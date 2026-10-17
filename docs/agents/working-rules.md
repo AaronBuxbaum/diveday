@@ -141,7 +141,7 @@ runs. Pass args directly. The shell guard refuses the bare form.
   ([docs/agents/verifying.md](verifying.md)).
 - **Verify before commit, and let CI run anything whole.** The checklist is the **verify** skill,
   and nowhere else; the line between what you run and what CI runs, and why, is
-  [docs/agents/verifying.md](verifying.md). `pnpm verify:push` runs before every push (`scripts/guard-push.mjs` holds it), and reads the layer below's CI: a push on a red base is a red run on every layer above, so it is stamped only when this layer makes the base's red tests pass here. Push once per round, when the checklist is green: each
+  [docs/agents/verifying.md](verifying.md). `pnpm verify:push --quick` runs before every push (`scripts/guard-push.mjs` holds it; the full run, with every affected browser spec, is optional since Aaron's 2026-10-16 call to batch into large stacked PRs and fix forward), and reads the layer below's CI: a push on a red base is a red run on every layer above, so it is stamped only when this layer makes the base's red tests pass here. Push once per round, when the checklist is green: each
   push cancels the CI run of the one before. Open the PR before it is green when that is the
   fastest way to learn what is broken, say in the body what you ran and what you did not, and work
   what comes back — a red PR you are driving is fine, a red PR you have stopped driving is not.
@@ -151,7 +151,8 @@ runs. Pass args directly. The shell guard refuses the bare form.
   message.** A bug, a safety gap, or a decision only a human can make: a GitHub issue labelled
   `needs-triage` ([docs/agents/issue-tracker.md](issue-tracker.md)'s "Filing a follow-up"), its
   number in the PR description, written for a reader with none of your context and ending in a
-  prompt they can paste into a fresh session. Anything else (an idea, debt read in passing, an
+  prompt they can paste into a fresh session. An idea or feature with a concrete first step is an
+  `idea` issue (`file-follow-up.mjs --idea`), kept out of every ready-for-* sweep. Anything else (debt read in passing, an
   out-of-scope cleanup) is a bullet in one "Notes" comment on the PR. This never replaces doing the work you were asked to do, a failing
   test is never a follow-up, and someone else's entry is never a drive-by.
 - **A failing or flaky test is part of the work, even when unrelated to your change.** Fix it

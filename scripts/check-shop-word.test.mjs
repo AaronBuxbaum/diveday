@@ -331,6 +331,17 @@ describe("the words the es-ES README settled", () => {
     });
   });
 
+  describe("adding is agregar (issue #2564)", () => {
+    it("refuses every form of añadir and leaves bañador alone", () => {
+      expect(rules({ k: "Añadir buzo" })).toEqual(["add"]);
+      expect(rules({ k: "Se añadió a la salida" }, STAFF)).toEqual(["add"]);
+      expect(rules({ k: "Añade una nota" })).toEqual(["add"]);
+      expect(rules({ k: "Ya añadido" })).toEqual(["add"]);
+      expect(rules({ k: "Agregar buzo" })).toEqual([]);
+      expect(rules({ k: "Trae bañador y toalla" })).toEqual([]);
+    });
+  });
+
   describe("joining a list is anotarse", () => {
     it("refuses the reflexive apuntarse in every shape the bundles used", () => {
       expect(rules({ k: "Apuntándote…" })).toEqual(["sign-up"]);
@@ -347,6 +358,16 @@ describe("the words the es-ES README settled", () => {
       expect(rules({ k: "triángulos oscuros que apuntan hacia el vientre" })).toEqual([]);
       expect(rules({ k: "Anotándote…" })).toEqual([]);
     });
+  });
+
+  it("reads past an ICU select's case keys, never past its words", () => {
+    // `waiver` as a case key is the turned-away reason's code, which no
+    // reader sees; the same word as the case's text is still the mistake.
+    expect(rules({ k: "No embarcó{reason, select, waiver {: exención} other {}}" })).toEqual([]);
+    expect(rules({ k: "No embarcó{reason, select, waiver {: waiver} other {}}" })).toEqual([
+      "waiver",
+    ]);
+    expect(rules({ k: "Completa tu waiver {tripTitle}" })).toEqual(["waiver"]);
   });
 
   it("reports every rule a single string breaks, not only the first", () => {

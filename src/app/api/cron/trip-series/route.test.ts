@@ -7,6 +7,16 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/db/trips", () => ({ rollAllSeriesForward: vi.fn() }));
 vi.mock("@/db/shops", () => ({ clearPassedReopensOn: vi.fn(async () => 0) }));
 vi.mock("@/db/rehearsals", () => ({ clearFinishedRehearsals: vi.fn() }));
+vi.mock("@/db/stale-package-invoices", () => ({
+  voidStalePublicPackageInvoices: vi.fn(async () => ({
+    considered: 2,
+    voided: 1,
+    refreshed: 0,
+    failed: 1,
+    unread: 0,
+    stuck: 0,
+  })),
+}));
 vi.mock("@/db/waitlist-roll", () => ({
   rollSailedSeriesWaitlists: vi.fn(async () => ({ rolled: 0, invited: 0 })),
 }));
@@ -22,6 +32,7 @@ const { getDb } = await import("@/db/client");
 const { rollAllSeriesForward } = await import("@/db/trips");
 const { clearPassedReopensOn } = await import("@/db/shops");
 const { clearFinishedRehearsals } = await import("@/db/rehearsals");
+const { voidStalePublicPackageInvoices } = await import("@/db/stale-package-invoices");
 const Sentry = await import("@sentry/nextjs");
 const { GET } = await import("./route");
 
@@ -89,6 +100,48 @@ describe("GET /api/cron/trip-series — auth gate", () => {
   });
 });
 
+describe("GET /api/cron/trip-series — stale package invoices (issue 2304)", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.mocked(console.log).mockRestore();
+  });
+
+  it("voids stale public package invoices on the nightly pass", async () => {
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(voidStalePublicPackageInvoices).toHaveBeenCalledWith(FAKE_DB, {
+      now: expect.any(Date),
+    });
+  });
+
+  it("still finishes the roll when the void step throws", async () => {
+    vi.mocked(voidStalePublicPackageInvoices).mockRejectedValueOnce(new Error("db down"));
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(200);
+    expect(Sentry.captureException).toHaveBeenCalled();
+  });
+
+  it("raises an invoice Stripe keeps refusing to void, and stays quiet otherwise", async () => {
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+
+    vi.mocked(voidStalePublicPackageInvoices).mockResolvedValueOnce({
+      considered: 1,
+      voided: 0,
+      refreshed: 0,
+      failed: 1,
+      unread: 0,
+      stuck: 1,
+    });
+    await GET(cronRequest(`Bearer ${secret}`));
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      "a stale package invoice could not be voided",
+      expect.objectContaining({ level: "warning" }),
+    );
+  });
+});
+
 describe("GET /api/cron/trip-series — reporting", () => {
   beforeEach(() => {
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -115,6 +168,8 @@ describe("GET /api/cron/trip-series — reporting", () => {
         seriesFailed: 0,
         waitlistRolled: 0,
         waitlistInvited: 0,
+        staleInvoicesVoided: 1,
+        staleInvoicesFailed: 1,
       }),
     );
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(

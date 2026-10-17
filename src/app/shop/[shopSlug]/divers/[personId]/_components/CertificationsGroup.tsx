@@ -27,6 +27,7 @@ import { AgencyCheckLink } from "./AgencyCheckLink";
 import { CardSightingForm } from "./CardSightingForm";
 import { agencyCheckActions, levelCardCheck, listedChecks } from "./card-checks";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
+import { DrysuitExperienceRow } from "./DrysuitExperienceRow";
 import { fileGap } from "./file-gap";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
@@ -669,6 +670,14 @@ export function CertificationsGroup({
           t={t}
           declared={noCertificationDeclared}
           empty={rows.length === 0}
+        />
+        <DrysuitExperienceRow
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          t={t}
         />
         <AddCertificationForm
           t={t}

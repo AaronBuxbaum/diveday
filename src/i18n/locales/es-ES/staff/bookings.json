@@ -1,8 +1,8 @@
 {
   "new": {
-    "title": "Añadir una reserva",
+    "title": "Agregar una reserva",
     "tripHeading": "¿Qué salida?",
-    "fullExcluded": "Las salidas completas no aparecen. Añade plazas, u otra salida ese día, desde el tablero.",
+    "fullExcluded": "Las salidas completas no aparecen. Agrega plazas, u otra salida ese día, desde el tablero.",
     "tripEmpty": "No queda ninguna plaza en las próximas salidas.",
     "tripEmptyAction": "Abrir el calendario",
     "day": {
@@ -15,10 +15,10 @@
     },
     "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}",
     "changeTrip": "¿No es esta? Elige otra salida.",
-    "addToTrip": "Añadir a la salida",
-    "addPersonAriaLabel": "Añadir a {name} a esta salida",
+    "addToTrip": "Agregar a la salida",
+    "addPersonAriaLabel": "Agregar a {name} a esta salida",
     "handEntryDescription": "El correo es opcional. Con el nombre basta para guardar la plaza y el resto puede llegar después.",
-    "noticeInvalid": "Introduce un nombre para añadir a un buceador. El correo y el teléfono son opcionales aquí.",
+    "noticeInvalid": "Introduce un nombre para agregar a un buceador. El correo y el teléfono son opcionales aquí.",
     "fromRequest": "Reserva desde una petición",
     "viewRequests": "Ver todas las peticiones",
     "relevantRequests": "Peticiones relevantes",

@@ -5,6 +5,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { AppDb } from "@/db/client";
 import {
+  clearDrysuitExperienceSeen,
+  type RecordDrysuitExperienceOutcome,
+  recordDrysuitExperienceSeen,
+} from "@/db/drysuit-experience";
+import {
   createNitroxCertification,
   deleteNitroxCertification,
   restoreNitroxCertification,
@@ -30,7 +35,7 @@ import {
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { isPlausibleCardNumber } from "@/lib/card-number";
-import { readForm } from "@/lib/form-parse";
+import { formValue, readForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { unreviewedCardState } from "@/lib/readiness";
 import { noticeUrl } from "@/lib/staff-notices";
@@ -354,6 +359,73 @@ export async function clearNoCertificationAction(
     base,
     backTo(base, cleared ? "no-certification-cleared" : "no-certification-nothing-to-clear"),
   );
+}
+
+/**
+ * A staffer recording that they have seen this diver dive dry (issue #2136).
+ * Clears the roster's drysuit-card advisory and nothing else; it is not a card.
+ * Staff-only: this record's actions are the only writer, and the writer itself
+ * re-checks roles, the note and the diver (domain review A4, security X2).
+ */
+const drysuitExperienceForm = z.object({ note: formValue() });
+
+export async function recordDrysuitExperienceAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const { note } = readForm(drysuitExperienceForm, formData);
+  const outcome = await recordDrysuitExperienceSeen(db, {
+    shopId: staff.user.shopId,
+    personId,
+    byPersonId: staff.user.personId,
+    note: typeof note === "string" ? note : "",
+  });
+  revalidateAndRedirect(base, backTo(base, drysuitRecordNotice(outcome)));
+}
+
+function drysuitRecordNotice(outcome: RecordDrysuitExperienceOutcome) {
+  if (outcome.ok) return "drysuit-experience-recorded";
+  switch (outcome.reason) {
+    case "already_recorded":
+      return "drysuit-experience-unchanged";
+    case "not_authorized":
+      return "drysuit-experience-not-authorized";
+    case "note_required":
+      return "drysuit-experience-note-required";
+    case "not_found":
+    case "self":
+    case "not_recordable":
+      return "drysuit-experience-not-recordable";
+  }
+}
+
+/**
+ * Take a "seen diving dry" back; the advisory returns to the roster. The
+ * recorder's, or an owner's or manager's (security review X3).
+ */
+export async function clearDrysuitExperienceAction(
+  shopSlug: string,
+  personId: string,
+  _formData: FormData,
+) {
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const outcome = await clearDrysuitExperienceSeen(db, {
+    shopId: staff.user.shopId,
+    personId,
+    byPersonId: staff.user.personId,
+  });
+  const notice = outcome.ok
+    ? "drysuit-experience-cleared"
+    : outcome.reason === "not_authorized"
+      ? "drysuit-experience-not-authorized"
+      : "drysuit-experience-unchanged";
+  revalidateAndRedirect(base, backTo(base, notice));
 }
 
 /**

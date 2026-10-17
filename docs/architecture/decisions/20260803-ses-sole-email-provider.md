@@ -27,7 +27,7 @@ one AWS-SDK-backed implementation (SES) — for a single sender.
   and the `RESEND_API_KEY`/`RESEND_FROM_EMAIL`/`RESEND_WEBHOOK_SECRET` env vars.
 - **`notificationProviderFromEnvironment` no longer branches on `EMAIL_PROVIDER`.** It always builds
   an SES config from `SES_AWS_REGION`/`SES_AWS_ACCESS_KEY_ID`/`SES_AWS_SECRET_ACCESS_KEY`/
-  `SES_FROM_EMAIL` and falls back to `disabledNotificationProvider` when that config is incomplete —
+  `SES_FROM_EMAIL` (unset means the compiled `DEFAULT_SENDER`, set empty means off, since the sender stopped travelling as configuration in #517) and falls back to `disabledNotificationProvider` when that config is incomplete —
   the same "degrades to `not_configured`, never throws" behavior every notification path already
   depended on, just with one provider instead of a flag choosing between two. The `EMAIL_PROVIDER` env
   var is gone; there is nothing left for it to select between.

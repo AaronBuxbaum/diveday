@@ -21,6 +21,7 @@ import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
+import { appNowTimestamp } from "./columns";
 
 /**
  * The tenant and the person: `shops`, `people` and their roles, the login on
@@ -391,6 +392,18 @@ export const shops = pgTable(
      */
     bookkeeperStopTokenHash: text("bookkeeper_stop_token_hash"),
     /**
+     * **A shop name that could pass for a brand or an institution** (issue
+     * #2450, decided 2026-10-16): set when the name matched the denylist in
+     * `src/lib/shop-name-review.ts` at sign-up (or a rename). While it is set
+     * and `name_cleared_at` is not newer, the shop's mail leaves under the plain
+     * "DiveDay" display name instead of "{Shop} via DiveDay"
+     * (`shopNameUnderReview`). A human clearing it stamps `name_cleared_at`; a
+     * later flag (another matching name) is newer than the clearing and holds
+     * again. Neither stops a shop signing up or sending.
+     */
+    nameFlaggedAt: timestamp("name_flagged_at", { withTimezone: true }),
+    nameClearedAt: timestamp("name_cleared_at", { withTimezone: true }),
+    /**
      * How many minutes before departure divers are asked to be at the dock. The
      * shop's real muster time varies (gear setup, cert check, briefing), so it is
      * configurable rather than a hardcoded "30 minutes" in every confirmation and
@@ -538,7 +551,7 @@ export const shops = pgTable(
     brandBadges: jsonb("brand_badges").$type<string[]>().notNull().default([]),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
@@ -827,6 +840,29 @@ export const people = pgTable(
      */
     noCertificationClearedByPersonId: uuid("no_certification_cleared_by_person_id"),
     /**
+     * When a staff member recorded that they have seen this diver dive dry
+     * (issue #2136, Aaron 2026-10-13). Clears the roster's drysuit-card
+     * advisory (`checkDrysuitCard`) and nothing else: it is **not a card**,
+     * never reaches `specialty_certifications`, `calculateReadiness` or
+     * admission, and a site or trip that requires the `drysuit` specialty
+     * still refuses without one. Staff-only: no diver-facing writer, and
+     * `/ready` never sets it. Null means nobody has recorded it.
+     */
+    drysuitExperienceSeenAt: timestamp("drysuit_experience_seen_at", { withTimezone: true }),
+    /**
+     * Who recorded `drysuit_experience_seen_at`. Not a typed FK for the same
+     * self-reference reason as `no_certification_cleared_by_person_id`. Set
+     * and cleared together with the column above.
+     */
+    drysuitExperienceSeenByPersonId: uuid("drysuit_experience_seen_by_person_id"),
+    /**
+     * What the staffer saw, in their words: the suit, where, when (domain
+     * review A4). Required by the writer, 1 to 200 characters, and set and
+     * cleared with the two columns above. The record and each clear also
+     * leave an append-only line on the diver's activity trail (A5).
+     */
+    drysuitExperienceSeenNote: text("drysuit_experience_seen_note"),
+    /**
      * The language this diver reads, captured from the `Accept-Language` of a
      * request they made themselves (a public booking, a waiver signature) and
      * preferred over the shop's `default_locale` when DiveDay emails or texts
@@ -971,7 +1007,7 @@ export const people = pgTable(
     mergedIntoPersonId: uuid("merged_into_person_id").references((): AnyPgColumn => people.id),
     mergedAt: timestamp("merged_at", { withTimezone: true }),
     mergedByPersonId: uuid("merged_by_person_id").references((): AnyPgColumn => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("people_shop_idx").on(table.shopId),
@@ -1223,7 +1259,7 @@ export const userAccounts = pgTable(
      * one email, and a quiet night sends at most one per interval.
      */
     afterHoursPingedAt: timestamp("after_hours_pinged_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * better-auth's core `user` model requires an `updatedAt`; nothing in
      * this app reads it (our own writers below don't set it, and we never
@@ -1231,7 +1267,7 @@ export const userAccounts = pgTable(
      * as stale as `createdAt` unless a future better-auth-owned write path
      * starts touching it.
      */
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("user_accounts_email_unique").on(table.email),

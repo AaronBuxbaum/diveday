@@ -167,6 +167,10 @@ export async function readTodaySecondWave({
         evidence,
         shopCrewTarget(shop),
         roles,
+        true,
+        // The reader themselves, for the one row read by who they are: the
+        // unfiled incident reports, re-checked live in the database.
+        personId,
       ),
       getShopDayDepartures(db, shop.id, shop.timezone, tomorrowNoon(now, shop.timezone), evidence),
       eveningClose.stations.length > 0

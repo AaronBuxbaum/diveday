@@ -9,6 +9,7 @@ import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import type { PaymentStatus } from "@/db/schema";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopCurrency } from "@/db/stripe-accounts";
+import { formValue, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { heldAfterMark, markNeedsWriteOffRight, readPaymentMarkForm } from "@/lib/payment-marks";
 import { requireShopSurface } from "@/lib/session";
@@ -45,10 +46,13 @@ function paymentStatusClass(status: PaymentStatus): "record" | "write_off" {
   return PAYMENT_STATUS_CLASS[status];
 }
 
+const markPaymentForm = z.object({ bookingId: text(), status: formValue() });
+
 export async function markPaymentAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = tripPath(shopSlug, tripId);
-  const bookingId = String(formData.get("bookingId") ?? "");
-  const status = paymentStatusSchema.safeParse(formData.get("status"));
+  const form = readForm(markPaymentForm, formData);
+  const { bookingId } = form;
+  const status = paymentStatusSchema.safeParse(form.status);
   // **Recording money is crew work; deciding about money is not.** Counter cash
   // at the dock is exactly front-desk work, so `paid` and `deposit_paid` stay
   // open to every staff member. `waived` is a free seat and `refunded` marks a
@@ -84,7 +88,7 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
   // failed to parse, missed this branch, and dead-ended at `?notice=invalid`:
   // an unexplained refusal on a money row for a tap that changed nothing
   // (issue #699 security review).
-  const submitted = String(formData.get("status") ?? "");
+  const submitted = String(form.status ?? "");
   // Counter cash is still money the shop took in its own currency — stamping
   // this row `usd` by default told a Mexican shop's diver their balance was in
   // dollars. The amount is read in the same currency's major unit.

@@ -50,7 +50,10 @@ export type PreparedDiveSiteImportRow = {
   description: string | null;
   locationName: string | null;
   difficultyLevel: DiveSiteDifficulty | null;
+  /** Empty cell is "not said", never false (issue #2214). */
+  snorkelSuitable: boolean | null;
   depthRange: string | null;
+  depthMinMeters: number | null;
   maxDepthMeters: number | null;
   expectedBottomTimeMinutes: number | null;
   currentNote: string | null;
@@ -132,7 +135,9 @@ export const DIVE_SITE_IMPORT_COLUMNS = [
   "location_name",
   "description",
   "difficulty_level",
+  "snorkel_suitable",
   "depth_range",
+  "depth_min_meters",
   "max_depth_meters",
   "expected_bottom_time_minutes",
   "current_note",
@@ -190,6 +195,18 @@ function text(value: string | undefined): string | null {
  */
 function flag(value: string | null): boolean {
   return value !== null && ["true", "t", "1", "yes", "y"].includes(value.toLowerCase());
+}
+
+/**
+ * A yes-or-no that may be unsaid: only an explicit answer sets it, and a typo
+ * or "maybe" stays null rather than reading as no (domain review A6).
+ */
+function saidFlag(value: string | null): boolean | null {
+  if (value === null) return null;
+  const answer = value.toLowerCase();
+  if (["true", "t", "1", "yes", "y"].includes(answer)) return true;
+  if (["false", "f", "0", "no", "n"].includes(answer)) return false;
+  return null;
 }
 
 function finiteNumber(value: string | null): number | null {
@@ -391,6 +408,14 @@ export function prepareDiveSiteImport(
       (maxDepthMeters <= 0 || maxDepthMeters > MAX_ENTERED_DEPTH_METERS)
     )
       issues.push("invalid_max_depth");
+    // The shallow end of a range needs the deep end and cannot sit below it, the
+    // pair the table's CHECK holds; a row breaking it would fail the whole import.
+    const depthMinMeters = finiteNumber(read(cells, "depth_min_meters"));
+    if (
+      depthMinMeters !== null &&
+      (depthMinMeters < 0 || maxDepthMeters === null || depthMinMeters > maxDepthMeters)
+    )
+      issues.push("invalid_min_depth");
     const bottomTimeRaw = read(cells, "expected_bottom_time_minutes");
     const expectedBottomTimeMinutes = finiteNumber(bottomTimeRaw);
     if (
@@ -462,7 +487,9 @@ export function prepareDiveSiteImport(
       description: read(cells, "description"),
       locationName: read(cells, "location_name"),
       difficultyLevel,
+      snorkelSuitable: saidFlag(read(cells, "snorkel_suitable")),
       depthRange: read(cells, "depth_range"),
+      depthMinMeters,
       maxDepthMeters,
       expectedBottomTimeMinutes,
       currentNote: read(cells, "current_note"),

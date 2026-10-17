@@ -555,7 +555,10 @@ async function joinWaiverOwed(db: AppDb, shopId: string, bookingId: string): Pro
   // A lapsed release is owed a link exactly as an unsent one is: nothing on
   // file stands, and no link is out.
   const needsWaiver = readiness?.blockers.some(
-    (blocker) => blocker.code === "waiver_not_sent" || blocker.code === "waiver_lapsed",
+    (blocker) =>
+      blocker.code === "waiver_not_sent" ||
+      blocker.code === "waiver_lapsed" ||
+      blocker.code === "waiver_runs_out",
   );
   if (!needsWaiver) return false;
   // A held seat is owed nothing yet: its link would open on a record that may
@@ -658,6 +661,7 @@ async function liveWaiverLinkForResend(
     (blocker) =>
       blocker.code === "waiver_not_sent" ||
       blocker.code === "waiver_lapsed" ||
+      blocker.code === "waiver_runs_out" ||
       blocker.code === "waiver_pending",
   );
   if (!owed) return null;

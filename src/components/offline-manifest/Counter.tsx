@@ -110,7 +110,11 @@ export function OfflineCounter({
                     </Badge>
                   ) : null}
                   {diver.notHere ? (
-                    <Badge tone="neutral">{t("shared.offlineManifest.single.notHereBadge")}</Badge>
+                    <Badge tone="neutral">
+                      {diver.turnedAway
+                        ? t("shared.offlineManifest.single.turnedAwayBadge")
+                        : t("shared.offlineManifest.single.notHereBadge")}
+                    </Badge>
                   ) : null}
                 </div>
                 {/* Nothing where there are no blockers: a released seat

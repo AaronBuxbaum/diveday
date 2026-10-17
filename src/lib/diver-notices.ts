@@ -151,6 +151,40 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "warning",
     key: "divers.notices.noCertificationNothingToClear",
   },
+  // A staffer's "seen diving dry" (#2136). `"page"` because the row that holds
+  // the control swaps between its two states on success.
+  "drysuit-experience-recorded": {
+    form: "page",
+    tone: "success",
+    key: "divers.notices.drysuitExperienceRecorded",
+  },
+  "drysuit-experience-cleared": {
+    form: "page",
+    tone: "success",
+    key: "divers.notices.drysuitExperienceCleared",
+  },
+  // A double tap or replay: the record already says what the staffer wanted.
+  "drysuit-experience-unchanged": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.drysuitExperienceUnchanged",
+  },
+  // Refusals from the writer itself (domain review A4, security review X2/X3).
+  "drysuit-experience-not-authorized": {
+    form: "page",
+    tone: "danger",
+    key: "divers.notices.drysuitExperienceNotAuthorized",
+  },
+  "drysuit-experience-note-required": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.drysuitExperienceNoteRequired",
+  },
+  "drysuit-experience-not-recordable": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.drysuitExperienceNotRecordable",
+  },
   // A staff account that has since been demoted, removed or disabled, still
   // holding a valid token. Every mutation on this page re-reads live roles for
   // the same reason.
@@ -230,6 +264,14 @@ const NOTICE_KEYS: DiverNoticeMap = {
     form: "waiver",
     tone: "success",
     key: "divers.notices.medicalClearanceRecorded",
+  },
+  // Recorded from a letter dated before the referral it answers, while another
+  // live seat is still held by the earlier referral (issue #2616). A warning:
+  // the answer is on the record, and the desk has one more to record.
+  "medical-clearance-recorded-earlier-held": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.medicalClearanceRecordedEarlierHeld",
   },
   // The other answer (issue #1283). Not a success tone: nothing good happened
   // to this diver, and a green tick under "the doctor said no" would read as

@@ -603,7 +603,8 @@ export async function departureOpenToDiver(
     const { instructorCount, assistantCount } = await tripCourseCrewCounts(db, trip.id);
     if (instructorCount === 0) return false;
     const seatCap = courseSeatCapacity(course, instructorCount, assistantCount);
-    if (seatCap !== null && held.aboard >= seatCap) return false;
+    // The students, its divers: a priced rider is a passenger (G5 of #2226).
+    if (seatCap !== null && held.divers >= seatCap) return false;
     if (course.minimumCertificationLevel) {
       const cards = await db
         .select()

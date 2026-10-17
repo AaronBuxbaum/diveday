@@ -23,6 +23,16 @@ vi.mock("../actions", () => {
   );
 });
 
+vi.mock("../../incidents/actions", () => ({
+  startMissingDiverReportAction: {
+    bind: (_: unknown, shopSlug: unknown, tripId: unknown) => ({
+      name: "startMissingDiverReportAction",
+      shopSlug,
+      tripId,
+    }),
+  },
+}));
+
 const context = { shopSlug: "blue-mantis", tripId: "trip-1", checkpoint: "after_dive_1" } as const;
 
 describe("bindManifestActions", () => {
@@ -53,5 +63,15 @@ describe("bindManifestActions", () => {
     ]) {
       expect((action as unknown as { context: unknown }).context).toEqual(narrow);
     }
+  });
+
+  it("binds the missing diver report only for a reader who may start a report", () => {
+    expect(bindManifestActions(context).startMissingDiverReport).toBeNull();
+    expect(
+      bindManifestActions(context, { mayStartIncidentReport: false }).startMissingDiverReport,
+    ).toBeNull();
+    expect(
+      bindManifestActions(context, { mayStartIncidentReport: true }).startMissingDiverReport,
+    ).toEqual({ name: "startMissingDiverReportAction", shopSlug: "blue-mantis", tripId: "trip-1" });
   });
 });

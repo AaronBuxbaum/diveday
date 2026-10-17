@@ -21,6 +21,7 @@ import {
   rollCallLabel,
   type TripManifest,
 } from "@/lib/manifests";
+import { type MissingReportAction, MissingReportButton } from "./MissingReportButton";
 import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import { personTrailWithCurrentRecord } from "./person-trail";
@@ -104,6 +105,8 @@ export function CrewRollCall({
   todayTrailBySubject,
   crewRollCallAction,
   crewRollCallButtonCopy,
+  startMissingReport = null,
+  rollCallClosed = false,
   buddyTeamLabel,
   t,
 }: {
@@ -122,6 +125,16 @@ export function CrewRollCall({
   todayTrailBySubject?: ReadonlyMap<string, readonly PersonTrailEntry[]>;
   crewRollCallAction: RollCallAction;
   crewRollCallButtonCopy: RollCallButtonCopy;
+  /**
+   * "Start a missing diver report" for a crew member marked not back aboard,
+   * bound to the departure; null for a reader who may not start a report.
+   */
+  startMissingReport?: MissingReportAction | null;
+  /**
+   * A cancelled departure nobody counted on (#2285): every roll-call write is
+   * refused, so no row or sheet draws a roll-call control.
+   */
+  rollCallClosed?: boolean;
   /** A localized, list-formatted buddy-team sentence. */
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
   t: StaffTranslator;
@@ -316,6 +329,8 @@ export function CrewRollCall({
                       mark={
                         rowState.notBackAboard ? (
                           <RollCallMark state="notBack" />
+                        ) : rollCallClosed ? (
+                          <RollCallMark state={rollCallMarkState(rowState)} />
                         ) : (
                           <RollCallMarkButton
                             kind="crew"
@@ -365,7 +380,7 @@ export function CrewRollCall({
                             surface is the same claim about the same kind of
                             body (ADR 20260815-offline-can-unsay-a-missing-diver
                             applies it to crew rows in as many words). */}
-                        {rowState.notBackAboard ? (
+                        {rowState.notBackAboard && !rollCallClosed ? (
                           <RollCallBackAboardControl
                             kind="crew"
                             subjectId={member.id}
@@ -376,18 +391,34 @@ export function CrewRollCall({
                             t={t}
                           />
                         ) : null}
+                        {/* The report, from the row that raised it, on the
+                            same terms as a diver's (domain review 2026-10-16):
+                            the staffer is named in it as affected. */}
+                        {rowState.notBackAboard && startMissingReport ? (
+                          <MissingReportButton
+                            key={checkpoint}
+                            action={startMissingReport}
+                            subject={{ field: "personId", id: member.id }}
+                            checkpoint={checkpoint}
+                            label={t("incidents.missingDiver.start")}
+                            pendingLabel={t("incidents.trip.starting")}
+                            ariaLabel={`${t("incidents.missingDiver.start")} — ${member.fullName}`}
+                          />
+                        ) : null}
                         {/* The deliberate second step, on the same terms as a
                             diver's. */}
-                        <RollCallExceptionControl
-                          kind="crew"
-                          subjectId={member.id}
-                          checkpoint={checkpoint}
-                          isDeparture={isDeparture}
-                          rollCall={rc}
-                          action={crewRollCallAction}
-                          copy={crewRollCallButtonCopy}
-                          t={t}
-                        />
+                        {rollCallClosed ? null : (
+                          <RollCallExceptionControl
+                            kind="crew"
+                            subjectId={member.id}
+                            checkpoint={checkpoint}
+                            isDeparture={isDeparture}
+                            rollCall={rc}
+                            action={crewRollCallAction}
+                            copy={crewRollCallButtonCopy}
+                            t={t}
+                          />
+                        )}
                       </div>
                     </PersonSheet>
                   </div>

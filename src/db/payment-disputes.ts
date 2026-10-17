@@ -1,5 +1,6 @@
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
+import { isUuid } from "@/lib/uuid";
 import type { AppDb } from "./client";
 import type { PaymentDispute } from "./schema";
 import {
@@ -62,9 +63,12 @@ export type DisputeOutcome =
  * the `closed` it preceded never reopens the dispute, and a replay changes
  * nothing. `closed_at` keeps the first close it saw.
  *
- * Informs; never moves money and never touches the order's balance or a seat's
- * payment. A lost dispute is money Stripe has taken back, and the shop sees it
- * where Stripe shows it.
+ * Never moves money and never touches the order's balance or a seat's
+ * payment. A close with status `lost` writes the **reversal line**
+ * (`reversed_at`, issue #2292, Aaron 2026-10-13): money the bank took back,
+ * read on the order page ({@link listLostDisputes}) and in Reports' money out,
+ * beside what was paid rather than instead of it. The first lost close sets it
+ * and nothing moves it, so a replay writes no second reversal.
  */
 export async function recordStripeDispute(
   db: AppDb,
@@ -82,6 +86,7 @@ export async function recordStripeDispute(
   const closed =
     event.eventType === "charge.dispute.closed" ||
     CLOSED_DISPUTE_STATUSES.has(event.dispute.status);
+  const lost = event.dispute.status === "lost";
   const row = {
     shopId,
     stripeAccountId: event.stripeAccountId,
@@ -96,6 +101,7 @@ export async function recordStripeDispute(
     evidenceDueBy: event.dispute.evidenceDueBy,
     openedAt: event.dispute.createdAt,
     closedAt: closed ? event.occurredAt : null,
+    reversedAt: lost ? event.occurredAt : null,
     lastEventAt: event.occurredAt,
     updatedAt: event.occurredAt,
   };
@@ -113,6 +119,8 @@ export async function recordStripeDispute(
         // equal-time update to a closed row), so a close is never undone by
         // an `updated` Stripe stamped in the same second.
         closedAt: closed ? sql`coalesce(${paymentDisputes.closedAt}, ${row.closedAt})` : sql`null`,
+        // A reversal, once written, stays where it was written.
+        reversedAt: sql`coalesce(${paymentDisputes.reversedAt}, ${row.reversedAt})`,
         lastEventAt: row.lastEventAt,
         updatedAt: row.updatedAt,
       },
@@ -242,4 +250,43 @@ export async function listOpenPaymentDisputes(
       ? (diverByCheckout.get(dispute.checkoutId) ?? null)
       : orderPersonName,
   }));
+}
+
+/** A dispute the shop lost: the reversal line the order page shows (issue #2292). */
+export type LostPaymentDispute = {
+  id: string;
+  amountCents: number;
+  currency: string;
+  orderId: string | null;
+  checkoutId: string | null;
+  reversedAt: Date;
+};
+
+/** A shop's lost disputes, oldest reversal first, optionally for one order. */
+export async function listLostDisputes(
+  db: AppDb,
+  shopId: string,
+  options: { orderId?: string } = {},
+): Promise<LostPaymentDispute[]> {
+  if (!isUuid(shopId) || (options.orderId !== undefined && !isUuid(options.orderId))) return [];
+  const rows = await db
+    .select({
+      id: paymentDisputes.id,
+      amountCents: paymentDisputes.amountCents,
+      currency: paymentDisputes.currency,
+      orderId: paymentDisputes.orderId,
+      checkoutId: paymentDisputes.checkoutId,
+      reversedAt: paymentDisputes.reversedAt,
+    })
+    .from(paymentDisputes)
+    .where(
+      and(
+        eq(paymentDisputes.shopId, shopId),
+        isNotNull(paymentDisputes.reversedAt),
+        ...(options.orderId ? [eq(paymentDisputes.orderId, options.orderId)] : []),
+      ),
+    )
+    .orderBy(asc(paymentDisputes.reversedAt), asc(paymentDisputes.stripeDisputeId))
+    .limit(50);
+  return rows.flatMap((row) => (row.reversedAt ? [{ ...row, reversedAt: row.reversedAt }] : []));
 }

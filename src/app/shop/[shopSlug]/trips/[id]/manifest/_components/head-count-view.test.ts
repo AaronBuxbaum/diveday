@@ -57,4 +57,38 @@ describe("headCountView", () => {
         .overCertificate,
     ).toBeNull();
   });
+
+  // Dive-domain review D2: the certificate's total persons counts the crew too.
+  it("holds passengers and crew counted aboard against total persons", () => {
+    const aboard = {
+      state: "boarded" as const,
+      occurredAt: new Date(0),
+      recordedByName: "Sol",
+      note: null,
+    };
+    const crew = [
+      crewMember({ id: "c-1", rollCall: aboard }),
+      crewMember({ id: "c-2", rollCall: aboard }),
+      crewMember({ id: "c-3" }),
+    ] as ReturnType<typeof crewMember>[];
+    const manifest = (boarded: number) =>
+      tripManifest({
+        trip: { ...tripManifest().trip, certifiedPassengers: 12, certifiedTotalPersons: 13 },
+        summary: { ...tripManifest().summary, totalDivers: 12, boarded },
+        crew,
+      });
+    const view = (boarded: number) =>
+      headCountView({ manifest: manifest(boarded), checkpoint: "departure", isDeparture: true });
+    // 12 passengers + 2 crew aboard is 14 souls; the crew member ashore is not.
+    expect(view(12).overTotalPersons).toEqual({ aboard: 14, limit: 13 });
+    expect(view(12).overCertificate).toBeNull();
+    expect(view(11).overTotalPersons).toEqual(null);
+    expect(
+      headCountView({
+        manifest: tripManifest({ summary: { ...tripManifest().summary, boarded: 40 }, crew }),
+        checkpoint: "departure",
+        isDeparture: true,
+      }).overTotalPersons,
+    ).toBeNull();
+  });
 });

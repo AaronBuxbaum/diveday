@@ -440,10 +440,21 @@ jobs:
       # here: `playwright test` with no file arguments runs every spec.
       # `--skip` leaves out the path-gated pixel-probe spec when the `changes`
       # job says nothing it tests changed; all six shards read the same output.
+      #
+      # A failed run whose log carries `browserActivity`'s renderer verdict
+      # ("wedged, not slow", e2e/fixtures.ts) gets exactly one `--last-failed`
+      # rerun of only the failed tests: the visual job's containment below,
+      # applied here (#2633, decided 2026-10-16). It is not a retry policy.
+      # The probe proves the browser stopped answering, which no app or spec
+      # code causes and a rerun cannot mask; every failure without the
+      # verdict stays red on the first attempt under `retries: 0`. The first
+      # attempt's JSON report is put back after the rerun for the budget and
+      # duration steps below, since the rerun's report holds only its few.
       - name: Run non-visual Playwright tests
         env:
           SKIP: ${{ needs.changes.outputs.pixel_probe == 'false' && 'e2e/pixel-probe.spec.ts' || '' }}
         run: |
+          set -o pipefail
           mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/6 --skip="${SKIP}" --explain --summary="$GITHUB_STEP_SUMMARY")
           if [ "${#spec_files[@]}" -eq 0 ]; then
             echo "::error::scripts/e2e-shard.mjs dealt this shard nothing; refusing to run every spec instead."
@@ -456,7 +467,20 @@ jobs:
           if printf '%s\n' "${spec_files[@]}" | grep -qx 'e2e/agency-check-extension.spec.ts'; then
             pnpm exec playwright install chromium
           fi
-          pnpm exec playwright test "${spec_files[@]}"
+          status=0
+          pnpm exec playwright test "${spec_files[@]}" 2>&1 | tee shard.log || status=$?
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+          if ! grep -q "wedged, not slow" shard.log; then
+            exit 1
+          fi
+          echo "::warning title=Renderer wedge detected::A failed test's browser activity carries the renderer probe's 'wedged, not slow' verdict (the known unattributed Chromium hang). Rerunning only this shard's failed tests once; any other failure stays red. The wedge is logged above."
+          cp e2e-durations/results.json e2e-durations/first-attempt.json
+          rerun=0
+          pnpm exec playwright test --last-failed || rerun=$?
+          mv e2e-durations/first-attempt.json e2e-durations/results.json
+          exit "$rerun"
         # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
         # cores) was pinned to E2E_WORKERS=1 with double the shards
         # (20260731-ci-parallelization-resources-build-concurrency.md)

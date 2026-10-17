@@ -30,7 +30,7 @@ export const BAHAMAS_ELEUTHERA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Iron and plating are covered in coral and sponge, and fish gather around the larger pieces. Look at the small things on the wreckage as much as the big ones.",
       difficultyLevel: "intermediate",
-      depthRange: "5–11 m (15–35 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 11,
       currentNote:
         "Called off when the surf breaks over the wrecks. Carry an SMB and surface only where the crew can reach you, away from the breaking reef. Breakers pound this shallow, ragged reef and the surf is rarely calm, so expect surge among the wrecks. Tidal water flows around the north end of the island; current is otherwise not documented, so ask the crew on the day. Shore dives to the wrecks are difficult, so go by boat. The wrecks lie flattened, with twisted plates and beams: keep your hands and your gear clear of torn metal.",
@@ -88,7 +88,7 @@ export const BAHAMAS_ELEUTHERA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The wreck is an artificial reef for the usual shallow-water crowd. Move slowly around the engine and boiler for the small residents.",
       difficultyLevel: "intermediate",
-      depthRange: "5–11 m (15–35 ft)",
+      depthMinMeters: 5,
       // The sources disagree: one guide gives 25 ft and Project Eleuthera 15–25 ft, another 35 ft.
       // The deeper figure is used.
       maxDepthMeters: 11,
@@ -137,7 +137,7 @@ export const BAHAMAS_ELEUTHERA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The current packs fish into the channel. Look along the edges as you pass for lobster, morays and resting animals.",
       difficultyLevel: "advanced",
-      depthRange: "15–18 m (50–60 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 18,
       currentNote:
         "Dived only in moderate flow near slack, never at peak, when the tide runs through the channel at 6 to 10 knots. Even then it is a strong drift with no stopping or turning back once you are in it. The crew picks the tide, best on an incoming tide, and calls it off when the flow is too strong. Carry an SMB, because you can surface hundreds of meters from where you started. Visibility is lower than on the reef sites, and the bottom is rocky.",

@@ -38,6 +38,7 @@ import {
   importedPaymentHistory,
   orderLineItems,
   orders,
+  paymentDisputes,
   trips,
   workOrderBills,
 } from "./schema";
@@ -64,7 +65,13 @@ export type MonthMoneyDetail = {
    * payouts that reached the bank this month — null when no payout this month
    * says what its fees were, which is not the same as none.
    */
-  out: { refundedCents: number; discountedCents: number; stripeFeesCents: number | null };
+  out: {
+    refundedCents: number;
+    discountedCents: number;
+    stripeFeesCents: number | null;
+    /** Card disputes lost this month: their reversal lines, by the day each was lost (issue #2292). */
+    disputesLostCents: number;
+  };
   /** Stripe payouts arriving at the bank this month, oldest first (ADR 20261012-payouts-reach-diveday). */
   payouts: ShopPayout[];
   /** The divers whose buddy links brought this month's buddy seats, most friends first (fifth-loop ideas, item 41). */
@@ -144,7 +151,7 @@ async function moneyOut(
   shopId: string,
   startUtc: Date,
   endUtc: Date,
-): Promise<{ refundedCents: number; discountedCents: number }> {
+): Promise<{ refundedCents: number; discountedCents: number; disputesLostCents: number }> {
   const [orderRefunds] = await db
     .select({ total: sql<string>`coalesce(sum(${orders.refundedCents}), 0)` })
     .from(orders)
@@ -166,9 +173,20 @@ async function moneyOut(
         lt(bookingCheckouts.completedAt, endUtc),
       ),
     );
+  const [lostDisputes] = await db
+    .select({ total: sql<string>`coalesce(sum(${paymentDisputes.amountCents}), 0)` })
+    .from(paymentDisputes)
+    .where(
+      and(
+        eq(paymentDisputes.shopId, shopId),
+        gte(paymentDisputes.reversedAt, startUtc),
+        lt(paymentDisputes.reversedAt, endUtc),
+      ),
+    );
   return {
     refundedCents: Number(orderRefunds?.total ?? 0) + Number(checkoutMoney?.refunded ?? 0),
     discountedCents: Number(checkoutMoney?.discounted ?? 0),
+    disputesLostCents: Number(lostDisputes?.total ?? 0),
   };
 }
 

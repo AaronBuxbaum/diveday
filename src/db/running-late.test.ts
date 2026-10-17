@@ -12,8 +12,8 @@ import {
   markPhoneRunningLate,
   messageSeats,
 } from "./running-late";
-import { activityEvents, bookings, people, trips } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { activityEvents, bookings, people, shops, trips } from "./schema";
+import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **"Running late"** (J3): one guarded write behind three doors. What matters
@@ -191,17 +191,15 @@ describe("a message in the diver's own words (the Inbox)", () => {
     const { db, shop, trip, bookingId, personId, now, actorPersonId, actorName } = await context();
     const receivedAt = new Date(now.getTime() - 10 * MINUTE_MS);
     const seats = await messageSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
-    expect(seats.get(MESSAGE_ID)).toMatchObject({
-      bookingId,
-      tripId: trip.id,
-      title: trip.title,
-      runningLateAt: null,
-    });
+    expect(seats.get(MESSAGE_ID)).toMatchObject([
+      { bookingId, tripId: trip.id, title: trip.title, runningLateAt: null },
+    ]);
 
     expect(
       await markMessageRunningLate(db, {
         shopId: shop.id,
         personId,
+        bookingId,
         receivedAt,
         now,
         actorPersonId,
@@ -218,6 +216,7 @@ describe("a message in the diver's own words (the Inbox)", () => {
       await markMessageRunningLate(db, {
         shopId: shop.id,
         personId,
+        bookingId,
         receivedAt,
         now,
         actorPersonId,
@@ -225,7 +224,7 @@ describe("a message in the diver's own words (the Inbox)", () => {
     ).toMatchObject({ status: "already" });
     expect(await lateLines(personId)).toHaveLength(1);
     const after = await messageSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
-    expect(after.get(MESSAGE_ID)?.runningLateAt).toEqual(receivedAt);
+    expect(after.get(MESSAGE_ID)?.[0]?.runningLateAt).toEqual(receivedAt);
   });
 
   it("names nothing for words written before this boat's window opened", async () => {
@@ -238,6 +237,7 @@ describe("a message in the diver's own words (the Inbox)", () => {
       await markMessageRunningLate(db, {
         shopId: shop.id,
         personId,
+        bookingId,
         receivedAt,
         now,
         actorPersonId,
@@ -262,6 +262,7 @@ describe("a message in the diver's own words (the Inbox)", () => {
       await markMessageRunningLate(db, {
         shopId: shop.id,
         personId,
+        bookingId,
         receivedAt,
         now,
         actorPersonId,
@@ -276,12 +277,135 @@ describe("a message in the diver's own words (the Inbox)", () => {
       await markMessageRunningLate(db, {
         shopId: otherShop,
         personId,
+        bookingId,
         receivedAt: now,
         now,
         actorPersonId,
       }),
     ).toEqual({ status: "closed" });
     expect(await lateAt(bookingId)).toBeNull();
+  });
+});
+
+/**
+ * A sender with two seats both inside the window when they wrote (issue #2551,
+ * decided 2026-10-16): the row lists both, the desk chooses, and the server
+ * re-derives the candidates from the stored message and refuses any other
+ * booking id. A `LATE` keyword reply stays the soonest seat, by design.
+ */
+describe("a message from a sender holding two seats in the window", () => {
+  const MESSAGE_ID = "8f000000-1111-4222-8333-444444444444";
+
+  async function twoSeats() {
+    const base = await context();
+    const { db, shop, trip } = base;
+    const other = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (candidate) => candidate.id !== trip.id && candidate.title !== trip.title,
+    );
+    if (!other) throw new Error("expected a second seeded trip");
+    const second = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: other.id,
+      ...DIVER,
+    });
+    if (!second.ok) throw new Error("second booking failed");
+    // The second boat sails eight hours after the first, inside the same day.
+    const startsAt = new Date(trip.startsAt.getTime() + 8 * HOUR_MS);
+    await db
+      .update(trips)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 3 * HOUR_MS) })
+      .where(eq(trips.id, other.id));
+    return { ...base, secondBookingId: second.bookingId, secondTripId: other.id };
+  }
+
+  it("names both seats, soonest first", async () => {
+    const { db, shop, personId, bookingId, secondBookingId, now } = await twoSeats();
+    const receivedAt = new Date(now.getTime() - 10 * MINUTE_MS);
+    const seats = await messageSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
+    expect(seats.get(MESSAGE_ID)?.map((seat) => seat.bookingId)).toEqual([
+      bookingId,
+      secondBookingId,
+    ]);
+  });
+
+  it("marks the seat the desk chose, and only that one", async () => {
+    const { db, shop, personId, bookingId, secondBookingId, now, actorPersonId } = await twoSeats();
+    const receivedAt = new Date(now.getTime() - 10 * MINUTE_MS);
+    expect(
+      await markMessageRunningLate(db, {
+        shopId: shop.id,
+        personId,
+        bookingId: secondBookingId,
+        receivedAt,
+        now,
+        actorPersonId,
+      }),
+    ).toEqual({ status: "marked", bookingId: secondBookingId, at: receivedAt });
+    expect(await lateAt(secondBookingId)).toEqual(receivedAt);
+    expect(await lateAt(bookingId)).toBeNull();
+  });
+
+  it("refuses a booking id that is not among the message's own seats", async () => {
+    const { db, shop, trip, personId, bookingId, now, actorPersonId } = await twoSeats();
+    const receivedAt = new Date(now.getTime() - 10 * MINUTE_MS);
+    // Another diver's seat at this shop, and an id that names nothing at all.
+    const stranger = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: trip.id,
+      fullName: "Someone Else",
+      email: "someone.else@example.com",
+    });
+    if (!stranger.ok) throw new Error("setup booking failed");
+    for (const forged of [stranger.bookingId, "00000000-0000-4000-8000-000000000000"]) {
+      expect(
+        await markMessageRunningLate(db, {
+          shopId: shop.id,
+          personId,
+          bookingId: forged,
+          receivedAt,
+          now,
+          actorPersonId,
+        }),
+      ).toEqual({ status: "closed" });
+      expect(await lateAt(forged)).toBeNull();
+    }
+    expect(await lateAt(bookingId)).toBeNull();
+    expect(await lateLines(personId)).toEqual([]);
+  });
+
+  it("refuses a seat that was not yet in the window when they wrote", async () => {
+    const { db, shop, trip, personId, secondBookingId, secondTripId, now, actorPersonId } =
+      await twoSeats();
+    // Put the second boat past a day from the message: it was not the one the
+    // words could have been about, even though it is open now.
+    const receivedAt = new Date(trip.startsAt.getTime() - 20 * HOUR_MS);
+    const later = new Date(receivedAt.getTime() + 30 * HOUR_MS);
+    await db
+      .update(trips)
+      .set({ startsAt: later, endsAt: new Date(later.getTime() + 3 * HOUR_MS) })
+      .where(eq(trips.id, secondTripId));
+    expect(
+      await markMessageRunningLate(db, {
+        shopId: shop.id,
+        personId,
+        bookingId: secondBookingId,
+        receivedAt,
+        now,
+        actorPersonId,
+      }),
+    ).toEqual({ status: "closed" });
+    expect(await lateAt(secondBookingId)).toBeNull();
+  });
+
+  it("leaves a LATE keyword reply on the soonest seat", async () => {
+    const { db, shop, personId, bookingId, secondBookingId, now } = await twoSeats();
+    expect(await markPersonRunningLate(db, { shopId: shop.id, personId, now })).toMatchObject({
+      status: "marked",
+      bookingId,
+    });
+    expect(await lateAt(secondBookingId)).toBeNull();
   });
 });
 
@@ -367,6 +491,46 @@ describe("one statement for the people travelling together", () => {
     expect(await lateAt(member.bookingId)).toEqual(now);
   });
 
+  it("files the staffer's line for every party member a message mark stamped, in one stroke", async () => {
+    const { db, shop, trip, now, actorPersonId } = await context();
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Eve Organizer",
+        email: "eve.organizer@example.com",
+      },
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Finn Member",
+        email: "finn.member@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`party failed: ${party.reason}`);
+    const [lead, member] = party.bookings;
+    if (!lead || !member) throw new Error("party seats missing");
+    const receivedAt = new Date(now.getTime() - 5 * MINUTE_MS);
+    expect(
+      await markMessageRunningLate(db, {
+        shopId: shop.id,
+        personId: lead.personId,
+        bookingId: lead.bookingId,
+        receivedAt,
+        now,
+        actorPersonId,
+      }),
+    ).toMatchObject({ status: "marked", bookingId: lead.bookingId });
+    expect(await lateAt(member.bookingId)).toEqual(receivedAt);
+    // The member's "said {time}" is the staffer's doing too, so it is on their trail.
+    expect(await lateLines(lead.personId)).toHaveLength(1);
+    expect(await lateLines(member.personId)).toEqual([
+      expect.objectContaining({ actor: actorPersonId }),
+    ]);
+  });
+
   it("covers every seat on that boat held under the texting number, and nothing else", async () => {
     const { db, shop, trip, bookingId, now } = await context();
     const sibling = await createBooking(db, {
@@ -390,6 +554,78 @@ describe("one statement for the people travelling together", () => {
     expect(await lateAt(bookingId)).toEqual(now);
     expect(await lateAt(sibling.bookingId)).toEqual(now);
     expect(await lateAt(stranger.bookingId)).toBeNull();
+  });
+});
+
+/**
+ * **One number, seats at two shops** (issue #2320). A LATE text lands on the
+ * sender number it was sent to; when that number belongs to one shop, the seat
+ * marked is that shop's, even when another shop's boat leaves sooner. On the
+ * shared DiveDay sender (`shopForSmsSender` answers null) the soonest seat
+ * across shops stands, as before.
+ */
+describe("markPhoneRunningLate across two shops (#2320)", () => {
+  async function twoShops() {
+    const base = await context();
+    const { db, trip } = base;
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Second Reef Shop", slug: "second-reef-shop", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("second shop setup failed");
+    // Leaves an hour after the first shop's boat: the later seat of the two.
+    const later = await createTrip(db, {
+      shopId: other.id,
+      title: "Second shop dawn dive",
+      startsAt: new Date(trip.startsAt.getTime() + HOUR_MS),
+      endsAt: new Date(trip.startsAt.getTime() + 4 * HOUR_MS),
+      capacity: 6,
+    });
+    if (!later) throw new Error("second shop trip failed");
+    const booked = await createBooking(db, {
+      actor: "staff",
+      shopId: other.id,
+      tripId: later.id,
+      fullName: "Iris Okafor",
+      email: "iris.second@example.com",
+      phone: DIVER.phone,
+    });
+    if (!booked.ok) throw new Error("second shop booking failed");
+    return { ...base, other, otherBookingId: booked.bookingId };
+  }
+
+  it("keeps the soonest seat across shops when no shop is named", async () => {
+    const { db, bookingId, otherBookingId, now } = await twoShops();
+    await markPhoneRunningLate(db, { phone: E164, now });
+    expect(await lateAt(bookingId)).toEqual(now);
+    expect(await lateAt(otherBookingId)).toBeNull();
+  });
+
+  it("marks the named shop's seat even when another shop's boat leaves sooner", async () => {
+    const { db, bookingId, other, otherBookingId, now } = await twoShops();
+    expect(await markPhoneRunningLate(db, { phone: E164, now, shopId: other.id })).toMatchObject({
+      status: "marked",
+      bookingId: otherBookingId,
+    });
+    expect(await lateAt(otherBookingId)).toEqual(now);
+    expect(await lateAt(bookingId)).toBeNull();
+  });
+
+  it("marks the first shop's seat when that is the shop named", async () => {
+    const { db, shop, bookingId, otherBookingId, now } = await twoShops();
+    await markPhoneRunningLate(db, { phone: E164, now, shopId: shop.id });
+    expect(await lateAt(bookingId)).toEqual(now);
+    expect(await lateAt(otherBookingId)).toBeNull();
+  });
+
+  it("closes, and touches no other shop, when the named shop holds no seat for the number", async () => {
+    const { db, bookingId, otherBookingId, now } = await twoShops();
+    const empty = "00000000-0000-4000-8000-000000000000";
+    expect(await markPhoneRunningLate(db, { phone: E164, now, shopId: empty })).toEqual({
+      status: "closed",
+    });
+    expect(await lateAt(bookingId)).toBeNull();
+    expect(await lateAt(otherBookingId)).toBeNull();
   });
 });
 
@@ -496,7 +732,7 @@ describe("a message that names its booking", () => {
       ],
       now,
     );
-    expect(seats.get("a")).toMatchObject({ bookingId, tripId: trip.id, title: trip.title });
+    expect(seats.get("a")).toMatchObject([{ bookingId, tripId: trip.id, title: trip.title }]);
     // Inferred from the window, a message from a week ago names nothing.
     expect(seats.has("b")).toBe(false);
 

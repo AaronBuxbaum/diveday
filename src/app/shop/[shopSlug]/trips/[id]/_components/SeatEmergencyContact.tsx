@@ -4,29 +4,34 @@ import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { RosterEntry } from "./types";
 
 /**
  * The seat's emergency contact: on file or not, with its form under it. Staff
  * record or correct a contact from the same form wherever it is rendered — in
  * the open when the seat has none (that is work), behind the disclosure when
  * it does (that is reference).
+ *
+ * On a **held seat** (`held`, issue #2145) the contact is the seat's own
+ * (`bookings.held_emergency_contact_*`), never the matched record's: the same
+ * form writes it onto the booking (`saveBookingEmergencyContact`), and the
+ * manifest shows it in place of the withheld one.
  */
 export function SeatEmergencyContact({
   bookingId,
-  person,
-  hasEmergencyContact,
+  contact,
+  held = false,
   holdOpen,
   t,
   saveEmergencyContactAction,
 }: {
   bookingId: string;
-  person: RosterEntry["person"];
-  hasEmergencyContact: boolean;
+  contact: { name: string | null; phone: string | null };
+  held?: boolean;
   holdOpen: boolean;
   t: StaffTranslator;
   saveEmergencyContactAction: (formData: FormData) => void;
 }) {
+  const hasEmergencyContact = Boolean(contact.name && contact.phone);
   // Staff record or correct a contact from the same form wherever it is
   // rendered — in the open when the seat has none (that is work), behind
   // the disclosure when it does (that is reference).
@@ -42,7 +47,7 @@ export function SeatEmergencyContact({
             name="emergencyContactName"
             autoComplete="name"
             maxLength={120}
-            defaultValue={person.emergencyContactName ?? ""}
+            defaultValue={contact.name ?? ""}
             className={controlClass}
           />
         </Field>
@@ -52,7 +57,7 @@ export function SeatEmergencyContact({
             type="tel"
             autoComplete="tel"
             maxLength={40}
-            defaultValue={person.emergencyContactPhone ?? ""}
+            defaultValue={contact.phone ?? ""}
             className={controlClass}
           />
         </Field>
@@ -86,12 +91,18 @@ export function SeatEmergencyContact({
   // also a reason line under the name, so the fact says only "Not on file".
   return (
     <div>
-      <GroupLabel as="p">{t("trips.roster.emergencyContactHeading")}</GroupLabel>
+      <GroupLabel as="p">
+        {t(
+          held
+            ? "trips.roster.heldEmergencyContactHeading"
+            : "trips.roster.emergencyContactHeading",
+        )}
+      </GroupLabel>
       {hasEmergencyContact ? (
         <p className="mt-1 text-sm text-muted">
           {t("trips.roster.emergencyContactOnFile", {
-            name: person.emergencyContactName ?? "",
-            phone: person.emergencyContactPhone ?? "",
+            name: contact.name ?? "",
+            phone: contact.phone ?? "",
           })}
         </p>
       ) : (

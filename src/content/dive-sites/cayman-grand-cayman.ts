@@ -24,7 +24,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Chromis and durgons cover the top of the reef, with cleaning stations and crustaceans to find.",
       difficultyLevel: "beginner",
-      depthRange: "8–18 m (25–60 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 18,
       fitTone: "welcoming",
       fitNote: "Shallow and easy, good for slow macro hunting.",
@@ -53,7 +53,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Soft corals wave on the pinnacle and small animals shelter in its shadows. Jacks and the odd reef shark pass.",
       difficultyLevel: "intermediate",
-      depthRange: "18–27 m (60–90 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 27,
       currentNote: "Occasional strong current. Carry an SMB.",
       fitTone: "demanding",
@@ -92,7 +92,6 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       conservationNote:
         "No handling, no feeding, no lifting. These are wild animals; follow the crew's briefing.",
       difficultyLevel: "beginner",
-      depthRange: "4 m (13 ft)",
       maxDepthMeters: 4,
       currentNote:
         "Tour boats and snorkelers crowd the surface above. Surface at the mooring line and carry an SMB. The North Sound is sheltered.",
@@ -124,7 +123,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look inside the reef for morays and crabs, and out into the blue for eagle rays.",
       difficultyLevel: "intermediate",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 14 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -162,7 +161,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eagle rays gather along the wall, and the chasm is crowded with black coral and sponge.",
       difficultyLevel: "intermediate",
-      depthRange: "16–30 m (50–100 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 16 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -192,7 +191,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Corals · sponges",
       marineLifeDescription: "Hard corals and sponges cover the flat top and the two canyons.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 12 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -230,7 +229,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Chub and wrasse school in the recess, with eagle rays and turtles passing.",
       difficultyLevel: "intermediate",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 15 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -262,7 +261,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sponges that normally live much deeper grow in the overhang's twilight. Porcupinefish hold just above the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "15–30 m (50–100 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 15 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -294,7 +293,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Sponges · sea fans · parrotfish · reef fish",
       marineLifeDescription: "Corals and sponges grow across the pinnacle and the reef top.",
       difficultyLevel: "beginner",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       divePlan:
         "Stay on the reef top. The plan's floor is 18 m (60 ft). The drop-off beyond is a separate, deeper dive.",
@@ -324,7 +323,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Sea fans · decorator crabs · barrel sponges",
       marineLifeDescription: "Look closely in the fans for decorator crabs wearing bits of reef.",
       difficultyLevel: "beginner",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       divePlan:
         "Stay on the reef top. The plan's floor is 18 m (60 ft). The drop-off beyond is a separate, deeper dive.",
@@ -359,7 +358,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A free-swimming green moray is a regular. A light brings back the color the water absorbs.",
       difficultyLevel: "intermediate",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 18 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -392,7 +391,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
         "The pillar coral is rare in the Cayman Islands and brittle. Look, never touch.",
       conservationNote: "Pillar coral is rare and fragile. Keep fins and hands clear.",
       difficultyLevel: "beginner",
-      depthRange: "10–18 m (35–60 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       fitTone: "welcoming",
       fitNote: "Shallow and relaxed, with a coral worth hovering beside.",
@@ -419,7 +418,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Color survives at 8 m, and the miniwall is crowded with sponges and coral.",
       difficultyLevel: "beginner",
-      depthRange: "10–18 m (35–60 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       divePlan:
         "Stay on the reef top and hold 18 m (60 ft). The drop-off beyond is a separate, deeper dive.",
@@ -448,7 +447,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barred, masked and indigo hamlets share the reef, all the same shape in different colors.",
       difficultyLevel: "beginner",
-      depthRange: "10–18 m (35–60 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       currentNote: "Rarely any current or surge.",
       fitTone: "welcoming",
@@ -478,7 +477,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "This stretch of north wall is one of the better places on the East End to see turtles.",
       difficultyLevel: "intermediate",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 18 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -514,7 +513,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Soapfish · sea fans · soft corals",
       marineLifeDescription: "Soapfish lie on their sides on the bottom and watch you back.",
       difficultyLevel: "intermediate",
-      depthRange: "20–30 m (65–100 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 20 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -544,7 +543,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters sit in the barrel sponges, and juvenile bluehead wrasse school round the yellow tube sponges.",
       difficultyLevel: "beginner",
-      depthRange: "11–18 m (35–60 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 18,
       fitTone: "welcoming",
       fitNote: "Classic north-side reef, shallow and easy.",
@@ -576,7 +575,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Angelfish · sea plumes · turtles",
       marineLifeDescription: "Angelfish pair up beside sponges that a turtle has just opened.",
       difficultyLevel: "beginner",
-      depthRange: "10–18 m (35–60 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       fitTone: "welcoming",
       fitNote: "Shallow spur and groove, easy to follow.",
@@ -610,7 +609,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Black coral glows when the sun shines through it. Brittle stars sit in the deep sponges.",
       difficultyLevel: "intermediate",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       currentNote:
         "A little current is normal as you round each headland. Carry an SMB and agree the pickup with the crew.",
@@ -648,7 +647,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
         "French and bluestriped grunts hang in the grooves. Look in the hardpan for lettuce sea slugs.",
       conservationNote: "Pillar coral grows slowly and should never be touched.",
       difficultyLevel: "beginner",
-      depthRange: "11–18 m (35–60 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 18,
       fitTone: "welcoming",
       fitNote: "Shallow and full of life.",
@@ -675,7 +674,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A school of reef squid often holds north of the boat and turns white if you press in.",
       difficultyLevel: "beginner",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote:
         "Current not documented; ask the crew on the day. The East End is windward, so the surface can be rough.",
@@ -711,7 +710,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Caribbean reef sharks are seen along the ridge at times. Keep your distance and let them pass.",
       difficultyLevel: "intermediate",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 18 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -743,7 +742,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Sponges · feather plumes · soft corals",
       marineLifeDescription: "A feather plume stands about 2.5 m tall north of the pin.",
       difficultyLevel: "intermediate",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 18 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -775,7 +774,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
         "Watch a barrel sponge filter and you can see it vent through its top. Never climb into one.",
       conservationNote: "Do not climb into the barrel sponges.",
       difficultyLevel: "intermediate",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 18 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -805,7 +804,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Males rise from their burrows and display. Check old conch shells for corkscrew anemones and cleaner shrimp.",
       difficultyLevel: "intermediate",
-      depthRange: "11–18 m (35–60 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 18,
       currentNote:
         "In a lively spot on the coast, so the sea can be rough and the site is dived less often. Current not documented; ask the crew on the day.",
@@ -840,7 +839,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Loggerhead turtles · reef fish",
       marineLifeDescription: "Loggerheads cruise the blue, especially in the spring mating season.",
       difficultyLevel: "intermediate",
-      depthRange: "19–30 m (60–100 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 30,
       currentNote:
         "On the northeast corner, so it is not always sheltered enough to dive. Current not documented; ask the crew on the day.",
@@ -874,7 +873,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Slipper lobsters shelter in the reef's crevices. Watch the blue for loggerheads.",
       difficultyLevel: "intermediate",
-      depthRange: "7–18 m (25–60 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 18,
       fitTone: "unknown",
       fitNote:
@@ -903,7 +902,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Juvenile yellowtail damselfish glow with blue spots beneath the elkhorn.",
       difficultyLevel: "intermediate",
-      depthRange: "7–18 m (25–60 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 18,
       fitTone: "unknown",
       fitNote:
@@ -937,7 +936,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Snapper and grunts school over the reef, and porkfish sit under the ledges.",
       difficultyLevel: "intermediate",
-      depthRange: "10–18 m (35–60 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       minimumCertificationLevel: "advanced_open_water",
       fitTone: "demanding",
@@ -974,7 +973,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Angelfish and parrotfish work the ridge, with grunts in the shade of the coral.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       fitTone: "unknown",
       fitNote:
@@ -1008,7 +1007,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big parrotfish crunch the rock you can hear before you see them. Smaller species spawn in the afternoon.",
       difficultyLevel: "intermediate",
-      depthRange: "12–17 m (40–55 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 17,
       fitTone: "welcoming",
       fitNote: "The cavern is wide, low and overhead. Stay out of it.",
@@ -1040,7 +1039,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Groupers · eagle rays · reef fish",
       marineLifeDescription: "Coney, graysby, Nassau, black and tiger groupers live here.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote:
         "A windswept corner where conditions vary and the sea can be rough. Current not documented; ask the crew on the day.",
@@ -1077,7 +1076,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Cubera snapper up to a meter long patrol the edge and move off if you crowd them.",
       difficultyLevel: "intermediate",
-      depthRange: "24–30 m (80–100 ft)",
+      depthMinMeters: 24,
       maxDepthMeters: 30,
       currentNote:
         "The most exposed of The Corner sites, with upwellings and currents. Best as a drift dive and can be hard to get on. Carry an SMB.",
@@ -1110,7 +1109,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Heavy schools of fish gather at the big buttress, with reef sharks along the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "19–30 m (60–100 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 19 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -1146,7 +1145,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Yellowhead jawfish · pike blennies · reef fish",
       marineLifeDescription: "Approach low and slow and the jawfish stay out of their burrows.",
       difficultyLevel: "beginner",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       fitTone: "welcoming",
       fitNote: "A relaxed ledge for macro lovers.",
@@ -1174,7 +1173,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Caribbean reef sharks are seen over the sand at times. Keep your distance.",
       difficultyLevel: "intermediate",
-      depthRange: "19–30 m (60–100 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 19 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -1211,7 +1210,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Sharks · scorpionfish · reef fish",
       marineLifeDescription: "Scorpionfish blend into the reef. Look, don't touch.",
       difficultyLevel: "intermediate",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 12 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -1248,7 +1247,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Longsnout butterflyfish · star coral",
       marineLifeDescription: "Plates of star coral spread out from the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "20–30 m (65–100 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 20 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -1284,7 +1283,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Yellow stingrays · jacks · chub",
       marineLifeDescription: "Chub, bar jacks and creole wrasse make the safety stop a show.",
       difficultyLevel: "beginner",
-      depthRange: "10–18 m (35–60 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       fitTone: "welcoming",
       fitNote: "Easy figure-eight route and a fine safety stop.",
@@ -1316,7 +1315,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Peacock flounders · sea plumes · fans",
       marineLifeDescription: "Peacock flounders flash white and blue if disturbed.",
       difficultyLevel: "beginner",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       fitTone: "welcoming",
       fitNote: "Quiet, shallow and easy to navigate.",
@@ -1350,7 +1349,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Purple lace coral and red algae grow beneath the arch, and shrimp wave from the cracks.",
       difficultyLevel: "beginner",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       fitTone: "welcoming",
       fitNote:
@@ -1383,7 +1382,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Surgeonfish · butterflyfish · damselfish",
       marineLifeDescription: "Ledges give small fish somewhere to hide above the drop.",
       difficultyLevel: "intermediate",
-      depthRange: "20–30 m (65–100 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 20 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -1422,7 +1421,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Wall life · pinnacles",
       marineLifeDescription: "The pinnacles are covered in coral and sponge.",
       difficultyLevel: "intermediate",
-      depthRange: "21–30 m (70–100 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 21 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -1455,7 +1454,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Blue tangs stream along the reef. Big groupers hold at the edge of the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "20–30 m (65–100 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       currentNote:
         "The deeper walls in this part of High Rock often have current. Drift the site, carry an SMB and agree the pickup with the crew.",
@@ -1488,7 +1487,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Spotted eagle rays dig for crustaceans in the sand patches near 21 m.",
       difficultyLevel: "intermediate",
-      depthRange: "20–30 m (65–100 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       currentNote:
         "Some current now and then, which keeps visibility high. Carry an SMB and agree the pickup with the crew.",
@@ -1524,7 +1523,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Tarpon · reef fish",
       marineLifeDescription: "The tarpon are in no hurry to move for divers.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote:
         "Close to shore with a big swell, so it is not always diveable. Current not documented; ask the crew on the day.",
@@ -1554,7 +1553,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Hawksbill turtles · reef fish",
       marineLifeDescription: "The hawksbills are curious and close.",
       difficultyLevel: "beginner",
-      depthRange: "14–18 m (45–60 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 18,
       divePlan:
         "Stay on the reef top. The plan's floor is 18 m (60 ft). The drop-off beyond is a separate, deeper dive.",
@@ -1588,7 +1587,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Razorfish · reef fish",
       marineLifeDescription: "Razorfish hover over the sand and dart into it when startled.",
       difficultyLevel: "beginner",
-      depthRange: "15–18 m (50–60 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 18,
       divePlan:
         "Stay on the reef top and hold 18 m (60 ft). The drop-off beyond is a separate, deeper dive.",
@@ -1618,7 +1617,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Parrotfish and angelfish work the ridges, with grunts over the coral.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       minimumCertificationLevel: "advanced_open_water",
       fitTone: "demanding",
@@ -1651,7 +1650,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Nurse sharks · fairy basslets",
       marineLifeDescription: "Fairy basslets swim upside down under the overhangs.",
       difficultyLevel: "intermediate",
-      depthRange: "12–18 m (40–60 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 18,
       fitTone: "unknown",
       fitNote:
@@ -1679,7 +1678,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Wall life · pinnacles",
       marineLifeDescription: "Plenty of headlands and ledges to explore past the pinnacles.",
       difficultyLevel: "intermediate",
-      depthRange: "19–30 m (60–100 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 19 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -1712,7 +1711,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The rubble field draws macro hunters. The sand holds blennies and jawfish.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       fitTone: "unknown",
       fitNote:
@@ -1745,7 +1744,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Blackbar soldierfish · star corals",
       marineLifeDescription: "Soldierfish wear small isopods on their heads.",
       difficultyLevel: "intermediate",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       fitTone: "unknown",
       fitNote:
@@ -1778,7 +1777,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Star corals · gobies · blennies",
       marineLifeDescription: "A good place for star coral spawning each autumn.",
       difficultyLevel: "intermediate",
-      depthRange: "10–18 m (35–60 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       fitTone: "unknown",
       fitNote:
@@ -1811,7 +1810,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Coral · sponges",
       marineLifeDescription: "Calm and sheltered on windier days.",
       difficultyLevel: "intermediate",
-      depthRange: "19–30 m (60–100 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 30,
       currentNote: "Sheltered from wind and waves.",
       divePlan:
@@ -1846,7 +1845,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Trunkfish · reef fish",
       marineLifeDescription: "Trunkfish blow sand off buried food.",
       difficultyLevel: "beginner",
-      depthRange: "9–15 m (30–50 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 15,
       fitTone: "welcoming",
       fitNote: "Very shallow and open, with lots of time.",
@@ -1878,7 +1877,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Sponges · overhang",
       marineLifeDescription: "A light brings back the color in the shade of the overhang.",
       difficultyLevel: "intermediate",
-      depthRange: "18–30 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 18 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -1919,7 +1918,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Chub school over the reef and small bright juveniles shelter in the coral.",
       difficultyLevel: "intermediate",
-      depthRange: "9–15 m (30–50 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 15,
       fitTone: "welcoming",
       fitNote: "Shallow and detailed. The passageways are overhead; stay out of them.",
@@ -1949,7 +1948,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nurse sharks rest in the shallow overhangs, and lobsters and eels fill the reef's sides.",
       difficultyLevel: "intermediate",
-      depthRange: "10–18 m (35–60 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 18,
       currentNote: "A south-side site, dived when northerly winds rule out the north and west.",
       divePlan:
@@ -1982,7 +1981,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Coral growth has covered the hull, with sponges, angelfish and snappers around it.",
       difficultyLevel: "intermediate",
-      depthRange: "18–20 m (60–65 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 20,
       currentNote:
         "Shore entry over ironshore: use the steps or ladder, check the surge and plan to exit at the same entry. Watch for boat and watersports traffic. Current not documented; ask the crew on the day.",
@@ -2025,7 +2024,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Sea turtles · eels · nurse sharks",
       marineLifeDescription: "Resident turtles, eels and nurse sharks share the reef.",
       difficultyLevel: "beginner",
-      depthRange: "9–17 m (30–55 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 17,
       currentNote:
         "Shore entry over ironshore: use the steps or ladder, check the surge and plan to exit at the same entry. Watch for boat and watersports traffic. Current not documented; ask the crew on the day.",
@@ -2064,7 +2063,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Tarpon · barracuda · groupers · lobsters",
       marineLifeDescription: "Tarpon, groupers and the odd barracuda hold around the coral heads.",
       difficultyLevel: "intermediate",
-      depthRange: "6–12 m (20–40 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 12,
       minimumCertificationLevel: "advanced_open_water",
       currentNote:
@@ -2104,7 +2103,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Tarpon · barracuda · groupers · lobsters",
       marineLifeDescription: "Tarpon, groupers and the odd barracuda hold around the coral heads.",
       difficultyLevel: "intermediate",
-      depthRange: "6–12 m (20–40 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 12,
       minimumCertificationLevel: "advanced_open_water",
       currentNote:
@@ -2141,7 +2140,6 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Tarpon · sponges · coral",
       marineLifeDescription: "Tarpon hold over the relics. Most of the ship has gone.",
       difficultyLevel: "intermediate",
-      depthRange: "8 m (25 ft)",
       maxDepthMeters: 8,
       currentNote:
         "No diving while a ship or tender is moving in the channel. Carry an SMB. Surface only at the line.",
@@ -2172,7 +2170,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Watch a grouper being cleaned at the ledges, then finish among the schools on top.",
       difficultyLevel: "beginner",
-      depthRange: "9–17 m (30–55 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 17,
       currentNote:
         "Watersports and boat traffic off Seven Mile Beach: listen for engines, surface at the line and carry an SMB. Current not documented; ask the crew on the day.",
@@ -2210,7 +2208,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
         "Grunts, snappers and parrotfish work the reef, with octopus in the crevices.",
       conservationNote: "Pillar coral is rare and fragile. Keep fins and hands clear.",
       difficultyLevel: "beginner",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       divePlan:
         "Stay on the reef near the mooring at 9 m (30 ft) and hold no deeper than 18 m (60 ft). The miniwall drops off beyond.",
@@ -2246,7 +2244,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The overhangs and coral fingers hold a wide mix of small and large reef life.",
       difficultyLevel: "beginner",
-      depthRange: "9–18 m (30–60 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 18,
       currentNote:
         "Watersports and boat traffic off Seven Mile Beach: listen for engines, surface at the line and carry an SMB. Current not documented; ask the crew on the day.",
@@ -2275,7 +2273,6 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Nurse sharks · turtles · blue tang · spotted drums · chromis",
       marineLifeDescription: "Nurse sharks sleep under the ledges and turtles feed along the reef.",
       difficultyLevel: "beginner",
-      depthRange: "12 m (40 ft)",
       maxDepthMeters: 12,
       currentNote:
         "Watersports and boat traffic off Seven Mile Beach: listen for engines, surface at the line and carry an SMB. Current not documented; ask the crew on the day.",
@@ -2312,7 +2309,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays dig in the sand, and snapper and angelfish work the coral fingers.",
       difficultyLevel: "beginner",
-      depthRange: "17–18 m (55–60 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 18,
       currentNote:
         "Watersports and boat traffic off Seven Mile Beach: listen for engines, surface at the line and carry an SMB. Current not documented; ask the crew on the day.",
@@ -2345,7 +2342,6 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Eagle rays · reef fish",
       marineLifeDescription: "Eagle rays pass over the sand, and fish gather on the wreckage.",
       difficultyLevel: "intermediate",
-      depthRange: "15 m (50 ft)",
       maxDepthMeters: 15,
       fitTone: "welcoming",
       fitNote: "An old wreck in shallow water. Stay outside the hull.",
@@ -2379,7 +2375,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Reef fish · coral",
       marineLifeDescription: "Life crowds the reef and the neighboring wreck.",
       difficultyLevel: "beginner",
-      depthRange: "14–15 m (45–50 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 15,
       currentNote:
         "Watersports and boat traffic off Seven Mile Beach: listen for engines, surface at the line and carry an SMB. Current not documented; ask the crew on the day.",
@@ -2409,7 +2405,6 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays and turtles pass the reef, and nurse sharks tuck in among the coral.",
       difficultyLevel: "intermediate",
-      depthRange: "18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote:
         "Watersports and boat traffic off Seven Mile Beach: listen for engines, surface at the line and carry an SMB. Current not documented; ask the crew on the day.",
@@ -2439,7 +2434,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Garden eels · stingrays · eagle rays · tang · jacks",
       marineLifeDescription: "The sand and the reef top are both busy with fish.",
       difficultyLevel: "beginner",
-      depthRange: "10–15 m (35–50 ft)",
+      depthMinMeters: 10,
       maxDepthMeters: 15,
       currentNote:
         "Watersports and boat traffic off Seven Mile Beach: listen for engines, surface at the line and carry an SMB. Current not documented; ask the crew on the day.",
@@ -2475,7 +2470,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Coral, sponges and fans have settled on the hull, and the clear water suits photographers.",
       difficultyLevel: "intermediate",
-      depthRange: "15–18 m (50–60 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 18,
       fitTone: "welcoming",
       fitNote: "A photogenic wreck at moderate depth. Stay outside the hull.",
@@ -2515,7 +2510,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Coral formations · sand slope",
       marineLifeDescription: "Mountains of coral frame the slope.",
       difficultyLevel: "intermediate",
-      depthRange: "17–30 m (55–100 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 30,
       currentNote:
         "Boat and watersports traffic near the Kittiwake: listen for engines, carry an SMB and surface at the line. Current not documented; ask the crew on the day.",
@@ -2555,7 +2550,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eels and rays work the sand around the hull, and turtles and morays use the structure.",
       difficultyLevel: "intermediate",
-      depthRange: "5–19 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 20,
       currentNote:
         "Seven Mile Beach boat and watersports traffic: listen for engines, carry an SMB and surface at the line. Current not documented; ask the crew on the day.",
@@ -2595,7 +2590,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Sponges · lobsters · morays · sea fans",
       marineLifeDescription: "The wall edge is rich in small life, with sponge on the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "14–30 m (45–100 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 30,
       divePlan:
         "Go around the swim-throughs to the wall near 24 m, work along it no deeper than 30 m (100 ft), then finish on top of the wall near 15 m.",
@@ -2634,7 +2629,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "This corner of the marine park holds more jacks, triggerfish and barracuda than most.",
       difficultyLevel: "intermediate",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       divePlan:
         "Down the mooring to about 11 m, along the wall no deeper than 30 m (100 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -2665,7 +2660,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Spotted drums · eagle rays · garden eels · schooling fish",
       marineLifeDescription: "Fish school over the heads, and eels and rays work the sand.",
       difficultyLevel: "beginner",
-      depthRange: "6–15 m (20–50 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 15,
       fitTone: "welcoming",
       fitNote: "Shallow and easy, open to every level.",
@@ -2696,7 +2691,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Black coral grows on the shaded walls of the channels, and jacks patrol the edge.",
       difficultyLevel: "advanced",
-      depthRange: "17–32 m (55–105 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 32,
       divePlan:
         "Down the mooring, along the wall no deeper than 32 m (105 ft), and back up the shallower reef with reserve gas. The wall drops far below this floor.",
@@ -2737,7 +2732,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Elephant ear sponges · eagle rays · morays · turtles",
       marineLifeDescription: "The sponges are the show, with pelagic visitors off the wall.",
       difficultyLevel: "advanced",
-      depthRange: "19–40 m (60–130 ft)",
+      depthMinMeters: 19,
       maxDepthMeters: 40,
       currentNote: "Prone to current, so it cannot always be dived. Carry an SMB.",
       fitTone: "demanding",
@@ -2773,7 +2768,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Groupers · horse-eye jacks · oceanic triggerfish · barracuda",
       marineLifeDescription: "The marine park starts here, and fish stocks are visibly richer.",
       difficultyLevel: "advanced",
-      depthRange: "20–30 m (65–100 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 30,
       currentNote:
         "Stronger currents are sometimes present. Carry an SMB and agree the pickup with the crew.",
@@ -2805,7 +2800,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish crowd the reef and above it, and hawksbills graze the sponge beside it.",
       difficultyLevel: "intermediate",
-      depthRange: "12–21 m (40–70 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 21,
       currentNote:
         "Heavy rain can form a halocline here, where fresh water meets salt and vision blurs. Current not documented; ask the crew on the day.",
@@ -2850,7 +2845,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Turtles graze the reef and summer silverside schools make light tunnels.",
       difficultyLevel: "beginner",
-      depthRange: "6–18 m (20–60 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 18,
       divePlan:
         "Stay on the reef top and hold 18 m (60 ft). The drop-off beyond is a separate, deeper dive.",
@@ -2895,7 +2890,7 @@ export const CAYMAN_GRAND_CAYMAN: DiveSiteTemplate[] = [
       marineLife: "Stingrays · barracuda · loggerhead turtles · eagle rays",
       marineLifeDescription: "Rays and turtles are common, with the odd reef shark.",
       difficultyLevel: "intermediate",
-      depthRange: "5–18 m (15–60 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 18,
       currentNote:
         "Shore entry down a ladder: check the surge and plan to exit by the same ladder. Little or no current, but plenty of boat traffic; use a surface buoy.",

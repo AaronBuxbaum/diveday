@@ -1,7 +1,8 @@
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { checkoutCharge, seatCheckoutCharge } from "@/lib/deposits";
 import { log } from "@/lib/log";
+import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { isDiver, type ParticipantType } from "@/lib/participant-types";
 import { parsePassThroughFee, passThroughTotalCents } from "@/lib/pass-through-fee";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
@@ -190,7 +191,9 @@ export async function startBookingCheckout(
         inArray(bookings.id, input.bookingIds),
         eq(bookings.shopId, input.shopId),
         eq(bookings.tripId, input.tripId),
-        ne(bookings.status, "cancelled"),
+        // Only a seat the diver still holds is charged: a released one (turned
+        // away, not here) may already be resold (layer 3 review, dde-2 #1).
+        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
       ),
     );
   if (bookingRows.length !== input.bookingIds.length) return { ok: false, reason: "invalid" };
@@ -919,7 +922,7 @@ export async function settledPartyPayment(
   db: DbExecutor,
   shopId: string,
   bookingId: string,
-): Promise<{ amountCents: number; currency: string; seats: number } | null> {
+): Promise<{ checkoutId: string; amountCents: number; currency: string; seats: number } | null> {
   const [booking] = await db
     .select({ partyLeadBookingId: bookings.partyLeadBookingId })
     .from(bookings)
@@ -946,6 +949,7 @@ export async function settledPartyPayment(
     );
   if (covered.some((seat) => seat.status === "cancelled")) return null;
   return {
+    checkoutId: checkout.id,
     amountCents: checkout.settledTotalCents,
     currency: checkout.currency,
     seats: Math.max(1, covered.length),
@@ -1085,6 +1089,40 @@ export async function recordCheckoutPaymentIntent(
 }
 
 /**
+ * **Withdraw every pending checkout quoting this seat**, for a writer that has
+ * just released it (the desk's "Turned away" and "Not here"; layer 3 re-review,
+ * dde-3 #3). The caller holds the seat's lock, the order every checkout-retiring
+ * writer takes (issue #2335). A tab completed afterwards lands as paid after
+ * close (`markCheckoutPaidBySessionId`), money for a person to refund, never a
+ * payment booked to a seat the shop may have sold.
+ */
+export async function expirePendingCheckoutsForBooking(
+  tx: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<void> {
+  const linked = tx
+    .select({ id: bookingCheckoutBookings.checkoutId })
+    .from(bookingCheckoutBookings)
+    .where(
+      and(
+        eq(bookingCheckoutBookings.shopId, shopId),
+        eq(bookingCheckoutBookings.bookingId, bookingId),
+      ),
+    );
+  await tx
+    .update(bookingCheckouts)
+    .set({ status: "expired" })
+    .where(
+      and(
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "pending"),
+        inArray(bookingCheckouts.id, linked),
+      ),
+    );
+}
+
+/**
  * Lock every seat a checkout covers, in id order, before anything touches the
  * checkout row itself. The one lock order for a seat and its checkout (issue
  * #2335): the expiring writers in `src/db/bookings.ts` hold the seat and then
@@ -1167,8 +1205,23 @@ export async function markCheckoutPaidBySessionId(
   settledTotalCents?: number | null,
   /** Stripe's reported tax total for the completed session. */
   settledTaxCents?: number | null,
+  /**
+   * Out-parameter: set `firstCompletion` true when THIS call is the one that
+   * moved the checkout `pending -> completed`, and left false for a replay,
+   * a repair run or a refusal. It is what lets the caller do something once
+   * per payment (the party receipt, #2566) without a second durable flag: the
+   * transition happens once, under the checkout's row lock. And
+   * `reportedOverCeiling`: Stripe's total was more than DiveDay could have
+   * asked for (the recorded figure is clamped to the ceiling), so it is not a
+   * figure to read back to anyone: the receipt sends nothing.
+   */
+  outcome?: { firstCompletion: boolean; reportedOverCeiling?: boolean },
 ): Promise<BookingCheckout | null> {
-  return db.transaction(async (tx) => {
+  let firstCompletion = false;
+  let reportedOverCeiling = false;
+  const result = await db.transaction(async (tx) => {
+    firstCompletion = false;
+    reportedOverCeiling = false;
     // The seats first, then the checkout (issue #2335): the order every
     // writer that retires a pending checkout already takes (it holds the seat
     // it is changing, then expires the checkout quoting it). Taking the
@@ -1283,6 +1336,7 @@ export async function markCheckoutPaidBySessionId(
         ? null
         : Math.min(reportedTaxCents, reportedSettledCents ?? checkout.totalCents);
     if (reportedSettledCents !== null && reportedSettledCents > settledCeiling) {
+      reportedOverCeiling = true;
       log("checkout.settled_total_over_asked", "error", {
         shopId: checkout.shopId,
         checkoutId: checkout.id,
@@ -1332,6 +1386,7 @@ export async function markCheckoutPaidBySessionId(
       if (checkout.status === "pending") logPaidDisqualified(checkout, "no_longer_pending");
       return null;
     }
+    firstCompletion = checkout.status === "pending";
 
     const linked = await tx
       .select({
@@ -1462,6 +1517,11 @@ export async function markCheckoutPaidBySessionId(
     });
     return updated;
   });
+  if (outcome) {
+    outcome.firstCompletion = result !== null && firstCompletion;
+    outcome.reportedOverCeiling = reportedOverCeiling;
+  }
+  return result;
 }
 
 /**

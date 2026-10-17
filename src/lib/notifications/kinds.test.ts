@@ -4,6 +4,7 @@ import type { ZodObject, ZodType } from "zod";
 import {
   NOTIFICATION_TRIP_TITLE_MAX,
   type Notification,
+  notificationIdempotencyKey,
   notificationSchema,
   notificationSubjectEmail,
   notificationSubjectPhone,
@@ -339,5 +340,34 @@ describe("every kind's tripTitle shortens a long title instead of rejecting it",
     });
     if (parsed.kind !== "booking_confirmation") throw new Error("wrong kind");
     expect(parsed.tripTitle.length).toBeLessThanOrEqual(NOTIFICATION_TRIP_TITLE_MAX);
+  });
+});
+
+describe("seat_already_held is keyed once per held seat per hour", () => {
+  const heldBookingId = "00000000-0000-4000-8000-0000000000a1";
+  const keyAt = (heldId: string, requestedAt: Date) =>
+    notificationIdempotencyKey({
+      kind: "seat_already_held",
+      heldBookingId: heldId,
+      shopId: "00000000-0000-4000-8000-0000000000a2",
+      to: "holder@example.com",
+      locale: "en-US",
+      diverName: "Orla Organizer",
+      shopName: "Blue Mantis",
+      tripTitle: "Two-Tank Reef",
+      startsAt: new Date("2026-10-20T14:00:00Z"),
+      timezone: "America/New_York",
+      requestedAt,
+    });
+
+  it("gives every attempt inside one hour the same key, and the next hour another", () => {
+    const first = keyAt(heldBookingId, new Date("2026-10-16T10:01:00Z"));
+    expect(keyAt(heldBookingId, new Date("2026-10-16T10:59:59Z"))).toBe(first);
+    expect(keyAt(heldBookingId, new Date("2026-10-16T11:00:00Z"))).not.toBe(first);
+  });
+
+  it("keeps two held seats apart in the same hour", () => {
+    const at = new Date("2026-10-16T10:01:00Z");
+    expect(keyAt(heldBookingId, at)).not.toBe(keyAt("00000000-0000-4000-8000-0000000000a3", at));
   });
 });

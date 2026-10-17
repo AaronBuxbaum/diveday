@@ -1,4 +1,5 @@
 import { and, asc, eq, gte, ne, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { Client } from "pg";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -331,6 +332,49 @@ export async function publishManifestEvent(
   shopId: string,
   tripId: string,
 ): Promise<void> {
+  await publishOne(db, shopId, tripId);
+  // A charter seat marked as a training dive (issue #2275) is asked the forms
+  // of a seat on this departure, and boards on whether that seat still holds:
+  // whatever changed here can change what the charter's manifest says.
+  for (const charterId of await chartersMarkedOn(db, shopId, tripId)) {
+    await publishOne(db, shopId, charterId);
+  }
+}
+
+/** The most charters one departure's change signals; a real course has a handful. */
+const MAX_MARKED_CHARTERS_PER_CHANGE = 25;
+
+/**
+ * The other departures holding a seat whose training mark names a seat on
+ * this one, at this shop. Never throws: an empty list only leaves those
+ * manifests on their own poll.
+ */
+async function chartersMarkedOn(db: AppDb, shopId: string, tripId: string): Promise<string[]> {
+  const enrollment = alias(bookings, "enrollment");
+  try {
+    const rows = await db
+      .selectDistinct({ id: bookings.tripId })
+      .from(bookings)
+      .innerJoin(enrollment, eq(enrollment.id, bookings.trainingEnrollmentBookingId))
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          eq(enrollment.shopId, shopId),
+          eq(enrollment.tripId, tripId),
+          ne(bookings.tripId, tripId),
+        ),
+      )
+      // diveday:allow-time-id-order: a capped list of ids to republish to, never shown to anyone.
+      .orderBy(asc(bookings.tripId))
+      .limit(MAX_MARKED_CHARTERS_PER_CHANGE);
+    return rows.map((row) => row.id);
+  } catch {
+    return [];
+  }
+}
+
+/** {@link publishManifestEvent} for one departure alone. */
+async function publishOne(db: AppDb, shopId: string, tripId: string): Promise<void> {
   try {
     if (!process.env.DATABASE_URL) {
       dispatch({ shopId, tripId });

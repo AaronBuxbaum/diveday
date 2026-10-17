@@ -16,7 +16,13 @@ import { seatListPriceCents } from "@/lib/deposits";
 import { typeChangedDeskEventKind } from "@/lib/desk-events";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
-import { seatName } from "@/lib/held-seat";
+import {
+  type HeldContactChoice,
+  heldContactCarry,
+  movingHeldContact,
+  seatName,
+} from "@/lib/held-seat";
+import { inTrainingBefore } from "@/lib/in-training";
 import { normalizeEmailAddress } from "@/lib/inbox";
 import { cleanDietaryNote } from "@/lib/lunch-aboard";
 import { rowCanBeReactivated } from "@/lib/no-show";
@@ -44,16 +50,17 @@ import {
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
 import { hasReturned, hasSailed, MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
+import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
-import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
 import { boundLockWaits } from "./lock-bounds";
 import { publishManifestEvent } from "./manifest-events";
-import { recordDiverActivity, recordTripActivity } from "./operations";
+import { recordDiverActivity, recordSeatChange, recordTripActivity } from "./operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
@@ -80,8 +87,10 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { lockSeatDeparture } from "./seat-locks";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
+import { dropTrainingMarkWithin } from "./training-marks";
 import { type SendRescheduleNoticesOptions, sendMissedRescheduleNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
 import {
@@ -572,6 +581,7 @@ export async function addPartySeat(
       shopId: input.shopId,
       tripId: lead.tripId,
       actorPersonId: lead.personId,
+      subjectPersonId: outcome.personId,
       entry: { code: "seat_added_from_trip_link", diver: input.seatName },
     });
     return { ok: true, bookingId: outcome.bookingId };
@@ -943,8 +953,9 @@ async function createBookingRecord(
     .for("no key update", { of: trips });
   if (!tripTakesSeatFrom(trip, req.actor)) return { ok: false, reason: "trip_unavailable" };
   const participantType: ParticipantType = req.participantType ?? "diver";
-  // A course session takes divers only, and the public form sells only the
-  // types this departure prices, read on the locked row (`participantTypeRefusal`).
+  // The public form sells only the types this departure prices, and a course
+  // session takes a non-diver only at a price the shop named, read on the
+  // locked row (`participantTypeRefusal`).
   const typeRefusal = participantTypeRefusal({ actor: req.actor, participantType, trip });
   if (typeRefusal) return { ok: false, reason: typeRefusal };
 
@@ -974,7 +985,11 @@ async function createBookingRecord(
   let { person, identityUnconfirmed, identityClaim } = resolved;
   const { pendingInsert } = resolved;
 
-  if (course) {
+  // Enrollment is a diver's (issue #2226): a snorkeler or a rider on a course
+  // session is a passenger beside the students, asked none of the course's
+  // card or age gates and counted against none of its in-water ratio.
+  const student = Boolean(course) && isDiver(participantType);
+  if (course && student) {
     const refusal = await courseEnrollmentFor(tx, req, course, person, trip.startsAt);
     if (refusal) return { ok: false, reason: refusal };
   }
@@ -995,7 +1010,6 @@ async function createBookingRecord(
   // capacity, but a copied, rolled, reinstated or pre-H-107 departure can
   // still carry one, and this is the one gate all of them reach.
   const held = await heldSeatCounts(tx, trip.shopId, trip.id);
-  const booked = held.aboard;
   const seatFull = seatRefusal(
     participantType,
     { ...trip, capacity: await sellableCapacity(tx, trip) },
@@ -1004,7 +1018,8 @@ async function createBookingRecord(
   if (seatFull) {
     return { ok: false, reason: seatFull };
   }
-  const ratioRefusal = courseRatioRefusal(booked, entryLevelSeatCap);
+  // The ratio counts students, who are the divers on a course session.
+  const ratioRefusal = student ? courseRatioRefusal(held.divers, entryLevelSeatCap) : null;
   if (ratioRefusal) return { ok: false, reason: ratioRefusal };
 
   // The trip's own cert/specialty/nitrox gate (DOM-M6). Every door that sells a
@@ -1113,6 +1128,9 @@ async function writeSeat(
       .update(bookings)
       .set({
         status: "booked",
+        // A new booking, so no turn-away from the row's last life.
+        turnedAwayReason: null,
+        turnedAwayAt: null,
         // A reactivated row is a new booking and takes this booking's type.
         // An old nitrox request rides along only for a diver: enriched air is
         // something a diver breathes, and the column's check refuses it on
@@ -1609,7 +1627,7 @@ export async function getBookingForTrip(
  * opposite case, so this is its own narrow read rather than a loosened filter
  * on that one.
  */
-export async function bookingDiverName(db: AppDb, shopId: string, bookingId: string) {
+async function bookingDiverName(db: AppDb, shopId: string, bookingId: string) {
   const [row] = await db
     .select({ fullName: people.fullName })
     .from(bookings)
@@ -1659,12 +1677,12 @@ export type RestoreBookingOutcome =
  *   bookings pause" (glossary). The diver whose row was mis-tapped is an
  *   existing booking; putting them back is undoing a clerical slip, not
  *   selling a seat the hold was meant to stop.
- * - *Already departed.* `cancelBooking` has no trip-state gate at all and the
- *   Remove control renders on every roster row, including at sea — a departed
- *   trip is still `scheduled` and roll call stays live. Refusing the undo
- *   there would make a misclick on an at-sea manifest permanent, and the two
- *   errors are not symmetric: an under-listed manifest costs a search, an
- *   over-listed one costs a tap.
+ * - *Already departed.* `cancelBooking` refuses only a diver marked aboard a
+ *   boat that has left (H-133); every other row can still be removed at sea —
+ *   a departed trip is still `scheduled` and roll call stays live. Refusing
+ *   the undo there would make a misclick on an at-sea manifest permanent, and
+ *   the two errors are not symmetric: an under-listed manifest costs a
+ *   search, an over-listed one costs a tap.
  *
  * Capacity and the course ratio still bind in both cases, so a seat that has
  * genuinely been taken is still refused.
@@ -1673,6 +1691,8 @@ export async function restoreBooking(
   db: AppDb,
   shopId: string,
   bookingId: string,
+  /** The staffer who put the seat back, for the trail line written with it. */
+  trail?: { actorPersonId: string },
 ): Promise<RestoreBookingOutcome> {
   return db.transaction(async (tx) => {
     const [booking] = await tx
@@ -1704,7 +1724,6 @@ export async function restoreBooking(
     // 20261007-participant-types).
     // The boat's certificate caps it under the same lock (H-107).
     const held = await heldSeatCounts(tx, trip.shopId, trip.id);
-    const booked = held.aboard;
     const full = seatRefusal(
       booking.participantType,
       { ...trip, capacity: await sellableCapacity(tx, trip) },
@@ -1712,7 +1731,9 @@ export async function restoreBooking(
     );
     if (full) return full;
 
-    if (trip.courseId) {
+    // The ratio counts students, the divers on a course session; a snorkeler
+    // or a rider beside them is not one (issue #2226).
+    if (trip.courseId && isDiver(booking.participantType)) {
       const [course] = await tx
         .select()
         .from(courses)
@@ -1724,12 +1745,14 @@ export async function restoreBooking(
       // instructor caps at zero and refuses too: a seat cannot be handed back
       // to a session that could not sell it in the first place.
       const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (seatCap !== null && booked >= seatCap) return "course_ratio_full";
+      if (seatCap !== null && held.divers >= seatCap) return "course_ratio_full";
     }
 
     await tx
       .update(bookings)
-      .set({ status: "booked" })
+      // A seat back on the boat carries no turned-away reason from its last
+      // life (`bookings_turned_away_is_released`).
+      .set({ status: "booked", turnedAwayReason: null, turnedAwayAt: null })
       .where(and(eq(bookings.id, bookingId), eq(bookings.status, "cancelled")));
     await settlePackageCoverage(tx, {
       shopId,
@@ -1739,6 +1762,15 @@ export async function restoreBooking(
       trip,
       participantType: booking.participantType,
     });
+    if (trail) {
+      await recordSeatChange(tx, {
+        shopId,
+        tripId: trip.id,
+        actorPersonId: trail.actorPersonId,
+        bookingId,
+        code: "booking_restored",
+      });
+    }
     return "restored";
   });
 }
@@ -1864,7 +1896,15 @@ async function courseGateRefusal(
 
 export async function moveBooking(
   db: AppDb,
-  input: { shopId: string; fromTripId: string; toTripId: string; bookingId: string; now?: Date },
+  input: {
+    shopId: string;
+    fromTripId: string;
+    toTripId: string;
+    bookingId: string;
+    now?: Date;
+    /** Who moved it: both departures' trail lines are written with the move. */
+    actorPersonId?: string;
+  },
 ): Promise<MoveBookingOutcome> {
   const { shopId, fromTripId, toTripId, bookingId } = input;
   const now = input.now ?? nowDate();
@@ -1906,8 +1946,20 @@ export async function moveBooking(
     if (!source || !booking || booking.status === "cancelled") {
       return { ok: false, reason: "not_found" };
     }
-    if (booking.status !== "booked") return { ok: false, reason: "not_movable" };
-    if (hasSailed(source.startsAt, now)) return { ok: false, reason: "departed" };
+    // **A seat the desk turned away moves too** (layer 3 review, dde-2 #3):
+    // the desk's money line sends staff here before the boat leaves. It lands booked on
+    // the new departure; the turn-away was about the old one and stays on its
+    // trail. A plain no-show does not move: that is the day's own record.
+    const turnedAway = booking.status === "no_show" && booking.turnedAwayAt !== null;
+    if (booking.status !== "booked" && !turnedAway) return { ok: false, reason: "not_movable" };
+    // A turned-away seat moves only before the source's scheduled start
+    // (layer 3 re-review, dde-3 #4 and #5): after it, the boat may be out with
+    // an offline after-dive mark still to sync, and the move would wipe the
+    // turn-away from the departure's record. The door then is Remove.
+    const departed = turnedAway
+      ? now.getTime() >= source.startsAt.getTime()
+      : hasSailed(source.startsAt, now);
+    if (departed) return { ok: false, reason: "departed" };
     if (!tripTakesSeatFrom(target, "staff") || target.isRehearsal || source.isRehearsal) {
       return { ok: false, reason: "target_unavailable" };
     }
@@ -1966,7 +2018,15 @@ export async function moveBooking(
       held,
     );
     if (full) return { ok: false, reason: full };
-    if (target.courseId) {
+    // A snorkeler or a rider moves only to a session that prices their seat,
+    // and is asked none of the course's student gates (issue #2226).
+    const typeRefusal = participantTypeRefusal({
+      actor: "staff",
+      participantType: booking.participantType,
+      trip: target,
+    });
+    if (typeRefusal) return { ok: false, reason: "target_unavailable" };
+    if (target.courseId && isDiver(booking.participantType)) {
       const [course] = await tx
         .select()
         .from(courses)
@@ -1975,7 +2035,7 @@ export async function moveBooking(
       const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, target.id);
       if (instructorCount === 0) return { ok: false, reason: "course_unstaffed" };
       const seatCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-      if (seatCap !== null && held.aboard >= seatCap) {
+      if (seatCap !== null && held.divers >= seatCap) {
         return { ok: false, reason: "course_ratio_full" };
       }
       // The course's own two gates, read again rather than trusted from the
@@ -2023,12 +2083,16 @@ export async function moveBooking(
         conditionsBriefedAt: null,
         carriedFactsConfirmedAt: null,
         pickupTime: null,
+        // A turned-away seat is a booked seat on the new departure.
+        status: "booked",
+        turnedAwayReason: null,
+        turnedAwayAt: null,
       })
       .where(
         and(
           eq(bookings.id, booking.id),
           eq(bookings.shopId, shopId),
-          eq(bookings.status, "booked"),
+          eq(bookings.status, booking.status),
         ),
       );
     // The diver's one open ask follows them: it is about their day, and the
@@ -2105,14 +2169,17 @@ export async function moveBooking(
       .where(and(eq(people.id, booking.personId), eq(people.shopId, shopId)))
       .limit(1);
     // The crew of each boat reads it on the catch-up strip: one fewer here,
-    // one more there.
-    await recordDeskEvent(tx, {
-      shopId,
-      tripId: source.id,
-      kind: "seat_released",
-      bookingId: booking.id,
-      subjectPersonId: booking.personId,
-    });
+    // one more there. A turned-away seat left the old boat when the desk
+    // turned them away, so only the new one hears of it.
+    if (!turnedAway) {
+      await recordDeskEvent(tx, {
+        shopId,
+        tripId: source.id,
+        kind: "seat_released",
+        bookingId: booking.id,
+        subjectPersonId: booking.personId,
+      });
+    }
     await recordDeskEvent(tx, {
       shopId,
       tripId: target.id,
@@ -2120,6 +2187,22 @@ export async function moveBooking(
       bookingId: booking.id,
       subjectPersonId: booking.personId,
     });
+    // Each departure's trail says what happened to its own roster, committed
+    // with the move so neither line can be missing from the log.
+    if (input.actorPersonId) {
+      for (const [tripId, code] of [
+        [source.id, "seat_moved_away"],
+        [target.id, "seat_moved_here"],
+      ] as const) {
+        await recordSeatChange(tx, {
+          shopId,
+          tripId,
+          actorPersonId: input.actorPersonId,
+          bookingId: booking.id,
+          code,
+        });
+      }
+    }
     return {
       ok: true,
       personId: booking.personId,
@@ -2208,14 +2291,16 @@ export type SetParticipantTypeOutcome =
       reason: /** No live seat by that id on that departure at this shop. */
         | "not_found"
         /**
-         * The departure is cancelled or deleted, it has come home, or its
-         * departure time has passed and the change is *into* diving. A seat
-         * leaving the water stays possible between dives, which is when it
-         * happens; a seat joining the dive after the dock check would skip that
-         * check.
+         * The departure is cancelled or deleted, or it has come home. Out on
+         * the water a seat may still change either way: joining the dive meets
+         * the card check and, once boarded, the boarding gate (issue #2225).
          */
         | "trip_unavailable"
-        /** A course session seats divers only. */
+        /**
+         * A course session: a student cannot stop diving, a passenger cannot
+         * start, and a snorkeler or rider changes only to a type the session
+         * prices (issue #2226).
+         */
         | "participant_type_unavailable"
         /** Becoming a diver, and every diver's seat is taken. */
         | "divers_full"
@@ -2228,7 +2313,8 @@ export type SetParticipantTypeOutcome =
         | "on_buddy_team"
         /**
          * Joining the dive on a seat the rail already recorded boarded at
-         * departure, when the boarding gate would refuse it as a diver. The
+         * departure, or on any seat once the boat is at sea, when the
+         * boarding gate would refuse it as a diver. The
          * boarding record was granted to a snorkeler or a rider; it is never
          * carried over to a diver it would not have been granted to. No
          * override: the gate is the boarding gate, and the crew answer it.
@@ -2286,10 +2372,12 @@ export type SetParticipantTypeInput = {
  * **Joining the water runs the booking-time card check** for this person, the
  * same `tripAdmissionFor` a new diver's seat takes. A refusal is returned as
  * `cert_blocked` with the missing card named, and only `confirmCertBlock`
- * writes past it. The boarding gate still asks for the card: a seat not yet
- * boarded meets it at the rail, and a seat the rail already recorded boarded
- * at departure is re-checked here as a diver, inside this transaction, and the
- * whole change rolls back (`boarded_not_ready`) when it would not pass.
+ * writes past it, and only before the time on the board. The boarding gate
+ * still asks for the card: a seat not yet boarded meets it at the rail, and a
+ * seat the rail recorded boarded at departure, or any seat once the boat is at
+ * sea, is re-checked here as a diver, inside this transaction, and the whole
+ * change rolls back (`boarded_not_ready`) when it would not pass. At sea no
+ * override writes past either check.
  *
  * Money is left where it is (a refund stays staff-initiated, H-07), but a
  * pending checkout that quoted this seat at its old type is retired, so it can
@@ -2382,14 +2470,28 @@ async function changeParticipantType(
     if (from === to) return { ok: true, changed: false, from, tripId: trip.id, owedCents: 0 };
     const now = nowDate();
     // Home is final: the head count is closed and the record is what it was.
-    // Departure time is final only for joining the dive, which would skip the dock's
-    // card check; leaving the water between dives is exactly when it happens.
-    // The time on the board, not `hasSailed`'s grace: that buffer is for
-    // selling a seat to someone running late, not for who goes in the water.
-    if (hasReturned(trip.endsAt, now) || (isDiver(to) && now >= trip.startsAt)) {
+    // Out on the water a seat may change either way (issue #2225, Aaron
+    // 2026-10-13): the partner who rode dive 1 dives the second tank, and the
+    // boat that left ten minutes late still has a dock. Joining the dive after
+    // the time on the board meets the same two checks it would before it — the
+    // booking-time card check below, past which only `confirmCertBlock` writes,
+    // and the boarding gate for a seat the rail recorded boarded — and its trail
+    // line says it happened at sea. The time on the board, not `hasSailed`'s
+    // grace: that buffer is for selling a seat to someone running late.
+    if (hasReturned(trip.endsAt, now)) {
       return { ok: false, reason: "trip_unavailable" };
     }
-    if (trip.courseId && !isDiver(to)) {
+    const atSea = now >= trip.startsAt;
+    // On a course session the divers are the students (issue #2226). A student
+    // never stops being one by a type change, and a passenger never becomes
+    // one: that would skip the course's card, age and ratio gates. Between
+    // snorkeling and riding, only at a price the shop named.
+    if (
+      trip.courseId &&
+      (isDiver(from) ||
+        isDiver(to) ||
+        participantTypeRefusal({ actor: "staff", participantType: to, trip }))
+    ) {
       return { ok: false, reason: "participant_type_unavailable" };
     }
     if (isDiver(from) && !isDiver(to)) {
@@ -2420,6 +2522,10 @@ async function changeParticipantType(
         Boolean(trip.courseId),
       );
       if (!admission.admitted) {
+        // At sea the person is already aboard, so no rail is left to catch a
+        // card the override skipped (dock review of #2225, H1): there is no
+        // "Change anyway" out there, and the boarding gate below answers.
+        if (atSea) return { ok: false, reason: "boarded_not_ready" };
         if (!input.confirmCertBlock) {
           return { ok: false, reason: "cert_blocked", refusal: admission.refusal };
         }
@@ -2445,6 +2551,8 @@ async function changeParticipantType(
     // starts diving spends one exactly as a fresh diver's seat would, under
     // the same rules (an unpaid, identity-confirmed seat only).
     if (!isDiver(to)) {
+      // Nor a training dive: the seat is asked none of a course's forms now.
+      await dropTrainingMarkWithin(tx, { shopId, bookingId: booking.id, actorPersonId, now });
       await releasePackageCoverageForBooking(tx, shopId, booking.id);
       // And the tagged units the seat will not use now: a rider holds none, a
       // snorkeler the surface kit. Unclaimed only, as a cancellation does;
@@ -2466,7 +2574,10 @@ async function changeParticipantType(
     // this seat boarded at departure as a snorkeler or a rider; the boarding
     // gate (`recordRollCall`) is asked again, now, as the diver it is
     // becoming, and the whole change rolls back if it would refuse.
-    if (isDiver(to) && (await boardedAtDeparture(tx, shopId, trip.id, booking.id))) {
+    // At sea the same holds with no roll call at all: a seat that is out on
+    // the water is aboard whatever the rail recorded, so it is asked the
+    // boarding gate now (dock review of #2225, H1).
+    if (isDiver(to) && (atSea || (await boardedAtDeparture(tx, shopId, trip.id, booking.id)))) {
       const readiness = await getBookingReadiness(tx, shopId, booking.id);
       if (readiness?.status !== "ready") throw new BoardedNotReady();
     }
@@ -2518,6 +2629,7 @@ async function changeParticipantType(
         type: to,
         certCheck,
         cleared: cleared.join(","),
+        atSea: atSea ? "yes" : "no",
       },
     });
     await recordDeskEvent(tx, {
@@ -2542,20 +2654,70 @@ async function changeParticipantType(
   });
 }
 
-export async function cancelBooking(db: AppDb, shopId: string, bookingId: string) {
-  const booking = await cancelBookingRow(db, shopId, bookingId);
+/**
+ * A staff removal's outcome. `aboard_at_sea`: the boat carried this seat or
+ * may be carrying it (H-133, `aboardAtSeaBookingIds`), at sea or home, and
+ * `hold` says which: on the water by the roll call, or never counted at the
+ * dock of a sailed departure.
+ */
+export type CancelBookingOutcome =
+  | {
+      ok: true;
+      booking: typeof bookings.$inferSelect & {
+        previousStatus: (typeof bookings.$inferSelect)["status"];
+      };
+    }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "aboard_at_sea"; hold: AboardHold };
+
+/**
+ * **A staff member takes a seat off the roster.** Refused for a seat the boat
+ * carried or may be carrying (H-133): a cancelled booking is nobody to every
+ * roll-call reader, so the removal would drop a person on the water from the
+ * count, and after the boat is home it would erase that they sailed. Asked
+ * inside the transaction, under the trip and the seat locks the crew's
+ * roll-call write takes in the same order (`lockSeatDeparture`), so a tap at
+ * the rail and a removal at the desk cannot both decide against the same
+ * pre-state. No override: roll-call marks correct a mistaken tap, and money
+ * goes back through the order's refund.
+ */
+export async function cancelBooking(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  opts: {
+    /**
+     * The staffer who took the seat off, when one did: the departure's trail
+     * line is written in the same transaction (`recordSeatChange`). A diver's
+     * own cancel and the wait-list sweep write their own line, or none.
+     */
+    trail?: { actorPersonId: string };
+    now?: Date;
+  } = {},
+): Promise<CancelBookingOutcome> {
+  const outcome = await cancelBookingRow(db, shopId, bookingId, opts.now ?? nowDate(), opts.trail);
   // A diver just left the roster, which is a manifest change like any other —
   // and one that lands on shore while a captain may already be walking to the
   // boat (ADR 20260804-manifest-web-push). Published *after* the transaction
   // commits, never inside it: this fans out to a push service, and holding a
   // database transaction open across third-party HTTP is how a slow provider
   // becomes a lock-wait on the bookings table.
-  if (booking) await publishManifestEvent(db, shopId, booking.tripId);
-  return booking;
+  if (outcome.ok) await publishManifestEvent(db, shopId, outcome.booking.tripId);
+  return outcome;
 }
 
-async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
-  return db.transaction(async (tx) => {
+async function cancelBookingRow(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  now: Date,
+  trail?: { actorPersonId: string },
+): Promise<CancelBookingOutcome> {
+  return db.transaction(async (tx): Promise<CancelBookingOutcome> => {
+    // The departure, then the seat: the order every seat writer takes, the
+    // crew's roll call among them.
+    const tripId = await lockSeatDeparture(tx, shopId, bookingId);
+    if (!tripId) return { ok: false, reason: "not_found" };
     // What the seat was before this, read under the row's lock: only a seat
     // that was `booked` becomes a diver's "your booking is canceled" email, and
     // a roster removal of a checked-in or no-show row is not one.
@@ -2564,12 +2726,16 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
       .from(bookings)
       .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
       .for("update");
+    if (!prior) return { ok: false, reason: "not_found" };
+    const atSea = await aboardAtSeaBookingIds(tx, { shopId, tripId, now, bookingIds: [bookingId] });
+    const hold = atSea.get(bookingId);
+    if (hold) return { ok: false, reason: "aboard_at_sea", hold };
     const [updated] = await tx
       .update(bookings)
       .set({ status: "cancelled" })
       .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
       .returning();
-    if (!updated || !prior) return null;
+    if (!updated) return { ok: false, reason: "not_found" };
     const booking = { ...updated, previousStatus: prior.status };
     // Belt-and-suspenders: verifyBookingCapability already fails closed on a
     // cancelled booking, but revoking outright keeps the capability table's
@@ -2594,15 +2760,27 @@ async function cancelBookingRow(db: AppDb, shopId: string, bookingId: string) {
     // most likely to land while a captain is already walking to the boat —
     // the same reason the push event below exists. No actor: this path is
     // reached by a staffer, by the diver's own link, and by the wait-list
-    // sweep, and none of them hands one down.
+    // sweep, and none of them hands one down. A seat the desk turned away
+    // (H-135) was refused, not given up, and the strip says so; the cancel
+    // keeps `turned_away_at`, so the row still knows.
     await recordDeskEvent(tx, {
       shopId,
       tripId: booking.tripId,
-      kind: "seat_released",
+      kind: booking.turnedAwayAt === null ? "seat_released" : "seat_turned_away",
       bookingId: booking.id,
       subjectPersonId: booking.personId,
     });
-    return booking;
+    // A seat that was already off the roster was not removed again.
+    if (trail && prior.status !== "cancelled") {
+      await recordSeatChange(tx, {
+        shopId,
+        tripId: booking.tripId,
+        actorPersonId: trail.actorPersonId,
+        bookingId,
+        code: "booking_removed",
+      });
+    }
+    return { ok: true, booking };
   });
 }
 
@@ -2692,6 +2870,15 @@ export async function selfCancelBooking(
     if (trip && hasSailed(trip.startsAt, now)) {
       return { ok: false, reason: "trip_departed" };
     }
+    // Within the hour `hasSailed` allows, a boat past its time or taken out by
+    // the crew with this diver counted aboard has left all the same (H-133).
+    const atSea = await aboardAtSeaBookingIds(tx, {
+      shopId: input.shopId,
+      tripId: row.tripId,
+      now,
+      bookingIds: [input.bookingId],
+    });
+    if (atSea.has(input.bookingId)) return { ok: false, reason: "trip_departed" };
 
     const [cancelled] = await tx
       .update(bookings)
@@ -2717,6 +2904,7 @@ export async function selfCancelBooking(
       shopId: input.shopId,
       leadBookingId: input.bookingId,
       tripId: row.tripId,
+      now,
     });
     return { ok: true, party };
   });
@@ -2749,7 +2937,8 @@ async function releaseSelfCancelledSeat(
 
 /**
  * **The one rule for which party seats a lead's cancel takes with it**: still
- * `booked` and not claimed by their own diver. `cancelUnclaimedPartySeats`
+ * `booked` and not claimed by their own diver (and, at sea, not counted
+ * aboard: H-133, applied beside it). `cancelUnclaimedPartySeats`
  * applies it to cancel, `previewPartyCancel` to count, and the lead's party
  * panel (`issuePartySeatClaims`) to list, so what the SMS prompt and the email
  * say can never differ from what the settle does.
@@ -2771,7 +2960,7 @@ export function partySeatGoesWithLead(seat: {
  */
 export async function previewPartyCancel(
   db: DbExecutor,
-  input: { shopId: string; leadBookingId: string },
+  input: { shopId: string; leadBookingId: string; now?: Date },
 ): Promise<{ goes: number; stays: number }> {
   const [lead] = await db
     .select({ tripId: bookings.tripId, partyLeadBookingId: bookings.partyLeadBookingId })
@@ -2780,7 +2969,7 @@ export async function previewPartyCancel(
     .limit(1);
   if (!lead || lead.partyLeadBookingId !== null) return { goes: 0, stays: 0 };
   const seats = await db
-    .select({ status: bookings.status, claimedAt: bookings.claimedAt })
+    .select({ id: bookings.id, status: bookings.status, claimedAt: bookings.claimedAt })
     .from(bookings)
     .where(
       and(
@@ -2790,7 +2979,15 @@ export async function previewPartyCancel(
         ne(bookings.status, "cancelled"),
       ),
     );
-  const goes = seats.filter(partySeatGoesWithLead).length;
+  // A seat counted aboard a boat that has left stays, as the cancel keeps it
+  // (H-133).
+  const atSea = await aboardAtSeaBookingIds(db, {
+    shopId: input.shopId,
+    tripId: lead.tripId,
+    now: input.now ?? nowDate(),
+    bookingIds: seats.map((seat) => seat.id),
+  });
+  const goes = seats.filter((seat) => partySeatGoesWithLead(seat) && !atSea.has(seat.id)).length;
   return { goes, stays: seats.length - goes };
 }
 
@@ -2807,7 +3004,7 @@ export async function previewPartyCancel(
  */
 export async function cancelUnclaimedPartySeats(
   tx: DbExecutor,
-  input: { shopId: string; leadBookingId: string; tripId: string },
+  input: { shopId: string; leadBookingId: string; tripId: string; now: Date },
 ): Promise<PartyCancelOutcome> {
   const [lead] = await tx
     .select({ email: people.email })
@@ -2839,10 +3036,18 @@ export async function cancelUnclaimedPartySeats(
     )
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id))
     .for("update", { of: bookings });
+  // A party seat counted aboard a boat that has left stays, like a claimed one
+  // (H-133).
+  const atSea = await aboardAtSeaBookingIds(tx, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    now: input.now,
+    bookingIds: seats.map((seat) => seat.bookingId),
+  });
   const outcome: PartyCancelOutcome = { cancelled: [], stayed: [] };
   for (const seat of seats) {
     const name = seatName(seat.fullName, seat);
-    if (!partySeatGoesWithLead(seat)) {
+    if (!partySeatGoesWithLead(seat) || atSea.has(seat.bookingId)) {
       outcome.stayed.push({ bookingId: seat.bookingId, seatName: name });
       continue;
     }
@@ -3218,13 +3423,51 @@ export async function confirmBookingIdentity(
     shopId: string;
     bookingId: string;
     actorPersonId: string;
+    /**
+     * Which emergency contact the confirmed record keeps, when the desk
+     * recorded one on the held seat that differs from the record's own
+     * (`HeldContactChoice`). Without it, a differing pair refuses the confirm.
+     */
+    heldContact?: HeldContactChoice;
   },
   notices: SendRescheduleNoticesOptions = {},
-) {
+): Promise<boolean | "contact_differs"> {
   const booking = await db.transaction(async (tx) => {
+    // **The held seat's contact is never dropped silently** (issue #2145,
+    // dive-domain review H3). Once the staffer says "Same person", the desk's
+    // note of who to call is that person's: onto a record with no contact it
+    // goes as it is; beside a different one, the staffer picks which stands.
+    const [held] = await tx
+      .select({
+        personId: bookings.personId,
+        heldName: bookings.heldEmergencyContactName,
+        heldPhone: bookings.heldEmergencyContactPhone,
+        recordName: people.emergencyContactName,
+        recordPhone: people.emergencyContactPhone,
+      })
+      .from(bookings)
+      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, bookings.shopId)))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!held) return null;
+    const carry = heldContactCarry(held, input.heldContact);
+    if (carry === "differs") return "contact_differs" as const;
     const [row] = await tx
       .update(bookings)
-      .set({ identityUnconfirmedAt: null, identityBookedAs: null, identityMatchedBy: null })
+      .set({
+        identityUnconfirmedAt: null,
+        identityBookedAs: null,
+        identityMatchedBy: null,
+        heldEmergencyContactName: null,
+        heldEmergencyContactPhone: null,
+      })
       .where(
         and(
           eq(bookings.id, input.bookingId),
@@ -3234,6 +3477,12 @@ export async function confirmBookingIdentity(
       )
       .returning({ tripId: bookings.tripId, personId: bookings.personId });
     if (!row) return null;
+    if (carry) {
+      await tx
+        .update(people)
+        .set({ emergencyContactName: carry.name, emergencyContactPhone: carry.phone })
+        .where(and(eq(people.id, row.personId), eq(people.shopId, input.shopId)));
+    }
     await settleConfirmedPackageCoverage(tx, {
       shopId: input.shopId,
       bookingId: input.bookingId,
@@ -3242,6 +3491,7 @@ export async function confirmBookingIdentity(
     return row;
   });
   if (!booking) return false;
+  if (booking === "contact_differs") return booking;
   const code = "identity_confirmed";
   const diver = await bookingDiverName(db, input.shopId, input.bookingId);
   if (diver) {
@@ -3288,7 +3538,11 @@ export type SplitBookingIdentityResult =
         | "date_of_birth_required"
         | "date_of_birth_invalid"
         | "age_unstated"
-        | "email_in_use";
+        | "email_in_use"
+        /** Two moving seats hold different emergency contacts (issue #2145). */
+        | "held_contact_conflict"
+        /** The seat's departure is deleted, cancelled or back (security review Y4). */
+        | "departure_closed";
     };
 
 /** What the staffer told a split about the new diver, beyond a name (issue #2081). */
@@ -3511,7 +3765,9 @@ export async function splitBookingIdentity(
     | "medical_hold"
     | "date_of_birth_required"
     | "age_unstated"
-    | "email_in_use";
+    | "email_in_use"
+    | "held_contact_conflict"
+    | "departure_closed";
   type Split =
     | { refused: Refusal }
     | {
@@ -3530,8 +3786,14 @@ export async function splitBookingIdentity(
           tripId: bookings.tripId,
           personId: bookings.personId,
           bookedAs: bookings.identityBookedAs,
+          heldContactName: bookings.heldEmergencyContactName,
+          heldContactPhone: bookings.heldEmergencyContactPhone,
+          tripStatus: trips.status,
+          tripDeletedAt: trips.deletedAt,
+          endsAt: trips.endsAt,
         })
         .from(bookings)
+        .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
         .where(
           and(
             eq(bookings.id, input.bookingId),
@@ -3541,8 +3803,16 @@ export async function splitBookingIdentity(
           ),
         )
         .limit(1)
-        .for("update");
+        .for("update", { of: bookings });
       if (!booking) return { refused: "not_held" as const };
+      // Only a seat on a departure still to come (security review Y4).
+      if (
+        booking.tripDeletedAt ||
+        booking.tripStatus !== "scheduled" ||
+        hasReturned(booking.endsAt, now)
+      ) {
+        return { refused: "departure_closed" as const };
+      }
 
       // The other held seats booked under the same name and guessed onto the
       // same diver: the same guess, repeated. Only on a departure that
@@ -3554,7 +3824,13 @@ export async function splitBookingIdentity(
       const candidates =
         requested.size > 0 && booking.bookedAs
           ? await tx
-              .select({ bookingId: bookings.id, tripId: bookings.tripId })
+              .select({
+                bookingId: bookings.id,
+                tripId: bookings.tripId,
+                endsAt: trips.endsAt,
+                heldContactName: bookings.heldEmergencyContactName,
+                heldContactPhone: bookings.heldEmergencyContactPhone,
+              })
               .from(bookings)
               .innerJoin(trips, eq(trips.id, bookings.tripId))
               .where(
@@ -3566,16 +3842,25 @@ export async function splitBookingIdentity(
                   ne(bookings.status, "cancelled"),
                   sql`lower(trim(${bookings.identityBookedAs})) = lower(trim(${booking.bookedAs}))`,
                   eq(trips.shopId, input.shopId),
+                  eq(trips.status, "scheduled"),
                   liveTrip(),
                 ),
               )
               .for("update", { of: bookings })
           : [];
-      const siblings = movableSameNameSeats(booking.tripId, candidates).filter((seat) =>
-        requested.has(seat.bookingId),
-      );
+      const siblings = movableSameNameSeats(
+        booking.tripId,
+        candidates.filter((seat) => !hasReturned(seat.endsAt, now)),
+      ).filter((seat) => requested.has(seat.bookingId));
       const seats = [{ bookingId: input.bookingId, tripId: booking.tripId }, ...siblings];
       const seatIds = seats.map((seat) => seat.bookingId);
+
+      // The contact the desk recorded for the person on any moving seat
+      // (issue #2145) is theirs, whichever seat it was written on; two
+      // different ones are a question for the desk, not a pick made here
+      // (dive-domain review H4).
+      const heldContact = movingHeldContact([booking, ...siblings]);
+      if (heldContact === "conflict") return { refused: "held_contact_conflict" as const };
 
       // A course with a minimum age measures it against this record, and so
       // does the guardian rule: a record with no date reads as an adult and
@@ -3654,6 +3939,10 @@ export async function splitBookingIdentity(
           ...(dateOfBirth
             ? {}
             : { adultAttestedAt: now, adultAttestedByPersonId: input.actorPersonId }),
+          // The contact the desk recorded for the person on this seat while
+          // it was held (issue #2145) is theirs: it goes onto their record.
+          emergencyContactName: heldContact?.name ?? null,
+          emergencyContactPhone: heldContact?.phone ?? null,
         })
         .returning({ id: people.id });
       if (!person) throw new Error("splitBookingIdentity: person insert returned no row");
@@ -3665,6 +3954,13 @@ export async function splitBookingIdentity(
           identityUnconfirmedAt: null,
           identityBookedAs: null,
           identityMatchedBy: null,
+          // A reason the desk gave while the seat was held was chosen about the
+          // guess (security review 2026-10-16, F1), so it does not travel to
+          // the new record. That the desk turned somebody away does
+          // (`turnedAwayAt` stays).
+          turnedAwayReason: null,
+          heldEmergencyContactName: null,
+          heldEmergencyContactPhone: null,
         })
         .where(and(inArray(bookings.id, seatIds), eq(bookings.shopId, input.shopId)));
 

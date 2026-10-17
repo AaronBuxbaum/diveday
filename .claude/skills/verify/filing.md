@@ -7,7 +7,9 @@ Part of the **verify** skill ([SKILL.md](SKILL.md)). Read it before you report d
 Before you report done, empty your head. A bug, a safety gap or a decision only a human can make
 becomes a GitHub issue labelled `needs-triage`, ten a run at most (see
 [docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)'s "Filing a follow-up"
-section); anything else is a bullet in one "Notes" comment on the PR (AGENTS.md's hard rule).
+section); an idea or feature with a concrete first step is an `idea` issue (`--idea`), which no
+ready-for-* sweep reads; anything else is a bullet in one "Notes" comment on the PR (AGENTS.md's
+hard rule).
 Candidates:
 
 - the improvement you can see but were not asked for

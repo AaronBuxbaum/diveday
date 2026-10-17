@@ -28,6 +28,16 @@
 //   pnpm verify:push                      run it
 //   pnpm verify:push --plan               print the base, the steps and the selected specs, run nothing
 //   pnpm verify:push --base-red <file…>   also run these, when the base is red on a job that names none
+//   pnpm verify:push --quick              the static checks and the unit tests the diff reaches; no
+//                                         full suite, no e2e build, no browser specs
+//
+// `--quick` is the default way to push (Aaron, 2026-10-16: "stop the pattern of waiting for the
+// full validations on these, just batch up work into single large PRs and stack them, adapting
+// when CI fails"). The full run took most of an hour on a four-core cloud container and held the
+// stack queue. The quick run keeps the cheap steps that caught most of the 2026-10-12 red jobs
+// (typecheck after a merge, the guards, check:repo) and leaves the browser to CI, which a layer
+// then fixes forward. Its stamp says `"mode": "quick"` and names what it left to CI; the guard
+// accepts either stamp and still refuses a commit with none.
 //
 // "Base CI" reads the layer below's latest CI (`scripts/base-ci.mjs`): a push on a red base is a
 // red run for this layer and every layer above, so the base's failing specs run here too (its
@@ -139,15 +149,10 @@ export const STAMP = "diveday-verified.json";
 /** CI's unit shards; each runs here as its own step, so a red one names itself. */
 export const UNIT_SHARDS = 4;
 
-/**
- * The steps for a diff. `changed` is the file list against the base, `specs` the Playwright
- * files to run, `captures` the titles of the visual captures to run (light mode only, after
- * the functional specs).
- */
-export function plan({ changed, specs, captures = [] }) {
-  const docsOnly = docsOnlyDiff(changed);
+/** The static steps every run starts with, cheapest first. */
+function staticSteps(changed) {
   const snapshot = changed.some((file) => SNAPSHOT_INPUTS.test(file));
-  const steps = [
+  return [
     {
       name: "regen",
       command: "pnpm",
@@ -163,7 +168,41 @@ export function plan({ changed, specs, captures = [] }) {
       args: ["exec", "vitest", "run", "--project", "guards", "--reporter=dot"],
     },
   ];
-  if (docsOnly) return steps;
+}
+
+/**
+ * `--quick`: the static steps, then the unit tests that import what changed (`vitest related`,
+ * which also runs a changed test file itself) plus any the base is red on. `related` is the
+ * changed files that still exist, so a deletion does not name a missing path.
+ */
+export function quickPlan({ changed, related = [] }) {
+  const steps = staticSteps(changed);
+  if (docsOnlyDiff(changed) || related.length === 0) return steps;
+  steps.push({
+    name: "related unit tests",
+    command: "pnpm",
+    args: [
+      "exec",
+      "vitest",
+      "related",
+      "--run",
+      "--project",
+      "!guards",
+      "--reporter=dot",
+      ...related,
+    ],
+  });
+  return steps;
+}
+
+/**
+ * The steps for a diff. `changed` is the file list against the base, `specs` the Playwright
+ * files to run, `captures` the titles of the visual captures to run (light mode only, after
+ * the functional specs).
+ */
+export function plan({ changed, specs, captures = [] }) {
+  const steps = staticSteps(changed);
+  if (docsOnlyDiff(changed)) return steps;
   // The whole unit suite, sharded exactly as CI's four jobs are (Aaron, 2026-10-15: "run
   // everything"). It replaced the source scans plus `vitest related`, which left every test that
   // neither read source nor imported the diff to CI. The base's red files are in it too.
@@ -232,7 +271,14 @@ export function browserSpecs({ changed, strong, reach, rank, record }) {
  * What this run did not run, said plainly in the output and the stamp, so "verify:push is
  * green" is never read as "every test passed here". CI runs all of it.
  */
-export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = [] }) {
+export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = [], quick = false }) {
+  if (quick) {
+    return [
+      "the unit tests the diff does not import, including those that read source from disk (quick run)",
+      `all ${allSpecs.filter((spec) => !/(?:^|\/)visual[^/]*\.spec\.ts$/.test(spec)).length} Playwright specs (quick run)`,
+      "visual captures (reg-suit): CI only, and a difference never fails the build",
+    ];
+  }
   const lines = [];
   const visual = (spec) => /(?:^|\/)visual[^/]*\.spec\.ts$/.test(spec);
   // A smoke pick is `file:line`; its file counts as run, though only that test of it ran.
@@ -354,6 +400,7 @@ function buildTreeFile() {
 
 function main() {
   const args = process.argv.slice(2);
+  const quick = args.includes("--quick");
   const git = gitReader(ROOT);
   const head = git(["rev-parse", "HEAD"]);
   // Falls back to the whole tree when git cannot list it, which only ever costs a rebuild.
@@ -407,33 +454,49 @@ function main() {
     : decision.specs.filter((spec) => existing(spec) && !specs.includes(spec));
   specs.push(...baseSpecs);
   const captures = docsOnly || testsOnly ? [] : [...selection.captures.keys()].sort();
-  const steps = plan({
-    changed: selection.changed,
-    specs,
-    captures,
-  });
+  const related = [
+    ...selection.changed.filter((file) => !DOCS_ONLY.test(file) && existing(file)),
+    ...decision.files.filter(existing),
+  ];
+  const steps = quick
+    ? quickPlan({ changed: selection.changed, related: [...new Set(related)] })
+    : plan({ changed: selection.changed, specs, captures });
 
-  console.log(
-    `verify:push: ${selection.changed.length} file(s) against ${selection.base}; ` +
-      `${strong.length} spec(s) the diff names, ${reachRun.length} it reaches, all run here ` +
-      `(about ${Math.round(estimateMs(specs, record) / 60000)} CI-minutes of browser tests).`,
-  );
-  for (const spec of strong) {
-    console.log(`  ${spec}  — ${[...selection.strong.get(spec)].slice(0, 2).join("; ")}`);
-  }
-  if (reachRun.length > 0) console.log(`  reached: ${reachRun.join(" ")}`);
-  if (captures.length > 0) {
+  if (quick) {
     console.log(
-      `  ${captures.length} visual capture(s) the diff names, light mode only ` +
-        `(about ${Math.round(captureMs(captures) / 60000)} CI-minutes):`,
+      `verify:push --quick: ${selection.changed.length} file(s) against ${selection.base}; ` +
+        "static checks and the unit tests they reach. CI runs the rest; fix forward if it goes red.",
     );
-    for (const title of captures) {
-      console.log(`    ${title}  — ${[...selection.captures.get(title)].slice(0, 2).join("; ")}`);
+  } else {
+    console.log(
+      `verify:push: ${selection.changed.length} file(s) against ${selection.base}; ` +
+        `${strong.length} spec(s) the diff names, ${reachRun.length} it reaches, all run here ` +
+        `(about ${Math.round(estimateMs(specs, record) / 60000)} CI-minutes of browser tests).`,
+    );
+    for (const spec of strong) {
+      console.log(`  ${spec}  — ${[...selection.strong.get(spec)].slice(0, 2).join("; ")}`);
     }
+    if (reachRun.length > 0) console.log(`  reached: ${reachRun.join(" ")}`);
+    if (captures.length > 0) {
+      console.log(
+        `  ${captures.length} visual capture(s) the diff names, light mode only ` +
+          `(about ${Math.round(captureMs(captures) / 60000)} CI-minutes):`,
+      );
+      for (const title of captures) {
+        console.log(`    ${title}  — ${[...selection.captures.get(title)].slice(0, 2).join("; ")}`);
+      }
+    }
+    if (baseSpecs.length > 0) console.log(`  red on the base: ${baseSpecs.join(" ")}`);
+    if (testsOnly) console.log("  only tests changed: no e2e build, no browser specs.");
   }
-  if (baseSpecs.length > 0) console.log(`  red on the base: ${baseSpecs.join(" ")}`);
-  if (testsOnly) console.log("  only tests changed: no e2e build, no browser specs.");
-  const skipped = notRunHere({ docsOnly, testsOnly, specs, allSpecs: allSpecFiles(), captures });
+  const skipped = notRunHere({
+    docsOnly,
+    testsOnly,
+    specs,
+    allSpecs: allSpecFiles(),
+    captures,
+    quick,
+  });
   if (args.includes("--plan")) {
     for (const step of steps) {
       const env = step.workers ? `E2E_WORKERS=${e2eWorkersHere().workers} ` : "";
@@ -508,20 +571,21 @@ function main() {
 
   const stamp = {
     sha: head,
+    mode: quick ? "quick" : "full",
     base: selection.base,
     at: new Date().toISOString(),
     steps: ran,
-    specs,
-    captures: captures.length > 0 ? captures : undefined,
+    specs: quick ? [] : specs,
+    captures: !quick && captures.length > 0 ? captures : undefined,
     e2eWorkers: workerCounts.length > 0 ? workerCounts : undefined,
     browser: browserNote ?? undefined,
     notRunHere: skipped,
     baseCi: verdict.unknown
       ? { unknown: verdict.unknown }
-      : { red: verdict.red, ran: [...decision.files, ...decision.specs] },
+      : { red: verdict.red, ran: quick ? decision.files : [...decision.files, ...decision.specs] },
   };
   writeStamps(stamp, { git });
-  console.log(`verify:push: green. ${head.slice(0, 9)} may be pushed.`);
+  console.log(`verify:push${quick ? " --quick" : ""}: green. ${head.slice(0, 9)} may be pushed.`);
   console.log("Not run here, so CI is the first to run it:");
   for (const line of skipped) console.log(`  - ${line}`);
 }

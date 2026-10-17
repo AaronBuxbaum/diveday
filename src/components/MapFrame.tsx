@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useMapReachable } from "./use-map-reachable";
+import { useMapState } from "./use-map-reachable";
 
 /**
  * The map frame behind a drawn route, shown only once the provider has
@@ -10,7 +10,19 @@ import { useMapReachable } from "./use-map-reachable";
  * frame stays invisible and the route draws alone over the panel's own
  * surface: no broken-document glyph under the line. `invisible`, never
  * unmounted, so the frame's box and the route's percentages never move.
+ *
+ * **It says which of three it is** (`data-map-state`, issue #2013): `waiting`
+ * until the provider answers, `reachable`, or `failed` once the probe errors or
+ * {@link MAP_GIVE_UP_MS} pass with no answer. A cross-origin frame gives no
+ * reliable `onError`, so the probe's error and the timeout are the only
+ * signals there are. A surface that wants a line for the failed state asks the
+ * document for it (`group-has-[[data-map-state=failed]]`) rather than lifting
+ * this state, so the line can sit outside a scaled or cropped box.
  */
+
+/** How long a map may stay silent before it counts as not loading. */
+export const MAP_GIVE_UP_MS = 8000;
+
 export function MapFrame({
   title,
   src,
@@ -43,7 +55,8 @@ export function MapFrame({
     return () => observer.disconnect();
   }, []);
 
-  const reachable = useMapReachable(onScreen);
+  const state = useMapState(onScreen, MAP_GIVE_UP_MS);
+  const reachable = state === "reachable";
   return (
     <iframe
       ref={frameRef}
@@ -52,6 +65,7 @@ export function MapFrame({
       tabIndex={interactive ? undefined : -1}
       aria-hidden={reachable ? undefined : true}
       data-map-reachable={reachable ? "true" : "false"}
+      data-map-state={state}
       className={`${className}${reachable ? "" : " invisible"}`}
       loading="lazy"
       referrerPolicy="strict-origin-when-cross-origin"

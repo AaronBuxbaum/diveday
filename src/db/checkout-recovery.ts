@@ -1,7 +1,8 @@
-import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte, ne, notInArray, or } from "drizzle-orm";
 import { toDiverLocale } from "@/i18n/settings";
 import { dueCheckoutRecovery, RECOVERY_DELAY_HOURS } from "@/lib/checkout-recovery";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import {
   type NotificationDelivery,
   type NotificationProvider,
@@ -182,7 +183,9 @@ export async function sendDueCheckoutRecoveries(
     .where(
       and(
         inArray(bookingCheckoutBookings.checkoutId, candidateIds),
-        eq(bookings.status, "cancelled"),
+        // Cancelled, or released at the desk (turned away, not here): a seat
+        // no longer held makes "your spot is still held" false (dde-3 #3).
+        notInArray(bookings.status, [...SEAT_HELD_STATUSES]),
       ),
     );
   const checkoutIdsWithACancelledBooking = new Set(cancelledBookingLinks.map((l) => l.checkoutId));
@@ -313,7 +316,10 @@ export async function sendDueCheckoutRecoveries(
       .from(bookingCheckoutBookings)
       .innerJoin(bookings, eq(bookings.id, bookingCheckoutBookings.bookingId))
       .where(
-        and(eq(bookingCheckoutBookings.checkoutId, checkout.id), eq(bookings.status, "cancelled")),
+        and(
+          eq(bookingCheckoutBookings.checkoutId, checkout.id),
+          notInArray(bookings.status, [...SEAT_HELD_STATUSES]),
+        ),
       )
       .limit(1);
     if (freshlyCancelled) {

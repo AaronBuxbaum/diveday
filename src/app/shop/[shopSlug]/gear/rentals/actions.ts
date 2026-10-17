@@ -7,6 +7,7 @@ import { getDb } from "@/db/client";
 import { createDiver } from "@/db/divers";
 import {
   checkOutCounterRental,
+  correctCounterTankFill,
   counterRentalPerson,
   createCounterRental,
   getCounterRentalTicket,
@@ -25,7 +26,12 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
 import { nowDate } from "@/lib/clock";
-import { counterRentalCoreKinds, counterRentalDays, isOneCoreSet } from "@/lib/counter-rentals";
+import {
+  counterRentalCoreKinds,
+  counterRentalDays,
+  isOneCoreSet,
+  parseTankFill,
+} from "@/lib/counter-rentals";
 import { allValues, formValue, readForm, text } from "@/lib/form-parse";
 import { GEAR_RETURN_OUTCOMES } from "@/lib/gear";
 import { majorToMinor } from "@/lib/money";
@@ -42,6 +48,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import {
   CONFIRM_FIELD_PREFIX,
   counterRentalFormPath,
+  FILL_FIELD_PREFIX,
   PAYMENT_FIELD,
   PRICE_FIELD_PREFIX,
   RENTAL_PAYMENTS,
@@ -149,6 +156,15 @@ export async function createCounterRentalAction(formData: FormData) {
     }
   }
 
+  // A tank's gas, as the staffer chose it. Unreadable is refused, never
+  // guessed; the writer decides whether it may go out (#2257).
+  const tankFills: Record<string, number> = {};
+  for (const unitId of units) {
+    const fill = parseTankFill(String(fields[`${FILL_FIELD_PREFIX}${unitId}`] ?? ""));
+    if (fill === "invalid") redirect(noticeUrl(form, "fill-invalid"));
+    if (fill !== null) tankFills[unitId] = fill;
+  }
+
   const outcome = await createCounterRental(db, {
     shopId: shop.id,
     personId,
@@ -161,6 +177,8 @@ export async function createCounterRentalAction(formData: FormData) {
     confirmedFlaggedIds: units.filter(
       (unitId) => fields[`${CONFIRM_FIELD_PREFIX}${unitId}`] === "on",
     ),
+    tankFills,
+    fillRecordedByPersonId: session.user.personId,
   });
   if (!outcome.ok) {
     // The unit travels by id, never by name: the page looks its label up in
@@ -437,4 +455,32 @@ export async function releaseCounterRentalAction(formData: FormData) {
   // Every unit released leaves no ticket to land on; the register says it.
   const left = await getCounterRentalTicket(db, session.user.shopId, parsed.data?.ticketId ?? "");
   revalidateAndRedirect(gear, noticeUrl(left ? ticket : gear, "released"));
+}
+
+const fillCorrectionSchema = ticketSchema.extend({
+  reservationId: z.uuid(),
+  fill: z.string().max(8),
+});
+
+/**
+ * Correct one counter tank's gas from its ticket (domain reviews A3/F6,
+ * security review X5): the same rules as renting it, recorded as this
+ * staffer's. Refusals land on the ticket in the writer's own words.
+ */
+export async function correctCounterTankFillAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const parsed = fillCorrectionSchema.safeParse(Object.fromEntries(formData));
+  const ticket = ticketLanding(session.user.shopSlug, parsed);
+  const gear = shopPath(session.user.shopSlug, "gear");
+  const fill = parseTankFill(parsed.data?.fill ?? "");
+  if (fill === null || fill === "invalid") {
+    revalidateAndRedirect(gear, noticeUrl(ticket, "fill-invalid"));
+  }
+  const outcome = await correctCounterTankFill(await getDb(), {
+    shopId: session.user.shopId,
+    reservationId: parsed.data?.reservationId ?? "",
+    o2Percent: fill,
+    byPersonId: session.user.personId,
+  });
+  revalidateAndRedirect(gear, noticeUrl(ticket, outcome.ok ? "fill-corrected" : outcome.reason));
 }

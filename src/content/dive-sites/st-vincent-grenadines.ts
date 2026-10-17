@@ -25,7 +25,6 @@ export const ST_VINCENT_GRENADINES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Growth covers the hull, and reef fish use it as shelter. Look at the outside plating and the fish around it.",
       difficultyLevel: "beginner",
-      depthRange: "12 m (40 ft)",
       maxDepthMeters: 12,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -66,7 +65,6 @@ export const ST_VINCENT_GRENADINES: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Tobago Cays Marine Park, which charges a park fee. On a dive trip it is usually included in the price, so confirm with the crew. Touch and take nothing.",
       difficultyLevel: "intermediate",
-      depthRange: "18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote:
         "Boat and snorkeler traffic in the Cays: ascend on the line or an SMB. Current not documented; ask the crew on the day. Medical care is far; confirm the boat's oxygen and plan.",
@@ -103,7 +101,6 @@ export const ST_VINCENT_GRENADINES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sharks rest on the sand between the coral heads and big lobsters and morays sit in the reef. Sightings are not promised.",
       difficultyLevel: "advanced",
-      depthRange: "About 15 m (50 ft) on average",
       maxDepthMeters: 15,
       currentNote:
         "Run as a drift; strength and direction are not documented, so carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
@@ -144,7 +141,7 @@ export const ST_VINCENT_GRENADINES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look low in the sand for garden eels and on the sea fans for flamingo tongues. Crinoids perch on the high points.",
       difficultyLevel: "intermediate",
-      depthRange: "17–24 m (55–80 ft)",
+      depthMinMeters: 17,
       maxDepthMeters: 25,
       currentNote:
         "Run as a drift whose direction follows the current: about 17 m (55 ft) going north, about 24 m (80 ft) going south. Strength is not documented, so carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
@@ -187,7 +184,6 @@ export const ST_VINCENT_GRENADINES: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Tobago Cays Marine Park, which charges a park fee. On a dive trip it is usually included in the price, so confirm with the crew. Touch and take nothing.",
       difficultyLevel: "beginner",
-      depthRange: "14 m (45 ft)",
       maxDepthMeters: 14,
       currentNote:
         "Boat and snorkeler traffic in the Cays: ascend on the line or an SMB. Current not documented; ask the crew on the day.",
@@ -227,7 +223,7 @@ export const ST_VINCENT_GRENADINES: DiveSiteTemplate[] = [
       conservationNote:
         "Inside Tobago Cays Marine Park, which charges a park fee. On a dive trip it is usually included in the price, so confirm with the crew. Touch and take nothing.",
       difficultyLevel: "advanced",
-      depthRange: "21–35 m (70–115 ft)",
+      depthMinMeters: 21,
       maxDepthMeters: 35,
       currentNote:
         "Boat and snorkeler traffic in the Cays: ascend on the line or an SMB. Current not documented; ask the crew on the day. It sits at the outer edge of the Cays, so carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
@@ -267,7 +263,6 @@ export const ST_VINCENT_GRENADINES: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Spotted drums hover under the ledges, and lobsters tuck into the cracks in the slope.",
       difficultyLevel: "intermediate",
-      depthRange: "20 m (65 ft)",
       maxDepthMeters: 20,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:

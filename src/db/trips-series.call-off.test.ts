@@ -164,7 +164,7 @@ describe("calling a run's dates off (in-memory PGlite)", () => {
       expect(email.sent.filter((sent) => sent.kind === "trip_blowout")).toHaveLength(1);
     });
 
-    it("leaves a dropped date whose boarding has begun on the board, counted as skipped", async () => {
+    it("leaves a dropped date whose boarding has begun on the board", async () => {
       const run = await narrowedRun();
       const [staff] = await listStaff(run.db, run.shop.id);
       if (!staff) throw new Error("seed staff missing");
@@ -185,7 +185,9 @@ describe("calling a run's dates off (in-memory PGlite)", () => {
         provider: fakeEmail().provider,
         checkout: fakeCheckout(),
       });
-      expect(outcome.skipped).toBeGreaterThan(0);
+      // An after-dive mark is the crew's word the boat is out (H-133), so the
+      // date is never offered as off-cadence, and so never reaches the cascade.
+      expect(outcome.tripIds).not.toContain(run.dropped.id);
       expect((await getTripWithBooked(run.db, run.shop.id, run.dropped.id))?.status).toBe(
         "scheduled",
       );

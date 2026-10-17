@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { courseTotalCents } from "@/lib/courses";
 import type {
   CreateInvoiceRequest,
@@ -1442,10 +1443,8 @@ describe("orders", () => {
       // Date range: a window around now catches both; a window that closes
       // before now catches neither (Reports' "revenue rows" link a month range
       // this same way).
-      // Bounded against the database's clock, not the (frozen) app clock:
-      // `orders.created_at` is a `defaultNow()` column, so Postgres is what
-      // stamped the rows this window has to straddle.
-      const dbTime = (await dbNow(db)).getTime();
+      // Bounded around the app clock, which stamps `orders.created_at`.
+      const dbTime = nowDate().getTime();
       const soon = new Date(dbTime + 60_000);
       const justNow = new Date(dbTime - 60_000);
       const longAgo = new Date("2000-01-01T00:00:00Z");

@@ -26,6 +26,12 @@ import { uuidParam } from "@/lib/uuid";
 /** A row's "⋯" posts its message id, and Done/Reopen says which (issue #2233). */
 const messageForm = z.object({ messageId: z.string().default(""), done: z.string().optional() });
 
+/** "Mark running late for {trip}" posts the message and the seat the desk chose (issue #2551). */
+const lateForm = z.object({
+  messageId: z.string().default(""),
+  bookingId: z.string().default(""),
+});
+
 /**
  * **Delete a message from a sender nobody on the roster holds** (issue #1506;
  * ADR 20260907-two-way-inbox, decision 9 and its delete amendment).
@@ -124,11 +130,14 @@ export async function setInboxMessageDoneAction(formData: FormData): Promise<voi
  * the diver's own tap sets on the seat the row named, so the roster and the
  * manifest show it.
  *
- * Same gate and the same tenant binding as the acts above. **Only a message
- * id is posted**: the person comes from the stored message, inside the
- * session's shop, and the seat from `markMessageRunningLate`'s own read, so a
- * hand-built form can name neither somebody else's seat nor a boat the
- * message was not about. The mark gates nothing (src/lib/running-late.ts),
+ * Same gate and the same tenant binding as the acts above. **A message id and
+ * the booking id the desk chose are posted** (issue #2551: a sender holding two
+ * seats inside the window gets one act per seat). The person comes from the
+ * stored message, inside the session's shop, and `markMessageRunningLate`
+ * re-derives the seats the message could be about and refuses any other
+ * booking id, so a hand-built form can name neither somebody else's seat nor a
+ * boat the message was not about. The message text is never read (ADR
+ * 20260909-reply-keywords). The mark gates nothing (src/lib/running-late.ts),
  * which is why any live staff role may set it.
  */
 export async function markInboxSenderLateAction(formData: FormData): Promise<void> {
@@ -137,9 +146,12 @@ export async function markInboxSenderLateAction(formData: FormData): Promise<voi
   const db = await getDb();
   if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
 
-  const parsed = parseForm(messageForm, formData);
+  const parsed = parseForm(lateForm, formData);
   const messageId = parsed.ok ? uuidParam(parsed.data.messageId) : null;
-  if (!parsed.ok || !messageId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
+  const bookingId = parsed.ok ? uuidParam(parsed.data.bookingId) : null;
+  if (!parsed.ok || !messageId || !bookingId) {
+    revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
+  }
 
   const message = await getInboundMessage(db, session.user.shopId, messageId);
   if (!message?.personId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
@@ -147,6 +159,7 @@ export async function markInboxSenderLateAction(formData: FormData): Promise<voi
   const outcome = await markMessageRunningLate(db, {
     shopId: session.user.shopId,
     personId: message.personId,
+    bookingId,
     receivedAt: message.receivedAt,
     now: nowDate(),
     actorPersonId: session.user.personId,

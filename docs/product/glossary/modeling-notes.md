@@ -67,14 +67,21 @@
   the departure log show the seat's own state (its name as booked, readiness, payment, roll-call
   marks) and withhold the matched person's particulars (contact, emergency contact, age, sizes,
   nitrox, medical answers), saying only that other holds may apply (`withholdHeldSeatParticulars`,
-  `src/lib/held-seat.ts`; issue #1690). The Gear tab packs nothing of the matched diver's for it
+  `src/lib/held-seat.ts`; issue #1690). In the withheld contact's place stands the **held seat's own
+  emergency contact**, which the desk records on the roster for the person in front of them
+  (`bookings.held_emergency_contact_*`, issue #2145): written on the booking, never on the matched
+  record, shown on the manifest, its sheet and the crew phone's copy from a field of its own
+  (`heldEmergencyContact`, never `emergencyContact*`, which a withheld row leaves empty), moved onto the new record at a
+  split from whichever moving seat holds it (two different ones refuse the split), and at a confirm copied onto a record with none; beside a different one, the staffer
+  picks which stands in the armed "Same person", which refuses until they do. The Gear tab packs nothing of the matched diver's for it
   either: its booked-as name, no sizes and no verified nitrox card until the desk confirms who it
   is (`listTripPrepDivers`, issue #2144). Its bearer links name nobody: `/ready` greets the name
   it was booked under and remembers nothing on the device, no release link is issued or signed
   until the desk confirms or splits it (`issueWaiverRequest` and `completeWaiver` refuse
   `identity_unconfirmed`), and confirming or splitting sends the release then (issue #2125). It
   ends one of two ways, both on the roster: **Confirm
-  identity** or **Split off a held seat**. Crew never settle it at the rail.
+  identity** or **Split off a held seat**; a seat held because two divers share its name may first
+  be **re-pointed to another diver on file**, which keeps it held. Crew never settle it at the rail.
 - **Confirm identity** — the staff tap that clears `bookings.identity_unconfirmed_at`, and the
   most consequential one in the product: it says *this person is the diver this seat was attached
   to*. Clearing the flag hands the seat the matched diver's **certifications** (readiness stops
@@ -135,6 +142,19 @@
   (owner or manager), which re-seals each verified release it moves as integrity **version 3**
   (who moved it, when, from which record) so it does not read as tampered. Trail lines on the departure (`identity_split`) and on the matched diver's
   record (`identity_split_off`).
+- **Re-point a held seat** ("Another diver on file") — the third answer, offered only on a seat
+  held because the shop holds more than one diver with its booked-as name (issue #2129, Aaron
+  2026-10-13): the seat belongs to the *other* existing record with that name.
+  The list (`otherSameNamePeople`) offers the shop's other live people with exactly that name (trimmed,
+  lower-cased; not removed, erased or merged) **by name only**, each beside a link to their record
+  for the staffer to check, and never pre-picks one. `repointHeldBooking`
+  (`src/db/identity-repoint.ts`) moves the booking, its gear and its unsigned links to the chosen
+  person in one transaction and **keeps the seat held**: it confirms nothing, and "Same person" is
+  then asked of the new match. Otherwise it is the split's: the booker's other same-name held seats
+  move along when ticked, a medical hold refuses the lot, every release is superseded and every
+  bearer link revoked, and a chosen person already on a moving departure is refused. Trail lines
+  on the departure (`identity_repointed`) and on both records (`identity_repointed_off`,
+  `identity_repointed_onto`).
 - **Merge (two diver records)** — the shop saying two records are one diver, and the record kept
   taking everything the other held (`mergeDiverRecords`, `src/db/diver-merge.ts`; issue #1240).
   Owner or manager only. A **likely duplicate** is offered on the record and flagged on the roster

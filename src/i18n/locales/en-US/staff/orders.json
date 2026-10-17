@@ -89,6 +89,7 @@
     "stillHeld": "Still held",
     "disputeOpen": "The cardholder’s bank is disputing {amount}. Send Stripe your evidence by {due}.",
     "disputeOpenNoDeadline": "The cardholder’s bank is disputing {amount}. Answer it in Stripe.",
+    "disputeLost": "Dispute lost on {date}. The cardholder’s bank took back {amount}.",
     "refundAmountLabel": "Refund ({currency})",
     "refunding": "Refunding…",
     "paidAtCounter": {
@@ -119,7 +120,7 @@
       "paymentInFlight": "A payment for this order is being recorded. Check the order in a minute before trying again."
     },
     "recordPayment": {
-      "label": "Record payment:",
+      "label": "Record payment",
       "recording": "Recording…",
       "roomCharge": "Charge to room",
       "roomNumber": "Room",
@@ -139,7 +140,10 @@
       "paidAfterCloseInProgress": "That refund is already on its way.",
       "paidAfterCloseNeedsCheck": "Stripe already reversed part of this payment. Check it under Payments that need a check first.",
       "paidAfterCloseNotConnected": "Your Stripe account isn’t taking payments, so the refund can’t go out. Refund it in Stripe.",
-      "paidAfterCloseFailed": "Stripe didn’t take that refund. Try again, or refund it in Stripe."
+      "paidAfterCloseFailed": "Stripe didn’t take that refund. Try again, or refund it in Stripe.",
+      "stripeRefundMatched": "Refund matched to the seat.",
+      "stripeRefundPartlyMatched": "Matched. The rest of that refund is still waiting for a seat.",
+      "stripeRefundNotMatched": "That seat can’t take this refund. It may already be matched, or the seat wasn’t paid through that checkout."
     },
     "filters": {
       "searchLabel": "Search orders",
@@ -246,6 +250,13 @@
       "label": "Owed:",
       "orders": "{amount} on {count, plural, one {# open order} other {# open orders}}, the oldest from {date}",
       "seats": "{amount} on {count, plural, one {# seat} other {# seats}} that sailed unpaid"
+    },
+    "unattributedRefunds": {
+      "sectionLabel": "Refunds made in Stripe",
+      "heading": "{count, plural, one {# refund} other {# refunds}} made in Stripe covered a group’s payment. Pick the seat each one was for.",
+      "seat": "{diver} · {held} paid",
+      "matching": "Matching…",
+      "openTrip": "Open trip"
     }
   }
 }

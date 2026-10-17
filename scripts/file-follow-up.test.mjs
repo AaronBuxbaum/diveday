@@ -132,6 +132,26 @@ describe("parseFileArgs", () => {
     expect(parsed.labels).toEqual(["ready-for-human", "parked"]);
   });
 
+  it("files an idea under its own label, out of the inbox and the human queue", () => {
+    const parsed = parseFileArgs([...complete, "--idea", "--label", "enhancement"]);
+    expect(parsed.error).toBeUndefined();
+    expect(parsed.idea).toBe(true);
+    expect(parsed.labels).toEqual(["idea", "enhancement"]);
+  });
+
+  it("leaves a plain filing out of the idea shelf", () => {
+    expect(parseFileArgs(complete).idea).toBe(false);
+  });
+
+  it("refuses an idea that is really a question", () => {
+    const asked = complete.map((item) => (item === "improvement" ? "question" : item));
+    expect(parseFileArgs([...asked, "--idea"]).error).toMatch(/drop --idea/);
+  });
+
+  it("refuses --idea given twice", () => {
+    expect(parseFileArgs([...complete, "--idea", "--idea"]).error).toMatch(/--idea given twice/);
+  });
+
   it("refuses two flags both reading stdin", () => {
     const both = complete.map((item) => (item === "why.md" || item === "prompt.md" ? "-" : item));
     expect(parseFileArgs(both).error).toMatch(/only one flag can read stdin/);

@@ -78,7 +78,7 @@ Part of the **backlog-routine** skill ([SKILL.md](SKILL.md)). The SKILL.md loop 
    not survive, say so in the PR **and** the issue, and build what the evidence supports.
 7. **Cut the branch, commit once, open the draft PR and extend the stack** ([stack.md](stack.md)), then build it.
 8. **Verify.** The local gate green (`pnpm check:repo`, `pnpm lint`, `pnpm typecheck`,
-   the specs `pnpm e2e:affected` names; the whole `pnpm check` runs on CI), `pnpm verify:push`
+   the specs `pnpm e2e:affected` names; the whole `pnpm check` runs on CI), `pnpm verify:push --quick`
    before the push, and *look at* every surface you changed, in light (both schemes only for colour work).
    Read each visual diff against the actual image before writing a word about it —
    `pnpm visual:report --commit <sha>` writes the PNGs.

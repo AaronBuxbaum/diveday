@@ -7,6 +7,7 @@ import {
   courseDepthFormat,
   depthRangeText,
   depthText,
+  diveSiteDepthText,
   seaStateText,
   temperatureText,
 } from "./unit-labels";
@@ -40,6 +41,30 @@ describe("the reader's second unit", () => {
     expect(depthRangeText(en, "60–130 ft", "feet")).toBe("60–130 ft");
     expect(depthRangeText(en, "60–130 ft", null)).toBe("60–130 ft");
     expect(depthRangeText(en, "Shallow, to about 40 ft", "meters")).toBe("Shallow, to about 40 ft");
+  });
+
+  it("adds the reader's unit after a site's recorded depth, and converts a typed note", () => {
+    const site = { depthMinMeters: 15, maxDepthMeters: 28 };
+    expect(diveSiteDepthText(en, site, "feet", "meters")).toBe("49–92 ft (15–28 m)");
+    expect(diveSiteDepthText(en, site, "feet", "feet")).toBe("49–92 ft");
+    expect(diveSiteDepthText(en, { depthRange: "60–130 ft" }, "feet", "meters")).toBe(
+      "60–130 ft (18–40 m)",
+    );
+  });
+});
+
+describe("diveSiteDepthText", () => {
+  it("writes a site's range, or its deepest point alone, in the shop's own unit", () => {
+    const site = { depthMinMeters: 15, maxDepthMeters: 28 };
+    expect(diveSiteDepthText(en, site, "meters")).toBe("15–28 m");
+    expect(diveSiteDepthText(en, site, "feet")).toBe("49–92 ft");
+    expect(diveSiteDepthText(es, site, "feet")).toBe("49–92 ft");
+    expect(diveSiteDepthText(en, { maxDepthMeters: 18 }, "meters")).toBe("18 m");
+    expect(diveSiteDepthText(en, { depthMinMeters: 6, maxDepthMeters: null }, "meters")).toBeNull();
+    // The shop's own words stand in only where no depth is recorded, so a briefing never names two units.
+    const note = { depthRange: " shallow ledge to 18 " };
+    expect(diveSiteDepthText(en, note, "feet")).toBe("shallow ledge to 18");
+    expect(diveSiteDepthText(en, { ...note, maxDepthMeters: 18 }, "feet")).toBe("59 ft");
   });
 });
 

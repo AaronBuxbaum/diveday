@@ -1612,7 +1612,7 @@ describe("the boat's emergency kit on Today (dive-domain review 2026-10-09)", ()
     expect(sorted.map((row) => row.id)[0]).toBe("boat-safety-kit:t1");
   });
 
-  it("keeps the papers the owner's errand, quiet while due and a warning once lapsed", () => {
+  it("keeps the boat errands the owner's, a paper due quiet and expired kit a warning", () => {
     const due = action({ id: "papers", kind: "boat_papers_due", urgency: "later" });
     const lapsed = action({ id: "lapsed", kind: "boat_safety_expired" });
     expect(ACTION_KIND_META.boat_papers_due.tone).toBe("neutral");

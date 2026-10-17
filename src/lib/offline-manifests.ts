@@ -7,7 +7,7 @@ import { nowDate } from "./clock";
 import type { DepartureEmergencyReference } from "./emergency-reference";
 // Dependency-free too (type-only imports), for the same reason.
 import { withholdHeldSeatParticulars } from "./held-seat";
-import type { TripManifest } from "./manifests";
+import type { TrainingMarkCleared, TripManifest } from "./manifests";
 // Same reasoning as the roll-call import above: dependency-free, so a value
 // import here is safe for the service worker to carry.
 import { latestPreDepartureCheck, type PreDepartureCheckStatus } from "./pre-departure-check";
@@ -351,6 +351,13 @@ export type OfflineManifestPayload = {
            */
           identityWithheld?: true;
           /**
+           * Beside `identityWithheld` only: the contact the desk recorded for
+           * the person on the held seat (issue #2145), in a field of its own
+           * so the view never reads `emergencyContact*` for it (H7, Y3).
+           * Optional and additive (no record-version bump).
+           */
+          heldEmergencyContact?: { name: string; phone: string };
+          /**
            * **The desk released this seat** (`notHere`, issue #1209) — the
            * other thing the counter can say about a booking, and the one a
            * crew with no signal has no other way to learn.
@@ -385,6 +392,16 @@ export type OfflineManifestPayload = {
            * looked like before the counter could say it.
            */
           notHere?: boolean;
+          /**
+           * **The desk saw this diver and turned them away** (H-135; layer 3
+           * review, dde-1 F3): set only beside `notHere`, which it refines.
+           * Without it the dock copy badged a turned-away diver "Not here", the
+           * opposite statement about a person the desk stood in front of.
+           * Optional and additive, like `notHere` (no record-version bump):
+           * absent reads as the plain write-off, which is what every copy
+           * saved before it said.
+           */
+          turnedAway?: true;
           /**
            * **The diver's own "running late"** (#2319), as an ISO instant:
            * when they said it, and nothing else — no channel, no message.
@@ -442,6 +459,21 @@ export type OfflineManifestPayload = {
             ridingNotClearedOn?: CalendarDate;
             ridingReferredOn?: CalendarDate;
           };
+          /**
+           * **A training mark that stands on this seat** (issue #2275): the
+           * course the dive counts toward and whether an instructor was on the
+           * crew when the copy was saved — the live manifest's fact and
+           * warning, never a blocker. Optional and additive, no version bump;
+           * absent on every other seat.
+           */
+          trainingDive?: { courseTitle: string; instructorAboard: boolean };
+          /**
+           * A staffer cleared this seat's training mark with its course forms
+           * unsigned, by name when the shop still has one: the crew boarding
+           * from this copy sees who decided, as on the live manifest.
+           * Optional and additive, no version bump; absent otherwise.
+           */
+          trainingMarkCleared?: TrainingMarkCleared;
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
           /**
@@ -972,6 +1004,9 @@ export function serializeManifests(
         bookingId: diver.bookingId,
         fullName: diver.fullName,
         ...(diver.identityWithheld ? { identityWithheld: true as const } : {}),
+        ...(diver.identityWithheld && diver.heldEmergencyContact
+          ? { heldEmergencyContact: diver.heldEmergencyContact }
+          : {}),
         emergencyContactName: diver.emergencyContactName,
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,
@@ -981,10 +1016,13 @@ export function serializeManifests(
         ...(diver.dietaryNote ? { dietaryNote: diver.dietaryNote } : {}),
         checkedIn: diver.checkedIn,
         notHere: diver.notHere,
+        ...(diver.notHere && diver.turnedAway ? { turnedAway: true as const } : {}),
         ...(diver.runningLateAt ? { runningLateAt: diver.runningLateAt.toISOString() } : {}),
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.
         ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),
+        ...(diver.trainingDive ? { trainingDive: diver.trainingDive } : {}),
+        ...(diver.trainingMarkCleared ? { trainingMarkCleared: diver.trainingMarkCleared } : {}),
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a
         // snapshot.

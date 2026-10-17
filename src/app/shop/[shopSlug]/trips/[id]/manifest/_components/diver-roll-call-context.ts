@@ -5,6 +5,7 @@ import type {
 import type { PrivateNoteAction } from "@/components/PrivateNoteForm";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ManifestBuddyTeam, RollCallCheckpoint, TripManifest } from "@/lib/manifests";
+import type { MissingReportAction } from "./MissingReportButton";
 import type { PersonTrailEntry } from "./PersonSheet";
 import type { ManifestNote } from "./StaffNotes";
 
@@ -31,7 +32,19 @@ export type DiverRollCallContext = {
   /** The non-implied roll-call events for this diver across today's checkpoints. */
   todayTrailByBooking?: ReadonlyMap<string, readonly PersonTrailEntry[]>;
   rollCallAction: RollCallAction;
+  /**
+   * The departure is cancelled and nobody was counted before it was (#2285):
+   * every roll-call write is refused, so no row or sheet draws a roll-call
+   * control. What is recorded still reads.
+   */
+  rollCallClosed?: boolean;
   addPrivateNoteAction: PrivateNoteAction;
+  /**
+   * "Start a missing diver report", bound to the departure, for a row marked
+   * not back aboard; null for a reader who may not start an incident report
+   * here (anyone but its crew, owners and managers). The write re-checks.
+   */
+  startMissingDiverReport: MissingReportAction | null;
   /**
    * One `RollCallButtonCopy` per diver: the "not ready" refusal embeds a rich
    * link to that diver's own Guests anchor, so it is built by the page

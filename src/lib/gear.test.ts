@@ -18,6 +18,7 @@ import {
   gearServiceIsDue,
   gearServiceState,
   groupUnitsForSize,
+  parseWetsuitThicknessMm,
   pickDisplayReservation,
   rankUnitsForSize,
   reservationPhase,
@@ -839,5 +840,18 @@ describe("benchReturnConcerns", () => {
         TZ,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("parseWetsuitThicknessMm", () => {
+  it("takes whole millimetres in range and refuses everything else as not said", () => {
+    expect(parseWetsuitThicknessMm("5")).toBe(5);
+    expect(parseWetsuitThicknessMm(" 7 ")).toBe(7);
+    expect(parseWetsuitThicknessMm("1")).toBe(1);
+    expect(parseWetsuitThicknessMm("10")).toBe(10);
+    for (const bad of ["", "0", "11", "3.5", "-3", "5mm", "abc"]) {
+      expect(parseWetsuitThicknessMm(bad)).toBeNull();
+    }
+    expect(parseWetsuitThicknessMm(5)).toBeNull();
   });
 });

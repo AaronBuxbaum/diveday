@@ -48,11 +48,9 @@ export function activeNavIndex(pathname: string, items: readonly PublicShopNavIt
 //
 // The pixels the restore costs are bought from padding instead: `px-1.5` below
 // `sm` (and a tighter list gap) rather than smaller type, so the 44px target
-// and the legibility both survive. The chrome bar is one fixed-height row at
-// every width now (ADR 20260827-clearwater-surface-language, decision 10), so
-// at 390px the shop's own name, these two tabs and the language control share
-// 358 points — and the name, which appears nowhere else above the fold on a
-// shopfront page, is the one that must not lose.
+// and the legibility both survive. Below `sm` the shop's name has a row of its
+// own above these tabs and the language control (issue #2303), so three tabs
+// never cost the name a character.
 const linkClass =
   "inline-flex min-h-11 items-center rounded-lg px-1.5 text-base font-medium transition-colors sm:px-3";
 
@@ -66,7 +64,8 @@ const linkClass =
  * growing its own cross-links. Packages is the one third tab, and only for a
  * shop with a package on sale (owner decision 2026-10-09: divers buy them
  * online). Anything further belongs on a page, not here: a fourth for a page
- * most divers never need is the row-of-equals principle 8 warns about.
+ * most divers never need is the row-of-equals principle 8 warns about. All
+ * three always show: on a phone the shop's name sits on the line above them.
  *
  * Never rendered in `?embed=1` mode: the layout drops the entire header there
  * (ADR 20260726-schedule-embed), so an iframe on a shop's own site gets the
@@ -81,23 +80,11 @@ export function PublicShopNav({
 }) {
   const pathname = usePathname();
   const active = activeNavIndex(pathname, items);
-  // Three destinations do not fit a phone's bar beside the shop's name: at
-  // 390px the name, Schedule, Courses, Packages and the language control would
-  // need about 420 of the row's 358 points, and the name is the slot that gave
-  // (it ellipsed to "Blue Mantis Div…" on a shop with a package on sale). The
-  // row stays one fixed height and the type stays 16px, so below `sm` the
-  // schedule tab folds into the name beside it, which already links to the
-  // schedule; the two tabs the name cannot stand in for stay.
-  const foldsScheduleIntoName = items.length >= 3;
-
   return (
     <nav aria-label={ariaLabel}>
       <ul className="flex items-center gap-0.5 sm:gap-1">
         {items.map((item, index) => (
-          <li
-            key={item.href}
-            className={foldsScheduleIntoName && index === 0 ? "hidden sm:block" : undefined}
-          >
+          <li key={item.href}>
             <Link
               href={item.href}
               aria-current={index === active ? "page" : undefined}

@@ -29,7 +29,10 @@
   "late": {
     "action": "Mark running late",
     "actionFor": "Mark {name} running late for {trip}",
-    "marked": "On the manifest: running late, said {time}"
+    "marked": "On the manifest: running late, said {time}",
+    "actionTrip": "Mark running late for {trip}",
+    "actionForSeat": "Mark {name} running late for {trip}, {when}",
+    "markedFor": "On the manifest for {trip}: running late, said {time}"
   },
   "openRecord": "Open the record for {name}",
   "delete": {

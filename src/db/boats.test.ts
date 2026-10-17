@@ -205,8 +205,13 @@ describe("deleting a boat", () => {
  */
 describe("updateBoatWithinCertificate", () => {
   const NOW = new Date("2030-05-01T12:00:00.000Z");
-  const papers = (certifiedPassengers: number | null) => ({
+  const papers = (
+    certifiedPassengers: number | null,
+    certifiedTotalPersons: number | null = null,
+  ) => ({
     certifiedPassengers,
+    certifiedTotalPersons,
+    coiExpiresOn: null,
     inspectionDueOn: null,
     registrationExpiresOn: null,
     insuranceExpiresOn: null,
@@ -242,6 +247,90 @@ describe("updateBoatWithinCertificate", () => {
     if (!trip) throw new Error("trip not created");
     return boat;
   }
+
+  // #2302: total persons, crew included, beside the passenger limit.
+  it("saves a total-persons limit and the certificate's own expiry", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Persons Hull", 6);
+    const saved = await updateBoatWithinCertificate(db, {
+      shopId: shop.id,
+      boatId: boat.id,
+      name: "Persons Hull",
+      capacity: 6,
+      description: null,
+      papers: { ...papers(10, 12), coiExpiresOn: "2031-02-28" },
+      timeZone: "America/New_York",
+      now: NOW,
+    });
+    expect(saved).toMatchObject({
+      ok: true,
+      boat: { certifiedPassengers: 10, certifiedTotalPersons: 12, coiExpiresOn: "2031-02-28" },
+    });
+  });
+
+  it("refuses more passengers than persons and writes nothing", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Typo Hull", 6);
+    const refused = await updateBoatWithinCertificate(db, {
+      shopId: shop.id,
+      boatId: boat.id,
+      name: "Typo Hull",
+      capacity: 6,
+      description: null,
+      papers: papers(14, 12),
+      timeZone: "America/New_York",
+      now: NOW,
+    });
+    expect(refused).toEqual({
+      ok: false,
+      reason: "certificate",
+      refusal: { code: "passengers_above_total_persons", passengers: 14, limit: 12 },
+    });
+    expect(await getBoatById(db, shop.id, boat.id)).toMatchObject({
+      certifiedPassengers: null,
+      certifiedTotalPersons: null,
+    });
+  });
+
+  // Dive-domain review D2: more seats than persons is a typo at save. The
+  // sale is untouched (Aaron, 2026-10-13); only the boat row is refused.
+  it("refuses saving more seats than total persons, and keeps the boat as it was", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Spanish Hull", 6);
+    expect(
+      await updateBoatWithinCertificate(db, {
+        shopId: shop.id,
+        boatId: boat.id,
+        name: "Spanish Hull",
+        capacity: 20,
+        description: null,
+        papers: papers(null, 12),
+        timeZone: "America/New_York",
+        now: NOW,
+      }),
+    ).toEqual({
+      ok: false,
+      reason: "certificate",
+      refusal: { code: "seats_above_total_persons", capacity: 20, limit: 12 },
+    });
+    expect(await getBoatById(db, shop.id, boat.id)).toMatchObject({
+      capacity: 6,
+      certifiedTotalPersons: null,
+    });
+  });
+
+  // One refused statement per test: it aborts the test's transaction.
+  it("is refused by the table itself when passengers pass persons", async () => {
+    const { db, shop } = ctx;
+    await expect(
+      createBoat(db, shop.id, "Constraint Hull", 6, null, papers(14, 12)),
+    ).rejects.toThrow();
+  });
+
+  it("is refused by the table itself for a total of nobody", async () => {
+    const { db, shop } = ctx;
+    await expect(createBoat(db, shop.id, "Zero Hull", 6, null, papers(null, 0))).rejects.toThrow();
+  });
 
   it("refuses a certificate below a departure's seats and leaves the hull as it was", async () => {
     const { db, shop } = ctx;
@@ -307,6 +396,8 @@ describe("the boat a departure sails on, for its emergency card (fourth review, 
     const { db, shop } = ctx;
     const one = await createBoat(db, shop.id, "Mantis I", 12, null, {
       certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
       inspectionDueOn: null,
       registrationExpiresOn: null,
       insuranceExpiresOn: null,
@@ -342,6 +433,8 @@ describe("the boat a departure sails on, for its emergency card (fourth review, 
     const before = await countBoatsWithoutRadioIdentity(db, shop.id);
     const papers = {
       certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
       inspectionDueOn: null,
       registrationExpiresOn: null,
       insuranceExpiresOn: null,
@@ -370,6 +463,8 @@ describe("the boat a departure sails on, for its emergency card (fourth review, 
     await expect(
       createBoat(db, shop.id, "Typo", 8, null, {
         certifiedPassengers: null,
+        certifiedTotalPersons: null,
+        coiExpiresOn: null,
         inspectionDueOn: null,
         registrationExpiresOn: null,
         insuranceExpiresOn: null,

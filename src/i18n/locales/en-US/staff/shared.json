@@ -62,7 +62,8 @@
     "documentChoose": "Choose a file",
     "documentChooseAnother": "Choose a different file",
     "recording": "Recording…",
-    "confirm": "Record the answer"
+    "confirm": "Record the answer",
+    "earlierLetterConfirm": "Tick if this letter is dated before the latest referral: the physician evaluated their current condition, not only the referral signed {date}."
   },
   "waiverSend": {
     "sending": "Sending…",
@@ -116,6 +117,8 @@
     "meters": "m",
     "feet": "ft"
   },
+  "depthRange": "{min}–{max} {unit}",
+  "depthSingle": "{max} {unit}",
   "temperature": {
     "celsius": "°C",
     "fahrenheit": "°F"
@@ -217,6 +220,7 @@
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
       "waiverLapsed": "Signed waiver lapsed; send a fresh link.",
+      "waiverRunsOut": "Waiver runs out before the trip; send a fresh link.",
       "medicalReview": "A medical answer needs a doctor’s sign-off before this diver dives.",
       "medicalNotCleared": "A physician did not clear this diver to dive.",
       "guardianSignatureMissing": "Signed by a minor alone. A parent or guardian has to sign too; send a fresh waiver link.",
@@ -238,7 +242,9 @@
       "paymentRefunded": "Payment was refunded; collect payment before boarding.",
       "readinessUnavailable": "Readiness evidence is unavailable. Do not board this diver until it is checked.",
       "courseFormUnsigned": "Course form not signed: {form}.",
-      "courseFormGuardianMissing": "{form} needs a parent or guardian’s signature."
+      "courseFormAgeUnknown": "{form} is for students {maxAge} and under, and there’s no date of birth on file. Add it, or have it signed with a parent or guardian.",
+      "courseFormGuardianMissing": "{form} needs a parent or guardian’s signature.",
+      "trainingMarkInvalid": "Training mark no longer fits its course seat. Clear it on the roster."
     }
   },
   "shopNav": {
@@ -353,6 +359,7 @@
       "eyebrow": "Offline manifests",
       "headingWithTrips": "Saved on this device",
       "headingEmpty": "No manifest saved on this phone yet",
+      "readFailedHeading": "Couldn’t open this phone’s saved manifests",
       "diverCount": "{count, plural, one {# diver} other {# divers}}",
       "expiredViewOnly": "Expired — view only",
       "emptyHint": "Open a departure’s manifest while online and it is kept here.",
@@ -365,6 +372,8 @@
       "eyebrow": "Offline manifest",
       "emptyHeading": "Nothing saved on this phone yet",
       "emptyHint": "While you still have signal, open the trip’s live manifest. It keeps this device’s copy current on its own.",
+      "readFailedHeading": "Couldn’t open this phone’s saved copy",
+      "readFailedHint": "Reload this page once. If it still won’t open, use the printed manifest.",
       "removedOtherShopHeading": "That saved copy has been removed",
       "removedOtherShopMessage": "A different shop is signed in on this tablet.",
       "removedOtherShopHint": "This trip was saved by a different shop, so its copy was removed from this tablet when the shop signed in here changed. Roll call for it has to be recorded on that shop’s own live manifest.",
@@ -392,6 +401,7 @@
       "readyBadge": "Ready when saved",
       "blockedBadge": "Blocked when saved",
       "notHereBadge": "Not here when saved",
+      "turnedAwayBadge": "Turned away when saved",
       "statePendingSuffix": "· waiting to send",
       "emergencyContact": "Emergency contact",
       "notOnFile": "Not on file",
@@ -478,7 +488,7 @@
     "ownKit": "Own kit",
     "needsStaffFit": "Needs staff fit at check-in",
     "needsStaffFitWithNote": "Needs staff fit — {note}",
-    "drysuitCardMissing": "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience, or plan an orientation before the first dive.",
+    "drysuitCardMissing": "Dives dry with no drysuit certification on file. Not a block: ask about their drysuit experience (if you have seen them dive dry, record it on their record), or plan an orientation before the first dive.",
     "drysuitCardUnconfirmed": "Dives dry, and their drysuit certification is not confirmed. Not a block: confirm it on their record, or plan an orientation before the first dive."
   },
   "rollCallCheckpoint": {
@@ -602,12 +612,18 @@
     "sameNameSeats": "{count, plural, one {Also move the held seat booked as {bookedAs} on {departures}} other {Also move the held seats booked as {bookedAs} on {departures}}}",
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Give them their own record",
-    "splitting": "Creating…"
+    "splitting": "Creating…",
+    "another": "Another diver on file",
+    "anotherLegend": "Move this seat to",
+    "anotherNote": "The seat stays held until you confirm it’s them.",
+    "openRecord": "Open record",
+    "repoint": "Move to this diver",
+    "repointing": "Moving…"
   },
   "boatWork": {
     "missingSize": "{count} missing a size",
     "kitUnasked": "{count} not asked about kit",
-    "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} nitrox with no verified card",
+    "ungatedNitrox": "{count, plural, one {# diver wants nitrox and gets air} other {# divers want nitrox and get air}} unless a card is verified before the boat leaves",
     "missingContact": "{count, plural, one {# person has} other {# people have}} no emergency contact",
     "openOrders": "{count, plural, one {# order} other {# orders}} awaiting payment"
   },

@@ -92,6 +92,7 @@ describe("useSavedManifest on a trip", () => {
     await waitFor(() => expect(result.current.storeRead).toBe(true));
     expect(result.current.envelope).toBeNull();
     expect(result.current.message).toBe(line("noneForTrip"));
+    expect(result.current.storeReadFailed).toBe(false);
   });
 
   it("settles on an error line when the store cannot be read", async () => {
@@ -99,6 +100,21 @@ describe("useSavedManifest on a trip", () => {
     const { result } = at("trip=trip-1");
     await waitFor(() => expect(result.current.storeRead).toBe(true));
     expect(result.current.message).toBe(line("singleLoadError"));
+    expect(result.current.storeReadFailed).toBe(true);
+  });
+
+  // Dive-domain review D9: a later read that works clears the failure.
+  it("clears the read failure once a later read of another trip succeeds", async () => {
+    load.mockRejectedValueOnce(new Error("decrypt failed"));
+    const { result, rerender } = at("trip=trip-1");
+    await waitFor(() => expect(result.current.storeReadFailed).toBe(true));
+    load.mockResolvedValue(envelope("trip-2", "Night Dive"));
+    search.params = new URLSearchParams("trip=trip-2");
+    rerender();
+    await waitFor(() =>
+      expect(result.current.envelope?.snapshot.manifests[0]?.trip.id).toBe("trip-2"),
+    );
+    expect(result.current.storeReadFailed).toBe(false);
   });
 
   it("keeps a checkpoint from the URL the trip actually has", async () => {
@@ -221,6 +237,7 @@ describe("useSavedManifest on the list", () => {
     const { result } = at("");
     await waitFor(() => expect(result.current.storeRead).toBe(true));
     expect(result.current.message).toBe(line("listLoadError"));
+    expect(result.current.storeReadFailed).toBe(true);
   });
 
   it("syncs only the signed-in shop's copies with pending events, and merges them back", async () => {

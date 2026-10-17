@@ -22,9 +22,17 @@ import {
 } from "./readiness";
 import { carriedPreparationForDiver, getBookedCard, getReadyPageData } from "./ready";
 import { getRentalFit, toDiverRentalFit } from "./rental-fit";
-import { bookings, people, priorVisits, shops, trips as tripTable, waiverRecords } from "./schema";
+import {
+  bookings,
+  people,
+  priorVisits,
+  rollCallEvents,
+  shops,
+  trips as tripTable,
+  waiverRecords,
+} from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, listStaff, setTripStatus, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver } from "./waivers";
 import { issueWaiverRequest } from "./waivers-requests";
 
@@ -136,6 +144,36 @@ describe("getReadyPageData", () => {
     if (!added.ok) throw new Error("add failed");
     expect((await getReadyPageData(db, bookingId))?.canAddSeat).toBe(true);
     expect((await getReadyPageData(db, added.bookingId))?.canAddSeat).toBe(false);
+  });
+
+  /**
+   * Layer 3 review (dde-2 #1, dde-1 F2): a seat the desk released before the
+   * boat left is not the diver's to pay for or prepare. Without this, a diver
+   * turned away for payment at 07:00 pays at 07:10 for a seat the shop has
+   * already sold, and the page walks them through the checklist to the boat.
+   */
+  it("neither charges for nor prepares a seat the desk released", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    await upsertShopStripeAccount(db, shop.id, "acct_ready_released");
+    await setShopStripeAccountStatus(db, "acct_ready_released", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const held = await getReadyPageData(db, bookingId);
+    expect(held?.canPay).toBe(true);
+    expect(held?.seatReleased).toBe(false);
+    await db
+      .update(bookings)
+      .set({ status: "no_show", turnedAwayAt: nowDate(), turnedAwayReason: "payment" })
+      .where(eq(bookings.id, bookingId));
+    const released = await getReadyPageData(db, bookingId);
+    expect(released?.canPay).toBe(false);
+    expect(released?.seatReleased).toBe(true);
+    expect(released?.turnedAway).toBe(true);
+    // Erasure-shaped: the fact without the category still reads turned away.
+    await db.update(bookings).set({ turnedAwayReason: null }).where(eq(bookings.id, bookingId));
+    expect((await getReadyPageData(db, bookingId))?.turnedAway).toBe(true);
   });
 
   /**
@@ -308,6 +346,26 @@ describe("getReadyPageData", () => {
     const pastBuffer = new Date(open.startsAt.getTime() + 60 * 60 * 1000);
     expect((await getReadyPageData(db, bookingId, midBuffer))?.canCancelBooking).toBe(true);
     expect((await getReadyPageData(db, bookingId, pastBuffer))?.canCancelBooking).toBe(false);
+  });
+
+  it("withdraws the cancel inside the late hour once the dock counted the diver aboard (H-133)", async () => {
+    // `selfCancelBooking` refuses this seat (`aboardAtSeaBookingIds`), so the
+    // page must not offer it.
+    const { db, shop, open, bookingId } = await unpaidBooking();
+    const midBuffer = new Date(open.startsAt.getTime() + 20 * 60 * 1000);
+    expect((await getReadyPageData(db, bookingId, midBuffer))?.canCancelBooking).toBe(true);
+    const [recorder] = await listStaff(db, shop.id);
+    if (!recorder) throw new Error("seeded staff missing");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: open.id,
+      bookingId,
+      recordedByPersonId: recorder.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: new Date(open.startsAt.getTime() + 5 * 60 * 1000),
+    });
+    expect((await getReadyPageData(db, bookingId, midBuffer))?.canCancelBooking).toBe(false);
   });
 
   it("reads a waived booking as owing no refund, since there is no money to give back", async () => {

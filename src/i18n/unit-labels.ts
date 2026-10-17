@@ -1,6 +1,7 @@
 import type { CourseDepthFormat } from "@/lib/courses";
 import type { DepthUnit } from "@/lib/depth-units";
 import { depthInUnit, depthToMeters } from "@/lib/depth-units";
+import { siteDepthInUnit } from "@/lib/dive-site-depth";
 import type { SeaState, WindState } from "@/lib/marine-forecast";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { temperatureInUnit } from "@/lib/temperature-units";
@@ -36,6 +37,50 @@ const TEMPERATURE_UNIT_KEYS: Record<TemperatureUnit, DiverMessageKey> = {
  */
 function withReaderUnit(t: DiverTranslator, first: string, second: string | null): string {
   return second ? t("common.units.withReaderUnit", { first, second }) : first;
+}
+
+const DEPTH_RANGE_KEYS: Record<DepthUnit, DiverMessageKey> = {
+  meters: "common.units.metersRange",
+  feet: "common.units.feetRange",
+};
+
+/** A recorded site depth in one unit: "15–28 m", or "28 m" with only the deepest. */
+function siteDepthInOneUnit(
+  t: DiverTranslator,
+  depth: { depthMinMeters?: number | null; maxDepthMeters?: number | null },
+  unit: DepthUnit,
+): string | null {
+  const inUnit = siteDepthInUnit(depth, unit);
+  if (!inUnit) return null;
+  if (inUnit.min === null) return t(DEPTH_UNIT_KEYS[unit], { value: inUnit.max });
+  return t(DEPTH_RANGE_KEYS[unit], { min: inUnit.min, max: inUnit.max });
+}
+
+/**
+ * A dive site's depth in the shop's unit: "15–28 m" where the shop recorded a
+ * shallow end and a deepest point, "28 m" with only the deepest. One unit on
+ * every briefing, whatever the shop typed, with the reader's after it when
+ * theirs differs (fifth-loop ideas, item 22). With no recorded depth at all
+ * the shop's own depth note stands in (converted only where it is a plain
+ * number and a unit, `depthRangeText`), and null when there is none.
+ */
+export function diveSiteDepthText(
+  t: DiverTranslator,
+  depth: {
+    depthMinMeters?: number | null;
+    maxDepthMeters?: number | null;
+    depthRange?: string | null;
+  },
+  unit: DepthUnit,
+  reader: DepthUnit | null = null,
+): string | null {
+  const own = siteDepthInOneUnit(t, depth, unit);
+  if (!own) {
+    const note = depth.depthRange?.trim();
+    return note ? depthRangeText(t, note, reader) : null;
+  }
+  const theirs = reader && reader !== unit ? siteDepthInOneUnit(t, depth, reader) : null;
+  return withReaderUnit(t, own, theirs);
 }
 
 /**

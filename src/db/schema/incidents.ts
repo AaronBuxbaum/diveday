@@ -11,6 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { diveSites } from "./dive-sites";
 import { trips } from "./trips";
@@ -105,8 +106,8 @@ export const incidentReports = pgTable(
     createdByPersonId: uuid("created_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     filedAt: timestamp("filed_at", { withTimezone: true }),
     filedByPersonId: uuid("filed_by_person_id").references(() => people.id),
     /**
@@ -124,11 +125,37 @@ export const incidentReports = pgTable(
      * discarded.
      */
     legalHoldAt: timestamp("legal_hold_at", { withTimezone: true }),
+    /**
+     * **The missing-diver alert's lease** (H-142, decided 2026-10-16): stamped
+     * when a pass took the report to tell the owners, so two passes never send
+     * at once. It is a lease, not the proof of a send: a pass that crashed
+     * leaves it stamped, and once it is older than the lease the next pass
+     * takes the report again. A send that did not reach every owner gives it
+     * back at once. `missing_alert_sent_at` is what says the owners were told
+     * (`sendMissingDiverAlerts`). Null on every other kind, and on a report not
+     * yet filed.
+     */
+    missingAlertedAt: timestamp("missing_alerted_at", { withTimezone: true }),
+    /**
+     * When every active owner's email for a filed missing-diver report was
+     * sent. Null until then; the report page says "Not reached yet" while it is.
+     */
+    missingAlertSentAt: timestamp("missing_alert_sent_at", { withTimezone: true }),
+    /** Who discarded the draft, named beside it on the departure log. */
+    deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
   },
   (table) => [
     index("incident_reports_shop_trip_idx")
       .on(table.shopId, table.tripId, table.createdAt)
       .where(sql`${table.deletedAt} is null`),
+    // Today's "not filed" line reads the shop's live drafts, oldest first.
+    index("incident_reports_live_drafts_idx")
+      .on(table.shopId, table.createdAt)
+      .where(sql`${table.status} = 'draft' and ${table.deletedAt} is null`),
+    check(
+      "incident_reports_deleted_by_whom",
+      sql`(${table.deletedAt} is null) = (${table.deletedByPersonId} is null)`,
+    ),
     index("incident_reports_shop_occurred_idx").on(table.shopId, table.occurredAt),
     check(
       "incident_reports_only_a_draft_is_discarded",
@@ -180,7 +207,7 @@ export const incidentReportPeople = pgTable(
     personId: uuid("person_id").references(() => people.id),
     outsiderName: text("outsider_name"),
     involvement: incidentInvolvement("involvement").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("incident_report_people_report_idx").on(table.reportId, table.createdAt),
@@ -215,7 +242,7 @@ export const incidentReportAddenda = pgTable(
     authorPersonId: uuid("author_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("incident_report_addenda_report_idx").on(table.reportId, table.createdAt),

@@ -5,6 +5,7 @@ import { type DepthUnit, depthToMeters, MAX_ENTERED_DEPTH_METERS } from "./depth
 import {
   type DiveSiteDifficulty,
   parseDiveSiteDifficulty,
+  parseSnorkelSuitable,
   type SiteLibraryGroupLabel,
 } from "./dive-site-difficulty";
 import { parseFieldGuideSelection } from "./dive-site-field-guide";
@@ -50,6 +51,7 @@ export type DiveSiteFormError =
   | "coordinatesIncomplete"
   | "tideStationInvalid"
   | "depthTooDeep"
+  | "depthRangeInvalid"
   | "images"
   | "imagesUnconfigured"
   | "nameTaken"
@@ -116,7 +118,16 @@ export const diveSiteFormSchema = z.object({
   marineLife: z.string().trim().max(400),
   marineLifeDescription: z.string().trim().max(1_200),
   difficulty: z.string().trim().max(120),
+  // "yes", "no" or "" from the select beside difficulty (issue #2214); absent
+  // from an older form reads as "not said".
+  snorkelSuitable: z.string().trim().max(3).optional().default(""),
+  /** The shop's own words about depth; it never replaces the two numbers. */
   depthRange: z.string().trim().max(120),
+  // Typed in the shop's own unit like `maxDepth`: the shallow end of the range.
+  minDepth: z
+    .union([z.literal(""), z.coerce.number().min(0).max(1_000)])
+    .optional()
+    .default(""),
   // Typed in the shop's own unit (metres or feet), so the real bound can only
   // be applied once the unit is known — this is the loose outer guard, and
   // `parseDiveSiteForm`'s `depthUnit` argument applies the true ceiling.
@@ -201,10 +212,14 @@ export type DiveSiteFormParse =
       ok: true;
       fields: DiveSiteFormFields;
       maxDepthMeters: number | null;
+      /** The shallow end of the depth range in metres, or null; never above `maxDepthMeters`. */
+      depthMinMeters: number | null;
       /** The typed override in minutes, or null when the shop's own figure stands. */
       expectedBottomTimeMinutes: number | null;
       /** The chosen difficulty code, or null — see `./dive-site-difficulty.ts`. */
       difficultyLevel: DiveSiteDifficulty | null;
+      /** Whether snorkelers get anything out of the site, or null for not said. */
+      snorkelSuitable: boolean | null;
       route: DiveSiteFormRoute;
       landmarks: DiveSiteLandmark[];
       creatures: MarineLifeSlug[];
@@ -224,7 +239,7 @@ export function parseDiveSiteForm(
 ): DiveSiteFormParse {
   const parsed = diveSiteFormSchema.safeParse(entries);
   if (!parsed.success) return { ok: false, error: "invalid" };
-  const { forecastLatitude, forecastLongitude, maxDepth } = parsed.data;
+  const { forecastLatitude, forecastLongitude, maxDepth, minDepth } = parsed.data;
   // A site may be saved before its GPS location is known, but a partial pair
   // is never meaningful and is refused until both coordinates are present.
   if (
@@ -242,6 +257,11 @@ export function parseDiveSiteForm(
   if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) {
     return { ok: false, error: "depthTooDeep" };
   }
+  // A shallow end needs a deepest point to be a range, and cannot sit below it.
+  const depthMinMeters = minDepth === "" ? null : depthToMeters(minDepth, depthUnit);
+  if (depthMinMeters !== null && (maxDepthMeters === null || depthMinMeters > maxDepthMeters)) {
+    return { ok: false, error: "depthRangeInvalid" };
+  }
   // Its own code rather than the form-wide "invalid": the note is one box on a
   // ~4,000px form, and a banner that only said "check the form" would send a
   // staffer hunting through ten sections for it (issue #1204).
@@ -258,9 +278,11 @@ export function parseDiveSiteForm(
     ok: true,
     fields: parsed.data,
     maxDepthMeters,
+    depthMinMeters,
     expectedBottomTimeMinutes:
       parsed.data.expectedBottomTime === "" ? null : parsed.data.expectedBottomTime,
     difficultyLevel: parseDiveSiteDifficulty(parsed.data.difficulty),
+    snorkelSuitable: parseSnorkelSuitable(parsed.data.snorkelSuitable),
     landmarks: parseDiveSiteLandmarks(parsed.data.landmarks),
     creatures: parseFieldGuideSelection(parsed.data.creatures),
     route: {

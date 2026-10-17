@@ -16,6 +16,7 @@ import {
 } from "@/db/trips";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
@@ -40,6 +41,11 @@ import { requireTripConfig } from "./trip-config";
  * when this date has a crew to stand; absent, the run's standing crew is left
  * as it was.
  */
+const seriesDetailsForm = z.object({
+  crewSwitch: formValue(),
+  standingCrew: checkbox(),
+});
+
 export async function applySeriesDetailsAction(
   shopSlug: string,
   tripId: string,
@@ -48,15 +54,16 @@ export async function applySeriesDetailsAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
+  const form = readForm(seriesDetailsForm, formData);
   const db = await getDb();
   const result = await applyDetailsToFutureSeries(db, s.user.shopId, seriesId, tripId);
   const crew =
-    result && formData.get("crewSwitch") === "shown"
+    result && form.crewSwitch === "shown"
       ? await setSeriesStandingCrew(db, {
           shopId: s.user.shopId,
           seriesId,
           sourceTripId: tripId,
-          standing: formData.get("standingCrew") === "on",
+          standing: form.standingCrew,
           actorPersonId: s.user.personId,
         })
       : null;
@@ -146,6 +153,8 @@ export async function cancelSeriesAction(shopSlug: string, tripId: string, serie
  * the same call, which is also how a shop takes a finite series scheduled
  * before this existed and simply lets it keep going.
  */
+const seriesRepeatForm = z.object({ keepRepeating: checkbox("yes") });
+
 export async function setSeriesRepeatAction(
   shopSlug: string,
   tripId: string,
@@ -154,7 +163,7 @@ export async function setSeriesRepeatAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = await requireTripConfig(shopSlug, tripId);
-  const keepRepeating = formData.get("keepRepeating") === "yes";
+  const { keepRepeating } = readForm(seriesRepeatForm, formData);
   const result = await setSeriesRepeat(await getDb(), s.user.shopId, seriesId, keepRepeating);
   const notice = !result ? "series-error" : keepRepeating ? "series-repeating" : "series-stopped";
   revalidateAndRedirect(back, noticeUrl(back, notice));

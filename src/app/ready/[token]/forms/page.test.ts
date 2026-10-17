@@ -113,7 +113,12 @@ async function enrolled(options: { forms?: number; dateOfBirth?: string } = {}) 
     });
     formIds.push(form.id);
   }
-  await setCourseFormRequirements(db, { shopId: shop.id, courseId: seat.courseId, formIds });
+  await setCourseFormRequirements(db, {
+    mayNarrow: true,
+    shopId: shop.id,
+    courseId: seat.courseId,
+    formIds,
+  });
   const issued = await issueBookingCapability(db, {
     shopId: shop.id,
     bookingId: seat.bookingId,

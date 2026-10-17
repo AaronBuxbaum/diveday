@@ -19,8 +19,9 @@ import type { TripManifest } from "./manifests";
  * correct, so the printed sheet withholds as well, and says so in words.
  *
  * What stays is the **seat**: its name, its readiness word, its roll-call
- * mark, its check-in and desk release, its buddy team, its pickup, and the
- * blockers that belong to the seat (the identity question and its payment).
+ * mark, its check-in and desk release, its buddy team, its pickup, the
+ * emergency contact the desk recorded on the seat itself (issue #2145), and
+ * the blockers that belong to the seat (the identity question and its payment).
  * A seat that cannot board has to appear and has to say so. What waits is the
  * **person**: contact, age and minor status, birthday, welcome word, rental
  * sizes and nitrox, the medical mark, the depth advisory measured against the
@@ -122,8 +123,11 @@ export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver
     identityWithheld: true,
     moreHoldsBehindConfirmation: dropped > 0,
     email: null,
+    // The matched record's next of kin never; the one the desk recorded for
+    // the person on this seat (issue #2145) rides in a field of its own (H7).
     emergencyContactName: null,
     emergencyContactPhone: null,
+    heldEmergencyContact: diver.identityClaim?.heldEmergencyContact ?? null,
     rentalFit: { state: "not_recorded" },
     nitroxRequested: false,
     age: null,
@@ -135,4 +139,70 @@ export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver
     riderMedicalHold: null,
     readiness: { status: "blocked", blockers: kept },
   };
+}
+
+/**
+ * Which emergency contact a confirmed record keeps when the held seat's own
+ * (issue #2145) differs from it: the seat's (`use_held`) or the record's
+ * (`keep_record`). The staffer picks in the armed "Same person".
+ */
+export type HeldContactChoice = "use_held" | "keep_record";
+
+/**
+ * What a confirm does with the held seat's contact: the pair to write onto the
+ * record, nothing (`null`), or `"differs"` when both hold a complete contact,
+ * they are not the same, and nobody has picked. A pair needs both halves, as
+ * `readEmergencyContact` does everywhere else.
+ */
+export function heldContactCarry(
+  contacts: {
+    heldName: string | null;
+    heldPhone: string | null;
+    recordName: string | null;
+    recordPhone: string | null;
+  },
+  choice: HeldContactChoice | undefined,
+): { name: string; phone: string } | null | "differs" {
+  const { heldName, heldPhone, recordName, recordPhone } = contacts;
+  if (!heldName || !heldPhone) return null;
+  const held = { name: heldName, phone: heldPhone };
+  if (!recordName || !recordPhone) return held;
+  const same =
+    heldName.trim().toLocaleLowerCase() === recordName.trim().toLocaleLowerCase() &&
+    heldPhone.replace(/\D/g, "") === recordPhone.replace(/\D/g, "");
+  if (same) return null;
+  if (choice === "use_held") return held;
+  if (choice === "keep_record") return null;
+  return "differs";
+}
+
+/**
+ * The one emergency contact a split's moving seats carry onto the new record
+ * (issue #2145): the first complete pair among them, `null` when none holds
+ * one, and `"conflict"` when two hold different pairs, which the desk settles
+ * before the split rather than one being dropped (dive-domain review H4).
+ */
+export function movingHeldContact(
+  seats: ReadonlyArray<{ heldContactName: string | null; heldContactPhone: string | null }>,
+): { name: string; phone: string } | null | "conflict" {
+  let found: { name: string; phone: string } | null = null;
+  for (const seat of seats) {
+    if (!seat.heldContactName || !seat.heldContactPhone) continue;
+    const pair = { name: seat.heldContactName, phone: seat.heldContactPhone };
+    if (!found) {
+      found = pair;
+      continue;
+    }
+    const same = heldContactCarry(
+      {
+        heldName: pair.name,
+        heldPhone: pair.phone,
+        recordName: found.name,
+        recordPhone: found.phone,
+      },
+      undefined,
+    );
+    if (same !== null) return "conflict";
+  }
+  return found;
 }

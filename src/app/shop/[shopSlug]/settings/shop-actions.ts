@@ -30,7 +30,7 @@ import {
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
-import { checkbox, formValue, readForm } from "@/lib/form-parse";
+import { checkbox, formValue, readForm, trimmedText } from "@/lib/form-parse";
 import { isValidTimeZone } from "@/lib/format";
 import { isShopCurrency, type ShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -335,11 +335,13 @@ export async function saveSeasonStartAction(formData: FormData) {
  * (`shops.reopens_on`). Blank clears it; anything that is not a real calendar
  * date is refused on the form rather than stored.
  */
+const reopensOnForm = z.object({ reopensOn: trimmedText() });
+
 export async function saveReopensOnAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
-  const submitted = String(formData.get("reopensOn") ?? "").trim();
+  const submitted = readForm(reopensOnForm, formData).reopensOn;
   if (submitted !== "" && !isValidCalendarDate(submitted)) {
     redirect(noticeUrl(settings, "reopens-invalid", { saved: "season" }));
   }

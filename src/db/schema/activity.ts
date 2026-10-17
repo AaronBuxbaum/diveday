@@ -15,6 +15,7 @@ import {
 import type { DraftFields } from "@/lib/form-drafts";
 import type { HeldSendPayload } from "@/lib/held-sends";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { diveSites } from "./dive-sites";
 import { orders } from "./payments";
@@ -50,7 +51,7 @@ export const internalNotes = pgTable(
     createdByPersonId: uuid("created_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("internal_notes_shop_person_idx").on(table.shopId, table.personId, table.createdAt),
@@ -140,7 +141,7 @@ export const activityEvents = pgTable(
      * sweep matches against this column's text.
      */
     params: jsonb("params").$type<Record<string, string>>().notNull().default({}),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    occurredAt: appNowTimestamp("occurred_at").notNull(),
     /**
      * The order these were written in, for reading a trail whose timestamps tie.
      *
@@ -208,7 +209,7 @@ export const tripChangeEvents = pgTable(
       .$type<Record<string, string | number | boolean | null>>()
       .notNull(),
     actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    occurredAt: appNowTimestamp("occurred_at").notNull(),
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
@@ -271,7 +272,7 @@ export const tripStageEvents = pgTable(
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
       .references(() => people.id),
-    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
     /** The final tiebreak when two taps share an instant, as on the roll call. */
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
@@ -304,7 +305,7 @@ export const formDrafts = pgTable(
       .references(() => people.id, { onDelete: "cascade" }),
     form: text("form").notNull(),
     fields: jsonb("fields").$type<DraftFields>().notNull(),
-    savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+    savedAt: appNowTimestamp("saved_at").notNull(),
   },
   (table) => [
     uniqueIndex("form_drafts_person_form_unique").on(table.shopId, table.personId, table.form),
@@ -343,7 +344,7 @@ export const heldSends = pgTable(
     /** Who tapped Send; the deal's creator, the trail's actor. Null once they are gone. */
     actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
     runAt: timestamp("run_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("held_sends_run_at_idx").on(table.runAt)],
 );
@@ -389,6 +390,9 @@ export const tripDeskEventKind = pgEnum("trip_desk_event_kind", [
   // A type change raised a paid seat's price: the difference is owed, and
   // nothing collects it on its own.
   "balance_owed",
+  // A seat the desk turned away (H-135) taken off the roster: the strip says
+  // so, rather than that the diver gave it up.
+  "seat_turned_away",
 ]);
 
 export const tripDeskEvents = pgTable(
@@ -418,7 +422,7 @@ export const tripDeskEvents = pgTable(
      * actor's own read mark.
      */
     actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    occurredAt: appNowTimestamp("occurred_at").notNull(),
     /**
      * The tiebreak, for the same reason `activity_events.seq` carries one:
      * `occurred_at` alone cannot order this table. Two desk acts in one request
@@ -467,7 +471,7 @@ export const tripReadMarks = pgTable(
       .notNull()
       .references(() => people.id, { onDelete: "cascade" }),
     lastSeenSeq: bigint("last_seen_seq", { mode: "number" }).notNull().default(0),
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: appNowTimestamp("last_seen_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_read_marks_trip_person_unique").on(table.tripId, table.personId),

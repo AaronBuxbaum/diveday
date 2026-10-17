@@ -1,10 +1,19 @@
 import { eq } from "drizzle-orm";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { shopDefaultsForTimeZone } from "@/lib/curated-defaults";
 import { hashPassword } from "@/lib/password-hashing";
+import { shopNameNeedsReview } from "@/lib/shop-name-review";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { AppDb } from "./client";
-import { people, personRoles, shops, userAccounts, waiverTemplates } from "./schema";
+import {
+  people,
+  personRoles,
+  preDepartureChecklistItems,
+  shops,
+  userAccounts,
+  waiverTemplates,
+} from "./schema";
 import { recordSetupLinkShop, spendSetupLink } from "./setup-links";
 
 export type ShopSignup = {
@@ -33,7 +42,7 @@ class SignupRefused extends Error {
 /**
  * A real shop and its owner, in one transaction: the setup link spent, the
  * shop, the owner's person with the owner and manager roles, the sign-in
- * account, and the default waiver. Any refusal rolls every write back,
+ * account, the default waiver and the first pre-departure line. Any refusal rolls every write back,
  * including the spend, so the corrected form can use the same link.
  *
  * Moved out of `src/app/onboard/actions.ts` so the route builds no query of
@@ -72,6 +81,10 @@ export async function createSignedUpShop(
         .insert(shops)
         .values({
           name: signup.shopName,
+          // A name that could pass for a brand or an institution is held for
+          // review: its mail goes out as plain DiveDay until a human clears it
+          // (issue #2450). The shop is created and can send either way.
+          nameFlaggedAt: shopNameNeedsReview(signup.shopName) ? nowDate() : null,
           slug: signup.shopSlug,
           timezone: signup.timezone,
           // **The timezone already answered these.** A shop that just said
@@ -140,6 +153,18 @@ export async function createSignedUpShop(
         title: DEFAULT_WAIVER_TITLE,
         version: 1,
         body: DEFAULT_WAIVER_BODY,
+      });
+
+      // **Oxygen is asked about from the first departure** (#2301, Aaron
+      // 2026-10-13): the one pre-departure line DiveDay writes, in the shop's
+      // own language. Kit moves between hulls and the register assigns it to
+      // one boat, so the crew confirm it per departure instead. It is an
+      // ordinary line from here: the shop may reword or delete it, and it
+      // informs, never gates (ADR 20260824-pre-departure-safety-check).
+      await tx.insert(preDepartureChecklistItems).values({
+        shopId: shop.id,
+        label: staffTranslator(shop.defaultLocale)("settings.safetyChecklist.defaultLine"),
+        sortOrder: 0,
       });
 
       return { ok: true as const, shop, accountId: account.id };

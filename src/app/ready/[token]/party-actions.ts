@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { openMinorSeatWaiver } from "@/db/seat-claims";
+import { parseForm, single } from "@/lib/form-parse";
 import {
   PARTY_RETURN_COOKIE,
   PARTY_RETURN_MAX_AGE_SECONDS,
@@ -25,16 +26,18 @@ const seatSchema = z.string().uuid();
  * still owing a release, and refuses anything else with one answer. The
  * waiver link is minted here, on the tap, never printed into the lead's page.
  */
+const minorSeatForm = z.object({ bookingId: single(seatSchema) });
+
 export async function signMinorWaiverAction(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   refuseWhileHeld(token, ctx.data);
-  const seat = seatSchema.safeParse(formData.get("bookingId"));
-  if (!seat.success) redirect(`${base(token)}?error=minor-waiver#party-seats`);
+  const seat = parseForm(minorSeatForm, formData);
+  if (!seat.ok) redirect(`${base(token)}?error=minor-waiver#party-seats`);
   const opened = await openMinorSeatWaiver(ctx.db, {
     shopId: ctx.data.shop.id,
     leadBookingId: ctx.bookingId,
-    seatBookingId: seat.data,
+    seatBookingId: seat.data.bookingId,
   });
   if (!opened.ok) redirect(`${base(token)}?error=minor-waiver#party-seats`);
   // Once it is signed, back to this page's party panel, so the next child's

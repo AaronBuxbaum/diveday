@@ -20,6 +20,7 @@ import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { bindManifestActions } from "./_components/bound-actions";
 import { buddyBuilderView } from "./_components/buddy-builder-view";
+import { CancelledRollCallBanner } from "./_components/CancelledRollCallBanner";
 import { CatchUpStrip } from "./_components/CatchUpStrip";
 import { CheckpointSwitch } from "./_components/CheckpointSwitch";
 import { CrewRollCall } from "./_components/CrewRollCall";
@@ -136,14 +137,16 @@ export default async function TripManifestPage({
     vessel,
     kitRecord,
     siteHistory,
+    cancelled,
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
+    mayStartIncidentReport,
   } = await readManifestPage(db, shop.id, tripId, session.user.personId);
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
-  const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t);
+  const boatSafety = await departureBoatSafetySection(db, shop, departureManifest, t, locale);
 
   const opened = openCheckpoint(completeManifests, departureManifest, requestedCheckpoint);
   // A checkpoint this plan lacks leaves the address bar, never opening the dock (#2508).
@@ -159,7 +162,7 @@ export default async function TripManifestPage({
   const rollCallComplete = completeness.complete;
 
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
-  const actions = bindManifestActions(actionContext);
+  const actions = bindManifestActions(actionContext, { mayStartIncidentReport });
   const seen = seenGroupView({
     checkpoint,
     actionContext,
@@ -208,12 +211,10 @@ export default async function TripManifestPage({
         trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}
-        // No description line. "Divers and crew, with emergency contacts, at
-        // every checkpoint" was a caption describing the page under a tab
-        // that already names it — the checkpoint nav and the panel below say
-        // what to do, and the per-row "Contact & gear" summaries carry the
-        // emergency-contact discoverability it was keeping alive (the
-        // copy-restraint question, applied 2026-08-21).
+        // No description line: "Divers and crew, with emergency contacts, at
+        // every checkpoint" captioned a page its tab already names; the
+        // checkpoint nav and the panel below say what to do, and the per-row
+        // summaries carry the contacts (copy-restraint, 2026-08-21).
         // Printing is an Overall-tab action. The manifest is the live dock
         // surface; keeping a second current-page printer here made it unclear
         // whether staff were getting the full packet or only this tab.
@@ -238,6 +239,7 @@ export default async function TripManifestPage({
           reading of where the boat is, and a second one above it would be the
           same fact twice. */}
       <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
+      <CancelledRollCallBanner state={cancelled} t={t} />
       <PrintedSoulsOnBoard manifest={manifest} vesselName={vessel?.name ?? null} t={t} />
       {/* **The catch-up strip**, under the masthead and above the instrument,
           exactly where the canvas draws it (ADR 20260904-reef-all-the-way-down
@@ -335,17 +337,18 @@ export default async function TripManifestPage({
             notesByBooking,
             todayTrailByBooking: todayTrailBySubject,
             rollCallAction: actions.rollCall,
+            rollCallClosed: cancelled === "closed",
             addPrivateNoteAction: actions.addPrivateNote,
+            startMissingDiverReport: actions.startMissingDiverReport,
             rollCallButtonCopy,
             buddyTeamLabel: buddy.buddyTeamLabel,
             t,
           }}
         />
 
-        {/* Crew close the checkpoint (DOM-H1) — they come straight after the
-            divers, not before them: the divers are the head count's heart, and
-            a two-person crew list ahead of nine divers read as the page's
-            subject. */}
+        {/* Crew close the checkpoint (DOM-H1) — straight after the divers, not
+            before them: the divers are the head count's heart, and a two-person
+            crew list ahead of nine divers read as the page's subject. */}
         <CrewRollCall
           crew={manifest.crew}
           idPrefix={idPrefix}
@@ -358,7 +361,9 @@ export default async function TripManifestPage({
           timezone={shop.timezone}
           todayTrailBySubject={todayTrailBySubject}
           crewRollCallAction={actions.crewRollCall}
+          rollCallClosed={cancelled === "closed"}
           crewRollCallButtonCopy={crewRollCallButtonCopy}
+          startMissingReport={actions.startMissingDiverReport}
           buddyTeamLabel={buddy.buddyTeamLabel}
           t={t}
         />

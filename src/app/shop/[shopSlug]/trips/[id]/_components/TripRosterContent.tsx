@@ -56,6 +56,7 @@ export type TripRosterActions = {
   setParticipantTypeAction: FormAction;
   confirmDiverIdentityAction: FormAction;
   splitDiverIdentityAction: FormAction;
+  repointDiverIdentityAction: FormAction;
   /** Drawn only for an owner or manager (`canRetireMedicalRefusal`). */
   sendNewWaiverAction?: FormAction;
   certifyDiverAction?: FormAction;
@@ -73,6 +74,9 @@ export type TripRosterActions = {
   recordTripInvitationAction: (invitationId: string) => Promise<"sent" | "fallback">;
   undoRemoveBookingAction: FormAction;
   restoreInternalNoteAction: FormAction;
+  /** Absent on a course session, and for a staffer who may not configure trips. */
+  markTrainingDiveAction?: FormAction;
+  clearTrainingDiveAction?: FormAction;
 };
 
 /** Everything `TripRosterContent` draws, assembled once by its caller and handed over as one object. */
@@ -125,6 +129,8 @@ export type TripRosterContentContext = {
    * invite control is drawn at all (owner, 2026-10-06).
    */
   acceptsDivers: boolean;
+  /** The live roles may send a wait-list invite (`waitlist_seat`'s audience), as the action will. */
+  mayInviteFromWaitlist: boolean;
   actions: TripRosterActions;
 };
 
@@ -161,6 +167,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     record,
     walkInOpen = false,
     acceptsDivers,
+    mayInviteFromWaitlist,
     actions,
   } = context;
   const t = staffTranslator(locale);
@@ -231,7 +238,9 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           >
             {t("trips.guests.scheduleAnotherDeparture")}
           </Link>
-          {actions.carryWaitlistAction && actions.moveSeat?.targets.length ? (
+          {actions.carryWaitlistAction &&
+          actions.moveSeat?.targets.length &&
+          !actions.moveSeat.departed ? (
             <CarryWaitlistForm
               action={actions.carryWaitlistAction}
               targets={actions.moveSeat.targets}
@@ -276,6 +285,10 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           issuedCardByPerson: guests.issuedCardByPerson,
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
+          aboardAtSea: guests.aboardAtSea,
+          sameNamePeople: guests.sameNamePeople,
+          dependentCharters: guests.dependentCharters,
+          trainingMarks: guests.trainingMarks,
           heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
           packageDivesByBooking: guests.packageDivesByBooking,
           paymentMarksByBooking: guests.paymentMarksByBooking,
@@ -295,6 +308,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           setParticipantTypeAction: actions.setParticipantTypeAction,
           confirmIdentityAction: actions.confirmDiverIdentityAction,
           splitIdentityAction: actions.splitDiverIdentityAction,
+          repointIdentityAction: actions.repointDiverIdentityAction,
           sendNewWaiverAction: actions.sendNewWaiverAction,
           addNoteAction: actions.addInternalNoteAction,
           deleteNoteAction: actions.deleteInternalNoteAction,
@@ -314,6 +328,10 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           // A course form signed on paper (ADR 20261008-course-forms). Bound
           // here rather than on the page: only a seat that owes a form draws it.
           recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),
+          // A training dive on a charter (issue #2275). Never on a finished
+          // departure: its ledger is the record.
+          markTrainingDiveAction: record ? undefined : actions.markTrainingDiveAction,
+          clearTrainingDiveAction: record ? undefined : actions.clearTrainingDiveAction,
           updatePickupAction: actions.updateBookingPickupAction,
           // Only a departure that serves lunch aboard asks for a lunch note.
           updateDietaryNoteAction: trip.lunchAboard
@@ -337,7 +355,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                   departureRequirement={dealRequirement}
                   locale={locale}
                   timezone={timezone}
-                  canInvite={acceptsDivers}
+                  canInvite={acceptsDivers && mayInviteFromWaitlist}
                 />
                 {/* **One waiting diver is worth carrying too** (fourth review,
                     item 31). The demand banner, and the carry door inside it,
@@ -372,7 +390,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                     timezone={timezone}
                     inviteAction={actions.recordTripInvitationAction}
                     locale={locale}
-                    canInvite={acceptsDivers}
+                    canInvite={acceptsDivers && mayInviteFromWaitlist}
                   />
                 ) : null}
                 {acceptsDivers && guests.inviteSuggestions ? (

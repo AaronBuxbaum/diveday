@@ -263,6 +263,22 @@ export async function setShopEmergencyReference(
 }
 
 /**
+ * **A human clears a flagged shop name** (issue #2450): the shop's mail goes
+ * back to "{Shop} via DiveDay". Stamps the clearing rather than erasing the
+ * flag, so a later rename that matches again (a newer flag) holds again. Null
+ * for a shop that does not exist; clearing a shop that was never flagged is
+ * harmless.
+ */
+export async function clearShopNameReview(db: AppDb, shopId: string, now: Date = nowDate()) {
+  const [shop] = await db
+    .update(shops)
+    .set({ nameClearedAt: now })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/**
  * The shore contact's address, the consent recorded for it and whether its
  * inbox confirmed it (H-118), as `nextShoreAlertContact` decided them. The
  * columns move together; the table's checks refuse any other shape.

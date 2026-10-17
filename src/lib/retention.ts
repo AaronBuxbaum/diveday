@@ -80,6 +80,22 @@
  * review of code review 2026-10-13 (layer B), which moved it here from the
  * out-of-scope list.
  *
+ * **`trip_change_events` and `review_moderation_events` are deliberately
+ * unbounded too.** The first is who changed a departure's plan and how (its
+ * meeting point, its conditions); the second is who published or hid a
+ * review and why. The shop activity log reads both as the record itself
+ * (PR #2310), and the moderation trail is also what answers "how much of this
+ * shop's record has been suppressed?" for as long as the reviews it describes
+ * are shown (ADR 20260813-review-moderation-has-a-floor). A window would leave
+ * a departure or a review the shop still has with a hole in its history and
+ * free almost nothing: both grow with the shop's own departures and reviews,
+ * not with traffic. Both hold free text a staffer typed (a meeting point's
+ * label, a moderator's `reason_note`), which can name a diver, so erasure
+ * redacts what names them (`scrubDepartureChangeTrail` and `scrubReviews` in
+ * `src/db/anonymize.ts`); the staffer who acted is a `people` reference
+ * resolved live, so erasure reaches them without a row moving. Chosen by the product owner, 2026-10-13, over the `activity_events`
+ * window (issue #2316).
+ *
  * **`notification_send_queue` empties its own rows of personal data, and the
  * window below only bounds what is left.** It holds a rendered outbound
  * message, a recipient and a subject's address and phone while a row is being
@@ -101,7 +117,8 @@
  * `roll_call_crew_events`, `booking_arrival_events`, `buddy_team_events`,
  * `trip_stage_events`, `pre_departure_check_events` (argued above). Equipment evidence:
  * `gear_service_events` (argued above). Records of who changed what on a
- * departure or a ticket, read as the record itself: `trip_change_events`,
+ * departure, a review or a ticket, read as the record itself:
+ * `trip_change_events`, `review_moderation_events` (argued above),
  * `work_order_events`. Queues and obligations deleted by their own work:
  * `held_sends` (its own sweep, `src/db/held-sends.ts`),
  * `media_deletion_attempts` and `processor_erasure_obligations` (deleted when
@@ -175,6 +192,8 @@ export const UNBOUNDED_BY_DECISION: readonly string[] = [
   "roll_call_crew_events",
   "booking_arrival_events",
   "pre_departure_check_events",
+  "trip_change_events",
+  "review_moderation_events",
 ];
 
 /**

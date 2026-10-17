@@ -43,11 +43,7 @@ import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersSeatLines } from "./_components/OrdersSeatLines";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { OwedLine } from "./_components/OwedLine";
-import {
-  FailedRefundsQueue,
-  OwedRefundsQueue,
-  PaidAfterCloseQueue,
-} from "./_components/OwedMoneyQueues";
+import { MoneyOwedQueues } from "./_components/OwedMoneyQueues";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 import { PayoutLines, readBackOffice } from "./_components/PayoutLines";
 import { type OrdersHrefOverrides, orderIndexFilter, ordersIndexHref } from "./order-index-filter";
@@ -142,6 +138,15 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
     key: "orders.index.notice.paidAfterCloseNotConnected",
   },
   "paid-after-close-failed": { tone: "danger", key: "orders.index.notice.paidAfterCloseFailed" },
+  "stripe-refund-matched": { tone: "success", key: "orders.index.notice.stripeRefundMatched" },
+  "stripe-refund-partly-matched": {
+    tone: "neutral",
+    key: "orders.index.notice.stripeRefundPartlyMatched",
+  },
+  "stripe-refund-not-matched": {
+    tone: "warning",
+    key: "orders.index.notice.stripeRefundNotMatched",
+  },
 };
 
 /**
@@ -222,8 +227,11 @@ export default async function OrdersIndexPage({
       {t("orders.index.newOrder")}
     </Link>
   ) : null;
-  const { stuckPaymentOperations, owedRefunds, paidAfterClose, failedRefunds, payouts } =
-    await readBackOffice(db, shop, canReconcilePayments);
+  const { stuckPaymentOperations, payouts, ...queues } = await readBackOffice(
+    db,
+    shop,
+    canReconcilePayments,
+  );
 
   // One reading of the URL, shared with "Download orders (CSV)" so the file
   // holds the orders this page shows (`orderIndexFilter`).
@@ -468,22 +476,8 @@ export default async function OrdersIndexPage({
         </section>
       ) : null}
 
-      <OwedRefundsQueue
-        queue={owedRefunds}
-        shopSlug={shopSlug}
-        timeZone={shop.timezone}
-        locale={locale}
-        t={t}
-      />
-      <PaidAfterCloseQueue
-        queue={paidAfterClose}
-        shopSlug={shopSlug}
-        timeZone={shop.timezone}
-        locale={locale}
-        t={t}
-      />
-      <FailedRefundsQueue
-        queue={failedRefunds}
+      <MoneyOwedQueues
+        queues={queues}
         shopSlug={shopSlug}
         timeZone={shop.timezone}
         locale={locale}

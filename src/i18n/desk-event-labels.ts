@@ -14,6 +14,7 @@ const KEYS = {
   arrival: "manifest.catchUp.arrival",
   seat_taken: "manifest.catchUp.seatTaken",
   seat_released: "manifest.catchUp.seatReleased",
+  seat_turned_away: "manifest.catchUp.seatTurnedAway",
   now_diving: "manifest.catchUp.nowDiving",
   now_snorkeling: "manifest.catchUp.nowSnorkeling",
   now_riding: "manifest.catchUp.nowRiding",

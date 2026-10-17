@@ -14,11 +14,12 @@ import {
   sql,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { inTrainingBefore } from "@/lib/in-training";
 import { INVITE_SUGGESTIONS_SHOWN, inviteCooldownStart } from "@/lib/invite-suggestions";
 import { decideTripAdmission, type TripAdmissionEvidence } from "@/lib/trip-admission";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { readCertificationEvidenceFor } from "./certification-evidence";
-import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";

@@ -70,29 +70,16 @@ describe("the dive-site catalog", () => {
       if (briefing.forecastLatitude == null || briefing.forecastLongitude == null) {
         found.push(`${slug}: no position`);
       }
-      if (briefing.maxDepthMeters == null || !briefing.depthRange) {
+      if (briefing.maxDepthMeters == null) {
         found.push(`${slug}: no depth`);
         return found;
       }
-      // "6–12 m (20–40 ft)": the deepest metre figure, and the deepest foot figure.
-      const metres = briefing.depthRange.match(/(\d+)(?:–(\d+))? m\b/);
-      const feet = briefing.depthRange.match(/(\d+)(?:–(\d+))? ft\b/);
-      const deepestMetres = Number(metres?.[2] ?? metres?.[1]);
-      const deepestFeet = Number(feet?.[2] ?? feet?.[1]);
-      if (!metres || !feet)
-        found.push(`${slug}: depth range “${briefing.depthRange}” lacks m and ft`);
-      else {
-        if (
-          briefing.maxDepthMeters < deepestMetres ||
-          briefing.maxDepthMeters > deepestMetres + 3
-        ) {
-          found.push(
-            `${slug}: maxDepthMeters ${briefing.maxDepthMeters} vs range ${deepestMetres} m`,
-          );
-        }
-        if (Math.abs(deepestFeet / 3.281 - deepestMetres) > Math.max(2, deepestMetres * 0.12)) {
-          found.push(`${slug}: ${deepestFeet} ft is not ${deepestMetres} m`);
-        }
+      // The depth is two numbers in metres (issue #2426); a shop reads them in
+      // its own unit, so the template carries no prose that could name another.
+      if (briefing.depthRange !== undefined) found.push(`${slug}: depth prose, not numbers`);
+      const min = briefing.depthMinMeters;
+      if (min != null && !(min >= 0 && min < briefing.maxDepthMeters)) {
+        found.push(`${slug}: depthMinMeters ${min} vs maxDepthMeters ${briefing.maxDepthMeters}`);
       }
       return found;
     });

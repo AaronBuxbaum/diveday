@@ -12,7 +12,7 @@ import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import type { SiteReview } from "@/db/reviews";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import { depthRangeText, depthText } from "@/i18n/unit-labels";
+import { diveSiteDepthText } from "@/i18n/unit-labels";
 import { dayProfileRows } from "@/lib/day-profile";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
@@ -220,7 +220,7 @@ export function TripDayPlan({
    * The shop, for its zone and for its own slug, which is half of every site
    * page's URL.
    */
-  shop: Pick<Shop, "slug" | "timezone" | "name">;
+  shop: Pick<Shop, "slug" | "timezone" | "name" | "depthUnit">;
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
   /**
@@ -330,15 +330,13 @@ export function TripDayPlan({
         {briefings.map(({ dive, diveSite }) => {
           const bottomTime = bottomTimes.get(dive.diveNumber) ?? null;
           const interval = intervals.get(dive.diveNumber) ?? null;
-          // The shop's own range where it wrote one ("18–40 m"), and the site's
-          // maximum where it did not.
+          // The recorded range in the shop's unit ("18–40 m"), or just the site's
+          // maximum; the shop's own note stands in only where no depth is recorded.
           // The crew's month for this site, once — decided above, in plan order.
           const seen = seenByDive.get(dive.id) ?? null;
-          const depth = diveSite?.depthRange
-            ? depthRangeText(t, diveSite.depthRange, profile?.readerDepthUnit)
-            : profile && diveSite?.maxDepthMeters
-              ? depthText(t, diveSite.maxDepthMeters, profile.depthUnit, profile.readerDepthUnit)
-              : null;
+          const depth = diveSite
+            ? diveSiteDepthText(t, diveSite, shop.depthUnit, profile?.readerDepthUnit ?? null)
+            : null;
           // **The site's name is the door to its own page** (N-48). The whole
           // of what the shop wrote about a place — the prose, the drawn route,
           // the field guide, the diver photos, and every other departure going
@@ -514,82 +512,6 @@ export function TripLookFor({ briefings, locale }: { briefings: SiteBriefing[]; 
                 <p className="mt-1 text-sm leading-relaxed text-muted">{card.preparationTip}</p>
               ) : null}
             </div>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/**
- * **Photos divers brought back from the places this day dives.**
- *
- * `dive_site_moments` rows are diver photos a staffer chose to publish — the
- * schema calls them "staff-moderated, opt-in moments from prior divers" — and
- * from slice 7c (which deleted the briefing deck they lived in) until now the
- * page fetched them into every briefing and rendered none: the one place the
- * product holds real pictures of the actual reef, invisible on the page whose
- * whole job is "is this my Saturday?".
- *
- * One strip for the day, deduplicated by site, capped at four: ambience, not a
- * gallery. The caption is the diver's own line and does the talking, so the
- * photo itself is `alt=""` — reading the caption twice per photo is the only
- * thing a screen reader could add. Renders nothing when no site has a
- * published moment with a photo, which is most shops.
- */
-/** The day's published diver photos, one strip, deduplicated by site and capped at four. */
-export function dayMomentsFor(briefings: readonly SiteBriefing[]) {
-  const seen = new Set<string>();
-  const moments: { id: string; caption: string; imageUrl: string }[] = [];
-  for (const { diveSite, moments: siteMoments } of briefings) {
-    if (!diveSite || seen.has(diveSite.id)) continue;
-    seen.add(diveSite.id);
-    for (const moment of siteMoments) {
-      if (moment.imageUrl) {
-        moments.push({ id: moment.id, caption: moment.caption, imageUrl: moment.imageUrl });
-      }
-    }
-  }
-  return moments.slice(0, 4);
-}
-
-export function TripMoments({ briefings, locale }: { briefings: SiteBriefing[]; locale: string }) {
-  const t = diverTranslator(locale);
-  const shown = dayMomentsFor(briefings);
-  if (shown.length === 0) return null;
-  return (
-    <section className="mt-6">
-      <GroupLabel as="h2">{t("trip.momentsHeading")}</GroupLabel>
-      <ul className={`mt-2 grid gap-4${shown.length > 1 ? " sm:grid-cols-2" : ""}`}>
-        {shown.map((moment) => (
-          <li key={moment.id}>
-            <figure>
-              <StoredPhoto
-                src={moment.imageUrl}
-                alt=""
-                // The corner follows the layout, as `sizes` below does. A lone
-                // moment fills the measure beside the hero's and the route
-                // card's 20px corners and takes the panel's; in the two-up
-                // grid each is a tile at the inset's 12px (pixel-craft class
-                // 12, K-510).
-                className={`aspect-[3/2] w-full ${shown.length > 1 ? "rounded-inset" : "rounded-panel"}`}
-                // Tracks the grid above it, which is only two-column when
-                // there is more than one moment. Declared flat at `17rem` it
-                // was right for a pair and half the truth for a single
-                // moment, which fills the row: measured at 528px on a 768px
-                // viewport against a 272px declaration, so the browser fetched
-                // a candidate for a slot half the size and the diver got a
-                // visibly soft photo. Nothing could see it — the visual suite
-                // builds with `images.unoptimized`, so there is no srcset for
-                // `sizes` to select from (issue #1350).
-                sizes={
-                  shown.length > 1
-                    ? "(min-width: 640px) 17rem, 100vw"
-                    : "(min-width: 640px) 33rem, 100vw"
-                }
-              />
-              <figcaption className="mt-2 text-sm text-muted">{moment.caption}</figcaption>
-            </figure>
           </li>
         ))}
       </ul>

@@ -184,9 +184,13 @@ export type CrewGap = {
 export function crewGapFor(input: {
   course: CourseCrewGapCourse;
   counts: InWaterCrewCount;
-  /** Everyone booked: a course ratio counts students, whatever they do in the water. */
+  /** Everyone booked. */
   booked: number;
-  /** Divers only, for the shop's scuba-guiding target. */
+  /**
+   * Divers only, for the shop's scuba-guiding target and a course session's
+   * ratio: its students are its divers, and a priced snorkeler or rider
+   * beside them is a passenger (G5 of #2226).
+   */
   bookedDivers: number;
   diversPerDivemaster: number | null;
   selfGuided: boolean;
@@ -195,7 +199,7 @@ export function crewGapFor(input: {
     course: input.course,
     instructorCount: input.counts.instructorCount,
     assistantCount: input.counts.assistantCount,
-    booked: input.booked,
+    booked: input.bookedDivers,
   });
   const ratioGap = divemasterRatioGap({
     divers: input.bookedDivers,

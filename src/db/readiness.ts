@@ -4,8 +4,14 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
+import { type CourseSeatInTraining, courseEndedBefore, inTrainingBefore } from "@/lib/in-training";
 import { isDiver, isHeldToMedical, participantPriceCents } from "@/lib/participant-types";
-import type { CardUnreviewRefusal, CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
+import type {
+  CardUnreviewRefusal,
+  CertificationLevel,
+  ReadinessResult,
+  SiteCertRequirement,
+} from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
@@ -18,21 +24,19 @@ import {
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
+import type { TrainingMarkState } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
 import {
   effectiveReleaseForRiderSeat,
   effectiveWaiverForBooking,
   overriddenReferral,
   overriddenRefusal,
-  releaseLapsedForBooking,
+  releaseLapseForBooking,
   riderMedicalHold,
+  waiverClockInstant,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
-import {
-  type CourseSeatInTraining,
-  inTrainingBefore,
-  listCourseSeatsInTraining,
-} from "./certifications-in-training";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
 import { publishManifestEventsForPerson } from "./manifest-events";
@@ -53,6 +57,7 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
+import { type MarkedSeat, resolveTrainingMarks } from "./training-mark-resolve";
 import { liveTrip } from "./trips-live";
 import {
   getCurrentWaiverGeneration,
@@ -463,6 +468,37 @@ export async function courseCertifiesOnTrip(
   return row.isIntroCourse ? "not_a_certifying_course" : "certifies";
 }
 
+/**
+ * **The student this seat holds**, or null (issue #2226, reviews G4/Y2): the
+ * person on a live diver's seat of this shop's session, whose identity is not
+ * held (H-13). A snorkeler or a rider on a course session is a passenger, and
+ * the session's roster never certifies one. The roster's Certify reads the
+ * person from here, never from what the form posted.
+ */
+export async function studentOnSeat(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+): Promise<string | null> {
+  if (!isUuid(bookingId) || !isUuid(tripId) || !isUuid(shopId)) return null;
+  const [row] = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+        eq(bookings.participantType, "diver"),
+        isNull(bookings.identityUnconfirmedAt),
+      ),
+    )
+    .limit(1);
+  return row?.personId ?? null;
+}
+
 export async function issueShopCertification(
   db: AppDb,
   input: NewShopIssuedCertification,
@@ -510,6 +546,10 @@ export async function issueShopCertification(
           eq(bookings.personId, input.personId),
           eq(bookings.shopId, input.shopId),
           ne(bookings.status, "cancelled"),
+          // A student's seat: a passenger is never certified, and a seat held
+          // over who is on it certifies nobody (reviews G4/Y2 of #2226).
+          eq(bookings.participantType, "diver"),
+          isNull(bookings.identityUnconfirmedAt),
         ),
       )
       .limit(1);
@@ -1200,6 +1240,8 @@ async function shopIssuedCourseContext(
         eq(bookings.personId, input.personId),
         eq(bookings.shopId, input.shopId),
         ne(bookings.status, "cancelled"),
+        eq(bookings.participantType, "diver"),
+        isNull(bookings.identityUnconfirmedAt),
       ),
     )
     .limit(1);
@@ -1508,6 +1550,30 @@ export async function getBookingReadiness(db: DbExecutor, shopId: string, bookin
   return readiness.find((row) => row.booking.id === bookingId)?.readiness ?? null;
 }
 
+/**
+ * `getBookingReadiness` for several seats at once, in one pass of the batched
+ * pipeline (`listTripsReadiness`) instead of one whole-roster read per seat
+ * (issue #2058: a diver record on a long package). The same `readiness` each
+ * seat's roster row carries, so a page reading this cannot disagree with the
+ * boat. A seat that is not this shop's, or not on a live roster, is absent.
+ */
+export async function getBookingsReadiness(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Map<string, ReadinessResult>> {
+  if (bookingIds.length === 0) return new Map();
+  const seats = await db
+    .select({ id: bookings.id, tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(inArray(bookings.id, [...bookingIds]), eq(bookings.shopId, shopId)));
+  const wanted = new Set(seats.map((seat) => seat.id));
+  const rows = await listTripsReadiness(db, shopId, [...new Set(seats.map((seat) => seat.tripId))]);
+  return new Map(
+    rows.flatMap((row) => (wanted.has(row.booking.id) ? [[row.booking.id, row.readiness]] : [])),
+  );
+}
+
 export type BookingReadinessDetail = {
   shop: { name: string; timezone: string };
   trip: { id: string; title: string; startsAt: Date; endsAt: Date };
@@ -1580,6 +1646,61 @@ export async function getBookingReadinessDetail(
   };
 }
 
+/**
+ * The seats on these rows that carry a training mark (issue #2275), as the
+ * resolver reads them. A seat whose departure `courseByTrip` lacks is read as
+ * a course seat, which the rule refuses: never a mark that stands.
+ */
+function markedSeatsOf(
+  rows: readonly { booking: typeof bookings.$inferSelect; person: { id: string } }[],
+  courseByTrip: ReadonlyMap<string, { courseId: string | null; startsAt: Date }>,
+): MarkedSeat[] {
+  const seats: MarkedSeat[] = [];
+  for (const { booking, person } of rows) {
+    if (booking.trainingEnrollmentBookingId === null) continue;
+    const trip = courseByTrip.get(booking.tripId);
+    seats.push({
+      bookingId: booking.id,
+      enrollmentBookingId: booking.trainingEnrollmentBookingId,
+      seat: {
+        personId: person.id,
+        participantType: booking.participantType,
+        onCourseSession: !trip || trip.courseId !== null,
+        departureStartsAt: trip?.startsAt ?? new Date(0),
+      },
+    });
+  }
+  return seats;
+}
+
+/**
+ * Whose forms a seat is asked, and whose records satisfy them: a training
+ * mark that stands is its enrollment's (`signatureSatisfies` is keyed on that
+ * booking), anything else is the seat's own. A mark that does not stand asks
+ * nothing here; it raises `training_mark_invalid` instead.
+ */
+function formsBookingOf(
+  bookingId: string,
+  tripId: string,
+  mark: TrainingMarkState | undefined,
+): { bookingId: string; tripId: string } {
+  return mark?.valid
+    ? { bookingId: mark.enrollmentBookingId, tripId: mark.enrollmentTripId }
+    : { bookingId, tripId };
+}
+
+/**
+ * The guardian rule's "Under 18" for a seat: its own booker's, or — on a seat
+ * whose training mark stands — the course seat's too, so the charter and the
+ * enrollment never disagree about whether a parent signs (fail closed).
+ */
+function minorDeclaredOf(
+  booking: { minorDeclaredAt: Date | null },
+  mark: TrainingMarkState | undefined,
+): boolean {
+  return booking.minorDeclaredAt !== null || (mark?.valid === true && mark.enrollmentMinorDeclared);
+}
+
 export async function listTripsReadiness(
   db: DbExecutor,
   shopId: string,
@@ -1632,6 +1753,7 @@ export async function listTripsReadiness(
           .select({
             id: trips.id,
             startsAt: trips.startsAt,
+            endsAt: trips.endsAt,
             courseId: trips.courseId,
             minimumAge: courses.minimumAge,
             priceCents: trips.priceCents,
@@ -1722,17 +1844,32 @@ export async function listTripsReadiness(
       () => listCourseSeatsInTraining(db, shopId, personIds),
     ]);
   const noEvidence: Awaited<ReturnType<typeof evidence>> = [[], [], [], new Map(), []];
+  // Seats staff marked as a training dive (issue #2275): read only when a
+  // mark exists, so an ordinary fun dive still pays nothing here.
+  const markedSeats = markedSeatsOf(waiverRows, courseByTrip);
   const [
     paymentByBooking,
-    [courseFormsByTrip, courseFormSignatures],
+    [courseFormsByTrip, courseFormSignatures, trainingMarks],
     [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson, courseSeatRows],
   ] = await queryAll(db, [
     () => paymentsByBooking(db, shopId, bookingIds),
     async () => {
-      const forms = await requiredCourseFormsForTrips(db, shopId, courseTripIds, now);
+      const marks = await resolveTrainingMarks(db, shopId, markedSeats);
+      const enrollments = [...marks.values()].filter((mark) => mark.valid);
+      const forms = await requiredCourseFormsForTrips(
+        db,
+        shopId,
+        [...new Set([...courseTripIds, ...enrollments.map((mark) => mark.enrollmentTripId)])],
+        now,
+      );
       const signatures =
-        forms.size === 0 ? [] : await courseFormSignaturesForBookings(db, shopId, bookingIds);
-      return [forms, signatures] as const;
+        forms.size === 0
+          ? []
+          : await courseFormSignaturesForBookings(db, shopId, [
+              ...bookingIds,
+              ...enrollments.map((mark) => mark.enrollmentBookingId),
+            ]);
+      return [forms, signatures, marks] as const;
     },
     () => (personIds.length === 0 ? Promise.resolve(noEvidence) : evidence()),
   ]);
@@ -1774,6 +1911,17 @@ export async function listTripsReadiness(
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
       : null;
 
+    // **The release's clocks run at the departure** (issue #2611): while the
+    // trip has not started, at its end; once under way, at now. The
+    // night-before roster, Today and the reminder then agree with the dock, a
+    // night dive's release that lapses mid-dive blocks before it sails, and a
+    // liveaboard guest on day two reads at now. Cards, payment and age keep
+    // their own instants.
+    const waiverNow = waiverClockInstant({
+      now,
+      startsAt: courseRow?.startsAt ?? null,
+      endsAt: courseRow?.endsAt ?? null,
+    });
     // A rider is held to the release and never to its medical (H-109), so a
     // hold does not outrank their signatures and a held record is a signed one
     // — read only while it is itself current, never the hold's own standing.
@@ -1785,25 +1933,29 @@ export async function listTripsReadiness(
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion: currentTemplateGeneration,
-      now,
+      now: waiverNow,
     });
-    const releaseLapsed = releaseLapsedForBooking({
+    const releaseLapse = releaseLapseForBooking({
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion: currentTemplateGeneration,
       heldToMedical: isHeldToMedical(row.booking.participantType),
       now,
+      startsAt: courseRow?.startsAt ?? null,
+      endsAt: courseRow?.endsAt ?? null,
     });
     const referral = overriddenReferral(
       effectiveWaiver,
       signedWaiversByPerson.get(row.person.id) ?? [],
     );
 
-    const requiredCourseForms = courseFormsByTrip.get(tripId);
+    const trainingMark = trainingMarks.get(row.booking.id);
+    const formsBooking = formsBookingOf(row.booking.id, tripId, trainingMark);
+    const requiredCourseForms = courseFormsByTrip.get(formsBooking.tripId);
     const courseForms = requiredCourseForms
       ? {
           shopId,
-          bookingId: row.booking.id,
+          bookingId: formsBooking.bookingId,
           personId: row.person.id,
           required: requiredCourseForms,
           signatures: courseFormSignatures,
@@ -1823,7 +1975,7 @@ export async function listTripsReadiness(
             ...courseForms,
             signer: {
               dateOfBirth: row.person.dateOfBirth,
-              minorDeclared: row.booking.minorDeclaredAt !== null,
+              minorDeclared: minorDeclaredOf(row.booking, trainingMark),
               timezone,
             },
           })
@@ -1861,7 +2013,7 @@ export async function listTripsReadiness(
         requirement,
         siteRequirement,
         waiver: effectiveWaiver,
-        releaseLapsed,
+        releaseLapse,
         certifications: certificationsByPerson.get(row.person.id) ?? [],
         // Measured against this departure: only a course that finishes before
         // it sails can be the card this diver boards on.
@@ -1872,6 +2024,15 @@ export async function listTripsReadiness(
                 id: tripId,
                 startsAt: courseRow.startsAt,
               },
+              now,
+            )
+          : [],
+        // Sessions already over without a card: named on the blocker so the
+        // record points at that roster (issue #2058). Clears nothing.
+        coursesEnded: courseRow
+          ? courseEndedBefore(
+              courseSeatsByPerson.get(row.person.id) ?? [],
+              { id: tripId, startsAt: courseRow.startsAt },
               now,
             )
           : [],
@@ -1886,7 +2047,7 @@ export async function listTripsReadiness(
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
         // The booker's "Under 18" on this seat, for the guardian rule alone.
-        minorDeclared: row.booking.minorDeclaredAt !== null,
+        minorDeclared: minorDeclaredOf(row.booking, trainingMark),
         // The guardian rule measures the diver's age on the shop-local day
         // they signed (src/lib/guardian.ts), so the engine needs the zone.
         timezone,
@@ -1901,6 +2062,7 @@ export async function listTripsReadiness(
           courseRow !== undefined &&
           participantPriceCents(courseRow, row.booking.participantType) === 0,
         courseForms,
+        trainingMarkInvalid: trainingMark !== undefined && !trainingMark.valid,
         now,
       }),
     };

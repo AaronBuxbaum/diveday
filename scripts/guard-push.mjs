@@ -160,9 +160,10 @@ export function pushViolation(command, read, cwd = ".") {
       if (here.verified?.(sha) || here.stamp?.() === sha) continue;
       return (
         `\`${segment}\` pushes ${sha.slice(0, 9)}, which \`pnpm verify:push\` has not passed. ` +
-        "Run it (in the background: it builds and runs the Playwright specs your diff reaches), " +
-        "fix what it finds, and push once it says green. Each red CI run costs the whole stack a " +
-        `cycle (docs/agents/verifying.md#the-pre-push-gate). To push anyway — work saved before ` +
+        "Run `pnpm verify:push --quick` (lint, typecheck, check:repo, guards and the unit tests " +
+        "the diff reaches; minutes, no browser), fix what it finds, push once it says green, and " +
+        "fix forward if CI goes red. The full `pnpm verify:push` adds the whole unit suite and " +
+        `every affected Playwright spec (docs/agents/verifying.md#the-pre-push-gate). To push anyway — work saved before ` +
         `the container is reclaimed, or a push to learn what only CI can answer — say why in front of it: ` +
         `\`${OVERRIDE}="<reason>" ${segment.replace(/^.*?git /, "git ")}\`, and say so in the PR.`
       );

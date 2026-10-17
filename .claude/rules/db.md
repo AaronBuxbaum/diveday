@@ -46,6 +46,10 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 - **Change the schema through the schema-change skill**: `pnpm db:generate --name`, then before
   you push run the four coverage guards by path (the **verify** skill's checklist, step 3). Never
   hand-edit `drizzle/`; regenerate.
+- **A column that defaults to now uses `appNowTimestamp`** (`src/db/schema/columns.ts`): the
+  database default stays for raw SQL and a Drizzle insert takes the app clock, so a row made under a
+  pinned `DIVEDAY_CLOCK` carries it; `schema-clock-default.test.ts` refuses a bare `.defaultNow()`.
+  A test that reads "the latest" calls `advanceClock` (`src/test/clock.ts`) between writes.
 - **There is no legacy**: drop what nothing writes, delete code that only tolerates old rows, write
   no backfill or dual-read for pre-pilot data (H-49). It does not relax the destructive-migration
   guard (`-- diveday:allow-destructive <rule> <table>.<column>: <why>`) or H-02's retention and

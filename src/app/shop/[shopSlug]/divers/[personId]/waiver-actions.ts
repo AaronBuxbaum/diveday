@@ -24,6 +24,8 @@ const evaluationForm = z.object({
   evaluatedOn: trimmedText(),
   physicianName: trimmedText(),
   medicalClearanceDocument: formValue(),
+  // A checkbox: present ("on") only when ticked.
+  earlierLetterConfirmed: text(),
 });
 
 /**
@@ -173,6 +175,8 @@ export async function recordMedicalClearanceAction(
     evaluatedOn,
     physicianName,
     documentUrl,
+    // Read by the domain only when the letter predates the open referral.
+    earlierLetterConfirmed: evaluation.earlierLetterConfirmed === "on",
   });
   if (!result.ok && documentUrl) {
     await queueAndAttemptMediaDeletion(db, {
@@ -187,7 +191,11 @@ export async function recordMedicalClearanceAction(
       context,
       result.ok
         ? result.outcome === "cleared"
-          ? "medical-clearance-recorded"
+          ? // An earlier letter answered the open record only: say plainly when
+            // another live seat is still held by the referral it was written for.
+            (result.earlierLetter?.seatsStillHeld ?? 0) > 0
+            ? "medical-clearance-recorded-earlier-held"
+            : "medical-clearance-recorded"
           : "medical-not-cleared-recorded"
         : MEDICAL_CLEARANCE_NOTICES[result.reason],
       "waiver",

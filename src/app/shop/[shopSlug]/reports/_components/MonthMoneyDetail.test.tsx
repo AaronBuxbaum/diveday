@@ -15,7 +15,12 @@ function detail(over: Partial<Detail> = {}): Detail {
     lines: [{ line: "funDives", cents: 120_000 }],
     packageDivesOwed: { dives: 0, valueCents: 0 },
     divers: { total: 0, returning: 0 },
-    out: { refundedCents: 4_000, discountedCents: 2_500, stripeFeesCents: 3_100 },
+    out: {
+      refundedCents: 4_000,
+      discountedCents: 2_500,
+      stripeFeesCents: 3_100,
+      disputesLostCents: 0,
+    },
     payouts: [],
     buddyReferrers: [],
     ...over,
@@ -39,7 +44,14 @@ describe("the money-out lines", () => {
   it("are left out when there is nothing to say, and a fee total of null is not $0", () => {
     render(
       <MoneyByLine
-        detail={detail({ out: { refundedCents: 0, discountedCents: 0, stripeFeesCents: null } })}
+        detail={detail({
+          out: {
+            refundedCents: 0,
+            discountedCents: 0,
+            stripeFeesCents: null,
+            disputesLostCents: 0,
+          },
+        })}
         t={t}
         money={money}
       />,
@@ -52,7 +64,12 @@ describe("the money-out lines", () => {
   it("show for a month with refunds but no revenue lines, and the section vanishes when empty", () => {
     const refundOnly = detail({
       lines: [],
-      out: { refundedCents: 4_000, discountedCents: 0, stripeFeesCents: null },
+      out: {
+        refundedCents: 4_000,
+        discountedCents: 0,
+        stripeFeesCents: null,
+        disputesLostCents: 0,
+      },
     });
     const { container, rerender } = render(<MoneyByLine detail={refundOnly} t={t} money={money} />);
     expect(screen.getByText(/Refunded \$40\.00/)).toBeTruthy();
@@ -60,13 +77,32 @@ describe("the money-out lines", () => {
       <MoneyByLine
         detail={detail({
           lines: [],
-          out: { refundedCents: 0, discountedCents: 0, stripeFeesCents: 0 },
+          out: { refundedCents: 0, discountedCents: 0, stripeFeesCents: 0, disputesLostCents: 0 },
         })}
         t={t}
         money={money}
       />,
     );
     expect(container.innerHTML).toBe("");
+  });
+
+  it("say what lost card disputes took back, even in a month with nothing else (issue 2292)", () => {
+    render(
+      <MoneyByLine
+        detail={detail({
+          lines: [],
+          out: {
+            refundedCents: 0,
+            discountedCents: 0,
+            stripeFeesCents: null,
+            disputesLostCents: 9_000,
+          },
+        })}
+        t={t}
+        money={money}
+      />,
+    );
+    expect(screen.getByText(/Card disputes lost this month took back \$90\.00/)).toBeTruthy();
   });
 
   it("are no longer under the figures", () => {

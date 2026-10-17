@@ -23,7 +23,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nurse sharks rest around the mooring, and green morays roam the reef. Tarpon and hawksbills have been reported here.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -56,7 +55,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Hawksbills graze the sponges, eagle rays cruise the outer wall, and the sand patches hold jawfish and flounders.",
       difficultyLevel: "beginner",
-      depthRange: "Up to 18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -102,7 +100,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nurse sharks rest in the sand channels. Eagle rays and spotted fish of several kinds work the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 27 m (90 ft)",
       maxDepthMeters: 27,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -135,7 +132,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nurse sharks sleep in the crevices, and barracuda sometimes keep a diver company.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 24 m (80 ft)",
       maxDepthMeters: 24,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -169,7 +165,7 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Eagle rays pass along the wall edge, and a nurse shark sometimes sleeps in a narrow channel west of the buoy.",
       difficultyLevel: "advanced",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -209,7 +205,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Stingrays feed in the sand, and sweepers and a green moray hold the crevices of the reef.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -251,7 +246,7 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Snappers school over the top of the pinnacle, and lobsters and banded coral shrimp use its cracks. Dolphins are sometimes seen around the site.",
       difficultyLevel: "intermediate",
-      depthRange: "9–30 m (30–100 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day. Carry an SMB.",
       divePlan:
@@ -296,7 +291,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Barrel sponges, some taller than a diver's arm span, line the wall. A nurse shark rests under the overhangs in the shallows.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -329,7 +323,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Gray angelfish come up to look at divers. Pillar coral, black coral and crinoids grow on the wall, and hawksbills feed on the sponges in the shallows.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote: "The wall can be run either way depending on the current. Carry an SMB.",
       divePlan:
@@ -368,7 +361,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Brown garden eels fill the sand, and crinoids sit on the reef walls with their feather star shrimp.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -401,7 +393,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Seahorses and sand dwellers live around the pinnacle, and black coral, which is protected in Honduras, hangs from the wall.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 21 m (70 ft)",
       maxDepthMeters: 21,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -440,7 +431,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Seahorses, hermit crabs and garden eels share the sand patch, while schools of snappers and creole wrasse gather on the walls.",
       difficultyLevel: "beginner",
-      depthRange: "Up to 18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -477,7 +467,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Garden eels and upside-down jellyfish live on the sand, and stingrays feed there. Longsnout seahorses turn up in the shallows.",
       difficultyLevel: "beginner",
-      depthRange: "Up to 18 m (60 ft)",
       maxDepthMeters: 18,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -515,7 +504,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Black coral, a protected species in Honduras, grows along the wall. Barracuda and snappers sit in the crevices, and seahorses live in the shallows.",
       difficultyLevel: "intermediate",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -549,7 +537,7 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Snappers and barracuda hang around the hull, and bearded fireworms crawl over the structure. Do not touch the wreck.",
       difficultyLevel: "advanced",
-      depthRange: "20–31 m (65–100 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 31,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -592,7 +580,6 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Jacks, spadefish and groupers gather on the formations, and a silky shark is an occasional visitor in the open water around the seamount.",
       difficultyLevel: "advanced",
-      depthRange: "Up to 30 m (100 ft)",
       maxDepthMeters: 30,
       currentNote:
         "Strong current, on the surface and down the seamount. Expect a drift; every diver carries an SMB and surfaces with it deployed for pickup.",
@@ -638,7 +625,7 @@ export const HONDURAS_UTILA: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Look low over the sand and into the coral on the rim. The reef top is shallow and bright, with the light reaching the coral. Keep hands clear of the coral and look, don't reach. Nurse sharks are not promised; if one is near, stay with the group, keep nothing dangling, do not chase or touch, and follow the crew's briefing.",
       difficultyLevel: "beginner",
-      depthRange: "4–18 m (13–59 ft)",
+      depthMinMeters: 4,
       maxDepthMeters: 18,
       currentNote:
         "Current not documented; ask the crew on the day, and carry an SMB. The wall beside the crater has caverns, crevices and swim-throughs. They are overhead; stay out.",

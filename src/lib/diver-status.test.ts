@@ -4,6 +4,7 @@ import type { ReadinessResult } from "@/lib/readiness";
 import {
   bookingIsAhead,
   buildDiverStatus,
+  foldsIntoFile,
   nextBookingAhead,
   splitDiverStatus,
 } from "./diver-status";
@@ -438,6 +439,28 @@ describe("the fix beside a card the boat will not take", () => {
       { now: NOW },
     );
     expect(rows[0]).toMatchObject({ tone: "danger", action: { target: "add_card" } });
+  });
+
+  it("points a card the ended course should have produced at that session's roster (#2058)", () => {
+    const rows = buildDiverStatus(
+      diver({ bookings: [booking("b1", TOMORROW)] }),
+      {
+        status: "blocked",
+        blockers: [{ code: "certification_missing", params: { endedCourseTripId: "aow-session" } }],
+      },
+      { now: NOW },
+    );
+    expect(rows[0]).toMatchObject({
+      kind: "certification",
+      tone: "danger",
+      action: { labelKey: "divers.status.acts.openCourseRoster", target: "open_course_roster" },
+      courseTripId: "aow-session",
+      tripContext: { tripId: "trip-b1", bookingId: "b1" },
+    });
+    // It leaves the page, so it stays in the ledger rather than folding into the file.
+    const row = rows[0];
+    if (!row) throw new Error("row missing");
+    expect(foldsIntoFile(row)).toBe(false);
   });
 
   it("reads a diver booked on the course that gets them there as a plan, with no fix", () => {

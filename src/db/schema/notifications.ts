@@ -12,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings, lastMinuteListEntries } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
 
@@ -44,7 +45,7 @@ export const lastMinuteListUnsubscribeTokens = pgTable(
       .notNull()
       .references(() => lastMinuteListEntries.id),
     tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    issuedAt: appNowTimestamp("issued_at").notNull(),
   },
   (table) => [
     index("last_minute_list_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
@@ -76,7 +77,7 @@ export const personCourtesyEmailUnsubscribeTokens = pgTable(
       .notNull()
       .references(() => people.id),
     tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+    issuedAt: appNowTimestamp("issued_at").notNull(),
   },
   (table) => [
     index("person_courtesy_email_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
@@ -108,7 +109,7 @@ export const shopContactEmailConfirmationTokens = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("shop_contact_email_confirmation_tokens_shop_idx").on(table.shopId)],
 );
@@ -145,7 +146,7 @@ export const shopShoreAlertTokens = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     usedAt: timestamp("used_at", { withTimezone: true }),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("shop_shore_alert_tokens_shop_idx").on(table.shopId),
@@ -256,7 +257,7 @@ export const notificationDeliveries = pgTable(
     sendErrorCode: text("send_error_code"),
     sendError: text("send_error"),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("notification_deliveries_booking_kind_unique").on(table.bookingId, table.kind),
@@ -294,7 +295,7 @@ export const notificationDeliveryAttempts = pgTable(
     /** True when a staff member re-triggered the send from the dashboard. */
     isRetry: boolean("is_retry").notNull().default(false),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("notification_delivery_attempts_booking_kind_idx").on(table.bookingId, table.kind),
@@ -430,8 +431,8 @@ export const notificationSendQueue = pgTable(
     httpStatus: integer("http_status"),
     errorCode: text("error_code"),
     lastError: text("last_error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("notification_send_queue_due_idx").on(
@@ -578,7 +579,7 @@ export const inboundMessages = pgTable(
      */
     spamFlagged: boolean("spam_flagged").notNull().default(false),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // Leads on the person column so deleting a person (a demo shop's cascade,
@@ -654,7 +655,7 @@ export const staffReplies = pgTable(
     sendError: text("send_error"),
     sentAt: timestamp("sent_at", { withTimezone: true }).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // Leads on the person column so deleting a person (a demo shop's cascade,
@@ -693,7 +694,7 @@ export const inboxSavedAnswers = pgTable(
     title: text("title").notNull(),
     body: text("body").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("inbox_saved_answers_shop_idx").on(table.shopId, table.createdAt),
@@ -764,10 +765,10 @@ export const shopWhatsappAccounts = pgTable(
      */
     templateName: text("template_name").notNull(),
     templateLanguage: text("template_language").notNull(),
-    connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
+    connectedAt: appNowTimestamp("connected_at").notNull(),
     /** Set by the settings page's test send, so staff can see the connection was proven, not just saved. */
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("shop_whatsapp_accounts_phone_number_unique").on(table.phoneNumberId),
@@ -837,7 +838,7 @@ export const pushSubscriptions = pgTable(
      * would not survive a serverless invocation. Null until the first push.
      */
     lastPushedAt: timestamp("last_pushed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // A device has at most one subscription per trip, and re-subscribing (the

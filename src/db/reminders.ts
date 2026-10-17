@@ -8,6 +8,7 @@ import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/course
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { type MeetingPoint, meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
 import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
+import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import {
   type Notification,
   type NotificationProvider,
@@ -21,6 +22,7 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
+import { isDiver } from "@/lib/participant-types";
 import {
   buildDiverChecklist,
   type ReminderActionCode,
@@ -430,7 +432,9 @@ export async function sendDueReminders(
     .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
     .where(
       and(
-        ne(bookings.status, "cancelled"),
+        // Only a seat the diver still holds: a released one (turned away at
+        // the desk) is not a "see you tomorrow" (layer 3 review, dde-1 F2).
+        inArray(bookings.status, [...SEAT_HELD_STATUSES]),
         and(eq(trips.status, "scheduled"), notRehearsal()),
         gt(trips.startsAt, now),
         lte(trips.startsAt, horizon),
@@ -581,12 +585,17 @@ export async function sendDueReminders(
     // "Done" is the person's, across every departure of the course
     // (`courseMaterialsDoneByPerson`), so a tick on the pool weekend quiets
     // the open-water weekend's nudge too.
+    // A course's student is its diver: a snorkeler or a rider on the session
+    // is a passenger, sent neither the course's words nor its materials
+    // (issue #2226).
+    const student = Boolean(trip.courseId) && isDiver(booking.participantType);
     const courseMaterialsList =
-      cadence.kind === "trip_reminder_7d" && trip.courseId && !booking.courseMaterialsDoneAt
+      cadence.kind === "trip_reminder_7d" && student && !booking.courseMaterialsDoneAt
         ? readLearningMaterials(courseMaterials)
         : [];
     const materialsDue =
       trip.courseId &&
+      student &&
       courseMaterialsList.length > 0 &&
       !(
         await courseMaterialsDoneByPerson(db, {
@@ -627,6 +636,7 @@ export async function sendDueReminders(
       materialsDue,
     } of sending) {
       const meetings = meetingsByTrip.get(trip.id) ?? [];
+      const student = Boolean(trip.courseId) && isDiver(booking.participantType);
       const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
       // No request to negotiate `Accept-Language` from at a cron fire: this reads
       // what the diver's past requests recorded, else the shop's stored locale,
@@ -691,7 +701,7 @@ export async function sendDueReminders(
           whoToText,
           replyKeywords,
           materials: materialsDue,
-          courseSession: Boolean(trip.courseId),
+          courseSession: student,
           diveMode: trip.diveMode,
           meetingPoint,
           readinessUrl,
@@ -736,7 +746,7 @@ export async function sendDueReminders(
             ...(brief ? { brief } : {}),
             ...(materialsDue.length > 0 ? { learningMaterials: materialsDue } : {}),
             ...(meetings.length > 1 ? { scheduleDays: meetings } : {}),
-            ...(trip.courseId ? { courseSession: true } : {}),
+            ...(student ? { courseSession: true } : {}),
             meetingPoint,
           },
         });

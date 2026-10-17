@@ -3,7 +3,7 @@
  * guardian's co-signature, emergency contacts, and completing the release.
  * Imported through the `./waivers` barrel.
  */
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { readEmergencyContact } from "@/lib/contact";
 import {
@@ -330,6 +330,8 @@ export async function saveBookingEmergencyContact(
      * Who is writing. A bearer link on a held seat (`identity_unconfirmed_at`)
      * may belong to someone other than the diver record it was matched to, so
      * it never writes onto that record until staff confirm who it is (#2082).
+     * Staff on a held seat write the seat's own contact (#2145), never the
+     * matched record's.
      */
     actor: "bearer" | "staff";
   },
@@ -346,7 +348,28 @@ export async function saveBookingEmergencyContact(
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
   if (!booking) return false;
-  if (input.actor === "bearer" && booking.identityUnconfirmedAt) return false;
+  if (booking.identityUnconfirmedAt) {
+    if (input.actor === "bearer") return false;
+    // **A held seat's contact is the seat's** (issue #2145): the matched
+    // record's next of kin may be somebody else's, so the desk's answer for
+    // the person in front of them goes on the booking and is shown in place
+    // of the withheld one. Nothing is written to the matched record.
+    const [held] = await db
+      .update(bookings)
+      .set({
+        heldEmergencyContactName: submitted.name,
+        heldEmergencyContactPhone: submitted.phone,
+      })
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .returning({ id: bookings.id });
+    return Boolean(held);
+  }
   const [updated] = await db
     .update(people)
     .set(patch)

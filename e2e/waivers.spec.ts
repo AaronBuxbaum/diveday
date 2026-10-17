@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   HELD_SEND_TIMEOUT_MS,
@@ -1247,7 +1248,9 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   await page.getByLabel("Date of the physician’s evaluation").fill("2020-01-01");
   await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
   await page.getByRole("button", { name: "Record the answer" }).click();
-  await expect(page.getByText("That evaluation predates the answers it would clear")).toBeVisible();
+  await expect(
+    page.getByText(staffTranslator("en-US")("divers.notices.medicalClearanceDateTooEarly")),
+  ).toBeVisible();
 
   await page.getByRole("radio", { name: "Cleared to dive" }).check();
   await page.getByLabel("Date of the physician’s evaluation").fill(EVALUATED_ON);

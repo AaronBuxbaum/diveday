@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { addPartySeat, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
@@ -16,6 +17,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
+import { formValue, parseForm, readForm, single } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -73,6 +75,8 @@ export async function payFromReady(token: string) {
  * and only a row this tap filed says "Sent": an ask that already stood is
  * shown as the page's own asked line, never reported as news.
  */
+const moveAskForm = z.object({ note: formValue() });
+
 export async function askToMoveAction(token: string, formData: FormData) {
   const ip = await clientIp();
   if (
@@ -86,7 +90,7 @@ export async function askToMoveAction(token: string, formData: FormData) {
   refuseWhileHeld(token, ctx.data);
   if (ctx.data.moveAsk === "asked") redirect(`${base(token)}#move-ask`);
   if (ctx.data.moveAsk !== "open") redirect(`${base(token)}?error=move-ask`);
-  const note = formData.get("note");
+  const { note } = readForm(moveAskForm, formData);
   const outcome = await recordMoveAsk(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
@@ -106,6 +110,8 @@ export async function askToMoveAction(token: string, formData: FormData) {
  * is the same quiet notice: the seat stays held, and a failure never reads as
  * a lost seat.
  */
+const partySeatPayForm = z.object({ seatBookingId: formValue() });
+
 export async function payForPartySeatFromReady(token: string, formData: FormData) {
   const ip = await clientIp();
   if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
@@ -115,7 +121,7 @@ export async function payForPartySeatFromReady(token: string, formData: FormData
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   refuseWhileHeld(token, ctx.data);
   const origin = publicAppUrl();
-  const seatBookingId = formData.get("seatBookingId");
+  const { seatBookingId } = readForm(partySeatPayForm, formData);
   if (
     !ctx.data.canPayPartySeats ||
     !origin ||
@@ -260,6 +266,8 @@ export async function emailFreshReadinessLinkAction(token: string) {
  * a notice. The new seat's claim link appears in the party panel on the page
  * the redirect lands on.
  */
+const addSeatForm = z.object({ seatName: single(diverNameSchema) });
+
 export async function addSeatFromReady(token: string, formData: FormData) {
   // A seat is a booking, so it spends the same per-IP budget the schedule's
   // booking form does, on top of the token chokepoint every action here takes.
@@ -271,8 +279,8 @@ export async function addSeatFromReady(token: string, formData: FormData) {
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   refuseWhileHeld(token, ctx.data);
   if (!ctx.data.canAddSeat) redirect(`${base(token)}?error=seat`);
-  const parsed = diverNameSchema.safeParse(formData.get("seatName"));
-  if (!parsed.success) redirect(`${base(token)}?error=seat-name`);
+  const parsed = parseForm(addSeatForm, formData);
+  if (!parsed.ok) redirect(`${base(token)}?error=seat-name`);
   // **Per booking, decided first** (security review of layer 8, D3): the link
   // is shared by design, so the per-IP bucket above is not the cap on how many
   // seats one booking can add. Every holder of this link spends from one
@@ -290,7 +298,7 @@ export async function addSeatFromReady(token: string, formData: FormData) {
   const outcome = await addPartySeat(ctx.db, {
     shopId: ctx.data.shop.id,
     leadBookingId: ctx.bookingId,
-    seatName: parsed.data,
+    seatName: parsed.data.seatName,
   }).catch((error: unknown) => {
     log("ready.add_seat_failed", "error", {
       errorCode: error instanceof Error ? error.name : "unknown_error",

@@ -6,8 +6,7 @@ type TripPage = Awaited<ReturnType<typeof readTripPage>>;
 
 /**
  * Each of the day's dives with what the shop says lives at its site (the
- * field-guide cards, in the reader's words) and the moments divers saved
- * there. A dive with no site carries neither. What `TripDayPlan` and
+ * field-guide cards, in the reader's words). A dive with no site carries none. What `TripDayPlan` and
  * `TripPitch` both read, and `dayCoverPhoto` picks the day's photo from.
  */
 export function dayBriefings(
@@ -19,6 +18,5 @@ export function dayBriefings(
     dive,
     diveSite,
     creatures: fieldGuideCards(diveSite ? (extras.creatures.get(diveSite.id) ?? []) : [], t),
-    moments: diveSite ? (extras.moments.get(diveSite.id) ?? []) : [],
   }));
 }

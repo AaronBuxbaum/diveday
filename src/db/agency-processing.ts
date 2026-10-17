@@ -263,7 +263,7 @@ export async function listCardsToProcess(db: DbExecutor, shopId: string): Promis
 
 /**
  * When the processed stamp began: the moment of the migration that added it
- * (`20261016234242_processed-cards-lunch-aboard-and-room-charge`). A card the
+ * (`20261017180605_processed-cards-lunch-aboard-and-room-charge`). A card the
  * shop issued before it has no stamp only because there was nowhere to put
  * one, and most were sent to the agency long ago. Without a cut every one of
  * them would land on the list at once, all "Waiting over 30 days", and an

@@ -113,7 +113,8 @@
   "moneyOut": {
     "refunded": "Reembolsado {amount} de los cobros de este mes",
     "discounted": "Los códigos de descuento restaron {amount}",
-    "fees": "Comisiones de Stripe {amount}, en lo pagado a tu banco este mes"
+    "fees": "Comisiones de Stripe {amount}, en lo pagado a tu banco este mes",
+    "disputesLost": "Las disputas de tarjeta perdidas este mes devolvieron {amount} al banco"
   },
   "emptySeats": {
     "heading": "Salidas que zarparon con plazas vacías",

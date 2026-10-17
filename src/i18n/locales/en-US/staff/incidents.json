@@ -7,6 +7,15 @@
     "writtenBy": "Written by {name}",
     "notTimed": "Time not written yet"
   },
+  "missingDiver": {
+    "start": "Start a missing diver report",
+    "alreadyStarted": "Already started by {name}.",
+    "alreadyFiled": "Already filed by {name}.",
+    "notMissing": "No longer marked not back aboard.",
+    "notAllowed": "Only this departure’s crew, owners and managers can start a report.",
+    "failed": "The report did not open. Tap again.",
+    "backToManifest": "Back to manifest"
+  },
   "status": {
     "draft": "Draft",
     "filed": "Filed"
@@ -102,6 +111,7 @@
     "title": "File the report",
     "description": "Filing puts your name and the time on it. After that it does not change.",
     "submit": "File report",
+    "missingDiverWarning": "Filing tells the owners now. Is the diver still missing?",
     "pending": "Filing…",
     "needs": "Before it can be filed, it needs:",
     "gap": {
@@ -117,6 +127,8 @@
     }
   },
   "read": {
+    "ownersAlerted": "Owners alerted",
+    "ownersNotReached": "Not reached yet. Call them.",
     "when": "When",
     "where": "Where",
     "notAnswered": "Not answered",

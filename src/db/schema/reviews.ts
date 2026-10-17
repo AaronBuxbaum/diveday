@@ -13,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
 
@@ -25,8 +26,8 @@ import { trips } from "./trips";
  * a per-booking signed token (public, noindex), so an upload is scoped to that
  * booking and a diver only ever sees the shots on their own page. Staff see a
  * trip's diver photos on the roster so the shop can reuse them and take down
- * anything inappropriate — the moderation seam is a delete, mirroring the opt-in
- * `dive_site_moments` shape (20260723-post-trip-recap follow-up).
+ * anything inappropriate — the moderation seam is a delete
+ * (20260723-post-trip-recap follow-up).
  */
 export const recapPhotos = pgTable(
   "recap_photos",
@@ -52,7 +53,7 @@ export const recapPhotos = pgTable(
      * delete.
      */
     sharedWithBoatAt: timestamp("shared_with_boat_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("recap_photos_booking_idx").on(table.bookingId, table.createdAt),
@@ -79,7 +80,7 @@ export const tripRecapPhotos = pgTable(
     uploadedByPersonId: uuid("uploaded_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("trip_recap_photos_shop_trip_idx").on(table.shopId, table.tripId, table.createdAt),
@@ -93,8 +94,7 @@ export const tripRecapPhotos = pgTable(
  * boat. Unique on `booking_id`: a diver revises their own review rather than
  * stacking several, and a replayed submit can't inflate a shop's average.
  *
- * `isPublished` is the moderation seam, same shape as `diveSiteMoments`. A
- * bare rating carries no text to moderate and publishes immediately; a review
+ * `isPublished` is the moderation seam. A bare rating carries no text to moderate and publishes immediately; a review
  * *with* a comment waits for staff, because the comment lands on the shop's
  * public schedule page. Aggregates are computed over published rows only, so
  * the number a visitor sees and the reviews under it always describe the same
@@ -123,8 +123,8 @@ export const tripReviews = pgTable(
     isPublished: boolean("is_published").notNull().default(false),
     /** Null until published; drives "newest published first" on the public list. */
     publishedAt: timestamp("published_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_reviews_booking_unique").on(table.bookingId),
@@ -170,8 +170,8 @@ export const reviewReplies = pgTable(
     writtenByPersonId: uuid("written_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
@@ -238,7 +238,7 @@ export const reviewModerationEvents = pgTable(
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
       .references(() => people.id),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    occurredAt: appNowTimestamp("occurred_at").notNull(),
   },
   (table) => [
     index("review_moderation_events_shop_idx").on(table.shopId, table.occurredAt),
@@ -328,8 +328,8 @@ export const recapPulses = pgTable(
      * 20260820-every-delete-is-soft): the row stays, the shop stops seeing it.
      */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // One live pulse per booking. Partial, over the live rows only, so a

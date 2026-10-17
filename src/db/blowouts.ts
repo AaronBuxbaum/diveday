@@ -12,8 +12,6 @@ import {
   lte,
   ne,
   notInArray,
-  type SQL,
-  type SQLWrapper,
   sql,
 } from "drizzle-orm";
 import {
@@ -32,7 +30,9 @@ import {
 } from "@/lib/notifications";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
+import { departureMayBeAtSea } from "./aboard-at-sea";
 import { releasePackageCoverageForBooking } from "./bookings";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices } from "./crew-notices";
 import { publishManifestEvent } from "./manifest-events";
@@ -52,8 +52,6 @@ import {
   certifications,
   nitroxCertifications,
   people,
-  rollCallCrewEvents,
-  rollCallEvents,
   shops,
   specialtyCertifications,
   tripAssignments,
@@ -62,7 +60,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
-import { setTripStatus } from "./trips-record";
+import { rollCallStartedOn, setTripStatus } from "./trips-record";
 
 /**
  * The blow-out cascade (docs ADR 20260804-blowout-cascade, glossary
@@ -160,13 +158,6 @@ export async function callTripBlowout(
   return outcome;
 }
 
-/** Whether anybody, diver or crew, has a roll-call or boarding event on this trip. */
-function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
-  return sql<boolean>`(exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId}) or exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId}))`.mapWith(
-    Boolean,
-  );
-}
-
 type BlowoutSetup = Extract<Awaited<ReturnType<typeof setUpTripBlowout>>, { ok: true }>;
 
 /**
@@ -205,11 +196,19 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
         .select({ started: rollCallStartedOn(trip.id) })
         .from(trips)
         .where(and(eq(trips.id, trip.id), liveTrip()));
+      // The crew may also have taken the boat out before its time, or hold a
+      // diver aboard (`departureMayBeAtSea`, H-133): the stricter of the two.
       if (
         departureUnderway(
           { startsAt: trip.startsAt, rollCallStarted: Boolean(started?.started) },
           now,
-        )
+        ) ||
+        (await departureMayBeAtSea(tx, {
+          shopId: input.shopId,
+          tripId: input.tripId,
+          startsAt: trip.startsAt,
+          now,
+        }))
       ) {
         return { ok: false as const, reason: "trip_departed" as const };
       }
@@ -696,7 +695,10 @@ async function sendPendingBlowoutMessages(
             ne(bookings.status, "cancelled"),
           ),
         );
-      const evidence = await certificationEvidence(db, input.shopId, row.diver.personId);
+      const [evidence, courseSeats] = await queryAll(db, [
+        () => certificationEvidence(db, input.shopId, row.diver.personId),
+        () => listCourseSeatsInTraining(db, input.shopId, [row.diver.personId]),
+      ]);
       const offeredTripIds = qualifyingAlternatives({
         cancelledTripId: input.trip.id,
         now: input.now,
@@ -706,6 +708,7 @@ async function sendPendingBlowoutMessages(
           identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
           bookedTripIds: activeSeats.map((seat) => seat.tripId),
           participantType: row.booking.participantType,
+          courseSeats,
         },
       });
 

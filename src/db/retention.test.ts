@@ -959,7 +959,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "courses",
   "dive_sites",
   "dive_site_creatures",
-  "dive_site_moments",
+  "dive_site_moments", // retired (#2330), dropped in a later release
   "waiver_templates",
   "shop_promo_codes",
   "dive_packages",
@@ -1014,7 +1014,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // departures rather than the calendar.
   "trips",
   "trip_dives",
-  "trip_change_events",
   "executed_dives",
   // A boat's open problem is current state until somebody says it is fixed,
   // and a fixed one is part of that boat's history, read like a logged dive.
@@ -1028,6 +1027,8 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_last_minute_promo_recipients",
   "trip_blowouts",
   "trip_blowout_divers",
+  // One row per departure, read as part of its departure log (#2300).
+  "departure_boat_safety_snapshots",
   // What the bench told a customer and the orders it raised (ADR
   // 20261008-work-order-follow-up). Read with the ticket or the piece they are
   // about, which the shop keeps; a reminder row is also what stops a second
@@ -1053,7 +1054,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "recap_photos",
   "trip_recap_photos",
   "trip_reviews",
-  "review_moderation_events",
   // The shop's public reply under a review (batch 4, K2): lives as long as the
   // review it answers, and goes the way the review goes.
   "review_replies",

@@ -252,7 +252,8 @@ export async function getTripOverview(
   // enough crew", also consumed by the staffing coverage list and the Today
   // queue — `over_ratio` is the visible nudge to fix a ratio-gated session before
   // sailing, never a retroactive block on the bookings already taken.
-  const crewGap = courseCrewGap({ course: trip.course, ...inWaterCrew, booked: trip.booked });
+  // Its students are its divers (G5 of #2226).
+  const crewGap = courseCrewGap({ course: trip.course, ...inWaterCrew, booked: trip.bookedDivers });
   // The shop's own target, measured off the same crew count and reported
   // separately from the two agency gates above — it applies to every departure,
   // course or fun dive, and it refuses nothing.

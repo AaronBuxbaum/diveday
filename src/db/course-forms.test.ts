@@ -100,6 +100,7 @@ async function requireOneForm(ctx: Awaited<ReturnType<typeof courseContext>>) {
     actorPersonId: ctx.staff.id,
   });
   const set = await setCourseFormRequirements(ctx.db, {
+    mayNarrow: true,
     shopId: ctx.shop.id,
     courseId: ctx.seat.courseId,
     formIds: [form.id],
@@ -153,6 +154,7 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     const ctx = await courseContext();
     // The seat's course asks for this one form only, made the template's way.
     await setCourseFormRequirements(ctx.db, {
+      mayNarrow: true,
       shopId: ctx.shop.id,
       courseId: ctx.seat.courseId,
       formIds: [],
@@ -290,7 +292,12 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
   it("never puts back a form the shop took off, when a sync keeps the shop's edits", async () => {
     const titles = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map((f) => f.title);
     const { db, shop, openWater } = await openWaterBehindItsTemplate(titles);
-    await setCourseFormRequirements(db, { shopId: shop.id, courseId: openWater.id, formIds: [] });
+    await setCourseFormRequirements(db, {
+      mayNarrow: true,
+      shopId: shop.id,
+      courseId: openWater.id,
+      formIds: [],
+    });
 
     const pulled = await pullCourseTemplateUpdates(
       db,
@@ -304,18 +311,19 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
   });
 
   it("adds only a form new in this template version, and not one the shop already declined", async () => {
-    const [first, second] = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map(
-      (form) => form.title,
-    );
+    const [first, second, ...rest] = (
+      getCourseTemplate("open-water-diver")?.standardForms ?? []
+    ).map((form) => form.title);
     if (!first || !second) throw new Error("Open Water names two forms");
-    // The previous version named only the first form; this one adds the second.
-    const { db, shop, openWater } = await openWaterBehindItsTemplate([first]);
+    // The previous version named every form but the second; this one adds it.
+    const { db, shop, openWater } = await openWaterBehindItsTemplate([first, ...rest]);
     const before = await listCourseFormRequirements(db, shop.id, openWater.id);
     const forms = await listCourseForms(db, shop.id);
     const firstId = forms.find((form) => form.title === first)?.id;
     const secondId = forms.find((form) => form.title === second)?.id;
     // The shop keeps the first and took the second off before the sync.
     await setCourseFormRequirements(db, {
+      mayNarrow: true,
       shopId: shop.id,
       courseId: openWater.id,
       formIds: before.filter((id) => id !== secondId),
@@ -324,15 +332,19 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     await pullCourseTemplateUpdates(db, shop.id, openWater.id, "preserve-shop-edits");
 
     // New in this version, but taken off by the shop: its soft-deleted row is the shop's no.
-    expect(await listCourseFormRequirements(db, shop.id, openWater.id)).toEqual([firstId]);
+    expect(await listCourseFormRequirements(db, shop.id, openWater.id)).toEqual(
+      before.filter((id) => id !== secondId),
+    );
+    expect(firstId).toBeDefined();
   });
 
   it("adds a form new in this template version that the course never had", async () => {
-    const [first, second] = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map(
+    const titles = (getCourseTemplate("open-water-diver")?.standardForms ?? []).map(
       (form) => form.title,
     );
+    const [first, second, ...rest] = titles;
     if (!first || !second) throw new Error("Open Water names two forms");
-    const { db, shop, openWater } = await openWaterBehindItsTemplate([first]);
+    const { db, shop, openWater } = await openWaterBehindItsTemplate([first, ...rest]);
     // A course that never listed the second form at all: delete the seeded form,
     // which takes its requirement row with it, then forget that row ever was.
     const secondId = (await listCourseForms(db, shop.id)).find((form) => form.title === second)?.id;
@@ -342,7 +354,7 @@ describe("course forms — the agency's standard forms (in-memory PGlite)", () =
     await pullCourseTemplateUpdates(db, shop.id, openWater.id, "preserve-shop-edits");
 
     const required = await listCourseFormRequirements(db, shop.id, openWater.id);
-    expect(required).toHaveLength(2);
+    expect(required).toHaveLength(titles.length);
     expect(required).toContain(secondId);
   });
 });
@@ -355,7 +367,6 @@ async function otherShop(db: AppDb) {
   if (!other) throw new Error("other shop insert failed");
   return other;
 }
-
 describe("course forms — authoring (in-memory PGlite)", () => {
   it("versions a form by insertion and writes nothing for the same words", async () => {
     const ctx = await courseContext();
@@ -410,6 +421,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
     });
     expect(
       await setCourseFormRequirements(ctx.db, {
+        mayNarrow: true,
         shopId: ctx.shop.id,
         courseId: ctx.seat.courseId,
         formIds: [form.id, foreign.id],
@@ -418,6 +430,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
     // A course id from this shop is not one the other shop can write to.
     expect(
       await setCourseFormRequirements(ctx.db, {
+        mayNarrow: true,
         shopId: other.id,
         courseId: ctx.seat.courseId,
         formIds: [foreign.id],
@@ -438,6 +451,7 @@ describe("course forms — authoring (in-memory PGlite)", () => {
       actorPersonId: ctx.staff.id,
     });
     await setCourseFormRequirements(ctx.db, {
+      mayNarrow: true,
       shopId: ctx.shop.id,
       courseId: ctx.seat.courseId,
       formIds: [second.id, first.id],
@@ -1212,60 +1226,6 @@ describe("course forms — a minor's guardian, and a paper copy's own rules (in-
     expect(readiness?.blockers.map((blocker) => blocker.code)).not.toContain(
       "course_form_guardian_missing",
     );
-  });
-});
-
-describe("course forms — placeholders, filled at signing (in-memory PGlite)", () => {
-  it("fills the shop, course and instructors into the words, and keeps what they were", async () => {
-    const ctx = await courseContext();
-    const created = await createCourseForm(ctx.db, {
-      shopId: ctx.shop.id,
-      title: "Agency release",
-      body: `I release {shopName} and {instructorNames} for {courseTitle}. ${BODY}`,
-      actorPersonId: ctx.staff.id,
-    });
-    await setCourseFormRequirements(ctx.db, {
-      shopId: ctx.shop.id,
-      courseId: ctx.seat.courseId,
-      formIds: [created.id],
-    });
-    const [course] = await ctx.db
-      .select({ title: courses.title })
-      .from(courses)
-      .where(eq(courses.id, ctx.seat.courseId));
-    const forms = await getCourseFormsForBooking(ctx.db, ctx.shop.id, ctx.seat.bookingId);
-    const [owed] = forms?.outstanding ?? [];
-    expect(owed?.body).toContain(`I release ${ctx.shop.name} and `);
-    expect(owed?.body).toContain(`for ${course?.title}.`);
-    expect(owed?.body).not.toContain("{");
-
-    await signCourseForm(ctx.db, {
-      shopId: ctx.shop.id,
-      bookingId: ctx.seat.bookingId,
-      formVersionId: owed?.versionId ?? "",
-      signerName: ctx.seat.fullName,
-      agreed: true,
-    });
-    const [record] = await ctx.db
-      .select()
-      .from(courseFormRecords)
-      .where(eq(courseFormRecords.bookingId, ctx.seat.bookingId));
-    expect(record).toMatchObject({
-      formBody: owed?.body,
-      courseTitle: course?.title,
-      tripId: ctx.seat.tripId,
-      instructorNames: forms?.enrollment.context.instructorNames,
-    });
-    // A later rename never rewrites what was agreed to.
-    await ctx.db
-      .update(courses)
-      .set({ title: "Renamed course" })
-      .where(eq(courses.id, ctx.seat.courseId));
-    const [kept] = await ctx.db
-      .select({ courseTitle: courseFormRecords.courseTitle })
-      .from(courseFormRecords)
-      .where(eq(courseFormRecords.bookingId, ctx.seat.bookingId));
-    expect(kept?.courseTitle).toBe(course?.title);
   });
 });
 

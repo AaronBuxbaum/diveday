@@ -134,7 +134,13 @@ import {
   seasonalBriefingText,
   stuckOperationKindText,
 } from "./today-labels";
-import { depthText, seaStateText, temperatureText, windText } from "./unit-labels";
+import {
+  depthText,
+  diveSiteDepthText,
+  seaStateText,
+  temperatureText,
+  windText,
+} from "./unit-labels";
 import { type WaiverRowState, waiverRowStateText } from "./waiver-labels";
 import {
   workOrderLineKindLabel,
@@ -475,7 +481,7 @@ const CASES: readonly LabelMapCase[] = [
     rows: codeRows(GEAR_SERVICE_KINDS, (locale, clock) =>
       [false, true]
         .map((expired) =>
-          boatSafetyNoticeText(staffTranslator(locale), {
+          boatSafetyNoticeText(staffTranslator(locale), locale, {
             code: "kit_clock",
             gearItemId: "unit",
             label: "AED",
@@ -495,7 +501,7 @@ const CASES: readonly LabelMapCase[] = [
     rows: codeRows(BOAT_PAPERS, (locale, paper) =>
       [false, true]
         .map((expired) =>
-          boatSafetyNoticeText(staffTranslator(locale), {
+          boatSafetyNoticeText(staffTranslator(locale), locale, {
             code: "paper",
             paper,
             dueOn: "2026-10-21",
@@ -510,14 +516,14 @@ const CASES: readonly LabelMapCase[] = [
     module: "boat-safety-labels.ts",
     map: "MISSING_KEYS",
     rows: codeRows(MUST_CARRY_KIT_KINDS, (locale, kind) =>
-      boatSafetyNoticeText(staffTranslator(locale), { code: "kit_missing", kind }),
+      boatSafetyNoticeText(staffTranslator(locale), locale, { code: "kit_missing", kind }),
     ),
   },
   {
     module: "boat-work-labels.ts",
     map: "BOAT_WORK_KEYS",
     rows: codeRows(BOAT_WORK_CODES, (locale, code) =>
-      boatWorkText(staffTranslator(locale), { code, count: 2 }),
+      boatWorkText(staffTranslator(locale), { code, count: 2, tone: "work" }),
     ),
   },
   {
@@ -1057,6 +1063,13 @@ const CASES: readonly LabelMapCase[] = [
   },
   {
     module: "unit-labels.ts",
+    map: "DEPTH_RANGE_KEYS",
+    rows: codeRows(DEPTH_UNITS, (locale, unit) =>
+      diveSiteDepthText(diverTranslator(locale), { depthMinMeters: 6, maxDepthMeters: 18 }, unit),
+    ),
+  },
+  {
+    module: "unit-labels.ts",
     map: "TEMPERATURE_UNIT_KEYS",
     rows: codeRows(TEMPERATURE_UNITS, (locale, unit) =>
       temperatureText(diverTranslator(locale), 24, unit),
@@ -1210,6 +1223,8 @@ const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   // translate. The spelled-out forms (`course.depthUnits.*`) do, and differ.
   ["DEPTH_UNIT_KEYS.meters", "the unit’s abbreviation, and the template is nothing else"],
   ["DEPTH_UNIT_KEYS.feet", "the unit’s abbreviation, and the template is nothing else"],
+  ["DEPTH_RANGE_KEYS.meters", "two numbers and the unit’s abbreviation, nothing else"],
+  ["DEPTH_RANGE_KEYS.feet", "two numbers and the unit’s abbreviation, nothing else"],
 ]);
 
 /** A rendered label that is nothing but a dotted key — what a missing key renders as. */

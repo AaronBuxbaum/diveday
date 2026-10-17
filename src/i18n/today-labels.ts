@@ -1,10 +1,12 @@
 import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
+import { calendarDateInTimezone, calendarDaysBetween } from "@/lib/calendar-date";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import type { DepthUnit } from "@/lib/depth-units";
-import { formatDateTimeTz } from "@/lib/format";
+import { formatDateTimeTz, formatRelativeDay, formatShortDate, formatWeekday } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
+import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { RollCallGapReason, TodayActionKind, TodaySeason } from "@/lib/today";
 import { awayDatesText } from "./away-labels";
 import { SPECIALTY_KEYS } from "./readiness-labels";
@@ -28,6 +30,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   instructor_missing: "today.actionKind.instructorMissing",
   uncrewed_course: "today.actionKind.uncrewedCourse",
   uncrewed_departure: "today.actionKind.uncrewedDeparture",
+  boat_clash: "today.actionKind.boatClash",
   crew_clash: "today.actionKind.crewClash",
   crew_clash_sailed: "today.actionKind.crewClashSailed",
   crew_away: "today.actionKind.crewAway",
@@ -54,8 +57,10 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   gear_service_due: "today.actionKind.gearServiceDue",
   boat_safety_kit: "today.actionKind.boatSafetyKit",
   boat_papers_due: "today.actionKind.boatPapersDue",
+  boat_papers_lapsed: "today.actionKind.boatPapersLapsed",
   boat_safety_expired: "today.actionKind.boatSafetyExpired",
   boat_snag: "today.actionKind.boatSnag",
+  incident_report_unfiled: "today.actionKind.incidentReportUnfiled",
   work_order_late: "today.actionKind.workOrderLate",
   work_order_uncollected: "today.actionKind.workOrderUncollected",
   staff_credential_due: "today.actionKind.staffCredentialDue",
@@ -72,6 +77,7 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   under_minimum_age: "today.blockerAction.checkDateOfBirth",
   waiver_not_sent: "today.blockerAction.sendWaiver",
   waiver_lapsed: "today.blockerAction.sendWaiver",
+  waiver_runs_out: "today.blockerAction.sendWaiver",
   waiver_pending: "today.blockerAction.nudgeWaiver",
   waiver_expired: "today.blockerAction.reissueWaiver",
   medical_review: "today.blockerAction.reviewMedical",
@@ -84,6 +90,7 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   guardian_signature_missing: "today.blockerAction.reissueWaiver",
   course_form_unsigned: "today.blockerAction.getCourseFormsSigned",
   course_form_guardian_missing: "today.blockerAction.getCourseFormsSigned",
+  training_mark_invalid: "today.blockerAction.clearTrainingMark",
   certification_missing: "today.blockerAction.addCard",
   // Nothing to add or verify: the diver said there is no card. The fix is a
   // conversation before boarding (third UX review, item 23).
@@ -93,9 +100,10 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   // level the diver typed. The work is getting the card in front of somebody.
   certification_self_declared: "today.blockerAction.askForCard",
   certification_insufficient: "today.blockerAction.reviewCard",
-  // By the day of the dive the course is over, so what is left is the card:
-  // the instructor's tap on the course roster, or a word with the diver.
-  certification_in_training: "today.blockerAction.reviewCard",
+  // There is no card to review yet (issue #2058): the diver is on a course
+  // that ends before this trip, and what is left is its result, the
+  // instructor's tap on the course roster or a word with the diver.
+  certification_in_training: "today.blockerAction.checkCourseResult",
   specialty_missing: "today.blockerAction.addSpecialty",
   specialty_pending: "today.blockerAction.verifySpecialty",
   specialty_import_unconfirmed: "today.blockerAction.confirmSpecialty",
@@ -114,6 +122,7 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   under_minimum_age: "today.blockerGroup.checkDatesOfBirth",
   waiver_not_sent: "today.blockerGroup.sendWaivers",
   waiver_lapsed: "today.blockerGroup.sendWaivers",
+  waiver_runs_out: "today.blockerGroup.sendWaivers",
   waiver_pending: "today.blockerGroup.nudgeWaivers",
   waiver_expired: "today.blockerGroup.reissueWaivers",
   medical_review: "today.blockerGroup.reviewMedicals",
@@ -121,12 +130,13 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   guardian_signature_missing: "today.blockerGroup.reissueWaivers",
   course_form_unsigned: "today.blockerGroup.getCourseFormsSigned",
   course_form_guardian_missing: "today.blockerGroup.getCourseFormsSigned",
+  training_mark_invalid: "today.blockerGroup.clearTrainingMarks",
   certification_missing: "today.blockerGroup.reviewCards",
   certification_not_yet: "today.blockerGroup.contactDivers",
   certification_pending: "today.blockerGroup.verifyCards",
   certification_self_declared: "today.blockerGroup.askForCards",
   certification_insufficient: "today.blockerGroup.reviewCards",
-  certification_in_training: "today.blockerGroup.reviewCards",
+  certification_in_training: "today.blockerGroup.checkCourseResults",
   specialty_missing: "today.blockerGroup.reviewSpecialties",
   specialty_pending: "today.blockerGroup.verifySpecialties",
   specialty_import_unconfirmed: "today.blockerGroup.confirmImportedSpecialties",
@@ -177,6 +187,7 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   identity_unconfirmed: "today.blockerRow.identityUnconfirmed",
   waiver_not_sent: "today.blockerRow.waiverNotSent",
   waiver_lapsed: "today.blockerRow.waiverLapsed",
+  waiver_runs_out: "today.blockerRow.waiverRunsOut",
   waiver_pending: "today.blockerRow.waiverPending",
   waiver_expired: "today.blockerRow.waiverExpired",
   medical_review: "today.blockerRow.medicalReview",
@@ -184,6 +195,7 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   guardian_signature_missing: "today.blockerRow.guardianSignatureMissing",
   course_form_unsigned: "today.blockerRow.courseFormUnsigned",
   course_form_guardian_missing: "today.blockerRow.courseFormUnsigned",
+  training_mark_invalid: "today.blockerRow.trainingMarkInvalid",
   certification_missing: "today.blockerRow.certificationMissing",
   certification_not_yet: "today.blockerRow.certificationNotYet",
   certification_pending: "today.blockerRow.certificationPending",
@@ -314,6 +326,21 @@ function clashGroups(
     count: names.length,
     departure,
   }));
+}
+
+/**
+ * One sentence per other departure on the same hull (H-80, issue #2135), the
+ * hull and the other departure named, in the words the departure page uses.
+ */
+export function boatClashDetailText(
+  t: StaffTranslator,
+  clashes: readonly { boatName: string; otherTitle: string }[],
+): string {
+  return clashes
+    .map((clash) =>
+      t("today.detail.boatClash", { boat: clash.boatName, departure: clash.otherTitle }),
+    )
+    .join(" ");
 }
 
 /**
@@ -707,6 +734,47 @@ export function owedRefundGroupDetailText(
  * who had already found it, every morning, forever — copy-restraint's fifth
  * deletion.
  */
+/**
+ * The unfiled incident report line (safety sheet 2026-10-15, item 3): how many
+ * drafts sit unfiled, and who started the oldest and when. `day` says how
+ * `when` reads: `relative` ("today", "yesterday"), `weekday` ("Tuesday"),
+ * `date` ("Oct 12"), so each language can put its own word before a date.
+ */
+export function incidentReportUnfiledSubjectText(
+  t: StaffTranslator,
+  input: { count: number; name: string; when: string; day: "relative" | "weekday" | "date" },
+): string {
+  return t("today.incidentReportUnfiled.subject", input);
+}
+
+/**
+ * When a draft was started, the way the desk says it: "today" or "yesterday",
+ * the weekday within the past week ("Tuesday"), else the date ("Oct 12"). In
+ * the shop's zone, by calendar day.
+ */
+export function incidentDraftStartedWhen(
+  startedAt: Date,
+  now: Date,
+  locale: string,
+  timeZone: string,
+): { day: "relative" | "weekday" | "date"; when: string } {
+  const daysAgo = calendarDaysBetween(
+    calendarDateInTimezone(startedAt, timeZone),
+    calendarDateInTimezone(now, timeZone),
+  );
+  if (daysAgo >= 0 && daysAgo <= 1) {
+    return { day: "relative", when: formatRelativeDay(startedAt, now, locale, timeZone) };
+  }
+  if (daysAgo > 1 && daysAgo < 7) {
+    return { day: "weekday", when: formatWeekday(startedAt, locale, timeZone) };
+  }
+  return { day: "date", when: formatShortDate(startedAt, locale, timeZone) };
+}
+
+export function openIncidentReportActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openIncidentReport");
+}
+
 export function reviewsPendingSubjectText(t: StaffTranslator, count: number): string {
   return t("today.reviewsPending.subject", { count });
 }
@@ -733,18 +801,24 @@ export function openInboxActionText(t: StaffTranslator): string {
 /**
  * The units row: the one first-run question a trading shop can still have open.
  *
- * Worded as a question about *money and depth*, not about a settings page —
+ * Worded as a question about *money, depth and temperature* (the three units
+ * the first-run checklist names too, issue #2571), not about a settings page —
  * "confirm your units" says nothing a reader could act on, while the currency a
  * card is charged in is the fact that makes this worth a row at all (#835).
  */
 export function unitsUnconfirmedSubjectText(
   t: StaffTranslator,
-  input: { currency: string; depthUnit: DepthUnit },
+  input: { currency: string; depthUnit: DepthUnit; temperatureUnit: TemperatureUnit },
 ): string {
   return t("today.unitsUnconfirmed.subject", {
     currency: input.currency,
     depth: t(
       input.depthUnit === "feet" ? "today.unitsUnconfirmed.feet" : "today.unitsUnconfirmed.meters",
+    ),
+    temperature: t(
+      input.temperatureUnit === "fahrenheit"
+        ? "today.unitsUnconfirmed.fahrenheit"
+        : "today.unitsUnconfirmed.celsius",
     ),
   });
 }

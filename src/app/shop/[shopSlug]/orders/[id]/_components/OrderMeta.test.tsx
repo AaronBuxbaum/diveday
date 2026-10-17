@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { OpenPaymentDispute } from "@/db/payment-disputes";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { OrderDisputeBanner, OrderMeta } from "./OrderMeta";
+import { OrderDisputeBanner, OrderLostDisputes, OrderMeta } from "./OrderMeta";
 
 const t = staffTranslator("en-US");
 
@@ -59,5 +59,33 @@ describe("OrderDisputeBanner", () => {
 
   it("renders nothing without a dispute", () => {
     expect(OrderDisputeBanner({ dispute: null, timezone: "UTC", locale: "en-US", t })).toBeNull();
+  });
+});
+
+describe("OrderLostDisputes (issue 2292)", () => {
+  it("writes each lost dispute as its own line: the amount and the day", () => {
+    const html = renderToStaticMarkup(
+      OrderLostDisputes({
+        lost: [
+          {
+            id: "d-1",
+            amountCents: 9_000,
+            currency: "usd",
+            orderId: "o-1",
+            checkoutId: null,
+            reversedAt: new Date("2026-10-10T12:00:00Z"),
+          },
+        ],
+        timezone: "UTC",
+        locale: "en-US",
+        t,
+      }) ?? null,
+    );
+    expect(html).toContain("$90.00");
+    expect(html).toContain("Dispute lost on");
+  });
+
+  it("renders nothing when no dispute was lost", () => {
+    expect(OrderLostDisputes({ lost: [], timezone: "UTC", locale: "en-US", t })).toBeNull();
   });
 });

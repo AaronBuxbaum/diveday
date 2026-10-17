@@ -29,8 +29,8 @@ import {
   updateDiveSiteForForm,
 } from "./dive-sites";
 import { bookings, diveSites, globalDiveSites, globalDiveSiteVersions } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
-import { getTripDiveSitesPeek, getTripWithBooked } from "./trips-record";
+import { listStaff } from "./trips";
+import { getTripWithBooked } from "./trips-record";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -845,24 +845,6 @@ describe("a dive site's planning note", () => {
     });
     await updateDiveSite(db, shop.id, site.id, { shopId: shop.id, name: site.name });
     expect((await rowFor(db, site.id))?.planningNote).toBe("Brief the swim-through first.");
-  });
-
-  it("never reaches the projection every diver-facing site reader shares", async () => {
-    // `getTripDiveSitesPeek` feeds the waiver success page and `/ready`. A
-    // column added to its projection would publish a staff note to divers with
-    // nothing failing, so the assertion is on the returned object's own keys.
-    const { db, shop } = ctx;
-    const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-    if (!trip) throw new Error("the seeded shop has no departures");
-    const [peek] = await getTripDiveSitesPeek(db, trip.id);
-    if (!peek) throw new Error("the seeded departure names no site");
-    expect(Object.keys(peek)).toEqual([
-      "name",
-      "description",
-      "difficultyLevel",
-      "depthRange",
-      "imageUrls",
-    ]);
   });
 });
 

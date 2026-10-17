@@ -68,6 +68,7 @@
     "awaySaved": "Saved. The shop can see those days on the week.",
     "credentialDeleted": "Credential removed.",
     "credentialInvalid": "That credential could not be saved. Check the staff member and dates.",
+    "credentialRenewalRequired": "Instructor and divemaster ratings need a renewal date.",
     "credentialReviewed": "Credential review updated.",
     "credentialSaved": "Credential added.",
     "invalid": "Check the shift date and times, then try again.",

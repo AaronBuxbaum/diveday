@@ -1466,6 +1466,7 @@ type NewAccountAlertEmailInput = {
   ownerEmail: string;
   shopName: string;
   shopSlug: string;
+  nameFlagged?: true;
 };
 
 /**
@@ -1479,11 +1480,17 @@ export function newAccountAlertEmail(input: NewAccountAlertEmailInput): Notifica
   const email = escapeHtml(input.ownerEmail);
   const shop = escapeHtml(input.shopName);
   const slug = escapeHtml(input.shopSlug);
+  // The name matched the brand and trust-word list (#2450): its mail goes out
+  // as plain DiveDay until somebody looks and clears it.
+  const flag =
+    "Name flagged for review: this shop's mail is sent as plain DiveDay until a human clears it.";
+  const flagText = input.nameFlagged ? `${flag}\n` : "";
+  const flagHtml = input.nameFlagged ? `<p>${flag}</p>` : "";
 
   return {
     subject: `New shop: ${input.shopName}`,
-    text: `${input.ownerName} (${input.ownerEmail}) just created "${input.shopName}" (/shop/${input.shopSlug}).\n`,
-    html: `<p><strong>${owner}</strong> (${email}) just created <strong>${shop}</strong> (<code>/shop/${slug}</code>).</p>`,
+    text: `${input.ownerName} (${input.ownerEmail}) just created "${input.shopName}" (/shop/${input.shopSlug}).\n${flagText}`,
+    html: `<p><strong>${owner}</strong> (${email}) just created <strong>${shop}</strong> (<code>/shop/${slug}</code>).</p>${flagHtml}`,
   };
 }
 

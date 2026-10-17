@@ -6,7 +6,7 @@
     "crew": "Tripulación"
   },
   "viewPublicPage": "Ver la página pública",
-  "scheduleTrip": "Añadir una salida",
+  "scheduleTrip": "Agregar una salida",
   "notices": {
     "added": "Ya está en el calendario.",
     "moved": "Movida.",
@@ -35,9 +35,9 @@
   },
   "builder": {
     "ariaLabel": "Constructor del calendario",
-    "addDeparture": "Añadir una salida",
-    "addDepartureOnDay": "Añadir una salida el {day}",
-    "add": "Añadir",
+    "addDeparture": "Agregar una salida",
+    "addDepartureOnDay": "Agregar una salida el {day}",
+    "add": "Agregar",
     "cancel": "Cancelar",
     "noSiteSetYet": "Sin sitio de buceo definido",
     "courseLabel": "Curso · {title}",
@@ -83,7 +83,7 @@
     "ordinaryTrip": "Inmersión recreativa",
     "decideLater": "Decidir más tarde",
     "optionsLoading": "Cargando…",
-    "adding": "Añadiendo…",
+    "adding": "Agregando…",
     "putOnBoard": "Ponerla en el calendario",
     "newDate": "Nueva fecha",
     "multiDayNote": "Los {count} días se mueven juntos, conservando sus intervalos.",
@@ -115,7 +115,7 @@
     "moreOptionsDescription": "Descripción, varios días, depósito, plazo de cancelación gratuita y fechas repetidas.",
     "viewOnlyNotice": "Programar y editar salidas está limitado a propietarios, gerentes e instructores.",
     "titlePlaceholderCourse": "{courseTitle} — Sesión 1",
-    "courseNote": "{requirement} · añade un instructor antes de compartir la sesión",
+    "courseNote": "{requirement} · agrega un instructor antes de compartir la sesión",
     "courseCertRequired": "Se requiere certificación {level} para inscribirse",
     "courseNoCardRequired": "No se exige certificación previa",
     "descriptionLabel": "Descripción",
@@ -123,7 +123,7 @@
     "isPrivateLabel": "Chárter privado",
     "isPrivateHint": "Fuera del calendario público. Cualquiera que tenga el enlace puede ver la salida y reservar una plaza.",
     "isRehearsalLabel": "Ensayo para un día de formación",
-    "isRehearsalHint": "Nadie paga, recibe avisos ni cuenta en los informes. Las personas que añadas aquí son buceadores de prueba.",
+    "isRehearsalHint": "Nadie paga, recibe avisos ni cuenta en los informes. Las personas que agregues aquí son buceadores de prueba.",
     "selfGuidedLabel": "Inmersión autoguiada",
     "selfGuidedHint": "Las parejas entran sin guía, así que DiveDay deja de pedirte que asignes uno.",
     "daysLabel": "Cuántos días",
@@ -196,5 +196,5 @@
     "lastYearCopy": "Copiarlas aquí",
     "lastYearCopying": "Copiando…"
   },
-  "addBooking": "Añadir una reserva"
+  "addBooking": "Agregar una reserva"
 }

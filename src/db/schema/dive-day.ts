@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   bigserial,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -12,9 +13,11 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { BoatPaperRecord, BoatSafetyNotice } from "@/lib/boat-safety";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { boats, trips } from "./trips";
 
@@ -90,7 +93,7 @@ export const rollCallEvents = pgTable(
     /** The blockers behind a `blocked` snapshot, as the engine raised them; null otherwise. */
     readinessBlockers: jsonb("readiness_blockers").$type<ReadinessBlocker[]>(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * The order these were written in — **the final tiebreak on every
      * roll-call read**, and the only column here that records what actually
@@ -228,7 +231,7 @@ export const rollCallCrewEvents = pgTable(
      */
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * The same final tiebreak the diver table carries, and it has to be the
      * same one: the two halves of a head count are read minutes apart on one
@@ -263,9 +266,10 @@ export const rollCallCrewEvents = pgTable(
  * oxygen aboard", "Life jackets counted" — in the order the shop wants it read
  * (ADR 20260824-pre-departure-safety-check).
  *
- * **DiveDay authors none of this.** The required set differs by flag state,
- * vessel class and jurisdiction, so the label is free text the shop writes for
- * itself, not a code this table looks up. `sortOrder` is the shop's own
+ * **DiveDay authors none of this** but the oxygen line a new shop starts with
+ * (`createSignedUpShop`, issue #2301), which is the shop's to edit from then.
+ * The required set differs by flag state, vessel class and jurisdiction, so the
+ * label is free text, not a code this table looks up. `sortOrder` is the shop's own
  * reading order, not a priority; it may repeat or skip after edits, and reads
  * always resolve ties on `createdAt`.
  */
@@ -282,8 +286,8 @@ export const preDepartureChecklistItems = pgTable(
      * row stays so `pre_departure_check_events` naming it keeps reading. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("pre_departure_checklist_items_shop_order_idx")
@@ -338,7 +342,7 @@ export const preDepartureCheckEvents = pgTable(
     clientEventId: uuid("client_event_id"),
     note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /** The same final tiebreak `rollCallEvents.seq` carries, and for the same
      * reason: this document is hashed for the incident export, and `occurred_at`
      * ties constantly under a frozen e2e clock or a batched offline sync. */
@@ -403,8 +407,8 @@ export const boatSnags = pgTable(
     fixedOnTripId: uuid("fixed_on_trip_id").references(() => trips.id),
     fixedByPersonId: uuid("fixed_by_person_id").references(() => people.id),
     fixedAt: timestamp("fixed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("boat_snags_shop_boat_open_idx")
@@ -502,7 +506,7 @@ export const bookingArrivalEvents = pgTable(
      */
     offlineSnapshotSavedAt: timestamp("offline_snapshot_saved_at", { withTimezone: true }),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /** The same final tiebreak `rollCallEvents.seq` carries, and for the same
      * reason: `occurred_at` ties constantly under a frozen e2e clock or a
      * batched offline sync, and this trail is replayed in order. */
@@ -574,7 +578,7 @@ export const buddyPairMembers = pgTable(
     pairedByPersonId: uuid("paired_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // A diver is in at most one team per departure — the invariant that keeps
@@ -635,7 +639,7 @@ export const buddyTeamEvents = pgTable(
       .notNull()
       .references(() => people.id),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("buddy_team_events_shop_trip_idx").on(table.shopId, table.tripId, table.occurredAt),
@@ -698,7 +702,7 @@ export const tripBlowouts = pgTable(
     calledAt: timestamp("called_at", { withTimezone: true }).notNull(),
     /** What the diver is told the cancellation was; see `blowoutCause`. */
     cause: blowoutCause("cause").notNull().default("weather"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_blowouts_trip_unique").on(table.tripId),
@@ -734,7 +738,7 @@ export const tripBlowoutDivers = pgTable(
     /** When the message settled as sent; null while pending/queued/failed/no_email. */
     notifiedAt: timestamp("notified_at", { withTimezone: true }),
     offeredTripIds: jsonb("offered_trip_ids").$type<string[]>().notNull().default([]),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // A booking belongs to exactly one trip and a trip to one blow-out, so the
@@ -745,3 +749,47 @@ export const tripBlowoutDivers = pgTable(
 );
 
 export type BlowoutMessageStatus = (typeof blowoutMessageStatus.enumValues)[number];
+
+/**
+ * **The boat's papers and kit notices as they stood at the departure
+ * checkpoint** (#2300, Aaron 2026-10-13). The live boat-safety section reads
+ * the boat as it is *now*, so once a departure has sailed it is hidden: paper
+ * dates are typed over when renewed and kit moves between hulls. This is the
+ * record the departure log and its incident export read instead.
+ *
+ * One row per departure, rewritten by each departure-checkpoint roll-call
+ * write until the boat sails (`hasSailed`) and never after, so it holds what
+ * the crew had in front of them as the boat left. No row means nobody recorded
+ * roll call at the departure checkpoint before it sailed, which the log says.
+ *
+ * `papers` keeps the certificate's limits and every paper date verbatim;
+ * `notices` keeps the codes the pre-departure check raised about papers and
+ * kit (never the head-count lines, which the roll call itself records), worded
+ * at render time like every other code on that document.
+ */
+export const departureBoatSafetySnapshots = pgTable(
+  "departure_boat_safety_snapshots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    boatId: uuid("boat_id")
+      .notNull()
+      .references(() => boats.id),
+    /** The hull's name then: a boat renamed later still reads as it sailed. */
+    boatName: text("boat_name").notNull(),
+    /** The departure's own local day the notices were judged on. */
+    judgedOn: date("judged_on").notNull(),
+    papers: jsonb("papers").$type<BoatPaperRecord>().notNull(),
+    notices: jsonb("notices").$type<BoatSafetyNotice[]>().notNull(),
+    capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("departure_boat_safety_snapshots_trip_idx").on(table.tripId),
+    index("departure_boat_safety_snapshots_shop_idx").on(table.shopId),
+  ],
+);

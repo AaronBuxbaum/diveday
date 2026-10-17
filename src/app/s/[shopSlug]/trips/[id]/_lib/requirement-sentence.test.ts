@@ -4,6 +4,8 @@ import { requirementSentenceFor } from "./requirement-sentence";
 
 const t = diverTranslator("en-US");
 const tEs = diverTranslator("es-ES");
+const card = (level: "open_water" | "advanced_open_water" | "rescue") =>
+  ({ kind: "card", level, keptAt: new Date("2026-01-01T00:00:00Z") }) as const;
 const none = { minimumCertificationLevel: null, requiredSpecialties: [], requiresNitrox: false };
 
 describe("requirementSentenceFor", () => {
@@ -35,5 +37,46 @@ describe("requirementSentenceFor", () => {
     expect(sentence).not.toBeNull();
     expect(sentence).toContain(" y ");
     expect(sentence).not.toContain(" and ");
+  });
+
+  // Issue issue 1866: admission is the weaker gate and never refuses someone
+  // readiness would clear, so a level reads as a bar with a way through.
+  describe("the way through (issue 1866)", () => {
+    const level = { ...none, minimumCertificationLevel: "advanced_open_water" } as const;
+    const askShop = "Not yet at that level? Ask the shop.";
+
+    it("says to ask the shop, beside a required level", () => {
+      expect(requirementSentenceFor(level, t, "en-US")).toBe(
+        `This charter is for divers with Advanced Open Water or higher. ${askShop}`,
+      );
+    });
+
+    it("says it to a known diver whose card is below the level, and to one with no card", () => {
+      expect(requirementSentenceFor(level, t, "en-US", { facts: [card("open_water")] })).toContain(
+        askShop,
+      );
+      expect(requirementSentenceFor(level, t, "en-US", { facts: [] })).toContain(askShop);
+    });
+
+    it("leaves it out for a known diver already at or above the level", () => {
+      expect(
+        requirementSentenceFor(level, t, "en-US", { facts: [card("advanced_open_water")] }),
+      ).not.toContain(askShop);
+      expect(requirementSentenceFor(level, t, "en-US", { facts: [card("rescue")] })).not.toContain(
+        askShop,
+      );
+    });
+
+    it("leaves it out when the trip asks for no level", () => {
+      expect(
+        requirementSentenceFor({ ...none, requiresNitrox: true }, t, "en-US", {
+          facts: [card("open_water")],
+        }),
+      ).not.toContain("Ask the shop");
+    });
+
+    it("speaks Spanish too", () => {
+      expect(requirementSentenceFor(level, tEs, "es-ES")).toContain("Pregunta al centro");
+    });
   });
 });

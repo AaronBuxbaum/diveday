@@ -365,6 +365,32 @@ describe("booking delight planning", () => {
     );
   });
 
+  it("reads depth off the recorded numbers, not off prose the shop may have typed in another unit", () => {
+    // 30 m is where an Open Water ceiling ends; the deepest point speaks for the site.
+    expect(
+      siteFit({ difficultyLevel: null, depthRange: null, currentNote: null, maxDepthMeters: 30 })
+        .tone,
+    ).toBe("demanding");
+    // 100 ft typed by a feet shop is 30.48 m.
+    expect(
+      siteFit({ difficultyLevel: null, depthRange: null, currentNote: null, maxDepthMeters: 30.48 })
+        .tone,
+    ).toBe("demanding");
+    expect(
+      siteFit({ difficultyLevel: null, depthRange: null, currentNote: null, maxDepthMeters: 18 })
+        .tone,
+    ).toBe("unknown");
+    // A chosen difficulty still outranks the number.
+    expect(
+      siteFit({
+        difficultyLevel: "beginner",
+        depthRange: null,
+        currentNote: null,
+        maxDepthMeters: 40,
+      }).tone,
+    ).toBe("welcoming");
+  });
+
   it("takes the shop's chosen difficulty over what the free text hints", () => {
     // The regression the code half of this change exists for: the sniff reads
     // text the shop wrote for another purpose, and a gentle reef whose current
@@ -377,6 +403,15 @@ describe("booking delight planning", () => {
         currentNote: "watch the deep channel on the swim back",
       }).tone,
     ).toBe("welcoming");
+    // A site recorded just under 30 m whose kept note crosses it still reads demanding.
+    expect(
+      siteFit({
+        difficultyLevel: null,
+        depthRange: "20–30 m",
+        currentNote: null,
+        maxDepthMeters: 29.7,
+      }).tone,
+    ).toBe("demanding");
     // …and with no level chosen, the sniff still has the last word.
     expect(
       siteFit({

@@ -7,7 +7,8 @@ import { listDeskEventsSince } from "@/db/desk-events";
 import { diveIntentTallyForTrip } from "@/db/dive-intent";
 import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
-import { getTripManifests } from "@/db/manifests";
+import { mayStartTripIncidentReport } from "@/db/incident-reports";
+import { getTripManifests, rollCallOpenOnTrip } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { lastAtSites } from "@/db/site-history";
@@ -15,6 +16,7 @@ import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { listShopPickedSpecies, listTripSightings } from "@/db/trip-sightings";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripMeetingPointFields, listTripDives } from "@/db/trips";
+import { cancelledRollCall } from "@/lib/roll-call";
 import type { SiteHistory } from "@/lib/site-history";
 
 /**
@@ -28,7 +30,7 @@ export async function readManifestPage(
   db: AppDb,
   shopId: string,
   tripId: string,
-  /** The staffer reading: the catch-up strip is "since *you* last looked". */
+  /** The staffer reading: the catch-up strip is "since *you* last looked", and who may report. */
   personId: string,
 ) {
   // The manifest rows, the raw team membership, and the desk's own notes don't
@@ -47,10 +49,12 @@ export async function readManifestPage(
     diveIntents,
     stage,
     meetingPoint,
+    mayStartIncidentReport,
     vessels,
     kitRecord,
     snags,
     partyPlan,
+    rollCallOpen,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -83,6 +87,9 @@ export async function readManifestPage(
     // Where the boat meets, so the plan says what the diver's `/ready` says
     // (UX review 2026-10-13, item 18).
     getTripMeetingPointFields(db, shopId, tripId),
+    // Who may start an incident report here: a row marked not back aboard
+    // offers the missing diver report to them alone (safety sheet item 2).
+    mayStartTripIncidentReport(db, shopId, tripId, personId),
     // The departure's own boat, for the emergency card and the printed head
     // (fourth review, item 11).
     departureVessels(db, shopId, [tripId]),
@@ -94,6 +101,9 @@ export async function readManifestPage(
     openSnagsForTrip(db, shopId, tripId),
     // Who booked together, and which parties one tap may team (item 50).
     planPartyTeams(db, shopId, tripId),
+    // The roll-call writers' own gate (#2285): a cancelled departure nobody
+    // counted on draws no control that could only be refused.
+    rollCallOpenOnTrip(db, shopId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -143,10 +153,16 @@ export async function readManifestPage(
     // The crew's latest word and the run's windows, read together (`stageStripProps`).
     stageStrip: { stage, meetingWindows },
     meetingPoint,
+    mayStartIncidentReport,
     vessel: vessels.get(tripId) ?? null,
     kitRecord,
     siteHistory,
     partyPlan,
+    // A cancelled departure (#2285): closed when nobody was counted before the
+    // cancel, so no row draws a control the writer would refuse; still counting
+    // when the count had begun, which keeps every control (dive-domain review,
+    // 2026-10-09). Null when the departure is not cancelled.
+    cancelled: cancelledRollCall({ cancelled: dockTrip?.cancelled === true, rollCallOpen }),
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,

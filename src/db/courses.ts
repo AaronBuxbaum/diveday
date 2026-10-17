@@ -13,7 +13,11 @@ import {
   not,
   sql,
 } from "drizzle-orm";
-import { courseTemplateSnapshot, getCourseTemplate } from "@/content/course-templates";
+import {
+  courseTemplateSnapshot,
+  getCourseTemplate,
+  standardFormAgeBounds,
+} from "@/content/course-templates";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import {
   type CourseTemplateDiff,
@@ -602,6 +606,7 @@ export async function pullCourseTemplateUpdates(
       courseId: course.id,
       titles: update.latest.standardForms ?? [],
       offeredBefore: mode === "preserve-shop-edits" ? (update.baseline?.standardForms ?? []) : [],
+      maxAgeByTitle: standardFormAgeBounds(getCourseTemplate(update.sourceTemplateSlug)),
     });
     return { status: "updated" as const, course, mode, diff: update.diff };
   });

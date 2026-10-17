@@ -35,6 +35,10 @@ export function noticeMessages(t: StaffTranslator): NoticeMessages {
     "credential-saved": { tone: "success", text: t("staffing.notice.credentialSaved") },
     "credential-reviewed": { tone: "success", text: t("staffing.notice.credentialReviewed") },
     "credential-deleted": { tone: "success", text: t("staffing.notice.credentialDeleted") },
+    "credential-renewal-required": {
+      tone: "danger",
+      text: t("staffing.notice.credentialRenewalRequired"),
+    },
     "credential-invalid": { tone: "danger", text: t("staffing.notice.credentialInvalid") },
   };
 }

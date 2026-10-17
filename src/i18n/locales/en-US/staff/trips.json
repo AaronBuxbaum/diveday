@@ -50,8 +50,15 @@
     "nextStepNotACourse": "This departure isn’t a course session, so there is no next step to record.",
     "materialsSaved": "Learning materials updated.",
     "materialsNotACourse": "This departure isn’t a course session, so it has no learning materials.",
+    "trainingMarked": "Marked as a training dive. The course’s forms are now asked on this seat.",
+    "trainingCleared": "Training mark cleared.",
+    "trainingMarkAlready": "This dive is already marked for another course. Clear that mark first.",
+    "trainingMarkInvalid": "That course seat can’t take this dive. It has to be this diver’s own live seat, on a session that runs until the boat leaves.",
+    "trainingMarkOver": "That departure or course session is over, so nothing changed.",
+    "trainingMarkFormsOwed": "Course forms are still owed. A manager or the course’s instructor can clear this mark.",
     "saved": "Changes saved.",
     "cancelled": "Trip canceled. It’s off the public schedule.",
+    "cancelUnderway": "This departure is underway or has left, so it wasn’t canceled.",
     "reinstated": "The trip is back on the schedule.",
     "crew": "Crew updated.",
     "crewConflict": "Crew wasn’t changed. Someone is already assigned during this time, or the course would fall below its teaching ratio.",
@@ -81,6 +88,7 @@
     "waitlistCarryUnavailable": "That departure is not taking seats.",
     "bookingRemovedRefundManual": "Booking canceled. A refund is owed but must be issued by hand (counter payment, or Stripe isn’t connected). Refund from the diver’s payments.",
     "bookingRemovedRefundFailed": "Booking canceled, but the automatic refund didn’t go through. Issue it from the diver’s payments.",
+    "bookingRemovedTurnedAway": "Booking canceled. They were turned away at the desk, so nothing was refunded. If the shop owes them, refund it by hand.",
     "bookingRemovedRefundReview": "Booking canceled. The payment record and Stripe disagree on what was captured, so review the diver’s payments before issuing any refund.",
     "bookingRemovedRefundInProgress": "Booking canceled. A refund for this seat is already going through.",
     "bookingRemovedRefundReconcile": "Booking canceled. An earlier refund reached Stripe but wasn’t recorded here. Reconcile it in Stripe before issuing another.",
@@ -109,6 +117,13 @@
     "identitySplitDobInvalid": "That date of birth can’t be right. Check it and try again.",
     "identitySplitEmailInvalid": "That email doesn’t look right. Check it, or leave it blank.",
     "identitySplitEmailInUse": "Another diver already has that email. Use their own, or leave it blank.",
+    "identityRepointed": "Moved to the other diver with that name. Confirm it’s them before they board.",
+    "identityRepointUnavailable": "That diver can’t take this seat. Pick another diver with this name, or use Different person.",
+    "identityRepointMedicalHold": "This seat, or a held seat moving with it, is on a medical hold: a physician referral nobody has answered, or one the physician did not clear. To move it to another diver, cancel this seat and seat them fresh.",
+    "identitySplitContactConflict": "The seats moving together have different emergency contacts. Record the right one on each, then try again.",
+    "identityDepartureClosed": "This departure is over or canceled, so the seat stays where it is. “Same person” still settles it.",
+    "identityContactDiffers": "This seat’s emergency contact isn’t the one on their record. Pick which to keep, then confirm.",
+    "identityRepointAlreadyBooked": "That diver already has a seat on a departure this would move. Check their record before moving it.",
     "newWaiverSent": "New waiver sent. They stay blocked until they sign it.",
     "newWaiverReady": "Ready for a new waiver. Send it from their row; they stay blocked until they sign it.",
     "newWaiverFailed": "The new waiver could not be sent. Check the booking is still on this departure.",
@@ -233,6 +248,7 @@
     "meetingPointLabelLabel": "Meeting point",
     "meetingPointAddressLabel": "Meeting point address",
     "optionalHint": "(optional)",
+    "wetsuitThicknessLabel": "Wetsuit for the day (mm)",
     "dateLabel": "Date",
     "departsLabel": "Departs",
     "returnsLabel": "Returns",
@@ -530,9 +546,13 @@
     "certifySpecialtyGroup": "Specialty",
     "certifying": "Certifying…",
     "checkedInPill": "Checked in",
+    "heldContactChoice": "Emergency contact to keep",
+    "heldContactUseHeld": "{contactName} ({phone}), recorded on this seat",
+    "heldContactKeepRecord": "{contactName} ({phone}), on {name}’s record",
     "applyPaidGear": "Add what they paid for to their fit: {pieces}",
     "confirmIdentityMessage": "Confirm this booking is {name}? They’ll board on {name}’s cards and waiver, and this can’t be undone.",
     "confirmRemoveBooking": "Remove {name} from this trip? If they’re eligible for a refund, it’s issued automatically.",
+    "courseSeatCarriesCharters": "{name} is booked on {trips} because this course gets them to that level. That seat stays booked, and still needs the card to board.",
     "confirmResendWaiver": "Send {name} a new waiver link? Their previous link will stop working.",
     "confirming": "Confirming…",
     "createOrder": "Create order",
@@ -546,6 +566,7 @@
     "editPickup": "Edit pickup",
     "emergencyContactEdit": "Edit emergency contact",
     "emergencyContactHeading": "Emergency contact",
+    "heldEmergencyContactHeading": "Emergency contact for the person on this seat",
     "emergencyContactMissing": "Not on file",
     "emergencyContactNameLabel": "Contact name",
     "emergencyContactOnFile": "{name} · {phone}",
@@ -555,6 +576,7 @@
     "groupReady": "Ready",
     "groupCheckedIn": "Checked in",
     "groupNotHere": "Not here",
+    "groupTurnedAway": "Turned away",
     "groupStillToClear": "Still to clear",
     "groupSailed": "Sailed",
     "groupDidNotSail": "Didn’t sail",
@@ -622,6 +644,8 @@
     "sendNewWaiverMessage": "Emails {name} a new waiver. They stay blocked until they sign it. The physician’s answer stays on file.",
     "refundEligibleUntil": "Refund-eligible until {date}",
     "removeBooking": "Remove booking",
+    "removeAboard": "{name} sailed on this departure, so the booking stays. To give money back, refund their order.",
+    "removeUncounted": "Nobody counted {name} at the dock, so the boat may have carried them. If they didn’t come, mark them Not boarded on the manifest, then remove the booking.",
     "moveSeat": "Move to another departure",
     "moveSeatTo": "Departure",
     "moveSeatSubmit": "Move",
@@ -682,6 +706,18 @@
       "signedOn": "Date on the paper",
       "signedOnHint": "Leave empty if it was signed today.",
       "paperCopy": "I have the signed paper copy"
+    },
+    "trainingMark": {
+      "label": "Training dive",
+      "countsToward": "Counts toward",
+      "option": "{course}, {date}",
+      "mark": "Mark as training dive",
+      "marking": "Marking…",
+      "marked": "Training dive for {course}. Its course forms are asked on this seat.",
+      "noInstructor": "No instructor is on this departure’s crew yet.",
+      "clear": "Clear training mark",
+      "clearing": "Clearing…",
+      "clearedWithFormsOwed": "{hasName, select, yes {Training mark cleared by {name} with course forms unsigned.} other {Training mark cleared with course forms unsigned.}}"
     }
   },
   "offlineManifestManager": {
@@ -726,7 +762,8 @@
   },
   "rollCall": {
     "errorRefusal": "That didn’t save. Recheck your connection or tap again.",
-    "stillBlocked": "Diver is still blocked. <tripLink>Open Trip to resolve the blocker</tripLink>, then try again."
+    "stillBlocked": "Diver is still blocked. <tripLink>Open Trip to resolve the blocker</tripLink>, then try again.",
+    "boatFull": "Boat full. See the desk."
   },
   "guests": {
     "demandSignal": "Unmet demand",
@@ -792,5 +829,9 @@
     "both": "visibility {visibility}, current {current}",
     "visibility": "visibility {visibility}",
     "current": "current {current}"
+  },
+  "erasedTitle": {
+    "private": "Private charter",
+    "public": "Departure"
   }
 }

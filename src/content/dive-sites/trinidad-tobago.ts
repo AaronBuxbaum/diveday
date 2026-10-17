@@ -24,7 +24,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobster and eels use the nooks between the rocks, and rays rest on the sand. Some of those rays are electric rays.",
       difficultyLevel: "intermediate",
-      depthRange: "6–20 m (20–65 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 20,
       currentNote:
         "Minimal on the Caribbean side. Electric rays rest in the sand and can shock a diver who touches the sand beside them, so keep hands and fins off it.",
@@ -62,7 +62,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Groupers and eels use the reef, barracuda cruise the edge, and flying gurnards turn up on the sand.",
       difficultyLevel: "beginner",
-      depthRange: "3–17 m (10–55 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 17,
       currentNote:
         "Busy beach: boats and snorkelers; no ascent without an SMB. Sources describe little or no current. Shore or boat entry; the sources name no entry hazard, so ask the crew about the entry on the day.",
@@ -102,7 +102,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Snappers and rainbow runners shelter around the car deck, and baitfish swirl over the upper deck. The car deck is overhead; stay out.",
       difficultyLevel: "advanced",
-      depthRange: "18–33 m (60–100 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 33,
       currentNote: "Usually little, but it can pick up at depth. Carry an SMB.",
       divePlan:
@@ -143,7 +143,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Cracks and ledges hold lobster, eels and shrimp, and queen angelfish patrol the face.",
       difficultyLevel: "beginner",
-      depthRange: "8–18 m (25–60 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 18,
       currentNote:
         "Little or none on the Caribbean side. Surge moves through the shallows above about 6 m, so stay low on the wall.",
@@ -182,7 +182,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Tarpon feed near the surface, jawfish live in the rubble, and rays and turtles pass over the coral. Black coral grows here and is protected.",
       difficultyLevel: "advanced",
-      depthRange: "18–24 m (60–80 ft)",
+      depthMinMeters: 18,
       maxDepthMeters: 25,
       currentNote: "Little or none on the Caribbean side; visibility can drop in places.",
       divePlan:
@@ -225,7 +225,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Hammerheads are seen most from December to March, and are not guaranteed. Brown chromis, creole wrasse and durgeons crowd the reef on the east side.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Exposed to swell and surge, with a rough surface and hazy water on some days; the force lessens a few meters down. Carry an SMB. Medical care is far; confirm the boat's oxygen and plan.",
@@ -267,7 +267,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big fish patrol the ledges and the current feeds the sponges. Look along the edge, not into the overhangs.",
       difficultyLevel: "advanced",
-      depthRange: "15–21 m (50–70 ft)",
+      depthMinMeters: 15,
       maxDepthMeters: 22,
       currentNote:
         "Strong at times; the dive starts up-current of a shallow plateau and drifts. Carry an SMB. This is the south coast, not the Atlantic side.",
@@ -308,7 +308,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Rays and nurse sharks rest where the reef meets the sand, and a soft wall of chub rides the current.",
       difficultyLevel: "intermediate",
-      depthRange: "5–15 m (18–50 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 15,
       currentNote:
         "0 to 2 knots; it can pick up. Carry an SMB. This is the south coast, not the Atlantic side.",
@@ -348,7 +348,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sponges cover the slope and the damselfish crowd it. Nurse sharks and barracuda hold near small caves, which are overhead; stay out.",
       difficultyLevel: "advanced",
-      depthRange: "6–34 m (20–110 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 34,
       currentNote:
         "The cut accelerates the current. Move out over open reef before it and deploy the SMB in open water; the small caves are overhead; stay out. The Guyana Current can bring strong, cloudy water to the Atlantic side. Medical care is far; confirm the boat's oxygen and plan.",
@@ -398,7 +398,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The coral is the landmark; nurse sharks often rest under it. Manta rays are occasional visitors.",
       difficultyLevel: "advanced",
-      depthRange: "16–37 m (54–120 ft)",
+      depthMinMeters: 16,
       maxDepthMeters: 37,
       currentNote:
         "A drift that is strong at times on the Atlantic side of Little Tobago. Carry an SMB so the boat can pick you up at the end of the drift. The Guyana Current can bring strong, cloudy water to the Atlantic side. Medical care is far; confirm the boat's oxygen and plan.",
@@ -447,7 +447,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Tarpon, turtles and sharks are reported nearby, and jacks school over the boulders. Octopus tuck into holes in the rock face.",
       difficultyLevel: "advanced",
-      depthRange: "12–30 m (40–100 ft)",
+      depthMinMeters: 12,
       maxDepthMeters: 30,
       currentNote:
         "Surge and current run around the rocks, and swells hit the arch with a loud boom; some days the site is not dived. In surge keep well away from the arch. Carry an SMB so the boat can pick you up at the end of the drift. The passage under the arch is overhead; stay out. Medical care is far; confirm the boat's oxygen and plan. The Guyana Current can bring strong, cloudy water to the Atlantic side.",
@@ -493,7 +493,7 @@ export const TRINIDAD_TOBAGO: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobster and eels use the corals around the cannons, and rays and nurse sharks pass over the sand.",
       difficultyLevel: "beginner",
-      depthRange: "7–14 m (24–45 ft)",
+      depthMinMeters: 7,
       maxDepthMeters: 14,
       currentNote:
         "Not documented. It is a shore entry from a beach, so ask the crew about the entry and the surf on the day.",

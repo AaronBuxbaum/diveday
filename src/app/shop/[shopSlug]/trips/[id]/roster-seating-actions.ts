@@ -6,8 +6,6 @@ import { z } from "zod";
 import { canPersonOverrideCertBlock, canPersonRefund } from "@/db/authz";
 import { sendBookingCancelledNotice } from "@/db/booking-cancelled-notice";
 import {
-  bookingDiverName,
-  cancelBooking,
   restoreBooking,
   setBookingDietaryNote,
   setBookingParticipantType,
@@ -15,9 +13,8 @@ import {
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { createInvitationUnderCooldown } from "@/db/invite-suggestions";
-import { recordTripActivity } from "@/db/operations";
 import { getBookingPayment } from "@/db/payments";
-import { type CancellationRefundOutcome, refundBookingOnCancellation } from "@/db/refunds";
+import { refundBookingOnCancellation } from "@/db/refunds";
 import { type MoveSeatRefusal, moveSeat } from "@/db/seat-diver";
 import { recordShopActivity } from "@/db/shop-activity";
 import {
@@ -30,7 +27,7 @@ import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
 import { carryWaitlist } from "@/db/waitlist-roll";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { parseForm } from "@/lib/form-parse";
+import { blankAsAbsent, parseForm, readForm, single, text } from "@/lib/form-parse";
 import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
@@ -40,7 +37,8 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
-import { requireRosterBooking, tripPath } from "./roster-booking";
+import { refundNotice } from "./refund-notice";
+import { removeSeat, requireRosterBooking, tripPath } from "./roster-booking";
 
 /**
  * Wait-listing still parses its own submission here: it is a different
@@ -51,20 +49,14 @@ import { requireRosterBooking, tripPath } from "./roster-booking";
  */
 const addDiverSchema = z.object({
   // Shared diver person-field bounds (src/lib/person-fields.ts).
-  fullName: diverNameSchema,
-  email: diverEmailSchema,
-  phone: diverPhoneSchema.optional(),
+  fullName: single(diverNameSchema),
+  email: single(diverEmailSchema),
+  phone: blankAsAbsent(diverPhoneSchema),
 });
 
-const directInvitationSchema = z.object({ personId: z.uuid() });
+const directInvitationSchema = z.object({ personId: single(z.uuid()) });
 
-function parseAddDiver(formData: FormData) {
-  return addDiverSchema.safeParse({
-    fullName: formData.get("fullName"),
-    email: formData.get("email"),
-    phone: formData.get("phone") || undefined,
-  });
-}
+const rosterBookingForm = z.object({ bookingId: text() });
 
 /**
  * A wait-list refusal's `?notice=` code. `already_waitlisted` never reaches this
@@ -90,12 +82,12 @@ const WAITLIST_NOTICE: Record<Extract<WaitlistOutcome, { ok: false }>["reason"],
 export async function addToWaitlistAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const parsed = parseAddDiver(formData);
+  const parsed = parseForm(addDiverSchema, formData);
   // The departure id is narrowed with the diver fields, not after them: a
   // malformed one reaches `eq(trips.id, …)` inside the join and Postgres
   // raises `invalid input syntax for type uuid`, so the staffer gets a 500
   // where the notice below is the honest answer.
-  if (!uuidParam(tripId) || !parsed.success) redirect(noticeUrl(back, "diver-invalid"));
+  if (!uuidParam(tripId) || !parsed.ok) redirect(noticeUrl(back, "diver-invalid"));
   const outcome = await joinTripWaitlist(await getDb(), {
     shopId: s.user.shopId,
     tripId,
@@ -168,8 +160,8 @@ async function inviteOneDiver(
 ): Promise<never> {
   const guests = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const parsed = directInvitationSchema.safeParse({ personId: formData.get("personId") });
-  if (!uuidParam(tripId) || !parsed.success) redirect(`${guests}#invite-person`);
+  const parsed = parseForm(directInvitationSchema, formData);
+  if (!uuidParam(tripId) || !parsed.ok) redirect(`${guests}#invite-person`);
   const db = await getDb();
   const input = {
     shopId: s.user.shopId,
@@ -229,64 +221,16 @@ async function bookingRefundMayBeOwed(
   return isCapturedPaymentStatus(payment?.status);
 }
 
-/**
- * What a removed booking's refund outcome is called in the URL.
- *
- * A table rather than the `switch` with a `default:` this replaces: the default
- * arm answered for `no_policy` and `unpaid` by name in a comment, and would have
- * silently answered for any status added later too. Keyed by the union, so a
- * seventh outcome is a compile error here instead of an unexplained "spot is
- * open" banner on a refund a shop is owed.
- */
-const REFUND_NOTICE: Record<CancellationRefundOutcome["status"], string> = {
-  refunded: "booking-removed-refunded",
-  forfeit: "booking-removed-forfeit",
-  failed: "booking-removed-refund-failed",
-  manual: "booking-removed-refund-manual",
-  // The booking-level refund lock's two refusals. Neither is `failed`: nothing
-  // is wrong at Stripe, and pressing again is precisely what must not happen.
-  in_progress: "booking-removed-refund-in-progress",
-  needs_reconciliation: "booking-removed-refund-reconcile",
-  // Nothing owed either way — today's plain "spot is open" notice.
-  no_policy: "booking-removed",
-  unpaid: "booking-removed",
-};
-
-function refundNotice(refund: CancellationRefundOutcome): string {
-  // `not_refundable` is a data mismatch (local row says paid, Stripe captured
-  // nothing) — a "review", not the "refund owed by hand" claim the
-  // counter/disconnected cases make. The only refusal whose code depends on
-  // more than the status.
-  if (refund.status === "manual" && refund.reason === "not_refundable") {
-    return "booking-removed-refund-review";
-  }
-  return REFUND_NOTICE[refund.status];
-}
-
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const { bookingId } = readForm(rosterBookingForm, formData);
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
-  const cancelled = await cancelBooking(dbi, s.user.shopId, bookingId);
-  const from = cancelled?.previousStatus ?? "cancelled";
+  // Refused, with nothing sent, for a diver marked aboard at sea (H-133).
+  const from = await removeSeat(dbi, s.user.shopId, bookingId, back, s.user.personId);
   await trackEvent({ name: "booking_cancelled", source: "staff" });
-  // Same activity line an add writes (addBookingAction), for the same reason:
-  // the trip's log, read from the Trip surface, is the record of who touched
-  // the roster and when. A removal is the entry that matters most of the two
-  // — "who took this diver off the manifest?" is a question asked at the
-  // dock, and until now the log could not answer it.
-  const removedName = await bookingDiverName(dbi, s.user.shopId, bookingId);
-  if (removedName) {
-    await recordTripActivity(dbi, {
-      shopId: s.user.shopId,
-      tripId,
-      actorPersonId: s.user.personId,
-      entry: { code: "booking_removed", diver: removedName },
-    });
-  }
   // Freeing the seat is roster work any staff member does, but moving money is
   // owner/manager work (H-14, ADR 20260724-role-authorization). A crew member
   // can cancel the booking; the auto-refund below only fires when the actor may
@@ -514,11 +458,16 @@ export async function undoRemoveBookingAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const { bookingId } = readForm(rosterBookingForm, formData);
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
-  const outcome = await restoreBooking(dbi, s.user.shopId, bookingId);
+  // Only a real restore writes its trail line, inside the restore: a refused
+  // undo changed nothing, and a line for it would read like the diver went
+  // back on the boat.
+  const outcome = await restoreBooking(dbi, s.user.shopId, bookingId, {
+    actorPersonId: s.user.personId,
+  });
   if (outcome === "not_found") redirect(back);
   // The undo can be refused three ways, and they need different things done
   // about them: the boat's capacity, a course session's instructor-to-student
@@ -536,19 +485,6 @@ export async function undoRemoveBookingAction(
           : outcome === "trip_cancelled"
             ? "booking-restore-cancelled"
             : "booking-restored";
-  if (outcome === "restored") {
-    // Only a real restore is logged: a refused undo changed nothing, and an
-    // activity line for it would read like the diver went back on the boat.
-    const restoredName = await bookingDiverName(dbi, s.user.shopId, bookingId);
-    if (restoredName) {
-      await recordTripActivity(dbi, {
-        shopId: s.user.shopId,
-        tripId,
-        actorPersonId: s.user.personId,
-        entry: { code: "booking_restored", diver: restoredName },
-      });
-    }
-  }
   revalidateAndRedirect(back, noticeUrl(back, restoreNotice));
 }
 

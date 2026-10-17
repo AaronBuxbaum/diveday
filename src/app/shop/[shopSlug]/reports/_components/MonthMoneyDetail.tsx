@@ -135,9 +135,15 @@ export function MoneyByLine({
   t: StaffTranslator;
   money: (cents: number) => string;
 }) {
-  const { refundedCents, discountedCents, stripeFeesCents } = detail.out;
+  const { refundedCents, discountedCents, stripeFeesCents, disputesLostCents } = detail.out;
   const showFees = stripeFeesCents !== null && stripeFeesCents !== 0;
-  if (detail.lines.length === 0 && refundedCents <= 0 && discountedCents <= 0 && !showFees) {
+  if (
+    detail.lines.length === 0 &&
+    refundedCents <= 0 &&
+    discountedCents <= 0 &&
+    disputesLostCents <= 0 &&
+    !showFees
+  ) {
     return null;
   }
   return (
@@ -171,6 +177,11 @@ export function MoneyByLine({
       {discountedCents > 0 ? (
         <p className="mt-1 text-sm text-muted tabular-nums">
           {t("reports.moneyOut.discounted", { amount: money(discountedCents) })}
+        </p>
+      ) : null}
+      {disputesLostCents > 0 ? (
+        <p className="mt-1 text-sm text-muted tabular-nums">
+          {t("reports.moneyOut.disputesLost", { amount: money(disputesLostCents) })}
         </p>
       ) : null}
       {showFees ? (

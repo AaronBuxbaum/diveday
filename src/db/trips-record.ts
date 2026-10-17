@@ -1,4 +1,16 @@
-import { and, asc, count, eq, inArray, isNotNull, isNull, notInArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  notInArray,
+  type SQL,
+  type SQLWrapper,
+  sql,
+} from "drizzle-orm";
 import { cache } from "react";
 import { STAFF_ROLES } from "@/lib/authz";
 import { sellableSeats } from "@/lib/boat-safety";
@@ -19,6 +31,7 @@ import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
 import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
+import { publishManifestEvent } from "./manifest-events";
 import { rearmTripReminders } from "./reminder-rearm";
 import { recordedRollCallRows } from "./roll-call-history";
 import type { Trip } from "./schema";
@@ -29,6 +42,8 @@ import {
   diveSites,
   people,
   personRoles,
+  rollCallCrewEvents,
+  rollCallEvents,
   tripAssignments,
   tripDives,
   tripScheduleDays,
@@ -49,9 +64,11 @@ import {
 import { liveTrip, notRehearsal } from "./trips-live";
 import {
   bookedDiversCount,
+  bookedSnorkelersCount,
   heldSeatCounts,
   seatHeld,
   tripBoatCertifiedPassengers,
+  tripBoatCertifiedTotalPersons,
 } from "./trips-queries";
 
 /**
@@ -118,7 +135,9 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
       diveSite: diveSites,
       booked: count(bookings.id),
       bookedDivers: bookedDiversCount(),
+      bookedSnorkelers: bookedSnorkelersCount(),
       certifiedPassengers: tripBoatCertifiedPassengers(),
+      certifiedTotalPersons: tripBoatCertifiedTotalPersons(),
     })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
@@ -134,10 +153,14 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
         sellableCapacity: sellableSeats(row.trip.capacity, row.certifiedPassengers),
         // The certificate itself, for the manifest's head count (batch 6, item 2).
         certifiedPassengers: row.certifiedPassengers,
+        // Total persons, crew included, for the same head count (#2302).
+        certifiedTotalPersons: row.certifiedTotalPersons,
         course: row.course,
         diveSite: row.diveSite,
         booked: row.booked,
         bookedDivers: row.bookedDivers,
+        /** Snorkelers holding a seat, for the snorkel-site line (domain review F8). */
+        bookedSnorkelers: row.bookedSnorkelers,
       }
     : null;
 }
@@ -377,7 +400,11 @@ export type TripSitePeek = {
   description: string | null;
   /** A `dive_site_difficulty` code; the surface prints a translated label. */
   difficultyLevel: DiveSiteDifficulty | null;
+  /** The shop's own depth note, shown only where no depth is recorded. */
   depthRange: string | null;
+  /** The recorded range in metres; the surface prints it in the shop's unit. */
+  depthMinMeters: number | null;
+  maxDepthMeters: number | null;
   imageUrls: string[];
 };
 
@@ -398,6 +425,8 @@ export async function getTripDiveSitesPeek(
     description: diveSites.description,
     difficultyLevel: diveSites.difficultyLevel,
     depthRange: diveSites.depthRange,
+    depthMinMeters: diveSites.depthMinMeters,
+    maxDepthMeters: diveSites.maxDepthMeters,
     imageUrls: diveSites.imageUrls,
   };
   const primarySite = await db
@@ -482,6 +511,11 @@ export type TripPatch = {
   exceedsNoDecoLimits?: boolean;
   /** Lunch is served aboard, so the Day-of form asks for a lunch preference (ideas item 56). */
   lunchAboard?: boolean;
+  /**
+   * The wetsuit the boat is running today, in whole millimetres (issue
+   * #2206). `null` clears it, `undefined` leaves it alone.
+   */
+  wetsuitThicknessMm?: number | null;
 };
 
 export type UpdateTripOutcome =
@@ -521,6 +555,7 @@ export async function updateTrip(
   patch: TripPatch,
 ): Promise<UpdateTripOutcome> {
   let timeMoved = false;
+  let timesChanged = false;
   const outcome = await db.transaction(async (tx): Promise<UpdateTripOutcome> => {
     const plannedDives = normalizedDiveCount(patch.plannedDives);
     if (!plannedDives) return { ok: false, reason: "invalid" };
@@ -695,6 +730,9 @@ export async function updateTrip(
           ? {}
           : { exceedsNoDecoLimits: patch.exceedsNoDecoLimits }),
         ...(patch.lunchAboard === undefined ? {} : { lunchAboard: patch.lunchAboard }),
+        ...(patch.wetsuitThicknessMm === undefined
+          ? {}
+          : { wetsuitThicknessMm: patch.wetsuitThicknessMm }),
         ...(patch.diveSiteId === undefined
           ? {}
           : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),
@@ -755,6 +793,7 @@ export async function updateTrip(
     const timesMoved =
       existing.startsAt.getTime() !== patch.startsAt.getTime() ||
       existing.endsAt.getTime() !== patch.endsAt.getTime();
+    timesChanged = timesMoved;
     if (timesMoved && patch.changeActorPersonId) {
       await recordShopActivityWithin(tx, {
         shopId,
@@ -766,6 +805,8 @@ export async function updateTrip(
   });
   // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
   if (timeMoved) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId] });
+  // Its manifest, and any charter whose training mark rests on its times.
+  if (timesChanged) await publishManifestEvent(db, shopId, tripId);
   return outcome;
 }
 
@@ -815,17 +856,13 @@ export async function setTripParticipantTerms(
 ): Promise<SetParticipantTermsOutcome> {
   const outcome = await db.transaction(async (tx): Promise<SetParticipantTermsOutcome> => {
     const [trip] = await tx
-      .select({ id: trips.id, capacity: trips.capacity, courseId: trips.courseId })
+      .select({ id: trips.id, capacity: trips.capacity })
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!trip) return { ok: false, reason: "not_found" };
     if (patch.diverCapacity !== null && patch.diverCapacity > trip.capacity) {
-      return { ok: false, reason: "invalid" };
-    }
-    // A course session seats divers only, so it has no other seat to price.
-    if (trip.courseId && (patch.snorkelerPriceCents !== null || patch.riderPriceCents !== null)) {
       return { ok: false, reason: "invalid" };
     }
     if (patch.diverCapacity !== null) {
@@ -910,6 +947,13 @@ export async function updateTripConditions(
       holdStarted: patch.conditionsHold === true && !before.conditionsHold,
     };
   });
+}
+
+/** Whether anybody, diver or crew, has a roll-call or boarding event on this trip. */
+export function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
+  return sql<boolean>`(exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId}) or exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId}))`.mapWith(
+    Boolean,
+  );
 }
 
 export async function setTripStatus(

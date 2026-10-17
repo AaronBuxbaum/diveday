@@ -359,8 +359,8 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 - **Removed:** the packing section, which is preparation rather than pitch and moved to the thread
   in 7b; and the swipeable briefing deck, deleted outright in 7c. The 2026-08-28 diver-views review
   put the deck's *pictures* back without the deck: "Look for" shows each species' bundled photo
-  beside its name, and the published diver moments render as one capped strip (`TripMoments`) —
-  beats, not a gallery.
+  beside its name — a beat, not a gallery. The diver-moments strip that sat beside it was removed
+  with its reader (issue #2330): nothing but the demo seed ever wrote one.
 - **Composition:** sell then close — the form is the page's terminal word, so the primary is where
   a decided diver already is; the arrival card follows the hero and the change ledger follows the
   conditions reading so practical wayfinding never competes with the pitch.

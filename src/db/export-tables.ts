@@ -21,10 +21,10 @@ import {
   courses,
   customerGearItems,
   customerGearReminderSettings,
+  departureBoatSafetySnapshots,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
-  diveSiteMoments,
   diveSites,
   executedDives,
   gearItems,
@@ -132,11 +132,6 @@ export const EXPORT_TABLES = {
       asc(diveSiteCreatures.id),
     ],
     scope: { shopColumn: diveSiteCreatures.shopId },
-  },
-  diveSiteMoments: {
-    table: diveSiteMoments,
-    order: [asc(diveSiteMoments.createdAt), asc(diveSiteMoments.id)],
-    scope: { shopColumn: diveSiteMoments.shopId },
   },
   recapPhotos: {
     table: recapPhotos,
@@ -557,6 +552,11 @@ export const EXPORT_TABLES = {
     table: boatSnags,
     order: [asc(boatSnags.notedAt), asc(boatSnags.id)],
     scope: { shopColumn: boatSnags.shopId },
+  },
+  departureBoatSafetySnapshots: {
+    table: departureBoatSafetySnapshots,
+    order: [asc(departureBoatSafetySnapshots.capturedAt), asc(departureBoatSafetySnapshots.id)],
+    scope: { shopColumn: departureBoatSafetySnapshots.shopId },
   },
   priorVisits: {
     table: priorVisits,

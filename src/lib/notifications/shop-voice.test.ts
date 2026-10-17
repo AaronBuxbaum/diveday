@@ -35,14 +35,21 @@ const reset = {
  */
 describe("fromAddressFor", () => {
   it("sends a diver's mail as the shop, via DiveDay, on the same address", () => {
-    expect(fromAddressFor("DiveDay <noreply@ses.dive.day>", confirmation)).toBe(
-      '"Blue Mantis via DiveDay" <noreply@ses.dive.day>',
+    expect(fromAddressFor("DiveDay <notifications@ses.dive.day>", confirmation)).toBe(
+      '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
+    );
+  });
+
+  it("sends a shop whose name is under review as plain DiveDay (issue #2450)", () => {
+    const held = { ...confirmation, sender: { nameUnderReview: true } } as Notification;
+    expect(fromAddressFor("DiveDay <notifications@ses.dive.day>", held)).toBe(
+      "DiveDay <notifications@ses.dive.day>",
     );
   });
 
   it("leaves DiveDay's own mail as DiveDay", () => {
-    expect(fromAddressFor("DiveDay <noreply@ses.dive.day>", reset)).toBe(
-      "DiveDay <noreply@ses.dive.day>",
+    expect(fromAddressFor("DiveDay <notifications@ses.dive.day>", reset)).toBe(
+      "DiveDay <notifications@ses.dive.day>",
     );
   });
 
@@ -54,10 +61,10 @@ describe("fromAddressFor", () => {
 
   it("never changes the domain, whatever the shop is called", () => {
     const sneaky = { ...confirmation, shopName: "Evil <attacker@evil.example>" } as Notification;
-    const from = fromAddressFor("DiveDay <noreply@ses.dive.day>", sneaky);
-    expect(from.endsWith(" <noreply@ses.dive.day>")).toBe(true);
+    const from = fromAddressFor("DiveDay <notifications@ses.dive.day>", sneaky);
+    expect(from.endsWith(" <notifications@ses.dive.day>")).toBe(true);
     // No second mailbox for a lenient parser to read as the sender.
-    expect(from).toBe('"Evil attacker@evil.example via DiveDay" <noreply@ses.dive.day>');
+    expect(from).toBe('"Evil attacker@evil.example via DiveDay" <notifications@ses.dive.day>');
   });
 });
 

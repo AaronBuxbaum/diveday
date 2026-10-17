@@ -26,7 +26,37 @@ export type GearItemInput = {
    * cleared for any kind that is not safety kit (`isSafetyKitKind`).
    */
   aboardBoatId?: string | null;
+  /**
+   * The regulator is kept for enriched air (issue #2207). `undefined` leaves
+   * an edited unit's answer as it was; ignored and cleared for any kind that
+   * is not a regulator.
+   */
+  nitroxDesignated?: boolean | null;
+  /**
+   * A wetsuit's thickness in whole millimetres (issue #2206). `undefined`
+   * leaves an edited unit's answer as it was; ignored and cleared for any
+   * kind that is not a wetsuit.
+   */
+  thicknessMm?: number | null;
 };
+
+/** What to write to `thickness_mm`: only a wetsuit holds one. */
+function thicknessFor(
+  kind: GearItemKind,
+  thicknessMm: number | null | undefined,
+): number | null | undefined {
+  if (kind !== "wetsuit") return null;
+  return thicknessMm;
+}
+
+/** What to write to `nitrox_designated`: only a regulator holds an answer. */
+function nitroxDesignatedFor(
+  kind: GearItemKind,
+  nitroxDesignated: boolean | null | undefined,
+): boolean | null | undefined {
+  if (kind !== "regulator") return null;
+  return nitroxDesignated;
+}
 
 export type CreateGearItemOutcome =
   | { ok: true; item: GearItem }
@@ -83,6 +113,8 @@ export async function createGearItem(
         brandModel: optional(input.brandModel),
         purchasedOn,
         aboardBoatId: aboardBoatId ?? null,
+        nitroxDesignated: nitroxDesignatedFor(input.kind, input.nitroxDesignated) ?? null,
+        thicknessMm: thicknessFor(input.kind, input.thicknessMm) ?? null,
       })
       .returning();
     if (!item) return { ok: false, reason: "duplicate_label" };
@@ -113,6 +145,8 @@ export async function updateGearItem(
     return { ok: false, reason: "invalid_date" };
   const aboardBoatId = await aboardBoatFor(db, input.shopId, input.kind, input.aboardBoatId);
   if (aboardBoatId === "invalid") return { ok: false, reason: "invalid_boat" };
+  const nitroxDesignated = nitroxDesignatedFor(input.kind, input.nitroxDesignated);
+  const thicknessMm = thicknessFor(input.kind, input.thicknessMm);
   try {
     const [item] = await db
       .update(gearItems)
@@ -126,6 +160,8 @@ export async function updateGearItem(
         // Left out of the write when the form did not carry it, so a unit's
         // hull survives an edit from a form that never showed the select.
         ...(aboardBoatId === undefined ? {} : { aboardBoatId }),
+        ...(nitroxDesignated === undefined ? {} : { nitroxDesignated }),
+        ...(thicknessMm === undefined ? {} : { thicknessMm }),
         updatedAt: nowDate(),
       })
       .where(

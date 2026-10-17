@@ -64,6 +64,7 @@ import {
 } from "./gear";
 import { listTodayHelpRequests } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
+import { listUnfiledIncidentDrafts } from "./incident-reports";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
 import { countOpenLostItems } from "./lost-items";
 import {
@@ -101,7 +102,7 @@ import { pushCrewAwayRows } from "./today-crew-away-rows";
 import { pushDepartureRows } from "./today-departure-rows";
 import { pushDeskRows } from "./today-desk-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
-import { pushRollCallRows } from "./today-roll-call-rows";
+import { pushBoatClashRows, pushRollCallRows } from "./today-roll-call-rows";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at, shopDay } from "./today-shared";
 import { pushShopRows } from "./today-shop-rows";
@@ -109,7 +110,7 @@ import { pushBoatSnagRows } from "./today-snag-rows";
 import { meetingWindowsByTrip } from "./trip-meeting-windows";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
-import { countShopTrips, crewClashesByTrip, listStaff } from "./trips";
+import { boatClashesByTrip, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
 import { sharedWelcomeSeatsByTrip } from "./welcome-cues";
 import { listWorkOrdersNeedingAttention } from "./work-order-follow-up";
@@ -924,8 +925,10 @@ async function standingCrewClashes(
   // The departure roll call is read here for every one of these departures,
   // not borrowed from the station reader: a boat that left more than an hour
   // ago is no longer a station, and it is the boat this question is about.
-  const [clashes, divers, crew, stages, meetingWindows] = await Promise.all([
+  const [clashes, boatClashes, divers, crew, stages, meetingWindows] = await Promise.all([
     crewClashesByTrip(db, shopId, ids, now),
+    // The hull half of the same fault (H-80, issue #2135): one batched read.
+    boatClashesByTrip(db, shopId, ids, now),
     listDepartureRollCallByTrip(db, shopId, ids),
     listDepartureCrewRollCallByTrip(db, shopId, ids),
     latestTripStagesByTrip(
@@ -952,6 +955,7 @@ async function standingCrewClashes(
     }) === "aboard";
   return {
     clashes,
+    boatClashes,
     divers,
     crew,
     departures: [...departures.values()],
@@ -1594,6 +1598,8 @@ async function readTodayWave(
     bookingIdsByTrip: Map<string, string[]>;
     includeOpsAlerts: boolean;
     personId: string | undefined;
+    /** The signed-in reader, for the rows only some roles may see (re-checked live). */
+    viewerPersonId: string | undefined;
     owingBookingIds: string[];
     noOpenOrders: Map<string, { id: string; hostedInvoiceUrl: string | null }>;
   },
@@ -1609,6 +1615,7 @@ async function readTodayWave(
     bookingIdsByTrip,
     includeOpsAlerts,
     personId,
+    viewerPersonId,
     owingBookingIds,
     noOpenOrders,
   } = input;
@@ -1649,6 +1656,7 @@ async function readTodayWave(
     workOrdersNeedingAttention,
     crewedAssignments,
     openOrders,
+    unfiledIncidentDrafts,
     crewAway,
     boatSnags,
   ] = await Promise.all([
@@ -1758,6 +1766,7 @@ async function readTodayWave(
         depthUnit: shops.depthUnit,
         // The blank-card desk row (fifth loop, item 3) rides this read.
         emergencyReference: shops.emergencyReference,
+        temperatureUnit: shops.temperatureUnit,
       })
       .from(shops)
       .where(eq(shops.id, shopId))
@@ -1804,6 +1813,11 @@ async function readTodayWave(
             ? openOrdersForBookings(db, shopId, owingBookingIds)
             : noOpenOrders,
         ),
+    // Incident reports started and never filed (safety sheet 2026-10-15, item
+    // 3): read for a named reader only, and answered for owners and managers
+    // only (`listUnfiledIncidentDrafts` re-reads their roles). A caller reading
+    // the shop's whole day with nobody behind it (the digest) gets none.
+    viewerPersonId ? listUnfiledIncidentDrafts(db, shopId, viewerPersonId) : [],
     // Who is rostered on a departure ahead and said they are away on a day it
     // meets (fourth review, item 12): the `crew_away` rows.
     crewAwayByTrip(
@@ -1850,6 +1864,7 @@ async function readTodayWave(
     workOrdersNeedingAttention,
     crewedAssignments,
     openOrders,
+    unfiledIncidentDrafts,
     crewAway,
     boatSnags,
   };
@@ -1911,6 +1926,12 @@ export async function getTodayWork(
    * request goes out and `highWind` resolves to `[]`. Defaults true.
    */
   withForecast = true,
+  /**
+   * The signed-in reader, for the one row whose reading depends on who they
+   * are rather than their JWT's roles: the unfiled incident reports, owners
+   * and managers only, re-checked live. Omitted, that row is never raised.
+   */
+  viewerPersonId?: string,
 ): Promise<TodayWork> {
   // The one horizon every readiness surface shares (src/lib/operational-window.ts).
   const { to: horizon } = operationalWindow(now);
@@ -1973,6 +1994,7 @@ export async function getTodayWork(
       bookingIdsByTrip,
       includeOpsAlerts,
       personId,
+      viewerPersonId,
       owingBookingIds,
       noOpenOrders,
     }),
@@ -2039,6 +2061,7 @@ export async function getTodayWork(
   };
 
   pushRollCallRows(actions, rows);
+  pushBoatClashRows(actions, rows);
 
   pushCrewAwayRows(actions, rows);
 
@@ -2086,6 +2109,7 @@ export async function getTodayWork(
       subject: unitsUnconfirmedSubjectText(t, {
         currency: shopUnits.currency.toUpperCase(),
         depthUnit: shopUnits.depthUnit,
+        temperatureUnit: shopUnits.temperatureUnit,
       }),
       context: null,
       detail: unitsUnconfirmedDetailText(t),

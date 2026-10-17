@@ -21,8 +21,8 @@ type Message = {
 
 /**
  * **The seats each Inbox message is about** (fourth UX review, item 32). Inside
- * the running-late window it is `messageSeats`' one answer, and the row may
- * offer "Mark running late". Outside it, every open seat the sender already
+ * the running-late window it is `messageSeats`' answer (every late-window
+ * seat), and the row may offer "Mark running late" on each. Outside it, every open seat the sender already
  * held when they wrote, soonest first: "Could I switch Saturday to next week?"
  * from a diver who also holds Wednesday is about one of the two, and only the
  * desk can tell which, so the row names both rather than guessing the soonest
@@ -42,8 +42,13 @@ export async function inboxSeats(
   // answer here is the late-window seat.
   const late = await messageSeats(db, shopId, messages, now);
   for (const message of messages) {
-    const seat = late.get(message.id);
-    if (seat) found.set(message.id, [{ ...seat, lateWindow: !message.bookingId }]);
+    const seats = late.get(message.id);
+    if (seats) {
+      found.set(
+        message.id,
+        seats.map((seat) => ({ ...seat, lateWindow: !message.bookingId })),
+      );
+    }
   }
   const rest = messages.filter(
     (message): message is Message & { personId: string } =>

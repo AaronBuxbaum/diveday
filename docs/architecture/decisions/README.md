@@ -380,7 +380,7 @@ script again.
 | 20261009-single-use-setup-links | `/onboard` opens with a single-use… |
 | 20261009-stripe-reversals-reach-diveday | Record refunds and disputes made… |
 | 20261012-architecture-guard-stays-hand-written | Keep the architecture guard hand-written;… |
-| 20261012-course-forms-on-charters-and-counter | Ask a course's forms on… (proposed) |
+| 20261012-course-forms-on-charters-and-counter | Ask a course's forms on… |
 | 20261012-incident-reports | Keep an incident report on… |
 | 20261012-payouts-reach-diveday | Record Stripe payouts so Reports… |
 | 20261012-rehearsal-departures | A rehearsal departure for training… |
@@ -397,8 +397,10 @@ script again.
 | 20261015-incident-draft-discard-and-hold | An owner may delete an… |
 | 20261015-roll-call-records-readiness | A count aboard keeps what… |
 | 20261016-bookkeeper-month-end-email | The month's files may be… |
+| 20261016-departure-log-code-v2 | The departure log's integrity code,… |
 | 20261016-doctor-referral-page | The doctor's page: the official… |
 | 20261016-fresh-link-per-booking-row | A booking's page lists the… |
+| 20261016-incident-drafts | Reuse an incident draft only… |
 | 20261016-shared-boat-photos | A diver may share a… |
 
 <!-- adr-index:end -->

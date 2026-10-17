@@ -4,7 +4,7 @@
  * Seven scripts used to carry their own copy of this three-line parser, and
  * every copy took the raw text after `=` as the value. That is right until a
  * value contains a space and therefore has to be written quoted --
- * `SES_FROM_EMAIL="DiveDay <noreply@ses.dive.day>"` -- at which point the
+ * `SES_FROM_EMAIL="DiveDay <notifications@ses.dive.day>"` -- at which point the
  * quotes become part of the value and travel wherever the script pushes it.
  *
  * The failure that found this was invisible everywhere it was cheap to notice.

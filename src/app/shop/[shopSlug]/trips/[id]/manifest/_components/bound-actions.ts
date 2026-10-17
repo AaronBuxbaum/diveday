@@ -1,3 +1,4 @@
+import { startMissingDiverReportAction } from "../../incidents/actions";
 import {
   addBuddyTeamMemberAction,
   addManifestPrivateNoteAction,
@@ -28,7 +29,11 @@ import {
  * the same shape, and as positional arguments swapping them was a silent,
  * well-typed mistake that revalidated another shop's route.
  */
-export function bindManifestActions(actionContext: ManifestActionContext) {
+export function bindManifestActions(
+  actionContext: ManifestActionContext,
+  /** Whether the reader may start an incident report here (`mayStartTripIncidentReport`). */
+  reader: { mayStartIncidentReport: boolean } = { mayStartIncidentReport: false },
+) {
   const { shopSlug, tripId } = actionContext;
   return {
     rollCall: rollCallAction.bind(null, actionContext),
@@ -47,6 +52,11 @@ export function bindManifestActions(actionContext: ManifestActionContext) {
     noteSnag: noteSnagAction.bind(null, { shopSlug, tripId }),
     answerSnag: answerSnagAction.bind(null, { shopSlug, tripId }),
     setTripStage: setTripStageAction.bind(null, { shopSlug, tripId }),
+    // A row's "Start a missing diver report", the row binding its own seat; none
+    // for a reader who may not start a report. The write re-checks.
+    startMissingDiverReport: reader.mayStartIncidentReport
+      ? startMissingDiverReportAction.bind(null, shopSlug, tripId)
+      : null,
     // Named as `BuddyTeamsPanel` takes them, so the page hands them on whole.
     buddyTeams: {
       formBuddyTeamAction: formBuddyTeamAction.bind(null, actionContext),

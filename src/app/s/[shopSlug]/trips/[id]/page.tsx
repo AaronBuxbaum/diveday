@@ -282,7 +282,7 @@ export default async function TripDetailPage({
         },
         siteRequirement,
       );
-  const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale);
+  const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale, knownDiver);
 
   const inPast = hasSailed(trip.startsAt, now);
   const logEntry = inPast ? undefined : { startsAt: trip.startsAt, isCourse: !!trip.course };
@@ -379,7 +379,7 @@ export default async function TripDetailPage({
               profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
             />
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
-                route, the rest of the field guide, the moments strip, the shop's
+                route, the rest of the field guide, the shop's
                 site prose and the crew used to run down the page as five more
                 beats — 5,782px at 390 before a diver was offered a seat. They are
                 all still here, in this order, behind `TripPitch`'s one door. A

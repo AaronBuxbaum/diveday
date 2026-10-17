@@ -83,6 +83,7 @@ export type TodayActionKind =
   | "instructor_missing"
   | "uncrewed_course"
   | "uncrewed_departure"
+  | "boat_clash"
   | "crew_clash"
   | "crew_clash_sailed"
   | "crew_away"
@@ -103,8 +104,10 @@ export type TodayActionKind =
   | "gear_service_due"
   | "boat_safety_kit"
   | "boat_papers_due"
+  | "boat_papers_lapsed"
   | "boat_safety_expired"
   | "boat_snag"
+  | "incident_report_unfiled"
   | "work_order_late"
   | "work_order_uncollected"
   | "staff_credential_due"
@@ -194,6 +197,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // of the two boats will sail without them, so it sits beside the zero-crew
   // row rather than with the advisory ones; it ranks just under it because the
   // boat it names does have somebody rostered, and the fix is one call.
+  // **Two departures on one hull at once** (H-80, issue #2135). The same fault
+  // as the crew clash seen from the boat, and the move that makes one usually
+  // makes the other, so it sits just above it: a hull cannot sail twice, a
+  // person at least can be swapped.
+  boat_clash: 11.25,
   crew_clash: 11.5,
   // **Rostered on a departure and away on a day it meets** (fourth review,
   // item 12). The person told the shop; the roster did not hear. Just under a
@@ -219,12 +227,22 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // hurt, and both are fixed ashore before the lines come off.
   emergency_card_blank: 13.6,
   high_wind_alert: 14,
+  // **A boat's paper has lapsed** (H-136): hull insurance, registration or the
+  // safety inspection past its date — the fact that makes a claim uncovered.
+  // Loud, under the kit and the weather, and still never a gate.
+  boat_papers_lapsed: 14.5,
   // The dock-side counts. An unfinished *departure* count is paperwork — the
   // boat is home and nobody was ever unaccounted for in the water — so it
   // deliberately sits far below the after-dive kinds above. Collapsing the
   // two into one row is what turns the red row into wallpaper (DOM-H3).
   roll_call_departure_open: 15,
   roll_call_not_started: 16,
+  // **An incident report started and never filed** (safety sheet 2026-10-15,
+  // item 3): somebody was hurt or nearly was, and the record sits as a private
+  // draft while the insurer's notice window runs. Nobody is in the water, so it
+  // ranks under every roll-call and boarding row; a written account of the
+  // worst day outranks the desk's chores and every money row below.
+  incident_report_unfiled: 16.5,
   dive_prep: 17,
   help_request: 18,
   payment: 18,
@@ -271,8 +289,8 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   gear_overdue: 29,
   gear_due_back: 30,
   gear_service_due: 31,
-  // The owner's boat errands (roadmap N-08, N-10): a paper inside its window,
-  // escalating to `boat_safety_expired` once it lapses, and kit that ran out
+  // The owner's boat errands (roadmap N-08, N-10): a paper inside its window
+  // (a lapsed one is `boat_papers_lapsed`, ranked with the boat's kit), and kit that ran out
   // ashore or on a boat not sailing today. Never a boarding blocker — the dock
   // decides — so they ride with the register's rows, ahead of the bench clock
   // because a dead AED pad is the boat's, not a rental's.
@@ -432,6 +450,7 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   ],
   // The crew rows' audience: the divemaster and captain at the rail are as
   // likely to notice they are on two boats as the office is to fix it.
+  boat_clash: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
   crew_clash: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
   // The clash's audience, for the clash's reason: the person away is as likely
   // to read it as the office that fixes it.
@@ -542,9 +561,13 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   // owner's errand, and the row's link is Settings. The crew read the same
   // facts on the departure's own pre-departure check.
   boat_papers_due: ["owner", "manager"],
+  boat_papers_lapsed: ["owner", "manager"],
   boat_safety_expired: ["owner", "manager"],
   // The owner's and the captain's: one gets it fixed, the other skippers it.
   boat_snag: ["owner", "manager", "captain"],
+  // The two roles that may read every report (`canReadEveryIncidentReport`):
+  // the line names who started a draft, so nobody else is told of it.
+  incident_report_unfiled: ["owner", "manager"],
   gear_service_due: [
     "owner",
     "manager",
@@ -662,6 +685,7 @@ export const ACTION_KIND_META = {
   uncrewed_course: { tone: "warning" },
   // Warning both: a clash is a roster that contradicts itself, not a person
   // somebody has said is missing — that is `roll_call_missing_crew`'s danger.
+  boat_clash: { tone: "warning" },
   crew_clash: { tone: "warning" },
   crew_clash_sailed: { tone: "warning" },
   // Warning, as the staffing week draws it on the person's chip: informs,
@@ -697,12 +721,15 @@ export const ACTION_KIND_META = {
   // a boat that sails today. It gates nothing — roll call and boarding go on —
   // but it is the one boat row nobody should scroll past.
   boat_safety_kit: { tone: "danger" },
-  // Neutral while a paper is only coming due; warning once it has run out,
-  // or once kit the boat is meant to carry has.
+  // Neutral while a paper is only coming due; danger once it has run out
+  // (H-136); warning once kit the boat is meant to carry has.
   boat_papers_due: { tone: "neutral" },
+  boat_papers_lapsed: { tone: "danger" },
   boat_safety_expired: { tone: "warning" },
   // Warning: something on the boat is wrong, and it informs, never gates.
   boat_snag: { tone: "warning" },
+  // Warning: an account of a bad day is unfinished, not a person in danger.
+  incident_report_unfiled: { tone: "warning" },
   // Warning: the shop gave its word on a day and the day has gone. Ready and
   // not collected is the customer's errand, not the shop's failure.
   work_order_late: { tone: "warning" },
@@ -949,6 +976,7 @@ export type TodayAction = {
 const WAIVER_CODES = new Set<ReadinessBlockerCode>([
   "waiver_not_sent",
   "waiver_lapsed",
+  "waiver_runs_out",
   "waiver_pending",
   "waiver_expired",
   "guardian_signature_missing",
@@ -977,6 +1005,7 @@ export const BLOCKER_ACTIONS: Record<
   under_minimum_age: { kind: "certification", target: "diver" },
   waiver_not_sent: { kind: "waiver", target: "trip" },
   waiver_lapsed: { kind: "waiver", target: "trip" },
+  waiver_runs_out: { kind: "waiver", target: "trip" },
   waiver_pending: { kind: "waiver", target: "trip" },
   waiver_expired: { kind: "waiver", target: "trip" },
   // **The diver, not the departure**, since #1252 gave the hold a door: the
@@ -994,6 +1023,8 @@ export const BLOCKER_ACTIONS: Record<
   // The roster is where a paper copy is recorded and the link is sent.
   course_form_unsigned: { kind: "waiver", target: "trip" },
   course_form_guardian_missing: { kind: "waiver", target: "trip" },
+  // The mark is fixed or cleared on the departure's own roster.
+  training_mark_invalid: { kind: "waiver", target: "trip" },
   certification_missing: { kind: "certification", target: "diver" },
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },
@@ -2057,4 +2088,15 @@ export function groupByDeparture(rows: readonly TodayAction[]): NeedsYouGroup[] 
   }
   const groups = [...boats.values()];
   return desk.length > 0 ? [...groups, { departure: null, rows: desk }] : groups;
+}
+
+/**
+ * Whether any of these roles is in a kind's Today audience. The server-side
+ * twin of `filterActionsForRoles`, for an action that does what a row offers:
+ * what Today hides from a role, the action behind it refuses (issue #2134).
+ * Unlike the filter, an empty list is nobody, not everybody.
+ */
+export function rolesMayActOnKind(kind: TodayActionKind, roles: readonly Role[]): boolean {
+  const audience = KIND_AUDIENCE[kind];
+  return roles.some((role) => audience.includes(role));
 }

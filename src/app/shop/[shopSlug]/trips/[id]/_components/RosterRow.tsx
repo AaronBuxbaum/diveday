@@ -87,7 +87,8 @@ export function RosterRow({
   const s3 = { ...s2, ...rowReasonLines(s2) };
   const s4 = { ...s3, ...rowIdentity(s3) };
   const s5 = { ...s4, ...rowReasonList(s4) };
-  const s6 = { ...s5, ...rowOutstanding(s5) };
+  // The training marks are the departure's (issue #2275), read here beside the seat.
+  const s6 = { ...s5, ...rowOutstanding({ ...s5, trainingMarks: context.rows.trainingMarks }) };
   const s7 = { ...s6, ...rowReference(s6) };
   const {
     booking,

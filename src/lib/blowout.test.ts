@@ -127,6 +127,42 @@ describe("qualifyingAlternatives — the admission filter", () => {
   });
 });
 
+describe("qualifyingAlternatives — a diver in training (issue #2058)", () => {
+  const advancedWall = (days: number) =>
+    candidate({
+      startsAt: daysFromNow(days),
+      requirement: requirement({ minimumCertificationLevel: "advanced_open_water" }),
+    });
+  const advancedCourse = (finishesInDays: number) => ({
+    personId: "p",
+    tripId: "advanced-course",
+    level: "advanced_open_water" as const,
+    finishesAt: daysFromNow(finishesInDays),
+  });
+
+  it("offers a departure after a booked course that reaches its level, as the booking door sells it", () => {
+    const after = advancedWall(5);
+    expect(offers([after], openWaterDiver({ courseSeats: [advancedCourse(3)] }))).toEqual([
+      after.id,
+    ]);
+  });
+
+  it("never offers one the course does not reach in time, nor on a course already over", () => {
+    const before = advancedWall(2);
+    expect(offers([before], openWaterDiver({ courseSeats: [advancedCourse(3)] }))).toEqual([]);
+    const ended = advancedCourse(-1);
+    expect(offers([advancedWall(5)], openWaterDiver({ courseSeats: [ended] }))).toEqual([]);
+  });
+
+  it("never counts a course that certifies less than the departure asks", () => {
+    const rescue = candidate({
+      startsAt: daysFromNow(5),
+      requirement: requirement({ minimumCertificationLevel: "rescue" }),
+    });
+    expect(offers([rescue], openWaterDiver({ courseSeats: [advancedCourse(3)] }))).toEqual([]);
+  });
+});
+
 describe("qualifyingAlternatives — offerability", () => {
   it("never offers the canceled trip itself, whatever state its row arrives in", () => {
     const ghost = candidate({ id: CANCELLED_TRIP_ID, status: "scheduled" });

@@ -218,6 +218,6 @@ test("a shop with a departure today is not treated as a shop with no departures"
   // reach here. It hangs off no boat, and it ranks in the one "Needs you" list, in the
   // open (ADR 20260827-clearwater-surface-language, decision 4).
   await expect(page.getByRole("heading", { level: 2, name: "Needs you" })).toBeVisible();
-  await expect(page.getByText(/guessed from your timezone/)).toBeVisible();
+  await expect(page.getByText(/picked for where you are/)).toBeVisible();
   await expect(page.getByRole("link", { name: /Open units/ })).toBeVisible();
 });

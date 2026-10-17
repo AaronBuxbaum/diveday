@@ -12,6 +12,7 @@ import { listTripReadiness, upsertTripRequirements } from "@/db/readiness";
 import { diveSpecialty } from "@/db/schema";
 import { getShopCurrency } from "@/db/stripe-accounts";
 import { getTripWithBooked, setTripParticipantTerms } from "@/db/trips";
+import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { parseParticipantTerms } from "@/lib/participant-terms";
 import { paymentGateIsUnclearable, REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
@@ -38,6 +39,18 @@ const requirementsSchema = z.object({
  * requirements form; the parse is `parseParticipantTerms` and the rules the
  * database holds under the trip lock are `setTripParticipantTerms`.
  */
+const participantTermsForm = z.object({
+  snorkelerPrice: formValue(),
+  riderPrice: formValue(),
+  diverSeats: formValue(),
+});
+
+/** The requirement switches: on only when the box sent `"on"`. */
+const requirementSwitchesForm = z.object({
+  requiresNitrox: checkbox(),
+  requiresPayment: checkbox(),
+});
+
 export async function saveParticipantTermsAction(
   shopSlug: string,
   tripId: string,
@@ -48,14 +61,10 @@ export async function saveParticipantTermsAction(
   const db = await getDb();
   const trip = await getTripWithBooked(db, s.user.shopId, tripId);
   if (!trip) redirect(back);
-  const parsed = parseParticipantTerms(
-    {
-      snorkelerPrice: formData.get("snorkelerPrice"),
-      riderPrice: formData.get("riderPrice"),
-      diverSeats: formData.get("diverSeats"),
-    },
-    { currency: await getShopCurrency(db, s.user.shopId), capacity: trip.capacity },
-  );
+  const parsed = parseParticipantTerms(readForm(participantTermsForm, formData), {
+    currency: await getShopCurrency(db, s.user.shopId),
+    capacity: trip.capacity,
+  });
   if (!parsed.ok) redirect(noticeUrl(back, "participant-terms-invalid"));
   const outcome = await setTripParticipantTerms(db, s.user.shopId, tripId, parsed.patch);
   if (!outcome.ok) {
@@ -79,14 +88,13 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
   if (trip?.courseId) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   const parsed = requirementsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
+  const switches = readForm(requirementSwitchesForm, formData);
   const specialties = z.array(specialtySchema).safeParse(formData.getAll("specialty").map(String));
   if (!specialties.success) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   // A payment gate on an unpriced departure blocks every diver who books it,
   // forever, and nothing ever asks them for money — so this one combination is
   // refused rather than saved and explained afterwards (issue #692).
-  if (
-    paymentGateIsUnclearable(formData.get("requiresPayment") === "on", trip?.priceCents ?? null)
-  ) {
+  if (paymentGateIsUnclearable(switches.requiresPayment, trip?.priceCents ?? null)) {
     redirect(noticeUrl(back, "requirements-need-price", { form: "requirements" }));
   }
   // Who was already blocked, read *before* the write — see the count below.
@@ -101,8 +109,8 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
     requiresWaiver: parsed.data.requiresWaiver === "on",
     minimumCertificationLevel: parsed.data.minimumCertificationLevel,
     requiredSpecialties: specialties.data,
-    requiresNitrox: formData.get("requiresNitrox") === "on",
-    requiresPayment: formData.get("requiresPayment") === "on",
+    requiresNitrox: switches.requiresNitrox,
+    requiresPayment: switches.requiresPayment,
   });
   if (!saved) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   // **Who this just blocked.** Readiness is computed live from the trip's

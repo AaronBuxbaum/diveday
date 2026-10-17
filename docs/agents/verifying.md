@@ -101,9 +101,9 @@ common git dir too, so a push from any worktree finds it):
    cores per worker because each brings its own Next server and Chromium: on an idle four-core
    cloud container two workers timed out on specs CI passes (`readiness.spec.ts:131`,
    `diver-merge.spec.ts:42`), and one passed them, so CI's 15-second test ceiling stays the bar
-   (why a built server is that slow here is #2624). The container's older fallback Chromium,
-   which the run names once, is not the cause: a Playwright pinned to that same browser failed
-   identically. A diff of only unit tests runs no spec and builds nothing.
+   ([why](#why-a-spec-times-out-here-and-not-on-ci): the per-test reset, measured). The
+   container's older fallback Chromium, which the run names once, is not the cause: a Playwright
+   pinned to that same browser failed identically. A diff of only unit tests runs no spec and builds nothing.
    `--commit <sha>` replays one commit; over 104 commits the median reach fell from 65 specs to
    19 with the name walk.
 
@@ -124,6 +124,56 @@ reason written in front of the command, `DIVEDAY_PUSH_UNVERIFIED="<why>" git pus
 two cases the verify skill allows. Each one is logged with its reason and the sha to
 `.claude/.hook-log` (`recordOverride` in `scripts/hook-log.mjs`), and the next session's opening
 line counts them, so an escape hatch used every day shows up as a number.
+
+### The quick run, and fixing forward
+
+On 2026-10-16 Aaron called time on the full run as the default: "stop the pattern of waiting for
+the full validations on these, just batch up work into single large PRs and stack them, adapting
+when CI fails". On a four-core cloud container the full run took most of an hour for a change
+that reached many routes, and every thread behind it in the stack queue waited too.
+
+So `pnpm verify:push --quick` is the run a push expects. It keeps steps 1 and 2 above (regen and
+a clean tree, lint, typecheck, `check:repo`, the `guards` project: the typecheck-after-a-merge
+and safeguards rows, in minutes) and replaces 3 and 4 with `vitest related` over the changed
+files, which also runs a changed test file itself, plus the unit files the base is red on. No
+e2e build, no browser. Its stamp says `"mode": "quick"` and its `notRunHere` names what it left
+to CI: the unit tests the diff does not import (the source-reading scans among them) and every
+Playwright spec. The guard accepts either stamp and still refuses a commit with none, an
+override whose reason blames the base, and a push that forks the stack.
+
+The trade is explicit: CI is now the first to run the browser for most pushes, and a red job is
+the next commit on the same layer, worked as soon as it comes back. The base-CI read below runs
+in both modes, so a quick run on a red base still refuses until the base's named unit files pass
+here or `--base-red` names them; a red Playwright job on the base is CI's to confirm. The full
+run is still there for a change where the browser's answer is worth the hour before CI's.
+
+### Why a spec times out here and not on CI
+
+Measured 2026-10-17 on a four-core cloud container (Intel Xeon at 2.8 GHz) on a built server,
+for #2624 and #2568. **The per-test `/api/test/reset` is the cost, not cold routes.** It restores
+the demo schedule with about 830 statements (303 selects, 258 inserts, 158 updates, 110 deletes,
+the deletes 1.8 s of it) and costs 3.9 to 5.3 s of single-core server CPU on every run, wall
+time matching CPU time, so it is compute and not waiting. It is a test-scoped fixture, so it is
+billed to the test's 15 s budget, and with the sign-in it leaves the body 6 to 8.5 s:
+
+| Run (load average) | Fixture setup | of which reset | Body before the 15 s ceiling | Result |
+| --- | --- | --- | --- | --- |
+| `readiness.spec.ts:131` ×4, 1 worker (3 to 6) | 6.6 to 8.3 s | 4.5 to 4.9 s | 7.0 to 8.7 s | 4 of 4 timed out |
+| `readiness.spec.ts:131` ×4, 2 workers (6 to 12) | 9.0 to 9.7 s | 5.1 to 5.6 s | 5.7 to 6.3 s | 4 of 4 timed out |
+| `manifest.spec.ts` "plan changed", "transposed" ×6, 1 worker (5 to 16) | 6.3 to 8.9 s | 4.4 to 5.3 s | 6.6 to 9.0 s | 5 of 12 timed out |
+
+A warmed route answers in 10 to 250 ms, so widening `e2e/global-setup.ts`'s warm-up list buys
+nothing. CI records 45.4 s for all eight `readiness.spec.ts` tests, about 5.7 s a test with its
+reset, so its runners do the same work several times faster; their per-request timings could not
+be read from here (job logs and artifacts are refused). The `?checkpoint=after_dive_1` RSC request
+#2568 saw abort does too in these runs, answered 200 in 35 ms, and the page reaches the
+checkpoint: noise, as #2332 found for the Divers request. Neither manifest test has failed on CI
+in the 300 failed CI runs from 2026-09-05 to 2026-10-16 (1,348 failure annotations read).
+
+So a local timeout in a spec that pays a reset and a long walk, with no other error before
+"Test timeout of 15000ms exceeded", is this container's CPU; CI's ceiling stays the bar and the
+timeout is not raised. Check the trace's `Before Hooks` step before debugging the body: past
+6 s, it is this. A cheaper reset is the fix that would move it.
 
 ### A red base
 

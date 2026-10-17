@@ -20,6 +20,7 @@ import type {
   CourseLearningMaterial,
   CourseScheduleDay,
 } from "@/lib/courses";
+import { appNowTimestamp } from "./columns";
 import { certificationLevel, people, shops } from "./core";
 
 /**
@@ -250,7 +251,7 @@ export const courses = pgTable(
      * form.
      */
     rowVersion: integer("row_version").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("courses_shop_title_unique").on(table.shopId, table.title),
@@ -406,7 +407,7 @@ export const courseInquiries = pgTable(
      */
     handledAt: timestamp("handled_at", { withTimezone: true }),
     handledAs: courseInquiryOutcome("handled_as"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // The notification/moderation read: this shop's inquiries, newest first.

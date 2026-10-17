@@ -27,7 +27,7 @@ import { fromAddressFor } from "./shop-voice";
  * refused. A value the repository already knows has no business making that
  * journey; `SES_FROM_EMAIL` remains only as a fork/self-host override.
  */
-export const DEFAULT_SENDER = "DiveDay <noreply@ses.dive.day>";
+export const DEFAULT_SENDER = "DiveDay <notifications@ses.dive.day>";
 
 export function formatSender(value: string): string {
   // Keep an explicitly branded sender untouched, while giving the common
@@ -220,7 +220,7 @@ export function sesNotificationProvider(
             FromEmailAddress: fromAddressFor(config.from, notification),
             Destination: { ToAddresses: [to] },
             // A reply to a booking confirmation is a diver writing to the
-            // shop, and `noreply@ses.dive.day` is a dead letter box. The
+            // shop, and `notifications@ses.dive.day` is a dead letter box. The
             // shop's own front-desk address, when it has one on file (ADR
             // 20260902-sender-standards-for-ses).
             ...(notification.sender?.replyTo && {

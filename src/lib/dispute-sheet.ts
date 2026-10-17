@@ -67,6 +67,7 @@ export const DISPUTE_ACTIVITY_CODES = [
   "payment_marked_refunded",
   "payment_balance_written_off",
   "party_marked_paid",
+  "dashboard_refund_matched",
 ] as const;
 
 /**

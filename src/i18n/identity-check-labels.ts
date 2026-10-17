@@ -20,6 +20,12 @@ export function identityCheckWords(t: StaffTranslator, recordName: string) {
     adultAttested: t("shared.identityCheck.adultAttested"),
     split: t("shared.identityCheck.split"),
     splitting: t("shared.identityCheck.splitting"),
+    another: t("shared.identityCheck.another"),
+    anotherLegend: t("shared.identityCheck.anotherLegend"),
+    anotherNote: t("shared.identityCheck.anotherNote"),
+    openRecord: t("shared.identityCheck.openRecord"),
+    repoint: t("shared.identityCheck.repoint"),
+    repointing: t("shared.identityCheck.repointing"),
   };
 }
 

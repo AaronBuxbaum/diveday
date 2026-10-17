@@ -5,6 +5,7 @@ import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import type { TripSitePeek } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
+import type { DepthUnit } from "@/lib/depth-units";
 import { MedicalReviewContact } from "./MedicalReviewContact";
 import { type WaiverRailProgress, WaiverStepRail } from "./WaiverStepRail";
 import { railDoneLabel, railLabels } from "./waiver-rail-copy";
@@ -29,7 +30,12 @@ export function WaiverCompleted({
   signedRail,
   diveSitesList,
 }: {
-  shop: { name: string; contactEmail: string | null; contactPhone: string | null };
+  shop: {
+    name: string;
+    contactEmail: string | null;
+    contactPhone: string | null;
+    depthUnit: DepthUnit;
+  };
   t: DiverTranslator;
   locale: string;
   needsReview: boolean;
@@ -90,7 +96,12 @@ export function WaiverCompleted({
         doneLabel={railDoneLabel(t, locale, signedRail.done)}
       />
 
-      <DiveSitesPeek sites={diveSitesList} heading={t("waiver.scheduledSites")} t={t} />
+      <DiveSitesPeek
+        sites={diveSitesList}
+        heading={t("waiver.scheduledSites")}
+        depthUnit={shop.depthUnit}
+        t={t}
+      />
     </main>
   );
 }

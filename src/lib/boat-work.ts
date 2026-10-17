@@ -1,3 +1,4 @@
+import { isDiver, type ParticipantType } from "./participant-types";
 import { urgencyFor } from "./today";
 
 /**
@@ -24,6 +25,13 @@ export type BoatWorkCounts = {
 };
 
 /**
+ * How loud a job reads. `work` is the neutral "things to sort"; `warning` is a
+ * fact that stands on its own line in warning ink, matching Today's chip for it.
+ * Neither holds the boat up: that is a hazard, and hazards are not boat work.
+ */
+export type BoatWorkTone = "work" | "warning";
+
+/**
  * One job and how many divers it names. The sizes job carries its two halves
  * (fourth review, item 36): one line, "1 missing a size · 3 not asked about
  * kit", because the Gear tab answers both, but never one sum that hides which
@@ -32,6 +40,7 @@ export type BoatWorkCounts = {
 export type BoatWorkItem = {
   code: BoatWorkCode;
   count: number;
+  tone: BoatWorkTone;
   sizes?: { missing: number; unasked: number };
 };
 
@@ -53,11 +62,31 @@ export function boatWorkItems(
     {
       code: "missing_sizes",
       count: counts.missingSize + counts.kitUnasked,
+      tone: "work",
       sizes: { missing: counts.missingSize, unasked: counts.kitUnasked },
     },
-    { code: "ungated_nitrox", count: counts.ungatedNitrox },
-    { code: "missing_contact", count: close ? counts.missingContact : 0 },
-    { code: "open_orders", count: counts.openOrders },
+    // A diver who planned for nitrox and breathes air has shorter
+    // no-decompression limits than planned, so this one is a warning
+    // (issue #2549, decided 2026-10-16), as Today's `nitrox_gate` already is.
+    { code: "ungated_nitrox", count: counts.ungatedNitrox, tone: "warning" },
+    { code: "missing_contact", count: close ? counts.missingContact : 0, tone: "work" },
+    { code: "open_orders", count: counts.openOrders, tone: "work" },
   ];
   return items.filter((item) => item.count > 0);
+}
+
+/**
+ * **Whether a seat counts as nitrox asked for with no card that authorizes a
+ * fill** (issue #2549): a diver who wants nitrox and holds no verified card.
+ * Only a diver breathes a tank, so a snorkeler or a rider never counts, whatever
+ * their flag says (the database refuses the flag on them, and this holds the
+ * line if a row ever carried it). `hasFillCard` is the fill gate's own answer,
+ * `authorizesNitroxFill`.
+ */
+export function seatUngatedNitrox(seat: {
+  participantType: ParticipantType | null | undefined;
+  wantsNitrox: boolean;
+  hasFillCard: boolean;
+}): boolean {
+  return isDiver(seat.participantType) && seat.wantsNitrox && !seat.hasFillCard;
 }

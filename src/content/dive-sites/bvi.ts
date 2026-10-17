@@ -24,7 +24,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Watch the garden eels from a little distance and they stay out of their burrows. The reef is also dived at night.",
       difficultyLevel: "beginner",
-      depthRange: "3–12 m (10–40 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 12,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -69,7 +69,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Big jacks, eagle rays and turtles pass the pinnacles, and tarpon gather in summer when the baitfish are thick.",
       difficultyLevel: "advanced",
-      depthRange: "8–34 m (25–110 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 34,
       currentNote:
         "A north swell spoils the site, so it is a summer dive. The gaps between the pinnacles are a maze of dead ends and narrow passages: stay out of them. Current not documented; ask the crew on the day.",
@@ -120,7 +120,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Tarpon sweep through the baitfish in summer, and a colony of garden eels lives on the sand on the Cow’s Mouth side.",
       difficultyLevel: "intermediate",
-      depthRange: "6–21 m (20–70 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 23,
       currentNote:
         "Watch the surge in the shallows. The Cow’s Mouth is a narrow cut between rock formations and the bedrock has caves and grottoes: overhead; stay out of them. Current not documented; ask the crew on the day.",
@@ -166,7 +166,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sergeant majors, blue tang and chromis fill the water above the rocks, and nurse sharks nap under the larger ledges.",
       difficultyLevel: "beginner",
-      depthRange: "5–11 m (15–35 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 11,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -212,7 +212,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Moving water brings in big volumes of fish, and the sponges and soft corals are some of the most colorful in the islands.",
       difficultyLevel: "advanced",
-      depthRange: "5–20 m (15–65 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 20,
       currentNote:
         "Washed by strong currents and prone to rough seas, and the site sits in unsheltered water north of Virgin Gorda. Carry an SMB and stay with the group. A wave-cresting swim-through at the finish is overhead: stay out of it.",
@@ -255,7 +255,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The coral heads under the mooring hold plenty of fish, and the canyons beyond them hide eels and small invertebrates.",
       difficultyLevel: "beginner",
-      depthRange: "5–14 m (15–45 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 14,
       currentNote:
         "Protected bay on the west side of the island. Current not documented; ask the crew on the day.",
@@ -302,7 +302,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobster and spotted drums sit under the coral overhangs, stingrays work the sand, and turtles pass now and then.",
       difficultyLevel: "beginner",
-      depthRange: "5–15 m (15–50 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 15,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -350,7 +350,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A large barracuda holds the top of the pinnacle, and the ledges below hold schools of bigeyes, highhats and snappers.",
       difficultyLevel: "advanced",
-      depthRange: "3–24 m (10–80 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 24,
       currentNote:
         "Swept by variable and sometimes strong current, and the site can only be dived when the current allows. Carry an SMB and stay close to the guide. The shallows are a maze of alleyways, tunnels and arches: overhead; stay out of them.",
@@ -394,7 +394,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Pillar coral and encrusting sponges color the canyon walls, with staghorn coral at the arches.",
       difficultyLevel: "intermediate",
-      depthRange: "5–15 m (15–50 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 15,
       currentNote:
         "Surge can be strong in the canyons, and the site is at its worst in winter swell. The arches are short swim-throughs: overhead; stay out of them. Current not documented; ask the crew on the day.",
@@ -445,7 +445,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Plankton-rich water brings in passing jacks and mackerel, an eagle ray or two, and shoals of butterflyfish that follow divers.",
       difficultyLevel: "advanced",
-      depthRange: "6–26 m (20–85 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 28,
       currentNote:
         "Exposed to the ocean and its currents. Carry an SMB. The swim-throughs and tiny caves in the boulders are overhead: stay out of them.",
@@ -487,7 +487,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Baitfish at the wash rocks bring barracuda, mackerel and large tarpon, and a southern stingray cleaning station sits in the deeper north end.",
       difficultyLevel: "intermediate",
-      depthRange: "6–23 m (20–75 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 23,
       currentNote:
         "Only in calm conditions with the guide: the wash rocks are exposed to the open sea and swell, and swell washes over the rocks. Current not documented; ask the crew on the day. Carry an SMB.",
@@ -530,7 +530,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Porkfish, bluestriped grunts and squirrelfish crowd the boulders around 14 m, and nurse sharks sleep under the ledges.",
       difficultyLevel: "advanced",
-      depthRange: "5–24 m (15–80 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 24,
       currentNote: "Current not documented; ask the crew on the day, and carry an SMB.",
       divePlan:
@@ -570,7 +570,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The boulders are the draw, with lobsters and schools of grunts and blue tang along the canyons.",
       difficultyLevel: "intermediate",
-      depthRange: "5–14 m (15–45 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 14,
       currentNote: "Surge in the shallows. Current not documented; ask the crew on the day.",
       divePlan:
@@ -608,7 +608,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Lobsters stand in for Fred and Barney in the crevices, nurse sharks rest on the boulders, and an eagle ray may pass in the deeper water.",
       difficultyLevel: "intermediate",
-      depthRange: "9–21 m (30–70 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 21,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -650,7 +650,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of grunts and pale snappers gather in the hollows, and southern rays sleep in the sand below the steps.",
       difficultyLevel: "intermediate",
-      depthRange: "11–30 m (35–100 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 30,
       currentNote:
         "The site is tucked against South Bay, which gives some shelter from ocean swell. Current not documented; ask the crew on the day.",
@@ -692,7 +692,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Visibility often exceeds 100 ft. Spotted eagle rays, southern rays and hawksbill turtles pass, and the ridges hide lobsters and sleeping nurse sharks.",
       difficultyLevel: "intermediate",
-      depthRange: "9–26 m (30–85 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 26,
       currentNote:
         "Open-ocean exposure, so the surface can be rolly. Current not documented; ask the crew on the day.",
@@ -734,7 +734,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of sennet shelter at the rock, and larger fish pass in the open water. Green morays and lobsters live along the ledges.",
       difficultyLevel: "advanced",
-      depthRange: "5–27 m (15–90 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 27,
       currentNote:
         "Open to current flows and best on calm days. Carry an SMB. The site is large, and the guides do not recommend circling the whole rock.",
@@ -776,7 +776,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of big jacks and permit sweep past in the blue, and highhats shelter under the boulder at the foot of the mooring.",
       difficultyLevel: "advanced",
-      depthRange: "8–26 m (25–85 ft)",
+      depthMinMeters: 8,
       maxDepthMeters: 26,
       currentNote:
         "An exposed ridge with rough surface conditions and occasionally strong current. Pay close attention to the guide, and carry an SMB.",
@@ -817,7 +817,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Schools of black durgon and snapper work the open water, and big solitary snappers and groupers patrol the base of the cliff.",
       difficultyLevel: "intermediate",
-      depthRange: "9–24 m (30–80 ft)",
+      depthMinMeters: 9,
       maxDepthMeters: 24,
       currentNote:
         "Usually protected from the wind, but waves break hard on the cliff above. Current not documented; ask the crew on the day.",
@@ -861,7 +861,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "A bed of garden eels grows on the sand, stingrays glide through the group, and big angelfish stand guard on the hulls.",
       difficultyLevel: "intermediate",
-      depthRange: "14–27 m (45–90 ft)",
+      depthMinMeters: 14,
       maxDepthMeters: 27,
       currentNote: "Current not documented; ask the crew on the day.",
       divePlan:
@@ -909,7 +909,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Tarpon and eels lurk in the cisterns, thick schools of sergeant majors and chromis line the point, and nurse sharks rest in the craters.",
       difficultyLevel: "beginner",
-      depthRange: "3–15 m (10–50 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 15,
       // Traffic: Manchioneel Bay is the Cooper Island anchorage and mooring field (the sources place the point at the bay's south end); the line is a conservative caution rather than a sourced hazard.
       currentNote:
@@ -952,7 +952,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Sergeant majors shelter inside the pillar coral, and eels and squid are regular.",
       difficultyLevel: "intermediate",
-      depthRange: "5–15 m (15–50 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 15,
       currentNote:
         "Current sweeps through the passage between Cooper and Salt Islands, strong enough to make the site undivable at times. Carry an SMB, and skip the dive if the current is running.",
@@ -999,7 +999,7 @@ export const BVI: DiveSiteTemplate[] = [
       conservationNote:
         "The Rhone lies in a British Virgin Islands National Parks Trust marine park. Boats tie to a Trust mooring buoy; ask the operator what permit applies today. Take nothing from the wreck.",
       difficultyLevel: "advanced",
-      depthRange: "3–27 m (10–90 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 27,
       currentNote:
         "Dive boats and snorkelers share the site, and the stern is shallow enough to snorkel. Listen for engines, surface with an SMB, and expect other boats on the buoys. Current is not documented; ask the crew on the day.",
@@ -1055,7 +1055,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The only large feature in the passage draws turtles, schools of jacks, cobia and barracuda, and the occasional shark.",
       difficultyLevel: "advanced",
-      depthRange: "3–20 m (10–65 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 20,
       currentNote:
         "Occasionally current-swept, and the pinnacles sit in open water between the islands. Carry an SMB. Some swim-throughs are overhead: stay out of them.",
@@ -1097,7 +1097,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Nurse sharks and hawksbill turtles rest in the passages, and banded shrimp live under the ledges.",
       difficultyLevel: "intermediate",
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 18,
       currentNote: "Some swell in the canyons. Current not documented; ask the crew on the day.",
       divePlan:
@@ -1144,7 +1144,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Pelagic fish and sharks pass the pinnacle, with turtles, eagle rays and Atlantic spadefish on the walls.",
       difficultyLevel: "advanced",
-      depthRange: "6–30 m (20–100 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 30,
       currentNote:
         "Open water, and only diveable on calm days. Carry an SMB. The small cave and the sink hole are overhead or confined: stay out of them.",
@@ -1183,7 +1183,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLife: "Hawksbill turtles · queen angelfish · reef fish · nudibranchs",
       marineLifeDescription: "Turtles on the deeper sections and nudibranchs in the pond.",
       difficultyLevel: "intermediate",
-      depthRange: "3–18 m (10–60 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 18,
       currentNote:
         "Snorkelers share the pinnacles. Surface with an SMB and listen for engines. Current not documented; ask the crew on the day.",
@@ -1229,7 +1229,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Snake eels and morays on the sand, anemones with tiny crabs and shrimp, and big lobsters in the ridges. The reef comes alive at night.",
       difficultyLevel: "intermediate",
-      depthRange: "6–27 m (20–90 ft)",
+      depthMinMeters: 6,
       maxDepthMeters: 27,
       currentNote:
         "Exposed to the open Caribbean, with swell at times. Current not documented; ask the crew on the day.",
@@ -1270,7 +1270,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Large green morays and tiny fairy basslets under the ledge on the platform’s edge, and spiny lobsters in the cuts.",
       difficultyLevel: "advanced",
-      depthRange: "5–21 m (15–70 ft)",
+      depthMinMeters: 5,
       maxDepthMeters: 21,
       currentNote:
         "Strong currents are possible at this open-water site. Carry an SMB, and watch your gas while looking for small animals.",
@@ -1311,7 +1311,7 @@ export const BVI: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Fish shelter all over the decks and in the crow’s nest, and the wreck draws a steady flow of reef species.",
       difficultyLevel: "intermediate",
-      depthRange: "11–20 m (35–65 ft)",
+      depthMinMeters: 11,
       maxDepthMeters: 20,
       currentNote:
         "Current not documented; ask the crew on the day. Dive and snorkel boats visit often, so listen for engines.",

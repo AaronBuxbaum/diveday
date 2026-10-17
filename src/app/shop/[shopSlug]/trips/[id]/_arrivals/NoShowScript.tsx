@@ -142,7 +142,7 @@ export type NoShowSalvageCopy = {
    * tree, and `NoShowScript.test.tsx` asserts it rather than trusting this
    * paragraph.
    */
-  money: { line: string; href: string; label: string };
+  money: { line: string; href?: string; label?: string };
 };
 
 export function NoShowSalvage({
@@ -187,13 +187,18 @@ export function NoShowSalvage({
         </ul>
       ) : null}
       <p className="mt-2 text-muted">
-        {copy.money.line}{" "}
-        <Link
-          href={copy.money.href}
-          className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
-        >
-          {copy.money.label}
-        </Link>
+        {copy.money.line}
+        {copy.money.href && copy.money.label ? (
+          <>
+            {" "}
+            <Link
+              href={copy.money.href}
+              className={`${tapTargetLinkClass} font-medium text-primary hover:underline`}
+            >
+              {copy.money.label}
+            </Link>
+          </>
+        ) : null}
       </p>
     </div>
   );

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -399,6 +400,7 @@ describe("listGearRentals, counter rentals", () => {
       reservedUntil: "2026-10-09",
       todayLocal: TODAY,
     });
+    advanceClock();
     const second = await createCounterRental(db, {
       shopId: shop.id,
       personId: ana.id,

@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { HeldTicket } from "@/components/SendHold";
-import { canPersonConfigureTrips, canPersonManagePaymentSettings } from "@/db/authz";
+import {
+  canPersonActOnKind,
+  canPersonConfigureTrips,
+  canPersonManagePaymentSettings,
+} from "@/db/authz";
 import { type AppDb, getDb } from "@/db/client";
 import {
   claimHeldSend,
@@ -17,7 +21,7 @@ import { getShopById } from "@/db/shops";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { trackEvent } from "@/lib/analytics";
 import { nowMs } from "@/lib/clock";
-import { formValue, parseForm, trimmedText } from "@/lib/form-parse";
+import { formValue, parseForm, readForm, single, trimmedText } from "@/lib/form-parse";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
 import { majorToMinor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
@@ -126,20 +130,23 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
  * `trips.divers_told_meeting_point`), never form fields, so a posted
  * `previousStartsAt` or `meetingPointMoved` is not read at all.
  */
-const tellThemForm = z.object({ tripId: z.uuid() });
+const tellThemForm = z.object({ tripId: single(z.uuid()) });
+const holdKindForm = z.object({ holdKind: formValue() });
 
 export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
   const session = await requireStaffSession();
   const db = await getDb();
   // The shop's currency, only to read a fixed-amount deal's major units.
-  if (formData.get("holdKind") === "trip_rescheduled") {
+  if (readForm(holdKindForm, formData).holdKind === "trip_rescheduled") {
     // "Tell them" after an Undo: the same gate as the move that held it, and
     // the same hold, so a second tap folds into the first rather than sending
     // twice. The recipients are read off the trip at send time, never here.
     if (!(await canPersonConfigureTrips(db, session.user.shopId, session.user.personId))) {
       throw new Error("not_authorized");
     }
-    const form = tellThemForm.parse({ tripId: formData.get("tripId") });
+    const tell = parseForm(tellThemForm, formData);
+    if (!tell.ok) throw new Error("unreadable hold form");
+    const form = tell.data;
     // Whether the meeting point moved is the server's record too
     // (`trips.divers_told_meeting_point`): a posted `meetingPointMoved` is not read.
     const held = await holdRescheduleNotice(db, {
@@ -161,6 +168,14 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
       session.user.personId,
     );
     if (!allowed) throw new Error("not_authorized");
+  }
+  // The wait-list invite is Today's `waitlist_seat` row: what Today hides from
+  // a role, the action refuses it too (issue #2134).
+  if (
+    payload.kind === "waitlist_invite" &&
+    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
+  ) {
+    throw new Error("not_authorized");
   }
   // A reschedule notice is only ever held by a move or by "Tell them" above,
   // both of which take the "before" time from the server's record.
@@ -207,6 +222,12 @@ async function assertMayActOnHeld(
         ? canPersonManagePaymentSettings
         : null;
   if (gate && !(await gate(db, session.user.shopId, session.user.personId))) {
+    throw new Error("not_authorized");
+  }
+  if (
+    row.kind === "waitlist_invite" &&
+    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
+  ) {
     throw new Error("not_authorized");
   }
 }

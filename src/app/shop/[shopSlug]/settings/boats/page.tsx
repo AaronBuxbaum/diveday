@@ -61,6 +61,7 @@ export default async function BoatsSettingsPage({
     notice?: string;
     boat?: string;
     capacity?: string;
+    passengers?: string;
     limit?: string;
     count?: string;
     dates?: string;
@@ -95,7 +96,9 @@ export default async function BoatsSettingsPage({
 
   return (
     <main className={settingsPaneClass()}>
-      <FlashParams params={["notice", "boat", "capacity", "limit", "count", "dates"]} />
+      <FlashParams
+        params={["notice", "boat", "capacity", "passengers", "limit", "count", "dates"]}
+      />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
@@ -176,7 +179,7 @@ export default async function BoatsSettingsPage({
                           {error.text}
                         </p>
                       ) : null}
-                      <BoatPaperFacts boat={boat} t={t} todayLocal={todayLocal} />
+                      <BoatPaperFacts boat={boat} t={t} todayLocal={todayLocal} locale={locale} />
                       {/* **Save and Delete on one line**, in the update form's
                         own action row rather than a form of their own apart.
                         The confirm posts to the delete through `formAction`,

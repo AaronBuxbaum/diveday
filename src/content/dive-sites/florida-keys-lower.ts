@@ -24,7 +24,7 @@ export const FLORIDA_KEYS_LOWER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "The grooves funnel fish. The deeper seaward end of each spur is where the big schools sit.",
       difficultyLevel: "beginner",
-      depthRange: "3–11 m (10–35 ft)",
+      depthMinMeters: 3,
       maxDepthMeters: 11,
       currentNote: "Sanctuary preservation area — mooring buoys only, and usually a mild current.",
       divePlan:
@@ -72,7 +72,7 @@ export const FLORIDA_KEYS_LOWER: DiveSiteTemplate[] = [
       marineLifeDescription:
         "Several very large goliath grouper live aboard. They are used to divers and entirely unbothered.",
       difficultyLevel: "advanced",
-      depthRange: "20–33 m (65–110 ft)",
+      depthMinMeters: 20,
       maxDepthMeters: 33,
       currentNote: "Open water; current decides whether it is a line dive or a free descent.",
       divePlan:

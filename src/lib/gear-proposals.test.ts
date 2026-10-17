@@ -128,30 +128,160 @@ describe("proposeRentalUnits", () => {
     expect(proposed(map, "b", "mask")).toBeNull();
   });
 
-  it("never proposes a regulator for a diver who asked for nitrox, and still proposes the rest", () => {
-    // The register cannot yet say which regulators are O2-clean.
-    const free = new Map([
-      ["regulator", [unit("Reg #1", null)]],
-      ["mask", [unit("Mask #1", null)]],
-    ]);
-    const map = proposeRentalUnits(
-      [
-        {
-          bookingId: "a",
-          wantsNitrox: true,
-          wanted: [
-            { kind: "regulator", size: null },
-            { kind: "mask", size: null },
+  /**
+   * Issue #2207 (Aaron 2026-10-13). A nitrox diver is proposed only a
+   * regulator the shop keeps for enriched air, and an air diver only one it
+   * does not. Every case below is one way a proposal could quietly undo the
+   * shop's own designated set.
+   */
+  describe("regulators and the nitrox-designated set", () => {
+    const reg = (id: string, nitroxDesignated: boolean | null, serviceState = ok) => ({
+      ...unit(id, null, serviceState),
+      nitroxDesignated,
+    });
+    const regs = (map: Map<string, ProposalUnit>, ids: string[]) =>
+      ids.map((id) => proposed(map, id, "regulator"));
+    const wants = (bookingId: string, wantsNitrox?: boolean) => ({
+      bookingId,
+      ...(wantsNitrox === undefined ? {} : { wantsNitrox }),
+      wanted: [{ kind: "regulator", size: null }],
+    });
+
+    it("proposes a nitrox diver the designated regulator, never an undesignated one first", () => {
+      const free = new Map([["regulator", [reg("Reg #1", null), reg("Reg #9", true)]]]);
+      const map = proposeRentalUnits([wants("a", true)], free);
+      expect(proposed(map, "a", "regulator")).toBe("Reg #9");
+    });
+
+    it("proposes a nitrox diver no regulator when the shop has none designated, and still the rest", () => {
+      const free = new Map([
+        ["regulator", [reg("Reg #1", null), reg("Reg #2", false)]],
+        ["mask", [unit("Mask #1", null)]],
+      ]);
+      const map = proposeRentalUnits(
+        [
+          {
+            bookingId: "a",
+            wantsNitrox: true,
+            wanted: [
+              { kind: "regulator", size: null },
+              { kind: "mask", size: null },
+            ],
+          },
+          wants("b"),
+        ],
+        free,
+      );
+      expect(proposed(map, "a", "regulator")).toBeNull();
+      expect(proposed(map, "a", "mask")).toBe("Mask #1");
+      // The air diver after them still gets a regulator nobody else took.
+      expect(proposed(map, "b", "regulator")).toBe("Reg #1");
+    });
+
+    it("never proposes a designated regulator to an air diver, even when it is the only one free", () => {
+      const free = new Map([["regulator", [reg("Reg #9", true)]]]);
+      const map = proposeRentalUnits([wants("a"), wants("b", false)], free);
+      expect(regs(map, ["a", "b"])).toEqual([null, null]);
+    });
+
+    it("keeps the designated set for the nitrox divers whatever the roster order", () => {
+      const free = new Map([
+        ["regulator", [reg("Reg #1", null), reg("Reg #8", true), reg("Reg #9", true)]],
+      ]);
+      const map = proposeRentalUnits(
+        [wants("air1"), wants("nx1", true), wants("air2"), wants("nx2", true), wants("nx3", true)],
+        free,
+      );
+      expect(regs(map, ["air1", "nx1", "air2", "nx2", "nx3"])).toEqual([
+        "Reg #1",
+        "Reg #8",
+        null,
+        "Reg #9",
+        null,
+      ]);
+    });
+
+    it("never proposes a designated regulator whose service has lapsed or whose concern is open", () => {
+      const free = new Map([
+        [
+          "regulator",
+          [
+            reg("Reg #7", true, { state: "overdue" }),
+            { ...reg("Reg #8", true), serviceConcern: true },
           ],
-        },
-        { bookingId: "b", wanted: [{ kind: "regulator", size: null }] },
+        ],
+      ]);
+      const map = proposeRentalUnits([wants("a", true)], free);
+      expect(proposed(map, "a", "regulator")).toBeNull();
+    });
+
+    it("takes a designated regulator coming due soon only after one that is not", () => {
+      const free = new Map([
+        ["regulator", [reg("Reg #7", true, { state: "due_soon" }), reg("Reg #8", true)]],
+      ]);
+      const map = proposeRentalUnits([wants("a", true), wants("b", true)], free);
+      expect(regs(map, ["a", "b"])).toEqual(["Reg #8", "Reg #7"]);
+    });
+
+    it("reads not said and false alike: neither is designated", () => {
+      const free = new Map([["regulator", [reg("Reg #1", null), reg("Reg #2", false)]]]);
+      const map = proposeRentalUnits([wants("a", true)], free);
+      expect(proposed(map, "a", "regulator")).toBeNull();
+    });
+  });
+
+  /**
+   * Issue #2206 (Aaron 2026-10-13): a wetsuit is proposed only when its size
+   * and its thickness both match, and nothing when either side does not say.
+   */
+  describe("wetsuits and the day's thickness", () => {
+    const suit = (id: string, size: string, thicknessMm: number | null) => ({
+      ...unit(id, size),
+      thicknessMm,
+    });
+    const free = new Map([
+      [
+        "wetsuit",
+        [
+          suit("WS #3 shorty", "L", 3),
+          suit("WS #5", "L", 5),
+          suit("WS #7", "L", 7),
+          suit("WS #M7", "M", 7),
+        ],
       ],
-      free,
-    );
-    expect(proposed(map, "a", "regulator")).toBeNull();
-    expect(proposed(map, "a", "mask")).toBe("Mask #1");
-    // The air diver after them still gets the regulator nobody else took.
-    expect(proposed(map, "b", "regulator")).toBe("Reg #1");
+    ]);
+    const wantsL = [{ bookingId: "a", wanted: [{ kind: "wetsuit", size: "L" }] }];
+
+    it("proposes the suit whose size and thickness both match the day", () => {
+      const map = proposeRentalUnits(wantsL, free, { wetsuitThicknessMm: 7 });
+      expect(proposed(map, "a", "wetsuit")).toBe("WS #7");
+    });
+
+    it("proposes nothing when no suit of that size is the day's thickness", () => {
+      const map = proposeRentalUnits(wantsL, free, { wetsuitThicknessMm: 6 });
+      expect(proposed(map, "a", "wetsuit")).toBeNull();
+    });
+
+    it("proposes no wetsuit when the day has not said its thickness", () => {
+      expect(proposed(proposeRentalUnits(wantsL, free), "a", "wetsuit")).toBeNull();
+      expect(
+        proposed(proposeRentalUnits(wantsL, free, { wetsuitThicknessMm: null }), "a", "wetsuit"),
+      ).toBeNull();
+    });
+
+    it("never proposes a suit that has not said its thickness, even on a day that has", () => {
+      const unsaid = new Map([["wetsuit", [suit("WS #9", "L", null)]]]);
+      const map = proposeRentalUnits(wantsL, unsaid, { wetsuitThicknessMm: 5 });
+      expect(proposed(map, "a", "wetsuit")).toBeNull();
+    });
+
+    it("leaves every other kind to its size alone", () => {
+      const map = proposeRentalUnits(
+        [{ bookingId: "a", wanted: [{ kind: "bcd", size: "L" }] }],
+        new Map([["bcd", [unit("BCD #1", "L")]]]),
+      );
+      expect(proposed(map, "a", "bcd")).toBe("BCD #1");
+    });
   });
 
   it("proposes nothing for weights, even passed directly with a size that matches", () => {

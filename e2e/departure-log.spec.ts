@@ -126,8 +126,12 @@ test("the Details tab opens the log with the recorded facts", async ({ page }) =
     checklistTable.getByRole("row").filter({ hasText: "VHF radio checked" }),
   ).toContainText("Not checked");
 
-  // The tamper-evidence code: a full SHA-256 in the footer.
-  await expect(page.getByText("Integrity code (SHA-256)")).toBeVisible();
+  // The departure's incident reports end the document, and none is stated, not left blank.
+  await expect(page.getByRole("heading", { name: "Incident reports" })).toBeVisible();
+  await expect(page.getByText(/^No incident report has been started/)).toBeVisible();
+
+  // The tamper-evidence code: a full SHA-256 in the footer, with its recipe's version.
+  await expect(page.getByText("Integrity code (SHA-256) · version 2")).toBeVisible();
   await expect(page.getByText(/^[0-9a-f]{64}$/)).toBeVisible();
 });
 

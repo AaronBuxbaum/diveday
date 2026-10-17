@@ -1,7 +1,9 @@
 // i18n-exempt-file: test fixture; only the roster's tests import it, and its names are seeded data.
 import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
+import type { AboardHold } from "@/db/aboard-at-sea";
 import type { SameNameHeldSeat } from "@/db/bookings";
+import type { SameNamePerson } from "@/db/identity-repoint";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -119,6 +121,8 @@ export type RosterFixtureOptions = {
   arrival?: RosterArrival;
   record?: RosterRecord;
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
+  sameNamePeople?: ReadonlyMap<string, ReadonlyArray<SameNamePerson>>;
+  dependentCharters?: ReadonlyMap<string, ReadonlyArray<{ title: string; startsAt: Date }>>;
   heldSeatLastDiveDay?: ReadonlyMap<string, Date | null>;
   packageDivesByBooking?: ReadonlyMap<string, number>;
   splitAsksDateOfBirth?: boolean;
@@ -126,6 +130,8 @@ export type RosterFixtureOptions = {
   certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
   /** "Move to another departure", when the page offers it. */
   moveSeat?: SeatMove;
+  /** Seats marked aboard a boat that has left, whose Remove refuses (H-133). */
+  aboardAtSea?: ReadonlyMap<string, AboardHold>;
 };
 
 function rosterProps({
@@ -140,11 +146,14 @@ function rosterProps({
   arrival,
   record,
   sameNameHeldSeats,
+  sameNamePeople,
+  dependentCharters,
   heldSeatLastDiveDay,
   packageDivesByBooking,
   splitAsksDateOfBirth,
   certifyDefaultLevel,
   moveSeat,
+  aboardAtSea,
 }: RosterFixtureOptions) {
   return {
     trip: {
@@ -172,8 +181,11 @@ function rosterProps({
       nitroxByBooking: new Map() as NitroxByBooking,
       notesByBooking: new Map(),
       sameNameHeldSeats,
+      sameNamePeople,
+      dependentCharters,
       heldSeatLastDiveDay,
       packageDivesByBooking,
+      aboardAtSea,
     },
     actions: {
       markRosterWaiverInPersonAction: noRefusal,
@@ -183,6 +195,7 @@ function rosterProps({
       removeBookingAction: noop,
       confirmIdentityAction: noop,
       splitIdentityAction: noop,
+      repointIdentityAction: noop,
       addNoteAction: noop,
       deleteNoteAction: noop,
       saveEmergencyContactAction: noop,

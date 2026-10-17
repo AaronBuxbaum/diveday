@@ -1,14 +1,24 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { markPartyPaid, previewPartyPayment } from "@/db/payment-marks";
 import { getShopCurrency } from "@/db/stripe-accounts";
+import { formValue, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { readManualPaymentMark } from "@/lib/payment-marks";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { requireRosterBooking, tripPath } from "./roster-booking";
+
+/** A field read as its first value turned to a string, or `null` when absent. */
+function sentText() {
+  return formValue().transform((value) => (value === null ? null : String(value)));
+}
+
+const partyPaymentForm = z.object({ bookingId: text(), amount: sentText(), method: sentText() });
+const partyPaidForm = z.object({ expectedOwed: text() });
 
 /**
  * What the party-payment form says, read once for the preview and the confirm
@@ -18,17 +28,13 @@ import { requireRosterBooking, tripPath } from "./roster-booking";
  */
 async function readPartyPaymentForm(shopSlug: string, tripId: string, formData: FormData) {
   const back = tripPath(shopSlug, tripId);
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const form = readForm(partyPaymentForm, formData);
+  const { bookingId } = form;
   const db = await getDb();
   const s = (await requireShopSurface(shopSlug)).session;
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, noticeUrl(back, "invalid"));
   const currency = await getShopCurrency(db, s.user.shopId);
-  const mark = readManualPaymentMark(
-    "paid",
-    formData.get("amount") === null ? null : String(formData.get("amount")),
-    formData.get("method") === null ? null : String(formData.get("method")),
-    currency,
-  );
+  const mark = readManualPaymentMark("paid", form.amount, form.method, currency);
   if (mark.kind === "invalid" || mark.kind === "no_money" || mark.kind === "not_money") {
     redirect(
       noticeUrl(
@@ -110,7 +116,7 @@ export async function markPartyPaidAction(shopSlug: string, tripId: string, form
   if (mark.kind !== "money") return;
   // What the preview said the party owed. A form without it, or with junk,
   // cannot be matched against anything, so it is the same "preview again".
-  const expected = String(formData.get("expectedOwed") ?? "");
+  const expected = readForm(partyPaidForm, formData).expectedOwed;
   if (!/^\d{1,12}$/.test(expected)) redirect(partyRefusalUrl(back, bookingId, "changed"));
   const result = await markPartyPaid(db, {
     expectedOwedCents: Number(expected),

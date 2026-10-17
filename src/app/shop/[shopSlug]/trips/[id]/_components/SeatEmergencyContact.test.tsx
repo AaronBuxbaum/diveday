@@ -10,13 +10,17 @@ afterEach(cleanup);
 
 const t = staffTranslator("en-US");
 
-function renderContact(hasEmergencyContact: boolean) {
+function renderContact(hasEmergencyContact: boolean, held = false) {
   const { person } = entry("a", "Asha Osei");
   return render(
     <SeatEmergencyContact
       bookingId="a"
-      person={person}
-      hasEmergencyContact={hasEmergencyContact}
+      contact={
+        hasEmergencyContact
+          ? { name: person.emergencyContactName, phone: person.emergencyContactPhone }
+          : { name: null, phone: null }
+      }
+      held={held}
       holdOpen={false}
       t={t}
       saveEmergencyContactAction={noop}
@@ -33,6 +37,12 @@ describe("SeatEmergencyContact", () => {
       ),
     ).toBeTruthy();
     expect(screen.getByText(t("trips.roster.emergencyContactEdit"))).toBeTruthy();
+  });
+
+  it("names a held seat's contact as the seat's own (issue 2145)", () => {
+    renderContact(false, true);
+    expect(screen.getByText(t("trips.roster.heldEmergencyContactHeading"))).toBeTruthy();
+    expect(screen.getByText(t("trips.roster.emergencyContactAddFull"))).toBeTruthy();
   });
 
   it("says a missing contact out loud, and offers to add one", () => {

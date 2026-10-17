@@ -181,6 +181,9 @@ export const DELIBERATELY_IDENTICAL = new Map([
   // Spelled and read the same in Spanish.
   ["diver.json factSource.plan", "the same word in both languages"],
   ["staff/incidents.json form.no", "the same word in both languages"],
+  // A number and the millimetre symbol, which is SI and the same in Spanish.
+  ["staff/gear.json prep.optionThickness", "a number and an SI unit symbol"],
+  ["staff/counterRentals.json fill.eanx", "EANx is the gas's international name, then a number"],
   // Examined one by one for issue #1797. Each is a value with no Spanish
   // form to give it: a brand, an acronym, a place, a unit, or a word Spanish
   // diving uses unchanged. Held both ways like every entry above — the day
@@ -249,10 +252,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ],
   ["staff/workOrders.json detail.total", "the same word in both languages"],
   ["staff/orders.json new.countryPlaceholder", "example country code in a placeholder attribute"],
-  [
-    "staff/diveSites.json form.depthRangePlaceholder",
-    "example depth range in a placeholder attribute",
-  ],
   ["staff/diveSites.json form.locationPlaceholder", "example location in a placeholder attribute"],
   ["diver.json inquiry.namePlaceholder", "example name in a placeholder attribute"],
   ["staff/promos.json fields.codePlaceholder", "example promo code in a placeholder attribute"],
@@ -395,6 +394,12 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/settings.json main.flySafe.value", "the unit abbreviation, unchanged in Spanish"],
   ["diver.json common.units.feet", "the unit symbol, unchanged in Spanish"],
   ["diver.json common.units.meters", "the unit symbol, unchanged in Spanish"],
+  ["diver.json common.units.metersRange", "two depths and the unit symbol, unchanged in Spanish"],
+  ["diver.json common.units.feetRange", "two depths and the unit symbol, unchanged in Spanish"],
+  ["staff/diveSites.json form.depthPreviewFeetOne", "the unit symbol, unchanged in Spanish"],
+  ["staff/diveSites.json form.depthPreviewFeetRange", "two depths and the unit symbol"],
+  ["staff/diveSites.json form.depthPreviewMetersOne", "the unit symbol, unchanged in Spanish"],
+  ["staff/diveSites.json form.depthPreviewMetersRange", "two depths and the unit symbol"],
   ["diver.json marketing.guides.fareharbor.heroEyebrow", "two product names"],
   ["diver.json marketing.guides.rezdy.heroEyebrow", "two product names"],
   ["staff/settings.json main.units.celsius", "unit name, the same in Spanish"],

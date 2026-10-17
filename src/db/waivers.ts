@@ -64,6 +64,7 @@ export {
   type DoctorReferral,
   type DoctorReferralAnswers,
   doctorPageOpen,
+  earlierReferralForOpenHold,
   getDoctorReferral,
   getMedicalClearanceDocument,
   hasUnansweredMedicalHold,

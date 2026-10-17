@@ -422,6 +422,55 @@ describe("sendDueCheckoutRecoveries", () => {
     expect(row?.status).toBe("expired");
   });
 
+  /**
+   * Layer 3 re-review (dde-3 #3): a seat the desk released (turned away, or
+   * marked not here) is not held, so "your spot is still held" is false. The
+   * release withdraws the checkout itself; this is the scan's own guard for
+   * a row that reaches it pending anyway.
+   */
+  it("never emails a checkout whose seat the desk has since released", async () => {
+    const { db, bookingIds, checkoutId } = await pendingCheckoutContext(3);
+    await db
+      .update(bookings)
+      .set({ status: "no_show", turnedAwayAt: NOW, turnedAwayReason: "payment" })
+      .where(eq(bookings.id, bookingIds[0]));
+
+    const email = fakeEmail();
+    const summary = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+    });
+
+    expect(summary.sent).toBe(0);
+    expect(summary.cancelled).toBe(1);
+    expect(email.sent).toHaveLength(0);
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    expect(row?.status).toBe("expired");
+  });
+
+  it("catches a release that lands mid-batch, before this candidate's send", async () => {
+    const { db, shop, bookingIds } = await pendingCheckoutContext(3);
+    const email = fakeEmail();
+    const releaseMidLookup: CheckoutProvider["retrieveCheckoutSession"] = async () => {
+      await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingIds[0]));
+      return stillOpen(shop.id, "cs_1");
+    };
+
+    const summary = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(releaseMidLookup),
+    });
+
+    expect(summary.sent).toBe(0);
+    expect(summary.cancelled).toBe(1);
+    expect(email.sent).toHaveLength(0);
+  });
+
   it("never emails a checkout for a trip that already departed, even though it stays 'scheduled'", async () => {
     const { db, tripId, checkoutId } = await pendingCheckoutContext(3);
     // Trips never leave "scheduled" on departure — only a backdated startsAt

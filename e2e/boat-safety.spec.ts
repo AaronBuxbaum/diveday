@@ -40,32 +40,36 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   //    boat sells is refused on the row, and nothing is saved…
   await page.goto(`${shop}/settings/boats`);
   const row = boatRow(page, BOAT);
-  await row.getByLabel("Passenger limit on the boat’s certificate").fill("10");
+  await row.getByLabel("Passengers allowed on the certificate (not crew)").fill("10");
   await row.getByRole("button", { name: "Save boat" }).click();
   const refused = boatRow(page, BOAT).getByRole("alert");
   await expect(refused).toHaveText(
     "The certificate allows 10 passengers, so this boat can’t sell 14. Lower the seats, or correct the certificate.",
   );
   await expect(
-    boatRow(page, BOAT).getByLabel("Passenger limit on the boat’s certificate"),
+    boatRow(page, BOAT).getByLabel("Passengers allowed on the certificate (not crew)"),
   ).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toHaveCount(0);
 
   //    …and so are fewer seats under it while today's departure still sells
   //    fourteen on this hull.
   await boatRow(page, BOAT).getByLabel("Capacity (seats)").fill("12");
-  await boatRow(page, BOAT).getByLabel("Passenger limit on the boat’s certificate").fill("12");
+  await boatRow(page, BOAT)
+    .getByLabel("Passengers allowed on the certificate (not crew)")
+    .fill("12");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
   await expect(boatRow(page, BOAT).getByRole("alert")).toHaveText(
     /sells? more seats than the certificate’s 12[.,]/,
   );
 
   //    The certificate the boat really carries, and a lapsed insurance date.
-  await boatRow(page, BOAT).getByLabel("Passenger limit on the boat’s certificate").fill("14");
+  await boatRow(page, BOAT)
+    .getByLabel("Passengers allowed on the certificate (not crew)")
+    .fill("14");
   await boatRow(page, BOAT).getByLabel("Insurance expires").fill(daysFromNow(-3));
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toBeVisible();
-  await expect(boatRow(page, BOAT).getByText("Insurance expired 3 days ago")).toBeVisible();
+  await expect(boatRow(page, BOAT).getByText(/^Hull insurance ended /)).toBeVisible();
   await expect(boatRow(page, BOAT).getByRole("alert")).toHaveCount(0);
 
   // 2. The gear register: an AED, aboard the boat, with its pads' date.
@@ -99,7 +103,8 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await page.goto(reefManifest);
   const section = page.getByRole("region", { name: `${BOAT}: papers and safety kit` });
   await expect(section).toBeVisible();
-  await expect(section.getByText("Insurance expired 3 days ago")).toBeVisible();
+  // A lapsed paper is danger ink, named by its date (H-136).
+  await expect(section.getByText(/^Hull insurance ended /)).toHaveClass(/text-danger-strong/);
   await expect(section.getByText("AED e2e: pads expire in 12 days")).toBeVisible();
   await page.emulateMedia({ media: "print" });
   await expect(section.getByText("AED e2e: pads expire in 12 days")).toBeVisible();
@@ -109,7 +114,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   //    pads coming due on a boat sailing today are a row on that departure,
   //    pointing at its Boat tab.
   await page.goto(shop);
-  await expect(page.getByText("Insurance expired 3 days ago").first()).toBeVisible();
+  await expect(page.getByText(/^Hull insurance ended /).first()).toBeVisible();
   await expect(page.getByText("AED e2e: pads expire in 12 days").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Open boat check" }).first()).toHaveAttribute(
     "href",

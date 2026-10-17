@@ -11,7 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonCallDayBlowout, canPersonRefund } from "@/db/authz";
-import { type BlowoutDiverState, getTripBlowout } from "@/db/blowouts";
+import type { BlowoutDiverState } from "@/db/blowouts";
 import type { PaymentStatus } from "@/db/schema";
 import { getTripRoster, getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -25,6 +25,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { HeldRefundsCard } from "./_components/HeldRefundsCard";
+import { blowoutTitleKey, readBlowout } from "./_lib/title";
 import { callBlowoutAction, releaseBlowoutRefundsAction, resumeBlowoutAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -36,11 +37,27 @@ import { callBlowoutAction, releaseBlowoutRefundsAction, resumeBlowoutAction } f
 // 20260804-instant-navigation.
 export const instant = true;
 
-// One title for the confirm and for either cause on the record: a run's
-// cancellation is not weather (review, 2026-10-12).
-export const metadata: Metadata = {
-  title: "Departure called off — DiveDay",
-};
+/**
+ * Runtime metadata on an instant route. It reads the record only behind
+ * `requireShopSurface`, as the page does: a title read before the tenant gate
+ * would tell a stranger whether a guessed departure was called off (the lesson
+ * of issue 1569). The page's own request reads keep the route dynamic, so the
+ * title streams with the body and the static shell still paints first.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ shopSlug: string; tripId: string }>;
+}): Promise<Metadata> {
+  const { shopSlug, tripId } = await params;
+  if (!uuidParam(tripId)) notFound();
+  const { db, shop } = await requireShopSurface(shopSlug);
+  const [locale, blowout] = await Promise.all([
+    requestLocale(shop.defaultLocale),
+    readBlowout(db, shop.id, tripId),
+  ]);
+  return { title: `${staffTranslator(locale)(blowoutTitleKey(blowout))} — DiveDay` };
+}
 
 /**
  * Between an offered departure's title and its date, glued to the title by a
@@ -102,7 +119,7 @@ export default async function BlowoutPage({
   const [locale, trip, blowout, canCallDay, mayRefund] = await Promise.all([
     requestLocale(shop.defaultLocale),
     getTripWithBooked(db, shop.id, tripId),
-    getTripBlowout(db, shop.id, tripId),
+    readBlowout(db, shop.id, tripId),
     canPersonCallDayBlowout(db, shop.id, session.user.personId),
     canPersonRefund(db, shop.id, session.user.personId),
   ]);
@@ -121,13 +138,7 @@ export default async function BlowoutPage({
       // (principle 10, issue #823).
       eyebrow={t("trips.surfaces.trip")}
       eyebrowHref={tripPath}
-      title={
-        blowout
-          ? blowout.cause === "run_ended"
-            ? t("blowout.record.titleRunEnded")
-            : t("blowout.record.title")
-          : t("blowout.confirm.title")
-      }
+      title={t(blowoutTitleKey(blowout))}
       meta={
         <div className="flex flex-col gap-1 text-sm text-muted">
           <span className="font-medium text-foreground">{trip.title}</span>

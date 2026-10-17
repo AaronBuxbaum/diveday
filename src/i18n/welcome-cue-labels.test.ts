@@ -150,6 +150,17 @@ describe("catchUpSentences", () => {
     ).toEqual(["The meeting point moved.", "The dive plan changed."]);
   });
 
+  it("says a seat removed after the desk turned its diver away was turned away", () => {
+    expect(
+      catchUpSentences(en, "en-US", [{ kind: "seat_turned_away", names: ["Ada Lindqvist"] }]),
+    ).toEqual(["Ada Lindqvist was turned away at the desk."]);
+    expect(
+      catchUpSentences(es, "es-ES", [
+        { kind: "seat_turned_away", names: ["Ada Lindqvist", "Ben Okafor"] },
+      ]),
+    ).toEqual(["En el mostrador no se les permitió embarcar a Ada Lindqvist y Ben Okafor."]);
+  });
+
   it("drops a group whose every diver has been erased", () => {
     // The names are joined live, so an erasure empties the group — and an empty
     // list is a sentence with a hole in it rather than a fact.

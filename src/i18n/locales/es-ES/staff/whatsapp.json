@@ -14,7 +14,7 @@
   "setup": {
     "heading": "Cómo funciona la conexión",
     "step1": "Presiona Conectar. Meta abre su propia ventana, donde inicias sesión con la cuenta de Facebook que gestiona tu centro.",
-    "step2": "Elige el número de teléfono desde el que quieres que los buceadores reciban los mensajes, o añade uno nuevo, y acepta las condiciones de Meta.",
+    "step2": "Elige el número de teléfono desde el que quieres que los buceadores reciban los mensajes, o agrega uno nuevo, y acepta las condiciones de Meta.",
     "step3": "Ya está. DiveDay registra el número y envía tu plantilla de mensaje a revisión en tu nombre."
   },
   "test": {
