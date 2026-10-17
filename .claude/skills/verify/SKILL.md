@@ -93,7 +93,7 @@ uncertified diver, a nitrox request with no verified card).
 
 Before you report done:
 
-- [filing.md](filing.md) — a bug, safety gap or decision becomes a `needs-triage` issue (ten a run at most), anything else a bullet in one "Notes" PR comment; name the issues in your closing message.
+- [filing.md](filing.md) — a bug, safety gap or decision becomes a `needs-triage` issue (ten a run at most), an idea or feature an `idea` issue, anything else a bullet in one "Notes" PR comment; name the issues in your closing message.
 
 ## Report honestly
 

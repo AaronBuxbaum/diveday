@@ -169,6 +169,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Crew schedule
 - Crew warning
 - DAN
+- Decompression card reminder
 - Default course page
 - Delivery receipt
 - Demo mode

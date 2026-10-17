@@ -161,8 +161,16 @@ migration step.
 - **a decision**: a question only a human can answer, whose answer would change what gets built
   (policy, pricing, tone, dive-safety practice), or work you stopped half-done that needs one
 
-**Everything else is one "Notes" comment on your PR**: the improvement outside your scope, the
-debt you read past, the assumption you made, the idea the change suggested. One comment per PR,
+**An idea or a feature is filed too, on its own shelf** (Aaron, 2026-10-17): an improvement or
+feature with a concrete first step goes in through `file-follow-up.mjs --idea`, which labels it
+`idea` instead of `needs-triage`. That label keeps it out of the triage inbox, out of the filing
+quota and inbox ceiling, and out of every sweep over `ready-for-agent` or `ready-for-human`, so
+"close all ready-for-agent issues" never picks one up. It moves into a queue only when a human
+relabels it. `--idea` refuses `--kind question`: a question is a decision and goes to
+`ready-for-human`.
+
+**Everything else is one "Notes" comment on your PR**: the debt you read past, the assumption
+you made, a cleanup too small to name a first step for. One comment per PR,
 a bullet each, headed `**Notes**`; whoever reads the PR reads it, and nobody has to triage it. A
 PR you are not opening (a review, a sweep) puts them in its hand-off instead.
 
