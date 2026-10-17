@@ -1,4 +1,4 @@
-import { and, eq, gt, isNotNull, ne, notInArray } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, ne, notInArray } from "drizzle-orm";
 import type { AppDb } from "@/db/client";
 import { createCourseForm, listCourseForms, setCourseFormRequirements } from "@/db/course-forms";
 import { getBookingReadiness } from "@/db/readiness";
@@ -28,7 +28,7 @@ export const HOUR = 60 * 60 * 1000;
 export async function charterContext(fileCtx: { db: AppDb; shop: { id: string } }) {
   const { db, shop } = fileCtx;
   const now = nowDate();
-  const [course] = await db
+  const candidates = await db
     .select({
       bookingId: bookings.id,
       personId: people.id,
@@ -51,8 +51,21 @@ export async function charterContext(fileCtx: { db: AppDb; shop: { id: string } 
         gt(trips.startsAt, now),
       ),
     )
-    .limit(1);
-  if (!course?.courseId) throw new Error("seed has no upcoming course seat");
+    .orderBy(asc(trips.startsAt), asc(bookings.id));
+  // The seed varies with the clock, so pick by shape, not by row order: a diver
+  // with only this one upcoming course seat (so the roster offers exactly it),
+  // on a session that has another diver's seat as well.
+  const count = (key: (row: (typeof candidates)[number]) => string) => {
+    const counts = new Map<string, number>();
+    for (const row of candidates) counts.set(key(row), (counts.get(key(row)) ?? 0) + 1);
+    return counts;
+  };
+  const seatsPerPerson = count((row) => row.personId);
+  const seatsPerTrip = count((row) => row.tripId);
+  const course = candidates.find(
+    (row) => seatsPerPerson.get(row.personId) === 1 && (seatsPerTrip.get(row.tripId) ?? 0) > 1,
+  );
+  if (!course?.courseId) throw new Error("seed has no upcoming course seat to share");
   await db.update(people).set({ dateOfBirth: "1990-04-02" }).where(eq(people.id, course.personId));
   await db
     .update(bookings)
