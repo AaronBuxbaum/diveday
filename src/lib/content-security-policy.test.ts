@@ -80,6 +80,7 @@ describe("the policy", () => {
     const formAction = directives(enforcedPolicy(base)).get("form-action") ?? [];
     expect(formAction).toContain("'self'");
     expect(formAction).toContain("https://checkout.stripe.com");
+    expect(formAction).toContain("https://billing.stripe.com");
     expect(formAction).toContain("https://connect.stripe.com");
   });
 

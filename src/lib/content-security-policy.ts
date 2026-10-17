@@ -228,7 +228,14 @@ const META_SIGNUP_CONNECT_HOSTS = [
  * re-checked across that redirect. Getting it wrong kills a diver's payment at
  * the last click, silently; listing two known hosts costs nothing.
  */
-const STRIPE_FORM_HOSTS = ["https://checkout.stripe.com", "https://connect.stripe.com"];
+const STRIPE_FORM_HOSTS = [
+  "https://checkout.stripe.com",
+  "https://connect.stripe.com",
+  // The Customer Portal the billing actions redirect to. A Stripe custom domain
+  // would not be listed here; its form hop is a client-side navigation once the
+  // page hydrates.
+  "https://billing.stripe.com",
+];
 
 /**
  * CloudWatch RUM's data plane and the Cognito identity pool it exchanges a

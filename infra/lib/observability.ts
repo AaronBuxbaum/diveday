@@ -314,8 +314,11 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     events: ["security.csp_violation"],
     threshold: 1,
     periodMinutes: 1_440,
-    // Paged on: a report now means the enforced policy blocked something.
-    alarm: true,
+    // Collected, not paged on. /api/csp-report is public, so anyone can post a
+    // well-formed report, and a crawler's injected `eval` (Chrome 118, source
+    // unknown) arrives most days. Read the daily count after a deploy; page on
+    // it only once the metric can tell a broken page from that noise.
+    alarm: false,
     response:
       "Read the directive, blocked origin and source origin off the lines, decide whether the host belongs in the policy, then either add it or fix what is loading it. A source that is not this app's origin is someone else's script; a report raised by a browser extension's own script is already dropped.",
   },

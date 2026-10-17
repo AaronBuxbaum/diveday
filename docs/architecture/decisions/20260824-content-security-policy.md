@@ -194,8 +194,8 @@ header.
   public schedule, the `?embed=1` widget, `/ready` and its Google Maps frame, the staff shell, the
   offline manifest and its service worker, a full Stripe checkout round trip, and the
   `opengraph-image` routes. Until that has run, `CspViolations` collects and does not page.
-- When it does get promoted, `alarm` on that signal flips to `true` in the same change: from then on
-  a report means the enforced policy blocked something real.
+- Promoting was meant to flip `alarm` on that signal to `true`; it stayed `false` (see the 2026-10-17
+  section below), because a public endpoint and a crawler make a daily page meaningless.
 - *Added 2026-10-07:* the measuring phase has a review date. `REPORT_ONLY_SINCE` and
   `REPORT_ONLY_REVIEW_BY` in `src/lib/content-security-policy.ts` record it, and a unit test fails
   on the wall clock once the review date passes, telling the reader to read the `CspViolations`
@@ -230,11 +230,11 @@ with `source: "unknown"`. None came from the app's own code:
 **The caveat.** The only production shop is the demo, so that traffic was thin, and several of the
 surfaces the Consequences list names (a full Stripe round trip, a shop's own embed host, a boat's
 offline manifest) may not have been exercised by a real visitor. That is why the enforced policy
-keeps `report-uri` and `report-to`, and why `CspViolations` now alarms (`alarm: true` in
-`infra/lib/observability.ts`): a page the policy breaks must be heard on the first day, not found by
-a diver. The bot's `eval` reports will keep arriving and are the expected noise on that alarm; a
+keeps `report-uri` and `report-to`. `CspViolations` still collects and does not page
+(`alarm: false` in `infra/lib/observability.ts`): `/api/csp-report` is public, so anyone can post a
+forged report, and the bot's `eval` reports arrive most days. Read the daily count after a deploy; a
 report whose source is this origin, or whose directive is anything but `script-src` `eval`, is a
-broken page.
+broken page. Page on it once the metric can tell the two apart.
 
 One directive changed on the way in: `frame-src` gained `'self'`. The staff embed generator
 (`src/app/shop/[shopSlug]/settings/embed/EmbedGenerator.tsx`) previews the widget by framing the
