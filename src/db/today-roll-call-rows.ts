@@ -12,6 +12,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import {
   collapseDiverActions,
   crewClashPhase,
+  departureClockOrder,
   ROLL_CALL_GAP_KINDS,
   rollCallGapUrgency,
   type TodayAction,
@@ -161,7 +162,7 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
   // (or already past "ahead") never silences the only row that says it.
   const startOrder = new Map(
     [...crewClashState.departures]
-      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime() || a.id.localeCompare(b.id))
+      .sort(departureClockOrder((trip) => trip.id))
       .map((trip, index) => [trip.id, index]),
   );
   const sayAheadOnce = (tripId: string, ahead: readonly ClashLeg[]): ClashLeg[] =>
@@ -233,9 +234,10 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
 export function pushBoatClashRows(actions: TodayAction[], ctx: TodayRowsContext): void {
   const { shopSlug, timeZone, locale, t, now } = ctx;
   const { departures, boatClashes } = ctx.wave.crewClashState;
-  const ordered = [...departures].sort(
-    (a, b) => a.startsAt.getTime() - b.startsAt.getTime() || a.id.localeCompare(b.id),
-  );
+  // Same-minute departures by title, then id (issue #2788), as the spine
+  // orders their stations: an id-only tiebreak hung the row on a different
+  // boat each seed.
+  const ordered = [...departures].sort(departureClockOrder((trip) => trip.id));
   const position = new Map(ordered.map((trip, index) => [trip.id, index]));
   for (const trip of ordered) {
     const standing: BoatClash[] = (boatClashes.get(trip.id) ?? []).filter((clash) => {

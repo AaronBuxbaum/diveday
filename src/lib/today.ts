@@ -1689,8 +1689,33 @@ export function sortStationRows(actions: readonly TodayAction[]): TodayAction[] 
     if (due !== 0) return due;
     const severity = KIND_SEVERITY[a.kind] - KIND_SEVERITY[b.kind];
     if (severity !== 0) return severity;
-    return a.subject.localeCompare(b.subject);
+    // Two rows alike in everything but their boat (two 2:30 PM departures each
+    // short the same sizes) read in their boat's order, never in the order the
+    // queue happened to build them (issue #2788).
+    return (
+      a.subject.localeCompare(b.subject) ||
+      (a.departure?.label ?? "").localeCompare(b.departure?.label ?? "") ||
+      (a.departure?.tripId ?? "").localeCompare(b.departure?.tripId ?? "") ||
+      a.id.localeCompare(b.id)
+    );
   });
+}
+
+/**
+ * **Clock order for departures, total** (issue #2788): start time, then title,
+ * then id. Two boats at the same minute read by title before id because ids
+ * are minted fresh by every seed, so an id tiebreak alone swaps them from one
+ * run to the next. Every "which of these comes first" on Today — the spine's
+ * stations, and which of two clashing departures says the clash — reads this
+ * one order, so the row and the station it files under always agree.
+ */
+export function departureClockOrder<T extends { startsAt: Date; title: string }>(
+  idOf: (departure: T) => string,
+): (a: T, b: T) => number {
+  return (a, b) =>
+    a.startsAt.getTime() - b.startsAt.getTime() ||
+    a.title.localeCompare(b.title) ||
+    idOf(a).localeCompare(idOf(b));
 }
 
 /** What `assembleDaySpine` needs of one `getTodayWork` result. */
@@ -1757,13 +1782,7 @@ function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): Da
  * a clock.
  */
 export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpine {
-  // Two boats at the same minute read by title before id: ids are minted
-  // fresh by every seed, so an id tiebreak alone swaps the two cards from one
-  // run to the next.
-  const byClock = (a: SpineDeparture, b: SpineDeparture) =>
-    a.startsAt.getTime() - b.startsAt.getTime() ||
-    a.title.localeCompare(b.title) ||
-    a.tripId.localeCompare(b.tripId);
+  const byClock = departureClockOrder<SpineDeparture>((departure) => departure.tripId);
   const todayDepartures = [...today.departures].sort(byClock);
   const tomorrowDepartures = [...tomorrow.departures].sort(byClock);
 
@@ -1940,7 +1959,8 @@ export type NeedsYouLens = {
  * - `count` is the list's own number: the lead rows, the drafts, and the
  *   payments row when it is not folded.
  * - `next` is the next boat that has not sailed, and `dueBeforeNext` is how
- *   many of the lead rows are about it — the sentence's number. Once every
+ *   many of the lead rows are about it, or about any boat leaving at the same
+ *   minute — the sentence's number. Once every
  *   boat is away the sentence says `count`.
  * - `boatsClear` is {@link todaysBoatsAreClear}.
  */
@@ -1978,8 +1998,19 @@ export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReadi
   const folded = crewsToday && (rest.length > 0 || paymentsRows > 0) ? rest : null;
   const count = lead.length + (lens.drafts ?? 0) + (folded ? 0 : paymentsRows);
   const next = spine.stations.find((station) => !hasSailed(station.startsAt, lens.now)) ?? null;
+  // The sentence names a time, not a boat: every boat leaving at that minute
+  // is "the 2:30 PM", so the count is theirs together and cannot change with
+  // which of two same-minute boats sorted first (issue #2788).
+  const nextTripIds = new Set(
+    next
+      ? spine.stations
+          .filter((station) => station.startsAt.getTime() === next.startsAt.getTime())
+          .map((station) => station.tripId)
+      : [],
+  );
   const dueBeforeNext = next
-    ? lead.filter((action) => action.departure?.tripId === next.tripId).length
+    ? lead.filter((action) => action.departure != null && nextTripIds.has(action.departure.tripId))
+        .length
     : count;
   return {
     lead,

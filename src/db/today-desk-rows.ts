@@ -3,7 +3,7 @@ import { HOUR_MS } from "@/lib/clock";
 import { formatRelativeDay } from "@/lib/format";
 import { staffDestination, staffDestinationHref, staffShopRoot } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { type TodayAction, urgencyFor } from "@/lib/today";
+import { departureClockOrder, type TodayAction, urgencyFor } from "@/lib/today";
 import { hasSailed } from "@/lib/trips";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at } from "./today-shared";
@@ -39,7 +39,7 @@ export function pushDeskRows(actions: TodayAction[], ctx: TodayRowsContext, fact
           !hasSailed(trip.startsAt, now) &&
           trip.startsAt.getTime() - now.getTime() <= EMERGENCY_CARD_WINDOW_MS,
       )
-      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())[0];
+      .sort(departureClockOrder((trip) => trip.id))[0];
     if (next) {
       const words = emergencyCardBlankText(t, {
         time: at(next.startsAt, timeZone, locale),
