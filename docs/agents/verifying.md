@@ -125,6 +125,28 @@ two cases the verify skill allows. Each one is logged with its reason and the sh
 `.claude/.hook-log` (`recordOverride` in `scripts/hook-log.mjs`), and the next session's opening
 line counts them, so an escape hatch used every day shows up as a number.
 
+### The quick run, and fixing forward
+
+On 2026-10-16 Aaron called time on the full run as the default: "stop the pattern of waiting for
+the full validations on these, just batch up work into single large PRs and stack them, adapting
+when CI fails". On a four-core cloud container the full run took most of an hour for a change
+that reached many routes, and every thread behind it in the stack queue waited too.
+
+So `pnpm verify:push --quick` is the run a push expects. It keeps steps 1 and 2 above (regen and
+a clean tree, lint, typecheck, `check:repo`, the `guards` project: the typecheck-after-a-merge
+and safeguards rows, in minutes) and replaces 3 and 4 with `vitest related` over the changed
+files, which also runs a changed test file itself, plus the unit files the base is red on. No
+e2e build, no browser. Its stamp says `"mode": "quick"` and its `notRunHere` names what it left
+to CI: the unit tests the diff does not import (the source-reading scans among them) and every
+Playwright spec. The guard accepts either stamp and still refuses a commit with none, an
+override whose reason blames the base, and a push that forks the stack.
+
+The trade is explicit: CI is now the first to run the browser for most pushes, and a red job is
+the next commit on the same layer, worked as soon as it comes back. The base-CI read below runs
+in both modes, so a quick run on a red base still refuses until the base's named unit files pass
+here or `--base-red` names them; a red Playwright job on the base is CI's to confirm. The full
+run is still there for a change where the browser's answer is worth the hour before CI's.
+
 ### A red base
 
 The gate as first built had one hole, and on 2026-10-14 it was the whole of what went red. Main
