@@ -39,7 +39,7 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { livePerson, liveTrip } from "./trips-live";
 import { issueWaiverOnJoin } from "./waiver-issue";
 import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 import { issueWaiverRequest } from "./waivers-requests";
@@ -1002,6 +1002,7 @@ async function seatPersonIsThisBookings(
         eq(people.id, booking.personId),
         eq(people.shopId, shopId),
         eq(people.createdByBookingId, booking.id),
+        livePerson(),
       ),
     )
     .limit(1);
