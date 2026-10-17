@@ -3,12 +3,18 @@
 /** The departure's internal notes: add one, delete it softly, and put it back. */
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { addInternalNote, deleteInternalNote } from "@/db/operations";
+import { readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { requireRosterBooking, tripPath } from "./roster-booking";
+
+const addNoteForm = z.object({ bookingId: text(), note: text() });
+const deleteNoteForm = z.object({ noteId: text() });
+const restoreNoteForm = z.object({ bookingId: text(), body: text() });
 
 /**
  * Adds a note **without navigating.** A note is written from a textarea inside
@@ -29,8 +35,7 @@ import { requireRosterBooking, tripPath } from "./roster-booking";
 export async function addInternalNoteAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
-  const body = String(formData.get("note") ?? "");
+  const { bookingId, note: body } = readForm(addNoteForm, formData);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, noticeUrl(back, "invalid"));
   const saved = await addInternalNote(dbi, {
@@ -58,7 +63,7 @@ export async function deleteInternalNoteAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const noteId = String(formData.get("noteId") ?? "");
+  const { noteId } = readForm(deleteNoteForm, formData);
   const result = await deleteInternalNote(await getDb(), {
     shopId: s.user.shopId,
     tripId,
@@ -92,8 +97,7 @@ export async function restoreInternalNoteAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
-  const body = String(formData.get("body") ?? "");
+  const { bookingId, body } = readForm(restoreNoteForm, formData);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, noticeUrl(back, "invalid"));
   const restored = await addInternalNote(dbi, {

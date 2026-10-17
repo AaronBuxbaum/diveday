@@ -10,6 +10,7 @@ import {
 } from "@/db/departure-notes";
 import { holdSend } from "@/db/held-sends";
 import { nowMs } from "@/lib/clock";
+import { readForm, text } from "@/lib/form-parse";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { requireStaffSession } from "@/lib/session";
 
@@ -25,6 +26,8 @@ export type HoldDepartureNoteResult =
   | { ok: true; ticket: HeldTicket }
   | { ok: false; reason: DepartureNoteRefusal | "no_recipients" | "invalid" | "rate_limited" };
 
+const departureNoteForm = z.object({ body: text() });
+
 export async function holdDepartureNoteAction(
   tripId: string,
   formData: FormData,
@@ -38,7 +41,7 @@ export async function holdDepartureNoteAction(
     RATE_LIMITS.staffSendByActor,
   );
   if (!sendAllowed.allowed) return { ok: false, reason: "rate_limited" };
-  const body = String(formData.get("body") ?? "");
+  const { body } = readForm(departureNoteForm, formData);
   const db = await getDb();
   const shopId = session.user.shopId;
   const check = await checkDepartureNote(db, { shopId, tripId, body, countHeld: true });

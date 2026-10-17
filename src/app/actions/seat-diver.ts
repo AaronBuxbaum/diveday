@@ -7,7 +7,7 @@ import { findSimilarDivers } from "@/db/divers";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
 import { nowDate } from "@/lib/clock";
-import { blankAsAbsent, formValue, parseForm, single } from "@/lib/form-parse";
+import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
@@ -147,8 +147,10 @@ function refuse(
  * (`bookings/new?request=`). A uuid or nothing; the writer scopes it to the
  * session's shop, so a forged id reaches no other tenant's lead.
  */
+const answeredRequestForm = z.object({ request: formValue() });
+
 function answeredRequestId(formData: FormData): string | null {
-  const value = formData.get("request");
+  const value = readForm(answeredRequestForm, formData).request;
   return typeof value === "string" && uuidParam(value) ? value : null;
 }
 

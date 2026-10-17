@@ -401,8 +401,12 @@ export async function saveCourseFormRequirementsAction(slug: string, formData: F
   // The optional age under each ticked form (issue #2265): blank asks every
   // student; anything else that is not a whole age in range refuses the save.
   const maxAgeYears = new Map<string, number>();
+  const maxAges = readForm(
+    z.object(Object.fromEntries(ordered.map((id) => [`maxAge-${id}`, trimmedText()]))),
+    formData,
+  );
   for (const id of ordered) {
-    const raw = String(formData.get(`maxAge-${id}`) ?? "").trim();
+    const raw = maxAges[`maxAge-${id}`] ?? "";
     if (raw === "") continue;
     const age = /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
     if (!Number.isInteger(age)) redirect(noticeUrl(anchor, "forms-invalid-age"));

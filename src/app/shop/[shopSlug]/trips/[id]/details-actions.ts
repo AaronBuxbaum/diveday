@@ -26,6 +26,7 @@ import {
   updateTrip,
 } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
+import { checkbox, formValue, readForm } from "@/lib/form-parse";
 import { parseWetsuitThicknessMm } from "@/lib/gear";
 import { meetingPointMoved, meetingPointOfRows } from "@/lib/meeting-point";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
@@ -355,9 +356,11 @@ function redirectDetailsRefusal(
  * no change (`nextUrl` undefined). `discardUpload` deletes the new file again
  * when the save that would have pointed at it is refused.
  */
+const arrivalPhotoForm = z.object({ arrivalPhoto: formValue(), removeArrivalPhoto: checkbox() });
+
 async function arrivalPhotoChange(formData: FormData, back: string) {
   let uploadedUrl: string | undefined;
-  const arrivalPhoto = formData.get("arrivalPhoto");
+  const { arrivalPhoto, removeArrivalPhoto: remove } = readForm(arrivalPhotoForm, formData);
   if (arrivalPhoto instanceof File && arrivalPhoto.size > 0) {
     const stored = await storeArrivalImage({
       filename: arrivalPhoto.name,
@@ -369,7 +372,6 @@ async function arrivalPhotoChange(formData: FormData, back: string) {
     }
     uploadedUrl = stored.url;
   }
-  const remove = formData.get("removeArrivalPhoto") === "on";
   return {
     nextUrl: uploadedUrl ?? (remove ? null : undefined),
     discardUpload: async () => {

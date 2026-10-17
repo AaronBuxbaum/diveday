@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { paperWaiverAttestation, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
 import { canPersonRetireMedicalRefusal } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { deliverWaiverBatch } from "@/db/waiver-issue";
 import { recordInPersonWaiver, retireMedicalRefusal } from "@/db/waivers";
+import { readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -28,10 +30,12 @@ import { isRosterBooking, requireRosterBooking, tripPath } from "./roster-bookin
  * the row's own waiver controls (copy the link, text it, or record paper) take
  * over.
  */
+const rosterBookingForm = z.object({ bookingId: text() });
+
 export async function sendNewWaiverAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const { bookingId } = readForm(rosterBookingForm, formData);
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
@@ -101,7 +105,7 @@ export async function markRosterWaiverInPersonAction(
 ): Promise<PaperWaiverFormState> {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const { bookingId } = readForm(rosterBookingForm, formData);
   // No seat on the request at all: the form always carries one here, so this is
   // not a submission the form made. Answered in the form anyway rather than
   // redirected, so there is exactly one shape of refusal to read.

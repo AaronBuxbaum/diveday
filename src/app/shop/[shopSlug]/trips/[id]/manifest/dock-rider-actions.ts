@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { addDockRider, type DockRiderOwes, type DockRiderRefusal } from "@/db/dock-rider";
 import { getShopById } from "@/db/shops";
+import { blankAsAbsent, parseForm, single } from "@/lib/form-parse";
 import { diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
@@ -21,12 +22,12 @@ export type DockRiderState =
   | { status: "refused"; reason: DockRiderRefusal | "invalid" };
 
 const dockRiderSchema = z.object({
-  fullName: diverNameSchema,
-  phone: diverPhoneSchema.optional(),
-  emergencyContactName: diverNameSchema,
-  emergencyContactPhone: diverPhoneSchema.min(1),
-  dateOfBirth: z.string().trim().max(10).optional(),
-  participantType: z.enum(["rider", "snorkeler"]),
+  fullName: single(diverNameSchema, ""),
+  phone: blankAsAbsent(diverPhoneSchema),
+  emergencyContactName: single(diverNameSchema, ""),
+  emergencyContactPhone: single(diverPhoneSchema.min(1), ""),
+  dateOfBirth: blankAsAbsent(z.string().trim().max(10)),
+  participantType: single(z.enum(["rider", "snorkeler"]), "rider"),
 });
 
 export async function addDockRiderAction(
@@ -36,15 +37,8 @@ export async function addDockRiderAction(
 ): Promise<DockRiderState> {
   const session = await requireStaffSession();
   if (!z.uuid().safeParse(tripId).success) return { status: "refused", reason: "invalid" };
-  const parsed = dockRiderSchema.safeParse({
-    fullName: formData.get("fullName") ?? "",
-    phone: formData.get("phone") || undefined,
-    emergencyContactName: formData.get("emergencyContactName") ?? "",
-    emergencyContactPhone: formData.get("emergencyContactPhone") ?? "",
-    dateOfBirth: formData.get("dateOfBirth") || undefined,
-    participantType: formData.get("participantType") ?? "rider",
-  });
-  if (!parsed.success) return { status: "refused", reason: "invalid" };
+  const parsed = parseForm(dockRiderSchema, formData);
+  if (!parsed.ok) return { status: "refused", reason: "invalid" };
   const db = await getDb();
   const result = await addDockRider(db, {
     shopId: session.user.shopId,

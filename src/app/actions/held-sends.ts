@@ -21,7 +21,7 @@ import { getShopById } from "@/db/shops";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import { trackEvent } from "@/lib/analytics";
 import { nowMs } from "@/lib/clock";
-import { formValue, parseForm, trimmedText } from "@/lib/form-parse";
+import { formValue, parseForm, readForm, single, trimmedText } from "@/lib/form-parse";
 import { type HeldSendPayload, heldSendPayloadSchema } from "@/lib/held-sends";
 import { majorToMinor, toShopCurrency } from "@/lib/money";
 import { requireStaffSession } from "@/lib/session";
@@ -130,20 +130,23 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
  * `trips.divers_told_meeting_point`), never form fields, so a posted
  * `previousStartsAt` or `meetingPointMoved` is not read at all.
  */
-const tellThemForm = z.object({ tripId: z.uuid() });
+const tellThemForm = z.object({ tripId: single(z.uuid()) });
+const holdKindForm = z.object({ holdKind: formValue() });
 
 export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
   const session = await requireStaffSession();
   const db = await getDb();
   // The shop's currency, only to read a fixed-amount deal's major units.
-  if (formData.get("holdKind") === "trip_rescheduled") {
+  if (readForm(holdKindForm, formData).holdKind === "trip_rescheduled") {
     // "Tell them" after an Undo: the same gate as the move that held it, and
     // the same hold, so a second tap folds into the first rather than sending
     // twice. The recipients are read off the trip at send time, never here.
     if (!(await canPersonConfigureTrips(db, session.user.shopId, session.user.personId))) {
       throw new Error("not_authorized");
     }
-    const form = tellThemForm.parse({ tripId: formData.get("tripId") });
+    const tell = parseForm(tellThemForm, formData);
+    if (!tell.ok) throw new Error("unreadable hold form");
+    const form = tell.data;
     // Whether the meeting point moved is the server's record too
     // (`trips.divers_told_meeting_point`): a posted `meetingPointMoved` is not read.
     const held = await holdRescheduleNotice(db, {
