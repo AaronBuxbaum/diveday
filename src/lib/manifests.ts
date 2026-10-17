@@ -965,6 +965,8 @@ export type TripManifest = {
      * so beside souls on board. Optional for the same reason as `capacity`.
      */
     isRehearsal?: boolean;
+    /** Past no-decompression limits: the roll call reminds crew to check technical cards. */
+    exceedsNoDecoLimits?: boolean;
     /**
      * A cancelled departure: the dock takes no rider (#2394). Optional for the
      * same reason as `capacity`; absent reads as not cancelled, which only

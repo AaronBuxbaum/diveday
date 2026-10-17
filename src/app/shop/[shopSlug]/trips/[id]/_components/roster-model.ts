@@ -48,6 +48,8 @@ export type RosterTrip = {
   shopSlug: string;
   /** A rehearsal departure: nothing about it is sent (ADR 20261012-rehearsal-departures). */
   rehearsal?: boolean;
+  /** Marked as past no-decompression limits: the roster reminds crew to check technical cards. */
+  exceedsNoDecoLimits?: boolean;
   shopTimezone: string;
   locale: string;
   tripId: string;

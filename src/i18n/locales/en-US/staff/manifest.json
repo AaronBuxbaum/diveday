@@ -191,6 +191,7 @@
   "buddySummaryUnteamed": " · {count, plural, one {# diver not on a team} other {# divers not on a team}}",
   "noDiversLine": "No divers are booked on this departure.",
   "diverFactsSummaryWithMedical": "Contact, gear & medical",
+  "decompressionReminder": "This departure goes past no-decompression limits. DiveDay does not record technical cards: check each diver’s decompression certification.",
   "sharedDepthApplies": "Applies to {names}.",
   "depthChip": "Depth advisory",
   "personDetails": "Details",

@@ -1,7 +1,9 @@
+import { DecompressionReminder } from "@/components/DecompressionReminder";
 import { RollCallTouchCue } from "@/components/RollCallTouchCue";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import { needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { scopedId } from "@/lib/element-id";
 import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { DiverRollCallRow } from "./DiverRollCallRow";
@@ -18,6 +20,10 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
   // so no capsule, fact block or shared advisory can reach past it.
   const divers = rosterDivers.map(withholdHeldSeatParticulars);
   const { sharedAdvisories, sharedAdvisoryTexts } = sharedDepthAdvisories(divers, t);
+  const showsDecompressionReminder = needsDecompressionCardReminder(
+    context.exceedsNoDecoLimits,
+    divers.map((diver) => diver.participantType),
+  );
   // Which row the reader sees first, which is not `divers[0]` once an alarm
   // pulls one up. Derived from the same `rollCallRowState` the rows use, so the
   // hairline above the top row cannot disagree with what `order-first` moved.
@@ -55,6 +61,9 @@ export function DiverRollCall({ context }: { context: DiverRollCallContext }) {
           checkpoint: rollCallCheckpointText(t, checkpoint),
         })}
       </h2>
+      {showsDecompressionReminder ? (
+        <DecompressionReminder text={t("manifest.decompressionReminder")} />
+      ) : null}
       <SharedDepthAdvisories sharedAdvisories={sharedAdvisories} locale={locale} t={t} />
       {/* **A flex column, and no `divide-y`** (decision 4, issue #1054).
           A diver recorded not back aboard is pulled to the top *on screen* with

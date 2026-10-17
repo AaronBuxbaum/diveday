@@ -132,6 +132,8 @@ export type RosterFixtureOptions = {
   moveSeat?: SeatMove;
   /** Seats marked aboard a boat that has left, whose Remove refuses (H-133). */
   aboardAtSea?: ReadonlyMap<string, AboardHold>;
+  /** The departure is marked as past no-decompression limits. */
+  exceedsNoDecoLimits?: boolean;
 };
 
 function rosterProps({
@@ -154,6 +156,7 @@ function rosterProps({
   certifyDefaultLevel,
   moveSeat,
   aboardAtSea,
+  exceedsNoDecoLimits,
 }: RosterFixtureOptions) {
   return {
     trip: {
@@ -172,6 +175,7 @@ function rosterProps({
       canManageOrders,
       splitAsksDateOfBirth,
       certifyDefaultLevel,
+      exceedsNoDecoLimits,
     },
     rows: {
       roster,

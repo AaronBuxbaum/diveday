@@ -249,6 +249,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         trip={{
           shopSlug,
           rehearsal: trip.isRehearsal,
+          exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
           shopTimezone: timezone,
           locale,
           tripId: trip.id,

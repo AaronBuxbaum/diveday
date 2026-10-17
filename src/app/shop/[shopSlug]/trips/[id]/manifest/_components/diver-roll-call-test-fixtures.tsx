@@ -60,11 +60,13 @@ export function renderList({
   divers,
   checkpoint = "after_dive_1",
   locale = ENGLISH,
+  exceedsNoDecoLimits,
 }: {
   divers: TripManifest["divers"];
   checkpoint?: RollCallCheckpoint;
   /** Both locales, for the copy this list is the on-screen guarantee for. */
   locale?: TestLocale;
+  exceedsNoDecoLimits?: boolean;
 }) {
   return render(
     <DiverRollCall
@@ -73,6 +75,7 @@ export function renderList({
         crew: [],
         checkpoint,
         isDeparture: checkpoint === "departure",
+        exceedsNoDecoLimits,
         shopSlug: "blue-mantis",
         tripId: "00000000-0000-4000-8000-0000000000ff",
         locale,

@@ -5,11 +5,13 @@ import {
   agencyCheckAllCopy,
   agencyCheckCopies,
 } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
+import { DecompressionReminder } from "@/components/DecompressionReminder";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { needsDecompressionCardReminder } from "@/lib/decompression-reminder";
 import { signingDate } from "@/lib/guardian";
 import { RosterAllClear } from "./RosterAllClear";
 import { RosterGroup, RosterGroupBand } from "./RosterGroupBand";
@@ -95,6 +97,10 @@ export function RosterSection({
   });
   const { stillToClear, ready, here, notHere, hereMeta, blockedCount, sharedFacts, sailedMeta } =
     groups;
+  const showsDecompressionReminder = needsDecompressionCardReminder(
+    trip.exceedsNoDecoLimits,
+    roster.map(({ booking }) => booking.participantType),
+  );
   // A record never celebrates a clearance: there was nothing left to clear.
   const showAllClear = roster.length > 0 && !record;
   const context: RosterRowContext = {
@@ -140,6 +146,11 @@ export function RosterSection({
           about nobody is not a finished thing. */}
       {showAllClear ? (
         <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
+      ) : null}
+      {showsDecompressionReminder ? (
+        <div className="mb-10">
+          <DecompressionReminder text={t("trips.roster.decompressionReminder")} />
+        </div>
       ) : null}
       {actions.agencyCheckAction ? (
         <div>

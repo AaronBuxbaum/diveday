@@ -1238,6 +1238,7 @@ export async function getTripManifests(
     certifiedTotalPersons: trip.certifiedTotalPersons,
     // Printed beside souls on board, so a practice sheet is never read as a boat.
     isRehearsal: trip.isRehearsal,
+    exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
     // The dock-rider form stays shut on a cancelled departure (#2394).
     cancelled: trip.status === "cancelled",
   };

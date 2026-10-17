@@ -27,6 +27,30 @@ afterEach(cleanup);
  * a restyle may move everything here except what these assert.
  */
 
+describe("the decompression reminder on the roster (H-144)", () => {
+  const words = "decompression certification";
+  const rowsFor = (type: "diver" | "snorkeler" | "rider") => ({
+    roster: [entry("b1", "Meera Iyer", { participantType: type })],
+    readiness: new Map([["b1", readinessRow("ready")]]) as unknown as ReadinessByBooking,
+    waivers: new Map() as unknown as WaiverByBooking,
+  });
+
+  it("shows once on a decompression departure with a diver aboard", () => {
+    renderRoster({ ...rowsFor("diver"), exceedsNoDecoLimits: true });
+    expect(screen.getAllByText(new RegExp(words))).toHaveLength(1);
+  });
+
+  it("is silent on a departure not marked as decompression diving", () => {
+    renderRoster({ ...rowsFor("diver"), exceedsNoDecoLimits: false });
+    expect(screen.queryByText(new RegExp(words))).toBeNull();
+  });
+
+  it.each(["snorkeler", "rider"] as const)("is silent when only a %s is booked", (type) => {
+    renderRoster({ ...rowsFor(type), exceedsNoDecoLimits: true });
+    expect(screen.queryByText(new RegExp(words))).toBeNull();
+  });
+});
+
 describe("the guests ledger (slice 5d)", () => {
   it("files every seat under a group band that owns the state word and the count", () => {
     renderRoster(fixtures);
