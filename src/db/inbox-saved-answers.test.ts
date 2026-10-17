@@ -51,7 +51,10 @@ describe("saveAnswerFromReply", () => {
     const replyId = await sentReply(`Hi ${first}, park behind the shop by the tank racks.`);
     const outcome = await saveAnswerFromReply(ctx.db, { shopId: ctx.shop.id, replyId });
     expect(outcome.ok).toBe(true);
-    const saved = (await listSavedAnswers(ctx.db, ctx.shop.id)).at(-1);
+    // Seeded answers share the frozen clock's instant, so find it by its words.
+    const saved = (await listSavedAnswers(ctx.db, ctx.shop.id)).find((answer) =>
+      answer.body.includes("park behind the shop"),
+    );
     expect(saved?.body).toBe("Hi {name}, park behind the shop by the tank racks.");
     expect(saved?.body).not.toContain(first);
     expect(saved?.title).toBe("Hi, park behind the shop by the tank…");

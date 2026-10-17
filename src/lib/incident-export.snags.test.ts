@@ -35,6 +35,8 @@ function input(overrides: Partial<IncidentExportInput> = {}): IncidentExportInpu
 /**
  * The hash of `input()` as built at a8a4f877d, before `sailedWithSnags`
  * existed: a log printed then must still match a fresh export with no snags.
+ * That code is version 1 of the departure log's hash (ADR
+ * 20261016-departure-log-code-v2), so it is asked for as version 1.
  */
 const PRE_FIELD_HASH = "0d46a441e95fca1128142c615f66803dd9795a94335109a8704e03d65ed84af9";
 
@@ -45,7 +47,7 @@ describe("buildIncidentExport: snags open when the boat sailed", () => {
     expect(doc.sailedWithSnags).toEqual([]);
     const { contentHash, ...body } = doc;
     expect(incidentExportContentHash(body)).toBe(contentHash);
-    expect(contentHash).toBe(PRE_FIELD_HASH);
+    expect(incidentExportContentHash(body, 1)).toBe(PRE_FIELD_HASH);
   });
 
   it("carries each one and hashes it", () => {

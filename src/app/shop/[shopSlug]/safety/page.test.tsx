@@ -118,7 +118,7 @@ describe("the Safety year", () => {
       /Blue Mantis[^\n]* · January 1 to [^\n]*, \d{4} · /,
     );
     expect(text).toContain("Printed ");
-    expect(text).toContain("A diver first counted at a later checkpoint is not in this figure.");
+    expect(text).toContain("a person first counted at a later checkpoint is not in this figure.");
   });
 
   it("counts filed incident reports and names drafts beside them (review F4)", async () => {

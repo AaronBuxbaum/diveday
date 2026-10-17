@@ -131,5 +131,7 @@ describe("what the assembly readers cost", () => {
  * 60 → 61 (fifth loop, merged): what it added is the crew's open snags against
  * a boat's checklist (`openSnagsForShop`), one statement in Today's one wave,
  * on top of the desk layer's count of found items waiting to go home.
+ * 61 → 62 (merging main, 2026-10-17): main's boat-on-two-departures read
+ * (`boatClashesByTrip`, H-80) beside the crew clash, in the same wave.
  */
-const TODAY_QUERY_CEILING = 61;
+const TODAY_QUERY_CEILING = 62;
