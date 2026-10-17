@@ -7,7 +7,9 @@ import {
   seatBlockerCodes,
 } from "@/test/training-mark-context";
 import { signCourseForm } from "./course-forms";
-import { bookings, people } from "./schema";
+import { bookings, people, tripAssignments } from "./schema";
+import { clearTrainingDive } from "./training-marks";
+import { changeTripCrew } from "./trips-crew";
 
 // The review round on #2275's build: each gate a reviewer found open.
 const fileCtx = fileScopedShopContext();
@@ -59,6 +61,54 @@ describe("training marks — the gates the build review closed (in-memory PGlite
         .set({ minorDeclaredAt: ctx.now })
         .where(eq(bookings.id, ctx.course.bookingId));
       expect(await seatBlockerCodes(ctx)).toContain("course_form_guardian_missing");
+    });
+  });
+
+  describe("clearing with forms owed takes an instructor someone else rostered", () => {
+    type Ctx = Awaited<ReturnType<typeof charterContext>>;
+    const roster = (ctx: Ctx, actor: string, tripRole: "instructor") =>
+      changeTripCrew(
+        ctx.db,
+        ctx.shop.id,
+        ctx.course.tripId,
+        { personId: ctx.instructor, operation: "assign", tripRole },
+        { actorPersonId: actor },
+      );
+    const clear = (ctx: Ctx) =>
+      clearTrainingDive(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.seat.id,
+        actorPersonId: ctx.instructor,
+      });
+
+    it("refuses an instructor who put themselves on the session", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      expect(await roster(ctx, ctx.instructor, "instructor")).toBe(true);
+      expect(await clear(ctx)).toEqual({ ok: false, reason: "forms_owed" });
+      expect(await seatBlockerCodes(ctx)).toContain("course_form_unsigned");
+    });
+
+    it("refuses an instructor who made themselves the session's instructor", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      // Rostered by the owner as the divemaster, written straight in: the
+      // course rules would refuse a session left with no instructor.
+      await ctx.db.insert(tripAssignments).values({
+        tripId: ctx.course.tripId,
+        personId: ctx.instructor,
+        tripRole: "divemaster",
+        assignedByPersonId: ctx.owner,
+      });
+      expect(await roster(ctx, ctx.instructor, "instructor")).toBe(true);
+      expect(await clear(ctx)).toEqual({ ok: false, reason: "forms_owed" });
+    });
+
+    it("takes an instructor the owner rostered", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      expect(await roster(ctx, ctx.owner, "instructor")).toBe(true);
+      expect(await clear(ctx)).toEqual({ ok: true, changed: true });
     });
   });
 });

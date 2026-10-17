@@ -285,6 +285,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "bookings.course_materials_done_by_person_id": "which staffer marked the materials done",
   "bookings.training_marked_by_person_id": "which staffer marked the dive as training",
   "bookings.training_cleared_by_person_id": "which staffer cleared a training mark with forms owed",
+  "trip_assignments.assigned_by_person_id": "which staffer rostered the crew member",
   "buddy_pair_members.crew_person_id": "a crew member on a team, refused as a staff record",
   "booking_arrival_events.recorded_by_person_id": "who checked the diver in at the counter",
   "booking_payment_events.recorded_by_person_id": "who marked the payment by hand",

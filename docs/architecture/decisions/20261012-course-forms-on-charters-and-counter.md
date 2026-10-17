@@ -26,7 +26,7 @@ A `dive-domain-expert` review's changes are folded in below.
   canceled, held or moved) is `training_mark_invalid` until staff clear it, never "no mark". Every
   mark and clear pushes the manifest, which refreshes the offline copy.
 - Clearing a mark with forms owed, or one that no longer holds, takes `canManageWaiverTemplates`
-  or the enrollment's rostered instructor, and the manifest names who did.
+  or the enrollment's instructor, rostered by another; the manifest names who did.
 - "In training" is unchanged: the mark answers "which forms", not "may this diver dive past their
   card". The row warns when no instructor is on the charter's crew.
 

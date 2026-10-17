@@ -195,7 +195,12 @@ export type ClearTrainingDiveOutcome =
         | "forms_owed";
     };
 
-/** Whether this person is rostered as an instructor on this departure. */
+/**
+ * Whether this person is rostered as an instructor on this departure **by
+ * someone else** (build review T2): an assignment, or a role, they gave
+ * themselves — or one nobody is recorded as giving — proves nothing about who
+ * teaches the session, so it fails closed.
+ */
 async function teachesSession(
   tx: DbExecutor,
   shopId: string,
@@ -215,6 +220,8 @@ async function teachesSession(
         eq(trips.shopId, shopId),
         eq(tripAssignments.tripId, tripId),
         eq(tripAssignments.personId, personId),
+        isNotNull(tripAssignments.assignedByPersonId),
+        ne(tripAssignments.assignedByPersonId, personId),
         liveTrip(),
       ),
     );

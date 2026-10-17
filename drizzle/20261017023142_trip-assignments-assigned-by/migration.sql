@@ -1,0 +1,3 @@
+ALTER TABLE "trip_assignments" ADD COLUMN "assigned_by_person_id" uuid;--> statement-breakpoint
+CREATE INDEX "trip_assignments_assigned_by_idx" ON "trip_assignments" ("assigned_by_person_id");--> statement-breakpoint
+ALTER TABLE "trip_assignments" ADD CONSTRAINT "trip_assignments_assigned_by_person_id_people_id_fkey" FOREIGN KEY ("assigned_by_person_id") REFERENCES "people"("id") ON DELETE SET NULL;

@@ -635,13 +635,17 @@ export async function setTripCrew(
     // them: the course check below has to know which job each person would be
     // doing, and the delete-all-then-insert write further down has to carry
     // them forward for anyone who stays.
-    const existingRoles = new Map(
-      (
-        await tx
-          .select({ personId: tripAssignments.personId, tripRole: tripAssignments.tripRole })
-          .from(tripAssignments)
-          .where(eq(tripAssignments.tripId, tripId))
-      ).map((row) => [row.personId, row.tripRole] as const),
+    const existing = await tx
+      .select({
+        personId: tripAssignments.personId,
+        tripRole: tripAssignments.tripRole,
+        assignedByPersonId: tripAssignments.assignedByPersonId,
+      })
+      .from(tripAssignments)
+      .where(eq(tripAssignments.tripId, tripId));
+    const existingRoles = new Map(existing.map((row) => [row.personId, row.tripRole] as const));
+    const existingAssigners = new Map(
+      existing.map((row) => [row.personId, row.assignedByPersonId] as const),
     );
     const roleAfterChange = (entry: TripCrewMemberInput) => {
       const personId = crewInputPersonId(entry);
@@ -744,11 +748,21 @@ export async function setTripCrew(
     );
     if (requested.length > 0) {
       await tx.insert(tripAssignments).values(
-        requested.map((entry) => ({
-          tripId,
-          personId: crewInputPersonId(entry),
-          tripRole: roleAfterChange(entry),
-        })),
+        requested.map((entry) => {
+          const personId = crewInputPersonId(entry);
+          const tripRole = roleAfterChange(entry);
+          // Who rostered someone whose place did not change stays who did; a
+          // newcomer or a new role is this staffer's doing.
+          const kept = existingRoles.has(personId) && existingRoles.get(personId) === tripRole;
+          return {
+            tripId,
+            personId,
+            tripRole,
+            assignedByPersonId: kept
+              ? (existingAssigners.get(personId) ?? null)
+              : (options.actorPersonId ?? null),
+          };
+        }),
       );
     }
     return true;
@@ -1170,9 +1184,12 @@ export async function changeTripCrewOutcome(
           options.now,
         );
       }
-      const insert = tx
-        .insert(tripAssignments)
-        .values({ tripId, personId: change.personId, tripRole: change.tripRole ?? null });
+      const insert = tx.insert(tripAssignments).values({
+        tripId,
+        personId: change.personId,
+        tripRole: change.tripRole ?? null,
+        assignedByPersonId: options.actorPersonId ?? null,
+      });
       // Assign is idempotent, so an already-assigned person hits the conflict
       // path — which is exactly where a *role change* on an existing
       // assignment arrives. `onConflictDoNothing` alone would accept the call,
@@ -1183,7 +1200,11 @@ export async function changeTripCrewOutcome(
         ? insert.onConflictDoNothing()
         : insert.onConflictDoUpdate({
             target: [tripAssignments.tripId, tripAssignments.personId],
-            set: { tripRole: change.tripRole },
+            // A new job is this staffer's doing, as a new seat is.
+            set: {
+              tripRole: change.tripRole,
+              assignedByPersonId: sql`case when ${tripAssignments.tripRole} is distinct from excluded.trip_role then excluded.assigned_by_person_id else ${tripAssignments.assignedByPersonId} end`,
+            },
           }));
     } else {
       const removed = await tx

@@ -296,9 +296,12 @@ describe("training marks — a training dive on a charter (in-memory PGlite)", (
     it("with forms owed, takes the enrollment's rostered instructor and stamps who cleared it", async () => {
       const ctx = await charterContext();
       await mark(ctx);
-      await ctx.db
-        .insert(tripAssignments)
-        .values({ tripId: ctx.course.tripId, personId: ctx.instructor, tripRole: "instructor" });
+      await ctx.db.insert(tripAssignments).values({
+        tripId: ctx.course.tripId,
+        personId: ctx.instructor,
+        tripRole: "instructor",
+        assignedByPersonId: ctx.owner,
+      });
       expect(
         await clearTrainingDive(ctx.db, {
           shopId: ctx.shop.id,
