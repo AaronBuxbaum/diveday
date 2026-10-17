@@ -1,7 +1,8 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { fileScopedShopContext } from "@/test/db";
 import { createDiveSite } from "./dive-sites";
 import { bookings, courses, shops, trips } from "./schema";
@@ -887,6 +888,40 @@ describe("the week board", () => {
     // per trip, whatever it is joined to.
     const ids = entries.map((entry) => entry.tripId);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("prices a course session at the course total the booking charges, never the trip row's own figure", async () => {
+    // H-125: the public schedule already reads the course's price; the staff
+    // board read the trip row's and said $195 where the diver pays $175.
+    const { db, shop } = ctx;
+
+    const weeks = [
+      await weekBoard(db, shop.id, THIS_WEEK, TZ),
+      await weekBoard(db, shop.id, COURSE_WEEK, TZ),
+    ];
+    const shown = weeks.flatMap((week) => [...Object.values(week.days).flat(), ...week.spans]);
+    const rows = await db
+      .select({ trip: trips, course: courses })
+      .from(trips)
+      .leftJoin(courses, eq(courses.id, trips.courseId))
+      .where(
+        inArray(
+          trips.id,
+          shown.map((cell) => cell.tripId),
+        ),
+      );
+    const sessions = rows.filter((row) => row.course !== null);
+    // The seed has to hold a session whose own price differs from its course's,
+    // or this test pins nothing.
+    expect(
+      sessions.some(
+        (row) => perDiverBookingPriceCents(row.trip, row.course) !== row.trip.priceCents,
+      ),
+    ).toBe(true);
+    for (const { trip, course } of sessions) {
+      const cell = shown.find((candidate) => candidate.tripId === trip.id);
+      expect(cell?.priceCents, trip.title).toBe(perDiverBookingPriceCents(trip, course));
+    }
   });
 
   it("carries a bucket for every day of the week, empty ones included", async () => {
