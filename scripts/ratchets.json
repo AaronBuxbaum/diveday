@@ -273,7 +273,7 @@
     "e2e/trips.spec.ts": 5,
     "e2e/visual.spec.ts": 7,
     "e2e/waiver-print.spec.ts": 1,
-    "e2e/waivers.spec.ts": 16,
+    "e2e/waivers.spec.ts": 15,
     "e2e/whatsapp-settings.spec.ts": 1,
     "e2e/work-orders.spec.ts": 4
   },

@@ -1,4 +1,4 @@
-# H-138: Does a filed report of a missing diver tell the owners at once?
+# H-142: Does a filed report of a missing diver tell the owners at once?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

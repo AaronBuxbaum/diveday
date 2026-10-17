@@ -1595,7 +1595,7 @@ const rollCallStaleSchema = z.object({
 });
 
 /**
- * **A filed incident report of kind "missing diver"** (H-138, decided
+ * **A filed incident report of kind "missing diver"** (H-142, decided
  * 2026-10-16; `sendMissingDiverAlerts`, src/db/missing-diver-alerts.ts). Staff
  * safety mail to each of the shop's owners at once, once per report: whoever
  * filed it chose "missing diver" on purpose, so the shop does not wait for the
