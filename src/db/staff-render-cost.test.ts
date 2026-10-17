@@ -682,7 +682,10 @@ const PUBLIC_TRIP_CEILING = 20;
 // 39 → 40: the dive-package line reads what this seat itself spends beside
 // what the diver has left (`packageDivesForBooking`, one `queryAll` wave), one
 // statement more than the count it replaced, in the same round trip.
-const READY_CEILING = 40;
+// 40 → 41 (issue #2676): the away mark reads through `crewAwayByTrip`, the one
+// place the rule lives, which reads the departure's roster beside its public
+// crew; still one round trip, since the window is passed in.
+const READY_CEILING = 41;
 // 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
 // 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
 // Stripe account and the other boats off the trip — are its third round trip.

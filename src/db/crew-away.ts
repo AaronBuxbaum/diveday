@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { type AvailabilityBlock, overlappingBlocks } from "@/lib/crew-requests";
+import type { TripMeeting } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
 import { people, tripAssignments, trips } from "./schema";
@@ -37,10 +38,18 @@ export async function crewAwayByTrip(
   shopId: string,
   tripIds: readonly string[],
   timeZone: string,
+  /**
+   * The calendar days the departures cover, when the caller already holds
+   * them (the diver pages hold the one departure's window): the days away are
+   * then read beside the roster rather than after it, one round trip, not two.
+   */
+  window?: { from: string; to: string },
 ): Promise<Map<string, CrewAway[]>> {
   const byTrip = new Map<string, CrewAway[]>();
   if (tripIds.length === 0) return byTrip;
-  const rows = await db
+  const blocksIn = (range: { from: string; to: string }) =>
+    listCrewAvailabilityBlocks(db, shopId, range);
+  const rosterRead = db
     .select({
       tripId: trips.id,
       startsAt: trips.startsAt,
@@ -59,22 +68,36 @@ export async function crewAwayByTrip(
         liveTrip(),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(people.fullName));
-  if (rows.length === 0) return byTrip;
-
-  const from = calendarDateInTimezone(
-    new Date(Math.min(...rows.map((row) => row.startsAt.getTime()))),
-    timeZone,
-  );
-  const to = calendarDateInTimezone(
-    new Date(Math.max(...rows.map((row) => row.endsAt.getTime()))),
-    timeZone,
-  );
-  const [blocks, meetingsByTrip] = await Promise.all([
-    listCrewAvailabilityBlocks(db, shopId, { from, to }),
-    tripMeetings(db, shopId, [...new Set(rows.map((row) => row.tripId))]),
-  ]);
-  if (blocks.length === 0) return byTrip;
+    .orderBy(asc(trips.startsAt), asc(people.fullName))
+    // Settled once: a Drizzle query sends itself again on every `then`.
+    .then((roster) => roster);
+  // Without a window the days away wait on the roster's dates, and both they
+  // and the schedule days are skipped when nobody is rostered.
+  const blocksRead = window
+    ? blocksIn(window)
+    : rosterRead.then((roster) =>
+        roster.length === 0
+          ? []
+          : blocksIn({
+              from: calendarDateInTimezone(
+                new Date(Math.min(...roster.map((row) => row.startsAt.getTime()))),
+                timeZone,
+              ),
+              to: calendarDateInTimezone(
+                new Date(Math.max(...roster.map((row) => row.endsAt.getTime()))),
+                timeZone,
+              ),
+            }),
+      );
+  const meetingsRead = window
+    ? tripMeetings(db, shopId, [...new Set(tripIds)])
+    : rosterRead.then((roster) =>
+        roster.length === 0
+          ? new Map<string, TripMeeting[]>()
+          : tripMeetings(db, shopId, [...new Set(roster.map((row) => row.tripId))]),
+      );
+  const [rows, meetingsByTrip, blocks] = await Promise.all([rosterRead, meetingsRead, blocksRead]);
+  if (rows.length === 0 || blocks.length === 0) return byTrip;
 
   for (const row of rows) {
     const meetings = meetingsByTrip.get(row.tripId) ?? [
