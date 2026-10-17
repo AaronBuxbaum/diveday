@@ -1013,6 +1013,8 @@ async function enrollmentFor(
   return {
     ...enrollment,
     identityHeld: enrollment.identityHeld || row.identityUnconfirmedAt !== null,
+    // Either seat's "Under 18" asks the guardian: one flag for both (fail closed).
+    minorDeclared: enrollment.minorDeclared || row.minorDeclaredAt !== null,
   };
 }
 

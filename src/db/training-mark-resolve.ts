@@ -26,6 +26,8 @@ export type TrainingEnrollmentRow = TrainingMarkEnrollment & {
   bookingId: string;
   tripId: string;
   sessionStartsAt: Date;
+  /** The course seat's booker said "Under 18". */
+  minorDeclared: boolean;
   /** The course's title, or the session's when the course row is gone. */
   courseTitle: string;
 };
@@ -48,6 +50,7 @@ export async function readTrainingEnrollments(
       personId: bookings.personId,
       status: bookings.status,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      minorDeclaredAt: bookings.minorDeclaredAt,
       participantType: bookings.participantType,
       tripId: trips.id,
       tripTitle: trips.title,
@@ -80,6 +83,7 @@ export async function readTrainingEnrollments(
       sessionEndsAt: row.endsAt,
       tripId: row.tripId,
       sessionStartsAt: row.startsAt,
+      minorDeclared: row.minorDeclaredAt !== null,
       courseTitle: row.courseTitle ?? row.tripTitle,
     });
   }
@@ -117,7 +121,12 @@ export async function resolveTrainingMarks(
       bookingId,
       problem || !enrollment
         ? { valid: false, problem: problem ?? "enrollment_missing" }
-        : { valid: true, enrollmentBookingId, enrollmentTripId: enrollment.tripId },
+        : {
+            valid: true,
+            enrollmentBookingId,
+            enrollmentTripId: enrollment.tripId,
+            enrollmentMinorDeclared: enrollment.minorDeclared,
+          },
     );
   }
   return result;

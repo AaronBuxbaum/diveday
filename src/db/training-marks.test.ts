@@ -1,170 +1,30 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, gt, isNotNull, ne, notInArray } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import {
-  SEEDED_CAPTAIN_EMAIL,
-  SEEDED_OWNER_EMAIL,
-  seededStaffPersonId,
-} from "@/test/staff-session";
-import {
-  createCourseForm,
-  getCourseFormsForBooking,
-  listCourseForms,
-  recordPaperCourseForm,
-  setCourseFormRequirements,
-  signCourseForm,
-} from "./course-forms";
+  charterContext as charterContextFor,
+  HOUR,
+  markSeat,
+  seatBlockerCodes,
+} from "@/test/training-mark-context";
+import { getCourseFormsForBooking, recordPaperCourseForm, signCourseForm } from "./course-forms";
 import { getBookingReadiness } from "./readiness";
 import {
   activityEvents,
   bookings,
   courseFormRecords,
   people,
-  personRoles,
   tripAssignments,
-  tripRequirements,
   trips,
-  userAccounts,
 } from "./schema";
 import { clearTrainingDive, markTrainingDive, trainingMarksForRoster } from "./training-marks";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const fileCtx = fileScopedShopContext();
-
-const BODY =
-  "I understand the course's in-water sessions follow the instructor's plan, and I will tell the instructor before any session if anything about my health changes.";
-const HOUR = 60 * 60 * 1000;
-
-/**
- * A seeded upcoming course session with a live seat on it (the enrollment),
- * a fun-dive charter for the same diver that leaves while the session runs,
- * one form the course asks, and the owner, the captain and an instructor.
- */
-async function charterContext() {
-  const { db, shop } = fileCtx;
-  const now = nowDate();
-  const [course] = await db
-    .select({
-      bookingId: bookings.id,
-      personId: people.id,
-      fullName: people.fullName,
-      tripId: trips.id,
-      courseId: trips.courseId,
-      startsAt: trips.startsAt,
-      endsAt: trips.endsAt,
-    })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .where(
-      and(
-        eq(bookings.shopId, shop.id),
-        isNotNull(trips.courseId),
-        eq(bookings.participantType, "diver"),
-        ne(bookings.status, "cancelled"),
-        ne(trips.status, "cancelled"),
-        gt(trips.startsAt, now),
-      ),
-    )
-    .limit(1);
-  if (!course?.courseId) throw new Error("seed has no upcoming course seat");
-  await db.update(people).set({ dateOfBirth: "1990-04-02" }).where(eq(people.id, course.personId));
-  await db
-    .update(bookings)
-    .set({ identityUnconfirmedAt: null })
-    .where(eq(bookings.id, course.bookingId));
-  const [charter] = await db
-    .insert(trips)
-    .values({
-      shopId: shop.id,
-      title: "Afternoon reef charter",
-      startsAt: course.startsAt,
-      endsAt: new Date(course.startsAt.getTime() + 3 * HOUR),
-      capacity: 10,
-    })
-    .returning();
-  if (!charter) throw new Error("charter insert failed");
-  await db
-    .insert(tripRequirements)
-    .values({ shopId: shop.id, tripId: charter.id, requiresWaiver: false });
-  const [seat] = await db
-    .insert(bookings)
-    .values({ bookedAs: "diver", shopId: shop.id, tripId: charter.id, personId: course.personId })
-    .returning();
-  if (!seat) throw new Error("charter seat insert failed");
-  const form = await createCourseForm(db, {
-    shopId: shop.id,
-    title: "Adventure dive statement",
-    body: BODY,
-    actorPersonId: await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL),
-  });
-  expect(
-    await setCourseFormRequirements(db, {
-      mayNarrow: true,
-      shopId: shop.id,
-      courseId: course.courseId,
-      formIds: [form.id],
-    }),
-  ).toEqual({ ok: true });
-  const summary = (await listCourseForms(db, shop.id)).find((row) => row.id === form.id);
-  if (!summary) throw new Error("form missing");
-  const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
-  const captain = await seededStaffPersonId(db, shop.id, SEEDED_CAPTAIN_EMAIL);
-  const managers = db
-    .select({ id: personRoles.personId })
-    .from(personRoles)
-    .where(notInArray(personRoles.role, ["instructor", "diver", "crew", "captain"]));
-  const [instructor] = await db
-    .select({ id: people.id })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
-    .where(
-      and(
-        eq(people.shopId, shop.id),
-        eq(personRoles.role, "instructor"),
-        notInArray(people.id, managers),
-        eq(userAccounts.status, "active"),
-      ),
-    )
-    .limit(1);
-  if (!instructor) throw new Error("seed has no instructor who is not a manager");
-  // Off the session's crew, so each test says whether they teach it.
-  await db
-    .delete(tripAssignments)
-    .where(
-      and(eq(tripAssignments.tripId, course.tripId), eq(tripAssignments.personId, instructor.id)),
-    );
-  return {
-    db,
-    shop,
-    now,
-    course: { ...course, courseId: course.courseId },
-    charter,
-    seat,
-    form: summary,
-    owner,
-    captain,
-    instructor: instructor.id,
-  };
-}
-
-type Ctx = Awaited<ReturnType<typeof charterContext>>;
-
-const mark = (ctx: Ctx, overrides: { enrollmentBookingId?: string; actorPersonId?: string } = {}) =>
-  markTrainingDive(ctx.db, {
-    shopId: ctx.shop.id,
-    bookingId: ctx.seat.id,
-    enrollmentBookingId: overrides.enrollmentBookingId ?? ctx.course.bookingId,
-    actorPersonId: overrides.actorPersonId ?? ctx.owner,
-  });
-
-const codes = async (ctx: Ctx) =>
-  ((await getBookingReadiness(ctx.db, ctx.shop.id, ctx.seat.id))?.blockers ?? []).map(
-    (blocker) => blocker.code,
-  );
+const charterContext = () => charterContextFor(fileCtx);
+const mark = markSeat;
+const codes = seatBlockerCodes;
 
 describe("training marks — a training dive on a charter (in-memory PGlite)", () => {
   it("asks an unmarked charter seat nothing: never an inference from the open enrollment", async () => {

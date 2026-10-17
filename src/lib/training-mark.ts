@@ -85,5 +85,14 @@ export function trainingMarkProblem(
  * asked, or that the mark no longer stands.
  */
 export type TrainingMarkState =
-  | { valid: true; enrollmentBookingId: string; enrollmentTripId: string }
+  | {
+      valid: true;
+      enrollmentBookingId: string;
+      enrollmentTripId: string;
+      /**
+       * The course seat's "Under 18". A reader of the charter seat ORs it with
+       * the charter's own, so both seats ask the guardian the same way.
+       */
+      enrollmentMinorDeclared: boolean;
+    }
   | { valid: false; problem: TrainingMarkProblem };

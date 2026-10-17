@@ -1688,6 +1688,18 @@ function formsBookingOf(
     : { bookingId, tripId };
 }
 
+/**
+ * The guardian rule's "Under 18" for a seat: its own booker's, or — on a seat
+ * whose training mark stands — the course seat's too, so the charter and the
+ * enrollment never disagree about whether a parent signs (fail closed).
+ */
+function minorDeclaredOf(
+  booking: { minorDeclaredAt: Date | null },
+  mark: TrainingMarkState | undefined,
+): boolean {
+  return booking.minorDeclaredAt !== null || (mark?.valid === true && mark.enrollmentMinorDeclared);
+}
+
 export async function listTripsReadiness(
   db: DbExecutor,
   shopId: string,
@@ -1948,7 +1960,7 @@ export async function listTripsReadiness(
             ...courseForms,
             signer: {
               dateOfBirth: row.person.dateOfBirth,
-              minorDeclared: row.booking.minorDeclaredAt !== null,
+              minorDeclared: minorDeclaredOf(row.booking, trainingMark),
               timezone,
             },
           })
@@ -2020,7 +2032,7 @@ export async function listTripsReadiness(
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
         // The booker's "Under 18" on this seat, for the guardian rule alone.
-        minorDeclared: row.booking.minorDeclaredAt !== null,
+        minorDeclared: minorDeclaredOf(row.booking, trainingMark),
         // The guardian rule measures the diver's age on the shop-local day
         // they signed (src/lib/guardian.ts), so the engine needs the zone.
         timezone,
