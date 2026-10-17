@@ -1032,8 +1032,6 @@
   "src/features/integrations/quickbooks.test.ts": 804,
   "src/features/integrations/registry.test.ts": 17,
   "src/features/integrations/shopify.test.ts": 1156,
-  "src/features/integrations/xero-delivery.test.ts": 15259,
-  "src/features/integrations/xero.test.ts": 699,
   "src/features/integrations/zapier.test.ts": 791,
   "src/features/recap-after-state/after-state.test.ts": 3645,
   "src/i18n/ErrorBoundaryIntlProvider.test.tsx": 309,

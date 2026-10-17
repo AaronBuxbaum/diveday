@@ -1,6 +1,6 @@
 # 20260907-xero-beside-quickbooks — Xero is the fourth connector, and it writes cash rather than invoices
 
-- **Status:** Accepted
+- **Status:** Superseded by 20261017-xero-removed-before-launch
 - **Date:** 2026-09-07
 
 Extends [20260827-shop-authorized-provider-connectors](20260827-shop-authorized-provider-connectors.md),

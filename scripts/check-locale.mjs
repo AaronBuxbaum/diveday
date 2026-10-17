@@ -226,7 +226,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/desk.json lostFound.channels.whatsapp", "brand"],
   ["staff/integrations.json quickbooks.name", "brand"],
   ["staff/integrations.json shopify.name", "brand"],
-  ["staff/integrations.json xero.name", "brand"],
   ["staff/integrations.json zapier.name", "brand"],
   ["staff/orders.json index.paymentOps.stripeId", "brand"],
   ["staff/settings.json embed.platforms.squarespace.name", "brand"],

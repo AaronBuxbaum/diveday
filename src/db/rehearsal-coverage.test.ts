@@ -180,7 +180,7 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
   {
     file: "src/db/integration-events.ts",
     holds: "isRehearsal",
-    why: "no order reaches Shopify, QuickBooks, Xero or Zapier",
+    why: "no order reaches Shopify, QuickBooks or Zapier",
   },
   {
     file: "src/db/trip-promos.ts",

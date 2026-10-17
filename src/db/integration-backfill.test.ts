@@ -115,7 +115,7 @@ async function paidTip(f: Awaited<ReturnType<typeof priced>>, bookingId: string,
 
 async function connect(
   shopId: string,
-  provider: "zapier" | "quickbooks" | "xero",
+  provider: "zapier" | "quickbooks",
   eventTypes: string[] = ["order.paid", "order.refunded"],
 ) {
   const [row] = await ctx.db
@@ -166,7 +166,7 @@ describe("integration backfill (issue #2606)", () => {
     const older = await completedCheckout(f, 20, 4_000);
     const tip = await paidTip(f, newer.bookingId, 3);
     const zap = await connect(f.shop.id, "zapier");
-    const xero = await connect(f.shop.id, "xero");
+    const quickbooks = await connect(f.shop.id, "quickbooks");
 
     const run = await runIntegrationBackfill(f.db, {
       shopId: f.shop.id,
@@ -188,7 +188,7 @@ describe("integration backfill (issue #2606)", () => {
       `tip:${tip}:paid`,
     ]);
     expect(queued.every((row) => row.delivery.status === "pending")).toBe(true);
-    expect(await deliveriesOf(xero.id)).toHaveLength(0);
+    expect(await deliveriesOf(quickbooks.id)).toHaveLength(0);
 
     const again = await runIntegrationBackfill(f.db, {
       shopId: f.shop.id,
@@ -398,7 +398,7 @@ describe("integration backfill (issue #2606)", () => {
       .update(shopIntegrations)
       .set({ deletedAt: nowDate() })
       .where(eq(shopIntegrations.id, gone.id));
-    const errored = await connect(f.shop.id, "xero");
+    const errored = await connect(f.shop.id, "quickbooks");
     await f.db
       .update(shopIntegrations)
       .set({ status: "error" })

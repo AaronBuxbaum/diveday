@@ -146,7 +146,10 @@ trains everyone to ignore it. It runs Mondays at 07:00 UTC in
 is already above a persona finding in the inbox. ADR
 [20260907-persona-bots-file-under-a-ceiling](../architecture/decisions/20260907-persona-bots-file-under-a-ceiling.md).
 
-## Xero beside QuickBooks (delivered 2026-09-07)
+## Xero beside QuickBooks (delivered 2026-09-07, removed 2026-10-17)
+
+Removed before launch in one commit; reverting it restores everything below. ADR
+[20261017-xero-removed-before-launch](../architecture/decisions/20261017-xero-removed-before-launch.md).
 
 N-52 from the 2026-09-07 improvement-ideas sheet (issue #1490). A shop on Xero connects it from
 Settings -> Integrations exactly as it connects QuickBooks, and its paid orders and refunds land in

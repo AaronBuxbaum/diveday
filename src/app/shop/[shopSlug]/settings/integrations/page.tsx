@@ -10,7 +10,6 @@ import {
   listIntegrationSummaries,
   quickBooksConfigFromEnvironment,
   shopifyConfigFromEnvironment,
-  xeroConfigFromEnvironment,
 } from "@/features/integrations";
 import { requestLocale } from "@/i18n/request";
 import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
@@ -23,10 +22,8 @@ import { settingsPaneClass } from "../_components/settings-pane";
 import {
   startQuickBooksConnectionAction,
   startShopifyConnectionAction,
-  startXeroConnectionAction,
   syncShopifyCatalogAction,
   updateQuickBooksSettingsAction,
-  updateXeroSettingsAction,
 } from "./actions";
 import { EarlierCheckoutsCard } from "./EarlierCheckoutsCard";
 import { ConnectedMeta, DisconnectForm, NotAvailable, statusBadge } from "./integration-parts";
@@ -79,7 +76,6 @@ export default async function IntegrationsSettingsPage({
   const ownerBackfill = await canPersonBackfillIntegrations(db, shop.id, session.user.personId);
   const shopify = summaries.find((row) => row.provider === "shopify");
   const quickbooks = summaries.find((row) => row.provider === "quickbooks");
-  const xero = summaries.find((row) => row.provider === "xero");
   const zapier = summaries.find((row) => row.provider === "zapier");
   const notices = noticeMessages(t);
   const banner = noticeFromParam(notice, notices);
@@ -88,9 +84,6 @@ export default async function IntegrationsSettingsPage({
   );
   const quickbooksConfigured = Boolean(
     quickBooksConfigFromEnvironment() && secretKeyFromEnvironment().status === "ok",
-  );
-  const xeroConfigured = Boolean(
-    xeroConfigFromEnvironment() && secretKeyFromEnvironment().status === "ok",
   );
   const zapierConfigured = secretKeyFromEnvironment().status === "ok";
   const syncBanner =
@@ -104,7 +97,6 @@ export default async function IntegrationsSettingsPage({
   const unavailable = [
     !shopify && !shopifyConfigured,
     !quickbooks && !quickbooksConfigured,
-    !xero && !xeroConfigured,
     !zapier && !zapierConfigured,
   ].filter(Boolean).length;
   const askOnce = unavailable > 1;
@@ -231,77 +223,6 @@ export default async function IntegrationsSettingsPage({
                 className={buttonClass()}
               >
                 {t("integrations.quickbooks.connect")}
-              </SubmitButton>
-            </form>
-          ) : (
-            <NotAvailable t={t} askedAbove={askOnce} />
-          )}
-        </SectionCard>
-
-        <SectionCard
-          padding="lg"
-          title={t("integrations.xero.name")}
-          description={t("integrations.xero.description")}
-          actions={statusBadge(t, xero)}
-        >
-          {xero ? (
-            <div className="space-y-5">
-              <ConnectedMeta t={t} row={xero} locale={locale} timezone={shop.timezone} />
-              <p className="text-sm text-muted">{t("integrations.xero.setupRequired")}</p>
-              <FieldGrid as="form" action={updateXeroSettingsAction}>
-                <Field
-                  label={t("integrations.xero.salesAccountLabel")}
-                  description={t("integrations.xero.salesAccountDescription")}
-                >
-                  <input
-                    name="salesAccountCode"
-                    className={controlClass}
-                    maxLength={10}
-                    placeholder={t("integrations.xero.salesAccountPlaceholder")}
-                    defaultValue={xero.settings.salesAccountCode ?? ""}
-                  />
-                </Field>
-                <Field
-                  label={t("integrations.xero.bankAccountLabel")}
-                  description={t("integrations.xero.bankAccountDescription")}
-                >
-                  <input
-                    name="bankAccountCode"
-                    className={controlClass}
-                    maxLength={10}
-                    placeholder={t("integrations.xero.bankAccountPlaceholder")}
-                    defaultValue={xero.settings.bankAccountCode ?? ""}
-                  />
-                </Field>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("integrations.common.saving")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("integrations.common.save")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-              <div className="flex flex-wrap items-center gap-3">
-                <form action={startXeroConnectionAction}>
-                  <SubmitButton
-                    pendingLabel={t("integrations.common.reconnect")}
-                    className={buttonClass({ variant: "secondary" })}
-                    disabled={!xeroConfigured}
-                  >
-                    {t("integrations.common.reconnect")}
-                  </SubmitButton>
-                </form>
-                <DisconnectForm provider="xero" t={t} />
-              </div>
-            </div>
-          ) : xeroConfigured ? (
-            <form action={startXeroConnectionAction}>
-              <SubmitButton
-                pendingLabel={t("integrations.common.connect")}
-                className={buttonClass()}
-              >
-                {t("integrations.xero.connect")}
               </SubmitButton>
             </form>
           ) : (

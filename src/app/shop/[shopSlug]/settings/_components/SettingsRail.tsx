@@ -204,8 +204,8 @@ export function SettingsRail({
                         >
                           {/* Wrapped, never cut: the rail is 264px by its
                             design, and its rows inset their words 12px a
-                            side, which left "Shopify, QuickBooks, Xero &
-                            Zapier" 208px for 216px of words. The row's 44px
+                            side, which left a label of three provider names
+                            208px for 216px of words. The row's 44px
                             is a floor, so a second line just grows it. */}
                           <span className="min-w-0 text-pretty">{labels[row.id]}</span>
                           {/* At most one badge per row, and only for a warning —
