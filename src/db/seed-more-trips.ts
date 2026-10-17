@@ -28,6 +28,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { at, DEMO_DAWN_BOAT, nextCreatedAt } from "./seed-clock";
+import { paperRelease } from "./seed-paper-release";
 
 /** The returned demo departure that gives Close-Out a finished local-day dive. */
 export const DEMO_COMPLETED_TRIP_TITLE = "Dawn Two-Tank — Molasses Reef";
@@ -709,17 +710,7 @@ export async function seedMoreTrips(
       // Comfortably past the furthest trip seeded here (day 56).
       expiresAt: at(75, 12),
       createdAt,
-      ...(signed
-        ? {
-            status: "completed" as const,
-            signedName: "Signed on file",
-            signatureMethod: "in_person_attested" as const,
-            recordedByPersonId: instructorId,
-            consentedAt: createdAt,
-            signedAt: createdAt,
-            completedAt: createdAt,
-          }
-        : {}),
+      ...(signed ? paperRelease(createdAt, instructorId) : {}),
     };
   });
   if (extraWaiverRows.length > 0) await db.insert(waiverRecords).values(extraWaiverRows);
@@ -768,9 +759,7 @@ export async function seedMoreTrips(
       shopId,
       tripId: picklesTrip.id,
       personId: waitlistCandidate.id,
-      // Two seats asked for, so the staff roster's "Party of 2" line and a
-      // party's worth of demand show in the demo (issue #2677).
-      partySize: 2,
+      partySize: 2, // the roster's "Party of 2" line (issue #2677)
       createdAt: nextCreatedAt(),
     });
   }

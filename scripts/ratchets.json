@@ -673,8 +673,8 @@
     "src/db/reminders.ts#sendDueReminders": 335,
     "src/db/reporting.ts#getMonthlyReport": 334,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
-    "src/db/seed-history.ts#seedHistory": 726,
-    "src/db/seed-more-trips.ts#seedMoreTrips": 642,
+    "src/db/seed-history.ts#seedHistory": 721,
+    "src/db/seed-more-trips.ts#seedMoreTrips": 634,
     "src/db/seed-trips.ts#seedTrips": 392,
     "src/lib/import.ts#prepareContactImport": 508
   },
@@ -778,7 +778,7 @@
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 714,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 624,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 618,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 496,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 519
   },

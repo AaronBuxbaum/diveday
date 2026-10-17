@@ -10,9 +10,9 @@ import {
   shops,
 } from "@/db/schema";
 import { getShopById, setShopDepthUnit } from "@/db/shops";
-import { briefingInUnit } from "@/lib/site-prose-units";
 import { calendarDateInTimezone, shiftCalendarDateMonths } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { briefingInUnit } from "@/lib/site-prose-units";
 import { fileScopedShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,

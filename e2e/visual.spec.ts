@@ -3,6 +3,8 @@ import type { Browser, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { LISTED_SHOP_SLUGS } from "../src/db/seed-listed-shops";
+import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
@@ -10,6 +12,7 @@ import {
   OFFLINE_MANIFEST_AGING_MS,
   OFFLINE_MANIFEST_RECORD_VERSION,
 } from "../src/lib/offline-manifests";
+import { publicFindMyBookingPath } from "../src/lib/public-routes";
 import { signRecapToken } from "../src/lib/recap-links";
 import { weekStartOf } from "../src/lib/week-board";
 import { clearCourseForms } from "./course-form-only";
@@ -55,6 +58,7 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 
 const staffCopy = staffTranslator("en-US");
+const diverCopy = diverTranslator("en-US");
 
 /**
  * Visual regression coverage: one `capture()` call per surface, each shot in
@@ -2338,6 +2342,22 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the diver's shop picker renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/find-your-booking");
         await page.locator("h1").first().waitFor();
+        // The picker lists every public shop in the shared database, so a shop
+        // another capture made first (the Bookable Moment shop) would change
+        // this picture with test order (#2690). Only the seeded listed shops
+        // stay in the frame; the page is otherwise exactly as it rendered.
+        await page.getByRole("list", { name: diverCopy("findYourBooking.listLabel") }).waitFor();
+        await page.evaluate((kept) => {
+          for (const item of document.querySelectorAll("main ul > li")) {
+            const href = item.querySelector("a")?.getAttribute("href") ?? "";
+            if (!kept.includes(href)) item.remove();
+          }
+        }, LISTED_SHOP_SLUGS.map(publicFindMyBookingPath));
+        await expect(
+          page
+            .getByRole("list", { name: diverCopy("findYourBooking.listLabel") })
+            .getByRole("listitem"),
+        ).toHaveCount(LISTED_SHOP_SLUGS.length);
         await capture(page, "find-your-booking", scheme);
       });
 
@@ -3575,6 +3595,104 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(claimPath ?? "/");
         await page.getByRole("heading", { name: /link isn.t available/ }).waitFor();
         await capture(page, "expired-link-claim", scheme);
+      });
+
+      /**
+       * **Ask to move, before and after it is sent** (H-126; #2666). Past the
+       * free-cancellation window a paid diver's page offers a request ahead of
+       * the cancel that forfeits what they paid: the form, then the page
+       * saying it was asked. The same flow as `e2e/ask-to-move.spec.ts`.
+       */
+      test(`the diver's ask-to-move form and its asked state render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const title = "Ask To Move Two-Tank";
+        await createTrip(page, {
+          title,
+          date: daysFromNow(5),
+          departsAt: "08:00",
+          returnsAt: "11:30",
+          capacity: 6,
+          price: 120,
+          // Thirty days: five days out is long past it.
+          cancellationWindowHours: 720,
+        });
+        const tripId = await seededTripId(page, "blue-mantis", title);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await openTripAbout(page);
+        await page.getByText("Edit requirements", { exact: true }).click();
+        await page.getByLabel("Require payment to board").check();
+        await page.getByRole("button", { name: "Save requirements" }).click();
+        await expect(page.getByRole("status")).toContainText("requirements updated");
+
+        await page.goto(publicTripUrl(`/shop/blue-mantis/trips/${tripId}`));
+        await bookASeatAndOpenThread(page, "Rafa Ortiz", `rafa-ask-${scheme}@example.com`);
+        const readyUrl = page.url().split("?")[0] ?? "";
+
+        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        const row = page.locator("li").filter({ hasText: "Rafa Ortiz" }).filter({ visible: true });
+        await openRosterDetails(row);
+        await row.getByRole("combobox").selectOption("paid");
+        await row.getByRole("radio", { name: "Cash" }).check();
+        await row.getByRole("button", { name: "Update" }).click();
+        await expect(row.getByText("Payment: Paid")).toBeVisible();
+
+        await page.goto(readyUrl);
+        await page.getByRole("button", { name: "Ask to move" }).waitFor();
+        await page.getByLabel("Dates that would work (optional)").fill("Any Saturday in August");
+        await capture(page, "ready-ask-to-move", scheme);
+
+        await page.getByRole("button", { name: "Ask to move" }).click();
+        await expect(page.getByText(diverCopy("ready.moveAsk.sent"))).toBeVisible();
+        await expect(page.getByRole("button", { name: "Ask to move" })).toHaveCount(0);
+        await capture(page, "ready-asked-to-move", scheme);
+      });
+
+      /**
+       * **A parent signs a child's release** (H-124; #2666): a lead books a
+       * party with one seat "Under 18", the panel offers "Sign {name}'s
+       * waiver" on that seat, and the child's own claim link says a parent
+       * signs with them. The flow of the last test in
+       * `e2e/guardian-co-signature.spec.ts`.
+       */
+      test(`the party panel's minor seat and the claim page's minor note render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const child = "Mia Byrne";
+        await page.goto("/s/blue-mantis");
+        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        await choosePartySize(page, 2);
+        await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");
+        await page
+          .getByLabel("Email", { exact: true })
+          .fill(`organizer-minor-${scheme}@example.com`);
+        await page.getByLabel("Diver 2 name").fill(child);
+        await page.getByLabel("Use the main contact’s email for this diver").check();
+        await page
+          .getByRole("checkbox", { name: /^Under 18/ })
+          .nth(1)
+          .check();
+        await page.getByRole("button", { name: /^Book/ }).click();
+        await expect(page).toHaveURL(/\/ready\//);
+        const seatRow = page.locator("#party-seats li").filter({ hasText: child });
+        await expect(
+          seatRow.getByText(diverCopy("seatClaim.minorSignBody", { name: child })),
+        ).toBeVisible();
+        await expect(seatRow.getByRole("button", { name: `Sign ${child}’s waiver` })).toBeVisible();
+        await capture(page, "party-panel-minor-seat", scheme);
+
+        await seatRow.getByText("Show link").click();
+        const claimPath = ((await seatRow.locator("p.font-mono").textContent()) ?? "").match(
+          /\/claim\/[^\s/?#]+/,
+        )?.[0];
+        expect(claimPath).toBeTruthy();
+        await page.goto(claimPath ?? "/");
+        await expect(
+          page.getByText(diverCopy("seatClaim.minorNote", { seatName: child }), { exact: false }),
+        ).toBeVisible();
+        await capture(page, "seat-claim-minor-note", scheme);
       });
 
       // Its own test rather than another stop on a public tour: a trust page

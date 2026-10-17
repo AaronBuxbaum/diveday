@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { fileScopedShopContext } from "@/test/db";
 import { briefingInUnit } from "@/lib/site-prose-units";
+import { fileScopedShopContext } from "@/test/db";
 import {
   convertImportedSiteProseToUnit,
   getDiveSiteTemplateUpdate,

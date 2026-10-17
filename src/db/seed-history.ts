@@ -21,6 +21,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { at, nextCreatedAt, withinDeskHours } from "./seed-clock";
+import { paperRelease } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
 import { getCurrentWaiverTemplate } from "./waivers";
 
@@ -768,15 +769,9 @@ export async function seedHistory(
         templateVersion: template.version,
         templateGeneration: template.materialGeneration,
         templateBody: template.body,
-        status: "completed" as const,
         tokenHash: `hist-waiver-${shopId}-${waiverToken}`,
         expiresAt: at(365, 12),
-        signedName: "Signed on file",
-        signatureMethod: "in_person_attested",
-        recordedByPersonId: createdByPersonId,
-        consentedAt: signedAt,
-        signedAt,
-        completedAt: signedAt,
+        ...paperRelease(signedAt, createdByPersonId),
         createdAt: signedAt,
       };
     })
