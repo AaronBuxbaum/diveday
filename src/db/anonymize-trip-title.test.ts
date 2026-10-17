@@ -12,9 +12,9 @@ const ctx = fileScopedShopContext({ history: true });
  * A departure titled with a diver's name ("Smith family charter") kept that
  * name after the diver was erased (issue #2315). Aaron, 2026-10-13: when the
  * erased diver's party is the only one booked on a departure and its title
- * contains their full or family name, case-insensitively, the title becomes a
- * neutral one from the bundle; a departure anyone else is booked on keeps its
- * title.
+ * names them (a private one: full or family name, case-insensitively; a public
+ * one: the full name as whole words), the title becomes a neutral one from the
+ * bundle; a departure anyone else is booked on keeps its title.
  */
 async function owner(db: AppDb, shopId: string) {
   const [row] = await db
@@ -119,7 +119,7 @@ describe("anonymizeDiver — a departure titled with the erased diver's name (is
   it("reaches a deleted departure and one whose only seat was cancelled", async () => {
     const { db, shop } = ctx;
     const person = await diver(db, shop.id, "Pablo Esquivel");
-    const gone = await departure(db, shop.id, "Esquivel charter", { deleted: true });
+    const gone = await departure(db, shop.id, "Pablo Esquivel charter", { deleted: true });
     const called = await departure(db, shop.id, "Esquivel sunrise", { isPrivate: true });
     await seat(db, shop.id, gone.id, person.id);
     await seat(db, shop.id, called.id, person.id, { status: "cancelled" });

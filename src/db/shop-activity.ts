@@ -320,7 +320,8 @@ export type ShopActivityWrite =
         | "series_added"
         | "departure_moved"
         | "departure_copied"
-        | "departure_deleted";
+        | "departure_deleted"
+        | "departure_retitled_by_erasure";
       tripId: string;
     }
   | {

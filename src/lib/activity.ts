@@ -270,6 +270,12 @@ type ActivityParamShapes = {
   departure_copied: { actor: string };
   departure_deleted: { actor: string };
   /**
+   * An erasure renamed a departure that carried the erased diver's name
+   * (issue #2315). The actor is the staffer who ran the erasure; the old
+   * title is never kept, because it is the name.
+   */
+  departure_retitled_by_erasure: { actor: string };
+  /**
    * The departure came off the board with the rest of its repeating run
    * ("Cancel every upcoming date"), through the blow-out cascade.
    */
@@ -420,6 +426,7 @@ export const ACTIVITY_CODES = [
   "departure_moved",
   "departure_copied",
   "departure_deleted",
+  "departure_retitled_by_erasure",
   "series_cancelled",
   "departure_called_off_automatically",
   "review_replied",

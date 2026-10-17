@@ -121,6 +121,7 @@ import {
   recapPhotos,
   recapPulses,
   rentalFitProfiles,
+  reviewModerationEvents,
   reviewReplies,
   rollCallCrewEvents,
   rollCallEvents,
@@ -130,8 +131,10 @@ import {
   staffCredentials,
   staffReplies,
   tips,
+  tripChangeEvents,
   tripLastMinutePromoRecipients,
   tripReviews,
+  tripSeries,
   trips,
   tripWaitlistEntries,
   userAccounts,
@@ -140,6 +143,7 @@ import {
   workOrderLines,
   workOrders,
 } from "./schema";
+import { recordShopActivityWithin } from "./shop-activity";
 import { customerProviderFromEnvironment } from "./stripe-providers";
 
 export type AnonymizeDiverRefusal =
@@ -1373,24 +1377,32 @@ function titleNameHandles(fullName: string): string[] {
  * charter"), and the title shows wherever the departure does: the schedule,
  * the manifest, the activity log. A title is free text, so it cannot be
  * scrubbed by matching a name in general; the rule is the product owner's
- * (Aaron, 2026-10-13) and deliberately narrow:
+ * (Aaron, 2026-10-13), narrowed on review:
  *
  * - **only their party is booked**: every seat on the departure that is not
  *   cancelled is the erased diver's own or one of the party they lead
  *   (`party_lead_booking_id` pointing at their seat), and they hold a seat
  *   there in some state. A departure with anyone else aboard keeps its title,
  *   because it is other people's departure too; a diver who joined someone
- *   else's party does not get to rename it.
- * - **the title contains their name**: the full name or the family name,
- *   case-insensitively, anywhere in the title. A plain substring, as decided:
- *   "The Smiths" must go as surely as "Smith charter", and the only departures
- *   it can reach are the erased diver's own, so the over-reach is a neutral
- *   title on their own charter. A name under three word characters is not
- *   used, the same floor every name match here keeps.
+ *   else's party does not get to rename it. A seat with no person is someone
+ *   else.
+ * - **the title names them**. On a *private* departure, the full name or the
+ *   family name anywhere in the title, case-insensitively: "The Smiths" must
+ *   go as surely as "Smith charter", and a private charter is theirs. On a
+ *   *public* one, only the full name as whole words: a public title is the
+ *   shop's ("Leeward Wall Dive" is not about Dana Lee), so the family name and
+ *   a match inside a word are not used. A name under three word characters is
+ *   never used, the floor every name match here keeps.
+ * - **a repeating charter goes whole**: when the diver holds a seat on a date
+ *   of a series and nobody else holds one on any of its dates, the series row
+ *   and its unbooked dates are renamed under the same title rule, because the
+ *   nightly roll copies the newest date's title onto every new one.
  *
  * The new title is the staff bundle's neutral one in the shop's own language
  * (`trips.erasedTitle`), "Private charter" or "Departure" by `is_private`.
- * Deleted departures are reached too: the activity log keeps naming one.
+ * Deleted departures are reached too: the activity log keeps naming one. Each
+ * renamed departure gets a `departure_retitled_by_erasure` line by the staffer
+ * who erased, naming nobody else and never the old title.
  */
 async function scrubDepartureTitles(
   tx: AppTransaction,
@@ -1399,6 +1411,7 @@ async function scrubDepartureTitles(
   const { shopId, personId, owned } = ctx;
   const handles = titleNameHandles(ctx.fullName);
   if (!owned || handles.length === 0) return [];
+  const fullNamePattern = buddyMemberNameMatch(ctx.fullName);
 
   const [shop] = await tx
     .select({ defaultLocale: shops.defaultLocale })
@@ -1406,39 +1419,143 @@ async function scrubDepartureTitles(
     .where(eq(shops.id, shopId))
     .limit(1);
   const t = staffTranslator(shop?.defaultLocale);
+  const privateTitle = t("trips.erasedTitle.private");
+  const publicTitle = t("trips.erasedTitle.public");
 
-  const theirSeat = sql`exists (
+  const names = (title: SQL | AnyPgColumn, isPrivate: SQL | AnyPgColumn) => {
+    const anywhere = or(
+      ...handles.map((handle) => sql`strpos(lower(${title}), lower(${handle})) > 0`),
+    ) as SQL;
+    const asWords = fullNamePattern ? sql`${title} ~* ${fullNamePattern}` : sql`false`;
+    return sql`(case when ${isPrivate} then (${anywhere}) else (${asWords}) end)`;
+  };
+  const holdsSeat = (tripId: SQL | AnyPgColumn) => sql`exists (
     select 1 from ${bookings} own
-    where own.trip_id = ${trips.id} and own.shop_id = ${shopId} and own.person_id = ${personId}
+    where own.trip_id = ${tripId} and own.shop_id = ${shopId} and own.person_id = ${personId}
   )`;
-  const nobodyElse = sql`not exists (
+  const nobodyElse = (tripId: SQL | AnyPgColumn) => sql`not exists (
     select 1 from ${bookings} other
-    where other.trip_id = ${trips.id}
+    where other.trip_id = ${tripId}
       and other.shop_id = ${shopId}
       and other.status <> 'cancelled'
-      and other.person_id <> ${personId}
-      and not exists (
-        select 1 from ${bookings} lead
-        where lead.id = other.party_lead_booking_id
-          and lead.trip_id = ${trips.id}
-          and lead.shop_id = ${shopId}
-          and lead.person_id = ${personId}
+      and (
+        other.person_id is null
+        or (
+          other.person_id <> ${personId}
+          and not exists (
+            select 1 from ${bookings} lead
+            where lead.id = other.party_lead_booking_id
+              and lead.trip_id = ${tripId}
+              and lead.shop_id = ${shopId}
+              and lead.person_id = ${personId}
+          )
+        )
       )
   )`;
-  const named = or(
-    ...handles.map((handle) => sql`strpos(lower(${trips.title}), lower(${handle})) > 0`),
-  ) as SQL;
+  // The series this diver has a date on and nobody else has a seat on.
+  const theirSeries = sql`(
+    select series.id from ${tripSeries} series
+    where series.shop_id = ${shopId}
+      and exists (
+        select 1 from ${trips} dated
+        where dated.series_id = series.id and dated.shop_id = ${shopId}
+          and ${holdsSeat(sql`dated.id`)}
+      )
+      and not exists (
+        select 1 from ${trips} dated
+        where dated.series_id = series.id and dated.shop_id = ${shopId}
+          and not ${nobodyElse(sql`dated.id`)}
+      )
+  )`;
+  const seriesIsPrivate = sql`exists (
+    select 1 from ${trips} dated
+    where dated.series_id = ${tripSeries.id} and dated.shop_id = ${shopId} and dated.is_private
+  )`;
+
+  await tx
+    .update(tripSeries)
+    .set({
+      title: sql`case when ${seriesIsPrivate} then ${privateTitle} else ${publicTitle} end`,
+    })
+    .where(
+      and(
+        eq(tripSeries.shopId, shopId),
+        sql`${tripSeries.id} in ${theirSeries}`,
+        names(tripSeries.title, seriesIsPrivate),
+      ),
+    );
 
   const retitled = await tx
     .update(trips)
     .set({
-      title: sql`case when ${trips.isPrivate} then ${t("trips.erasedTitle.private")} else ${t("trips.erasedTitle.public")} end`,
+      title: sql`case when ${trips.isPrivate} then ${privateTitle} else ${publicTitle} end`,
     })
     // diveday:allow-deleted-trips: a deleted departure's title still shows in
     // the activity log, so the erasure reaches it too.
-    .where(and(eq(trips.shopId, shopId), theirSeat, nobodyElse, named))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        or(holdsSeat(trips.id), sql`${trips.seriesId} in ${theirSeries}`),
+        nobodyElse(trips.id),
+        names(trips.title, trips.isPrivate),
+      ),
+    )
     .returning({ id: trips.id });
+  for (const trip of retitled) {
+    await recordShopActivityWithin(tx, {
+      shopId,
+      actorPersonId: ctx.actorPersonId,
+      write: { code: "departure_retitled_by_erasure", tripId: trip.id },
+    });
+  }
   logFuzzyMatch(ctx, "departure_title_name", retitled.length);
+  return [];
+}
+
+/**
+ * The erasure's "departure change trail" sweep. `trip_change_events` keeps a
+ * meeting point's or the conditions' values before and after for ever
+ * (`src/lib/retention.ts`), and a value is free text a staffer typed ("Pick up
+ * at the Halvorsens'"). Each string value naming the diver, by the same
+ * whole-word full-name match as the activity sweep, becomes `[redacted]`; the
+ * keys, the other values and the row stay, so the change still reads as one.
+ */
+async function scrubDepartureChangeTrail(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const pattern = buddyMemberNameMatch(ctx.fullName);
+  if (!pattern) return [];
+  const redactValues = (
+    column: AnyPgColumn,
+  ) => sql`case when jsonb_typeof(${column}) is distinct from 'object' then ${column} else (
+    select coalesce(jsonb_object_agg(
+      entry.key,
+      case when jsonb_typeof(entry.value) = 'string' and (entry.value #>> '{}') ~* ${pattern}
+        then to_jsonb(${REDACTED_TEXT}::text) else entry.value end
+    ), '{}'::jsonb)
+    from jsonb_each(${column}) as entry(key, value)
+  ) end`;
+  const naming = (column: AnyPgColumn) => sql`exists (
+    select 1 from jsonb_each_text(
+      case when jsonb_typeof(${column}) = 'object' then ${column} else '{}'::jsonb end
+    ) as named(key, value)
+    where named.value ~* ${pattern}
+  )`;
+  const scrubbed = await tx
+    .update(tripChangeEvents)
+    .set({
+      beforeValue: redactValues(tripChangeEvents.beforeValue),
+      afterValue: redactValues(tripChangeEvents.afterValue),
+    })
+    .where(
+      and(
+        eq(tripChangeEvents.shopId, ctx.shopId),
+        or(naming(tripChangeEvents.beforeValue), naming(tripChangeEvents.afterValue)),
+      ),
+    )
+    .returning({ id: tripChangeEvents.id });
+  logFuzzyMatch(ctx, "trip_change_event_name", scrubbed.length);
   return [];
 }
 
@@ -1524,6 +1641,32 @@ async function scrubReviews(
             .select({ id: tripReviews.id })
             .from(tripReviews)
             .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId))),
+        ),
+      ),
+    );
+  // The moderation trail is kept for ever (`src/lib/retention.ts`), and its
+  // `reason_note` is a moderator's own words about a review: on the diver's
+  // own reviews it is about what they wrote, and on anyone's it may name them.
+  // The row (who acted, what, why by code) stays; the words become
+  // `[redacted]`, never null, since an `other` reason must carry a note.
+  const notePattern = buddyMemberNameMatch(ctx.fullName);
+  await tx
+    .update(reviewModerationEvents)
+    .set({ reasonNote: REDACTED_TEXT })
+    .where(
+      and(
+        eq(reviewModerationEvents.shopId, shopId),
+        isNotNull(reviewModerationEvents.reasonNote),
+        ne(reviewModerationEvents.reasonNote, REDACTED_TEXT),
+        or(
+          inArray(
+            reviewModerationEvents.reviewId,
+            tx
+              .select({ id: tripReviews.id })
+              .from(tripReviews)
+              .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId))),
+          ),
+          notePattern ? sql`${reviewModerationEvents.reasonNote} ~* ${notePattern}` : undefined,
         ),
       ),
     );
@@ -2539,6 +2682,7 @@ const SCRUB_SECTIONS = [
   scrubBookingRows,
   scrubActivityEvents,
   scrubDepartureTitles,
+  scrubDepartureChangeTrail,
   scrubBuddyTrail,
   scrubReviews,
   scrubPrivateWord,

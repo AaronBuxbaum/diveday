@@ -343,10 +343,7 @@ const ERASURE_KEEPS: Record<string, string> = {
   pre_departure_check_events:
     "a crew member ticking a checklist line before a departure, and their note about the line",
   trip_stage_events: "the crew moving a departure through its stages",
-  trip_change_events: "what changed on a departure, before and after, and who changed it",
   trip_blowouts: "who called a departure off, and when",
-  review_moderation_events:
-    "a moderator's action on a review and their reason for it. The review's own words are on `trip_reviews`, which the erasure redacts",
   marine_life_requests: "a staff member’s search for a species DiveDay does not carry",
   integration_oauth_states:
     "a single-use OAuth handshake bound to the staff member who started it and expiring in minutes",
@@ -415,7 +412,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   course_form_requirements: "which course asks for which form, and from when",
   trip_lenses: "the shop’s own word for a kind of day",
   trip_series:
-    "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows",
+    "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows; its title is renamed with them when an erased diver's own charter carries their name",
   trip_series_skips:
     "a date the shop took out of that cadence, so the nightly roll does not put it back",
 

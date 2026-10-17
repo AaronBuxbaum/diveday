@@ -59,6 +59,7 @@
     "departure_moved": "{actor} movió la salida",
     "departure_copied": "{actor} copió una salida en esta",
     "departure_deleted": "{actor} eliminó la salida",
+    "departure_retitled_by_erasure": "{actor} cambió el nombre de la salida al borrar los datos de un buceador",
     "series_cancelled": "{actor} canceló todas las próximas fechas de esta salida recurrente",
     "departure_called_off_automatically": "Cancelada automáticamente: {reason, select, minimum_not_met {no se alcanzó el mínimo} other {regla}}",
     "review_replied": "{actor} respondió a una reseña",

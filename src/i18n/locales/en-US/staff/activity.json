@@ -59,6 +59,7 @@
     "departure_moved": "{actor} moved the departure",
     "departure_copied": "{actor} copied a departure to this one",
     "departure_deleted": "{actor} deleted the departure",
+    "departure_retitled_by_erasure": "{actor} renamed the departure while erasing a diver’s data",
     "series_cancelled": "{actor} canceled every upcoming date of this repeating departure",
     "departure_called_off_automatically": "Automatically called off: {reason, select, minimum_not_met {minimum not met} other {rule}}",
     "review_replied": "{actor} replied to a review",
