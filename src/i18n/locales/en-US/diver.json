@@ -9,7 +9,7 @@
     "said": "The crew said so at {time}."
   },
   "common": {
-    "smsConsent": "By giving a mobile number, you agree to texts from DiveDay about your bookings: reminders, waiver links and trip recaps, up to four per booking. Message and data rates may apply. Reply STOP to opt out, HELP for help. <a>Privacy policy</a>",
+    "smsConsent": "By giving a mobile number, you agree to texts from DiveDay about your bookings and courses: reminders, waiver links, trip changes, notes from the crew, lost property and recaps. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help. <a>Privacy policy</a>",
     "backToSchedule": "Back to the schedule",
     "needHelpContact": "Need help? <link>Contact {shop}</link>.",
     "needHelpPlain": "Need help? Contact {shop} directly.",
