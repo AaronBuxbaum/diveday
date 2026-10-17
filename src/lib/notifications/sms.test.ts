@@ -117,6 +117,22 @@ describe("snsSmsProvider (ADR 20260802-sns-sms-adapter)", () => {
     });
   });
 
+  it("marks a 400 Throttling answer as retryable", async () => {
+    const error = Object.assign(new Error("Rate exceeded"), {
+      name: "Throttling",
+      $metadata: { httpStatusCode: 400 },
+    });
+    const client = { send: vi.fn().mockRejectedValue(error) };
+    const provider = snsSmsProvider(snsConfig, { client });
+
+    await expect(provider.send(message)).resolves.toMatchObject({
+      status: "failed",
+      retryable: true,
+      httpStatus: 400,
+      errorCode: "Throttling",
+    });
+  });
+
   it("marks a thrown 5xx SNS error as retryable", async () => {
     const error = Object.assign(new Error("Internal error"), {
       name: "InternalErrorException",
