@@ -393,7 +393,15 @@ export function SegmentedControl({
   // longer than its neighbours made the row's targets jump). One line is a
   // grid of `1fr` columns: in a `w-fit` track that sizes every column to the
   // widest option, and in a `fill` track it splits the room evenly.
-  const track = `relative ${
+  //
+  // **Its own compositor layer, always** (#2634). Chromium promotes a track
+  // that overlaps the sticky staff sidebar to a layer of its own ("Overlap")
+  // and leaves one that does not flat, and the two antialias the border over
+  // the fill one 8-bit step apart. Whether a given track was promoted was a
+  // side effect of the layout around it, and `reports-year-dark` flipped
+  // between the two on unchanged code. `will-change-transform` asks for the
+  // layer outright, so every track paints the same way.
+  const track = `relative will-change-transform ${
     columns !== null
       ? segmentedGridTrackClass
       : `${segmentedGridTrackClass} grid-flow-col auto-cols-fr${fill ? "" : " w-fit max-w-full"}`
