@@ -3498,7 +3498,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Your name").fill("Sam Reyes");
         await page.getByLabel("Your email").fill(`claimant-${scheme}@example.com`);
         await page.getByRole("button", { name: "Claim this seat" }).click();
-        await expect(page).toHaveURL(/\/ready\//);
+        // Every claim lands on the static "check your email" page (#2381).
+        await expect(page).toHaveURL(/\/claim\/[^/?#]+\?sent=1$/);
         await page.goto(claimPath ?? "/");
         await page.getByRole("heading", { name: /link isn.t available/ }).waitFor();
         await capture(page, "expired-link-claim", scheme);
