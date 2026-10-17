@@ -5,6 +5,7 @@
   "nextMonth": "Next month",
   "currentMonthTitle": "You’re viewing the current month",
   "earliestMonthTitle": "This is your first month with departures",
+  "monthStripLabel": "The month’s days",
   "numbersLabel": "This month’s numbers",
   "comparison": {
     "yearAgo": "{trend}vs {baseline} in {month}",

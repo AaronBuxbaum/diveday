@@ -54,6 +54,8 @@ test.describe("the year on Reports", () => {
     await page.getByRole("link", { name: "This month" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
     await expect(page.getByRole("region", { name: "This month’s numbers" })).toBeVisible();
+    // The month's days as one strip above its figures (issue #2664).
+    await expect(page.getByRole("region", { name: "The month’s days" })).toBeVisible();
   });
 
   test("the card is an image the year page hands over", { tag: READ_ONLY }, async ({
