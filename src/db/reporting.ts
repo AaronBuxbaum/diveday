@@ -20,14 +20,14 @@ import {
 } from "drizzle-orm";
 import { canViewShopReports, type Role } from "@/lib/authz";
 import type { MonthRef } from "@/lib/calendar";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import type { CertificationLevel } from "@/lib/certification-levels";
 import { nowDate } from "@/lib/clock";
 import { emptyParticipantCounts } from "@/lib/participant-types";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { ShopYearDay, ShopYearInput } from "@/lib/shop-year";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
-import { shopMonthBounds, wallTimeToUtc } from "@/lib/zoned";
+import { shopDaysBounds, shopMonthBounds, wallTimeToUtc } from "@/lib/zoned";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
 import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -940,46 +940,69 @@ export async function crewCountsByTrip(
 
 /**
  * **The year's money, month by month** (fourth UX review, item 25): one
- * month report per month of `year` that has begun, each over the departures
- * that left before `now`, so the current month reads "so far" and nothing on
- * the books is counted. The year CSV writes one row per entry; the year view
- * sums them through {@link getYearToDate} instead, one read.
+ * month report per month of the shop's year that has begun, each over the
+ * departures that left before `now`, so the current month reads "so far" and
+ * nothing on the books is counted. The year is the season (issue #2657): a
+ * season that starts mid-month opens and closes on a part of that month. The
+ * year CSV writes one row per entry; the year view sums them through
+ * {@link getYearToDate} instead, one read.
  */
 export async function getYearMonthInputs(
   db: DbExecutor,
   shopId: string,
-  options: { timeZone: string; currency?: string; year: number; now: Date },
+  options: {
+    timeZone: string;
+    currency?: string;
+    startsOn: CalendarDate;
+    endsOn: CalendarDate;
+    now: Date;
+  },
 ): Promise<{ month: MonthRef; input: MonthlyReportInput }[]> {
-  const { timeZone, year, now } = options;
-  const months: MonthRef[] = [];
-  for (let month = 1; month <= 12; month++) {
-    if (shopMonthBounds({ year, month }, timeZone).from >= now) break;
-    months.push({ year, month });
+  const { timeZone, now } = options;
+  const window = shopDaysBounds(options.startsOn, options.endsOn, timeZone);
+  const months: { month: MonthRef; from: Date; to: Date }[] = [];
+  let month: MonthRef = {
+    year: Number(options.startsOn.slice(0, 4)),
+    month: Number(options.startsOn.slice(5, 7)),
+  };
+  for (;;) {
+    const bounds = shopMonthBounds(month, timeZone);
+    const from = bounds.from > window.from ? bounds.from : window.from;
+    if (from >= window.to || from >= now) break;
+    const to = [bounds.to, window.to, now].reduce((left, right) => (right < left ? right : left));
+    months.push({ month, from, to });
+    month =
+      month.month === 12
+        ? { year: month.year + 1, month: 1 }
+        : { ...month, month: month.month + 1 };
   }
   return queryAll(
     db,
-    months.map((month) => async () => {
-      const { from, to } = shopMonthBounds(month, timeZone);
-      const input = await getMonthlyReport(db, shopId, from, to < now ? to : now, options);
+    months.map(({ month, from, to }) => async () => {
+      const input = await getMonthlyReport(db, shopId, from, to, options);
       return { month, input };
     }),
   );
 }
 
 /**
- * The year so far as one month report: every departure of `year` that left
- * before `now`. Revenue, tax and tips add across departures, so this is the
- * sum of {@link getYearMonthInputs}' rows in one read.
+ * The year so far as one month report: every departure of the shop's year
+ * that left before `now`. Revenue, tax and tips add across departures, so
+ * this is the sum of {@link getYearMonthInputs}' rows in one read.
  */
 export async function getYearToDate(
   db: DbExecutor,
   shopId: string,
-  options: { timeZone: string; currency?: string; year: number; now: Date },
+  options: {
+    timeZone: string;
+    currency?: string;
+    startsOn: CalendarDate;
+    endsOn: CalendarDate;
+    now: Date;
+  },
 ): Promise<MonthlyReportInput> {
-  const { timeZone, year, now } = options;
-  const from = wallTimeToUtc({ year, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
-  const to = wallTimeToUtc({ year: year + 1, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
-  return getMonthlyReport(db, shopId, from, to < now ? to : now, options);
+  const { from, to } = shopDaysBounds(options.startsOn, options.endsOn, options.timeZone);
+  return getMonthlyReport(db, shopId, from, to < options.now ? to : options.now, options);
 }
 
 /**
@@ -1007,20 +1030,17 @@ export async function getYearToDate(
 export async function getShopYear(
   db: DbExecutor,
   shopId: string,
-  options: { timeZone: string; year?: number; now?: Date },
+  options: { timeZone: string; startsOn: CalendarDate; endsOn: CalendarDate; now?: Date },
 ): Promise<ShopYearInput> {
-  const { timeZone } = options;
+  const { timeZone, startsOn, endsOn } = options;
   const now = options.now ?? nowDate();
   const today = calendarDateInTimezone(now, timeZone);
-  const year = options.year ?? Number(today.slice(0, 4));
-  const yearStart = `${year}-01-01`;
-  const yearEnd = `${year}-12-31`;
+  const year = Number(startsOn.slice(0, 4));
   // Nothing after today is ever drawn: the year is what happened, never what
   // is on the books.
-  const lastDay = today < yearEnd ? today : yearEnd;
+  const lastDay = today < endsOn ? today : endsOn;
 
-  const from = wallTimeToUtc({ year, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
-  const to = wallTimeToUtc({ year: year + 1, month: 1, day: 1, hour: 0, minute: 0 }, timeZone);
+  const { from, to } = shopDaysBounds(startsOn, endsOn, timeZone);
   const sailedBy = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
 
   const sailedInYear = and(
@@ -1039,109 +1059,134 @@ export async function getShopYear(
   // Postgres refuses the query naming a column the GROUP BY plainly contains.
   const localDay = sql<string>`to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
 
-  const [dayRows, diverRows, boatRows, plannedSiteRows, departureSiteRows, firstSailed] =
-    await queryAll(db, [
-      () =>
-        db
-          .select({ day: localDay, boats: count(), seats: sum(trips.capacity) })
-          .from(trips)
-          .where(and(sailedInYear, liveTrip(), notRehearsal()))
-          .groupBy(sql`1`),
-      () =>
-        db
-          .select({ day: localDay, divers: count(bookings.id) })
-          .from(trips)
-          .innerJoin(
-            bookings,
-            and(
-              eq(bookings.tripId, trips.id),
-              eq(bookings.shopId, shopId),
-              inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
-            ),
-          )
-          .where(and(sailedInYear, liveTrip(), notRehearsal()))
-          .groupBy(sql`1`),
-      // Days per hull, not departures per hull: a boat that goes out twice in a
-      // day was at sea once. A departure with no boat on it contributes to the
-      // year's other figures and to no hull's count.
-      () =>
-        db
-          .select({
-            name: boats.name,
-            days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD'))`,
-          })
-          .from(trips)
-          .innerJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
-          .where(and(sailedInYear, liveTrip(), notRehearsal()))
-          .groupBy(boats.id, boats.name),
-      // The times a site was dived, from the day's plan. `trip_dives` carries no
-      // `shop_id` of its own (CR-007), so it is reached only through `trips`,
-      // and the site is scoped to the shop as well.
-      () =>
-        db
-          .select({
-            siteId: diveSites.id,
-            name: diveSites.name,
-            deletedAt: diveSites.deletedAt,
-            times: count(),
-          })
-          .from(tripDives)
-          .innerJoin(trips, eq(trips.id, tripDives.tripId))
-          .innerJoin(
-            diveSites,
-            and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)),
-          )
-          .where(and(sailedInYear, liveTrip(), notRehearsal()))
-          .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
-      // **The departure's own site, where the plan names none** (fifth loop,
-      // section 6). A shop that never fills in per-dive sites still chose a site
-      // for the departure, and its year read "0 sites" without this. Counted
-      // once per departure, and only for one whose plan names no site at all, so
-      // a planned dive is never counted twice.
-      () =>
-        db
-          .select({
-            siteId: diveSites.id,
-            name: diveSites.name,
-            deletedAt: diveSites.deletedAt,
-            times: count(),
-          })
-          .from(trips)
-          .innerJoin(
-            diveSites,
-            and(eq(diveSites.id, trips.diveSiteId), eq(diveSites.shopId, shopId)),
-          )
-          .where(
-            and(
-              sailedInYear,
-              liveTrip(),
-              notRehearsal(),
-              not(
-                exists(
-                  db
-                    .select({ id: tripDives.id })
-                    .from(tripDives)
-                    .where(and(eq(tripDives.tripId, trips.id), isNotNull(tripDives.diveSiteId))),
-                ),
+  const localMonth = sql<string>`to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM')`;
+  // **Divers are people** (issue #2663): `countDistinct` on the person, as
+  // `seasonScale` counts the home's season, so the year and the hundredth-diver
+  // line agree. Seats aboard stay a count of bookings: they fill the strip.
+  const seated = and(
+    eq(bookings.tripId, trips.id),
+    eq(bookings.shopId, shopId),
+    inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+  );
+
+  const [
+    dayRows,
+    diverRows,
+    monthRows,
+    windowDivers,
+    boatRows,
+    plannedSiteRows,
+    departureSiteRows,
+    firstSailed,
+  ] = await queryAll(db, [
+    () =>
+      db
+        .select({ day: localDay, boats: count(), seats: sum(trips.capacity) })
+        .from(trips)
+        .where(and(sailedInYear, liveTrip(), notRehearsal()))
+        .groupBy(sql`1`),
+    () =>
+      db
+        .select({
+          day: localDay,
+          divers: countDistinct(bookings.personId),
+          aboard: count(bookings.id),
+        })
+        .from(trips)
+        .innerJoin(bookings, seated)
+        .where(and(sailedInYear, liveTrip(), notRehearsal()))
+        .groupBy(sql`1`),
+    () =>
+      db
+        .select({ month: localMonth, divers: countDistinct(bookings.personId) })
+        .from(trips)
+        .innerJoin(bookings, seated)
+        .where(and(sailedInYear, liveTrip(), notRehearsal()))
+        .groupBy(sql`1`),
+    () =>
+      db
+        .select({ divers: countDistinct(bookings.personId) })
+        .from(trips)
+        .innerJoin(bookings, seated)
+        .where(and(sailedInYear, liveTrip(), notRehearsal())),
+    // Days per hull, not departures per hull: a boat that goes out twice in a
+    // day was at sea once. A departure with no boat on it contributes to the
+    // year's other figures and to no hull's count.
+    () =>
+      db
+        .select({
+          name: boats.name,
+          days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD'))`,
+        })
+        .from(trips)
+        .innerJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
+        .where(and(sailedInYear, liveTrip(), notRehearsal()))
+        .groupBy(boats.id, boats.name),
+    // The times a site was dived, from the day's plan. `trip_dives` carries no
+    // `shop_id` of its own (CR-007), so it is reached only through `trips`,
+    // and the site is scoped to the shop as well.
+    () =>
+      db
+        .select({
+          siteId: diveSites.id,
+          name: diveSites.name,
+          deletedAt: diveSites.deletedAt,
+          times: count(),
+        })
+        .from(tripDives)
+        .innerJoin(trips, eq(trips.id, tripDives.tripId))
+        .innerJoin(
+          diveSites,
+          and(eq(diveSites.id, tripDives.diveSiteId), eq(diveSites.shopId, shopId)),
+        )
+        .where(and(sailedInYear, liveTrip(), notRehearsal()))
+        .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
+    // **The departure's own site, where the plan names none** (fifth loop,
+    // section 6). A shop that never fills in per-dive sites still chose a site
+    // for the departure, and its year read "0 sites" without this. Counted
+    // once per departure, and only for one whose plan names no site at all, so
+    // a planned dive is never counted twice.
+    () =>
+      db
+        .select({
+          siteId: diveSites.id,
+          name: diveSites.name,
+          deletedAt: diveSites.deletedAt,
+          times: count(),
+        })
+        .from(trips)
+        .innerJoin(diveSites, and(eq(diveSites.id, trips.diveSiteId), eq(diveSites.shopId, shopId)))
+        .where(
+          and(
+            sailedInYear,
+            liveTrip(),
+            notRehearsal(),
+            not(
+              exists(
+                db
+                  .select({ id: tripDives.id })
+                  .from(tripDives)
+                  .where(and(eq(tripDives.tripId, trips.id), isNotNull(tripDives.diveSiteId))),
               ),
             ),
-          )
-          .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
-      // The shop's first day at sea, ever — the "since May" rule's only input.
-      () =>
-        db
-          .select({ startsAt: sql<Date | null>`min(${trips.startsAt})` })
-          .from(trips)
-          .where(
-            and(
-              eq(trips.shopId, shopId),
-              ne(trips.status, "cancelled"),
-              lte(trips.startsAt, sailedBy),
-              liveTrip(),
-              notRehearsal(),
-            ),
           ),
-    ]);
+        )
+        .groupBy(diveSites.id, diveSites.name, diveSites.deletedAt),
+    // The shop's first day at sea, ever — the "since May" rule's only input.
+    () =>
+      db
+        .select({ startsAt: sql<Date | null>`min(${trips.startsAt})` })
+        .from(trips)
+        .where(
+          and(
+            eq(trips.shopId, shopId),
+            ne(trips.status, "cancelled"),
+            lte(trips.startsAt, sailedBy),
+            liveTrip(),
+            notRehearsal(),
+          ),
+        ),
+  ]);
 
   const siteTimes = new Map<string, (typeof plannedSiteRows)[number]>();
   for (const row of [...plannedSiteRows, ...departureSiteRows]) {
@@ -1153,12 +1198,13 @@ export async function getShopYear(
   }
   const siteRows = [...siteTimes.values()];
 
-  const diversByDay = new Map(diverRows.map((row) => [row.day, Number(row.divers)]));
+  const diversByDay = new Map(diverRows.map((row) => [row.day, row]));
   const days: ShopYearDay[] = dayRows
     .map((row) => ({
       day: row.day,
       boats: Number(row.boats),
-      divers: diversByDay.get(row.day) ?? 0,
+      divers: Number(diversByDay.get(row.day)?.divers ?? 0),
+      aboard: Number(diversByDay.get(row.day)?.aboard ?? 0),
       seats: Number(row.seats ?? 0),
     }))
     .sort((left, right) => (left.day < right.day ? -1 : left.day > right.day ? 1 : 0));
@@ -1168,15 +1214,19 @@ export async function getShopYear(
     ? calendarDateInTimezone(new Date(firstSailedAt), timeZone)
     : null;
   const openedThisYear =
-    firstSailedDay !== null && firstSailedDay > yearStart && firstSailedDay <= lastDay;
-  const firstDay = openedThisYear && firstSailedDay ? firstSailedDay : yearStart;
+    firstSailedDay !== null && firstSailedDay > startsOn && firstSailedDay <= lastDay;
+  const firstDay = openedThisYear && firstSailedDay ? firstSailedDay : startsOn;
 
   return {
     year,
+    startsOn,
+    endsOn,
     firstDay,
     lastDay,
     openedThisYear,
     today,
+    divers: Number(windowDivers[0]?.divers ?? 0),
+    monthDivers: monthRows.map((row) => ({ month: row.month, divers: Number(row.divers) })),
     days: days.filter((day) => day.day >= firstDay),
     boats: boatRows
       .map((row) => ({ name: row.name, days: Number(row.days) }))

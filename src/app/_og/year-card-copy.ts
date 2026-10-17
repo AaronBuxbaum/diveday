@@ -27,15 +27,15 @@ export function yearCardCopy({
   t: DiverTranslator;
   locale: string;
 }): YearCardCopy {
-  const stillRunning = year.lastDay < `${year.year}-12-31`;
+  const stillRunning = year.lastDay < year.endsOn;
   const range = year.sinceMonth
     ? t("shopYear.card.rangeSince", {
-        year: String(year.year),
+        year: year.label,
         month: monthNames(locale)[year.sinceMonth - 1] ?? "",
       })
     : stillRunning
       ? t("shopYear.card.rangeToDate", {
-          year: String(year.year),
+          year: year.label,
           // The day without its year: the line already opens with it.
           date: formatMonthDay(
             Number(year.lastDay.slice(5, 7)),
@@ -43,7 +43,7 @@ export function yearCardCopy({
             locale,
           ),
         })
-      : t("shopYear.card.range", { year: String(year.year) });
+      : t("shopYear.card.range", { year: year.label });
 
   const topBoat = year.boats[0];
   const topSite = year.sites[0];

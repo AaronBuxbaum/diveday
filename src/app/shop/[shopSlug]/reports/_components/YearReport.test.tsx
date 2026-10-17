@@ -12,13 +12,20 @@ const t = staffTranslator("en-US");
 /** A year with something in every part: days at sea, a boat, a site. */
 const YEAR = summarizeShopYear({
   year: 2026,
+  startsOn: "2026-01-01",
+  endsOn: "2026-12-31",
   firstDay: "2026-01-01",
   lastDay: "2026-08-27",
   openedThisYear: false,
   today: "2026-08-27",
+  divers: 23,
+  monthDivers: [
+    { month: "2026-02", divers: 8 },
+    { month: "2026-03", divers: 15 },
+  ],
   days: [
-    { day: "2026-02-03", boats: 1, divers: 8, seats: 10 },
-    { day: "2026-03-14", boats: 2, divers: 15, seats: 20 },
+    { day: "2026-02-03", boats: 1, divers: 8, aboard: 8, seats: 10 },
+    { day: "2026-03-14", boats: 2, divers: 15, aboard: 15, seats: 20 },
   ],
   boats: [{ name: "Manta", days: 2 }],
   sites: [{ siteId: "s1", name: "Palancar Gardens", times: 3, live: true }],

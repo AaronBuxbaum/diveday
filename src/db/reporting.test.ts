@@ -1,8 +1,9 @@
-import { eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import { type MonthlyReport, summarizeMonth } from "@/lib/reporting";
+import { currentShopSeason, seasonStartInstant, shopSeasonOf } from "@/lib/season";
 import { summarizeShopYear } from "@/lib/shop-year";
 import { shiftInstantByCalendarDays, shopDayBounds, shopMonthBounds } from "@/lib/zoned";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
@@ -37,6 +38,7 @@ import {
   userAccounts,
   waiverRecords,
 } from "./schema";
+import { seasonScale } from "./season-scale";
 import { deleteTrip, getTripRoster, listStaff, setTripCrew } from "./trips";
 import { getCurrentWaiverTemplate } from "./waivers";
 
@@ -1243,6 +1245,9 @@ describe("crewCountsByTrip (issue #700 — crew load, never a cost)", () => {
  * **The year's money** (fourth UX review, item 25): one month row per month
  * begun, each "so far" at now, and one year-to-date read that sums them.
  */
+/** A January-start shop's year: the calendar year (issue #2657). */
+const YEAR_2026 = { startsOn: "2026-01-01", endsOn: "2026-12-31" } as const;
+
 describe("the year's money", () => {
   const TZ = "America/New_York";
   const NOW = new Date("2026-03-20T16:00:00Z");
@@ -1264,12 +1269,12 @@ describe("the year's money", () => {
     // Still to sail on the day the year is read: not in the year's money.
     await seat("2026-03-28", 7_000);
 
-    const months = await getYearMonthInputs(db, shop.id, { timeZone: TZ, year: 2026, now: NOW });
+    const months = await getYearMonthInputs(db, shop.id, { timeZone: TZ, ...YEAR_2026, now: NOW });
     expect(months.map(({ month }) => month.month)).toEqual([1, 2, 3]);
     const revenue = months.map(({ input }) => summarizeMonth(input).revenueCents);
     expect(revenue).toEqual([10_000, 0, 9_500]);
     const ytd = summarizeMonth(
-      await getYearToDate(db, shop.id, { timeZone: TZ, year: 2026, now: NOW }),
+      await getYearToDate(db, shop.id, { timeZone: TZ, ...YEAR_2026, now: NOW }),
     );
     expect(ytd.revenueCents).toBe(19_500);
     expect(ytd.seatsBooked).toBe(2);
@@ -1317,7 +1322,7 @@ describe("getShopYear", () => {
     await sailedTrip(db, shopId, "2026-03-14", 10, 2, "Night");
     await sailedTrip(db, shopId, "2026-07-04", 12, 12);
 
-    const input = await getShopYear(db, shopId, { timeZone: TZ, now: NOW });
+    const input = await getShopYear(db, shopId, { timeZone: TZ, now: NOW, ...YEAR_2026 });
     const year = summarizeShopYear(input);
 
     expect(year.year).toBe(2026);
@@ -1325,7 +1330,13 @@ describe("getShopYear", () => {
     expect(year.divers).toBe(21);
     expect(year.boatsOut).toBe(4);
     expect(year.daysAtSea).toBe(3);
-    expect(year.busiestDay).toEqual({ day: "2026-07-04", boats: 1, divers: 12, seats: 12 });
+    expect(year.busiestDay).toEqual({
+      day: "2026-07-04",
+      boats: 1,
+      divers: 12,
+      aboard: 12,
+      seats: 12,
+    });
     // Today is the last square drawn, and the strip never runs past it.
     expect(year.lastDay).toBe("2026-08-27");
     expect(year.strip.at(-1)?.day).toBe("2026-08-27");
@@ -1349,7 +1360,9 @@ describe("getShopYear", () => {
     // August is the month NOW sits in, and it is the thinnest of the three.
     await sailedTrip(db, shopId, "2026-08-03", 10, 1);
 
-    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+    const year = summarizeShopYear(
+      await getShopYear(db, shopId, { timeZone: TZ, now: NOW, ...YEAR_2026 }),
+    );
 
     expect(year.quietestMonth).toEqual({ month: 2, divers: 3, boats: 1 });
   });
@@ -1360,7 +1373,7 @@ describe("getShopYear", () => {
     await sailedTrip(db, shopId, "2026-05-20", 8, 6);
     await sailedTrip(db, shopId, "2026-06-02", 8, 4);
 
-    const input = await getShopYear(db, shopId, { timeZone: TZ, now: NOW });
+    const input = await getShopYear(db, shopId, { timeZone: TZ, now: NOW, ...YEAR_2026 });
     const year = summarizeShopYear(input);
 
     expect(input.openedThisYear).toBe(true);
@@ -1375,7 +1388,9 @@ describe("getShopYear", () => {
     const db = await unseededTestDb();
     const shopId = await yearShop(db, "year-empty");
 
-    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+    const year = summarizeShopYear(
+      await getShopYear(db, shopId, { timeZone: TZ, now: NOW, ...YEAR_2026 }),
+    );
 
     expect(year.hasActivity).toBe(false);
     expect(year.divers).toBe(0);
@@ -1404,7 +1419,9 @@ describe("getShopYear", () => {
       .set({ boatId: boat.id })
       .where(inArray(trips.id, [morning, night, later]));
 
-    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+    const year = summarizeShopYear(
+      await getShopYear(db, shopId, { timeZone: TZ, now: NOW, ...YEAR_2026 }),
+    );
 
     expect(year.boats).toEqual([{ name: "Mantis II", days: 2 }]);
     expect(year.boatsOut).toBe(3);
@@ -1435,7 +1452,9 @@ describe("getShopYear", () => {
       { tripId: second, diveNumber: 1, diveSiteId: molasses.id },
     ]);
 
-    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+    const year = summarizeShopYear(
+      await getShopYear(db, shopId, { timeZone: TZ, now: NOW, ...YEAR_2026 }),
+    );
 
     expect(year.siteCount).toBe(2);
     expect(year.sites.map((site) => [site.name, site.times, site.live])).toEqual([
@@ -1458,10 +1477,71 @@ describe("getShopYear", () => {
     await makeBooking(db, shopId, tripId, personId);
     await makeTrip(db, shopId, new Date("2026-06-15T13:00:00Z"), 10, "Blown out", "cancelled");
 
-    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+    const year = summarizeShopYear(
+      await getShopYear(db, shopId, { timeZone: TZ, now: NOW, ...YEAR_2026 }),
+    );
 
     expect(year.boatsOut).toBe(1);
     expect(year.divers).toBe(5);
+  });
+
+  it("counts a diver once however many boats they sailed on (issue #2663)", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-distinct-divers");
+    const regular = await makePerson(db, shopId, "Saturday Regular");
+    const morning = await sailedTrip(db, shopId, "2026-06-06", 4, 1);
+    const night = await makeTrip(db, shopId, new Date("2026-06-07T00:00:00Z"), 4, "Night");
+    const nextWeek = await sailedTrip(db, shopId, "2026-06-13", 4, 0);
+    for (const tripId of [morning, night, nextWeek]) await makeBooking(db, shopId, tripId, regular);
+
+    const input = await getShopYear(db, shopId, { timeZone: TZ, now: NOW, ...YEAR_2026 });
+    const year = summarizeShopYear(input);
+
+    // Two people: the regular, three times, and one diver once.
+    expect(year.divers).toBe(2);
+    expect(input.monthDivers).toEqual([{ month: "2026-06", divers: 2 }]);
+    // June 6 is one day with two boats: two people, three seats taken.
+    expect(input.days.find((day) => day.day === "2026-06-06")).toMatchObject({
+      boats: 2,
+      divers: 2,
+      aboard: 3,
+    });
+  });
+
+  it("follows a season that starts in May, not January (issue #2657)", async () => {
+    const db = await unseededTestDb();
+    const shopId = await yearShop(db, "year-may-season");
+    await db
+      .update(shops)
+      .set({ seasonStartMonth: 5, seasonStartDay: 1 })
+      .where(eq(shops.id, shopId));
+    // The last season's, and this one's.
+    await sailedTrip(db, shopId, "2026-04-20", 10, 7);
+    await sailedTrip(db, shopId, "2026-05-10", 10, 3);
+
+    const season = currentShopSeason(NOW, TZ, { month: 5, day: 1 });
+    expect(season).toEqual({ year: 2026, startsOn: "2026-05-01", endsOn: "2027-04-30" });
+    const year = summarizeShopYear(
+      await getShopYear(db, shopId, { timeZone: TZ, now: NOW, ...season }),
+    );
+    expect(year.label).toBe("2026–27");
+    expect(year.divers).toBe(3);
+    expect(year.boatsOut).toBe(1);
+    expect(year.sinceMonth).toBeNull();
+    expect(year.firstDay).toBe("2026-05-01");
+
+    const last = summarizeShopYear(
+      await getShopYear(db, shopId, {
+        timeZone: TZ,
+        now: NOW,
+        ...shopSeasonOf(2025, { month: 5, day: 1 }),
+      }),
+    );
+    expect(last.label).toBe("2025–26");
+    expect(last.divers).toBe(7);
+    // The season's money, month by month from May.
+    const months = await getYearMonthInputs(db, shopId, { timeZone: TZ, ...season, now: NOW });
+    expect(months.map(({ month }) => month.month)).toEqual([5, 6, 7, 8]);
   });
 
   it("never counts another shop's departures", async () => {
@@ -1471,10 +1551,43 @@ describe("getShopYear", () => {
     await sailedTrip(db, shopId, "2026-06-01", 10, 5);
     await sailedTrip(db, otherId, "2026-06-01", 10, 9);
 
-    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
+    const year = summarizeShopYear(
+      await getShopYear(db, shopId, { timeZone: TZ, now: NOW, ...YEAR_2026 }),
+    );
 
     expect(year.divers).toBe(5);
     expect(year.boatsOut).toBe(1);
+  });
+});
+
+/**
+ * **The year's divers and the home's season count are one number** (issue
+ * #2663): "Divers" on the year page and "your 400th diver of the season" both
+ * count different people, so on the seeded shop, read the morning after its
+ * last departure so nothing sails between the two, they agree.
+ */
+describe("the year and the season count agree", () => {
+  it("counts the same divers as seasonScale on the seeded shop", async () => {
+    const { db, shop } = ctx;
+    const tz = shop.timezone;
+    const latest = await db
+      .select({ startsAt: trips.startsAt })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .orderBy(desc(trips.startsAt))
+      .limit(1);
+    const last = latest[0]?.startsAt;
+    if (!last) throw new Error("the seeded shop has no departures");
+    // Two shop days after the last departure: everything has sailed, and none of it is today's.
+    const now = shiftInstantByCalendarDays(last, 2, tz);
+    const start = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
+    const year = summarizeShopYear(
+      await getShopYear(db, shop.id, { timeZone: tz, now, ...currentShopSeason(now, tz, start) }),
+    );
+    const scale = await seasonScale(db, shop.id, tz, seasonStartInstant(now, tz, start), now);
+
+    expect(year.divers).toBeGreaterThan(0);
+    expect(year.divers).toBe(scale.diversBefore);
   });
 });
 

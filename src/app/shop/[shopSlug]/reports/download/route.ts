@@ -8,6 +8,7 @@ import { nowDate } from "@/lib/clock";
 import { exportDateStamp } from "@/lib/export";
 import { toShopCurrency } from "@/lib/money";
 import { formatReportMoney, summarizeMonth } from "@/lib/reporting";
+import { currentShopSeason, shopSeasonOf } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
 import { utcToWallTime } from "@/lib/zoned";
 import { monthReportFile } from "./month-report-file";
@@ -46,15 +47,17 @@ export async function GET(request: Request) {
   const yearParam = search.get("year");
   if (yearParam !== null) {
     // The year as twelve month rows (fourth UX review, item 25). Parsed, never
-    // trusted: four digits, no later than this year.
+    // trusted: four digits, no later than this year. The year is the shop's
+    // season, as on the page (issue #2657).
+    const seasonStart = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
     const year = /^\d{4}$/.test(yearParam) ? Number(yearParam) : null;
-    if (year === null || year > todayWall.year) {
+    if (year === null || year > currentShopSeason(now, shop.timezone, seasonStart).year) {
       return new Response("Expected year=YYYY", { status: 400 });
     }
     const months = await getYearMonthInputs(db, shop.id, {
       timeZone: shop.timezone,
       currency,
-      year,
+      ...shopSeasonOf(year, seasonStart),
       now,
     });
     const money = (cents: number) => formatReportMoney(cents, currency, shop.defaultLocale);

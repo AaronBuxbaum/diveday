@@ -26,6 +26,18 @@ test.describe("the year on Reports", () => {
     await expect(figures.getByText("Boats out", { exact: true })).toBeVisible();
     await expect(figures.getByText("Busiest day", { exact: true })).toBeVisible();
     await expect(figures.getByText("Quietest month", { exact: true })).toBeVisible();
+    // **Divers are people** (issue #2663): the Divers figure and the sentence
+    // read one count of different people, the count the home's season line uses.
+    const sentence = await page.getByText(/[\d,]+ divers?, \d+ boats? out/).textContent();
+    const sentenceDivers = (sentence?.match(/^([\d,]+) divers?/)?.[1] ?? "").replaceAll(",", "");
+    expect(sentenceDivers).not.toBe("");
+    const figure = await figures
+      .getByRole("definition")
+      .first()
+      .locator("span")
+      .first()
+      .textContent();
+    expect(figure?.replaceAll(",", "")).toBe(sentenceDivers);
 
     // **The year's money is its own row** (fourth UX review, item 25): net
     // revenue, tax and tips for the owner, apart from the four figures, which

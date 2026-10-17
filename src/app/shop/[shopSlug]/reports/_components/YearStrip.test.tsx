@@ -9,11 +9,15 @@ afterEach(cleanup);
 /** A short year whose last day is today, so today's square is in the strip. */
 const YEAR = summarizeShopYear({
   year: 2026,
+  startsOn: "2026-01-01",
+  endsOn: "2026-12-31",
   firstDay: "2026-01-01",
   lastDay: "2026-02-10",
   openedThisYear: false,
   today: "2026-02-10",
-  days: [{ day: "2026-02-10", boats: 1, divers: 8, seats: 10 }],
+  divers: 8,
+  monthDivers: [{ month: "2026-02", divers: 8 }],
+  days: [{ day: "2026-02-10", boats: 1, divers: 8, aboard: 8, seats: 10 }],
   boats: [{ name: "Manta", days: 1 }],
   sites: [],
 });
