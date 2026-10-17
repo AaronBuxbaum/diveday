@@ -5,7 +5,7 @@ import type {
 import type { PrivateNoteAction } from "@/components/PrivateNoteForm";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { ManifestBuddyTeam, RollCallCheckpoint, TripManifest } from "@/lib/manifests";
-import type { MissingReportAction } from "./MissingReportButton";
+import type { MissingDiverRowActions } from "./missing-diver-controls";
 import type { PersonTrailEntry } from "./PersonSheet";
 import type { ManifestNote } from "./StaffNotes";
 
@@ -42,13 +42,12 @@ export type DiverRollCallContext = {
   rollCallClosed?: boolean;
   addPrivateNoteAction: PrivateNoteAction;
   /**
-   * "Start a missing diver report", bound to the departure, for a row marked
-   * not back aboard; null for a reader who may not start an incident report
-   * here (anyone but its crew, owners and managers). The write re-checks.
+   * The row's missing-diver controls (`MissingDiverControls`), bound to the
+   * departure; absent, or each null, for a reader who may not start an
+   * incident report here (anyone but its crew, owners and managers). Each
+   * write re-checks.
    */
-  startMissingDiverReport: MissingReportAction | null;
-  /** "Missing diver, alert owners now" (issue #2694), to the same readers. */
-  raiseMissingDiverAlert?: MissingReportAction | null;
+  missingDiver?: MissingDiverRowActions;
   /**
    * One `RollCallButtonCopy` per diver: the "not ready" refusal embeds a rich
    * link to that diver's own Guests anchor, so it is built by the page

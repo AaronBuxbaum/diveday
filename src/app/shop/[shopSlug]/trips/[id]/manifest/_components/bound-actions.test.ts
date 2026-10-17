@@ -30,6 +30,7 @@ vi.mock("../../incidents/actions", () => {
   return {
     startMissingDiverReportAction: bound("startMissingDiverReportAction"),
     raiseMissingDiverAlertAction: bound("raiseMissingDiverAlertAction"),
+    markMissingSubjectFoundAction: bound("markMissingSubjectFoundAction"),
   };
 });
 
@@ -83,5 +84,17 @@ describe("bindManifestActions", () => {
       bindManifestActions(context, { mayStartIncidentReport: true }).missingDiver
         .raiseMissingDiverAlert,
     ).toEqual({ name: "raiseMissingDiverAlertAction", shopSlug: "blue-mantis", tripId: "trip-1" });
+  });
+
+  it("binds Found on the row to the same readers, with the alerts still open (review 2026-10-17)", () => {
+    expect(bindManifestActions(context).missingDiver.markMissingSubjectFound).toBeNull();
+    const alerted = new Set(["booking-1"]);
+    const bound = bindManifestActions(context, { mayStartIncidentReport: true, alerted });
+    expect(bound.missingDiver.markMissingSubjectFound).toEqual({
+      name: "markMissingSubjectFoundAction",
+      shopSlug: "blue-mantis",
+      tripId: "trip-1",
+    });
+    expect(bound.missingDiver.missingAlerted).toBe(alerted);
   });
 });

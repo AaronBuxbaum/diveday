@@ -8,7 +8,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { DiverFacts, diverBlockerText } from "./DiverFacts";
 import type { DiverRollCallContext } from "./diver-roll-call-context";
 import type { DiverRowState } from "./diver-row-state";
-import { MissingReportButton } from "./MissingReportButton";
+import { MissingDiverControls } from "./missing-diver-controls";
 import {
   ROW_DISCLOSURE_PANEL_CLASS,
   RollCallBackAboardControl,
@@ -46,8 +46,7 @@ export function DiverRowPanel({
     timezone,
     rollCallAction,
     addPrivateNoteAction,
-    startMissingDiverReport,
-    raiseMissingDiverAlert = null,
+    missingDiver,
     rollCallButtonCopy,
     rollCallClosed,
     t,
@@ -211,37 +210,18 @@ export function DiverRowPanel({
           t={t}
         />
       ) : null}
-      {/* **The report, from the row that raised it** (safety sheet
-        2026-10-15, item 2). The trip page's "Report an incident" was the
-        only door, so the worst day's report was written from memory later.
-        This opens the one report for this missing diver, kind, diver and
-        time of the mark filled in, or says who already started it. Only for
-        those who may start one. */}
-      {/* **The owners told now, apart from the report** (issue #2694): one
-        tap, the report started behind it. */}
-      {rowState.notBackAboard && raiseMissingDiverAlert ? (
-        <MissingReportButton
-          key={`alert-${checkpoint}`}
-          action={raiseMissingDiverAlert}
-          subject={{ field: "bookingId", id: diver.bookingId }}
-          checkpoint={checkpoint}
-          label={t("incidents.missingDiver.alert")}
-          pendingLabel={t("incidents.missingDiver.alerting")}
-          ariaLabel={`${t("incidents.missingDiver.alert")} — ${diver.fullName}`}
-          variant="danger"
-        />
-      ) : null}
-      {rowState.notBackAboard && startMissingDiverReport ? (
-        <MissingReportButton
-          key={checkpoint}
-          action={startMissingDiverReport}
-          subject={{ field: "bookingId", id: diver.bookingId }}
-          checkpoint={checkpoint}
-          label={t("incidents.missingDiver.start")}
-          pendingLabel={t("incidents.trip.starting")}
-          ariaLabel={`${t("incidents.missingDiver.start")} — ${diver.fullName}`}
-        />
-      ) : null}
+      {/* **The owners told now, and the report, from the row that raised
+        it** (safety sheet 2026-10-15, item 2; issue #2694): the alert and the
+        one report for this missing diver while marked not back aboard, and
+        Found once marked back. Only for those who may start a report. */}
+      <MissingDiverControls
+        actions={missingDiver}
+        notBackAboard={rowState.notBackAboard}
+        subject={{ field: "bookingId", id: diver.bookingId }}
+        name={diver.fullName}
+        checkpoint={checkpoint}
+        t={t}
+      />
       {/* The deliberate second step. It is here, and nowhere
         else on this page, because reaching it has to cost a
         tap on the person's own name first (decision 3). */}

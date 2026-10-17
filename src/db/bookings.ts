@@ -42,6 +42,7 @@ import {
   hasVerifiedCertificationAtLeast,
 } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
+import type { TrainingDiveCourse } from "@/lib/training-mark";
 import {
   decideTripAdmission,
   type SelfDeclaration,
@@ -90,7 +91,7 @@ import {
 import { lockSeatDeparture } from "./seat-locks";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
-import { markableTrainingDiveLevels } from "./training-mark-resolve";
+import { markableTrainingDives } from "./training-mark-resolve";
 import { dropTrainingMarkWithin } from "./training-marks";
 import { type SendRescheduleNoticesOptions, sendMissedRescheduleNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
@@ -739,7 +740,7 @@ export async function tripAdmissionFor(
       ? {
           ...(await readCertificationEvidence(tx, shopId, person.id)),
           levelsInTraining: await levelsInTrainingBefore(tx, shopId, person.id, tripId),
-          trainingDiveLevels: await trainingDiveLevelsOn(tx, shopId, person.id, tripId),
+          trainingDives: await trainingDivesOn(tx, shopId, person.id, tripId),
         }
       : NO_EVIDENCE;
   // A declaration about a person whose identity did not match is not about
@@ -778,22 +779,23 @@ async function levelsInTrainingBefore(
 }
 
 /**
- * The course levels a staff training mark could make this departure answer
- * to, with the course's instructor aboard (`markableTrainingDiveLevels`,
- * issue #2731). Admission sells on them; readiness waits for the mark.
+ * The courses a staff training mark could make this departure answer to,
+ * with room for the seat under an instructor of the course aboard
+ * (`markableTrainingDives`, issue #2731). Admission sells on them; readiness
+ * waits for the mark.
  */
-async function trainingDiveLevelsOn(
+async function trainingDivesOn(
   tx: DbExecutor,
   shopId: string,
   personId: string,
   tripId: string,
-): Promise<(CertificationLevel | null)[]> {
+): Promise<TrainingDiveCourse[]> {
   const [trip] = await tx
     .select({ id: trips.id, startsAt: trips.startsAt })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
-  return trip ? markableTrainingDiveLevels(tx, shopId, personId, trip) : [];
+  return trip ? markableTrainingDives(tx, shopId, personId, trip) : [];
 }
 
 /** What a diver this shop knows nothing about has on file — and what an unread evidence lookup stands in for. */

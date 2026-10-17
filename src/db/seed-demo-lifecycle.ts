@@ -48,7 +48,6 @@ import {
   inboundMessages,
   inboxSavedAnswers,
   incidentReportAddenda,
-  incidentReportPeople,
   incidentReports,
   integrationDeliveries,
   integrationEvents,
@@ -217,7 +216,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
   // Incident reports name bookings, people and the departure, so they go first.
   await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
-  await db.delete(incidentReportPeople).where(eq(incidentReportPeople.shopId, shopId));
+  // Each report takes its people rows with it (cascade): a raised report
+  // points at its subject's row, so that row cannot go first.
   await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));

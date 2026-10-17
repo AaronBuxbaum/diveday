@@ -1,4 +1,18 @@
-import { type AnyColumn, and, asc, desc, eq, gte, inArray, isNull, lt, ne, sql } from "drizzle-orm";
+import {
+  type AnyColumn,
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -26,6 +40,13 @@ import { OFFLINE_EVENT_SKEW_MS } from "@/lib/offline-events";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { sendMissingDiverAlerts, sendMissingDiverAllClear } from "./missing-diver-alerts";
+import {
+  affectedSubjects,
+  afterDiveEvents,
+  type MissingSubject,
+  standingNotBackAboardSince,
+  subjectOnDeparture,
+} from "./missing-subject";
 import { recordTripActivity } from "./operations";
 import { queryAll } from "./query-helpers";
 import {
@@ -91,6 +112,9 @@ export async function loadIncidentViewer(
   ]);
   return { personId, roles, onCrew: crew.length > 0 };
 }
+
+export type { MissingSubject } from "./missing-subject";
+export { standingNotBackAboardSince } from "./missing-subject";
 
 export type IncidentWriteRefusal =
   | "not_found"
@@ -224,124 +248,6 @@ async function openUntouchedDraft(
   return { ok: true, reportId, reused: false };
 }
 
-/** Who is missing: a diver by their seat, or a crew member of this departure. */
-export type MissingSubject =
-  | { kind: "diver"; bookingId: string }
-  | { kind: "crew"; personId: string };
-
-/**
- * When a standing "not back aboard" began, from one subject's after-dive
- * roll-call events oldest first: per checkpoint, the first `not_boarded` of
- * the unbroken run that ends with the checkpoint's latest event; across
- * checkpoints, the earliest. Null when no checkpoint stands that way now
- * (never marked, or marked back aboard or cleared since).
- *
- * The earliest, not the newest (domain review 2026-10-16): an offline copy of
- * the same alarm synced seven minutes later, or the same diver still missing
- * at the next count, is the same disappearance, and an insurer reads the
- * first time the crew said so. The dock's `not_boarded` is "never left",
- * never a missing diver, so the caller leaves the departure checkpoint out.
- */
-export function standingNotBackAboardSince(
-  events: readonly { checkpoint: string; status: string; occurredAt: Date }[],
-): Date | null {
-  const runStart = new Map<string, Date | null>();
-  for (const event of events) {
-    if (event.status !== "not_boarded") runStart.set(event.checkpoint, null);
-    else if (!runStart.get(event.checkpoint)) runStart.set(event.checkpoint, event.occurredAt);
-  }
-  let since: Date | null = null;
-  for (const start of runStart.values()) {
-    if (start && (!since || start < since)) since = start;
-  }
-  return since;
-}
-
-/** The subject's after-dive roll-call events on this departure, oldest first. */
-async function afterDiveEvents(
-  tx: DbExecutor,
-  input: { shopId: string; tripId: string; subject: MissingSubject },
-) {
-  const { subject } = input;
-  if (subject.kind === "diver") {
-    return tx
-      .select({
-        checkpoint: rollCallEvents.checkpoint,
-        status: rollCallEvents.status,
-        occurredAt: rollCallEvents.occurredAt,
-      })
-      .from(rollCallEvents)
-      .where(
-        and(
-          eq(rollCallEvents.shopId, input.shopId),
-          eq(rollCallEvents.tripId, input.tripId),
-          eq(rollCallEvents.bookingId, subject.bookingId),
-          ne(rollCallEvents.checkpoint, "departure"),
-        ),
-      )
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      );
-  }
-  return tx
-    .select({
-      checkpoint: rollCallCrewEvents.checkpoint,
-      status: rollCallCrewEvents.status,
-      occurredAt: rollCallCrewEvents.occurredAt,
-    })
-    .from(rollCallCrewEvents)
-    .where(
-      and(
-        eq(rollCallCrewEvents.shopId, input.shopId),
-        eq(rollCallCrewEvents.tripId, input.tripId),
-        eq(rollCallCrewEvents.personId, subject.personId),
-        ne(rollCallCrewEvents.checkpoint, "departure"),
-      ),
-    )
-    .orderBy(
-      asc(rollCallCrewEvents.occurredAt),
-      asc(rollCallCrewEvents.createdAt),
-      asc(rollCallCrewEvents.seq),
-    );
-}
-
-/** Whether the subject is on this departure: a seat booked on it, or its crew. */
-async function subjectOnDeparture(
-  tx: DbExecutor,
-  input: { shopId: string; tripId: string; subject: MissingSubject },
-): Promise<boolean> {
-  const { subject } = input;
-  if (subject.kind === "diver") {
-    const [seat] = await tx
-      .select({ id: bookings.id })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.id, subject.bookingId),
-          eq(bookings.shopId, input.shopId),
-          eq(bookings.tripId, input.tripId),
-        ),
-      )
-      .limit(1);
-    return Boolean(seat);
-  }
-  const [member] = await tx
-    .select({ personId: tripAssignments.personId })
-    .from(tripAssignments)
-    .innerJoin(people, eq(people.id, tripAssignments.personId))
-    .where(
-      and(
-        eq(tripAssignments.tripId, input.tripId),
-        eq(tripAssignments.personId, subject.personId),
-        eq(people.shopId, input.shopId),
-      ),
-    )
-    .limit(1);
-  return Boolean(member);
-}
-
 export type MissingDiverStart =
   | { ok: true; reportId: string; reused: boolean }
   | { ok: false; reason: IncidentWriteRefusal | "not_missing" }
@@ -397,7 +303,9 @@ type MissingReportRow = {
   createdByName: string;
   filedByName: string | null;
   missingAlertRaisedAt: Date | null;
-  missingFoundAt: Date | null;
+  missingAlertSentAt: Date | null;
+  /** The report's row naming this person as affected. */
+  subjectRowId: string;
 };
 
 /**
@@ -433,7 +341,8 @@ async function openMissingReport(
       createdByName: creators.fullName,
       filedByName: filers.fullName,
       missingAlertRaisedAt: incidentReports.missingAlertRaisedAt,
-      missingFoundAt: incidentReports.missingFoundAt,
+      missingAlertSentAt: incidentReports.missingAlertSentAt,
+      subjectRowId: incidentReportPeople.id,
     })
     .from(incidentReports)
     .innerJoin(creators, eq(creators.id, incidentReports.createdByPersonId))
@@ -445,6 +354,11 @@ async function openMissingReport(
         eq(incidentReports.tripId, input.tripId),
         eq(incidentReports.kind, "missing_diver"),
         isNull(incidentReports.deletedAt),
+        // A report marked found is an earlier disappearance's: Found is
+        // refused while the roll call stands not back aboard, so a mark that
+        // stands now came after it, or reached the server after it, and is a
+        // diver missing again (review 2026-10-17). Never the found report.
+        isNull(incidentReports.missingFoundAt),
         // This disappearance's, not an earlier one's the diver came back
         // from. A tablet's clock may run ahead of the server's by the
         // offline skew, so the mark can postdate the report it opened.
@@ -461,14 +375,18 @@ async function openMissingReport(
   if (open) return { ok: true, report: open, created: false };
   const reportId = await insertDraft(tx, input, { kind: "missing_diver", occurredAt: since });
   if (!reportId) return { ok: false, reason: "not_found" };
-  await tx.insert(incidentReportPeople).values({
-    shopId: input.shopId,
-    reportId,
-    involvement: "affected",
-    ...(subject.kind === "diver"
-      ? { bookingId: subject.bookingId }
-      : { personId: subject.personId }),
-  });
+  const [row] = await tx
+    .insert(incidentReportPeople)
+    .values({
+      shopId: input.shopId,
+      reportId,
+      involvement: "affected",
+      ...(subject.kind === "diver"
+        ? { bookingId: subject.bookingId }
+        : { personId: subject.personId }),
+    })
+    .returning({ id: incidentReportPeople.id });
+  if (!row) return { ok: false, reason: "not_found" };
   return {
     ok: true,
     created: true,
@@ -479,7 +397,8 @@ async function openMissingReport(
       createdByName: "",
       filedByName: null,
       missingAlertRaisedAt: null,
-      missingFoundAt: null,
+      missingAlertSentAt: null,
+      subjectRowId: row.id,
     },
   };
 }
@@ -503,9 +422,13 @@ async function reuseOrName(
 }
 
 export type MissingDiverRaise =
-  /** The owners are being told; `reportId` is the report this viewer may open, when they may. */
-  | { ok: true; reportId: string | null; alreadyRaised: boolean }
-  | { ok: false; reason: IncidentWriteRefusal | "not_missing" | "already_found" };
+  /**
+   * The owners were asked for; `reportId` is the report this viewer may open,
+   * when they may. `told` says whether every owner's email went, so the
+   * screen never says "alerted" over a send that reached nobody.
+   */
+  | { ok: true; reportId: string | null; alreadyRaised: boolean; told: boolean }
+  | { ok: false; reason: IncidentWriteRefusal | "not_missing" };
 
 /**
  * **"Missing diver, alert owners now"** (issue #2694, decided by Aaron
@@ -517,13 +440,17 @@ export type MissingDiverRaise =
  * report's path (`sendMissingDiverAlerts`, H-142), once per report.
  *
  * - **A double tap is one alert.** The advisory lock on (departure, missing
- *   person) serializes two taps; the second finds the report raised and
- *   sends nothing new. A report already filed was alerted by its filing.
+ *   person) serializes two taps; the second finds the report raised. A report
+ *   already filed was alerted by its filing.
+ * - **A tap on a report not yet told sends again** (review 2026-10-17): when
+ *   no send reached every owner (`missing_alert_sent_at` still null), the
+ *   tap is the retry; the send's lease stops two at once. `told` answers
+ *   whether the owners have it now.
  * - **Somebody else's report is still raised.** A second crew member's tap
  *   alerts the owners on the first one's report; it is not handed over
  *   (`reportId` null), only named.
- * - **A diver already found is not alerted again** (`already_found`): the
- *   crew marks them back aboard, and a later disappearance is a new report.
+ * - **Missing again after Found is a new report and a new alert**: a found
+ *   report never answers for a mark that stands now (`openMissingReport`).
  * - Same people as the report button (`mayStartIncidentReport`), same
  *   `not_missing` refusal for a stale tap, and no alert for a rehearsal, a
  *   cancelled departure or a demo shop (the sender's own filter).
@@ -538,115 +465,120 @@ export async function raiseMissingDiverAlert(
     provider?: NotificationProvider;
   },
 ): Promise<MissingDiverRaise> {
-  const raised = await db.transaction(async (tx): Promise<MissingDiverRaise> => {
-    const opened = await openMissingReport(tx, input);
-    if (!opened.ok) return opened;
-    const { report } = opened;
-    if (report.missingFoundAt) return { ok: false, reason: "already_found" };
-    let alreadyRaised = report.status === "filed" || report.missingAlertRaisedAt !== null;
-    if (!alreadyRaised) {
-      const now = nowDate();
-      const stamped = await tx
-        .update(incidentReports)
-        .set({
-          missingAlertRaisedAt: now,
-          missingAlertRaisedByPersonId: input.actorPersonId,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(incidentReports.id, report.id),
-            eq(incidentReports.shopId, input.shopId),
-            eq(incidentReports.status, "draft"),
-            isNull(incidentReports.missingAlertRaisedAt),
-            isNull(incidentReports.missingFoundAt),
-            liveReport,
-          ),
-        )
-        .returning({ id: incidentReports.id });
-      alreadyRaised = stamped.length === 0;
+  const raised = await db.transaction(
+    async (tx): Promise<{ result: MissingDiverRaise; send: string | null }> => {
+      const opened = await openMissingReport(tx, input);
+      if (!opened.ok) return { result: opened, send: null };
+      const { report } = opened;
+      let alreadyRaised = report.status === "filed" || report.missingAlertRaisedAt !== null;
       if (!alreadyRaised) {
-        await recordTripActivity(tx, {
-          shopId: input.shopId,
-          tripId: input.tripId,
-          actorPersonId: input.actorPersonId,
-          entry: { code: "missing_diver_alert_raised" },
-        });
+        const now = nowDate();
+        const stamped = await tx
+          .update(incidentReports)
+          .set({
+            missingAlertRaisedAt: now,
+            missingAlertRaisedByPersonId: input.actorPersonId,
+            missingSubjectRowId: report.subjectRowId,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(incidentReports.id, report.id),
+              eq(incidentReports.shopId, input.shopId),
+              eq(incidentReports.status, "draft"),
+              isNull(incidentReports.missingAlertRaisedAt),
+              isNull(incidentReports.missingFoundAt),
+              liveReport,
+            ),
+          )
+          .returning({ id: incidentReports.id });
+        alreadyRaised = stamped.length === 0;
+        if (!alreadyRaised) {
+          await recordTripActivity(tx, {
+            shopId: input.shopId,
+            tripId: input.tripId,
+            actorPersonId: input.actorPersonId,
+            entry: { code: "missing_diver_alert_raised" },
+          });
+        }
       }
-    }
-    const reuse = opened.created
-      ? { ok: true as const, reportId: report.id }
-      : await reuseOrName(tx, input, report);
-    return { ok: true, reportId: reuse.ok ? reuse.reportId : null, alreadyRaised };
-  });
+      const reuse = opened.created
+        ? { ok: true as const, reportId: report.id }
+        : await reuseOrName(tx, input, report);
+      return {
+        result: {
+          ok: true,
+          reportId: reuse.ok ? reuse.reportId : null,
+          alreadyRaised,
+          told: report.missingAlertSentAt !== null,
+        },
+        // A first raise sends; so does a re-tap on a report nobody was told of.
+        send: report.missingAlertSentAt === null ? report.id : null,
+      };
+    },
+  );
+  const { result } = raised;
+  if (!result.ok || !raised.send) return result;
   // After the commit, as filing does: the send never undoes the raise, and a
-  // failed send is given back for the hourly pass.
-  if (raised.ok && !raised.alreadyRaised) {
-    try {
-      const reportId = await raisedReportId(db, input);
-      if (reportId) {
-        await sendMissingDiverAlerts(db, { reportId, provider: input.provider });
-      }
-    } catch {
-      log("incident.missing_diver_alert_failed", "error", { tripId: input.tripId });
-    }
+  // failed send is given back for the next tap or the hourly pass.
+  try {
+    await sendMissingDiverAlerts(db, { reportId: raised.send, provider: input.provider });
+  } catch {
+    log("incident.missing_diver_alert_failed", "error", { tripId: input.tripId });
   }
-  return raised;
+  return { ...result, told: await ownersTold(db, input.shopId, raised.send) };
 }
 
-/** The raised report for this departure and missing person, newest first: the one just raised. */
-async function raisedReportId(
-  db: DbExecutor,
-  input: { shopId: string; tripId: string; subject: MissingSubject },
-): Promise<string | null> {
-  const { subject } = input;
+/** Whether every owner's email for this report's alert went (`missing_alert_sent_at`). */
+async function ownersTold(db: DbExecutor, shopId: string, reportId: string): Promise<boolean> {
   const [row] = await db
-    .select({ id: incidentReports.id })
+    .select({ sentAt: incidentReports.missingAlertSentAt })
     .from(incidentReports)
-    .innerJoin(incidentReportPeople, eq(incidentReportPeople.reportId, incidentReports.id))
-    .where(
-      and(
-        eq(incidentReports.shopId, input.shopId),
-        eq(incidentReports.tripId, input.tripId),
-        sql`${incidentReports.missingAlertRaisedAt} is not null`,
-        isNull(incidentReports.missingFoundAt),
-        liveReport,
-        eq(incidentReportPeople.involvement, "affected"),
-        subject.kind === "diver"
-          ? eq(incidentReportPeople.bookingId, subject.bookingId)
-          : eq(incidentReportPeople.personId, subject.personId),
-      ),
-    )
-    // diveday:allow-time-id-order: the report just raised; nobody is shown this order.
-    .orderBy(desc(incidentReports.missingAlertRaisedAt), asc(incidentReports.id))
+    .where(and(eq(incidentReports.id, reportId), eq(incidentReports.shopId, shopId)))
     .limit(1);
-  return row?.id ?? null;
+  return row?.sentAt != null;
 }
 
 export type MissingDiverFound =
   | { ok: true; changed: boolean }
-  | { ok: false; reason: IncidentWriteRefusal | "not_alerted" };
+  | { ok: false; reason: IncidentWriteRefusal | "not_alerted" | "still_missing" };
 
 /**
  * **The diver was found** (issue #2694, decided by Aaron 2026-10-17): the
  * addendum that sends one quiet all-clear to the owners the alert told. On a
- * missing-diver report whose alert was raised or filed, by whoever may write
- * it (as an addendum). Recorded once; a second tap changes nothing and sends
- * nothing. It stops any alert not yet sent. The all-clear is email only, no
- * push, at most once (`sendMissingDiverAllClear`).
+ * missing-diver report whose alert was raised or filed.
+ *
+ * - **Never over the roll call** (review 2026-10-17): refused as
+ *   `still_missing` while any person the report names as affected still
+ *   stands "not back aboard" on this departure. "Mark back aboard" first; one
+ *   wrong tap cannot silence a live disappearance.
+ * - **Any of the departure's crew**, as well as the report's own readers:
+ *   the people at the rail are the ones who see the diver surface.
+ * - Recorded once; a second tap changes nothing and sends nothing. It stops
+ *   any alert not yet sent. The all-clear is email only, no push, at most
+ *   once (`sendMissingDiverAllClear`).
  */
 export async function markMissingDiverFound(
   db: AppDb,
   input: WriteTarget & { provider?: NotificationProvider },
 ): Promise<MissingDiverFound> {
   const found = await db.transaction(async (tx): Promise<MissingDiverFound> => {
-    const { report, allowed } = await lockForWrite(tx, input);
-    if (!report || !allowed) return { ok: false, reason: "not_found" };
+    const { report, allowed, viewer } = await lockForWrite(tx, input);
+    if (!report || !viewer || !(allowed || mayStartIncidentReport(viewer))) {
+      return { ok: false, reason: "not_found" };
+    }
     if (report.kind !== "missing_diver") return { ok: false, reason: "not_alerted" };
     if (report.status !== "filed" && report.missingAlertRaisedAt === null) {
       return { ok: false, reason: "not_alerted" };
     }
     if (report.missingFoundAt !== null) return { ok: true, changed: false };
+    const subjects = await affectedSubjects(tx, input.shopId, input.reportId);
+    for (const subject of subjects) {
+      const target = { shopId: input.shopId, tripId: report.tripId, subject };
+      if (standingNotBackAboardSince(await afterDiveEvents(tx, target))) {
+        return { ok: false, reason: "still_missing" };
+      }
+    }
     const now = nowDate();
     const stamped = await tx
       .update(incidentReports)
@@ -671,12 +603,81 @@ export async function markMissingDiverFound(
   });
   if (found.ok && found.changed) {
     try {
-      await sendMissingDiverAllClear(db, { reportId: input.reportId, provider: input.provider });
+      await sendMissingDiverAllClear(db, {
+        shopId: input.shopId,
+        reportId: input.reportId,
+        provider: input.provider,
+      });
     } catch {
       log("incident.missing_diver_all_clear_failed", "error", { reportId: input.reportId });
     }
   }
   return found;
+}
+
+/**
+ * **Found from the roll-call row** (review 2026-10-17): the same Found, for
+ * the open alerted report naming this diver or crew member as affected on
+ * this departure. `not_alerted` when there is none.
+ */
+export async function markMissingSubjectFound(
+  db: AppDb,
+  input: {
+    shopId: string;
+    tripId: string;
+    subject: MissingSubject;
+    actorPersonId: string;
+    provider?: NotificationProvider;
+  },
+): Promise<MissingDiverFound> {
+  const open = (await openMissingAlerts(db, input.shopId, input.tripId)).find((row) =>
+    input.subject.kind === "diver"
+      ? row.bookingId === input.subject.bookingId
+      : row.personId === input.subject.personId,
+  );
+  if (!open) return { ok: false, reason: "not_alerted" };
+  return markMissingDiverFound(db, { ...input, reportId: open.reportId });
+}
+
+export type OpenMissingAlert = {
+  reportId: string;
+  bookingId: string | null;
+  personId: string | null;
+};
+
+/**
+ * The people on this departure an alert was raised or filed for and who are
+ * not marked found yet: the manifest offers Found on their rows. Newest
+ * report first per person.
+ */
+export async function openMissingAlerts(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<OpenMissingAlert[]> {
+  return (
+    db
+      .select({
+        reportId: incidentReports.id,
+        bookingId: incidentReportPeople.bookingId,
+        personId: incidentReportPeople.personId,
+      })
+      .from(incidentReports)
+      .innerJoin(incidentReportPeople, eq(incidentReportPeople.reportId, incidentReports.id))
+      .where(
+        and(
+          eq(incidentReports.shopId, shopId),
+          eq(incidentReports.tripId, tripId),
+          eq(incidentReports.kind, "missing_diver"),
+          or(eq(incidentReports.status, "filed"), isNotNull(incidentReports.missingAlertRaisedAt)),
+          isNull(incidentReports.missingFoundAt),
+          liveReport,
+          eq(incidentReportPeople.involvement, "affected"),
+        ),
+      )
+      // diveday:allow-time-id-order: picks the newest open report per person; nobody is shown this order.
+      .orderBy(desc(incidentReports.createdAt), asc(incidentReports.id))
+  );
 }
 
 /**
@@ -727,6 +728,7 @@ async function lockForWrite(
       legalHoldAt: incidentReports.legalHoldAt,
       missingAlertRaisedAt: incidentReports.missingAlertRaisedAt,
       missingFoundAt: incidentReports.missingFoundAt,
+      missingSubjectRowId: incidentReports.missingSubjectRowId,
     })
     .from(incidentReports)
     // A discarded draft is gone to every write, as a report that never existed.
@@ -1035,6 +1037,11 @@ export async function removeIncidentPerson(
     const { report, allowed } = await lockForWrite(tx, input);
     if (!report || !allowed) return { ok: false, reason: "not_found" } as const;
     if (report.status !== "draft") return { ok: false, reason: "filed" } as const;
+    // The person the owners were told is missing stays on the report (review
+    // 2026-10-17); the foreign key on `missing_subject_row_id` refuses too.
+    if (report.missingSubjectRowId === input.rowId) {
+      return { ok: false, reason: "alerted" } as const;
+    }
     await tx
       .delete(incidentReportPeople)
       .where(
@@ -1086,6 +1093,12 @@ export type IncidentReportView = {
     sentAt: Date | null;
     foundAt: Date | null;
     foundByName: string | null;
+    /**
+     * The all-clear after Found: sent to every owner, claimed but not reaching
+     * every owner, or never sent (a demo shop, no public origin). Null before
+     * Found.
+     */
+    allClear: { state: "sent"; sentAt: Date } | { state: "partial" | "none" } | null;
   } | null;
 };
 
@@ -1232,6 +1245,11 @@ export async function getIncidentReport(
             sentAt: report.missingAlertSentAt,
             foundAt: report.missingFoundAt,
             foundByName: report.missingFoundAt ? (row.foundByName ?? null) : null,
+            allClear: !report.missingFoundAt
+              ? null
+              : report.missingAllClearSentAt
+                ? { state: "sent", sentAt: report.missingAllClearSentAt }
+                : { state: report.missingAllClearClaimedAt ? "partial" : "none" },
           }
         : null,
   };
@@ -1529,7 +1547,8 @@ export async function listIncidentCrewChoices(
  */
 export async function deleteDemoSafetyTrail(db: DbExecutor, shopId: string): Promise<void> {
   await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
-  await db.delete(incidentReportPeople).where(eq(incidentReportPeople.shopId, shopId));
+  // Each report takes its people rows with it (cascade): a raised report
+  // points at its subject's row, so that row cannot go first.
   await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));

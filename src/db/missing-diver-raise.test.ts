@@ -1,23 +1,30 @@
 import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
-import type { Notification, NotificationProvider } from "@/lib/notifications";
+import type { NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
-  addIncidentAddendum,
   discardIncidentDraft,
   fileIncidentReport,
-  getIncidentReport,
   markMissingDiverFound,
   raiseMissingDiverAlert,
+  removeIncidentPerson,
   saveIncidentDraft,
-  startIncidentReport,
   startMissingDiverReport,
 } from "./incident-reports";
-import { complete, fixture, OTHER_SHOP, OTHER_TRIP } from "./incident-reports-test-fixtures";
-import { sendMissingDiverAlerts, sendMissingDiverAllClear } from "./missing-diver-alerts";
-import { activityEvents, incidentReports, rollCallEvents, shops } from "./schema";
+import { complete, OTHER_SHOP, OTHER_TRIP } from "./incident-reports-test-fixtures";
+import { sendMissingDiverAlerts } from "./missing-diver-alerts";
+import {
+  type Fixture,
+  MARKED_AT,
+  mark,
+  missingSeat,
+  recorder,
+  stateOf,
+} from "./missing-diver-test-fixtures";
+import { ownerLogins } from "./owner-logins";
+import { activityEvents, incidentReportPeople, incidentReports, personRoles } from "./schema";
 
 // The boat's followers are pushed by the alert; counted here, never sent.
 const push = vi.hoisted(() => ({ calls: 0 }));
@@ -37,72 +44,16 @@ afterEach(() => {
 });
 
 /**
- * **"Missing diver, alert owners now" and "Found"** (issue #2694, decided by
- * Aaron 2026-10-17). Safety-critical, so the failure paths lead: a double
- * tap, a tap synced late from an offline tablet, another shop's caller, a
- * diver already found, staff who may not write, a found before the alert
- * went, and a second all-clear.
+ * **"Missing diver, alert owners now"** (issue #2694, decided by Aaron
+ * 2026-10-17; domain and security reviews 2026-10-17). Safety-critical, so
+ * the failure paths lead: a double tap, a send that reached nobody, a tap
+ * synced late from an offline tablet, another shop's caller, staff who may
+ * not, a diver missing again after Found, and a roll call that has them back
+ * before the hourly pass.
  */
 const ctx = fileScopedShopContext();
 
-// Five minutes ago: a diver who may be missing now, so the alert pushes too.
-const MARKED_AT = new Date(nowDate().getTime() - 5 * 60 * 1000);
-
-function recorder() {
-  const sent: Notification[] = [];
-  const provider: NotificationProvider = {
-    async send(notification) {
-      sent.push(notification);
-      return { status: "sent", providerMessageId: `msg-${sent.length}` };
-    },
-  };
-  const kinds = (kind: string) => sent.filter((n) => n.kind === kind).length;
-  return { sent, provider, kinds };
-}
-
-type Fixture = Awaited<ReturnType<typeof fixture>>;
-
-/** A real (not demo) shop's departure with the fixture's seat marked not back aboard. */
-async function missingSeat(source: "live" | "offline" = "live") {
-  const { db, shop } = ctx;
-  await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
-  const f = await fixture(db, shop.id);
-  await db.insert(rollCallEvents).values({
-    shopId: shop.id,
-    tripId: f.trip.id,
-    bookingId: f.seat.booking.id,
-    recordedByPersonId: f.crew.id,
-    status: "not_boarded",
-    checkpoint: "after_dive_1",
-    source,
-    occurredAt: MARKED_AT,
-  });
-  const input = {
-    shopId: shop.id,
-    tripId: f.trip.id,
-    subject: { kind: "diver" as const, bookingId: f.seat.booking.id },
-  };
-  return { db, f, input };
-}
-
-async function stateOf(db: AppDb, reportId: string) {
-  const [row] = await db
-    .select({
-      kind: incidentReports.kind,
-      status: incidentReports.status,
-      raisedAt: incidentReports.missingAlertRaisedAt,
-      raisedBy: incidentReports.missingAlertRaisedByPersonId,
-      sentAt: incidentReports.missingAlertSentAt,
-      foundAt: incidentReports.missingFoundAt,
-      foundBy: incidentReports.missingFoundByPersonId,
-      allClearAt: incidentReports.missingAllClearSentAt,
-      deletedAt: incidentReports.deletedAt,
-    })
-    .from(incidentReports)
-    .where(eq(incidentReports.id, reportId));
-  if (!row) throw new Error("report missing");
-  return row;
-}
+const seat = () => missingSeat(ctx.db, ctx.shop.id);
 
 async function activityCodes(db: AppDb, f: Fixture) {
   const rows = await db
@@ -114,7 +65,7 @@ async function activityCodes(db: AppDb, f: Fixture) {
 
 async function raised(
   db: AppDb,
-  input: Awaited<ReturnType<typeof missingSeat>>["input"],
+  input: Awaited<ReturnType<typeof seat>>["input"],
   actorPersonId: string,
   provider: NotificationProvider,
 ) {
@@ -123,28 +74,37 @@ async function raised(
   return result.reportId;
 }
 
+const minutesAfterMark = (minutes: number) => new Date(MARKED_AT.getTime() + minutes * 60_000);
+
 describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () => {
   it("tells the owners at once from a draft, the report started behind the tap", async () => {
-    const { db, f, input } = await missingSeat();
+    const { db, f, input } = await seat();
     const { provider, kinds } = recorder();
-    const reportId = await raised(db, input, f.crew.id, provider);
-    const state = await stateOf(db, reportId);
+    const result = await raiseMissingDiverAlert(db, {
+      ...input,
+      actorPersonId: f.crew.id,
+      provider,
+    });
+    if (!result.ok || !result.reportId) throw new Error("refused");
+    expect(result).toMatchObject({ alreadyRaised: false, told: true });
+    const state = await stateOf(db, result.reportId);
     expect(state).toMatchObject({ kind: "missing_diver", status: "draft", raisedBy: f.crew.id });
     expect(state.raisedAt).toBeInstanceOf(Date);
     expect(state.sentAt).toBeInstanceOf(Date);
+    expect(state.subjectRowId).not.toBeNull();
     expect(kinds("incident_missing_diver")).toBeGreaterThan(0);
     expect(push.calls).toBe(1);
     expect(await activityCodes(db, f)).toEqual(["missing_diver_alert_raised"]);
     // "Start a missing diver report" opens the same report.
     expect(await startMissingDiverReport(db, { ...input, actorPersonId: f.crew.id })).toEqual({
       ok: true,
-      reportId,
+      reportId: result.reportId,
       reused: true,
     });
   });
 
   it("is one alert for a double tap, and for a second crew member's tap", async () => {
-    const { db, f, input } = await missingSeat();
+    const { db, f, input } = await seat();
     const { provider, kinds } = recorder();
     // PGlite is one connection, so the taps run one after the other here; the
     // advisory lock is what serializes them on Postgres.
@@ -158,8 +118,8 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
       actorPersonId: f.crew.id,
       provider,
     });
-    expect([first, second].filter((r) => r.ok && !r.alreadyRaised)).toHaveLength(1);
-    expect([first, second].filter((r) => r.ok && r.alreadyRaised)).toHaveLength(1);
+    expect(first).toMatchObject({ ok: true, alreadyRaised: false, told: true });
+    expect(second).toMatchObject({ ok: true, alreadyRaised: true, told: true });
     const once = kinds("incident_missing_diver");
     expect(once).toBeGreaterThan(0);
     // The owner's tap reuses the crew member's report and sends nothing new.
@@ -168,14 +128,44 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
       actorPersonId: f.owner.id,
       provider,
     });
-    expect(owner).toMatchObject({ ok: true, alreadyRaised: true });
+    expect(owner).toMatchObject({ ok: true, alreadyRaised: true, told: true });
     expect(kinds("incident_missing_diver")).toBe(once);
     expect(push.calls).toBe(1);
     expect(await activityCodes(db, f)).toEqual(["missing_diver_alert_raised"]);
   });
 
+  it("never says told when the send reached nobody, and a second tap sends again", async () => {
+    const { db, f, input } = await seat();
+    const failing = recorder("failed");
+    const first = await raiseMissingDiverAlert(db, {
+      ...input,
+      actorPersonId: f.crew.id,
+      provider: failing.provider,
+    });
+    if (!first.ok || !first.reportId) throw new Error("refused");
+    expect(first).toMatchObject({ alreadyRaised: false, told: false });
+    expect((await stateOf(db, first.reportId)).sentAt).toBeNull();
+    const working = recorder();
+    const again = await raiseMissingDiverAlert(db, {
+      ...input,
+      actorPersonId: f.crew.id,
+      provider: working.provider,
+    });
+    expect(again).toMatchObject({ ok: true, alreadyRaised: true, told: true });
+    expect(working.kinds("incident_missing_diver")).toBeGreaterThan(0);
+    expect((await stateOf(db, first.reportId)).sentAt).toBeInstanceOf(Date);
+    // Told now: a third tap sends nothing more.
+    const third = recorder();
+    await raiseMissingDiverAlert(db, {
+      ...input,
+      actorPersonId: f.crew.id,
+      provider: third.provider,
+    });
+    expect(third.sent).toEqual([]);
+  });
+
   it("counts a filed report's alert as raised: no second alert", async () => {
-    const { db, f, input } = await missingSeat();
+    const { db, f, input } = await seat();
     const started = await startMissingDiverReport(db, { ...input, actorPersonId: f.crew.id });
     if (!started.ok) throw new Error("start refused");
     const target = { ...input, reportId: started.reportId, actorPersonId: f.crew.id };
@@ -185,12 +175,12 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
     const once = kinds("incident_missing_diver");
     expect(
       await raiseMissingDiverAlert(db, { ...input, actorPersonId: f.crew.id, provider }),
-    ).toEqual({ ok: true, reportId: started.reportId, alreadyRaised: true });
+    ).toEqual({ ok: true, reportId: started.reportId, alreadyRaised: true, told: true });
     expect(kinds("incident_missing_diver")).toBe(once);
   });
 
   it("raises from a mark synced late from an offline tablet", async () => {
-    const { db, f, input } = await missingSeat("offline");
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id, "offline");
     const { provider, kinds } = recorder();
     const reportId = await raised(db, input, f.crew.id, provider);
     expect((await stateOf(db, reportId)).raisedAt).toBeInstanceOf(Date);
@@ -198,7 +188,7 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
   });
 
   it("refuses another shop's caller, a seat on another departure and a stale tap", async () => {
-    const { db, f, input } = await missingSeat();
+    const { db, f, input } = await seat();
     const { provider, sent } = recorder();
     expect(
       await raiseMissingDiverAlert(db, {
@@ -217,16 +207,7 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
       }),
     ).toEqual({ ok: false, reason: "not_missing" });
     // Marked back aboard since: the tap was read off a stale screen.
-    await db.insert(rollCallEvents).values({
-      shopId: ctx.shop.id,
-      tripId: f.trip.id,
-      bookingId: f.seat.booking.id,
-      recordedByPersonId: f.crew.id,
-      status: "boarded",
-      checkpoint: "after_dive_1",
-      source: "live",
-      occurredAt: new Date(MARKED_AT.getTime() + 60_000),
-    });
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", minutesAfterMark(1));
     expect(
       await raiseMissingDiverAlert(db, { ...input, actorPersonId: f.crew.id, provider }),
     ).toEqual({ ok: false, reason: "not_missing" });
@@ -234,7 +215,7 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
   });
 
   it("refuses staff who are not this departure's crew, an owner or a manager", async () => {
-    const { db, f, input } = await missingSeat();
+    const { db, f, input } = await seat();
     const { provider, sent } = recorder();
     expect(
       await raiseMissingDiverAlert(db, { ...input, actorPersonId: f.ashore.id, provider }),
@@ -242,24 +223,70 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
     expect(sent).toEqual([]);
   });
 
-  it("does not alert again for a diver already found", async () => {
-    const { db, f, input } = await missingSeat();
-    const { provider, kinds } = recorder();
-    const reportId = await raised(db, input, f.crew.id, provider);
-    const target = { shopId: input.shopId, tripId: input.tripId, reportId, provider };
-    expect(await markMissingDiverFound(db, { ...target, actorPersonId: f.crew.id })).toEqual({
-      ok: true,
-      changed: true,
-    });
-    const alerts = kinds("incident_missing_diver");
+  it("opens a new report and alerts again for a diver missing again after Found", async () => {
+    const { db, f, input } = await seat();
+    const first = await raised(db, input, f.crew.id, recorder().provider);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", minutesAfterMark(1));
     expect(
-      await raiseMissingDiverAlert(db, { ...input, actorPersonId: f.crew.id, provider }),
-    ).toEqual({ ok: false, reason: "already_found" });
-    expect(kinds("incident_missing_diver")).toBe(alerts);
+      await markMissingDiverFound(db, {
+        shopId: input.shopId,
+        tripId: input.tripId,
+        reportId: first,
+        actorPersonId: f.crew.id,
+        provider: recorder().provider,
+      }),
+    ).toEqual({ ok: true, changed: true });
+    // Gone again at the next look.
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "not_boarded", minutesAfterMark(2));
+    const { provider, kinds } = recorder();
+    const again = await raiseMissingDiverAlert(db, {
+      ...input,
+      actorPersonId: f.crew.id,
+      provider,
+    });
+    expect(again).toMatchObject({ ok: true, alreadyRaised: false, told: true });
+    expect(again.ok && again.reportId).not.toBe(first);
+    expect(kinds("incident_missing_diver")).toBeGreaterThan(0);
   });
 
-  it("keeps a raised draft: it cannot be discarded, and stays a missing-diver report", async () => {
-    const { db, f, input } = await missingSeat();
+  it("pages nobody from the hourly pass once the roll call has the diver back", async () => {
+    const { db, f, input } = await seat();
+    // The tap's send reached nobody, so the report waits for the pass.
+    const reportId = await raised(db, input, f.crew.id, recorder("failed").provider);
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", minutesAfterMark(1));
+    const { provider, sent } = recorder();
+    await sendMissingDiverAlerts(db, { provider });
+    expect(sent).toEqual([]);
+    expect((await stateOf(db, reportId)).sentAt).toBeNull();
+  });
+
+  it("stops between owners once the diver is marked found mid-send", async () => {
+    const { db, f, input } = await seat();
+    const reportId = await raised(db, input, f.crew.id, recorder("failed").provider);
+    // A second owner with a login, so there is a "between".
+    await db.insert(personRoles).values({ personId: f.crew.id, role: "owner" });
+    expect((await ownerLogins(db, input.shopId)).length).toBeGreaterThan(1);
+    let alarms = 0;
+    const provider: NotificationProvider = {
+      async send(notification) {
+        if (notification.kind === "incident_missing_diver") {
+          alarms += 1;
+          // Found while the pass is between two owners.
+          await db
+            .update(incidentReports)
+            .set({ missingFoundAt: nowDate(), missingFoundByPersonId: f.crew.id })
+            .where(eq(incidentReports.id, reportId));
+        }
+        return { status: "sent", providerMessageId: `msg-${alarms}` };
+      },
+    };
+    await sendMissingDiverAlerts(db, { provider });
+    expect(alarms).toBe(1);
+    expect((await stateOf(db, reportId)).sentAt).toBeNull();
+  });
+
+  it("keeps a raised draft whole: not discarded, still a missing-diver report, its person kept", async () => {
+    const { db, f, input } = await seat();
     const reportId = await raised(db, input, f.crew.id, recorder().provider);
     const target = { shopId: input.shopId, tripId: input.tripId, reportId };
     expect(await discardIncidentDraft(db, { ...target, actorPersonId: f.owner.id })).toEqual({
@@ -272,122 +299,26 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
       fields: { ...complete, kind: "injury" },
     });
     expect(await stateOf(db, reportId)).toMatchObject({ kind: "missing_diver", deletedAt: null });
-    // The database holds both, whatever the code above it says.
+    const { subjectRowId } = await stateOf(db, reportId);
+    if (!subjectRowId) throw new Error("expected the raised report's subject row");
+    expect(
+      await removeIncidentPerson(db, { ...target, actorPersonId: f.crew.id, rowId: subjectRowId }),
+    ).toEqual({ ok: false, reason: "alerted" });
+    // The database holds all three, whatever the code above it says.
     await expect(
       db
         .update(incidentReports)
         .set({ deletedAt: nowDate() })
         .where(eq(incidentReports.id, reportId)),
     ).rejects.toThrow();
-  });
-});
-
-describe("Found: one quiet all-clear (issue #2694, in-memory PGlite)", () => {
-  it("emails each owner once, pushes nobody, and records who found them", async () => {
-    const { db, f, input } = await missingSeat();
-    const reportId = await raised(db, input, f.crew.id, recorder().provider);
-    const pushedByAlert = push.calls;
-    const { provider, sent, kinds } = recorder();
-    const target = { shopId: input.shopId, tripId: input.tripId, reportId, provider };
-    expect(await markMissingDiverFound(db, { ...target, actorPersonId: f.crew.id })).toEqual({
-      ok: true,
-      changed: true,
-    });
-    expect(sent.length).toBeGreaterThan(0);
-    expect(kinds("incident_missing_diver_found")).toBe(sent.length);
-    expect(push.calls).toBe(pushedByAlert);
-    const state = await stateOf(db, reportId);
-    expect(state.foundBy).toBe(f.crew.id);
-    expect(state.allClearAt).toBeInstanceOf(Date);
-    const view = await getIncidentReport(db, input.shopId, reportId, f.owner.id);
-    expect(view?.ownersAlert).toMatchObject({ foundByName: f.crew.fullName });
-    expect(await activityCodes(db, f)).toEqual([
-      "missing_diver_alert_raised",
-      "missing_diver_found",
-    ]);
-  });
-
-  it("sends the all-clear at most once: a second tap, and a retry, send nothing", async () => {
-    const { db, f, input } = await missingSeat();
-    const reportId = await raised(db, input, f.crew.id, recorder().provider);
-    const { provider, sent } = recorder();
-    const target = { shopId: input.shopId, tripId: input.tripId, reportId, provider };
-    const a = await markMissingDiverFound(db, { ...target, actorPersonId: f.crew.id });
-    const b = await markMissingDiverFound(db, { ...target, actorPersonId: f.owner.id });
-    expect([a, b].filter((r) => r.ok && r.changed)).toHaveLength(1);
-    const once = sent.length;
-    expect(once).toBeGreaterThan(0);
-    expect(await sendMissingDiverAllClear(db, { reportId, provider })).toBe("skipped");
-    expect(sent.length).toBe(once);
-  });
-
-  it("stops an alert not yet sent: the hourly pass skips a found report", async () => {
-    const { db, f, input } = await missingSeat();
-    const started = await startMissingDiverReport(db, { ...input, actorPersonId: f.crew.id });
-    if (!started.ok) throw new Error("start refused");
-    // Raised, but the send at the tap never ran (the stamp alone, as after a crash).
-    await db
-      .update(incidentReports)
-      .set({ missingAlertRaisedAt: nowDate(), missingAlertRaisedByPersonId: f.crew.id })
-      .where(eq(incidentReports.id, started.reportId));
-    const target = { shopId: input.shopId, tripId: input.tripId, reportId: started.reportId };
-    await markMissingDiverFound(db, {
-      ...target,
-      actorPersonId: f.crew.id,
-      provider: recorder().provider,
-    });
-    const { provider, kinds } = recorder();
-    await sendMissingDiverAlerts(db, { provider });
-    expect(kinds("incident_missing_diver")).toBe(0);
-  });
-
-  it("refuses a report never alerted, staff who may not write it, and another shop", async () => {
-    const { db, f, input } = await missingSeat();
-    const { provider, sent } = recorder();
-    // A plain draft, never raised or filed.
-    const plain = await startIncidentReport(db, { ...input, actorPersonId: f.crew.id });
-    if (!plain.ok) throw new Error("start refused");
-    expect(
-      await markMissingDiverFound(db, {
-        shopId: input.shopId,
-        tripId: input.tripId,
-        reportId: plain.reportId,
-        actorPersonId: f.crew.id,
-        provider,
-      }),
-    ).toEqual({ ok: false, reason: "not_alerted" });
-    const reportId = await raised(db, input, f.crew.id, recorder().provider);
-    const target = { shopId: input.shopId, tripId: input.tripId, reportId, provider };
-    expect(await markMissingDiverFound(db, { ...target, actorPersonId: f.ashore.id })).toEqual({
-      ok: false,
-      reason: "not_found",
-    });
-    expect(
-      await markMissingDiverFound(db, { ...target, shopId: OTHER_SHOP, actorPersonId: f.owner.id }),
-    ).toEqual({ ok: false, reason: "not_found" });
-    expect(
-      await markMissingDiverFound(db, { ...target, tripId: OTHER_TRIP, actorPersonId: f.owner.id }),
-    ).toEqual({ ok: false, reason: "not_found" });
-    expect(sent).toEqual([]);
-    expect((await stateOf(db, reportId)).foundAt).toBeNull();
-  });
-
-  it("still takes a later dated note on the filed report after the find", async () => {
-    const { db, f, input } = await missingSeat();
-    const reportId = await raised(db, input, f.crew.id, recorder().provider);
-    const target = {
-      shopId: input.shopId,
-      tripId: input.tripId,
-      reportId,
-      actorPersonId: f.crew.id,
-    };
-    await markMissingDiverFound(db, { ...target, provider: recorder().provider });
-    await saveIncidentDraft(db, { ...target, fields: { ...complete, kind: "missing_diver" } });
-    expect(await fileIncidentReport(db, { ...target, provider: recorder().provider })).toEqual({
-      ok: true,
-    });
-    expect(
-      await addIncidentAddendum(db, { ...target, body: "Found on the reef top, well." }),
-    ).toEqual({ ok: true });
+    await expect(
+      db.delete(incidentReportPeople).where(eq(incidentReportPeople.id, subjectRowId)),
+    ).rejects.toThrow();
+    await expect(
+      db
+        .update(incidentReports)
+        .set({ missingSubjectRowId: null })
+        .where(eq(incidentReports.id, reportId)),
+    ).rejects.toThrow();
   });
 });

@@ -1717,6 +1717,8 @@ const incidentMissingDiverFoundSchema = z.object({
   tripTitle: tripTitleSchema,
   /** When the crew marked the diver found: said in the shop's zone. */
   foundAt: z.date(),
+  /** Others on this departure still reported missing: a count, never a name. */
+  stillMissing: z.number().int().min(0).max(500),
   timezone: z.string().trim().min(1).max(100),
   reportUrl: z.url().max(2_000),
 });

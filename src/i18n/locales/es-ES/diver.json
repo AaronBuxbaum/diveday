@@ -5717,7 +5717,8 @@
     },
     "incidentMissingDiverFound": {
       "subject": "{shopName}: encontrado el buceador desaparecido en {tripTitle}",
-      "body": "Se encontró al buceador reportado como desaparecido en {tripTitle}. Marcado como encontrado {when}."
+      "body": "Se encontró al buceador reportado como desaparecido en {tripTitle}. Marcado como encontrado {when}.",
+      "stillMissing": "{count, plural, one {# persona más sigue reportada como desaparecida en esta salida.} other {# personas más siguen reportadas como desaparecidas en esta salida.}}"
     },
     "shoreAlertStopped": {
       "subject": "{shopName}: el contacto en tierra dejó los avisos del pase de lista",

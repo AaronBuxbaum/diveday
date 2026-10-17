@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "b1ed4a7d-eec7-45d2-a346-906a5d0d39c9",
+  "id": "364c20fe-19fa-435f-b3a9-daeba01f5dee",
   "prevIds": [
     "1e9b1af8-8aad-415d-bd6c-dbca0af9d5a8"
   ],
@@ -15412,6 +15412,19 @@
       "table": "incident_reports"
     },
     {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "missing_subject_row_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
@@ -15433,6 +15446,19 @@
       "generated": null,
       "identity": null,
       "name": "missing_found_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "missing_all_clear_claimed_at",
       "entityType": "columns",
       "schema": "public",
       "table": "incident_reports"
@@ -40386,6 +40412,23 @@
     {
       "nameExplicit": false,
       "columns": [
+        "missing_subject_row_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "incident_report_people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "incident_reports_pKE3joE7tHcd_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
         "missing_found_by_person_id"
       ],
       "schemaTo": "public",
@@ -45999,6 +46042,13 @@
     {
       "value": "\"missing_found_at\" is null or \"missing_alert_raised_at\" is not null\n        or \"status\" = 'filed'",
       "name": "incident_reports_found_after_alert",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
+      "value": "\"missing_alert_raised_at\" is null or \"missing_subject_row_id\" is not null",
+      "name": "incident_reports_raised_names_its_subject",
       "entityType": "checks",
       "schema": "public",
       "table": "incident_reports"

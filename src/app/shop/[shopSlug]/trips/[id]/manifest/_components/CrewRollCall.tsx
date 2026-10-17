@@ -21,7 +21,7 @@ import {
   rollCallLabel,
   type TripManifest,
 } from "@/lib/manifests";
-import { type MissingReportAction, MissingReportButton } from "./MissingReportButton";
+import { MissingDiverControls, type MissingDiverRowActions } from "./missing-diver-controls";
 import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import { personTrailWithCurrentRecord } from "./person-trail";
@@ -130,10 +130,7 @@ export function CrewRollCall({
    * (issue #2694) for a crew member marked not back aboard, bound to the
    * departure; each null for a reader who may not start a report.
    */
-  missingDiver?: {
-    startMissingDiverReport: MissingReportAction | null;
-    raiseMissingDiverAlert?: MissingReportAction | null;
-  };
+  missingDiver?: MissingDiverRowActions;
   /**
    * A cancelled departure nobody counted on (#2285): every roll-call write is
    * refused, so no row or sheet draws a roll-call control.
@@ -149,8 +146,6 @@ export function CrewRollCall({
   // only for somebody nobody has tapped yet. The instruction is said once,
   // here; the rows say only which other boat (UX audit 2026-10-07, item 3 —
   // two crew members carried the same three-line paragraph each).
-  const startMissingReport = missingDiver?.startMissingDiverReport ?? null;
-  const raiseMissingAlert = missingDiver?.raiseMissingDiverAlert ?? null;
   const crewToConfirm = isDeparture
     ? crew.filter((member) => !member.rollCall && (member.clashes ?? []).length > 0).length
     : 0;
@@ -400,29 +395,14 @@ export function CrewRollCall({
                         {/* The report, from the row that raised it, on the
                             same terms as a diver's (domain review 2026-10-16):
                             the staffer is named in it as affected. */}
-                        {rowState.notBackAboard && raiseMissingAlert ? (
-                          <MissingReportButton
-                            key={`alert-${checkpoint}`}
-                            action={raiseMissingAlert}
-                            subject={{ field: "personId", id: member.id }}
-                            checkpoint={checkpoint}
-                            label={t("incidents.missingDiver.alert")}
-                            pendingLabel={t("incidents.missingDiver.alerting")}
-                            ariaLabel={`${t("incidents.missingDiver.alert")} — ${member.fullName}`}
-                            variant="danger"
-                          />
-                        ) : null}
-                        {rowState.notBackAboard && startMissingReport ? (
-                          <MissingReportButton
-                            key={checkpoint}
-                            action={startMissingReport}
-                            subject={{ field: "personId", id: member.id }}
-                            checkpoint={checkpoint}
-                            label={t("incidents.missingDiver.start")}
-                            pendingLabel={t("incidents.trip.starting")}
-                            ariaLabel={`${t("incidents.missingDiver.start")} — ${member.fullName}`}
-                          />
-                        ) : null}
+                        <MissingDiverControls
+                          actions={missingDiver}
+                          notBackAboard={rowState.notBackAboard}
+                          subject={{ field: "personId", id: member.id }}
+                          name={member.fullName}
+                          checkpoint={checkpoint}
+                          t={t}
+                        />
                         {/* The deliberate second step, on the same terms as a
                             diver's. */}
                         {rollCallClosed ? null : (

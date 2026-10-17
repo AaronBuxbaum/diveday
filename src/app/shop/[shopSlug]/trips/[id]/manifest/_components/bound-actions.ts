@@ -1,4 +1,5 @@
 import {
+  markMissingSubjectFoundAction,
   raiseMissingDiverAlertAction,
   startMissingDiverReportAction,
 } from "../../incidents/actions";
@@ -35,7 +36,11 @@ import {
 export function bindManifestActions(
   actionContext: ManifestActionContext,
   /** Whether the reader may start an incident report here (`mayStartTripIncidentReport`). */
-  reader: { mayStartIncidentReport: boolean } = { mayStartIncidentReport: false },
+  reader: {
+    mayStartIncidentReport: boolean;
+    /** Seats and crew whose owners were alerted and who are not found yet (issue #2694). */
+    alerted?: ReadonlySet<string>;
+  } = { mayStartIncidentReport: false },
 ) {
   const { shopSlug, tripId } = actionContext;
   return {
@@ -66,6 +71,12 @@ export function bindManifestActions(
       raiseMissingDiverAlert: reader.mayStartIncidentReport
         ? raiseMissingDiverAlertAction.bind(null, shopSlug, tripId)
         : null,
+      // "Found", on a row whose owners were alerted and which is marked back
+      // aboard (review 2026-10-17); the write refuses while it is not.
+      markMissingSubjectFound: reader.mayStartIncidentReport
+        ? markMissingSubjectFoundAction.bind(null, shopSlug, tripId)
+        : null,
+      missingAlerted: reader.alerted ?? new Set<string>(),
     },
     // Named as `BuddyTeamsPanel` takes them, so the page hands them on whole.
     buddyTeams: {

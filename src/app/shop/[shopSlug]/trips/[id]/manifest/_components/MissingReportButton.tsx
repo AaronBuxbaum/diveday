@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
+import { ConnectivityStatus, type ConnectivityStatusCopy } from "@/components/ConnectivityStatus";
 import {
   refusePress,
   wasMultiTouch,
@@ -37,6 +38,7 @@ export function MissingReportButton({
   pendingLabel,
   ariaLabel,
   variant = "secondary",
+  offline,
 }: {
   action: MissingReportAction;
   subject: { field: "bookingId" | "personId"; id: string };
@@ -46,11 +48,36 @@ export function MissingReportButton({
   ariaLabel: string;
   /** `danger` for "Missing diver, alert owners now", the louder of the two (issue #2694). */
   variant?: "secondary" | "danger";
+  /**
+   * For the owners' alert (review 2026-10-17): the line shown while this
+   * device has no signal, and the sentence for a request that never reached
+   * the server, so a dead connection reads as "call them", never as silence.
+   */
+  offline?: { label: string; copy: ConnectivityStatusCopy; failed: string };
 }) {
-  const [state, formAction, isPending] = useActionState(action, null);
+  const [state, formAction, isPending] = useActionState<MissingReportState, FormData>(
+    offline
+      ? async (previous, formData) => {
+          try {
+            return await action(previous, formData);
+          } catch {
+            return { message: offline.failed };
+          }
+        }
+      : action,
+    null,
+  );
   useEffect(() => watchRollCallTouches(), []);
   return (
     <form action={formAction} className="mt-3 print:hidden">
+      {offline ? (
+        <ConnectivityStatus
+          onlyWhenOffline
+          offlineLabel={offline.label}
+          copy={offline.copy}
+          className="mb-2"
+        />
+      ) : null}
       <input type="hidden" name={subject.field} value={subject.id} />
       <input type="hidden" name="checkpoint" value={checkpoint} />
       <button

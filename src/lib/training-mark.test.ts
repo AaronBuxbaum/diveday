@@ -3,11 +3,13 @@ import type { TripRequirement, WaiverRecord } from "@/db/schema";
 import { COURSE_FORMS_BLOCK_BOARDING, type RequiredCourseForm } from "./course-forms";
 import { aboardBlockerKind, BLOCKER_CATEGORY, calculateReadiness } from "./readiness";
 import {
-  courseInstructorAboard,
+  courseInstructorsAboard,
+  type TrainingDiveCourse,
   type TrainingMarkEnrollment,
   type TrainingMarkSeat,
   type TrainingMarkState,
   trainingDiveLevel,
+  trainingDiveRequiredLevel,
   trainingMarkProblem,
 } from "./training-mark";
 
@@ -162,19 +164,21 @@ describe("calculateReadiness — a seat carrying a training mark", () => {
   });
 });
 
-describe("courseInstructorAboard — the course's instructor on this departure (issue #2731)", () => {
+describe("courseInstructorsAboard — the course's instructor on this departure (issue #2731)", () => {
   const teacher = { personId: "teacher", shopRoles: ["instructor"] };
   const other = { personId: "other", shopRoles: ["instructor"] };
 
   it("is the session's instructor rostered as an instructor on the departure", () => {
     expect(
-      courseInstructorAboard(
+      courseInstructorsAboard(
         [{ ...teacher, tripRole: "instructor" }],
         [{ ...teacher, tripRole: "instructor" }],
       ),
-    ).toBe(true);
+    ).toBe(1);
     // No per-trip role reads the standing role, as the ratio does.
-    expect(courseInstructorAboard([teacher], [teacher])).toBe(true);
+    expect(courseInstructorsAboard([teacher], [teacher])).toBe(1);
+    // Two of the course's instructors aboard count two, for the ratio.
+    expect(courseInstructorsAboard([teacher, other], [teacher, other])).toBe(2);
   });
 
   it.each([
@@ -201,32 +205,75 @@ describe("courseInstructorAboard — the course's instructor on this departure (
     ],
     ["nobody on the departure", [teacher], []],
   ])("is not %s", (_name, sessionCrew, departureCrew) => {
-    expect(courseInstructorAboard(sessionCrew, departureCrew)).toBe(false);
+    expect(courseInstructorsAboard(sessionCrew, departureCrew)).toBe(0);
   });
 });
 
-describe("trainingDiveLevel — the level a marked dive answers to (issue #2731)", () => {
+describe("trainingDiveLevel — the course a marked dive answers to (issue #2731)", () => {
+  const course: TrainingDiveCourse = {
+    minimumLevel: "open_water",
+    certifiesLevel: "advanced_open_water",
+    intro: false,
+  };
   const standing: TrainingMarkState = {
     valid: true,
     enrollmentBookingId: ENROLLMENT,
     enrollmentTripId: "session",
     enrollmentMinorDeclared: false,
     enrollmentCourseTitle: "Advanced Open Water",
-    enrollmentCourseMinimumLevel: "open_water",
+    enrollmentCourse: course,
     courseInstructorAboard: true,
   };
 
-  it("takes the course's own minimum, including none", () => {
-    expect(trainingDiveLevel(standing)).toEqual({ courseMinimumLevel: "open_water" });
-    expect(trainingDiveLevel({ ...standing, enrollmentCourseMinimumLevel: null })).toEqual({
-      courseMinimumLevel: null,
-    });
+  it("takes the course, with the mark standing and its instructor aboard", () => {
+    expect(trainingDiveLevel(standing)).toEqual(course);
   });
 
   it("keeps the departure's level with no mark, a mark that fell, no instructor, or no course row", () => {
     expect(trainingDiveLevel(undefined)).toBeNull();
     expect(trainingDiveLevel({ valid: false, problem: "enrollment_canceled" })).toBeNull();
     expect(trainingDiveLevel({ ...standing, courseInstructorAboard: false })).toBeNull();
-    expect(trainingDiveLevel({ ...standing, enrollmentCourseMinimumLevel: undefined })).toBeNull();
+    expect(trainingDiveLevel({ ...standing, enrollmentCourse: undefined })).toBeNull();
+  });
+});
+
+describe("trainingDiveRequiredLevel — lowers only as far as the course certifies (issue #2731)", () => {
+  const aow: TrainingDiveCourse = {
+    minimumLevel: "open_water",
+    certifiesLevel: "advanced_open_water",
+    intro: false,
+  };
+
+  it("lowers an AOW departure to the course's minimum", () => {
+    expect(trainingDiveRequiredLevel("advanced_open_water", aow)).toBe("open_water");
+  });
+
+  it("never lowers a level above what the course certifies", () => {
+    expect(trainingDiveRequiredLevel("rescue", aow)).toBe("rescue");
+    expect(trainingDiveRequiredLevel("divemaster", aow)).toBe("divemaster");
+  });
+
+  it("never lowers for an intro session, a course certifying nothing, or one with no minimum", () => {
+    const dsd: TrainingDiveCourse = { minimumLevel: null, certifiesLevel: null, intro: true };
+    expect(trainingDiveRequiredLevel("open_water", dsd)).toBe("open_water");
+    expect(
+      trainingDiveRequiredLevel("open_water", { ...dsd, minimumLevel: "open_water", intro: true }),
+    ).toBe("open_water");
+    expect(trainingDiveRequiredLevel("advanced_open_water", { ...aow, certifiesLevel: null })).toBe(
+      "advanced_open_water",
+    );
+    expect(trainingDiveRequiredLevel("advanced_open_water", { ...aow, minimumLevel: null })).toBe(
+      "advanced_open_water",
+    );
+  });
+
+  it("never raises a level, and never invents one", () => {
+    const rescueCourse: TrainingDiveCourse = {
+      minimumLevel: "advanced_open_water",
+      certifiesLevel: "rescue",
+      intro: false,
+    };
+    expect(trainingDiveRequiredLevel("open_water", rescueCourse)).toBe("open_water");
+    expect(trainingDiveRequiredLevel(null, aow)).toBeNull();
   });
 });

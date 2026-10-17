@@ -13,11 +13,12 @@ import { queryAll } from "./query-helpers";
 import { activityEvents, bookings, courses, people, shops, trips } from "./schema";
 import {
   aboardKey,
-  courseInstructorsAboard,
   readTrainingEnrollments,
   resolveTrainingMarks,
+  seatWithinRoom,
   type TrainingEnrollmentRow,
   teachesSessionAsRostered,
+  trainingDiveRoom,
 } from "./training-mark-resolve";
 import { livePerson, liveTrip } from "./trips-live";
 
@@ -346,9 +347,11 @@ export type TrainingMarkRosterSeat = {
     sessionStartsAt: Date | null;
     valid: boolean;
     /**
-     * Someone who teaches the course's session is rostered as this departure's
-     * instructor (`courseInstructorAboard`, issue #2731): the seat then takes
-     * the course's own level, and the row warns when not.
+     * An instructor of the course's session is aboard this departure for this
+     * seat (`courseInstructorAboard`, issue #2731): rostered by someone else,
+     * not counted off at the crew count, within the course ratio. The seat
+     * then takes the course's level where the course reaches it; the row
+     * warns when not.
      */
     courseInstructorAboard: boolean;
     markedAt: Date;
@@ -461,12 +464,13 @@ export async function trainingMarksForRoster(
             // diveday:allow-deleted-people: the name of whoever marked or cleared, kept as history.
             .where(and(eq(people.shopId, shopId), inArray(people.id, staffIds))),
   ]);
-  const aboard = await courseInstructorsAboard(
+  const room = await trainingDiveRoom(
     db,
     shopId,
     [...enrollments.values()].map((enrollment) => ({
       departureTripId: trip.id,
       sessionTripId: enrollment.tripId,
+      course: enrollment.course,
     })),
   );
   const nameById = new Map(staffRows.map((row) => [row.id, row.name]));
@@ -507,7 +511,8 @@ export async function trainingMarksForRoster(
             sessionStartsAt: enrollment?.sessionStartsAt ?? null,
             valid,
             courseInstructorAboard:
-              enrollment !== undefined && aboard.has(aboardKey(trip.id, enrollment.tripId)),
+              enrollment !== undefined &&
+              seatWithinRoom(room.get(aboardKey(trip.id, enrollment.tripId)), seat.bookingId),
             markedAt: seat.trainingMarkedAt,
             markedByName: seat.trainingMarkedByPersonId
               ? (nameById.get(seat.trainingMarkedByPersonId) ?? null)

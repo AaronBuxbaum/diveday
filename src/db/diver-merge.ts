@@ -1283,6 +1283,11 @@ export async function mergeDiverRecords(input: {
           emergencyContactName: contactFrom.emergencyContactName,
           emergencyContactPhone: contactFrom.emergencyContactPhone,
           dateOfBirth,
+          // A record that took in another is no longer one a single booking
+          // made, whichever way the merge went: the parent's door
+          // (`seatPersonIsThisBookings`) stays shut for it (security review
+          // 2026-10-17, issue #2665).
+          createdByBookingId: null,
           // A staffer's "18 or older" (H-100) travels as a pair with its author,
           // from whichever record has one, survivor first, and only while no
           // date answers the question instead.

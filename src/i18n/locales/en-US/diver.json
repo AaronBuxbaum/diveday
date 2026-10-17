@@ -5717,7 +5717,8 @@
     },
     "incidentMissingDiverFound": {
       "subject": "{shopName}: the missing diver on {tripTitle} was found",
-      "body": "The diver reported missing on {tripTitle} was found. Marked found {when}."
+      "body": "The diver reported missing on {tripTitle} was found. Marked found {when}.",
+      "stillMissing": "{count, plural, one {# other person is still reported missing on this departure.} other {# others are still reported missing on this departure.}}"
     },
     "shoreAlertStopped": {
       "subject": "{shopName}: the shore contact stopped roll-call alerts",

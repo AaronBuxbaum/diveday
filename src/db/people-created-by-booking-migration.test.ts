@@ -39,10 +39,14 @@ async function trips() {
 const madeAt = new Date("2026-09-01T12:00:00.000Z");
 const later = (ms: number) => new Date(madeAt.getTime() + ms);
 
-async function personWithSeats(name: string, seatsAt: { tripId: string; at: Date }[]) {
+async function personWithSeats(
+  name: string,
+  seatsAt: { tripId: string; at: Date }[],
+  email: string | null = null,
+) {
   const [person] = await ctx.db
     .insert(people)
-    .values({ shopId: ctx.shop.id, fullName: name, createdAt: madeAt })
+    .values({ shopId: ctx.shop.id, fullName: name, email, createdAt: madeAt })
     .returning();
   if (!person) throw new Error("person insert failed");
   const seats = [];
@@ -100,5 +104,16 @@ describe("the created_by_booking_id backfill", () => {
     await runBackfill();
     expect(await stampOf(twice.person.id)).toBeNull();
     expect(await stampOf(none.person.id)).toBeNull();
+  });
+
+  it("leaves a person with an email unstamped: a lead or a returning diver, never a name-only seat", async () => {
+    const [trip] = await trips();
+    const lead = await personWithSeats(
+      "Lead With Email",
+      [{ tripId: trip.id, at: later(40) }],
+      "lead-2665@example.com",
+    );
+    await runBackfill();
+    expect(await stampOf(lead.person.id)).toBeNull();
   });
 });

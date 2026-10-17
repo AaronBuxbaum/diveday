@@ -9,16 +9,26 @@ import {
 } from "@/test/training-mark-context";
 import { cancelBooking, createBooking } from "./bookings";
 import { createDiver } from "./divers";
-import { bookings, certifications, courses, tripAssignments, tripRequirements } from "./schema";
+import {
+  bookings,
+  certifications,
+  courses,
+  rollCallCrewEvents,
+  tripAssignments,
+  tripRequirements,
+} from "./schema";
+import { seatWithinRoom, trainingDiveRoom } from "./training-mark-resolve";
 import { trainingMarksForRoster } from "./training-marks";
 
 /**
  * **A marked training dive takes the course's own minimum level when the
- * course's instructor is aboard** (issue #2731, decided by Aaron 2026-10-17).
- * The charter here asks Advanced; the student holds a verified Open Water card
- * and is enrolled on a course whose own minimum is Open Water. Only a mark that
- * stands counts, and only with someone who teaches the session rostered on the
- * charter as its instructor.
+ * course's instructor is aboard** (issue #2731, decided by Aaron 2026-10-17;
+ * domain review 2026-10-17). The charter here asks Advanced; the student holds
+ * a verified Open Water card and is enrolled on an Advanced course whose own
+ * minimum is Open Water. Only a mark that stands counts, only as far down as
+ * the course certifies, never for an intro session, and only with someone who
+ * teaches the session rostered on the charter as its instructor by somebody
+ * else and not counted off it at the dock.
  */
 const fileCtx = fileScopedShopContext();
 
@@ -30,7 +40,7 @@ async function advancedCharter(): Promise<CharterContext> {
     .where(eq(tripRequirements.tripId, ctx.charter.id));
   await ctx.db
     .update(courses)
-    .set({ minimumCertificationLevel: "open_water" })
+    .set({ minimumCertificationLevel: "open_water", certifiesLevel: "advanced_open_water" })
     .where(eq(courses.id, ctx.course.courseId));
   await ctx.db.delete(certifications).where(eq(certifications.personId, ctx.course.personId));
   await ctx.db.insert(certifications).values({
@@ -46,13 +56,17 @@ async function advancedCharter(): Promise<CharterContext> {
 
 type Role = "instructor" | "divemaster" | "captain";
 
-async function roster(ctx: CharterContext, tripId: string, personId: string, tripRole: Role) {
+async function roster(
+  ctx: CharterContext,
+  tripId: string,
+  personId: string,
+  tripRole: Role,
+  assignedByPersonId: string = ctx.owner,
+) {
   await ctx.db
     .delete(tripAssignments)
     .where(and(eq(tripAssignments.tripId, tripId), eq(tripAssignments.personId, personId)));
-  await ctx.db
-    .insert(tripAssignments)
-    .values({ tripId, personId, tripRole, assignedByPersonId: ctx.owner });
+  await ctx.db.insert(tripAssignments).values({ tripId, personId, tripRole, assignedByPersonId });
 }
 
 /** The session's instructor, rostered as its instructor on both the session and the charter. */
@@ -147,6 +161,83 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     await teachesAndAboard(ctx, "divemaster");
     await markSeat(ctx);
     expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+  });
+
+  it("never lowers a level above what the course certifies", async () => {
+    const ctx = await advancedCharter();
+    await ctx.db
+      .update(tripRequirements)
+      .set({ minimumCertificationLevel: "rescue" })
+      .where(eq(tripRequirements.tripId, ctx.charter.id));
+    await teachesAndAboard(ctx);
+    await markSeat(ctx);
+    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+  });
+
+  it.each([
+    ["an intro session", { isIntroCourse: true }],
+    ["a course that certifies no level", { certifiesLevel: null }],
+  ])("never lowers the level for %s", async (_name, course) => {
+    const ctx = await advancedCharter();
+    await ctx.db.update(courses).set(course).where(eq(courses.id, ctx.course.courseId));
+    await teachesAndAboard(ctx);
+    await markSeat(ctx);
+    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+  });
+
+  it("ignores an instructor who rostered themself on the charter", async () => {
+    const ctx = await advancedCharter();
+    await roster(ctx, ctx.course.tripId, ctx.instructor, "instructor");
+    await roster(ctx, ctx.charter.id, ctx.instructor, "instructor", ctx.instructor);
+    await markSeat(ctx);
+    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await rosterWarning(ctx)).toBe(false);
+  });
+
+  it("ignores an instructor the crew count marked not aboard", async () => {
+    const ctx = await advancedCharter();
+    await teachesAndAboard(ctx);
+    await markSeat(ctx);
+    await ctx.db.insert(rollCallCrewEvents).values({
+      shopId: ctx.shop.id,
+      tripId: ctx.charter.id,
+      personId: ctx.instructor,
+      recordedByPersonId: ctx.owner,
+      status: "not_boarded",
+      checkpoint: "departure",
+      occurredAt: ctx.now,
+    });
+    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await rosterWarning(ctx)).toBe(false);
+  });
+
+  it("seats marked dives only up to the course's ratio per instructor aboard", async () => {
+    const ctx = await advancedCharter();
+    await ctx.db
+      .update(courses)
+      .set({ minimumCertificationLevel: null, certifiesLevel: "open_water", agency: "padi" })
+      .where(eq(courses.id, ctx.course.courseId));
+    const pair = {
+      departureTripId: ctx.charter.id,
+      sessionTripId: ctx.course.tripId,
+      course: { minimumLevel: null, certifiesLevel: null, intro: false, agency: "padi" },
+    };
+    const key = `${pair.departureTripId}:${pair.sessionTripId}`;
+    expect((await trainingDiveRoom(ctx.db, ctx.shop.id, [pair])).get(key)?.capacity).toBe(0);
+    await teachesAndAboard(ctx);
+    expect((await trainingDiveRoom(ctx.db, ctx.shop.id, [pair])).get(key)?.capacity).toBe(8);
+    const intro = { ...pair, course: { ...pair.course, intro: true } };
+    expect((await trainingDiveRoom(ctx.db, ctx.shop.id, [intro])).get(key)?.capacity).toBe(2);
+    // The earliest marks take the room; one past it has no instructor for it.
+    const room = { capacity: 2, marked: ["a", "b", "c"] };
+    expect(["a", "b", "c", "x"].map((id) => seatWithinRoom(room, id))).toEqual([
+      true,
+      true,
+      false,
+      false,
+    ]);
+    expect(seatWithinRoom({ capacity: null, marked: [] }, "a")).toBe(true);
+    expect(seatWithinRoom({ capacity: 0, marked: ["a"] }, "a")).toBe(false);
   });
 
   it("changes nothing on a mark that no longer stands", async () => {

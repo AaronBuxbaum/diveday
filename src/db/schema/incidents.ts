@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   index,
@@ -154,6 +155,16 @@ export const incidentReports = pgTable(
       () => people.id,
     ),
     /**
+     * The raised report's affected person, as its `incident_report_people`
+     * row (review 2026-10-17): the owners were told this person is missing,
+     * so the row cannot be removed while this points at it (the foreign key
+     * refuses), and a raised report always has one (CHECK below). Deleting the
+     * report itself still takes its rows with it.
+     */
+    missingSubjectRowId: uuid("missing_subject_row_id").references(
+      (): AnyPgColumn => incidentReportPeople.id,
+    ),
+    /**
      * **The diver was found** (issue #2694): recorded once, on a report whose
      * alert was raised or filed. It stops any alert not yet sent, and sends one
      * quiet all-clear by email to the owners. Never undone: a diver missing
@@ -161,7 +172,12 @@ export const incidentReports = pgTable(
      */
     missingFoundAt: timestamp("missing_found_at", { withTimezone: true }),
     missingFoundByPersonId: uuid("missing_found_by_person_id").references(() => people.id),
-    /** When the all-clear went to every owner. Claimed before the sends, so it goes at most once. */
+    /**
+     * The all-clear's claim: stamped before any of its emails, so it goes at
+     * most once whatever happens after. Not proof of a send.
+     */
+    missingAllClearClaimedAt: timestamp("missing_all_clear_claimed_at", { withTimezone: true }),
+    /** When the all-clear's email went to every owner. Null while any did not (or none were sent). */
     missingAllClearSentAt: timestamp("missing_all_clear_sent_at", { withTimezone: true }),
     /** Who discarded the draft, named beside it on the departure log. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
@@ -210,6 +226,10 @@ export const incidentReports = pgTable(
       "incident_reports_found_after_alert",
       sql`${table.missingFoundAt} is null or ${table.missingAlertRaisedAt} is not null
         or ${table.status} = 'filed'`,
+    ),
+    check(
+      "incident_reports_raised_names_its_subject",
+      sql`${table.missingAlertRaisedAt} is null or ${table.missingSubjectRowId} is not null`,
     ),
     check(
       "incident_reports_a_raised_report_is_kept",

@@ -141,7 +141,7 @@ export default async function TripManifestPage({
     fieldGuides,
     loggedSightings,
     shopPickedSpecies,
-    mayStartIncidentReport,
+    missingDiverReader,
   } = await readManifestPage(db, shop.id, tripId, session.user.personId);
   const { catalogSpecies, speciesBySite } = manifestSpecies(locale, fieldGuides);
   const departureManifest = completeManifests?.[0];
@@ -162,7 +162,7 @@ export default async function TripManifestPage({
   const rollCallComplete = completeness.complete;
 
   const actionContext: ManifestActionContext = { shopSlug, tripId, checkpoint };
-  const actions = bindManifestActions(actionContext, { mayStartIncidentReport });
+  const actions = bindManifestActions(actionContext, missingDiverReader);
   const seen = seenGroupView({
     checkpoint,
     actionContext,
@@ -339,7 +339,7 @@ export default async function TripManifestPage({
             rollCallAction: actions.rollCall,
             rollCallClosed: cancelled === "closed",
             addPrivateNoteAction: actions.addPrivateNote,
-            ...actions.missingDiver,
+            missingDiver: actions.missingDiver,
             rollCallButtonCopy,
             buddyTeamLabel: buddy.buddyTeamLabel,
             t,

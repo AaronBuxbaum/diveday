@@ -13,6 +13,7 @@ import {
   type IncidentWriteRefusal,
   type MissingSubject,
   markMissingDiverFound,
+  markMissingSubjectFound,
   raiseMissingDiverAlert,
   removeIncidentPerson,
   saveIncidentDraft,
@@ -204,12 +205,22 @@ export async function startMissingDiverReportAction(
   );
 }
 
+/** A row's posted subject: a diver's seat or a crew member, or null when neither is a uuid. */
+function postedSubject(formData: FormData): MissingSubject | null {
+  const { bookingId, personId } = readForm(missingDiverForm, formData);
+  if (uuidParam(bookingId)) return { kind: "diver", bookingId };
+  if (uuidParam(personId)) return { kind: "crew", personId };
+  return null;
+}
+
 /**
  * **"Missing diver, alert owners now"** on a manifest row marked not back
  * aboard (issue #2694): tells the owners at once, apart from the report, and
  * answers beside the button. It stays on the manifest, since the roll call is
  * still going; "Start a missing diver report" beside it opens the report the
- * tap started.
+ * tap started. It says the owners were alerted only when every owner's email
+ * went (review 2026-10-17); otherwise it says to call them, and the next tap
+ * sends again.
  */
 export async function raiseMissingDiverAlertAction(
   shopSlug: string,
@@ -219,12 +230,7 @@ export async function raiseMissingDiverAlertAction(
 ): Promise<MissingReportState> {
   const { session, shop } = await requireShopSurface(shopSlug);
   const t = staffTranslator(await requestLocale(shop.defaultLocale));
-  const { bookingId, personId } = readForm(missingDiverForm, formData);
-  const subject: MissingSubject | null = uuidParam(bookingId)
-    ? { kind: "diver", bookingId }
-    : uuidParam(personId)
-      ? { kind: "crew", personId }
-      : null;
+  const subject = postedSubject(formData);
   if (!uuidParam(tripId) || !subject) return { message: t("incidents.missingDiver.notMissing") };
   let result: Awaited<ReturnType<typeof raiseMissingDiverAlert>>;
   try {
@@ -239,12 +245,10 @@ export async function raiseMissingDiverAlertAction(
   }
   if (!result.ok) {
     if (result.reason === "not_missing") return { message: t("incidents.missingDiver.notMissing") };
-    if (result.reason === "already_found") {
-      return { message: t("incidents.missingDiver.alreadyFound") };
-    }
     return { message: t("incidents.missingDiver.notAllowed") };
   }
   revalidatePath(shopPath(shopSlug, "trips", tripId), "layout");
+  if (!result.told) return { message: t("incidents.missingDiver.notReached") };
   return {
     tone: "success",
     message: result.alreadyRaised
@@ -254,8 +258,46 @@ export async function raiseMissingDiverAlertAction(
 }
 
 /**
+ * **Found from the roll-call row** (review 2026-10-17): for a diver or crew
+ * member marked back aboard whose owners were alerted, the same Found as the
+ * report's, beside the row's roll-call control. Any of the departure's crew.
+ */
+export async function markMissingSubjectFoundAction(
+  shopSlug: string,
+  tripId: string,
+  _previous: MissingReportState,
+  formData: FormData,
+): Promise<MissingReportState> {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const subject = postedSubject(formData);
+  if (!uuidParam(tripId) || !subject) return { message: t("incidents.missingDiver.notAlerted") };
+  let result: Awaited<ReturnType<typeof markMissingSubjectFound>>;
+  try {
+    result = await markMissingSubjectFound(await getDb(), {
+      shopId: shop.id,
+      tripId,
+      subject,
+      actorPersonId: session.user.personId,
+    });
+  } catch {
+    return { message: t("incidents.missingDiver.foundFailed") };
+  }
+  if (!result.ok) {
+    if (result.reason === "still_missing") {
+      return { message: t("incidents.missingDiver.stillMissing") };
+    }
+    if (result.reason === "not_alerted") return { message: t("incidents.missingDiver.notAlerted") };
+    return { message: t("incidents.missingDiver.notAllowed") };
+  }
+  revalidatePath(shopPath(shopSlug, "trips", tripId), "layout");
+  return { tone: "success", message: t("incidents.missingDiver.foundDone") };
+}
+
+/**
  * **Found**: on a missing-diver report whose owners were alerted, one quiet
- * all-clear to the same owners (issue #2694). A second tap changes nothing.
+ * all-clear to the same owners (issue #2694). Refused while the roll call
+ * still has the person not back aboard. A second tap changes nothing.
  */
 export async function markMissingDiverFoundAction(
   shopSlug: string,
@@ -274,6 +316,9 @@ export async function markMissingDiverFoundAction(
   if (result.ok) settle(back, { ok: true }, "found", "page");
   // A report never alerted has no "Found" to press: as for one this actor cannot see.
   if (result.reason === "not_alerted") notFound();
+  if (result.reason === "still_missing") {
+    revalidateAndRedirect(back, noticeUrl(back, "still-missing", { form: "page" }));
+  }
   settle(back, { ok: false, reason: result.reason }, "found", "page");
 }
 

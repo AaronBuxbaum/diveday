@@ -18,6 +18,7 @@ import {
 } from "./course-forms";
 import { guardianSignatureMissing } from "./guardian";
 import { isDiver, isHeldToMedical, type ParticipantType } from "./participant-types";
+import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-mark";
 import { type ReleaseLapse, type WaiverStateFields, waiverState } from "./waivers";
 
 /**
@@ -600,11 +601,12 @@ export type ReadinessInput = {
   trainingMarkInvalid?: boolean;
   /**
    * The seat's training mark stands and the course's instructor is aboard
-   * (`trainingDiveLevel`, issue #2731): the course's own minimum level is the
-   * level gate, in place of the departure's and its sites'. Absent, the
+   * for it (`trainingDiveLevel`, issue #2731): the departure's and its sites'
+   * level is lowered to the course's own minimum only where it is at or below
+   * the card the course certifies (`trainingDiveRequiredLevel`). Absent, the
    * departure's level stands. Specialty and nitrox gates are unchanged.
    */
-  trainingDive?: { courseMinimumLevel: CertificationLevel | null } | null;
+  trainingDive?: TrainingDiveCourse | null;
   now?: Date;
 };
 
@@ -1164,10 +1166,17 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     ? combineCertRequirements(input.requirement, input.siteRequirement)
     : combineCertRequirements(NO_CERT_REQUIREMENT, null);
   // A marked training dive with its course's instructor aboard answers to the
-  // course's own minimum level instead (issue #2731). Only ever for a diver.
+  // course's own minimum where the course reaches the level asked (issue
+  // #2731). Only ever for a diver; lowered, never removed.
   const effective =
     input.trainingDive && isDiver(input.participantType)
-      ? { ...composed, minimumCertificationLevel: input.trainingDive.courseMinimumLevel }
+      ? {
+          ...composed,
+          minimumCertificationLevel: trainingDiveRequiredLevel(
+            composed.minimumCertificationLevel,
+            input.trainingDive,
+          ),
+        }
       : composed;
 
   if (effective.minimumCertificationLevel) {

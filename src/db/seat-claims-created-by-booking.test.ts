@@ -56,6 +56,39 @@ async function familyParty() {
   return { db, shop, open, lead, mia, lee };
 }
 
+/** The seeded owner, who may merge. */
+async function ownerId(db: AppDb, shopId: string): Promise<string> {
+  const [owner] = await db
+    .select({ id: people.id })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "owner")))
+    .limit(1);
+  if (!owner) throw new Error("expected the seeded owner");
+  return owner.id;
+}
+
+/** A record the contact importer made: a name and nothing else. */
+async function importedRecord(db: AppDb, shopId: string, fullName: string): Promise<string> {
+  const [imported] = await db.insert(people).values({ shopId, fullName }).returning();
+  if (!imported) throw new Error("imported person insert failed");
+  await db.insert(personRoles).values({ personId: imported.id, role: "diver" });
+  return imported.id;
+}
+
+async function leadSignsFor(
+  db: AppDb,
+  shopId: string,
+  leadBookingId: string,
+  seatBookingId: string,
+) {
+  const seats = await issuePartySeatClaims(db, { shopId, leadBookingId });
+  return {
+    signForMinor: seats.find((seat) => seat.bookingId === seatBookingId)?.signForMinor,
+    open: await openMinorSeatWaiver(db, { shopId, leadBookingId, seatBookingId }),
+  };
+}
+
 describe("a seat's person stamped with the booking that made it (issue #2665)", () => {
   /**
    * Issue #2665 (dive-domain review N3 of the parent-signs layer): a record the
@@ -66,41 +99,45 @@ describe("a seat's person stamped with the booking that made it (issue #2665)", 
    */
   it("never opens one after a merge points the seat at an imported record with no history", async () => {
     const { db, shop, lead, mia } = await familyParty();
-    const [imported] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Mia Child" })
-      .returning();
-    if (!imported) throw new Error("imported person insert failed");
-    await db.insert(personRoles).values({ personId: imported.id, role: "diver" });
-    const [owner] = await db
-      .select({ id: people.id })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
-      .limit(1);
-    if (!owner) throw new Error("expected the seeded owner");
+    const imported = await importedRecord(db, shop.id, "Mia Child");
     expect(
       await mergeDiverRecords({
         db,
         shopId: shop.id,
         personId: await personOfSeat(db, mia.bookingId),
-        survivorId: imported.id,
-        actorPersonId: owner.id,
+        survivorId: imported,
+        actorPersonId: await ownerId(db, shop.id),
       }),
     ).toMatchObject({ ok: true });
-    expect(await personOfSeat(db, mia.bookingId)).toBe(imported.id);
-    const seats = await issuePartySeatClaims(db, {
-      shopId: shop.id,
-      leadBookingId: lead.bookingId,
+    expect(await personOfSeat(db, mia.bookingId)).toBe(imported);
+    expect(await leadSignsFor(db, shop.id, lead.bookingId, mia.bookingId)).toEqual({
+      signForMinor: false,
+      open: { ok: false },
     });
-    expect(seats.find((seat) => seat.bookingId === mia.bookingId)?.signForMinor).toBe(false);
+  });
+
+  it("never opens one after an imported record is merged into the seat's own person", async () => {
+    const { db, shop, lead, mia } = await familyParty();
+    const survivor = await personOfSeat(db, mia.bookingId);
+    const imported = await importedRecord(db, shop.id, "Mia Child");
     expect(
-      await openMinorSeatWaiver(db, {
+      await mergeDiverRecords({
+        db,
         shopId: shop.id,
-        leadBookingId: lead.bookingId,
-        seatBookingId: mia.bookingId,
+        personId: imported,
+        survivorId: survivor,
+        actorPersonId: await ownerId(db, shop.id),
       }),
-    ).toEqual({ ok: false });
+    ).toMatchObject({ ok: true });
+    const [row] = await db
+      .select({ createdByBookingId: people.createdByBookingId })
+      .from(people)
+      .where(eq(people.id, survivor));
+    expect(row?.createdByBookingId).toBeNull();
+    expect(await leadSignsFor(db, shop.id, lead.bookingId, mia.bookingId)).toEqual({
+      signForMinor: false,
+      open: { ok: false },
+    });
   });
 
   it("stamps a name-only seat's new person with the booking that made it", async () => {

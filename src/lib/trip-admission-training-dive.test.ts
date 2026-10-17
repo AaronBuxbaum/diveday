@@ -5,7 +5,15 @@ import {
   calculateReadiness,
   type SiteCertRequirement,
 } from "./readiness";
+import type { TrainingDiveCourse } from "./training-mark";
 import { decideTripAdmission, type TripAdmissionEvidence } from "./trip-admission";
+
+const aow: TrainingDiveCourse = {
+  minimumLevel: "open_water",
+  certifiesLevel: "advanced_open_water",
+  intro: false,
+};
+const dsd: TrainingDiveCourse = { minimumLevel: null, certifiesLevel: null, intro: true };
 
 /** A course seat a training mark could name (issue #2731); the rest is in `trip-admission.test.ts`. */
 function certification(overrides: Partial<Certification> = {}): Certification {
@@ -44,19 +52,12 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
       decideTripAdmission({
         requirement: advancedTrip,
         siteRequirement: null,
-        evidence: { ...openWater, trainingDiveLevels: ["open_water"] },
-      }),
-    ).toEqual({ admitted: true });
-    expect(
-      decideTripAdmission({
-        requirement: advancedTrip,
-        siteRequirement: null,
-        evidence: { ...openWater, trainingDiveLevels: [null] },
+        evidence: { ...openWater, trainingDives: [aow] },
       }),
     ).toEqual({ admitted: true });
   });
 
-  it("refuses when no such course seat exists, or its minimum is above the diver too", () => {
+  it("refuses with no such course seat, above what the course certifies, or for an intro session", () => {
     expect(
       decideTripAdmission({
         requirement: advancedTrip,
@@ -68,9 +69,19 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
       decideTripAdmission({
         requirement: requirement({ minimumCertificationLevel: "rescue" }),
         siteRequirement: null,
-        evidence: { ...openWater, trainingDiveLevels: ["advanced_open_water"] },
+        evidence: { ...openWater, trainingDives: [aow] },
       }),
     ).toMatchObject({ admitted: false, refusal: { requiredLevel: "rescue" } });
+    // An intro session, or a course certifying nothing, sells no level at all.
+    for (const course of [dsd, { ...aow, certifiesLevel: null }]) {
+      expect(
+        decideTripAdmission({
+          requirement: advancedTrip,
+          siteRequirement: null,
+          evidence: { ...openWater, trainingDives: [course] },
+        }),
+      ).toMatchObject({ admitted: false, refusal: { requiredLevel: "advanced_open_water" } });
+    }
   });
 
   it("clears only the level: a missing Deep card is still refused", () => {
@@ -78,7 +89,7 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
       decideTripAdmission({
         requirement: advancedTrip,
         siteRequirement: site({ requiredSpecialties: ["deep"] }),
-        evidence: { ...openWater, trainingDiveLevels: ["open_water"] },
+        evidence: { ...openWater, trainingDives: [aow] },
       }),
     ).toMatchObject({
       admitted: false,
@@ -92,14 +103,14 @@ describe("decideTripAdmission — a course seat a training mark could name (issu
       waiver: null,
       certifications: openWater.certifications,
       timezone: "UTC",
-      trainingDive: { courseMinimumLevel: "open_water" },
+      trainingDive: aow,
     });
     expect(readiness.blockers.filter((b) => b.code.startsWith("certification_"))).toEqual([]);
     expect(
       decideTripAdmission({
         requirement: advancedTrip,
         siteRequirement: null,
-        evidence: { ...openWater, trainingDiveLevels: ["open_water"] },
+        evidence: { ...openWater, trainingDives: [aow] },
       }).admitted,
     ).toBe(true);
   });

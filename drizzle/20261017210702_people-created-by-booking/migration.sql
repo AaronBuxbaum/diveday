@@ -11,6 +11,9 @@ FROM "bookings" AS "b"
 WHERE "b"."person_id" = "p"."id"
   AND "b"."shop_id" = "p"."shop_id"
   AND "p"."created_by_booking_id" IS NULL
+  -- A name-only seat's person has no address; one with an address was not
+  -- made by a seat alone (security review 2026-10-17).
+  AND "p"."email" IS NULL
   AND "b"."created_at" >= "p"."created_at"
   AND "b"."created_at" < "p"."created_at" + interval '1 second'
   AND (SELECT count(*) FROM "bookings" AS "o" WHERE "o"."person_id" = "p"."id") = 1;

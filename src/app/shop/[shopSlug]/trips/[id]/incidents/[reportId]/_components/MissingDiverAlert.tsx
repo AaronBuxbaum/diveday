@@ -51,6 +51,19 @@ export function MissingDiverAlert({
                 when: at(alert.foundAt),
               })}
             </dd>
+            {alert.allClear?.state === "sent" ? (
+              <dd className="mt-1 text-sm text-muted">
+                {t("incidents.found.allClearSent", { when: at(alert.allClear.sentAt) })}
+              </dd>
+            ) : alert.allClear ? (
+              <dd className="mt-1 text-sm font-semibold text-warning-strong">
+                {t(
+                  alert.allClear.state === "partial"
+                    ? "incidents.found.allClearPartial"
+                    : "incidents.found.allClearNone",
+                )}
+              </dd>
+            ) : null}
           </div>
         ) : null}
       </dl>
