@@ -77,6 +77,13 @@ const snsConfigSchema = z.object({
 });
 
 /**
+ * SNS answers a throttled publish with HTTP 400, not 429, so the status alone
+ * misses it. The code is `Throttling` on the Query protocol (production,
+ * 2026-10-15), `ThrottledException` on SNS's modeled error.
+ */
+const SNS_THROTTLE_CODES = new Set(["Throttling", "ThrottlingException", "ThrottledException"]);
+
+/**
  * Every SNS SDK error extends `SNSServiceException`, which carries
  * `$metadata.httpStatusCode` and a `.name` matching the specific AWS error
  * type — the same shape `sesErrorInfo` (`./index.ts`) classifies, reused here
@@ -106,7 +113,7 @@ function snsErrorInfo(error: unknown): {
     httpStatus === undefined ||
     httpStatus === 429 ||
     httpStatus >= 500 ||
-    errorCode === "ThrottledException";
+    SNS_THROTTLE_CODES.has(errorCode);
   return { retryable, httpStatus, errorCode, detail };
 }
 
