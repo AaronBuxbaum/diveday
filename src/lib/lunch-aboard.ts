@@ -4,8 +4,9 @@
  *
  * A long day boat that serves lunch says so on the departure; only then does
  * the diver's Day-of form ask for a lunch preference (vegetarian, halal), the
- * desk can write one on the roster, and Prep, the paper day, the manifest row
- * and the offline copy show it by name.
+ * desk can write one on the roster. Prep (and the paper day) show the count,
+ * each note by name and "N of M left a lunch note"; the manifest row and the
+ * offline copy show only each person's own note.
  *
  * **The note is a galley note, not an allergy record** (dive-domain review
  * B1). A food allergy is medical: it belongs on the person, on every

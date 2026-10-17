@@ -31,6 +31,7 @@ import { carryWaitlist } from "@/db/waitlist-roll";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { parseForm } from "@/lib/form-parse";
+import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
@@ -556,13 +557,15 @@ const updatePickupSchema = z.object({
   hotelPickupLocation: z.string().trim().max(300).optional(),
 });
 
-const dietaryNoteSchema = z.object({ dietaryNote: z.string().max(2_000).optional() });
+const dietaryNoteSchema = z.object({
+  dietaryNote: z.string().trim().max(DIETARY_NOTE_MAX).optional(),
+});
 
 /**
  * **The desk writes a seat's lunch note** (fifth-loop ideas, item 56;
  * dive-domain review F8): for a walk-up, a phone booking, or one person who
  * filled in a whole group's forms. The same note the diver's Day-of form
- * writes, cut to the same length by the writer; a meal preference for the
+ * writes, held to the same {@link DIETARY_NOTE_MAX}; a meal preference for the
  * galley, never an allergy record. Any staffer, like the pickup beside it.
  */
 export async function updateBookingDietaryNoteAction(
@@ -577,11 +580,14 @@ export async function updateBookingDietaryNoteAction(
   if (!parsed.success) redirect(noticeUrl(back, "dietary-invalid", { bid: bookingId }));
   const db = await getDb();
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
-  await setBookingDietaryNote(db, {
+  // The writer refuses a departure that does not serve lunch aboard (N-a):
+  // the roster shows no lunch control there, so nothing was asked of anyone.
+  const saved = await setBookingDietaryNote(db, {
     shopId: s.user.shopId,
     bookingId,
     note: parsed.data.dietaryNote ?? null,
   });
+  if (!saved) redirect(back);
   revalidatePath(shopPath(shopSlug, "trips", tripId, "prep"));
   revalidatePath(shopPath(shopSlug, "trips", tripId, "manifest"));
   revalidateAndRedirect(back, noticeUrl(back, "dietary-saved", { bid: bookingId }));

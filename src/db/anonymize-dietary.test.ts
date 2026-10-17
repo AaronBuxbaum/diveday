@@ -5,12 +5,12 @@ import { anonymizeDiver } from "./anonymize";
 import { bookings, people, personRoles } from "./schema";
 
 /**
- * Erasure reaches the dietary note (fifth-loop ideas, item 56). What a diver
- * can't eat is their own words, said for one boat's galley; a diver who asks
+ * Erasure reaches the dietary note (fifth-loop ideas, item 56). A diver's
+ * lunch preference is their own words, said for one boat's galley; a diver who asks
  * to be forgotten takes it back, like the welcome consent beside it.
  */
 describe("anonymizeDiver — the dietary note", () => {
-  it("clears what the diver said they can't eat", async () => {
+  it("clears the diver's lunch preference", async () => {
     const { db, shop } = await seededShopContext();
     const [owner] = await db
       .select({ id: people.id })

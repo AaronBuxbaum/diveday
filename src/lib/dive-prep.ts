@@ -157,7 +157,7 @@ export type PrepDiver = {
   hotelPickupLocation?: string | null;
   /** Staff-set pickup time for this booking (e.g. "07:15"). */
   pickupTime?: string | null;
-  /** What this seat can't eat, asked when lunch is served aboard (ideas item 56). */
+  /** This seat's meal preference for the galley, not an allergy record (ideas item 56). */
   dietaryNote?: string | null;
   /**
    * What this seat is for (ADR 20261007-participant-types). Absent is a

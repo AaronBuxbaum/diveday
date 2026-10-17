@@ -3016,9 +3016,11 @@ export async function setBookingLastDived(
 }
 
 /**
- * What a diver can't eat, from the Day-of form of a departure that serves
+ * A meal preference for the galley, not an allergy record (dive-domain
+ * review B1), from the Day-of form or the roster of a departure that serves
  * lunch aboard (fifth-loop ideas, item 56). The booking's, not the person's:
- * it is for this boat's galley. Null clears it.
+ * it is for this boat's galley. Null clears it. False when nothing was
+ * written: no such live booking, or its departure does not serve lunch.
  */
 export async function setBookingDietaryNote(
   db: AppDb,
@@ -3032,6 +3034,16 @@ export async function setBookingDietaryNote(
         eq(bookings.id, input.bookingId),
         eq(bookings.shopId, input.shopId),
         ne(bookings.status, "cancelled"),
+        // Only a departure that serves lunch aboard takes a lunch note, from
+        // either writer (dive-domain second pass, N-a): the roster hides its
+        // control otherwise, and a hand-posted form is refused here too.
+        inArray(
+          bookings.tripId,
+          db
+            .select({ id: trips.id })
+            .from(trips)
+            .where(and(eq(trips.shopId, input.shopId), eq(trips.lunchAboard, true))),
+        ),
       ),
     )
     .returning({ id: bookings.id });

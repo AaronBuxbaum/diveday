@@ -312,9 +312,9 @@ export type ReadyPageData = {
   canPay: boolean;
   /** The shop runs hotel pickups, so Day-of details asks about one (fourth UX review, item 8). */
   offersHotelPickup: boolean;
-  /** Lunch is served aboard, so Day-of details asks what this diver can't eat (ideas item 56). */
+  /** Lunch is served aboard, so Day-of details asks for a lunch preference (ideas item 56). */
   lunchAboard: boolean;
-  /** What this diver said they can't eat; null when nothing. */
+  /** This diver's lunch preference; null when nothing. */
   dietaryNote: string | null;
   /**
    * This seat is priced, unpaid, and the page cannot take a card for it: the

@@ -255,10 +255,10 @@ export const bookings = pgTable(
     /** Optional lodging / hotel pickup address or landmark provided by the diver on /ready. */
     hotelPickupLocation: text("hotel_pickup_location"),
     /**
-     * What this diver cannot eat, as they wrote it on /ready (fifth-loop
-     * ideas, item 56), asked only on a departure with lunch aboard. Food, not
-     * medicine: anything life-threatening belongs on the medical form, and the
-     * question says so.
+     * This diver's meal preference for the galley, as they wrote it on /ready
+     * or the desk did on the roster (fifth-loop ideas, item 56), asked only on
+     * a departure with lunch aboard. Not an allergy record (dive-domain review
+     * B1): the question's hint sends a food allergy to the shop.
      */
     dietaryNote: text("dietary_note"),
     /** Optional staff-set pickup time for this booking (e.g., "07:15"). */

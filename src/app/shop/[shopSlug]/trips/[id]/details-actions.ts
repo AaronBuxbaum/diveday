@@ -80,8 +80,8 @@ const detailsSchema = z.object({
   // The dives went past no-decompression limits: the recap then says nothing
   // about flying (H-84, issue #1555). Nothing else reads it.
   exceedsNoDecoLimits: z.preprocess((value) => value === "on", z.boolean()),
-  // Lunch is served aboard: the Day-of form then asks each diver what they
-  // can't eat, and Prep and the paper day say it (fifth-loop ideas, item 56).
+  // Lunch is served aboard: the Day-of form then asks each diver for a lunch
+  // preference, and Prep and the paper day say it (fifth-loop ideas, item 56).
   lunchAboard: z.preprocess((value) => value === "on", z.boolean()),
   // How many consecutive days this departure meets on (src/lib/trip-days.ts).
   // Absent from an older cached form is one day, the shape every trip had

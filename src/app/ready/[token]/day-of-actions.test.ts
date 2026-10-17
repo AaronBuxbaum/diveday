@@ -6,6 +6,7 @@ import { getReadyPageData } from "@/db/ready";
 import { bookings, shops, trips } from "@/db/schema";
 import { listStaff } from "@/db/trips";
 import { DAY_MS, nowDate } from "@/lib/clock";
+import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
 import { fileScopedShopContext } from "@/test/db";
 
 /**
@@ -188,7 +189,7 @@ describe("saveDayOfDetailsFromReady", () => {
     expect((await read(bookingId)).hotelPickupLocation).toBeNull();
   });
 
-  it("asks what a diver can't eat only on a boat that serves lunch, and clears it with a blank", async () => {
+  it("asks for a lunch preference only on a boat that serves lunch, and clears it with a blank", async () => {
     const { db, bookingId, token } = await seat();
     const [own] = await db
       .select({ tripId: bookings.tripId })
@@ -205,6 +206,19 @@ describe("saveDayOfDetailsFromReady", () => {
     expect((await read(bookingId)).dietaryNote).toBe("no shellfish");
     await save(token, { dietaryNote: "" });
     expect((await read(bookingId)).dietaryNote).toBeNull();
+  });
+
+  it("holds a hand-posted lunch note to the same 160 characters the input allows", async () => {
+    const { db, bookingId, token } = await seat();
+    const [own] = await db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    await db.update(trips).set({ lunchAboard: true }).where(eq(trips.id, own.tripId));
+    await save(token, { dietaryNote: "v".repeat(DIETARY_NOTE_MAX + 1) });
+    expect((await read(bookingId)).dietaryNote).toBeNull();
+    await save(token, { dietaryNote: "v".repeat(DIETARY_NOTE_MAX) });
+    expect((await read(bookingId)).dietaryNote).toBe("v".repeat(DIETARY_NOTE_MAX));
   });
 
   it("never blanks a stored answer with Choose", async () => {

@@ -17,7 +17,7 @@ describe("lunchSummary", () => {
     { fullName: "Priya Sharma", dietaryNote: " vegetarian " },
   ];
 
-  it("feeds every seat and the crew, and names what each can't eat", () => {
+  it("feeds every seat and the crew, and names each lunch note", () => {
     expect(lunchSummary({ lunchAboard: true, cancelled: false, seats, crewAboard: 2 })).toEqual({
       count: 5,
       notes: [

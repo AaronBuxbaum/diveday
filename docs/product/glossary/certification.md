@@ -184,7 +184,7 @@
   shop's own act and issues nothing: the agency sends its own card. The same tap takes it back, and
   the course page lists every issued card still to process, oldest first and with no lookback, a
   card waiting more than 30 days saying so. Gates nothing.
-- **Course ladder** — the Courses page's "N did Discover Scuba this year · M went on to Open Water",
+- **Course ladder** — the Courses page's "N did Discover Scuba in the last 12 months · M went on to Open Water",
   with the names of those who did not and an Invite to the next course's soonest session with a
   seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-141's one-at-a-time invite under the
   **30-day invite cooldown**). The names leave out anyone holding a card at or above the level the

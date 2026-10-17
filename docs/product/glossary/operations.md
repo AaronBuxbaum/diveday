@@ -220,8 +220,10 @@
   time and place instead of the dock arrival time. A **seat move** clears the pickup time.
 - **Lunch aboard** — `trips.lunch_aboard`, set on a departure's Details ("Lunch served aboard").
   Only on such a departure does the diver's Day-of form ask for a lunch preference and the desk's
-  roster row offer a lunch note, and Prep, the paper day, the manifest row and the offline copy say
-  "Lunch for 14" with each **dietary note** by name and "N of M left a lunch note". Gates nothing.
+  roster row offer a lunch note. Prep (and the paper day, which prints it) says "Lunch for 14" (every
+  seat and the crew aboard), each **dietary note** by name and "N of M left a lunch note" (seats
+  only: crew have no note); the manifest row and the offline copy show only each person's own note,
+  with no count. Gates nothing.
 - **Dietary note** — `bookings.dietary_note`: a seat's meal preference for that day's galley
   (vegetarian, halal, no pork), 160 characters, from the diver's Day-of form or the desk. **A galley
   note, not an allergy record**: a food allergy is medical, belongs on the person and on every

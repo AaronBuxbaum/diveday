@@ -100,7 +100,7 @@ export type TripPrep = {
    */
   proposals: Map<string, Awaited<ReturnType<typeof listAvailableGearUnits>>[number]>;
   /**
-   * "Lunch for 14", with what each person can't eat, on a departure that
+   * "Lunch for 14", with each person's lunch note, on a departure that
    * serves lunch aboard (fifth-loop ideas, item 56). Absent or null otherwise.
    */
   lunch?: LunchSummary | null;

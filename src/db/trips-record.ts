@@ -480,7 +480,7 @@ export type TripPatch = {
   selfGuided?: boolean;
   /** The dives went past no-decompression limits, so the recap says nothing about flying (H-84). */
   exceedsNoDecoLimits?: boolean;
-  /** Lunch is served aboard, so the Day-of form asks what a diver can't eat (ideas item 56). */
+  /** Lunch is served aboard, so the Day-of form asks for a lunch preference (ideas item 56). */
   lunchAboard?: boolean;
 };
 

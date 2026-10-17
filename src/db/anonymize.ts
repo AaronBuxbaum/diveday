@@ -1131,7 +1131,7 @@ async function scrubBookingRows(
         courseNextStepByPersonId: null,
         hotelPickupLocation: null,
         pickupTime: null,
-        // What they can't eat (ideas item 56) is health-adjacent prose about
+        // Their lunch preference (ideas item 56) is health-adjacent prose about
         // this person, typed for one boat's galley.
         dietaryNote: null,
         // The name a held seat was booked under (H-13) is somebody's name, and
