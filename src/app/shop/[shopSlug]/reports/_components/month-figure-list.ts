@@ -117,6 +117,25 @@ export function monthFigureList({
   // (`formatPercent` answers an em dash for a null ratio, which is what
   // `summarizeMonth` returns when a month offered no seat and took no booking).
   const waiversAllIn = report.waiverCompletion === 1;
+  // Counter money sits inside the figure but on no departure, so the ledger's
+  // rows add up to the figure only once the line names it (fifth loop, item 26).
+  const counter =
+    report.counterCents !== 0 ? formatReportMoney(report.counterCents, currency, locale) : null;
+  const importedDetail =
+    report.importedFinancialRecordCount > 0
+      ? t("reports.metrics.revenueDetailWithImported", {
+          count: report.importedFinancialRecordCount,
+          payments: formatReportMoney(report.importedPaymentCents, currency, locale),
+          refunds: formatReportMoney(report.importedRefundCents, currency, locale),
+        })
+      : null;
+  const revenueDetail = importedDetail
+    ? counter
+      ? `${importedDetail} ${t("reports.metrics.revenueCounter", { amount: counter })}`
+      : importedDetail
+    : counter
+      ? t("reports.metrics.revenueBasisWithCounter", { amount: counter })
+      : t("reports.metrics.revenueBasis");
   return [
     {
       key: "revenue",
@@ -125,15 +144,9 @@ export function monthFigureList({
       // The basis line: this figure is anchored to the month's departures, and
       // "Money in, by line" below it to the day money was paid, so the two
       // totals differ and each says which it is (third review, item 1). The
-      // imported case names money inside this figure Stripe has not confirmed.
-      detail:
-        report.importedFinancialRecordCount > 0
-          ? t("reports.metrics.revenueDetailWithImported", {
-              count: report.importedFinancialRecordCount,
-              payments: formatReportMoney(report.importedPaymentCents, currency, locale),
-              refunds: formatReportMoney(report.importedRefundCents, currency, locale),
-            })
-          : t("reports.metrics.revenueBasis"),
+      // imported case names money inside this figure Stripe has not confirmed,
+      // and the counter case money inside it that no departure row carries.
+      detail: revenueDetail,
       split: split?.revenue,
       comparison: moneyLine("revenueCents"),
       link: { href: revenueOrdersHref, label: t("reports.metrics.revenueViewOrders") },

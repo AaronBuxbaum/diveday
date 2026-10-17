@@ -1,7 +1,9 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBoat } from "./boats";
+import { trips } from "./schema";
 import { getTodayWork } from "./today";
 import { createTrip, moveTrip, setTripStatus } from "./trips";
 
@@ -69,6 +71,22 @@ describe("boat clashes on Today (H-80, #2135)", () => {
     expect(row?.detail).toContain("Clash hull");
     const other = row?.departure?.tripId === drift.id ? "Morning charter" : "Reef drift";
     expect(row?.detail).toContain(other);
+  });
+
+  // Issue #2788: two departures on one hull at the same minute put the row on
+  // whichever trip id sorted first — fresh per seed, so it swapped boats
+  // between runs. Titles are chosen against the ids so an id tiebreak fails.
+  it("puts a same-minute clash on the departure whose title reads first, whatever the ids", async () => {
+    const now = nowDate();
+    const { id: boatId } = await hull();
+    const { drift, charter } = await oneHullTwice(now, boatId);
+    const [lowId, highId] = [drift.id, charter.id].sort((a, b) => a.localeCompare(b));
+    if (!lowId || !highId) throw new Error("fixture");
+    await ctx.db.update(trips).set({ title: "Two-Tank Reef" }).where(eq(trips.id, lowId));
+    await ctx.db.update(trips).set({ title: "Morning Two-Tank" }).where(eq(trips.id, highId));
+    const rows = await boatClashRows(now);
+    expect(rows.map((row) => row.departure?.tripId)).toEqual([highId]);
+    expect(rows[0]?.detail).toContain("Two-Tank Reef");
   });
 
   it("leaves two departures that tie up nose to tail alone", async () => {

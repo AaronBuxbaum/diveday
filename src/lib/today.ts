@@ -16,6 +16,7 @@ import { formatMoneyCents } from "@/lib/format";
 import type { AgencyCheckableCard } from "./agency-check-queue";
 import type { Role } from "./authz";
 import type { DiveIntentCount } from "./dive-intent";
+import { cachedCollator } from "./intl-cache";
 import type { CrewIncompleteReason } from "./manifests";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SeasonStart } from "./season";
@@ -1689,9 +1690,45 @@ export function sortStationRows(actions: readonly TodayAction[]): TodayAction[] 
     if (due !== 0) return due;
     const severity = KIND_SEVERITY[a.kind] - KIND_SEVERITY[b.kind];
     if (severity !== 0) return severity;
-    return a.subject.localeCompare(b.subject);
+    // Two rows alike in everything but their boat (two 2:30 PM departures each
+    // short the same sizes) read in their boat's order, never in the order the
+    // queue happened to build them (issue #2788).
+    return (
+      CLOCK_COLLATOR.compare(a.subject, b.subject) ||
+      CLOCK_COLLATOR.compare(a.departure?.label ?? "", b.departure?.label ?? "") ||
+      CLOCK_COLLATOR.compare(a.departure?.tripId ?? "", b.departure?.tripId ?? "") ||
+      CLOCK_COLLATOR.compare(a.id, b.id)
+    );
   });
 }
+
+/**
+ * **Clock order for departures, total** (issue #2788): start minute, then title,
+ * then boat name (when the caller can name it), then id. Two boats at the same minute read by title before id because ids
+ * are minted fresh by every seed, so an id tiebreak alone swaps them from one
+ * run to the next. Every "which of these comes first" on Today — the spine's
+ * stations, and which of two clashing departures says the clash — reads this
+ * one order, so the row and the station it files under always agree.
+ */
+export function departureClockOrder<T extends { startsAt: Date; title: string }>(
+  idOf: (departure: T) => string,
+  boatOf: (departure: T) => string | null | undefined = () => null,
+): (a: T, b: T) => number {
+  return (a, b) =>
+    clockMinute(a.startsAt) - clockMinute(b.startsAt) ||
+    CLOCK_COLLATOR.compare(a.title, b.title) ||
+    CLOCK_COLLATOR.compare(boatOf(a) ?? "", boatOf(b) ?? "") ||
+    CLOCK_COLLATOR.compare(idOf(a), idOf(b));
+}
+
+/**
+ * The one collator every departure tiebreak reads, fixed to a locale so the
+ * server and the spine agree whatever the runtime's default is (issue #2788).
+ */
+const CLOCK_COLLATOR = cachedCollator("en");
+
+/** The clock minute a departure leaves in: "the 2:30 PM" is every boat inside it. */
+const clockMinute = (at: Date): number => Math.floor(at.getTime() / 60_000);
 
 /** What `assembleDaySpine` needs of one `getTodayWork` result. */
 export type SpineWork = {
@@ -1757,13 +1794,10 @@ function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): Da
  * a clock.
  */
 export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpine {
-  // Two boats at the same minute read by title before id: ids are minted
-  // fresh by every seed, so an id tiebreak alone swaps the two cards from one
-  // run to the next.
-  const byClock = (a: SpineDeparture, b: SpineDeparture) =>
-    a.startsAt.getTime() - b.startsAt.getTime() ||
-    a.title.localeCompare(b.title) ||
-    a.tripId.localeCompare(b.tripId);
+  const byClock = departureClockOrder<SpineDeparture>(
+    (departure) => departure.tripId,
+    (departure) => departure.boatName,
+  );
   const todayDepartures = [...today.departures].sort(byClock);
   const tomorrowDepartures = [...tomorrow.departures].sort(byClock);
 
@@ -1940,7 +1974,8 @@ export type NeedsYouLens = {
  * - `count` is the list's own number: the lead rows, the drafts, and the
  *   payments row when it is not folded.
  * - `next` is the next boat that has not sailed, and `dueBeforeNext` is how
- *   many of the lead rows are about it — the sentence's number. Once every
+ *   many of the lead rows are about it, or about any boat leaving at the same
+ *   minute — the sentence's number. Once every
  *   boat is away the sentence says `count`.
  * - `boatsClear` is {@link todaysBoatsAreClear}.
  */
@@ -1978,8 +2013,19 @@ export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReadi
   const folded = crewsToday && (rest.length > 0 || paymentsRows > 0) ? rest : null;
   const count = lead.length + (lens.drafts ?? 0) + (folded ? 0 : paymentsRows);
   const next = spine.stations.find((station) => !hasSailed(station.startsAt, lens.now)) ?? null;
+  // The sentence names a time, not a boat: every boat leaving at that minute
+  // is "the 2:30 PM", so the count is theirs together and cannot change with
+  // which of two same-minute boats sorted first (issue #2788).
+  const nextTripIds = new Set(
+    next
+      ? spine.stations
+          .filter((station) => clockMinute(station.startsAt) === clockMinute(next.startsAt))
+          .map((station) => station.tripId)
+      : [],
+  );
   const dueBeforeNext = next
-    ? lead.filter((action) => action.departure?.tripId === next.tripId).length
+    ? lead.filter((action) => action.departure != null && nextTripIds.has(action.departure.tripId))
+        .length
     : count;
   return {
     lead,

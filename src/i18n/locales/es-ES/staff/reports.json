@@ -16,6 +16,8 @@
   "metrics": {
     "revenueLabel": "Ingresos netos",
     "revenueBasis": "De las salidas de este mes",
+    "revenueBasisWithCounter": "De las salidas de este mes, más {amount} en el mostrador",
+    "revenueCounter": "Más {amount} en el mostrador.",
     "revenueDetailWithImported": "Pagos y depósitos de salidas actuales después del impuesto de Stripe, más {count, plural, one {# registro importado del origen sin verificar} other {# registros importados del origen sin verificar}}: {payments} en pagos y {refunds} en reembolsos.",
     "bookingsLabel": "Plazas",
     "bookingsThisMonth": "{count, plural, one {# salida} other {# salidas}} en el calendario hasta ahora",
