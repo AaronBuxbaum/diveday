@@ -594,7 +594,9 @@ const CHROME_CEILING = 20;
 // 71 → 72 (fifth loop, ideas item 1): the open snags the crew wrote against a
 // boat's checklist (`openSnagsForShop`), one statement in the wave, so the
 // phase count does not move.
-const TODAY_CEILING = 72;
+// 72 → 73 (issue #2658): the unanswered row counts the open date requests
+// (`countOpenDateRequests`), one statement in the wave.
+const TODAY_CEILING = 73;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
