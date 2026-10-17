@@ -1281,6 +1281,7 @@ export async function getTripManifests(
       trainingDive: trainingDiveOf(trainingMarks.get(booking.id), instructorAboard),
       trainingMarkCleared: booking.trainingClearedAt
         ? {
+            reason: booking.trainingClearedReason ?? "forms_owed",
             byName: booking.trainingClearedByPersonId
               ? (clearedByName.get(booking.trainingClearedByPersonId) ?? null)
               : null,

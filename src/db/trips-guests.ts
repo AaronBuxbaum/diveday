@@ -255,6 +255,7 @@ export async function getTripGuests(
         trainingMarkedAt: booking.trainingMarkedAt,
         trainingMarkedByPersonId: booking.trainingMarkedByPersonId,
         trainingClearedAt: booking.trainingClearedAt,
+        trainingClearedReason: booking.trainingClearedReason,
         trainingClearedByPersonId: booking.trainingClearedByPersonId,
       })),
     ),

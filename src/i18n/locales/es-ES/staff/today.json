@@ -129,7 +129,7 @@
     "takePayment": "Cobrar pago",
     "checkReadiness": "Verificar disponibilidad",
     "getCourseFormsSigned": "Pedir firmas",
-    "fixTrainingMark": "Corregir marca de formación"
+    "clearTrainingMark": "Quitar marca de formación"
   },
   "blockerGroup": {
     "setRequirements": "Configurar requisitos",
@@ -153,7 +153,7 @@
     "takePayments": "Cobrar pagos",
     "checkReadiness": "Verificar disponibilidad",
     "getCourseFormsSigned": "Pedir firmas",
-    "fixTrainingMarks": "Corregir marcas de formación"
+    "clearTrainingMarks": "Quitar marcas de formación"
   },
   "pointingLabel": {
     "trip": "Ver lista",

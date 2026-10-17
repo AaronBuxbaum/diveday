@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import {
@@ -6,11 +6,11 @@ import {
   markSeat,
   seatBlockerCodes,
 } from "@/test/training-mark-context";
-import { cancelBooking } from "./bookings";
+import { cancelBooking, setBookingParticipantType } from "./bookings";
 import { recordPaperCourseForm, signCourseForm } from "./course-forms";
 import { subscribeManifestEvents } from "./manifest-events";
 import { getTripManifest } from "./manifests";
-import { bookings, courses, people, tripAssignments } from "./schema";
+import { activityEvents, bookings, courses, people, tripAssignments } from "./schema";
 import { clearTrainingDive } from "./training-marks";
 import { changeTripCrew } from "./trips-crew";
 import { moveTrip } from "./trips-schedule";
@@ -210,5 +210,111 @@ describe("training marks — the gates the build review closed (in-memory PGlite
     // A mark that no longer stands names no course.
     await cancelBooking(ctx.db, ctx.shop.id, ctx.course.bookingId);
     expect((await row())?.trainingDive ?? null).toBeNull();
+  });
+
+  describe("a cleared mark says why, and stays said", () => {
+    type Ctx = Awaited<ReturnType<typeof charterContext>>;
+    const clearAs = (ctx: Ctx, actorPersonId: string, now?: Date) =>
+      clearTrainingDive(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.seat.id,
+        actorPersonId,
+        now,
+      });
+    const seatRow = async (ctx: Ctx) =>
+      (await ctx.db.select().from(bookings).where(eq(bookings.id, ctx.seat.id)))[0];
+    const sign = (ctx: Ctx) =>
+      signCourseForm(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.seat.id,
+        formVersionId: ctx.form.versionId as string,
+        signerName: ctx.course.fullName,
+        agreed: true,
+      });
+    const holdEnrollment = (ctx: Ctx) =>
+      ctx.db
+        .update(bookings)
+        .set({ identityUnconfirmedAt: ctx.now })
+        .where(eq(bookings.id, ctx.course.bookingId));
+
+    it("stamps forms_owed on a mark cleared with its forms unsigned", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      expect(await clearAs(ctx, ctx.owner)).toEqual({ ok: true, changed: true });
+      expect((await seatRow(ctx))?.trainingClearedReason).toBe("forms_owed");
+    });
+
+    it("reads a mark that no longer holds against the enrollment's own records", async () => {
+      const signed = await charterContext();
+      await markSeat(signed);
+      expect(await sign(signed)).toMatchObject({ ok: true });
+      await holdEnrollment(signed);
+      expect(await seatBlockerCodes(signed)).toContain("training_mark_invalid");
+      // Still a boarding block relaxed: not an instructor's call.
+      expect(await clearAs(signed, signed.instructor)).toEqual({ ok: false, reason: "forms_owed" });
+      expect(await clearAs(signed, signed.owner)).toEqual({ ok: true, changed: true });
+      expect((await seatRow(signed))?.trainingClearedReason).toBe("mark_invalid");
+
+      const unsigned = await charterContext();
+      await markSeat(unsigned);
+      await holdEnrollment(unsigned);
+      expect(await clearAs(unsigned, unsigned.owner)).toEqual({ ok: true, changed: true });
+      expect((await seatRow(unsigned))?.trainingClearedReason).toBe("forms_owed");
+    });
+
+    it("keeps an earlier clear's stamp through a re-mark, until a later clear replaces it", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      await clearAs(ctx, ctx.owner);
+      expect(await markSeat(ctx)).toEqual({ ok: true, changed: true });
+      expect(await seatRow(ctx)).toMatchObject({
+        trainingClearedByPersonId: ctx.owner,
+        trainingClearedReason: "forms_owed",
+      });
+      expect(await sign(ctx)).toMatchObject({ ok: true });
+      expect(await clearAs(ctx, ctx.owner)).toEqual({ ok: true, changed: true });
+      expect(await seatRow(ctx)).toMatchObject({
+        trainingClearedAt: null,
+        trainingClearedByPersonId: null,
+        trainingClearedReason: null,
+      });
+    });
+
+    it("refuses to clear a mark once the charter is home", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      const home = new Date(ctx.charter.endsAt.getTime() + 2 * 24 * 60 * 60 * 1000);
+      expect(await clearAs(ctx, ctx.owner, home)).toEqual({
+        ok: false,
+        reason: "departure_over",
+      });
+      expect((await seatRow(ctx))?.trainingEnrollmentBookingId).toBe(ctx.course.bookingId);
+    });
+
+    it("drops the mark, logged, when the seat stops diving", async () => {
+      const ctx = await charterContext();
+      await markSeat(ctx);
+      expect(
+        await setBookingParticipantType(ctx.db, {
+          shopId: ctx.shop.id,
+          tripId: ctx.charter.id,
+          bookingId: ctx.seat.id,
+          to: "snorkeler",
+          actorPersonId: ctx.owner,
+        }),
+      ).toMatchObject({ ok: true, changed: true });
+      expect((await seatRow(ctx))?.trainingEnrollmentBookingId).toBeNull();
+      expect(await seatBlockerCodes(ctx)).not.toContain("training_mark_invalid");
+      const [line] = await ctx.db
+        .select({ actor: activityEvents.actorPersonId })
+        .from(activityEvents)
+        .where(
+          and(
+            eq(activityEvents.bookingId, ctx.seat.id),
+            eq(activityEvents.code, "training_dive_cleared"),
+          ),
+        );
+      expect(line?.actor).toBe(ctx.owner);
+    });
   });
 });

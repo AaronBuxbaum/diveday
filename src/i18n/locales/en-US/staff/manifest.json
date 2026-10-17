@@ -123,6 +123,7 @@
   "medicalWaiverSigned": "Medical waiver signed",
   "medicalEarlierRefusal": "A physician did not clear this person on {date} (earlier waiver)",
   "trainingMarkCleared": "{hasName, select, yes {Training mark cleared by {name} with course forms unsigned} other {Training mark cleared with course forms unsigned}}",
+  "trainingMarkClearedInvalid": "{hasName, select, yes {Training mark cleared by {name} after it stopped fitting its course seat} other {Training mark cleared after it stopped fitting its course seat}}",
   "trainingDive": "Training dive for {course}",
   "trainingDiveNoInstructor": "No instructor is on this boat’s crew",
   "medicalEarlierRefusalChip": "Physician said no before",

@@ -1,4 +1,9 @@
-import type { MedicalHoldCode, RollCallCheckpoint, RollCallLabel } from "@/lib/manifests";
+import type {
+  MedicalHoldCode,
+  RollCallCheckpoint,
+  RollCallLabel,
+  TrainingMarkCleared,
+} from "@/lib/manifests";
 import type { MedicalWarningDays } from "@/lib/waivers";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -114,7 +119,7 @@ export function trainingDiveLines(
   t: StaffTranslator,
   diver: {
     trainingDive?: { courseTitle: string; instructorAboard: boolean } | null;
-    trainingMarkCleared?: { byName: string | null } | null;
+    trainingMarkCleared?: TrainingMarkCleared | null;
   },
 ): { fact: string | null; warnings: string[] } {
   const { trainingDive, trainingMarkCleared } = diver;
@@ -125,10 +130,15 @@ export function trainingDiveLines(
         ? t("manifest.trainingDiveNoInstructor")
         : null,
       trainingMarkCleared
-        ? t("manifest.trainingMarkCleared", {
-            hasName: trainingMarkCleared.byName ? "yes" : "no",
-            name: trainingMarkCleared.byName ?? "",
-          })
+        ? t(
+            trainingMarkCleared.reason === "mark_invalid"
+              ? "manifest.trainingMarkClearedInvalid"
+              : "manifest.trainingMarkCleared",
+            {
+              hasName: trainingMarkCleared.byName ? "yes" : "no",
+              name: trainingMarkCleared.byName ?? "",
+            },
+          )
         : null,
     ].filter((line): line is string => line !== null),
   };

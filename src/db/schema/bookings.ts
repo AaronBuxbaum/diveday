@@ -472,13 +472,18 @@ export const bookings = pgTable(
     trainingMarkedAt: timestamp("training_marked_at", { withTimezone: true }),
     trainingMarkedByPersonId: uuid("training_marked_by_person_id").references(() => people.id),
     /**
-     * **Who cleared a training mark while its forms were still owed, and
-     * when.** Clearing then relaxes a boarding block, so the manifest names who
-     * did it. Null when no mark was ever cleared with forms owed; a new mark
-     * clears it. Both columns move together.
+     * **Who cleared a training mark that relaxed a boarding block, when, and
+     * why**: its course forms still owed (`forms_owed`), or every form signed
+     * but the mark no longer holding (`mark_invalid`). The manifest names who
+     * did it. A new mark keeps the stamp, so the crew still read the earlier
+     * decision; the next clear replaces it, with null when it relaxed nothing.
+     * All three columns move together.
      */
     trainingClearedAt: timestamp("training_cleared_at", { withTimezone: true }),
     trainingClearedByPersonId: uuid("training_cleared_by_person_id").references(() => people.id),
+    trainingClearedReason: text("training_cleared_reason", {
+      enum: ["forms_owed", "mark_invalid"],
+    }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -500,7 +505,9 @@ export const bookings = pgTable(
     ),
     check(
       "bookings_training_cleared_attributed",
-      sql`(${table.trainingClearedAt} is null) = (${table.trainingClearedByPersonId} is null)`,
+      sql`(${table.trainingClearedAt} is null) = (${table.trainingClearedByPersonId} is null)
+        and (${table.trainingClearedAt} is null) = (${table.trainingClearedReason} is null)
+        and (${table.trainingClearedReason} is null or ${table.trainingClearedReason} in ('forms_owed', 'mark_invalid'))`,
     ),
     check(
       "bookings_training_mark_not_self",

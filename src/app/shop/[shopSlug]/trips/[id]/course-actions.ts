@@ -391,7 +391,9 @@ export async function clearTrainingDiveAction(
           ? "training-mark-forms-owed"
           : outcome.reason === "not_authorized"
             ? "not-authorized"
-            : "training-mark-invalid",
+            : outcome.reason === "departure_over"
+              ? "training-mark-over"
+              : "training-mark-invalid",
       { bid: bookingId },
     ),
   );

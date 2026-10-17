@@ -231,7 +231,7 @@
       "courseFormUnsigned": "Course form not signed: {form}.",
       "courseFormAgeUnknown": "{form} is for students {maxAge} and under, and there’s no date of birth on file. Add it, or have it signed with a parent or guardian.",
       "courseFormGuardianMissing": "{form} needs a parent or guardian’s signature.",
-      "trainingMarkInvalid": "Training mark no longer fits its course seat. Fix or clear it on the roster before boarding."
+      "trainingMarkInvalid": "Training mark no longer fits its course seat. Clear it on the roster."
     }
   },
   "shopNav": {

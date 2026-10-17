@@ -80,7 +80,7 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   guardian_signature_missing: "today.blockerAction.reissueWaiver",
   course_form_unsigned: "today.blockerAction.getCourseFormsSigned",
   course_form_guardian_missing: "today.blockerAction.getCourseFormsSigned",
-  training_mark_invalid: "today.blockerAction.fixTrainingMark",
+  training_mark_invalid: "today.blockerAction.clearTrainingMark",
   certification_missing: "today.blockerAction.addCard",
   // Nothing to add or verify: the diver said there is no card. The fix is a
   // conversation before boarding (third UX review, item 23).
@@ -119,7 +119,7 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   guardian_signature_missing: "today.blockerGroup.reissueWaivers",
   course_form_unsigned: "today.blockerGroup.getCourseFormsSigned",
   course_form_guardian_missing: "today.blockerGroup.getCourseFormsSigned",
-  training_mark_invalid: "today.blockerGroup.fixTrainingMarks",
+  training_mark_invalid: "today.blockerGroup.clearTrainingMarks",
   certification_missing: "today.blockerGroup.reviewCards",
   certification_not_yet: "today.blockerGroup.contactDivers",
   certification_pending: "today.blockerGroup.verifyCards",

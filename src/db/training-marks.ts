@@ -1,12 +1,13 @@
 import { and, eq, gte, inArray, isNotNull, isNull, ne } from "drizzle-orm";
 import { canConfigureTrips, canManageWaiverTemplates } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { outstandingCourseForms } from "@/lib/course-forms";
 import type { ParticipantType } from "@/lib/participant-types";
 import { type TrainingMarkProblem, trainingMarkProblem } from "@/lib/training-mark";
 import { hasReturned } from "@/lib/trips";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { getCourseFormsForBooking } from "./course-forms";
+import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
 import { publishManifestEvent } from "./manifest-events";
 import { queryAll } from "./query-helpers";
 import {
@@ -15,10 +16,15 @@ import {
   courses,
   people,
   personRoles,
+  shops,
   tripAssignments,
   trips,
 } from "./schema";
-import { readTrainingEnrollments, resolveTrainingMarks } from "./training-mark-resolve";
+import {
+  readTrainingEnrollments,
+  resolveTrainingMarks,
+  type TrainingEnrollmentRow,
+} from "./training-mark-resolve";
 import { livePerson, liveTrip } from "./trips-live";
 
 /**
@@ -60,6 +66,7 @@ async function lockSeat(tx: DbExecutor, shopId: string, bookingId: string) {
       status: bookings.status,
       participantType: bookings.participantType,
       identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      minorDeclaredAt: bookings.minorDeclaredAt,
       enrollmentBookingId: bookings.trainingEnrollmentBookingId,
       tripId: trips.id,
       tripStatus: trips.status,
@@ -153,9 +160,6 @@ export async function markTrainingDive(
           trainingEnrollmentBookingId: input.enrollmentBookingId,
           trainingMarkedAt: now,
           trainingMarkedByPersonId: input.actorPersonId,
-          // A fresh mark is what the manifest reads now, not an earlier clear.
-          trainingClearedAt: null,
-          trainingClearedByPersonId: null,
         })
         .where(and(eq(bookings.id, seat.bookingId), eq(bookings.shopId, input.shopId)));
       await tx.insert(activityEvents).values({
@@ -188,12 +192,58 @@ export type ClearTrainingDiveOutcome =
       reason:
         | "not_authorized"
         | "not_found"
+        /** The charter is home: its marks stay as they sailed. */
+        | "departure_over"
         /**
          * Forms are still owed, or the mark no longer stands, and the staffer
          * may neither manage the shop's forms nor teaches the enrollment.
          */
         | "forms_owed";
     };
+
+/**
+ * Whether the enrollment a mark names still owes any of its course's forms,
+ * from its own records, as boarding reads them (`outstandingCourseForms`):
+ * the student's date of birth, and either seat's "Under 18". An enrollment
+ * this cannot read, or another person's, owes (fail closed).
+ */
+async function enrollmentOwesForms(
+  tx: DbExecutor,
+  shopId: string,
+  enrollment: TrainingEnrollmentRow | null,
+  seat: { personId: string; minorDeclaredAt: Date | null },
+  now: Date,
+): Promise<boolean> {
+  if (!enrollment || enrollment.personId !== seat.personId) return true;
+  const [required, signatures, signerRows] = await queryAll(tx, [
+    () => requiredCourseFormsForTrips(tx, shopId, [enrollment.tripId], now),
+    () => courseFormSignaturesForBookings(tx, shopId, [enrollment.bookingId]),
+    () =>
+      tx
+        .select({ dateOfBirth: people.dateOfBirth, timezone: shops.timezone })
+        .from(people)
+        .innerJoin(shops, eq(shops.id, people.shopId))
+        // diveday:allow-deleted-people: the student's date of birth, read for the guardian rule.
+        .where(and(eq(people.id, seat.personId), eq(people.shopId, shopId)))
+        .limit(1),
+  ]);
+  const [signer] = signerRows;
+  if (!signer) return true;
+  return (
+    outstandingCourseForms({
+      shopId,
+      bookingId: enrollment.bookingId,
+      personId: enrollment.personId,
+      required: required.get(enrollment.tripId) ?? [],
+      signatures,
+      signer: {
+        dateOfBirth: signer.dateOfBirth,
+        minorDeclared: enrollment.minorDeclared || seat.minorDeclaredAt !== null,
+        timezone: signer.timezone,
+      },
+    }).length > 0
+  );
+}
 
 /**
  * Whether this person is rostered as an instructor on this departure **by
@@ -250,6 +300,8 @@ export async function clearTrainingDive(
       const seat = await lockSeat(tx, input.shopId, input.bookingId);
       if (!seat) return { ok: false, reason: "not_found" };
       if (seat.enrollmentBookingId === null) return { ok: true, changed: false };
+      // Home is final: the record of what the seat was asked stays as it sailed.
+      if (hasReturned(seat.endsAt, now)) return { ok: false, reason: "departure_over" };
       const state = (
         await resolveTrainingMarks(tx, input.shopId, [
           {
@@ -269,13 +321,13 @@ export async function clearTrainingDive(
           seat.enrollmentBookingId,
         ) ?? null;
       // Owed whatever the course-forms switch says: a warned form is still a
-      // form nobody signed. A mark that does not stand is treated as owing.
-      const forms = state?.valid
-        ? await getCourseFormsForBooking(tx, input.shopId, seat.bookingId, now)
-        : null;
-      const formsOwed = !forms || forms.outstanding.length > 0;
+      // form nobody signed. Read off the enrollment's own records, whether or
+      // not the mark still stands (build review T6).
+      const formsOwed = await enrollmentOwesForms(tx, input.shopId, enrollment, seat, now);
+      // What this clear relaxes, if anything, and so what the seat is stamped.
+      const reason = formsOwed ? "forms_owed" : state?.valid ? null : "mark_invalid";
       if (
-        formsOwed &&
+        reason !== null &&
         !canManageWaiverTemplates(roles) &&
         !(
           enrollment &&
@@ -290,9 +342,11 @@ export async function clearTrainingDive(
           trainingEnrollmentBookingId: null,
           trainingMarkedAt: null,
           trainingMarkedByPersonId: null,
-          ...(formsOwed
-            ? { trainingClearedAt: now, trainingClearedByPersonId: input.actorPersonId }
-            : {}),
+          // This clear's own stamp, replacing any earlier one: null when it
+          // relaxed nothing (security review U5).
+          trainingClearedAt: reason ? now : null,
+          trainingClearedByPersonId: reason ? input.actorPersonId : null,
+          trainingClearedReason: reason,
         })
         .where(and(eq(bookings.id, seat.bookingId), eq(bookings.shopId, input.shopId)));
       await tx.insert(activityEvents).values({
@@ -351,6 +405,7 @@ type RosterSeatInput = {
   trainingMarkedByPersonId: string | null;
   trainingClearedAt: Date | null;
   trainingClearedByPersonId: string | null;
+  trainingClearedReason: "forms_owed" | "mark_invalid" | null;
 };
 
 /**
@@ -500,14 +555,15 @@ export async function trainingMarksForRoster(
           }
         : null;
     const options = offerable.includes(seat) ? (optionsByPerson.get(seat.personId) ?? []) : [];
-    const clearedWithFormsOwed = seat.trainingClearedAt
-      ? {
-          at: seat.trainingClearedAt,
-          byName: seat.trainingClearedByPersonId
-            ? (nameById.get(seat.trainingClearedByPersonId) ?? null)
-            : null,
-        }
-      : null;
+    const clearedWithFormsOwed =
+      seat.trainingClearedAt && seat.trainingClearedReason === "forms_owed"
+        ? {
+            at: seat.trainingClearedAt,
+            byName: seat.trainingClearedByPersonId
+              ? (nameById.get(seat.trainingClearedByPersonId) ?? null)
+              : null,
+          }
+        : null;
     if (!mark && options.length === 0 && !clearedWithFormsOwed) continue;
     bySeat.set(seat.bookingId, { mark, options, clearedWithFormsOwed });
   }
@@ -517,4 +573,48 @@ export async function trainingMarksForRoster(
       row.tripRole === null ? row.role === "instructor" : row.tripRole === "instructor",
     ),
   };
+}
+
+/**
+ * **A seat that stops diving drops its training mark**, inside the type
+ * change's own transaction (build review T6): a snorkeler or a rider is asked
+ * none of a course's forms, and a mark left behind would only raise
+ * `training_mark_invalid` on a seat nobody can mark again. Logged as a clear
+ * by the staffer who changed the type; nothing was relaxed, so nothing is
+ * stamped. True when a mark was dropped, so the caller knows the manifest
+ * moved (it publishes the seat's departure already).
+ */
+export async function dropTrainingMarkWithin(
+  tx: DbExecutor,
+  input: { shopId: string; bookingId: string; actorPersonId: string; now: Date },
+): Promise<boolean> {
+  const seat = await lockSeat(tx, input.shopId, input.bookingId);
+  if (!seat || seat.enrollmentBookingId === null) return false;
+  const enrollment =
+    (await readTrainingEnrollments(tx, input.shopId, [seat.enrollmentBookingId])).get(
+      seat.enrollmentBookingId,
+    ) ?? null;
+  await tx
+    .update(bookings)
+    .set({
+      trainingEnrollmentBookingId: null,
+      trainingMarkedAt: null,
+      trainingMarkedByPersonId: null,
+    })
+    .where(and(eq(bookings.id, seat.bookingId), eq(bookings.shopId, input.shopId)));
+  await tx.insert(activityEvents).values({
+    shopId: input.shopId,
+    tripId: seat.tripId,
+    bookingId: seat.bookingId,
+    actorPersonId: input.actorPersonId,
+    code: "training_dive_cleared",
+    params: {
+      actor: await staffName(tx, input.shopId, input.actorPersonId),
+      diver: seat.diverName,
+      course: enrollment?.courseTitle ?? "",
+      formsOwed: "no",
+    },
+    occurredAt: input.now,
+  });
+  return true;
 }

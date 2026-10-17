@@ -244,11 +244,11 @@ export type ManifestDiverInput = {
    */
   riderMedicalHold?: RiderMedicalHold | null;
   /**
-   * A staffer cleared this seat's training mark while its course forms were
-   * still owed (issue #2275): the seat boards without them, and the crew sees
-   * who decided. Never a blocker.
+   * A staffer cleared this seat's training mark in a way that relaxed a
+   * boarding block (issue #2275) — its course forms still owed, or a mark that
+   * no longer held — and the crew sees who decided. Never a blocker.
    */
-  trainingMarkCleared?: { byName: string | null } | null;
+  trainingMarkCleared?: TrainingMarkCleared | null;
   /**
    * A training mark that stands on this seat (issue #2275): the course the
    * dive counts toward, and whether an instructor is on this departure's crew
@@ -1294,3 +1294,9 @@ export function blockedAtDock(
   }
   return { undecided, aboard };
 }
+
+/** Who cleared a seat's training mark over a boarding block, and which one (issue #2275). */
+export type TrainingMarkCleared = {
+  byName: string | null;
+  reason: "forms_owed" | "mark_invalid";
+};

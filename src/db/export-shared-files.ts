@@ -416,6 +416,7 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.trainingClearedByPersonId,
     },
+    { header: "training_cleared_reason", in: "shop", value: (row) => row.trainingClearedReason },
     { header: "hotel_pickup_location", in: "shop", value: (row) => row.hotelPickupLocation },
     { header: "pickup_time", in: "shop", value: (row) => row.pickupTime },
     {

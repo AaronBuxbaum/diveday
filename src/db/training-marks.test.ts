@@ -409,6 +409,7 @@ describe("training marks — a training dive on a charter (in-memory PGlite)", (
         trainingMarkedByPersonId: row.trainingMarkedByPersonId,
         trainingClearedAt: row.trainingClearedAt,
         trainingClearedByPersonId: row.trainingClearedByPersonId,
+        trainingClearedReason: row.trainingClearedReason,
       };
     };
     const before = await trainingMarksForRoster(ctx.db, ctx.shop.id, ctx.charter, [

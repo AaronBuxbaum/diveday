@@ -7,7 +7,7 @@ import { nowDate } from "./clock";
 import type { EmergencyReference } from "./emergency-reference";
 // Dependency-free too (type-only imports), for the same reason.
 import { withholdHeldSeatParticulars } from "./held-seat";
-import type { TripManifest } from "./manifests";
+import type { TrainingMarkCleared, TripManifest } from "./manifests";
 // Same reasoning as the roll-call import above: dependency-free, so a value
 // import here is safe for the service worker to carry.
 import { latestPreDepartureCheck, type PreDepartureCheckStatus } from "./pre-departure-check";
@@ -437,7 +437,7 @@ export type OfflineManifestPayload = {
            * from this copy sees who decided, as on the live manifest.
            * Optional and additive, no version bump; absent otherwise.
            */
-          trainingMarkCleared?: { byName: string | null };
+          trainingMarkCleared?: TrainingMarkCleared;
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
           /**

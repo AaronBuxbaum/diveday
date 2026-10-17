@@ -129,7 +129,7 @@
     "takePayment": "Take payment",
     "checkReadiness": "Check readiness",
     "getCourseFormsSigned": "Get forms signed",
-    "fixTrainingMark": "Fix training mark"
+    "clearTrainingMark": "Clear training mark"
   },
   "blockerGroup": {
     "setRequirements": "Set requirements",
@@ -153,7 +153,7 @@
     "takePayments": "Take payments",
     "checkReadiness": "Check readiness",
     "getCourseFormsSigned": "Get forms signed",
-    "fixTrainingMarks": "Fix training marks"
+    "clearTrainingMarks": "Clear training marks"
   },
   "pointingLabel": {
     "trip": "Open roster",

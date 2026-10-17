@@ -79,12 +79,12 @@ describe("the dock copy of a training dive", () => {
   });
 
   it("carries who cleared a mark with its forms unsigned", () => {
-    expect(save({ trainingMarkCleared: { byName: "Ana Ruiz" } }).trainingMarkCleared).toEqual({
-      byName: "Ana Ruiz",
-    });
-    expect(save({ trainingMarkCleared: { byName: null } }).trainingMarkCleared).toEqual({
-      byName: null,
-    });
+    for (const cleared of [
+      { byName: "Ana Ruiz", reason: "forms_owed" as const },
+      { byName: null, reason: "mark_invalid" as const },
+    ]) {
+      expect(save({ trainingMarkCleared: cleared }).trainingMarkCleared).toEqual(cleared);
+    }
   });
 
   it("writes neither field for an ordinary seat", () => {

@@ -85,6 +85,7 @@ import {
 } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
+import { dropTrainingMarkWithin } from "./training-marks";
 import { type SendRescheduleNoticesOptions, sendMissedRescheduleNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
@@ -2438,6 +2439,8 @@ async function changeParticipantType(
     // starts diving spends one exactly as a fresh diver's seat would, under
     // the same rules (an unpaid, identity-confirmed seat only).
     if (!isDiver(to)) {
+      // Nor a training dive: the seat is asked none of a course's forms now.
+      await dropTrainingMarkWithin(tx, { shopId, bookingId: booking.id, actorPersonId, now });
       await releasePackageCoverageForBooking(tx, shopId, booking.id);
       // And the tagged units the seat will not use now: a rider holds none, a
       // snorkeler the surface kit. Unclaimed only, as a cancellation does;
