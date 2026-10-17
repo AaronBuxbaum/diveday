@@ -6,7 +6,8 @@ import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surf
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { FormDraft } from "@/components/FormDraft";
 import { formDraftCopy } from "@/components/form-draft-copy";
-import { KeepTypedOnRefusal, keptTypedScope } from "@/components/KeepTypedOnRefusal";
+import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { NameMatchCandidateFacts } from "@/components/seat-diver/NameMatchCandidateFacts";

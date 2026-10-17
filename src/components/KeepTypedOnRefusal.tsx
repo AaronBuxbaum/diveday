@@ -4,24 +4,12 @@ import { useEffect, useRef } from "react";
 import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { draftableFields } from "@/lib/form-drafts";
 import { applyFormFields } from "./apply-form-fields";
+import { KEPT_PREFIX, keptTypedKey } from "./kept-typed-scope";
 
-const KEPT_PREFIX = "diveday.refused-form.";
+export { keptTypedKey, keptTypedScope } from "./kept-typed-scope";
+
 /** A refusal comes back in a second; anything older is a different visit. */
 const KEPT_FOR_MS = 10 * MINUTE_MS;
-
-/**
- * Where a form's last submission waits, per tab, until the answer comes back:
- * one key per form and per `scope` (the shop's slug and the staffer's person
- * id), so the next staffer on a shared tab never sees the last one's typing.
- */
-export function keptTypedKey(form: string, scope: string): string {
-  return `${KEPT_PREFIX}${scope}.${form}`;
-}
-
-/** The scope a staff page passes: this shop, this staffer. */
-export function keptTypedScope(shopSlug: string, personId: string): string {
-  return `${shopSlug}.${personId}`;
-}
 
 /**
  * What this tab last submitted from `form`, for a control that holds its own
