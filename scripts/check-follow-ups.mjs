@@ -71,6 +71,10 @@ export const PARKED_LABEL = "parked";
  *  human's queue beside the other human-owned issues, not in the agent inbox the triage
  *  routine reads. */
 export const QUESTION_LABEL = "ready-for-human";
+/** An improvement or feature idea nobody has committed to (Aaron, 2026-10-17): filed so it is
+ *  not lost, kept out of the `needs-triage` inbox and out of every ready-for-agent and
+ *  ready-for-human sweep until a human promotes it. */
+export const IDEA_LABEL = "idea";
 
 /** Open `needs-triage` issues above this fail the scheduled run (2026-10-13 re-review, item 1). */
 export const INBOX_CEILING = 40;

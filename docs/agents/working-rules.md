@@ -151,7 +151,8 @@ runs. Pass args directly. The shell guard refuses the bare form.
   message.** A bug, a safety gap, or a decision only a human can make: a GitHub issue labelled
   `needs-triage` ([docs/agents/issue-tracker.md](issue-tracker.md)'s "Filing a follow-up"), its
   number in the PR description, written for a reader with none of your context and ending in a
-  prompt they can paste into a fresh session. Anything else (an idea, debt read in passing, an
+  prompt they can paste into a fresh session. An idea or feature with a concrete first step is an
+  `idea` issue (`file-follow-up.mjs --idea`), kept out of every ready-for-* sweep. Anything else (debt read in passing, an
   out-of-scope cleanup) is a bullet in one "Notes" comment on the PR. This never replaces doing the work you were asked to do, a failing
   test is never a follow-up, and someone else's entry is never a drive-by.
 - **A failing or flaky test is part of the work, even when unrelated to your change.** Fix it
