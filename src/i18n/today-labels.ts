@@ -790,8 +790,20 @@ export function openReviewsActionText(t: StaffTranslator): string {
  * for the same reason as the reviews row, the count is the whole row: the
  * second sentence named the surface the tap already opens.
  */
-export function unansweredMessagesSubjectText(t: StaffTranslator, count: number): string {
-  return t("today.unansweredMessages.subject", { count });
+/** What is waiting on an answer: messages, open date requests, or both (issue #2658). */
+export function unansweredMessagesSubjectText(
+  t: StaffTranslator,
+  { messages, dateRequests }: { messages: number; dateRequests: number },
+): string {
+  if (dateRequests === 0) return t("today.unansweredMessages.subject", { count: messages });
+  if (messages === 0) {
+    return t("today.unansweredMessages.subjectDateRequests", { count: dateRequests });
+  }
+  return t("today.unansweredMessages.subjectBoth", { messages, requests: dateRequests });
+}
+
+export function openDateRequestsActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openRequests");
 }
 
 export function openInboxActionText(t: StaffTranslator): string {

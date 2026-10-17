@@ -195,7 +195,9 @@ describe("a Needs you row's sentence", () => {
       for (const text of [
         helpRequestDetailText(t, { kind: "first_timer", status: "requested" }),
         reviewsPendingSubjectText(t, 2),
-        unansweredMessagesSubjectText(t, 3),
+        unansweredMessagesSubjectText(t, { messages: 3, dateRequests: 0 }),
+        unansweredMessagesSubjectText(t, { messages: 0, dateRequests: 2 }),
+        unansweredMessagesSubjectText(t, { messages: 3, dateRequests: 1 }),
       ]) {
         expect(text).toMatch(/\.$/);
       }

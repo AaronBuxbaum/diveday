@@ -54,6 +54,7 @@ import { openSnagsForShop } from "./boat-snags";
 import { readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
+import { countOpenDateRequests } from "./course-inquiries";
 import { crewAwayByTrip } from "./crew-away";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
@@ -1650,6 +1651,7 @@ async function readTodayWave(
     opsAlerts,
     reviewsAwaiting,
     unanswered,
+    openDateRequests,
     shopUnits,
     [overdueGear, dueBackGear, gearServiceDueRows, fitAdjustedReturns],
     boatSafety,
@@ -1759,6 +1761,8 @@ async function readTodayWave(
       : null,
     readReviewsAwaitingModeration(db, shopId),
     countUnansweredMessages(db, shopId),
+    // Open date requests count into the same unanswered row (issue #2658).
+    countOpenDateRequests(db, shopId),
     db
       .select({
         unitsConfirmedAt: shops.unitsConfirmedAt,
@@ -1855,6 +1859,7 @@ async function readTodayWave(
     opsAlerts,
     reviewsAwaiting,
     unanswered,
+    openDateRequests,
     shopUnits,
     overdueGear,
     dueBackGear,

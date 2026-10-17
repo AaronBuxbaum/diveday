@@ -226,6 +226,7 @@
     "openPaymentSettings": "Open payment settings",
     "openReviews": "Open reviews",
     "openInbox": "Open inbox",
+    "openRequests": "Open requests",
     "openGearRegister": "Open gear register",
     "openRentals": "Open rentals",
     "openGearUnit": "Open unit record",
@@ -272,7 +273,9 @@
     "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you."
   },
   "unansweredMessages": {
-    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer."
+    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer.",
+    "subjectDateRequests": "{count, plural, one {# date request is} other {# date requests are}} waiting on an answer.",
+    "subjectBoth": "{messages, plural, one {# message} other {# messages}} and {requests, plural, one {# date request} other {# date requests}} are waiting on an answer."
   },
   "unitsUnconfirmed": {
     "subject": "{currency}, {depth} and {temperature}, picked for where you are",
