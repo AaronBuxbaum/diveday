@@ -13,6 +13,7 @@ export function emergencyReferenceCopy(t: StaffTranslator) {
     vesselLabel: t("manifest.emergency.vesselLabel"),
     callSignLabel: t("manifest.emergency.callSignLabel"),
     mmsiLabel: t("manifest.emergency.mmsiLabel"),
+    workingChannelLabel: t("manifest.emergency.workingChannelLabel"),
     shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
     planLabel: t("manifest.emergency.planLabel"),
   };

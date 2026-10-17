@@ -1002,6 +1002,11 @@
   case, and an MMSI as exactly nine digits, refused at the form and at the column. A departure on a
   hull the shop has since deleted still prints that hull, because the paper describes the boat that
   sailed.
+- **Working channel** — the VHF channel a **boat** works on besides 16, which every boat monitors
+  (`boats.working_channel`, issue #2672). Kept as the shop says it ("68", "16/68"), at most 16
+  characters, and printed as "Channel: 68" on the emergency card of each departure on that boat. It
+  is not part of the **radio identity**: a boat with only a channel still prints the shop's vessel
+  line.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. **After a dive it may carry a
   short note** (up to `ROLL_CALL_NOTE_MAX`, 300 characters) when the mark raises a "not back

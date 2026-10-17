@@ -12,6 +12,7 @@ const copy = {
   vesselLabel: "Vessel:",
   callSignLabel: "Call sign:",
   mmsiLabel: "MMSI:",
+  workingChannelLabel: "Channel:",
   shoreContactLabel: "Shore contact:",
   planLabel: "First moves",
 };
@@ -40,6 +41,20 @@ describe("EmergencyReferenceCard", () => {
     expect(screen.queryByText(copy.empty)).toBeNull();
   });
 
+  it("prints the boat's working channel on its own labelled line (issue #2672)", () => {
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          boat: { name: "Mantis I", callSign: "WDM2201", mmsi: "338055502", workingChannel: "68" },
+        }}
+      />,
+    );
+    expect(screen.getByText("68").closest("p")?.textContent).toBe("Channel: 68");
+    expect(container.textContent).toContain("MMSI: 338055502");
+  });
+
   it("leaves out a radio fact the boat's row does not hold", () => {
     const { container } = render(
       <EmergencyReferenceCard
@@ -53,6 +68,7 @@ describe("EmergencyReferenceCard", () => {
     expect(container.textContent).toContain("Vessel: Mantis I");
     expect(container.textContent).not.toContain("Call sign:");
     expect(container.textContent).not.toContain("MMSI:");
+    expect(container.textContent).not.toContain("Channel:");
   });
 
   it("still states the absence under a boat when the shop has no numbers", () => {

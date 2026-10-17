@@ -7,6 +7,7 @@ import {
   normalizeCallSign,
   normalizeEmergencyReference,
   normalizeMmsi,
+  normalizeWorkingChannel,
 } from "./emergency-reference";
 
 describe("normalizing what a shop typed", () => {
@@ -138,6 +139,18 @@ describe("the departure's own boat (fourth review, item 11)", () => {
     ).toBe("");
   });
 
+  it("carries the boat's working channel to the card (issue #2672)", () => {
+    const withChannel = { ...mantisOne, workingChannel: "68" };
+    expect(emergencyReferenceForDeparture(shop, withChannel).boat).toEqual(withChannel);
+  });
+
+  it("keeps the shop line under a boat that holds only a working channel", () => {
+    // A channel is not the boat's identity: the MMSI the shop typed in its
+    // own line is still the only one there is.
+    const channelOnly = { name: "Mantis I", callSign: null, mmsi: null, workingChannel: "68" };
+    expect(emergencyReferenceForDeparture(shop, channelOnly).vessel).toBe(shop.vessel);
+  });
+
   it("keeps the shop line for a departure on no boat", () => {
     const reference = emergencyReferenceForDeparture(shop, null);
     expect(reference.boat).toBeNull();
@@ -175,5 +188,14 @@ describe("a boat's radio identity as typed", () => {
     expect(normalizeCallSign("   ")).toBeNull();
     expect(normalizeCallSign("WDM/2201")).toBe("invalid");
     expect(normalizeCallSign("A".repeat(13))).toBe("invalid");
+  });
+
+  it("keeps a working channel as it is said, and refuses one that is not a channel (issue #2672)", () => {
+    expect(normalizeWorkingChannel("  68 ")).toBe("68");
+    expect(normalizeWorkingChannel("72  or   69")).toBe("72 or 69");
+    expect(normalizeWorkingChannel("16/68")).toBe("16/68");
+    expect(normalizeWorkingChannel("   ")).toBeNull();
+    expect(normalizeWorkingChannel("call +1 305 555")).toBe("invalid");
+    expect(normalizeWorkingChannel("6".repeat(17))).toBe("invalid");
   });
 });

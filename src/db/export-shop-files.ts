@@ -305,6 +305,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "insurance_expires_on",
       "call_sign",
       "mmsi",
+      "working_channel",
       "created_at",
     ],
     rows: ({ boatRows }) =>
@@ -321,6 +322,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.insuranceExpiresOn,
         row.callSign,
         row.mmsi,
+        row.workingChannel,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["boats.csv"],

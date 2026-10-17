@@ -327,6 +327,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Weather day
 - Week totals
 - WhatsApp sender
+- Working channel
 - Working it anyway
 - Working shift
 - Your days

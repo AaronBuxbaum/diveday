@@ -229,6 +229,14 @@ export const boats = pgTable(
      */
     callSign: text("call_sign"),
     mmsi: text("mmsi"),
+    /**
+     * **The channel the boat works on** (issue #2672, decided by Aaron
+     * 2026-10-17): "68", printed as "Channel: 68" on its departures' emergency
+     * card. Free of the radio identity's fallback rule: a boat with only a
+     * channel still prints the shop's vessel line. Optional; normalized by
+     * `normalizeWorkingChannel`, and bounded here too.
+     */
+    workingChannel: text("working_channel"),
     createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR
@@ -255,6 +263,10 @@ export const boats = pgTable(
     ),
     // An MMSI is nine digits; anything else read over the radio is a wrong number.
     check("boats_mmsi_nine_digits", sql`${table.mmsi} is null or ${table.mmsi} ~ '^[0-9]{9}$'`),
+    check(
+      "boats_working_channel_short",
+      sql`${table.workingChannel} is null or char_length(${table.workingChannel}) between 1 and 16`,
+    ),
     check(
       "boats_certified_total_persons_positive",
       sql`${table.certifiedTotalPersons} is null or ${table.certifiedTotalPersons} between 1 and 999`,

@@ -235,6 +235,7 @@
     "vesselLabel": "Embarcación:",
     "callSignLabel": "Indicativo:",
     "mmsiLabel": "MMSI:",
+    "workingChannelLabel": "Canal:",
     "shoreContactLabel": "Contacto en tierra:",
     "planLabel": "Si algo sale mal"
   },

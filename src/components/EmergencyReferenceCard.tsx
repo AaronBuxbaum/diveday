@@ -22,6 +22,8 @@ export type EmergencyReferenceCopy = {
   vesselLabel: string;
   callSignLabel: string;
   mmsiLabel: string;
+  /** "Channel:" — the boat's working channel (issue #2672). */
+  workingChannelLabel: string;
   shoreContactLabel: string;
   planLabel: string;
 };
@@ -107,6 +109,14 @@ export function EmergencyReferenceCard({
                 <p>
                   <span className="font-medium">{copy.mmsiLabel}</span>{" "}
                   <span className="font-mono tabular-nums">{reference.boat.mmsi}</span>
+                </p>
+              ) : null}
+              {/* The channel the boat works on (issue #2672), on its own
+                  line so it is never read as part of the MMSI. */}
+              {reference.boat.workingChannel ? (
+                <p>
+                  <span className="font-medium">{copy.workingChannelLabel}</span>{" "}
+                  <span className="font-mono tabular-nums">{reference.boat.workingChannel}</span>
                 </p>
               ) : null}
               {reference.vessel ? <p className="text-pretty">{reference.vessel}</p> : null}

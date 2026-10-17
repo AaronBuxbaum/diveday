@@ -31,6 +31,7 @@ import {
   normalizeCallSign,
   normalizeEmergencyReference,
   normalizeMmsi,
+  normalizeWorkingChannel,
 } from "@/lib/emergency-reference";
 import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
 import { parseMinTurnaroundMinutes } from "@/lib/move-preflight";
@@ -92,6 +93,7 @@ const boatForm = z.object({
   insuranceExpiresOn: trimmedText(),
   callSign: trimmedText(),
   mmsi: trimmedText(),
+  workingChannel: trimmedText(),
 });
 type BoatForm = z.infer<typeof boatForm>;
 
@@ -335,7 +337,8 @@ function boatDescription(form: BoatForm): string | null {
  * whole number of people or a real calendar day refuses the save rather than
  * being dropped, so a typo is never stored as "nothing said" (roadmap N-10).
  * The radio identity rides with them (fourth review, item 11): an MMSI that is
- * not nine digits refuses the save the same way.
+ * not nine digits, or a working channel that is not a channel (#2672), refuses
+ * the save the same way.
  */
 function boatPapers(form: BoatForm): BoatPapersInput | "invalid" | "radio-invalid" {
   const day = (
@@ -369,9 +372,12 @@ function boatPapers(form: BoatForm): BoatPapersInput | "invalid" | "radio-invali
   }
   const callSign = normalizeCallSign(form.callSign ?? "");
   const mmsi = normalizeMmsi(form.mmsi ?? "");
+  const workingChannel = normalizeWorkingChannel(form.workingChannel ?? "");
   // Its own refusal: "Provide a boat name and capacity." over a mistyped
   // MMSI sent the owner looking at the two fields that were fine.
-  if (callSign === "invalid" || mmsi === "invalid") return "radio-invalid";
+  if (callSign === "invalid" || mmsi === "invalid" || workingChannel === "invalid") {
+    return "radio-invalid";
+  }
   return {
     certifiedPassengers,
     certifiedTotalPersons,
@@ -381,6 +387,7 @@ function boatPapers(form: BoatForm): BoatPapersInput | "invalid" | "radio-invali
     insuranceExpiresOn,
     callSign,
     mmsi,
+    workingChannel,
   };
 }
 

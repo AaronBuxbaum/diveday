@@ -7,7 +7,7 @@ import {
   boatSafetyNoticeTone,
   passengersAboveCertificate,
 } from "@/lib/boat-safety";
-import { MAX_CALL_SIGN_LENGTH } from "@/lib/emergency-reference";
+import { MAX_CALL_SIGN_LENGTH, MAX_WORKING_CHANNEL_LENGTH } from "@/lib/emergency-reference";
 
 /**
  * **The certificate and the paper dates** (roadmap N-10), under the boat's
@@ -97,6 +97,17 @@ export function BoatPaperFields({
           maxLength={11}
           autoComplete="off"
           defaultValue={boat?.mmsi ?? ""}
+          className={`${controlClass} font-mono tabular-nums`}
+        />
+      </Field>
+      <Field label={t("boats.workingChannelLabel")} description={t("boats.workingChannelHint")}>
+        <input
+          name="workingChannel"
+          type="text"
+          maxLength={MAX_WORKING_CHANNEL_LENGTH}
+          autoComplete="off"
+          spellCheck={false}
+          defaultValue={boat?.workingChannel ?? ""}
           className={`${controlClass} font-mono tabular-nums`}
         />
       </Field>

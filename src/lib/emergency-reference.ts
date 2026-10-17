@@ -92,6 +92,13 @@ export type VesselIdentity = {
   name: string;
   callSign: string | null;
   mmsi: string | null;
+  /**
+   * **The channel this boat works on** (issue #2672), as the shop says it:
+   * "68". Channel 16 is monitored by every boat; this is the other one, which
+   * shops used to type into the shop-wide vessel line. Optional because a
+   * snapshot an older build saved offline never carried it.
+   */
+  workingChannel?: string | null;
 };
 
 /**
@@ -154,6 +161,26 @@ export function normalizeMmsi(input: string): string | null | "invalid" {
   const value = input.replace(/[\s-]/g, "");
   if (value === "") return null;
   return /^[0-9]{9}$/.test(value) ? value : "invalid";
+}
+
+/** The longest working channel a form accepts: "72 or 69" fits, a sentence does not. */
+export const MAX_WORKING_CHANNEL_LENGTH = 16;
+
+/**
+ * A working channel as typed (issue #2672): trimmed, inner runs of space
+ * collapsed, otherwise kept as the shop says it ("68", "16/68", "72 or 69").
+ * Null for an empty box; `"invalid"` past {@link MAX_WORKING_CHANNEL_LENGTH}
+ * or holding more than letters, digits, spaces, `/`, `.` and `-`, so a phone
+ * number typed into the wrong box refuses the save rather than printing as a
+ * channel.
+ */
+export function normalizeWorkingChannel(input: string): string | null | "invalid" {
+  const value = input.trim().replace(/\s+/g, " ");
+  if (value === "") return null;
+  if (value.length > MAX_WORKING_CHANNEL_LENGTH || !/^[A-Za-z0-9][A-Za-z0-9 ./-]*$/.test(value)) {
+    return "invalid";
+  }
+  return value;
 }
 
 /**
