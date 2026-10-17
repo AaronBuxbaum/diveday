@@ -1,5 +1,6 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -7,6 +8,7 @@ import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { convertImportedSiteProseToUnit, shopSearchAnchor } from "@/db/dive-sites";
 import { sendNotification } from "@/db/notifications";
+import { shops } from "@/db/schema";
 import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
   getShopById,
@@ -133,18 +135,20 @@ export async function saveUnitsAction(formData: FormData) {
   }
 
   const db = await getDb();
-  const before = await getShopById(db, session.user.shopId);
-  await setShopDepthUnit(db, session.user.shopId, depthUnit.data);
-  // The catalog's words follow the switch (issue #2683); a site the shop edited
-  // does not, and the notice counts those so staff know which to read by hand.
-  const sites = before
-    ? await convertImportedSiteProseToUnit(
-        db,
-        session.user.shopId,
-        before.depthUnit,
-        depthUnit.data,
-      )
-    : { converted: 0, leftAlone: 0 };
+  // One transaction: the unit and the prose it carries land together or not
+  // at all, so a failed conversion leaves the shop on its old unit and a retry
+  // still has a switch to make (issue #2683).
+  const sites = await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select({ depthUnit: shops.depthUnit })
+      .from(shops)
+      .where(eq(shops.id, session.user.shopId))
+      .for("update");
+    await setShopDepthUnit(tx, session.user.shopId, depthUnit.data);
+    return before
+      ? convertImportedSiteProseToUnit(tx, session.user.shopId, before.depthUnit, depthUnit.data)
+      : { converted: 0, leftAlone: 0 };
+  });
   await setShopTemperatureUnit(db, session.user.shopId, temperatureUnit.data);
   if (currency !== null) {
     await setShopCurrency(db, session.user.shopId, currency);

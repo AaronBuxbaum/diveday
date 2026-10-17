@@ -47,6 +47,13 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/db/dive-sites", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/dive-sites")>();
+  return {
+    ...actual,
+    convertImportedSiteProseToUnit: vi.fn(actual.convertImportedSiteProseToUnit),
+  };
+});
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };
@@ -145,6 +152,90 @@ describe("saving the shop's units", () => {
 
     expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
     expect(await unitsOf(db, shop.id)).toEqual(before);
+  });
+
+  async function importedSiteInMeters(shopId: string) {
+    const { db } = ctx;
+    const withMeasures = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(
+      (row) =>
+        JSON.stringify(briefingInUnit(row.version.briefing, "feet")) !==
+        JSON.stringify(briefingInUnit(row.version.briefing, "meters")),
+    );
+    if (!withMeasures) throw new Error("seed: no catalog site names a measure");
+    const site = await importGlobalDiveSiteTemplate(db, shopId, withMeasures.template.id);
+    if (!site) throw new Error("expected a catalog copy");
+    return site;
+  }
+
+  async function siteRow(id: string) {
+    const [row] = await ctx.db.select().from(diveSites).where(eq(diveSites.id, id));
+    if (!row) throw new Error("site missing");
+    return row;
+  }
+
+  it("keeps the old unit when the prose conversion fails, so a retry still switches", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    await setShopDepthUnit(db, shop.id, "meters");
+    try {
+      const site = await importedSiteInMeters(shop.id);
+      const { convertImportedSiteProseToUnit } = await import("@/db/dive-sites");
+      vi.mocked(convertImportedSiteProseToUnit).mockRejectedValueOnce(new Error("boom"));
+
+      await expect(saveUnitsAction(unitsForm({}))).rejects.toThrow("boom");
+
+      expect((await unitsOf(db, shop.id)).depthUnit).toBe("meters");
+      expect((await siteRow(site.id)).description).toBe(site.description);
+      const retry = await redirectedTo(() => saveUnitsAction(unitsForm({})));
+      expect(retry).toContain("notice=units-saved");
+      expect((await unitsOf(db, shop.id)).depthUnit).toBe("feet");
+    } finally {
+      await setShopDepthUnit(db, shop.id, "feet");
+    }
+  });
+
+  it("never touches another shop's catalog sites when this shop switches", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Unit Neighbour", slug: "unit-neighbour", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("insert failed");
+    await setShopDepthUnit(db, shop.id, "meters");
+    try {
+      const theirs = await importedSiteInMeters(other.id);
+      const before = await siteRow(theirs.id);
+
+      await redirectedTo(() => saveUnitsAction(unitsForm({})));
+
+      const after = await siteRow(theirs.id);
+      expect(after.rowVersion).toBe(before.rowVersion);
+      expect(after.description).toBe(before.description);
+      expect(after.landmarks).toEqual(before.landmarks);
+    } finally {
+      await setShopDepthUnit(db, shop.id, "feet");
+    }
+  });
+
+  it("leaves the prose alone when a captain's post is refused", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    await setShopDepthUnit(db, shop.id, "meters");
+    try {
+      const site = await importedSiteInMeters(shop.id);
+      const before = await siteRow(site.id);
+
+      const to = await redirectedTo(() => saveUnitsAction(unitsForm({})));
+
+      expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
+      expect((await unitsOf(db, shop.id)).depthUnit).toBe("meters");
+      const after = await siteRow(site.id);
+      expect(after.rowVersion).toBe(before.rowVersion);
+      expect(after.description).toBe(before.description);
+    } finally {
+      await setShopDepthUnit(db, shop.id, "feet");
+    }
   });
 
   it("counts the edited catalog sites a depth-unit switch left alone", async () => {

@@ -14,7 +14,7 @@ import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
 import type { ShoreAlertContact } from "@/lib/shore-alert-contact";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { CustomerRegulatorServiceMonths } from "@/lib/work-orders";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { courses, divePackages, orders, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -504,7 +504,7 @@ export async function setShopCurrency(db: AppDb, shopId: string, currency: ShopC
  * `dive_sites.max_depth_meters` stays canonical metres, so flipping this never
  * changes a stored depth or what a certification ceiling compares against.
  */
-export async function setShopDepthUnit(db: AppDb, shopId: string, unit: DepthUnit) {
+export async function setShopDepthUnit(db: DbExecutor, shopId: string, unit: DepthUnit) {
   const [shop] = await db
     .update(shops)
     .set({ depthUnit: unit })

@@ -1448,13 +1448,14 @@ async function shopDepthUnit(db: DbExecutor, shopId: string): Promise<DepthUnit>
  * which to check by hand.
  */
 export async function convertImportedSiteProseToUnit(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   from: DepthUnit,
   to: DepthUnit,
 ): Promise<{ converted: number; leftAlone: number }> {
   if (from === to) return { converted: 0, leftAlone: 0 };
-  return db.transaction(async (tx) => {
+  // Inside the caller's transaction this nests as a savepoint.
+  return (db as AppDb).transaction(async (tx) => {
     const sites = await tx
       .select()
       .from(diveSites)
