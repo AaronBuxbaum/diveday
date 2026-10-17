@@ -1705,6 +1705,15 @@ async function markMixedWaiverDelivery(
   if (!priya) return;
   const issued = await issueWaiverRequest(db, { shopId, personId: priya.id });
   if (!issued.ok) return;
+  // The record is stamped with the pinned clock, and the seed stamps Priya's
+  // seat releases a few milliseconds *after* it (`nextCreatedAt`), so under the
+  // frozen clock her newest outstanding link would be a seat's, which has no
+  // delivery rows. An hour on is later than every seeded stamp and still the
+  // same morning for the capture.
+  await db
+    .update(waiverRecords)
+    .set({ createdAt: new Date(nowDate().getTime() + HOUR_MS) })
+    .where(eq(waiverRecords.id, issued.recordId));
   // Email first, text second: the record's own latest-attempt columns take the
   // last write, and "the text got through" is the truer summary of the pair.
   await recordWaiverDelivery(db, {

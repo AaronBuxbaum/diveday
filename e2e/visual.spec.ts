@@ -8953,13 +8953,13 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/dive-sites/new");
         await page.getByLabel("What the route is called").waitFor();
         await page.getByLabel("Name").fill("Turtle Ledge");
-        await page.getByLabel("Depth range").fill("20-45 ft");
+        await page.getByLabel("Depth note").fill("20-45 ft");
         await page.getByText("Unsaved changes in 2 sections").waitFor();
         // **Focus is put back before each width** (issue #2570). The capture
-        // shoots 390 first, where the folded Depth range section is
+        // shoots 390 first, where the folded depth section is
         // `max-lg:hidden`, so the field loses focus there and the 1280 shot
         // showed no ring. A hidden field is left alone.
-        const depth = page.getByLabel("Depth range");
+        const depth = page.getByLabel("Depth note");
         await capture(page, "dive-site-editor-unsaved", scheme, {
           beforeShot: async () => {
             if (await depth.isVisible()) await depth.focus();
