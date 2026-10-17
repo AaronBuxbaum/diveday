@@ -23,6 +23,8 @@ export type DiverRollCallContext = {
   crew: TripManifest["crew"];
   checkpoint: RollCallCheckpoint;
   isDeparture: boolean;
+  /** The departure is marked as past no-decompression limits. */
+  exceedsNoDecoLimits?: boolean;
   shopSlug: string;
   tripId: string;
   locale: string;
