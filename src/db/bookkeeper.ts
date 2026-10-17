@@ -336,13 +336,20 @@ export async function claimBookkeeperMonth(
 /**
  * Gives a claimed month back after a send that failed, so the next day's pass
  * tries again, with the stop link of the last email that did go; only while
- * the claim is still this one.
+ * the claim is still this one: the same month, the same address and this
+ * claim's own stop link. An address changed mid-send clears the link and may
+ * land on the same month, so the month alone would match the new address's
+ * row and hand it the old recipient's stop link (third-pass security N1).
  */
 export async function releaseBookkeeperMonth(
   db: DbExecutor,
   input: {
     shopId: string;
     month: string;
+    /** The address the claim was won for. */
+    email: string;
+    /** The claim's own stop token, from {@link claimBookkeeperMonth}. */
+    stopToken: string;
     previous: string | null;
     previousStopTokenHash: string | null;
   },
@@ -353,7 +360,14 @@ export async function releaseBookkeeperMonth(
       bookkeeperSentMonth: input.previous,
       bookkeeperStopTokenHash: input.previousStopTokenHash,
     })
-    .where(and(eq(shops.id, input.shopId), eq(shops.bookkeeperSentMonth, input.month)));
+    .where(
+      and(
+        eq(shops.id, input.shopId),
+        eq(shops.bookkeeperSentMonth, input.month),
+        eq(shops.bookkeeperEmail, input.email),
+        eq(shops.bookkeeperStopTokenHash, hashBearerToken(input.stopToken)),
+      ),
+    );
 }
 
 export type BookkeeperStopContext = {

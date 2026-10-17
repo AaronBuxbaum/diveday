@@ -229,12 +229,15 @@ describe("the month-end claim", () => {
       origin: null,
     });
     expect(await claim(db, shopId, "2026-10", { email: "old@example.com" })).toBeNull();
-    expect(await claim(db, shopId, "2026-10")).not.toBeNull();
+    const won = await claim(db, shopId, "2026-10");
+    if (!won) throw new Error("no claim");
     expect(await claim(db, shopId, "2026-10")).toBeNull();
     // A failed send gives it back, and the next pass wins it again.
     await releaseBookkeeperMonth(db, {
       shopId,
       month: "2026-10",
+      email: BOOKS,
+      stopToken: won.stopToken,
       previous: "2026-09",
       previousStopTokenHash: null,
     });
@@ -256,6 +259,37 @@ describe("the month-end claim", () => {
         month: "2026-10",
       }),
     ).not.toBeNull();
+  });
+
+  it("never gives a failed month back onto an address changed mid-send (third-pass N1)", async () => {
+    const db = await unseededTestDb();
+    const shopId = await shopRow(db, "books-midsend");
+    await confirmed(db, shopId);
+    const november = await claim(db, shopId, "2026-11");
+    if (!november) throw new Error("no claim");
+    const previousHash = (await rowOf(db, shopId))?.bookkeeperStopTokenHash ?? null;
+    const december = await claim(db, shopId, "2026-12");
+    if (!december) throw new Error("no claim");
+    // While December's send to BOOKS is out, a manager points it at a new
+    // address, landing on the same month with no stop link; then the send fails.
+    await set(db, shopId, "new@example.com");
+    await db.update(shops).set({ bookkeeperSentMonth: "2026-12" }).where(eq(shops.id, shopId));
+    const before = await rowOf(db, shopId);
+    await releaseBookkeeperMonth(db, {
+      shopId,
+      month: "2026-12",
+      email: BOOKS,
+      stopToken: december.stopToken,
+      previous: "2026-11",
+      previousStopTokenHash: previousHash,
+    });
+    const after = await rowOf(db, shopId);
+    expect(after?.bookkeeperEmail).toBe("new@example.com");
+    expect(after?.bookkeeperSentMonth).toBe(before?.bookkeeperSentMonth);
+    expect(after?.bookkeeperStopTokenHash).toBe(before?.bookkeeperStopTokenHash);
+    // So the old recipient's November link stops nothing on the new address.
+    expect(await stopBookkeeperByToken(db, { token: november.stopToken, origin: null })).toBeNull();
+    expect((await readBookkeeper(db, shopId))?.email).toBe("new@example.com");
   });
 
   it("lists real shops with a confirmed address, never a demo shop or an unconfirmed one", async () => {
@@ -320,6 +354,8 @@ describe("the stop link (second-pass N1)", () => {
     await releaseBookkeeperMonth(db, {
       shopId,
       month: "2026-12",
+      email: BOOKS,
+      stopToken: december.stopToken,
       previous: "2026-11",
       previousStopTokenHash: previous,
     });

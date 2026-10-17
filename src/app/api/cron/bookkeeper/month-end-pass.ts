@@ -82,10 +82,13 @@ export async function sendDueMonthEndEmails(
       summary.alreadySent += 1;
       continue;
     }
+    const claimedEmail = shop.email;
     const release = () =>
       releaseBookkeeperMonth(db, {
         shopId: shop.id,
         month,
+        email: claimedEmail,
+        stopToken: claim.stopToken,
         previous: shop.sentMonth,
         previousStopTokenHash: shop.stopTokenHash,
       });
