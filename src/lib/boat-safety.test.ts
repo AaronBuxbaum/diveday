@@ -589,7 +589,8 @@ describe("boatSafetyNoticeTone", () => {
   });
 
   // Dive-domain review D3, records 6: a lapsed certificate or inspection means
-  // the boat is not certified to carry anyone. Danger, informing, never a gate.
+  // the boat is not certified to carry anyone. Danger, informing, never a gate;
+  // every other lapsed paper reads in danger too (H-136).
   it("is danger for a lapsed certificate or inspection, and only once lapsed", () => {
     for (const which of ["coi", "inspection"] as const) {
       const paper = { code: "paper", paper: which, dueOn: TODAY, days: 3 } as const;
@@ -604,7 +605,7 @@ describe("boatSafetyNoticeTone", () => {
         days: 3,
         expired: true,
       }),
-    ).toBe("warning");
+    ).toBe("danger");
   });
 
   it("raises a lapsed certificate or inspection on Today's departure row, for every role", () => {

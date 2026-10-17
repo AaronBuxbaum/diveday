@@ -275,11 +275,15 @@ describe("how many round trips a diver's page waits for, one after another", () 
 // beside the seat checks with the trip in the same wave, so the recap is 3
 // phases where it was 7. The after-state's 5 are its next-dive read and the
 // handoff it mints.
-const READY_AFTER_CEILING = 59;
+// 59 → 60 and 28 → 29 (issue #2058): the next-dive pick reads the diver's
+// course seats once beside the cards (`nextDiveForBooking`), so a departure
+// after a course they are booked on is suggested as the booking door sells it.
+// One statement in the same wave; the phases stay.
+const READY_AFTER_CEILING = 60;
 const READY_AFTER_PHASE_CEILING = 12;
 // `/recap/[token]`, replayed from item 32: the recap's 3 and the after-state's
 // next-dive read, with no handoff. Before item 32 the same reads were 7 + 2.
-const RECAP_CEILING = 28;
+const RECAP_CEILING = 29;
 const RECAP_PHASE_CEILING = 5;
 // The shop, `readSchedulePage`'s batch with its chained reads, then the
 // board's-end read. 16 → 14 statements and 7 → 5 phases (item 29): the
