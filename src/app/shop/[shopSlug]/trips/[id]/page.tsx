@@ -223,17 +223,17 @@ export default async function ManageTripPage({
     cancelled,
     meetingWindows: scheduleDays,
   });
+
   const tabsCopy = tripTabsCopy(t, checkInOpen ? { trip, shop, locale } : undefined);
   const rosterActions = await tripRosterActions({
     db,
     shop,
     shopSlug,
     tripId,
-    trip,
+    overview,
     locale,
     now,
     mayRetireRefusal,
-    canConfigure,
   });
 
   const { paymentMarkRetry, partyPreview } = await paymentAsks(db, {

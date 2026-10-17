@@ -38,22 +38,20 @@ export async function tripRosterActions({
   shop,
   shopSlug,
   tripId,
-  trip,
+  overview: { trip, canConfigure },
   locale,
   now,
   mayRetireRefusal,
-  canConfigure,
 }: {
   db: AppDb;
   shop: { id: string; timezone: string };
   shopSlug: string;
   tripId: string;
-  trip: { startsAt: Date; course: unknown };
+  /** The departure, and whether this staffer may configure it (`canConfigureTrips`). */
+  overview: { trip: { startsAt: Date; course: unknown }; canConfigure: boolean };
   locale: string;
   now: Date;
   mayRetireRefusal: boolean;
-  /** Owner, manager or instructor (`canConfigureTrips`): who may mark a training dive. */
-  canConfigure: boolean;
 }) {
   return {
     addBookingAction: seatNewDiverAction.bind(null, "trip-guests", shopSlug),
