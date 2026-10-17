@@ -205,6 +205,7 @@
   "buddySummaryUnteamed": " · {count, plural, one {# buceador sin pareja de buceo} other {# buceadores sin pareja de buceo}}",
   "noDiversLine": "No hay buceadores reservados en esta salida.",
   "diverFactsSummaryWithMedical": "Contacto, equipo y ficha médica",
+  "decompressionReminder": "Esta salida supera los límites sin descompresión. DiveDay no registra tarjetas técnicas: verifica la tarjeta de descompresión de cada buceador y guía según la profundidad y la mezcla previstas.",
   "sharedDepthApplies": "Se aplica a {names}.",
   "depthChip": "Aviso de profundidad",
   "personDetails": "Detalles",

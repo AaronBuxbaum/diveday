@@ -299,10 +299,9 @@ export default async function TripManifestPage({
 
       {/* **Every section from the boat check down, at one gap** (K-189). Each
           used to bring its own top margin — `mt-5`, `mt-8`, `mt-9` and back —
-          so sections of one kind stepped 21 to 42px apart, and "Buddy teams"
-          opened 64px under the plan. One `space-y-10` holds them and none
-          carries a margin (docs/design/forms-and-controls.md); `mt-5` is the
-          boat check's own step under the checkpoint switch it belongs to. */}
+          so sections of one kind stepped 21 to 42px apart. One `space-y-10` holds
+          them and none carries a margin (docs/design/forms-and-controls.md); `mt-5`
+          is the boat check's own step under the checkpoint switch. */}
       <div className="mt-5 space-y-10">
         {/* One line, under the checkpoint switch: the boat check happens once
             before the boat leaves rather than once per dive, so it is the last
@@ -330,6 +329,7 @@ export default async function TripManifestPage({
             crew: manifest.crew,
             checkpoint,
             isDeparture,
+            exceedsNoDecoLimits: manifest.trip.exceedsNoDecoLimits,
             shopSlug,
             tripId,
             locale,

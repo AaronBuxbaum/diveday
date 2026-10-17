@@ -163,13 +163,12 @@ export default async function ManageTripPage({
     canConfigure,
     blowoutCalled,
     boatClashes,
-    crew,
   } = overview;
   // One hull, one departure at a time (H-80, issue #1780). A called-off
   // departure holds no hull, and `boatClashes` answers nothing for one anyway.
   const liveBoatClashes = cancelled ? [] : boatClashes;
   const crewNotes = tripCrewNotes({
-    crew,
+    crew: overview.crew,
     diversPerDivemaster: shop.diversPerDivemaster,
     locale,
     t,
@@ -469,6 +468,7 @@ export default async function ManageTripPage({
               context={{
                 arrival: desk?.arrival,
                 record,
+                inWaterCrew: overview.crew.inWaterCrew,
                 walkInOpen: desk?.walkInOpen,
                 acceptsDivers,
                 guests,

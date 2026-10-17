@@ -409,7 +409,8 @@ export const trips = pgTable(
      * a dive that took stops, so `flySafeFrom` (src/lib/fly-safe.ts) answers
      * nothing for a departure carrying it and the recap says nothing about
      * flying. Defaults to no, so a shop that never sets it keeps the ordinary
-     * sentence; it changes no gate, no ratio and no manifest.
+     * sentence. It changes no gate and no ratio; the roster and the roll call show
+     * one reminder line to check technical cards when a diver is booked (H-144).
      */
     exceedsNoDecoLimits: boolean("exceeds_no_deco_limits").notNull().default(false),
     /** Per-diver price; null means unpriced — an order made from this trip needs a manual amount. */
