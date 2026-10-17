@@ -35,7 +35,7 @@ import {
   type TripChangeLineCode,
 } from "@/lib/shop-activity";
 import type { TemperatureUnit } from "@/lib/temperature-units";
-import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
+import { ROLL_CALL_GAP_KINDS } from "@/lib/today";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
 import { stripComments } from "@/test/source";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
@@ -131,7 +131,6 @@ import {
   blockerActionLabelText,
   blockerRowText,
   mediaDeletionKindText,
-  seasonalBriefingText,
   stuckOperationKindText,
 } from "./today-labels";
 import {
@@ -385,13 +384,6 @@ const TRIP_CHANGE_LINES = everyCodeOf<TripChangeLineCode>({
 const DEPTH_UNITS = everyCodeOf<DepthUnit>({ meters: true, feet: true });
 
 const TEMPERATURE_UNITS = everyCodeOf<TemperatureUnit>({ celsius: true, fahrenheit: true });
-
-const TODAY_SEASONS = everyCodeOf<TodaySeason>({
-  summer: true,
-  autumn: true,
-  winter: true,
-  spring: true,
-});
 
 /**
  * **The two maps that were keyed by `string`, now keyed by their enum.** The
@@ -1044,16 +1036,6 @@ const CASES: readonly LabelMapCase[] = [
     map: "MEDIA_DELETION_KIND_KEYS",
     rows: codeRows(MEDIA_DELETION_KINDS, (locale, kind) =>
       mediaDeletionKindText(staffTranslator(locale), kind),
-    ),
-  },
-  {
-    module: "today-labels.ts",
-    map: "SEASONAL_BRIEFING_KEYS",
-    // Private, and every sentence carries a `select` on whether there is a
-    // shop to name — rendered with a name, so the branch that interpolates is
-    // the one exercised.
-    rows: codeRows(TODAY_SEASONS, (locale, season) =>
-      seasonalBriefingText(staffTranslator(locale), season, "Blue Mantis Divers"),
     ),
   },
   {

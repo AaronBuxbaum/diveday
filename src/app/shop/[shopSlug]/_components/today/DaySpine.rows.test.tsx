@@ -184,7 +184,6 @@ describe("a row that performs keeps its place", () => {
             { departures: [], actions: [] },
           ),
           shopSlug: "blue-mantis",
-          shopName: "Blue Mantis",
           mailShopName: "Blue Mantis",
           locale: "en-US",
           timeZone: "America/New_York",

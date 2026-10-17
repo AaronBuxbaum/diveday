@@ -22,7 +22,6 @@ import type { SeasonStart } from "./season";
 import type { TripStageReading } from "./trip-stages";
 import { hasReturned, hasSailed } from "./trips";
 import type { WelcomeCue } from "./welcome-cue";
-import { utcToWallTime } from "./zoned";
 
 /**
  * The Today page is a work queue, not a dashboard. Everything on it is either
@@ -1535,26 +1534,6 @@ export function roleLensFor(roles: readonly Role[]): RoleLens {
     return "boat";
   }
   return null;
-}
-
-/** Which seasonal-briefing sentence today's date falls into. */
-export type TodaySeason = "summer" | "autumn" | "winter" | "spring";
-
-/**
- * Which seasonal briefing variant the date falls into, based on its month
- * **in the shop's own timezone** — `getMonth()` on the raw Date read the
- * server's (or, in a Client Component, the browser's) local month, which
- * flips the season a day early or late around a month boundary for any shop
- * whose zone straddles the server's midnight. The sentence itself — kept
- * rationed like --accent, reading like a briefing, not filler — lives in
- * `src/i18n/today-labels.ts`'s `seasonalBriefingText`.
- */
-export function getSeasonalBriefing(date: Date, timezone: string): TodaySeason {
-  const month = utcToWallTime(date, timezone).month - 1; // 0-indexed (0 = Jan, 11 = Dec)
-  if (month >= 5 && month <= 7) return "summer"; // June, July, August
-  if (month >= 8 && month <= 10) return "autumn"; // September, October, November
-  if (month === 11 || month === 0 || month === 1) return "winter"; // December, January, February
-  return "spring"; // March, April, May
 }
 
 /**

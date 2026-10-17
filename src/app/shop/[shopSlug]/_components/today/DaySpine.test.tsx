@@ -522,3 +522,21 @@ describe("the evening reading", () => {
     expect(document.body.textContent?.split("Night Dive")).toHaveLength(2);
   });
 });
+
+/**
+ * **The empty queue names no season** (issue #2661). It used to append a
+ * June-to-August-is-summer sentence for every shop, which is the wrong season
+ * for a southern-hemisphere or tropical shop. The body is the empty-body copy alone.
+ */
+describe("the empty queue", () => {
+  const EMPTY_BODY =
+    "Every diver booked in the next week has their waiver, certifications, and payment in order.";
+
+  for (const timeZone of ["Pacific/Auckland", "America/New_York"]) {
+    it(`says only that the week is in order, with no season, in ${timeZone}`, () => {
+      renderSpine({ departures: [], actions: [], timeZone });
+      expect(screen.getByText(EMPTY_BODY)).toBeTruthy();
+      expect(screen.queryByText(/surface interval/i)).toBeNull();
+    });
+  }
+});
