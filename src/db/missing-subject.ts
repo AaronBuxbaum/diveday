@@ -50,6 +50,19 @@ export function standingNotBackAboardSince(
   return since;
 }
 
+/**
+ * Whether these after-dive events (oldest first) say the person is back
+ * aboard: the latest event is `boarded` and no checkpoint still stands "not
+ * back aboard". A `cleared` undo is not "back": it takes the mark away
+ * without saying anyone came aboard (review 2026-10-17), and no marks at all
+ * is not back either.
+ */
+export function backAboard(
+  events: readonly { checkpoint: string; status: string; occurredAt: Date }[],
+): boolean {
+  return events.at(-1)?.status === "boarded" && standingNotBackAboardSince(events) === null;
+}
+
 /** The subject's after-dive roll-call events on this departure, oldest first. */
 export async function afterDiveEvents(
   tx: DbExecutor,
@@ -164,9 +177,9 @@ export async function affectedSubjects(
 }
 
 /**
- * Whether the roll call has every one of these people back: each has
- * after-dive marks and none still stands "not back aboard". A subject with no
- * marks at all is not "back": the roll call never spoke for them.
+ * Whether the roll call has every one of these people back (`backAboard`).
+ * A subject with no marks at all, or whose latest mark was undone, is not
+ * "back": the roll call never said so.
  */
 export async function rollCallHasThemBack(
   db: DbExecutor,
@@ -175,7 +188,7 @@ export async function rollCallHasThemBack(
   if (input.subjects.length === 0) return false;
   for (const subject of input.subjects) {
     const events = await afterDiveEvents(db, { ...input, subject });
-    if (events.length === 0 || standingNotBackAboardSince(events)) return false;
+    if (!backAboard(events)) return false;
   }
   return true;
 }

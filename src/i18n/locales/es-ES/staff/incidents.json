@@ -24,7 +24,10 @@
     "notAlerted": "Aquí no hay ningún aviso abierto para esta persona.",
     "found": "Encontrado",
     "foundPending": "Guardando…",
-    "foundDone": "Marcado como encontrado. Se envía a los propietarios el fin de la alerta.",
+    "foundDone": "Marcado como encontrado. Los propietarios ya tienen el fin de la alerta.",
+    "foundPartial": "Marcado como encontrado. El fin de la alerta no llegó a todos los propietarios. Llámalos.",
+    "foundNoAllClear": "Marcado como encontrado. No se envió el fin de la alerta.",
+    "foundAlready": "Ya estaba marcado como encontrado.",
     "foundFailed": "No se guardó. Toca de nuevo.",
     "stillMissing": "Sigue sin regresar a bordo. Márcalo antes como de vuelta a bordo.",
     "offline": "Sin señal: llama a los propietarios o usa el VHF."

@@ -220,7 +220,8 @@ export async function sendMissingDiverAlerts(
         }
       }
       ownersTold = owners.length > 0 && sent === owners.length;
-      if (withinPushWindow(report, now)) {
+      // Found meanwhile: the boat's followers are not woken for a diver already found.
+      if (withinPushWindow(report, now) && !(await foundSince(db, report))) {
         const pushes = await pushTripAlert(db, report.shopId, report.tripId, {
           url: reportPath,
           words: (t) => ({
@@ -310,7 +311,8 @@ export type MissingDiverAllClearOutcome = "sent" | "partial" | "skipped";
  * written only once every owner's email went, so the report page can say
  * when it did not. A failed send is logged, not retried: the found stands on
  * the report either way, and the owner's first instruction was to call the
- * boat. Never for a rehearsal or a demo shop, which are never alerted; a
+ * boat. Only after an alarm that went (`missing_alert_sent_at`): owners who
+ * were never told have nothing to be cleared of. Never for a rehearsal or a demo shop, which are never alerted; a
  * departure cancelled or removed since the alert still gets it.
  */
 export async function sendMissingDiverAllClear(
@@ -335,6 +337,8 @@ export async function sendMissingDiverAllClear(
         eq(incidentReports.kind, "missing_diver"),
         or(eq(incidentReports.status, "filed"), isNotNull(incidentReports.missingAlertRaisedAt)),
         isNotNull(incidentReports.missingFoundAt),
+        // An alarm that never went has no all-clear to follow it (review 2026-10-17).
+        isNotNull(incidentReports.missingAlertSentAt),
         isNull(incidentReports.missingAllClearClaimedAt),
         isNull(incidentReports.deletedAt),
       ),

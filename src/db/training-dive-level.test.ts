@@ -32,8 +32,37 @@ import { trainingMarksForRoster } from "./training-marks";
  */
 const fileCtx = fileScopedShopContext();
 
+/**
+ * The charter asks Open Water and the student holds no card; they are enrolled
+ * on a PADI Open Water course (no minimum, certifies Open Water), so a marked
+ * dive asks them no card at all. The course keeps its ratio.
+ */
 async function advancedCharter(): Promise<CharterContext> {
   const ctx = await charterContextFor(fileCtx);
+  await ctx.db
+    .update(tripRequirements)
+    .set({ minimumCertificationLevel: "open_water" })
+    .where(eq(tripRequirements.tripId, ctx.charter.id));
+  await ctx.db
+    .update(courses)
+    .set({
+      minimumCertificationLevel: null,
+      certifiesLevel: "open_water",
+      isIntroCourse: false,
+      agency: "padi",
+    })
+    .where(eq(courses.id, ctx.course.courseId));
+  await ctx.db.delete(certifications).where(eq(certifications.personId, ctx.course.personId));
+  return ctx;
+}
+
+/**
+ * The charter asks Advanced; the student holds a verified Open Water card and
+ * is enrolled on an Advanced course whose own minimum is Open Water. No ratio
+ * is known for such a course, so its marked dives keep the charter's level.
+ */
+async function continuingEdCharter(): Promise<CharterContext> {
+  const ctx = await advancedCharter();
   await ctx.db
     .update(tripRequirements)
     .set({ minimumCertificationLevel: "advanced_open_water" })
@@ -42,7 +71,6 @@ async function advancedCharter(): Promise<CharterContext> {
     .update(courses)
     .set({ minimumCertificationLevel: "open_water", certifiesLevel: "advanced_open_water" })
     .where(eq(courses.id, ctx.course.courseId));
-  await ctx.db.delete(certifications).where(eq(certifications.personId, ctx.course.personId));
   await ctx.db.insert(certifications).values({
     shopId: ctx.shop.id,
     personId: ctx.course.personId,
@@ -103,7 +131,7 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
   it("holds the unmarked seat to the charter's level, instructor aboard or not", async () => {
     const ctx = await advancedCharter();
     await teachesAndAboard(ctx);
-    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
 
   it("takes the course's own minimum when the mark stands and the course's instructor is aboard", async () => {
@@ -114,22 +142,11 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     expect(await rosterWarning(ctx)).toBe(true);
   });
 
-  it("still asks the course's own minimum: a student below it stays blocked", async () => {
-    const ctx = await advancedCharter();
-    await ctx.db
-      .update(certifications)
-      .set({ status: "pending" })
-      .where(eq(certifications.personId, ctx.course.personId));
-    await teachesAndAboard(ctx);
-    await markSeat(ctx);
-    expect(await levelCodes(ctx)).toEqual(["certification_pending"]);
-  });
-
   it("keeps the charter's level and warns when no instructor is aboard", async () => {
     const ctx = await advancedCharter();
     await roster(ctx, ctx.course.tripId, ctx.instructor, "instructor");
     await markSeat(ctx);
-    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
     expect(await rosterWarning(ctx)).toBe(false);
   });
 
@@ -145,7 +162,7 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
         ),
       );
     await markSeat(ctx);
-    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
     expect(await rosterWarning(ctx)).toBe(false);
   });
 
@@ -153,36 +170,47 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     const ctx = await advancedCharter();
     await teachesAndAboard(ctx, "captain");
     await markSeat(ctx);
-    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
 
   it("keeps the charter's level when the instructor is aboard only as a divemaster", async () => {
     const ctx = await advancedCharter();
     await teachesAndAboard(ctx, "divemaster");
     await markSeat(ctx);
-    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
 
   it("never lowers a level above what the course certifies", async () => {
     const ctx = await advancedCharter();
     await ctx.db
       .update(tripRequirements)
-      .set({ minimumCertificationLevel: "rescue" })
+      .set({ minimumCertificationLevel: "advanced_open_water" })
       .where(eq(tripRequirements.tripId, ctx.charter.id));
     await teachesAndAboard(ctx);
     await markSeat(ctx);
-    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
   });
 
   it.each([
-    ["an intro session", { isIntroCourse: true }],
-    ["a course that certifies no level", { certifiesLevel: null }],
-  ])("never lowers the level for %s", async (_name, course) => {
+    ["an intro session", { isIntroCourse: true }, true],
+    ["a course that certifies no level", { certifiesLevel: null }, true],
+    // No ratio is known for these, so the level is never lowered (fail closed).
+    ["another agency's course", { agency: "SSI" }, false],
+  ] as const)("never lowers the level for %s", async (_name, course, aboard) => {
     const ctx = await advancedCharter();
     await ctx.db.update(courses).set(course).where(eq(courses.id, ctx.course.courseId));
     await teachesAndAboard(ctx);
     await markSeat(ctx);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
+    expect(await rosterWarning(ctx)).toBe(aboard);
+  });
+
+  it("never lowers the level for a continuing-education course: no ratio is known for it", async () => {
+    const ctx = await continuingEdCharter();
+    await teachesAndAboard(ctx);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
     expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await rosterWarning(ctx)).toBe(false);
   });
 
   it("ignores an instructor who rostered themself on the charter", async () => {
@@ -190,7 +218,7 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     await roster(ctx, ctx.course.tripId, ctx.instructor, "instructor");
     await roster(ctx, ctx.charter.id, ctx.instructor, "instructor", ctx.instructor);
     await markSeat(ctx);
-    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
     expect(await rosterWarning(ctx)).toBe(false);
   });
 
@@ -207,37 +235,74 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
       checkpoint: "departure",
       occurredAt: ctx.now,
     });
-    expect(await levelCodes(ctx)).toEqual(["certification_insufficient"]);
+    expect(await levelCodes(ctx)).toEqual(["certification_missing"]);
     expect(await rosterWarning(ctx)).toBe(false);
   });
 
-  it("seats marked dives only up to the course's ratio per instructor aboard", async () => {
+  it("has room for a marked dive only where the course has a known ratio and an instructor is aboard", async () => {
     const ctx = await advancedCharter();
-    await ctx.db
-      .update(courses)
-      .set({ minimumCertificationLevel: null, certifiesLevel: "open_water", agency: "padi" })
-      .where(eq(courses.id, ctx.course.courseId));
-    const pair = {
+    const pair = (
+      course: Partial<{ minimumLevel: "open_water" | null; intro: boolean; agency: string }>,
+    ) => ({
       departureTripId: ctx.charter.id,
       sessionTripId: ctx.course.tripId,
-      course: { minimumLevel: null, certifiesLevel: null, intro: false, agency: "padi" },
-    };
-    const key = `${pair.departureTripId}:${pair.sessionTripId}`;
-    expect((await trainingDiveRoom(ctx.db, ctx.shop.id, [pair])).get(key)?.capacity).toBe(0);
+      course: {
+        minimumLevel: null,
+        certifiesLevel: null,
+        intro: false,
+        agency: "padi",
+        ...course,
+      },
+    });
+    const key = `${ctx.charter.id}:${ctx.course.tripId}`;
+    const spare = async (p: ReturnType<typeof pair>) =>
+      (await trainingDiveRoom(ctx.db, ctx.shop.id, [p])).get(key)?.spare;
+    expect(await spare(pair({}))).toBe(false);
     await teachesAndAboard(ctx);
-    expect((await trainingDiveRoom(ctx.db, ctx.shop.id, [pair])).get(key)?.capacity).toBe(8);
-    const intro = { ...pair, course: { ...pair.course, intro: true } };
-    expect((await trainingDiveRoom(ctx.db, ctx.shop.id, [intro])).get(key)?.capacity).toBe(2);
-    // The earliest marks take the room; one past it has no instructor for it.
-    const room = { capacity: 2, marked: ["a", "b", "c"] };
-    expect(["a", "b", "c", "x"].map((id) => seatWithinRoom(room, id))).toEqual([
-      true,
-      true,
-      false,
-      false,
-    ]);
-    expect(seatWithinRoom({ capacity: null, marked: [] }, "a")).toBe(true);
-    expect(seatWithinRoom({ capacity: 0, marked: ["a"] }, "a")).toBe(false);
+    expect(await spare(pair({}))).toBe(true);
+    expect(await spare(pair({ intro: true }))).toBe(true);
+    expect(await spare(pair({ minimumLevel: "open_water" }))).toBe(false);
+    expect(await spare(pair({ agency: "NAUI" }))).toBe(false);
+    expect(seatWithinRoom(undefined, "a")).toBe(false);
+    expect(seatWithinRoom({ seated: new Set(["a"]), spare: false }, "a")).toBe(true);
+    expect(seatWithinRoom({ seated: new Set(["a"]), spare: false }, "b")).toBe(false);
+  });
+
+  it("stops seating marks once the instructor's ratio is used up, even with a second mark on another seat", async () => {
+    const ctx = await advancedCharter();
+    await teachesAndAboard(ctx);
+    expect(await markSeat(ctx)).toMatchObject({ ok: true });
+    expect(await rosterWarning(ctx)).toBe(true);
+    // Eight other marked seats of the same session fill the instructor's 8.
+    const others = [];
+    for (let i = 0; i < 8; i += 1) {
+      const diver = await createDiver(ctx.db, {
+        shopId: ctx.shop.id,
+        fullName: `Ratio Diver ${i}`,
+        email: `ratio-${i}-2731@example.com`,
+      });
+      if (!diver) throw new Error("diver setup failed");
+      others.push(diver.id);
+    }
+    const marks = [];
+    for (const personId of others) {
+      const [row] = await ctx.db
+        .insert(bookings)
+        .values({
+          bookedAs: "diver",
+          shopId: ctx.shop.id,
+          tripId: ctx.charter.id,
+          personId,
+          trainingEnrollmentBookingId: ctx.course.bookingId,
+          trainingMarkedAt: new Date(ctx.now.getTime() - 60_000),
+          trainingMarkedByPersonId: ctx.owner,
+        })
+        .returning({ id: bookings.id });
+      if (row) marks.push(row.id);
+    }
+    expect(marks).toHaveLength(8);
+    // The earlier eight take the room; the ninth (the fixture's seat) is out.
+    expect(await rosterWarning(ctx)).toBe(false);
   });
 
   it("changes nothing on a mark that no longer stands", async () => {
@@ -247,29 +312,13 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     await cancelBooking(ctx.db, ctx.shop.id, ctx.course.bookingId);
     const codes = await seatBlockerCodes(ctx);
     expect(codes).toContain("training_mark_invalid");
-    expect(codes).toContain("certification_insufficient");
+    expect(codes).toContain("certification_missing");
   });
 
-  describe("admission never refuses the seat readiness would clear", () => {
-    it("sells the charter seat to the enrolled student while the course's instructor is aboard", async () => {
-      const ctx = await advancedCharter();
+  describe("admission agrees with readiness", () => {
+    it("refuses the enrolled student whether or not the course's instructor is aboard: no ratio is known", async () => {
+      const ctx = await continuingEdCharter();
       await teachesAndAboard(ctx);
-      // A second seat for the same student, so the charter's own seat in the
-      // fixture does not answer `already_booked`.
-      await cancelBooking(ctx.db, ctx.shop.id, ctx.seat.id);
-      expect(
-        await createBooking(ctx.db, {
-          actor: "staff",
-          shopId: ctx.shop.id,
-          tripId: ctx.charter.id,
-          personId: ctx.course.personId,
-        }),
-      ).toMatchObject({ ok: true });
-    });
-
-    it("refuses the same student with no instructor of the course aboard", async () => {
-      const ctx = await advancedCharter();
-      await roster(ctx, ctx.course.tripId, ctx.instructor, "instructor");
       await cancelBooking(ctx.db, ctx.shop.id, ctx.seat.id);
       expect(
         await createBooking(ctx.db, {
@@ -282,7 +331,7 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     });
 
     it("refuses a carded Open Water diver with no enrollment, instructor aboard or not", async () => {
-      const ctx = await advancedCharter();
+      const ctx = await continuingEdCharter();
       await teachesAndAboard(ctx);
       const stranger = await createDiver(ctx.db, {
         shopId: ctx.shop.id,

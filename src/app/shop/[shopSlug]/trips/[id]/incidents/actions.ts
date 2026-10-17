@@ -291,7 +291,18 @@ export async function markMissingSubjectFoundAction(
     return { message: t("incidents.missingDiver.notAllowed") };
   }
   revalidatePath(shopPath(shopSlug, "trips", tripId), "layout");
-  return { tone: "success", message: t("incidents.missingDiver.foundDone") };
+  const done = {
+    sent: "incidents.missingDiver.foundDone",
+    partial: "incidents.missingDiver.foundPartial",
+    skipped: "incidents.missingDiver.foundNoAllClear",
+  } as const;
+  if (result.allClear === null) {
+    return { tone: "success", message: t("incidents.missingDiver.foundAlready") };
+  }
+  return {
+    tone: result.allClear === "sent" ? "success" : undefined,
+    message: t(done[result.allClear]),
+  };
 }
 
 /**

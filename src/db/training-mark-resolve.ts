@@ -1,16 +1,16 @@
 import { and, asc, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { courseSeatCapacity } from "@/lib/course-ratios";
+import { courseRatioRule } from "@/lib/course-ratios";
 import { groupCrewAssignments } from "@/lib/crew-roles";
 import type { ParticipantType } from "@/lib/participant-types";
 import {
   type CrewMember,
-  courseInstructorsAboard,
   type TrainingDiveCourse,
   type TrainingMarkEnrollment,
   type TrainingMarkSeat,
   type TrainingMarkState,
   trainingMarkProblem,
+  trainingRoom,
 } from "@/lib/training-mark";
 import type { DbExecutor } from "./client";
 import { queryAll } from "./query-helpers";
@@ -212,31 +212,53 @@ type AboardPair = {
   course: TrainingEnrollmentRow["course"];
 };
 
+/** The ratio rule a course carries, or null when none is known (fail closed). */
+function ratioRuleOf(course: TrainingEnrollmentRow["course"]) {
+  return course
+    ? courseRatioRule({
+        agency: course.agency,
+        minimumCertificationLevel: course.minimumLevel,
+        isIntroCourse: course.intro,
+      })
+    : null;
+}
+
+/** What `trainingDiveRoom` found for one (departure, session) pair. */
+export type TrainingRoom = {
+  /** The departure's marked seats within the room its instructors have, across every session. */
+  seated: ReadonlySet<string>;
+  /** One more marked seat of this session's course would fit without unseating another. */
+  spare: boolean;
+};
+
 /**
- * **How many of the course's students this departure can carry as training
- * dives** (issue #2731; review 2026-10-17), keyed by `aboardKey`: the
- * course's ratio over its instructors aboard (`courseInstructorsAboard`),
- * with the seats already marked for that session, oldest mark first. Zero
- * with no instructor aboard; `null` capacity for a course with no ratio rule.
+ * **How many of the courses' students this departure can carry as training
+ * dives** (issue #2731; review 2026-10-17), keyed by `aboardKey`. The room is
+ * the departure's, not the session's: the course's instructors aboard
+ * (`courseInstructorIdsAboard`), a certified assistant raising the cap, and
+ * every marked seat of every session on the departure drawing on the same
+ * instructors, oldest mark first (`trainingRoom`). A course with no known
+ * ratio (`courseRatioRule`) has no room at all: its seats keep the
+ * departure's level.
  */
 export async function trainingDiveRoom(
   db: DbExecutor,
   shopId: string,
   pairs: readonly AboardPair[],
-): Promise<Map<string, { capacity: number | null; marked: string[] }>> {
-  const room = new Map<string, { capacity: number | null; marked: string[] }>();
+): Promise<Map<string, TrainingRoom>> {
+  const room = new Map<string, TrainingRoom>();
   if (pairs.length === 0) return room;
-  const crew = await trustedCrewOfTrips(
-    db,
-    shopId,
-    pairs.flatMap((pair) => [pair.departureTripId, pair.sessionTripId]),
-  );
   const enrollmentSeats = alias(bookings, "training_room_enrollments");
+  const enrollmentTrips = alias(trips, "training_room_sessions");
   const marked = await db
     .select({
       id: bookings.id,
       departureTripId: bookings.tripId,
       sessionTripId: enrollmentSeats.tripId,
+      courseRowId: courses.id,
+      courseMinimumLevel: courses.minimumCertificationLevel,
+      courseIsIntro: courses.isIntroCourse,
+      courseAgency: courses.agency,
     })
     .from(bookings)
     .innerJoin(
@@ -246,6 +268,8 @@ export async function trainingDiveRoom(
         eq(enrollmentSeats.shopId, shopId),
       ),
     )
+    .innerJoin(enrollmentTrips, eq(enrollmentTrips.id, enrollmentSeats.tripId))
+    .leftJoin(courses, and(eq(courses.id, enrollmentTrips.courseId), eq(courses.shopId, shopId)))
     .where(
       and(
         eq(bookings.shopId, shopId),
@@ -256,50 +280,49 @@ export async function trainingDiveRoom(
     )
     // diveday:allow-time-id-order: the earliest marks are the ones the ratio seats first.
     .orderBy(asc(bookings.trainingMarkedAt), asc(bookings.id));
+  const crew = await trustedCrewOfTrips(db, shopId, [
+    ...pairs.flatMap((pair) => [pair.departureTripId, pair.sessionTripId]),
+    ...marked.map((row) => row.sessionTripId),
+  ]);
   for (const pair of pairs) {
     const key = aboardKey(pair.departureTripId, pair.sessionTripId);
     if (room.has(key)) continue;
-    const instructors = courseInstructorsAboard(
-      crew.get(pair.sessionTripId) ?? [],
-      crew.get(pair.departureTripId) ?? [],
+    const onDeparture = marked.filter((row) => row.departureTripId === pair.departureTripId);
+    const sessionIds = new Set([
+      pair.sessionTripId,
+      ...onDeparture.map((row) => row.sessionTripId),
+    ]);
+    room.set(
+      key,
+      trainingRoom({
+        marked: onDeparture.map((row) => ({
+          id: row.id,
+          sessionTripId: row.sessionTripId,
+          rule:
+            row.courseRowId === null
+              ? null
+              : courseRatioRule({
+                  agency: row.courseAgency ?? "",
+                  minimumCertificationLevel: row.courseMinimumLevel,
+                  isIntroCourse: row.courseIsIntro ?? false,
+                }),
+        })),
+        candidate: {
+          id: `${key}:next`,
+          sessionTripId: pair.sessionTripId,
+          rule: ratioRuleOf(pair.course),
+        },
+        sessionCrew: new Map([...sessionIds].map((id) => [id, crew.get(id) ?? []])),
+        departureCrew: crew.get(pair.departureTripId) ?? [],
+      }),
     );
-    const capacity =
-      instructors === 0
-        ? 0
-        : courseSeatCapacity(
-            pair.course
-              ? {
-                  agency: pair.course.agency,
-                  minimumCertificationLevel: pair.course.minimumLevel,
-                  isIntroCourse: pair.course.intro,
-                }
-              : null,
-            instructors,
-            0,
-          );
-    room.set(key, {
-      capacity,
-      marked: marked
-        .filter(
-          (row) =>
-            row.departureTripId === pair.departureTripId &&
-            row.sessionTripId === pair.sessionTripId,
-        )
-        .map((row) => row.id),
-    });
   }
   return room;
 }
 
 /** Whether this marked seat is within the room `trainingDiveRoom` found. */
-export function seatWithinRoom(
-  room: { capacity: number | null; marked: string[] } | undefined,
-  bookingId: string,
-): boolean {
-  if (!room || room.capacity === 0) return false;
-  if (room.capacity === null) return true;
-  const position = room.marked.indexOf(bookingId);
-  return position !== -1 && position < room.capacity;
+export function seatWithinRoom(room: TrainingRoom | undefined, bookingId: string): boolean {
+  return room?.seated.has(bookingId) ?? false;
 }
 
 export function aboardKey(departureTripId: string, sessionTripId: string): string {
@@ -454,11 +477,7 @@ export async function markableTrainingDives(
     })),
   );
   return markable.flatMap((enrollment) => {
-    const left = room.get(aboardKey(departure.id, enrollment.tripId));
-    const fits =
-      left !== undefined &&
-      left.capacity !== 0 &&
-      (left.capacity === null || left.marked.length < left.capacity);
+    const fits = room.get(aboardKey(departure.id, enrollment.tripId))?.spare === true;
     return fits && enrollment.course
       ? [
           {

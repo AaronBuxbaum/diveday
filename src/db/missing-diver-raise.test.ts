@@ -235,7 +235,7 @@ describe("Missing diver, alert owners now (issue #2694, in-memory PGlite)", () =
         actorPersonId: f.crew.id,
         provider: recorder().provider,
       }),
-    ).toEqual({ ok: true, changed: true });
+    ).toMatchObject({ ok: true, changed: true });
     // Gone again at the next look.
     await mark(db, ctx.shop.id, f, f.seat.booking.id, "not_boarded", minutesAfterMark(2));
     const { provider, kinds } = recorder();

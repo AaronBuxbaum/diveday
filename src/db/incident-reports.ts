@@ -39,10 +39,15 @@ import type { NotificationProvider } from "@/lib/notifications";
 import { OFFLINE_EVENT_SKEW_MS } from "@/lib/offline-events";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
-import { sendMissingDiverAlerts, sendMissingDiverAllClear } from "./missing-diver-alerts";
+import {
+  type MissingDiverAllClearOutcome,
+  sendMissingDiverAlerts,
+  sendMissingDiverAllClear,
+} from "./missing-diver-alerts";
 import {
   affectedSubjects,
   afterDiveEvents,
+  backAboard,
   type MissingSubject,
   standingNotBackAboardSince,
   subjectOnDeparture,
@@ -540,7 +545,8 @@ async function ownersTold(db: DbExecutor, shopId: string, reportId: string): Pro
 }
 
 export type MissingDiverFound =
-  | { ok: true; changed: boolean }
+  /** `allClear` is what the all-clear really did; null when this tap changed nothing. */
+  | { ok: true; changed: boolean; allClear: MissingDiverAllClearOutcome | null }
   | { ok: false; reason: IncidentWriteRefusal | "not_alerted" | "still_missing" };
 
 /**
@@ -549,8 +555,8 @@ export type MissingDiverFound =
  * missing-diver report whose alert was raised or filed.
  *
  * - **Never over the roll call** (review 2026-10-17): refused as
- *   `still_missing` while any person the report names as affected still
- *   stands "not back aboard" on this departure. "Mark back aboard" first; one
+ *   `still_missing` unless the roll call has every person the report names as
+ *   affected back (`backAboard`): a `cleared` undo is not back aboard. "Mark back aboard" first; one
  *   wrong tap cannot silence a live disappearance.
  * - **Any of the departure's crew**, as well as the report's own readers:
  *   the people at the rail are the ones who see the diver surface.
@@ -571,11 +577,11 @@ export async function markMissingDiverFound(
     if (report.status !== "filed" && report.missingAlertRaisedAt === null) {
       return { ok: false, reason: "not_alerted" };
     }
-    if (report.missingFoundAt !== null) return { ok: true, changed: false };
+    if (report.missingFoundAt !== null) return { ok: true, changed: false, allClear: null };
     const subjects = await affectedSubjects(tx, input.shopId, input.reportId);
     for (const subject of subjects) {
       const target = { shopId: input.shopId, tripId: report.tripId, subject };
-      if (standingNotBackAboardSince(await afterDiveEvents(tx, target))) {
+      if (!backAboard(await afterDiveEvents(tx, target))) {
         return { ok: false, reason: "still_missing" };
       }
     }
@@ -592,18 +598,20 @@ export async function markMissingDiverFound(
       )
       .returning({ id: incidentReports.id });
     // The row lock above already serializes two taps; this says so twice.
-    if (stamped.length === 0) return { ok: true, changed: false };
+    if (stamped.length === 0) return { ok: true, changed: false, allClear: null };
     await recordTripActivity(tx, {
       shopId: input.shopId,
       tripId: report.tripId,
       actorPersonId: input.actorPersonId,
       entry: { code: "missing_diver_found" },
     });
-    return { ok: true, changed: true };
+    return { ok: true, changed: true, allClear: null };
   });
   if (found.ok && found.changed) {
+    // What the all-clear really did, so the reply never claims more.
+    let allClear: MissingDiverAllClearOutcome = "skipped";
     try {
-      await sendMissingDiverAllClear(db, {
+      allClear = await sendMissingDiverAllClear(db, {
         shopId: input.shopId,
         reportId: input.reportId,
         provider: input.provider,
@@ -611,6 +619,7 @@ export async function markMissingDiverFound(
     } catch {
       log("incident.missing_diver_all_clear_failed", "error", { reportId: input.reportId });
     }
+    return { ...found, allClear };
   }
   return found;
 }

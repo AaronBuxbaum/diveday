@@ -199,6 +199,11 @@ describe("training marks — the gates the build review closed (in-memory PGlite
 
   it("prints the course a marked dive counts toward on the manifest, and that no instructor is aboard", async () => {
     const ctx = await charterContext();
+    // A course with a known ratio (PADI, no minimum); one without has no room.
+    await ctx.db
+      .update(courses)
+      .set({ agency: "padi", minimumCertificationLevel: null, isIntroCourse: false })
+      .where(eq(courses.id, ctx.course.courseId));
     await markSeat(ctx);
     const row = async () =>
       (await getTripManifest(ctx.db, ctx.shop.id, ctx.charter.id))?.divers.find(

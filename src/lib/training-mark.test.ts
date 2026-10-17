@@ -11,6 +11,7 @@ import {
   trainingDiveLevel,
   trainingDiveRequiredLevel,
   trainingMarkProblem,
+  trainingRoom,
 } from "./training-mark";
 
 const PERSON = "00000000-0000-4000-8000-0000000000a1";
@@ -253,7 +254,19 @@ describe("trainingDiveRequiredLevel — lowers only as far as the course certifi
     expect(trainingDiveRequiredLevel("divemaster", aow)).toBe("divemaster");
   });
 
-  it("never lowers for an intro session, a course certifying nothing, or one with no minimum", () => {
+  it("asks no card of a course with no minimum for a level it certifies, and no more", () => {
+    const ow: TrainingDiveCourse = {
+      minimumLevel: null,
+      certifiesLevel: "open_water",
+      intro: false,
+    };
+    expect(trainingDiveRequiredLevel("open_water", ow)).toBeNull();
+    // Past what it certifies the departure's level stands.
+    expect(trainingDiveRequiredLevel("advanced_open_water", ow)).toBe("advanced_open_water");
+    expect(trainingDiveRequiredLevel("rescue", ow)).toBe("rescue");
+  });
+
+  it("never lowers for an intro session or a course certifying nothing", () => {
     const dsd: TrainingDiveCourse = { minimumLevel: null, certifiesLevel: null, intro: true };
     expect(trainingDiveRequiredLevel("open_water", dsd)).toBe("open_water");
     expect(
@@ -262,9 +275,9 @@ describe("trainingDiveRequiredLevel — lowers only as far as the course certifi
     expect(trainingDiveRequiredLevel("advanced_open_water", { ...aow, certifiesLevel: null })).toBe(
       "advanced_open_water",
     );
-    expect(trainingDiveRequiredLevel("advanced_open_water", { ...aow, minimumLevel: null })).toBe(
-      "advanced_open_water",
-    );
+    expect(
+      trainingDiveRequiredLevel("open_water", { ...aow, minimumLevel: null, intro: true }),
+    ).toBe("open_water");
   });
 
   it("never raises a level, and never invents one", () => {
@@ -275,5 +288,101 @@ describe("trainingDiveRequiredLevel — lowers only as far as the course certifi
     };
     expect(trainingDiveRequiredLevel("open_water", rescueCourse)).toBe("open_water");
     expect(trainingDiveRequiredLevel(null, aow)).toBeNull();
+  });
+});
+
+describe("trainingRoom — the instructors' ratio is shared across sessions (review 2026-10-17)", () => {
+  const teacher = {
+    personId: "teacher",
+    shopRoles: ["instructor"],
+    tripRole: "instructor" as const,
+  };
+  const teacher2 = {
+    personId: "teacher2",
+    shopRoles: ["instructor"],
+    tripRole: "instructor" as const,
+  };
+  const dm = { personId: "dm", shopRoles: ["divemaster"], tripRole: "divemaster" as const };
+  const entry = {
+    baseStudentsPerInstructor: 8,
+    assistantBonusPerInstructor: 2,
+    maxStudentsPerInstructor: 12,
+  };
+  const seats = (session: string, count: number, from = 0) =>
+    Array.from({ length: count }, (_, i) => ({
+      id: `${session}-${from + i}`,
+      sessionTripId: session,
+      rule: entry,
+    }));
+  const crews = new Map([
+    ["s1", [teacher]],
+    ["s2", [teacher]],
+  ]);
+
+  it("counts one instructor's seats across two sessions, not per session", () => {
+    const room = trainingRoom({
+      marked: [...seats("s1", 5), ...seats("s2", 5)],
+      sessionCrew: crews,
+      departureCrew: [teacher],
+    });
+    expect(room.seated.size).toBe(8);
+    expect(room.seated.has("s2-2")).toBe(true);
+    expect(room.seated.has("s2-3")).toBe(false);
+  });
+
+  it("seats nobody whose course has no known ratio, or with no instructor aboard", () => {
+    const noRule = [{ id: "a", sessionTripId: "s1", rule: null }];
+    expect(
+      trainingRoom({ marked: noRule, sessionCrew: crews, departureCrew: [teacher] }).seated.size,
+    ).toBe(0);
+    expect(
+      trainingRoom({ marked: seats("s1", 1), sessionCrew: crews, departureCrew: [] }).seated.size,
+    ).toBe(0);
+  });
+
+  it("lets a certified assistant raise the cap, to the ceiling and no further", () => {
+    const withDm = trainingRoom({
+      marked: seats("s1", 12),
+      sessionCrew: crews,
+      departureCrew: [teacher, dm],
+    });
+    expect(withDm.seated.size).toBe(10);
+    const many = trainingRoom({
+      marked: seats("s1", 14),
+      sessionCrew: crews,
+      departureCrew: [teacher, dm, { ...dm, personId: "dm2" }, { ...dm, personId: "dm3" }],
+    });
+    expect(many.seated.size).toBe(12);
+  });
+
+  it("says whether one more seat fits, and never by unseating a marked one", () => {
+    const candidate = { id: "new", sessionTripId: "s2", rule: entry };
+    const full = trainingRoom({
+      marked: seats("s1", 8),
+      candidate,
+      sessionCrew: crews,
+      departureCrew: [teacher],
+    });
+    expect(full.spare).toBe(false);
+    const room = trainingRoom({
+      marked: seats("s1", 7),
+      candidate,
+      sessionCrew: crews,
+      departureCrew: [teacher],
+    });
+    expect(room.spare).toBe(true);
+    // A second instructor on the departure only counts for the session they teach.
+    const two = new Map([
+      ["s1", [teacher]],
+      ["s2", [teacher2]],
+    ]);
+    expect(
+      trainingRoom({
+        marked: seats("s1", 8),
+        candidate,
+        sessionCrew: two,
+        departureCrew: [teacher, teacher2],
+      }).spare,
+    ).toBe(true);
   });
 });

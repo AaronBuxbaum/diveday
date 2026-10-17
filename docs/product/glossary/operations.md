@@ -1338,11 +1338,14 @@
   manager or the enrollment's own instructor, and the manifest names who did. **A training mark is
   not In training**: it changes boarding only, and buying a seat never reads it. A mark that
   stands lowers the departure's or site's level to the course's minimum, and only when the course
-  certifies that level: never past it, never for an intro session or a course that certifies none
-  (issue #2731). It needs the course's own instructor aboard, rostered by somebody else and not
-  counted off at the dock, and no more marked seats than the course's ratio gives the instructors
-  aboard; otherwise the departure's level stands and the row warns. The sale, which cannot see a
-  mark not yet made, sells on the same course seat under the same rule.
+  certifies that level: a course with no minimum (Open Water) asks no card for a level it
+  certifies; never past it, never for an intro session or a course that certifies none (issue
+  #2731). It needs the course's own instructor aboard, rostered by somebody else and not counted
+  off at the dock, and the seat within the course's ratio: marked seats are counted per instructor
+  across every session on the departure, a certified assistant raising the cap as on the session.
+  A course with no known ratio never lowers a level, so the departure's level stands and the row
+  warns. The sale, which cannot see a mark not yet made, sells on the same course seat under the
+  same rule.
 - **Counter hand-off** — signing several students' **Course forms** one at a time on one shop
   device, each on a single-use staff-issued link, with the page dead-ending after each signature
   (ADR 20261012-course-forms-on-charters-and-counter, decision 2). Designed, not built yet.

@@ -24,7 +24,10 @@
     "notAlerted": "No alert stands for them here.",
     "found": "Found",
     "foundPending": "Saving…",
-    "foundDone": "Marked found. The owners are sent an all-clear.",
+    "foundDone": "Marked found. The owners have the all-clear.",
+    "foundPartial": "Marked found. The all-clear did not reach every owner. Call them.",
+    "foundNoAllClear": "Marked found. No all-clear was sent.",
+    "foundAlready": "Already marked found.",
     "foundFailed": "Not saved. Tap again.",
     "stillMissing": "Still marked not back aboard. Mark them back aboard first.",
     "offline": "No signal: phone the owners or use VHF."

@@ -26,10 +26,10 @@ forms checked, and a group at the counter with one tablet cannot sign one studen
   mark and clear pushes the manifest, which refreshes the offline copy.
 - Clearing a mark with forms owed, or one that no longer holds, takes `canManageWaiverTemplates`
   or the enrollment's instructor, rostered by another; the manifest names who did.
-- **Amended 2026-10-17 (#2731, Aaron):** a standing mark lowers the charter's or site's level to
-  the course's minimum when the course certifies that level; never for an intro session. It needs
-  the course's instructor aboard, rostered by another, not counted off, within the ratio; else the
-  row warns. The sale matches (`markableTrainingDives`).
+- **Amended 2026-10-17 (#2731, Aaron):** a standing mark lowers the level to the course's minimum
+  when the course certifies it (no minimum: no card); never for an intro session. It needs the
+  course's instructor aboard and the seat within the
+  course's ratio, counted per instructor across the departure. No known ratio, no lowering.
 
 **2. Counter hand-off (Proposed, not built).** A single-use, ten-minute `course_forms_counter`
 capability per booking, never the emailed link. The device shows that student's forms, then "Hand

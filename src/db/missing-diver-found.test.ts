@@ -13,7 +13,7 @@ import {
   startIncidentReport,
 } from "./incident-reports";
 import { complete, OTHER_SHOP, OTHER_TRIP } from "./incident-reports-test-fixtures";
-import { sendMissingDiverAllClear } from "./missing-diver-alerts";
+import { sendMissingDiverAlerts, sendMissingDiverAllClear } from "./missing-diver-alerts";
 import {
   MARKED_AT,
   mark,
@@ -22,7 +22,7 @@ import {
   secondSeat,
   stateOf,
 } from "./missing-diver-test-fixtures";
-import { activityEvents, incidentReports, tripAssignments } from "./schema";
+import { activityEvents, incidentReports, rollCallEvents, tripAssignments } from "./schema";
 
 // The boat's followers are pushed by the alert; counted here, never sent.
 const push = vi.hoisted(() => ({ calls: 0 }));
@@ -100,6 +100,7 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
     ).toEqual({
       ok: true,
       changed: true,
+      allClear: "sent",
     });
     expect(sent.length).toBeGreaterThan(0);
     expect(kinds("incident_missing_diver_found")).toBe(sent.length);
@@ -130,7 +131,7 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
     await db.insert(tripAssignments).values({ tripId: f.trip.id, personId: f.ashore.id });
     expect(
       await markMissingSubjectFound(db, { ...input, actorPersonId: f.ashore.id, provider }),
-    ).toEqual({ ok: true, changed: true });
+    ).toEqual({ ok: true, changed: true, allClear: "sent" });
     expect((await stateOf(db, reportId)).foundBy).toBe(f.ashore.id);
     expect(await openMissingAlerts(db, input.shopId, input.tripId)).toEqual([]);
   });
@@ -236,5 +237,118 @@ describe("Found (issue #2694, in-memory PGlite)", () => {
     expect(
       await addIncidentAddendum(db, { ...writer, body: "Found on the reef top, well." }),
     ).toEqual({ ok: true });
+  });
+
+  it("is not back aboard on an undo: a cleared mark leaves them missing, and the pass still sends", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    // The provider is down: the raise stands, nobody was told.
+    const down = recorder("failed");
+    const raised = await raiseMissingDiverAlert(db, {
+      ...input,
+      actorPersonId: f.crew.id,
+      provider: down.provider,
+    });
+    if (!raised.ok || !raised.reportId) throw new Error("raise refused");
+    expect((await stateOf(db, raised.reportId)).sentAt).toBeNull();
+    await db.insert(rollCallEvents).values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      bookingId: f.seat.booking.id,
+      recordedByPersonId: f.crew.id,
+      status: "cleared",
+      checkpoint: "after_dive_1",
+      source: "live",
+      occurredAt: backAt,
+    });
+    const { provider, sent } = recorder();
+    expect(
+      await markMissingDiverFound(db, {
+        ...input,
+        reportId: raised.reportId,
+        actorPersonId: f.owner.id,
+        provider,
+      }),
+    ).toEqual({ ok: false, reason: "still_missing" });
+    expect(sent).toEqual([]);
+    await sendMissingDiverAlerts(db, {
+      reportId: raised.reportId,
+      origin: "https://example.test",
+      provider,
+    });
+    expect(sent.length).toBeGreaterThan(0);
+    expect((await stateOf(db, raised.reportId)).sentAt).toBeInstanceOf(Date);
+  });
+
+  it("sends no all-clear for an alarm that never went, and says so", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const raised = await raiseMissingDiverAlert(db, {
+      ...input,
+      actorPersonId: f.crew.id,
+      provider: recorder("failed").provider,
+    });
+    if (!raised.ok || !raised.reportId) throw new Error("raise refused");
+    await mark(db, ctx.shop.id, f, f.seat.booking.id, "boarded", backAt);
+    const { provider, sent } = recorder();
+    expect(
+      await markMissingDiverFound(db, {
+        shopId: input.shopId,
+        tripId: input.tripId,
+        reportId: raised.reportId,
+        actorPersonId: f.crew.id,
+        provider,
+      }),
+    ).toEqual({ ok: true, changed: true, allClear: "skipped" });
+    expect(sent).toEqual([]);
+    expect((await stateOf(db, raised.reportId)).allClearAt).toBeNull();
+    // A second tap changes nothing and reports nothing sent.
+    expect(
+      await markMissingDiverFound(db, {
+        shopId: input.shopId,
+        tripId: input.tripId,
+        reportId: raised.reportId,
+        actorPersonId: f.crew.id,
+        provider,
+      }),
+    ).toEqual({ ok: true, changed: false, allClear: null });
+  });
+
+  it("reports a partial all-clear as partial", async () => {
+    const { db, f, target } = await raisedThenBack();
+    expect(
+      await markMissingDiverFound(db, {
+        ...target,
+        actorPersonId: f.crew.id,
+        provider: recorder("failed").provider,
+      }),
+    ).toEqual({ ok: true, changed: true, allClear: "partial" });
+  });
+
+  it("pushes nobody once Found lands mid-send", async () => {
+    const { db, f, input } = await missingSeat(ctx.db, ctx.shop.id);
+    const raised = await raiseMissingDiverAlert(db, {
+      ...input,
+      actorPersonId: f.crew.id,
+      provider: recorder("failed").provider,
+    });
+    if (!raised.ok || !raised.reportId) throw new Error("raise refused");
+    const before = push.calls;
+    const { sent } = recorder();
+    // Found lands while the first owner's email is going out.
+    const provider = {
+      async send(notification: (typeof sent)[number]) {
+        sent.push(notification);
+        await db
+          .update(incidentReports)
+          .set({ missingFoundAt: backAt, missingFoundByPersonId: f.crew.id })
+          .where(eq(incidentReports.id, raised.reportId as string));
+        return { status: "sent" as const, providerMessageId: "m" };
+      },
+    };
+    await sendMissingDiverAlerts(db, {
+      reportId: raised.reportId,
+      origin: "https://example.test",
+      provider,
+    });
+    expect(push.calls).toBe(before);
   });
 });
