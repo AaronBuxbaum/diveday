@@ -565,17 +565,17 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     why: "the `cus_…` that tip's session created, on the same `if_required` rule as booking_checkouts",
   },
   "notification_deliveries.provider_message_id": whatsAppChat(
-    "SES's, SNS's or Meta's handle on a message that carried this diver's name. A `wamid.` here is a message in the shop's WhatsApp chat with the diver, found by this prefix even after the shop disconnected its number. The handle itself is kept as the shop's evidence that a message went; the prose beside it (`provider_detail`, `send_error`) is cleared",
+    "SES's, SNS's or Meta's handle on a message that carried this diver's name. A `wamid.` here is a message in the shop's WhatsApp chat with the diver, found by this prefix even after the shop disconnected its number. A `wamid.` embeds the recipient's number, so erasure rewrites it to `wamid.` plus its SHA-256: still the shop's evidence that a message went, and no longer a number. SES and SNS ids are kept as they are. The prose beside it (`provider_detail`, `send_error`) is cleared",
   ),
   "notification_delivery_attempts.provider_message_id": whatsAppChat("as deliveries', above"),
   "inbound_messages.provider_message_id": whatsAppChat(
-    "the provider's handle on a message the *diver* sent in. A WhatsApp one raises the chat it came in on, by its `from_address`, read before that address is redacted. `notNull`, so there is nothing to clear it to",
+    "the provider's handle on a message the *diver* sent in. A WhatsApp one raises the chat it came in on, by its `from_address`, read before that address is redacted. `notNull`; a `wamid.` is rewritten to `wamid.` plus its SHA-256, as on notification_deliveries",
   ),
   "staff_replies.provider_message_id": whatsAppChat(
-    "the provider's handle on the shop's answer, whose body and recipient are redacted here. A WhatsApp reply raises the chat it went to, by its `to_address`",
+    "the provider's handle on the shop's answer, whose body and recipient are redacted here. A WhatsApp reply raises the chat it went to, by its `to_address`; its `wamid.` is rewritten as on notification_deliveries",
   ),
   "waiver_deliveries.provider_message_id": whatsAppChat(
-    "the provider's handle on the message carrying a waiver link, which goes over the shop's WhatsApp when it has one. A `wamid.` here raises that chat. `detail` beside it is nulled",
+    "the provider's handle on the message carrying a waiver link, which goes over the shop's WhatsApp when it has one. A `wamid.` here raises that chat and is rewritten as on notification_deliveries. `detail` beside it is nulled",
   ),
 
   // --- the shop's own furniture at a processor or provider -----------------
@@ -694,13 +694,13 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
   "notification_send_queue.provider_message_id": { held: "copy", why: "settles onto deliveries" },
   "waiver_records.delivery_provider_message_id": {
     held: "copy",
-    why: "the latest of `waiver_deliveries.provider_message_id`, denormalized onto its record",
+    why: "the latest of `waiver_deliveries.provider_message_id`, denormalized onto its record, and rewritten the same way",
   },
 
   // --- at a system the obligation ledger deliberately does not reach -------
   "integration_sync_records.external_id": {
     held: "elsewhere",
-    why: "the QuickBooks or Xero object a diver was synced to: the map from a DiveDay row to the provider's own object, ids on both sides and no copied details, kept so a second Customer is not created for someone already synced (`OUTSIDE_CLOSURE_REASONS` above, issue #1015). The shop's books are the shop's to keep, and deleting a Customer may not be possible while its invoices reference it. Nothing is owed (ADR 20260803-processor-erasure-obligations, widened 2026-10-17)",
+    why: "the QuickBooks or Xero object a diver was synced to: the map from a DiveDay row to the provider's own object. The row copies no details, but the Customer it names holds the diver's name and contact details at the provider, and erasure does not reach it. Kept so a second Customer is not created for someone already synced (`OUTSIDE_CLOSURE_REASONS` above, issue #1015). The books are the shop's to keep, and deleting a Customer may not be possible while its invoices reference it. Nothing is owed (ADR 20260803-processor-erasure-obligations, widened 2026-10-17)",
   },
   "imported_payment_history.stripe_reference": {
     held: "elsewhere",

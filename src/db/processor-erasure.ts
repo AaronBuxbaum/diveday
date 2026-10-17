@@ -24,12 +24,13 @@
  *     it and rewrites neither field — so it is the same manual shape as the
  *     invoice. `tips` and `booking_checkouts` both carry one, which is how a
  *     diver who only ever tipped now reaches this ledger at all (issue #1621).
- *   - **A WhatsApp chat → recorded, not deleted.** The shop's own WhatsApp
- *     Business number keeps every message it sent or received from a diver,
- *     at Meta, and the Cloud API has no delete for a message. One row per
- *     (shop, diver number), discharged by the owner deleting the chat in
- *     WhatsApp Manager. SES and SNS ids raise nothing: those logs are
- *     DiveDay's own and its log retention discharges them (issue #1721).
+ *   - **A WhatsApp chat → recorded, not deleted.** A chat between the shop's
+ *     WhatsApp number and a diver, which the Cloud API has no delete for. One
+ *     row per (shop, diver number), discharged by the owner deleting the chat
+ *     wherever it is held, if there is one. SES and SNS ids raise nothing:
+ *     those logs are DiveDay's own and its log retention discharges them
+ *     (issue #1721). Where a Cloud API chat is held for the shop is open: see
+ *     the ADR.
  *
  * **The delete never runs inside the erasure transaction, and never gates it.**
  * The obligation row commits with the scrub; the Stripe call happens after. A
@@ -86,6 +87,27 @@ function isRecordable(entry: ProcessorErasureTargetInput): boolean {
   return (entry.providerAccountId ?? "").trim().length > 0;
 }
 
+/**
+ * Drop what cannot become a row, and say so: a Stripe object with no account
+ * is an erasure that will report finished while Stripe still holds it, which
+ * must not be silent. The target and the ids, never the handle.
+ */
+function recordableTargets(
+  input: RecordProcessorErasureObligationsInput,
+): ProcessorErasureTargetInput[] {
+  return input.targets.filter((entry) => {
+    if (isRecordable(entry)) return true;
+    if (entry.externalId.trim().length > 0) {
+      log("anonymize.processor_erasure_target_dropped", "warn", {
+        shopId: input.shopId,
+        personId: input.personId,
+        target: entry.target,
+      });
+    }
+    return false;
+  });
+}
+
 export type RecordProcessorErasureObligationsInput = {
   shopId: string;
   /** The erasure that raised these — already anonymized by the time this runs. */
@@ -113,8 +135,7 @@ export async function recordProcessorErasureObligations(
   input: RecordProcessorErasureObligationsInput,
 ): Promise<ProcessorErasureObligation[]> {
   const seen = new Set<string>();
-  const values = input.targets
-    .filter(isRecordable)
+  const values = recordableTargets(input)
     .filter((entry) => {
       const key = `${entry.target}:${entry.externalId}`;
       if (seen.has(key)) return false;
@@ -127,6 +148,9 @@ export async function recordProcessorErasureObligations(
       target: entry.target,
       externalId: entry.externalId,
       providerAccountId: entry.providerAccountId,
+      // The release still serving during a deploy reads only this column.
+      // Dropped with it in the next release.
+      stripeAccountId: STRIPE_TARGETS.has(entry.target) ? entry.providerAccountId : null,
     }));
   if (values.length === 0) return [];
   return db
@@ -206,7 +230,9 @@ export async function attemptProcessorErasure(
   // A customer row always names its account (the table's check constraint);
   // the guard is here so the type says so too, and so a row that somehow did
   // not is refused rather than fired at nothing.
-  const accountId = obligation.providerAccountId;
+  // `stripe_account_id` only for a row the previous release wrote during the
+  // deploy; it goes when that column does.
+  const accountId = obligation.providerAccountId ?? obligation.stripeAccountId;
   const owned = accountId ? await accountBelongsToShop(db, accountId, obligation.shopId) : false;
   if (!accountId || !owned) {
     return recordFailedAttempt(db, obligation, ERASURE_FAILURE_DETAIL.accountNotOwned);

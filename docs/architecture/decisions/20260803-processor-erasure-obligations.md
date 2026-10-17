@@ -180,39 +180,71 @@ honestly press. The local handle stays on the delivery row as the shop's evidenc
 went, as before.
 
 **WhatsApp: one `whatsapp_conversation` row per (shop, diver number), discharged by the owner.**
-A `wamid` lives in the shop's own WhatsApp Business account at Meta, and the Cloud API cannot
-delete a sent or received message. The owner can delete the chat in WhatsApp Manager, so that is
-the obligation, and it is per chat, not per message: a season of reminders is dozens of messages
-and one chat, and one chat is what the owner deletes.
+A `wamid` is a message on the shop's own WhatsApp Business number, and the Cloud API cannot delete
+a sent or received message. The obligation is the chat, not each message: a season of reminders is
+dozens of messages and one chat.
 
-- **Which numbers.** `anonymizeDiver` raises a chat for every number the diver wrote in on WhatsApp
-  from (by the person link, or by the number on their record), every number the shop replied to
-  on WhatsApp, and the number on their record when either the diver holds a booking at a shop with
-  a WhatsApp number connected now, or a booking message or waiver link to them carries a `wamid.`
-  id. The connected-number case exists because a courtesy text riding with a reminder email goes
-  from the shop's number and is not recorded by channel. The `wamid.` case finds a chat opened
-  before the shop disconnected. The numbers are read before the inbox sweep redacts them.
-- **The account column is generalized.** `stripe_account_id` was `NOT NULL` and named for Stripe. It
-  is replaced by `provider_account_id`: the connected Stripe account for a Stripe target, and the
-  shop's WhatsApp `phone_number_id` for a chat, or null when no number is connected at erasure. A
-  check constraint keeps it non-null for every Stripe target. `stripe_account_id` stays declared,
-  nullable and unwritten for one release, because the release before this one reads it, and is
-  dropped in the next.
-- **The handle is the diver's number, held only while the row is owed.** A chat in WhatsApp Manager
-  is found by its number and by nothing else, so the owner cannot do the work without it. This is
-  the one row in the ledger that holds personal data rather than a pointer, and that is why it is
-  held only as long as it has a job: discharging the row replaces the number with the row's own
-  id, in the same statement that records the attestation. A later erasure that reaches the same
-  number therefore raises a new chat rather than folding into a closed one.
+- **Where the chat is held is open (2026-10-17 review, desk F1).** Meta's Cloud API data-privacy
+  page says messages are kept at most 30 days, for retransmission, and does not name any place a
+  business can view or delete Cloud API message history. A DiveDay number is Cloud API only and
+  cannot also be on the WhatsApp Business app (whatsapp-cloud-api-runbook.md), so the app's chat
+  list is not that place either. The durable copy DiveDay knows of is its own inbox, which the
+  erasure already redacts. The copy therefore names no place: "delete any chat with this number on
+  your WhatsApp, if there is one". Whether the target should exist at all, given that, is Aaron's
+  call, recorded on #1721.
+- **Which numbers.** `anonymizeDiver` reads them before any sweep, since the sweeps redact the
+  addresses and delete the rows they come from:
+  - every number the diver wrote in on WhatsApp from (by the person link, or by the number on the
+    record — the second is logged as a fuzzy match, because a household can share a number);
+  - every number the shop replied to on WhatsApp;
+  - the number on the record when a send to the diver is recorded as WhatsApp: a booking message or
+    waiver link with a `wamid.` id, or a gear notice or lost-item tell whose channel is `whatsapp`;
+  - the number on the record when the diver holds a booking on a departure at or after the shop
+    finished connecting its number. **This one is a guess and over-includes.** The courtesy text
+    that rides a reminder, recap or reschedule email goes from the shop's number and is recorded
+    nowhere, so a row can name a chat that never opened: no reminder was due yet, or the diver is
+    not on WhatsApp and the text went by SMS. The owner's instruction says "if there is one" for
+    that reason. A parked signup (`isWhatsAppSetupComplete`) has sent nothing and counts as not
+    connected. Recording the riding text's provider id at each send site would replace the guess
+    with evidence; it touches seven send paths and is not in this change.
+- **The message ids forget the number.** A `wamid` embeds the recipient's number in base64, so a
+  kept id is the erased number in another spelling (security review F1). The erasure rewrites
+  every `wamid.` id it keeps for the diver — on `notification_deliveries`,
+  `notification_delivery_attempts`, `inbound_messages`, `staff_replies`, `waiver_deliveries` and
+  `waiver_records.delivery_provider_message_id` — to `wamid.` plus the SHA-256 of the id. The row
+  stays the shop's evidence that a WhatsApp message went, the `wamid.` prefix still matches, and
+  the number is gone. A delivery status Meta sends later for one of those messages no longer
+  matches; the diver is erased. SES and SNS ids carry no address and are kept as they are.
+- **The account column is generalized, in two releases.** `stripe_account_id` was `NOT NULL` and
+  named for Stripe. `provider_account_id` replaces it: the connected Stripe account for a Stripe
+  target, and the shop's WhatsApp `phone_number_id` for a chat, or null when no finished number is
+  connected at erasure. The release before this one serves while its migrations run, and reads and
+  writes only `stripe_account_id`. So this release also writes `stripe_account_id` on every Stripe
+  row, reads it when `provider_account_id` is null, and checks
+  `coalesce(provider_account_id, stripe_account_id) is not null` for Stripe targets. The next
+  release stops both, narrows the check to `provider_account_id`, and drops the old column. An
+  entry dropped for naming no account is logged as a warning with the shop, the person and the
+  target.
+- **Rolling back.** Back to the previous release after this one has run: Stripe rows still carry
+  `stripe_account_id` and work, and the nullable column is harmless to it. A `whatsapp_conversation`
+  row is a target that release does not know, so its Settings panel has no label for the row; delete
+  or discharge such rows before rolling back.
+- **The handle is the diver's number, held only while the row is owed.** A chat is found by its
+  number and by nothing else, so the owner cannot do the work without it. This is the one row in
+  the ledger that holds personal data rather than a pointer, so it is held only as long as it has a
+  job: discharging the row replaces the number with the row's own id, in the same statement that
+  records the attestation. A later erasure that reaches the same number raises a new chat rather
+  than folding into a closed one. Only a reader who can erase sees the number on the panel.
 - **Never retried and never called.** `attemptProcessorErasure` returns `manual` for it, and the
   nightly drain reads only `stripe_customer` rows.
 
 **`integration_sync_records.external_id` stays out of the ledger.** It is the map from a DiveDay
 row to the QuickBooks or Xero object, ids on both sides and no copied details, kept so a second
 Customer is not minted for a diver already synced (issue #1015, the table's closure reason in
-`src/db/erasure-coverage.test.ts`). The books are the shop's, a Customer may not be deletable while
-its invoices reference it, and H-82 named messaging handles only. The census tags it `elsewhere`
-with that reason.
+`src/db/erasure-coverage.test.ts`). The row copies nothing, but the Customer it names holds the
+diver's name and contact details at QuickBooks or Xero. The books are the shop's, a Customer may
+not be deletable while its invoices reference it, and H-82 named messaging handles only. The census
+tags it `elsewhere` with that reason.
 
 ## What this does not do
 
@@ -230,8 +262,16 @@ Stated plainly, because a compliance mechanism that overstates itself is worse t
   table existed.
 - **A discharged `whatsapp_conversation` row is the owner's attestation too.** Nothing reads the
   shop's WhatsApp to confirm the chat is gone.
-- **It does not reach a WhatsApp chat it has no sign of.** A chat the shop opened by hand from its
-  phone, outside DiveDay, leaves nothing here to find.
+- **It does not reach a WhatsApp chat it has no sign of.** A chat the shop opened by hand outside
+  DiveDay leaves nothing here to find. Nor does a chat whose only sends are recorded nowhere: a
+  departure note or a course-certified notice to a diver with no booking after the number was
+  connected, or a riding courtesy text from a number since disconnected.
+- **It reaches the diver's current number only.** A diver who changed their number keeps a chat on
+  the old one, which nothing here finds unless they wrote in or were replied to from it.
+- **The row names the shop's current WhatsApp number, not the chat's.** A shop that replaced its
+  number has older chats on the old one; the row's account says nothing about them.
+- **It does not reach the accounting integration's Customer.** A QuickBooks or Xero Customer holds
+  the diver's name and contact details, and the erasure leaves it: the books are the shop's to keep.
 - **It does not reach SES's account-level suppression list.** A bounced or complained address stays
   there until removed. Log retention does not discharge it, and nothing in this ledger does either.
 

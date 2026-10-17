@@ -1,1 +1,0 @@
-ALTER TABLE "processor_erasure_obligations" ADD CONSTRAINT "processor_erasure_obligations_stripe_names_account" CHECK ("target" not in ('stripe_customer', 'stripe_invoice_snapshot', 'stripe_checkout_session_snapshot') or "provider_account_id" is not null);

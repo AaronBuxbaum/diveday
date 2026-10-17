@@ -185,3 +185,23 @@ describe("retrying a processor-erasure obligation", () => {
     expect(retryProcessorErasure).not.toHaveBeenCalled();
   });
 });
+
+describe("an obligation id that is not one", () => {
+  // Security review F4: a hand-made post with a non-UUID reached Postgres as a
+  // uuid comparison and came back a 500. It is refused before any query now.
+  it("is refused quietly by both actions, before the database sees it", async () => {
+    const { db, shop } = ctx;
+    const id = await owedObligation(db, shop.id);
+    signIn(await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL));
+
+    await expect(dischargeProcessorErasureAction(form("not-a-uuid"))).resolves.toBeUndefined();
+    await expect(retryProcessorErasureAction(form("'; select 1 --"))).resolves.toBeUndefined();
+
+    expect((await obligation(db, id)).status).toBe("owed");
+    expect(retryProcessorErasure).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "'; select 1 --",
+    );
+  });
+});

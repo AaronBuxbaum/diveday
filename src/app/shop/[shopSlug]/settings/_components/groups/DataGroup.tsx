@@ -65,6 +65,15 @@ const PROCESSOR_ERASURE_TARGET_KEYS: Record<ProcessorErasureTarget, StaffMessage
   whatsapp_conversation: "settings.main.dataJobs.erasureTarget.whatsapp_conversation",
 };
 
+/** The one step each kind of row still needs, said on the row (desk review of #1721, F5). */
+const PROCESSOR_ERASURE_TODO_KEYS: Record<ProcessorErasureTarget, StaffMessageKey> = {
+  stripe_customer: "settings.main.dataJobs.processorErasures.todo.stripe_customer",
+  stripe_invoice_snapshot: "settings.main.dataJobs.processorErasures.todo.stripe_invoice_snapshot",
+  stripe_checkout_session_snapshot:
+    "settings.main.dataJobs.processorErasures.todo.stripe_checkout_session_snapshot",
+  whatsapp_conversation: "settings.main.dataJobs.processorErasures.todo.whatsapp_conversation",
+};
+
 /**
  * Why an erasure is still owed, in shop words (issue #1865). The row's
  * `last_error` is Stripe's own English and stays in the ledger; the panel
@@ -191,7 +200,7 @@ export async function DataGroup({
       itself gets "Retry" (the nightly tick also retries it), while an
       invoice snapshot has no API behind it at all and can only be closed by
       an owner attesting they filed Stripe's data-deletion request. A WhatsApp
-      chat is the same manual shape: the owner deletes it in WhatsApp Manager.
+      chat is the same manual shape: the owner deletes it, if there is one.
       The panel shows the `cus_…`/`in_…` handle and nothing else — the diver's
       identity is exactly what erasure already removed here — except for a
       chat, which shows the diver's number: a chat is found by its number and
@@ -220,7 +229,12 @@ export async function DataGroup({
                           value: t(PROCESSOR_ERASURE_TARGET_KEYS[obligation.target]),
                           className: "font-medium",
                         },
-                        { value: obligation.externalId, className: "font-mono" },
+                        // A chat's handle is the diver's number, there only so
+                        // the owner can find the chat; a reader who cannot
+                        // discharge it sees the row without it.
+                        obligation.target === "whatsapp_conversation" && !canErase
+                          ? null
+                          : { value: obligation.externalId, className: "font-mono" },
                         {
                           value: t("settings.main.dataJobs.processorErasures.raised", {
                             date: formatShortDate(obligation.createdAt, locale, shop.timezone),
@@ -231,6 +245,7 @@ export async function DataGroup({
                       ]}
                     />
                   </p>
+                  <p className="text-sm">{t(PROCESSOR_ERASURE_TODO_KEYS[obligation.target])}</p>
                   {/* Only an owner may close an erasure, so a manager's
                       item is its words alone, with no empty row under it. */}
                   {canErase ? (

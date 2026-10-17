@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "6540aa1a-2d12-4c1a-b4fd-9dc1280532a8",
+  "id": "306faf5e-6b2c-4797-be7b-159501448db9",
   "prevIds": [
     "cac3f8a2-c703-4420-8dc6-8287b7e4475e"
   ],
@@ -44467,7 +44467,7 @@
       "table": "dive_sites"
     },
     {
-      "value": "\"target\" not in ('stripe_customer', 'stripe_invoice_snapshot', 'stripe_checkout_session_snapshot') or \"provider_account_id\" is not null",
+      "value": "\"target\" not in ('stripe_customer', 'stripe_invoice_snapshot', 'stripe_checkout_session_snapshot') or coalesce(\"provider_account_id\", \"stripe_account_id\") is not null",
       "name": "processor_erasure_obligations_stripe_names_account",
       "entityType": "checks",
       "schema": "public",

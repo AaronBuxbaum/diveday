@@ -216,8 +216,11 @@
   deleting it; a Stripe invoice, a Checkout Session and a **WhatsApp chat** have no delete, so the
   owner discharges them by attesting to the work in Settings. A WhatsApp chat is one row per shop
   and diver number, holds the number only while it is owed, and is found from the diver's WhatsApp
-  messages and replies or from a reminder or waiver link the shop's WhatsApp sent them. SES and SNS
-  message ids raise none: DiveDay's own log retention discharges them. See
+  messages and replies, from a send recorded as WhatsApp (a `wamid.` booking message or waiver
+  link, a gear notice, a lost-item tell), or, as a guess, from a booking on a departure after the
+  shop finished connecting its number. SES and SNS message ids raise none: DiveDay's own log
+  retention discharges them. A QuickBooks or Xero Customer is not one either: it holds the diver's
+  details, and the shop's books are the shop's to keep. See
   [20260803-processor-erasure-obligations](../../architecture/decisions/20260803-processor-erasure-obligations.md).
 - **Buddy-group preference** — an optional, non-sensitive note a diver adds while booking about
   pace, photography, or friends they hope to stay with. It helps the crew plan groups but is never

@@ -111,7 +111,7 @@ export const mediaDeletionAttempts = pgTable(
  * - `whatsapp_conversation` — the chat between the shop's own WhatsApp
  *   Business number and one diver number, at Meta. The Cloud API has no
  *   delete for a sent or received message, so it is manual: the owner deletes
- *   the chat in WhatsApp Manager and attests to it. One row per (shop, diver
+ *   the chat, if there is one, and attests to it. One row per (shop, diver
  *   number), never one per message: a season of reminders is one chat, and
  *   one chat is what the owner deletes (issue #1721).
  *
@@ -171,7 +171,7 @@ export const processorErasureStatus = pgEnum("processor_erasure_status", ["owed"
  * `external_id` is a `cus_…`/`in_…`/`cs_…` handle, not personal data: it is the
  * pointer, and the row deliberately keeps no name, address or amount. The one
  * exception is `whatsapp_conversation`, whose handle is the diver's number in
- * E.164: a chat in WhatsApp Manager is found by its number and by nothing
+ * E.164: a chat is found by its number and by nothing
  * else, so the owner cannot do the work without it. It is held only while the
  * row is owed — discharging one replaces the number with the row's own id
  * (`dischargeProcessorErasure`).
@@ -209,9 +209,11 @@ export const processorErasureObligations = pgTable(
      */
     providerAccountId: text("provider_account_id"),
     /**
-     * Retired by `provider_account_id` (issue #1721) and written by nothing.
-     * Still declared because the release before this one reads it; the next
-     * release drops it (expand/contract, `.claude/rules/db.md`).
+     * Retired by `provider_account_id` (issue #1721). This release still
+     * writes it on a Stripe row, and reads it when `provider_account_id` is
+     * null, because the release before this one reads and writes only this
+     * column and serves while the migrations run. The next release stops
+     * both and drops it (expand/contract, `.claude/rules/db.md`).
      */
     stripeAccountId: text("stripe_account_id"),
     status: processorErasureStatus("status").notNull().default("owed"),
@@ -245,10 +247,13 @@ export const processorErasureObligations = pgTable(
     // say which can never be retried or found. Only a WhatsApp chat may lack
     // an account: a shop that disconnected its number still owes the chat.
     // Spelled with the Stripe values rather than `<> 'whatsapp_conversation'`
-    // so a future target has to choose, not inherit.
+    // so a future target has to choose, not inherit. Either column counts this
+    // release, because the release still serving during the deploy writes
+    // only `stripe_account_id`; it narrows to `provider_account_id` in the
+    // release that drops the old column.
     check(
       "processor_erasure_obligations_stripe_names_account",
-      sql`${table.target} not in ('stripe_customer', 'stripe_invoice_snapshot', 'stripe_checkout_session_snapshot') or ${table.providerAccountId} is not null`,
+      sql`${table.target} not in ('stripe_customer', 'stripe_invoice_snapshot', 'stripe_checkout_session_snapshot') or coalesce(${table.providerAccountId}, ${table.stripeAccountId}) is not null`,
     ),
     check(
       "processor_erasure_obligations_discharged_consistent",

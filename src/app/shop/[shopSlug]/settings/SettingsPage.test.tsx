@@ -294,6 +294,18 @@ async function oweErasure(
   });
 }
 
+/** Every string anywhere in a rendered tree, props included, joined. */
+function everyString(node: unknown, seen = new Set<unknown>()): string {
+  if (typeof node === "string") return node;
+  if (!node || typeof node !== "object" || seen.has(node)) return "";
+  seen.add(node);
+  if (Array.isArray(node)) return node.map((child) => everyString(child, seen)).join("\n");
+  const props = (node as { props?: Record<string, unknown> }).props;
+  return Object.values(props ?? (node as Record<string, unknown>))
+    .map((value) => everyString(value, seen))
+    .join("\n");
+}
+
 describe("the data-compliance queues in the Data group", () => {
   it("renders neither panel when the shop owes nothing", async () => {
     // The calm state, and the whole reason these could move off a page nobody
@@ -356,7 +368,7 @@ describe("the data-compliance queues in the Data group", () => {
   /**
    * A chat in the shop's WhatsApp (issue #1721). Meta has no delete for a
    * message, so the row offers only the attestation, and it shows the number:
-   * a chat in WhatsApp Manager is found by its number, and by nothing else.
+   * a chat is found by its number, and by nothing else.
    */
   it("offers a WhatsApp chat only the attestation, with the number to find it by", async () => {
     const element = await renderSettings("owner", (db, session) =>
@@ -374,6 +386,35 @@ describe("the data-compliance queues in the Data group", () => {
     );
     expect(buttons).toContain("Mark deleted in WhatsApp");
     expect(buttons).not.toContain("Mark done at Stripe");
+  });
+
+  /**
+   * Desk review F5: the panel opened on "Erasing a diver also deletes their
+   * Stripe customer", which a WhatsApp-only shop has no reason to read. Each
+   * row now carries the one step its own target needs.
+   */
+  it("tells each row the one step its own kind needs", async () => {
+    const element = await renderSettings("owner", async (db, session) => {
+      await oweErasure(db, session, "stripe_invoice_snapshot");
+      await oweErasure(db, session, "whatsapp_conversation");
+    });
+    const texts = everyString(element);
+    expect(texts).toContain("File a data-deletion request with Stripe, then mark it done.");
+    expect(texts).toContain(
+      "Delete any chat with this number on your WhatsApp, if there is one, then mark it deleted.",
+    );
+    expect(texts).not.toContain("also deletes their Stripe customer");
+  });
+
+  it("shows a manager who cannot erase the chat, but not the diver's number", async () => {
+    // Desk review F6: the number is there so the owner can find the chat; a
+    // reader who cannot discharge it has no use for it.
+    const element = await renderSettings("manager", async (db, session) => {
+      await demoteOwnerToManager(db, session.user.personId);
+      await oweErasure(db, session, "whatsapp_conversation");
+    });
+    expect(ariaLabelsIn(element)).toContain(ERASURE_PANEL);
+    expect(everyString(element)).not.toContain("3055550177");
   });
 
   it("shows a manager the owed erasure but no button to close it", async () => {

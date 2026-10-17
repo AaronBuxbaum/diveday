@@ -134,9 +134,7 @@ reconnected degrades those shops to SMS.
 
 ## Deliberately not built
 
-**Inbound messages.** A diver replying reaches the shop's own WhatsApp inbox, where a human reads it.
-DiveDay does not receive, store, or answer inbound WhatsApp — the webhook parses delivery statuses
-and ignores everything else.
+Inbound messages are built: see [ADR 20260907-two-way-inbox](../architecture/decisions/20260907-two-way-inbox.md).
 
 **Read receipts.** DiveDay does not record opens on any channel, so `read` statuses are dropped.
 

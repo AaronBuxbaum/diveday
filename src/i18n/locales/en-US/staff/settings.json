@@ -511,7 +511,13 @@
       "processorErasures": {
         "sectionLabel": "Erasures not finished outside DiveDay",
         "heading": "{count, plural, one {# record} other {# records}} from an erased diver still outside DiveDay",
-        "detail": "Erasing a diver also deletes their Stripe customer. These didn’t finish. A customer record retries on its own tonight. An invoice or a payment page can’t: only a data-deletion request to Stripe clears the name and email it copied. File one, then mark it done. A WhatsApp chat: delete it in WhatsApp Manager, then mark it deleted.",
+        "detail": "Erased in DiveDay, not yet outside it.",
+        "todo": {
+          "stripe_customer": "Retries on its own tonight, or retry now.",
+          "stripe_invoice_snapshot": "File a data-deletion request with Stripe, then mark it done.",
+          "stripe_checkout_session_snapshot": "File a data-deletion request with Stripe, then mark it done.",
+          "whatsapp_conversation": "Delete any chat with this number on your WhatsApp, if there is one, then mark it deleted."
+        },
         "raised": "raised {date}",
         "retry": "Retry delete",
         "retrying": "Retrying…",
