@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   assembleDayCloseout,
@@ -12,7 +13,7 @@ import {
 import type { CrewRollCallSubject } from "@/lib/manifests";
 import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
 import { settleWithLimit } from "@/lib/settle-with-limit";
-import { shopDayBounds } from "@/lib/zoned";
+import { shopDayBounds, shopDaysBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "./recap";
@@ -28,7 +29,7 @@ import {
   tripDives,
   trips,
 } from "./schema";
-import { listRollCallGaps } from "./today";
+import { listRollCallGaps, ROLL_CALL_RESIDUE_MS } from "./today";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { liveTrip } from "./trips-live";
 import { getTripPrep, type TripPrepShop } from "./trips-prep";
@@ -72,12 +73,12 @@ function crewSubjectsAtClose(
 }
 
 /**
- * Today's departures in the shop's own calendar day — backwards-looking on
- * purpose, like `listRollCallGaps`: the boats this surface reconciles have
- * mostly already fallen out of every forward-looking reader.
+ * One shop day's departures — today's, or a past day's (issue #2662) —
+ * backwards-looking on purpose, like `listRollCallGaps`: the boats this
+ * surface reconciles have mostly already fallen out of every forward-looking
+ * reader.
  */
-async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Date) {
-  const bounds = shopDayBounds(now, timeZone);
+async function dayTrips(db: AppDb, shopId: string, bounds: { from: Date; to: Date }) {
   const rows = await db
     .select({
       id: trips.id,
@@ -385,9 +386,16 @@ export async function getDayCloseout(
    * (fifth-loop ideas, item 2). Absent, tomorrow is never read.
    */
   loadOutShop?: TripPrepShop,
+  /**
+   * **A past shop day instead of today** (issue #2662), `YYYY-MM-DD` in the
+   * shop's zone: how that day's boats closed, read now. Never a load-out: a
+   * past day has no tomorrow to fill tanks for.
+   */
+  day?: CalendarDate,
 ): Promise<DayCloseoutState> {
+  if (day !== undefined) return pastDayCloseout(db, shopId, timeZone, now, day);
   const [tripsToday, gaps] = await Promise.all([
-    todaysTrips(db, shopId, timeZone, now),
+    dayTrips(db, shopId, shopDayBounds(now, timeZone)),
     listRollCallGaps(db, shopId, now),
   ]);
   const state = assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
@@ -398,6 +406,46 @@ export async function getDayCloseout(
     ...state,
     tomorrow: await readDayLoadOut(db, loadOutShop, tomorrowNoon(now, timeZone), now),
   };
+}
+
+/**
+ * **A past day, closed as it stands now** (issue #2662). The same assembly as
+ * today's, over that day's departures, and the same head-count reader: every
+ * roll-call mark ever written on those boats, so a count corrected on Monday
+ * reads corrected on Saturday's page.
+ *
+ * **Never "all home" by age.** `listRollCallGaps` looks back
+ * `ROLL_CALL_RESIDUE_MS` from the instant it is asked about, and a boat older
+ * than that would fall out of it and reach the clock's verdict, "All home",
+ * with its count still open. So the gaps are read for exactly the day's trips,
+ * as of the latest instant all of them are still inside that window: now, for
+ * any day of the last thirty, and otherwise a moment the counts have long been
+ * due. The marks themselves are not cut at that instant, so nothing recorded
+ * later is lost.
+ */
+async function pastDayCloseout(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date,
+  day: CalendarDate,
+): Promise<DayCloseoutState> {
+  const departures = await dayTrips(db, shopId, shopDaysBounds(day, day, timeZone));
+  const earliestEnd = Math.min(...departures.map((trip) => trip.endsAt.getTime()));
+  const asOf =
+    departures.length === 0
+      ? now
+      : new Date(Math.min(now.getTime(), earliestEnd + ROLL_CALL_RESIDUE_MS));
+  const gaps =
+    departures.length === 0
+      ? []
+      : await listRollCallGaps(
+          db,
+          shopId,
+          asOf,
+          departures.map((trip) => trip.tripId),
+        );
+  return assembleDayCloseout({ trips: departures, gaps, timeZone, now, shopDay: day });
 }
 
 /**

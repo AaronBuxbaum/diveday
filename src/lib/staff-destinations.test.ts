@@ -368,9 +368,9 @@ describe("what each consumer derives", () => {
   it("keeps a trip's detail page lit on Schedule, where the board is", () => {
     const board = STAFF_DESTINATIONS.find((destination) => destination.id === "board");
     expect(board?.suffix).toBe("/schedule/board");
-    // `/trips` only: Staffing is its own destination, and a page with a
-    // destination of its own lights that, never a borrowed claim.
-    expect(board?.alsoMatch).toEqual(["/trips"]);
+    // `/trips` and a past day only: Staffing is its own destination, and a
+    // page with a destination of its own lights that, never a borrowed claim.
+    expect(board?.alsoMatch).toEqual(["/trips", "/schedule/day"]);
   });
 
   it("badges only the blocked count, on Today", () => {
@@ -447,6 +447,8 @@ describe("currentStaffDestination and the section it lights", () => {
     // Trip details are the board's detail views (`alsoMatch`).
     expect(current(`${root}/trips/42`)).toBe("board");
     expect(section(`${root}/trips/42`)).toBe("schedule");
+    // A past day sits beside the board (issue #2662).
+    expect(section(`${root}/schedule/day/2026-10-10`)).toBe("schedule");
   });
 
   it("never lights a destination the viewer cannot see", () => {

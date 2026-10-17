@@ -13,6 +13,9 @@
     "invalid": "That didn’t go through. Refresh the page and try again.",
     "unknownPerson": "That diver isn’t in this shop’s records, so nothing was saved."
   },
+  "pastDay": {
+    "empty": "No boats went out that day."
+  },
   "departures": {
     "status": {
       "allHome": "All home",

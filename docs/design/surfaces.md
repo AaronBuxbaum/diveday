@@ -234,6 +234,10 @@ below `xl` (1280px) until 2026-09-20; see the entry above.
 - **Composition:** a week grid at desktop because the content is a calendar; the phone keeps the
   stream because a seven-column grid has no honest 390px form.
 
+### A past day — `/shop/[shopSlug]/schedule/day/[date]`
+
+**Shipped 2026-10-17, read-only** (issue #2662; [ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md)'s noun navigation, so it sits under Schedule beside the board). "How did Saturday go": that day's departures as the home's evening closed them, the same `getDayCloseout` over the date and the same `ClosingStation`s, with nothing to do on them (no recap editor, no takings, no tomorrow). Today's date goes to the shop home; a day still to come has no page. A head count still open reads open however old the day is: the gaps are read for exactly that day's boats (`src/db/closeout.ts`, `pastDayCloseout`). The first slice only: no door to it yet, no week of days.
+
 ### Settings — `/shop/[shopSlug]/settings`
 
 **Harbor, 2026-09-02:** the brand fields end in a preview of the brand as it reads by day and at
