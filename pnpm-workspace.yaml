@@ -1,61 +1,9 @@
 allowBuilds:
   '@parcel/watcher': true
-  '@sentry/cli': true
   '@swc/core': true
   esbuild: true
-  msw: true
 
-# No release-age delay on resolution: pnpm 12 defaults to one day and checks
-# every locked entry on a frozen install, so a lockfile main bumped yesterday
-# fails to install today. Aaron dropped the three-day delay on 2026-10-15;
-# Dependabot's `cooldown` in .github/dependabot.yml is the one delay on bumps.
 minimumReleaseAge: 0
-
-# `pnpm audit --audit-level high` runs in CI over the whole tree (repository
-# safeguards). An advisory is listed here when it is reachable only from
-# development tooling and has no patched release within the major its parent
-# pins, so a same-major override (below) cannot reach it. Delete a line once
-# its parent moves to a patched release.
-#   GHSA-vfj7-8cjw-p6xm: braces <=3.0.3, stack exhaustion on nested patterns.
-#     Dev only: reg-suit > reg-cli > del > globby > fast-glob > micromatch.
-#   GHSA-vrm6-8vpv-qv8q, GHSA-v9p9-hfj2-hcw8: undici <6.24.0;
-#   GHSA-vxpw-j846-p89q: undici <6.27.0;
-#   GHSA-x8mw-p69m-v3mx: @fastify/busboy >=1.0.0 <3.2.1 (undici 5's parser).
-#     Dev only: vercel CLI > undici 5 (vercel 64.2.0, the latest, pins 5.29.0).
-#     These four lines go once vercel moves to undici 6 or later.
-auditConfig:
-  ignoreGhsas:
-    - GHSA-vfj7-8cjw-p6xm
-    - GHSA-vrm6-8vpv-qv8q
-    - GHSA-v9p9-hfj2-hcw8
-    - GHSA-vxpw-j846-p89q
-    - GHSA-x8mw-p69m-v3mx
-
-# Security overrides for transitive dependencies (`pnpm audit`).
-# Each one lifts a pinned or stale copy to a patched release in the *same*
-# major, so the parent's API contract is unchanged; anything that would need a
-# major jump is deliberately not here. The selectors name the vulnerable range
-# so an already-patched copy elsewhere in the tree is left alone. Delete a line
-# once its parent ships the fix itself.
-#   vercel CLI: ajv, js-yaml, minimatch, path-to-regexp, smol-toml, tar, undici 5
-#   next-devtools-mcp: @modelcontextprotocol/sdk (pinned 1.25.2 upstream)
-#   aws-rum-web: uuid. The one exception to "same major": @aws-rum/web-core
-#   3.2.1 (the latest) pins uuid ^9 and imports only `v4`, which 11.x keeps
-#   with the same signature and the same CJS + ESM entry points.
-#   reg-suit (dev): tmp, two advisories patched in 0.2.6. Its `braces`
-#   advisory has no patched release reported, so it has no line here.
-overrides:
-  '@modelcontextprotocol/sdk@<1.31.0': ^1.31.0
-  'ajv@>=8.0.0 <8.18.0': ^8.18.0
-  'js-yaml@>=4.0.0 <4.3.2': ^4.3.2
-  'minimatch@>=10.0.0 <10.2.3': ^10.2.3
-  'path-to-regexp@>=6.0.0 <6.3.0': ^6.3.0
-  'path-to-regexp@>=8.0.0 <8.4.0': ^8.4.0
-  'smol-toml@<1.9.0': ^1.9.0
-  'tar@>=7.0.0 <7.5.21': ^7.5.21
-  'tmp@<0.2.6': ^0.2.6
-  'undici@>=5.0.0 <5.29.0': ^5.29.0
-  'uuid@<11.1.1': ^11.1.1
 
 patchedDependencies:
   '@vercel/analytics@2.0.1': patches/@vercel__analytics@2.0.1.patch
