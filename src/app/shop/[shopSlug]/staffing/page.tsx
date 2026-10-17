@@ -18,8 +18,7 @@ import {
   FormStatus,
 } from "@/components/ui/form";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
-import { canPersonManageStaffAccounts } from "@/db/authz";
-import { listCrewAssignmentRequests, listCrewAvailabilityBlocks } from "@/db/crew-requests";
+import { listCrewAssignmentRequests, readStaffingWeekAway } from "@/db/crew-requests";
 import { getStaffingView } from "@/db/staffing";
 import { listStaff } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -173,10 +172,7 @@ export default async function StaffingPage({
   const fromWall = parseWallTime(weekStart, "00:00");
   const toWall = parseWallTime(shiftCalendarDate(weekStart, 7), "00:00");
   if (!fromWall || !toWall) redirect(shopPath(shopSlug, "staffing"));
-  // Asked once, beside the reads: it decides the add-shift form and who reads
-  // an away block's note (issue #2673).
-  const canManageRead = canPersonManageStaffAccounts(db, shop.id, session.user.personId);
-  const [view, staff, blocks, canManage] = await Promise.all([
+  const [view, staff, { blocks, canManageStaffAccounts: canManage }] = await Promise.all([
     getStaffingView(
       db,
       shop.id,
@@ -189,17 +185,8 @@ export default async function StaffingPage({
     listStaff(db, shop.id),
     // The whole week's blackouts, whoever's: a person's own draw as quiet
     // chips in their row, and everybody's are needed to warn on an assignment.
-    // The note is the person's own and owners' and managers' (#2673); everyone
-    // else is sent the dates alone.
-    canManageRead.then((canManageStaffAccounts) =>
-      listCrewAvailabilityBlocks(
-        db,
-        shop.id,
-        { from: weekStart, to: weekEnd },
-        { personId: session.user.personId, canManageStaffAccounts },
-      ),
-    ),
-    canManageRead,
+    // Each note only as this reader may read it (#2673).
+    readStaffingWeekAway(db, shop.id, { from: weekStart, to: weekEnd }, session.user.personId),
   ]);
   // Requests hang off the gaps, so they are asked for after the view knows
   // which departures are short — one query, over the ids that can carry one.

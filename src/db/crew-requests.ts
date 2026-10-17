@@ -12,6 +12,7 @@ import {
   type CrewRequestState,
 } from "@/lib/crew-requests";
 import { inWaterCrewRole, lapsedRungs, lastDayOfDeparture } from "@/lib/crew-roles";
+import { canPersonManageStaffAccounts } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
 import { recordCrewNotices } from "./crew-notices";
@@ -109,6 +110,25 @@ export async function listCrewAvailabilityBlocks(
     endsOn: row.endsOn,
     note: awayNoteFor(row, reader),
   }));
+}
+
+/**
+ * The staffing week's days away for `personId`, each note only as they may
+ * read it (#2673), and whether they manage staff accounts, which the page's
+ * add-shift form asks too. One live role read, then the blocks.
+ */
+export async function readStaffingWeekAway(
+  db: AppDb,
+  shopId: string,
+  range: { from: string; to: string },
+  personId: string,
+): Promise<{ blocks: AvailabilityBlock[]; canManageStaffAccounts: boolean }> {
+  const canManageStaffAccounts = await canPersonManageStaffAccounts(db, shopId, personId);
+  const blocks = await listCrewAvailabilityBlocks(db, shopId, range, {
+    personId,
+    canManageStaffAccounts,
+  });
+  return { blocks, canManageStaffAccounts };
 }
 
 /** A crew member says they are away for a range of days. */
