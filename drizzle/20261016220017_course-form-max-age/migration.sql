@@ -1,2 +1,0 @@
-ALTER TABLE "course_form_requirements" ADD COLUMN "max_age_years" integer;--> statement-breakpoint
-ALTER TABLE "course_form_requirements" ADD CONSTRAINT "course_form_requirements_max_age_sane" CHECK ("max_age_years" is null or ("max_age_years" >= 1 and "max_age_years" <= 120));

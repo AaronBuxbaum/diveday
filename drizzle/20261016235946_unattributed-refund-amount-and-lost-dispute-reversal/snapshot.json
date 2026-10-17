@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "585f8d9f-9cd3-4299-9461-51238a92f0fe",
+  "id": "52a6d25d-1f1f-410f-b488-0badfe05fe33",
   "prevIds": [
-    "6213e5d4-c713-4590-99e2-abee28bf2a96"
+    "4c1211fa-8b2a-4d4d-a7cd-a56bfc35e47f"
   ],
   "ddl": [
     {
@@ -69,7 +69,8 @@
         "now_diving",
         "now_snorkeling",
         "now_riding",
-        "balance_owed"
+        "balance_owed",
+        "seat_turned_away"
       ],
       "name": "trip_desk_event_kind",
       "entityType": "enums",
@@ -215,6 +216,19 @@
         "failed"
       ],
       "name": "trip_last_minute_promo_status",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "medical",
+        "waiver",
+        "card",
+        "age",
+        "identity",
+        "payment"
+      ],
+      "name": "turn_away_reason",
       "entityType": "enums",
       "schema": "public"
     },
@@ -806,7 +820,8 @@
       "values": [
         "email",
         "sms",
-        "whatsapp"
+        "whatsapp",
+        "page"
       ],
       "name": "inbound_channel",
       "entityType": "enums",
@@ -1513,6 +1528,12 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "departure_boat_safety_snapshots",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "pre_departure_check_events",
       "entityType": "tables",
       "schema": "public"
@@ -1550,6 +1571,12 @@
     {
       "isRlsEnabled": false,
       "name": "dive_site_creatures",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "dive_site_moments",
       "entityType": "tables",
       "schema": "public"
     },
@@ -4208,6 +4235,32 @@
       "table": "bookings"
     },
     {
+      "type": "turn_away_reason",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "turned_away_reason",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "turned_away_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
@@ -5152,6 +5205,19 @@
       "generated": null,
       "identity": null,
       "name": "invited_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "trip_waitlist_entries"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "1",
+      "generated": null,
+      "identity": null,
+      "name": "party_size",
       "entityType": "columns",
       "schema": "public",
       "table": "trip_waitlist_entries"
@@ -6301,32 +6367,6 @@
       "table": "people"
     },
     {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "drysuit_experience_seen_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "people"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "drysuit_experience_seen_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "people"
-    },
-    {
       "type": "text",
       "typeSchema": null,
       "notNull": false,
@@ -7068,6 +7108,32 @@
       "table": "shops"
     },
     {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name_flagged_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name_cleared_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
       "type": "integer",
       "typeSchema": null,
       "notNull": true,
@@ -7076,6 +7142,19 @@
       "generated": null,
       "identity": null,
       "name": "dock_call_minutes",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "offers_hotel_pickup",
       "entityType": "columns",
       "schema": "public",
       "table": "shops"
@@ -10406,6 +10485,123 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "trip_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "boat_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "boat_name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "judged_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "papers",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "notices",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "captured_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
       "table": "pre_departure_check_events"
     },
     {
@@ -11316,6 +11512,97 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
+      "table": "dive_site_moments"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "dive_site_moments"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "dive_site_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "dive_site_moments"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "caption",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "dive_site_moments"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "image_url",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "dive_site_moments"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "is_published",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "dive_site_moments"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "dive_site_moments"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
       "table": "dive_sites"
     },
     {
@@ -11579,19 +11866,6 @@
       "table": "dive_sites"
     },
     {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "snorkel_suitable",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_sites"
-    },
-    {
       "type": "text",
       "typeSchema": null,
       "notNull": false,
@@ -11600,6 +11874,19 @@
       "generated": null,
       "identity": null,
       "name": "depth_range",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "dive_sites"
+    },
+    {
+      "type": "double precision",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "depth_min_meters",
       "entityType": "columns",
       "schema": "public",
       "table": "dive_sites"
@@ -12835,32 +13122,6 @@
       "generated": null,
       "identity": null,
       "name": "aboard_boat_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "gear_items"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "nitrox_designated",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "gear_items"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "thickness_mm",
       "entityType": "columns",
       "schema": "public",
       "table": "gear_items"
@@ -14361,6 +14622,45 @@
       "table": "incident_reports"
     },
     {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "missing_alerted_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "missing_alert_sent_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "deleted_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
       "type": "uuid",
       "typeSchema": null,
       "notNull": true,
@@ -15578,6 +15878,19 @@
       "generated": null,
       "identity": null,
       "name": "keyword_intent",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "booking_id",
       "entityType": "columns",
       "schema": "public",
       "table": "inbound_messages"
@@ -18913,6 +19226,19 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "counter_claimed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "orders"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": "now()",
@@ -19121,6 +19447,19 @@
     {
       "type": "timestamp with time zone",
       "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reversed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "payment_disputes"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": null,
@@ -19296,6 +19635,19 @@
       "generated": null,
       "identity": null,
       "name": "stripe_object_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "payment_operation_intents"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "amount_cents",
       "entityType": "columns",
       "schema": "public",
       "table": "payment_operation_intents"
@@ -21160,6 +21512,19 @@
       "table": "boats"
     },
     {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "certified_total_persons",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
       "type": "date",
       "typeSchema": null,
       "notNull": false,
@@ -21168,6 +21533,19 @@
       "generated": null,
       "identity": null,
       "name": "inspection_due_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
+      "type": "date",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "coi_expires_on",
       "entityType": "columns",
       "schema": "public",
       "table": "boats"
@@ -21194,6 +21572,32 @@
       "generated": null,
       "identity": null,
       "name": "insurance_expires_on",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "call_sign",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "mmsi",
       "entityType": "columns",
       "schema": "public",
       "table": "boats"
@@ -22455,19 +22859,6 @@
       "generated": null,
       "identity": null,
       "name": "diver_capacity",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "trips"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "wetsuit_thickness_mm",
       "entityType": "columns",
       "schema": "public",
       "table": "trips"
@@ -28474,6 +28865,48 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "trip_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "departure_boat_safety_snapshots_trip_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "departure_boat_safety_snapshots_shop_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "shop_id",
           "isExpression": false,
           "asc": true,
@@ -28910,6 +29343,34 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "dive_site_creatures"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "dive_site_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "is_published",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "dive_site_moments_site_published_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "dive_site_moments"
     },
     {
       "nameExplicit": true,
@@ -29929,6 +30390,34 @@
       "method": "btree",
       "concurrently": false,
       "name": "incident_reports_shop_trip_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "shop_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "created_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": "\"status\" = 'draft' and \"deleted_at\" is null",
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "incident_reports_live_drafts_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "incident_reports"
@@ -36939,6 +37428,57 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
+      "name": "departure_boat_safety_snapshots_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "trip_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "trips",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "departure_boat_safety_snapshots_trip_id_trips_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "boat_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "boats",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "departure_boat_safety_snapshots_boat_id_boats_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
       "name": "pre_departure_check_events_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -37317,6 +37857,40 @@
       "entityType": "fks",
       "schema": "public",
       "table": "dive_site_creatures"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "dive_site_moments_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "dive_site_moments"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "dive_site_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "dive_sites",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "dive_site_moments_dive_site_id_dive_sites_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "dive_site_moments"
     },
     {
       "nameExplicit": false,
@@ -38069,6 +38643,23 @@
     {
       "nameExplicit": false,
       "columns": [
+        "deleted_by_person_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "incident_reports_deleted_by_person_id_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "incident_reports"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
         "shop_id"
       ],
       "schemaTo": "public",
@@ -38317,6 +38908,23 @@
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "inbound_messages_xZJ0xNr6OkuL_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "booking_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "bookings",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "inbound_messages_booking_id_bookings_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "inbound_messages"
@@ -41747,6 +42355,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "departure_boat_safety_snapshots_pkey",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "pre_departure_check_events_pkey",
       "schema": "public",
       "table": "pre_departure_check_events",
@@ -41810,6 +42428,16 @@
       "name": "dive_site_creatures_pkey",
       "schema": "public",
       "table": "dive_site_creatures",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "dive_site_moments_pkey",
+      "schema": "public",
+      "table": "dive_site_moments",
       "entityType": "pks"
     },
     {
@@ -42883,6 +43511,20 @@
       "table": "bookings"
     },
     {
+      "value": "\"turned_away_at\" is null or \"status\" in ('no_show', 'cancelled')",
+      "name": "bookings_turned_away_is_released",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
+      "value": "\"turned_away_reason\" is null or \"turned_away_at\" is not null",
+      "name": "bookings_turned_away_reason_has_time",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
       "value": "\"available_from\" is null or \"available_until\" is null or \"available_from\" <= \"available_until\"",
       "name": "last_minute_list_entries_range",
       "entityType": "checks",
@@ -42916,6 +43558,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "trip_last_minute_promos"
+    },
+    {
+      "value": "\"party_size\" between 1 and 20",
+      "name": "trip_waitlist_entries_party_size_range",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "trip_waitlist_entries"
     },
     {
       "value": "(\"identifier\" is not null and length(btrim(\"identifier\", E' \\t\\n\\r\\f\\v')) > 0) or (\"self_declared_at\" is not null and \"status\" = 'pending') or (\"issued_by_shop_at\" is not null)",
@@ -43254,6 +43903,13 @@
       "table": "dive_sites"
     },
     {
+      "value": "\"depth_min_meters\" is null\n        or (\"depth_min_meters\" >= 0\n          and \"max_depth_meters\" is not null\n          and \"depth_min_meters\" <= \"max_depth_meters\")",
+      "name": "dive_sites_depth_range_ordered",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "dive_sites"
+    },
+    {
       "value": "\"expected_bottom_time_minutes\" is null or \"expected_bottom_time_minutes\" > 0",
       "name": "dive_sites_expected_bottom_time_positive",
       "entityType": "checks",
@@ -43266,13 +43922,6 @@
       "entityType": "checks",
       "schema": "public",
       "table": "processor_erasure_obligations"
-    },
-    {
-      "value": "\"thickness_mm\" is null or \"thickness_mm\" between 1 and 10",
-      "name": "gear_items_thickness_mm_range",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "gear_items"
     },
     {
       "value": "\"reserved_until\" >= \"reserved_from\"",
@@ -43364,6 +44013,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "incident_report_people"
+    },
+    {
+      "value": "(\"deleted_at\" is null) = (\"deleted_by_person_id\" is null)",
+      "name": "incident_reports_deleted_by_whom",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "incident_reports"
     },
     {
       "value": "\"deleted_at\" is null or \"status\" = 'draft'",
@@ -43618,8 +44274,15 @@
       "table": "orders"
     },
     {
-      "value": "(\"collection\" = 'stripe_invoice' and \"stripe_account_id\" is not null and \"stripe_customer_id\" is not null and \"stripe_invoice_id\" is not null) or (\"collection\" <> 'stripe_invoice' and \"stripe_account_id\" is null and \"stripe_customer_id\" is null and \"stripe_invoice_id\" is null and \"stripe_payment_intent_id\" is null)",
+      "value": "(\"collection\" = 'stripe_invoice' and \"stripe_account_id\" is not null and \"stripe_customer_id\" is not null and \"stripe_invoice_id\" is not null) or (\"collection\" <> 'stripe_invoice' and \"stripe_payment_intent_id\" is null and ((\"stripe_account_id\" is null and \"stripe_customer_id\" is null and \"stripe_invoice_id\" is null) or (\"stripe_account_id\" is not null and \"stripe_customer_id\" is not null and \"stripe_invoice_id\" is not null)))",
       "name": "orders_stripe_ids_match_collection",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "orders"
+    },
+    {
+      "value": "\"counter_claimed_at\" is null or (\"status\" = 'open' and \"collection\" <> 'stripe_invoice' and \"stripe_invoice_id\" is not null)",
+      "name": "orders_counter_claim_open",
       "entityType": "checks",
       "schema": "public",
       "table": "orders"
@@ -43641,6 +44304,13 @@
     {
       "value": "\"promo_code_id\" is null or \"trip_promo_id\" is null",
       "name": "payment_operation_intents_single_promo",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "payment_operation_intents"
+    },
+    {
+      "value": "\"amount_cents\" is null or \"amount_cents\" >= 0",
+      "name": "payment_operation_intents_amount_nonnegative",
       "entityType": "checks",
       "schema": "public",
       "table": "payment_operation_intents"
@@ -43758,6 +44428,27 @@
       "table": "boats"
     },
     {
+      "value": "\"mmsi\" is null or \"mmsi\" ~ '^[0-9]{9}$'",
+      "name": "boats_mmsi_nine_digits",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
+      "value": "\"certified_total_persons\" is null or \"certified_total_persons\" between 1 and 999",
+      "name": "boats_certified_total_persons_positive",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
+      "value": "\"certified_passengers\" is null or \"certified_total_persons\" is null or \"certified_passengers\" <= \"certified_total_persons\"",
+      "name": "boats_certified_passengers_within_total",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "boats"
+    },
+    {
       "value": "\"dive_number\" >= 1",
       "name": "executed_dives_number_positive",
       "entityType": "checks",
@@ -43863,13 +44554,6 @@
       "table": "trips"
     },
     {
-      "value": "\"wetsuit_thickness_mm\" is null or \"wetsuit_thickness_mm\" between 1 and 10",
-      "name": "trips_wetsuit_thickness_mm_range",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "trips"
-    },
-    {
       "value": "\"rider_price_cents\" is null or \"rider_price_cents\" >= 0",
       "name": "trips_rider_price_nonnegative",
       "entityType": "checks",
@@ -43966,175 +44650,6 @@
       "entityType": "checks",
       "schema": "public",
       "table": "work_orders"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "dive_site_moments",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_moments"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_moments"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "dive_site_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_moments"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "caption",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_moments"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "image_url",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_moments"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "false",
-      "generated": null,
-      "identity": null,
-      "name": "is_published",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_moments"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "dive_site_moments"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "dive_site_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "is_published",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "dive_site_moments_site_published_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "dive_site_moments"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "dive_site_moments_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "dive_site_moments"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "dive_site_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "dive_sites",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "dive_site_moments_dive_site_id_dive_sites_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "dive_site_moments"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "dive_site_moments_pkey",
-      "schema": "public",
-      "table": "dive_site_moments",
-      "entityType": "pks"
     }
   ],
   "renames": []
