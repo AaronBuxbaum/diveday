@@ -556,7 +556,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         .reduce((sum, [, cents]) => sum + cents, 0)
     : 0;
   // Sized by the party, not the boat's free seats: one diver booking reads
-  // "Book this seat", never "these spots" (fourth UX review item 7, H-133).
+  // "Book this seat", never "these spots" (fourth UX review item 7, H-122).
   const bookLabel = payAtBooking
     ? remaining === 1
       ? t("bookAndPayLastSeat")

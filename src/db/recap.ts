@@ -81,7 +81,7 @@ import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 /**
  * A photo as the recap page renders it: the diver's own, the crew's, or one
- * another diver on the same boat chose to share (H-140).
+ * another diver on the same boat chose to share (H-129).
  */
 export type RecapPhotoView = {
   id: string;
@@ -972,7 +972,7 @@ async function loadRecapPageData(
 /**
  * A diver's recap photos, newest first: their own, the crew's departure photos,
  * and the photos other divers on the same departure chose to share with the
- * boat (H-140, ADR 20261016-shared-boat-photos).
+ * boat (H-129, ADR 20261016-shared-boat-photos).
  *
  * **A shared photo shows only to the sharer's own boat.** The read is the
  * departure the recap is for, and the sharer's seat must still be one the
@@ -1151,7 +1151,7 @@ export async function addRecapPhoto(
     bookingId: string;
     imageUrl: string;
     caption?: string | null;
-    /** The sharer's own tick under "Add to my recap" (H-140); off unless given. */
+    /** The sharer's own tick under "Add to my recap" (H-129); off unless given. */
     shareWithBoat?: boolean;
     now?: Date;
   },

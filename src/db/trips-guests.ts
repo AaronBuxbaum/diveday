@@ -115,7 +115,7 @@ export async function getTripGuests(
     shared ? shared.prepDivers : listTripPrepDivers(db, shop.id, tripId),
     getTripWaitlist(db, shop.id, tripId),
     listTripInvitations(db, shop.id, tripId),
-    // Past divers of this departure's site worth asking (H-141), only while
+    // Past divers of this departure's site worth asking (H-130), only while
     // it has a seat to offer.
     isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
     listLastMinuteList(db, shop.id),

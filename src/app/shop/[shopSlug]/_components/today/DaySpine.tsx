@@ -800,7 +800,7 @@ export type DaySpineContext = {
   spine: DaySpineData;
   shopSlug: string;
   shopName: string;
-  mailShopName: string; // what a mail that leaves says: always `shop.name` (H-142)
+  mailShopName: string; // what a mail that leaves says: always `shop.name` (H-131)
   locale: string;
   timeZone: string;
   currency: string;

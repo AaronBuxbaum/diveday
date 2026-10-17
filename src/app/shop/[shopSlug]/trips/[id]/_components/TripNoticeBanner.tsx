@@ -185,7 +185,7 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.invitationOptedOut",
   },
   // A suggested past diver contacted with an invite inside the cooldown
-  // (H-141): nothing was recorded or sent.
+  // (H-130): nothing was recorded or sent.
   "invite-cooldown": { form: "add-diver", tone: "warning", key: "trips.notices.inviteCooldown" },
   // A suggested diver this departure would no longer sell a seat to (its
   // level, a specialty, a full boat): nothing was recorded or sent (review F1).
@@ -466,7 +466,7 @@ const NOTICE_KEYS: Record<
     key: "tripSeries.notices.seriesCancelled",
     countKey: "tripSeries.notices.seriesCancelledCount",
   },
-  // The caller may not refund (H-123): the run is canceled and the divers told,
+  // The caller may not refund (H-139): the run is canceled and the divers told,
   // and the card refunds wait for an owner or manager.
   "series-cancelled-held": {
     form: "series",

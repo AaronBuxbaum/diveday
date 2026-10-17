@@ -220,7 +220,7 @@ export function InboxRow({
             {receivedWhen(message.receivedAt, { now, locale, timezone, t })}
           </span>
           <RowMenu label={t("inbox.menu.label", { name })}>
-            {/* An "Ask to move" (H-137) is about another date, never this
+            {/* An "Ask to move" (H-126) is about another date, never this
                 boat's lateness. */}
             {lateSeat && !lateSeat.runningLateAt && lateAction && message.channel !== "page" ? (
               <form action={lateAction}>

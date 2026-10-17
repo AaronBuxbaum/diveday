@@ -279,7 +279,7 @@ export type CloseoutTripInput = {
     caption: string | null;
     diverName: string;
     bookingId: string;
-    /** Its diver shared it with everyone on the boat (H-140). */
+    /** Its diver shared it with everyone on the boat (H-129). */
     sharedWithBoat?: boolean;
   }[];
   /** Staff photos shared with every diver's recap for the completed departure. */
@@ -340,7 +340,7 @@ export type CloseoutDeparture = {
     caption: string | null;
     diverName: string;
     bookingId: string;
-    /** Its diver shared it with everyone on the boat (H-140). */
+    /** Its diver shared it with everyone on the boat (H-129). */
     sharedWithBoat?: boolean;
   }[];
   crewPhotos: {

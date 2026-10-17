@@ -7,7 +7,7 @@ import { createInvitationUnderCooldown } from "./invite-suggestions";
 import { people, personRoles, shops, tripInvitations, trips } from "./schema";
 
 /**
- * **The 30-day invite cooldown under real concurrency** (H-141; security
+ * **The 30-day invite cooldown under real concurrency** (H-130; security
  * review N2). Two staffers inviting the same person to two different
  * departures at the same moment must not both pass the cooldown check: the
  * check and the insert run under one advisory lock on (shop, person), so the

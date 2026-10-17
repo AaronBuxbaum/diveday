@@ -1,4 +1,4 @@
-# H-135: May a parent sign a child's release from the parent's own link?
+# H-124: May a parent sign a child's release from the parent's own link?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

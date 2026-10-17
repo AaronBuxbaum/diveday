@@ -81,7 +81,7 @@ describe("the public packages page with a package on sale", () => {
     expect(screen.getByText("Pay once, then book the dives as you go.")).toBeInTheDocument();
     expect(document.body.textContent).toContain("Courses not included");
     expect(document.body.textContent).toContain("No expiry date");
-    // A dive is a tank, said where the money is decided (H-134).
+    // A dive is a tank, said where the money is decided (H-123).
     expect(document.body.textContent).toContain(
       "One dive is one tank, so a two-tank trip uses two",
     );

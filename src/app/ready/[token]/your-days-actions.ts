@@ -13,7 +13,7 @@ export type YourDayLinkState = {
 };
 
 /**
- * **"Email me the link" on one of the diver's other days** (H-143, ADR
+ * **"Email me the link" on one of the diver's other days** (H-132, ADR
  * 20261016-fresh-link-per-booking-row).
  *
  * Authorized like every action on this page: the verified readiness token

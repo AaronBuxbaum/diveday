@@ -2044,7 +2044,7 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
   // is signed and the course's forms are not (ADR 20261008-course-forms), so it
   // must not tell the diver a link of theirs expired.
   // `other_day` and `log_entry` are the diver asking for another of their days
-  // from one booking's page (H-143), so neither says anything expired either.
+  // from one booking's page (H-132), so neither says anything expired either.
   const words = READINESS_LINK_WORDS[input.purpose ?? "rescue"];
   const body = t(words.body, {
     shopName: input.shopName,

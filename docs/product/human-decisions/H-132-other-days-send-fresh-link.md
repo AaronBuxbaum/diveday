@@ -1,4 +1,4 @@
-# H-143: How does one booking's page lead to the diver's other days with the shop?
+# H-132: How does one booking's page lead to the diver's other days with the shop?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

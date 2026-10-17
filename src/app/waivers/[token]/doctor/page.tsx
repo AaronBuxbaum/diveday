@@ -28,7 +28,7 @@ export const instant = true;
 const FORM = RSTC_QUESTIONNAIRE.published;
 
 /**
- * **Take this to your doctor** (fifth-loop ideas, item 17; H-138 and ADR
+ * **Take this to your doctor** (fifth-loop ideas, item 17; H-127 and ADR
  * 20261016-doctor-referral-page, both amended by the layer r5-3 reviews). A
  * diver whose questionnaire referred them opens this from their own waiver
  * link and prints it: their name, the official form's examiner page to print,

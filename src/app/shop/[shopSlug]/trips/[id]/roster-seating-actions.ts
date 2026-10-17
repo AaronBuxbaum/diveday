@@ -151,7 +151,7 @@ export async function createDirectTripInvitationAction(
 
 /**
  * **Invites one past diver the departure suggested** (fifth-loop ideas, items
- * 43 and 44; H-141): the same one-to-one invite as above, staff-chosen and for
+ * 43 and 44; H-130): the same one-to-one invite as above, staff-chosen and for
  * this named departure, and refused for a person already contacted with an
  * invite inside `INVITE_COOLDOWN_DAYS`. The list leaves such people out; this
  * holds the line for a page left open across the window.
@@ -180,7 +180,7 @@ async function inviteOneDiver(
   let created: boolean;
   if (rule.cooldown) {
     // A suggestion: the cooldown and the departure's own gate, re-checked
-    // under one lock for a page left open (H-141; review F1, N2).
+    // under one lock for a page left open (H-130; review F1, N2).
     const outcome = await createInvitationUnderCooldown(db, { ...input, now: nowDate() });
     if (outcome === "cooldown") redirect(noticeUrl(`${guests}#invitations`, "invite-cooldown"));
     if (outcome === "unavailable") {

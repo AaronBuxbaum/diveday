@@ -64,12 +64,12 @@ afterEach(() => {
 
 /**
  * **The doctor's page, against a real database** (fifth-loop ideas, item 17;
- * H-138, ADR 20261016-doctor-referral-page). The waiver link is its whole
+ * H-127, ADR 20261016-doctor-referral-page). The waiver link is its whole
  * authority, so every case is the link's record deciding what renders.
  */
 /**
  * **The doctor's page, against a real database** (fifth-loop ideas, item 17;
- * H-138 and ADR 20261016-doctor-referral-page, amended by the layer r5-3
+ * H-127 and ADR 20261016-doctor-referral-page, amended by the layer r5-3
  * reviews). The waiver link is its whole authority for the page; the answers
  * need the diver's date of birth as well.
  */

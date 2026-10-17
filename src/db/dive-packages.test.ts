@@ -253,7 +253,7 @@ describe("selling and spending a package", () => {
     expect(await diverPackageBalance(db, crypto.randomUUID(), person.id)).toBeNull();
   });
 
-  it("spends one dive per tank, and counts what the booking spent (H-134)", async () => {
+  it("spends one dive per tank, and counts what the booking spent (H-123)", async () => {
     // A package dive is one tank: a two-tank boat takes two of the five, and
     // /ready says "Uses 2 package dives (3 left)" from this count.
     const { db, shop, person, booking } = await sold({ diveCount: 5 });

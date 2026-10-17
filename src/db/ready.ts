@@ -84,7 +84,7 @@ export type BookedCard = {
   pickup: { time: string | null; location: string | null };
   bookingCancelled: boolean;
   departureCancelled: boolean;
-  /** This seat is the diver's 10th, 25th, 50th or 100th boat with the shop (H-139), or null. */
+  /** This seat is the diver's 10th, 25th, 50th or 100th boat with the shop (H-128), or null. */
   milestone: DiveDayMilestone | null;
 };
 
@@ -379,7 +379,7 @@ export type ReadyPageData = {
    */
   runningLate: { open: boolean; saidAt: Date | null };
   /**
-   * **"Ask to move"** (H-137). Past the free-cancellation window, or on a
+   * **"Ask to move"** (H-126). Past the free-cancellation window, or on a
    * trip with none, a paid cancel returns nothing right away, so the diver
    * may ask the shop for another date instead: `open` while that ask could be
    * made — a paid seat the diver may still release, not held, on their own

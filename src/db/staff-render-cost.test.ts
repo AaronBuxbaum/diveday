@@ -600,7 +600,7 @@ const TODAY_CEILING = 71;
 // cards (`listAgencyCheckableCards`), one statement in `getTripGuests`' fan-out.
 // 52 → 54: the same read also asks for the divers' pending nitrox and specialty
 // cards (issue #2592), one statement each, in the same wave as the level read.
-// 54 → 65 (fifth loop, r5-6 item 44, H-141): the Invite section's past divers
+// 54 → 65 (fifth loop, r5-6 item 44, H-130): the Invite section's past divers
 // of the site (`listInviteSuggestions`): the departure row, who is aboard or
 // already asked, the 30-day cooldown and the boat's gate in one wave, the
 // site's past divers, then every candidate's cards and courses in training in

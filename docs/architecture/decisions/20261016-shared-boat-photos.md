@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-16
-- **Extends:** [20260723-post-trip-recap](20260723-post-trip-recap.md); decision H-140
+- **Extends:** [20260723-post-trip-recap](20260723-post-trip-recap.md); decision H-129
 
 ## Context
 
@@ -10,7 +10,7 @@ A diver's recap photos stayed on their own recap, while a crew photo (`trip_reca
 every diver on the departure. The diver with the camera is the one whose pictures the rest of the
 boat wants (fifth-loop ideas, item 42). Those pictures carry other divers' faces, so the owner was
 asked whether a diver may share them and chose: yes, opt-in per photo by the sharer, off by
-default, with staff able to delete (H-140).
+default, with staff able to delete (H-129).
 
 ## Decision
 
@@ -31,7 +31,7 @@ default, with staff able to delete (H-140).
 
 ## Alternatives considered
 
-- **Staff approve each shared photo first.** A queue on the evening close for a keepsake; H-140
+- **Staff approve each shared photo first.** A queue on the evening close for a keepsake; H-129
   declined it.
 - **No sharing.** Leaves the best photos of the day on one recap.
 - **Share every photo by default.** Puts other people's faces on pages without anyone choosing it.

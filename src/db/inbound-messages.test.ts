@@ -520,7 +520,7 @@ describe("the WhatsApp window", () => {
 });
 
 /**
- * H-137: "Ask to move" from the booking page. One row per booking, filed on
+ * H-126: "Ask to move" from the booking page. One row per booking, filed on
  * the diver the booking belongs to and only inside its shop.
  */
 describe("an Ask to move", () => {

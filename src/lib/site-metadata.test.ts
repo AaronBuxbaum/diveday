@@ -71,7 +71,7 @@ describe("shopSearchListingRobots", () => {
     ).toEqual({ index: false, follow: false });
   });
 
-  it("never lists a demo shop, which may wear its visitor's shop name (H-142)", () => {
+  it("never lists a demo shop, which may wear its visitor's shop name (H-131)", () => {
     expect(shopSearchListingRobots({ searchListingOptOutAt: null, isDemo: true })).toEqual({
       index: false,
       follow: false,

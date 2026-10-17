@@ -1,4 +1,4 @@
-# H-125: May crew without the money permission see tips on their own boats?
+# H-141: May crew without the money permission see tips on their own boats?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

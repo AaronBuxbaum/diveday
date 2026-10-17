@@ -1,4 +1,4 @@
-# H-133: Which one word does a diver buy: "seat" or "spot"?
+# H-122: Which one word does a diver buy: "seat" or "spot"?
 
 - **Status:** Implemented
 - **Human owner:** Product owner

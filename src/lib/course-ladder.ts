@@ -7,7 +7,7 @@ import { certificationRank } from "@/lib/readiness";
 
 /**
  * **The course ladder: who finished here and never took the next step**
- * (fifth-loop ideas, item 45; H-141 for its one-to-one invites).
+ * (fifth-loop ideas, item 45; H-130 for its one-to-one invites).
  *
  * The next step is read off the shop's own catalog, the way the progression
  * order is (`src/db/courses.ts`): a taster (Discover Scuba) leads into the

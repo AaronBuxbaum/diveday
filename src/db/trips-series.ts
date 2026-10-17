@@ -976,7 +976,7 @@ export type SeriesCallOffInput = {
   checkout?: CheckoutProvider;
   /**
    * Whether the refunds the call triggers go back now or wait for a refund
-   * holder (H-123). Absent means now, which is every system caller.
+   * holder (H-139). Absent means now, which is every system caller.
    */
   refunds?: BlowoutRefundMode;
 };
@@ -1022,7 +1022,7 @@ async function callOffSeriesDates(
  * **Each date goes through the blow-out cascade**, exactly as "Cancel every
  * upcoming date" does (`callOffSeriesDates`): it is still reinstatable from its
  * own trip page and every booking's history survives, but its booked divers are
- * told once and their card payments go back (issue #2453; full refunds, H-122).
+ * told once and their card payments go back (issue #2453; full refunds, H-138).
  * Before that this only flipped the status, and a paid diver on a dropped
  * weekday heard nothing and kept being charged.
  *
@@ -1156,7 +1156,7 @@ export async function setSeriesRepeat(
  * staff get a cascade record per date to work. Before 2026-10-12 this only
  * flipped the status: the dates kept their bookings and their money, and
  * nobody but the crew was told. Every date refunds in full, never under its
- * own cancellation window (H-122).
+ * own cancellation window (H-138).
  *
  * Every date is set up before any message is written, so nobody is offered
  * another date of the run being cancelled. Past and already-cancelled dates

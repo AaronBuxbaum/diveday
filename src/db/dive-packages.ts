@@ -321,7 +321,7 @@ export async function diverPackageBalance(
 }
 
 /**
- * How many package dives this booking spent: one per planned tank (H-134).
+ * How many package dives this booking spent: one per planned tank (H-123).
  * `/ready` says it beside the money ("Uses 2 package dives (3 left)"), so a
  * two-tank boat spending two is never a surprise.
  */
@@ -344,7 +344,7 @@ export async function countDivesSpentOnBooking(
 
 /**
  * The two package numbers `/ready`'s Pay step says: what the diver still
- * holds (`countSpendableDives`) and what this booking used (H-134).
+ * holds (`countSpendableDives`) and what this booking used (H-123).
  */
 export async function packageDivesForBooking(
   db: DbExecutor,

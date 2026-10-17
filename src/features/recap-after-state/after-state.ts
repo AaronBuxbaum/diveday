@@ -182,7 +182,7 @@ export type AfterStateProps = {
   bookedNext?: { date: string; title: string; time: string } | null;
   /**
    * The diver's other days with the shop, as rows that each send a fresh link
-   * (H-143). Rendered only on `/ready`; `/recap` passes nothing.
+   * (H-132). Rendered only on `/ready`; `/recap` passes nothing.
    */
   yourDays?: ReactNode;
   /**

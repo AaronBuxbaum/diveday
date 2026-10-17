@@ -14,7 +14,7 @@
   a counter payment, a disconnected account, or a Stripe refusal still leaves the refund to staff.
   Only a caller with the refund right (owner or manager) sends the card refunds as it runs; anyone
   else who calls it off leaves them queued for one of those two to release
-  ([H-123](../human-decisions/H-123-call-off-queues-refunds-for-a-refund-holder.md)).
+  ([H-139](../human-decisions/H-139-call-off-queues-refunds-for-a-refund-holder.md)).
   A departure **underway** (past its start time, or with anybody recorded at roll call) cannot be
   blown out, and the day call is for owners, managers and captains only.
   **It cancels the *trip* and leaves every booking active**, and every reader downstream has to expect that

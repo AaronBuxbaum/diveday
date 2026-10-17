@@ -189,7 +189,7 @@
   never sent is still there to tick. Gates nothing.
 - **Course ladder** — the Courses page's "N did Discover Scuba in the last 12 months · M went on to Open Water",
   with the names of those who did not and an Invite to the next course's soonest session with a
-  seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-141's one-at-a-time invite under the
+  seat (`nextCourseFor`, `src/lib/course-ladder.ts`; H-130's one-at-a-time invite under the
   **30-day invite cooldown**). The names leave out anyone holding a card at or above the level the
   next course certifies (any agency, any state) and anyone under its minimum age on the session's
   day, and the send re-checks both. Someone whose release waits on a physician's referral is
