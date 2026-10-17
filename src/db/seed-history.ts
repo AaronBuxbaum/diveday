@@ -21,7 +21,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { at, nextCreatedAt, withinDeskHours } from "./seed-clock";
-import { paperRelease } from "./seed-paper-release";
+import { paperRelease, signingNames } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
 import { getCurrentWaiverTemplate } from "./waivers";
 
@@ -751,14 +751,12 @@ export async function seedHistory(
     .filter((row): row is NonNullable<typeof row> => row !== null);
   if (payments.length > 0) await db.insert(bookingPayments).values(payments);
 
-  // Signed releases for the divers who actually boarded.
-  let waiverToken = 0;
+  // Signed releases for the divers who boarded, on paper at the desk (`withinDeskHours`).
+  const signedName = await signingNames(db, shopId);
   const waiverRows = plans
     .map((plan, i) => {
       const booking = bookingRows[i];
       if (!booking || !plan.waiver) return null;
-      waiverToken++;
-      // On paper at the desk, so while it was open (`withinDeskHours`).
       const signedAt = withinDeskHours(new Date(plan.createdAt.getTime() - 12 * 60 * 60 * 1000));
       return {
         shopId,
@@ -769,9 +767,9 @@ export async function seedHistory(
         templateVersion: template.version,
         templateGeneration: template.materialGeneration,
         templateBody: template.body,
-        tokenHash: `hist-waiver-${shopId}-${waiverToken}`,
+        tokenHash: `hist-waiver-${shopId}-${i + 1}`,
         expiresAt: at(365, 12),
-        ...paperRelease(signedAt, createdByPersonId),
+        ...paperRelease(signedAt, createdByPersonId, signedName(plan.personId)),
         createdAt: signedAt,
       };
     })

@@ -1,6 +1,5 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -8,10 +7,10 @@ import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { convertImportedSiteProseToUnit, shopSearchAnchor } from "@/db/dive-sites";
 import { sendNotification } from "@/db/notifications";
-import { shops } from "@/db/schema";
 import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
   getShopById,
+  lockShopDepthUnit,
   markShopUnitsConfirmed,
   setShopAddress,
   setShopContact,
@@ -139,15 +138,16 @@ export async function saveUnitsAction(formData: FormData) {
   // at all, so a failed conversion leaves the shop on its old unit and a retry
   // still has a switch to make (issue #2683).
   const sites = await db.transaction(async (tx) => {
-    const [before] = await tx
-      .select({ depthUnit: shops.depthUnit })
-      .from(shops)
-      .where(eq(shops.id, session.user.shopId))
-      .for("update");
+    const before = await lockShopDepthUnit(tx, session.user.shopId);
     await setShopDepthUnit(tx, session.user.shopId, depthUnit.data);
-    return before
-      ? convertImportedSiteProseToUnit(tx, session.user.shopId, before.depthUnit, depthUnit.data)
-      : { converted: 0, leftAlone: 0 };
+    const from = before ?? depthUnit.data;
+    const result = await convertImportedSiteProseToUnit(
+      tx,
+      session.user.shopId,
+      from,
+      depthUnit.data,
+    );
+    return { ...result, from };
   });
   await setShopTemperatureUnit(db, session.user.shopId, temperatureUnit.data);
   if (currency !== null) {
@@ -160,7 +160,13 @@ export async function saveUnitsAction(formData: FormData) {
   revalidateAndRedirect(
     settings,
     sites.leftAlone > 0
-      ? noticeUrl(settings, "units-saved-sites-left", { saved: "units", count: sites.leftAlone })
+      ? noticeUrl(settings, "units-saved-sites-left", {
+          saved: "units",
+          count: sites.leftAlone,
+          from: sites.from,
+          // The first few by name; the rest are the count's "and more".
+          sites: sites.leftAloneNames.slice(0, 3).join(" · "),
+        })
       : noticeUrl(settings, "units-saved", { saved: "units" }),
   );
 }

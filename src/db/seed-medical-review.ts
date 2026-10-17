@@ -4,6 +4,7 @@ import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { bookings, certifications, people, personRoles, type trips, waiverRecords } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
+import { paperRelease } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
 
 /** Two fictitious divers used only to train on the medical-review states. */
@@ -229,14 +230,10 @@ async function seedHeldDiver(
     templateVersion: waiverTemplate.version,
     templateGeneration: waiverTemplate.materialGeneration,
     templateBody: waiverTemplate.body,
-    status: "medical_review",
     tokenHash,
     expiresAt: at(30, 12),
-    signedName: diverSpec.fullName,
-    signatureMethod: "in_person_attested",
-    recordedByPersonId: reviewerId,
-    consentedAt: signedAt,
-    signedAt,
+    ...paperRelease(signedAt, reviewerId, diverSpec.fullName),
+    status: "medical_review",
     medicalReviewRequired: true,
     // Never a clearance stamp on either row: the held diver has no answer, and
     // the refused one has an answer that lifts nothing (issue #1283).
@@ -244,7 +241,6 @@ async function seedHeldDiver(
     medicalClearanceDeclinedByPersonId: declined ? reviewerId : null,
     medicalClearanceEvaluatedOn: declined ? evaluatedOn : null,
     medicalClearancePhysicianName: declined ? "Dr. Imani Reyes" : null,
-    completedAt: signedAt,
     createdAt: signedAt,
   });
 }

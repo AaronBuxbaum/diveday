@@ -35,7 +35,7 @@ import {
 } from "@/lib/dive-site-template-sync";
 import type { DiveMode } from "@/lib/diver-planning";
 import type { CertificationLevel } from "@/lib/readiness";
-import { briefingInUnit, SITE_PROSE_FIELDS } from "@/lib/site-prose-units";
+import { briefingInUnit, SITE_PROSE_FIELDS, siteProseInUnit } from "@/lib/site-prose-units";
 import type { TidePreference } from "@/lib/tides";
 import type { AppDb, DbExecutor } from "./client";
 import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
@@ -1444,44 +1444,52 @@ async function shopDepthUnit(db: DbExecutor, shopId: string): Promise<DepthUnit>
  * read in the new unit, so the round trip is the catalog's own pair of
  * renderings and never a conversion of a conversion. A site with any local edit
  * is the shop's own words, whose measures it may have typed itself, and is left
- * as it is; the count of those that name a measure comes back so staff know
- * which to check by hand.
+ * as it is, whole; so is a hand-written site, or one whose source version is
+ * gone, when it names a measure. Their names come back so staff know which to
+ * check by hand.
  */
 export async function convertImportedSiteProseToUnit(
   db: DbExecutor,
   shopId: string,
   from: DepthUnit,
   to: DepthUnit,
-): Promise<{ converted: number; leftAlone: number }> {
-  if (from === to) return { converted: 0, leftAlone: 0 };
+): Promise<{ converted: number; leftAlone: number; leftAloneNames: string[] }> {
+  if (from === to) return { converted: 0, leftAlone: 0, leftAloneNames: [] };
   // Inside the caller's transaction this nests as a savepoint.
   return (db as AppDb).transaction(async (tx) => {
     const sites = await tx
       .select()
       .from(diveSites)
-      .where(
-        and(
-          eq(diveSites.shopId, shopId),
-          isNull(diveSites.deletedAt),
-          isNotNull(diveSites.sourceTemplateId),
-          isNotNull(diveSites.sourceTemplateVersion),
-        ),
-      )
+      .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
+      .orderBy(diveSites.name)
       .for("update");
     let converted = 0;
-    let leftAlone = 0;
+    const leftAloneNames: string[] = [];
+    // A site the conversion cannot vouch for (hand-written, or its source
+    // version is gone) is left whole; it is named when it says a measure.
+    const namesMeasure = (site: (typeof sites)[number]) =>
+      [
+        ...SITE_PROSE_FIELDS.map((field) => site[field]),
+        ...parseDiveSiteLandmarks(site.landmarks).map((l) => l.note),
+      ].some((text) => typeof text === "string" && siteProseInUnit(text, to) !== text);
     for (const site of sites) {
-      const [source] = await tx
-        .select({ briefing: globalDiveSiteVersions.briefing })
-        .from(globalDiveSiteVersions)
-        .where(
-          and(
-            eq(globalDiveSiteVersions.globalDiveSiteId, site.sourceTemplateId ?? ""),
-            eq(globalDiveSiteVersions.version, site.sourceTemplateVersion ?? 0),
-          ),
-        )
-        .limit(1);
-      if (!source) continue;
+      const [source] =
+        site.sourceTemplateId && site.sourceTemplateVersion != null
+          ? await tx
+              .select({ briefing: globalDiveSiteVersions.briefing })
+              .from(globalDiveSiteVersions)
+              .where(
+                and(
+                  eq(globalDiveSiteVersions.globalDiveSiteId, site.sourceTemplateId),
+                  eq(globalDiveSiteVersions.version, site.sourceTemplateVersion),
+                ),
+              )
+              .limit(1)
+          : [];
+      if (!source) {
+        if (namesMeasure(site)) leftAloneNames.push(site.name);
+        continue;
+      }
       const before = briefingInUnit(source.briefing, from);
       const after = briefingInUnit(source.briefing, to);
       const proseOf = (briefing: typeof before) => ({
@@ -1497,7 +1505,7 @@ export async function convertImportedSiteProseToUnit(
         SITE_PROSE_FIELDS.every((field, index) => (site[field] ?? null) === wanted.fields[index]) &&
         JSON.stringify(landmarks.map((landmark) => landmark.note)) === JSON.stringify(wanted.notes);
       if (!untouched) {
-        leftAlone += 1;
+        leftAloneNames.push(site.name);
         continue;
       }
       await tx
@@ -1515,7 +1523,7 @@ export async function convertImportedSiteProseToUnit(
         .where(and(eq(diveSites.id, site.id), eq(diveSites.shopId, shopId)));
       converted += 1;
     }
-    return { converted, leftAlone };
+    return { converted, leftAlone: leftAloneNames.length, leftAloneNames };
   });
 }
 

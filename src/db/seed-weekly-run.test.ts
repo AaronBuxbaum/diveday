@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { divemastersNeeded } from "@/lib/divemaster-ratio";
 import { seededShopContext } from "@/test/db";
 import {
+  personRoles,
   shops,
   tripAssignments,
   tripSeries,
@@ -95,28 +96,37 @@ describe("the seeded weekly run", () => {
     expect(short).toEqual([]);
   });
 
-  it("puts a relief on the date a standing member is out on a longer boat", async () => {
+  it("seats only people who hold captain as captain, and calls off a date no captain is free for", async () => {
     const { db, series } = await run();
-    const [relieved] = await db
+    const live = await db
       .select({ id: trips.id })
       .from(trips)
-      .where(and(eq(trips.seriesId, series.id), eq(trips.seriesOccurrenceDate, "2026-07-25")));
-    if (!relieved) throw new Error("the 2026-07-25 Saturday was deleted");
-    const crew = await db
-      .select({ personId: tripAssignments.personId, role: tripAssignments.tripRole })
-      .from(tripAssignments)
-      .where(eq(tripAssignments.tripId, relieved.id));
-    const standingIds = new Set(
-      (
-        await db
-          .select({ personId: tripSeriesCrew.personId })
-          .from(tripSeriesCrew)
-          .where(eq(tripSeriesCrew.seriesId, series.id))
-      ).map((row) => row.personId),
-    );
-    const captain = crew.find((member) => member.role === "captain");
-    expect(captain).toBeDefined();
-    expect(standingIds.has(captain?.personId ?? "")).toBe(false);
+      .where(and(eq(trips.seriesId, series.id), isNull(trips.deletedAt)));
+    const standingSkipper = await db
+      .select({ personId: tripSeriesCrew.personId })
+      .from(tripSeriesCrew)
+      .where(and(eq(tripSeriesCrew.seriesId, series.id), eq(tripSeriesCrew.tripRole, "captain")));
+    for (const date of live) {
+      const captains = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(and(eq(tripAssignments.tripId, date.id), eq(tripAssignments.tripRole, "captain")));
+      expect(captains.length).toBe(1);
+      const roles = await db
+        .select({ role: personRoles.role })
+        .from(personRoles)
+        .where(eq(personRoles.personId, captains[0]?.personId ?? ""));
+      // The standing skipper is the owner; anyone relieving her holds captain.
+      if (captains[0]?.personId === standingSkipper[0]?.personId) continue;
+      expect(roles.map((row) => row.role)).toContain("captain");
+    }
+    // 2026-07-25: the owner skippers the long boat and the shop's one captain is
+    // on another, so nobody holding captain is free and the Saturday is called off.
+    const skips = await db
+      .select({ date: tripSeriesSkips.occurrenceDate })
+      .from(tripSeriesSkips)
+      .where(eq(tripSeriesSkips.seriesId, series.id));
+    expect(skips.map((row) => row.date).sort()).toEqual(["2026-07-25", "2026-09-12"]);
   });
 
   it("names the two sites its dives visit", async () => {
@@ -130,7 +140,7 @@ describe("the seeded weekly run", () => {
       .select({ date: tripSeriesSkips.occurrenceDate })
       .from(tripSeriesSkips)
       .where(eq(tripSeriesSkips.seriesId, series.id));
-    expect(skips.map((row) => row.date)).toEqual(["2026-09-12"]);
+    expect(skips.map((row) => row.date).sort()).toEqual(["2026-07-25", "2026-09-12"]);
     const removed = await db
       .select({ date: trips.seriesOccurrenceDate })
       .from(trips)

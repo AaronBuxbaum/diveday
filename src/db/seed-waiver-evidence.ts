@@ -135,10 +135,17 @@ export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promis
       ...record,
       signedAt,
       // A release is consented to and completed in the same sitting it is
-      // signed in; the seeded rows already tie all three together, so they move
-      // together too.
+      // signed in; the seeded rows already tie the three together (completion
+      // a few minutes behind the signature), so they move together too.
       consentedAt: stampedNow ? signedAt : record.consentedAt,
-      completedAt: stampedNow ? signedAt : record.completedAt,
+      completedAt:
+        stampedNow && signedAt && record.completedAt && record.signedAt
+          ? new Date(
+              signedAt.getTime() + (record.completedAt.getTime() - record.signedAt.getTime()),
+            )
+          : stampedNow
+            ? signedAt
+            : record.completedAt,
       createdAt: stampedNow && signedAt ? signedAt : record.createdAt,
       integrityHash: null,
       integrityVersion: null,

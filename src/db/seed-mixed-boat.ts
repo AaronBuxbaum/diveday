@@ -11,6 +11,7 @@ import {
   type waiverTemplates,
 } from "./schema";
 import { at, nextCreatedAt } from "./seed-clock";
+import { paperRelease } from "./seed-paper-release";
 
 /**
  * **A snorkeler and a rider on today's reef boat** (ADR
@@ -112,13 +113,7 @@ export async function seedMixedBoat(
       tokenHash: `seed-waiver-mixed-boat-${shopId}-${index}`,
       expiresAt: at(30, 12),
       createdAt: signedAt,
-      status: "completed" as const,
-      signedName: "Signed on file",
-      signatureMethod: "in_person_attested" as const,
-      recordedByPersonId: recordedById,
-      consentedAt: signedAt,
-      signedAt,
-      completedAt: signedAt,
+      ...paperRelease(signedAt, recordedById, guest.fullName),
     });
 
     if (guest.maskFins) {

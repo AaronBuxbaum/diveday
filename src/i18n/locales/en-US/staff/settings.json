@@ -12,7 +12,7 @@
       "turnaroundSaved": "Turnaround saved.",
       "turnaroundInvalid": "Enter a turnaround between 0 and 240 minutes.",
       "unitsSaved": "Units saved.",
-      "unitsSavedSitesLeft": "Units saved. {count, plural, one {# dive site you edited still reads in the old depth unit; check it by hand.} other {# dive sites you edited still read in the old depth unit; check them by hand.}}",
+      "unitsSavedSitesLeft": "Units saved. {count, plural, one {# dive site was} other {# dive sites were}} left alone, whole, and still {count, plural, one {reads} other {read}} in {from, select, feet {feet} other {meters}}: {sites}{more, plural, =0 {} other { and # more}}. Check {count, plural, one {it} other {them}} by hand in Dive sites.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "taxSaved": "Tax setting saved.",
       "taxInvalid": "Nothing changed: the tax switch sent a value this page didn’t expect. Reload Settings and turn it on or off again.",

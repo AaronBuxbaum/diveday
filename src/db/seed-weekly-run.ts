@@ -41,6 +41,9 @@ import { seatStandingCrew, setTripCrew } from "./trips-crew";
 /** Named for the two sites its dives visit, in order. */
 export const DEMO_WEEKLY_RUN_TITLE = "Saturday Two-Tank — Benwood & Christ of the Abyss";
 
+/** The shop roles that put someone in the water as a guide. */
+const IN_WATER_ROLES = ["instructor", "assistant_instructor", "divemaster"];
+
 /** Seats the run sells: two guides at the default six divers per divemaster. */
 const RUN_SEATS = 12;
 
@@ -86,8 +89,12 @@ export async function seedWeeklyRun(
     skipperId: string | undefined;
     /** The standing in-water guides: two cover twelve divers at the default ratio. */
     divemasterIds: readonly string[];
-    /** Staff who step onto a date a standing member is busy on, in the order tried. */
-    reliefIds: readonly string[];
+    /**
+     * Staff who step onto a date a standing member is busy on, in the order
+     * tried, with the shop roles each holds: a place goes only to someone who
+     * holds the role it needs.
+     */
+    reliefs: readonly { personId: string; roles: readonly string[] }[];
   },
 ): Promise<void> {
   // The schedule builder's doors take the app database; the seed runs on it
@@ -145,6 +152,7 @@ export async function seedWeeklyRun(
     ...(ctx.skipperId ? [{ personId: ctx.skipperId, tripRole: "captain" as const }] : []),
     ...ctx.divemasterIds.map((personId) => ({ personId, tripRole: "divemaster" as const })),
   ];
+  const calledOff: string[] = [];
   if (crew.length > 0) {
     await db
       .insert(tripSeriesCrew)
@@ -169,7 +177,14 @@ export async function seedWeeklyRun(
       let unfilled = false;
       for (const member of absent) {
         let placed = false;
-        for (const relief of ctx.reliefIds) {
+        const needs = member.tripRole === "captain" ? ["captain"] : IN_WATER_ROLES;
+        const holders = ctx.reliefs.filter((relief) =>
+          relief.roles.some((role) => needs.includes(role)),
+        );
+        if (holders.length === 0) {
+          throw new Error(`seed: nobody on the staff holds ${needs.join(" or ")} to relieve`);
+        }
+        for (const { personId: relief } of holders) {
           if (roster.some((entry) => entry.personId === relief)) continue;
           const attempt = [...roster, { personId: relief, tripRole: member.tripRole }];
           if (await setTripCrew(app, shopId, trip.id, attempt)) {
@@ -179,10 +194,12 @@ export async function seedWeeklyRun(
           }
         }
         // A date nobody is free to guide sells only what its guides cover, the
-        // way a shop caps a day it cannot staff; a missing captain is a seed
-        // bug, not a thing a boat sails without.
+        // way a shop caps a day it cannot staff. A date no captain is free to
+        // skipper is called off, as a shop does: an instructor is not a
+        // captain, and the boat does not sail without one.
         if (!placed && member.tripRole === "captain") {
-          throw new Error("seed: no captain was free for a Saturday of the weekly run");
+          calledOff.push(trip.id);
+          break;
         }
         if (!placed) unfilled = true;
       }
@@ -213,7 +230,7 @@ export async function seedWeeklyRun(
     .from(trips)
     .where(and(eq(trips.seriesId, series.id), eq(trips.seriesOccurrenceDate, closed)))
     .limit(1);
-  for (const tripId of survey ? [survey.id] : []) {
+  for (const tripId of new Set([...calledOff, ...(survey ? [survey.id] : [])])) {
     const outcome = await deleteTrip(app, shopId, tripId);
     if (!outcome.ok) throw new Error(`seed: a Saturday the run skips stayed (${outcome.reason})`);
   }

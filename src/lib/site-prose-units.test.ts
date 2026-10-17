@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { COURSE_DEPTHS } from "./courses";
 import { siteProseInUnit } from "./site-prose-units";
 
 describe("siteProseInUnit", () => {
@@ -47,5 +48,45 @@ describe("siteProseInUnit", () => {
     expect(siteProseInUnit(prose, "feet")).toBe(prose);
     expect(siteProseInUnit("Already 25 ft.", "feet")).toBe("Already 25 ft.");
     expect(siteProseInUnit("Already 12 m.", "meters")).toBe("Already 12 m.");
+  });
+});
+
+describe("a range with a worded joiner", () => {
+  it.each([
+    ["comes out at 30 to 33 m", "comes out at 100 to 110 ft"],
+    ["comes out at 17 and 19 m", "comes out at 55 and 63 ft"],
+    ["comes out at 17 or 19 m", "comes out at 55 or 63 ft"],
+    ["comes out at 17-to-19 m", "comes out at 55-to-63 ft"],
+    ["comes out at 17 – 19 m", "comes out at 55–63 ft"],
+  ])("converts both numbers of %s", (text, expected) => {
+    expect(siteProseInUnit(text, "feet")).toBe(expected);
+  });
+
+  it("converts both numbers the other way", () => {
+    expect(siteProseInUnit("at 60 to 80 ft", "meters")).toBe("at 18 to 24 m");
+  });
+});
+
+describe("the agency limits", () => {
+  it("never reads a deeper depth at or under a limit's feet, in either direction", () => {
+    for (let metres = 1; metres <= 50; metres += 1) {
+      const said = Number(/(\d+) ft/.exec(siteProseInUnit(`${metres} m`, "feet"))?.[1]);
+      for (const limit of COURSE_DEPTHS) {
+        if (metres > limit.meters) expect(said, `${metres} m`).toBeGreaterThan(limit.feet);
+        if (metres < limit.meters) expect(said, `${metres} m`).toBeLessThanOrEqual(limit.feet);
+      }
+    }
+    for (let feet = 1; feet <= 170; feet += 1) {
+      const said = Number(/(\d+) m/.exec(siteProseInUnit(`${feet} ft`, "meters"))?.[1]);
+      for (const limit of COURSE_DEPTHS) {
+        if (feet > limit.feet) expect(said, `${feet} ft`).toBeGreaterThan(limit.meters);
+      }
+    }
+  });
+
+  it("reads the cases the review found", () => {
+    expect(siteProseInUnit("19 m", "feet")).toBe("63 ft");
+    expect(siteProseInUnit("22 m", "feet")).toBe("73 ft");
+    expect(siteProseInUnit("31 m", "feet")).toBe("102 ft");
   });
 });

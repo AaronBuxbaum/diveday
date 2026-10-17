@@ -135,6 +135,40 @@ describe("a depth-unit switch and imported dive-site prose", () => {
     expect(await convertImportedSiteProseToUnit(db, shop.id, "feet", "feet")).toEqual({
       converted: 0,
       leftAlone: 0,
+      leftAloneNames: [],
     });
+  });
+
+  it("names an edited site and a hand-written one that says a measure, whole", async () => {
+    const { db, shop } = ctx;
+    const [handWritten] = await db
+      .insert(diveSites)
+      .values({
+        shopId: shop.id,
+        name: "Hand Written Ledge",
+        slug: "hand-written-ledge",
+        description: "The ledge drops away at about 30 m.",
+        maxDepthMeters: 30,
+      })
+      .returning();
+    if (!handWritten) throw new Error("insert failed");
+    await setShopDepthUnit(db, shop.id, "meters");
+    try {
+      const result = await convertImportedSiteProseToUnit(db, shop.id, "feet", "meters");
+      // Said in feet, so converting to metres reads "30 m" as already metric: the
+      // hand-written site names a feet measure only after a switch the other way.
+      expect(result.leftAloneNames).not.toContain("Hand Written Ledge");
+      await db
+        .update(diveSites)
+        .set({ description: "Down to 100 ft on the ledge." })
+        .where(eq(diveSites.id, handWritten.id));
+      const again = await convertImportedSiteProseToUnit(db, shop.id, "feet", "meters");
+      expect(again.leftAloneNames).toContain("Hand Written Ledge");
+      expect(
+        (await db.select().from(diveSites).where(eq(diveSites.id, handWritten.id)))[0]?.description,
+      ).toBe("Down to 100 ft on the ledge.");
+    } finally {
+      await setShopDepthUnit(db, shop.id, "feet");
+    }
   });
 });

@@ -50,7 +50,10 @@ export const metadata: Metadata = { title: "Shop settings — DiveDay" };
  * translated against the negotiated locale — a module-level constant would
  * freeze it to whichever locale first imported this file.
  */
-function noticeMessages(t: StaffTranslator, count: number): NoticeMessages {
+function noticeMessages(
+  t: StaffTranslator,
+  left: { count: number; from: string; sites: string },
+): NoticeMessages {
   return {
     "packing-saved": { tone: "success", text: t("settings.main.notice.packingSaved") },
     "packing-invalid": { tone: "danger", text: t("settings.main.notice.packingInvalid") },
@@ -66,7 +69,12 @@ function noticeMessages(t: StaffTranslator, count: number): NoticeMessages {
     "units-saved": { tone: "success", text: t("settings.main.notice.unitsSaved") },
     "units-saved-sites-left": {
       tone: "warning",
-      text: t("settings.main.notice.unitsSavedSitesLeft", { count }),
+      text: t("settings.main.notice.unitsSavedSitesLeft", {
+        count: left.count,
+        from: left.from === "feet" ? "feet" : "meters",
+        sites: left.sites,
+        more: Math.max(0, left.count - left.sites.split(" · ").filter(Boolean).length),
+      }),
     },
     "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
     "tax-saved": { tone: "success", text: t("settings.main.notice.taxSaved") },
@@ -186,10 +194,16 @@ export default async function SettingsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; saved?: string; count?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    saved?: string;
+    count?: string;
+    from?: string;
+    sites?: string;
+  }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, saved, count } = await searchParams;
+  const { notice, saved, count, from, sites } = await searchParams;
   // Every row on this page changes the shop rather than the day, so the page
   // itself is owner/manager work (src/lib/authz.ts — canManageShopSettings),
   // checked against live roles. Bounced to Today with an explanatory notice
@@ -242,7 +256,10 @@ export default async function SettingsPage({
   const canViewBilling = !shop.isDemo && canManageBilling(session.user.roles);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const banner = noticeFromParam(notice, noticeMessages(t, Number(count) || 0));
+  const banner = noticeFromParam(
+    notice,
+    noticeMessages(t, { count: Number(count) || 0, from: from ?? "", sites: sites ?? "" }),
+  );
   // A recognized section opens its own row and renders the notice inside it;
   // anything else (chiefly `not-authorized`, which spans several sections
   // rather than owning one) keeps the old top-of-page banner.

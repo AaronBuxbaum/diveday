@@ -17,6 +17,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { at, nextCreatedAt } from "./seed-clock";
+import { paperRelease, signingNames } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
 
 /**
@@ -357,6 +358,7 @@ export async function seedCertGates(
   // between a diver and this roster is a card, so the roster has to be clean of
   // everything else — including for the Open Water student, whose one remaining
   // blocker is then exactly the site gate the carve-out let her book past.
+  const signedName = await signingNames(db, shopId);
   let gateWaiverToken = 0;
   const waiverRows = insertedBookings.map((booking) => {
     gateWaiverToken++;
@@ -376,13 +378,7 @@ export async function seedCertGates(
       // Comfortably past the furthest departure seeded here (day 32).
       expiresAt: at(60, 12),
       createdAt,
-      status: "completed" as const,
-      signedName: "Signed on file",
-      signatureMethod: "in_person_attested" as const,
-      recordedByPersonId: instructorId,
-      consentedAt: createdAt,
-      signedAt: createdAt,
-      completedAt: createdAt,
+      ...paperRelease(createdAt, instructorId, signedName(booking.personId)),
     };
   });
   if (waiverRows.length > 0) await db.insert(waiverRecords).values(waiverRows);

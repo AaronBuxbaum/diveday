@@ -1283,8 +1283,8 @@ export async function seedDemoSchedule(
       .limit(1);
     // Everyone else on the crew, for a date a standing member is out on a
     // longer boat; the owner skippers, so she is not a relief.
-    const reliefPool = await db
-      .selectDistinct({ id: people.id, fullName: people.fullName })
+    const reliefRows = await db
+      .select({ id: people.id, fullName: people.fullName, role: personRoles.role })
       .from(people)
       .innerJoin(personRoles, eq(people.id, personRoles.personId))
       .where(
@@ -1300,13 +1300,17 @@ export async function seedDemoSchedule(
         ),
       )
       .orderBy(people.fullName);
+    const reliefPool = [...new Set(reliefRows.map((row) => row.id))].map((id) => ({
+      personId: id,
+      roles: reliefRows.filter((row) => row.id === id).map((row) => row.role),
+    }));
     // The assistant instructor and the shop's divemaster are the standing
     // guides.
     const standing = [assistant?.id, divemaster?.id].filter((id): id is string => !!id);
     await seedWeeklyRun(db, shopId, {
       skipperId: owner.id,
       divemasterIds: standing,
-      reliefIds: reliefPool.map((row) => row.id).filter((id) => !standing.includes(id)),
+      reliefs: reliefPool.filter((relief) => !standing.includes(relief.personId)),
     });
   }
 

@@ -81,7 +81,9 @@ describe("seeded waiver evidence", () => {
       // Consent, signature and completion are one sitting; the record is
       // created no later than the signature it carries.
       expect(record.consentedAt?.getTime()).toBe(record.signedAt.getTime());
-      expect(record.completedAt?.getTime()).toBe(record.signedAt.getTime());
+      const lag = (record.completedAt?.getTime() ?? Number.NaN) - record.signedAt.getTime();
+      expect(lag).toBeGreaterThanOrEqual(0);
+      expect(lag).toBeLessThanOrEqual(10 * 60_000);
       expect(record.createdAt.getTime()).toBeLessThanOrEqual(record.signedAt.getTime());
     }
   });
@@ -138,5 +140,13 @@ describe("seeded signature methods", () => {
     const paper = records.filter((record) => record.signatureMethod === "in_person_attested");
     expect(paper.length).toBeGreaterThan(0);
     expect(paper.filter((record) => record.recordedByPersonId === null)).toEqual([]);
+    // The diver's own full name, never a constant, and a record never completes
+    // before it was signed.
+    expect(paper.filter((record) => record.signedName === "Signed on file")).toEqual([]);
+    expect(
+      paper.filter(
+        (record) => record.completedAt && record.signedAt && record.completedAt < record.signedAt,
+      ),
+    ).toEqual([]);
   });
 });

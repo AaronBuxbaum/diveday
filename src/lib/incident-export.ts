@@ -98,8 +98,8 @@ export type IncidentWaiverStatus = {
   templateTitle: string | null;
   templateVersion: number | null;
   /**
-   * How the signature was recorded, verbatim (`in_person`,
-   * `in_person_attested`, `imported`, null for the diver's own digital
+   * How the signature was recorded, verbatim (`in_person_attested`,
+   * `in_person_attested_namesake`, `imported`, null for the diver's own digital
    * completion). Imported acceptances must render distinctly (ADR
    * 20260724-import-waiver-acceptance).
    */
