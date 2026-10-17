@@ -52,6 +52,14 @@ export type MonthlyReportInput = {
   passThroughCents?: number;
   /** Tax included in verified DiveDay-collected payments; imported history has no tax evidence. */
   taxCents: number;
+  /**
+   * Net minor units inside revenueCents that no departure names: orders paid
+   * at the counter with no booking (a rental, retail, an air fill), anchored
+   * to when they were paid. The trips' own `netCents` plus this plus the
+   * imported slice is `revenueCents`. Optional so a hand-built report reads as
+   * none.
+   */
+  counterCents?: number;
   /** Unverified imported source payments included in revenueCents for this calendar month. */
   importedPaymentCents: number;
   /** Unverified imported source refunds subtracted from revenueCents for this calendar month. */
@@ -122,6 +130,8 @@ export type MonthlyReport = {
   passThroughCents?: number;
   /** Tax included in verified DiveDay-collected payments, shown separately from net revenue. */
   taxCents: number;
+  /** Net counter money inside revenueCents that belongs to no departure. */
+  counterCents: number;
   /** Unverified imported source payments included in revenueCents. */
   importedPaymentCents: number;
   /** Unverified imported source refunds subtracted from revenueCents. */
@@ -168,6 +178,7 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
     revenueCents: input.revenueCents,
     passThroughCents: input.passThroughCents ?? 0,
     taxCents: input.taxCents,
+    counterCents: input.counterCents ?? 0,
     importedPaymentCents: input.importedPaymentCents,
     importedRefundCents: input.importedRefundCents,
     importedFinancialRecordCount: input.importedFinancialRecordCount,

@@ -179,7 +179,9 @@ function tallyByDeparture(reads: {
   currentPassThrough: readonly MoneyRow[];
   invoiceRevenue: readonly MoneyRow[];
   invoiceBookingAmounts: readonly MoneyRow[];
-}): { tripMoney: Map<string, DepartureMoney>; bookedMoney: DepartureMoney } {
+  /** The orders no booking names, summed: counter money on no departure. */
+  counter: { total: unknown; tax: unknown; passThrough: unknown } | undefined;
+}): { tripMoney: Map<string, DepartureMoney>; monthMoney: DepartureMoney; counterCents: number } {
   const tripMoney = new Map<string, DepartureMoney>();
   const add = (tripId: string, gross: unknown, tax: unknown, passThrough: unknown) => {
     const money = tripMoney.get(tripId) ?? { gross: 0, tax: 0, passThrough: 0 };
@@ -194,13 +196,21 @@ function tallyByDeparture(reads: {
   for (const row of reads.currentPassThrough) add(row.tripId, 0, 0, row.total);
   for (const row of reads.invoiceRevenue) add(row.tripId, row.total, row.tax, row.passThrough);
   for (const row of reads.invoiceBookingAmounts) add(row.tripId, 0, row.total, row.passThrough);
-  const bookedMoney = { gross: 0, tax: 0, passThrough: 0 };
+  const counter = {
+    gross: Number(reads.counter?.total ?? 0),
+    tax: Number(reads.counter?.tax ?? 0),
+    passThrough: Number(reads.counter?.passThrough ?? 0),
+  };
+  const monthMoney = { ...counter };
   for (const money of tripMoney.values()) {
-    bookedMoney.gross += money.gross;
-    bookedMoney.tax += money.tax;
-    bookedMoney.passThrough += money.passThrough;
+    monthMoney.gross += money.gross;
+    monthMoney.tax += money.tax;
+    monthMoney.passThrough += money.passThrough;
   }
-  return { tripMoney, bookedMoney };
+  // The counter's share, net on a departure's basis: the rows plus this plus
+  // the imported slice are the month's figure, to the cent.
+  const counterCents = counter.gross - counter.tax - counter.passThrough;
+  return { tripMoney, monthMoney, counterCents };
 }
 
 /**
@@ -670,16 +680,16 @@ export async function getMonthlyReport(
 
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
 
-  // **Each departure's own net** (fifth loop, item 26): the six booking-borne
-  // money reads above are grouped by departure, so a row's net and the month's
-  // total are one arithmetic (`tallyByDeparture`).
-  const { tripMoney, bookedMoney } = tallyByDeparture({
+  // **Each departure's own net** (fifth loop, item 26): the six booking-borne reads
+  // above by departure, so a row's net and the month are one sum (`tallyByDeparture`).
+  const { tripMoney, monthMoney, counterCents } = tallyByDeparture({
     baseRevenue,
     recoveredDeposits,
     currentCheckoutTax,
     currentPassThrough,
     invoiceRevenue,
     invoiceBookingAmounts,
+    counter: standaloneOrderRevenue,
   });
 
   const reportTrips: ReportTrip[] = tripRows.map((row) => {
@@ -698,10 +708,7 @@ export async function getMonthlyReport(
     };
   });
 
-  const currentRevenueCents = bookedMoney.gross + Number(standaloneOrderRevenue?.total ?? 0);
-  const passThroughCents =
-    bookedMoney.passThrough + Number(standaloneOrderRevenue?.passThrough ?? 0);
-  const taxCents = bookedMoney.tax + Number(standaloneOrderRevenue?.tax ?? 0);
+  const { gross: currentRevenueCents, tax: taxCents, passThrough: passThroughCents } = monthMoney;
   const importedPaymentCents = Number(importedFinancialTotals?.payments ?? 0);
   const importedRefundCents = Number(importedFinancialTotals?.refunds ?? 0);
 
@@ -715,6 +722,7 @@ export async function getMonthlyReport(
       importedRefundCents,
     passThroughCents,
     taxCents,
+    counterCents,
     importedPaymentCents,
     importedRefundCents,
     importedFinancialRecordCount: Number(importedFinancialTotals?.count ?? 0),

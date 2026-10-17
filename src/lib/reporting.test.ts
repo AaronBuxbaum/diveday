@@ -240,6 +240,7 @@ function report(overrides: Partial<MonthlyReport> = {}): MonthlyReport {
     atCapacityTrips: 3,
     revenueCents: 747_900,
     taxCents: 0,
+    counterCents: 0,
     importedPaymentCents: 0,
     importedRefundCents: 0,
     importedFinancialRecordCount: 0,

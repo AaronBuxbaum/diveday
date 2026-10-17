@@ -393,41 +393,8 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
             </select>
           </Field>
         ) : null}
-        {/* `htmlFor`, so the caption is a label beside the row's own rather
-            than a label wrapped around it: `Field` wraps a child that is not
-            one control in a `<label>`, and a label in a label is invalid HTML
-            with two targets for one click (K-13). */}
-        <Field label={t("schedule.builder.isPrivateLabel")} htmlFor="trip-details-is-private">
-          <ChoiceRow
-            type="checkbox"
-            id="trip-details-is-private"
-            name="isPrivate"
-            defaultChecked={trip.isPrivate}
-            className="text-sm"
-          >
-            {t("schedule.builder.isPrivateHint")}
-          </ChoiceRow>
-        </Field>
-        {/* Silences the shop's own divemaster target for this departure and
-                nothing else — an agency training ratio is a safety cap with its
-                own module and a box cannot switch one off (issue #973).
-
-                **Not offered at all on a course session** (issue #1342): a
-                departure running a course has an instructor of record, so the
-                shop's own target is exactly the signal that should keep
-                applying to it. `updateTrip` refuses the mark whatever this form
-                posts; the box is absent rather than present-and-ignored. The
-                condition is the trip's own course, since this form has no
-                course picker — a departure's course is fixed when it is
-                created.
-
-                A course session that already carries the mark (a row predating
-                the rule) clears itself the first time this form is saved: the
-                action parses an absent checkbox as `false` rather than
-                `undefined`, so `updateTrip` writes the correction. */}
-        {trip.courseId ? null : <SelfGuidedField t={t} checked={trip.selfGuided} />}
-        <AboardFields t={t} trip={trip} />
       </FieldGrid>
+      <DepartureSwitches t={t} trip={trip} />
       <PayAtBookingFields
         t={t}
         trip={trip}
@@ -605,6 +572,52 @@ function PayAtBookingFields({
         </Field>
       </FieldGrid>
     </fieldset>
+  );
+}
+
+/**
+ * The departure's switches, in a grid of their own two across, so the last
+ * one never sits alone under three selects in a narrow column (visual
+ * triage, round 5).
+ */
+function DepartureSwitches({ t, trip }: { t: StaffTranslator; trip: Trip }) {
+  return (
+    <FieldGrid columns={2}>
+      {/* `htmlFor`, so the caption is a label beside the row's own rather
+            than a label wrapped around it: `Field` wraps a child that is not
+            one control in a `<label>`, and a label in a label is invalid HTML
+            with two targets for one click (K-13). */}
+      <Field label={t("schedule.builder.isPrivateLabel")} htmlFor="trip-details-is-private">
+        <ChoiceRow
+          type="checkbox"
+          id="trip-details-is-private"
+          name="isPrivate"
+          defaultChecked={trip.isPrivate}
+          className="text-sm"
+        >
+          {t("schedule.builder.isPrivateHint")}
+        </ChoiceRow>
+      </Field>
+      {/* Silences the shop's own divemaster target for this departure and
+                nothing else — an agency training ratio is a safety cap with its
+                own module and a box cannot switch one off (issue #973).
+
+                **Not offered at all on a course session** (issue #1342): a
+                departure running a course has an instructor of record, so the
+                shop's own target is exactly the signal that should keep
+                applying to it. `updateTrip` refuses the mark whatever this form
+                posts; the box is absent rather than present-and-ignored. The
+                condition is the trip's own course, since this form has no
+                course picker — a departure's course is fixed when it is
+                created.
+
+                A course session that already carries the mark (a row predating
+                the rule) clears itself the first time this form is saved: the
+                action parses an absent checkbox as `false` rather than
+                `undefined`, so `updateTrip` writes the correction. */}
+      {trip.courseId ? null : <SelfGuidedField t={t} checked={trip.selfGuided} />}
+      <AboardFields t={t} trip={trip} />
+    </FieldGrid>
   );
 }
 

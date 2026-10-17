@@ -16,6 +16,8 @@
   "metrics": {
     "revenueLabel": "Net revenue",
     "revenueBasis": "For this month’s departures",
+    "revenueBasisWithCounter": "For this month’s departures, plus {amount} at the counter",
+    "revenueCounter": "Plus {amount} at the counter.",
     "revenueDetailWithImported": "Current-trip payments and deposits after Stripe Tax, plus {count, plural, one {# unverified imported source record} other {# unverified imported source records}}: {payments} payments and {refunds} refunds.",
     "bookingsLabel": "Seats",
     "bookingsThisMonth": "{count, plural, one {# trip} other {# trips}} on the books so far",

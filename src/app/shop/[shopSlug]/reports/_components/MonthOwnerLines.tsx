@@ -112,9 +112,13 @@ export async function LeadTimes({
   const weekdays = weekdayNames(locale, "long");
   return (
     <section aria-labelledby="reports-lead-time" className="mt-10">
-      <GroupLabel as="h2" id="reports-lead-time" meta={t("reports.leadTime.caption")}>
+      {/* The caption is a sentence, not a group's quiet tally, so it sits under
+          the heading rather than in `meta`'s column, which squeezed the
+          heading onto three lines at phone width. */}
+      <GroupLabel as="h2" id="reports-lead-time">
         {t("reports.leadTime.heading")}
       </GroupLabel>
+      <p className="mt-1 text-sm text-muted">{t("reports.leadTime.caption")}</p>
       <ul className="mt-2 space-y-1 text-sm">
         {lines.map((line) => (
           <li key={line.isoWeekday}>
