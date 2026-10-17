@@ -166,21 +166,36 @@ export function normalizeMmsi(input: string): string | null | "invalid" {
 /** The longest working channel a form accepts: "72 or 69" fits, a sentence does not. */
 export const MAX_WORKING_CHANNEL_LENGTH = 16;
 
+/** The marine VHF channels a boat can work on: 1 to 88 (ITU-R M.1084). */
+const VHF_CHANNEL_MAX = 88;
+
 /**
- * A working channel as typed (issue #2672): trimmed, inner runs of space
- * collapsed, otherwise kept as the shop says it ("68", "16/68", "72 or 69").
- * Null for an empty box; `"invalid"` past {@link MAX_WORKING_CHANNEL_LENGTH}
- * or holding more than letters, digits, spaces, `/`, `.` and `-`, so a phone
- * number typed into the wrong box refuses the save rather than printing as a
- * channel.
+ * Distress, safety and calling (16) and DSC (70): every boat keeps them clear,
+ * so neither is ever a boat's working channel (dock review S4).
  */
-export function normalizeWorkingChannel(input: string): string | null | "invalid" {
-  const value = input.trim().replace(/\s+/g, " ");
+const DISTRESS_CHANNELS = new Set([16, 70]);
+
+/**
+ * A working channel as typed (issue #2672): one VHF channel or a few joined by
+ * "/" or "or" ("68", "68/72", "72 or 69"), each 1 to 88 with an optional
+ * letter suffix ("22A"), stored upper-cased with its joins tidied. Null for an
+ * empty box; `"invalid"` for anything else, so a phone number or a sentence
+ * refuses the save rather than printing on the emergency card; `"distress"`
+ * for 16 or 70, which the settings form refuses in its own words.
+ */
+export function normalizeWorkingChannel(input: string): string | null | "invalid" | "distress" {
+  const value = input.trim().replace(/\s+/g, " ").toUpperCase();
   if (value === "") return null;
-  if (value.length > MAX_WORKING_CHANNEL_LENGTH || !/^[A-Za-z0-9][A-Za-z0-9 ./-]*$/.test(value)) {
+  if (
+    value.length > MAX_WORKING_CHANNEL_LENGTH ||
+    !/^\d{1,2}[A-Z]?(\s*(\/|OR)\s*\d{1,2}[A-Z]?)*$/.test(value)
+  ) {
     return "invalid";
   }
-  return value;
+  const channels = value.split(/\s*(?:\/|OR)\s*/).map((channel) => Number.parseInt(channel, 10));
+  if (channels.some((channel) => channel < 1 || channel > VHF_CHANNEL_MAX)) return "invalid";
+  if (channels.some((channel) => DISTRESS_CHANNELS.has(channel))) return "distress";
+  return value.replace(/\s*\/\s*/g, "/").replace(/\s*OR\s*/g, " or ");
 }
 
 /**

@@ -22,8 +22,16 @@ export type EmergencyReferenceCopy = {
   vesselLabel: string;
   callSignLabel: string;
   mmsiLabel: string;
-  /** "Channel:" — the boat's working channel (issue #2672). */
+  /**
+   * "Working channel (VHF):" — the boat's working channel (issue #2672).
+   * Never a bare "Channel": on a card headed "In an emergency" that reads as
+   * the channel to call on (dock review B1).
+   */
   workingChannelLabel: string;
+  /** "not recorded", for a boat whose row holds no working channel. */
+  workingChannelNotRecorded: string;
+  /** The fixed line under it: distress and calling stay on VHF 16. */
+  distressChannel: string;
   shoreContactLabel: string;
   planLabel: string;
 };
@@ -112,13 +120,19 @@ export function EmergencyReferenceCard({
                 </p>
               ) : null}
               {/* The channel the boat works on (issue #2672), on its own
-                  line so it is never read as part of the MMSI. */}
-              {reference.boat.workingChannel ? (
-                <p>
-                  <span className="font-medium">{copy.workingChannelLabel}</span>{" "}
+                  line so it is never read as part of the MMSI, always named
+                  a working channel and always followed by the fixed line
+                  that distress stays on 16 (dock review B1). An empty one
+                  says so rather than vanishing. */}
+              <p>
+                <span className="font-medium">{copy.workingChannelLabel}</span>{" "}
+                {reference.boat.workingChannel ? (
                   <span className="font-mono tabular-nums">{reference.boat.workingChannel}</span>
-                </p>
-              ) : null}
+                ) : (
+                  copy.workingChannelNotRecorded
+                )}
+              </p>
+              <p className="font-medium">{copy.distressChannel}</p>
               {reference.vessel ? <p className="text-pretty">{reference.vessel}</p> : null}
             </>
           ) : reference.vessel ? (

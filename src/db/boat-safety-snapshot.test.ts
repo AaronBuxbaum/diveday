@@ -81,6 +81,30 @@ describe("captureDepartureBoatSafety", () => {
     expect(snapshot?.notices.map((notice) => notice.code)).not.toContain("over_total_persons");
   });
 
+  it("keeps the boat's radio identity as the emergency card printed it (records review S1)", async () => {
+    const { db, shop } = ctx;
+    const boat = await createBoat(db, shop.id, "Radio Hull", 12, null, {
+      certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
+      inspectionDueOn: null,
+      registrationExpiresOn: null,
+      insuranceExpiresOn: null,
+      callSign: "WDM2201",
+      mmsi: "338055502",
+      workingChannel: "68",
+    });
+    const trip = await departure(db, shop.id, boat.id);
+    expect(await captureDepartureBoatSafety(db, shop.id, trip.id, BEFORE)).toBe("captured");
+    const radio = { callSign: "WDM2201", mmsi: "338055502", workingChannel: "68" };
+    expect((await departureBoatSafetySnapshot(db, shop.id, trip.id))?.radio).toEqual(radio);
+
+    // The channel changed after the boat left: the log still reads what sailed.
+    await db.update(boats).set({ workingChannel: "72" }).where(eq(boats.id, boat.id));
+    expect(await captureDepartureBoatSafety(db, shop.id, trip.id, LONG_AFTER)).toBe("sailed");
+    expect((await departureBoatSafetySnapshot(db, shop.id, trip.id))?.radio).toEqual(radio);
+  });
+
   it("rewrites the snapshot before sailing, and freezes it once the boat has sailed", async () => {
     const { db, shop } = ctx;
     const boat = await paperedBoat(db, shop.id);

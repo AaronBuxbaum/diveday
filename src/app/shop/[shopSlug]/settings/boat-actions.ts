@@ -340,7 +340,9 @@ function boatDescription(form: BoatForm): string | null {
  * not nine digits, or a working channel that is not a channel (#2672), refuses
  * the save the same way.
  */
-function boatPapers(form: BoatForm): BoatPapersInput | "invalid" | "radio-invalid" {
+function boatPapers(
+  form: BoatForm,
+): BoatPapersInput | "invalid" | "radio-invalid" | "channel-distress" {
   const day = (
     name: "coiExpiresOn" | "inspectionDueOn" | "registrationExpiresOn" | "insuranceExpiresOn",
   ): string | null | "invalid" => {
@@ -378,6 +380,9 @@ function boatPapers(form: BoatForm): BoatPapersInput | "invalid" | "radio-invali
   if (callSign === "invalid" || mmsi === "invalid" || workingChannel === "invalid") {
     return "radio-invalid";
   }
+  // 16 and 70 are every boat's distress and calling channels: said in its own
+  // words, because "check the working channel" over a real channel reads wrong.
+  if (workingChannel === "distress") return "channel-distress";
   return {
     certifiedPassengers,
     certifiedTotalPersons,
@@ -447,6 +452,7 @@ export async function createBoatAction(formData: FormData) {
   const papers = boatPapers(form);
 
   if (papers === "radio-invalid") redirect(noticeUrl(page, "boat-radio-invalid"));
+  if (papers === "channel-distress") redirect(noticeUrl(page, "boat-channel-distress"));
   if (!name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
   }
@@ -483,6 +489,7 @@ export async function updateBoatAction(formData: FormData) {
   const papers = boatPapers(form);
 
   if (papers === "radio-invalid") redirect(noticeUrl(page, "boat-radio-invalid"));
+  if (papers === "channel-distress") redirect(noticeUrl(page, "boat-channel-distress"));
   if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
     redirect(noticeUrl(page, "boat-invalid"));
   }

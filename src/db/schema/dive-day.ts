@@ -13,7 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { BoatPaperRecord, BoatSafetyNotice } from "@/lib/boat-safety";
+import type { BoatPaperRecord, BoatRadioRecord, BoatSafetyNotice } from "@/lib/boat-safety";
 import { SNAG_NOTE_MAX } from "@/lib/pre-departure-check";
 import type { ReadinessBlocker } from "@/lib/readiness";
 import { bookings } from "./bookings";
@@ -785,6 +785,16 @@ export const departureBoatSafetySnapshots = pgTable(
     /** The departure's own local day the notices were judged on. */
     judgedOn: date("judged_on").notNull(),
     papers: jsonb("papers").$type<BoatPaperRecord>().notNull(),
+    /**
+     * The radio identity the emergency card printed for this departure (call
+     * sign, MMSI, working channel; records review S1 of #2672), written at the
+     * same checkpoint as `papers`. A snapshot kept before it existed reads
+     * every fact as not recorded.
+     */
+    radio: jsonb("radio")
+      .$type<BoatRadioRecord>()
+      .notNull()
+      .default({ callSign: null, mmsi: null, workingChannel: null }),
     notices: jsonb("notices").$type<BoatSafetyNotice[]>().notNull(),
     capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
   },

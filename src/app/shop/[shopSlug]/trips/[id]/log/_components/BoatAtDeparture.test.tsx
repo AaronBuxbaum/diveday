@@ -71,11 +71,37 @@ for (const locale of ["en-US", "es-ES"] as const) {
         ),
       ).toBeInTheDocument();
       expect(screen.getByText("12")).toBeInTheDocument();
-      // Total persons, registration and insurance were never recorded.
-      expect(screen.getAllByText(t("incidentExport.boatNotRecorded"))).toHaveLength(3);
+      // Total persons, registration and insurance were never recorded, and
+      // this snapshot kept no radio fact.
+      expect(screen.getAllByText(t("incidentExport.boatNotRecorded"))).toHaveLength(6);
       expect(screen.getAllByRole("listitem")).toHaveLength(1);
       // The notices are what the register showed, not what was aboard.
       expect(screen.getByText(t("incidentExport.boatNoticesLabel"))).toBeInTheDocument();
+    });
+
+    it("sets the radio identity the card printed, each under its own label (records review S1)", () => {
+      draw({
+        ...SNAPSHOT,
+        radio: { callSign: "WDM2201", mmsi: "338055502", workingChannel: null },
+      });
+      expect(screen.getByText(t("boats.callSignLabel")).nextSibling?.textContent).toBe("WDM2201");
+      expect(screen.getByText(t("boats.mmsiLabel")).nextSibling?.textContent).toBe("338055502");
+      expect(screen.getByText(t("boats.workingChannelLabel")).nextSibling?.textContent).toBe(
+        t("incidentExport.boatNotRecorded"),
+      );
+    });
+
+    it("says a snapshot that kept no radio fact recorded none", () => {
+      draw(SNAPSHOT);
+      for (const label of [
+        "boats.callSignLabel",
+        "boats.mmsiLabel",
+        "boats.workingChannelLabel",
+      ] as const) {
+        expect(screen.getByText(t(label)).nextSibling?.textContent).toBe(
+          t("incidentExport.boatNotRecorded"),
+        );
+      }
     });
 
     it("says the boat carried no notice when it carried none", () => {

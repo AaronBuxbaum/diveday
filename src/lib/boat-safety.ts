@@ -153,6 +153,29 @@ export type BoatPaperRecord = BoatPaperDates & {
   certifiedTotalPersons: number | null;
 };
 
+/**
+ * **The boat's radio identity as the emergency card printed it** (records
+ * review S1 of #2672): call sign, MMSI and working channel, kept beside the
+ * papers at the departure checkpoint so what the card said can be read back.
+ * Null is "not recorded".
+ */
+export type BoatRadioRecord = {
+  callSign: string | null;
+  mmsi: string | null;
+  workingChannel: string | null;
+};
+
+export const EMPTY_BOAT_RADIO_RECORD: BoatRadioRecord = {
+  callSign: null,
+  mmsi: null,
+  workingChannel: null,
+};
+
+/** Whether a kept radio record holds any fact at all. */
+export function boatRadioRecorded(radio: BoatRadioRecord | null | undefined): boolean {
+  return Boolean(radio && (radio.callSign || radio.mmsi || radio.workingChannel));
+}
+
 /** The six certificate and paper fields a boat save can change, in the fleet row's order. */
 export const BOAT_PAPER_FIELDS = [
   "certifiedPassengers",
