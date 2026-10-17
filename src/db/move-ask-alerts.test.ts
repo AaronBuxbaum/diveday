@@ -5,7 +5,15 @@ import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
 import { markInboundAnswered, recordMoveAsk } from "./inbound-messages";
 import { alertStaffToMoveAsk } from "./move-ask-alerts";
-import { bookings, people, personRoles, shops, trips, userAccounts } from "./schema";
+import {
+  bookings,
+  inboundMessages,
+  people,
+  personRoles,
+  shops,
+  trips,
+  userAccounts,
+} from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -180,6 +188,41 @@ describe("alertStaffToMoveAsk", () => {
         provider,
       }),
     ).toEqual({ status: "not_found" });
+    expect(sent).toEqual([]);
+  });
+
+  it("emails nobody about a rehearsal's ask", async () => {
+    const { db, shop } = ctx;
+    await setDemo(false);
+    const ask = await anAsk(5);
+    const [seat] = await db
+      .select({ tripId: bookings.tripId })
+      .from(bookings)
+      .innerJoin(inboundMessages, eq(inboundMessages.bookingId, bookings.id))
+      .where(eq(inboundMessages.id, ask.messageId));
+    if (!seat) throw new Error("ask's seat missing");
+    // A rehearsal is always private (`trips_rehearsal_is_private`).
+    const [before] = await db
+      .select({ isPrivate: trips.isPrivate })
+      .from(trips)
+      .where(eq(trips.id, seat.tripId));
+    await db
+      .update(trips)
+      .set({ isRehearsal: true, isPrivate: true })
+      .where(eq(trips.id, seat.tripId));
+    const { sent, provider } = recorder();
+    const outcome = await alertStaffToMoveAsk(db, {
+      shopId: shop.id,
+      messageId: ask.messageId,
+      now: new Date(ask.startsAt.getTime() - HOUR_MS),
+      origin: ORIGIN,
+      provider,
+    });
+    await db
+      .update(trips)
+      .set({ isRehearsal: false, isPrivate: before?.isPrivate ?? false })
+      .where(eq(trips.id, seat.tripId));
+    expect(outcome).toEqual({ status: "not_found" });
     expect(sent).toEqual([]);
   });
 });

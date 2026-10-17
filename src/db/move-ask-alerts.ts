@@ -14,7 +14,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 export type MoveAskAlertOutcome =
   | { status: "not_soon" | "demo" | "no_origin" | "not_found" | "failed" }
@@ -26,6 +26,8 @@ export type MoveAskAlertOutcome =
  * once `recordMoveAsk` filed the ask — never for an ask that already stood —
  * and only when the seat's departure leaves within a day
  * (`moveAskAlertDue`); farther out the Inbox row is enough.
+ *
+ * A rehearsal's ask reads as not found, so a drill emails nobody.
  *
  * One email to each active owner or manager login, keyed to the ask's own
  * filing (`move_ask_soon`'s idempotency key), so a resubmit sends nothing new
@@ -73,6 +75,8 @@ export async function alertStaffToMoveAsk(
           isNull(inboundMessages.answeredAt),
           isNull(inboundMessages.deletedAt),
           liveTrip(),
+          // A practice departure's ask is the drill's, never anyone's inbox.
+          notRehearsal(),
         ),
       )
       .limit(1);
