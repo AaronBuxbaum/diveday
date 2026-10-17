@@ -90,7 +90,9 @@
     "demo_own_computer_confirmed": "{actor} confirmó que {diver} trae su propia computadora",
     "demo_paper_card_reminded": "{actor} le recordó a {diver} traer la tarjeta física al muelle",
     "participant_type_changed": "{actor} cambió a {diver} de {from, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}} a {type, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}}{certCheck, select, cleared {, y eso quitó una verificación de tarjeta} overridden {, aunque falta una tarjeta} other {}}{atSea, select, yes {, después de la salida} other {}}",
-    "course_form_medical_changed": "{actor} {marked, select, yes {marcó} other {quitó la marca médica de}} el formulario del curso {form}{marked, select, yes { como declaración médica} other {}}"
+    "course_form_medical_changed": "{actor} {marked, select, yes {marcó} other {quitó la marca médica de}} el formulario del curso {form}{marked, select, yes { como declaración médica} other {}}",
+    "training_dive_marked": "{actor} marcó la inmersión de {diver} como formación para {course}",
+    "training_dive_cleared": "{actor} quitó la marca de formación de la inmersión de {diver} para {course}{formsOwed, select, yes {, con formularios del curso sin firmar} other {}}"
   },
   "unknown": "Una entrada anterior",
   "review": {

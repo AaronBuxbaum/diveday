@@ -244,6 +244,12 @@ export type ManifestDiverInput = {
    */
   riderMedicalHold?: RiderMedicalHold | null;
   /**
+   * A staffer cleared this seat's training mark while its course forms were
+   * still owed (issue #2275): the seat boards without them, and the crew sees
+   * who decided. Never a blocker. Not in the offline snapshot.
+   */
+  trainingMarkCleared?: { byName: string | null } | null;
+  /**
    * Lodging / hotel location stated by diver on /ready (marker only, not a checkpoint).
    */
   hotelPickupLocation?: string | null;

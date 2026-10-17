@@ -122,6 +122,7 @@
   "medicalClearedByPhysician": "Cleared by physician",
   "medicalWaiverSigned": "Medical waiver signed",
   "medicalEarlierRefusal": "A physician did not clear this person on {date} (earlier waiver)",
+  "trainingMarkCleared": "{hasName, select, yes {Training mark cleared by {name} with course forms unsigned} other {Training mark cleared with course forms unsigned}}",
   "medicalEarlierRefusalChip": "Physician said no before",
   "medicalReferralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file",
   "medicalHoldNotClearedChip": "Not medically cleared",

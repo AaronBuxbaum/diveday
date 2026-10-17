@@ -428,6 +428,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   guardian_signature_missing: "shared.readiness.blockers.guardianSignatureMissing",
   course_form_unsigned: "shared.readiness.blockers.courseFormUnsigned",
   course_form_guardian_missing: "shared.readiness.blockers.courseFormGuardianMissing",
+  training_mark_invalid: "shared.readiness.blockers.trainingMarkInvalid",
   certification_missing: "shared.readiness.blockers.certificationMissing",
   certification_pending: "shared.readiness.blockers.certificationPending",
   certification_self_declared: "shared.readiness.blockers.certificationSelfDeclared",

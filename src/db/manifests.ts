@@ -1107,6 +1107,27 @@ export async function getTripManifests(
   const riderHoldByBooking = new Map(
     readinessRows.map((row) => [row.booking.id, row.riderMedicalHold] as const),
   );
+  // Who cleared a training mark while its course forms were still owed (issue
+  // #2275): that clear relaxed a boarding block, so the crew sees who did it.
+  // Read only when such a seat is aboard.
+  const clearedByIds = [
+    ...new Set(
+      roster
+        .map(({ booking }) => booking.trainingClearedByPersonId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const clearedByName = new Map(
+    clearedByIds.length === 0
+      ? []
+      : (
+          await db
+            .select({ id: people.id, name: people.fullName })
+            .from(people)
+            // diveday:allow-deleted-people: who cleared the mark, kept as history.
+            .where(and(eq(people.shopId, shopId), inArray(people.id, clearedByIds)))
+        ).map((row) => [row.id, row.name] as const),
+  );
   // Buddy teams, reduced to the members who are actually aboard. A member
   // whose seat was since cancelled stays listed (and dissolvable) on the teams
   // panel, but is dropped here: a cancelled seat is nobody (ADR
@@ -1221,6 +1242,13 @@ export async function getTripManifests(
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
       riderMedicalHold: riderHoldByBooking.get(booking.id) ?? null,
+      trainingMarkCleared: booking.trainingClearedAt
+        ? {
+            byName: booking.trainingClearedByPersonId
+              ? (clearedByName.get(booking.trainingClearedByPersonId) ?? null)
+              : null,
+          }
+        : null,
       // Null whenever the shop holds no date of birth, so the captain's list
       // stays quiet rather than showing "unknown" down the whole boat.
       age: person.dateOfBirth ? ageOnDate(person.dateOfBirth, tripDate) : null,

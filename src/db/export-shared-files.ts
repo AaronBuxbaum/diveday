@@ -396,6 +396,26 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
       in: "shop",
       value: (row) => row.courseMaterialsDoneByPersonId,
     },
+    // A training mark: the course seat this charter seat's dive counted
+    // toward, who marked it, and a clear made with course forms owed
+    // (issue #2275). The forms themselves stay on the enrollment.
+    {
+      header: "training_enrollment_booking_id",
+      in: "shop",
+      value: (row) => row.trainingEnrollmentBookingId,
+    },
+    { header: "training_marked_at", in: "shop", value: (row) => row.trainingMarkedAt },
+    {
+      header: "training_marked_by_person_id",
+      in: "shop",
+      value: (row) => row.trainingMarkedByPersonId,
+    },
+    { header: "training_cleared_at", in: "shop", value: (row) => row.trainingClearedAt },
+    {
+      header: "training_cleared_by_person_id",
+      in: "shop",
+      value: (row) => row.trainingClearedByPersonId,
+    },
     { header: "hotel_pickup_location", in: "shop", value: (row) => row.hotelPickupLocation },
     { header: "pickup_time", in: "shop", value: (row) => row.pickupTime },
     {

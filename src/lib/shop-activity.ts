@@ -64,6 +64,8 @@ export const ACTIVITY_CODE_KINDS: Record<ActivityCode, ShopActivityKind> = {
   party_seat_self_cancelled: "seats",
   participant_type_changed: "safety",
   course_form_medical_changed: "safety",
+  training_dive_marked: "safety",
+  training_dive_cleared: "safety",
   identity_confirmed: "safety",
   identity_split: "safety",
   identity_split_off: "safety",

@@ -590,7 +590,11 @@ const TODAY_CEILING = 66;
 // cards (`listAgencyCheckableCards`), one statement in `getTripGuests`' fan-out.
 // 52 → 54: the same read also asks for the divers' pending nitrox and specialty
 // cards (issue #2592), one statement each, in the same wave as the level read.
-const TRIP_CEILING = 54;
+// 54 → 55 (issue #2275): on a departure that is not a course session, the
+// roster reads each diver's course seats a training mark may name
+// (`trainingMarksForRoster`), one statement in the same wave. The marks
+// themselves cost nothing until one is set.
+const TRIP_CEILING = 55;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never

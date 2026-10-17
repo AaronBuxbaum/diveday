@@ -28,6 +28,7 @@ import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "
 import { listTripPrepDivers } from "./rental-fit";
 import { listCertificationSummaries } from "./self-declared-cards";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { trainingMarksForRoster } from "./training-marks";
 import { listTripInvitations } from "./trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
 import { getTripWithBooked } from "./trips-record";
@@ -148,6 +149,7 @@ export async function getTripGuests(
     courseMaterialsDone,
     agencyCheckCardsByPerson,
     dependentCharters,
+    trainingMarks,
   ] = await Promise.all([
     // What "Different person" on a held seat can offer to move along with it:
     // other held seats under the same name on the same matched diver, on other
@@ -237,6 +239,25 @@ export async function getTripGuests(
           nowDate(),
         )
       : new Map<string, DependentCharter[]>(),
+    // On a charter, each seat's training mark and the course seats one may
+    // name (issue #2275). Nothing on a course session.
+    trainingMarksForRoster(
+      db,
+      shop.id,
+      trip,
+      roster.map(({ booking }) => ({
+        bookingId: booking.id,
+        personId: booking.personId,
+        participantType: booking.participantType,
+        status: booking.status,
+        identityHeld: booking.identityUnconfirmedAt !== null,
+        trainingEnrollmentBookingId: booking.trainingEnrollmentBookingId,
+        trainingMarkedAt: booking.trainingMarkedAt,
+        trainingMarkedByPersonId: booking.trainingMarkedByPersonId,
+        trainingClearedAt: booking.trainingClearedAt,
+        trainingClearedByPersonId: booking.trainingClearedByPersonId,
+      })),
+    ),
   ]);
 
   const heldSeatLastDiveDay = new Map<string, Date | null>(
@@ -347,6 +368,8 @@ export async function getTripGuests(
     sameNamePeople,
     /** Per course seat, the charter seats sold only on it (issue #2058). */
     dependentCharters,
+    /** On a charter, the training marks and the course seats one may name (issue #2275). */
+    trainingMarks,
     /**
      * Per held seat, the matched diver's last dive day at this shop, or null
      * when there is none (issue #1789). Only held seats have an entry.

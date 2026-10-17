@@ -9,6 +9,7 @@ import type { CourseMaterialsDone } from "@/db/course-materials";
 import type { SameNamePerson } from "@/db/identity-repoint";
 import type { listBookingNotes } from "@/db/operations";
 import type { PaymentMarkFacts } from "@/db/payment-marks";
+import type { TrainingMarkRosterSeat } from "@/db/training-marks";
 import { depthWarningText } from "@/i18n/depth-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckableCard } from "@/lib/agency-check-queue";
@@ -123,6 +124,14 @@ export type RosterRows = {
   notesByBooking: Map<string, RosterPrivateNote[]>;
   /** What each student's next step already says, so an instructor edits rather than retypes. */
   courseNextStepByBooking?: Map<string, string>;
+  /**
+   * On a departure that is not a course session, each seat's training mark
+   * and the course seats a mark may name (`trainingMarksForRoster`, #2275).
+   */
+  trainingMarks?: {
+    bySeat: ReadonlyMap<string, TrainingMarkRosterSeat>;
+    instructorRostered: boolean;
+  };
   /** What the browser extension searches PADI's eLearning for, per seat (H-106). */
   elearningQueryByBooking?: Map<string, ElearningQuery>;
   /** A PADI course with materials at a shop whose PADI checks are off (H-121). */
@@ -238,6 +247,9 @@ export type RosterActions = {
   certifyDiverAction?: (formData: FormData) => void;
   /** Record a course form signed on paper (ADR 20261008-course-forms). */
   recordPaperCourseFormAction?: (formData: FormData) => void;
+  /** Mark a charter seat as a training dive, and clear it (issue #2275). */
+  markTrainingDiveAction?: (formData: FormData) => void;
+  clearTrainingDiveAction?: (formData: FormData) => void;
   /**
    * What this student does next, in the instructor's own words (issues #1196,
    * #1205) — present under exactly the same condition as `certifyDiverAction`,

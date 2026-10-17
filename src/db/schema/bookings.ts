@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -447,9 +448,64 @@ export const bookings = pgTable(
     courseMaterialsDoneByPersonId: uuid("course_materials_done_by_person_id").references(
       () => people.id,
     ),
+    /**
+     * **A training mark** (issue #2275, ADR
+     * 20261012-course-forms-on-charters-and-counter): staff said this seat on
+     * an ordinary departure carries a training dive for the course seat named
+     * here (the enrollment). The seat is then asked that course's forms, and
+     * signing them once on the enrollment covers both.
+     *
+     * Only ever a staff act on the departure's Divers tab, never inferred from
+     * a diver's open enrollment or card level (`src/db/training-marks.ts`).
+     * One enrollment per seat: a second mark is refused until this one is
+     * cleared. Checked again at every read (`trainingMarkValidity`): a mark
+     * whose enrollment is canceled, held, moved off a course or ends before
+     * this departure sails raises `training_mark_invalid` until staff clear
+     * it, so a stale mark never quietly relaxes boarding. A training mark is
+     * not "In training": the booking gate never reads it.
+     *
+     * The three columns move together. The foreign key takes the default
+     * action: a hard delete of a marked enrollment fails rather than clearing
+     * the mark in silence.
+     */
+    trainingEnrollmentBookingId: uuid("training_enrollment_booking_id"),
+    trainingMarkedAt: timestamp("training_marked_at", { withTimezone: true }),
+    trainingMarkedByPersonId: uuid("training_marked_by_person_id").references(() => people.id),
+    /**
+     * **Who cleared a training mark while its forms were still owed, and
+     * when.** Clearing then relaxes a boarding block, so the manifest names who
+     * did it. Null when no mark was ever cleared with forms owed; a new mark
+     * clears it. Both columns move together.
+     */
+    trainingClearedAt: timestamp("training_cleared_at", { withTimezone: true }),
+    trainingClearedByPersonId: uuid("training_cleared_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    foreignKey({
+      name: "bookings_training_enrollment_fk",
+      columns: [table.trainingEnrollmentBookingId],
+      foreignColumns: [table.id],
+    }),
+    // The charter seats marked as training on one enrollment, and the foreign
+    // key's probe when a booking is deleted.
+    index("bookings_training_enrollment_idx")
+      .on(table.trainingEnrollmentBookingId)
+      .where(sql`${table.trainingEnrollmentBookingId} is not null`),
+    // A mark nobody is recorded as having made is not one boarding may read.
+    check(
+      "bookings_training_mark_attributed",
+      sql`(${table.trainingEnrollmentBookingId} is null) = (${table.trainingMarkedAt} is null)
+        and (${table.trainingMarkedAt} is null) = (${table.trainingMarkedByPersonId} is null)`,
+    ),
+    check(
+      "bookings_training_cleared_attributed",
+      sql`(${table.trainingClearedAt} is null) = (${table.trainingClearedByPersonId} is null)`,
+    ),
+    check(
+      "bookings_training_mark_not_self",
+      sql`${table.trainingEnrollmentBookingId} is null or ${table.trainingEnrollmentBookingId} <> ${table.id}`,
+    ),
     // Leads on the person column so deleting a person (a demo shop's cascade,
     // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
     // every shop's rows; a (shop_id, …) composite cannot serve that probe.

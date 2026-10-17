@@ -124,6 +124,8 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // The student signs it on this very page (ADR 20261008-course-forms).
   course_form_unsigned: "action",
   course_form_guardian_missing: "action",
+  // The shop fixes its own mark; the diver has nothing to do.
+  training_mark_invalid: "waiting",
   certification_missing: "action",
   certification_pending: "waiting",
   // "action", not "waiting": the diver said a level and nobody has seen a card,

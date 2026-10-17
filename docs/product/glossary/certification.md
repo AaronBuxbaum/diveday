@@ -194,8 +194,9 @@
   ladder — not the **specialty** or **nitrox** tables, which stay one-tap-away from this treatment on
   purpose (see their own entries on why even an *imported* row waits for a staff confirm there).
 - **In training** — a diver with no card at a trip's level yet, holding a seat on a course session
-  that certifies that level (or higher), ends before the trip starts, and has not ended yet. Which
-  courses certify a rung is agency fact, written on each template in `src/content/course-templates.ts`
+  that certifies that level (or higher), ends before the trip starts, and has not ended yet. A
+  **Training mark** (operations glossary) is a different thing and never makes a diver In training.
+  Which courses certify a rung is agency fact, written on each template in `src/content/course-templates.ts`
   (`certifiesLevel`) and copied onto the course (`courses.certifies_level`, issue #2059), so a
   template update carries it and no editor changes it; it matches the importer: SSI Advanced
   Adventurer and SDI Advanced Adventure Diver are the Advanced rung; specialties, refreshers and

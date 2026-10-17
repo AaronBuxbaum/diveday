@@ -212,6 +212,14 @@ export type ReadinessBlockerCode =
    * signature. The fix is the guardian's signature, not the student's again.
    */
   | "course_form_guardian_missing"
+  /**
+   * Staff marked this seat as a training dive for a course seat, and the mark
+   * no longer stands: the enrollment was canceled, held, moved off a course or
+   * ends before this departure (issue #2275). Raised until a staffer clears or
+   * replaces the mark, never read as "no mark": a stale mark must not relax
+   * boarding in silence.
+   */
+  | "training_mark_invalid"
   | "certification_missing"
   | "certification_pending"
   | "certification_self_declared"
@@ -296,6 +304,9 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   // step on the diver's own page is where both are answered.
   course_form_unsigned: "waiver",
   course_form_guardian_missing: "waiver",
+  // The desk's own record is what is wrong, like a held identity: staff fix
+  // it on the Divers tab, and the student has nothing to do.
+  training_mark_invalid: "setup",
   certification_missing: "certification",
   certification_pending: "certification",
   certification_self_declared: "certification",
@@ -381,6 +392,9 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   // nobody aboard can sign it for them.
   course_form_unsigned: "unknown",
   course_form_guardian_missing: "unknown",
+  // Which course's forms this seat owes is not known, so neither is whether
+  // they are signed.
+  training_mark_invalid: "unknown",
   identity_unconfirmed: "unknown",
   readiness_unavailable: "unknown",
   requirements_not_configured: "unknown",
@@ -568,6 +582,12 @@ export type ReadinessInput = {
      */
     timezone: string;
   };
+  /**
+   * The seat carries a training mark that no longer stands
+   * (`trainingMarkProblem`, issue #2275). A mark that stands arrives as
+   * `courseForms` above instead, keyed on the enrollment's booking.
+   */
+  trainingMarkInvalid?: boolean;
   now?: Date;
 };
 
@@ -1108,6 +1128,10 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       });
     }
   }
+
+  // A training mark that stopped being true. Whatever the course-forms switch
+  // says: until staff fix the mark, nobody knows which forms this seat owes.
+  if (input.trainingMarkInvalid) blockers.push({ code: "training_mark_invalid" });
 
   // A snorkeler or a rider is asked for no card: the trip's and its sites'
   // gates compose to nothing for a seat with no dive in it. Composed here, in

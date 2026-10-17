@@ -17,11 +17,16 @@ import { ElearningCheck } from "./ElearningCheck";
 import { elearningCheckCopy } from "./elearning-check-copy";
 import { PartyPaymentSection } from "./PartyPaymentSection";
 import { PaymentStatusControl } from "./PaymentStatusControl";
-import { PAYMENT_STATUSES_ALL, PAYMENT_STATUSES_RECORDING_ONLY } from "./roster-model";
+import {
+  PAYMENT_STATUSES_ALL,
+  PAYMENT_STATUSES_RECORDING_ONLY,
+  type RosterRows,
+} from "./roster-model";
 import type { RowIdentity } from "./roster-row-identity";
 import type { RowReasonList } from "./roster-row-reason-list";
 import type { RosterSeat } from "./roster-seat";
 import { SeatCourseControls } from "./SeatCourseControls";
+import { TrainingMarkControl } from "./TrainingMarkControl";
 
 /** **Outstanding**: what the seat still needs, the first band of its panel. */
 /**
@@ -60,6 +65,7 @@ export type RowOutstandingInput = Pick<
   | "setCourseMaterialsDoneAction"
   | "elearningCheckAction"
   | "recordPaperCourseFormAction"
+  | "actions"
   | "materialsDone"
   | "paymentStatus"
   | "paymentSource"
@@ -73,7 +79,8 @@ export type RowOutstandingInput = Pick<
   | "namesakeRefused"
 > &
   Pick<RowIdentity, "identityContact" | "packageNote"> &
-  Pick<RowReasonList, "deskPrivateLines">;
+  Pick<RowReasonList, "deskPrivateLines"> &
+  Pick<RosterRows, "trainingMarks">;
 
 export function rowOutstanding(seat: RowOutstandingInput) {
   const {
@@ -107,6 +114,8 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     setCourseMaterialsDoneAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
+    actions,
+    trainingMarks,
     materialsDone,
     paymentStatus,
     paymentSource,
@@ -122,6 +131,8 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     packageNote,
     deskPrivateLines,
   } = seat;
+  // This seat's training mark on a charter (issue #2275); none on a course session.
+  const trainingMark = trainingMarks?.bySeat.get(booking.id) ?? null;
   // Only a seat in the water on a medical hold: a rider is never held on one.
   const snorkelerMedicalHold =
     booking.participantType === "snorkeler" &&
@@ -281,6 +292,21 @@ export function rowOutstanding(seat: RowOutstandingInput) {
         </div>
       ) : null}
 
+      {/* A training dive on a charter (issue #2275): the mark, or the course
+          seats it may name. Before the forms it brings with it. */}
+      {trainingMark ? (
+        <TrainingMarkControl
+          bookingId={booking.id}
+          training={trainingMark}
+          instructorRostered={trainingMarks?.instructorRostered ?? false}
+          markAction={actions.markTrainingDiveAction}
+          clearAction={actions.clearTrainingDiveAction}
+          locale={locale}
+          timezone={shopTimezone}
+          t={t}
+        />
+      ) : null}
+
       {/* The course's own forms, which the release's control above does not
           speak for (ADR 20261008-course-forms). Withheld on a held seat, like
           every other write onto the diver's record from this row. */}
@@ -353,6 +379,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     Boolean(saveCourseNextStepAction) ||
     Boolean(setCourseMaterialsDoneAction) ||
     waiverControl.action !== null ||
+    trainingMark !== null ||
     requiresPayment;
 
   /**

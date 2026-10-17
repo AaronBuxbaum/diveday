@@ -43,7 +43,10 @@ const MUST_LEAD = [
 // `booking_payment_events.recorded_by_person_id` attribute a staffer's manual
 // Paid mark. Written once per mark, read by nothing that probes by person, so
 // an index would tax every payment write for a demo-data delete.
-const UNINDEXED_CEILING = 108;
+// 110 with #2275: `bookings.training_marked_by_person_id` and
+// `bookings.training_cleared_by_person_id` attribute a staffer's training
+// mark, for the same reason.
+const UNINDEXED_CEILING = 110;
 
 async function unindexedPeopleForeignKeys(db: AppDb): Promise<string[]> {
   const result = await db.execute(sql`

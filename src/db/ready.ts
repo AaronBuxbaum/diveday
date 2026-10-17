@@ -287,6 +287,12 @@ export type ReadyPageData = {
    */
   participantType: ParticipantType;
   /**
+   * The seat may owe course forms: it is on a course session, or staff marked
+   * it as a training dive for a course seat (issue #2275), whose forms are
+   * then signed on the enrollment.
+   */
+  asksCourseForms: boolean;
+  /**
    * What cancelling right now would do to any payment already captured —
    * shown before the diver commits, mirroring `refundBookingOnCancellation`'s
    * decision without moving any money. Never trust this for the actual
@@ -387,6 +393,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
       participantType: bookings.participantType,
+      trainingEnrollmentBookingId: bookings.trainingEnrollmentBookingId,
       lastDivedBand: bookings.lastDivedBand,
       welcomeSharedAt: bookings.welcomeSharedAt,
       welcomeHello: bookings.welcomeHello,
@@ -624,6 +631,7 @@ export async function getReadyPageData(
     fitConfirmation: identityHeld ? null : fitConfirmation,
     wantsNitrox: row.wantsNitrox,
     participantType: row.participantType,
+    asksCourseForms: Boolean(trip.course) || row.trainingEnrollmentBookingId !== null,
     lastDivedBand: row.lastDivedBand,
     diveIntent: row.diveIntent,
     reEntryAsk: row.reEntryAsk,

@@ -197,5 +197,7 @@ Risks Acknowledgment (10615) at 11.
   The shop export checks every seal as it writes `course_form_records.csv` (`integrity_check`).
 - The prep page's sign step offers the forms door whenever the enrollment owes a form, whatever
   the switch says, so warn-only still has a way in besides the direct link the send delivers.
-- Training dives that ride a regular charter, and handing one device round a family to sign, are
-  not modelled here; both are filed as a follow-up.
+- Training dives that ride a regular charter are the training mark of ADR
+  20261012-course-forms-on-charters-and-counter (issue #2275): the charter seat reads and writes
+  the enrollment's records, so "signed per booking" still means the course seat. Handing one
+  device round a family to sign is that ADR's second, still Proposed, decision.

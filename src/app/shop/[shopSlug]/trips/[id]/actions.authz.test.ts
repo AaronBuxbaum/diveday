@@ -539,6 +539,8 @@ describe("who may run each action on the trip page", () => {
     // A snorkeler's and a rider's price and the divers-only limit are trip
     // definition, beside the diver's own price in `saveDetails`.
     "saveParticipantTermsAction",
+    "markTrainingDiveAction",
+    "clearTrainingDiveAction",
   ];
 
   /** Money: what a dive costs, and writing off what it earned. */

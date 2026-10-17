@@ -899,7 +899,8 @@
       "paymentDone": "Pagado. Gracias.",
       "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada. Comparte los datos de cada una y tu centro confirmará que estás listo.",
       "courseFormUnsigned": "Tu curso tiene formularios para que firmes.",
-      "courseFormGuardianMissing": "Tu madre, padre o tutor legal tiene que firmar contigo los formularios del curso."
+      "courseFormGuardianMissing": "Tu madre, padre o tutor legal tiene que firmar contigo los formularios del curso.",
+      "trainingMarkInvalid": "Tu centro necesita revisar los datos de tu curso antes de darte luz verde. Se pondrán en contacto si hace falta algo."
     },
     "gearAndSetup": "Equipo y ajuste",
     "dockCallLine": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",

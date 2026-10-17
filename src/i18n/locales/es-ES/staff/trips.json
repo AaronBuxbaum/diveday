@@ -49,6 +49,12 @@
     "nextStepNotACourse": "Esta salida no es una sesión de curso, así que no hay un siguiente paso que registrar.",
     "materialsSaved": "Material de estudio actualizado.",
     "materialsNotACourse": "Esta salida no es una sesión de curso, así que no tiene material de estudio.",
+    "trainingMarked": "Marcada como inmersión de formación. Ahora en esta plaza se piden los formularios del curso.",
+    "trainingCleared": "Marca de formación quitada.",
+    "trainingMarkAlready": "Esta inmersión ya está marcada para otro curso. Quita esa marca primero.",
+    "trainingMarkInvalid": "Esa plaza del curso no puede llevar esta inmersión. Tiene que ser una plaza vigente de este mismo buceador, en una sesión que dure hasta que salga el barco.",
+    "trainingMarkOver": "Esa salida o sesión del curso ya terminó, así que no cambió nada.",
+    "trainingMarkFormsOwed": "Todavía faltan formularios del curso. Un gerente o el instructor del curso puede quitar esta marca.",
     "saved": "Cambios guardados.",
     "cancelled": "Salida cancelada. Ya no aparece en el calendario público.",
     "reinstated": "La salida vuelve a estar en el calendario.",
@@ -659,6 +665,18 @@
       "signedOn": "Fecha del papel",
       "signedOnHint": "Déjala vacía si se firmó hoy.",
       "paperCopy": "Tengo la copia firmada en papel"
+    },
+    "trainingMark": {
+      "label": "Inmersión de formación",
+      "countsToward": "Cuenta para",
+      "option": "{course}, {date}",
+      "mark": "Marcar como inmersión de formación",
+      "marking": "Marcando…",
+      "marked": "Inmersión de formación para {course}. En esta plaza se piden los formularios del curso.",
+      "noInstructor": "Todavía no hay instructor en la tripulación de esta salida.",
+      "clear": "Quitar marca de formación",
+      "clearing": "Quitando…",
+      "clearedWithFormsOwed": "{hasName, select, yes {{name} quitó la marca de formación con formularios del curso sin firmar.} other {Se quitó la marca de formación con formularios del curso sin firmar.}}"
     }
   },
   "offlineManifestManager": {

@@ -22,7 +22,11 @@ import type { MarkRetry } from "@/lib/payment-marks";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { recordPaperCourseFormAction } from "../course-actions";
+import {
+  clearTrainingDiveAction,
+  markTrainingDiveAction,
+  recordPaperCourseFormAction,
+} from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
 import { DepartureNoteSection } from "./DepartureNoteSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
@@ -272,6 +276,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           sameNameHeldSeats: guests.sameNameHeldSeats,
           sameNamePeople: guests.sameNamePeople,
           dependentCharters: guests.dependentCharters,
+          trainingMarks: guests.trainingMarks,
           heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
           packageDivesByBooking: guests.packageDivesByBooking,
           paymentMarksByBooking: guests.paymentMarksByBooking,
@@ -310,6 +315,16 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           // A course form signed on paper (ADR 20261008-course-forms). Bound
           // here rather than on the page: only a seat that owes a form draws it.
           recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),
+          // A training dive on a charter (issue #2275). Never on a finished
+          // departure: its ledger is the record.
+          markTrainingDiveAction:
+            trip.courseId || record
+              ? undefined
+              : markTrainingDiveAction.bind(null, shopSlug, trip.id),
+          clearTrainingDiveAction:
+            trip.courseId || record
+              ? undefined
+              : clearTrainingDiveAction.bind(null, shopSlug, trip.id),
           updatePickupAction: actions.updateBookingPickupAction,
         }}
         slots={{

@@ -176,6 +176,16 @@ export function DiverFacts({
           ))}
         </p>
       ) : null}
+      {/* A training mark cleared with its course forms unsigned (issue
+          #2275): the seat boards without them, and the crew sees who decided. */}
+      {diver.trainingMarkCleared ? (
+        <p className="font-medium text-warning-strong">
+          {t("manifest.trainingMarkCleared", {
+            hasName: diver.trainingMarkCleared.byName ? "yes" : "no",
+            name: diver.trainingMarkCleared.byName ?? "",
+          })}
+        </p>
+      ) : null}
       {diver.medicalWaiver ? (
         <p>
           <span className="font-bold">

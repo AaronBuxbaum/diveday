@@ -899,7 +899,8 @@
       "paymentDone": "Paid up. Thank you.",
       "certificationMultipleNeeded": "This dive needs more than one certification on file. Share the details for each one it calls for, and your shop will confirm you’re set.",
       "courseFormUnsigned": "Your course has forms for you to sign.",
-      "courseFormGuardianMissing": "A parent or legal guardian has to sign your course forms with you."
+      "courseFormGuardianMissing": "A parent or legal guardian has to sign your course forms with you.",
+      "trainingMarkInvalid": "Your shop needs to check your course details before you’re cleared. They’ll be in touch if anything’s needed."
     },
     "gearAndSetup": "Gear and setup",
     "dockCallLine": "Aim to be at the dock by {time}, {dock} before we sail.",
