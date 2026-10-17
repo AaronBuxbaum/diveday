@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { confirmBookingIdentity, splitBookingIdentity } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { repointHeldBooking } from "@/db/identity-repoint";
@@ -8,12 +9,37 @@ import { applyPaidRentalKindsToFit } from "@/db/rental-fit";
 import { type IdentityReleaseOutcome, sendReleasesOnceIdentityKnown } from "@/db/waiver-issue";
 import { saveBookingEmergencyContact } from "@/db/waivers";
 import { emergencyContactSchema } from "@/lib/contact";
+import { checkbox, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { requireRosterBooking, tripPath } from "./roster-booking";
+
+const confirmIdentityForm = z.object({
+  bookingId: text(),
+  heldContact: text(),
+  applyPaidGear: checkbox(),
+});
+
+const splitIdentityForm = z.object({
+  bookingId: text(),
+  email: text(),
+  phone: text(),
+  fullName: text(),
+  dateOfBirth: text(),
+  adultAttested: checkbox("yes"),
+  sameNameSeatIds: text(),
+});
+
+const repointIdentityForm = z.object({
+  bookingId: text(),
+  toPersonId: text(),
+  sameNameSeatIds: text(),
+});
+
+const rosterBookingForm = z.object({ bookingId: text() });
 
 /**
  * Staff confirm a flagged booking is the person it was attached to (H-13),
@@ -32,13 +58,14 @@ export async function confirmDiverIdentityAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const form = readForm(confirmIdentityForm, formData);
+  const { bookingId } = form;
   if (!uuidParam(bookingId)) redirect(back);
   const db = await getDb();
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
   // Which emergency contact stands, when the seat's and the record's differ
   // (dive-domain review H3); anything else posted is no answer.
-  const heldContactPosted = String(formData.get("heldContact") ?? "");
+  const heldContactPosted = form.heldContact;
   const heldContact =
     heldContactPosted === "use_held" || heldContactPosted === "keep_record"
       ? heldContactPosted
@@ -55,7 +82,7 @@ export async function confirmDiverIdentityAction(
   // The gear this seat paid for at checkout waited on the booking while it was
   // held (`paid_rental_kinds`); the staffer's tick carries it to the fit, which
   // is a standing record, so it is theirs to decline.
-  if (formData.get("applyPaidGear") === "on") {
+  if (form.applyPaidGear) {
     await applyPaidRentalKindsToFit(db, { shopId: s.user.shopId, bookingId });
   }
   // A held seat was sent no release (issue #2125); now that the desk knows
@@ -81,14 +108,15 @@ export async function splitDiverIdentityAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const form = readForm(splitIdentityForm, formData);
+  const { bookingId } = form;
   if (!uuidParam(bookingId)) redirect(back);
   const db = await getDb();
   await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
   // Who the new diver is, beyond a name (issue #2081). The email is checked
   // for shape here; whether another record holds it is the writer's call.
-  const email = blankableDiverEmailSchema.safeParse(String(formData.get("email") ?? "").trim());
-  const phone = diverPhoneSchema.safeParse(String(formData.get("phone") ?? ""));
+  const email = blankableDiverEmailSchema.safeParse(form.email.trim());
+  const phone = diverPhoneSchema.safeParse(form.phone);
   if (!email.success || !phone.success) {
     revalidateAndRedirect(
       back,
@@ -101,16 +129,14 @@ export async function splitDiverIdentityAction(
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
-    fullName: String(formData.get("fullName") ?? ""),
-    dateOfBirth: String(formData.get("dateOfBirth") ?? ""),
-    adultAttested: formData.get("adultAttested") === "yes",
+    fullName: form.fullName,
+    dateOfBirth: form.dateOfBirth,
+    adultAttested: form.adultAttested,
     email: email.data,
     phone: phone.data,
     // The bookings the ticked box named. Only ids; the writer moves only those
     // that are still the same guess and still movable.
-    sameNameSeatIds: String(formData.get("sameNameSeatIds") ?? "")
-      .split(",")
-      .filter((id) => uuidParam(id)),
+    sameNameSeatIds: form.sameNameSeatIds.split(",").filter((id) => uuidParam(id)),
   });
   if (!split.ok) {
     revalidateAndRedirect(
@@ -145,8 +171,8 @@ export async function repointDiverIdentityAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
-  const toPersonId = String(formData.get("toPersonId") ?? "");
+  const form = readForm(repointIdentityForm, formData);
+  const { bookingId, toPersonId } = form;
   if (!uuidParam(bookingId)) redirect(back);
   if (!uuidParam(toPersonId))
     revalidateAndRedirect(back, noticeUrl(back, "invalid", { bid: bookingId }));
@@ -157,9 +183,7 @@ export async function repointDiverIdentityAction(
     bookingId,
     actorPersonId: s.user.personId,
     toPersonId,
-    sameNameSeatIds: String(formData.get("sameNameSeatIds") ?? "")
-      .split(",")
-      .filter((id) => uuidParam(id)),
+    sameNameSeatIds: form.sameNameSeatIds.split(",").filter((id) => uuidParam(id)),
   });
   revalidateAndRedirect(
     back,
@@ -236,7 +260,7 @@ export async function saveRosterEmergencyContactAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const { bookingId } = readForm(rosterBookingForm, formData);
   const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "invalid"));
   const dbi = await getDb();

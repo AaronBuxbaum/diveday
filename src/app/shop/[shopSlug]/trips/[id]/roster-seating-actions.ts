@@ -20,7 +20,7 @@ import {
 import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
 import { carryWaitlist } from "@/db/waitlist-roll";
 import { trackEvent } from "@/lib/analytics";
-import { parseForm } from "@/lib/form-parse";
+import { blankAsAbsent, parseForm, readForm, single, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
@@ -41,20 +41,14 @@ import { removeSeat, requireRosterBooking, tripPath } from "./roster-booking";
  */
 const addDiverSchema = z.object({
   // Shared diver person-field bounds (src/lib/person-fields.ts).
-  fullName: diverNameSchema,
-  email: diverEmailSchema,
-  phone: diverPhoneSchema.optional(),
+  fullName: single(diverNameSchema),
+  email: single(diverEmailSchema),
+  phone: blankAsAbsent(diverPhoneSchema),
 });
 
-const directInvitationSchema = z.object({ personId: z.uuid() });
+const directInvitationSchema = z.object({ personId: single(z.uuid()) });
 
-function parseAddDiver(formData: FormData) {
-  return addDiverSchema.safeParse({
-    fullName: formData.get("fullName"),
-    email: formData.get("email"),
-    phone: formData.get("phone") || undefined,
-  });
-}
+const rosterBookingForm = z.object({ bookingId: text() });
 
 /**
  * A wait-list refusal's `?notice=` code. `already_waitlisted` never reaches this
@@ -80,12 +74,12 @@ const WAITLIST_NOTICE: Record<Extract<WaitlistOutcome, { ok: false }>["reason"],
 export async function addToWaitlistAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const parsed = parseAddDiver(formData);
+  const parsed = parseForm(addDiverSchema, formData);
   // The departure id is narrowed with the diver fields, not after them: a
   // malformed one reaches `eq(trips.id, …)` inside the join and Postgres
   // raises `invalid input syntax for type uuid`, so the staffer gets a 500
   // where the notice below is the honest answer.
-  if (!uuidParam(tripId) || !parsed.success) redirect(noticeUrl(back, "diver-invalid"));
+  if (!uuidParam(tripId) || !parsed.ok) redirect(noticeUrl(back, "diver-invalid"));
   const outcome = await joinTripWaitlist(await getDb(), {
     shopId: s.user.shopId,
     tripId,
@@ -138,8 +132,8 @@ export async function createDirectTripInvitationAction(
 ) {
   const guests = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const parsed = directInvitationSchema.safeParse({ personId: formData.get("personId") });
-  if (!uuidParam(tripId) || !parsed.success) redirect(`${guests}#invite-person`);
+  const parsed = parseForm(directInvitationSchema, formData);
+  if (!uuidParam(tripId) || !parsed.ok) redirect(`${guests}#invite-person`);
   const db = await getDb();
   const created = await createDirectTripInvitation(db, {
     shopId: s.user.shopId,
@@ -189,7 +183,7 @@ async function bookingRefundMayBeOwed(
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const { bookingId } = readForm(rosterBookingForm, formData);
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);
@@ -423,7 +417,7 @@ export async function undoRemoveBookingAction(
 ) {
   const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const bookingId = String(formData.get("bookingId") ?? "");
+  const { bookingId } = readForm(rosterBookingForm, formData);
   if (!uuidParam(bookingId)) redirect(back);
   const dbi = await getDb();
   await requireRosterBooking(dbi, s.user.shopId, tripId, bookingId, back);

@@ -35,7 +35,7 @@ import {
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { isPlausibleCardNumber } from "@/lib/card-number";
-import { readForm } from "@/lib/form-parse";
+import { formValue, readForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { unreviewedCardState } from "@/lib/readiness";
 import { noticeUrl } from "@/lib/staff-notices";
@@ -367,6 +367,8 @@ export async function clearNoCertificationAction(
  * Staff-only: this record's actions are the only writer, and the writer itself
  * re-checks roles, the note and the diver (domain review A4, security X2).
  */
+const drysuitExperienceForm = z.object({ note: formValue() });
+
 export async function recordDrysuitExperienceAction(
   shopSlug: string,
   personId: string,
@@ -375,7 +377,7 @@ export async function recordDrysuitExperienceAction(
   const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
   personId = context.personId;
   const { base, db, staff } = context;
-  const note = formData.get("note");
+  const { note } = readForm(drysuitExperienceForm, formData);
   const outcome = await recordDrysuitExperienceSeen(db, {
     shopId: staff.user.shopId,
     personId,
