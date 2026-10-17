@@ -448,7 +448,9 @@
   before"), for a one-to-one invite (H-141). Only a diver's seat on a departure that was not an
   intro session counts as having dived the site, everyone listed passes the departure's own
   admission gate (`tripAdmissionFor`), and a course session suggests nobody. Leaves out anyone
-  aboard, already invited to it, inside the **30-day invite cooldown**, opted out, erased or merged.
+  aboard, already invited to it, inside the **30-day invite cooldown**, opted out, erased or merged,
+  and anyone whose release waits on a physician's referral (the course ladder's `physicianReferrals`;
+  the send re-checks it under the cooldown lock).
 - **30-day invite cooldown** — no second one-to-one invite to the same person inside 30 days
   (`INVITE_COOLDOWN_DAYS`, H-141), counted from when the invite was recorded. Its scope is the
   invite suggestions and the course ladder, which leave such people out and re-check under a lock

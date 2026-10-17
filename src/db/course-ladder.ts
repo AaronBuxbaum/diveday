@@ -18,7 +18,7 @@ import { courseLadderSince, ladderExclusion, nextCourseFor } from "@/lib/course-
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { listCatalogInProgressionOrder } from "./courses";
-import { recentlyInvitedPeople } from "./invite-suggestions";
+import { physicianReferrals, recentlyInvitedPeople } from "./invite-suggestions";
 import { queryAll } from "./query-helpers";
 import { bookings, certifications, courses, people, trips, waiverRecords } from "./schema";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
@@ -252,28 +252,6 @@ async function ladderFacts(
     facts.set(card.personId, entry);
   }
   return facts;
-}
-
-/** People whose release is parked on a physician's referral that nobody has cleared. */
-async function physicianReferrals(
-  db: DbExecutor,
-  shopId: string,
-  personIds: string[],
-): Promise<Set<string>> {
-  if (personIds.length === 0) return new Set();
-  const rows = await db
-    .selectDistinct({ personId: waiverRecords.personId })
-    .from(waiverRecords)
-    .where(
-      and(
-        eq(waiverRecords.shopId, shopId),
-        inArray(waiverRecords.personId, personIds),
-        eq(waiverRecords.status, "medical_review"),
-        isNull(waiverRecords.medicalClearedAt),
-        isNull(waiverRecords.supersededAt),
-      ),
-    );
-  return new Set(rows.map((row) => row.personId));
 }
 
 /**

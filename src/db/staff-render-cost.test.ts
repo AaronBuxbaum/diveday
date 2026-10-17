@@ -606,7 +606,10 @@ const TODAY_CEILING = 71;
 // site's past divers, then every candidate's cards and courses in training in
 // one pass (`admittedUnderGate`). As merged it sent each candidate through the
 // booking gate one after another: 117 statements and 31 phases here.
-const TRIP_CEILING = 65;
+// 65 → 66 (dive-domain second pass, X3): the same pass also asks which
+// candidates' releases wait on a physician's referral (`physicianReferrals`),
+// one statement in the cards' wave, so no new phase.
+const TRIP_CEILING = 66;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never

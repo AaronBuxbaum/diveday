@@ -3,6 +3,7 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   isNotNull,
   isNull,
   lt,
@@ -29,6 +30,7 @@ import {
   personRoles,
   tripInvitations,
   trips,
+  waiverRecords,
 } from "./schema";
 import { departureOpenToDiver, insertDirectTripInvitation } from "./trip-invitations";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
@@ -51,7 +53,9 @@ import { livePerson, liveTrip, notRehearsal } from "./trips-live";
  * or a try-dive participant did not dive the site. And everyone listed passes
  * the departure's own admission gate (`tripAdmissionFor`): a diver whose card
  * is below the boat's level, or who lacks a specialty it demands, is left out
- * rather than invited to a boat that would refuse them (dive-domain review F1).
+ * rather than invited to a boat that would refuse them (dive-domain review F1),
+ * and so is anyone whose release waits on a physician's referral (second pass,
+ * X3; the ladder's own predicate, {@link physicianReferrals}).
  * A course session lists nobody: its site's past divers are certified divers,
  * the least likely to want the course (review F2; the course ladder is that
  * list).
@@ -241,9 +245,9 @@ export async function listInviteSuggestions(
 
 /**
  * The people of `candidates` the departure's admission gate would sell a seat
- * to (`tripAdmissionFor`, the booking's own gate), in order. A departure that
- * demands no card admits every diver, so it is read once and the per-person
- * reads are skipped.
+ * to (`tripAdmissionFor`, the booking's own gate), in order, less anyone
+ * awaiting a physician's referral (X3). A departure that demands no card
+ * admits every diver, so the per-person card reads are skipped.
  */
 export async function admittedToTrip<T extends { personId: string }>(
   db: DbExecutor,
@@ -267,10 +271,44 @@ export async function admittedToTrip<T extends { personId: string }>(
 }
 
 /**
+ * People whose release is parked on a physician's referral that nobody has
+ * cleared: a live `medical_review` release with no `medical_cleared_at`. The
+ * one predicate both invite paths share (dive-domain second pass, X3): the
+ * course ladder flags them for a call instead of an Invite, the site's past
+ * divers leave them out, and the send under the cooldown lock refuses them.
+ * Readiness blocks them at the dock either way; this keeps the shop from
+ * inviting someone a doctor has not yet cleared to dive.
+ */
+export async function physicianReferrals(
+  db: DbExecutor,
+  shopId: string,
+  personIds: string[],
+): Promise<Set<string>> {
+  if (personIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ personId: waiverRecords.personId })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        inArray(waiverRecords.personId, personIds),
+        eq(waiverRecords.status, "medical_review"),
+        isNull(waiverRecords.medicalClearedAt),
+        isNull(waiverRecords.supersededAt),
+      ),
+    );
+  return new Set(rows.map((row) => row.personId));
+}
+
+/**
  * {@link admittedToTrip} with the departure's gate already in hand. The same
  * evidence `tripAdmissionFor` reads for one diver (their live cards and the
  * levels their booked courses certify before this departure), read once for
- * every candidate rather than one diver after another.
+ * every candidate rather than one diver after another. Anyone whose release
+ * waits on a physician's referral ({@link physicianReferrals}) is left out
+ * too: the booking gate would sell them a seat (readiness stops them at the
+ * dock), but an invite from the shop must not reach them (dive-domain second
+ * pass, X3).
  */
 async function admittedUnderGate<T extends { personId: string }>(
   db: DbExecutor,
@@ -290,14 +328,22 @@ async function admittedUnderGate<T extends { personId: string }>(
       requirement?.requiresNitrox ||
       siteRequirement,
   );
-  if (!demandsSomething) return [...candidates];
   const personIds = candidates.map((candidate) => candidate.personId);
-  const [evidenceByPerson, seatsInTraining] = await queryAll(db, [
-    () => readCertificationEvidenceFor(db, shopId, personIds),
-    () => listCourseSeatsInTraining(db, shopId, personIds),
+  // The referral read goes out with the cards, in the same wave: a boat that
+  // demands no card still never invites someone awaiting a doctor (X3).
+  const [referred, evidenceByPerson, seatsInTraining] = await queryAll(db, [
+    () => physicianReferrals(db, shopId, personIds),
+    () =>
+      demandsSomething
+        ? readCertificationEvidenceFor(db, shopId, personIds)
+        : Promise.resolve(undefined),
+    () =>
+      demandsSomething ? listCourseSeatsInTraining(db, shopId, personIds) : Promise.resolve([]),
   ]);
+  const open = candidates.filter((candidate) => !referred.has(candidate.personId));
+  if (!evidenceByPerson) return open;
   const now = nowDate();
-  return candidates.filter((candidate) => {
+  return open.filter((candidate) => {
     const cards = evidenceByPerson.get(candidate.personId) ?? NO_CARDS;
     const seats = seatsInTraining.filter((seat) => seat.personId === candidate.personId);
     const evidence: TripAdmissionEvidence = {
@@ -363,6 +409,10 @@ export async function createInvitationUnderCooldown(
       return "cooldown";
     }
     if (!(await departureOpenToDiver(tx, { ...input }))) return "unavailable";
+    // A release parked on a physician's referral since the page was drawn (X3).
+    if ((await physicianReferrals(tx, input.shopId, [input.personId])).size > 0) {
+      return "unavailable";
+    }
     return (await insertDirectTripInvitation(tx, input)) ? "created" : "refused";
   });
 }

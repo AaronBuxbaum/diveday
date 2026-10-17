@@ -21,6 +21,8 @@ import {
   tripInvitations,
   tripRequirements,
   trips,
+  waiverRecords,
+  waiverTemplates,
 } from "./schema";
 
 const ctx = fileScopedShopContext();
@@ -90,7 +92,52 @@ async function fixture() {
       identifier: `C-${personId.slice(0, 8)}`,
     });
 
-  return { db, shop, now, site, target, march, july, rehearsal, diver, seat, card, trip };
+  // A signed release whose medical answers referred the diver to a physician.
+  const referral = async (
+    personId: string,
+    extra: Partial<typeof waiverRecords.$inferInsert> = {},
+  ) => {
+    const [template] = await db
+      .select()
+      .from(waiverTemplates)
+      .where(eq(waiverTemplates.shopId, shop.id))
+      .limit(1);
+    if (!template) throw new Error("expected a seeded waiver template");
+    await db.insert(waiverRecords).values({
+      shopId: shop.id,
+      personId,
+      templateId: template.id,
+      templateTitle: template.title,
+      templateVersion: template.version,
+      templateBody: template.body,
+      status: "medical_review",
+      medicalReviewRequired: true,
+      signedName: "Referred Diver",
+      signatureMethod: "typed",
+      tokenHash: `hash-${crypto.randomUUID()}`,
+      expiresAt: now,
+      consentedAt: now,
+      signedAt: now,
+      medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: { q1: true } },
+      ...extra,
+    });
+  };
+
+  return {
+    db,
+    shop,
+    now,
+    site,
+    target,
+    march,
+    july,
+    rehearsal,
+    diver,
+    seat,
+    card,
+    trip,
+    referral,
+  };
 }
 
 describe("listInviteSuggestions", () => {
@@ -165,6 +212,60 @@ describe("listInviteSuggestions", () => {
     await seat(rehearsal.id, rehearsed.id);
 
     expect(await listInviteSuggestions(db, { shopId: shop.id, tripId: target.id, now })).toBeNull();
+  });
+
+  it("never suggests a diver whose release waits on a physician's referral, cleared or not", async () => {
+    // The second-pass review's X3: readiness stops them at the dock, but the
+    // shop must not send "come dive" to someone a doctor has not cleared. The
+    // departure demands no card, so the booking gate's shortcut admits all.
+    const { db, shop, now, target, march, diver, seat, referral } = await fixture();
+    const open = await diver("Referral Open");
+    const declined = await diver("Referral Declined");
+    const cleared = await diver("Referral Cleared");
+    const superseded = await diver("Referral Superseded");
+    const [owner] = await db.select({ id: people.id }).from(people).limit(1);
+    for (const p of [open, declined, cleared, superseded]) await seat(march.id, p.id);
+    await referral(open.id);
+    // A physician said no: still parked, still never invited.
+    await referral(declined.id, {
+      medicalClearanceDeclinedAt: now,
+      medicalClearanceDeclinedByPersonId: owner.id,
+      medicalClearanceEvaluatedOn: "2026-07-20",
+      medicalClearancePhysicianName: "Dr. Imani Hale",
+    });
+    await referral(cleared.id, {
+      status: "completed",
+      completedAt: now,
+      medicalClearedAt: now,
+      medicalClearedByPersonId: owner.id,
+      medicalClearanceEvaluatedOn: "2026-07-20",
+      medicalClearancePhysicianName: "Dr. Imani Hale",
+    });
+    await referral(superseded.id, { supersededAt: now });
+
+    const got = await listInviteSuggestions(db, { shopId: shop.id, tripId: target.id, now });
+    expect(got?.shown.map((p) => p.fullName).sort()).toEqual([
+      "Referral Cleared",
+      "Referral Superseded",
+    ]);
+  });
+
+  it("leaves out an open referral on a boat that checks cards too", async () => {
+    const { db, shop, now, target, march, diver, seat, card, referral } = await fixture();
+    const referred = await diver("Carded But Referred");
+    const clear = await diver("Carded And Clear");
+    for (const p of [referred, clear]) {
+      await seat(march.id, p.id);
+      await card(p.id, "advanced_open_water");
+    }
+    await db.insert(tripRequirements).values({
+      shopId: shop.id,
+      tripId: target.id,
+      minimumCertificationLevel: "advanced_open_water",
+    });
+    await referral(referred.id);
+    const got = await listInviteSuggestions(db, { shopId: shop.id, tripId: target.id, now });
+    expect(got?.shown.map((p) => p.fullName)).toEqual(["Carded And Clear"]);
   });
 
   it("shows a handful and counts the rest", async () => {
@@ -276,8 +377,8 @@ describe("listInviteSuggestions", () => {
 });
 
 describe("admittedToTrip", () => {
-  it("agrees with the booking's own gate for every candidate, read in one pass", async () => {
-    const { db, shop, now, target, diver, card, trip } = await fixture();
+  it("agrees with the booking's own gate for every candidate, read in one pass, less an open referral", async () => {
+    const { db, shop, now, target, diver, card, trip, referral } = await fixture();
     const underLevel = await diver("Gate Under Level");
     const advanced = await diver("Gate Advanced");
     const deletedCard = await diver("Gate Deleted Card");
@@ -330,16 +431,31 @@ describe("admittedToTrip", () => {
       identifier: "DEEP-GATE",
     });
 
-    const candidates = [underLevel, advanced, deletedCard, trainee, stranger].map((p) => ({
-      personId: p.id,
-    }));
+    // Admitted by the booking gate, but parked on a physician's referral (X3):
+    // the one place the batch is stricter than the one-diver gate.
+    const referred = await diver("Gate Advanced Referred");
+    await card(referred.id, "advanced_open_water");
+    await db.insert(specialtyCertifications).values({
+      shopId: shop.id,
+      personId: referred.id,
+      agency: "padi",
+      specialty: "deep",
+      status: "verified",
+      identifier: "DEEP-REFERRED",
+    });
+    await referral(referred.id);
+
+    const candidates = [underLevel, advanced, deletedCard, trainee, stranger, referred].map(
+      (p) => ({ personId: p.id }),
+    );
     const one = async (personId: string) =>
       (await tripAdmissionFor(db, shop.id, target.id, { id: personId }, false, false)).admitted;
     const expected = [];
     for (const c of candidates) if (await one(c.personId)) expected.push(c);
+    expect(expected.map((c) => c.personId)).toContain(referred.id);
 
     const got = await admittedToTrip(db, shop.id, target.id, candidates);
-    expect(got).toEqual(expected);
+    expect(got).toEqual(expected.filter((c) => c.personId !== referred.id));
     expect(got.map((c) => c.personId)).toContain(advanced.id);
     expect(got.map((c) => c.personId)).not.toContain(underLevel.id);
   });
@@ -381,5 +497,22 @@ describe("createInvitationUnderCooldown", () => {
       }),
     ).toBe("unavailable");
     expect(await invitedWithinCooldown(db, shop.id, ow.id, now)).toBe(false);
+  });
+
+  it("refuses someone referred to a physician since the page was drawn, recording nothing", async () => {
+    const { db, shop, now, target, diver, referral } = await fixture();
+    const author = await diver("Desk Author Three");
+    const referred = await diver("Referred After Render");
+    await referral(referred.id);
+    expect(
+      await createInvitationUnderCooldown(db, {
+        shopId: shop.id,
+        tripId: target.id,
+        personId: referred.id,
+        createdByPersonId: author.id,
+        now,
+      }),
+    ).toBe("unavailable");
+    expect(await invitedWithinCooldown(db, shop.id, referred.id, now)).toBe(false);
   });
 });
