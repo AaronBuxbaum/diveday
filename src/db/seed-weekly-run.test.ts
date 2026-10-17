@@ -2,7 +2,14 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { divemastersNeeded } from "@/lib/divemaster-ratio";
 import { seededShopContext } from "@/test/db";
-import { shops, tripAssignments, tripSeries, tripSeriesCrew, tripSeriesSkips, trips } from "./schema";
+import {
+  shops,
+  tripAssignments,
+  tripSeries,
+  tripSeriesCrew,
+  tripSeriesSkips,
+  trips,
+} from "./schema";
 import { DEMO_WEEKLY_RUN_TITLE, surveySaturday } from "./seed-weekly-run";
 import { getTripSeriesSummary } from "./trips";
 

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { shopSearchAnchor } from "@/db/dive-sites";
+import { convertImportedSiteProseToUnit, shopSearchAnchor } from "@/db/dive-sites";
 import { sendNotification } from "@/db/notifications";
 import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
@@ -133,7 +133,18 @@ export async function saveUnitsAction(formData: FormData) {
   }
 
   const db = await getDb();
+  const before = await getShopById(db, session.user.shopId);
   await setShopDepthUnit(db, session.user.shopId, depthUnit.data);
+  // The catalog's words follow the switch (issue #2683); a site the shop edited
+  // does not, and the notice counts those so staff know which to read by hand.
+  const sites = before
+    ? await convertImportedSiteProseToUnit(
+        db,
+        session.user.shopId,
+        before.depthUnit,
+        depthUnit.data,
+      )
+    : { converted: 0, leftAlone: 0 };
   await setShopTemperatureUnit(db, session.user.shopId, temperatureUnit.data);
   if (currency !== null) {
     await setShopCurrency(db, session.user.shopId, currency);
@@ -142,7 +153,12 @@ export async function saveUnitsAction(formData: FormData) {
   // when nothing changed — the step is "look at these", and a shop that opened
   // the row and agreed with the derived values has looked (issue #712).
   await markShopUnitsConfirmed(db, session.user.shopId);
-  revalidateAndRedirect(settings, noticeUrl(settings, "units-saved", { saved: "units" }));
+  revalidateAndRedirect(
+    settings,
+    sites.leftAlone > 0
+      ? noticeUrl(settings, "units-saved-sites-left", { saved: "units", count: sites.leftAlone })
+      : noticeUrl(settings, "units-saved", { saved: "units" }),
+  );
 }
 
 /**

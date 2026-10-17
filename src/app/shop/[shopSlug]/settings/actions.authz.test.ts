@@ -1,13 +1,16 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
+import { importGlobalDiveSiteTemplate, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import {
+  diveSites,
   mediaDeletionAttempts,
   processorErasureObligations,
   shopShoreAlertTokens,
   shops,
 } from "@/db/schema";
-import { getShopById } from "@/db/shops";
+import { getShopById, setShopDepthUnit } from "@/db/shops";
+import { briefingInUnit } from "@/lib/site-prose-units";
 import { calendarDateInTimezone, shiftCalendarDateMonths } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -142,6 +145,32 @@ describe("saving the shop's units", () => {
 
     expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
     expect(await unitsOf(db, shop.id)).toEqual(before);
+  });
+
+  it("counts the edited catalog sites a depth-unit switch left alone", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    await setShopDepthUnit(db, shop.id, "meters");
+    const withMeasures = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(
+      (row) =>
+        JSON.stringify(briefingInUnit(row.version.briefing, "feet")) !==
+        JSON.stringify(briefingInUnit(row.version.briefing, "meters")),
+    );
+    if (!withMeasures) throw new Error("seed: no catalog site names a measure");
+    const imported = await importGlobalDiveSiteTemplate(db, shop.id, withMeasures.template.id);
+    if (!imported) throw new Error("expected a catalog copy");
+    await db
+      .update(diveSites)
+      .set({ description: `${imported.description ?? ""} Our own words.` })
+      .where(eq(diveSites.id, imported.id));
+
+    const to = await redirectedTo(() => saveUnitsAction(unitsForm({})));
+
+    expect(to).toMatch(
+      new RegExp(
+        `^/shop/${shop.slug}/settings\\?notice=units-saved-sites-left&saved=units&count=[1-9]`,
+      ),
+    );
   });
 
   it("lets an owner set all three", async () => {

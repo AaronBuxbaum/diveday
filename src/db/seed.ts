@@ -1291,7 +1291,12 @@ export async function seedDemoSchedule(
         and(
           eq(people.shopId, shopId),
           ne(people.id, owner.id),
-          inArray(personRoles.role, ["instructor", "assistant_instructor", "divemaster", "captain"]),
+          inArray(personRoles.role, [
+            "instructor",
+            "assistant_instructor",
+            "divemaster",
+            "captain",
+          ]),
         ),
       )
       .orderBy(people.fullName);

@@ -22,7 +22,7 @@ import {
   SITE_LIBRARY_GROUPS,
   type SiteLibraryGroupLabel,
 } from "@/lib/dive-site-difficulty";
-import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
+import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
 import {
@@ -35,7 +35,7 @@ import {
 } from "@/lib/dive-site-template-sync";
 import type { DiveMode } from "@/lib/diver-planning";
 import type { CertificationLevel } from "@/lib/readiness";
-import { briefingInUnit } from "@/lib/site-prose-units";
+import { briefingInUnit, SITE_PROSE_FIELDS } from "@/lib/site-prose-units";
 import type { TidePreference } from "@/lib/tides";
 import type { AppDb, DbExecutor } from "./client";
 import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
@@ -1430,6 +1430,92 @@ async function shopDepthUnit(db: DbExecutor, shopId: string): Promise<DepthUnit>
     .where(eq(shops.id, shopId))
     .limit(1);
   return shop?.depthUnit ?? "meters";
+}
+
+/**
+ * **A depth-unit switch carries the catalog's words with it** (issue #2683).
+ * A briefing is converted to the shop's unit once, at import, so a shop that
+ * flips its unit afterwards would read "12 m" under a feet header on every site
+ * it copied from the catalog.
+ *
+ * A site follows only when its prose is still exactly what the import wrote:
+ * every prose field and every landmark note equals the catalog version it was
+ * copied from, read in the unit the shop is leaving. Then the same version is
+ * read in the new unit, so the round trip is the catalog's own pair of
+ * renderings and never a conversion of a conversion. A site with any local edit
+ * is the shop's own words, whose measures it may have typed itself, and is left
+ * as it is; the count of those that name a measure comes back so staff know
+ * which to check by hand.
+ */
+export async function convertImportedSiteProseToUnit(
+  db: AppDb,
+  shopId: string,
+  from: DepthUnit,
+  to: DepthUnit,
+): Promise<{ converted: number; leftAlone: number }> {
+  if (from === to) return { converted: 0, leftAlone: 0 };
+  return db.transaction(async (tx) => {
+    const sites = await tx
+      .select()
+      .from(diveSites)
+      .where(
+        and(
+          eq(diveSites.shopId, shopId),
+          isNull(diveSites.deletedAt),
+          isNotNull(diveSites.sourceTemplateId),
+          isNotNull(diveSites.sourceTemplateVersion),
+        ),
+      )
+      .for("update");
+    let converted = 0;
+    let leftAlone = 0;
+    for (const site of sites) {
+      const [source] = await tx
+        .select({ briefing: globalDiveSiteVersions.briefing })
+        .from(globalDiveSiteVersions)
+        .where(
+          and(
+            eq(globalDiveSiteVersions.globalDiveSiteId, site.sourceTemplateId ?? ""),
+            eq(globalDiveSiteVersions.version, site.sourceTemplateVersion ?? 0),
+          ),
+        )
+        .limit(1);
+      if (!source) continue;
+      const before = briefingInUnit(source.briefing, from);
+      const after = briefingInUnit(source.briefing, to);
+      const proseOf = (briefing: typeof before) => ({
+        fields: SITE_PROSE_FIELDS.map((field) => briefing[field] ?? null),
+        notes: (briefing.landmarks ?? []).map((landmark) => landmark.note),
+      });
+      const wanted = proseOf(before);
+      const target = proseOf(after);
+      // Nothing in this catalog entry names a measure: nothing to follow.
+      if (JSON.stringify(wanted) === JSON.stringify(target)) continue;
+      const landmarks = parseDiveSiteLandmarks(site.landmarks);
+      const untouched =
+        SITE_PROSE_FIELDS.every((field, index) => (site[field] ?? null) === wanted.fields[index]) &&
+        JSON.stringify(landmarks.map((landmark) => landmark.note)) === JSON.stringify(wanted.notes);
+      if (!untouched) {
+        leftAlone += 1;
+        continue;
+      }
+      await tx
+        .update(diveSites)
+        .set({
+          // Bumps the editor's generation like any other writer of this prose
+          // (issue #820).
+          rowVersion: sql`${diveSites.rowVersion} + 1`,
+          ...Object.fromEntries(SITE_PROSE_FIELDS.map((field) => [field, after[field] ?? null])),
+          landmarks: landmarks.map((landmark, index) => ({
+            ...landmark,
+            note: target.notes[index] ?? landmark.note,
+          })),
+        })
+        .where(and(eq(diveSites.id, site.id), eq(diveSites.shopId, shopId)));
+      converted += 1;
+    }
+    return { converted, leftAlone };
+  });
 }
 
 export async function importGlobalDiveSiteTemplate(db: AppDb, shopId: string, templateId: string) {

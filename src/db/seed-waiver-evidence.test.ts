@@ -110,7 +110,9 @@ describe("withinDeskHours", () => {
 describe("staff-recorded signatures", () => {
   it("fall in desk hours, not near midnight", async () => {
     const { records } = await evidence();
-    const staffRecorded = records.filter((record) => record.signatureMethod === "in_person_attested");
+    const staffRecorded = records.filter(
+      (record) => record.signatureMethod === "in_person_attested",
+    );
     expect(staffRecorded.length).toBeGreaterThan(0);
     const outside = staffRecorded
       .filter((record) => record.signedAt && record.signedAt.getTime() >= nowMs() - 21 * DAY_MS)

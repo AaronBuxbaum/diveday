@@ -1,13 +1,16 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { briefingInUnit } from "@/lib/site-prose-units";
 import {
+  convertImportedSiteProseToUnit,
   getDiveSiteTemplateUpdate,
   getGlobalDiveSiteTemplate,
   importGlobalDiveSiteTemplate,
   listGlobalDiveSiteTemplates,
 } from "./dive-sites";
-import { globalDiveSites, globalDiveSiteVersions } from "./schema";
+import { diveSites, globalDiveSites, globalDiveSiteVersions } from "./schema";
+import { setShopDepthUnit } from "./shops";
 
 const ctx = fileScopedShopContext();
 
@@ -68,5 +71,70 @@ describe("the dive-site catalog in a feet shop's unit", () => {
     // Without a reader, the catalog's own words: the published version is untouched.
     const raw = await getGlobalDiveSiteTemplate(db, catalogEntry.template.slug);
     expect(raw?.version.briefing).toEqual(catalogEntry.version.briefing);
+  });
+});
+
+/**
+ * **A depth-unit switch follows the catalog's words** (issue #2683): a site
+ * still reading exactly what the import wrote is said again in the shop's new
+ * unit, and a site the shop edited is left alone and counted.
+ */
+describe("a depth-unit switch and imported dive-site prose", () => {
+  it("converts an untouched site both ways and leaves an edited one alone", async () => {
+    const { db, shop } = ctx;
+    const catalog = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.filter(
+      (row) =>
+        JSON.stringify(briefingInUnit(row.version.briefing, "feet")) !==
+        JSON.stringify(briefingInUnit(row.version.briefing, "meters")),
+    );
+    const [first, second] = catalog;
+    if (!first || !second) throw new Error("seed: two catalog sites with measures are needed");
+    const untouched = await importGlobalDiveSiteTemplate(db, shop.id, first.template.id);
+    const edited = await importGlobalDiveSiteTemplate(db, shop.id, second.template.id);
+    if (!untouched || !edited) throw new Error("expected two catalog copies");
+    await db
+      .update(diveSites)
+      .set({ description: `${edited.description ?? ""} Our own rope line.` })
+      .where(eq(diveSites.id, edited.id));
+    const notesOf = (site: { landmarks: unknown }) =>
+      (site.landmarks as { note: string }[]).map((landmark) => landmark.note);
+    const read = async (id: string) => {
+      const [row] = await db.select().from(diveSites).where(eq(diveSites.id, id));
+      if (!row) throw new Error("site missing");
+      return row;
+    };
+
+    await setShopDepthUnit(db, shop.id, "meters");
+    try {
+      const toMeters = await convertImportedSiteProseToUnit(db, shop.id, "feet", "meters");
+      expect(toMeters.converted).toBeGreaterThanOrEqual(1);
+      expect(toMeters.leftAlone).toBeGreaterThanOrEqual(1);
+      const inMeters = briefingInUnit(first.version.briefing, "meters");
+      expect((await read(untouched.id)).description).toBe(inMeters.description ?? null);
+      expect(notesOf(await read(untouched.id))).toEqual(
+        (inMeters.landmarks ?? []).map((landmark) => landmark.note),
+      );
+      expect((await read(edited.id)).description).toBe(
+        `${edited.description ?? ""} Our own rope line.`,
+      );
+
+      await setShopDepthUnit(db, shop.id, "feet");
+      await convertImportedSiteProseToUnit(db, shop.id, "meters", "feet");
+      const inFeet = briefingInUnit(first.version.briefing, "feet");
+      expect((await read(untouched.id)).description).toBe(inFeet.description ?? null);
+      expect(notesOf(await read(untouched.id))).toEqual(
+        (inFeet.landmarks ?? []).map((landmark) => landmark.note),
+      );
+    } finally {
+      await setShopDepthUnit(db, shop.id, "feet");
+    }
+  });
+
+  it("does nothing when the unit did not change", async () => {
+    const { db, shop } = ctx;
+    expect(await convertImportedSiteProseToUnit(db, shop.id, "feet", "feet")).toEqual({
+      converted: 0,
+      leftAlone: 0,
+    });
   });
 });

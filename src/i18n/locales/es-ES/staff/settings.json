@@ -12,6 +12,7 @@
       "turnaroundSaved": "Margen entre salidas guardado.",
       "turnaroundInvalid": "Introduce un margen de entre 0 y 240 minutos.",
       "unitsSaved": "Unidades guardadas.",
+      "unitsSavedSitesLeft": "Unidades guardadas. {count, plural, one {# sitio de buceo que editaste sigue en la unidad de profundidad anterior; revísalo a mano.} other {# sitios de buceo que editaste siguen en la unidad de profundidad anterior; revísalos a mano.}}",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
       "taxSaved": "Configuración de impuestos guardada.",
       "taxInvalid": "No cambió nada: el interruptor de impuestos envió un valor inesperado. Recarga Ajustes y vuelve a activarlo o desactivarlo.",

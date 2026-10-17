@@ -93,7 +93,7 @@ function meters(imperial: string): number {
 }
 
 /** The briefing's prose fields: everything a diver reads that can name a measure. */
-const PROSE_FIELDS = [
+export const SITE_PROSE_FIELDS = [
   "description",
   "marineLifeDescription",
   "conservationNote",
@@ -113,7 +113,7 @@ export function briefingInUnit(
   unit: DepthUnit,
 ): GlobalDiveSiteBriefing {
   const resolved: GlobalDiveSiteBriefing = { ...briefing };
-  for (const field of PROSE_FIELDS) {
+  for (const field of SITE_PROSE_FIELDS) {
     const text = briefing[field];
     if (typeof text === "string") resolved[field] = siteProseInUnit(text, unit);
   }
