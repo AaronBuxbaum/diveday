@@ -126,6 +126,7 @@ export async function resolveTrainingMarks(
             enrollmentBookingId,
             enrollmentTripId: enrollment.tripId,
             enrollmentMinorDeclared: enrollment.minorDeclared,
+            enrollmentCourseTitle: enrollment.courseTitle,
           },
     );
   }

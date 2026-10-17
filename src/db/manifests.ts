@@ -26,12 +26,14 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
+import type { ParticipantType } from "@/lib/participant-types";
 import {
   type CountedAboardBlocked,
   type ReadinessSnapshot,
   readinessSnapshotOf,
 } from "@/lib/roll-call-readiness";
 import { runningLateShown } from "@/lib/running-late";
+import type { TrainingMarkState } from "@/lib/training-mark";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { standingArrivalStatus } from "./arrival-provenance";
@@ -55,6 +57,7 @@ import {
 } from "./schema";
 import { lockSeatDeparture } from "./seat-locks";
 import { getShopById } from "./shops";
+import { resolveTrainingMarks } from "./training-mark-resolve";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { getTripWithBooked } from "./trips-record";
@@ -1026,6 +1029,14 @@ export async function listDepartureBoardedBookingIds(
  * accidentally edit out of sync. Every active booking starts from the trip
  * roster and is joined with the shared readiness, fit, and roll-call records.
  */
+/** A standing training mark as the manifest prints it; null for none, or one that no longer stands. */
+function trainingDiveOf(
+  mark: TrainingMarkState | undefined,
+  instructorAboard: boolean,
+): TripManifest["divers"][number]["trainingDive"] {
+  return mark?.valid ? { courseTitle: mark.enrollmentCourseTitle, instructorAboard } : null;
+}
+
 export async function getTripManifests(
   db: AppDb,
   shopId: string,
@@ -1128,6 +1139,31 @@ export async function getTripManifests(
             .where(and(eq(people.shopId, shopId), inArray(people.id, clearedByIds)))
         ).map((row) => [row.id, row.name] as const),
   );
+  // The training marks that stand on this departure (issue #2275), through the
+  // one resolver every reader shares, and whether an instructor is on its crew
+  // now: the manifest names the course a dive counts toward and warns when
+  // nobody aboard teaches it. Read only when a marked seat is aboard.
+  const trainingMarks = await resolveTrainingMarks(
+    db,
+    shopId,
+    roster.flatMap(({ booking, person }) =>
+      booking.trainingEnrollmentBookingId === null
+        ? []
+        : [
+            {
+              bookingId: booking.id,
+              enrollmentBookingId: booking.trainingEnrollmentBookingId,
+              seat: {
+                personId: person.id,
+                participantType: booking.participantType as ParticipantType,
+                onCourseSession: trip.courseId !== null,
+                departureStartsAt: trip.startsAt,
+              },
+            },
+          ],
+    ),
+  );
+  const instructorAboard = crew.some((member) => member.roles.includes("instructor"));
   // Buddy teams, reduced to the members who are actually aboard. A member
   // whose seat was since cancelled stays listed (and dissolvable) on the teams
   // panel, but is dropped here: a cancelled seat is nobody (ADR
@@ -1242,6 +1278,7 @@ export async function getTripManifests(
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
       riderMedicalHold: riderHoldByBooking.get(booking.id) ?? null,
+      trainingDive: trainingDiveOf(trainingMarks.get(booking.id), instructorAboard),
       trainingMarkCleared: booking.trainingClearedAt
         ? {
             byName: booking.trainingClearedByPersonId

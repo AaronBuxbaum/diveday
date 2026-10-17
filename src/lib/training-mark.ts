@@ -94,5 +94,7 @@ export type TrainingMarkState =
        * the charter's own, so both seats ask the guardian the same way.
        */
       enrollmentMinorDeclared: boolean;
+      /** The course the dive counts toward, as the manifest names it. */
+      enrollmentCourseTitle: string;
     }
   | { valid: false; problem: TrainingMarkProblem };

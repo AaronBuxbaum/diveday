@@ -104,3 +104,32 @@ export function ridingOnlyMedicalSentences(
       : null,
   ].filter((line): line is string => line !== null);
 }
+
+/**
+ * A training dive's lines on a manifest row (issue #2275), live and offline
+ * alike: the course it counts toward, then the warnings — no instructor on the
+ * crew, and a mark someone cleared with the course's forms unsigned.
+ */
+export function trainingDiveLines(
+  t: StaffTranslator,
+  diver: {
+    trainingDive?: { courseTitle: string; instructorAboard: boolean } | null;
+    trainingMarkCleared?: { byName: string | null } | null;
+  },
+): { fact: string | null; warnings: string[] } {
+  const { trainingDive, trainingMarkCleared } = diver;
+  return {
+    fact: trainingDive ? t("manifest.trainingDive", { course: trainingDive.courseTitle }) : null,
+    warnings: [
+      trainingDive && !trainingDive.instructorAboard
+        ? t("manifest.trainingDiveNoInstructor")
+        : null,
+      trainingMarkCleared
+        ? t("manifest.trainingMarkCleared", {
+            hasName: trainingMarkCleared.byName ? "yes" : "no",
+            name: trainingMarkCleared.byName ?? "",
+          })
+        : null,
+    ].filter((line): line is string => line !== null),
+  };
+}

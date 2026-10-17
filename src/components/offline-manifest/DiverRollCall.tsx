@@ -10,6 +10,7 @@ import {
   medicalWarningChips,
   ridingOnlyMedicalSentences,
   rollCallLabelText,
+  trainingDiveLines,
 } from "@/i18n/manifest-labels";
 import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
@@ -122,6 +123,7 @@ function OfflineDiverRow({
       ? medicalWarningChips(t, medicalWarnings)[0]
       : undefined;
   const warningDate = (day: string) => formatCalendarDate(day, locale);
+  const training = trainingDiveLines(t, diver);
   // The diver's own "running late" (#2319), on the live page's terms: a dock
   // row not boarded yet, with nothing from the counter on it — this device's
   // queued arrival included, which is the counter's newest word here.
@@ -399,6 +401,13 @@ function OfflineDiverRow({
                       ) : null}
                     </p>
                   ) : null}
+                  {/* A training dive, worded as the live manifest words it. */}
+                  {training.fact ? <p>{training.fact}</p> : null}
+                  {training.warnings.map((line) => (
+                    <p key={line} className="font-medium text-warning-strong">
+                      {line}
+                    </p>
+                  ))}
                 </>
               )}
             </div>

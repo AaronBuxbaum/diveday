@@ -423,6 +423,21 @@ export type OfflineManifestPayload = {
             ridingNotClearedOn?: CalendarDate;
             ridingReferredOn?: CalendarDate;
           };
+          /**
+           * **A training mark that stands on this seat** (issue #2275): the
+           * course the dive counts toward and whether an instructor was on the
+           * crew when the copy was saved — the live manifest's fact and
+           * warning, never a blocker. Optional and additive, no version bump;
+           * absent on every other seat.
+           */
+          trainingDive?: { courseTitle: string; instructorAboard: boolean };
+          /**
+           * A staffer cleared this seat's training mark with its course forms
+           * unsigned, by name when the shop still has one: the crew boarding
+           * from this copy sees who decided, as on the live manifest.
+           * Optional and additive, no version bump; absent otherwise.
+           */
+          trainingMarkCleared?: { byName: string | null };
           /** Dropped at save time; the dock does not need it (kept for shape parity). */
           email: null;
           /**
@@ -965,6 +980,8 @@ export function serializeManifests(
         // Dates only, and absent when there is nothing to warn about: see the
         // allow-list type above.
         ...offlineMedicalWarnings(diver.medicalWaiver, shop.timezone, diver.riderMedicalHold),
+        ...(diver.trainingDive ? { trainingDive: diver.trainingDive } : {}),
+        ...(diver.trainingMarkCleared ? { trainingMarkCleared: diver.trainingMarkCleared } : {}),
         // Names only, never a teammate's booking or person id — the dock copy
         // displays teams and must stay unable to compute divergence from a
         // snapshot.

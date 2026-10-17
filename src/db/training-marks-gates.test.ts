@@ -9,7 +9,8 @@ import {
 import { cancelBooking } from "./bookings";
 import { recordPaperCourseForm, signCourseForm } from "./course-forms";
 import { subscribeManifestEvents } from "./manifest-events";
-import { bookings, people, tripAssignments } from "./schema";
+import { getTripManifest } from "./manifests";
+import { bookings, courses, people, tripAssignments } from "./schema";
 import { clearTrainingDive } from "./training-marks";
 import { changeTripCrew } from "./trips-crew";
 import { moveTrip } from "./trips-schedule";
@@ -184,5 +185,30 @@ describe("training marks — the gates the build review closed (in-memory PGlite
         ),
       ).toBeGreaterThan(0);
     });
+  });
+
+  it("prints the course a marked dive counts toward on the manifest, and that no instructor is aboard", async () => {
+    const ctx = await charterContext();
+    await markSeat(ctx);
+    const row = async () =>
+      (await getTripManifest(ctx.db, ctx.shop.id, ctx.charter.id))?.divers.find(
+        (diver) => diver.bookingId === ctx.seat.id,
+      );
+    const [course] = await ctx.db
+      .select({ title: courses.title })
+      .from(courses)
+      .where(eq(courses.id, ctx.course.courseId));
+    expect((await row())?.trainingDive).toEqual({
+      courseTitle: course?.title,
+      instructorAboard: false,
+    });
+    // Read from the crew at read time: rostering one clears the warning.
+    await ctx.db
+      .insert(tripAssignments)
+      .values({ tripId: ctx.charter.id, personId: ctx.instructor, tripRole: "instructor" });
+    expect((await row())?.trainingDive?.instructorAboard).toBe(true);
+    // A mark that no longer stands names no course.
+    await cancelBooking(ctx.db, ctx.shop.id, ctx.course.bookingId);
+    expect((await row())?.trainingDive ?? null).toBeNull();
   });
 });

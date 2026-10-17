@@ -246,9 +246,17 @@ export type ManifestDiverInput = {
   /**
    * A staffer cleared this seat's training mark while its course forms were
    * still owed (issue #2275): the seat boards without them, and the crew sees
-   * who decided. Never a blocker. Not in the offline snapshot.
+   * who decided. Never a blocker.
    */
   trainingMarkCleared?: { byName: string | null } | null;
+  /**
+   * A training mark that stands on this seat (issue #2275): the course the
+   * dive counts toward, and whether an instructor is on this departure's crew
+   * as the manifest is read — a warning when not, never a blocker. Null on an
+   * unmarked seat and on a mark that no longer stands (`training_mark_invalid`
+   * says that).
+   */
+  trainingDive?: { courseTitle: string; instructorAboard: boolean } | null;
   /**
    * Lodging / hotel location stated by diver on /ready (marker only, not a checkpoint).
    */
