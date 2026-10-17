@@ -270,6 +270,15 @@
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
+- **Days away** — a crew member's own range of calendar dates they told the shop they are away
+  (`crew_availability_blocks`, ADR 20260902-crew-requests-and-blackouts). Informs, never gates. Its
+  optional note is read only by the person and by owners and managers (issue #2673); everyone else
+  sees the dates. A rostered crew member away on a day a departure meets raises Today's `crew_away`
+  row and reads "to be confirmed" on the diver pages (`crewAwayByTrip`, `src/db/crew-away.ts`).
+- **Working it anyway** — a staffer saying an away crew member is working one departure all the
+  same (`crew_away_acknowledgements`, issue #2678), tapped on Today's `crew_away` row. Per crew
+  assignment: it clears that row and the diver-side mark for that departure only, never edits the
+  person's days away, and goes when they come off the crew.
 - **Boat clash** — one hull on two departures whose windows **overlap** (H-80: one hull, one
   departure at a time). Same half-open predicate as the **Crew clash** below
   (`src/db/trips-clashes.ts`), so a hull that ties up at 12:00 and takes the 12:00 out is the plan

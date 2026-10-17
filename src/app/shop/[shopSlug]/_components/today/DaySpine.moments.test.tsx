@@ -22,6 +22,7 @@ vi.mock("@/app/actions/held-sends", () => ({
 // the database. Same reason as the three above.
 vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   keepRentalFitAction: vi.fn(),
+  acknowledgeCrewAwayAction: vi.fn(),
 }));
 // The agency check's host (H-105) wraps the spine and repaints through the
 // router when a "Check all" ends; no app router is mounted here.
@@ -456,7 +457,7 @@ describe("the two horizon rows", () => {
           id: "crew-away:t9",
           kind: "crew_away",
           departure: boat("t9"),
-          awayPersonIds: ["marcus"],
+          crewAway: { people: [{ personId: "marcus", fullName: "Marcus Webb" }] },
           dueAt: hoursFromNow(72),
         }),
         action({ id: "friday", departure: boat("t8") }),

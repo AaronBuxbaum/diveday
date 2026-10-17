@@ -45,6 +45,7 @@ import {
   weekCrewAway,
 } from "@/lib/today";
 import { ClosingStation } from "./ClosingStation";
+import { CrewAwayWorkingControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
 import { NeedsYouGroups } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
@@ -472,6 +473,17 @@ function StationRow({
       personId={action.agencyCheck.personId}
       cards={action.agencyCheck.cards}
       align="end"
+    />
+  ) : action.kind === "crew_away" && action.crewAway && action.departure ? (
+    // **"Working it anyway"** (issue #2678): the row keeps its door to the
+    // crew editor, and the tap beside it says the shop already asked.
+    <CrewAwayWorkingControl
+      tripId={action.departure.tripId}
+      people={action.crewAway.people.map((person) => ({
+        personId: person.personId,
+        label: t("today.crewAway.working", { name: person.fullName }),
+      }))}
+      pendingLabel={t("today.crewAway.saving")}
     />
   ) : action.rentalFit ? (
     // **The one row whose fix is the tap itself** (issue #1174, D14): the size

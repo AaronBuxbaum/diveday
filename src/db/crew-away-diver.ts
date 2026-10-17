@@ -28,6 +28,11 @@ export async function diverCrewWithAway(
     }),
   ]);
   if (crew.length === 0) return [];
-  const away = new Set((awayByTrip.get(trip.id) ?? []).map((entry) => entry.personId));
+  // A crew member a staffer said is working it anyway is not marked (#2678).
+  const away = new Set(
+    (awayByTrip.get(trip.id) ?? [])
+      .filter((entry) => !entry.acknowledged)
+      .map((entry) => entry.personId),
+  );
   return crew.map((member) => ({ ...member, away: away.has(member.personId) }));
 }

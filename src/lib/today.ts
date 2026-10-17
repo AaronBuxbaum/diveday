@@ -963,10 +963,11 @@ export type TodayAction = {
    */
   staffPersonId?: string;
   /**
-   * Who a `crew_away` row names (issue #2671): the week line counts these
-   * people, once each however many departures they are away for.
+   * Who a `crew_away` row names: the week line counts these people, once each
+   * however many departures they are away for (issue #2671), and the row
+   * offers each a "working it anyway" (issue #2678).
    */
-  awayPersonIds?: readonly string[];
+  crewAway?: { people: readonly { personId: string; fullName: string }[] };
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };
@@ -1814,8 +1815,8 @@ export function weekCrewAway(
   const people = new Set<string>();
   let soonest: Date | null = null;
   for (const row of rows) {
-    if (row.kind !== "crew_away" || !row.awayPersonIds || row.awayPersonIds.length === 0) continue;
-    for (const personId of row.awayPersonIds) people.add(personId);
+    if (row.kind !== "crew_away" || !row.crewAway || row.crewAway.people.length === 0) continue;
+    for (const person of row.crewAway.people) people.add(person.personId);
     if (row.dueAt && (soonest === null || row.dueAt < soonest)) soonest = row.dueAt;
   }
   if (people.size === 0 || soonest === null) return null;

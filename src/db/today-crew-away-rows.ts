@@ -23,8 +23,9 @@ export function pushCrewAwayRows(actions: TodayAction[], ctx: TodayRowsContext):
   const { crewAway } = ctx.wave;
   const { inWindow, shopSlug, timeZone, locale, t, now } = ctx;
   for (const trip of inWindow) {
-    const away = crewAway.get(trip.id);
-    if (!away || away.length === 0) continue;
+    // A crew member a staffer said is working it anyway raises nothing (#2678).
+    const away = (crewAway.get(trip.id) ?? []).filter((person) => !person.acknowledged);
+    if (away.length === 0) continue;
     const when = at(trip.startsAt, timeZone, locale);
     actions.push({
       id: `crew-away:${trip.id}`,
@@ -38,7 +39,9 @@ export function pushCrewAwayRows(actions: TodayAction[], ctx: TodayRowsContext):
       actionLabel: openCrewActionText(t),
       href: `/shop/${shopSlug}/trips/${trip.id}?view=details#crew`,
       ...(away.length === 1 && away[0] ? { staffPersonId: away[0].personId } : {}),
-      awayPersonIds: away.map((person) => person.personId),
+      crewAway: {
+        people: away.map((person) => ({ personId: person.personId, fullName: person.fullName })),
+      },
       dueAt: trip.startsAt,
     });
   }

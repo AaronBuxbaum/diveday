@@ -60,6 +60,7 @@ import {
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
+  crewAwayAcknowledgements,
   divePackages,
   gearItems,
   gearReservations,
@@ -235,6 +236,32 @@ async function readReviewRowsWithReplies(tx: AppTransaction, shopId: string) {
 }
 
 /**
+ * Every crew assignment of the shop's departures, with its live "working it
+ * anyway" (issue #2678) riding along: trip_assignments.csv carries both.
+ */
+async function readTripAssignmentRows(tx: AppTransaction, shopId: string) {
+  return tx
+    .select({
+      ...getTableColumns(tripAssignments),
+      awayAcknowledgedAt: crewAwayAcknowledgements.createdAt,
+      awayAcknowledgedByPersonId: crewAwayAcknowledgements.acknowledgedByPersonId,
+    })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .leftJoin(
+      crewAwayAcknowledgements,
+      and(
+        eq(crewAwayAcknowledgements.tripId, tripAssignments.tripId),
+        eq(crewAwayAcknowledgements.personId, tripAssignments.personId),
+        eq(crewAwayAcknowledgements.shopId, shopId),
+        isNull(crewAwayAcknowledgements.deletedAt),
+      ),
+    )
+    .where(eq(trips.shopId, shopId))
+    .orderBy(asc(tripAssignments.tripId), asc(tripAssignments.personId));
+}
+
+/**
  * Everything the shop bundle's files are built from, read once inside the
  * bundle's transaction: the plain per-table reads through `EXPORT_TABLES`
  * (`./export-tables`), the joined and filtered reads written out below, and
@@ -393,12 +420,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .filter((trip) => requirementsByTrip.has(trip.id))
     .map((trip) => requirementsByTrip.get(trip.id));
 
-  const assignmentRows = await tx
-    .select(getTableColumns(tripAssignments))
-    .from(tripAssignments)
-    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    .where(eq(trips.shopId, shopId))
-    .orderBy(asc(tripAssignments.tripId), asc(tripAssignments.personId));
+  const assignmentRows = await readTripAssignmentRows(tx, shopId);
 
   const staffShiftRows = await tx
     .select()

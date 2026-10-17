@@ -226,6 +226,9 @@ export const STAFF_HISTORY_TABLES = [
   // merge is refused, exactly as a seeded shift refuses it.
   "crew_availability_blocks",
   "crew_assignment_requests",
+  // "Working it anyway" on a departure (issue #2678): its subject is somebody
+  // on a crew, so a record holding one is a staff record and the merge is refused.
+  "crew_away_acknowledgements",
   // Where a *staffer* had read up to in a departure's shift catch-up (issues
   // #1202, #1187). Same shape as `push_subscriptions` above it: written by, and
   // about, somebody who works the boats, so either side of a merge holding one
@@ -300,6 +303,8 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "certifications.processed_by_person_id": "who told the agency about the card",
   "certifications.reviewed_by_person_id": "who confirmed the card",
   "crew_assignment_requests.decided_by_person_id": "who answered the ask",
+  "crew_away_acknowledgements.acknowledged_by_person_id":
+    "who said the crew member is working it anyway",
   "crew_notices.actor_person_id": "who made the crew change",
   "crew_availability_blocks.created_by_person_id": "who blocked the days",
   "dive_packages.created_by_person_id": "who wrote the package",

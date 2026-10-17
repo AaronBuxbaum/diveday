@@ -32,6 +32,10 @@
       "rateLimited": "You have resent a lot this hour. Try again in a little while."
     }
   },
+  "crewAway": {
+    "working": "{name} is working it",
+    "saving": "Saving…"
+  },
   "helpRequest": {
     "kind": {
       "carryGear": "carry gear",

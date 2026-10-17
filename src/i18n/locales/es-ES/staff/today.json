@@ -32,6 +32,10 @@
       "rateLimited": "Has reenviado mucho en esta hora. Vuelve a intentarlo en un rato."
     }
   },
+  "crewAway": {
+    "working": "{name} trabaja igualmente",
+    "saving": "Guardando…"
+  },
   "helpRequest": {
     "kind": {
       "carryGear": "cargar el equipo",

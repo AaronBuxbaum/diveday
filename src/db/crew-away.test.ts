@@ -1,8 +1,11 @@
+import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import { crewAwayByTrip } from "./crew-away";
+import { acknowledgeCrewAway } from "./crew-away-acknowledgements";
 import { saveCrewAvailabilityBlock } from "./crew-requests";
-import { createTrip, listStaff, setTripCrew } from "./trips";
+import { crewAvailabilityBlocks, crewAwayAcknowledgements } from "./schema";
+import { changeTripCrew, createTrip, listStaff, setTripCrew } from "./trips";
 
 const ctx = fileScopedShopContext();
 
@@ -88,5 +91,127 @@ describe("crewAwayByTrip", () => {
         .size,
     ).toBe(0);
     expect((await crewAwayByTrip(db, shop.id, [], shop.timezone)).size).toBe(0);
+  });
+
+  /**
+   * **"Working it anyway"** (issue #2678): a staffer's acknowledgement on one
+   * crew assignment. It is read beside the days away, refused for anybody not
+   * on the crew or in another shop, and taken off with the person.
+   */
+  describe("working it anyway", () => {
+    it("marks the acknowledged person on that departure only, and leaves their block alone", async () => {
+      const { db, shop } = ctx;
+      const sunday = await rostered("Ack Sunday", "2027-06-13T15:00:00Z");
+      const saturday = await rostered("Ack Saturday", "2027-06-12T15:00:00Z");
+      await away(sunday.instructor.id, "2027-06-12", "2027-06-13");
+      expect(
+        await acknowledgeCrewAway(db, {
+          shopId: shop.id,
+          tripId: sunday.trip.id,
+          personId: sunday.instructor.id,
+          actorPersonId: sunday.captain.id,
+        }),
+      ).toBe("saved");
+      // Twice is one row, and still saved.
+      expect(
+        await acknowledgeCrewAway(db, {
+          shopId: shop.id,
+          tripId: sunday.trip.id,
+          personId: sunday.instructor.id,
+          actorPersonId: sunday.captain.id,
+        }),
+      ).toBe("saved");
+      const result = await crewAwayByTrip(
+        db,
+        shop.id,
+        [sunday.trip.id, saturday.trip.id],
+        shop.timezone,
+      );
+      expect(result.get(sunday.trip.id)?.[0]).toMatchObject({
+        personId: sunday.instructor.id,
+        acknowledged: true,
+      });
+      expect(result.get(saturday.trip.id)?.[0]).toMatchObject({
+        personId: sunday.instructor.id,
+        acknowledged: false,
+      });
+      // The block, and its note, are the person's own and untouched.
+      const [block] = await db
+        .select()
+        .from(crewAvailabilityBlocks)
+        .where(
+          and(
+            eq(crewAvailabilityBlocks.personId, sunday.instructor.id),
+            eq(crewAvailabilityBlocks.startsOn, "2027-06-12"),
+          ),
+        );
+      expect(block).toMatchObject({ note: "Family trip", deletedAt: null });
+    });
+
+    it("refuses a person who is not on the crew, and another shop", async () => {
+      const { db, shop } = ctx;
+      const { trip, captain } = await rostered("Ack refusals", "2027-06-20T15:00:00Z");
+      const staff = await listStaff(db, shop.id);
+      const offCrew = staff.find(
+        (entry) => !entry.roles.includes("instructor") && !entry.roles.includes("captain"),
+      )?.person;
+      if (!offCrew) throw new Error("seeded staff missing an off-crew member");
+      expect(
+        await acknowledgeCrewAway(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: offCrew.id,
+          actorPersonId: captain.id,
+        }),
+      ).toBe("not_on_crew");
+      expect(
+        await acknowledgeCrewAway(db, {
+          shopId: "00000000-0000-4000-8000-000000000000",
+          tripId: trip.id,
+          personId: captain.id,
+          actorPersonId: captain.id,
+        }),
+      ).toBe("not_on_crew");
+      expect(await db.select().from(crewAwayAcknowledgements)).toEqual([]);
+    });
+
+    it("goes with the person when they come off the crew, either way they are taken off", async () => {
+      const { db, shop } = ctx;
+      const { trip, instructor, captain } = await rostered("Ack cleared", "2027-06-27T15:00:00Z");
+      await away(instructor.id, "2027-06-27", "2027-06-27");
+      await away(captain.id, "2027-06-27", "2027-06-27");
+      for (const person of [instructor, captain]) {
+        await acknowledgeCrewAway(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: person.id,
+          actorPersonId: captain.id,
+        });
+      }
+      // One taken off by a single change, then the whole crew rewritten.
+      expect(
+        await changeTripCrew(db, shop.id, trip.id, {
+          operation: "unassign",
+          personId: captain.id,
+        }),
+      ).toBe(true);
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [{ personId: captain.id, tripRole: "captain" }]),
+      ).toBe(true);
+      const live = await db
+        .select()
+        .from(crewAwayAcknowledgements)
+        .where(
+          and(
+            eq(crewAwayAcknowledgements.tripId, trip.id),
+            isNull(crewAwayAcknowledgements.deletedAt),
+          ),
+        );
+      expect(live).toEqual([]);
+      // Back on the crew, the captain starts unconfirmed.
+      expect((await crewAwayByTrip(db, shop.id, [trip.id], shop.timezone)).get(trip.id)).toEqual([
+        expect.objectContaining({ personId: captain.id, acknowledged: false }),
+      ]);
+    });
   });
 });

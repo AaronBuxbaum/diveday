@@ -6,6 +6,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking } from "./bookings";
+import { acknowledgeCrewAway } from "./crew-away-acknowledgements";
 import { saveCrewAvailabilityBlock } from "./crew-requests";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import { recordNotificationDelivery } from "./notifications";
@@ -867,7 +868,25 @@ describe("crew rostered while away", () => {
     expect(rows[0]?.href).toBe(`/shop/${shop.slug}/trips/${trip.id}?view=details#crew`);
     expect(rows[0]?.staffPersonId).toBe(instructor.id);
     // The week line counts the people these rows name (issue #2671).
-    expect(rows[0]?.awayPersonIds).toEqual([instructor.id]);
+    expect(rows[0]?.crewAway?.people).toEqual([
+      { personId: instructor.id, fullName: instructor.fullName },
+    ]);
+
+    // "Working it anyway" (issue #2678) takes the row off Today.
+    expect(
+      await acknowledgeCrewAway(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: instructor.id,
+        actorPersonId: instructor.id,
+      }),
+    ).toBe("saved");
+    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(
+      after.actions.filter(
+        (action) => action.kind === "crew_away" && action.departure?.tripId === trip.id,
+      ),
+    ).toEqual([]);
 
     // Not a course session, so it is not on "Your sessions"; the row is the
     // reader's own lead instead. A session the reader teaches carries the days.

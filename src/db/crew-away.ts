@@ -3,6 +3,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { type AvailabilityBlock, overlappingBlocks } from "@/lib/crew-requests";
 import type { TripMeeting } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
+import { acknowledgedKey, crewAwayAcknowledgedKeys } from "./crew-away-acknowledgements";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
 import { people, tripAssignments, trips } from "./schema";
 import { tripMeetings } from "./staffing";
@@ -14,6 +15,11 @@ export type CrewAway = {
   fullName: string;
   /** Their days away that the departure meets on, soonest first. */
   blocks: AvailabilityBlock[];
+  /**
+   * A staffer said they are working this departure anyway (issue #2678): the
+   * diver pages drop the "to be confirmed" mark and Today drops the row.
+   */
+  acknowledged: boolean;
 };
 
 /**
@@ -97,7 +103,12 @@ export async function crewAwayByTrip(
           ? new Map<string, TripMeeting[]>()
           : tripMeetings(db, shopId, [...new Set(roster.map((row) => row.tripId))]),
       );
-  const [rows, meetingsByTrip, blocks] = await Promise.all([rosterRead, meetingsRead, blocksRead]);
+  const [rows, meetingsByTrip, blocks, acknowledged] = await Promise.all([
+    rosterRead,
+    meetingsRead,
+    blocksRead,
+    crewAwayAcknowledgedKeys(db, shopId, tripIds),
+  ]);
   if (rows.length === 0 || blocks.length === 0) return byTrip;
 
   for (const row of rows) {
@@ -107,7 +118,12 @@ export async function crewAwayByTrip(
     const away = overlappingBlocks(blocks, row.personId, meetings, timeZone);
     if (away.length === 0) continue;
     const list = byTrip.get(row.tripId) ?? [];
-    list.push({ personId: row.personId, fullName: row.fullName, blocks: away });
+    list.push({
+      personId: row.personId,
+      fullName: row.fullName,
+      blocks: away,
+      acknowledged: acknowledged.has(acknowledgedKey(row.tripId, row.personId)),
+    });
     byTrip.set(row.tripId, list);
   }
   return byTrip;
