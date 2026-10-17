@@ -10,17 +10,10 @@ import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
 import { publishManifestEvent } from "./manifest-events";
 import { queryAll } from "./query-helpers";
+import { activityEvents, bookings, courses, people, shops, trips } from "./schema";
 import {
-  activityEvents,
-  bookings,
-  courses,
-  people,
-  personRoles,
-  shops,
-  tripAssignments,
-  trips,
-} from "./schema";
-import {
+  aboardKey,
+  courseInstructorsAboard,
   readTrainingEnrollments,
   resolveTrainingMarks,
   type TrainingEnrollmentRow,
@@ -272,6 +265,7 @@ export async function clearTrainingDive(
         await resolveTrainingMarks(tx, input.shopId, [
           {
             bookingId: seat.bookingId,
+            tripId: seat.tripId,
             enrollmentBookingId: seat.enrollmentBookingId,
             seat: {
               personId: seat.personId,
@@ -351,6 +345,12 @@ export type TrainingMarkRosterSeat = {
     courseTitle: string | null;
     sessionStartsAt: Date | null;
     valid: boolean;
+    /**
+     * Someone who teaches the course's session is rostered as this departure's
+     * instructor (`courseInstructorAboard`, issue #2731): the seat then takes
+     * the course's own level, and the row warns when not.
+     */
+    courseInstructorAboard: boolean;
     markedAt: Date;
     markedByName: string | null;
   } | null;
@@ -384,8 +384,9 @@ type RosterSeatInput = {
  * not yet — the writer's own conditions, so the control never offers a mark
  * the writer refuses.
  *
- * `instructorRostered` is whether this departure has an instructor on its
- * crew, for the warning beside a mark (dive-domain review item 5).
+ * Each mark says whether the course's instructor is aboard
+ * (`courseInstructorAboard`), for the warning beside it (dive-domain review
+ * item 5) and the level the seat answers to (issue #2731).
  */
 export async function trainingMarksForRoster(
   db: DbExecutor,
@@ -393,11 +394,9 @@ export async function trainingMarksForRoster(
   trip: { id: string; courseId: string | null; startsAt: Date; endsAt: Date },
   seats: readonly RosterSeatInput[],
   now: Date = nowDate(),
-): Promise<{ bySeat: Map<string, TrainingMarkRosterSeat>; instructorRostered: boolean }> {
+): Promise<{ bySeat: Map<string, TrainingMarkRosterSeat> }> {
   const bySeat = new Map<string, TrainingMarkRosterSeat>();
-  if (trip.courseId !== null || seats.length === 0) {
-    return { bySeat, instructorRostered: false };
-  }
+  if (trip.courseId !== null || seats.length === 0) return { bySeat };
   const marked = seats.filter((seat) => seat.trainingEnrollmentBookingId !== null);
   const offerable = hasReturned(trip.endsAt, now)
     ? []
@@ -417,7 +416,7 @@ export async function trainingMarksForRoster(
       ),
     ),
   ];
-  const [enrollments, optionRows, staffRows, instructors] = await queryAll(db, [
+  const [enrollments, optionRows, staffRows] = await queryAll(db, [
     () =>
       readTrainingEnrollments(
         db,
@@ -461,22 +460,15 @@ export async function trainingMarksForRoster(
             .from(people)
             // diveday:allow-deleted-people: the name of whoever marked or cleared, kept as history.
             .where(and(eq(people.shopId, shopId), inArray(people.id, staffIds))),
-    () =>
-      marked.length === 0
-        ? Promise.resolve([])
-        : db
-            .select({ tripRole: tripAssignments.tripRole, role: personRoles.role })
-            .from(tripAssignments)
-            .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-            .leftJoin(
-              personRoles,
-              and(
-                eq(personRoles.personId, tripAssignments.personId),
-                eq(personRoles.role, "instructor"),
-              ),
-            )
-            .where(and(eq(trips.shopId, shopId), eq(tripAssignments.tripId, trip.id), liveTrip())),
   ]);
+  const aboard = await courseInstructorsAboard(
+    db,
+    shopId,
+    [...enrollments.values()].map((enrollment) => ({
+      departureTripId: trip.id,
+      sessionTripId: enrollment.tripId,
+    })),
+  );
   const nameById = new Map(staffRows.map((row) => [row.id, row.name]));
   const optionsByPerson = new Map<string, TrainingEnrollmentOption[]>();
   for (const row of optionRows) {
@@ -514,6 +506,8 @@ export async function trainingMarksForRoster(
             courseTitle: enrollment?.courseTitle ?? null,
             sessionStartsAt: enrollment?.sessionStartsAt ?? null,
             valid,
+            courseInstructorAboard:
+              enrollment !== undefined && aboard.has(aboardKey(trip.id, enrollment.tripId)),
             markedAt: seat.trainingMarkedAt,
             markedByName: seat.trainingMarkedByPersonId
               ? (nameById.get(seat.trainingMarkedByPersonId) ?? null)
@@ -533,12 +527,7 @@ export async function trainingMarksForRoster(
     if (!mark && options.length === 0 && !clearedWithFormsOwed) continue;
     bySeat.set(seat.bookingId, { mark, options, clearedWithFormsOwed });
   }
-  return {
-    bySeat,
-    instructorRostered: instructors.some((row) =>
-      row.tripRole === null ? row.role === "instructor" : row.tripRole === "instructor",
-    ),
-  };
+  return { bySeat };
 }
 
 /**

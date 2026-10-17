@@ -1,6 +1,10 @@
 import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
+import type { CertificationLevel } from "@/lib/certification-levels";
+import { groupCrewAssignments } from "@/lib/crew-roles";
 import type { ParticipantType } from "@/lib/participant-types";
 import {
+  type CrewMember,
+  courseInstructorAboard,
   type TrainingMarkEnrollment,
   type TrainingMarkSeat,
   type TrainingMarkState,
@@ -30,6 +34,8 @@ export type TrainingEnrollmentRow = TrainingMarkEnrollment & {
   minorDeclared: boolean;
   /** The course's title, or the session's when the course row is gone. */
   courseTitle: string;
+  /** The course's own minimum level; `undefined` when the course row is gone (issue #2731). */
+  courseMinimumLevel: CertificationLevel | null | undefined;
 };
 
 /**
@@ -59,6 +65,8 @@ export async function readTrainingEnrollments(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       courseTitle: courses.title,
+      courseRowId: courses.id,
+      courseMinimumLevel: courses.minimumCertificationLevel,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -85,6 +93,7 @@ export async function readTrainingEnrollments(
       sessionStartsAt: row.startsAt,
       minorDeclared: row.minorDeclaredAt !== null,
       courseTitle: row.courseTitle ?? row.tripTitle,
+      courseMinimumLevel: row.courseRowId === null ? undefined : row.courseMinimumLevel,
     });
   }
   return result;
@@ -93,9 +102,79 @@ export async function readTrainingEnrollments(
 /** A marked seat, as a reader holds it. */
 export type MarkedSeat = {
   bookingId: string;
+  /** The seat's own departure, whose crew says whether the course's instructor is aboard. */
+  tripId: string;
   enrollmentBookingId: string;
   seat: TrainingMarkSeat;
 };
+
+/**
+ * Each of these departures' crew, one entry per person, read the way the
+ * course ratio reads it (`tripCourseCrewCounts`): every assignment with every
+ * standing role, so the per-trip role decides.
+ */
+async function crewOfTrips(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, CrewMember[]>> {
+  const byTrip = new Map<string, CrewMember[]>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: tripAssignments.tripId,
+      personId: tripAssignments.personId,
+      tripRole: tripAssignments.tripRole,
+      role: personRoles.role,
+    })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .leftJoin(personRoles, eq(personRoles.personId, tripAssignments.personId))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        inArray(tripAssignments.tripId, [...new Set(tripIds)]),
+        liveTrip(),
+      ),
+    );
+  const rowsByTrip = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const list = rowsByTrip.get(row.tripId) ?? [];
+    list.push(row);
+    rowsByTrip.set(row.tripId, list);
+  }
+  for (const [tripId, list] of rowsByTrip) byTrip.set(tripId, groupCrewAssignments(list));
+  return byTrip;
+}
+
+/**
+ * For each (departure, course session) pair, whether the course's instructor
+ * is aboard that departure (`courseInstructorAboard`, issue #2731), keyed by
+ * `aboardKey`. One read for every pair.
+ */
+export async function courseInstructorsAboard(
+  db: DbExecutor,
+  shopId: string,
+  pairs: readonly { departureTripId: string; sessionTripId: string }[],
+): Promise<Set<string>> {
+  const aboard = new Set<string>();
+  if (pairs.length === 0) return aboard;
+  const crew = await crewOfTrips(
+    db,
+    shopId,
+    pairs.flatMap((pair) => [pair.departureTripId, pair.sessionTripId]),
+  );
+  for (const { departureTripId, sessionTripId } of pairs) {
+    if (courseInstructorAboard(crew.get(sessionTripId) ?? [], crew.get(departureTripId) ?? [])) {
+      aboard.add(aboardKey(departureTripId, sessionTripId));
+    }
+  }
+  return aboard;
+}
+
+export function aboardKey(departureTripId: string, sessionTripId: string): string {
+  return `${departureTripId}:${sessionTripId}`;
+}
 
 /**
  * Whether each marked seat's mark stands, by seat booking id. Every seat
@@ -114,7 +193,14 @@ export async function resolveTrainingMarks(
     shopId,
     seats.map((seat) => seat.enrollmentBookingId),
   );
-  for (const { bookingId, enrollmentBookingId, seat } of seats) {
+  const standing = seats.flatMap(({ tripId, enrollmentBookingId, seat }) => {
+    const enrollment = enrollments.get(enrollmentBookingId) ?? null;
+    return enrollment && trainingMarkProblem(seat, enrollment) === null
+      ? [{ departureTripId: tripId, sessionTripId: enrollment.tripId }]
+      : [];
+  });
+  const aboard = await courseInstructorsAboard(db, shopId, standing);
+  for (const { bookingId, tripId, enrollmentBookingId, seat } of seats) {
     const enrollment = enrollments.get(enrollmentBookingId) ?? null;
     const problem = trainingMarkProblem(seat, enrollment);
     result.set(
@@ -127,6 +213,8 @@ export async function resolveTrainingMarks(
             enrollmentTripId: enrollment.tripId,
             enrollmentMinorDeclared: enrollment.minorDeclared,
             enrollmentCourseTitle: enrollment.courseTitle,
+            enrollmentCourseMinimumLevel: enrollment.courseMinimumLevel,
+            courseInstructorAboard: aboard.has(aboardKey(tripId, enrollment.tripId)),
           },
     );
   }
@@ -166,4 +254,67 @@ export async function teachesSessionAsRostered(
   return rows.some((row) =>
     row.tripRole === null ? row.role === "instructor" : row.tripRole === "instructor",
   );
+}
+
+/**
+ * **The course levels a staff mark could make this departure answer to**, for
+ * the sale (issue #2731). Readiness takes a standing mark's course minimum in
+ * place of the departure's while the course's instructor is aboard, and the
+ * sale must never refuse a seat readiness would clear. So for a diver about to
+ * buy a seat on `departure`: each of their course seats a mark could name
+ * (`trainingMarkProblem` finds nothing, the course row is readable) whose
+ * course's instructor is already aboard `departure`. Never a mark: the seat
+ * still boards on the departure's level until staff mark it.
+ */
+export async function markableTrainingDiveLevels(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+  departure: { id: string; startsAt: Date },
+): Promise<(CertificationLevel | null)[]> {
+  const seats = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.personId, personId),
+        ne(bookings.status, "cancelled"),
+        eq(trips.shopId, shopId),
+        isNotNull(trips.courseId),
+        ne(trips.id, departure.id),
+        liveTrip(),
+      ),
+    );
+  if (seats.length === 0) return [];
+  const enrollments = await readTrainingEnrollments(
+    db,
+    shopId,
+    seats.map((seat) => seat.id),
+  );
+  const markable = [...enrollments.values()].filter(
+    (enrollment) =>
+      enrollment.courseMinimumLevel !== undefined &&
+      trainingMarkProblem(
+        {
+          personId,
+          participantType: "diver",
+          onCourseSession: false,
+          departureStartsAt: departure.startsAt,
+        },
+        enrollment,
+      ) === null,
+  );
+  const aboard = await courseInstructorsAboard(
+    db,
+    shopId,
+    markable.map((enrollment) => ({
+      departureTripId: departure.id,
+      sessionTripId: enrollment.tripId,
+    })),
+  );
+  return markable
+    .filter((enrollment) => aboard.has(aboardKey(departure.id, enrollment.tripId)))
+    .map((enrollment) => enrollment.courseMinimumLevel ?? null);
 }

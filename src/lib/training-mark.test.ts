@@ -3,8 +3,11 @@ import type { TripRequirement, WaiverRecord } from "@/db/schema";
 import { COURSE_FORMS_BLOCK_BOARDING, type RequiredCourseForm } from "./course-forms";
 import { aboardBlockerKind, BLOCKER_CATEGORY, calculateReadiness } from "./readiness";
 import {
+  courseInstructorAboard,
   type TrainingMarkEnrollment,
   type TrainingMarkSeat,
+  type TrainingMarkState,
+  trainingDiveLevel,
   trainingMarkProblem,
 } from "./training-mark";
 
@@ -156,5 +159,74 @@ describe("calculateReadiness — a seat carrying a training mark", () => {
   it("files training_mark_invalid as the desk's setup, and as unknown at the rail", () => {
     expect(BLOCKER_CATEGORY.training_mark_invalid).toBe("setup");
     expect(aboardBlockerKind([{ code: "training_mark_invalid" }])).toBe("unknown");
+  });
+});
+
+describe("courseInstructorAboard — the course's instructor on this departure (issue #2731)", () => {
+  const teacher = { personId: "teacher", shopRoles: ["instructor"] };
+  const other = { personId: "other", shopRoles: ["instructor"] };
+
+  it("is the session's instructor rostered as an instructor on the departure", () => {
+    expect(
+      courseInstructorAboard(
+        [{ ...teacher, tripRole: "instructor" }],
+        [{ ...teacher, tripRole: "instructor" }],
+      ),
+    ).toBe(true);
+    // No per-trip role reads the standing role, as the ratio does.
+    expect(courseInstructorAboard([teacher], [teacher])).toBe(true);
+  });
+
+  it.each([
+    ["another course's instructor", [teacher], [other]],
+    [
+      "the teacher as the departure's captain",
+      [teacher],
+      [{ ...teacher, tripRole: "captain" as const }],
+    ],
+    [
+      "the teacher as the departure's divemaster",
+      [teacher],
+      [{ ...teacher, tripRole: "divemaster" as const }],
+    ],
+    [
+      "somebody who only drives the session's boat",
+      [{ ...teacher, tripRole: "captain" as const }],
+      [teacher],
+    ],
+    [
+      "a divemaster on both",
+      [{ personId: "dm", shopRoles: ["divemaster"] }],
+      [{ personId: "dm", shopRoles: ["divemaster"] }],
+    ],
+    ["nobody on the departure", [teacher], []],
+  ])("is not %s", (_name, sessionCrew, departureCrew) => {
+    expect(courseInstructorAboard(sessionCrew, departureCrew)).toBe(false);
+  });
+});
+
+describe("trainingDiveLevel — the level a marked dive answers to (issue #2731)", () => {
+  const standing: TrainingMarkState = {
+    valid: true,
+    enrollmentBookingId: ENROLLMENT,
+    enrollmentTripId: "session",
+    enrollmentMinorDeclared: false,
+    enrollmentCourseTitle: "Advanced Open Water",
+    enrollmentCourseMinimumLevel: "open_water",
+    courseInstructorAboard: true,
+  };
+
+  it("takes the course's own minimum, including none", () => {
+    expect(trainingDiveLevel(standing)).toEqual({ courseMinimumLevel: "open_water" });
+    expect(trainingDiveLevel({ ...standing, enrollmentCourseMinimumLevel: null })).toEqual({
+      courseMinimumLevel: null,
+    });
+  });
+
+  it("keeps the departure's level with no mark, a mark that fell, no instructor, or no course row", () => {
+    expect(trainingDiveLevel(undefined)).toBeNull();
+    expect(trainingDiveLevel({ valid: false, problem: "enrollment_canceled" })).toBeNull();
+    expect(trainingDiveLevel({ ...standing, courseInstructorAboard: false })).toBeNull();
+    expect(trainingDiveLevel({ ...standing, enrollmentCourseMinimumLevel: undefined })).toBeNull();
   });
 });

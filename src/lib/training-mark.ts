@@ -1,3 +1,5 @@
+import type { CertificationLevel } from "./certification-levels";
+import { inWaterCrewRole, type TripCrewAssignment } from "./crew-roles";
 import type { ParticipantType } from "./participant-types";
 import { isDiver } from "./participant-types";
 
@@ -96,5 +98,57 @@ export type TrainingMarkState =
       enrollmentMinorDeclared: boolean;
       /** The course the dive counts toward, as the manifest names it. */
       enrollmentCourseTitle: string;
+      /**
+       * The course's own minimum level (`courses.minimum_certification_level`),
+       * or `undefined` when the course row could not be read: then the seat
+       * never takes the course's level (issue #2731), it keeps the charter's.
+       */
+      enrollmentCourseMinimumLevel: CertificationLevel | null | undefined;
+      /**
+       * Someone who teaches the enrollment's session as its instructor is
+       * rostered as the instructor on this seat's departure
+       * (`courseInstructorAboard`, issue #2731).
+       */
+      courseInstructorAboard: boolean;
     }
   | { valid: false; problem: TrainingMarkProblem };
+
+/** One person on a departure's crew, as `groupCrewAssignments` folds them. */
+export type CrewMember = TripCrewAssignment & { personId: string };
+
+/**
+ * **Whether the course's instructor is aboard** (issue #2731): somebody who
+ * counts as the instructor in the water on the enrollment's session, and
+ * counts as the instructor in the water on this departure too. A captain, a
+ * deckhand or a divemaster slot does not count on either side, nor does an
+ * instructor of some other course. The roster's claim, read the way the
+ * session's own ratio reads it (`inWaterCrewRole`).
+ */
+export function courseInstructorAboard(
+  sessionCrew: readonly CrewMember[],
+  departureCrew: readonly CrewMember[],
+): boolean {
+  const teaches = new Set(
+    sessionCrew
+      .filter((member) => inWaterCrewRole(member) === "instructor")
+      .map((member) => member.personId),
+  );
+  return departureCrew.some(
+    (member) => teaches.has(member.personId) && inWaterCrewRole(member) === "instructor",
+  );
+}
+
+/**
+ * The level gate a marked training dive answers to (issue #2731, decided by
+ * Aaron 2026-10-17): with the mark standing, the course's level readable and
+ * the course's instructor aboard, the course's own minimum stands in place of
+ * the departure's; otherwise null, and the departure's level stands. Only the
+ * level: a site's specialty or nitrox gate is unchanged.
+ */
+export function trainingDiveLevel(
+  mark: TrainingMarkState | undefined,
+): { courseMinimumLevel: CertificationLevel | null } | null {
+  if (!mark?.valid || !mark.courseInstructorAboard) return null;
+  if (mark.enrollmentCourseMinimumLevel === undefined) return null;
+  return { courseMinimumLevel: mark.enrollmentCourseMinimumLevel };
+}

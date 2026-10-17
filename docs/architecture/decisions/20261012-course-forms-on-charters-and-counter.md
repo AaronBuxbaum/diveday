@@ -27,8 +27,13 @@ A `dive-domain-expert` review's changes are folded in below.
   mark and clear pushes the manifest, which refreshes the offline copy.
 - Clearing a mark with forms owed, or one that no longer holds, takes `canManageWaiverTemplates`
   or the enrollment's instructor, rostered by another; the manifest names who did.
-- "In training" is unchanged: the mark answers "which forms", not "may this diver dive past their
-  card". The row warns when no instructor is on the charter's crew.
+- "In training" is unchanged. **Amended 2026-10-17 (issue #2731, decided by Aaron):** a mark that
+  stands, with the course's instructor aboard (someone who counts as the instructor in the water on
+  the enrollment's session and on the charter), takes the course's own minimum level in place of the
+  charter's and its sites'; specialty and nitrox gates are unchanged. With no such instructor the
+  charter's level stands and the row and the manifest warn. The sale counts a course seat a mark
+  could name, with that instructor already aboard, so admission never refuses a seat readiness would
+  clear (`markableTrainingDiveLevels`, `src/db/training-mark-resolve.ts`).
 
 **2. Counter hand-off (Proposed, not built).** A single-use, ten-minute `course_forms_counter`
 capability per booking, never the emailed link. The device shows that student's forms, then "Hand
@@ -47,5 +52,5 @@ or the staffer's own device). Records name the staffer who handed over.
 ## Consequences
 
 - Five booking columns and one resolver; no new dependency.
-- Not built: a marked dive taking the course's minimum level when its instructor is rostered.
-  Revisit if shops need several courses on one dive.
+- A marked dive takes the course's minimum level only while the course's instructor is aboard
+  (amendment above). Revisit if shops need several courses on one dive.

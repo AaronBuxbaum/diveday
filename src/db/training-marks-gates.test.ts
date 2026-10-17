@@ -212,10 +212,15 @@ describe("training marks — the gates the build review closed (in-memory PGlite
       courseTitle: course?.title,
       instructorAboard: false,
     });
-    // Read from the crew at read time: rostering one clears the warning.
+    // Read from the crew at read time. An instructor who does not teach the
+    // session is not the course's (issue #2731); once they teach it, they are.
     await ctx.db
       .insert(tripAssignments)
       .values({ tripId: ctx.charter.id, personId: ctx.instructor, tripRole: "instructor" });
+    expect((await row())?.trainingDive?.instructorAboard).toBe(false);
+    await ctx.db
+      .insert(tripAssignments)
+      .values({ tripId: ctx.course.tripId, personId: ctx.instructor, tripRole: "instructor" });
     expect((await row())?.trainingDive?.instructorAboard).toBe(true);
     // A mark that no longer stands names no course.
     await cancelBooking(ctx.db, ctx.shop.id, ctx.course.bookingId);

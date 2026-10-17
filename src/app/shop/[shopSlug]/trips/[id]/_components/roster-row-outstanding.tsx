@@ -325,7 +325,6 @@ export function rowOutstanding(seat: RowOutstandingInput) {
         <TrainingMarkControl
           bookingId={booking.id}
           training={trainingMark}
-          instructorRostered={trainingMarks?.instructorRostered ?? false}
           markAction={actions.markTrainingDiveAction}
           clearAction={actions.clearTrainingDiveAction}
           locale={locale}

@@ -99,6 +99,14 @@ export type TripAdmissionEvidence = {
    * for the card the instructor issues.
    */
   levelsInTraining?: readonly CertificationLevel[];
+  /**
+   * The own minimum levels of this diver's course seats that a staff training
+   * mark could name on this departure, where the course's instructor is
+   * already aboard it (issue #2731). Readiness takes such a course's minimum in
+   * place of the departure's once staff mark the seat, so the sale must not
+   * refuse a level the course's would clear. Null is a course with no minimum.
+   */
+  trainingDiveLevels?: readonly (CertificationLevel | null)[];
 };
 
 /**
@@ -356,10 +364,15 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
     (best, level) => highestOf(best, level),
     heldLevel,
   );
+  const reaches = (level: CertificationLevel | null) =>
+    !level ||
+    (reachedLevel !== null && certificationRank(reachedLevel) >= certificationRank(level));
+  // A course seat a staff mark could make this a training dive for, with the
+  // course's instructor aboard, is a level readiness would clear on (#2731).
   const requiredLevel =
     effective.minimumCertificationLevel &&
-    (!reachedLevel ||
-      certificationRank(reachedLevel) < certificationRank(effective.minimumCertificationLevel))
+    !reaches(effective.minimumCertificationLevel) &&
+    !(evidence.trainingDiveLevels ?? []).some(reaches)
       ? effective.minimumCertificationLevel
       : null;
 

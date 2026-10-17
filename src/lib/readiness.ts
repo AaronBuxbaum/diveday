@@ -598,6 +598,13 @@ export type ReadinessInput = {
    * `courseForms` above instead, keyed on the enrollment's booking.
    */
   trainingMarkInvalid?: boolean;
+  /**
+   * The seat's training mark stands and the course's instructor is aboard
+   * (`trainingDiveLevel`, issue #2731): the course's own minimum level is the
+   * level gate, in place of the departure's and its sites'. Absent, the
+   * departure's level stands. Specialty and nitrox gates are unchanged.
+   */
+  trainingDive?: { courseMinimumLevel: CertificationLevel | null } | null;
   now?: Date;
 };
 
@@ -1153,9 +1160,15 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // A snorkeler or a rider is asked for no card: the trip's and its sites'
   // gates compose to nothing for a seat with no dive in it. Composed here, in
   // the one place every requirement is composed, rather than checked beside it.
-  const effective = isDiver(input.participantType)
+  const composed = isDiver(input.participantType)
     ? combineCertRequirements(input.requirement, input.siteRequirement)
     : combineCertRequirements(NO_CERT_REQUIREMENT, null);
+  // A marked training dive with its course's instructor aboard answers to the
+  // course's own minimum level instead (issue #2731). Only ever for a diver.
+  const effective =
+    input.trainingDive && isDiver(input.participantType)
+      ? { ...composed, minimumCertificationLevel: input.trainingDive.courseMinimumLevel }
+      : composed;
 
   if (effective.minimumCertificationLevel) {
     const certification = certificationBlocker(

@@ -1330,7 +1330,10 @@
   Checked again at every read: a mark whose enrollment is canceled, held or moved is the
   `training_mark_invalid` blocker until staff clear it. Clearing one with forms still owed takes a
   manager or the enrollment's own instructor, and the manifest names who did. **A training mark is
-  not In training**: it changes boarding only, and buying a seat never reads it.
+  not In training**: it changes boarding only, and buying a seat never reads it. While the
+  course's own instructor is aboard, a mark that stands holds the seat to the course's minimum
+  level in place of the departure's (issue #2731); the sale, which cannot see a mark not yet made,
+  sells on the same course seat once that instructor is aboard.
 - **Counter hand-off** — signing several students' **Course forms** one at a time on one shop
   device, each on a single-use staff-issued link, with the page dead-ending after each signature
   (ADR 20261012-course-forms-on-charters-and-counter, decision 2). Designed, not built yet.

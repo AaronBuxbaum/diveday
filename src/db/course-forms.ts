@@ -1029,6 +1029,7 @@ async function enrollmentFor(
     await resolveTrainingMarks(db, shopId, [
       {
         bookingId,
+        tripId: row.tripId,
         enrollmentBookingId: row.trainingEnrollmentBookingId,
         seat: {
           personId: row.personId,

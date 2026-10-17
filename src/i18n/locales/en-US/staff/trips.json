@@ -715,7 +715,7 @@
       "mark": "Mark as training dive",
       "marking": "Marking…",
       "marked": "Training dive for {course}. Its course forms are asked on this seat.",
-      "noInstructor": "No instructor is on this departure’s crew yet.",
+      "noInstructor": "The course’s instructor isn’t on this crew, so the departure’s own level applies.",
       "clear": "Clear training mark",
       "clearing": "Clearing…",
       "clearedWithFormsOwed": "{hasName, select, yes {Training mark cleared by {name} with course forms unsigned.} other {Training mark cleared with course forms unsigned.}}"
