@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { SEAT_SURFACES, type SeatLanding, type SeatSurfaceId } from "./seat-diver-surfaces";
+import type { SeatDiverRefusal } from "@/db/seat-diver";
+import {
+  SEAT_SURFACES,
+  type SeatLanding,
+  type SeatSurfaceId,
+  seatSurfaceFor,
+} from "./seat-diver-surfaces";
 
 /**
  * A `SeatLanding` is built from raw form fields precisely when zod *failed* —
@@ -15,7 +21,7 @@ import { SEAT_SURFACES, type SeatLanding, type SeatSurfaceId } from "./seat-dive
  * (security review finding, nit).
  */
 
-const ids: SeatSurfaceId[] = ["trip-guests", "walk-in", "diver-record", "new-booking"];
+const ids: SeatSurfaceId[] = ["departure", "diver"];
 
 const hostile: Array<[string, string]> = [
   ["?notice=diver-added", "a query string"],
@@ -60,25 +66,21 @@ describe("every seat surface escapes what it puts in a path segment", () => {
       tripId: "11111111-1111-4111-8111-111111111111",
       personId: "22222222-2222-4222-8222-222222222222",
     };
-    expect(SEAT_SURFACES["trip-guests"].refusedPath(landing)).toBe(
+    // From a departure, seated or refused, the staffer lands on that boat's
+    // Divers tab — the roster's add-diver band, the global Add booking and the
+    // counter walk-in all stand on the same boat.
+    expect(SEAT_SURFACES.departure.seatedPath(landing)).toBe(
       "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111",
     );
-    expect(SEAT_SURFACES["diver-record"].refusedPath(landing)).toBe(
+    expect(SEAT_SURFACES.departure.refusedPath(landing)).toBe(
+      "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111",
+    );
+    // From a diver, both land on that diver's record.
+    expect(SEAT_SURFACES.diver.seatedPath(landing)).toBe(
       "/shop/blue-mantis/divers/22222222-2222-4222-8222-222222222222",
     );
-    expect(SEAT_SURFACES["new-booking"].refusedPath(landing)).toBe(
-      "/shop/blue-mantis/bookings/new/11111111-1111-4111-8111-111111111111",
-    );
-    expect(SEAT_SURFACES["new-booking"].refusedPath({ ...landing, tripId: "" })).toBe(
-      "/shop/blue-mantis/bookings/new",
-    );
-    // A walk-in is a door on one departure's Divers tab: seated lands on
-    // that tab's roster, refused lands back on the same boat's walk-in form.
-    expect(SEAT_SURFACES["walk-in"].seatedPath(landing)).toBe(
-      "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111",
-    );
-    expect(SEAT_SURFACES["walk-in"].refusedPath(landing)).toBe(
-      "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111/walk-in",
+    expect(SEAT_SURFACES.diver.refusedPath(landing)).toBe(
+      "/shop/blue-mantis/divers/22222222-2222-4222-8222-222222222222",
     );
   });
 });
@@ -128,15 +130,8 @@ describe("gate scope matches the id in each landing path", () => {
   };
 
   it.each([
-    ["trip-guests", { kind: "trip", id: landing.tripId }],
-    ["new-booking", { kind: "trip", id: landing.tripId }],
-    ["diver-record", { kind: "diver", id: landing.personId }],
-    // The counter used to be the exception here: `refusals: "coarse"` collapsed
-    // every gate into "open its trip page for the reason", so there was no
-    // specific refusal for a signature to carry and `gateScope` returned null.
-    // It says which gate it was now, and the departure is a path segment on the
-    // route it lands back on — which is the id the signature binds to.
-    ["walk-in", { kind: "trip", id: landing.tripId }],
+    ["departure", { kind: "trip", id: landing.tripId }],
+    ["diver", { kind: "diver", id: landing.personId }],
   ] as const)("%s binds to %o", (id, scope) => {
     expect(SEAT_SURFACES[id].gateScope(landing)).toEqual(scope);
   });
@@ -146,7 +141,107 @@ describe("gate scope matches the id in each landing path", () => {
     // There is no route to land on that owns one, so there is nothing a
     // signature could be verified against — better silent than unverifiable.
     const noTrip: SeatLanding = { ...landing, tripId: "" };
-    expect(SEAT_SURFACES["walk-in"].gateScope(noTrip)).toBeNull();
-    expect(SEAT_SURFACES["new-booking"].gateScope(noTrip)).toBeNull();
+    expect(SEAT_SURFACES.departure.gateScope(noTrip)).toBeNull();
+  });
+});
+
+/**
+ * Both doors answer every refusal the booking transaction can give, and a
+ * refusal never collapses onto a success: the shared vocabulary is exhaustive
+ * by type, and this pins that each gate keeps a distinct, well-formed code so
+ * a page's notice map can find it. The counter used to keep a second map of
+ * the same twelve refusals; it speaks the departure door's now.
+ */
+describe("every refusal keeps its own code on both doors", () => {
+  const refusals: SeatDiverRefusal[] = [
+    "trip_full",
+    "divers_full",
+    "participant_type_unavailable",
+    "already_booked",
+    "course_unstaffed",
+    "course_prerequisite",
+    "course_ratio_full",
+    "course_min_age",
+    "trip_prerequisite",
+    "trip_unavailable",
+    "person_not_found",
+    "unavailable",
+  ];
+
+  for (const id of ids) {
+    it(`${id} answers each gate, none with a success code`, () => {
+      const surface = SEAT_SURFACES[id];
+      const successes = new Set([
+        surface.seatedNotice,
+        surface.seatedWaiverUndeliveredNotice,
+        surface.seatedIdentityUnconfirmedNotice,
+        surface.seatedConfirmationSentNotice,
+        ...Object.values(surface.walkIn ?? {}).filter((value) => value.length > 0),
+      ]);
+      for (const reason of refusals) {
+        const code = surface.refusalNotice[reason];
+        expect(code).toMatch(/^[a-z0-9-]+$/);
+        expect(successes.has(code)).toBe(false);
+      }
+      // The boat's own certification gate and the course gates stay apart: the
+      // staffer's next move differs (DOM-M6).
+      expect(surface.refusalNotice.trip_prerequisite).not.toBe(
+        surface.refusalNotice.course_prerequisite,
+      );
+      expect(surface.refusalNotice.trip_full).not.toBe(surface.refusalNotice.course_ratio_full);
+    });
+  }
+
+  it("the departure door has no second refusal vocabulary for the counter", () => {
+    const counter = seatSurfaceFor(SEAT_SURFACES.departure, {
+      shopSlug: "blue-mantis",
+      tripId: "11111111-1111-4111-8111-111111111111",
+      personId: "",
+      walkIn: true,
+    });
+    expect(counter.refusalNotice).toBe(SEAT_SURFACES.departure.refusalNotice);
+    expect(counter.refusals).toBe("specific");
+  });
+});
+
+/**
+ * The counter is a mode of the departure door, asked for per submission. It
+ * changes how the seat is recorded and worded and nothing about who may take
+ * it: the same refusals, the same gate scope, the same landing.
+ */
+describe("the departure door's counter mode", () => {
+  const landing: SeatLanding = {
+    shopSlug: "blue-mantis",
+    tripId: "11111111-1111-4111-8111-111111111111",
+    personId: "",
+  };
+
+  it("records a walk-in and words it as one", () => {
+    const counter = seatSurfaceFor(SEAT_SURFACES.departure, { ...landing, walkIn: true });
+    expect(counter.entry).toBe("walk_in");
+    expect(counter.seatedNotice).toBe("walkin-added");
+    expect(counter.seatedIdentityUnconfirmedNotice).toBe("walkin-added-identity-unconfirmed");
+    expect(counter.seatedWaiverUndeliveredNotice).toBe("walkin-added-waiver-undelivered");
+    expect(counter.seatedConfirmationSentNotice).toBe("walkin-added-confirmed");
+  });
+
+  it("is an ordinary roster seat when it was not asked for", () => {
+    expect(seatSurfaceFor(SEAT_SURFACES.departure, landing).entry).toBe("roster");
+    expect(seatSurfaceFor(SEAT_SURFACES.departure, { ...landing, walkIn: false }).entry).toBe(
+      "roster",
+    );
+  });
+
+  it("is not a thing a diver's record can be asked for", () => {
+    const door = seatSurfaceFor(SEAT_SURFACES.diver, { ...landing, walkIn: true });
+    expect(door).toBe(SEAT_SURFACES.diver);
+    expect(door.entry).toBe("roster");
+  });
+
+  it("changes neither the landing nor what the gate signature binds to", () => {
+    const counter = seatSurfaceFor(SEAT_SURFACES.departure, { ...landing, walkIn: true });
+    expect(counter.seatedPath(landing)).toBe(SEAT_SURFACES.departure.seatedPath(landing));
+    expect(counter.refusedPath(landing)).toBe(SEAT_SURFACES.departure.refusedPath(landing));
+    expect(counter.gateScope(landing)).toEqual(SEAT_SURFACES.departure.gateScope(landing));
   });
 });

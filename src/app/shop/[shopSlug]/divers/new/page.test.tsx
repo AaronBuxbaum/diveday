@@ -80,7 +80,7 @@ async function renderPage(search: Record<string, string>, matches: unknown[] = [
   );
 }
 
-const seatingArm = { surface: "trip-guests", tripId: TRIP_ID, confirmName: "Nadia Ruis" };
+const seatingArm = { surface: "departure", tripId: TRIP_ID, confirmName: "Nadia Ruis" };
 const waitlistArm = { ...seatingArm, waitlist: "true" };
 
 /**

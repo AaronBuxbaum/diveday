@@ -56,8 +56,8 @@ export async function tripRosterActions({
   mayRetireRefusal: boolean;
 }) {
   return {
-    addBookingAction: seatNewDiverAction.bind(null, "trip-guests", shopSlug),
-    addExistingDiverAction: seatExistingDiverAction.bind(null, "trip-guests", shopSlug),
+    addBookingAction: seatNewDiverAction.bind(null, "departure", shopSlug),
+    addExistingDiverAction: seatExistingDiverAction.bind(null, "departure", shopSlug),
     addToWaitlistAction: addToWaitlistAction.bind(null, shopSlug, tripId),
     createDirectTripInvitationAction: createDirectTripInvitationAction.bind(null, shopSlug, tripId),
     invitePastDiverAction: invitePastDiverAction.bind(null, shopSlug, tripId),

@@ -108,7 +108,8 @@ describe("createDiverFormAction", () => {
       fullName: "Nadia Ruiz",
       email: "nadia@example.com",
       phone: "",
-      surface: "walk-in",
+      surface: "departure",
+      walkIn: "true",
       tripId: TRIP_ID,
     });
     const url = new URL(to ?? "", "https://diveday.test");
@@ -116,7 +117,8 @@ describe("createDiverFormAction", () => {
     expect(Object.fromEntries(url.searchParams)).toEqual({
       confirmName: "Nadia Ruiz",
       confirmEmail: "nadia@example.com",
-      surface: "walk-in",
+      surface: "departure",
+      walkIn: "true",
       tripId: TRIP_ID,
     });
     expect(findSimilarDivers).toHaveBeenCalledWith({ db: "handle" }, SHOP_ID, "Nadia Ruiz");
@@ -135,7 +137,7 @@ describe("createDiverFormAction", () => {
       fullName: "Nadia Ruiz",
       email: "",
       phone: "",
-      surface: "trip-guests",
+      surface: "departure",
       tripId: TRIP_ID,
       waitlist: "true",
     };
@@ -145,14 +147,35 @@ describe("createDiverFormAction", () => {
   });
 
   it("hands a seat door's form to the one seating path", async () => {
-    for (const surface of ["trip-guests", "walk-in", "new-booking"]) {
+    for (const extra of [{}, { walkIn: "true" }] as Array<Record<string, string>>) {
       vi.mocked(seatNewDiverAction).mockClear();
       expect(
-        await landing({ fullName: "Nadia Ruiz", email: "", phone: "", surface, tripId: TRIP_ID }),
+        await landing({
+          fullName: "Nadia Ruiz",
+          email: "",
+          phone: "",
+          surface: "departure",
+          tripId: TRIP_ID,
+          ...extra,
+        }),
       ).toBeNull();
-      expect(seatNewDiverAction).toHaveBeenCalledWith(surface, "blue-mantis", expect.any(FormData));
+      expect(seatNewDiverAction).toHaveBeenCalledWith(
+        "departure",
+        "blue-mantis",
+        expect.any(FormData),
+      );
     }
     expect(createDiver).not.toHaveBeenCalled();
+    // A diver's own record seats through its own form, not this one.
+    expect(
+      await landing({
+        fullName: "Nadia Ruiz",
+        email: "",
+        phone: "",
+        surface: "diver",
+        tripId: TRIP_ID,
+      }),
+    ).not.toBeNull();
   });
 
   it("treats a door it does not know as no door at all", async () => {

@@ -11,6 +11,7 @@ import { WALK_IN_PARTY_MAX, walkInMemberField } from "@/lib/walk-in-party";
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
 vi.mock("@/db/divers", () => ({ findSimilarDivers: vi.fn(async () => []) }));
 vi.mock("@/db/seat-diver", () => ({ seatDiver: vi.fn(), seatParty: vi.fn() }));
+vi.mock("@/db/trips", () => ({ getTripWithBooked: vi.fn() }));
 vi.mock("@/db/form-drafts", () => ({ discardFormDraft: vi.fn(async () => {}) }));
 vi.mock("@/lib/navigation", () => ({
   revalidateAndRedirect: vi.fn((_path: string, to: string) => {
@@ -21,6 +22,8 @@ vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { findSimilarDivers } = await import("@/db/divers");
 const { seatParty } = await import("@/db/seat-diver");
+const { getTripWithBooked } = await import("@/db/trips");
+const { HOUR_MS, nowMs } = await import("@/lib/clock");
 const { discardFormDraft } = await import("@/db/form-drafts");
 const { requireShopSurface } = await import("@/lib/session");
 const { seatWalkInPartyAction } = await import("./seat-diver");
@@ -53,7 +56,12 @@ async function landing(data: FormData): Promise<string> {
   throw new Error("the action neither redirected nor threw");
 }
 
+function boatAt(hours: number, status = "scheduled") {
+  return { id: TRIP_ID, status, startsAt: new Date(nowMs() + hours * HOUR_MS) } as never;
+}
+
 beforeEach(() => {
+  vi.mocked(getTripWithBooked).mockResolvedValue(boatAt(2));
   vi.mocked(requireShopSurface).mockResolvedValue({
     session: { user: { shopId: SHOP_ID, personId: "staff" } },
   } as never);
@@ -147,5 +155,28 @@ describe("seatWalkInPartyAction", () => {
     const to = new URL(await landing(form()), "http://x");
     expect(to.searchParams.get("notice")).toBe("walkin-party-added");
     expect(discardFormDraft).toHaveBeenCalledWith(expect.anything(), SHOP_ID, "staff", "new_diver");
+  });
+
+  it.each([
+    ["a boat that has sailed", boatAt(-2)],
+    ["a boat out of the counter's reach", boatAt(24 * 4)],
+    ["a cancelled boat", boatAt(2, "cancelled")],
+    ["a boat that is not there", null],
+  ])("seats nobody on %s, and keeps the form", async (_name, trip) => {
+    vi.mocked(getTripWithBooked).mockResolvedValue(trip as never);
+    const to = new URL(await landing(form()), "http://x");
+    expect(to.searchParams.get("notice")).toBe("diver-unavailable");
+    expect(to.searchParams.get("surface")).toBe("departure");
+    expect(to.searchParams.get("walkIn")).toBe("true");
+    expect(seatParty).not.toHaveBeenCalled();
+    expect(discardFormDraft).not.toHaveBeenCalled();
+  });
+
+  it("records the party as walk-ins", async () => {
+    await landing(form());
+    expect(vi.mocked(seatParty).mock.calls[0]?.[1]).toMatchObject({
+      entry: "walk_in",
+      refusals: "specific",
+    });
   });
 });

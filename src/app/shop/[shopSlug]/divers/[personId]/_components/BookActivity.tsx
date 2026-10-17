@@ -67,7 +67,7 @@ export function BookActivity({
         <DisclosureCaret direction="down" className="group-open:rotate-180" />
       </summary>
       <form
-        action={seatExistingDiverAction.bind(null, "diver-record", shopSlug)}
+        action={seatExistingDiverAction.bind(null, "diver", shopSlug)}
         className={sectionCardClass({ className: "mt-3 w-full" })}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">

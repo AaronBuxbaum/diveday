@@ -6,11 +6,15 @@ import type { TripAdmissionGateScope } from "@/lib/trip-admission-gate";
  * The per-door half of seating a diver (`src/db/seat-diver.ts` owns the other
  * half — the consequences, which are identical everywhere).
  *
- * What legitimately differs between the four staff doors is *presentation*:
- * where the staffer lands afterwards, which words their page already speaks,
- * and whether a name typed at the desk must come with an email. Those live
- * here as data, one row per surface, so a reviewer can read the whole matrix
- * at once instead of diffing four action files. Kept out of the `"use server"`
+ * There are two staff doors, named for where the staffer starts: **from a
+ * departure** ("who is joining this boat" — the roster's Add diver, the
+ * counter's walk-in, the global Add booking once it has a boat) and **from a
+ * diver** ("put this person on a boat" — the diver's own record). What
+ * legitimately differs between them is *presentation*: where the staffer lands
+ * afterwards, which words their page already speaks, and whether a name typed at
+ * the desk must come with an email. Those live here as data, one row per door,
+ * so a reviewer can read the whole matrix at once instead of diffing action
+ * files. Kept out of the `"use server"`
  * module beside it — such a module may only export async functions — the same
  * split as `./waiver-send-types.ts`.
  *
@@ -26,10 +30,30 @@ import type { TripAdmissionGateScope } from "@/lib/trip-admission-gate";
  */
 export const SEAT_BUSY_NOTICE = "seat-busy";
 
-export type SeatSurfaceId = "trip-guests" | "walk-in" | "diver-record" | "new-booking";
+export type SeatSurfaceId = "departure" | "diver";
+
+/**
+ * The departure door's counter mode: the diver is standing at the desk for a
+ * boat that has not left. It is one door with its own entry and success words,
+ * not a third door, and it is open only while `walkInDoorOpen`
+ * (src/lib/operational-window.ts) says so — the seat action asks again.
+ */
+export type SeatWalkInMode = {
+  entry: SeatDiverEntry;
+  seatedNotice: string;
+  seatedWaiverUndeliveredNotice: string;
+  seatedIdentityUnconfirmedNotice: string;
+  seatedConfirmationSentNotice: string;
+};
 
 /** Everything a settle path can be built from. */
-export type SeatLanding = { shopSlug: string; tripId: string; personId: string };
+export type SeatLanding = {
+  shopSlug: string;
+  tripId: string;
+  personId: string;
+  /** The staffer came through the departure door's counter mode. */
+  walkIn?: boolean;
+};
 
 export type SeatSurface = {
   entry: SeatDiverEntry;
@@ -55,6 +79,11 @@ export type SeatSurface = {
    */
   gateScope: (landing: SeatLanding) => TripAdmissionGateScope | null;
   seatedNotice: string;
+  /**
+   * What the counter's mode of this door says and records instead
+   * ({@link SeatWalkInMode}); absent on a door with no counter.
+   */
+  walkIn?: SeatWalkInMode;
   /**
    * The same seating, when the waiver it triggered could not be emailed —
    * `SeatDiverWaiver`'s `not_delivered` / `failed` (src/db/seat-diver.ts). The
@@ -131,7 +160,11 @@ export type SeatSurface = {
  */
 const tripPath = ({ shopSlug, tripId }: SeatLanding) => shopPath(shopSlug, "trips", tripId);
 
-/** The trip page's vocabulary — one distinct notice per gate. */
+/**
+ * The one refusal vocabulary a boat's page speaks — one distinct notice per
+ * gate, for the roster's Add diver and the counter's walk-in alike (the
+ * counter once kept a second, parallel map of the same twelve refusals).
+ */
 const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
   trip_full: "diver-full",
   divers_full: "diver-divers-full",
@@ -151,83 +184,53 @@ const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
 };
 
 export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
-  /** The Trip surface — hand entry and the returning-diver picker. */
-  "trip-guests": {
+  /**
+   * **From a departure**: the roster's hand entry and returning-diver picker,
+   * the global Add booking once a boat is chosen, and the counter's walk-in.
+   * Seated or refused, the staffer lands on that boat's Divers tab, where the
+   * add-diver form and the signed `?gate=` sentence both live.
+   *
+   * The counter is a mode of this door: a name on its own is enough (so the
+   * email is optional everywhere on it, `people.email` being nullable for the
+   * diver who just walked up), and the seat is told as a walk-in. It used to
+   * be a page of its own, and before that spoke a deliberately blunt three-code
+   * vocabulary (`refusals: "coarse"`); naming the reason ("This boat is full")
+   * is both shorter and useful, and now there is one place that words it.
+   */
+  departure: {
     entry: "roster",
     refusals: "specific",
-    email: "required",
+    email: "optional",
     seatedPath: tripPath,
     refusedPath: tripPath,
-    gateScope: ({ tripId }) => ({ kind: "trip", id: tripId }),
+    gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),
     seatedNotice: "diver-added",
     seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
     seatedIdentityUnconfirmedNotice: "diver-added-identity-unconfirmed",
     seatedConfirmationSentNotice: "diver-added-confirmed",
+    walkIn: {
+      entry: "walk_in",
+      seatedNotice: "walkin-added",
+      seatedWaiverUndeliveredNotice: "walkin-added-waiver-undelivered",
+      seatedIdentityUnconfirmedNotice: "walkin-added-identity-unconfirmed",
+      seatedConfirmationSentNotice: "walkin-added-confirmed",
+    },
     carriesBookingId: true,
-    invalidNotice: "diver-invalid",
+    invalidNotice: "diver-seat-invalid",
     refusalNotice: TRIP_REFUSAL_NOTICE,
   },
   /**
-   * The counter walk-in, from a departure's Divers tab while arrivals are
-   * open. A seated diver settles on that tab's roster, where they are the next
-   * row to work; a *refused* one lands back on the walk-in form for the same
-   * boat, so the staffer can try someone else.
-   *
-   * It used to speak a deliberately blunt three-code vocabulary
-   * (`refusals: "coarse"`) that collapsed all eight gates into "can't add this
-   * diver to that boat right now — open its trip page for the reason", on the
-   * grounds that a staffer with a queue waiting should not be asked to
-   * distinguish four rare course gates. The brevity was right and the
-   * conclusion was not: that sentence saves no decision, it sends the staffer
-   * to a *different page* to learn what happened, at the moment they have least
-   * time to go there. "This boat is full" is both shorter and useful.
+   * **From a diver**: "Book on an upcoming trip", from a diver's own record.
+   * Stays on the record — the staffer is working that one diver, not that one
+   * boat.
    */
-  "walk-in": {
-    entry: "walk_in",
-    refusals: "specific",
-    email: "optional",
-    seatedPath: ({ shopSlug, tripId }) =>
-      tripId ? shopPath(shopSlug, "trips", tripId) : shopPath(shopSlug),
-    refusedPath: ({ shopSlug, tripId }) =>
-      tripId ? shopPath(shopSlug, "trips", tripId, "walk-in") : shopPath(shopSlug),
-    // The departure is a path segment on that landing route, which is what lets
-    // the signature bind to something its reader can re-derive without trusting
-    // the query — and what lets a refusal add only its own `?notice=` to a
-    // query-less URL (see `SEAT_SURFACES["new-booking"]` for what appending to
-    // an already-queried one did instead).
-    gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),
-    seatedNotice: "walkin-added",
-    seatedWaiverUndeliveredNotice: "walkin-added-waiver-undelivered",
-    seatedIdentityUnconfirmedNotice: "walkin-added-identity-unconfirmed",
-    seatedConfirmationSentNotice: "walkin-added-confirmed",
-    carriesBookingId: true,
-    invalidNotice: "walkin-invalid",
-    refusalNotice: {
-      trip_full: "walkin-full",
-      divers_full: "walkin-divers-full",
-      participant_type_unavailable: "walkin-type-unavailable",
-      already_booked: "walkin-already",
-      course_unstaffed: "walkin-course-unstaffed",
-      course_prerequisite: "walkin-course-prerequisite",
-      course_ratio_full: "walkin-course-ratio-full",
-      course_min_age: "walkin-course-min-age",
-      trip_prerequisite: "walkin-trip-prerequisite",
-      trip_unavailable: "walkin-unavailable",
-      person_not_found: "walkin-unavailable",
-      unavailable: "walkin-unavailable",
-    },
-  },
-  /**
-   * "Book on an upcoming trip", from a diver's own record. Stays on the
-   * record — the staffer is working that one diver, not that one boat.
-   */
-  "diver-record": {
+  diver: {
     entry: "roster",
     refusals: "specific",
     email: "optional",
     seatedPath: ({ shopSlug, personId }) => shopPath(shopSlug, "divers", personId),
     refusedPath: ({ shopSlug, personId }) => shopPath(shopSlug, "divers", personId),
-    // The one surface with no departure in its landing URL: it binds the
+    // The one door with no departure in its landing URL: it binds the
     // signature to the diver whose record is about to render the sentence.
     gateScope: ({ personId }) => ({ kind: "diver", id: personId }),
     seatedNotice: "booked",
@@ -251,34 +254,12 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
       unavailable: "trip-unavailable",
     },
   },
-  /**
-   * The global "Add a booking" door. The only surface whose success and
-   * refusal part ways: a seated diver belongs on the Trip surface with
-   * the roster's usual toast, while a refusal stays on the form that produced
-   * it, boat still chosen, so the staffer can pick someone else.
-   *
-   * The chosen departure is a path segment there, which is what lets the
-   * refusal add only its own `?notice=` to a query-less URL — the shape every
-   * other door's refusal already uses, and the one a server-action redirect
-   * actually lands on (see the page's docstring for what appending a second
-   * param to an already-queried URL did instead).
-   */
-  "new-booking": {
-    entry: "roster",
-    refusals: "specific",
-    email: "optional",
-    seatedPath: tripPath,
-    refusedPath: ({ shopSlug, tripId }) =>
-      tripId
-        ? shopPath(shopSlug, "bookings", "new", tripId)
-        : shopPath(shopSlug, "bookings", "new"),
-    gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),
-    seatedNotice: "diver-added",
-    seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
-    seatedIdentityUnconfirmedNotice: "diver-added-identity-unconfirmed",
-    seatedConfirmationSentNotice: "diver-added-confirmed",
-    carriesBookingId: true,
-    invalidNotice: "diver-invalid",
-    refusalNotice: TRIP_REFUSAL_NOTICE,
-  },
 };
+
+/**
+ * The door as the staffer came through it: the counter's entry and words when
+ * they asked for the counter on a door that has one, the door's own otherwise.
+ */
+export function seatSurfaceFor(surface: SeatSurface, landing: SeatLanding): SeatSurface {
+  return landing.walkIn && surface.walkIn ? { ...surface, ...surface.walkIn } : surface;
+}

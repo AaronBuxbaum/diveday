@@ -12,7 +12,7 @@ import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff
  * either union with no words below is a compile error**. The reverse — an entry
  * left behind after a reason is deleted — is not caught, because the map also
  * carries codes from a vocabulary the desk only borrows (`SEAT_SURFACES
- * ["walk-in"]`). A guard claimed to be stronger than it
+ * .departure.walkIn`). A guard claimed to be stronger than it
  * is gets trusted where it does not hold.
  *
  * `ArrivalOfflineRefusal` is excluded: those answer a device reconciling a

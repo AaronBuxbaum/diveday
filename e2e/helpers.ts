@@ -779,6 +779,30 @@ export function counterPath(shopSlug: string, tripId: string): string {
   return `/shop/${shopSlug}/trips/${tripId}`;
 }
 
+/**
+ * The departure door's counter mode: the new-diver form for a walk-in on this
+ * boat (`SEAT_SURFACES.departure.walkIn`). The Divers tab's own search reaches
+ * it through "Add as a walk-in"; tests that are not about that link go straight
+ * to it.
+ */
+export function walkInFormPath(shopSlug: string, tripId: string): string {
+  return `/shop/${shopSlug}/divers/new?surface=departure&walkIn=true&tripId=${tripId}`;
+}
+
+/**
+ * Seat a returning diver from the boat's Divers tab: search, then the row's own
+ * add button. This is the roster's door, so the seat lands as an ordinary
+ * "Diver added…" (`notice=diver-added…`).
+ */
+export async function seatFromRoster(page: Page, tripId: string, name: string): Promise<void> {
+  await page.goto(counterPath("blue-mantis", tripId));
+  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  await find.fill(name);
+  await find.press("Enter");
+  await page.getByRole("button", { name: `Add ${name} to the trip` }).click();
+  await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=diver-added`));
+}
+
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

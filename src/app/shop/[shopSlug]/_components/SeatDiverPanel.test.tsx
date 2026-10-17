@@ -12,7 +12,7 @@ vi.mock("@/app/actions/seat-diver", () => ({
   seatNewDiverAction: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/shop/blue-mantis/trips/trip-1/walk-in",
+  usePathname: () => "/shop/blue-mantis/bookings/new/trip-1",
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 
@@ -61,7 +61,7 @@ function renderPanel(
 ) {
   return render(
     <SeatDiverPanel
-      surface="walk-in"
+      surface="departure"
       shopSlug="blue-mantis"
       tripId="trip-1"
       query={extra.query ?? ""}
