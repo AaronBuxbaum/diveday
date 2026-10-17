@@ -713,7 +713,8 @@ export async function seedMoreTrips(
         ? {
             status: "completed" as const,
             signedName: "Signed on file",
-            signatureMethod: "in_person" as const,
+            signatureMethod: "in_person_attested" as const,
+            recordedByPersonId: instructorId,
             consentedAt: createdAt,
             signedAt: createdAt,
             completedAt: createdAt,

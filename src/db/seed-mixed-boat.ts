@@ -54,9 +54,14 @@ export const DEMO_RIDER_PRICE_CENTS = 2500;
 export async function seedMixedBoat(
   db: DbExecutor,
   shopId: string,
-  ctx: { reef: typeof trips.$inferSelect; waiverTemplate: typeof waiverTemplates.$inferSelect },
+  ctx: {
+    reef: typeof trips.$inferSelect;
+    waiverTemplate: typeof waiverTemplates.$inferSelect;
+    /** The staffer who took the paper releases at the counter. */
+    recordedById: string;
+  },
 ): Promise<void> {
-  const { reef, waiverTemplate } = ctx;
+  const { reef, waiverTemplate, recordedById } = ctx;
   await db
     .update(trips)
     .set({
@@ -109,7 +114,8 @@ export async function seedMixedBoat(
       createdAt: signedAt,
       status: "completed" as const,
       signedName: "Signed on file",
-      signatureMethod: "in_person" as const,
+      signatureMethod: "in_person_attested" as const,
+      recordedByPersonId: recordedById,
       consentedAt: signedAt,
       signedAt,
       completedAt: signedAt,

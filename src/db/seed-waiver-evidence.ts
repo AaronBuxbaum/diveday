@@ -89,7 +89,7 @@ export function signedAtFor(index: number): Date {
 
 /** Recorded by a staffer from a signature made in front of them. */
 function staffRecorded(record: WaiverRecord): boolean {
-  return record.signatureMethod === "in_person" || record.signatureMethod === "in_person_attested";
+  return record.signatureMethod === "in_person_attested";
 }
 
 export async function seedWaiverEvidence(db: DbExecutor, shopId: string): Promise<void> {

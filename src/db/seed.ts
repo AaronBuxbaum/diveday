@@ -1010,6 +1010,7 @@ export async function seedDemoSchedule(
       customers,
       tripRows,
       pinRecapBooking: isCanonicalDemo,
+      recordedById: instructor.id,
     },
   );
 
@@ -1191,7 +1192,7 @@ export async function seedDemoSchedule(
   // 20261007-participant-types).
   const [reef] = tripRows;
   if (!reef) throw new Error("seed: reef trip missing before the mixed boat");
-  await seedMixedBoat(db, shopId, { reef, waiverTemplate });
+  await seedMixedBoat(db, shopId, { reef, waiverTemplate, recordedById: instructor.id });
 
   // Adds-only and late, like the four above: the desk's trail **per diver**,
   // so the Activity section on a diver's record opens on a real history rather

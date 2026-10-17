@@ -110,10 +110,7 @@ describe("withinDeskHours", () => {
 describe("staff-recorded signatures", () => {
   it("fall in desk hours, not near midnight", async () => {
     const { records } = await evidence();
-    const staffRecorded = records.filter(
-      (record) =>
-        record.signatureMethod === "in_person" || record.signatureMethod === "in_person_attested",
-    );
+    const staffRecorded = records.filter((record) => record.signatureMethod === "in_person_attested");
     expect(staffRecorded.length).toBeGreaterThan(0);
     const outside = staffRecorded
       .filter((record) => record.signedAt && record.signedAt.getTime() >= nowMs() - 21 * DAY_MS)
@@ -123,5 +120,21 @@ describe("staff-recorded signatures", () => {
         return hour < 8 || hour >= 18;
       });
     expect(outside).toEqual([]);
+  });
+});
+
+describe("seeded signature methods", () => {
+  it("are only methods the product writes, and a paper release names who took it", async () => {
+    const { records } = await evidence();
+    const known = new Set([
+      "typed_consent",
+      "in_person_attested",
+      "imported",
+      "in_person_attested_namesake",
+    ]);
+    expect(records.filter((record) => !known.has(record.signatureMethod ?? ""))).toEqual([]);
+    const paper = records.filter((record) => record.signatureMethod === "in_person_attested");
+    expect(paper.length).toBeGreaterThan(0);
+    expect(paper.filter((record) => record.recordedByPersonId === null)).toEqual([]);
   });
 });

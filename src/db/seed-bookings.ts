@@ -74,9 +74,11 @@ export async function seedBookings(
     customers: (typeof people.$inferSelect)[];
     tripRows: (typeof trips.$inferSelect)[];
     pinRecapBooking: boolean;
+    /** The staffer who took the paper releases at the counter. */
+    recordedById: string;
   },
 ) {
-  const { customers, tripRows, pinRecapBooking } = ctx;
+  const { customers, tripRows, pinRecapBooking, recordedById } = ctx;
   // Booking spread: busy reef trip, quiet night dive, sold-out wreck, fresh listing.
   const [reef, night, wreck] = tripRows;
   if (!reef || !night || !wreck) throw new Error("seed: failed to insert demo trips");
@@ -382,7 +384,8 @@ export async function seedBookings(
           ? {
               status: "completed" as const,
               signedName: "Signed on file",
-              signatureMethod: "in_person" as const,
+              signatureMethod: "in_person_attested" as const,
+              recordedByPersonId: recordedById,
               consentedAt: createdAt,
               signedAt: createdAt,
               completedAt: createdAt,

@@ -523,13 +523,7 @@ function WaiverLine({
                 ? t("incidentExport.waiverPaperMarkedBy", { name: waiver.recordedByName })
                 : t("incidentExport.waiverCompleteAttested")
             }`
-          : waiver.signatureMethod === "in_person"
-            ? ` ${
-                waiver.recordedByName
-                  ? t("incidentExport.waiverPaperMarkedBy", { name: waiver.recordedByName })
-                  : t("incidentExport.waiverCompleteAttested")
-              }`
-            : "";
+          : "";
     return (
       <>
         {t("incidentExport.waiverComplete", {
