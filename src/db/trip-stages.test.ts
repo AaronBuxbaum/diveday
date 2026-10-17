@@ -2,12 +2,14 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { diveSiteSlugFrom } from "@/lib/dive-site-slug";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import {
+  bookings,
   diveSites,
   people,
   personRoles,
+  rollCallEvents,
   shops,
   tripDives,
   tripStageEvents,
@@ -16,6 +18,8 @@ import {
 } from "./schema";
 import { latestTripStage, latestTripStagesByTrip, recordTripStage } from "./trip-stages";
 import { createTrip } from "./trips";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **A control on a safety surface** — ADR 20260904-reef-all-the-way-down,
@@ -27,7 +31,7 @@ const ZONE = "America/New_York";
 const NOW = new Date("2026-07-21T13:30:00.000Z");
 
 async function freshShop(slug: string) {
-  const db = await seededTestDb();
+  const db = ctx.db;
   const [shop] = await db
     .insert(shops)
     .values({ name: `Shop ${slug}`, slug, timezone: ZONE })
@@ -270,5 +274,128 @@ describe("latestTripStagesByTrip", () => {
     expect(byTrip.get(morning.id)?.stage).toBe("home");
     expect(byTrip.get(afternoon.id)?.stage).toBe("underway");
     expect(byTrip.has(quiet.id)).toBe(false);
+  });
+});
+
+/**
+ * Batch 6, item 4: "Heading in" and "Home" while the last after-dive roll call
+ * still has somebody unmarked. Recorded all the same — a stage is what the
+ * crew said, never refused — and the writer reports the open count, so the
+ * warning is the server's and not the screen's alone.
+ */
+describe("recordTripStage on the way home", () => {
+  async function aBoardedDiver(db: AppDb, shopId: string, tripId: string, staffer: string) {
+    const person = await aDiver(db, shopId, "Ana Ruiz");
+    const [booking] = await db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId, tripId, personId: person })
+      .returning();
+    if (!booking) throw new Error("test booking insert failed");
+    await db.insert(rollCallEvents).values({
+      shopId,
+      tripId,
+      bookingId: booking.id,
+      recordedByPersonId: staffer,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: new Date("2026-07-21T12:00:00.000Z"),
+    });
+    return booking.id;
+  }
+
+  it("records the word and reports who the last roll call has not marked", async () => {
+    const { db, shopId } = await freshShop("stage-homeward-open");
+    const trip = await aDeparture(db, shopId);
+    const staffer = await aStaffer(db, shopId);
+    await aBoardedDiver(db, shopId, trip.id, staffer);
+    const outcome = await recordTripStage(db, {
+      shopId,
+      tripId: trip.id,
+      stage: "heading_in",
+      recordedByPersonId: staffer,
+      recordedAt: NOW,
+    });
+    expect(outcome).toMatchObject({
+      ok: true,
+      rollCallOpen: {
+        kind: "unmarked",
+        checkpoint: "after_dive_2",
+        divers: 1,
+        crew: 0,
+        missing: 0,
+      },
+    });
+    // Warned, never refused: the word stands.
+    expect(await latestTripStage(db, shopId, trip.id)).toMatchObject({ stage: "heading_in" });
+  });
+
+  it("reports nothing once the last roll call has everyone, or for a word mid-trip", async () => {
+    const { db, shopId } = await freshShop("stage-homeward-closed");
+    const trip = await aDeparture(db, shopId);
+    const staffer = await aStaffer(db, shopId);
+    const bookingId = await aBoardedDiver(db, shopId, trip.id, staffer);
+    expect(
+      await recordTripStage(db, {
+        shopId,
+        tripId: trip.id,
+        stage: "surface",
+        recordedByPersonId: staffer,
+        recordedAt: NOW,
+      }),
+    ).toMatchObject({ ok: true, rollCallOpen: null });
+
+    await db.insert(rollCallEvents).values({
+      shopId,
+      tripId: trip.id,
+      bookingId,
+      recordedByPersonId: staffer,
+      status: "boarded",
+      checkpoint: "after_dive_2",
+      occurredAt: new Date("2026-07-21T15:00:00.000Z"),
+    });
+    // No crew is rostered, so the crew half has nobody to owe a statement about.
+    expect(
+      await recordTripStage(db, {
+        shopId,
+        tripId: trip.id,
+        stage: "home",
+        recordedByPersonId: staffer,
+        recordedAt: NOW,
+      }),
+    ).toMatchObject({ ok: true, rollCallOpen: null });
+  });
+
+  it("counts a diver recorded not back aboard as open", async () => {
+    const { db, shopId } = await freshShop("stage-homeward-missing");
+    const trip = await aDeparture(db, shopId);
+    const staffer = await aStaffer(db, shopId);
+    const bookingId = await aBoardedDiver(db, shopId, trip.id, staffer);
+    await db.insert(rollCallEvents).values({
+      shopId,
+      tripId: trip.id,
+      bookingId,
+      recordedByPersonId: staffer,
+      status: "not_boarded",
+      checkpoint: "after_dive_2",
+      occurredAt: new Date("2026-07-21T15:00:00.000Z"),
+    });
+    expect(
+      await recordTripStage(db, {
+        shopId,
+        tripId: trip.id,
+        stage: "home",
+        recordedByPersonId: staffer,
+        recordedAt: NOW,
+      }),
+    ).toMatchObject({
+      ok: true,
+      rollCallOpen: {
+        kind: "unmarked",
+        checkpoint: "after_dive_2",
+        divers: 0,
+        crew: 0,
+        missing: 1,
+      },
+    });
   });
 });

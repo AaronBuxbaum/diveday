@@ -8,6 +8,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { DiverFacts, diverBlockerText } from "./DiverFacts";
 import type { DiverRollCallContext } from "./diver-roll-call-context";
 import type { DiverRowState } from "./diver-row-state";
+import { MissingReportButton } from "./MissingReportButton";
 import {
   ROW_DISCLOSURE_PANEL_CLASS,
   RollCallBackAboardControl,
@@ -45,10 +46,12 @@ export function DiverRowPanel({
     timezone,
     rollCallAction,
     addPrivateNoteAction,
+    startMissingDiverReport,
     rollCallButtonCopy,
+    rollCallClosed,
     t,
   } = context;
-  const { rc, rowState, blockedAtDock, capsuleKind } = state;
+  const { rc, rowState, blockedAtDock, capsuleKind, medicalHoldInPanel } = state;
   return (
     <div className={ROW_DISCLOSURE_PANEL_CLASS}>
       {/* Blockers, and their one fix, at the dock only. After a
@@ -90,6 +93,26 @@ export function DiverRowPanel({
             the rule's margin is below only. */}
           <hr className="mt-0 mb-3 border-border" />
         </>
+      ) : null}
+      {/* **A medical hold the capsule lost** (#2380): after a dive, a
+        diver boarded over a medical blocker whose row went to a
+        louder fact keeps the blocker's sentence here. Warning tone
+        like the capsule it would have worn — the red is the dock's
+        and the alarm's, and after a dive readiness gates nothing. */}
+      {medicalHoldInPanel ? (
+        <ul className="mb-3 flex flex-col gap-1 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
+          {diver.readiness.blockers
+            .filter((blocker) => blocker.code === medicalHoldInPanel)
+            .map((blocker) => {
+              const text = diverBlockerText(t, diver, blocker);
+              return (
+                <li key={text} className="flex gap-2">
+                  <StatusMark variant="warning" size="md" />
+                  <span>{text}</span>
+                </li>
+              );
+            })}
+        </ul>
       ) : null}
       {/* A diver whose advisory the strip above does not already
         state by name keeps the full sentence — here, where the
@@ -175,7 +198,8 @@ export function DiverRowPanel({
         — retracting a mark may never be harder than making
         one, and asserting aboard over a missing mark is not a
         thumb-under-a-list act). */}
-      {rowState.notBackAboard ? (
+      {/* No roll-call control at all on a closed cancelled departure (#2285). */}
+      {rowState.notBackAboard && !rollCallClosed ? (
         <RollCallBackAboardControl
           kind="diver"
           subjectId={diver.bookingId}
@@ -186,19 +210,38 @@ export function DiverRowPanel({
           t={t}
         />
       ) : null}
+      {/* **The report, from the row that raised it** (safety sheet
+        2026-10-15, item 2). The trip page's "Report an incident" was the
+        only door, so the worst day's report was written from memory later.
+        This opens the one report for this missing diver, kind, diver and
+        time of the mark filled in, or says who already started it. Only for
+        those who may start one. */}
+      {rowState.notBackAboard && startMissingDiverReport ? (
+        <MissingReportButton
+          key={checkpoint}
+          action={startMissingDiverReport}
+          subject={{ field: "bookingId", id: diver.bookingId }}
+          checkpoint={checkpoint}
+          label={t("incidents.missingDiver.start")}
+          pendingLabel={t("incidents.trip.starting")}
+          ariaLabel={`${t("incidents.missingDiver.start")} — ${diver.fullName}`}
+        />
+      ) : null}
       {/* The deliberate second step. It is here, and nowhere
         else on this page, because reaching it has to cost a
         tap on the person's own name first (decision 3). */}
-      <RollCallExceptionControl
-        kind="diver"
-        subjectId={diver.bookingId}
-        checkpoint={checkpoint}
-        isDeparture={isDeparture}
-        rollCall={rc}
-        action={rollCallAction}
-        copy={rollCallButtonCopy(diver.bookingId)}
-        t={t}
-      />
+      {rollCallClosed ? null : (
+        <RollCallExceptionControl
+          kind="diver"
+          subjectId={diver.bookingId}
+          checkpoint={checkpoint}
+          isDeparture={isDeparture}
+          rollCall={rc}
+          action={rollCallAction}
+          copy={rollCallButtonCopy(diver.bookingId)}
+          t={t}
+        />
+      )}
     </div>
   );
 }

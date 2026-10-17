@@ -72,7 +72,7 @@ since 2026-08-06 and one has never been stood up.
    assert a departure card is on the page. Catches the class the heartbeat cannot: the app is up,
    the database answers `select 1`, and the page is blank — which is a *live* failure mode here,
    since a diver Client Component missing its `DiverIntlProvider` degrades to a blank client-only
-   **200** (`src/i18n/provider-coverage.test.ts` guards the code path; nothing guards production).
+   **200** (`scripts/check-intl-providers.mjs` guards the code path; nothing guards production).
 3. **Booking flow** — a multi-step browser canary walking a departure to the point of checkout.
    The most valuable and the most expensive; see the risk note.
 

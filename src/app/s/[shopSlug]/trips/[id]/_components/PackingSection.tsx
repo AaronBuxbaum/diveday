@@ -7,6 +7,7 @@ import {
   dockDayTimeline,
   exposureSuitFor,
   type LegTravelTimes,
+  type PersonalGearCode,
   type ProvidedItemCode,
   packingConfidence,
   type SiteBottomTimes,
@@ -38,16 +39,26 @@ const RENTAL_ITEM_KEYS: Record<RentableItemKind, DiverMessageKey> = {
   smb: "trip.rentalItems.smb",
 };
 
+const PERSONAL_GEAR_KEYS: Record<PersonalGearCode, DiverMessageKey> = {
+  mask: "trip.personalGear.mask",
+  fins: "trip.personalGear.fins",
+  snorkel: "trip.personalGear.snorkel",
+  boots: "trip.personalGear.boots",
+};
+
 const PROVIDED_ITEM_KEYS: Record<ProvidedItemCode, DiverMessageKey> = {
+  scubaUnit: "trip.providedItems.scubaUnit",
   tanksAndWeights: "trip.providedItems.tanksAndWeights",
   crewBriefing: "trip.providedItems.crewBriefing",
+  instructorBriefing: "trip.providedItems.instructorBriefing",
 };
 
 /**
  * **"Departure" is a boat word.** A shore diver walks to the entry and a pool
  * session is already at the water, so the one beat anchored on `startsAt` needs
  * three spellings; every other beat reads the same however the diver gets wet.
- * `boatRide` never reaches here off a boat — `dockDayOffsets` drops it.
+ * `boatRide` never reaches here off a boat — `dockDayOffsets` drops it — and
+ * the ride out reaches it only as the departure's `rideMinutes`.
  */
 function timelineStepKey(step: DockDayStep, diveMode: DiveMode): DiverMessageKey {
   if (step === "departure") {
@@ -279,7 +290,12 @@ export function PackingSection({
   locale: string;
 }) {
   const rhythmDays = days?.length ? days : [day ?? trip];
-  const packing = packingConfidence(shop.packingList, rentalFit ?? null, shop.briefingMinutes > 0);
+  const packing = packingConfidence(
+    shop.packingList,
+    rentalFit ?? null,
+    shop.briefingMinutes > 0,
+    trip.course?.gearIncluded === true,
+  );
   const t = diverTranslator(locale);
   // Said here only when nothing above has said it. This used to be an
   // unconditional "water is expected around 24°C — use the shop's wetsuit
@@ -314,6 +330,9 @@ export function PackingSection({
         <div>
           <h3 className="font-semibold">{t("trip.packBring")}</h3>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
+            {packing.bringPersonal.map((code) => (
+              <li key={code}>{t(PERSONAL_GEAR_KEYS[code])}</li>
+            ))}
             {packing.bring.map((item) => (
               <li key={item}>{item}</li>
             ))}
@@ -393,9 +412,13 @@ export function PackingSection({
                               {formatTime(entry.at, locale, shop.timezone)}
                             </span>
                             <span className="text-muted text-sm leading-6">
-                              {t(timelineStepKey(entry.step, trip.diveMode), {
-                                number: entry.number ?? 1,
-                              })}
+                              {entry.rideMinutes
+                                ? t("trip.timeline.departureWithRide", {
+                                    minutes: entry.rideMinutes,
+                                  })
+                                : t(timelineStepKey(entry.step, trip.diveMode), {
+                                    number: entry.number ?? 1,
+                                  })}
                               {/* Where this departure meets, when it isn't the
                                   shop's own front door — the exact line that
                                   should carry it and, until now, could not

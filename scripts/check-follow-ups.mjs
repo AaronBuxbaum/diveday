@@ -2,7 +2,7 @@ import { access, glob, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-import { tracker } from "./tracker.mjs";
+import { OPEN_ONLY_LABELS, tracker } from "./tracker.mjs";
 
 /**
  * The agent follow-up register is a GitHub issue tracker, not a folder — every idea,
@@ -71,6 +71,10 @@ export const PARKED_LABEL = "parked";
  *  human's queue beside the other human-owned issues, not in the agent inbox the triage
  *  routine reads. */
 export const QUESTION_LABEL = "ready-for-human";
+/** An improvement or feature idea nobody has committed to (Aaron, 2026-10-17): filed so it is
+ *  not lost, kept out of the `needs-triage` inbox and out of every ready-for-agent and
+ *  ready-for-human sweep until a human promotes it. */
+export const IDEA_LABEL = "idea";
 
 /** Open `needs-triage` issues above this fail the scheduled run (2026-10-13 re-review, item 1). */
 export const INBOX_CEILING = 40;
@@ -81,30 +85,93 @@ export function inboxProblem(openCount, ceiling = INBOX_CEILING) {
   return `${openCount} issues are open under label:${LABEL}, over the ceiling of ${ceiling}: triage before anything files more (docs/agents/triage-routine.md runs it daily; the triage skill is the how). A follow-up filed into a queue nobody reads is not memory.`;
 }
 
-/** How many leading words of a title make it "the same issue" for the duplicate check. */
-export const TITLE_KEY_WORDS = 6;
+/** Words that carry no subject: dropped before two titles are compared. */
+const TITLE_STOPWORDS = new Set(
+  "a an the of to for in on at and or with from by is are be it its as that this when so".split(
+    " ",
+  ),
+);
 
-/** A title reduced to its first TITLE_KEY_WORDS words, lowercased, punctuation dropped. */
-export function titleKey(title) {
-  return String(title ?? "")
+/** Imperative openings ("Add …", "Fix …"): the same item is often filed under two of them. */
+const LEADING_VERBS = new Set(
+  "add fix make remove refuse move use run file write update delete drop rename replace show let stop keep check test document wire teach give split extract cover support handle guard record name read".split(
+    " ",
+  ),
+);
+
+/**
+ * A title's subject words: lowercased, punctuation dropped, a leading imperative verb and the
+ * stopwords removed.
+ */
+export function titleWords(title) {
+  const words = String(title ?? "")
     .toLowerCase()
     .replace(/[‘’`'"]/g, "")
     .replace(/[^\p{L}\p{N}\s]+/gu, " ")
     .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, TITLE_KEY_WORDS)
-    .join(" ");
+    .filter(Boolean);
+  if (words.length > 1 && LEADING_VERBS.has(words[0])) words.shift();
+  return new Set(words.filter((word) => !TITLE_STOPWORDS.has(word)));
+}
+
+/** Two titles this alike (Jaccard over `titleWords`) are probably one item. */
+export const DUPLICATE_SIMILARITY = 0.8;
+
+function similarity(a, b) {
+  if (a.size === 0 || b.size === 0) return 0;
+  let shared = 0;
+  for (const word of a) if (b.has(word)) shared += 1;
+  return shared / (a.size + b.size - shared);
 }
 
 /**
- * The open issue whose title shares `title`'s first TITLE_KEY_WORDS words, or null. Three
- * "Add a visual capture of the …" issues were filed on one day (#2412, #2418, #2423); one
- * issue listing the three surfaces was the right shape.
+ * The open issue whose title reads most like `title`, at `DUPLICATE_SIMILARITY` or above, or
+ * null. A warning, not a refusal: the six-word key it replaced matched only #2412, #2418 and
+ * #2423 on 2026-10-13, three different "Add a visual capture of the …" requests, and missed
+ * true twins whose openings were reworded.
  */
 export function nearDuplicate(title, openIssues) {
-  const key = titleKey(title);
-  if (!key) return null;
-  return (openIssues ?? []).find((issue) => titleKey(issue.title) === key) ?? null;
+  const words = titleWords(title);
+  let best = null;
+  let bestScore = 0;
+  for (const issue of openIssues ?? []) {
+    const score = similarity(words, titleWords(issue.title));
+    if (score >= DUPLICATE_SIMILARITY && score > bestScore) {
+      best = issue;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+/**
+ * The relabels that move every open `**Kind:** question` issue in `issues` (the open
+ * `needs-triage` list) to `ready-for-human`. `file-follow-up` routes a question there at
+ * filing; this applies the same rule to the ones filed before it (31 on 2026-10-13), and the
+ * 06:00 job runs it daily for anything filed around the door.
+ */
+export function questionRoutingMoves(issues) {
+  return (issues ?? [])
+    .filter((issue) => metadata(issue.body ?? "", "Kind")?.toLowerCase() === "question")
+    .map((issue) => ({ number: issue.number, add: [QUESTION_LABEL], remove: [LABEL] }));
+}
+
+/**
+ * The labels to strip from closed issues: the ones that only describe an open issue's queue
+ * (`OPEN_ONLY_LABELS`). Issues close through `Closes #n` on merge, which never reaches
+ * `tracker.closeIssue`, so 267 closed issues still said `in-progress` on 2026-10-13.
+ * `needs-triage` stays: `persona-bots.mjs` reads closed `needs-triage` issues to know which
+ * findings a human already ended.
+ */
+export function closedLabelSweep(closedIssues) {
+  return (closedIssues ?? [])
+    .map((issue) => ({
+      number: issue.number,
+      remove: OPEN_ONLY_LABELS.filter((name) =>
+        (issue.labels ?? []).some((label) => label.name === name),
+      ),
+    }))
+    .filter((move) => move.remove.length > 0);
 }
 
 const VALID_KINDS = new Set(["question", "improvement", "risk", "cleanup", "half-done"]);
@@ -603,8 +670,59 @@ export function parseDraftArgs(argv) {
   };
 }
 
+/**
+ * `--apply-routing` and `--sweep-closed`: the two relabelling passes, each printing one line per
+ * issue it moves. `--dry-run` prints the requests and sends nothing. Exit 0 when every relabel
+ * landed, 1 when one failed, `SKIPPED_EXIT` when the tracker could not be read.
+ */
+function relabel(mode, { dryRun }) {
+  const github = tracker();
+  let moves;
+  try {
+    if (mode === "--apply-routing") {
+      moves = questionRoutingMoves(github.listIssues({ label: LABEL, limit: 1000 }));
+    } else {
+      const closed = new Map();
+      for (const label of OPEN_ONLY_LABELS) {
+        for (const issue of github.listIssues({ label, state: "closed", limit: 1000 })) {
+          closed.set(issue.number, issue);
+        }
+      }
+      moves = closedLabelSweep([...closed.values()]);
+    }
+  } catch (error) {
+    console.warn(`follow-ups ${mode}: could not read the tracker — skipping. ${error.message}`);
+    return SKIPPED_EXIT;
+  }
+  let failed = 0;
+  for (const move of moves) {
+    try {
+      github.editLabels(move.number, { add: move.add ?? [], remove: move.remove }, { dryRun });
+      console.log(
+        `#${move.number}: ${[...(move.add ?? []).map((name) => `+${name}`), ...move.remove.map((name) => `-${name}`)].join(" ")}`,
+      );
+    } catch (error) {
+      failed += 1;
+      console.error(`#${move.number}: relabel failed — ${error.message}`);
+    }
+  }
+  const what =
+    mode === "--apply-routing" ? "questions moved to ready-for-human" : "closed issues swept";
+  console.log(`follow-ups ${mode}: ${moves.length - failed} ${what}${dryRun ? " (dry run)" : ""}`);
+  return failed > 0 ? 1 : 0;
+}
+
 async function main() {
   const args = process.argv.slice(2);
+  const mode = args.find((arg) => arg === "--apply-routing" || arg === "--sweep-closed");
+  if (mode) {
+    const rest = args.filter((arg) => arg !== mode && arg !== "--dry-run");
+    if (rest.length > 0) {
+      console.error(`follow-ups: ${mode} takes only --dry-run, not ${rest.join(" ")}`);
+      process.exit(1);
+    }
+    process.exit(relabel(mode, { dryRun: args.includes("--dry-run") }));
+  }
   if (args.length > 0) {
     const { error, body, title, allowUnresolvedTouches } = parseDraftArgs(args);
     if (error) {

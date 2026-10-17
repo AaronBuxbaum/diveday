@@ -1,9 +1,11 @@
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { countUnansweredMessages } from "@/db/inbound-messages";
-import { inboundMessages, shops } from "@/db/schema";
-import { seededShopContext } from "@/test/db";
+import { messageSeats } from "@/db/running-late";
+import { bookings, inboundMessages, shops } from "@/db/schema";
+import { nowDate } from "@/lib/clock";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_CAPTAIN_EMAIL,
@@ -11,6 +13,8 @@ import {
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **Deleting a stranger's message** (issue #1506).
@@ -47,7 +51,8 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { deleteInboxMessageAction, setInboxMessageDoneAction } = await import("./actions");
+const { deleteInboxMessageAction, markInboxSenderLateAction, setInboxMessageDoneAction } =
+  await import("./actions");
 
 /** The seeded row from an address nobody on the roster holds (`src/db/seed-inbox.ts`). */
 async function strangerMessageId(db: AppDb, shopId: string): Promise<string> {
@@ -76,7 +81,7 @@ async function deletedAt(db: AppDb, messageId: string): Promise<Date | null> {
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   return {
     db,
@@ -269,5 +274,139 @@ describe("marking a message done, and taking it back", () => {
     const to = await redirectedTo(() => setInboxMessageDoneAction(doneForm("not-a-uuid", true)));
 
     expect(to).toBe(`/shop/${shop.slug}/inbox?notice=gone`);
+  });
+});
+
+/**
+ * UX review 2026-10-13, item 19: marking the sender of "Running about 15 min
+ * late" running late from the Inbox row. Only a message id is posted; the
+ * person and the seat come from the server's own reads.
+ */
+describe("marking a message's sender running late", () => {
+  /** The late form posts the message and the seat the desk chose (issue #2551). */
+  function lateForm(messageId: string, bookingId: string): FormData {
+    const formData = form(messageId);
+    formData.set("bookingId", bookingId);
+    return formData;
+  }
+
+  /** The seat the row would offer for Diego's message: the server's own candidates. */
+  async function offeredSeat(db: AppDb, shopId: string) {
+    const late = await lateMessage(db, shopId);
+    const seats = await messageSeats(db, shopId, [late], nowDate());
+    const seat = seats.get(late.id)?.[0];
+    if (!seat) throw new Error("seeded running-late message has no open seat");
+    return { late, seat };
+  }
+
+  /** Diego's WhatsApp, written in his own words (`src/db/seed-inbox.ts`). */
+  async function lateMessage(db: AppDb, shopId: string) {
+    const [row] = await db
+      .select({
+        id: inboundMessages.id,
+        personId: inboundMessages.personId,
+        receivedAt: inboundMessages.receivedAt,
+      })
+      .from(inboundMessages)
+      .where(
+        and(
+          eq(inboundMessages.shopId, shopId),
+          eq(inboundMessages.channel, "whatsapp"),
+          isNotNull(inboundMessages.personId),
+        ),
+      )
+      .limit(1);
+    if (!row?.personId) throw new Error("seeded shop has no running-late WhatsApp");
+    return { ...row, personId: row.personId };
+  }
+
+  async function marks(db: AppDb, shopId: string, personId: string) {
+    return (
+      await db
+        .select({ at: bookings.runningLateAt })
+        .from(bookings)
+        .where(and(eq(bookings.shopId, shopId), eq(bookings.personId, personId)))
+    )
+      .map((row) => row.at)
+      .filter((at): at is Date => at !== null);
+  }
+
+  it("puts the mark on his seat with the moment he wrote, for any staff role", async () => {
+    const { db, shop, captain } = await context();
+    const { late, seat } = await offeredSeat(db, shop.id);
+    signIn(shop, captain);
+
+    const to = await redirectedTo(() =>
+      markInboxSenderLateAction(lateForm(late.id, seat.bookingId)),
+    );
+
+    expect(to).toBe(`/shop/${shop.slug}/inbox?notice=late-marked`);
+    expect(await marks(db, shop.id, late.personId)).toEqual([late.receivedAt]);
+  });
+
+  it("404s a session whose claimed shop is not the acting person's", async () => {
+    const { db, shop, owner } = await context();
+    const { late, seat } = await offeredSeat(db, shop.id);
+    signIn({ id: "00000000-0000-4000-8000-000000000000", slug: "other-shop" }, owner);
+
+    await expect(markInboxSenderLateAction(lateForm(late.id, seat.bookingId))).rejects.toThrow(
+      "NOT_FOUND",
+    );
+    expect(await marks(db, shop.id, late.personId)).toEqual([]);
+  });
+
+  it("answers a stranger's message and a non-id with gone, and writes nothing", async () => {
+    const { shop, message, owner } = await context();
+    signIn(shop, owner);
+
+    for (const id of [message, "not-a-uuid"]) {
+      expect(
+        await redirectedTo(() =>
+          markInboxSenderLateAction(lateForm(id, "00000000-0000-4000-8000-000000000000")),
+        ),
+      ).toBe(`/shop/${shop.slug}/inbox?notice=gone`);
+    }
+  });
+
+  it("answers a post with no seat, or a malformed one, with gone, and writes nothing", async () => {
+    const { db, shop, owner } = await context();
+    const { late } = await offeredSeat(db, shop.id);
+    signIn(shop, owner);
+
+    for (const bookingId of ["", "not-a-uuid"]) {
+      expect(
+        await redirectedTo(() => markInboxSenderLateAction(lateForm(late.id, bookingId))),
+      ).toBe(`/shop/${shop.slug}/inbox?notice=gone`);
+    }
+    expect(await redirectedTo(() => markInboxSenderLateAction(form(late.id)))).toBe(
+      `/shop/${shop.slug}/inbox?notice=gone`,
+    );
+    expect(await marks(db, shop.id, late.personId)).toEqual([]);
+  });
+
+  it("refuses a booking id the message was not about, and writes nothing", async () => {
+    const { db, shop, owner } = await context();
+    const { late, seat } = await offeredSeat(db, shop.id);
+    // A seat of somebody else's at this shop, and an id that names nothing.
+    const [other] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), ne(bookings.personId, late.personId)))
+      .limit(1);
+    if (!other) throw new Error("seeded shop has no other booking");
+    signIn(shop, owner);
+
+    for (const forged of [other.id, "00000000-0000-4000-8000-000000000000"]) {
+      expect(forged).not.toBe(seat.bookingId);
+      expect(await redirectedTo(() => markInboxSenderLateAction(lateForm(late.id, forged)))).toBe(
+        `/shop/${shop.slug}/inbox?notice=late-closed`,
+      );
+    }
+    expect(await marks(db, shop.id, late.personId)).toEqual([]);
+    const anyMark = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), isNotNull(bookings.runningLateAt)));
+    expect(anyMark.filter((row) => row.id === other.id)).toEqual([]);
   });
 });

@@ -13,6 +13,7 @@ import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {
+  courseIdsEverOnBoard,
   getCourseBySlug,
   getCourseTemplateUpdate,
   hasActiveCourses,
@@ -40,6 +41,7 @@ import {
   getTripWithBooked,
   listStaff,
   listUpcomingSessionsForCourse,
+  nextSessionStartByCourse,
   setTripCrew,
   upcomingTripsWithCounts,
 } from "./trips";
@@ -1034,6 +1036,64 @@ describe("pagedCourses pagination (in-memory PGlite)", () => {
     const past = await pagedCourses(db, shop.id, { page: 99, limit: 3 });
     expect(past.page).toBe(first.pageCount);
     expect(past.courses.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * **55 courses, findable in one line** (third UX review, item 35): a title
+ * search, and views for a course with a session ahead, one on the catalog with
+ * none, and one hidden from divers. The count narrows with the rows.
+ */
+describe("pagedCourses search and views", () => {
+  it("finds a course by a piece of its title", async () => {
+    const { db, shop } = ctx;
+    const found = await pagedCourses(db, shop.id, { query: "rescue div", limit: 1000 });
+    expect(found.courses.map((course) => course.title)).toContain("Rescue Diver");
+    expect(found.courses.every((course) => /rescue div/i.test(course.title))).toBe(true);
+    expect(found.total).toBe(found.courses.length);
+  });
+
+  it("splits the catalog into scheduled, not yet and hidden, agreeing with the row's next date", async () => {
+    const { db, shop } = ctx;
+    const all = await pagedCourses(db, shop.id, { limit: 1000 });
+    const scheduled = await pagedCourses(db, shop.id, { view: "scheduled", limit: 1000 });
+    const notYet = await pagedCourses(db, shop.id, { view: "notYet", limit: 1000 });
+    const hidden = await pagedCourses(db, shop.id, { view: "hidden", limit: 1000 });
+    expect(scheduled.total).toBeGreaterThan(0);
+    expect(notYet.total).toBeGreaterThan(0);
+
+    const next = await nextSessionStartByCourse(
+      db,
+      shop.id,
+      all.courses.map((course) => course.id),
+      "shop",
+    );
+    expect(scheduled.courses.every((course) => next.has(course.id))).toBe(true);
+    expect(notYet.courses.some((course) => next.has(course.id))).toBe(false);
+    expect(notYet.courses.every((course) => course.isActive)).toBe(true);
+    expect(hidden.courses.every((course) => !course.isActive)).toBe(true);
+  });
+
+  it("puts a course a shop hides under Hidden", async () => {
+    const { db, shop } = ctx;
+    const [course] = (await pagedCourses(db, shop.id, { view: "notYet", limit: 1 })).courses;
+    if (!course) throw new Error("expected a course with no session");
+    await setCourseVisibility(db, shop.id, course.id, false);
+    const hidden = await pagedCourses(db, shop.id, { view: "hidden", limit: 1000 });
+    expect(hidden.courses.map((row) => row.id)).toContain(course.id);
+  });
+});
+
+describe("courseIdsEverOnBoard", () => {
+  it("names the courses with a session ahead or one that ran, and no others", async () => {
+    const { db, shop } = ctx;
+    const all = await pagedCourses(db, shop.id, { limit: 1000 });
+    const ids = all.courses.map((course) => course.id);
+    const onBoard = await courseIdsEverOnBoard(db, shop.id, ids);
+    const next = await nextSessionStartByCourse(db, shop.id, ids, "shop");
+    for (const id of next.keys()) expect(onBoard.has(id)).toBe(true);
+    expect(onBoard.size).toBeLessThan(ids.length);
+    expect(await courseIdsEverOnBoard(db, shop.id, [])).toEqual(new Set());
   });
 });
 

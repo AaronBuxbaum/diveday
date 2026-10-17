@@ -4,34 +4,42 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { outstandingCourseForms } from "@/lib/course-forms";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
+import { type CourseSeatInTraining, courseEndedBefore, inTrainingBefore } from "@/lib/in-training";
 import { isDiver, isHeldToMedical, participantPriceCents } from "@/lib/participant-types";
-import type { CardUnreviewRefusal, CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
+import type {
+  CardUnreviewRefusal,
+  CertificationLevel,
+  ReadinessResult,
+  SiteCertRequirement,
+} from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
   calculateReadiness,
+  cardUndoRefusal,
   combineCertRequirements,
   combineSiteRequirements,
   isUnsightedSelfDeclaration,
   needsCardSighting,
+  noCertificationStands,
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
+import type { TrainingMarkState } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
 import {
   effectiveReleaseForRiderSeat,
   effectiveWaiverForBooking,
   overriddenReferral,
   overriddenRefusal,
+  releaseLapseForBooking,
   riderMedicalHold,
+  waiverClockInstant,
 } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
-import {
-  type CourseSeatInTraining,
-  inTrainingBefore,
-  listCourseSeatsInTraining,
-} from "./certifications-in-training";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { courseFormSignaturesForBookings, requiredCourseFormsForTrips } from "./course-forms";
+import { publishManifestEventsForPerson } from "./manifest-events";
 import { paymentsByBooking } from "./payments";
 import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
@@ -49,6 +57,7 @@ import {
   tripRequirements,
   trips,
 } from "./schema";
+import { type MarkedSeat, resolveTrainingMarks } from "./training-mark-resolve";
 import { liveTrip } from "./trips-live";
 import {
   getCurrentWaiverGeneration,
@@ -430,10 +439,11 @@ export type NewShopIssuedCertification = {
  * (any provenance) — a numberless row is invisible to the unique index that
  * would otherwise catch a repeat tap. That guard is a plain read inside the
  * same transaction as the write, serialized by locking the person's own row
- * `for("update")` first — without it, two genuinely concurrent taps (a
- * second tab, a retried submit over flaky boat wifi) could both pass the
- * check before either insert commits, since a numberless row has no unique
- * index to catch the duplicate the way every other write to this table does.
+ * `for("no key update")` first, which still conflicts with itself — without
+ * it, two genuinely concurrent taps (a second tab, a retried submit over flaky
+ * boat wifi) could both pass the check before either insert commits, since a
+ * numberless row has no unique index to catch the duplicate the way every
+ * other write to this table does.
  */
 /**
  * Whether a trip's course can certify anyone: `not_a_certifying_course` for a
@@ -458,6 +468,37 @@ export async function courseCertifiesOnTrip(
   return row.isIntroCourse ? "not_a_certifying_course" : "certifies";
 }
 
+/**
+ * **The student this seat holds**, or null (issue #2226, reviews G4/Y2): the
+ * person on a live diver's seat of this shop's session, whose identity is not
+ * held (H-13). A snorkeler or a rider on a course session is a passenger, and
+ * the session's roster never certifies one. The roster's Certify reads the
+ * person from here, never from what the form posted.
+ */
+export async function studentOnSeat(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+): Promise<string | null> {
+  if (!isUuid(bookingId) || !isUuid(tripId) || !isUuid(shopId)) return null;
+  const [row] = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+        eq(bookings.participantType, "diver"),
+        isNull(bookings.identityUnconfirmedAt),
+      ),
+    )
+    .limit(1);
+  return row?.personId ?? null;
+}
+
 export async function issueShopCertification(
   db: AppDb,
   input: NewShopIssuedCertification,
@@ -473,13 +514,15 @@ export async function issueShopCertification(
     // calls for the same person now serialize here, so the "already holds
     // this level" check below and the insert that follows it act as one
     // atomic unit rather than a race either could win.
+    // `no key update`, as `recordSelfDeclaredCards` takes it: a booking insert
+    // naming this diver holds a `KEY SHARE` here, and `update` would conflict.
     const [person] = await tx
       .select({ id: people.id })
       .from(people)
       // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
       .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
       .limit(1)
-      .for("update");
+      .for("no key update");
     if (!person) return null;
     const [trip] = await tx
       .select({ id: trips.id, courseId: trips.courseId })
@@ -503,6 +546,10 @@ export async function issueShopCertification(
           eq(bookings.personId, input.personId),
           eq(bookings.shopId, input.shopId),
           ne(bookings.status, "cancelled"),
+          // A student's seat: a passenger is never certified, and a seat held
+          // over who is on it certifies nobody (reviews G4/Y2 of #2226).
+          eq(bookings.participantType, "diver"),
+          isNull(bookings.identityUnconfirmedAt),
         ),
       )
       .limit(1);
@@ -687,7 +734,10 @@ export async function reviewCertification(
         ),
       )
       .returning();
-    return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+    if (!certification) return { ok: false, reason: "not_found" };
+    // Open and primed manifests re-read (issue #2613).
+    await publishManifestEventsForPerson(db, input.shopId, certification.personId);
+    return { ok: true, certification };
   } catch (error) {
     // The sighted number collides with a live card this shop already holds —
     // the same partial unique index `createCertification` refuses on (CR-009).
@@ -709,12 +759,38 @@ export async function reviewCertification(
  */
 export async function unreviewCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string },
+  input: { shopId: string; certificationId: string; reviewedAt: Date },
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+  const undone = await reverseCertificationReview(db, input);
+  if (!undone.ok) return undone;
+  // Open and primed manifests re-read, so a clearance taken back is not shown
+  // on the dock (issue #2613).
+  await publishManifestEventsForPerson(db, input.shopId, undone.personId);
+  return { ok: true };
+}
+
+/**
+ * The write behind {@link unreviewCertification}, with no manifest event, for a
+ * caller inside a transaction (`undoAgencyCheck`): the event goes out after the
+ * commit, never before it, or a device could re-read the old evidence.
+ */
+export async function reverseCertificationReview(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    certificationId: string;
+    /** The `reviewedAt` the Undo was offered for: a later review is `stale` (issue #2612). */
+    reviewedAt: Date;
+    /** Only the agency check's own Undo (`undoAgencyCheck`) reverses an agency-checked review. */
+    reversingAgencyCheck?: boolean;
+  },
+): Promise<{ ok: true; personId: string } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
+      personId: certifications.personId,
       status: certifications.status,
       reviewedAt: certifications.reviewedAt,
+      agencyCheckedAt: certifications.agencyCheckedAt,
       selfDeclaredAt: certifications.selfDeclaredAt,
       issuedByShopAt: certifications.issuedByShopAt,
       importedAt: certifications.importedAt,
@@ -731,6 +807,10 @@ export async function unreviewCertification(
   if (!existing) return { ok: false, reason: "not_found" };
   const target = unreviewedCardState(existing);
   if (!target.ok) return target;
+  const refusal = cardUndoRefusal(existing, input.reviewedAt, {
+    reversingAgencyCheck: input.reversingAgencyCheck,
+  });
+  if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
     .update(certifications)
     .set({
@@ -745,24 +825,56 @@ export async function unreviewCertification(
         eq(certifications.id, input.certificationId),
         eq(certifications.shopId, input.shopId),
         isNull(certifications.deletedAt),
+        // The review that was offered, still: a review landing between the read
+        // above and this write matches no row (issue #2612).
+        eq(certifications.reviewedAt, input.reviewedAt),
+        ...(input.reversingAgencyCheck ? [] : [isNull(certifications.agencyCheckedAt)]),
       ),
     )
     .returning({ id: certifications.id });
-  return row ? { ok: true } : { ok: false, reason: "not_found" };
+  return row ? { ok: true, personId: existing.personId } : { ok: false, reason: "stale" };
 }
 
 /** The specialty twin of {@link unreviewCertification}; same decision, same guards. */
 export async function unreviewSpecialtyCertification(
   db: AppDb,
-  input: { shopId: string; certificationId: string },
+  input: { shopId: string; certificationId: string; reviewedAt: Date },
 ): Promise<{ ok: true } | { ok: false; reason: CardUnreviewRefusal }> {
+  const undone = await reverseSpecialtyReview(db, input);
+  if (!undone.ok) return undone;
+  await publishManifestEventsForPerson(db, input.shopId, undone.personId);
+  return { ok: true };
+}
+
+/**
+ * The write behind {@link unreviewSpecialtyCertification}, with no manifest
+ * event, for a caller inside a transaction (`undoAgencyCheck`). See
+ * {@link reverseCertificationReview}, whose guards it keeps.
+ */
+export async function reverseSpecialtyReview(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    certificationId: string;
+    reviewedAt: Date;
+    reversingAgencyCheck?: boolean;
+  },
+): Promise<{ ok: true; personId: string } | { ok: false; reason: CardUnreviewRefusal }> {
   const [existing] = await db
     .select({
+      personId: specialtyCertifications.personId,
       status: specialtyCertifications.status,
       reviewedAt: specialtyCertifications.reviewedAt,
+      agencyCheckedAt: specialtyCertifications.agencyCheckedAt,
       selfDeclaredAt: specialtyCertifications.selfDeclaredAt,
       issuedByShopAt: specialtyCertifications.issuedByShopAt,
       importedAt: specialtyCertifications.importedAt,
+      // A listed card (layer 3): its note is the agency's words, never the
+      // review's, and stays; and at an agency that numbers each card its
+      // number may be a sighting (`unreviewedCardState`).
+      listedFromCertificationId: specialtyCertifications.listedFromCertificationId,
+      agency: specialtyCertifications.agency,
+      reviewNote: specialtyCertifications.reviewNote,
     })
     .from(specialtyCertifications)
     .where(
@@ -774,25 +886,35 @@ export async function unreviewSpecialtyCertification(
     )
     .limit(1);
   if (!existing) return { ok: false, reason: "not_found" };
-  const target = unreviewedCardState(existing);
+  // See `reverseNitroxReview`: an agency check never certifies a card that
+  // needed a sighting, so its Undo puts back the number it was checked by.
+  const target = unreviewedCardState(
+    input.reversingAgencyCheck ? { ...existing, listedFromCertificationId: null } : existing,
+  );
   if (!target.ok) return target;
+  const refusal = cardUndoRefusal(existing, input.reviewedAt, {
+    reversingAgencyCheck: input.reversingAgencyCheck,
+  });
+  if (refusal) return { ok: false, reason: refusal };
   const [row] = await db
     .update(specialtyCertifications)
     .set({
       status: target.status,
-      reviewNote: null,
+      reviewNote: existing.listedFromCertificationId ? existing.reviewNote : null,
       reviewedAt: null,
       reviewedByPersonId: null,
+      agencyCheckedAt: null,
     })
     .where(
       and(
         eq(specialtyCertifications.id, input.certificationId),
         eq(specialtyCertifications.shopId, input.shopId),
         isNull(specialtyCertifications.deletedAt),
+        eq(specialtyCertifications.reviewedAt, input.reviewedAt),
       ),
     )
     .returning({ id: specialtyCertifications.id });
-  return row ? { ok: true } : { ok: false, reason: "not_found" };
+  return row ? { ok: true, personId: existing.personId } : { ok: false, reason: "stale" };
 }
 
 /**
@@ -1081,7 +1203,9 @@ export async function issueShopNitroxCertification(
  * The person row is locked and stays locked for the rest of the caller's
  * transaction, so two concurrent taps for the same diver serialize and the
  * "already holds this" check that follows acts as one atomic unit with its
- * insert rather than a race either could win.
+ * insert rather than a race either could win. `for no key update`, as
+ * `recordSelfDeclaredCards` takes it, so a foreign key naming the diver is
+ * never queued behind it.
  */
 async function shopIssuedCourseContext(
   tx: DbExecutor,
@@ -1093,7 +1217,7 @@ async function shopIssuedCourseContext(
     // diveday:allow-deleted-people: tenant proof for a card write; a removed record keeps its cards and may be restored.
     .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
     .limit(1)
-    .for("update");
+    .for("no key update");
   if (!person) return null;
   const [trip] = await tx
     .select({ id: trips.id, courseId: trips.courseId })
@@ -1116,6 +1240,8 @@ async function shopIssuedCourseContext(
         eq(bookings.personId, input.personId),
         eq(bookings.shopId, input.shopId),
         ne(bookings.status, "cancelled"),
+        eq(bookings.participantType, "diver"),
+        isNull(bookings.identityUnconfirmedAt),
       ),
     )
     .limit(1);
@@ -1168,6 +1294,13 @@ export async function reviewSpecialtyCertification(
      * depth gate past 18 m, and a diver's typing is not a card sighting.
      */
     sighting?: CardSighting;
+    /**
+     * The review is the agency's own lookup page listing this specialty for
+     * this diver (H-105, issue #2592), read by `judgeAgencyListedCard`. Stamps
+     * `agencyCheckedAt`; a card that needs a sighting is never certified this
+     * way, as for the level and nitrox reviews.
+     */
+    agencyChecked?: boolean;
   },
 ): Promise<
   | { ok: true; certification: typeof specialtyCertifications.$inferSelect }
@@ -1190,6 +1323,13 @@ export async function reviewSpecialtyCertification(
       // opens the depth gate — so it asks for the card exactly as a
       // self-declaration's does (issue #975).
       issuedByShopAt: specialtyCertifications.issuedByShopAt,
+      // The agency's words a check filed the card with (layer 3), kept by a
+      // confirm that brings none of its own.
+      reviewNote: specialtyCertifications.reviewNote,
+      // A card an agency check listed with no number of its own is confirmed
+      // through the sighting too (`needsCardSighting`).
+      identifier: specialtyCertifications.identifier,
+      listedFromCertificationId: specialtyCertifications.listedFromCertificationId,
     })
     .from(specialtyCertifications)
     .where(
@@ -1207,7 +1347,7 @@ export async function reviewSpecialtyCertification(
   // review beside it, and for a stronger reason: this one opens a depth gate
   // past 18 m.
   const sighting = needsCardSighting(existing) ? input.sighting : undefined;
-  if (needsCardSighting(existing) && !sighting?.identifier.trim()) {
+  if (needsCardSighting(existing) && (input.agencyChecked || !sighting?.identifier.trim())) {
     return { ok: false, reason: "card_sighting_required" };
   }
 
@@ -1215,8 +1355,9 @@ export async function reviewSpecialtyCertification(
     .update(specialtyCertifications)
     .set({
       status: input.status,
-      reviewNote: reviewNoteFor(input.reviewNote),
+      reviewNote: reviewNoteFor(input.reviewNote) ?? existing.reviewNote,
       reviewedAt: nowDate(),
+      agencyCheckedAt: input.agencyChecked ? nowDate() : null,
       ...(reviewedByPersonId ? { reviewedByPersonId } : undefined),
       ...(sighting
         ? { agency: sighting.agency, identifier: sighting.identifier.trim() }
@@ -1233,7 +1374,9 @@ export async function reviewSpecialtyCertification(
       ),
     )
     .returning();
-  return certification ? { ok: true, certification } : { ok: false, reason: "not_found" };
+  if (!certification) return { ok: false, reason: "not_found" };
+  await publishManifestEventsForPerson(db, input.shopId, certification.personId);
+  return { ok: true, certification };
 }
 
 /**
@@ -1407,6 +1550,30 @@ export async function getBookingReadiness(db: DbExecutor, shopId: string, bookin
   return readiness.find((row) => row.booking.id === bookingId)?.readiness ?? null;
 }
 
+/**
+ * `getBookingReadiness` for several seats at once, in one pass of the batched
+ * pipeline (`listTripsReadiness`) instead of one whole-roster read per seat
+ * (issue #2058: a diver record on a long package). The same `readiness` each
+ * seat's roster row carries, so a page reading this cannot disagree with the
+ * boat. A seat that is not this shop's, or not on a live roster, is absent.
+ */
+export async function getBookingsReadiness(
+  db: DbExecutor,
+  shopId: string,
+  bookingIds: readonly string[],
+): Promise<Map<string, ReadinessResult>> {
+  if (bookingIds.length === 0) return new Map();
+  const seats = await db
+    .select({ id: bookings.id, tripId: bookings.tripId })
+    .from(bookings)
+    .where(and(inArray(bookings.id, [...bookingIds]), eq(bookings.shopId, shopId)));
+  const wanted = new Set(seats.map((seat) => seat.id));
+  const rows = await listTripsReadiness(db, shopId, [...new Set(seats.map((seat) => seat.tripId))]);
+  return new Map(
+    rows.flatMap((row) => (wanted.has(row.booking.id) ? [[row.booking.id, row.readiness]] : [])),
+  );
+}
+
 export type BookingReadinessDetail = {
   shop: { name: string; timezone: string };
   trip: { id: string; title: string; startsAt: Date; endsAt: Date };
@@ -1479,6 +1646,61 @@ export async function getBookingReadinessDetail(
   };
 }
 
+/**
+ * The seats on these rows that carry a training mark (issue #2275), as the
+ * resolver reads them. A seat whose departure `courseByTrip` lacks is read as
+ * a course seat, which the rule refuses: never a mark that stands.
+ */
+function markedSeatsOf(
+  rows: readonly { booking: typeof bookings.$inferSelect; person: { id: string } }[],
+  courseByTrip: ReadonlyMap<string, { courseId: string | null; startsAt: Date }>,
+): MarkedSeat[] {
+  const seats: MarkedSeat[] = [];
+  for (const { booking, person } of rows) {
+    if (booking.trainingEnrollmentBookingId === null) continue;
+    const trip = courseByTrip.get(booking.tripId);
+    seats.push({
+      bookingId: booking.id,
+      enrollmentBookingId: booking.trainingEnrollmentBookingId,
+      seat: {
+        personId: person.id,
+        participantType: booking.participantType,
+        onCourseSession: !trip || trip.courseId !== null,
+        departureStartsAt: trip?.startsAt ?? new Date(0),
+      },
+    });
+  }
+  return seats;
+}
+
+/**
+ * Whose forms a seat is asked, and whose records satisfy them: a training
+ * mark that stands is its enrollment's (`signatureSatisfies` is keyed on that
+ * booking), anything else is the seat's own. A mark that does not stand asks
+ * nothing here; it raises `training_mark_invalid` instead.
+ */
+function formsBookingOf(
+  bookingId: string,
+  tripId: string,
+  mark: TrainingMarkState | undefined,
+): { bookingId: string; tripId: string } {
+  return mark?.valid
+    ? { bookingId: mark.enrollmentBookingId, tripId: mark.enrollmentTripId }
+    : { bookingId, tripId };
+}
+
+/**
+ * The guardian rule's "Under 18" for a seat: its own booker's, or — on a seat
+ * whose training mark stands — the course seat's too, so the charter and the
+ * enrollment never disagree about whether a parent signs (fail closed).
+ */
+function minorDeclaredOf(
+  booking: { minorDeclaredAt: Date | null },
+  mark: TrainingMarkState | undefined,
+): boolean {
+  return booking.minorDeclaredAt !== null || (mark?.valid === true && mark.enrollmentMinorDeclared);
+}
+
 export async function listTripsReadiness(
   db: DbExecutor,
   shopId: string,
@@ -1531,6 +1753,7 @@ export async function listTripsReadiness(
           .select({
             id: trips.id,
             startsAt: trips.startsAt,
+            endsAt: trips.endsAt,
             courseId: trips.courseId,
             minimumAge: courses.minimumAge,
             priceCents: trips.priceCents,
@@ -1621,17 +1844,32 @@ export async function listTripsReadiness(
       () => listCourseSeatsInTraining(db, shopId, personIds),
     ]);
   const noEvidence: Awaited<ReturnType<typeof evidence>> = [[], [], [], new Map(), []];
+  // Seats staff marked as a training dive (issue #2275): read only when a
+  // mark exists, so an ordinary fun dive still pays nothing here.
+  const markedSeats = markedSeatsOf(waiverRows, courseByTrip);
   const [
     paymentByBooking,
-    [courseFormsByTrip, courseFormSignatures],
+    [courseFormsByTrip, courseFormSignatures, trainingMarks],
     [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson, courseSeatRows],
   ] = await queryAll(db, [
     () => paymentsByBooking(db, shopId, bookingIds),
     async () => {
-      const forms = await requiredCourseFormsForTrips(db, shopId, courseTripIds, now);
+      const marks = await resolveTrainingMarks(db, shopId, markedSeats);
+      const enrollments = [...marks.values()].filter((mark) => mark.valid);
+      const forms = await requiredCourseFormsForTrips(
+        db,
+        shopId,
+        [...new Set([...courseTripIds, ...enrollments.map((mark) => mark.enrollmentTripId)])],
+        now,
+      );
       const signatures =
-        forms.size === 0 ? [] : await courseFormSignaturesForBookings(db, shopId, bookingIds);
-      return [forms, signatures] as const;
+        forms.size === 0
+          ? []
+          : await courseFormSignaturesForBookings(db, shopId, [
+              ...bookingIds,
+              ...enrollments.map((mark) => mark.enrollmentBookingId),
+            ]);
+      return [forms, signatures, marks] as const;
     },
     () => (personIds.length === 0 ? Promise.resolve(noEvidence) : evidence()),
   ]);
@@ -1673,6 +1911,17 @@ export async function listTripsReadiness(
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
       : null;
 
+    // **The release's clocks run at the departure** (issue #2611): while the
+    // trip has not started, at its end; once under way, at now. The
+    // night-before roster, Today and the reminder then agree with the dock, a
+    // night dive's release that lapses mid-dive blocks before it sails, and a
+    // liveaboard guest on day two reads at now. Cards, payment and age keep
+    // their own instants.
+    const waiverNow = waiverClockInstant({
+      now,
+      startsAt: courseRow?.startsAt ?? null,
+      endsAt: courseRow?.endsAt ?? null,
+    });
     // A rider is held to the release and never to its medical (H-109), so a
     // hold does not outrank their signatures and a held record is a signed one
     // — read only while it is itself current, never the hold's own standing.
@@ -1684,18 +1933,29 @@ export async function listTripsReadiness(
       bookingWaiver: row.waiver,
       personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
       currentTemplateVersion: currentTemplateGeneration,
+      now: waiverNow,
+    });
+    const releaseLapse = releaseLapseForBooking({
+      bookingWaiver: row.waiver,
+      personSignedWaivers: signedWaiversByPerson.get(row.person.id) ?? [],
+      currentTemplateVersion: currentTemplateGeneration,
+      heldToMedical: isHeldToMedical(row.booking.participantType),
       now,
+      startsAt: courseRow?.startsAt ?? null,
+      endsAt: courseRow?.endsAt ?? null,
     });
     const referral = overriddenReferral(
       effectiveWaiver,
       signedWaiversByPerson.get(row.person.id) ?? [],
     );
 
-    const requiredCourseForms = courseFormsByTrip.get(tripId);
+    const trainingMark = trainingMarks.get(row.booking.id);
+    const formsBooking = formsBookingOf(row.booking.id, tripId, trainingMark);
+    const requiredCourseForms = courseFormsByTrip.get(formsBooking.tripId);
     const courseForms = requiredCourseForms
       ? {
           shopId,
-          bookingId: row.booking.id,
+          bookingId: formsBooking.bookingId,
           personId: row.person.id,
           required: requiredCourseForms,
           signatures: courseFormSignatures,
@@ -1713,7 +1973,11 @@ export async function listTripsReadiness(
       owedCourseForms: courseForms
         ? outstandingCourseForms({
             ...courseForms,
-            signer: { dateOfBirth: row.person.dateOfBirth, timezone },
+            signer: {
+              dateOfBirth: row.person.dateOfBirth,
+              minorDeclared: minorDeclaredOf(row.booking, trainingMark),
+              timezone,
+            },
           })
         : [],
       bookingWaiver: row.waiver,
@@ -1749,6 +2013,7 @@ export async function listTripsReadiness(
         requirement,
         siteRequirement,
         waiver: effectiveWaiver,
+        releaseLapse,
         certifications: certificationsByPerson.get(row.person.id) ?? [],
         // Measured against this departure: only a course that finishes before
         // it sails can be the card this diver boards on.
@@ -1762,6 +2027,18 @@ export async function listTripsReadiness(
               now,
             )
           : [],
+        // Sessions already over without a card: named on the blocker so the
+        // record points at that roster (issue #2058). Clears nothing.
+        coursesEnded: courseRow
+          ? courseEndedBefore(
+              courseSeatsByPerson.get(row.person.id) ?? [],
+              { id: tripId, startsAt: courseRow.startsAt },
+              now,
+            )
+          : [],
+        // The diver's own "I'm not certified yet", said on their link or a
+        // public form: it names why the gate is unmet, and clears nothing.
+        noCertificationDeclared: noCertificationStands(row.person),
         specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
         nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
         paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,
@@ -1769,6 +2046,8 @@ export async function listTripsReadiness(
         courseMinimumAge,
         courseDate,
         dateOfBirth: row.person.dateOfBirth,
+        // The booker's "Under 18" on this seat, for the guardian rule alone.
+        minorDeclared: minorDeclaredOf(row.booking, trainingMark),
         // The guardian rule measures the diver's age on the shop-local day
         // they signed (src/lib/guardian.ts), so the engine needs the zone.
         timezone,
@@ -1783,6 +2062,7 @@ export async function listTripsReadiness(
           courseRow !== undefined &&
           participantPriceCents(courseRow, row.booking.participantType) === 0,
         courseForms,
+        trainingMarkInvalid: trainingMark !== undefined && !trainingMark.valid,
         now,
       }),
     };

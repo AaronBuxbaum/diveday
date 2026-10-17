@@ -1,17 +1,25 @@
 "use server";
 
 import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import {
   addIncidentAddendum,
   addIncidentPerson,
+  discardIncidentDraft,
   fileIncidentReport,
   type IncidentSubject,
   type IncidentWriteRefusal,
+  type MissingSubject,
   removeIncidentPerson,
   saveIncidentDraft,
+  setIncidentLegalHold,
   startIncidentReport,
+  startMissingDiverReport,
 } from "@/db/incident-reports";
+import { requestLocale } from "@/i18n/request";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { formValue, readForm } from "@/lib/form-parse";
 import {
   type IncidentFieldRefusal,
   isIncidentInvolvement,
@@ -22,6 +30,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { manifestCheckpointParam } from "./[reportId]/_components/manifest-return";
 
 /**
  * The incident report's writes (ADR 20261012-incident-reports). Each reads the
@@ -46,6 +55,7 @@ const REFUSAL_NOTICE: Record<
   subject_not_found: "subject-not-found",
   already_listed: "already-listed",
   blank: "blank-note",
+  held: "held",
 };
 
 const FIELD_NOTICE: Record<IncidentFieldRefusal, string> = {
@@ -79,10 +89,35 @@ function requireIds(...ids: string[]): void {
   if (!ids.every((id) => uuidParam(id))) notFound();
 }
 
-function text(formData: FormData, name: string): string {
-  const value = formData.get(name);
-  return typeof value === "string" ? value : "";
+/** A field read as typed text: `""` when it is absent or a file. */
+function typed() {
+  return formValue().transform((value) => (typeof value === "string" ? value : ""));
 }
+
+const missingDiverForm = z.object({ bookingId: typed(), personId: typed(), checkpoint: typed() });
+
+const incidentDraftForm = z.object({
+  occurredOn: typed(),
+  occurredTime: typed(),
+  diveSiteId: typed(),
+  locationText: typed(),
+  whatHappened: typed(),
+  kind: typed(),
+  severity: typed(),
+  firstAidGiven: typed(),
+  oxygenGiven: typed(),
+  oxygenMinutes: typed(),
+  emergencyServicesCalled: typed(),
+  handoverKind: typed(),
+  handoverDetail: typed(),
+  handedOverOn: typed(),
+  handedOverTime: typed(),
+  followUp: typed(),
+});
+
+const addendumForm = z.object({ body: typed() });
+
+const incidentPersonForm = z.object({ who: typed(), involvement: typed(), outsiderName: typed() });
 
 /** Start a draft on a departure and open it. */
 export async function startIncidentReportAction(shopSlug: string, tripId: string) {
@@ -101,6 +136,70 @@ export async function startIncidentReportAction(shopSlug: string, tripId: string
   );
 }
 
+/** What "Start a missing diver report" answers in place when it opens nothing. */
+export type MissingReportState = { message: string } | null;
+
+/**
+ * **"Start a missing diver report"** on a manifest row marked not back aboard,
+ * a diver's (`bookingId`) or a crew member's (`personId`): the one report for
+ * that missing person (`startMissingDiverReport`), opened with the way back
+ * to the manifest it came from.
+ *
+ * Under `useActionState`, so every way it can fail is a sentence beside the
+ * button (domain review 2026-10-16): a thrown write used to swap the whole
+ * manifest for the error page, in the minutes the crew most needs it. Only
+ * the success navigates.
+ */
+export async function startMissingDiverReportAction(
+  shopSlug: string,
+  tripId: string,
+  _previous: MissingReportState,
+  formData: FormData,
+): Promise<MissingReportState> {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const form = readForm(missingDiverForm, formData);
+  const { bookingId, personId } = form;
+  const subject: MissingSubject | null = uuidParam(bookingId)
+    ? { kind: "diver", bookingId }
+    : uuidParam(personId)
+      ? { kind: "crew", personId }
+      : null;
+  if (!uuidParam(tripId) || !subject) return { message: t("incidents.missingDiver.notMissing") };
+  let result: Awaited<ReturnType<typeof startMissingDiverReport>>;
+  try {
+    result = await startMissingDiverReport(await getDb(), {
+      shopId: shop.id,
+      tripId,
+      subject,
+      actorPersonId: session.user.personId,
+    });
+  } catch {
+    return { message: t("incidents.missingDiver.failed") };
+  }
+  if (!result.ok) {
+    if (result.reason === "already_started") {
+      return {
+        message: t("incidents.missingDiver.alreadyStarted", { name: result.startedByName }),
+      };
+    }
+    if (result.reason === "already_filed") {
+      return { message: t("incidents.missingDiver.alreadyFiled", { name: result.filedByName }) };
+    }
+    if (result.reason === "not_missing") {
+      return { message: t("incidents.missingDiver.notMissing") };
+    }
+    return { message: t("incidents.missingDiver.notAllowed") };
+  }
+  const checkpoint = manifestCheckpointParam(form.checkpoint);
+  const back = new URLSearchParams({ from: "manifest" });
+  if (checkpoint) back.set("checkpoint", checkpoint);
+  revalidateAndRedirect(
+    shopPath(shopSlug, "trips", tripId),
+    `${reportPath(shopSlug, tripId, result.reportId)}?${back}`,
+  );
+}
+
 /** Save the draft's fields, read as wall-clock times in the shop's zone. */
 export async function saveIncidentDraftAction(
   shopSlug: string,
@@ -111,28 +210,10 @@ export async function saveIncidentDraftAction(
   const { session, shop } = await requireShopSurface(shopSlug);
   requireIds(tripId, reportId);
   const back = reportPath(shopSlug, tripId, reportId);
-  const parsed = parseIncidentDraft(
-    {
-      occurredOn: text(formData, "occurredOn"),
-      occurredTime: text(formData, "occurredTime"),
-      diveSiteId: text(formData, "diveSiteId"),
-      locationText: text(formData, "locationText"),
-      whatHappened: text(formData, "whatHappened"),
-      firstAidGiven: text(formData, "firstAidGiven"),
-      oxygenGiven: text(formData, "oxygenGiven"),
-      oxygenMinutes: text(formData, "oxygenMinutes"),
-      emergencyServicesCalled: text(formData, "emergencyServicesCalled"),
-      handoverKind: text(formData, "handoverKind"),
-      handoverDetail: text(formData, "handoverDetail"),
-      handedOverOn: text(formData, "handedOverOn"),
-      handedOverTime: text(formData, "handedOverTime"),
-      followUp: text(formData, "followUp"),
-    },
-    (date, time) => {
-      const wall = parseWallTime(date, time);
-      return wall ? wallTimeToUtc(wall, shop.timezone) : null;
-    },
-  );
+  const parsed = parseIncidentDraft(readForm(incidentDraftForm, formData), (date, time) => {
+    const wall = parseWallTime(date, time);
+    return wall ? wallTimeToUtc(wall, shop.timezone) : null;
+  });
   // A refused field leaves the draft as it was; the staffer's typing is lost
   // with the redirect, so the notice names exactly which answer to fix.
   if (!parsed.ok) {
@@ -175,7 +256,7 @@ export async function addIncidentAddendumAction(
   const { session, shop } = await requireShopSurface(shopSlug);
   requireIds(tripId, reportId);
   const back = reportPath(shopSlug, tripId, reportId);
-  const body = text(formData, "body");
+  const { body } = readForm(addendumForm, formData);
   const result = await addIncidentAddendum(await getDb(), {
     shopId: shop.id,
     reportId,
@@ -199,14 +280,13 @@ export async function addIncidentPersonAction(
   const { session, shop } = await requireShopSurface(shopSlug);
   requireIds(tripId, reportId);
   const back = reportPath(shopSlug, tripId, reportId);
-  const who = text(formData, "who");
-  const involvement = text(formData, "involvement");
+  const { who, involvement, outsiderName } = readForm(incidentPersonForm, formData);
   const [kind, id = ""] = who.split(":");
   let subject: IncidentSubject | null = null;
   if (kind === "booking" && uuidParam(id)) subject = { kind: "booking", bookingId: id };
   else if (kind === "staff" && uuidParam(id)) subject = { kind: "staff", personId: id };
-  else if (kind === "outsider" && text(formData, "outsiderName").trim()) {
-    subject = { kind: "outsider", name: text(formData, "outsiderName") };
+  else if (kind === "outsider" && outsiderName.trim()) {
+    subject = { kind: "outsider", name: outsiderName };
   }
   if (!subject || !isIncidentInvolvement(involvement)) {
     redirect(noticeUrl(back, "nobody-chosen", { form: "people" }));
@@ -240,4 +320,51 @@ export async function removeIncidentPersonAction(
     rowId,
   });
   settle(back, result, "person-removed", "people");
+}
+
+/**
+ * Delete an unfiled draft (an owner only; a filed report has no such door).
+ * Lands on the departure's incident list, where the draft is no longer.
+ */
+export async function discardIncidentDraftAction(
+  shopSlug: string,
+  tripId: string,
+  reportId: string,
+) {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  requireIds(tripId, reportId);
+  const back = reportPath(shopSlug, tripId, reportId);
+  const result = await discardIncidentDraft(await getDb(), {
+    shopId: shop.id,
+    reportId,
+    tripId,
+    actorPersonId: session.user.personId,
+  });
+  if (result.ok) {
+    revalidateAndRedirect(
+      shopPath(shopSlug, "trips", tripId),
+      `${shopPath(shopSlug, "trips", tripId)}?view=details#incidents`,
+    );
+  }
+  settle(back, result, "saved", "discard");
+}
+
+/** Put a legal hold on a report, or release it (an owner only). */
+export async function setIncidentLegalHoldAction(
+  shopSlug: string,
+  tripId: string,
+  reportId: string,
+  held: boolean,
+) {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  requireIds(tripId, reportId);
+  const back = reportPath(shopSlug, tripId, reportId);
+  const result = await setIncidentLegalHold(await getDb(), {
+    shopId: shop.id,
+    reportId,
+    tripId,
+    actorPersonId: session.user.personId,
+    held,
+  });
+  settle(back, result, held ? "hold-set" : "hold-released", "hold");
 }

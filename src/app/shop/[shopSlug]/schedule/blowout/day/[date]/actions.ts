@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { canPersonCallDayBlowout } from "@/db/authz";
+import { canPersonCallDayBlowout, canPersonRefund } from "@/db/authz";
 import { callDayBlowout, listDayBlowoutDepartures } from "@/db/blowouts";
 import { recordTripActivity } from "@/db/operations";
 import { trackEvent } from "@/lib/analytics";
@@ -18,8 +18,9 @@ import { uuidParam } from "@/lib/uuid";
  * **One weather call for the selected departures of a day** (ADR
  * 20261009-day-weather-call). Owner, manager and captain only
  * (`canCallDayBlowout`, the owner's decision of 2026-10-09); the single-trip
- * call stays open to all staff. No refund here bypasses the H-14 role gate:
- * the cascade moves money only through the same shop-cancellation path.
+ * call stays open to all staff. A caller without the refund right (`canRefund`,
+ * H-14) cancels and tells the divers but leaves the money captured for an owner
+ * or manager to release (H-139).
  *
  * **The server decides what is called** (security review L2): the submitted
  * ids are re-read against this date's departures in the shop's own zone, and
@@ -62,6 +63,10 @@ export async function callDayBlowoutAction(shopSlug: string, date: string, formD
           tripIds: callable,
           calledByPersonId: session.user.personId,
           now,
+          // A captain may call the day; only a refund holder moves the money (H-139).
+          refunds: (await canPersonRefund(db, shop.id, session.user.personId))
+            ? "release"
+            : "queue",
         })
       : [];
 

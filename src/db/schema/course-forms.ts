@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   date,
   index,
@@ -11,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { courses } from "./courses";
 import { trips } from "./trips";
@@ -41,9 +43,18 @@ export const courseForms = pgTable(
     shopId: uuid("shop_id")
       .notNull()
       .references(() => shops.id),
+    /**
+     * The form is a medical statement (signature only; no answers are screened). Such a form keeps blocking boarding
+     * whatever `COURSE_FORMS_BLOCK_BOARDING` says (ADR 20261008-course-forms,
+     * issue #2337): the dive medical always blocks, so a questionnaire a shop
+     * pasted into a course form must not become a warning when the switch is
+     * off. Set by an owner or manager on the form; a property of the identity,
+     * so changing it asks no student to sign again.
+     */
+    medicalScreening: boolean("medical_screening").notNull().default(false),
     /** Soft delete (ADR 20260820-every-delete-is-soft). A deleted form is required by no course. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("course_forms_shop_live_idx").on(table.shopId).where(sql`${table.deletedAt} is null`),
@@ -72,7 +83,7 @@ export const courseFormVersions = pgTable(
     body: text("body").notNull(),
     /** The staff member who wrote this version. */
     createdByPersonId: uuid("created_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("course_form_versions_form_version_unique").on(table.formId, table.version),
@@ -82,7 +93,7 @@ export const courseFormVersions = pgTable(
 
 /**
  * A course asking every student enrolled on its sessions to sign a form, in
- * the order the shop listed them. Soft-deleted when the course stops asking,
+ * the order the shop listed them, or only those at or under an age. Soft-deleted when the course stops asking,
  * so the list a course once had is still on record.
  */
 export const courseFormRequirements = pgTable(
@@ -99,10 +110,20 @@ export const courseFormRequirements = pgTable(
       .notNull()
       .references(() => courseForms.id),
     position: integer("position").notNull(),
+    /**
+     * Asked only of a student this age or younger on the session's first day,
+     * in the shop's zone (issue #2265): PADI's Youth Diving acknowledgment
+     * (10615) is for 10- and 11-year-olds. Null asks every student.
+     */
+    maxAgeYears: integer("max_age_years"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
+    check(
+      "course_form_requirements_max_age_sane",
+      sql`${table.maxAgeYears} is null or (${table.maxAgeYears} >= 1 and ${table.maxAgeYears} <= 120)`,
+    ),
     uniqueIndex("course_form_requirements_live_unique")
       .on(table.courseId, table.formId)
       .where(sql`${table.deletedAt} is null`),
@@ -163,6 +184,15 @@ export const courseFormRecords = pgTable(
     tripId: uuid("trip_id")
       .notNull()
       .references(() => trips.id),
+    /**
+     * **The seat whose link or row the form was signed from**, when it is not
+     * the enrollment's own: a charter seat carrying a training mark (issue
+     * #2275). The record is still the enrollment's (`booking_id`); this keeps
+     * which door it came through, for the shop's export and an audit. Null on
+     * a signature made on the course seat itself. Outside the integrity seal,
+     * whose field set is fixed by version.
+     */
+    signedViaBookingId: uuid("signed_via_booking_id").references(() => bookings.id),
     instructorNames: text("instructor_names").notNull(),
     /**
      * The date written on a paper copy, when the staffer recording it gave one.
@@ -198,7 +228,7 @@ export const courseFormRecords = pgTable(
      */
     integrityHash: text("integrity_hash"),
     integrityVersion: integer("integrity_version"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // A seal is a hash and the field set it is over, never one without the other.
@@ -214,6 +244,14 @@ export const courseFormRecords = pgTable(
     ),
     index("course_form_records_shop_booking_idx").on(table.shopId, table.bookingId),
     index("course_form_records_shop_person_idx").on(table.shopId, table.personId),
+    // The foreign key's probe when a booking is deleted.
+    index("course_form_records_signed_via_idx")
+      .on(table.signedViaBookingId)
+      .where(sql`${table.signedViaBookingId} is not null`),
+    check(
+      "course_form_records_signed_via_other_seat",
+      sql`${table.signedViaBookingId} is null or ${table.signedViaBookingId} <> ${table.bookingId}`,
+    ),
     check(
       "course_form_records_signature_method_known",
       sql`${table.signatureMethod} in ('typed_consent', 'in_person_attested', 'in_person_attested_namesake')`,

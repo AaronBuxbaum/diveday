@@ -6,9 +6,11 @@ import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import {
+  medicalHoldChip,
   medicalWarningChips,
   ridingOnlyMedicalSentences,
   rollCallLabelText,
+  trainingDiveLines,
 } from "@/i18n/manifest-labels";
 import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
@@ -111,8 +113,17 @@ function OfflineDiverRow({
   const medicalWarnings = withheld ? undefined : diver.medicalWarnings;
   // The live roll call's capsule for the same facts, strongest first: riding
   // only (H-109), then an earlier refusal (H-98), then an open referral.
-  const medicalChip = medicalWarnings ? medicalWarningChips(t, medicalWarnings)[0] : undefined;
+  // Ahead of them, after a dive, the live row's medical-hold capsule (#2380):
+  // a diver boarded over a physician's "no" or an open review, read through
+  // the one predicate both surfaces share (`medicalHoldAfterDive`).
+  const medicalHold = withheld ? null : (view.medicalHold[index] ?? null);
+  const medicalChip = medicalHold
+    ? medicalHoldChip(t, medicalHold)
+    : medicalWarnings
+      ? medicalWarningChips(t, medicalWarnings)[0]
+      : undefined;
   const warningDate = (day: string) => formatCalendarDate(day, locale);
+  const training = trainingDiveLines(t, diver);
   // The diver's own "running late" (#2319), on the live page's terms: a dock
   // row not boarded yet, with nothing from the counter on it — this device's
   // queued arrival included, which is the counter's newest word here.
@@ -223,7 +234,11 @@ function OfflineDiverRow({
               name and a diver still walking down the dock are the
               same row. */}
             {diver.notHere ? (
-              <Badge tone="neutral">{t("shared.offlineManifest.single.notHereBadge")}</Badge>
+              <Badge tone="neutral">
+                {diver.turnedAway
+                  ? t("shared.offlineManifest.single.turnedAwayBadge")
+                  : t("shared.offlineManifest.single.notHereBadge")}
+              </Badge>
             ) : null}
             {/* The live roll call's capsule for the same facts, strongest
               first (`medicalWarningChips`): a rider riding only under a
@@ -325,7 +340,21 @@ function OfflineDiverRow({
                 #1690). Either signal withholds: the saved flag, or
                 the identity blocker on the row, failing closed. */}
               {withheld ? (
-                <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
+                <>
+                  <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
+                  {/* The desk's contact for the person on the seat (issue
+                    #2145), saved in a field of its own, and only on a row
+                    the save withheld: nothing from `emergencyContact*` is
+                    ever read here (H7, Y3). */}
+                  {diver.identityWithheld && diver.heldEmergencyContact ? (
+                    <p>
+                      <span className="font-bold">{t("manifest.heldEmergencyContactLabel")}</span>
+                      <span className="mt-0.5 block text-muted">
+                        {`${diver.heldEmergencyContact.name} · ${diver.heldEmergencyContact.phone}`}
+                      </span>
+                    </p>
+                  ) : null}
+                </>
               ) : (
                 <>
                   <p>
@@ -351,6 +380,14 @@ function OfflineDiverRow({
                       </span>
                     </p>
                   )}
+                  {diver.dietaryNote ? (
+                    <p>
+                      <span className="font-bold">{t("manifest.dietaryNoteLabel")}</span>
+                      <span className="mt-0.5 block text-muted break-words">
+                        {diver.dietaryNote}
+                      </span>
+                    </p>
+                  ) : null}
                   {/* The live manifest's own sentences, in the same tone
                     (`DiverRollCall.tsx` under `/manifest`). */}
                   {medicalWarnings ? (
@@ -376,6 +413,13 @@ function OfflineDiverRow({
                       ) : null}
                     </p>
                   ) : null}
+                  {/* A training dive, worded as the live manifest words it. */}
+                  {training.fact ? <p>{training.fact}</p> : null}
+                  {training.warnings.map((line) => (
+                    <p key={line} className="font-medium text-warning-strong">
+                      {line}
+                    </p>
+                  ))}
                 </>
               )}
             </div>

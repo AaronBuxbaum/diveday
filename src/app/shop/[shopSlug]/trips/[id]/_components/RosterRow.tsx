@@ -1,9 +1,13 @@
+import type { ReactNode } from "react";
+import { AgencyCheckRow } from "@/app/shop/[shopSlug]/_components/agency-check/AgencyCheckRow";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
+import type { CountedAboardBlocked } from "@/lib/roll-call-readiness";
 import type { PaymentStatusControlCopy } from "./PaymentStatusControl";
+import { RosterRecordBlocked } from "./RosterRecordBlocked";
 import type {
   RosterActions,
   RosterArrival,
@@ -33,6 +37,10 @@ export type RosterRowContext = {
    * 2026-10-10, item 10): the row says who, never what is left to do.
    */
   record: boolean;
+  /** The record's seats counted aboard while blocked (`RosterRecord`). */
+  countedAboardBlocked?: ReadonlyMap<string, CountedAboardBlocked>;
+  /** Under a seat on that record, the diver's next dive (fifth-loop ideas, item 4). */
+  recordBelow?: ReadonlyMap<string, ReactNode>;
   /** Depth sentences much of the boat shares, said once in the group band. */
   sharedAdvisoryTexts: ReadonlySet<string>;
   waiverControls: WaiverControls;
@@ -79,7 +87,8 @@ export function RosterRow({
   const s3 = { ...s2, ...rowReasonLines(s2) };
   const s4 = { ...s3, ...rowIdentity(s3) };
   const s5 = { ...s4, ...rowReasonList(s4) };
-  const s6 = { ...s5, ...rowOutstanding(s5) };
+  // The training marks are the departure's (issue #2275), read here beside the seat.
+  const s6 = { ...s5, ...rowOutstanding({ ...s5, trainingMarks: context.rows.trainingMarks }) };
   const s7 = { ...s6, ...rowReference(s6) };
   const {
     booking,
@@ -99,7 +108,10 @@ export function RosterRow({
     hasWork,
     reference,
     record,
+    identityUnconfirmed,
   } = s7;
+  const { rows, actions } = context;
+  const countedBlocked = context.countedAboardBlocked?.get(booking.id);
   const badgeCluster =
     headerBadges.length > 0 ? (
       <div className="ms-auto flex flex-wrap items-center justify-end gap-2 max-sm:ms-0 max-sm:justify-start">
@@ -168,12 +180,33 @@ export function RosterRow({
           diver; AutoOpenDetails opens on the hash, so the fold can never
           swallow what a link promised, and `holdOpen` keeps open the row a
           form on it just answered. */}
-      {record ? null : reasonList}
+      {record ? (
+        countedBlocked ? (
+          <RosterRecordBlocked t={t} blocked={countedBlocked} />
+        ) : null
+      ) : (
+        reasonList
+      )}
+      {/* "Check with SSI", under the reason that says the card is pending
+          (H-105): drawn only with the browser extension, and never on a held
+          seat, whose matched diver's details are not yet this seat's. */}
+      {record || identityUnconfirmed || !actions.agencyCheckAction ? null : (
+        <AgencyCheckRow
+          personId={person.id}
+          cards={rows.agencyCheckCardsByPerson?.get(person.id) ?? []}
+        />
+      )}
       {arrival || record ? null : identityContact}
       {record ? null : identityCheck}
       {record ? null : reEntryNote}
       {arrivalBelow}
-      <AutoOpenDetails openOnHash={`booking-${booking.id}`} open={holdOpen} className="group">
+      {/* The Inbox's "Move to another departure" lands on `#move-booking-…`,
+          which opens this row and the move inside it (fourth review, item 32). */}
+      <AutoOpenDetails
+        openOnHash={[`booking-${booking.id}`, `move-booking-${booking.id}`]}
+        open={holdOpen}
+        className="group"
+      >
         {markSummary}
         {/* **One panel per seat** (owner, 2026-10-05: "confusing and ugly").
             It used to be a loose stack — fixes, then facts, each fact with

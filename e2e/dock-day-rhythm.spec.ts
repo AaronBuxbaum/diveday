@@ -1,5 +1,11 @@
 import { expect, test } from "./fixtures";
-import { bookASeatAndOpenThread, daysFromNow, seededTripId, signInAsOwner } from "./helpers";
+import {
+  bookASeatAndOpenThread,
+  daysFromNow,
+  openThreadStep,
+  seededTripId,
+  signInAsOwner,
+} from "./helpers";
 
 /**
  * The dock-day rhythm, end to end: six numbers a shop types in Settings, and
@@ -82,12 +88,36 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   // shop settings these two were unconditional, so this pair of assertions is
   // the whole fix in one place.
   await expect(rhythm).not.toContainText("Crew briefing");
-  await expect(rhythm).not.toContainText("Ride out to the site");
+  // The ride out is said on the departure's own row, so no ride, no clause.
+  await expect(rhythm).not.toContainText("minutes to the site");
 
   // The packing list stops promising a briefing the shop just said it does
   // not run — the two used to sit three inches apart and disagree.
   const provided = page.getByRole("list").filter({ hasText: "Tanks and weights" }).last();
   await expect(provided).not.toContainText("Crew briefing");
+
+  // **No pickup the shop never offered** (fourth UX review, item 8). A new
+  // shop runs none, so Day-of details asks nothing about one until the shop
+  // says it does, on this same settings page.
+  const readyUrl = page.url();
+  await openThreadStep(page, "dayof");
+  await expect(page.getByLabel("Where you’re staying")).toHaveCount(0);
+  await page.goto(`/shop/${SHOP}/settings/dock-day`);
+  await page.getByRole("checkbox", { name: /We offer hotel pickup/ }).check();
+  await page.getByRole("button", { name: "Save pickup" }).click();
+  await expect(page.getByRole("status")).toContainText("asked about a pickup");
+  await page.goto(readyUrl);
+  await openThreadStep(page, "dayof");
+  await expect(page.getByRole("heading", { name: "Want a pickup?" })).toBeVisible();
+
+  // **How divers pay at the desk** (fifth-loop ideas, item 21), on the same
+  // page: a new shop says nothing until it chooses.
+  await page.goto(`/shop/${SHOP}/settings/dock-day`);
+  await expect(page.getByRole("radio", { name: "Don’t say" })).toBeChecked();
+  await page.getByRole("radio", { name: "Cash", exact: true }).check();
+  await page.getByRole("button", { name: "Save how divers pay" }).click();
+  await expect(page.getByRole("status")).toContainText("says how to pay");
+  await expect(page.getByRole("radio", { name: "Cash", exact: true })).toBeChecked();
 });
 
 /**
@@ -138,6 +168,11 @@ test("a departure's own legs are the day the diver reads", async ({ page, privat
   await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
 
   const rhythm = page.getByRole("list").filter({ hasText: "Arrive and check in" }).last();
+  // The ride out on the departure's row, one minute one row (third UX review,
+  // item 29).
+  await expect(rhythm.getByRole("listitem").filter({ hasText: "Departure" })).toContainText(
+    "Departure, about 10 minutes to the site",
+  );
   // Dive one at the trip's own ten minutes, not the shop's twenty: 8:00 + 0:10.
   await expect(rhythm.getByRole("listitem").filter({ hasText: "Dive 1" })).toContainText("8:10 AM");
   // ...and dive two 45 under plus a 150-minute run, rather than the 60-minute

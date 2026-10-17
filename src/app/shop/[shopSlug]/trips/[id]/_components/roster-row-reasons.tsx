@@ -89,7 +89,7 @@ export function rowReasonLines(seat: RowReasonLinesInput) {
                 href={shopPath(shopSlug, "divers", person.id, "waivers", earlierRefusal.recordId)}
                 className={linkAction}
               >
-                {t("trips.roster.viewSignedRecord")}
+                {t("trips.roster.viewPhysicianDecision")}
               </Link>
             ),
           },

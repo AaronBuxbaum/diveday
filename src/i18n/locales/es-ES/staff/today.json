@@ -4,8 +4,7 @@
     "emptyBody": "Todos los buceadores reservados en la próxima semana tienen en orden su exención, sus certificaciones y su pago.",
     "emptyAction": "Ver el calendario",
     "boatsClear": "Las salidas de hoy están todas despejadas",
-    "checkingForecast": "Consultando el pronóstico…",
-    "withheldDeskWork": "{count, plural, one {# tarea para recepción} other {# tareas para recepción}}"
+    "checkingForecast": "Consultando el pronóstico…"
   },
   "resendConfirmation": {
     "resending": "Reenviando…",
@@ -13,7 +12,7 @@
     "confirmationsResent": "Confirmaciones reenviadas.",
     "errors": {
       "invalid": "No se encontró esa reserva. Abre la salida para revisarla.",
-      "noEmail": "No hay correo registrado. Añade uno desde el listado y vuelve a intentarlo.",
+      "noEmail": "No hay correo registrado. Agrega uno desde el listado y vuelve a intentarlo.",
       "notConfigured": "El correo todavía no está configurado para este centro.",
       "failed": "Sigue sin poder entregarse. Abre la salida para revisar la reserva."
     }
@@ -35,12 +34,12 @@
   },
   "helpRequest": {
     "kind": {
-      "carryGear": "Ayuda con el equipo",
-      "firstTimer": "Orientación para principiantes",
-      "findGroup": "Encontrar su grupo"
+      "carryGear": "cargar el equipo",
+      "firstTimer": "orientación para principiantes",
+      "findGroup": "encontrar su grupo"
     },
-    "detailRequested": "{name} ha pedido ayuda: {help}.",
-    "detailAcknowledged": "{name} espera ayuda: {help}.",
+    "detailRequested": "Pidió ayuda: {help}.",
+    "detailAcknowledged": "Espera ayuda: {help}.",
     "acknowledge": "Confirmar recibida",
     "markHandled": "Marcar como atendida",
     "saving": "Guardando…"
@@ -50,12 +49,15 @@
     "studentsCount": "{count, plural, one {# estudiante} other {# estudiantes}}",
     "readyCount": "{count, plural, one {# listo} other {# listos}}",
     "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
-    "openRoster": "Ver lista"
+    "openRoster": "Ver lista",
+    "away": "Avisaste que estás ausente {dates}."
   },
   "yourWeek": {
     "heading": "Tu semana",
     "openTrip": "Abrir {title}",
-    "roleUnset": "En la tripulación"
+    "roleUnset": "En la tripulación",
+    "atTheDock": "En el muelle a las {dock} · sale a las {leaves}",
+    "diversAtTheDock": "Buceadores en el muelle a las {dock} · sale a las {leaves}"
   },
   "actionKind": {
     "rollCallMissingDiver": "Buceador sin localizar",
@@ -74,6 +76,7 @@
     "instructorMissing": "El curso necesita instructor",
     "uncrewedCourse": "Sin instructor ni supervisión",
     "uncrewedDeparture": "Sin divemaster",
+    "boatClash": "Barco en dos salidas",
     "crewClash": "Tripulante en dos salidas",
     "crewClashSailed": "Salió con un tripulante en dos salidas",
     "nitroxGate": "Nitrox",
@@ -89,6 +92,7 @@
     "failedPhotoDeletion": "Limpieza",
     "owedRefund": "Reembolso pendiente",
     "paymentDispute": "Disputa de tarjeta",
+    "paymentsRestricted": "Pagos con tarjeta",
     "reviewsPending": "Reseñas",
     "unansweredMessages": "Mensajes",
     "gearOverdue": "Equipo atrasado",
@@ -96,15 +100,20 @@
     "gearServiceDue": "Mantenimiento",
     "boatSafetyKit": "Equipo de seguridad",
     "boatPapersDue": "Documentos por vencer",
+    "boatPapersLapsed": "Documentos vencidos",
     "boatSafetyExpired": "Seguridad vencida",
+    "incidentReportUnfiled": "Informe de incidente",
+    "boatSnag": "Problema en el barco",
     "workOrderLate": "Reparación atrasada",
     "workOrderUncollected": "Reparación sin recoger",
     "staffCredentialDue": "Credencial",
     "unitsUnconfirmed": "Configuración",
+    "emergencyCardBlank": "Referencia de emergencia",
+    "lostItemsWaiting": "Objetos perdidos",
     "helpRequest": "Solicitud de ayuda",
-    "sayHello": "Saluda",
     "rentalFit": "Equipo",
-    "blockedAboard": "A bordo"
+    "blockedAboard": "A bordo",
+    "crewAway": "Tripulación ausente"
   },
   "blockerAction": {
     "setRequirements": "Configurar requisitos",
@@ -115,19 +124,21 @@
     "reissueWaiver": "Reemitir exención",
     "reviewMedical": "Revisar informe médico",
     "contactDiver": "Avisar a la persona",
-    "addCard": "Añadir certificación",
+    "addCard": "Agregar certificación",
     "askForCard": "Pedir datos de certificación",
     "verifyCard": "Verificar certificación",
     "reviewCard": "Revisar certificación",
-    "addSpecialty": "Añadir especialidad",
+    "checkCourseResult": "Revisar el resultado del curso",
+    "addSpecialty": "Agregar especialidad",
     "verifySpecialty": "Verificar especialidad",
     "confirmSpecialty": "Confirmar especialidad",
-    "addNitroxCard": "Añadir certificación de nitrox",
+    "addNitroxCard": "Agregar certificación de nitrox",
     "askForNitroxCard": "Pedir certificación de nitrox",
     "verifyNitroxCard": "Verificar certificación de nitrox",
     "takePayment": "Cobrar pago",
     "checkReadiness": "Verificar disponibilidad",
-    "getCourseFormsSigned": "Pedir firmas"
+    "getCourseFormsSigned": "Pedir firmas",
+    "clearTrainingMark": "Quitar marca de formación"
   },
   "blockerGroup": {
     "setRequirements": "Configurar requisitos",
@@ -139,6 +150,7 @@
     "reviewMedicals": "Revisar informes médicos",
     "contactDivers": "Avisar a las personas",
     "reviewCards": "Revisar certificaciones",
+    "checkCourseResults": "Revisar resultados de cursos",
     "askForCards": "Pedir certificaciones",
     "verifyCards": "Verificar certificaciones",
     "reviewSpecialties": "Revisar especialidades",
@@ -149,7 +161,8 @@
     "verifyNitroxCards": "Verificar certificaciones de nitrox",
     "takePayments": "Cobrar pagos",
     "checkReadiness": "Verificar disponibilidad",
-    "getCourseFormsSigned": "Pedir firmas"
+    "getCourseFormsSigned": "Pedir firmas",
+    "clearTrainingMarks": "Quitar marcas de formación"
   },
   "pointingLabel": {
     "trip": "Ver lista",
@@ -172,39 +185,45 @@
     "openCrewRollCallStale": "El recuento de tripulación de la inmersión {dive} nunca se cerró: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Reconstrúyelo desde el manifiesto.",
     "departureCountOpen": "Recuento en el muelle sin terminar: {uncounted, plural, one {# de {total, plural, one {# persona} other {# personas}} no tiene} other {# de {total, plural, one {# persona} other {# personas}} no tienen}} resultado.",
     "noRollCall": "Sin recuento registrado para {total, plural, one {# persona} other {# personas}}.",
-    "missingFit": "{count, plural, one {A # persona le faltan} other {A # personas les faltan}} tallas de alquiler.",
-    "missingFitNamed": "Le faltan tallas de alquiler.",
-    "ungatedNitrox": "{count, plural, one {# buceador quiere} other {# buceadores quieren}} nitrox sin certificación verificada.",
-    "ungatedNitroxNamed": "Quiere nitrox, sin certificación verificada.",
+    "boatWork": "{work}.",
+    "missingSizeNamed": "Le falta una talla de alquiler.",
+    "kitUnaskedNamed": "Sin preguntar por su equipo.",
+    "ungatedNitroxNamed": "Quiere nitrox, recibe aire a menos que se verifique una certificación antes de que salga el barco.",
     "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes {, rachas de {gusts} nudos} other {}}.",
     "instructorMissing": "Sin instructor asignado.",
     "uncrewedCourse": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}}, sin instructor.",
     "overRatio": "{booked, plural, one {# reservado} other {# reservados}}, la tripulación cubre {capacity}.",
     "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}}, la tripulación cubre {capacity} a {perInstructor} por instructor.",
     "uncrewedDeparture": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}}, sin divemaster ni instructor.",
+    "boatClash": "{boat} también está asignado a {departure} a esas horas.",
     "crewClash": "{names} también {count, plural, one {figura} other {figuran}} en la tripulación de {departure} a esas horas.",
     "crewClashSailed": "{names} {count, plural, one {está} other {están}} a bordo pese a figurar también en la tripulación de {departure} a esas horas.",
     "crewClashSailedConfirm": "Confirma quién va a bordo.",
     "crewBelowTarget": "{divers, plural, one {# buceador} other {# buceadores}}, {divemasterCount, plural, one {# supervisor} other {# supervisores}}. Tu objetivo es {ratio}:1.",
     "ratingLapsed": "{names} {count, plural, one {tiene una titulación vencida} other {tienen titulaciones vencidas}} para esta salida.",
-    "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia.",
     "missingContactNamed": "Sin contacto de emergencia.",
     "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}}, sin oferta de última hora enviada.",
-    "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera."
+    "waitlistSeat": "{seats, plural, one {# plaza libre} other {# plazas libres}}, {waiting} en la lista de espera.",
+    "crewAway": "{name} está ausente {dates}.",
+    "rollCallAlerted": "Propietarios avisados: {time}.",
+    "rollCallAlertedWithShore": "Propietarios y contacto en tierra avisados: {time}.",
+    "rollCallShoreAlerted": "Contacto en tierra avisado: {time}.",
+    "boatSnag": "{item}: {note}. Anotado por {name}{count, plural, =0 {.} one {, hace # salida.} other {, hace # salidas.}}"
   },
   "actionLabel": {
+    "openIncidentReport": "Abrir informe",
     "openRollCall": "Abrir recuento",
     "openPrepList": "Abrir lista de preparación",
     "openTrip": "Abrir salida",
     "openCrew": "Abrir tripulación",
     "openLastMinuteDeal": "Abrir oferta de última hora",
-    "openGuests": "Abrir buceadores",
     "inviteFromWaitlist": "Invitar de la lista de espera",
     "resendWaiverLink": "Reenviar enlace de exención",
     "resendConfirmation": "Reenviar confirmación",
     "openOrders": "Revisar en Pedidos",
     "openOrder": "Abrir pedido",
     "openDataSettings": "Revisar en Ajustes",
+    "openPaymentSettings": "Abrir la configuración de pagos",
     "openReviews": "Ver reseñas",
     "openInbox": "Ver mensajes",
     "openGearRegister": "Abrir registro de equipo",
@@ -248,19 +267,35 @@
     "owedRefundGroupDetailNoAmount": "{tripTitle} del {when}: {names}. Devuélvelo y luego marca cada plaza como reembolsada.",
     "disputeSubject": "Disputa de tarjeta",
     "disputeDetail": "{amount} en disputa. Envía tus pruebas a Stripe antes del {due}.",
-    "disputeDetailNoDeadline": "{amount} en disputa. Respóndela en Stripe."
+    "disputeDetailNoDeadline": "{amount} en disputa. Respóndela en Stripe.",
+    "restrictedSubject": "Los pagos con tarjeta están desactivados",
+    "restrictedDetail": "Stripe los pausó el {when}. Los buceadores pagan en el centro hasta que Stripe los reactive."
+  },
+  "incidentReportUnfiled": {
+    "subject": "{count, plural, one {# informe de incidente sin presentar, empezado {day, select, relative {{when}} other {el {when}}} por {name}.} other {# informes de incidente sin presentar; el más antiguo lo empezó {name} {day, select, relative {{when}} other {el {when}}}.}}"
   },
   "reviewsPending": {
-    "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión"
+    "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión."
   },
   "unansweredMessages": {
-    "subject": "{count, plural, one {# mensaje espera} other {# mensajes esperan}} respuesta"
+    "subject": "{count, plural, one {# mensaje espera} other {# mensajes esperan}} respuesta."
   },
   "unitsUnconfirmed": {
-    "subject": "{currency} y {depth}, deducidos de tu zona horaria",
+    "subject": "{currency}, {depth} y {temperature}, elegidos según dónde estás",
     "detail": "Confírmalos.",
     "feet": "pies",
-    "meters": "metros"
+    "meters": "metros",
+    "fahrenheit": "grados Fahrenheit",
+    "celsius": "grados Celsius"
+  },
+  "emergencyCard": {
+    "subject": "Tu referencia de emergencia no tiene números",
+    "detail": "La salida de las {time} de {day} zarpa sin un número de cámara hiperbárica ni de guardacostas.",
+    "action": "Agregar los números"
+  },
+  "lostItems": {
+    "subject": "{count, plural, one {# objeto esperando a su dueño} other {# objetos esperando a sus dueños}}",
+    "action": "Abrir objetos perdidos"
   },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {debía devolverse} other {debían devolverse}} el {dueOn} y {count, plural, one {sigue fuera} other {siguen fuera}}.",
@@ -278,13 +313,15 @@
     "overdueDetail": "{credential} venció el {dueOn}."
   },
   "sayHello": {
-    "firstTrip": "{names}: primera inmersión contigo.",
-    "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}."
+    "firstTrip": "{names}: primera inmersión con nosotros.",
+    "firstTime": "{names}: primera vez con nosotros.",
+    "returning": "{name} vuelve tras {years, plural, one {# año} other {# años}}.",
+    "milestone": "{name}: {ordinal} día de buceo con nosotros."
   },
   "unfinished": {
     "label": "Sin terminar",
-    "addDeparture": "Una salida que empezaste a añadir.",
-    "newDiver": "Un buceador que empezaste a añadir.",
+    "addDeparture": "Una salida que empezaste a agregar.",
+    "newDiver": "Un buceador que empezaste a agregar.",
     "tookACall": "Una llamada que empezaste a anotar.",
     "resume": "Retomar"
   },
@@ -306,6 +343,8 @@
     "waiverNotSent": "{count, plural, one {Exención sin firmar, aún sin enviar.} other {# exenciones sin firmar, aún sin enviar.}}",
     "waiverPending": "{count, plural, one {Exención sin firmar, enlace enviado.} other {# exenciones sin firmar, enlaces enviados.}}",
     "waiverExpired": "{count, plural, one {El enlace de la exención caducó.} other {# enlaces de exención caducados.}}",
+    "waiverLapsed": "{count, plural, one {Exención firmada caducada.} other {# exenciones firmadas caducadas.}}",
+    "waiverRunsOut": "{count, plural, one {Una exención caduca antes de la salida.} other {# exenciones caducan antes de la salida.}}",
     "medicalReview": "{count, plural, one {Una respuesta médica necesita el visto bueno de un médico.} other {# respuestas médicas necesitan el visto bueno de un médico.}}",
     "medicalNotCleared": "{count, plural, one {Un médico no lo autorizó a bucear.} other {# buceadores sin autorización médica para bucear.}}",
     "guardianSignatureMissing": "{count, plural, one {La exención necesita la firma de un tutor.} other {# exenciones necesitan la firma de un tutor.}}",
@@ -314,6 +353,7 @@
     "certificationSelfDeclared": "{count, plural, one {Certificación declarada por el buceador, sin verificar.} other {# certificaciones declaradas por los buceadores, sin verificar.}}",
     "certificationInsufficient": "{count, plural, one {Sin la certificación que pide esta salida.} other {# buceadores sin la certificación que pide esta salida.}}",
     "certificationInTraining": "{count, plural, one {Aún en formación para el nivel de esta salida.} other {# buceadores aún en formación para el nivel de esta salida.}}",
+    "certificationNotYet": "{count, plural, one {Dice que todavía no tiene certificación.} other {# buceadores dicen que todavía no tienen certificación.}}",
     "specialtyMissing": "{count, plural, one {Sin certificación de {specialty} registrada.} other {# buceadores sin certificación de {specialty} registrada.}}",
     "specialtyPending": "{count, plural, one {Certificación de {specialty} aún sin verificar.} other {# certificaciones de {specialty} aún sin verificar.}}",
     "specialtyImportUnconfirmed": "{count, plural, one {Certificación de {specialty} importada sin confirmar.} other {# certificaciones de {specialty} importadas sin confirmar.}}",
@@ -324,6 +364,7 @@
     "paymentDue": "{count, plural, one {Pago pendiente.} other {# pagos pendientes.}}",
     "paymentRefunded": "{count, plural, one {Reembolsado, así que vuelve a deber el pago.} other {# buceadores reembolsados, así que vuelven a deber el pago.}}",
     "readinessUnavailable": "{count, plural, one {No se pudo revisar si está listo.} other {No se pudo revisar si están listos # buceadores.}}",
-    "courseFormUnsigned": "{count, plural, one {Formulario del curso sin firmar.} other {# formularios del curso sin firmar.}}"
+    "courseFormUnsigned": "{count, plural, one {Formulario del curso sin firmar.} other {# formularios del curso sin firmar.}}",
+    "trainingMarkInvalid": "{count, plural, one {Marca de formación que ya no corresponde a su plaza del curso.} other {# marcas de formación que ya no corresponden a su plaza del curso.}}"
   }
 }

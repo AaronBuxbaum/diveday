@@ -6,9 +6,13 @@
  * shopfront, which publishes the shop's own counts and so waits for its yes),
  * and each is a feature a shop can run without: DiveDay's own star ratings,
  * divers asking for a day that is not on the board, the last-minute deals
- * list, tips on the recap, and the shopfront's "Our year". Off
- * hides the feature on every surface that offers it and deletes nothing, so
- * turning it back on finds everything where it was.
+ * list, tips on the recap, the shopfront's "Our year", and the PADI checks
+ * (beta). Off hides the feature on every surface that offers it and deletes
+ * nothing, so turning it back on finds everything where it was.
+ *
+ * The PADI checks also default off: "Check with PADI" (DiveChek) and the PADI
+ * eLearning check run under the shop's own PADI membership, so the shop opts
+ * in (H-121). The rule is `agencyCheckOffered` in `agency-check.ts`.
  *
  * The crew schedule is the same idea with its own rule (`crew-schedule.ts`),
  * because switching it off also has to keep a safety count honest.
@@ -19,6 +23,7 @@ export const SHOP_FEATURES = [
   "lastMinuteList",
   "tips",
   "publicYear",
+  "padiChecks",
 ] as const;
 
 export type ShopFeature = (typeof SHOP_FEATURES)[number];
@@ -30,6 +35,7 @@ export const SHOP_FEATURE_COLUMNS = {
   lastMinuteList: "lastMinuteListEnabled",
   tips: "tipsEnabled",
   publicYear: "publicYearEnabled",
+  padiChecks: "padiChecksEnabled",
 } as const satisfies Record<ShopFeature, string>;
 
 export type ShopFeatureColumn = (typeof SHOP_FEATURE_COLUMNS)[ShopFeature];

@@ -22,7 +22,9 @@ test.describe("as owner", () => {
     await page.goto(`/shop/${SHOP}/settings/team`);
 
     const email = `new-instructor-${Date.now()}@example.com`;
-    const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
+    // The invite form opens from its button under the team (ideas item 58).
+    const inviteSection = page.locator("#invite");
+    await inviteSection.locator("summary").click();
     await inviteSection.getByLabel("Full name").fill("Priya Nair");
     await inviteSection.getByLabel("Email").fill(email);
     // `exact`, and every role checkbox in this file takes it: `getByLabel`
@@ -77,7 +79,9 @@ test.describe("as owner", () => {
     await page.goto(`/shop/${SHOP}/settings/team`);
 
     const email = `undo-check-${Date.now()}@example.com`;
-    const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
+    // The invite form opens from its button under the team (ideas item 58).
+    const inviteSection = page.locator("#invite");
+    await inviteSection.locator("summary").click();
     await inviteSection.getByLabel("Full name").fill("Talia Reyes");
     await inviteSection.getByLabel("Email").fill(email);
     await inviteSection.getByLabel("Instructor", { exact: true }).check();
@@ -142,7 +146,9 @@ test.describe("as owner", () => {
     await page.goto(`/shop/${SHOP}/settings/team`);
 
     const email = `row-roles-${Date.now()}@example.com`;
-    const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
+    // The invite form opens from its button under the team (ideas item 58).
+    const inviteSection = page.locator("#invite");
+    await inviteSection.locator("summary").click();
     await inviteSection.getByLabel("Full name").fill("Rosa Delgado");
     await inviteSection.getByLabel("Email").fill(email);
     await inviteSection.getByLabel("Instructor", { exact: true }).check();

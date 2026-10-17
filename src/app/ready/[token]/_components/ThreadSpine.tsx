@@ -3,7 +3,14 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { SETTLED_CHECK_TEXT_INSET } from "@/components/ui/settled-mark";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
-import type { ThreadStepId, ThreadStepState } from "@/lib/thread-steps";
+import type { DiverTranslator } from "@/i18n/messages";
+import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "@/i18n/thread-labels";
+import type {
+  ThreadSpine as ThreadSpineModel,
+  ThreadStep,
+  ThreadStepId,
+  ThreadStepState,
+} from "@/lib/thread-steps";
 
 /**
  * **The thread page's step spine** — ADR 20260827-the-divers-thread, decision
@@ -131,58 +138,94 @@ const OPEN_STEP_HEAD_CLASS = "group-open/step:min-h-12 group-open/step:pb-1";
  * `AutoOpenDetails` rides on top of it for deep links, which a client-side
  * route change would otherwise leave collapsed.
  */
+/**
+ * The engine's spine as the figure draws it: each step's title and state word
+ * in the diver's language, the one open at rest marked current, and the line
+ * and body the page composed for it.
+ */
+export function threadSpineSteps(
+  spine: Pick<ThreadSpineModel, "steps" | "current">,
+  t: DiverTranslator,
+  stepLine: (step: ThreadStep) => string | null,
+  stepBody: (step: ThreadStep) => ReactNode,
+): ThreadSpineStep[] {
+  return spine.steps.map((step) => ({
+    id: step.id,
+    state: step.state,
+    current: step.id === spine.current,
+    title: t(THREAD_STEP_TITLE_KEYS[step.id]),
+    stateWord: step.state === "done" ? null : t(THREAD_STEP_STATE_KEYS[step.state]),
+    line: stepLine(step),
+    body: stepBody(step) ?? undefined,
+  }));
+}
+
 export function ThreadSpine({
   steps,
+  heading,
   className = "",
 }: {
   steps: ThreadSpineStep[];
+  /**
+   * The checklist's name, for a screen reader only: the step bodies hold H3s
+   * ("Want a morning pickup?", "I could use a hand") that otherwise sat under
+   * the page's H1 with nothing between (fourth review, item 47). The status
+   * line above already says it to a sighted reader.
+   */
+  heading?: string;
   className?: string;
 }) {
   return (
-    <ol className={`mt-6 ${className}`.trim()}>
-      {steps.map((step) => (
-        // `data-thread-step` is the spine's own hook: an e2e spec scopes to a
-        // step by id through `page.locator`, which is the reach a `data-`
-        // attribute exists for (e2e/fixtures.ts filters every `getBy*` to
-        // visible nodes, so a closed step's contents are unreachable by role).
-        <li
-          key={step.id}
-          data-thread-step={step.id}
-          className="border-t border-border last:border-b"
-        >
-          {step.body ? (
-            <AutoOpenDetails
-              id={`step-${step.id}`}
-              openOnHash={`step-${step.id}`}
-              name="thread-step"
-              open={step.current}
-              className="group/step"
-            >
-              {/* Every part of the head is phrasing content, `<span>`s and
+    <>
+      {heading ? <h2 className="sr-only">{heading}</h2> : null}
+      <ol className={`mt-6 ${className}`.trim()}>
+        {steps.map((step) => (
+          // `data-thread-step` is the spine's own hook: an e2e spec scopes to a
+          // step by id through `page.locator`, which is the reach a `data-`
+          // attribute exists for (e2e/fixtures.ts filters every `getBy*` to
+          // visible nodes, so a closed step's contents are unreachable by role).
+          // `data-step-state` says where the step stands without reading the
+          // state word, which a settled step does not print.
+          <li
+            key={step.id}
+            data-thread-step={step.id}
+            data-step-state={step.state}
+            className="border-t border-border last:border-b"
+          >
+            {step.body ? (
+              <AutoOpenDetails
+                id={`step-${step.id}`}
+                openOnHash={`step-${step.id}`}
+                name="thread-step"
+                open={step.current}
+                className="group/step"
+              >
+                {/* Every part of the head is phrasing content, `<span>`s and
                   not `<p>`s: `<summary>`'s content model takes phrasing (or a
                   single heading), and a paragraph in here is invalid markup
                   that browsers silently re-parent. */}
-              <summary
-                className={`${STEP_ROW_CLASS} ${OPEN_STEP_HEAD_CLASS} cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden`}
-              >
-                <StepHead step={step} />
-              </summary>
-              {/* `pt-2`: the summary's focus ring reaches 5px below it, and
+                <summary
+                  className={`${STEP_ROW_CLASS} ${OPEN_STEP_HEAD_CLASS} cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden`}
+                >
+                  <StepHead step={step} />
+                </summary>
+                {/* `pt-2`: the summary's focus ring reaches 5px below it, and
                   the body is a later sibling that paints over whatever it
                   overlaps — flush, "Sign your waiver" hid the ring's bottom
                   arm (K-161). The open head lends these 8px from its own
                   bottom (`OPEN_STEP_HEAD_CLASS`), so the fact still stands
                   12px over the form. */}
-              <div className="pt-2 pb-6">{step.body}</div>
-            </AutoOpenDetails>
-          ) : (
-            <div className={STEP_ROW_CLASS}>
-              <StepHead step={step} />
-            </div>
-          )}
-        </li>
-      ))}
-    </ol>
+                <div className="pt-2 pb-6">{step.body}</div>
+              </AutoOpenDetails>
+            ) : (
+              <div className={STEP_ROW_CLASS}>
+                <StepHead step={step} />
+              </div>
+            )}
+          </li>
+        ))}
+      </ol>
+    </>
   );
 }
 

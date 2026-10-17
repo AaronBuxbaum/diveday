@@ -2,6 +2,7 @@ import {
   and,
   asc,
   count,
+  countDistinct,
   eq,
   gt,
   gte,
@@ -11,8 +12,6 @@ import {
   lte,
   ne,
   notInArray,
-  type SQL,
-  type SQLWrapper,
   sql,
 } from "drizzle-orm";
 import {
@@ -31,7 +30,9 @@ import {
 } from "@/lib/notifications";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
+import { departureMayBeAtSea } from "./aboard-at-sea";
 import { releasePackageCoverageForBooking } from "./bookings";
+import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices } from "./crew-notices";
 import { publishManifestEvent } from "./manifest-events";
@@ -39,15 +40,18 @@ import { sendAndRecordNotification } from "./notifications";
 import { paymentsByBooking } from "./payments";
 import { queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
-import { refundBookingOnShopCancellation, shopCancellationPaymentStory } from "./refunds";
+import {
+  queueBookingRefundOnShopCancellation,
+  refundBookingOnShopCancellation,
+  shopCancellationPaymentStory,
+} from "./refunds";
 import type { BlowoutCause, BlowoutMessageStatus, PaymentStatus } from "./schema";
 import {
+  bookingPayments,
   bookings,
   certifications,
   nitroxCertifications,
   people,
-  rollCallCrewEvents,
-  rollCallEvents,
   shops,
   specialtyCertifications,
   tripAssignments,
@@ -56,7 +60,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
-import { setTripStatus } from "./trips-record";
+import { rollCallStartedOn, setTripStatus } from "./trips-record";
 
 /**
  * The blow-out cascade (docs ADR 20260804-blowout-cascade, glossary
@@ -111,6 +115,15 @@ export type CallBlowoutOutcome =
       reason: "not_found" | "trip_departed" | "failed";
     };
 
+/**
+ * What happens to the money when a call-off cancels paid seats (H-139).
+ * `release` sends the card captures back at once; `queue` leaves them captured
+ * for a refund holder to release, because the person who called it off may not
+ * move money (`canRefund`, H-14). A system caller (the head-count sweep) is
+ * never a person with a role and releases.
+ */
+export type BlowoutRefundMode = "release" | "queue";
+
 export type CallBlowoutInput = {
   shopId: string;
   tripId: string;
@@ -124,6 +137,8 @@ export type CallBlowoutInput = {
    * cancelled keeps the cause the call was made with.
    */
   cause?: BlowoutCause;
+  /** Whether the refunds go back now or wait for a refund holder. Release unless said. */
+  refunds?: BlowoutRefundMode;
   /** Injectable for tests; defaults to the environment-configured provider. */
   provider?: NotificationProvider;
   /** Injectable for tests; defaults to the environment-configured Stripe seam. */
@@ -141,13 +156,6 @@ export async function callTripBlowout(
   // Its crew hear it is off now (ADR 20261009-crew-hear-about-their-boats).
   await flushUrgentCrewNotices(db, { shopId: input.shopId, tripIds: [input.tripId], now });
   return outcome;
-}
-
-/** Whether anybody, diver or crew, has a roll-call or boarding event on this trip. */
-function rollCallStartedOn(tripId: SQLWrapper | string): SQL<boolean> {
-  return sql<boolean>`(exists (select 1 from ${rollCallEvents} where ${rollCallEvents.tripId} = ${tripId}) or exists (select 1 from ${rollCallCrewEvents} where ${rollCallCrewEvents.tripId} = ${tripId}))`.mapWith(
-    Boolean,
-  );
 }
 
 type BlowoutSetup = Extract<Awaited<ReturnType<typeof setUpTripBlowout>>, { ok: true }>;
@@ -188,11 +196,19 @@ async function setUpTripBlowout(db: AppDb, input: CallBlowoutInput, now: Date) {
         .select({ started: rollCallStartedOn(trip.id) })
         .from(trips)
         .where(and(eq(trips.id, trip.id), liveTrip()));
+      // The crew may also have taken the boat out before its time, or hold a
+      // diver aboard (`departureMayBeAtSea`, H-133): the stricter of the two.
       if (
         departureUnderway(
           { startsAt: trip.startsAt, rollCallStarted: Boolean(started?.started) },
           now,
-        )
+        ) ||
+        (await departureMayBeAtSea(tx, {
+          shopId: input.shopId,
+          tripId: input.tripId,
+          startsAt: trip.startsAt,
+          now,
+        }))
       ) {
         return { ok: false as const, reason: "trip_departed" as const };
       }
@@ -287,6 +303,7 @@ async function finishTripBlowout(
     now,
     provider: input.provider,
     checkout: input.checkout,
+    refunds: input.refunds,
     alsoCalled,
   });
 
@@ -588,6 +605,7 @@ async function sendPendingBlowoutMessages(
     now: Date;
     provider?: NotificationProvider;
     checkout?: CheckoutProvider;
+    refunds?: BlowoutRefundMode;
     /** Sister departures canceled by the same day call; never offered. */
     alsoCalled?: readonly string[];
   },
@@ -655,11 +673,17 @@ async function sendPendingBlowoutMessages(
       // one diver is refunded once; a booking already `refunded` reads back as
       // `unpaid` and no second reversal is attempted, which is what makes a
       // resume safe (ADR 20260813-shop-cancellation-refunds-itself).
-      const refund = await refundBookingOnShopCancellation(
-        db,
-        { shopId: input.shopId, bookingId: row.diver.bookingId },
-        input.checkout,
-      );
+      const refund =
+        input.refunds === "queue"
+          ? await queueBookingRefundOnShopCancellation(db, {
+              shopId: input.shopId,
+              bookingId: row.diver.bookingId,
+            })
+          : await refundBookingOnShopCancellation(
+              db,
+              { shopId: input.shopId, bookingId: row.diver.bookingId },
+              input.checkout,
+            );
       // The diver's other active seats — never offer a boat they're already on.
       const activeSeats = await db
         .select({ tripId: bookings.tripId })
@@ -671,7 +695,10 @@ async function sendPendingBlowoutMessages(
             ne(bookings.status, "cancelled"),
           ),
         );
-      const evidence = await certificationEvidence(db, input.shopId, row.diver.personId);
+      const [evidence, courseSeats] = await queryAll(db, [
+        () => certificationEvidence(db, input.shopId, row.diver.personId),
+        () => listCourseSeatsInTraining(db, input.shopId, [row.diver.personId]),
+      ]);
       const offeredTripIds = qualifyingAlternatives({
         cancelledTripId: input.trip.id,
         now: input.now,
@@ -681,6 +708,7 @@ async function sendPendingBlowoutMessages(
           identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
           bookedTripIds: activeSeats.map((seat) => seat.tripId),
           participantType: row.booking.participantType,
+          courseSeats,
         },
       });
 
@@ -939,4 +967,111 @@ export async function tripBlowoutCause(
     .where(and(eq(tripBlowouts.tripId, tripId), eq(tripBlowouts.shopId, shopId)))
     .limit(1);
   return row?.cause ?? null;
+}
+
+/** What the weather called off in a window, for Reports (fifth loop, item 27). */
+export type WeatherCalls = {
+  /** Departures the weather called off. */
+  departures: number;
+  /** Shop-local days with at least one of them. */
+  days: number;
+  /** Divers who held a seat on them when the call was made. */
+  divers: number;
+  /** What went back to those divers' cards, in minor units. */
+  refundedCents: number;
+  /** Of those divers, how many booked another departure after the call. */
+  moved: number;
+};
+
+/**
+ * **The weather's share of a month or a year** (fifth loop, item 27): every
+ * blow-out whose cause is the weather (`run_ended` is a schedule decision, not
+ * a weather day) on a departure that was due to leave in `[startUtc, endUtc)`,
+ * anchored like every other Reports figure to the departure, not to the call.
+ *
+ * Only departures still called off count: one reinstated and sailed is not
+ * the weather's (dive-domain review F2). `days` is shop-local days with at
+ * least one weather call, not days the whole fleet stayed in (N4: the words
+ * say "days with a weather call").
+ *
+ * Divers are the cascade's own snapshot (`trip_blowout_divers`), so a booking
+ * cancelled by the call still counts. "Refunded" is the money now standing as
+ * refunded on those seats; "moved" is a diver who holds a live seat on
+ * another departure with the shop, booked within 30 days of the call (N3), so
+ * next season's booking is not this call's make-up dive. A walk-up who comes
+ * back gets a fresh person row and is not counted: an undercount.
+ */
+export async function weatherCallsInWindow(
+  db: DbExecutor,
+  shopId: string,
+  window: { startUtc: Date; endUtc: Date; timeZone: string },
+): Promise<WeatherCalls> {
+  const called = and(
+    eq(tripBlowouts.shopId, shopId),
+    eq(tripBlowouts.cause, "weather"),
+    eq(trips.shopId, shopId),
+    // A call the shop took back and sailed keeps its blow-out row; it was not
+    // a departure the weather took (dive-domain review F2).
+    eq(trips.status, "cancelled"),
+    gte(trips.startsAt, window.startUtc),
+    lt(trips.startsAt, window.endUtc),
+  );
+  const [departureRows, diverRows, refundRows, movedRows] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          departures: count(tripBlowouts.id),
+          days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${window.timeZone}::text, 'YYYY-MM-DD'))`,
+        })
+        .from(tripBlowouts)
+        .innerJoin(trips, eq(trips.id, tripBlowouts.tripId))
+        .where(and(called, liveTrip())),
+    () =>
+      db
+        .select({ divers: count(tripBlowoutDivers.id) })
+        .from(tripBlowoutDivers)
+        .innerJoin(tripBlowouts, eq(tripBlowouts.id, tripBlowoutDivers.blowoutId))
+        .innerJoin(trips, eq(trips.id, tripBlowouts.tripId))
+        .where(and(called, liveTrip(), eq(tripBlowoutDivers.shopId, shopId))),
+    () =>
+      db
+        .select({ cents: sql<string>`coalesce(sum(${bookingPayments.amountCents}), 0)` })
+        .from(tripBlowoutDivers)
+        .innerJoin(tripBlowouts, eq(tripBlowouts.id, tripBlowoutDivers.blowoutId))
+        .innerJoin(trips, eq(trips.id, tripBlowouts.tripId))
+        .innerJoin(
+          bookingPayments,
+          and(
+            eq(bookingPayments.bookingId, tripBlowoutDivers.bookingId),
+            eq(bookingPayments.shopId, shopId),
+            eq(bookingPayments.status, "refunded"),
+          ),
+        )
+        .where(and(called, liveTrip(), eq(tripBlowoutDivers.shopId, shopId))),
+    () =>
+      db
+        .select({ moved: countDistinct(tripBlowoutDivers.id) })
+        .from(tripBlowoutDivers)
+        .innerJoin(tripBlowouts, eq(tripBlowouts.id, tripBlowoutDivers.blowoutId))
+        .innerJoin(trips, eq(trips.id, tripBlowouts.tripId))
+        .innerJoin(
+          bookings,
+          and(
+            eq(bookings.personId, tripBlowoutDivers.personId),
+            eq(bookings.shopId, shopId),
+            ne(bookings.tripId, tripBlowouts.tripId),
+            ne(bookings.status, "cancelled"),
+            gte(bookings.createdAt, tripBlowouts.calledAt),
+            lt(bookings.createdAt, sql`${tripBlowouts.calledAt} + interval '30 days'`),
+          ),
+        )
+        .where(and(called, liveTrip(), eq(tripBlowoutDivers.shopId, shopId))),
+  ]);
+  return {
+    departures: Number(departureRows[0]?.departures ?? 0),
+    days: Number(departureRows[0]?.days ?? 0),
+    divers: Number(diverRows[0]?.divers ?? 0),
+    refundedCents: Number(refundRows[0]?.cents ?? 0),
+    moved: Number(movedRows[0]?.moved ?? 0),
+  };
 }

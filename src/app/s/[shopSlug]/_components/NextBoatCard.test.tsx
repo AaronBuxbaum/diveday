@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { diverTranslator } from "@/i18n/messages";
 import { NextBoatCard } from "./NextBoatCard";
 
@@ -22,7 +22,7 @@ function card(overrides: Partial<Parameters<typeof NextBoatCard>[0]> = {}) {
       time="7:30 PM"
       title="Night Dive — City of Washington"
       description="Torches, tarpon, and bioluminescence."
-      spots="5 spots left"
+      spots="5 seats left"
       price="$120.00"
       t={t}
       {...overrides}
@@ -76,7 +76,7 @@ describe("what the card says", () => {
 
     expect(container.textContent).not.toContain("$");
     expect(container.textContent).not.toContain("per diver");
-    expect(screen.getByText("5 spots left")).toBeInTheDocument();
+    expect(screen.getByText("5 seats left")).toBeInTheDocument();
   });
 });
 
@@ -163,7 +163,7 @@ describe("next boat with space", () => {
 describe("the facts line", () => {
   function facts() {
     render(card({ skipped: 1, firstSkippedTime: "7:00 AM" }));
-    return screen.getByText("5 spots left").parentElement as HTMLElement;
+    return screen.getByText("5 seats left").parentElement as HTMLElement;
   }
 
   it("sets each dot as a hidden element of its own, with the row's gap either side", () => {
@@ -182,7 +182,7 @@ describe("the facts line", () => {
     // Still one sentence to anything reading the text: the spaces are there,
     // and a flex row renders none of them.
     expect(row.textContent?.replace(/\s+/g, " ").trim()).toBe(
-      "5 spots left · $120.00 per diver · the 7:00 AM boat is full",
+      "5 seats left · $120.00 per diver · the 7:00 AM boat is full",
     );
   });
 
@@ -194,7 +194,7 @@ describe("the facts line", () => {
   it("keeps each dot in one item with its fact, so no line ends on a dot", () => {
     const row = facts();
     expect([...row.children].map((fact) => fact.textContent?.replace(/\s+/g, " ").trim())).toEqual([
-      "5 spots left",
+      "5 seats left",
       "· $120.00 per diver",
       "· the 7:00 AM boat is full",
     ]);
@@ -203,7 +203,7 @@ describe("the facts line", () => {
   it("draws no dot for a fact the card does not have", () => {
     render(card({ price: null }));
 
-    const row = screen.getByText("5 spots left").parentElement as HTMLElement;
+    const row = screen.getByText("5 seats left").parentElement as HTMLElement;
     expect(row.textContent).not.toContain("·");
   });
 });

@@ -1,6 +1,6 @@
 import { DAY_MS } from "./clock";
 import type { TripStage } from "./trip-stages";
-import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
+import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "./trips";
 import { shopDayBounds } from "./zoned";
 
 /**
@@ -38,6 +38,13 @@ import { shopDayBounds } from "./zoned";
  *
  * A cancelled departure has no phase: none of the four is its next step.
  */
+/**
+ * One real meeting window of a multi-day run (`trip_schedule_days`,
+ * `trip-days.ts`). Optional on every reader here: a departure with none is
+ * read from its shop days alone, exactly as before.
+ */
+export type MeetingWindow = { startsAt: Date; endsAt: Date };
+
 export const TRIP_PHASES = ["prep", "checkin", "aboard", "back"] as const;
 
 export type TripPhase = (typeof TRIP_PHASES)[number];
@@ -49,19 +56,23 @@ export function tripPhaseOf({
   timeZone,
   stage,
   cancelled,
+  meetingWindows,
 }: {
   startsAt: Date;
   endsAt: Date;
   now: Date;
   /** The shop's zone: "the departure's day" is the shop's calendar day. */
   timeZone: string;
+  meetingWindows?: readonly MeetingWindow[];
   /** The crew's latest tap on the manifest, whatever its age (`latestTripStage`). */
   stage: { stage: TripStage; recordedAt: Date } | null;
   cancelled: boolean;
 }): TripPhase | null {
   if (cancelled) return null;
   const departureDay = shopDayBounds(startsAt, timeZone);
-  const reading = stage ? readTap({ startsAt, endsAt, now, timeZone, tap: stage }) : null;
+  const reading = stage
+    ? readTap({ startsAt, endsAt, now, timeZone, tap: stage, meetingWindows })
+    : null;
   if (reading === "final_home") return "back";
   // A word that still speaks is Aboard. A `home` from an earlier day of a
   // course is the crew tying up for the night: the clock answers.
@@ -106,6 +117,7 @@ export function boatStageOf<R extends { stage: TripStage; recordedAt: Date }>({
   timeZone,
   stage,
   cancelled,
+  meetingWindows,
 }: {
   startsAt: Date;
   endsAt: Date;
@@ -114,9 +126,12 @@ export function boatStageOf<R extends { stage: TripStage; recordedAt: Date }>({
   /** The crew's latest tap on the manifest, whatever its age (`latestTripStage`). */
   stage: R | null;
   cancelled: boolean;
+  meetingWindows?: readonly MeetingWindow[];
 }): R | null {
   if (cancelled || !stage) return null;
-  return readTap({ startsAt, endsAt, now, timeZone, tap: stage }) === null ? null : stage;
+  return readTap({ startsAt, endsAt, now, timeZone, tap: stage, meetingWindows }) === null
+    ? null
+    : stage;
 }
 
 /**
@@ -126,8 +141,14 @@ export function boatStageOf<R extends { stage: TripStage; recordedAt: Date }>({
  *
  * A departure shorter than a day is one sailing even when it crosses
  * midnight, so every tap from its own day is "from its last day". A longer one
- * is a multi-day run (`trip-days.ts`: the same window on consecutive days), and
+ * is a multi-day run (`trip-days.ts`: the same window on several days), and
  * its last day is the shop day `endsAt` falls on.
+ *
+ * A word from the last day speaks until that day is over or an hour past the
+ * scheduled return, whichever is later; for one sailing "that day" is the day
+ * it left on, so a forgotten Home tap does not hold a midnight boat for a
+ * second day, unless the word itself was said on the later day, which holds
+ * it to the end of that day.
  */
 function readTap({
   startsAt,
@@ -135,33 +156,168 @@ function readTap({
   now,
   timeZone,
   tap,
+  meetingWindows = [],
 }: {
   startsAt: Date;
   endsAt: Date;
   now: Date;
   timeZone: string;
   tap: { stage: TripStage; recordedAt: Date };
+  meetingWindows?: readonly MeetingWindow[];
 }): "final_home" | "speaks" | null {
   const at = tap.recordedAt.getTime();
   if (at < shopDayBounds(startsAt, timeZone).from.getTime()) return null;
   const returnDay = shopDayBounds(endsAt, timeZone);
   const oneSailing = endsAt.getTime() - startsAt.getTime() < DAY_MS;
-  const fromLastDay = oneSailing || at >= returnDay.from.getTime();
+  // On a multi-day run with real meeting windows, the last day begins where
+  // the last window does when that is earlier than the shop day `endsAt` falls
+  // on: a 22:00 to 02:00 night's Home tap at 23:30 is the run's last word,
+  // though its window ends on the next shop day (issue #2406).
+  const lastWindow = meetingWindows.reduce<MeetingWindow | null>(
+    (latest, window) => (!latest || window.endsAt > latest.endsAt ? window : latest),
+    null,
+  );
+  const lastDayFrom = oneSailing
+    ? returnDay.from.getTime()
+    : Math.min(
+        returnDay.from.getTime(),
+        lastWindow?.startsAt.getTime() ?? Number.POSITIVE_INFINITY,
+      );
+  const fromLastDay = oneSailing || at >= lastDayFrom;
   if (fromLastDay && tap.stage === "home") return "final_home";
+  // One sailing holds its word to the end of the day it left on (or the day
+  // the word was said, when that is later), or the hour past its return when
+  // that is later: a boat back at 02:00 lets go at 03:00, not at the end of
+  // the day 02:00 falls on (#2409), but a "Heading in" said at 02:40 is the
+  // crew's word and outlasts the clock.
+  const lastDayEnd = oneSailing
+    ? shopDayBounds(new Date(Math.max(startsAt.getTime(), at)), timeZone).to
+    : returnDay.to;
   const until = fromLastDay
-    ? Math.max(returnDay.to.getTime(), endsAt.getTime() + DEPARTURE_BUFFER_MS)
-    : shopDayBounds(tap.recordedAt, timeZone).to.getTime();
+    ? Math.max(lastDayEnd.getTime(), endsAt.getTime() + DEPARTURE_BUFFER_MS)
+    : earlierDayEnd(tap.recordedAt, timeZone, meetingWindows);
   return now.getTime() < until ? "speaks" : null;
 }
 
 /**
- * A departure page's two readings of where the boat is, from one input: the
- * crew's word the header chip prints (`boatStageOf`), and whether the
- * departure is finished, which turns its Divers tab into a record and stops
- * its header counting seats (UX review 2026-10-10, items 1 and 10).
+ * Where an earlier day's tap on a multi-day run stops speaking: the end of the
+ * shop day it was said on, or the end of the meeting window it was said inside
+ * when that is later. A window that crosses midnight (22:00 to 02:00 each
+ * night) is still one sailing at 01:00, and its Boarding tap from 23:30 has not
+ * gone quiet at 00:00 (issue #2406). A tap said outside every window, and a run
+ * with no windows on file, keep the shop-day rule.
+ */
+function earlierDayEnd(
+  recordedAt: Date,
+  timeZone: string,
+  meetingWindows: readonly MeetingWindow[],
+): number {
+  const dayEnd = shopDayBounds(recordedAt, timeZone).to.getTime();
+  const at = recordedAt.getTime();
+  const inside = meetingWindows.find(
+    (window) => window.startsAt.getTime() <= at && at < window.endsAt.getTime(),
+  );
+  return Math.max(dayEnd, inside?.endsAt.getTime() ?? dayEnd);
+}
+
+/**
+ * **Whether the desk may say check-in is open** (UX review 2026-10-13, item
+ * 20): the clock's Check-in phase, while the crew have said nothing.
+ *
+ * It is the one place the clock's phase reaches a word on screen, and it is
+ * built not to compete with the stage. It never names a stage (it is not one
+ * of the five boat words), it is said on the Divers tab only, where the desk
+ * checks people in, and it goes silent the moment a crew tap speaks, so the
+ * header's chip and this line can never both be talking. Before it the desk
+ * had no word at all for its busiest half hour: the chip is silent until the
+ * crew taps ("never a word from the clock").
+ */
+export function checkInOpen(input: Parameters<typeof tripPhaseOf>[0]): boolean {
+  return tripPhaseOf(input) === "checkin" && boatStageOf(input) === null;
+}
+
+/**
+ * A departure page's readings of where the boat is, from one input: the
+ * crew's word the header chip prints (`boatStageOf`), whether the departure is
+ * finished, which turns its Divers tab into a record and stops its header
+ * counting seats (UX review 2026-10-10, items 1 and 10), whether the boat has
+ * sailed (`departureSailed`), and whether the Divers tab says check-in is open
+ * (`checkInOpen`).
+ *
+ * **A departure is not finished while the roll call still lacks a diver**
+ * (issue #2404). `unaccountedFor` is the page's answer to "is any seat recorded
+ * not back aboard at an after-dive checkpoint and not counted since"
+ * (`listUnaccountedForByTrip`, src/db/manifests.ts). The clock and a stale tap
+ * would call a night boat out past its hour Back while someone may still be in
+ * the water, and the desk would give way to a record that files them under
+ * "Sailed". So the clock and a stale tap no longer finish it. **The crew's own
+ * `home` from the departure's last day still does**: it is the last word a
+ * departure has, and the record then names the seat as unaccounted for rather
+ * than hiding it. Nothing else moves: the chip, the clock's phase and
+ * check-in read as they did. The page reads the roll call only once the
+ * departure would otherwise read as finished, so a boat still out costs it
+ * nothing.
  */
 export function departureStage<R extends { stage: TripStage; recordedAt: Date }>(
-  input: Parameters<typeof boatStageOf<R>>[0],
-): { shown: R | null; finished: boolean } {
-  return { shown: boatStageOf(input), finished: tripPhaseOf(input) === "back" };
+  input: Parameters<typeof boatStageOf<R>>[0] & { unaccountedFor?: boolean },
+): { shown: R | null; finished: boolean; sailed: boolean; checkInOpen: boolean } {
+  const { unaccountedFor = false, ...reading } = input;
+  const homeSaid =
+    !reading.cancelled &&
+    reading.stage !== null &&
+    readTap({ ...reading, tap: reading.stage }) === "final_home";
+  return {
+    shown: boatStageOf(reading),
+    finished: tripPhaseOf(reading) === "back" && (homeSaid || !unaccountedFor),
+    sailed: departureSailed(reading),
+    checkInOpen: checkInOpen(reading),
+  };
+}
+
+/** The crew's words that mean the boat is off the dock and not yet tied up. */
+const AT_SEA_STAGES: ReadonlySet<TripStage> = new Set(["underway", "surface", "heading_in"]);
+
+/**
+ * **Has this departure left the dock?** (fourth review, item 16). Once it has,
+ * nothing on its pages is for sale and nothing is still to pack: "4 seats
+ * left", "6 people missing rental sizes" and "12 pieces still to pick" are
+ * dock words on the one page open during the trip.
+ *
+ * Back is sailed. Otherwise the crew's word answers when it still speaks:
+ * underway, at the surface and heading in are at sea; a course's "home" from
+ * an earlier day is tied up for the night, with tomorrow still to pack for.
+ * With no word, the clock answers for a single sailing once its hour and the
+ * departure buffer have passed (`hasSailed`, the dock rider's door's own
+ * rule), so a boat running late at the dock keeps its prompts; never for a
+ * course, whose later days still need their kit.
+ *
+ * **Boarding yields to the clock the way silence does** (review F3). The tap
+ * a busy dock makes is Boarding and the one it forgets is Underway, so a
+ * Boarding nobody followed up would otherwise hold the boat at the dock all
+ * day. A tap never holds a boat at the dock longer than silence would, as it
+ * never finishes one sooner.
+ */
+export function departureSailed(input: Parameters<typeof tripPhaseOf>[0]): boolean {
+  const phase = tripPhaseOf(input);
+  if (phase === "back") return true;
+  if (phase !== "aboard") return false;
+  const shown = boatStageOf(input);
+  if (shown && AT_SEA_STAGES.has(shown.stage)) return true;
+  if (shown && shown.stage !== "boarding") return false;
+  return (
+    input.endsAt.getTime() - input.startsAt.getTime() < DAY_MS &&
+    hasSailed(input.startsAt, input.now)
+  );
+}
+
+/**
+ * **When the "Left aboard" form is the crew's job** (fourth review, item 16):
+ * from "Heading in", when the crew sweeps the deck, and on a departure that is
+ * back. Not while the boat is still diving, where a form for what was found
+ * after the trip is a question nobody can answer yet.
+ */
+export function leftAboardOpen(input: Parameters<typeof tripPhaseOf>[0]): boolean {
+  if (tripPhaseOf(input) === "back") return true;
+  const shown = boatStageOf(input);
+  return shown?.stage === "heading_in" || shown?.stage === "home";
 }

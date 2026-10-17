@@ -287,7 +287,7 @@ export const areas = {
     tests: ["e2e"],
     invariants: [
       "Use semantic tokens only; no raw colors in components.",
-      "Inspect light/dark and phone/desktop output.",
+      "Inspect light at phone and desktop, dark at desktop.",
       "Include empty, loading, validation, error, and success states.",
       "Keep touch targets and focus states accessible.",
     ],
@@ -860,6 +860,52 @@ export const areas = {
     validate: [
       "pnpm test src/lib/work-orders.test.ts src/db/work-orders.test.ts src/db/work-order-follow-up.test.ts --reporter=dot",
       "pnpm e2e e2e/work-orders.spec.ts --reporter=line",
+    ],
+  },
+  retention: {
+    goal: "Change how long an operational trail is kept, or add a new append-only table, without pruning a person or evidence somebody still needs.",
+    docs: ["docs/architecture/decisions/20260803-append-only-retention.md"],
+    code: [
+      "src/lib/retention.ts",
+      "src/db/retention.ts",
+      "src/app/api/cron/retention/route.ts",
+      "src/db/schema/",
+    ],
+    tests: [
+      "src/lib/retention.test.ts",
+      "src/db/retention.test.ts",
+      "src/app/api/cron/retention/route.test.ts",
+    ],
+    invariants: [
+      "Every append-only table is in exactly one of RETENTION_DAYS, UNBOUNDED_BY_DECISION (src/lib/retention.ts) or OUTSIDE_RETENTION (src/db/retention.test.ts).",
+      "Retention prunes trails, never people: a table holding a person is erased on request (src/db/anonymize.ts), never on a timer.",
+      "The windows are a human decision (HD-11); shortening one is a policy change named in the ADR.",
+      "One pass is bounded, so a backlog converges over nights instead of timing out.",
+    ],
+    validate: [
+      "pnpm test src/lib/retention.test.ts src/db/retention.test.ts src/app/api/cron/retention/route.test.ts --reporter=dot",
+    ],
+  },
+  i18n: {
+    goal: "Add or change words a person reads, in every locale, without a hard-coded string, a hard-coded locale or a sentence that has not earned its place.",
+    docs: [".claude/rules/i18n.md", "src/i18n/locales/es-ES/README.md", "docs/design/brand.md"],
+    code: [
+      "src/i18n/locales/en-US/",
+      "src/i18n/locales/es-ES/",
+      "src/i18n/staff-messages.ts",
+      "src/i18n/settings.ts",
+      "src/i18n/",
+    ],
+    tests: ["src/i18n/icu-messages.test.ts", "src/i18n/count-agreement.test.ts"],
+    invariants: [
+      "Copy comes from a bundle: diver words in locales/<locale>/diver.json, staff words in locales/<locale>/staff/<namespace>.json, composed by staff-messages.ts.",
+      "Every key exists in en-US and es-ES; US spelling in en-US.",
+      "No locale or time zone is hard-coded; a date names its zone.",
+      "Every sentence earns its place (the copy-restraint skill).",
+    ],
+    validate: [
+      "pnpm test src/i18n --reporter=dot",
+      "pnpm check:locale && pnpm check:voice && pnpm check:copy",
     ],
   },
 };

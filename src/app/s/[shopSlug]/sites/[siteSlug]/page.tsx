@@ -5,7 +5,6 @@ import { connection } from "next/server";
 import { cache } from "react";
 import {
   TripLookFor,
-  TripMoments,
   TripRoutes,
   TripSiteNotes,
 } from "@/app/s/[shopSlug]/trips/[id]/_components/TripDayPlan";
@@ -15,7 +14,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
+import { LedgerRow } from "@/components/ui/ledger";
 import { getDb } from "@/db/client";
 import {
   getDiveSiteBySlug,
@@ -24,8 +24,8 @@ import {
 } from "@/db/dive-sites";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
-import { requestTranslator } from "@/i18n/request";
-import { depthText } from "@/i18n/unit-labels";
+import { requestReaderUnits, requestTranslator } from "@/i18n/request";
+import { diveSiteDepthText } from "@/i18n/unit-labels";
 import { parseDiveSiteSlug } from "@/lib/dive-site-slug";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
@@ -79,7 +79,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    robots: shopSearchListingRobots(shop.searchListingOptOutAt),
+    robots: shopSearchListingRobots(shop),
     openGraph: { ...openGraphSite, title, description, url: canonical },
   };
 }
@@ -88,9 +88,9 @@ export async function generateMetadata({
  * **One dive site, as the shop already wrote it** (N-48).
  *
  * A composition, not new content: every word here is on the `dive_sites` row
- * the shop filled in for its own briefings, and the four beats are the same
+ * the shop filled in for its own briefings, and the three beats are the same
  * components the departure page renders them with — `TripRoutes`,
- * `TripSiteNotes`, `TripLookFor`, `TripMoments`. A diver who reads about
+ * `TripSiteNotes`, `TripLookFor`. A diver who reads about
  * Molasses Reef here and then opens a Saturday going there sees the same
  * words in the same shapes, because they are the same components.
  *
@@ -117,8 +117,8 @@ export default async function DiveSitePage({
     listDiveSiteBriefingExtras(db, shop.id, [site.id]),
     listUpcomingDeparturesForSite(db, shop.id, site.id),
   ]);
-  // One "briefing", for one site and no tank: the four beats read the place,
-  // its field guide and its published moments, and nothing about a dive
+  // One "briefing", for one site and no tank: the beats read the place and
+  // its field guide, and nothing about a dive
   // (`SiteBriefing`). The species words are DiveDay's, resolved here where the
   // reader's locale is known — never the shop's (ADR
   // 20260813-marine-life-is-diveday-copy).
@@ -126,16 +126,15 @@ export default async function DiveSitePage({
     {
       diveSite: site,
       creatures: fieldGuideCards(extras.creatures.get(site.id) ?? [], t),
-      moments: extras.moments.get(site.id) ?? [],
     },
   ];
 
-  // The shop's own words for how deep it is, and the recorded maximum where it
-  // wrote none — the same fallback the departure page's day rows use, so the
-  // two surfaces never name different depths for one reef.
-  const depth =
-    site.depthRange ??
-    (site.maxDepthMeters ? depthText(t, site.maxDepthMeters, shop.depthUnit) : null);
+  // The recorded range in the shop's unit, the same line the departure page's
+  // day rows print, so the two surfaces never name different depths for one
+  // reef. The shop's note stands in only where no depth is recorded. The
+  // reader's unit follows the shop's when it differs (fifth-loop ideas, item 22).
+  const readerDepth = (await requestReaderUnits(locale)).depth;
+  const depth = diveSiteDepthText(t, site, shop.depthUnit, readerDepth);
   const facts = [site.locationName, depth].filter((fact) => fact !== null);
   const [cover = null, ...gallery] = site.imageUrls;
 
@@ -204,7 +203,6 @@ export default async function DiveSitePage({
       <TripRoutes briefings={briefings} locale={locale} />
       <TripSiteNotes briefings={briefings} locale={locale} />
       <TripLookFor briefings={briefings} locale={locale} />
-      <TripMoments briefings={briefings} locale={locale} />
 
       {/* The page's one act. Everything above answers "would I like this
           reef?"; this answers "when can I go?", and each row is the door to

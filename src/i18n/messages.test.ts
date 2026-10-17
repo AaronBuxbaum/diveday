@@ -123,7 +123,7 @@ describe("diverTranslator", () => {
     // Blanks (or a raw key) would be worse than English: a shop whose row names
     // an unsupported locale still gets a usable booking page.
     expect(diverTranslator("fr-FR")("schedule.title")).toBe("Schedule");
-    expect(diverTranslator(null)("booking.heading")).toBe("Grab a spot");
+    expect(diverTranslator(null)("booking.heading")).toBe("Grab a seat");
   });
 });
 

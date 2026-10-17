@@ -6,9 +6,7 @@ import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { dateRequestCopy } from "@/i18n/date-request-copy";
 import type { DiverTranslator } from "@/i18n/messages";
 import { compareMonths, type MonthRef } from "@/lib/calendar";
-import { weekdayNames } from "@/lib/format";
-import { cachedListFormat } from "@/lib/intl-cache";
-import { recurrenceSummary } from "@/lib/recurrence";
+import { runCadenceWords } from "./run-cadence";
 
 /**
  * Whether the viewed month is at or past the end of what the board holds, so
@@ -36,21 +34,8 @@ export function seriesHorizonLines(
   locale: string,
   runs: readonly RunningPublicSeries[],
 ): string[] {
-  const longWeekdays = weekdayNames(locale, "long");
   return runs.map((run) => {
-    const summary = recurrenceSummary({
-      intervalWeeks: run.intervalWeeks,
-      weekdays: run.weekdayMask,
-    });
-    const days = cachedListFormat(locale, { type: "conjunction" }).format(
-      summary.weekdays.map((day) => longWeekdays[day] ?? ""),
-    );
-    const cadence =
-      summary.cadence === "daily"
-        ? t("schedule.horizon.cadenceDaily")
-        : summary.cadence === "weekly"
-          ? t("schedule.horizon.cadenceWeekly", { days })
-          : t("schedule.horizon.cadenceEveryNWeeks", { weeks: summary.intervalWeeks, days });
+    const cadence = runCadenceWords(t, locale, run);
     return t("schedule.horizon.runs", { title: run.title, cadence });
   });
 }

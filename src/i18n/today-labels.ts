@@ -1,10 +1,14 @@
 import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
+import { calendarDateInTimezone, calendarDaysBetween } from "@/lib/calendar-date";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import type { DepthUnit } from "@/lib/depth-units";
+import { formatDateTimeTz, formatRelativeDay, formatShortDate, formatWeekday } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
+import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { RollCallGapReason, TodayActionKind, TodaySeason } from "@/lib/today";
+import { awayDatesText } from "./away-labels";
 import { SPECIALTY_KEYS } from "./readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -26,8 +30,10 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   instructor_missing: "today.actionKind.instructorMissing",
   uncrewed_course: "today.actionKind.uncrewedCourse",
   uncrewed_departure: "today.actionKind.uncrewedDeparture",
+  boat_clash: "today.actionKind.boatClash",
   crew_clash: "today.actionKind.crewClash",
   crew_clash_sailed: "today.actionKind.crewClashSailed",
+  crew_away: "today.actionKind.crewAway",
   nitrox_gate: "today.actionKind.nitroxGate",
   high_wind_alert: "today.actionKind.highWindAlert",
   dive_prep: "today.actionKind.divePrep",
@@ -43,6 +49,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   failed_photo_deletion: "today.actionKind.failedPhotoDeletion",
   owed_refund: "today.actionKind.owedRefund",
   payment_dispute: "today.actionKind.paymentDispute",
+  payments_restricted: "today.actionKind.paymentsRestricted",
   reviews_pending: "today.actionKind.reviewsPending",
   unanswered_messages: "today.actionKind.unansweredMessages",
   gear_overdue: "today.actionKind.gearOverdue",
@@ -50,12 +57,16 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   gear_service_due: "today.actionKind.gearServiceDue",
   boat_safety_kit: "today.actionKind.boatSafetyKit",
   boat_papers_due: "today.actionKind.boatPapersDue",
+  boat_papers_lapsed: "today.actionKind.boatPapersLapsed",
   boat_safety_expired: "today.actionKind.boatSafetyExpired",
+  boat_snag: "today.actionKind.boatSnag",
+  incident_report_unfiled: "today.actionKind.incidentReportUnfiled",
   work_order_late: "today.actionKind.workOrderLate",
   work_order_uncollected: "today.actionKind.workOrderUncollected",
   staff_credential_due: "today.actionKind.staffCredentialDue",
   units_unconfirmed: "today.actionKind.unitsUnconfirmed",
-  say_hello: "today.actionKind.sayHello",
+  emergency_card_blank: "today.actionKind.emergencyCardBlank",
+  lost_items_waiting: "today.actionKind.lostItemsWaiting",
   rental_fit_confirm: "today.actionKind.rentalFit",
 };
 
@@ -65,6 +76,8 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   identity_unconfirmed: "today.blockerAction.confirmIdentity",
   under_minimum_age: "today.blockerAction.checkDateOfBirth",
   waiver_not_sent: "today.blockerAction.sendWaiver",
+  waiver_lapsed: "today.blockerAction.sendWaiver",
+  waiver_runs_out: "today.blockerAction.sendWaiver",
   waiver_pending: "today.blockerAction.nudgeWaiver",
   waiver_expired: "today.blockerAction.reissueWaiver",
   medical_review: "today.blockerAction.reviewMedical",
@@ -77,15 +90,20 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   guardian_signature_missing: "today.blockerAction.reissueWaiver",
   course_form_unsigned: "today.blockerAction.getCourseFormsSigned",
   course_form_guardian_missing: "today.blockerAction.getCourseFormsSigned",
+  training_mark_invalid: "today.blockerAction.clearTrainingMark",
   certification_missing: "today.blockerAction.addCard",
+  // Nothing to add or verify: the diver said there is no card. The fix is a
+  // conversation before boarding (third UX review, item 23).
+  certification_not_yet: "today.blockerAction.contactDiver",
   certification_pending: "today.blockerAction.verifyCard",
   // Never "Verify card": there is no number to look up with an agency, only a
   // level the diver typed. The work is getting the card in front of somebody.
   certification_self_declared: "today.blockerAction.askForCard",
   certification_insufficient: "today.blockerAction.reviewCard",
-  // By the day of the dive the course is over, so what is left is the card:
-  // the instructor's tap on the course roster, or a word with the diver.
-  certification_in_training: "today.blockerAction.reviewCard",
+  // There is no card to review yet (issue #2058): the diver is on a course
+  // that ends before this trip, and what is left is its result, the
+  // instructor's tap on the course roster or a word with the diver.
+  certification_in_training: "today.blockerAction.checkCourseResult",
   specialty_missing: "today.blockerAction.addSpecialty",
   specialty_pending: "today.blockerAction.verifySpecialty",
   specialty_import_unconfirmed: "today.blockerAction.confirmSpecialty",
@@ -103,6 +121,8 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   identity_unconfirmed: "today.blockerGroup.confirmIdentities",
   under_minimum_age: "today.blockerGroup.checkDatesOfBirth",
   waiver_not_sent: "today.blockerGroup.sendWaivers",
+  waiver_lapsed: "today.blockerGroup.sendWaivers",
+  waiver_runs_out: "today.blockerGroup.sendWaivers",
   waiver_pending: "today.blockerGroup.nudgeWaivers",
   waiver_expired: "today.blockerGroup.reissueWaivers",
   medical_review: "today.blockerGroup.reviewMedicals",
@@ -110,11 +130,13 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   guardian_signature_missing: "today.blockerGroup.reissueWaivers",
   course_form_unsigned: "today.blockerGroup.getCourseFormsSigned",
   course_form_guardian_missing: "today.blockerGroup.getCourseFormsSigned",
+  training_mark_invalid: "today.blockerGroup.clearTrainingMarks",
   certification_missing: "today.blockerGroup.reviewCards",
+  certification_not_yet: "today.blockerGroup.contactDivers",
   certification_pending: "today.blockerGroup.verifyCards",
   certification_self_declared: "today.blockerGroup.askForCards",
   certification_insufficient: "today.blockerGroup.reviewCards",
-  certification_in_training: "today.blockerGroup.reviewCards",
+  certification_in_training: "today.blockerGroup.checkCourseResults",
   specialty_missing: "today.blockerGroup.reviewSpecialties",
   specialty_pending: "today.blockerGroup.verifySpecialties",
   specialty_import_unconfirmed: "today.blockerGroup.confirmImportedSpecialties",
@@ -164,6 +186,8 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   requirements_not_configured: "today.blockerRow.requirementsNotConfigured",
   identity_unconfirmed: "today.blockerRow.identityUnconfirmed",
   waiver_not_sent: "today.blockerRow.waiverNotSent",
+  waiver_lapsed: "today.blockerRow.waiverLapsed",
+  waiver_runs_out: "today.blockerRow.waiverRunsOut",
   waiver_pending: "today.blockerRow.waiverPending",
   waiver_expired: "today.blockerRow.waiverExpired",
   medical_review: "today.blockerRow.medicalReview",
@@ -171,7 +195,9 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   guardian_signature_missing: "today.blockerRow.guardianSignatureMissing",
   course_form_unsigned: "today.blockerRow.courseFormUnsigned",
   course_form_guardian_missing: "today.blockerRow.courseFormUnsigned",
+  training_mark_invalid: "today.blockerRow.trainingMarkInvalid",
   certification_missing: "today.blockerRow.certificationMissing",
+  certification_not_yet: "today.blockerRow.certificationNotYet",
   certification_pending: "today.blockerRow.certificationPending",
   certification_self_declared: "today.blockerRow.certificationSelfDeclared",
   certification_insufficient: "today.blockerRow.certificationInsufficient",
@@ -236,16 +262,9 @@ export function nameListText(t: StaffTranslator, names: readonly string[], shown
 
 /** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
 
-export function missingFitDetailText(t: StaffTranslator, count: number): string {
-  return t("today.detail.missingFit", { count });
-}
-
-export function ungatedNitroxDetailText(t: StaffTranslator, count: number): string {
-  return t("today.detail.ungatedNitrox", { count });
-}
-
-export function missingFitNamedDetailText(t: StaffTranslator): string {
-  return t("today.detail.missingFitNamed");
+/** One diver's sizes job: a blank size, or nobody has asked about their kit yet. */
+export function missingFitNamedDetailText(t: StaffTranslator, unasked: boolean): string {
+  return t(unasked ? "today.detail.kitUnaskedNamed" : "today.detail.missingSizeNamed");
 }
 
 export function ungatedNitroxNamedDetailText(t: StaffTranslator): string {
@@ -310,6 +329,21 @@ function clashGroups(
 }
 
 /**
+ * One sentence per other departure on the same hull (H-80, issue #2135), the
+ * hull and the other departure named, in the words the departure page uses.
+ */
+export function boatClashDetailText(
+  t: StaffTranslator,
+  clashes: readonly { boatName: string; otherTitle: string }[],
+): string {
+  return clashes
+    .map((clash) =>
+      t("today.detail.boatClash", { boat: clash.boatName, departure: clash.otherTitle }),
+    )
+    .join(" ");
+}
+
+/**
  * One sentence per other departure (H-80, issue #1776), naming everyone it
  * shares — the same "also rostered on" the Crew panel and the staffing week
  * say, so a staffer reads one fact in one set of words wherever they meet it.
@@ -321,6 +355,26 @@ export function crewClashDetailText(
 ): string {
   return clashGroups(locale, clashes)
     .map((group) => t("today.detail.crewClash", group))
+    .join(" ");
+}
+
+/**
+ * **Who on this departure said they are away on a day it meets** (fourth
+ * review, item 12): one sentence a person, with the days, in the words the
+ * staffing week and the board use (`awayDatesText`).
+ */
+export function crewAwayDetailText(
+  t: StaffTranslator,
+  locale: string,
+  away: readonly { fullName: string; blocks: readonly { startsOn: string; endsOn: string }[] }[],
+): string {
+  return away
+    .map((person) =>
+      t("today.detail.crewAway", {
+        name: person.fullName,
+        dates: awayDatesText(person.blocks, locale),
+      }),
+    )
     .join(" ");
 }
 
@@ -497,10 +551,6 @@ export function rollCallGapDetailText(
 /** The unclosed-roll-call row's action label — it opens the checkpoint that is open. */
 export function openRollCallActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openRollCall");
-}
-
-export function missingContactDetailText(t: StaffTranslator, count: number): string {
-  return t("today.detail.missingContact", { count });
 }
 
 /** The single-diver contact row leads with the diver's name; the detail then carries only the gap. */
@@ -684,6 +734,47 @@ export function owedRefundGroupDetailText(
  * who had already found it, every morning, forever — copy-restraint's fifth
  * deletion.
  */
+/**
+ * The unfiled incident report line (safety sheet 2026-10-15, item 3): how many
+ * drafts sit unfiled, and who started the oldest and when. `day` says how
+ * `when` reads: `relative` ("today", "yesterday"), `weekday` ("Tuesday"),
+ * `date` ("Oct 12"), so each language can put its own word before a date.
+ */
+export function incidentReportUnfiledSubjectText(
+  t: StaffTranslator,
+  input: { count: number; name: string; when: string; day: "relative" | "weekday" | "date" },
+): string {
+  return t("today.incidentReportUnfiled.subject", input);
+}
+
+/**
+ * When a draft was started, the way the desk says it: "today" or "yesterday",
+ * the weekday within the past week ("Tuesday"), else the date ("Oct 12"). In
+ * the shop's zone, by calendar day.
+ */
+export function incidentDraftStartedWhen(
+  startedAt: Date,
+  now: Date,
+  locale: string,
+  timeZone: string,
+): { day: "relative" | "weekday" | "date"; when: string } {
+  const daysAgo = calendarDaysBetween(
+    calendarDateInTimezone(startedAt, timeZone),
+    calendarDateInTimezone(now, timeZone),
+  );
+  if (daysAgo >= 0 && daysAgo <= 1) {
+    return { day: "relative", when: formatRelativeDay(startedAt, now, locale, timeZone) };
+  }
+  if (daysAgo > 1 && daysAgo < 7) {
+    return { day: "weekday", when: formatWeekday(startedAt, locale, timeZone) };
+  }
+  return { day: "date", when: formatShortDate(startedAt, locale, timeZone) };
+}
+
+export function openIncidentReportActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openIncidentReport");
+}
+
 export function reviewsPendingSubjectText(t: StaffTranslator, count: number): string {
   return t("today.reviewsPending.subject", { count });
 }
@@ -710,18 +801,24 @@ export function openInboxActionText(t: StaffTranslator): string {
 /**
  * The units row: the one first-run question a trading shop can still have open.
  *
- * Worded as a question about *money and depth*, not about a settings page —
+ * Worded as a question about *money, depth and temperature* (the three units
+ * the first-run checklist names too, issue #2571), not about a settings page —
  * "confirm your units" says nothing a reader could act on, while the currency a
  * card is charged in is the fact that makes this worth a row at all (#835).
  */
 export function unitsUnconfirmedSubjectText(
   t: StaffTranslator,
-  input: { currency: string; depthUnit: DepthUnit },
+  input: { currency: string; depthUnit: DepthUnit; temperatureUnit: TemperatureUnit },
 ): string {
   return t("today.unitsUnconfirmed.subject", {
     currency: input.currency,
     depth: t(
       input.depthUnit === "feet" ? "today.unitsUnconfirmed.feet" : "today.unitsUnconfirmed.meters",
+    ),
+    temperature: t(
+      input.temperatureUnit === "fahrenheit"
+        ? "today.unitsUnconfirmed.fahrenheit"
+        : "today.unitsUnconfirmed.celsius",
     ),
   });
 }
@@ -762,6 +859,20 @@ export function paymentDisputeSubjectText(t: StaffTranslator): string {
   return t("today.opsAlert.disputeSubject");
 }
 
+/** Stripe turned card payments off (batch 6 item 8): the row's subject. */
+export function paymentsRestrictedSubjectText(t: StaffTranslator): string {
+  return t("today.opsAlert.restrictedSubject");
+}
+
+/** Since when, and what divers do meanwhile; Stripe's reason stays in Stripe. */
+export function paymentsRestrictedDetailText(t: StaffTranslator, when: string): string {
+  return t("today.opsAlert.restrictedDetail", { when });
+}
+
+export function openPaymentSettingsActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openPaymentSettings");
+}
+
 /**
  * A stuck photo-deletion's action label — Settings' "Data"
  * group, where the retry button for it now lives.
@@ -774,11 +885,14 @@ export function openPrepListActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openPrepList");
 }
 
-/** The small day-of hand-off row, kept as codes here so staff copy stays localized. */
+/**
+ * The small day-of hand-off row, kept as codes here so staff copy stays
+ * localized. The row leads with the diver's name, as every person row does,
+ * so the sentence never repeats it (fourth review, item 43).
+ */
 export function helpRequestDetailText(
   t: StaffTranslator,
   input: {
-    personName: string;
     kind: "carry_gear" | "first_timer" | "find_group";
     status: "requested" | "acknowledged";
   },
@@ -794,7 +908,7 @@ export function helpRequestDetailText(
     input.status === "acknowledged"
       ? "today.helpRequest.detailAcknowledged"
       : "today.helpRequest.detailRequested",
-    { name: input.personName, help },
+    { help },
   );
 }
 
@@ -809,11 +923,6 @@ export function helpRequestActionText(
 
 export function openTripActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openTrip");
-}
-
-/** The Say hello row's door — the departure's Guests tab (issue #1182). */
-export function openGuestsActionText(t: StaffTranslator): string {
-  return t("today.actionLabel.openGuests");
 }
 
 /**
@@ -949,6 +1058,23 @@ export function openGearUnitActionText(t: StaffTranslator): string {
 }
 
 /** A departure's Boat tab, where the pre-departure check names the kit aboard. */
+/**
+ * A snag's row (fifth-loop ideas, item 1): the line and what is wrong, then
+ * who wrote it and how many departures have sailed with it since.
+ */
+export function boatSnagDetailText(
+  t: StaffTranslator,
+  snag: { itemLabel: string; note: string; notedByName: string; departuresSince: number },
+): string {
+  return t("today.detail.boatSnag", {
+    item: snag.itemLabel,
+    // The sentence closes the note itself; a crew's own full stop would double it.
+    note: snag.note.replace(/[.\s]+$/u, ""),
+    name: snag.notedByName,
+    count: snag.departuresSince,
+  });
+}
+
 export function openBoatCheckActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openBoatCheck");
 }
@@ -1073,4 +1199,55 @@ export function seasonalBriefingText(
     hasShop: shopName ? "true" : "false",
     shopName: shopName ?? "",
   });
+}
+
+/** Who the stale-roll-call alert reached, and when (the owners' time first), or null. */
+export function rollCallAlertedText(
+  t: StaffTranslator,
+  gap: { alertedAt?: Date | null; shoreAlertedAt?: Date | null },
+  locale: string,
+  timeZone: string,
+): string | null {
+  const owners = gap.alertedAt ?? null;
+  const shore = gap.shoreAlertedAt ?? null;
+  if (owners && shore) {
+    return t("today.detail.rollCallAlertedWithShore", {
+      time: formatDateTimeTz(owners, locale, timeZone),
+    });
+  }
+  if (owners) {
+    return t("today.detail.rollCallAlerted", { time: formatDateTimeTz(owners, locale, timeZone) });
+  }
+  if (shore) {
+    return t("today.detail.rollCallShoreAlerted", {
+      time: formatDateTimeTz(shore, locale, timeZone),
+    });
+  }
+  return null;
+}
+
+/**
+ * The blank emergency card's row (fifth loop, item 3): what is missing, and the
+ * first boat that would sail without it, by its time and day.
+ */
+export function emergencyCardBlankText(
+  t: StaffTranslator,
+  input: { time: string; day: string },
+): { subject: string; detail: string; actionLabel: string } {
+  return {
+    subject: t("today.emergencyCard.subject"),
+    detail: t("today.emergencyCard.detail", input),
+    actionLabel: t("today.emergencyCard.action"),
+  };
+}
+
+/** Found items still waiting for their owners (fifth loop, item 7), as one count. */
+export function lostItemsWaitingText(
+  t: StaffTranslator,
+  count: number,
+): { subject: string; actionLabel: string } {
+  return {
+    subject: t("today.lostItems.subject", { count }),
+    actionLabel: t("today.lostItems.action"),
+  };
 }

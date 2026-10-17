@@ -7,6 +7,15 @@
     "writtenBy": "Written by {name}",
     "notTimed": "Time not written yet"
   },
+  "missingDiver": {
+    "start": "Start a missing diver report",
+    "alreadyStarted": "Already started by {name}.",
+    "alreadyFiled": "Already filed by {name}.",
+    "notMissing": "No longer marked not back aboard.",
+    "notAllowed": "Only this departure’s crew, owners and managers can start a report.",
+    "failed": "The report did not open. Tap again.",
+    "backToManifest": "Back to manifest"
+  },
   "status": {
     "draft": "Draft",
     "filed": "Filed"
@@ -28,6 +37,8 @@
     "locationHint": "The dock, the boat deck, a spot on the reef.",
     "whatHappened": "What happened",
     "whatHappenedHint": "In order, as you saw it: times, depths, and who did what.",
+    "kind": "What kind of incident",
+    "severity": "How serious",
     "care": "Care given",
     "firstAid": "Was first aid given?",
     "oxygen": "Was oxygen given?",
@@ -55,6 +66,19 @@
     "chamber": "A hyperbaric chamber",
     "diver": "Themselves, released on scene",
     "other": "Someone else"
+  },
+  "kind": {
+    "injury": "Injury or illness",
+    "near_miss": "Near miss",
+    "equipment": "Equipment failure",
+    "missing_diver": "Missing diver",
+    "fatality": "Fatality",
+    "other": "Something else"
+  },
+  "severity": {
+    "minor": "Minor",
+    "moderate": "Moderate",
+    "serious": "Serious"
   },
   "people": {
     "title": "People involved",
@@ -87,12 +111,15 @@
     "title": "File the report",
     "description": "Filing puts your name and the time on it. After that it does not change.",
     "submit": "File report",
+    "missingDiverWarning": "Filing tells the owners now. Is the diver still missing?",
     "pending": "Filing…",
     "needs": "Before it can be filed, it needs:",
     "gap": {
       "occurred_at": "When it happened",
       "location": "Where it happened",
       "what_happened": "What happened",
+      "kind": "What kind of incident it was",
+      "severity": "How serious it was",
       "first_aid": "Whether first aid was given",
       "oxygen": "Whether oxygen was given",
       "emergency_services": "Whether emergency services were called",
@@ -100,6 +127,8 @@
     }
   },
   "read": {
+    "ownersAlerted": "Owners alerted",
+    "ownersNotReached": "Not reached yet. Call them.",
     "when": "When",
     "where": "Where",
     "notAnswered": "Not answered",
@@ -134,7 +163,10 @@
     "alreadyListed": "That person is already on the report.",
     "nobodyChosen": "Choose a person, or write a name.",
     "blankNote": "Write the note before adding it.",
-    "notYetFiled": "File the report before adding a later note."
+    "notYetFiled": "File the report before adding a later note.",
+    "held": "A report on legal hold can’t be deleted. Release the hold first.",
+    "holdSet": "Legal hold set.",
+    "holdReleased": "Legal hold released."
   },
   "safety": {
     "intro": "What the shop recorded on departures that left this month and are home. Lapsed credentials are read as the records stand today. Nothing here changes a record.",
@@ -148,9 +180,14 @@
     "certOverridesLink": "The month’s safety activity",
     "crew": "Crew sailing on a lapsed credential",
     "crewValue": "{lapsed} of {sailings}",
+    "crewDetailUnrecorded": "Nothing on file for their role on {unrecorded} of {sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "crewDetail": "{sailings, plural, one {# crew sailing} other {# crew sailings}}",
     "incidents": "Incident reports",
-    "boardingNote": "The dock roll call refuses a diver the readiness check has not cleared. A diver first counted at a later checkpoint is not in this figure.",
+    "noCrew": "Sailed with no crew on record",
+    "noCrewNone": "No crew recorded on any departure this month",
+    "noCrewDetail": "of {back, plural, one {# boat} other {# boats}} back, listed below",
+    "noCrewTitle": "Departures that sailed with no crew on record",
+    "boardingNote": "The dock roll call won’t record a person as boarded while readiness blocks them. A seat whose readiness changed after boarding is not separated here, and a person first counted at a later checkpoint is not in this figure.",
     "incidentsTitle": "Incident reports",
     "incidentsEmpty": "No incident reports this month.",
     "openTitle": "Roll calls left open",
@@ -159,6 +196,46 @@
     "closureNone": "No roll call taken",
     "lapsedTitle": "Crew who sailed on a lapsed credential",
     "lapsedEmpty": "Nobody sailed on a lapsed credential.",
-    "noDepartures": "No departures came back this month."
+    "unrecordedTitle": "Crew who sailed with no credential for their role on file",
+    "unrecordedSailings": "{count, plural, one {# sailing} other {# sailings}} this month",
+    "noDepartures": "No departures came back this month.",
+    "year": {
+      "open": "The year",
+      "print": "Print the year",
+      "intro": "What the shop recorded on the year’s departures that are home. Lapsed credentials are read as the records stand today.",
+      "figuresLabel": "The year’s safety record",
+      "noDepartures": "No departures came back this year.",
+      "noCrewNone": "No crew recorded on any departure this year",
+      "activityLink": "The year’s safety activity",
+      "noCrewDetail": "of {back, plural, one {# boat} other {# boats}} back, listed on each month",
+      "noCrewMonths": "No crew recorded in {none} of {months, plural, one {# month} other {# months}}",
+      "rollCallsOpen": "{open, plural, one {# not closed} other {# not closed}} · {none, plural, one {# with no roll call taken} other {# with no roll call taken}}, listed on each month",
+      "boardedDetail": "{count, plural, =0 {Every seat marked at the dock} one {# seat never marked at the dock, on a roll call listed as open on its month} other {# seats never marked at the dock, on roll calls listed as open on each month}}",
+      "printedFor": "{shopName} · {start} to {end}, {year} · {zone}",
+      "printedOn": "Printed {date}",
+      "chooseYear": "Choose a year",
+      "previous": "Previous year",
+      "next": "Next year",
+      "earliestTitle": "This is your first year with departures",
+      "currentTitle": "You’re viewing the current year"
+    },
+    "incidentsValue": "{filed} filed{drafts, plural, =0 {} one { · # draft} other { · # drafts}}"
+  },
+  "discard": {
+    "title": "Delete this draft",
+    "description": "Only an owner can, and only before it is filed. It comes off this departure and the Reports page.",
+    "trigger": "Delete draft",
+    "confirm": "Yes, delete the draft",
+    "cancel": "Never mind",
+    "pending": "Deleting…",
+    "message": "Delete this draft? It leaves the screen, and its words are kept for seven years. A filed report can never be deleted."
+  },
+  "hold": {
+    "title": "Legal hold",
+    "descriptionOff": "For an open claim. Keeps this report past its seven years. Only an owner can set or release it.",
+    "descriptionOn": "On hold. This report is kept until an owner releases the hold.",
+    "set": "Put a legal hold",
+    "release": "Release the hold",
+    "pending": "Saving…"
   }
 }

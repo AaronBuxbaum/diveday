@@ -13,7 +13,8 @@ export const DIVE_SITE_TEMPLATE_SYNC_FIELDS = [
   "marineLife",
   "marineLifeDescription",
   "difficultyLevel",
-  "depthRange",
+  "snorkelSuitable",
+  "depthMinMeters",
   "maxDepthMeters",
   "expectedBottomTimeMinutes",
   "currentNote",
@@ -39,7 +40,8 @@ export type DiveSiteTemplateSnapshot = {
   marineLife: string | null;
   marineLifeDescription: string | null;
   difficultyLevel: DiveSiteDifficulty | null;
-  depthRange: string | null;
+  snorkelSuitable: boolean | null;
+  depthMinMeters: number | null;
   maxDepthMeters: number | null;
   expectedBottomTimeMinutes: number | null;
   currentNote: string | null;
@@ -71,7 +73,8 @@ export type DiveSiteTemplateSource = {
   marineLifeDescription?: string;
   difficulty?: string;
   difficultyLevel?: DiveSiteDifficulty;
-  depthRange?: string;
+  snorkelSuitable?: boolean;
+  depthMinMeters?: number;
   maxDepthMeters?: number;
   expectedBottomTimeMinutes?: number;
   currentNote?: string;
@@ -96,7 +99,8 @@ export type DiveSiteTemplateSiteRecord = {
   marineLife: string | null;
   marineLifeDescription: string | null;
   difficultyLevel: DiveSiteDifficulty | null;
-  depthRange: string | null;
+  snorkelSuitable: boolean | null;
+  depthMinMeters: number | null;
   maxDepthMeters: number | null;
   expectedBottomTimeMinutes: number | null;
   currentNote: string | null;
@@ -131,7 +135,8 @@ export function diveSiteTemplateSnapshot(source: DiveSiteTemplateSource): DiveSi
     marineLife: source.marineLife ?? null,
     marineLifeDescription: source.marineLifeDescription ?? null,
     difficultyLevel: source.difficultyLevel ?? parseDiveSiteDifficulty(source.difficulty),
-    depthRange: source.depthRange ?? null,
+    snorkelSuitable: source.snorkelSuitable ?? null,
+    depthMinMeters: source.depthMinMeters ?? null,
     maxDepthMeters: source.maxDepthMeters ?? null,
     expectedBottomTimeMinutes: source.expectedBottomTimeMinutes ?? null,
     currentNote: source.currentNote ?? null,
@@ -204,10 +209,18 @@ export function mergedDiveSiteTemplateSnapshot(
   mode: DiveSiteTemplateUpdateMode,
 ): DiveSiteTemplateSnapshot {
   if (mode === "replace-template-copy") return latest;
-  return Object.fromEntries(
+  const merged = Object.fromEntries(
     DIVE_SITE_TEMPLATE_SYNC_FIELDS.map((field) => [
       field,
       sameValue(current[field], baseline[field]) ? latest[field] : current[field],
     ]),
   ) as DiveSiteTemplateSnapshot;
+  // Two ends taken from two authors can cross: a shop's shallow end kept under a
+  // deeper point the template has since shortened. The row refuses that pair
+  // (`dive_sites_depth_range_ordered`), so the shallow end is dropped, not the update.
+  const { depthMinMeters, maxDepthMeters } = merged;
+  if (depthMinMeters !== null && (maxDepthMeters === null || depthMinMeters > maxDepthMeters)) {
+    merged.depthMinMeters = null;
+  }
+  return merged;
 }

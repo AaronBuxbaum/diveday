@@ -34,8 +34,17 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Add to the record" }).click();
     await expect(page.getByText("On the record.")).toBeVisible();
 
-    await page.getByLabel(/Apeks XTX50/).check();
+    // **A refusal keeps the paragraph** (fifth loop, item 14): sent without
+    // a piece ticked, the form comes back saying so, with the customer's
+    // words still in the box.
     await page.getByLabel("What the customer reports").fill("Second stage free-flows when wet.");
+    await page.getByRole("button", { name: "Open the work order" }).click();
+    await expect(page.getByText("Pick at least one piece.")).toBeVisible();
+    await expect(page.getByLabel("What the customer reports")).toHaveValue(
+      "Second stage free-flows when wet.",
+    );
+
+    await page.getByLabel(/Apeks XTX50/).check();
     await page.getByRole("button", { name: "Open the work order" }).click();
 
     await expect(page.getByRole("heading", { level: 1, name: "Diego Alvarez" })).toBeVisible();
@@ -199,8 +208,9 @@ test.describe("staff", () => {
       .first()
       .click();
     const card = page.getByRole("region", { name: "Bill and pickup" });
-    // Unconnected: the total and where it is paid, and no button.
-    await expect(card.getByText("Collected at the counter.")).toBeVisible();
+    // Unconnected: the total and how to record it paid at pickup, and no bill.
+    await expect(card.getByText("Paid at pickup:")).toBeVisible();
+    await expect(card.getByRole("button", { name: "Cash" })).toBeVisible();
     await expect(card.getByRole("button", { name: "Send the bill" })).toHaveCount(0);
 
     // The test double: connected and charges-enabled, without calling Stripe.

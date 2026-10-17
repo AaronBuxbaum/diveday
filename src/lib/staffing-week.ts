@@ -1,5 +1,5 @@
 import { type CalendarDate, calendarDateInTimezone } from "./calendar-date";
-import type { CourseCrewGap } from "./course-ratios";
+import { type CourseCrewGap, type CourseCrewGapCourse, courseCrewGap } from "./course-ratios";
 import {
   type AvailabilityBlock,
   blockCoversDay,
@@ -7,6 +7,12 @@ import {
   crewRequestRefusal,
   overlappingBlocks,
 } from "./crew-requests";
+import type { InWaterCrewCount } from "./crew-roles";
+import {
+  type DivemasterRatioGap,
+  divemasterRatioGap,
+  inWaterDivemasterCount,
+} from "./divemaster-ratio";
 import { hasReturned } from "./trips";
 import { weekDates } from "./week-board";
 
@@ -123,6 +129,100 @@ export function staffGapForCourseGap(gap: CourseCrewGap): StaffGapCode | null {
   if (gap.code === "no_instructor") return "no_instructor";
   if (gap.ratio === "intro") return "over_intro_ratio";
   return gap.remedy === "instructor" ? "over_ratio_instructor" : "over_ratio";
+}
+
+/** A departure's crew gap, and the two rules it was decided from. */
+export type CrewGap = {
+  /** The one code for the departure, or null when its crew is enough. */
+  code: StaffGapCode | null;
+  /** The agency training ratio's own answer, for the words a caller draws. */
+  courseGap: CourseCrewGap;
+  /** The shop's own target's answer, likewise. */
+  ratioGap: DivemasterRatioGap;
+  /** Divers aboard to supervise and nobody in the water to supervise them. */
+  uncrewed: boolean;
+};
+
+/**
+ * **The one decision of a departure's crew gap** (issue #2482), read by the
+ * staffing week (`src/db/staffing.ts`) and Today's crew rows
+ * (`src/db/today-crew-gap-rows.ts`), so the two cannot disagree about whether
+ * a boat is short. Pure: the counts come in, a code comes out.
+ *
+ * The agency training ratio first (`courseCrewGap`): a course session missing
+ * its instructor is the more precise fact, and firing the shop's own target
+ * underneath it would name one gap in two vocabularies. Then the shop's own
+ * target (`divemasterRatioGap`), which reaches every departure it runs rather
+ * than only the courses, and owns the two exemptions: a self-guided departure,
+ * and one with nobody booked. Divers only (ADR 20261007-participant-types):
+ * the ratio is a scuba-guiding ratio, and a snorkeler or a rider is not
+ * supervised underwater.
+ *
+ * **No crew outranks the instructor gap** (issue #1338). A course session with
+ * no crew at all satisfies both rules, and issue #732 settled that a departure
+ * carries one row; the course gap winning outright meant an empty boat read as
+ * "Course needs instructor", which a staffer takes to mean a divemaster is
+ * already aboard. `divemasterRatioGap` decides, not a bare zero count, because
+ * the count alone is also true where "No crew" would be wrong: a self-guided
+ * departure wants no supervisor, and one with nobody booked has no one to
+ * supervise. Both keep the instructor gap, which stays true and actionable.
+ *
+ * Which zero-crew code is the course/fun-dive split, read off `courseGap`
+ * rather than the course so the two cannot disagree: with nobody in the water
+ * `courseCrewGap` returns `no_instructor` for exactly the sessions with a
+ * course. `uncrewed_course` says both words, because only an instructor closes
+ * a course gap.
+ *
+ * Two things this is safe because of. Neither ratio code can be suppressed by
+ * the zero-crew case: both require `instructorCount >= 1`
+ * (src/lib/course-ratios.ts), which forces a non-zero in-water count. And the
+ * shop's `diversPerDivemaster` cannot route a departure between the rows: with
+ * divers aboard and nobody in the water, `ceil(divers / ratio) >= 1` across the
+ * whole legal range, so `under_target` always holds and only the two
+ * exemptions decide.
+ */
+export function crewGapFor(input: {
+  course: CourseCrewGapCourse;
+  counts: InWaterCrewCount;
+  /** Everyone booked. */
+  booked: number;
+  /**
+   * Divers only, for the shop's scuba-guiding target and a course session's
+   * ratio: its students are its divers, and a priced snorkeler or rider
+   * beside them is a passenger (G5 of #2226).
+   */
+  bookedDivers: number;
+  diversPerDivemaster: number | null;
+  selfGuided: boolean;
+}): CrewGap {
+  const courseGap = courseCrewGap({
+    course: input.course,
+    instructorCount: input.counts.instructorCount,
+    assistantCount: input.counts.assistantCount,
+    booked: input.bookedDivers,
+  });
+  const ratioGap = divemasterRatioGap({
+    divers: input.bookedDivers,
+    divemasterCount: inWaterDivemasterCount(input.counts),
+    diversPerDivemaster: input.diversPerDivemaster,
+    selfGuided: input.selfGuided,
+  });
+  const uncrewed = ratioGap.code === "under_target" && ratioGap.divemasterCount === 0;
+  const decided = (code: StaffGapCode | null): CrewGap => ({
+    code,
+    courseGap,
+    ratioGap,
+    uncrewed,
+  });
+  if (uncrewed) {
+    return decided(courseGap.code === "no_instructor" ? "uncrewed_course" : "uncrewed_departure");
+  }
+  // Through the mapper, not `courseGap.code`: the chip keeps the intro cap
+  // apart from the entry-level one (issue #1339, `staffGapForCourseGap`).
+  const courseGapCode = staffGapForCourseGap(courseGap);
+  if (courseGapCode) return decided(courseGapCode);
+  // Short of the shop's target but not empty: the zero case returned above.
+  return decided(ratioGap.code === "none" ? null : "crew_below_target");
 }
 
 /** The gap codes only another instructor's seat closes. */
@@ -248,6 +348,17 @@ export type PlacedTrip = {
   title: string;
   startsAt: Date;
   endsAt: Date;
+  /**
+   * **The shop day this window began on, when it is not this column's** (UX
+   * review 2026-10-13, item 21): a night boat out at 11:30 PM and back at 3:00
+   * AM covers both days, and its second-day chip printed "11:30 PM – 3:00 AM"
+   * above that morning's 7:00 AM boat, which read as two night boats. A chip
+   * carrying this says what is true of its own day ("until 3:00 AM · from
+   * Monday") instead of the whole window. Null on the day it starts.
+   */
+  continuesFrom: CalendarDate | null;
+  /** Whether the window ends on this column's day — false only for a middle day of a run. */
+  endsThisDay: boolean;
   awayBlocks: readonly AvailabilityBlock[];
   clashes: readonly CrewClash[];
 };
@@ -352,6 +463,39 @@ export type StaffWeekPerson = {
   days: StaffWeekPersonDay[];
 };
 
+/**
+ * **One person's week, summed** (fifth-loop ideas, item 52): "6 days · 8
+ * boats · 34 h" under each name, so the owner balancing the long-range day
+ * reads one figure instead of seven columns. Days are the columns with a
+ * shift or a crewed departure in them; boats are distinct departures; time is
+ * the union of their shifts and crewed windows, so a shift that covers the
+ * boat it works is counted once. A day away alone is not a working day.
+ */
+export type PersonWeekTotals = { days: number; boats: number; minutes: number };
+
+export function personWeekTotals(person: StaffWeekPerson): PersonWeekTotals {
+  const windows = new Map<string, { from: number; to: number }>();
+  const boats = new Set<string>();
+  let days = 0;
+  for (const day of person.days) {
+    if (day.shifts.length > 0 || day.crewing.length > 0) days += 1;
+    for (const window of [...day.shifts, ...day.crewing]) {
+      const from = window.startsAt.getTime();
+      const to = window.endsAt.getTime();
+      if (to > from) windows.set(`${from}-${to}`, { from, to });
+    }
+    for (const trip of day.crewing) boats.add(trip.tripId);
+  }
+  let minutes = 0;
+  let reach = Number.NEGATIVE_INFINITY;
+  for (const { from, to } of [...windows.values()].sort((a, b) => a.from - b.from)) {
+    const start = Math.max(from, reach);
+    if (to > start) minutes += (to - start) / 60_000;
+    reach = Math.max(reach, to);
+  }
+  return { days, boats: boats.size, minutes: Math.round(minutes) };
+}
+
 /** The gap row's cell for one day. */
 export type StaffWeekGapDay = { date: CalendarDate; gaps: PlacedGap[] };
 
@@ -448,13 +592,20 @@ function placements(
 ): { date: CalendarDate; placed: PlacedTrip }[] {
   const byDate = new Map<CalendarDate, PlacedTrip>();
   for (const meeting of [...trip.meetings].sort(byStart)) {
-    for (const date of daysCovered(meeting, timeZone, dates)) {
+    const covered = daysCovered(meeting, timeZone, dates);
+    const startDay = calendarDateInTimezone(meeting.startsAt, timeZone);
+    const lastDay = covered[covered.length - 1];
+    for (const date of covered) {
       if (byDate.has(date)) continue;
       byDate.set(date, {
         tripId: trip.tripId,
         title: trip.title,
         startsAt: meeting.startsAt,
         endsAt: meeting.endsAt,
+        continuesFrom: date === startDay ? null : startDay,
+        endsThisDay:
+          date === lastDay &&
+          calendarDateInTimezone(new Date(meeting.endsAt.getTime() - 1), timeZone) === date,
         awayBlocks,
         clashes: clashesFor(meeting),
       });

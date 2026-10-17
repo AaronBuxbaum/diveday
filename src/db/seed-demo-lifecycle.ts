@@ -11,6 +11,7 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  boatSnags,
   boats,
   bookingArrivalEvents,
   bookingCapabilities,
@@ -32,6 +33,7 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   customerGearItems,
+  departureBoatSafetySnapshots,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -44,6 +46,7 @@ import {
   gearServiceEvents,
   importedPaymentHistory,
   inboundMessages,
+  inboxSavedAnswers,
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
@@ -84,6 +87,7 @@ import {
   shopIntegrations,
   shopPromoCodes,
   shopPromoRedemptions,
+  shopShoreAlertTokens,
   shopStripeAccounts,
   shopSubscriptions,
   shops,
@@ -218,7 +222,12 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   // Events before the shop's own item list they reference.
+  // A snag names its boat, its departures and its checklist line, none cascading.
+  await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
+  await db
+    .delete(departureBoatSafetySnapshots)
+    .where(eq(departureBoatSafetySnapshots.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   await db.delete(preDepartureChecklistItems).where(eq(preDepartureChecklistItems.shopId, shopId));
   // The close-out trail references people and the shop, so it must clear
@@ -235,6 +244,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // The inbox: replies before the messages and people they name.
   await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
+  await db.delete(inboxSavedAnswers).where(eq(inboxSavedAnswers.shopId, shopId));
   // Course forms, children first (records → requirements → versions → forms).
   await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
   await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));
@@ -311,13 +321,16 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
 
   // People-scoped records and the shop's own catalog/config.
-  await db.delete(certifications).where(eq(certifications.shopId, shopId));
+  // Nitrox and specialty rows first: a card an agency check listed points at
+  // the level card whose page listed it (`listed_from_certification_id`).
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
+  await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
+  // Retired (#2330) but still declared: an old row would hold its site's FK.
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   // A species request points at the site the staffer was writing when they hit
@@ -359,6 +372,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db
     .delete(shopContactEmailConfirmationTokens)
     .where(eq(shopContactEmailConfirmationTokens.shopId, shopId));
+  // The shore contact's links (H-118), the same shape and the same 23503.
+  await db.delete(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shopId));
   /*
    * Seven shop-scoped tables that reference `shops` (and most of them `people`)
    * with no `ON DELETE CASCADE`, so a minted demo carrying any of them made the

@@ -11,9 +11,17 @@ import {
   replyDestination,
   whatsAppReplyWindowOpen,
 } from "@/lib/inbox";
+import {
+  type SavedAnswerChip,
+  SavedAnswerChips,
+} from "../../../inbox/_components/SavedAnswerChips";
+import { SaveThisAnswer } from "../../../inbox/_components/SaveThisAnswer";
 import { replyToDiverAction } from "../details-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
+
+/** The answers to a send that left a reply on the record (`sendStaffReply`). */
+const RECORDED_SEND_CODES = new Set(["reply-sent", "reply-send-failed", "reply-not-configured"]);
 
 /**
  * **The conversation** — what this diver wrote to the shop and what the shop
@@ -42,6 +50,9 @@ export function ConversationSection({
   removed,
   t,
   status,
+  savedAnswers = [],
+  fill = { name: null, trip: null },
+  saveAnswerAction,
 }: {
   entries: ThreadEntry[];
   diverName: string;
@@ -59,12 +70,20 @@ export function ConversationSection({
   removed: boolean;
   t: StaffTranslator;
   status?: DiverNotice;
+  /** The shop's saved answers, as chips above the reply box (fifth loop, item 15). */
+  savedAnswers?: readonly SavedAnswerChip[];
+  /** What a chip fills `{name}` and `{trip}` with on this record. */
+  fill?: { name: string | null; trip: string | null };
+  /** "Save this answer", offered under a reply that just went out. */
+  saveAnswerAction?: (formData: FormData) => Promise<void>;
 }) {
   if (entries.length === 0) return null;
 
   const inbound = entries.filter((entry) => entry.direction === "inbound");
   const unanswered = inbound.filter((entry) => entry.message.answeredAt === null).length;
-  const latest = inbound.at(-1);
+  // An "Ask to move" from the booking page (H-126) sits in the thread but is
+  // nothing to answer *on*: the composer answers the last thing they wrote.
+  const latest = inbound.filter((entry) => entry.message.channel !== "page").at(-1);
   const latestWhatsApp = inbound.filter((entry) => entry.message.channel === "whatsapp").at(-1);
   // A typed WhatsApp reply is only accepted for 24 hours after the diver's own
   // last WhatsApp message — measured from that message, not from the one being
@@ -83,6 +102,14 @@ export function ConversationSection({
   // Nothing to answer *on*: SMS is recorded and cannot be answered yet, and a
   // closed WhatsApp window is the case worth a sentence.
   const closedWhatsApp = Boolean(latest && latest.message.channel === "whatsapp" && !whatsAppOpen);
+  // The reply just written, for "Save this answer": only on the answer to a
+  // send that recorded one, so the offer is about words the reader has just
+  // typed. Whether the provider took it does not change the words, so a send
+  // that did not go out may still be kept.
+  const justSent =
+    status?.code && RECORDED_SEND_CODES.has(status.code) && saveAnswerAction
+      ? entries.filter((entry) => entry.direction === "outbound").at(-1)
+      : undefined;
 
   return (
     <DiverFileGroupDisclosure
@@ -102,10 +129,17 @@ export function ConversationSection({
           const key = entry.direction === "inbound" ? entry.message.id : `reply-${entry.reply.id}`;
           const meta =
             entry.direction === "inbound"
-              ? t("inbox.thread.received", {
-                  name: diverName,
-                  date: formatDateTimeTz(entry.message.receivedAt, locale, timezone),
-                })
+              ? t(
+                  // An "Ask to move" (H-126) is a button, not words: the
+                  // line says what was asked, and a note follows if any.
+                  entry.message.channel === "page"
+                    ? "inbox.thread.askedToMove"
+                    : "inbox.thread.received",
+                  {
+                    name: diverName,
+                    date: formatDateTimeTz(entry.message.receivedAt, locale, timezone),
+                  },
+                )
               : // A reply with no staffer behind it is one DiveDay sent on the
                 // shop's behalf — a reply-keyword confirmation (ADR
                 // 20260909-reply-keywords). Named as that rather than as
@@ -131,11 +165,13 @@ export function ConversationSection({
             >
               <p className="text-sm text-muted">{meta}</p>
               {/* Their words and the shop's, as typed. */}
-              <p
-                className={`mt-1 whitespace-pre-wrap ${entry.direction === "outbound" ? "text-muted" : ""}`.trim()}
-              >
-                {body}
-              </p>
+              {body.trim() ? (
+                <p
+                  className={`mt-1 whitespace-pre-wrap ${entry.direction === "outbound" ? "text-muted" : ""}`.trim()}
+                >
+                  {body}
+                </p>
+              ) : null}
               {entry.direction === "outbound" && entry.reply.status !== "sent" ? (
                 <p className="mt-1 text-sm text-danger">{t("inbox.thread.sendFailed")}</p>
               ) : null}
@@ -146,13 +182,21 @@ export function ConversationSection({
           {replyTo ? (
             <form action={replyToDiverAction.bind(null, shopSlug, personId)} className="grid gap-3">
               <input type="hidden" name="messageId" value={replyTo.message.id} />
+              <SavedAnswerChips
+                answers={savedAnswers}
+                fill={fill}
+                label={t("inbox.savedAnswers.heading")}
+              />
               <Field
                 label={t(
                   replyTo.message.channel === "whatsapp"
                     ? "inbox.reply.whatsapp"
                     : "inbox.reply.email",
                   {
-                    address: replyDestination(replyTo.message.channel, replyTo.message.fromAddress),
+                    address: replyDestination(
+                      replyTo.message.channel === "whatsapp" ? "whatsapp" : "email",
+                      replyTo.message.fromAddress,
+                    ),
                   },
                 )}
               >
@@ -182,6 +226,16 @@ export function ConversationSection({
             <p className="text-sm text-muted">{t("inbox.reply.diverRemoved")}</p>
           ) : closedWhatsApp ? (
             <p className="text-sm text-muted">{t("inbox.reply.windowClosed")}</p>
+          ) : null}
+          {justSent?.direction === "outbound" && saveAnswerAction ? (
+            <div className="mt-3">
+              <SaveThisAnswer
+                replyId={justSent.reply.id}
+                action={saveAnswerAction}
+                label={t("inbox.savedAnswers.save")}
+                pendingLabel={t("inbox.savedAnswers.saving")}
+              />
+            </div>
           ) : null}
           <FieldActions>
             <DiverFormStatus status={status} />

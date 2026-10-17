@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
-import { arrivalCardFacts, siteRunsLine, TripArrivalCard } from "./TripArrivalCard";
+import {
+  arrivalCardFacts,
+  arrivalDockCallLine,
+  siteRunsLine,
+  TripArrivalCard,
+} from "./TripArrivalCard";
 
 afterEach(cleanup);
 
@@ -145,37 +151,34 @@ describe("the Sites row", () => {
 });
 
 /**
- * **The dock call is on the card** (issue #2034). The card is what a diver has
- * offline at the dock, and a diver reading only the departure range would
- * arrive as the boat leaves. Same sentence and same minute `/ready` gives:
- * the trip sails 9:00 AM New York time, so a 30-minute call is 8:30.
+ * **The dock call is said once** (fifth-loop ideas, item 23). `/ready`'s
+ * masthead says "Aim to be at the dock by 8:30 AM"; this card, two screens
+ * down, used to repeat the date, the range and the same sentence. It keeps
+ * where to go. The saved card still says the dock call (issue #2034), through
+ * `arrivalDockCallLine`, because it travels without the masthead: the trip
+ * sails 9:00 AM New York time, so a 30-minute call is 8:30.
  */
-describe("the dock-call line", () => {
-  it("names when to be at the dock, in the shop's zone, beside the departure range", () => {
-    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" dockCallMinutes={30} />);
-    expect(
-      screen.getByText("Aim to be at the dock by 8:30 AM, 30 minutes before we sail."),
-    ).toBeInTheDocument();
-    // The departure range stays, beside it.
-    expect(screen.getByText(/9:00.*1:00\sPM/)).toBeInTheDocument();
+describe("the dock call", () => {
+  it("is not on the card: no date, no range, no dock sentence", () => {
+    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
+    expect(screen.getByText("Blue Mantis Divers")).toBeInTheDocument();
+    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/9:00.*1:00\sPM/)).not.toBeInTheDocument();
   });
 
-  it("speaks the diver's language", () => {
-    render(<TripArrivalCard shop={shop} trip={trip} locale="es-ES" dockCallMinutes={45} />);
+  it("is the saved card's line, in the shop's zone and the diver's language", () => {
     expect(
-      screen.getByText("Procura estar en el muelle a las 8:15, 45 minutos antes de zarpar."),
-    ).toBeInTheDocument();
+      arrivalDockCallLine(diverTranslator("en-US"), trip.startsAt, 30, "en-US", shop.timezone),
+    ).toBe("Aim to be at the dock by 8:30\u00a0AM, 30 minutes before we sail.");
+    expect(
+      arrivalDockCallLine(diverTranslator("es-ES"), trip.startsAt, 45, "es-ES", shop.timezone),
+    ).toBe("Procura estar en el muelle a las 8:15, 45 minutos antes de zarpar.");
   });
 
-  it("says nothing when the shop asks for no lead time, or the caller passes none", () => {
-    const { rerender } = render(
-      <TripArrivalCard shop={shop} trip={trip} locale="en-US" dockCallMinutes={0} />,
-    );
-    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
-    rerender(<TripArrivalCard shop={shop} trip={trip} locale="en-US" dockCallMinutes={null} />);
-    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
-    rerender(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
-    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
+  it("says nothing when the shop asks for no lead time, or none is known", () => {
+    const t = diverTranslator("en-US");
+    expect(arrivalDockCallLine(t, trip.startsAt, 0, "en-US", shop.timezone)).toBeNull();
+    expect(arrivalDockCallLine(t, trip.startsAt, null, "en-US", shop.timezone)).toBeNull();
   });
 });
 
@@ -195,6 +198,31 @@ describe("the map", () => {
     return document.querySelector("iframe");
   }
 
+  // The frame waits for the map host to answer a probe image (`ArrivalMap`,
+  // fourth UX review item 4); these cases answer it, as a reachable host does.
+  const probes: { onload: (() => void) | null }[] = [];
+  class FakeImage {
+    src = "";
+    referrerPolicy = "";
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor() {
+      probes.push(this);
+    }
+  }
+  beforeEach(() => {
+    probes.length = 0;
+    vi.stubGlobal("Image", FakeImage);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  function hostAnswers() {
+    act(() => {
+      for (const probe of probes) probe.onload?.();
+    });
+  }
+
   it("draws nothing unless the caller asks", () => {
     render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
     expect(mapFrame()).toBeNull();
@@ -202,6 +230,7 @@ describe("the map", () => {
 
   it("draws the meeting point, titled by the place rather than the shop", () => {
     render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />);
+    hostAnswers();
     const frame = mapFrame();
     expect(frame).not.toBeNull();
     expect(frame?.getAttribute("title")).toBe("Map of Blue Mantis Divers");
@@ -224,6 +253,7 @@ describe("the map", () => {
         showMap
       />,
     );
+    hostAnswers();
     expect(mapFrame()?.getAttribute("title")).toBe("Map of North Jetty");
   });
 
@@ -238,6 +268,31 @@ describe("the map", () => {
     );
     expect(mapFrame()).toBeNull();
     expect(screen.getByAltText(/Blue Mantis Divers/)).toBeInTheDocument();
+  });
+
+  it("is never in the server's HTML, the copy a phone keeps for the marina", () => {
+    // A frame with no signal is 16:9 of gray above the address (third UX
+    // review, item 27); the saved page carries the address and the link alone.
+    const html = renderToString(<TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />);
+    expect(html).not.toContain("<iframe");
+    expect(html).toContain("100 Ocean Drive");
+  });
+
+  it("steps aside when the connection drops, and comes back with it", () => {
+    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" showMap />);
+    hostAnswers();
+    expect(mapFrame()).not.toBeNull();
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    act(() => {
+      window.dispatchEvent(new Event("offline"));
+    });
+    expect(mapFrame()).toBeNull();
+    onLine.mockReturnValue(true);
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(mapFrame()).not.toBeNull();
+    onLine.mockRestore();
   });
 
   it("draws nothing where no honest query can be built", () => {

@@ -65,7 +65,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch'
       || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -73,7 +73,7 @@ jobs:
       # X-Accepted-Github-Permissions header on the probe's 422.
       pull-requests: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # No `./.github/actions/setup`: this script imports nothing outside Node's
       # standard library, so the runner's own Node runs it in a second rather
       # than paying an install for a file that makes three API calls.

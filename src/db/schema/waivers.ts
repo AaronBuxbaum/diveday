@@ -15,6 +15,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { notificationDeliveryStatus, notificationProviderStatus } from "./notifications";
 
@@ -45,7 +46,7 @@ export const waiverTemplates = pgTable(
     body: text("body").notNull(),
     /** Soft delete, spelled the one way every other entity spells it (ADR 20260820-every-delete-is-soft). */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // A shop has exactly one waiver — versions increment per shop, not per
@@ -72,7 +73,7 @@ export const waiverMaterialityDecisions = pgTable(
     actorPersonId: uuid("actor_person_id")
       .notNull()
       .references(() => people.id),
-    decidedAt: timestamp("decided_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: appNowTimestamp("decided_at").notNull(),
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [index("waiver_materiality_decisions_shop_idx").on(table.shopId, table.templateId)],
@@ -408,6 +409,15 @@ export const waiverRecords = pgTable(
      * erasure is inside the seal rather than an unsealed annotation beside it.
      */
     anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
+    /**
+     * Wrong dates of birth typed on the doctor's page to unlock this release's
+     * referral answers (`revealDoctorReferral`). At
+     * `DOCTOR_UNLOCK_FAILURE_LIMIT` the answers stay locked for the rest of
+     * the hold: a ceiling for the life of the record, which a refilling rate
+     * limit cannot give (second-pass security review of layer r5-3, FIX-1).
+     * Outside the seal; a count of attempts, not evidence.
+     */
+    doctorUnlockFailures: integer("doctor_unlock_failures").notNull().default(0),
     /** The shop owner who ordered the erasure — see `people.anonymized_by_person_id`. */
     anonymizedByPersonId: uuid("anonymized_by_person_id").references(() => people.id),
     /**
@@ -425,9 +435,14 @@ export const waiverRecords = pgTable(
     movedFromPersonId: uuid("moved_from_person_id").references(() => people.id),
     movedAt: timestamp("moved_at", { withTimezone: true }),
     movedByPersonId: uuid("moved_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("waiver_records_person_id_idx").on(table.personId),
     index("waiver_records_booking_current_idx").on(table.bookingId, table.supersededAt),
     index("waiver_records_shop_status_idx").on(table.shopId, table.status),
     // The per-person carry-forward lookup: a diver's completed releases at a shop.
@@ -541,7 +556,7 @@ export const waiverDeliveries = pgTable(
     /** The provider's own words for a bounce or failure. */
     detail: text("detail"),
     attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     // Current state, not history: a second email on the same link replaces the

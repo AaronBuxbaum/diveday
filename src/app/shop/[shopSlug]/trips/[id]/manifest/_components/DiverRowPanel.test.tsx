@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { diverBlockerText } from "./DiverFacts";
 import { DiverRowPanel } from "./DiverRowPanel";
 import {
   dangerToned,
@@ -11,6 +12,7 @@ import {
   t,
 } from "./diver-roll-call-test-fixtures";
 import { diverRowState } from "./diver-row-state";
+import type { MissingReportAction } from "./MissingReportButton";
 
 afterEach(cleanup);
 
@@ -189,6 +191,37 @@ describe("DiverRowPanel, drawn on its own", () => {
     );
   });
 
+  /**
+   * **A medical hold the capsule lost still has a home** (#2380 review). After a
+   * dive a split team outranks the hold, the dock's blocker list is gone, and the
+   * waiver fact is empty for a referred or refused record — so the panel says it.
+   */
+  it("names a medical hold that a split team took the capsule from", () => {
+    const boardedOver = diver({
+      boardedEarlier: true,
+      readiness: { status: "blocked", blockers: [{ code: "medical_not_cleared" }] },
+      buddyAlert: "separated_after_dive",
+      buddyTeam: { teamId: "t-1", others: [] },
+    });
+    const state = diverRowState(boardedOver, "after_dive_1", false, "America/New_York");
+    expect(state.capsuleKind).toBe("buddy");
+    const { container } = render(
+      <DiverRowPanel
+        context={diverContext({ divers: [boardedOver] })}
+        diver={boardedOver}
+        state={state}
+        sharedAdvisoryTexts={new Set()}
+        bookingNotes={[]}
+      />,
+    );
+    expect(container).toHaveTextContent(
+      diverBlockerText(t, boardedOver, { code: "medical_not_cleared" }),
+    );
+    // Warning, never the dock's red: after a dive readiness gates nothing.
+    expect(dangerToned(container)).toHaveLength(0);
+    expect(screen.queryByRole("link", { name: t("manifest.resolveBlockersLink") })).toBeNull();
+  });
+
   it("offers the way back aboard only to a diver recorded not back", () => {
     const missing = diver({ rollCall: notBackAt() });
     render(
@@ -204,5 +237,65 @@ describe("DiverRowPanel, drawn on its own", () => {
     expect(
       screen.getAllByRole("button").some((button) => /back aboard/i.test(button.textContent ?? "")),
     ).toBe(true);
+  });
+});
+
+/**
+ * Safety sheet 2026-10-15, item 2: a row marked not back aboard is where the
+ * missing diver report starts, for the people who may start one, and nowhere
+ * else.
+ */
+describe("the missing diver report starts from the row that raised it", () => {
+  const start = () => screen.queryByRole("button", { name: /Start a missing diver report/ });
+
+  function renderPanel(
+    rollCall: ReturnType<typeof notBackAt> | undefined,
+    startMissingDiverReport: MissingReportAction | null,
+    checkpoint: "departure" | "after_dive_1" = "after_dive_1",
+  ) {
+    const row = diver({ bookingId: "b-9", fullName: "Hugo Brandt", rollCall });
+    render(
+      <DiverRowPanel
+        context={diverContext({
+          divers: [row],
+          checkpoint,
+          isDeparture: checkpoint === "departure",
+          startMissingDiverReport,
+        })}
+        diver={row}
+        state={diverRowState(row, checkpoint, checkpoint === "departure", "America/New_York")}
+        sharedAdvisoryTexts={new Set()}
+        bookingNotes={[]}
+      />,
+    );
+  }
+
+  it("offers it, named for the diver, on a row marked not back aboard", () => {
+    renderPanel(
+      notBackAt(),
+      vi.fn(async () => null),
+    );
+    expect(start()).toHaveAccessibleName(`${t("incidents.missingDiver.start")} — Hugo Brandt`);
+  });
+
+  it("offers nothing to a reader who may not start a report", () => {
+    renderPanel(notBackAt(), null);
+    expect(start()).toBeNull();
+  });
+
+  it("offers nothing on a row that is not missing, or at the dock", () => {
+    renderPanel(
+      undefined,
+      vi.fn(async () => null),
+    );
+    expect(start()).toBeNull();
+    cleanup();
+    // At the dock "not boarded" is "never left": no missing diver.
+    renderPanel(
+      notBackAt(),
+      vi.fn(async () => null),
+      "departure",
+    );
+    expect(start()).toBeNull();
   });
 });

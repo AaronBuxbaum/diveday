@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
-import { eq, getTableName, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { RETENTION_DAYS, type RetainedTable, UNBOUNDED_BY_DECISION } from "@/lib/retention";
 import { fileScopedShopContext } from "@/test/db";
+import { schemaTableNames } from "@/test/schema-tables";
 import { setBookingPayment } from "./payments";
 import { PRUNE_ARMS, pruneExpiredRecords } from "./retention";
 import * as schema from "./schema";
@@ -18,6 +19,7 @@ import {
   tripReadMarks,
   userAccounts,
 } from "./schema";
+import { insertShoreAlertToken } from "./shore-alert-test-fixtures";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -679,6 +681,8 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.shopContactEmailConfirmationTokens.id }),
     ),
+  shop_shore_alert_tokens: async ({ db, shop }, at) =>
+    insertShoreAlertToken(db, { shopId: shop.id, tokenHash: token(), createdAt: at }),
   booking_capabilities: async ({ db, shop, entry }, at, n) =>
     idOf(
       await db
@@ -929,25 +933,6 @@ describe("every retention window deletes", () => {
 });
 
 /**
- * Every table in the schema, by its database name.
- *
- * `getTableName` throws on everything the schema module exports that is not a
- * table — the enums and the views — which is how they are skipped, the same
- * way `export.test.ts` and `erasure-coverage.test.ts` skip them.
- */
-function schemaTableNames(): string[] {
-  return Object.values(schema)
-    .map((value) => {
-      try {
-        return getTableName(value as Parameters<typeof getTableName>[0]);
-      } catch {
-        return null;
-      }
-    })
-    .filter((name): name is string => typeof name === "string");
-}
-
-/**
  * Tables retention does not govern — and a list that has to be edited by hand
  * for every table added to the schema, which is the price of the guard below.
  *
@@ -974,7 +959,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "courses",
   "dive_sites",
   "dive_site_creatures",
-  "dive_site_moments",
+  "dive_site_moments", // retired (#2330), dropped in a later release
   "waiver_templates",
   "shop_promo_codes",
   "dive_packages",
@@ -983,6 +968,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "gear_items",
   "trip_series",
   "trip_series_crew",
+  "inbox_saved_answers", // kept until a staffer deletes one, like waiver templates
   "trip_series_skips",
   "trip_schedule_days",
   // DiveDay's own shared catalogue, and a shop asking for an addition to it.
@@ -1028,8 +1014,10 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // departures rather than the calendar.
   "trips",
   "trip_dives",
-  "trip_change_events",
   "executed_dives",
+  // A boat's open problem is current state until somebody says it is fixed,
+  // and a fixed one is part of that boat's history, read like a logged dive.
+  "boat_snags",
   "trip_sightings",
   "trip_assignments",
   "trip_help_requests",
@@ -1039,6 +1027,8 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_last_minute_promo_recipients",
   "trip_blowouts",
   "trip_blowout_divers",
+  // One row per departure, read as part of its departure log (#2300).
+  "departure_boat_safety_snapshots",
   // What the bench told a customer and the orders it raised (ADR
   // 20261008-work-order-follow-up). Read with the ticket or the piece they are
   // about, which the shop keeps; a reminder row is also what stops a second
@@ -1064,7 +1054,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "recap_photos",
   "trip_recap_photos",
   "trip_reviews",
-  "review_moderation_events",
   // The shop's public reply under a review (batch 4, K2): lives as long as the
   // review it answers, and goes the way the review goes.
   "review_replies",
@@ -1093,16 +1082,13 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "orders",
   "order_line_items",
   "tips",
-  // A card dispute on one of those orders or checkouts: one mutable row per
-  // dispute, kept current by Stripe, the shop's books like the order it is
-  // about (ADR 20261009-stripe-reversals-reach-diveday). Not a trail.
+  // A card dispute on one of those orders or checkouts: one mutable row per dispute,
+  // kept current by Stripe (ADR 20261009-stripe-reversals-reach-diveday). Not a trail.
   "payment_disputes",
-  // A payout to the shop's bank: one mutable row per Stripe payout, the books
-  // a bank statement is reconciled against (ADR 20261012-payouts-reach-diveday).
+  // A payout to the shop's bank, one row per Stripe payout (ADR 20261012-payouts-reach-diveday).
   "stripe_payouts",
-  // A refund Stripe reported failed after accepting it (issue #2291): one row
-  // per Stripe refund, the books' record that money said to have gone back
-  // did not, owed until it is refunded again. The shop's books, not a trail.
+  // A refund Stripe reported failed after accepting it (issue #2291): one row per
+  // Stripe refund, owed until it is refunded again. The shop's books, not a trail.
   "stripe_refund_failures",
   "dive_package_entitlements",
   "shop_promo_redemptions",

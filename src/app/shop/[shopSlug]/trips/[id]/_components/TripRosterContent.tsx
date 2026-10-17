@@ -1,30 +1,36 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { ActivityLog } from "@/components/ActivityLog";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { ScrollToHash } from "@/components/ScrollToHash";
+import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripGuests } from "@/db/trips";
 import { activityLine } from "@/i18n/activity-labels";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
+import type { MarkRetry } from "@/lib/payment-marks";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
+import { carryTargetLabel } from "./carry-target-label";
+import { DealLeadTime } from "./DealLeadTime";
 import { DepartureNoteSection } from "./DepartureNoteSection";
+import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
-import type { RosterActions, RosterRecord } from "./roster-model";
+import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -36,32 +42,48 @@ export type TripRosterActions = {
   addExistingDiverAction: FormAction;
   addToWaitlistAction: FormAction;
   createDirectTripInvitationAction: FormAction;
+  invitePastDiverAction: FormAction;
   /** A reducer, not a plain `FormAction`: a refused paper release answers in
    * the form with the typed values rather than redirecting (issue #1674). */
   markRosterWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: FormAction;
+  previewPartyPaymentAction: FormAction;
+  markPartyPaidAction: FormAction;
   removeBookingAction: FormAction;
+  moveSeat?: SeatMove;
+  /** The demand banner's "Carry the wait list" (third UX review, item 12). */
+  carryWaitlistAction?: FormAction;
   setParticipantTypeAction: FormAction;
   confirmDiverIdentityAction: FormAction;
   splitDiverIdentityAction: FormAction;
+  repointDiverIdentityAction: FormAction;
   /** Drawn only for an owner or manager (`canRetireMedicalRefusal`). */
   sendNewWaiverAction?: FormAction;
   certifyDiverAction?: FormAction;
   saveCourseNextStepAction?: FormAction;
+  markCardProcessedAction?: FormAction;
   setCourseMaterialsDoneAction?: FormAction;
   elearningCheckAction?: RosterActions["elearningCheckAction"];
+  agencyCheckAction?: RosterActions["agencyCheckAction"];
+  agencyListedAction?: RosterActions["agencyListedAction"];
   addInternalNoteAction: FormAction;
   deleteInternalNoteAction: FormAction;
   saveRosterEmergencyContactAction: FormAction;
   updateBookingPickupAction: (bookingId: string, formData: FormData) => void | Promise<void>;
+  updateBookingDietaryNoteAction: (bookingId: string, formData: FormData) => void | Promise<void>;
   recordTripInvitationAction: (invitationId: string) => Promise<"sent" | "fallback">;
   undoRemoveBookingAction: FormAction;
   restoreInternalNoteAction: FormAction;
+  /** Absent on a course session, and for a staffer who may not configure trips. */
+  markTrainingDiveAction?: FormAction;
+  clearTrainingDiveAction?: FormAction;
 };
 
 /** Everything `TripRosterContent` draws, assembled once by its caller and handed over as one object. */
 export type TripRosterContentContext = {
   guests: TripGuests;
+  /** A guide in the water is rostered (`overview.crew.inWaterCrew`): the decompression reminder covers them too. */
+  inWaterCrew?: { instructorCount: number; assistantCount: number };
   shopSlug: string;
   shopName: string;
   locale: string;
@@ -77,6 +99,10 @@ export type TripRosterContentContext = {
   confirmPhone?: string;
   undoBookingId?: string;
   keepOpenBookingId?: string;
+  /** A refused Paid mark, to reopen the sheet holding what was typed (issue #2607). */
+  paymentMarkRetry?: { bookingId: string } & MarkRetry;
+  /** A party payment waiting on its confirm (issue #2605). */
+  partyPreview?: PartyPreview;
   /** The seat whose paper release was refused for a namesake co-signer (#1573). */
   namesakeRefusedBookingId?: string;
   /** The seat whose change into diving the card check just refused. */
@@ -84,8 +110,6 @@ export type TripRosterContentContext = {
   mayWriteOffPayment: boolean;
   /** Whether this staffer may raise an invoice — see `RosterSection`. */
   canManageOrders: boolean;
-  /** The canonical Trip surface already owns the masthead capacity read. */
-  compact?: boolean;
   /**
    * What reads as the roster's consequence rather than its footnote — on the
    * departure page, the packing list derived from these very seats.
@@ -107,6 +131,8 @@ export type TripRosterContentContext = {
    * invite control is drawn at all (owner, 2026-10-06).
    */
   acceptsDivers: boolean;
+  /** The live roles may send a wait-list invite (`waitlist_seat`'s audience), as the action will. */
+  mayInviteFromWaitlist: boolean;
   actions: TripRosterActions;
 };
 
@@ -132,16 +158,19 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     confirmPhone,
     undoBookingId,
     keepOpenBookingId,
+    paymentMarkRetry,
+    partyPreview,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
     mayWriteOffPayment,
     canManageOrders,
-    compact = false,
     afterRoster = null,
     arrival,
     record,
+    inWaterCrew,
     walkInOpen = false,
     acceptsDivers,
+    mayInviteFromWaitlist,
     actions,
   } = context;
   const t = staffTranslator(locale);
@@ -212,12 +241,26 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           >
             {t("trips.guests.scheduleAnotherDeparture")}
           </Link>
+          {actions.carryWaitlistAction &&
+          actions.moveSeat?.targets.length &&
+          !actions.moveSeat.departed ? (
+            <CarryWaitlistForm
+              action={actions.carryWaitlistAction}
+              targets={actions.moveSeat.targets}
+              t={t}
+            />
+          ) : null}
         </section>
       ) : null}
 
       <RosterSection
         trip={{
           shopSlug,
+          rehearsal: trip.isRehearsal,
+          exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
+          divingCrew: Boolean(
+            inWaterCrew && inWaterCrew.instructorCount + inWaterCrew.assistantCount > 0,
+          ),
           shopTimezone: timezone,
           locale,
           tripId: trip.id,
@@ -234,8 +277,6 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           certifyDefaultLevel: guests.certifyDefaultLevel,
           courseHasMaterials: guests.courseHasMaterials,
           courseMaterialsOpen: guests.courseMaterialsOpen,
-          compact,
-          showSummaryHeading: !compact,
         }}
         rows={{
           roster,
@@ -246,71 +287,128 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           notesByBooking,
           courseNextStepByBooking,
           elearningQueryByBooking: guests.elearningQueryByBooking,
+          elearningChecksOff: guests.elearningChecksOff,
+          agencyCheckCardsByPerson: guests.agencyCheckCardsByPerson,
+          issuedCardByPerson: guests.issuedCardByPerson,
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
+          aboardAtSea: guests.aboardAtSea,
+          sameNamePeople: guests.sameNamePeople,
+          dependentCharters: guests.dependentCharters,
+          trainingMarks: guests.trainingMarks,
           heldSeatLastDiveDay: guests.heldSeatLastDiveDay,
           packageDivesByBooking: guests.packageDivesByBooking,
+          paymentMarksByBooking: guests.paymentMarksByBooking,
           keepOpenBookingId,
+          paymentMarkRetry,
+          partyPreview,
           namesakeRefusedBookingId,
           participantTypeCertBookingId,
         }}
         actions={{
           markRosterWaiverInPersonAction: actions.markRosterWaiverInPersonAction,
           markPaymentAction: actions.markPaymentAction,
+          previewPartyPaymentAction: actions.previewPartyPaymentAction,
+          markPartyPaidAction: actions.markPartyPaidAction,
           removeBookingAction: actions.removeBookingAction,
+          moveSeat: actions.moveSeat,
           setParticipantTypeAction: actions.setParticipantTypeAction,
           confirmIdentityAction: actions.confirmDiverIdentityAction,
           splitIdentityAction: actions.splitDiverIdentityAction,
+          repointIdentityAction: actions.repointDiverIdentityAction,
           sendNewWaiverAction: actions.sendNewWaiverAction,
           addNoteAction: actions.addInternalNoteAction,
           deleteNoteAction: actions.deleteInternalNoteAction,
           saveEmergencyContactAction: actions.saveRosterEmergencyContactAction,
           certifyDiverAction: guests.certifies ? actions.certifyDiverAction : undefined,
           saveCourseNextStepAction: actions.saveCourseNextStepAction,
+          markCardProcessedAction: actions.markCardProcessedAction,
           setCourseMaterialsDoneAction: guests.courseHasMaterials
             ? actions.setCourseMaterialsDoneAction
             : undefined,
           elearningCheckAction: guests.courseHasMaterials
             ? actions.elearningCheckAction
             : undefined,
+          // A finished departure is its record: nothing on it is checked.
+          agencyCheckAction: record ? undefined : actions.agencyCheckAction,
+          agencyListedAction: record ? undefined : actions.agencyListedAction,
           // A course form signed on paper (ADR 20261008-course-forms). Bound
           // here rather than on the page: only a seat that owes a form draws it.
           recordPaperCourseFormAction: recordPaperCourseFormAction.bind(null, shopSlug, trip.id),
+          // A training dive on a charter (issue #2275). Never on a finished
+          // departure: its ledger is the record.
+          markTrainingDiveAction: record ? undefined : actions.markTrainingDiveAction,
+          clearTrainingDiveAction: record ? undefined : actions.clearTrainingDiveAction,
           updatePickupAction: actions.updateBookingPickupAction,
+          // Only a departure that serves lunch aboard asks for a lunch note.
+          updateDietaryNoteAction: trip.lunchAboard
+            ? actions.updateBookingDietaryNoteAction
+            : undefined,
         }}
         slots={{
           arrival,
           record,
           waitingGroup:
             waitlist.length > 0 ? (
-              <WaitlistGroup
-                waitlist={waitlist}
-                shopSlug={shopSlug}
-                tripId={trip.id}
-                shopName={shopName}
-                tripTitle={trip.title}
-                tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
-                certificationSummaries={certificationSummaries}
-                departureRequirement={dealRequirement}
-                locale={locale}
-                timezone={timezone}
-                canInvite={acceptsDivers}
-              />
+              <>
+                <WaitlistGroup
+                  waitlist={waitlist}
+                  shopSlug={shopSlug}
+                  tripId={trip.id}
+                  shopName={shopName}
+                  tripTitle={trip.title}
+                  tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
+                  certificationSummaries={certificationSummaries}
+                  departureRequirement={dealRequirement}
+                  locale={locale}
+                  timezone={timezone}
+                  canInvite={acceptsDivers && mayInviteFromWaitlist}
+                />
+                {/* **One waiting diver is worth carrying too** (fourth review,
+                    item 31). The demand banner, and the carry door inside it,
+                    wait for a cluster; a full boat with one lead offered
+                    staff only an invite to a boat with no seat. Under the list
+                    it is about, whenever the banner is not standing. */}
+                {!demand &&
+                isFull(seatsOnSale(trip)) &&
+                actions.carryWaitlistAction &&
+                actions.moveSeat?.targets.length ? (
+                  <div className="px-4 pb-4 sm:px-5">
+                    <CarryWaitlistForm
+                      action={actions.carryWaitlistAction}
+                      targets={actions.moveSeat.targets}
+                      t={t}
+                    />
+                  </div>
+                ) : null}
+              </>
             ) : null,
           invitedGroup:
-            invitations.length > 0 ? (
-              <TripInvitationGroup
-                invitations={invitations}
-                shopSlug={shopSlug}
-                tripId={trip.id}
-                shopName={shopName}
-                tripTitle={trip.title}
-                tripStartsAt={trip.startsAt}
-                timezone={timezone}
-                inviteAction={actions.recordTripInvitationAction}
-                locale={locale}
-                canInvite={acceptsDivers}
-              />
+            invitations.length > 0 || (acceptsDivers && guests.inviteSuggestions) ? (
+              <>
+                {invitations.length > 0 ? (
+                  <TripInvitationGroup
+                    invitations={invitations}
+                    shopSlug={shopSlug}
+                    tripId={trip.id}
+                    shopName={shopName}
+                    tripTitle={trip.title}
+                    tripStartsAt={trip.startsAt}
+                    timezone={timezone}
+                    inviteAction={actions.recordTripInvitationAction}
+                    locale={locale}
+                    canInvite={acceptsDivers && mayInviteFromWaitlist}
+                  />
+                ) : null}
+                {acceptsDivers && guests.inviteSuggestions ? (
+                  <InviteSuggestionsGroup
+                    suggestions={guests.inviteSuggestions}
+                    action={actions.invitePastDiverAction}
+                    locale={locale}
+                    timeZone={timezone}
+                  />
+                ) : null}
+              </>
             ) : null,
           addDiverGroup: !acceptsDivers ? null : (
             <AddDiverSection
@@ -425,6 +523,16 @@ export function TripPromoteAndActivity({
               currency={currency}
               status={noticeForForm(tripNotice, "last-minute-deal")}
               tripId={trip.id}
+              leadTime={
+                <Suspense fallback={null}>
+                  <DealLeadTime
+                    shopId={shop.id}
+                    startsAt={trip.startsAt}
+                    timeZone={timezone}
+                    locale={locale}
+                  />
+                </Suspense>
+              }
             />
           </div>
         </AutoOpenDetails>
@@ -456,5 +564,44 @@ export function TripPromoteAndActivity({
           the roster's own ScrollToHash is not on this tab. */}
       <ScrollToHash />
     </div>
+  );
+}
+
+/**
+ * The demand banner's second door: hand the waiting leads to a departure that
+ * is already on the board, including the one just added from "Schedule another
+ * departure". The same departures a seat may move to (`seatMoveFor`).
+ */
+function CarryWaitlistForm({
+  action,
+  targets,
+  t,
+}: {
+  action: FormAction;
+  targets: SeatMove["targets"];
+  t: StaffTranslator;
+}) {
+  return (
+    <form action={action} className="mt-4 flex flex-col gap-3">
+      <FieldGrid columns={1}>
+        <Field label={t("trips.guests.carryWaitlistTo")} htmlFor="carry-waitlist-to">
+          <select id="carry-waitlist-to" name="toTripId" required className={controlClass}>
+            {targets.map((target) => (
+              <option key={target.id} value={target.id}>
+                {carryTargetLabel(target, t)}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </FieldGrid>
+      <div>
+        <SubmitButton
+          pendingLabel={t("trips.guests.carryWaitlistPending")}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("trips.guests.carryWaitlist")}
+        </SubmitButton>
+      </div>
+    </form>
   );
 }

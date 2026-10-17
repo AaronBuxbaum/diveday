@@ -99,7 +99,6 @@
     "restoreUnit": "Restore {label}"
   },
   "addUnit": {
-    "door": "Add gear",
     "title": "Add a unit",
     "submit": "Add to the register",
     "pending": "Adding…"
@@ -117,7 +116,10 @@
     "purchasedOn": "Purchased on",
     "optionalHint": "(optional)",
     "aboard": "Aboard",
-    "ashore": "Ashore"
+    "ashore": "Ashore",
+    "nitroxDesignated": "Nitrox",
+    "nitroxDesignatedHint": "Kept for enriched air",
+    "thicknessMm": "Thickness (mm)"
   },
   "notice": {
     "added": "On the register.",
@@ -153,7 +155,8 @@
     "returnedSetPulled": "Back. {count} pulled for service.",
     "concernNeedsWords": "A service concern needs a line saying what happened, so a technician can act on it.",
     "nothingOut": "Nothing from that set is out.",
-    "nothingToHandOver": "That set is already out."
+    "nothingToHandOver": "That set is already out.",
+    "returnedFlagged": "Back, and flagged for a technician."
   },
   "import": {
     "help": "One row per unit, service event, or historical rental. Units match by tag first, then serial number; assignments match an existing diver by email or exact name, stay display-only, and never affect current availability.",
@@ -229,7 +232,8 @@
       "reinstating": "Returning…",
       "delete": "Delete unit",
       "deleting": "Deleting…",
-      "deleteHeld": "{name} has this unit until {until}. Release or return it first."
+      "deleteHeld": "{name} has this unit until {until}. Release or return it first.",
+      "returnedConcern": "Returned {date} with a concern: {note}"
     },
     "returnOutcomeAllGood": "Came back fine",
     "returnOutcomeFitAdjusted": "Fit adjusted at return",
@@ -243,6 +247,7 @@
     "cartServiceFlagged": "{count, plural, one {# unit needs service} other {# units need service}}",
     "handOver": "Hand over",
     "handingOver": "Handing over…",
+    "allAssigned": "{count, plural, one {# assigned} other {All # assigned}}",
     "outLabel": "out",
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No {kindLabel} free for these dates.",
@@ -263,6 +268,10 @@
     },
     "optionServiceOverdue": "service overdue",
     "optionServiceDueSoon": "service due soon",
+    "optionNitroxDesignated": "for nitrox",
+    "optionNitroxDesignatedOnAir": "kept for nitrox, check before air",
+    "optionThickness": "{mm} mm",
+    "notDaysThickness": "not the day’s {mm} mm",
     "optionServiceConcern": "service concern",
     "pickUnit": "Pick a unit…",
     "proposal": {
@@ -281,7 +290,13 @@
     "returnCancelConcern": "Cancel",
     "returnNoteLabel": "What to tell the technician",
     "returnNotePlaceholder": "Torn strap, second stage free-flowed",
-    "returnPullToBench": "Pull for service"
+    "returnPullToBench": "Pull for service",
+    "backHeading": "Back from the boat",
+    "backCount": "{count, plural, one {# unit to check in} other {# units to check in}}",
+    "backUnit": "Back",
+    "backProblem": "Back with a problem",
+    "backNoteLabel": "What’s wrong with it?",
+    "backNotePlaceholder": "Inflator sticks"
   },
   "ticket": {
     "eyebrow": "Rental",

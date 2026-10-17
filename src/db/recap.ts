@@ -1,4 +1,18 @@
-import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  notInArray,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { isStaff } from "@/lib/authz";
 import type { BrandDisplayFontCode } from "@/lib/brand";
@@ -21,8 +35,10 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
+import { isDiver } from "@/lib/participant-types";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
-import { mergeShopHistory, priorVisitStanding } from "@/lib/prior-visits";
+import { firstNameOf } from "@/lib/person-name";
+import { diveDayOrdinal } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
 import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
 import { maySendNow } from "@/lib/send-window";
@@ -31,7 +47,7 @@ import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
-import { diveDay } from "./dive-days";
+import { numberedDiveDay } from "./dive-days";
 import { listSiteFieldGuides } from "./dive-sites";
 import { diveDaysBefore, listExecutedDives } from "./executed-dives";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
@@ -63,8 +79,24 @@ import { tripCrewByTrip } from "./trips-crew";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
-/** A diver's own recap photo, as the recap page renders it. */
-export type RecapPhotoView = { id: string; imageUrl: string; caption: string | null };
+/**
+ * A photo as the recap page renders it: the diver's own, the crew's, or one
+ * another diver on the same boat chose to share (H-129).
+ */
+export type RecapPhotoView = {
+  id: string;
+  imageUrl: string;
+  caption: string | null;
+  /**
+   * The first name of the diver who shared it with the boat, on a photo that
+   * is not this diver's own; absent on their own photos and the crew's. Only
+   * the first name: the recap is a forwardable page, and the boat already knew
+   * each other by it.
+   */
+  sharedBy?: string;
+  /** This diver's own photo, shared with the boat at upload. */
+  sharedWithBoat?: boolean;
+};
 
 /**
  * The post-trip recap: one reading of the day per diver per trip, generated
@@ -326,30 +358,108 @@ export async function getRecapPageState(
   checkoutProvider?: CheckoutProvider,
   now: Date = nowDate(),
 ): Promise<RecapPageState> {
-  const closed = await recapClosedReason(db, bookingId, now);
-  if (closed === null) {
-    const data = await loadRecapPageData(db, bookingId, checkoutProvider);
-    if (data) return { kind: "recap", data };
-  }
-  if (closed === "unknown") return { kind: "unknown" };
+  const row = await readRecapRow(db, bookingId);
+  if (!row) return { kind: "unknown" };
+  const shop: DeadRecapShop = {
+    name: row.shopName,
+    slug: row.slug,
+    contactEmail: row.contactEmail,
+    contactPhone: row.contactPhone,
+    defaultLocale: row.defaultLocale,
+  };
+  const byRow = recapClosedByRow(row);
+  if (byRow) return closedRecapState(byRow, shop);
+  // **The page's reads go out beside the seat checks** (code review
+  // 2026-10-13b, item 32). Every one of them is a read and none is shown until
+  // the gate below has said the recap is open, so a closed recap costs the
+  // reads and discloses nothing; an open one, the common shape, no longer
+  // waits for the gate first. Stripe is the exception and waits: it is asked
+  // only for an open recap's pending tip.
+  const [bySeat, loaded] = await Promise.all([
+    recapClosedBySeat(db, row, bookingId, now),
+    loadRecapPageData(db, row, bookingId),
+  ]);
+  if (bySeat) return closedRecapState(bySeat, shop);
+  if (!loaded) return { kind: "dead", shop };
+  const { latestTip } = loaded;
+  // A still-pending tip's local status is a lead, not proof — a delayed or
+  // missed webhook must never leave the page offering a dead Checkout link,
+  // or (via a bare `?tip=paid` return-URL) reading as confirmed when Stripe
+  // itself hasn't said so.
+  const tip =
+    latestTip?.status === "pending"
+      ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
+      : latestTip;
+  return {
+    kind: "recap",
+    data: {
+      ...loaded.data,
+      tip: tip
+        ? { status: tip.status, amountCents: tip.amountCents, checkoutUrl: tip.checkoutUrl }
+        : null,
+    },
+  };
+}
 
-  const [shop] = await db
-    .select({
-      name: shops.name,
-      slug: shops.slug,
-      contactEmail: shops.contactEmail,
-      contactPhone: shops.contactPhone,
-      defaultLocale: shops.defaultLocale,
-    })
-    .from(bookings)
-    .innerJoin(shops, eq(shops.id, bookings.shopId))
-    .where(eq(bookings.id, bookingId))
-    .limit(1);
-  if (!shop) return { kind: "unknown" };
-  if (closed === "departure-cancelled") return { kind: "departure-cancelled", shop };
-  if (closed === "waiting") return { kind: "waiting", shop };
+function closedRecapState(
+  reason: Exclude<RecapClosedReason, "unknown">,
+  shop: DeadRecapShop,
+): RecapPageState {
+  if (reason === "departure-cancelled") return { kind: "departure-cancelled", shop };
+  if (reason === "waiting") return { kind: "waiting", shop };
   return { kind: "dead", shop };
 }
+
+/**
+ * **The one row the gate and the page both start from**: the booking's tier,
+ * its departure's status and the facts the page's reads key on, the diver's
+ * name and the shop's published identity. One select where the gate and the
+ * page each used to read the booking, and a closed page used a third to name
+ * its shop. `liveTrip()` here is what makes a deleted departure `unknown`.
+ */
+async function readRecapRow(db: AppDb, bookingId: string) {
+  const [row] = await db
+    .select({
+      shopId: bookings.shopId,
+      tripId: bookings.tripId,
+      personId: bookings.personId,
+      participantType: bookings.participantType,
+      status: bookings.status,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      tripStatus: trips.status,
+      tripStartsAt: trips.startsAt,
+      tripBoatId: trips.boatId,
+      tripCourseId: trips.courseId,
+      diverName: people.fullName,
+      diverEmail: people.email,
+      shopName: shops.name,
+      slug: shops.slug,
+      logoUrl: shops.logoUrl,
+      timezone: shops.timezone,
+      defaultLocale: shops.defaultLocale,
+      contactEmail: shops.contactEmail,
+      contactPhone: shops.contactPhone,
+      reviewUrl: shops.reviewUrl,
+      reviewsEnabled: shops.reviewsEnabled,
+      tipsEnabled: shops.tipsEnabled,
+      currency: shops.currency,
+      depthUnit: shops.depthUnit,
+      temperatureUnit: shops.temperatureUnit,
+      brandColor: shops.brandColor,
+      brandDisplayFont: shops.brandDisplayFont,
+      courseNextStep: bookings.courseNextStep,
+      courseNextStepByPersonId: bookings.courseNextStepByPersonId,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .where(and(eq(bookings.id, bookingId), liveTrip()))
+    .limit(1);
+  return row ?? null;
+}
+
+type RecapRow = NonNullable<Awaited<ReturnType<typeof readRecapRow>>>;
 
 /**
  * **Why a recap is closed, or null when it is open** — the one gate the page,
@@ -377,24 +487,30 @@ export async function recapClosedReason(
   bookingId: string,
   now: Date = nowDate(),
 ): Promise<RecapClosedReason | null> {
-  const [row] = await db
-    .select({
-      shopId: bookings.shopId,
-      tripId: bookings.tripId,
-      status: bookings.status,
-      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
-      tripStatus: trips.status,
-    })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(and(eq(bookings.id, bookingId), liveTrip()))
-    .limit(1);
+  const row = await readRecapRow(db, bookingId);
   if (!row) return "unknown";
+  return recapClosedByRow(row) ?? (await recapClosedBySeat(db, row, bookingId, now));
+}
+
+/** The booking tier, then the departure, then the held seat: what the row alone decides. */
+function recapClosedByRow(
+  row: Pick<RecapRow, "status" | "tripStatus" | "identityUnconfirmedAt">,
+): "dead" | "departure-cancelled" | null {
   if (row.status === "cancelled" || row.status === "no_show") return "dead";
   // Read `getRecapPageData`'s doc comment before relaxing this: an active
   // booking on a cancelled trip is the *normal* shape of a blow-out.
   if (row.tripStatus !== "scheduled") return "departure-cancelled";
   if (row.identityUnconfirmedAt) return "dead";
+  return null;
+}
+
+/** Then the causes the roll call decides: the dock before the wait. */
+async function recapClosedBySeat(
+  db: AppDb,
+  row: Pick<RecapRow, "shopId" | "tripId">,
+  bookingId: string,
+  now: Date,
+): Promise<"dead" | "waiting" | null> {
   const one = [{ booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } }];
   // Both asked at once, then answered in the disclosure order above: the dock
   // before the wait (code review 2026-10-13, item 29).
@@ -566,51 +682,27 @@ export async function getRecapPageData(
   checkoutProvider?: CheckoutProvider,
   now: Date = nowDate(),
 ): Promise<RecapPageData | null> {
-  if ((await recapClosedReason(db, bookingId, now)) !== null) return null;
-  return loadRecapPageData(db, bookingId, checkoutProvider);
+  const state = await getRecapPageState(db, bookingId, checkoutProvider, now);
+  return state.kind === "recap" ? state.data : null;
 }
 
-/** The page's content, once {@link recapClosedReason} has said it is open. */
+/**
+ * The page's content from {@link readRecapRow}'s row, before the gate has
+ * answered (`getRecapPageState` discards it when the recap is closed). The
+ * tip comes back as stored; Stripe is asked only once the recap is open.
+ */
 async function loadRecapPageData(
   db: AppDb,
+  row: RecapRow,
   bookingId: string,
-  checkoutProvider?: CheckoutProvider,
-): Promise<RecapPageData | null> {
-  const [row] = await db
-    .select({
-      shopId: bookings.shopId,
-      tripId: bookings.tripId,
-      personId: bookings.personId,
-      diverName: people.fullName,
-      diverEmail: people.email,
-      shopName: shops.name,
-      slug: shops.slug,
-      logoUrl: shops.logoUrl,
-      timezone: shops.timezone,
-      defaultLocale: shops.defaultLocale,
-      contactEmail: shops.contactEmail,
-      contactPhone: shops.contactPhone,
-      reviewUrl: shops.reviewUrl,
-      reviewsEnabled: shops.reviewsEnabled,
-      tipsEnabled: shops.tipsEnabled,
-      currency: shops.currency,
-      depthUnit: shops.depthUnit,
-      temperatureUnit: shops.temperatureUnit,
-      brandColor: shops.brandColor,
-      brandDisplayFont: shops.brandDisplayFont,
-      courseNextStep: bookings.courseNextStep,
-      courseNextStepByPersonId: bookings.courseNextStepByPersonId,
-    })
-    .from(bookings)
-    .innerJoin(people, eq(people.id, bookings.personId))
-    .innerJoin(shops, eq(shops.id, bookings.shopId))
-    .where(eq(bookings.id, bookingId))
-    .limit(1);
-  if (!row) return null;
-  const trip = await getTripWithBooked(db, row.shopId, row.tripId);
-  if (!trip) return null;
-
+): Promise<{
+  data: Omit<RecapPageData, "tip">;
+  latestTip: Awaited<ReturnType<typeof getLatestTipForBooking>>;
+} | null> {
+  // One wave: the trip with its booked list beside everything keyed on the
+  // row, where the trip used to be read first and the wave waited for it.
   const [
+    trip,
     dives,
     livedDives,
     divedRecentlyIds,
@@ -623,7 +715,9 @@ async function loadRecapPageData(
     latestTip,
     sessionCertifications,
     nextStepAuthors,
+    tappedSightings,
   ] = await Promise.all([
+    getTripWithBooked(db, row.shopId, row.tripId),
     listTripDives(db, row.shopId, row.tripId),
     // The only read of `executed_dives` on this page. `listExecutedDives`
     // already drops soft-deleted rows and non-live trips, which is what keeps
@@ -632,8 +726,8 @@ async function loadRecapPageData(
     // Did this diver dive here yesterday? DAN's 18 hours covers multiple days
     // as well as repetitive dives, so the answer widens the fly-safe basis
     // below. One more element of this `Promise.all`, not a second round trip.
-    diveDaysBefore(db, row.shopId, [row.personId], trip.startsAt, row.timezone),
-    trip.boatId ? getBoatForHistory(db, row.shopId, trip.boatId) : Promise.resolve(null),
+    diveDaysBefore(db, row.shopId, [row.personId], row.tripStartsAt, row.timezone),
+    row.tripBoatId ? getBoatForHistory(db, row.shopId, row.tripBoatId) : Promise.resolve(null),
     tripCrewByTrip(db, row.shopId, [row.tripId]),
     db
       .select({
@@ -647,17 +741,17 @@ async function loadRecapPageData(
           eq(bookings.shopId, row.shopId),
           eq(bookings.personId, row.personId),
           // **The one dive-day rule** (`src/db/dive-days.ts`, issue #1694),
-          // which the counter's name-match prompt reads too. A blown-out
-          // departure is not a dive day unless the crew logged a dive on it
-          // (H-84): a cancellation leaves its bookings active by design, so a
-          // plain status read counts days nobody dived, and the imported half
-          // of this merge refuses exactly that (`did_not_happen`, below).
+          // on diver seats that are not held (`numberedDiveDay`), the days the
+          // milestone and "Your days" count too. A blown-out departure is not
+          // a dive day unless the crew logged a dive on it (H-84): a
+          // cancellation leaves its bookings active by design, so a plain
+          // status read counts days nobody dived, and the imported half of
+          // this merge refuses exactly that (`did_not_happen`, below).
           // `visitMilestone` is exact equality on {1, 10, 25, 50, 100}, so a
           // day that moves in or out skips a stamp permanently rather than
-          // blurring it: which is why this count may never disagree with the
-          // prompt that names the day to a staffer.
-          diveDay(),
-          lte(trips.startsAt, trip.startsAt),
+          // blurring it: which is why the three readers may never disagree.
+          numberedDiveDay(),
+          lte(trips.startsAt, row.tripStartsAt),
         ),
       ),
     db
@@ -678,7 +772,7 @@ async function loadRecapPageData(
     // self-declaration, a pending review, an imported card and a card from
     // another session all read as "nothing was recorded", which is what the
     // recap then says out loud.
-    trip.course
+    row.tripCourseId
       ? db
           .select({ level: certifications.level, issuedAt: certifications.issuedByShopAt })
           .from(certifications)
@@ -702,10 +796,12 @@ async function loadRecapPageData(
           .select({ fullName: people.fullName })
           .from(people)
           // diveday:allow-deleted-people: the name of who wrote the course's next step.
-          .where(eq(people.id, row.courseNextStepByPersonId))
+          .where(and(eq(people.id, row.courseNextStepByPersonId), eq(people.shopId, row.shopId)))
           .limit(1)
       : Promise.resolve([]),
+    listTripSightings(db, row.shopId, row.tripId),
   ]);
+  if (!trip) return null;
 
   const sites: RecapSite[] = [];
   const seen = new Set<string>();
@@ -759,7 +855,7 @@ async function loadRecapPageData(
     const slug = executed.observedSpeciesSlug;
     if (slug && !observedSpecies.includes(slug)) observedSpecies.push(slug);
   }
-  for (const tapped of await listTripSightings(db, row.shopId, row.tripId)) {
+  for (const tapped of tappedSightings) {
     if (!observedSpecies.includes(tapped.speciesSlug)) observedSpecies.push(tapped.speciesSlug);
   }
 
@@ -774,46 +870,40 @@ async function loadRecapPageData(
     })),
   );
 
-  const flySafe = flySafeFrom({
-    executedDives: livedDives.map(({ executed }) => ({
-      diveNumber: executed.diveNumber,
-      exitedAt: executed.exitedAt,
-    })),
-    plannedDives: trip.plannedDives,
-    endsAt: trip.endsAt,
-    divedRecently: divedRecentlyIds.dived.has(row.personId),
-    exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
-    decompressionRecently: divedRecentlyIds.decompression.has(row.personId),
-    now: nowDate(),
-    hours: DEFAULT_FLY_SAFE_HOURS,
-  });
+  // A rider never entered the water and a snorkeler breathes no gas: neither
+  // is told when they may fly (issue #2383). Silence, as for a decompression
+  // departure.
+  const flySafe = isDiver(row.participantType)
+    ? flySafeFrom({
+        executedDives: livedDives.map(({ executed }) => ({
+          diveNumber: executed.diveNumber,
+          exitedAt: executed.exitedAt,
+        })),
+        plannedDives: trip.plannedDives,
+        endsAt: trip.endsAt,
+        divedRecently: divedRecentlyIds.dived.has(row.personId),
+        exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
+        decompressionRecently: divedRecentlyIds.decompression.has(row.personId),
+        now: nowDate(),
+        hours: DEFAULT_FLY_SAFE_HOURS,
+      })
+    : null;
 
-  const tripLocalDay = calendarDateInTimezone(trip.startsAt, row.timezone);
-  const effectivePriorVisits = priorVisitRows.filter(
-    (v) => priorVisitStanding(v.statusLabel) !== "did_not_happen" && v.visitedOn <= tripLocalDay,
-  );
-  const mergedHistory = mergeShopHistory(nativeBookings, effectivePriorVisits, {
-    bookingStartsAt: (b) => b.startsAt,
-    visitedOn: (v) => v.visitedOn,
+  // One calendar day is one dive day (glossary **Dive day**): the count every
+  // reader says, the milestone and "Your days" included (`diveDayOrdinal`).
+  const visitCount = diveDayOrdinal({
+    diveDayStarts: nativeBookings.map((booking) => booking.startsAt),
+    visits: priorVisitRows,
     timezone: row.timezone,
+    throughDay: calendarDateInTimezone(trip.startsAt, row.timezone),
   });
-  const visitCount = Math.max(1, mergedHistory.length);
   const crew = (crewMap.get(row.tripId) ?? []).map((c) => c.name);
-
-  // A still-pending tip's local status is a lead, not proof — a delayed or
-  // missed webhook must never leave the page offering a dead Checkout link,
-  // or (via a bare `?tip=paid` return-URL) reading as confirmed when Stripe
-  // itself hasn't said so.
-  const tip =
-    latestTip?.status === "pending"
-      ? await refreshTipFromStripe(db, row.shopId, latestTip.id, checkoutProvider)
-      : latestTip;
 
   const sessionCertification = sessionCertifications[0] ?? null;
   const nextStepWords = row.courseNextStep?.trim() || null;
   const nextStepAuthor = nextStepAuthors[0]?.fullName?.trim() || null;
 
-  return {
+  const data: Omit<RecapPageData, "tip"> = {
     shop: {
       id: row.shopId,
       name: row.shopName,
@@ -874,18 +964,23 @@ async function loadRecapPageData(
     // And never for a shop that switched tips off (`shops.tips_enabled`).
     canTip: row.tipsEnabled && Boolean(row.diverEmail) && canAcceptPayments(stripeAccount),
     currency: toShopCurrency(row.currency),
-    tip: tip
-      ? {
-          status: tip.status,
-          amountCents: tip.amountCents,
-          checkoutUrl: tip.checkoutUrl,
-        }
-      : null,
     visitCount,
   };
+  return { data, latestTip };
 }
 
-/** A diver's recap photos, including staff-shared departure photos, newest first. */
+/**
+ * A diver's recap photos, newest first: their own, the crew's departure photos,
+ * and the photos other divers on the same departure chose to share with the
+ * boat (H-129, ADR 20261016-shared-boat-photos).
+ *
+ * **A shared photo shows only to the sharer's own boat.** The read is the
+ * departure the recap is for, and the sharer's seat must still be one the
+ * recap would show (not cancelled, not a no-show), so a seat taken off the
+ * boat afterwards takes its shared photos off everyone else's page with it.
+ * Erasure deletes the photo row itself (`src/db/anonymize.ts`), so an erased
+ * diver's name can never reach this read.
+ */
 async function listRecapPhotosForBooking(
   db: AppDb,
   shopId: string,
@@ -893,15 +988,32 @@ async function listRecapPhotosForBooking(
   tripId?: string,
 ): Promise<RecapPhotoView[]> {
   const [diverRows, crewRows] = await Promise.all([
+    // The diver's own photos and the boat's shared ones in one read: the
+    // other seats' half carries the rules of {@link boatShares}.
     db
       .select({
         id: recapPhotos.id,
+        bookingId: recapPhotos.bookingId,
         imageUrl: recapPhotos.imageUrl,
         caption: recapPhotos.caption,
+        sharedWithBoatAt: recapPhotos.sharedWithBoatAt,
         createdAt: recapPhotos.createdAt,
+        sharerName: people.fullName,
       })
       .from(recapPhotos)
-      .where(and(eq(recapPhotos.shopId, shopId), eq(recapPhotos.bookingId, bookingId)))
+      .innerJoin(
+        bookings,
+        and(eq(bookings.id, recapPhotos.bookingId), eq(bookings.shopId, recapPhotos.shopId)),
+      )
+      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+      .where(
+        and(
+          eq(recapPhotos.shopId, shopId),
+          tripId
+            ? or(eq(recapPhotos.bookingId, bookingId), boatShares(tripId, bookingId))
+            : eq(recapPhotos.bookingId, bookingId),
+        ),
+      )
       .orderBy(desc(recapPhotos.createdAt)),
     tripId
       ? db
@@ -915,9 +1027,62 @@ async function listRecapPhotosForBooking(
           .orderBy(desc(tripRecapPhotos.createdAt))
       : Promise.resolve([]),
   ]);
-  return [...diverRows, ...crewRows.map((photo) => ({ ...photo, caption: null }))]
+  const own = diverRows.filter((row) => row.bookingId === bookingId);
+  const shared = diverRows.filter((row) => row.bookingId !== bookingId);
+  // A seat left at the dock is off the boat (ADR 20261016-shared-boat-photos
+  // §3), asked only when somebody shared anything at all.
+  const ashore =
+    shared.length > 0 && tripId
+      ? await bookingsLeftAtTheDock(
+          db,
+          [...new Set(shared.map((row) => row.bookingId))].map((id) => ({
+            booking: { id },
+            shop: { id: shopId },
+            trip: { id: tripId },
+          })),
+        )
+      : new Set<string>();
+  return [
+    ...own.map(({ id, imageUrl, caption, sharedWithBoatAt, createdAt }) =>
+      sharedWithBoatAt
+        ? { id, imageUrl, caption, createdAt, sharedWithBoat: true }
+        : { id, imageUrl, caption, createdAt },
+    ),
+    ...crewRows.map((photo) => ({ ...photo, caption: null })),
+    ...shared
+      .filter((row) => !ashore.has(row.bookingId))
+      .map(({ id, imageUrl, caption, createdAt, sharerName }) => ({
+        id,
+        imageUrl,
+        caption,
+        createdAt,
+        sharedBy: firstNameOf(sharerName, sharerName),
+      })),
+  ]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .map(({ createdAt: _createdAt, ...photo }) => photo);
+}
+
+/**
+ * The photos other divers on this departure shared with the boat. Never this
+ * booking's own (those are the other half of the read above).
+ *
+ * Only from a seat a recap would show (ADR 20261016-shared-boat-photos §3;
+ * security review of layer r5-4, F2): not cancelled or a no-show, not held
+ * (its holder may not be the person whose name it would carry), and not a
+ * removed or erased diver's; a seat left at the dock is dropped after the read.
+ */
+function boatShares(tripId: string, bookingId: string): SQL {
+  return and(
+    eq(recapPhotos.tripId, tripId),
+    eq(bookings.tripId, tripId),
+    ne(recapPhotos.bookingId, bookingId),
+    isNotNull(recapPhotos.sharedWithBoatAt),
+    notInArray(bookings.status, ["cancelled", "no_show"]),
+    isNull(bookings.identityUnconfirmedAt),
+    isNull(people.deletedAt),
+    isNull(people.anonymizedAt),
+  ) as SQL;
 }
 
 export type RecapPhotoEligibility =
@@ -982,7 +1147,14 @@ export type AddRecapPhotoResult =
  */
 export async function addRecapPhoto(
   db: AppDb,
-  input: { bookingId: string; imageUrl: string; caption?: string | null },
+  input: {
+    bookingId: string;
+    imageUrl: string;
+    caption?: string | null;
+    /** The sharer's own tick under "Add to my recap" (H-129); off unless given. */
+    shareWithBoat?: boolean;
+    now?: Date;
+  },
 ): Promise<AddRecapPhotoResult> {
   return db.transaction(async (tx) => {
     const [booking] = await tx
@@ -1015,6 +1187,7 @@ export async function addRecapPhoto(
         tripId: booking.tripId,
         imageUrl: input.imageUrl,
         caption,
+        sharedWithBoatAt: input.shareWithBoat ? (input.now ?? nowDate()) : null,
       })
       .returning({
         id: recapPhotos.id,
@@ -1026,7 +1199,12 @@ export async function addRecapPhoto(
   });
 }
 
-export type StaffRecapPhoto = RecapPhotoView & { diverName: string; bookingId: string };
+export type StaffRecapPhoto = RecapPhotoView & {
+  diverName: string;
+  bookingId: string;
+  /** The diver shared it with everyone on the boat, so it shows on their recaps too. */
+  sharedWithBoat: boolean;
+};
 
 /** Every diver photo on these trips, with who shared it — the close-out's moderation gallery. */
 export async function listRecapPhotosForTrips(
@@ -1043,6 +1221,7 @@ export async function listRecapPhotosForTrips(
       diverName: people.fullName,
       bookingId: recapPhotos.bookingId,
       tripId: recapPhotos.tripId,
+      sharedWithBoat: sql<boolean>`${recapPhotos.sharedWithBoatAt} is not null`,
     })
     .from(recapPhotos)
     .innerJoin(bookings, eq(bookings.id, recapPhotos.bookingId))
@@ -1530,16 +1709,19 @@ async function sendRecaps(
       for (const r of tripRows) {
         flySafeByBooking.set(
           r.booking.id,
-          flySafeFrom({
-            executedDives: executed,
-            plannedDives: first.trip.plannedDives,
-            endsAt: first.trip.endsAt,
-            divedRecently: divedRecentlyIds.dived.has(r.booking.personId),
-            exceedsNoDecoLimits: first.trip.exceedsNoDecoLimits,
-            decompressionRecently: divedRecentlyIds.decompression.has(r.booking.personId),
-            now,
-            hours: DEFAULT_FLY_SAFE_HOURS,
-          }),
+          // Same silence as the page for a rider or a snorkeler (issue #2383).
+          isDiver(r.booking.participantType)
+            ? flySafeFrom({
+                executedDives: executed,
+                plannedDives: first.trip.plannedDives,
+                endsAt: first.trip.endsAt,
+                divedRecently: divedRecentlyIds.dived.has(r.booking.personId),
+                exceedsNoDecoLimits: first.trip.exceedsNoDecoLimits,
+                decompressionRecently: divedRecentlyIds.decompression.has(r.booking.personId),
+                now,
+                hours: DEFAULT_FLY_SAFE_HOURS,
+              })
+            : null,
         );
       }
     }),
@@ -1589,9 +1771,7 @@ async function sendRecaps(
     // locale, exactly as before the column existed.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
-    const smsBody = recapUrl
-      ? t("notifications.sms.recap", { shopName: shop.name, tripTitle: trip.title, recapUrl })
-      : "";
+    const smsBody = recapUrl ? t("notifications.sms.recap", { shopName: shop.name, recapUrl }) : "";
 
     if (recapUrl && person.email && !person.courtesyEmailOptOutAt) {
       const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {

@@ -1,5 +1,5 @@
 {
-  "title": "The release",
+  "title": "Waivers and signed records",
   "editRelease": "Edit the release",
   "banner": {
     "savedNew": "Saved as a new version.",
@@ -24,7 +24,8 @@
   "placeholder": "Write the release the diver will read and sign.",
   "pendingLabel": "Publishing…",
   "releaseDescription": {
-    "sample": "This is sample wording to start from. Edit it to fit your shop, and have your own counsel review it."
+    "sample": "This is sample wording to start from. Edit it to fit your shop, and have your own counsel review it.",
+    "sampleLive": "Divers are signing DiveDay’s sample wording. Edit it to fit your shop, and have your own counsel review it."
   },
   "versionInfo": "Version {version} · published {date}",
   "signatures": {
@@ -37,8 +38,20 @@
     "openTrip": "Open the departure",
     "integrityInvalid": "Integrity mismatch",
     "integrityUnsealed": "Can’t be checked for changes",
-    "medicalFlag": "Medical follow-up flagged",
+    "medicalWaiting": "Waiting on physician",
+    "medicalCleared": "Cleared by physician",
+    "medicalNotCleared": "Not cleared",
     "flaggedAnswersHeading": "Flagged answers",
+    "searchLabel": "Search signed records",
+    "searchPlaceholder": "Diver name, email or phone",
+    "searchClear": "Clear search",
+    "noMatch": "No signed records match.",
+    "views": {
+      "label": "Signed record views",
+      "all": "All",
+      "unchecked": "Can’t be checked",
+      "medical": "Medical holds"
+    },
     "pagination": {
       "total": "{count, plural, one {# record} other {# records}}"
     }
@@ -68,8 +81,11 @@
     "noQuestionnaire": "No questionnaire was answered on this waiver.",
     "newWaiverSent": "A new waiver was sent {date}. This answer still blocks them until a physician clears the new one.",
     "noQuestionnairePaper": "The shop reviewed the medical form on paper. The answers are not kept here.",
-    "answersRestricted": "Only an owner or manager can read the full questionnaire.",
     "identityHeld": "Medical answers stay hidden until someone confirms who is in this seat.",
+    "showAnswers": "Show answers",
+    "showingAnswers": "Showing…",
+    "showAnswersHint": "Opening them is noted on their record.",
+    "showAnswersFailed": "The answers couldn’t be shown. Try again.",
     "answerYes": "Yes",
     "answerNo": "No",
     "releaseHeading": "What they signed"
@@ -88,6 +104,8 @@
     "create": "Add form",
     "titleLabel": "Title",
     "bodyLabel": "Text students sign",
+    "medicalScreeningLabel": "This is a medical statement",
+    "medicalScreeningHint": "Signature only; no answers are screened. Keeps blocking boarding for a student who has not signed it, whatever the course forms setting.",
     "bodyPlaceholder": "Paste the form’s full text here.",
     "notice": {
       "saved": "Saved.",

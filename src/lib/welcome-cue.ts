@@ -1,5 +1,7 @@
+import type { welcomeHello } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
+import { type DiveDayMilestone, diveDayMilestone } from "@/lib/visit-milestones";
 
 /**
  * **The welcome word under a diver's name** (issue #1182, delight report D22;
@@ -12,7 +14,31 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
  *
  * Framework-free and code-only — the words are `src/i18n/welcome-cue-labels.ts`.
  */
-export type WelcomeCue = { kind: "first_trip" } | { kind: "returning"; years: number };
+/** What a first-timer chose to add to the hello (issue #2425): a fixed choice, never free text. */
+export type WelcomeHello = (typeof welcomeHello.enumValues)[number];
+
+/**
+ * The choices in the order `/ready` offers them. A tuple with a `satisfies`,
+ * like `DIVE_INTENTS`: a value here that the pgEnum lacks is a compile error.
+ */
+export const WELCOME_HELLOS = [
+  "first_ocean_dive",
+  "celebrating",
+  "nervous",
+] as const satisfies readonly WelcomeHello[];
+
+export type WelcomeCue =
+  /** `nonDiver`: a snorkeler's or a rider's first seat, which is not a "first dive". */
+  | { kind: "first_trip"; nonDiver?: true }
+  | { kind: "returning"; years: number }
+  /**
+   * A regular's 10th, 25th, 50th or 100th dive day with the shop (H-128): a count,
+   * never a badge. Staff-side only, behind the same consent as every cue.
+   */
+  | { kind: "milestone"; count: DiveDayMilestone };
+
+/** What the diver's own `/ready` may offer: never a milestone, which is the crew's line. */
+export type OfferableWelcomeCue = Exclude<WelcomeCue, { kind: "milestone" }>;
 
 /**
  * How long a gap has to be before coming back is worth a word.
@@ -35,6 +61,14 @@ type CueInput = {
    * the app.
    */
   lastDivedAt: Date | null;
+  /** This seat is a snorkeler's or a rider's, so its first time is not a first dive. */
+  nonDiver?: boolean;
+  /**
+   * Which dive day with the shop this departure's day is, for a diver
+   * (`diveDayOrdinal`: one calendar day is one day, imported visits included).
+   * Absent for a snorkeler's or a rider's seat, which counts no milestone.
+   */
+  diveDayCount?: number | null;
   tripEndsAt: Date;
   now?: Date;
 };
@@ -57,11 +91,13 @@ type CueInput = {
  */
 export function offerableWelcomeCue({
   lastDivedAt,
+  nonDiver = false,
   tripEndsAt,
   now = nowDate(),
-}: CueInput): WelcomeCue | null {
+}: CueInput): OfferableWelcomeCue | null {
   if (now.getTime() > tripEndsAt.getTime() + DEPARTURE_BUFFER_MS) return null;
-  if (!lastDivedAt) return { kind: "first_trip" };
+  if (!lastDivedAt)
+    return nonDiver ? { kind: "first_trip", nonDiver: true } : { kind: "first_trip" };
   const years = Math.floor((now.getTime() - lastDivedAt.getTime()) / YEAR_MS);
   return years >= WELCOME_GAP_YEARS ? { kind: "returning", years } : null;
 }
@@ -77,6 +113,33 @@ export function offerableWelcomeCue({
 export function welcomeCueFor({
   sharedAt,
   ...input
-}: CueInput & { sharedAt: Date | null }): WelcomeCue | null {
-  return sharedAt ? offerableWelcomeCue(input) : null;
+}: CueInput & {
+  sharedAt: Date | null;
+  /**
+   * Required here, though optional on the diver's own offer: a staff caller
+   * that forgot it would silently never say a milestone (H-128).
+   */
+  diveDayCount: number | null;
+}): WelcomeCue | null {
+  if (!sharedAt) return null;
+  return milestoneCue(input) ?? offerableWelcomeCue(input);
+}
+
+/**
+ * **A regular's milestone dive day** (H-128, fifth-loop ideas item 39): said on
+ * the 10th, 25th, 50th and 100th and on no other, with the cue's own expiry an
+ * hour after the boat is home. It outranks "back after N years" on the rare
+ * day both are true: the count is the news, and one line under a name says one
+ * thing. Never on a non-diver's seat, whose count is not of dives.
+ */
+function milestoneCue({
+  diveDayCount,
+  nonDiver = false,
+  tripEndsAt,
+  now = nowDate(),
+}: CueInput): WelcomeCue | null {
+  if (nonDiver) return null;
+  if (now.getTime() > tripEndsAt.getTime() + DEPARTURE_BUFFER_MS) return null;
+  const count = diveDayMilestone(diveDayCount);
+  return count ? { kind: "milestone", count } : null;
 }

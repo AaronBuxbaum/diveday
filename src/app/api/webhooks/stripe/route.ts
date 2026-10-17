@@ -9,21 +9,22 @@ import {
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import {
-  markOrderPaidByInvoiceId,
+  applyInvoicePaid,
   markOrderVoidedByInvoiceId,
   recordOrderPaymentIntent,
 } from "@/db/orders";
+import { sendPartyPaymentReceipt } from "@/db/party-payment-receipt";
 import { recordStripeDispute } from "@/db/payment-disputes";
-import { recordStripePayout } from "@/db/payouts";
 import { recordStripeRefundFailure } from "@/db/refund-failures";
 import { recordStripeChargeRefund } from "@/db/refunds";
 import {
+  applyStripeAccountStatus,
   disconnectShopStripeAccount,
-  setShopStripeAccountStatus,
   stripeAccountHolder,
 } from "@/db/stripe-accounts";
 import { recordTipPaymentIntent } from "@/db/stripe-payment-targets";
 import { paymentSourceLookupFromEnvironment } from "@/db/stripe-providers";
+import { tellOwnersPaymentsRestricted } from "@/db/stripe-restricted";
 import {
   markTipExpiredBySessionId,
   markTipPaidBySessionId,
@@ -41,14 +42,17 @@ import { type LogContext, log } from "@/lib/log";
 import { reportScrubbedError } from "@/lib/observability/sentry";
 import { invoicePaymentIntentId } from "@/lib/payments/invoicing";
 import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
-import { payoutSummaryLookupFromEnvironment } from "@/lib/payments/payout-summary";
 import { refundFailureReasonOf } from "@/lib/payments/refund-failure-reason";
 import { demoStripeAccount, platformKeyIsLive } from "@/lib/payments/stripe-keys";
 import { type StripeWebhookEvent, verifyStripeWebhook } from "@/lib/payments/webhook";
+import { logWebhookRefusal } from "@/lib/webhook-refusal";
+import { applyPayoutEvent } from "./payout-event";
 
 const invoiceObjectSchema = z.object({
   id: z.string().min(1),
   amount_paid: z.number().int().optional(),
+  // True on the echo of a counter settle (`recordPaymentOnOpenOrder`).
+  paid_out_of_band: z.boolean().optional(),
   total_tax_amounts: z
     .array(z.object({ amount: z.number().int().nonnegative() }))
     .nullable()
@@ -67,6 +71,9 @@ const checkoutSessionObjectSchema = z.object({
   // parses — the completion then falls back to the amounts DiveDay asked for
   // rather than recording nothing collected.
   amount_total: z.number().int().nullable().optional(),
+  // The currency `amount_total` is in. The party receipt reads the figure back
+  // to a person and sends nothing when this is not the checkout's own.
+  currency: z.string().min(3).max(3).nullable().optional(),
   total_details: z
     .object({ amount_tax: z.number().int().nonnegative().nullable().optional() })
     .nullable()
@@ -126,6 +133,56 @@ const refundObjectSchema = z.object({
     .nullable()
     .optional(),
 });
+
+/**
+ * Settle the order an invoice backs (`applyInvoicePaid`), remember the
+ * PaymentIntent that paid it, and tell the integrations. Returns the outcome
+ * to log, or `"deferred"` while a counter claim on the invoice is in flight.
+ * A counter settlement logs its order id: when the counter call died after
+ * Stripe answered, no activity line names the staffer, and this line is what
+ * the request log can be joined on to find who tapped.
+ */
+async function handleInvoicePaid(
+  db: AppDb,
+  event: StripeWebhookEvent,
+): Promise<{ outcome: string; extra?: LogContext }> {
+  const invoice = invoiceObjectSchema.safeParse(event.data.object);
+  if (!invoice.success) return { outcome: "malformed_payload" };
+  const outcome = await applyInvoicePaid(db, {
+    stripeInvoiceId: invoice.data.id,
+    amountPaidCents: invoice.data.amount_paid ?? 0,
+    expectedAccountId: event.account,
+    taxCents: invoiceTaxCents(invoice.data),
+    paidOutOfBand: invoice.data.paid_out_of_band,
+  });
+  if (outcome.status === "deferred") return { outcome: "deferred" };
+  if (outcome.status === "not_found") return { outcome: "order_not_found" };
+  // Only an order Stripe collected (`settled` is a row still a Stripe invoice
+  // under its lock): a counter order's money never passed through a
+  // PaymentIntent, whatever attempts the invoice holds.
+  const paymentIntentId =
+    outcome.status === "settled" ? invoicePaymentIntentId(event.data.object) : null;
+  if (paymentIntentId) {
+    await recordOrderPaymentIntent(db, {
+      stripeInvoiceId: invoice.data.id,
+      paymentIntentId,
+      expectedAccountId: event.account,
+    });
+  }
+  // A paid order enqueues `order.paid` for every connected integration.
+  // Stripe's webhook is the most common way an order becomes paid, so draining
+  // here is what makes the write-driven path worth having at all (ADR
+  // 20260919-integration-delivery-is-write-driven). After the 200, never before
+  // it: Stripe retries on a slow response, and a provider's latency must not
+  // become a redelivery.
+  dispatchIntegrationsAfterResponse();
+  return outcome.status === "settled"
+    ? { outcome: "order_paid" }
+    : {
+        outcome: "order_paid_at_counter",
+        extra: { orderId: outcome.order.id, shopId: outcome.order.shopId },
+      };
+}
 
 /**
  * Void the order an invoice backs, and tell the integrations (`order.voided`,
@@ -194,23 +251,6 @@ const disputeObjectSchema = z.object({
     .object({ due_by: z.number().int().nullable().optional() })
     .nullable()
     .optional(),
-});
-
-/**
- * The Payout every `payout.*` event carries (ADR 20261012-payouts-reach-diveday).
- * Only what the owner's line needs: the amount and currency, the day it reaches
- * the bank, whether Stripe will itemize it, and why it failed.
- */
-const payoutObjectSchema = z.object({
-  id: z.string().min(1),
-  amount: z.number().int().nonnegative(),
-  currency: z.string().min(1),
-  arrival_date: z.number().int(),
-  // The only two statuses a `payout.paid` / `payout.failed` event carries;
-  // anything else is refused rather than stored as "Paid out".
-  status: z.enum(["paid", "failed"]),
-  automatic: z.boolean().optional(),
-  failure_code: z.string().nullable().optional(),
 });
 
 /**
@@ -330,43 +370,6 @@ async function applyDisputeEvent(
   return outcome.status === "stale" ? "stale_dispute_event" : "dispute_target_not_found";
 }
 
-/**
- * A `payout.paid` or `payout.failed` event (ADR 20261012-payouts-reach-diveday).
- * Whose payout it is comes from the event's own `account` alone, the same way
- * every reversal is scoped. Returns the outcome to log, or `"deferred"` when
- * Stripe could not be asked what the payout carried.
- */
-async function applyPayoutEvent(
-  db: AppDb,
-  event: StripeWebhookEvent,
-  occurredAt: Date,
-  livemode: boolean,
-): Promise<string> {
-  const payout = payoutObjectSchema.safeParse(event.data.object);
-  if (!payout.success) return "malformed_payload";
-  if (!event.account) return "missing_account";
-  const outcome = await recordStripePayout(
-    db,
-    {
-      stripeAccountId: event.account,
-      occurredAt,
-      payout: {
-        id: payout.data.id,
-        amountCents: payout.data.amount,
-        currency: payout.data.currency,
-        status: payout.data.status,
-        arrivalDate: new Date(payout.data.arrival_date * 1000),
-        automatic: payout.data.automatic ?? false,
-        failureCode: payout.data.failure_code ?? null,
-      },
-    },
-    payoutSummaryLookupFromEnvironment(process.env, fetch, { livemode }),
-  );
-  if (outcome.status === "deferred") return "deferred";
-  if (outcome.status === "recorded") return "payout_recorded";
-  return outcome.status === "stale" ? "stale_payout_event" : "payout_account_not_found";
-}
-
 function invoiceTaxCents(invoice: z.infer<typeof invoiceObjectSchema>): number | null {
   const amounts = invoice.total_tax_amounts ?? invoice.total_taxes;
   return amounts ? amounts.reduce((total, entry) => total + entry.amount, 0) : null;
@@ -378,10 +381,43 @@ const accountObjectSchema = z.object({
   payouts_enabled: z.boolean(),
   details_submitted: z.boolean(),
   // Optional: a fixture or an unusual event payload missing it still
-  // parses — `setShopStripeAccountStatus` leaves the stored currency
+  // parses — `applyStripeAccountStatus` leaves the stored currency
   // untouched rather than resetting it to "usd" (task 60).
   default_currency: z.string().optional(),
 });
+
+/**
+ * Store an `account.updated` delivery's flags, and tell the owners when this
+ * is the write that turned card payments off (batch 6 item 8). Bookings
+ * already fall back to paying at the shop; this is the owner hearing why.
+ * Claimed once per change of state (`applyStripeAccountStatus`), so a
+ * redelivery tells nobody twice, and the telling never throws. Returns
+ * whether this delivery was that change.
+ */
+async function applyAccountUpdate(
+  db: AppDb,
+  account: {
+    id: string;
+    charges_enabled: boolean;
+    payouts_enabled: boolean;
+    details_submitted: boolean;
+    default_currency?: string;
+  },
+): Promise<boolean> {
+  const applied = await applyStripeAccountStatus(db, account.id, {
+    chargesEnabled: account.charges_enabled,
+    payoutsEnabled: account.payouts_enabled,
+    detailsSubmitted: account.details_submitted,
+    defaultCurrency: account.default_currency,
+  });
+  if (applied.newlyRestricted && applied.account?.paymentsRestrictedAt) {
+    await tellOwnersPaymentsRestricted(db, {
+      shopId: applied.account.shopId,
+      restrictedAt: applied.account.paymentsRestrictedAt,
+    });
+  }
+  return applied.newlyRestricted;
+}
 
 /**
  * A single Connect webhook endpoint for every shop's connected account
@@ -389,6 +425,35 @@ const accountObjectSchema = z.object({
  * `account` field). Fails closed on a bad/stale/missing signature before any
  * event is handled (docs ADR 20260719-stripe-connect-orders).
  */
+/**
+ * Stripe says this booking checkout is paid: settle it from Stripe's own
+ * figures, then tell a group's lead the total (#2566). The receipt goes only on
+ * the call that completed the checkout, so a replay or a fresh-id redelivery
+ * sends nothing; it never throws, so a mail failure cannot make Stripe retry.
+ */
+async function settleCheckoutPaid(
+  db: AppDb,
+  session: z.infer<typeof checkoutSessionObjectSchema>,
+  account: string | undefined,
+) {
+  const settlement = { firstCompletion: false, reportedOverCeiling: false };
+  const checkout = await markCheckoutPaidBySessionId(
+    db,
+    session.id,
+    account,
+    session.amount_total,
+    session.total_details?.amount_tax,
+    settlement,
+  );
+  if (checkout && settlement.firstCompletion) {
+    await sendPartyPaymentReceipt(db, checkout, {
+      currency: session.currency ?? null,
+      overCeiling: settlement.reportedOverCeiling,
+    });
+  }
+  return checkout;
+}
+
 export async function POST(request: Request) {
   const payload = await request.text();
   const signature = request.headers.get("stripe-signature");
@@ -414,8 +479,10 @@ export async function POST(request: Request) {
     }
   }
 
-  if (verification.status === "not_configured") return new Response(null, { status: 503 });
-  if (verification.status !== "verified") return new Response(null, { status: 400 });
+  if (verification.status !== "verified") {
+    logWebhookRefusal("stripe", verification.status);
+    return new Response(null, { status: verification.status === "not_configured" ? 503 : 400 });
+  }
 
   const { event } = verification;
   const db = await getDb();
@@ -539,35 +606,9 @@ export async function POST(request: Request) {
   try {
     switch (event.type) {
       case "invoice.paid": {
-        const invoice = invoiceObjectSchema.safeParse(event.data.object);
-        if (invoice.success) {
-          const order = await markOrderPaidByInvoiceId(
-            db,
-            invoice.data.id,
-            invoice.data.amount_paid ?? 0,
-            event.account,
-            invoiceTaxCents(invoice.data),
-          );
-          logOutcome(order ? "order_paid" : "order_not_found");
-          const paymentIntentId = order ? invoicePaymentIntentId(event.data.object) : null;
-          if (paymentIntentId) {
-            await recordOrderPaymentIntent(db, {
-              stripeInvoiceId: invoice.data.id,
-              paymentIntentId,
-              expectedAccountId: event.account,
-            });
-          }
-          // A paid order enqueues `order.paid` for every connected
-          // integration. Stripe's webhook is the most common way an order
-          // becomes paid, so draining here is what makes the write-driven
-          // path worth having at all (ADR
-          // 20260919-integration-delivery-is-write-driven). After the 200
-          // below, never before it: Stripe retries on a slow response, and a
-          // provider's latency must not become a redelivery.
-          if (order) dispatchIntegrationsAfterResponse();
-        } else {
-          logOutcome("malformed_payload");
-        }
+        const { outcome, extra } = await handleInvoicePaid(db, event);
+        if (outcome === "deferred") deferred = true;
+        else logOutcome(outcome, extra);
         break;
       }
       case "invoice.voided": {
@@ -588,13 +629,7 @@ export async function POST(request: Request) {
           // live in separate tables (docs ADR 20260726-post-trip-tipping); a
           // session id belongs to at most one, so try the booking-payment path
           // first and only fall back to tips when it finds nothing to mark.
-          const checkout = await markCheckoutPaidBySessionId(
-            db,
-            session.data.id,
-            event.account,
-            session.data.amount_total,
-            session.data.total_details?.amount_tax,
-          );
+          const checkout = await settleCheckoutPaid(db, session.data, event.account);
           if (checkout) {
             logOutcome("checkout_paid");
           } else {
@@ -613,13 +648,7 @@ export async function POST(request: Request) {
         if (session.success) {
           await recordSessionCustomer(db, session.data, event.account, logOutcome);
           await recordSessionPaymentIntent(db, session.data, event.account, logOutcome);
-          const checkout = await markCheckoutPaidBySessionId(
-            db,
-            session.data.id,
-            event.account,
-            session.data.amount_total,
-            session.data.total_details?.amount_tax,
-          );
+          const checkout = await settleCheckoutPaid(db, session.data, event.account);
           if (checkout) {
             logOutcome("checkout_paid");
           } else {
@@ -691,13 +720,8 @@ export async function POST(request: Request) {
             logOutcome("stale_account_update", { account: account.data.id });
             break;
           }
-          await setShopStripeAccountStatus(db, account.data.id, {
-            chargesEnabled: account.data.charges_enabled,
-            payoutsEnabled: account.data.payouts_enabled,
-            detailsSubmitted: account.data.details_submitted,
-            defaultCurrency: account.data.default_currency,
-          });
-          logOutcome("account_updated", { account: account.data.id });
+          const restricted = await applyAccountUpdate(db, account.data);
+          logOutcome("account_updated", { account: account.data.id, restricted });
         } else {
           logOutcome("malformed_payload");
         }
@@ -775,12 +799,11 @@ export async function POST(request: Request) {
         logOutcome(await applyDisputeEvent(db, event, occurredAt, sourceLookup));
         break;
       case "payout.paid":
-      case "payout.failed": {
+      case "payout.failed":
+      case "payout.canceled": {
         // Money Stripe moved to the shop's bank, or tried to (ADR
         // 20261012-payouts-reach-diveday).
-        const outcome = await applyPayoutEvent(db, event, occurredAt, expectedLivemode);
-        if (outcome === "deferred") deferred = true;
-        else logOutcome(outcome);
+        logOutcome(await applyPayoutEvent(db, event, occurredAt, expectedLivemode));
         break;
       }
       default:
@@ -796,14 +819,14 @@ export async function POST(request: Request) {
     // *does* retry rather than marking this delivery done (PAY-M1).
     //
     // Every handler this dispatch can reach is safely re-runnable:
-    // `markOrderPaidByInvoiceId`/`markOrderVoidedByInvoiceId` are transactional
+    // `applyInvoicePaid`/`markOrderVoidedByInvoiceId` are transactional
     // and transition-gated, `markCheckoutPaidBySessionId` never overwrites a
     // recorded settled total and dedupes its promo redemption,
     // `markTipPaidBySessionId` early-returns once paid, both
     // `*ExpiredBySessionId` and `markCheckoutPaymentFailedBySessionId` only
     // touch a `pending` row,
     // `recordStripeRefundFailure` writes one row per refund, reversing with it,
-    // `setShopStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
+    // `applyStripeAccountStatus` is gated by `hasNewerAccountUpdate`, and
     // `disconnectShopStripeAccount` neither moves `disconnectedAt` on a row
     // that is already disconnected nor touches one reconnected since this
     // event's own `created` time, `recordStripeChargeRefund` only ever raises a

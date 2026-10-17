@@ -99,7 +99,6 @@
     "restoreUnit": "Restaurar {label}"
   },
   "addUnit": {
-    "door": "Agregar equipo",
     "title": "Agregar una unidad",
     "submit": "Agregar al registro",
     "pending": "Agregando…"
@@ -117,7 +116,10 @@
     "purchasedOn": "Fecha de compra",
     "optionalHint": "(opcional)",
     "aboard": "A bordo",
-    "ashore": "En tierra"
+    "ashore": "En tierra",
+    "nitroxDesignated": "Uso con nitrox",
+    "nitroxDesignatedHint": "Reservado para aire enriquecido",
+    "thicknessMm": "Grosor (mm)"
   },
   "notice": {
     "added": "En el registro.",
@@ -153,7 +155,8 @@
     "returnedSetPulled": "De vuelta. {count, plural, one {# enviado a mantenimiento.} other {# enviados a mantenimiento.}}",
     "concernNeedsWords": "Para revisar un equipo hace falta una línea que diga qué pasó, para que el técnico pueda actuar.",
     "nothingOut": "De ese conjunto no hay nada fuera.",
-    "nothingToHandOver": "Ese conjunto ya está fuera."
+    "nothingToHandOver": "Ese conjunto ya está fuera.",
+    "returnedFlagged": "De vuelta y marcado para el técnico."
   },
   "import": {
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
@@ -229,7 +232,8 @@
       "reinstating": "Devolviendo…",
       "delete": "Eliminar unidad",
       "deleting": "Eliminando…",
-      "deleteHeld": "{name} tiene esta unidad hasta el {until}. Libérala o márcala como devuelta primero."
+      "deleteHeld": "{name} tiene esta unidad hasta el {until}. Libérala o márcala como devuelta primero.",
+      "returnedConcern": "Devuelto el {date} para revisar: {note}"
     },
     "returnOutcomeAllGood": "Volvió bien",
     "returnOutcomeFitAdjusted": "Talla ajustada al devolverlo",
@@ -243,6 +247,7 @@
     "cartServiceFlagged": "{count, plural, one {# unidad necesita mantenimiento} other {# unidades necesitan mantenimiento}}",
     "handOver": "Entregar",
     "handingOver": "Entregando…",
+    "allAssigned": "{count, plural, one {# asignada} other {Todas las # asignadas}}",
     "outLabel": "fuera",
     "kindWithSize": "{kindLabel} · {size}",
     "noneFree": "No hay {kindLabel} libre para estas fechas.",
@@ -263,6 +268,10 @@
     },
     "optionServiceOverdue": "mantenimiento vencido",
     "optionServiceDueSoon": "mantenimiento por vencer",
+    "optionNitroxDesignated": "para nitrox",
+    "optionNitroxDesignatedOnAir": "reservado para nitrox, revísalo antes de usarlo con aire",
+    "optionThickness": "{mm} mm",
+    "notDaysThickness": "no es el de {mm} mm del día",
     "optionServiceConcern": "revisión pendiente",
     "pickUnit": "Elige una unidad…",
     "proposal": {
@@ -281,7 +290,13 @@
     "returnCancelConcern": "Cancelar",
     "returnNoteLabel": "Qué contarle al técnico",
     "returnNotePlaceholder": "Correa rota, la segunda etapa se disparó",
-    "returnPullToBench": "Enviar a mantenimiento"
+    "returnPullToBench": "Enviar a mantenimiento",
+    "backHeading": "De vuelta del barco",
+    "backCount": "{count, plural, one {# unidad por recibir} other {# unidades por recibir}}",
+    "backUnit": "De vuelta",
+    "backProblem": "De vuelta con un problema",
+    "backNoteLabel": "¿Qué le pasa?",
+    "backNotePlaceholder": "El inflador se traba"
   },
   "ticket": {
     "eyebrow": "Alquiler",

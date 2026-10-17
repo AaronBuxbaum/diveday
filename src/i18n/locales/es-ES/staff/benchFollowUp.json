@@ -19,7 +19,6 @@
   "bill": {
     "heading": "Factura",
     "total": "Importe total: {amount}",
-    "atShop": "Se cobra en el mostrador.",
     "ownerOnly": "La factura la envía un propietario o gerente.",
     "needsEmail": "Agrega un correo a la ficha del cliente para enviarle la factura.",
     "send": "Enviar la factura",
@@ -27,7 +26,9 @@
     "sending": "Enviando…",
     "sent": "Enviada el {date}",
     "openOrder": "Ver pedido",
-    "description": "Orden de trabajo #{number}"
+    "description": "Orden de trabajo #{number}",
+    "paidAtPickup": "Pagado al recoger:",
+    "recording": "Registrando…"
   },
   "notice": {
     "readySent": "Aviso de recogida enviado.",
@@ -38,13 +39,13 @@
     "billSent": "Factura enviada.",
     "billAlready": "Esta orden ya tiene una factura.",
     "billNotConnected": "Conecta Stripe en Ajustes para enviar facturas.",
-    "billNotAuthorized": "Solo un propietario o gerente puede enviar una factura.",
     "billInvalid": "Estas líneas no pueden ir en una factura. Revisa cada importe y cantidad.",
     "billTaxLocation": "Los impuestos están activados, así que esta factura necesita la dirección de facturación del cliente. Envíala desde Pedidos.",
     "billStripeFailed": "Stripe no pudo crear esa factura. Inténtalo de nuevo en un momento.",
     "billNoLines": "Agrega primero repuestos o mano de obra.",
     "remindersOff": "Recordatorios de mantenimiento desactivados para esa pieza.",
-    "remindersOn": "Recordatorios de mantenimiento activados para esa pieza."
+    "remindersOn": "Recordatorios de mantenimiento activados para esa pieza.",
+    "billPaidCounter": "Pago registrado. La orden está pagada."
   },
   "reminders": {
     "off": "Sin recordatorios",

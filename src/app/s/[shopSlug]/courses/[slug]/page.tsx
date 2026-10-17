@@ -84,7 +84,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: canonical ? { canonical } : undefined,
-    robots: shopSearchListingRobots(shop?.searchListingOptOutAt),
+    robots: shop ? shopSearchListingRobots(shop) : undefined,
     openGraph: { ...openGraphSite, title, description, url: canonical },
   };
 }

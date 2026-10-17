@@ -33,6 +33,26 @@ export type IssuedCapability = { token: string; expiresAt: Date };
 export const MAX_LIVE_CAPABILITIES_PER_PURPOSE = 20;
 
 /**
+ * **The two readiness links a new booking gets** (security review r5-4, F1):
+ * one for the browser that booked, which proved only a typed name and an
+ * address and so stays undelivered, and one for the confirmation email, which
+ * is delivered and opens the diver's other days. Issued one after the other,
+ * never side by side, so a transaction executor stays sequential.
+ */
+export async function issueBookedReadinessLinks(
+  db: DbExecutor,
+  input: { shopId: string; bookingId: string },
+): Promise<{ redirect: IssuedCapability | null; mailed: IssuedCapability | null }> {
+  const redirect = await issueBookingCapability(db, { ...input, purpose: "readiness" });
+  const mailed = await issueBookingCapability(db, {
+    ...input,
+    purpose: "readiness",
+    delivered: true,
+  });
+  return { redirect, mailed };
+}
+
+/**
  * Mints a fresh, purpose-bound bearer capability over a booking. Refuses a
  * booking that isn't this shop's or is already cancelled — a cancelled
  * booking never gets a new link, and any of its outstanding links already
@@ -69,6 +89,12 @@ export async function issueBookingCapability(
      * longer: the trip-anchored expiry stays the ceiling.
      */
     expiresAt?: Date;
+    /**
+     * The token goes only into a message to the contact on file, never back
+     * to the browser that asked (`booking_capabilities.delivered`). Leave it
+     * off for a link a redirect or a page hands over.
+     */
+    delivered?: boolean;
   },
 ): Promise<IssuedCapability | null> {
   const now = input.now ?? nowDate();
@@ -97,6 +123,7 @@ export async function issueBookingCapability(
     purpose: input.purpose,
     tokenHash: hashCapabilityToken(token),
     tokenSealed: input.sealingKey ? sealSecret(token, input.sealingKey) : null,
+    delivered: input.delivered ?? false,
     issuedAt: now,
     expiresAt,
   });
@@ -114,7 +141,14 @@ export async function issueBookingCapability(
  */
 export async function issueBookingCapabilities(
   db: DbExecutor,
-  input: { shopId: string; bookingIds: string[]; purpose: CapabilityPurpose; now?: Date },
+  input: {
+    shopId: string;
+    bookingIds: string[];
+    purpose: CapabilityPurpose;
+    now?: Date;
+    /** As {@link issueBookingCapability}'s: every token goes only into a message. */
+    delivered?: boolean;
+  },
 ): Promise<Map<string, IssuedCapability>> {
   const now = input.now ?? nowDate();
   const issued = new Map<string, IssuedCapability>();
@@ -132,26 +166,63 @@ export async function issueBookingCapabilities(
       ),
     );
   if (found.length === 0) return issued;
+  return mintBookingCapabilities(db, {
+    shopId: input.shopId,
+    seats: found.map((booking) => ({ bookingId: booking.id, tripEndsAt: booking.tripEndsAt })),
+    purpose: input.purpose,
+    now,
+    delivered: input.delivered,
+  });
+}
+
+/**
+ * **The minting half of {@link issueBookingCapabilities}, for a caller that has
+ * already read its bookings** (#2488): the organizer's party panel reads every
+ * seat with its departure in one statement, so asking the database again which
+ * of them exist and when their boats return was a round trip spent learning
+ * what the caller held.
+ *
+ * The caller owns the proof that every seat is this shop's and not cancelled,
+ * read in the same request: nothing here re-checks it. The rules after that
+ * are the same as ever: each booking's live set stays within
+ * `MAX_LIVE_CAPABILITIES_PER_PURPOSE`, its oldest retired first, and the
+ * retiring finishes before the new rows go in.
+ */
+export async function mintBookingCapabilities(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    seats: Array<{ bookingId: string; tripEndsAt: Date }>;
+    purpose: CapabilityPurpose;
+    now: Date;
+    /** As {@link issueBookingCapability}'s: every token goes only into a message. */
+    delivered?: boolean;
+  },
+): Promise<Map<string, IssuedCapability>> {
+  const issued = new Map<string, IssuedCapability>();
+  const seats = [...new Map(input.seats.map((seat) => [seat.bookingId, seat])).values()];
+  if (seats.length === 0) return issued;
 
   await retireOldestLiveCapabilities(
     db,
     input.shopId,
-    found.map((booking) => booking.id),
+    seats.map((seat) => seat.bookingId),
     input.purpose,
-    now,
+    input.now,
   );
 
-  const rows = found.map((booking) => {
+  const rows = seats.map((seat) => {
     const token = createCapabilityToken();
-    const expiresAt = capabilityExpiryFor(booking.tripEndsAt, now);
-    issued.set(booking.id, { token, expiresAt });
+    const expiresAt = capabilityExpiryFor(seat.tripEndsAt, input.now);
+    issued.set(seat.bookingId, { token, expiresAt });
     return {
       shopId: input.shopId,
-      bookingId: booking.id,
+      bookingId: seat.bookingId,
       purpose: input.purpose,
       tokenHash: hashCapabilityToken(token),
       tokenSealed: null,
-      issuedAt: now,
+      delivered: input.delivered ?? false,
+      issuedAt: input.now,
       expiresAt,
     };
   });
@@ -283,6 +354,8 @@ export type BookingCapabilityContext = {
   shopId: string;
   personId: string;
   tripId: string;
+  /** The token reached the bearer only through the contact on file. */
+  delivered: boolean;
 };
 
 /**
@@ -308,6 +381,7 @@ export async function verifyBookingCapability(
       tripId: bookings.tripId,
       bookingStatus: bookings.status,
       tripStatus: trips.status,
+      delivered: bookingCapabilities.delivered,
     })
     .from(bookingCapabilities)
     .innerJoin(bookings, eq(bookings.id, bookingCapabilities.bookingId))
@@ -341,6 +415,7 @@ export async function verifyBookingCapability(
     shopId: row.capabilityShopId,
     personId: row.personId,
     tripId: row.tripId,
+    delivered: row.delivered,
   };
 }
 
@@ -561,4 +636,30 @@ export async function revokeBookingCapabilities(
     // A revoked link is dead, so its openable copy has no reason to exist.
     .set({ revokedAt: now, tokenSealed: null })
     .where(and(...conditions));
+}
+
+/**
+ * **Take back links that were minted ahead of a send that did not go** (#2451).
+ * A batch mints every reachable seat's link before the first message leaves,
+ * because the link is part of the body; when the provider then answers
+ * not-sent (a bounce, a stop-listed phone, a refused request), nobody holds
+ * the token, and a live capability for no reader is only surface. This revokes
+ * exactly the tokens it is handed — by hash, never by booking — so an earlier,
+ * delivered link for the same booking stays live.
+ */
+export async function revokeIssuedCapabilities(
+  db: DbExecutor,
+  input: { shopId: string; tokens: readonly string[]; now?: Date },
+): Promise<void> {
+  if (input.tokens.length === 0) return;
+  await db
+    .update(bookingCapabilities)
+    .set({ revokedAt: input.now ?? nowDate(), tokenSealed: null })
+    .where(
+      and(
+        eq(bookingCapabilities.shopId, input.shopId),
+        inArray(bookingCapabilities.tokenHash, input.tokens.map(hashCapabilityToken)),
+        isNull(bookingCapabilities.revokedAt),
+      ),
+    );
 }

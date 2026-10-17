@@ -28,6 +28,8 @@ const COPY: CommandPaletteCopy = {
   groupGear: "Gear",
   gearStatuses: { in_service: "In service", needs_service: "Needs service" },
   groupGoTo: "Go to",
+  groupRecent: "Recent",
+  groupToday: "Today",
   language: "Language",
   groupSession: "This session",
   signOut: "Sign out",
@@ -313,5 +315,100 @@ describe("CommandPalette settings shortcuts", () => {
     // The registry's row (labelled by its id here); the rail's "Team" is skipped.
     expect(await screen.findByRole("option", { name: "team" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Team" })).toBeNull();
+  });
+});
+
+/**
+ * **⌘K opens on what you were just doing** (fifth loop, item 13): the records
+ * this staffer last opened from it on this device, then today's boats, before
+ * anything is typed. Browser storage only, per shop and per staffer.
+ */
+describe("CommandPalette recents and today's boats", () => {
+  afterEach(() => window.localStorage.clear());
+
+  function renderWith(props: Partial<Parameters<typeof CommandPalette>[0]> = {}) {
+    return render(
+      <CommandPalette
+        shopSlug="blue-mantis"
+        gates={{ waivers: true, reports: true, team: true, settings: true }}
+        locale="en-US"
+        languages={[]}
+        setLocaleAction={async () => {}}
+        signOutAction={async () => {}}
+        createDiverAction={async () => {}}
+        readerId="p-desk"
+        copy={COPY}
+        {...props}
+      />,
+    );
+  }
+
+  it("remembers a diver opened from it by id only, and opens on them next time", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify(results(null)), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderWith();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    await userEvent.type(screen.getByRole("combobox"), "gra");
+    await userEvent.click(await screen.findByRole("option", { name: "Grace Mensah" }));
+    expect(routerPush).toHaveBeenCalledWith("/shop/blue-mantis/divers/p-grace");
+    // The device keeps which record, never its name or contact line.
+    expect(
+      JSON.parse(window.localStorage.getItem("diveday.palette.recent.blue-mantis.p-desk") ?? ""),
+    ).toEqual([{ key: "diver:p-grace", kind: "diver", id: "p-grace" }]);
+
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      `/api/search?recent=${encodeURIComponent("diver:p-grace")}`,
+      expect.anything(),
+    );
+    const first = await screen.findByRole("option", { name: "Grace Mensah" });
+    expect(screen.getAllByRole("option")[0]).toBe(first);
+    expect(screen.getByText("Recent")).toBeInTheDocument();
+  });
+
+  it("drops a remembered record that no longer reads back, and forgets it", async () => {
+    window.localStorage.setItem(
+      "diveday.palette.recent.blue-mantis.p-desk",
+      JSON.stringify([{ key: "diver:p-gone", kind: "diver", id: "p-gone" }]),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ ...results(null), divers: [] }))),
+    );
+    renderWith();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    await waitFor(() =>
+      expect(window.localStorage.getItem("diveday.palette.recent.blue-mantis.p-desk")).toBe("[]"),
+    );
+    expect(screen.queryByText("Recent")).toBeNull();
+  });
+
+  it("keeps one staffer's recents from the next one on the same device", async () => {
+    window.localStorage.setItem(
+      "diveday.palette.recent.blue-mantis.p-owner",
+      JSON.stringify([{ key: "diver:p-grace", kind: "diver", id: "p-grace" }]),
+    );
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(results(null))));
+    vi.stubGlobal("fetch", fetchMock);
+    renderWith();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("Recent")).toBeNull();
+  });
+
+  it("offers today's boats under Today before anything is typed, and not once a query is", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(results(null)), { status: 200 })),
+    );
+    renderWith({ todayBoats: [{ id: "t-1", title: "Two-Tank Reef", time: "7:00 AM" }] });
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    const boat = screen.getByRole("option", { name: "Two-Tank Reef" });
+    expect(boat).toHaveTextContent("7:00 AM");
+    await userEvent.type(screen.getByRole("combobox"), "gra");
+    await screen.findByRole("option", { name: "Grace Mensah" });
+    expect(screen.queryByRole("option", { name: "Two-Tank Reef" })).toBeNull();
   });
 });

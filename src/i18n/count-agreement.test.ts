@@ -40,17 +40,17 @@ import { daySpineSummaryText } from "./today-labels";
  * first station, both rendered at one.
  */
 describe("the day spine's counts", () => {
-  it.each(DIVER_LOCALES)("inflects the open-spots line in %s at one", (locale) => {
+  it.each(DIVER_LOCALES)("inflects the open-seats line in %s at one", (locale) => {
     const t = staffTranslator(locale);
     for (const count of [0, 1, 2, 11]) {
-      const line = t("shopHome.spine.spotsOpen", { count });
+      const line = t("shopHome.spine.seatsOpen", { count });
       expect(line, `${locale} at ${count}`).not.toContain("{");
       expect(line, `${locale} at ${count}`).not.toContain("plural,");
     }
     // The singular and the plural are genuinely different sentences; asserting
     // only "no braces left" would pass against a pair identical by mistake.
-    expect(t("shopHome.spine.spotsOpen", { count: 1 })).not.toBe(
-      t("shopHome.spine.spotsOpen", { count: 2 }).replace("2", "1"),
+    expect(t("shopHome.spine.seatsOpen", { count: 1 })).not.toBe(
+      t("shopHome.spine.seatsOpen", { count: 2 }).replace("2", "1"),
     );
   });
 
@@ -87,5 +87,34 @@ describe("counts a diver reads", () => {
     // ("1 respondida" / "2 respondidas"); asserting only "no braces left" would
     // pass against a pair whose halves are identical by mistake.
     if (locale === "es-ES") expect(line(1)).not.toBe(line(2).replace("2", "1"));
+  });
+});
+
+describe("an age a staffer reads", () => {
+  it("says the unit in Spanish, which a bare number does not imply (#2167)", () => {
+    const t = staffTranslator("es-ES");
+    expect(t("divers.header.clearDateAdultAttestedMinor", { age: 16 })).toContain("tiene 16 años.");
+  });
+});
+
+/**
+ * **The seat line reads like the board's** (fifth loop, section 6). The walk-in
+ * and Add-booking headers said "11/14 booked" while the schedule board says
+ * "11 of 14", so one boat read two ways a tap apart.
+ */
+describe("the seat-diver trip summary", () => {
+  const args = { title: "Reef", date: "Oct 15", time: "9:00 AM", booked: 11, capacity: 14 };
+
+  it("says booked of capacity in words, as the board does", () => {
+    const en = staffTranslator("en-US");
+    expect(en("seatDiver.tripSummary", args)).toContain("11 of 14 booked");
+    expect(en("seatDiver.tripSummary", args)).not.toContain("11/14");
+    expect(staffTranslator("es-ES")("seatDiver.tripSummary", args)).toContain("reservas: 11 de 14");
+  });
+
+  it("reads the same at one, with no adjective to agree", () => {
+    const one = { ...args, booked: 1 };
+    expect(staffTranslator("es-ES")("seatDiver.tripSummary", one)).toContain("reservas: 1 de 14");
+    expect(staffTranslator("es-ES")("seatDiver.tripSummary", one)).not.toContain("reservado");
   });
 });

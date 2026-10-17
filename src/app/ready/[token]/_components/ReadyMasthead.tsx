@@ -9,14 +9,17 @@ import type { DiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import {
   bindTitleDash,
+  formatOrdinal,
   formatRelativeDay,
   formatShortDate,
   formatTime,
   formatTimeRangeTz,
 } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
+import { firstNameOf } from "@/lib/person-name";
 import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { isDiveDay } from "@/lib/thread-steps";
+import type { DiveDayMilestone } from "@/lib/visit-milestones";
 
 /**
  * **The facts the top of `/ready` states**, and the only ones: whose shop,
@@ -34,24 +37,20 @@ export type MastheadFacts = {
   pickup: { time: string | null; location: string | null };
 };
 
-/**
- * **"Tomorrow · Sun, Oct 11 · 7:00 AM – 10:30 AM EDT"** — the relative day
- * first (UX review 2026-10-10, item 8).
- *
- * It used to trail ("… EDT · tomorrow"), and on a phone the line wrapped so
- * that "· tomorrow" stood alone on a line of its own: a dangling bullet that
- * looked broken, on the one word a diver scans the top of this page for. First,
- * it is the line's lead and can never orphan. `Intl.RelativeTimeFormat` writes
- * it in lower case for a phrase's middle, so its first letter is raised in the
- * reader's own locale.
- */
-export function mastheadWhenLine(facts: MastheadFacts, locale: string, now: Date): string {
+/** The when line's two halves: the day and date, and the time range. */
+export function mastheadWhenParts(
+  facts: MastheadFacts,
+  locale: string,
+  now: Date,
+): { day: string; hours: string } {
   const { trip, shop } = facts;
   const relative = formatRelativeDay(trip.startsAt, now, locale, shop.timezone);
   const lead = relative.charAt(0).toLocaleUpperCase(locale) + relative.slice(1);
   const date = formatShortDate(trip.startsAt, locale, shop.timezone);
-  const hours = formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone);
-  return `${lead} · ${date} · ${hours}`;
+  return {
+    day: `${lead} · ${date}`,
+    hours: formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone),
+  };
 }
 
 /**
@@ -126,7 +125,7 @@ export function ReadyMastheadMeta({
   });
   return (
     <>
-      <p className="mt-1 text-base text-muted">{mastheadWhenLine(facts, locale, now)}</p>
+      <MastheadWhen facts={facts} locale={locale} now={now} />
       {/* Today. Said once, above the only number that matters this morning:
           plain ink, no motion. */}
       {diveDay ? <p className={`mt-2 ${ITEM_TITLE_CLASS}`}>{t("thread.diveDayLine")}</p> : null}
@@ -157,6 +156,7 @@ export function ReadyMastheadMeta({
 export function ReadyBookedHeader({
   facts,
   greetingName,
+  milestone = null,
   locale,
   now,
   t,
@@ -165,13 +165,18 @@ export function ReadyBookedHeader({
   facts: MastheadFacts;
   /** The name the booking greets, already resolved (a held identity greets the name it booked as). */
   greetingName: string;
+  /**
+   * This seat is the diver's 10th, 25th, 50th or 100th boat with the shop
+   * (H-128): said once, as a count, under the arrival line. Null otherwise.
+   */
+  milestone?: DiveDayMilestone | null;
   locale: string;
   now: Date;
   t: DiverTranslator;
   /** Anything that belongs under the card and above the thread. */
   children?: ReactNode;
 }) {
-  const firstName = greetingName.split(" ")[0] || t("ready.namelessFallback");
+  const firstName = firstNameOf(greetingName, t("ready.namelessFallback"));
   return (
     <header>
       <EarnedMoment
@@ -180,12 +185,67 @@ export function ReadyBookedHeader({
         title={t("booking.confirmedHeading", { name: firstName })}
       >
         <p className="font-semibold text-foreground">{bindTitleDash(facts.trip.title)}</p>
-        <p className="mt-1">{mastheadWhenLine(facts, locale, now)}</p>
+        <BookedWhen facts={facts} locale={locale} now={now} />
         <p className="mt-1 font-medium text-foreground">{mastheadArrivalLine(facts, locale, t)}</p>
+        {milestone ? (
+          <p className="mt-1">
+            {t("booking.milestoneDay", {
+              ordinal: formatOrdinal(milestone, locale),
+              shopName: facts.shop.name,
+            })}
+          </p>
+        ) : null}
       </EarnedMoment>
       <MastheadDoors facts={facts} t={t} />
       {children}
     </header>
+  );
+}
+
+/**
+ * **"Tomorrow · Sun, Oct 11 · 7:00 AM – 10:30 AM EDT"** — the relative day
+ * first (UX review 2026-10-10, item 8).
+ *
+ * It used to trail ("… EDT · tomorrow"), and on a phone the line wrapped so
+ * that "· tomorrow" stood alone on a line of its own: a dangling bullet that
+ * looked broken, on the one word a diver scans the top of this page for. First,
+ * it is the line's lead and can never orphan. `Intl.RelativeTimeFormat` writes
+ * it in lower case for a phrase's middle, so its first letter is raised in the
+ * reader's own locale. *
+ * The time range is unbreakable: at 390 the line broke inside it ("7:00 AM" /
+ * "– 10:30 AM EDT", fourth review, item 48). The line may still wrap, but only
+ * at the separator before the range.
+ */
+export function MastheadWhen({
+  facts,
+  locale,
+  now,
+}: {
+  facts: MastheadFacts;
+  locale: string;
+  now: Date;
+}) {
+  const { day, hours } = mastheadWhenParts(facts, locale, now);
+  return (
+    <p className="mt-1 text-base text-muted">
+      {day} · <span className="whitespace-nowrap">{hours}</span>
+    </p>
+  );
+}
+
+/**
+ * **The booked card's when, on two lines** (#2504). The page a diver
+ * screenshots for the dock wrapped its one line inside the time range at 390
+ * ("7:00" / "AM to 11:30 AM"); the day and date take a line, and the whole
+ * range the next, unbreakable.
+ */
+function BookedWhen({ facts, locale, now }: { facts: MastheadFacts; locale: string; now: Date }) {
+  const { day, hours } = mastheadWhenParts(facts, locale, now);
+  return (
+    <p className="mt-1">
+      <span className="block">{day}</span>
+      <span className="block whitespace-nowrap">{hours}</span>
+    </p>
   );
 }
 
@@ -199,7 +259,7 @@ export function ReadyBookedPage({
   locale,
   children,
 }: {
-  card: MastheadFacts & { greetingName: string };
+  card: MastheadFacts & { greetingName: string; milestone?: DiveDayMilestone | null };
   locale: DiverLocale;
   children: ReactNode;
 }) {
@@ -215,6 +275,7 @@ export function ReadyBookedPage({
           <ReadyBookedHeader
             facts={card}
             greetingName={card.greetingName}
+            milestone={card.milestone ?? null}
             locale={locale}
             now={nowDate()}
             t={t}

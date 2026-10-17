@@ -8,8 +8,10 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { listDivePackages } from "@/db/dive-packages";
+import { packageDivesOwedAt } from "@/db/report-lines";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { MAX_PACKAGE_DIVE_COUNT } from "@/lib/dive-packages";
 import { formatMoneyScanned } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
@@ -57,7 +59,12 @@ export default async function DivePackagesSettingsPage({
   });
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const shopPackages = await listDivePackages(db, session.user.shopId);
+  // What the shop still owes in dives (fourth UX review, item 20): sold,
+  // not yet taken, at what each was bought for. The month report's figure, at now.
+  const [shopPackages, owed] = await Promise.all([
+    listDivePackages(db, session.user.shopId),
+    packageDivesOwedAt(db, session.user.shopId, nowDate()),
+  ]);
   const banner = noticeFromParam(notice, divePackageNoticeMessages(t));
 
   return (
@@ -69,6 +76,14 @@ export default async function DivePackagesSettingsPage({
         title={t("settings.main.divePackages.heading")}
       />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
+      {owed.dives > 0 ? (
+        <p className="mb-4 text-sm tabular-nums">
+          {t("settings.main.divePackages.owed", {
+            dives: owed.dives,
+            value: formatMoneyScanned(owed.valueCents, shop.currency, locale),
+          })}
+        </p>
+      ) : null}
 
       <SectionCard padding="lg">
         {shopPackages.length > 0 ? (

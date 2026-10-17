@@ -60,7 +60,7 @@ export function statusRowText(t: StaffTranslator, row: DiverStatusRow): string {
  * and stays first-class on the Orders ledger.
  */
 export const STATUS_TARGET_ANCHORS: Record<
-  Exclude<DiverStatusTarget, "collect" | "open_booking">,
+  Exclude<DiverStatusTarget, "collect" | "open_booking" | "open_course_roster">,
   string
 > = {
   verify: "#card-awaiting",
@@ -79,6 +79,10 @@ function fixHref(row: DiverStatusRow, shopSlug: string, recordPath: string): str
     return row.tripContext
       ? `/shop/${shopSlug}/trips/${row.tripContext.tripId}#booking-${row.tripContext.bookingId}`
       : "";
+  }
+  // The ended course session's roster, where the instructor issues the card.
+  if (target === "open_course_roster") {
+    return row.courseTripId ? `/shop/${shopSlug}/trips/${row.courseTripId}` : "";
   }
   // A row about one kind of card lands on that kind (the original bug: a
   // blocker about the Advanced card landed on an unrelated pending Deep card).

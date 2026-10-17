@@ -41,7 +41,18 @@ Scrutinize, in order of severity:
    use; zod (or equivalent) validates shape before logic runs.
 6. **Secrets** — nothing from `.env*` committed, echoed to the client, or baked into a fixture.
 
-Report findings ordered by severity, each with: the file:line, the concrete attack (who does
-what, from where), and the fix. Distinguish "exploitable" from "defense-in-depth gap" from
-"style". If the change is clean, say which checks you ran so the next reviewer can calibrate.
-You review; you do not edit files.
+Report findings ordered by severity. Each finding carries its evidence or is not reported:
+
+- **The line it violates**: the ADR, the rule (`AGENTS.subagent.md`, a path-scoped rule), or the
+  guarantee in `src/lib/authz.ts`, by path and heading, id or line.
+- **A concrete failing input or a test**: the file:line and the attack — who sends what, from
+  where, and what they get back — written so the implementer can turn it into a test and run it.
+- **A label**: **confirmed** (you traced the request through the code to the leak or the bypass)
+  or **possible** (the risk is real but you could not trace it to the end).
+
+Then the fix. Mark each one "exploitable" or "defense-in-depth gap"; style is out of scope. When
+the prompt frames you as the attacker in a two-run review of a safety-critical surface
+(`docs/agents/working-rules.md`, "Hard rules"), go after the gate itself too: the input or
+ordering that gets a diver past readiness or keeps data an erasure promised to remove. If the
+change is clean, say which checks you ran so the next reviewer can calibrate. You review; you do
+not edit files.

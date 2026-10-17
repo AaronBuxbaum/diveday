@@ -45,6 +45,8 @@ export function HeadCount({
   blockedAboard = 0,
   t,
   people = false,
+  overCertificate = null,
+  overTotalPersons = null,
   className = "",
 }: {
   /** Divers with an *aboard* result at this checkpoint. */
@@ -66,8 +68,23 @@ export function HeadCount({
    * The figure is the same either way: everyone aboard is counted.
    */
   people?: boolean;
+  /**
+   * More passengers counted aboard than the boat's certificate allows
+   * (`passengersAboveCertificateAboard`, src/lib/boat-safety.ts). The sale is
+   * refused above it (H-107); the rail never is, so the count says it: the
+   * figure goes danger and a line names the limit. Crew are not passengers and
+   * are never in it.
+   */
+  overCertificate?: { limit: number } | null;
+  /**
+   * More people counted aboard, crew included, than the certificate's total
+   * persons (`personsAboveTotalPersonsAboard`, dive-domain review D2). Same
+   * danger, its own line; it caps no sale.
+   */
+  overTotalPersons?: { limit: number } | null;
   className?: string;
 }) {
+  const over = overCertificate !== null || overTotalPersons !== null;
   // Bounded for the pixels only: an empty glass stands at zero rather than
   // dividing by it, and the water cannot rise past the brim.
   const fraction = out > 0 ? Math.min(1, Math.max(0, aboard / out)) : 0;
@@ -84,7 +101,9 @@ export function HeadCount({
             ? t("participants.headCount.aboardOfTotalPeople", { aboard, total: out })
             : t("manifest.aboardOfTotal", { aboard, total: out })
         }
-        className="relative size-20 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken"
+        className={`relative size-20 shrink-0 overflow-hidden rounded-full bg-surface-sunken ${
+          over ? "border-2 border-danger" : "border border-border"
+        }`}
       >
         <div
           aria-hidden="true"
@@ -94,7 +113,11 @@ export function HeadCount({
         />
         {/* The figure sits over the water, not in it: the number is the fact
             and the water is its shape (principle 9). */}
-        <span className={`absolute inset-0 flex items-center justify-center ${FIGURE_DIAL_CLASS}`}>
+        <span
+          className={`absolute inset-0 flex items-center justify-center ${FIGURE_DIAL_CLASS}${
+            over ? " text-danger" : ""
+          }`}
+        >
           {aboard}
         </span>
       </div>
@@ -119,6 +142,16 @@ export function HeadCount({
             ? t("participants.headCount.ofTotalAboardPeople", { total: out })
             : t("manifest.ofTotalAboard", { total: out })}
         </p>
+        {overCertificate ? (
+          <p className="font-bold text-danger">
+            {t("manifest.headCountOverCertificate", { limit: overCertificate.limit })}
+          </p>
+        ) : null}
+        {overTotalPersons ? (
+          <p className="font-bold text-danger">
+            {t("manifest.headCountOverTotalPersons", { limit: overTotalPersons.limit })}
+          </p>
+        ) : null}
         {blockedAboard > 0 ? (
           <p className="font-bold text-danger">
             {t("manifest.headCountBlockedAboard", { count: blockedAboard })}

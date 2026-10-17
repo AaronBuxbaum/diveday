@@ -4,8 +4,9 @@ import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getTripManifest } from "./manifests";
 import { getMonthlyReport } from "./reporting";
-import { tripRequirements, trips as tripsTable } from "./schema";
+import { tripAssignments, tripRequirements, trips as tripsTable } from "./schema";
 import { resetDemoSchedule } from "./seed";
+import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -51,6 +52,33 @@ describe("seeded history manifests", () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  /**
+   * **The completed dawn boat boards nobody the gate would refuse** (#2415).
+   * Its roll call is written by direct insert, past `recordRollCall`, and it
+   * used to board every seat, including divers with no card or a card nobody
+   * verified: "boarded" in a state the product forbids, on the boat the demo
+   * opens its record and its close-out on.
+   */
+  it("never boards a diver on the completed boat whom readiness would refuse", async () => {
+    const { db, shop } = ctx;
+    await resetDemoSchedule(db, shop.id);
+    const [completed] = await db
+      .select({ id: tripsTable.id })
+      .from(tripsTable)
+      .where(and(eq(tripsTable.shopId, shop.id), eq(tripsTable.title, DEMO_COMPLETED_TRIP_TITLE)));
+    if (!completed) throw new Error("seeded completed trip missing");
+
+    const manifest = await getTripManifest(db, shop.id, completed.id);
+    if (!manifest) throw new Error("no manifest for the completed trip");
+    const boarded = manifest.divers.filter((diver) => diver.rollCall?.state === "boarded");
+    expect(boarded.length).toBeGreaterThan(0);
+    expect(
+      boarded
+        .filter((diver) => diver.readiness.status !== "ready")
+        .map((diver) => `${diver.fullName}: ${JSON.stringify(diver.readiness.blockers)}`),
+    ).toEqual([]);
   });
 
   it("carries a no-show's absence forward through every after-dive checkpoint", async () => {
@@ -114,5 +142,35 @@ describe("seeded history manifests", () => {
     // subtracts the latter from the former — so a tax seeded *inside* the price
     // would show up here as revenue that had quietly shrunk.
     expect(report.revenueCents).toBeGreaterThan(report.taxCents);
+  });
+});
+
+/**
+ * **Every boat in the back-fill had somebody driving it** (fourth review, item
+ * 13): Reports listed this month's boats as "0 crew" while Safety judged "0 of
+ * 0" crew sailings, the emptiest record reading cleanest.
+ */
+describe("seeded history crew", () => {
+  it("puts a captain and a divemaster on every sailed history boat", async () => {
+    const { db, shop } = ctx;
+    await resetDemoSchedule(db, shop.id, { history: true });
+    const history = await db
+      .select({ id: tripsTable.id })
+      .from(tripsTable)
+      .where(
+        and(
+          eq(tripsTable.shopId, shop.id),
+          eq(tripsTable.description, "Sailed. Kept in the log for the shop's monthly numbers."),
+        ),
+      );
+    expect(history.length).toBeGreaterThan(0);
+    const crew = await db.select().from(tripAssignments);
+    for (const trip of history) {
+      const roles = crew
+        .filter((row) => row.tripId === trip.id)
+        .map((row) => row.tripRole)
+        .sort();
+      expect(roles, trip.id).toEqual(["captain", "divemaster"]);
+    }
   });
 });

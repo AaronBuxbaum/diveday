@@ -7,10 +7,13 @@ import { fileScopedShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import { courses, divePackages, shops, trips } from "./schema";
 import {
+  clearPassedReopensOn,
   getShopBySlug,
+  listShopsForDiverPicker,
   listShopsForSitemap,
   setShopAddress,
   setShopDepthUnit,
+  setShopReopensOn,
   setShopSearchListing,
   setShopTemperatureUnit,
   shopHasPricedRecords,
@@ -192,6 +195,35 @@ describe("listShopsForSitemap", () => {
 });
 
 /**
+ * **The diver's shop picker names exactly the listed shops** (fourth review,
+ * item 50). It is a public list DiveDay publishes, so it reads through the same
+ * scope as the sitemap: never a demo, never a shop that opted out of search.
+ */
+describe("listShopsForDiverPicker", () => {
+  it("names the sitemap's shops, in name order, with their town", async () => {
+    const db = ctx.db;
+    const picker = await listShopsForDiverPicker(db);
+    expect(picker.map((row) => row.slug).sort()).toEqual(
+      (await listShopsForSitemap(db)).map((row) => row.slug).sort(),
+    );
+    const names = picker.map((row) => row.name);
+    expect(names).toEqual([...names].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)));
+    expect(picker.map((row) => row.slug)).not.toContain("blue-mantis");
+    expect(picker.find((row) => row.slug === "reef-line-divers")?.locality).toBe("Key Largo");
+  });
+
+  it("drops a shop that opted out of search", async () => {
+    const db = ctx.db;
+    const [shop] = await db.select().from(shops).where(eq(shops.slug, "reef-line-divers"));
+    if (!shop) throw new Error("the listed seed shop is missing");
+    await setShopSearchListing(db, shop.id, false);
+    expect((await listShopsForDiverPicker(db)).map((row) => row.slug)).not.toContain(
+      "reef-line-divers",
+    );
+  });
+});
+
+/**
  * **The currency warning is only as good as the places it looks.**
  *
  * `shopHasPricedRecords` decides whether Settings warns a shop that switching
@@ -312,5 +344,30 @@ describe("shopHasPricedRecords", () => {
       .insert(divePackages)
       .values({ shopId: rival.id, name: "Ten dives", diveCount: 10, priceCents: 40000 });
     expect(await shopHasPricedRecords(db, bare.id)).toBe(false);
+  });
+});
+
+describe("clearPassedReopensOn", () => {
+  it("clears a date before the shop's own today and keeps today and later", async () => {
+    const { db, shop } = ctx;
+    // 2030-06-02 01:00 UTC is still 1 June in New York (the shop's zone).
+    const now = new Date("2030-06-02T01:00:00.000Z");
+    await setShopReopensOn(db, shop.id, "2030-05-31");
+    expect(await clearPassedReopensOn(db, now)).toBe(1);
+    expect((await getShopBySlug(db, shop.slug))?.reopensOn).toBeNull();
+
+    // The day itself is not passed yet.
+    await setShopReopensOn(db, shop.id, "2030-06-01");
+    expect(await clearPassedReopensOn(db, now)).toBe(0);
+    expect((await getShopBySlug(db, shop.slug))?.reopensOn).toBe("2030-06-01");
+
+    await setShopReopensOn(db, shop.id, "2031-01-15");
+    expect(await clearPassedReopensOn(db, now)).toBe(0);
+  });
+
+  it("leaves a shop with no date alone", async () => {
+    const { db, shop } = ctx;
+    await setShopReopensOn(db, shop.id, null);
+    expect(await clearPassedReopensOn(db, new Date("2030-06-02T01:00:00.000Z"))).toBe(0);
   });
 });

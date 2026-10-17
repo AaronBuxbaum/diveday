@@ -16,7 +16,7 @@ import { openTripAbout, openTripMore } from "./helpers";
  * plus this test's own 8 navigations summed past the default 15s test budget.
  *
  * READ_ONLY holds here: every mutation path in this file is asserted *absent* or
- * refused. The owner test opens the "What we rent" settings row and the trip's
+ * refused. The owner test opens the "Rentals" settings row and the trip's
  * "Edit details" disclosure and never saves either; the calendar tests read the
  * feed page without issuing a feed.
  */
@@ -30,7 +30,9 @@ test.describe.configure({ timeout: 30_000 });
 async function firstDiverDetailHref(page: Page): Promise<string> {
   await page.goto(`/shop/${SHOP}/divers`);
   const detailLinks = page
-    .locator(`a[href^="/shop/${SHOP}/divers/"]:not([href$="/divers/new"])`)
+    .locator(
+      `a[href^="/shop/${SHOP}/divers/"]:not([href$="/divers/new"]):not([href*="/divers/download"])`,
+    )
     .filter({ visible: true });
   // The roster streams behind its loading shell for slower role sessions.
   // Wait for the first actual record link instead of inspecting the DOM once.

@@ -14,8 +14,9 @@ import {
 /**
  * The settings hub's one list of groups, in render order: the ten of ADR
  * 20261001-logbook, each named for what a shop is setting up rather than for
- * where the row happened to be built, plus Notifications (every row that
- * decides where mail goes, once three rows in three groups) and Rarely
+ * where the row happened to be built, plus How divers reach you (the
+ * shop's contact details, desk hours, mail, reviews and WhatsApp: once
+ * Notifications and Messages, two groups a shop read as one) and Rarely
  * changed (the rows a shop sets once, kept out of the weekly groups). Both of the hub's
  * `SettingsPage.tsx` renders its sections from this one list. It remains a
  * registry rather than three local constants so a new section cannot drift
@@ -36,8 +37,7 @@ export const SETTINGS_GROUPS = [
   { id: "bookings-waivers", labelKey: "settings.main.groups.bookingsWaivers" },
   { id: "rental-gear", labelKey: "settings.main.groups.rentals" },
   { id: "money", labelKey: "settings.main.groups.money" },
-  { id: "messages", labelKey: "settings.main.groups.messages" },
-  { id: "notifications", labelKey: "settings.main.groups.notifications" },
+  { id: "reach", labelKey: "settings.main.groups.reach" },
   { id: "website", labelKey: "settings.main.groups.website" },
   { id: "data", labelKey: "settings.main.groups.data" },
   { id: "account", labelKey: "settings.main.groups.account" },
@@ -81,6 +81,7 @@ export const SECTION_IDS = [
   "packing",
   "counterCard",
   "certCheck",
+  "padiChecks",
   "units",
   "crewSchedule",
   "divingOptions",
@@ -119,6 +120,7 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   publicYear: "public-year",
   counterCard: "counter-card",
   certCheck: "cert-check",
+  padiChecks: "padi-checks",
 };
 
 /** The `#fragment` that opens and scrolls to a hub section. */
@@ -271,6 +273,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "certCheck" },
   },
   {
+    id: "padiChecks",
+    labelKey: "settings.main.features.padiChecks.heading",
+    group: "bookings-waivers",
+    target: { kind: "section", id: "padiChecks" },
+  },
+  {
     id: "packing",
     labelKey: "settings.main.packing.heading",
     group: "bookings-waivers",
@@ -327,41 +335,41 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     badgeSource: "payments",
   },
   {
-    id: "reviews",
-    labelKey: "settings.main.features.reviews.heading",
-    group: "messages",
-    target: { kind: "section", id: "reviews" },
-  },
-  {
-    id: "reviewLink",
-    labelKey: "settings.main.reviewLink.heading",
-    group: "messages",
-    target: { kind: "section", id: "reviewLink" },
-  },
-  {
-    id: "whatsapp",
-    labelKey: "settings.main.whatsapp.heading",
-    group: "messages",
-    target: { kind: "route", path: "/settings/whatsapp" },
-    gate: "messaging",
-  },
-  {
     id: "contact",
     labelKey: "settings.main.contact.heading",
-    group: "notifications",
+    group: "reach",
     target: { kind: "section", id: "contact" },
   },
   {
     id: "deskHours",
     labelKey: "settings.main.deskHours.heading",
-    group: "notifications",
+    group: "reach",
     target: { kind: "section", id: "deskHours" },
   },
   {
     id: "email",
     labelKey: "emailSettings.title",
-    group: "notifications",
+    group: "reach",
     target: { kind: "route", path: "/settings/email" },
+  },
+  {
+    id: "reviews",
+    labelKey: "settings.main.features.reviews.heading",
+    group: "reach",
+    target: { kind: "section", id: "reviews" },
+  },
+  {
+    id: "reviewLink",
+    labelKey: "settings.main.reviewLink.heading",
+    group: "reach",
+    target: { kind: "section", id: "reviewLink" },
+  },
+  {
+    id: "whatsapp",
+    labelKey: "settings.main.whatsapp.heading",
+    group: "reach",
+    target: { kind: "route", path: "/settings/whatsapp" },
+    gate: "messaging",
   },
   {
     id: "profile",

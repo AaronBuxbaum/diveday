@@ -80,4 +80,65 @@ describe("PartyClaimPanel", () => {
     );
     expect(summary?.querySelector("svg")).not.toBeNull();
   });
+
+  /** H-124: a parent signs a child's release from their own page. */
+  it("offers the organizer the minor's waiver, posting only the seat", () => {
+    const action = async () => {};
+    const seat = {
+      bookingId: "seat-mia",
+      seatName: "Mia",
+      claimed: false,
+      waiverSigned: false,
+      claimUrl: "/claim/seat-mia",
+      signForMinor: true,
+    };
+    const { container } = render(
+      <PartyClaimPanel locale="en-US" seats={[seat]} signWaiverAction={action} />,
+    );
+    expect(
+      screen.getByText(
+        "Mia is under 18, so you sign their release with them, as their parent or guardian.",
+      ),
+    ).toBeTruthy();
+    const button = screen.getByRole("button", { name: "Sign Mia’s waiver" });
+    const fields = [...(button.closest("form")?.querySelectorAll("input") ?? [])].map((input) => [
+      input.name,
+      input.value,
+    ]);
+    expect(fields).toEqual([["bookingId", "seat-mia"]]);
+    cleanup();
+    // Without the action (the booking confirmation's panel), no seat offers to.
+    render(<PartyClaimPanel locale="en-US" seats={[seat]} />);
+    expect(screen.queryByRole("button", { name: "Sign Mia’s waiver" })).toBeNull();
+    expect(container).toBeTruthy();
+  });
+
+  /** Dive-domain review F4 and N7 of layer r4-1: a minor seat with no button says why. */
+  it("tells the organizer the path left when they cannot sign", () => {
+    const base = {
+      claimed: false,
+      waiverSigned: false,
+      claimUrl: null,
+      signForMinor: false,
+    };
+    render(
+      <PartyClaimPanel
+        locale="en-US"
+        seats={[
+          { ...base, bookingId: "seat-tess", seatName: "Tess", minorNote: "send_link" as const },
+          { ...base, bookingId: "seat-kai", seatName: "Kai", minorNote: "physician" as const },
+        ]}
+        signWaiverAction={async () => {}}
+      />,
+    );
+    expect(
+      screen.getByText("Send Tess their link; a parent or guardian signs with them."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Kai’s medical answers need a physician’s sign-off. The shop will say what it needs.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /waiver/ })).toBeNull();
+  });
 });

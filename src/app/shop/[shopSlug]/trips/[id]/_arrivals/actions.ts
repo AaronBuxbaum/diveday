@@ -7,10 +7,12 @@ import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
 import { offerDepartureToDiver } from "@/db/trip-invitations";
+import { turnBookingAway } from "@/db/turn-away";
 import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
+import { TURN_AWAY_REASONS } from "@/lib/turn-away";
 import { uuidParam } from "@/lib/uuid";
 import { requireRosterBooking } from "../roster-booking";
 import { counterQueuePath } from "./focus";
@@ -227,6 +229,57 @@ export async function undoNoShowAction(
   revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
 }
 
+const turnAwayForm = z.object({
+  bookingId: z.string().refine((id) => uuidParam(id) !== undefined),
+  reason: z.enum(TURN_AWAY_REASONS),
+});
+
+/**
+ * **"Turned away" — the desk saw this diver and would not board them**
+ * (safety sheet 2026-10-15, item 6; H-135: any active staff, blocked rows
+ * only).
+ *
+ * Shaped like `markNoShowAction`: the seat must be this departure's, and every
+ * refusal lands back on this boat. The reason is shape-checked against the
+ * enum here, and `turnBookingAway` checks it against the row's live blockers
+ * under the seat's lock, which is the check that counts — a posted reason the
+ * row does not show is refused, never stored.
+ */
+export async function turnAwayAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+): Promise<void> {
+  const session = (await requireShopSurface(shopSlug)).session;
+  const back = counterQueuePath(shopSlug, tripId);
+  const parsed = parseForm(turnAwayForm, formData);
+  if (!parsed.ok) redirect(noticeUrl(back, "invalid"));
+  const { bookingId, reason } = parsed.data;
+  const db = await getDb();
+  // A seat from another departure is not this counter's (../roster-booking.ts).
+  await requireRosterBooking(
+    db,
+    session.user.shopId,
+    tripId,
+    bookingId,
+    noticeUrl(back, "invalid"),
+  );
+
+  const outcome = await turnBookingAway(db, {
+    shopId: session.user.shopId,
+    bookingId,
+    reason,
+    recordedByPersonId: session.user.personId,
+  });
+  if (outcome.ok) {
+    // No banner: the row moves into the released group wearing "Turned away"
+    // and its reason, with the move and refund doors under it.
+    revalidatePath(back);
+    return;
+  }
+  revalidateAndRedirect(back, noticeUrl(back, `turn_away_${outcome.reason}`));
+}
+
 const offerForm = z.object({
   offerTripId: z.string().refine((id) => uuidParam(id) !== undefined),
   personId: z.string().refine((id) => uuidParam(id) !== undefined),
@@ -263,11 +316,13 @@ export async function offerAnotherDayAction(
       back,
       outcome === "sent"
         ? "offer-sent"
-        : outcome === "opted_out"
-          ? "offer-opted-out"
-          : outcome === "unavailable"
-            ? "offer-unavailable"
-            : "offer-not-sent",
+        : outcome === "already_sent"
+          ? "offer-already-sent"
+          : outcome === "opted_out"
+            ? "offer-opted-out"
+            : outcome === "unavailable"
+              ? "offer-unavailable"
+              : "offer-not-sent",
     ),
   );
 }

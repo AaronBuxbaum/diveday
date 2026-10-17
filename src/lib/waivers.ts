@@ -1,6 +1,6 @@
 import type { MedicalAnswers, WaiverRecord as StoredWaiverRecord } from "@/db/schema";
 import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "./calendar-date";
-import { nowDate } from "./clock";
+import { DAY_MS, nowDate } from "./clock";
 import {
   type GuardianSignature,
   type GuardianSigner,
@@ -53,6 +53,20 @@ export const DEFAULT_WAIVER_BODY = [
   "I have read this release in full, understand it, and agree to it freely.",
 ].join("\n");
 
+/**
+ * **The live release is still DiveDay's starting text, byte for byte.**
+ *
+ * Sign-up publishes {@link DEFAULT_WAIVER_BODY} as a new shop's version 1
+ * (`src/db/shop-signup.ts`), so divers can sign it the hour the shop goes
+ * live. Until somebody at the shop publishes their own words, the Waivers page
+ * says the text is sample wording and the first-run checklist keeps "Read your
+ * release" open. A shop with no release at all reads as sample too: the editor
+ * offers the same text.
+ */
+export function isSampleRelease(body: string | null | undefined): boolean {
+  return body == null || body === DEFAULT_WAIVER_BODY;
+}
+
 // `createWaiverToken` and `hashWaiverToken` used to live here. They are the
 // only two things in this file that need `node:crypto`, and this file is
 // reachable from three client components through `src/lib/readiness.ts` and
@@ -81,24 +95,6 @@ function signatureTime(record: WaiverRecord): number {
 }
 
 /**
- * Whether a completed release still stands for a booking. It must be a clean
- * completion (never one parked in medical review), signed against the shop's
- * current material generation (a later material edit is different terms the
- * diver never agreed to), and inside the validity window. Display versions may
- * advance for a non-material correction without invalidating a signature.
- * Applied uniformly — to the
- * booking's own record and to any carried from another booking — so a signature
- * that is stale or against superseded terms is never treated as current, whoever
- * it was signed for. Fails closed on anything missing.
- *
- * An `imported` record (ADR 20260724-import-waiver-acceptance) is exempt from
- * the template-generation check: it was never signed against any version of this
- * shop's own template, only snapshotted against the current one for reference,
- * so comparing versions would always — and wrongly — read it as stale. Its
- * `signedAt` is the diver's real acceptance date at the prior shop, so the
- * validity window still ages it out exactly like any other signature.
- */
-/**
  * A medical hold nobody has resolved — the thing that fails closed.
  *
  * The questionnaire refers a diver, the record parks in `medical_review`, and
@@ -115,8 +111,52 @@ function signatureTime(record: WaiverRecord): number {
  * and nothing about who boards. Anything that wants that distinction asks
  * {@link waiverState}, which is presentation; this one is the gate.
  */
-export function isUnresolvedMedicalHold(record: WaiverRecord): boolean {
+export function isUnresolvedMedicalHold(
+  record: Pick<WaiverRecord, "status" | "supersededAt" | "medicalClearedAt">,
+): boolean {
   return record.status === "medical_review" && !record.supersededAt && !record.medicalClearedAt;
+}
+
+/**
+ * **Whether this release still waits on a physician's written answer**: an
+ * {@link isUnresolvedMedicalHold} nobody has answered either way, on a diver
+ * not erased. Built from the hold rather than spelled beside it, so the
+ * doctor's page and the held waiver page can never disagree about a hold
+ * (security review of layer r5-3, N2). A physician's "no" still holds the
+ * diver; it only means there is no form left to take to a doctor.
+ */
+export function awaitsPhysician(
+  record: Pick<
+    WaiverRecord,
+    "status" | "supersededAt" | "medicalClearedAt" | "medicalClearanceDeclinedAt" | "anonymizedAt"
+  >,
+): boolean {
+  return (
+    isUnresolvedMedicalHold(record) && !record.medicalClearanceDeclinedAt && !record.anonymizedAt
+  );
+}
+
+/**
+ * How long after its departure ends the doctor's page still opens. A hold on
+ * a trip that has sailed is rarely resolved by staff, so without a bound the
+ * page, and every copy of its link, would open for ever (security review of
+ * layer r5-3, F3). A day covers a late evening clinic on a multi-day trip's
+ * last night; nothing after that needs the page.
+ */
+export const DOCTOR_PAGE_TRIP_GRACE_MS = DAY_MS;
+
+/**
+ * Wrong dates of birth a held release takes on the doctor's page before its
+ * answers stay locked for the rest of the hold (second-pass security review of
+ * layer r5-3, FIX-1). Far more than a diver mistyping their own birthday needs,
+ * and a few days' guesses at most against a year the attacker already knows.
+ * After it, the page says to go through the whole questionnaire.
+ */
+export const DOCTOR_UNLOCK_FAILURE_LIMIT = 20;
+
+/** Whether a held seat's departure is still close enough for the doctor's page to open. */
+export function doctorPageWithinTrip(tripEndsAt: Date, now: Date): boolean {
+  return now.getTime() < tripEndsAt.getTime() + DOCTOR_PAGE_TRIP_GRACE_MS;
 }
 
 /**
@@ -141,9 +181,24 @@ export function isStandingRefusal(record: WaiverRecord): boolean {
   );
 }
 
-/** What outranks an older clean signature: an open hold, or a refusal. */
+/**
+ * **A referral no physician cleared, superseded or not** — what outranks every
+ * signature older than it (glossary: Medical hold, H-104).
+ *
+ * Superseding a record moves its hold off *a seat* so the seat can take a fresh
+ * link (a rider's lapsed release, a retired refusal); it answers nothing. Only a
+ * physician clearance, or a clean release signed after it, ends a hold, so a
+ * superseded referral keeps counting by **time** exactly as a retired refusal
+ * does ({@link isStandingRefusal}). {@link isUnresolvedMedicalHold} stays the
+ * live-record question a seat asks of its own record.
+ */
+export function isUnclearedReferral(record: WaiverRecord): boolean {
+  return record.status === "medical_review" && !record.medicalClearedAt;
+}
+
+/** What outranks an older clean signature: any referral no physician cleared. */
 function outranksOlderSignatures(record: WaiverRecord): boolean {
-  return isUnresolvedMedicalHold(record) || isStandingRefusal(record);
+  return isUnclearedReferral(record);
 }
 
 /**
@@ -163,6 +218,24 @@ export function isCleanCompletion(record: WaiverRecord): boolean {
   return record.status === "medical_review" && Boolean(record.medicalClearedAt);
 }
 
+/**
+ * Whether a completed release still stands for a booking. It must be a clean
+ * completion (never one parked in medical review), signed against the shop's
+ * current material generation (a later material edit is different terms the
+ * diver never agreed to), and inside the validity window. Display versions may
+ * advance for a non-material correction without invalidating a signature.
+ * Applied uniformly — to the
+ * booking's own record and to any carried from another booking — so a signature
+ * that is stale or against superseded terms is never treated as current, whoever
+ * it was signed for. Fails closed on anything missing.
+ *
+ * An `imported` record (ADR 20260724-import-waiver-acceptance) is exempt from
+ * the template-generation check: it was never signed against any version of this
+ * shop's own template, only snapshotted against the current one for reference,
+ * so comparing versions would always — and wrongly — read it as stale. Its
+ * `signedAt` is the diver's real acceptance date at the prior shop, so the
+ * validity window still ages it out exactly like any other signature.
+ */
 export function isCompletedWaiverCurrent(
   record: WaiverRecord,
   currentTemplateGeneration: number | null,
@@ -185,7 +258,7 @@ export function isCompletedWaiverCurrent(
  * the shop's current material terms, and inside the validity window. Fails
  * closed on a missing signature time.
  */
-function isSignatureCurrent(
+export function isSignatureCurrent(
   record: WaiverRecord,
   currentTemplateGeneration: number | null,
   now: Date,
@@ -224,6 +297,32 @@ export function clearanceEvaluatedAt(record: WaiverRecord): number | null {
 }
 
 /**
+ * **The instant a seat's release is measured at** (issue #2611): while the trip
+ * has not started, the departure's end (its `endsAt`, whatever the trip's
+ * length); once it is under way or over, `now`. A roster read the night before
+ * must not call a release "Ready" that lapses before the boat is home, so both
+ * clocks of a release (the signature's year and a cleared referral's physician
+ * evaluation) run against the end of a trip still to come.
+ *
+ * Every door that asks "does this seat's release stand?" reads the same instant,
+ * so a release that runs out before the trip is blocked on the roster **and**
+ * can be signed again today: the readers (`listTripsReadiness`, the diver
+ * record) and the re-sign doors (`issueWaiverRequest`, the paper path, a seat
+ * claim) cannot disagree. Cards, payment and age do not use it: they keep their
+ * own instants. Fail-closed by construction: the result is never before `now`,
+ * and an unknown trip reads at `now`.
+ */
+export function waiverClockInstant(input: {
+  now: Date;
+  startsAt: Date | null;
+  endsAt: Date | null;
+}): Date {
+  const { now, startsAt, endsAt } = input;
+  if (!startsAt || startsAt.getTime() <= now.getTime()) return now;
+  return endsAt !== null && endsAt.getTime() > startsAt.getTime() ? endsAt : startsAt;
+}
+
+/**
  * The single waiver record that governs a booking's readiness once the
  * sign-once rule is applied.
  *
@@ -237,9 +336,10 @@ export function clearanceEvaluatedAt(record: WaiverRecord): number | null {
  * completed record never reads as complete.
  *
  * `personSignedWaivers` is the diver's signed evidence at the shop — completed
- * and medical-review records, superseded ones excluded except a retired
- * refusal, which still outranks the signatures older than it
- * ({@link isStandingRefusal}).
+ * and medical-review records. Superseded ones are there only as a referral no
+ * physician cleared, which still outranks the signatures older than it
+ * ({@link isUnclearedReferral}), or a clean signature a fresh link replaced,
+ * which no currency check lets stand.
  */
 export function effectiveWaiverForBooking(input: {
   bookingWaiver: WaiverRecord | null;
@@ -302,6 +402,92 @@ export function effectiveReleaseForRiderSeat(input: {
 }
 
 /**
+ * **Whether a seat no release covers has one the diver signed and outlived.**
+ *
+ * True only where the seat's own resolution ({@link effectiveWaiverForBooking},
+ * or {@link effectiveReleaseForRiderSeat} for a seat not held to the medical)
+ * finds nothing, and the diver has a signature here that no longer stands:
+ * aged past its year, a physician's evaluation aged past its own, given against
+ * terms the shop has since changed, or superseded by a fresh link on another of
+ * the diver's seats (the evidence carries that one only from the signer's own
+ * seat, `listSignedWaiversByPerson`). A send on one seat never turns another
+ * seat's lapse into "not sent". The same reading {@link shopWaiverStatus} gives
+ * the diver record as `expired`.
+ *
+ * It names the blocker and nothing more. The seat is blocked whichever it is;
+ * a lapsed signature asks the diver to sign again, where an unsent release asks
+ * the shop to send one.
+ */
+export function releaseLapsedForBooking(input: {
+  bookingWaiver: WaiverRecord | null;
+  personSignedWaivers: readonly WaiverRecord[];
+  currentTemplateVersion: number | null;
+  /** False for a rider's seat (H-109); defaults to a seat in the water. */
+  heldToMedical?: boolean;
+  now?: Date;
+}): boolean {
+  const heldToMedical = input.heldToMedical ?? true;
+  const resolve = heldToMedical ? effectiveWaiverForBooking : effectiveReleaseForRiderSeat;
+  if (resolve(input) !== null) return false;
+  const signed = heldToMedical
+    ? isCleanCompletion
+    : (record: WaiverRecord) => record.status === "completed" || record.status === "medical_review";
+  return [...(input.bookingWaiver ? [input.bookingWaiver] : []), ...input.personSignedWaivers].some(
+    signed,
+  );
+}
+
+/** Why a seat's release does not stand: aged out already, or aging out before the trip. */
+export type ReleaseLapse = "lapsed" | "before_trip";
+
+/**
+ * **Whether, and how, a seat's release has run out at the seat's trip**
+ * (issue #2611). Null when the seat has no lapsed release to name (it stands,
+ * or the diver never signed). `before_trip` is a release that still stands
+ * today and runs out before the departure's end ({@link waiverClockInstant}):
+ * the seat is blocked, but "lapsed" would be untrue, so the desk and the diver
+ * read "runs out before the trip" and sign again now. `lapsed` is a release
+ * that no longer stands today.
+ */
+export function releaseLapseForBooking(input: {
+  bookingWaiver: WaiverRecord | null;
+  personSignedWaivers: readonly WaiverRecord[];
+  currentTemplateVersion: number | null;
+  heldToMedical?: boolean;
+  /** Real now, never the trip-scoped instant. */
+  now: Date;
+  startsAt: Date | null;
+  endsAt: Date | null;
+}): ReleaseLapse | null {
+  const at = waiverClockInstant(input);
+  if (!releaseLapsedForBooking({ ...input, now: at })) return null;
+  if (at.getTime() === input.now.getTime()) return "lapsed";
+  const resolve =
+    (input.heldToMedical ?? true) ? effectiveWaiverForBooking : effectiveReleaseForRiderSeat;
+  return resolve(input) !== null ? "before_trip" : "lapsed";
+}
+
+/**
+ * **Whether a signature a seat already holds no longer stands** at `at`: the
+ * one test `issueWaiverRequest` and the paper path share, so a fresh link or a
+ * paper copy is never refused as "already completed" for a release the roster
+ * has blocked (issue #2611). A seat in the water reads a clean completion; a
+ * rider's seat (H-109) reads only the signature's own clock. A pending link
+ * is never "lapsed" here.
+ */
+export function bookingRecordLapsed(
+  record: WaiverRecord,
+  currentTemplateGeneration: number | null,
+  at: Date,
+  heldToMedical: boolean,
+): boolean {
+  return heldToMedical
+    ? isCleanCompletion(record) && !isCompletedWaiverCurrent(record, currentTemplateGeneration, at)
+    : (record.status === "completed" || record.status === "medical_review") &&
+        !isSignatureCurrent(record, currentTemplateGeneration, at);
+}
+
+/**
  * Where a diver stands with **the shop**, independent of any one booking.
  *
  * A release is signed once and carries across every booking the diver has here
@@ -322,6 +508,13 @@ export type ShopWaiverStatus =
       recordId: string;
       signedAt: Date;
       expiresAt: Date;
+      /**
+       * True when the release stands today and runs out before the departure
+       * the caller named (`through`, issue #2611): the seat is blocked for it
+       * on the roster, so this record must not read as plain "Signed".
+       * `expiresAt` is then the first of its clocks to end.
+       */
+      runsOutBeforeTrip: boolean;
       medical: MedicalWaiverMark | null;
     }
   /**
@@ -370,8 +563,8 @@ export type ShopWaiverStatus =
  * longer be trusted. Fails closed on anything missing.
  *
  * `personSignedWaivers` is the diver's completed and medical-review records at
- * this shop, superseded ones excluded but for a retired refusal
- * (`listSignedWaiversByPerson`).
+ * this shop, superseded ones excluded but for an uncleared referral and a
+ * clean signature a fresh link replaced (`listSignedWaiversByPerson`).
  */
 export function shopWaiverStatus(input: {
   personSignedWaivers: readonly WaiverRecord[];
@@ -384,13 +577,24 @@ export function shopWaiverStatus(input: {
    */
   signer?: GuardianSigner;
   now?: Date;
+  /**
+   * The trip-scoped instant of the diver's upcoming seat (`waiverClockInstant`,
+   * issue #2611). A release that stands today but not then reads
+   * `runsOutBeforeTrip`, the same answer the roster gives that seat.
+   */
+  through?: Date;
 }): ShopWaiverStatus {
   const now = input.now ?? nowDate();
-  const clean = input.personSignedWaivers
-    .filter((record) => isCompletedWaiverCurrent(record, input.currentTemplateVersion, now))
-    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  const standsAt = (record: WaiverRecord, at: Date) =>
+    isCompletedWaiverCurrent(record, input.currentTemplateVersion, at);
+  const newest = (records: readonly WaiverRecord[]) =>
+    [...records].sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  const through = input.through && input.through.getTime() > now.getTime() ? input.through : now;
+  const clean = newest(input.personSignedWaivers.filter((record) => standsAt(record, through)));
+  const cleanNow = newest(input.personSignedWaivers.filter((record) => standsAt(record, now)));
 
-  const cleanTime = clean ? signatureTime(clean) : Number.NEGATIVE_INFINITY;
+  const standing = clean ?? cleanNow;
+  const cleanTime = standing ? signatureTime(standing) : Number.NEGATIVE_INFINITY;
   const hold = input.personSignedWaivers
     .filter(outranksOlderSignatures)
     .filter((record) => signatureTime(record) >= cleanTime)
@@ -413,8 +617,8 @@ export function shopWaiverStatus(input: {
   // The same precedence the readiness engine applies: a hold outranks it, and
   // it outranks "Signed". The record still *is* the diver's current signature
   // for every other purpose; it is only the standing that changes word.
-  if (clean && input.signer && guardianSignatureMissing(clean, input.signer)) {
-    return { state: "guardian_missing", signedAt: new Date(signatureTime(clean)) };
+  if (standing && input.signer && guardianSignatureMissing(standing, input.signer)) {
+    return { state: "guardian_missing", signedAt: new Date(signatureTime(standing)) };
   }
 
   if (clean) {
@@ -423,7 +627,26 @@ export function shopWaiverStatus(input: {
       recordId: clean.id,
       signedAt: new Date(signatureTime(clean)),
       expiresAt: new Date(signatureTime(clean) + WAIVER_SIGNATURE_VALIDITY_MS),
+      runsOutBeforeTrip: false,
       medical: medicalWaiverMark(clean, input.personSignedWaivers),
+    };
+  }
+  // Standing today, gone by the departure: the seat is blocked, and the desk
+  // reads why instead of "Signed".
+  if (cleanNow) {
+    const evaluatedAt = clearanceEvaluatedAt(cleanNow);
+    const signatureEnds = signatureTime(cleanNow) + WAIVER_SIGNATURE_VALIDITY_MS;
+    return {
+      state: "current",
+      recordId: cleanNow.id,
+      signedAt: new Date(signatureTime(cleanNow)),
+      expiresAt: new Date(
+        evaluatedAt === null
+          ? signatureEnds
+          : Math.min(signatureEnds, evaluatedAt + WAIVER_SIGNATURE_VALIDITY_MS),
+      ),
+      runsOutBeforeTrip: true,
+      medical: medicalWaiverMark(cleanNow, input.personSignedWaivers),
     };
   }
 
@@ -587,9 +810,13 @@ export function overriddenReferral(
 ): OverriddenReferral | null {
   if (!standing || !isCleanCompletion(standing)) return null;
   const standingTime = signatureTime(standing);
+  const records = personSignedWaivers.some((record) => record.id === standing.id)
+    ? personSignedWaivers
+    : [...personSignedWaivers, standing];
   const referral = personSignedWaivers
-    .filter((record) => isUnresolvedMedicalHold(record) && !isStandingRefusal(record))
+    .filter((record) => isUnclearedReferral(record) && !isStandingRefusal(record))
     .filter((record) => record.id !== standing.id && signatureTime(record) < standingTime)
+    .filter((record) => !answeredByLaterClearance(record, records))
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   return referral
     ? { recordId: referral.id, personId: referral.personId, at: new Date(signatureTime(referral)) }
@@ -614,6 +841,31 @@ function decidedAfter(a: WaiverRecord, b: WaiverRecord): boolean {
   const [dayA, recordedA] = decisionOrder(a);
   const [dayB, recordedB] = decisionOrder(b);
   return dayA !== dayB ? dayA > dayB : recordedA > recordedB;
+}
+
+/**
+ * **A referral a physician has since answered on another record**: a clearance
+ * evaluated on or after the day the referral was signed (the day rule
+ * `recordMedicalEvaluation` applies to its own record), on a record that
+ * flagged at least every question this one did — {@link overriddenRefusal}'s
+ * rule for a refusal. Without it the record read "stood over a referral"
+ * beside "Cleared by physician" for one diver. A clearance decided before the
+ * diver disclosed again answers nothing about the new disclosure.
+ */
+function answeredByLaterClearance(
+  referral: WaiverRecord,
+  records: readonly WaiverRecord[],
+): boolean {
+  const referredOn = calendarDateInTimezone(new Date(signatureTime(referral)), "UTC");
+  const referredDay = Date.parse(`${referredOn}T00:00:00.000Z`);
+  const referred = flaggedPromptsOf(referral);
+  return records.some(
+    (record) =>
+      record.id !== referral.id &&
+      record.medicalClearedAt !== null &&
+      decisionOrder(record)[0] >= referredDay &&
+      referred.every((prompt) => flaggedPromptsOf(record).includes(prompt)),
+  );
 }
 
 /** The questions a record flagged, which are what a physician answered. */

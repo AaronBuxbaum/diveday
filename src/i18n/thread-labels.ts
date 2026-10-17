@@ -78,6 +78,7 @@ export type CertificationNextCode = Extract<
   | "certification_self_declared"
   | "certification_insufficient"
   | "certification_in_training"
+  | "certification_not_yet"
   | "specialty_missing"
   | "specialty_pending"
   | "specialty_import_unconfirmed"
@@ -93,6 +94,8 @@ export const CERTIFICATION_NEXT_KEYS: Record<CertificationNextCode, DiverMessage
   certification_insufficient: "thread.next.certificationLevel",
   // The card is the instructor's to issue; the diver's part is the course.
   certification_in_training: "thread.next.certificationInTraining",
+  // The diver has answered; the crew's conversation at the dock is next.
+  certification_not_yet: "thread.next.certificationNotYet",
   specialty_missing: "thread.next.specialty",
   specialty_pending: "thread.next.cardWithShop",
   specialty_import_unconfirmed: "thread.next.cardWithShop",
@@ -109,6 +112,8 @@ export const CERTIFICATION_NEXT_KEYS: Record<CertificationNextCode, DiverMessage
 export type SignNextCode = Extract<
   ReadinessBlockerCode,
   | "waiver_not_sent"
+  | "waiver_lapsed"
+  | "waiver_runs_out"
   | "waiver_pending"
   | "waiver_expired"
   | "medical_review"
@@ -121,6 +126,9 @@ export type SignNextCode = Extract<
 export const SIGN_NEXT_KEYS: Record<SignNextCode, DiverMessageKey> = {
   // No link ever issued; the honest ask is the shop, not an email we can't promise.
   waiver_not_sent: "thread.next.askForWaiver",
+  // Signed once already: the same fresh link an expired one needs.
+  waiver_lapsed: "thread.next.freshWaiver",
+  waiver_runs_out: "thread.next.freshWaiver",
   waiver_pending: "thread.next.signWaiver",
   waiver_expired: "thread.next.freshWaiver",
   medical_review: "thread.next.medical",

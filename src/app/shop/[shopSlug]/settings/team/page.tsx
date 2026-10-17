@@ -8,9 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
-import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import {
   ChoicePill,
   controlClass,
@@ -30,28 +28,21 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
-import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
-import {
-  type FormNotice,
-  type NoticeMessages,
-  noticeForForm,
-  noticeFromParam,
-} from "@/lib/staff-notices";
+import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
-import {
-  type CredentialRow,
-  type RenewalState,
-  StaffCredentials,
-} from "./_components/StaffCredentials";
+import { InviteStaffDisclosure } from "./_components/InviteStaffDisclosure";
+import { StaffCardCredentials } from "./_components/StaffCardCredentials";
+import { StaffCredentials } from "./_components/StaffCredentials";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
+import { type CrewYear, readStaffYears, StaffYearLine } from "./_components/StaffYear";
 import {
   deleteStaffCredentialAction,
-  inviteStaffAction,
   removeStaffAction,
   resendInviteAction,
   restoreStaffAction,
@@ -63,7 +54,9 @@ import {
   setStaffStatusAction,
 } from "./actions";
 import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
-import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
+import { type CardCredential, credentialRowsFor } from "./credential-rows";
+import { noticeMessages } from "./notice-messages";
+import { parseRoles, TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -75,96 +68,6 @@ import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 export const instant = true;
 
 export const metadata: Metadata = { title: "Team — DiveDay" };
-
-/** Built per request; see `NoticeMessages`. */
-function noticeMessages(t: StaffTranslator): NoticeMessages {
-  return {
-    invited: { tone: "success", text: t("settings.team.notice.invited") },
-    "invite-resent": { tone: "success", text: t("settings.team.notice.inviteResent") },
-    "changes-saved": { tone: "success", text: t("settings.team.notice.changesSaved") },
-    reactivated: { tone: "success", text: t("settings.team.notice.reactivated") },
-    disabled: { tone: "success", text: t("settings.team.notice.disabled") },
-    removed: { tone: "success", text: t("settings.team.notice.removed") },
-    restored: { tone: "success", text: t("settings.team.notice.restored") },
-    "restore-failed": { tone: "danger", text: t("settings.team.notice.restoreFailed") },
-    "invite-invalid": { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
-    "roles-invalid": { tone: "danger", text: t("settings.team.notice.rolesInvalid") },
-    "roles-conflict": { tone: "danger", text: t("settings.team.notice.rolesConflict") },
-    "invite-already-on-team": {
-      tone: "danger",
-      text: t("settings.team.notice.inviteAlreadyOnTeam"),
-    },
-    "invite-email-taken": { tone: "danger", text: t("settings.team.notice.inviteEmailTaken") },
-    "invite-email-reserved": {
-      tone: "danger",
-      text: t("settings.team.notice.inviteEmailReserved"),
-    },
-    "contact-saved": { tone: "success", text: t("settings.team.notice.contactSaved") },
-    "languages-saved": { tone: "success", text: t("settings.team.notice.languagesSaved") },
-    "half-filled": { tone: "danger", text: t("settings.team.notice.contactHalfFilled") },
-    "last-owner": { tone: "danger", text: t("settings.team.notice.lastOwner") },
-    "not-found": { tone: "danger", text: t("settings.team.notice.notFound") },
-    "not-authorized": { tone: "danger", text: t("settings.team.notice.notAuthorized") },
-    "credential-saved": { tone: "success", text: t("staffing.notice.credentialSaved") },
-    "credential-reviewed": { tone: "success", text: t("staffing.notice.credentialReviewed") },
-    "credential-deleted": { tone: "success", text: t("staffing.notice.credentialDeleted") },
-    "credential-invalid": { tone: "danger", text: t("staffing.notice.credentialInvalid") },
-  };
-}
-
-/** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
-const RENEWAL_WINDOW_DAYS = 30;
-
-/** The ledger's rows, each renewal measured against the shop's own today. */
-function credentialRowsFor(
-  credentials: Awaited<ReturnType<typeof listStaffCredentials>>,
-  today: string,
-  locale: string,
-  t: StaffTranslator,
-): CredentialRow[] {
-  const dueSoonThrough = shiftCalendarDate(today, RENEWAL_WINDOW_DAYS);
-  return credentials.map(({ credential, person }) => {
-    const renewal: RenewalState = !credential.renewsAt
-      ? "not-recorded"
-      : credential.renewsAt < today
-        ? "overdue"
-        : credential.renewsAt <= dueSoonThrough
-          ? "due-soon"
-          : "current";
-    return {
-      id: credential.id,
-      title: `${person.fullName} · ${credential.name}`,
-      detail: [
-        credential.status === "verified"
-          ? t("staffing.credentials.verified")
-          : t("staffing.credentials.pending"),
-        t(CREDENTIAL_KIND_KEYS[credential.kind]),
-        credential.issuingBody,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      // The word is what carries the state; the ink only seconds it. A
-      // credential whose renewal is comfortably ahead says the date and
-      // nothing more, and one with no renewal recorded says nothing at all.
-      renewalWord:
-        renewal === "overdue"
-          ? t("staffing.credentials.overdue")
-          : renewal === "due-soon"
-            ? t("staffing.credentials.dueSoon")
-            : credential.renewsAt
-              ? t("staffing.credentials.renews", {
-                  date: formatCalendarDate(credential.renewsAt, locale),
-                })
-              : null,
-      renewal,
-      reviewed: credential.status === "verified",
-      reviewLabel:
-        credential.status === "verified"
-          ? t("staffing.credentials.markPending")
-          : t("staffing.credentials.markVerified"),
-    };
-  });
-}
 
 /**
  * **Only the exceptional state wears a badge.** Four rows each carrying a green
@@ -190,39 +93,6 @@ function statusBadge(
  * flagged in the extraction report rather than changed here.
  */
 const roleLabels = staffRoleLabelRecord;
-
-/**
- * The invite form's role picker. A roster row's is `StaffRolesDisclosure` —
- * the per-row disclosure that saves on close (ADR 20260827-the-shops-shelves,
- * slice 9h). This one stays a plain fieldset because it is one part of a form
- * with its own Send invite: there is nothing to close, and nothing to save yet.
- */
-function RoleCheckboxes({
-  name,
-  defaultRoles,
-  t,
-}: {
-  name: string;
-  defaultRoles: readonly string[];
-  t: StaffTranslator;
-}) {
-  const labels = roleLabels(t);
-  return (
-    <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      <legend className="sr-only">{t("settings.team.rolesLegend")}</legend>
-      {STAFF_ROLES.map((role) => (
-        <ChoicePill
-          key={role}
-          type="checkbox"
-          name={`${name}_${role}`}
-          defaultChecked={defaultRoles.includes(role)}
-        >
-          {labels[role]}
-        </ChoicePill>
-      ))}
-    </fieldset>
-  );
-}
 
 /**
  * One staff member's spoken languages (issue #708) — a checkbox per language
@@ -283,13 +153,17 @@ function publicName(member: StaffMember): string {
 
 function StaffRow({
   member,
+  credentials,
   notice,
   priorRoles,
   locale,
   timezone,
   t,
+  year,
 }: {
   member: StaffMember;
+  /** This person's credentials on file, from the ledger at the foot. */
+  credentials: readonly CardCredential[];
   /** The page's one resolved notice, already told which form it belongs to. */
   notice: FormNotice | undefined;
   /** The roles this row held before the save it just made — its Undo, or nothing. */
@@ -298,6 +172,7 @@ function StaffRow({
   /** The shop's own zone, so a consent stamp reads as the day the shop lived. */
   timezone: string;
   t: StaffTranslator;
+  year?: CrewYear;
 }) {
   const isDisabled = member.accountStatus === "disabled";
   const status = member.accountStatus === "active" ? null : statusBadge(t)[member.accountStatus];
@@ -312,6 +187,7 @@ function StaffRow({
         <div className="min-w-0">
           <p className="font-medium">{member.fullName}</p>
           <p className="text-sm text-muted wrap-anywhere">{member.email}</p>
+          <StaffYearLine year={year} t={t} />
           {/* What this person publishes to divers, when they have said yes on
               their own staffing page (issue #1357). Read-only here: the switch
               is theirs, and a shop that could edit it would be overriding
@@ -403,7 +279,7 @@ function StaffRow({
                     (language) => languageNameIn(language, locale) ?? language,
                   ),
                 )
-              : t("settings.team.languagesEmpty")
+              : t("settings.team.emergencyContact.addValue")
           }
           open={Boolean(languagesStatus)}
         >
@@ -422,6 +298,14 @@ function StaffRow({
           </form>
         </CompactDisclosureRow>
       </div>
+
+      <StaffCardCredentials
+        personId={member.personId}
+        roles={member.roles}
+        credentials={credentials}
+        locale={locale}
+        t={t}
+      />
 
       {/* Who to call for this person, and the one place a shop can say so.
           Behind a disclosure because it is the rare edit — a contact is typed
@@ -588,13 +472,6 @@ function StaffRow({
   );
 }
 
-/** A `?priorRoles=` value, kept to roles this app actually has. */
-function parseRoles(value: string | undefined): Role[] {
-  return (value ?? "")
-    .split(",")
-    .filter((role): role is Role => (STAFF_ROLES as readonly string[]).includes(role));
-}
-
 export default async function TeamSettingsPage({
   params,
   searchParams,
@@ -633,9 +510,10 @@ export default async function TeamSettingsPage({
     refusal: { notice: "team-not-authorized" },
   });
 
-  const [staff, credentials] = await Promise.all([
+  const [staff, credentials, years] = await Promise.all([
     listShopStaff(db, shop.id),
     listStaffCredentials(db, shop.id),
+    readStaffYears(db, shop, nowDate()),
   ]);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -709,57 +587,18 @@ export default async function TeamSettingsPage({
           `space-y-10` here, and no `mt-*` on any card
           (docs/design/forms-and-controls.md). */}
       <div className="space-y-10">
-        {/* The anchor the roster's empty state jumps to. */}
-        <SectionCard
-          id="invite"
-          padding="lg"
-          className="scroll-mt-24"
-          title={t("settings.team.invite.heading")}
-          description={t("settings.team.invite.description")}
-        >
-          <FieldGrid as="form" action={inviteStaffAction} columns={2}>
-            <Field label={t("settings.team.invite.fullNameLabel")}>
-              <input
-                name="fullName"
-                type="text"
-                required
-                maxLength={120}
-                autoComplete="name"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("settings.team.invite.emailLabel")} error={inviteEmailError}>
-              <input
-                name="email"
-                type="email"
-                required
-                maxLength={150}
-                autoComplete="email"
-                className={controlClass}
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <RoleCheckboxes name="role" defaultRoles={[]} t={t} />
-            </div>
-            <FieldActions>
-              <SubmitButton
-                pendingLabel={t("settings.team.invite.submitting")}
-                className={buttonClass()}
-              >
-                {t("settings.team.invite.submit")}
-              </SubmitButton>
-              <FormStatus tone={inviteStatus?.tone}>{inviteStatus?.text}</FormStatus>
-            </FieldActions>
-            <FieldErrorFocus key={notice} scope="invite" />
-          </FieldGrid>
-        </SectionCard>
-
+        {/* The team first; inviting is a button under its heading (item 58). */}
         <section>
           {/* Not a card — a heading over a list of them, so a bare `h2` at
               `SECTION_TITLE_CLASS`, the rung `SectionCard` draws its own title
-              at and `card.tsx` prescribes for a heading over a plural body. It
-              once stood 18px under the invite card's 24px (K-314, #1966). */}
+              at and `card.tsx` prescribes for a heading over a plural body. */}
           <h2 className={SECTION_TITLE_CLASS}>{t("settings.team.current.heading")}</h2>
+          <InviteStaffDisclosure
+            emailError={inviteEmailError}
+            status={inviteStatus}
+            notice={notice}
+            t={t}
+          />
           {staff.length === 0 ? (
             <EmptyState
               title={t("settings.team.current.empty")}
@@ -776,11 +615,15 @@ export default async function TeamSettingsPage({
                 <StaffRow
                   key={member.personId}
                   member={member}
+                  credentials={credentialRows
+                    .filter((row) => row.personId === member.personId)
+                    .map(({ id, name, kind, renewalWord }) => ({ id, name, kind, renewalWord }))}
                   notice={pageNotice}
                   priorRoles={rolesFor === member.personId ? undoRolesFor : []}
                   locale={locale}
                   timezone={shop.timezone}
                   t={t}
+                  year={years.get(member.personId)}
                 />
               ))}
             </InsetGroup>

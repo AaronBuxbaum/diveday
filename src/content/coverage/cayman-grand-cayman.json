@@ -1,0 +1,2270 @@
+{
+  "area": "cayman-grand-cayman",
+  "method": "Grand Cayman, every coast: North Sound and the North Wall, the North Side and East End, the south coast and South Sound, and the west coast from George Town to Northwest Point. The official list is the Cayman Islands Department of Environment public-mooring spreadsheet (January 2023 update, linked from doe.ky/resources/public-moorings), 235 named moorings with depth and WGS84 coordinates; it counts as one list, and a site moored more than once (Stingray City east and west, Round Rock, Oro Verde bow and stern, Eden Rock, Devil's Grotto, Japanese Gardens, Bullwinkle, Pallas Pinnacle) is one row at its first mooring. Operator site lists, each one list: Ocean Frontiers (its 55 East End sites), Red Sail Sports (its dive-sites page, East End wall tour and blog guides; Tortuga Divers is Red Sail and adds nothing), Divetech (its site guides and favourite-site posts; a post that only reports diving Babylon with another shop does not count), Living the Dream Divers, Indigo Divers, Cayman Turtle Divers, Sunset Divers, Eden Rock Diving Center and CU Divers. Don Foster's, Divers Down, Deep Blue Divers and Ambassador Divers publish no site names; the CITA Dive365 site copies the DoE moorings and is not independent; Explore Cayman, DivePlannerPro and magazines were read for leads only. A site is counted when it is on two lists. Operator names are matched to moorings by name; five matches rest on a near-identical name at the same place in the operator's sequence and say so in the row name (Dumbo's Drop-Off, Black Rock Reef, Breakers' Cutback, Princess Penny's Pinnacle, Lone Star Ledges). Excluded: names on the mooring list or one operator list only, the eight sites the DoE removed for the 2021 no-diving zones (still named by some operators), the George Town yacht moorings, and the Stingray City sandbar, which is a wade-depth snorkel stop; Stingray City itself, moored at 12 ft and sold as a dive, is counted. No moored site is beyond recreational depth (the deepest mooring is 85 ft). Counted 2026-10-14.",
+  "sources": [
+    "https://doe.ky/resources/public-moorings/",
+    "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+    "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+    "https://diveredsailcayman.com/dive-sites/",
+    "https://redsailcayman.com/tour/2-tank-am-wall-dive-east/",
+    "https://redsailcayman.com/our-dive-instructors-favourite-dive-sites-in-grand-cayman/",
+    "https://redsailcayman.com/exploring-grand-caymans-hidden-dive-sites-a-divers-paradise/",
+    "https://redsailcayman.com/your-guide-to-wall-diving-the-north-wall-in-grand-cayman/",
+    "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/",
+    "https://redsailcayman.com/a-guide-to-shipwreck-dives-in-the-cayman-islands/",
+    "https://redsailcayman.com/your-guide-to-coral-reef-diving-in-grand-cayman/",
+    "https://www.divetech.com/post/the-grandest-of-sites",
+    "https://www.divetech.com/post/best-dive-sites-grand-cayman",
+    "https://www.divetech.com/post/best-scuba-diving-in-west-bay",
+    "https://www.divetech.com/post/grand-cayman-shore-diving-sites-the-ultimate-guide-to-exploring-cayman-s-coastline-with-divetech",
+    "https://www.divetech.com/post/best-dive-sites-in-grand-cayman-kid-friendly",
+    "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/",
+    "https://www.indigodivers.com/dive-sites",
+    "https://www.caymanturtledivers.com/grand-cayman-dive-sites",
+    "https://www.caymanturtledivers.com/grand-cayman-wall-diving-sites",
+    "https://www.caymanturtledivers.com/dive-kittiwake-shipwreck",
+    "https://www.caymanturtledivers.com/dive-stingray-city-grand-cayman",
+    "https://sunsethouse.com/for-divers-by-divers/",
+    "https://web.archive.org/web/2026/https://sunsethouse.com/diving/",
+    "https://web.archive.org/web/2026/https://edenrockdivingcenter.com/",
+    "https://www.cudivers.com/diving"
+  ],
+  "counted": "2026-10-14",
+  "promised": true,
+  "sites": [
+    {
+      "name": "Hepp's Wall",
+      "template": null,
+      "position": [19.38608, -81.41768],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Hepp's Pipeline",
+      "template": "hepps-pipeline",
+      "position": [19.38538, -81.41645],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://www.indigodivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Valley of the Turtles",
+      "template": null,
+      "position": [19.39137, -81.4123],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Sand Hole Reef",
+      "template": null,
+      "position": [19.39032, -81.41075],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Lexau's Legacy",
+      "template": null,
+      "position": [19.39163, -81.40844],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Schoolhouse Reef",
+      "template": null,
+      "position": [19.39247, -81.40393],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Little Tunnels Wall",
+      "template": null,
+      "position": [19.39462, -81.40107],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Conch Point Reef",
+      "template": null,
+      "position": [19.39373, -81.40005],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Ledges",
+      "template": null,
+      "position": [19.3958, -81.39517],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Conch Point",
+      "template": null,
+      "position": [19.39747, -81.39217],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "3 Towers",
+      "template": null,
+      "position": [19.39994, -81.38986],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Carson's Reef",
+      "template": null,
+      "position": [19.3993, -81.38912],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Ghost Mountain",
+      "template": "ghost-mountain-grand-cayman",
+      "position": [19.4023, -81.38568],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://redsailcayman.com/exploring-grand-caymans-hidden-dive-sites-a-divers-paradise/"
+      ]
+    },
+    {
+      "name": "ZZ's Top",
+      "template": null,
+      "position": [19.40372, -81.38307],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Park Place",
+      "template": null,
+      "position": [19.40058, -81.37252],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Alex's Alley",
+      "template": null,
+      "position": [19.39985, -81.36358],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites"
+      ]
+    },
+    {
+      "name": "Bear's Paw",
+      "template": null,
+      "position": [19.39788, -81.36023],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Indigo Drop Off",
+      "template": null,
+      "position": [19.39781, -81.35128],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.indigodivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Blue Pinnacles",
+      "template": null,
+      "position": [19.39383, -81.34562],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Hole In the Wall",
+      "template": null,
+      "position": [19.39338, -81.34522],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Stingray City",
+      "template": "stingray-city-grand-cayman",
+      "position": [19.38482, -81.34373],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.caymanturtledivers.com/dive-stingray-city-grand-cayman",
+        "https://www.indigodivers.com/dive-sites",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/"
+      ]
+    },
+    {
+      "name": "Tarpon Alley",
+      "template": null,
+      "listedBy": [
+        "https://redsailcayman.com/exploring-grand-caymans-hidden-dive-sites-a-divers-paradise/",
+        "https://www.divetech.com/post/the-grandest-of-sites"
+      ]
+    },
+    {
+      "name": "Stingray City Sandbar",
+      "template": null,
+      "listedBy": ["https://www.caymanturtledivers.com/dive-stingray-city-grand-cayman"],
+      "excluded": "snorkel and wade site in about 1 m of water; the scuba dive is Stingray City (DoE moorings, 12 ft)"
+    },
+    {
+      "name": "Main Street",
+      "template": null,
+      "position": [19.39088, -81.34327],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Tarpon Tunnels",
+      "template": null,
+      "position": [19.38693, -81.33815],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "John Halas Wall",
+      "template": null,
+      "position": [19.38605, -81.33668],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Halas Reef",
+      "template": null,
+      "position": [19.38568, -81.33603],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Ronnie's Nemesis",
+      "template": null,
+      "position": [19.38492, -81.33425],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Princess Penny's Wall (Princess Penny's Pinnacle)",
+      "template": "princess-pennys-pinnacle",
+      "position": [19.38428, -81.33153],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Black Forest North",
+      "template": null,
+      "position": [19.38405, -81.32842],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Eagle Ray Pass",
+      "template": "eagle-ray-pass",
+      "position": [19.38385, -81.32492],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://www.indigodivers.com/dive-sites",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Lemon Reef",
+      "template": null,
+      "position": [19.38295, -81.32385],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Lemon Wall",
+      "template": null,
+      "position": [19.38393, -81.32243],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Blue Peter Reef",
+      "template": null,
+      "position": [19.38295, -81.32202],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Leslie's Curl",
+      "template": null,
+      "position": [19.38383, -81.32023],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites"
+      ]
+    },
+    {
+      "name": "Round a Bout (Roundabout)",
+      "template": null,
+      "position": [19.38433, -81.3183],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Durgon's Domain",
+      "template": null,
+      "position": [19.38345, -81.31812],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Castle Wall",
+      "template": null,
+      "position": [19.38463, -81.315],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Severn's Fathom",
+      "template": null,
+      "position": [19.38441, -81.31346],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.indigodivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Creole Cliff",
+      "template": null,
+      "position": [19.38437, -81.31073],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Hammerhead Hill",
+      "template": null,
+      "position": [19.38398, -81.30882],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "3B Wall",
+      "template": null,
+      "position": [19.38348, -81.30777],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Harlequin",
+      "template": null,
+      "position": [19.38135, -81.30505],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Dream Weaver Reef",
+      "template": null,
+      "position": [19.38198, -81.30363],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Monet's Garden",
+      "template": null,
+      "position": [19.38057, -81.30298],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.indigodivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Chinese Wall",
+      "template": null,
+      "position": [19.38087, -81.29955],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Ray's Bedroom",
+      "template": null,
+      "position": [19.37993, -81.29953],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Robert's Wall",
+      "template": null,
+      "position": [19.38077, -81.29803],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Flamingo Flamenco",
+      "template": null,
+      "position": [19.37947, -81.29622],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Gail's Mountain",
+      "template": "gails-mountain",
+      "position": [19.3806, -81.29613],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Haunted House",
+      "template": null,
+      "position": [19.38055, -81.29473],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Pinnacle Reef",
+      "template": null,
+      "position": [19.37942, -81.2939],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Butterfly Bluff",
+      "template": null,
+      "position": [19.38053, -81.2925],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Queen's Throne",
+      "template": null,
+      "position": [19.38002, -81.29127],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Peter's Playground",
+      "template": null,
+      "position": [19.38073, -81.29102],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "White Stroke Canyon",
+      "template": "white-stroke-canyon",
+      "position": [19.38143, -81.2883],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.caymanturtledivers.com/grand-cayman-dive-sites"
+      ]
+    },
+    {
+      "name": "Penny's Arch",
+      "template": null,
+      "position": [19.37662, -81.26575],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Tilley's Tower",
+      "template": null,
+      "position": [19.37272, -81.26072],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Heather's Hallway",
+      "template": null,
+      "position": [19.368, -81.25722],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Andes Reef",
+      "template": null,
+      "position": [19.36397, -81.2538],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Andes Wall",
+      "template": null,
+      "position": [19.36485, -81.25288],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Deila's Delight",
+      "template": null,
+      "position": [19.35895, -81.2453],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Julie's Wall",
+      "template": "julies-wall",
+      "position": [19.35265, -81.16605],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/exploring-grand-caymans-hidden-dive-sites-a-divers-paradise/"
+      ]
+    },
+    {
+      "name": "Babylon",
+      "template": "babylon-grand-cayman",
+      "position": [19.35332, -81.16432],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/tour/2-tank-am-wall-dive-east/"
+      ]
+    },
+    {
+      "name": "McCurley's Wall",
+      "template": "mccurleys-wall",
+      "position": [19.35373, -81.16357],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Northern Lights",
+      "template": "northern-lights-grand-cayman",
+      "position": [19.35492, -81.162],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/tour/2-tank-am-wall-dive-east/"
+      ]
+    },
+    {
+      "name": "Top Secret",
+      "template": "top-secret-grand-cayman",
+      "position": [19.35708, -81.15037],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Omega Reef",
+      "template": "omega-reef",
+      "position": [19.35635, -81.14257],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Little Bluff Reef",
+      "template": "little-bluff-reef",
+      "position": [19.35643, -81.13872],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Anchor Point",
+      "template": "anchor-point-grand-cayman",
+      "position": [19.35817, -81.13187],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/tour/2-tank-am-wall-dive-east/"
+      ]
+    },
+    {
+      "name": "Old #12 (Old Number 12)",
+      "template": "old-number-12",
+      "position": [19.35832, -81.13078],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Kathleen's Reef",
+      "template": "kathleens-reef",
+      "position": [19.35845, -81.12348],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Delwin's Delight",
+      "template": "delwins-delight",
+      "position": [19.35785, -81.115],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Split Rock",
+      "template": "split-rock-grand-cayman",
+      "position": [19.35873, -81.11255],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Fish Tank",
+      "template": "fish-tank-grand-cayman",
+      "position": [19.35675, -81.10697],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Black Rock Canyon (Black Rock Reef)",
+      "template": "black-rock-reef",
+      "position": [19.3576, -81.10542],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Black Rock Dropoff",
+      "template": "black-rock-drop-off",
+      "position": [19.35635, -81.10503],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Valley of the Dolls",
+      "template": "valley-of-the-dolls",
+      "position": [19.3571, -81.10083],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Barrel Sponge Wall",
+      "template": "barrel-sponge-wall-grand-cayman",
+      "position": [19.35695, -81.09953],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Roger's Reef",
+      "template": "rogers-reef",
+      "position": [19.35548, -81.09842],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Turtle Pass",
+      "template": "turtle-pass-grand-cayman",
+      "position": [19.35617, -81.09552],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/tour/2-tank-am-wall-dive-east/"
+      ]
+    },
+    {
+      "name": "Chub Hole",
+      "template": "chub-hole-grand-cayman",
+      "position": [19.35047, -81.08428],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Cinderella's Castle",
+      "template": "cinderellas-castle",
+      "position": [19.34935, -81.08282],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Glamis",
+      "template": null,
+      "position": [19.34674, -81.08011],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Snapper Hole",
+      "template": "snapper-hole-grand-cayman",
+      "position": [19.34415, -81.07783],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Dragon's Lair",
+      "template": "dragons-lair",
+      "position": [19.34287, -81.07797],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Lost Wall",
+      "template": null,
+      "listedBy": [
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ],
+      "excluded": "on one operator list only (Ocean Frontiers); no DoE mooring by that name"
+    },
+    {
+      "name": "Old Wreck Head",
+      "template": null,
+      "listedBy": [
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ],
+      "excluded": "on one operator list only (Ocean Frontiers); no DoE mooring by that name"
+    },
+    {
+      "name": "Sunset Reef (East End)",
+      "template": null,
+      "listedBy": [
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ],
+      "excluded": "on one operator list only (Ocean Frontiers); no DoE mooring by that name"
+    },
+    {
+      "name": "Gigglin' Marlin",
+      "template": "gigglin-marlin-legacy",
+      "position": [19.30413, -81.0728],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Grouper Grotto",
+      "template": "grouper-grotto",
+      "position": [19.29628, -81.08598],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Scuba Bowl",
+      "template": "scuba-bowl-grand-cayman",
+      "position": [19.29233, -81.08798],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Pat's Wall",
+      "template": "pats-wall",
+      "position": [19.29293, -81.08902],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Old Isaac's",
+      "template": "old-isaacs",
+      "position": [19.2953, -81.08908],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "McKenney's Canyon",
+      "template": "jack-mckenneys-canyons",
+      "position": [19.29343, -81.09037],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "The Maze",
+      "template": "the-maze-grand-cayman",
+      "position": [19.29402, -81.0923],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Lighthouse Wall",
+      "template": "lighthouse-wall-grand-cayman",
+      "position": [19.29357, -81.09395],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Lighthouse Reef (East End)",
+      "template": null,
+      "listedBy": ["https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"],
+      "excluded": "on one operator list only (Red Sail Sports); possibly Lighthouse Wall, but no list says so"
+    },
+    {
+      "name": "Playing Field",
+      "template": "playing-fields-grand-cayman",
+      "position": [19.29278, -81.105],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Lodge Anchor",
+      "template": "lodge-anchor-grand-cayman",
+      "position": [19.29052, -81.11258],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "The Arch",
+      "template": "the-arch-grand-cayman",
+      "position": [19.29052, -81.11438],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Dumbo's Lookout (Dumbo's Drop-Off)",
+      "template": "dumbos-drop-off",
+      "position": [19.28877, -81.11668],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Three Sisters",
+      "template": "three-sisters-grand-cayman",
+      "position": [19.28852, -81.11772],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Lost Valley",
+      "template": "lost-valley-grand-cayman",
+      "position": [19.28905, -81.1195],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Kangaroo Gorge",
+      "template": "kangaroo-gorge",
+      "position": [19.28887, -81.1214],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Tarpon Terrace",
+      "template": "tarpon-terrace-grand-cayman",
+      "position": [19.29115, -81.12327],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "High Rock Dropoff",
+      "template": "high-rock-drop-off-grand-cayman",
+      "position": [19.29008, -81.12403],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "River of Sands",
+      "template": "river-of-sands-grand-cayman",
+      "position": [19.2906, -81.12577],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Ironshore Gardens",
+      "template": "ironshore-gardens",
+      "position": [19.29142, -81.14363],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Maggie's Maze",
+      "template": "maggies-maze",
+      "position": [19.29117, -81.14478],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Crusher's Wall",
+      "template": "crushers-wall",
+      "position": [19.29012, -81.14602],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Kelly's Caverns",
+      "template": "kellys-caverns",
+      "position": [19.29128, -81.14602],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Little House on the Prairie",
+      "template": "little-house-on-the-prairie",
+      "position": [19.29122, -81.14815],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Big House",
+      "template": null,
+      "listedBy": [
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ],
+      "excluded": "on one operator list only (Ocean Frontiers); it sits where the DoE list has Tarpon Tap Room, but no list equates them"
+    },
+    {
+      "name": "Tarpon Tap Room",
+      "template": null,
+      "position": [19.29137, -81.15017],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Fantasy Land (Fantasea Land)",
+      "template": "fantasea-land",
+      "position": [19.29112, -81.15433],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Elmo's Wall",
+      "template": "elmos-wall",
+      "position": [19.28953, -81.17028],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Frank Sound Gardens",
+      "template": "frank-sound-gardens",
+      "position": [19.29073, -81.17607],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ]
+    },
+    {
+      "name": "Eeny, Meeny, Miny, Mo",
+      "template": null,
+      "listedBy": [
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman"
+      ],
+      "excluded": "on one operator list only (Ocean Frontiers); it sits where the DoE list has The Moguls, but no list equates them"
+    },
+    {
+      "name": "The Moguls",
+      "template": null,
+      "position": [19.28785, -81.19082],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Breakers Wall (Breakers' Cutback)",
+      "template": "breakers-cutback",
+      "position": [19.28875, -81.19395],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/exploring-grand-caymans-hidden-dive-sites-a-divers-paradise/"
+      ]
+    },
+    {
+      "name": "Pedro Pinnacle",
+      "template": null,
+      "position": [19.26343, -81.29202],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Pedro Castle",
+      "template": null,
+      "position": [19.26575, -81.2943],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Pedro Reef",
+      "template": null,
+      "position": [19.26645, -81.29437],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Bat Cave Reef",
+      "template": null,
+      "position": [19.26817, -81.30983],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Spotts Reef",
+      "template": null,
+      "position": [19.26862, -81.31138],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Yacht 5s",
+      "template": null,
+      "position": [19.26907, -81.31367],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Yacht 4s",
+      "template": null,
+      "position": [19.26978, -81.31572],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Yacht 3s",
+      "template": null,
+      "position": [19.27022, -81.31902],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Yacht 2s",
+      "template": null,
+      "position": [19.27027, -81.3207],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Yacht 1s",
+      "template": null,
+      "position": [19.27073, -81.32307],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Prospect Reef",
+      "template": null,
+      "position": [19.27012, -81.33667],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Broadbelt's Bommie",
+      "template": null,
+      "position": [19.2689, -81.33687],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Skye Arch",
+      "template": null,
+      "position": [19.26972, -81.34083],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/"
+      ]
+    },
+    {
+      "name": "Charlie's Caverns",
+      "template": null,
+      "position": [19.2688, -81.34308],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/"
+      ]
+    },
+    {
+      "name": "Japanese Gardens",
+      "template": "japanese-gardens-grand-cayman",
+      "position": [19.26832, -81.34532],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.caymanturtledivers.com/grand-cayman-wall-diving-sites"
+      ]
+    },
+    {
+      "name": "Barracuda Runs",
+      "template": null,
+      "position": [19.26598, -81.3486],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Marin's Playground",
+      "template": null,
+      "position": [19.26758, -81.3507],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Bullwinkle",
+      "template": null,
+      "position": [19.26548, -81.36032],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Ned's Tunnels",
+      "template": null,
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/"
+      ],
+      "excluded": "in a DoE no-diving zone since the 2021 marine-park expansion; the DoE 2023 mooring list records its mooring as removed"
+    },
+    {
+      "name": "Victoria's Secret",
+      "template": null,
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/"
+      ],
+      "excluded": "in a DoE no-diving zone since the 2021 marine-park expansion; the DoE 2023 mooring list records its mooring as removed"
+    },
+    {
+      "name": "Christopher's Wall",
+      "template": null,
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.indigodivers.com/dive-sites"
+      ],
+      "excluded": "in a DoE no-diving zone since the 2021 marine-park expansion; the DoE 2023 mooring list records its mooring as removed"
+    },
+    {
+      "name": "Max's Garden",
+      "template": null,
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.indigodivers.com/dive-sites"
+      ],
+      "excluded": "in a DoE no-diving zone since the 2021 marine-park expansion; the DoE 2023 mooring list records its mooring as removed"
+    },
+    {
+      "name": "13 Trees",
+      "template": null,
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "in a DoE no-diving zone since the 2021 marine-park expansion; the DoE 2023 mooring list records its mooring as removed"
+    },
+    {
+      "name": "Lost Treasure Reef",
+      "template": null,
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "in a DoE no-diving zone since the 2021 marine-park expansion; the DoE 2023 mooring list records its mooring as removed"
+    },
+    {
+      "name": "Darvin's Theory",
+      "template": null,
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "in a DoE no-diving zone since the 2021 marine-park expansion; the DoE 2023 mooring list records its mooring as removed"
+    },
+    {
+      "name": "Cayman Crossing",
+      "template": null,
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "in a DoE no-diving zone since the 2021 marine-park expansion; the DoE 2023 mooring list records its mooring as removed"
+    },
+    {
+      "name": "Laura's Reef",
+      "template": "lauras-reef",
+      "position": [19.26547, -81.36247],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/"
+      ]
+    },
+    {
+      "name": "No Name Wall",
+      "template": null,
+      "position": [19.26402, -81.36515],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Red Bay Caves",
+      "template": null,
+      "position": [19.26522, -81.36603],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/"
+      ]
+    },
+    {
+      "name": "Gary's Wall",
+      "template": null,
+      "position": [19.26375, -81.36643],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Phantom Ledge",
+      "template": null,
+      "position": [19.2636, -81.36767],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Eye of the Needle",
+      "template": null,
+      "position": [19.26337, -81.3696],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Ollen's Office",
+      "template": null,
+      "position": [19.26295, -81.37063],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Crossroads",
+      "template": null,
+      "position": [19.26273, -81.37187],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Pirate's Cove",
+      "template": null,
+      "position": [19.26415, -81.3722],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Gary's Reef",
+      "template": null,
+      "position": [19.26395, -81.3732],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Christina's Wall",
+      "template": null,
+      "position": [19.2615, -81.374],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Dede's Garden",
+      "template": null,
+      "position": [19.26405, -81.3742],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Pallas Pinnacle",
+      "template": null,
+      "position": [19.26097, -81.37567],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Barracuda Ron's Pass",
+      "template": null,
+      "position": [19.2628, -81.37702],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Ron's Wall",
+      "template": null,
+      "position": [19.25918, -81.37775],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Pallas Reef",
+      "template": null,
+      "position": [19.26215, -81.37842],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Pallas Wreck",
+      "template": null,
+      "listedBy": ["https://redsailcayman.com/a-guide-to-shipwreck-dives-in-the-cayman-islands/"],
+      "excluded": "on one operator list only (Red Sail Sports); no DoE mooring by that name"
+    },
+    {
+      "name": "Kent's Caves",
+      "template": null,
+      "position": [19.25858, -81.38573],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Little Table Rock",
+      "template": null,
+      "position": [19.25855, -81.38632],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Black Forest",
+      "template": null,
+      "position": [19.27112, -81.39568],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Blackie's Hole",
+      "template": null,
+      "position": [19.27238, -81.39565],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Stuey's Crevasse",
+      "template": null,
+      "position": [19.27268, -81.3933],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Disneyworld",
+      "template": null,
+      "position": [19.27375, -81.39343],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Eagle Ray Rock",
+      "template": null,
+      "position": [19.27407, -81.3952],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Smith Cove",
+      "template": null,
+      "position": [19.27577, -81.39318],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Armchair Reef",
+      "template": null,
+      "position": [19.27952, -81.39425],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "LCM David Nicholson (wreck)",
+      "template": "lcm-david-nicholson",
+      "position": [19.28735, -81.39262],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://redsailcayman.com/a-guide-to-shipwreck-dives-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Sunset House Reef (Sunset Reef, the Amphitrite mermaid)",
+      "template": "sunset-house-reef",
+      "listedBy": [
+        "https://www.divetech.com/post/grand-cayman-shore-diving-sites-the-ultimate-guide-to-exploring-cayman-s-coastline-with-divetech",
+        "https://redsailcayman.com/exploring-grand-caymans-hidden-dive-sites-a-divers-paradise/",
+        "https://sunsethouse.com/for-divers-by-divers/"
+      ]
+    },
+    {
+      "name": "Devil's Grotto",
+      "template": "devils-grotto-grand-cayman",
+      "position": [19.29165, -81.38825],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/grand-cayman-shore-diving-sites-the-ultimate-guide-to-exploring-cayman-s-coastline-with-divetech",
+        "https://web.archive.org/web/2026/https://edenrockdivingcenter.com/",
+        "https://redsailcayman.com/exploring-grand-caymans-hidden-dive-sites-a-divers-paradise/"
+      ]
+    },
+    {
+      "name": "Seaview Reef",
+      "template": null,
+      "position": [19.29196, -81.38953],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Eden Rock",
+      "template": "eden-rock-grand-cayman",
+      "position": [19.2931, -81.38727],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/grand-cayman-shore-diving-sites-the-ultimate-guide-to-exploring-cayman-s-coastline-with-divetech",
+        "https://web.archive.org/web/2026/https://edenrockdivingcenter.com/",
+        "https://redsailcayman.com/exploring-grand-caymans-hidden-dive-sites-a-divers-paradise/"
+      ]
+    },
+    {
+      "name": "Balboa (wreck)",
+      "template": "balboa",
+      "position": [19.29723, -81.38643],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://redsailcayman.com/a-guide-to-shipwreck-dives-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Cali (wreck)",
+      "template": null,
+      "listedBy": ["https://redsailcayman.com/a-guide-to-shipwreck-dives-in-the-cayman-islands/"],
+      "excluded": "on one operator list only (Red Sail Sports); no DoE mooring by that name"
+    },
+    {
+      "name": "Gamma (wreck)",
+      "template": null,
+      "listedBy": ["https://redsailcayman.com/a-guide-to-shipwreck-dives-in-the-cayman-islands/"],
+      "excluded": "on one operator list only (Red Sail Sports); no DoE mooring by that name"
+    },
+    {
+      "name": "Yacht moorings 1-6 (George Town)",
+      "template": null,
+      "position": [19.29925, -81.38475],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "yacht moorings, not dive sites"
+    },
+    {
+      "name": "Governor's Reef",
+      "template": null,
+      "listedBy": ["https://www.divetech.com/post/best-dive-sites-in-grand-cayman-kid-friendly"],
+      "excluded": "on one operator list only (Divetech); no DoE mooring by that name"
+    },
+    {
+      "name": "Fish Pot Reef",
+      "template": null,
+      "position": [19.30008, -81.38532],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Sotos Central",
+      "template": null,
+      "position": [19.30262, -81.38552],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Pageant Beach Reef",
+      "template": null,
+      "position": [19.30647, -81.38832],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Royal Palms Ledge",
+      "template": null,
+      "position": [19.31895, -81.39328],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "La Mesa",
+      "template": "la-mesa-grand-cayman",
+      "position": [19.32168, -81.39308],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Cable Wall",
+      "template": null,
+      "position": [19.32173, -81.39437],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Barracuda Wall",
+      "template": null,
+      "position": [19.32302, -81.39457],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Killer Pillar",
+      "template": "killer-pillar",
+      "position": [19.32458, -81.3914],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.indigodivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Giant's Slide",
+      "template": null,
+      "position": [19.32632, -81.3935],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Lone Star Reef (Lone Star Ledges)",
+      "template": "lone-star-ledges-grand-cayman",
+      "position": [19.327, -81.39097],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://redsailcayman.com/our-dive-instructors-favourite-dive-sites-in-grand-cayman/"
+      ]
+    },
+    {
+      "name": "Wildlife Reef",
+      "template": "wildlife-reef-grand-cayman",
+      "position": [19.33123, -81.38982],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Caribbean Club Sand Chute",
+      "template": "caribbean-club-sand-chute",
+      "position": [19.33213, -81.39167],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Meridian Drop",
+      "template": null,
+      "position": [19.33408, -81.39168],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Hammerhead Hole",
+      "template": null,
+      "position": [19.33622, -81.38912],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Holiday Inn Dropoff",
+      "template": null,
+      "position": [19.33777, -81.39185],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Oro Verde",
+      "template": "oro-verde",
+      "position": [19.3382, -81.39038],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.cudivers.com/diving",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Paradise Reef",
+      "template": "paradise-reef-grand-cayman",
+      "position": [19.3392, -81.38992],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Wild Hammer",
+      "template": null,
+      "position": [19.3392, -81.3895],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Jax Dax",
+      "template": null,
+      "position": [19.34085, -81.39005],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Eagle's Nest",
+      "template": "eagles-nest-grand-cayman",
+      "position": [19.3414, -81.39208],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Peter's Reef",
+      "template": null,
+      "position": [19.34272, -81.39061],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Great House Wall",
+      "template": null,
+      "position": [19.34315, -81.39265],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Killer Puffer",
+      "template": null,
+      "position": [19.34367, -81.39073],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Aquarium",
+      "template": "aquarium-grand-cayman",
+      "position": [19.34492, -81.391],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Angelfish Reef",
+      "template": null,
+      "position": [19.34603, -81.39187],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Chelonia Wall",
+      "template": null,
+      "position": [19.34637, -81.39358],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Bolero",
+      "template": null,
+      "position": [19.34785, -81.3924],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/"
+      ]
+    },
+    {
+      "name": "Three Trees",
+      "template": null,
+      "position": [19.35047, -81.39288],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Spanish Anchor",
+      "template": null,
+      "position": [19.3529, -81.39355],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Cemetery Reef",
+      "template": null,
+      "listedBy": ["https://www.divetech.com/post/best-dive-sites-in-grand-cayman-kid-friendly"],
+      "excluded": "on one operator list only (Divetech); no DoE mooring by that name"
+    },
+    {
+      "name": "Knife",
+      "template": null,
+      "position": [19.35912, -81.39935],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Marty's Wall",
+      "template": null,
+      "position": [19.36012, -81.4],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Doc Poulson",
+      "template": "doc-poulson",
+      "position": [19.36048, -81.39915],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.cudivers.com/diving",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://redsailcayman.com/a-guide-to-shipwreck-dives-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Mitch Miller Reef",
+      "template": null,
+      "position": [19.36085, -81.39708],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Sand Chute",
+      "template": "sand-chute-grand-cayman",
+      "position": [19.3617, -81.40168],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "USS Kittiwake",
+      "template": "uss-kittiwake",
+      "position": [19.3619, -81.40122],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.caymanturtledivers.com/dive-kittiwake-shipwreck",
+        "https://www.cudivers.com/diving",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://www.indigodivers.com/dive-sites",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/",
+        "https://www.oceanfrontiers.com/dive-and-snorkel-sites-in-east-end-grand-cayman",
+        "https://redsailcayman.com/our-dive-instructors-favourite-dive-sites-in-grand-cayman/",
+        "https://sunsethouse.com/for-divers-by-divers/"
+      ]
+    },
+    {
+      "name": "Wall Street",
+      "template": null,
+      "position": [19.3621, -81.40265],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Memorial Reef",
+      "template": null,
+      "position": [19.36238, -81.3982],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Slaughterhouse Wall",
+      "template": null,
+      "position": [19.36297, -81.40405],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Neptune's Wall",
+      "template": null,
+      "position": [19.36367, -81.4055],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Turtle Schooner Reef",
+      "template": null,
+      "position": [19.36397, -81.40273],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://redsailcayman.com/our-dive-instructors-favourite-dive-sites-in-grand-cayman/"
+      ]
+    },
+    {
+      "name": "Trinity Caves",
+      "template": "trinity-caves",
+      "position": [19.36483, -81.40717],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.cudivers.com/diving",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://www.indigodivers.com/dive-sites",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Round Rock",
+      "template": "round-rock-grand-cayman",
+      "position": [19.36483, -81.40787],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Little Tunnels",
+      "template": null,
+      "position": [19.36568, -81.41023],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"
+      ]
+    },
+    {
+      "name": "Peppermint Reef",
+      "template": null,
+      "position": [19.36578, -81.40615],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Big Dipper",
+      "template": null,
+      "position": [19.3659, -81.41083],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Dragon's Hole",
+      "template": null,
+      "position": [19.3663, -81.41227],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "In Between",
+      "template": null,
+      "position": [19.36723, -81.41452],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Easy Street",
+      "template": null,
+      "position": [19.36792, -81.41588],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Rainbow Reef West",
+      "template": null,
+      "position": [19.36797, -81.41238],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Chain Reef",
+      "template": "chain-reef-grand-cayman",
+      "position": [19.36805, -81.40863],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites"
+      ]
+    },
+    {
+      "name": "Big Tunnels",
+      "template": "big-tunnels-grand-cayman",
+      "position": [19.36827, -81.41652],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.cudivers.com/diving",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://www.indigodivers.com/dive-sites",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Sentinel Rock",
+      "template": null,
+      "position": [19.36837, -81.41735],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Orange Canyon",
+      "template": "orange-canyon-grand-cayman",
+      "position": [19.36868, -81.41805],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.caymanturtledivers.com/grand-cayman-dive-sites",
+        "https://www.cudivers.com/diving",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://www.indigodivers.com/dive-sites",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Dolphin Drop Off",
+      "template": null,
+      "position": [19.36915, -81.41998],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "North West Point (Northwest Point Dropoff)",
+      "template": "north-west-point",
+      "position": [19.36942, -81.42067],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://diveredsailcayman.com/dive-sites/"
+      ]
+    },
+    {
+      "name": "Funky Sponge",
+      "template": null,
+      "position": [19.37007, -81.41772],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.indigodivers.com/dive-sites"
+      ]
+    },
+    {
+      "name": "Bonnie's Arch",
+      "template": "bonnies-arch",
+      "position": [19.37038, -81.4195],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites",
+        "https://www.indigodivers.com/dive-sites",
+        "https://www.livingthedreamdivers.com/cayman-diving/cayman-diving-sites/"
+      ]
+    },
+    {
+      "name": "Lighthouse Point",
+      "template": "lighthouse-point-grand-cayman",
+      "position": [19.37295, -81.42185],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx",
+        "https://www.divetech.com/post/the-grandest-of-sites"
+      ]
+    },
+    {
+      "name": "Portobello",
+      "template": null,
+      "position": [19.37791, -81.42092],
+      "listedBy": [
+        "https://doe.ky/wp-content/uploads/2023/01/GRAND-CAYMAN-PUBLIC-MOORINGS-2023.xlsx"
+      ],
+      "excluded": "on the DoE mooring list only; no operator site list read names it"
+    },
+    {
+      "name": "Turtle Reef (Macabuca)",
+      "template": "turtle-reef-grand-cayman",
+      "listedBy": [
+        "https://redsailcayman.com/exploring-grand-caymans-hidden-dive-sites-a-divers-paradise/",
+        "https://www.divetech.com/post/grand-cayman-shore-diving-sites-the-ultimate-guide-to-exploring-cayman-s-coastline-with-divetech",
+        "https://www.cudivers.com/diving"
+      ]
+    },
+    {
+      "name": "Brown Rock",
+      "template": null,
+      "listedBy": ["https://redsailcayman.com/the-ultimate-guide-to-diving-in-the-cayman-islands/"],
+      "excluded": "on one operator list only (Red Sail Sports); no DoE mooring by that name"
+    },
+    {
+      "name": "Cobalt Coast",
+      "template": null,
+      "listedBy": ["https://www.divetech.com/post/best-dive-sites-grand-cayman"],
+      "excluded": "on one operator list only (Divetech); no DoE mooring by that name"
+    }
+  ]
+}

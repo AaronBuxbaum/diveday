@@ -1,0 +1,85 @@
+import type { Page } from "@playwright/test";
+import { expect, signedInAsOwner, test } from "./fixtures";
+import { bookASeatAndOpenThread, e2eNow, publicTripUrl, signOut, tripPathByTitle } from "./helpers";
+import { E2E_FROZEN_CLOCK } from "./servers";
+
+/**
+ * **The diver's saved `/ready` page, offline** (issue #2478).
+ *
+ * The page is kept on the phone for the marina with no signal
+ * (`src/worker/ready-page-cache.ts`). This pins the two ends of that promise:
+ * with no signal the saved copy shows, and landing on `?cancelled=` forgets it,
+ * so a seat the diver cancelled does not keep telling them to come to the dock.
+ *
+ * What is *not* pinned, on purpose (decided 2026-10-16): a staff cancel or a
+ * blow-out does not reach a phone that never opens the link online again.
+ * Divers have no push subscription, and a diver offline at the marina is the
+ * case a push cannot reach anyway, so the copy is bounded by its date alone.
+ */
+const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
+const COPY_CACHE = "diveday-ready-page-v1";
+
+test.describe.configure({ timeout: 90_000 });
+
+signedInAsOwner();
+
+/** How many entries the phone's saved-copy cache holds right now. */
+function keptCopies(page: Page): Promise<number> {
+  return page.evaluate(async (name) => (await (await caches.open(name)).keys()).length, COPY_CACHE);
+}
+
+test("the saved /ready copy shows with no signal, and a cancel landing forgets it", async ({
+  page,
+  context,
+}) => {
+  // The harness freezes the page's clock and the server's, never a service
+  // worker's, which would read the real date and find the seeded trip's copy
+  // long out of date. The worker script is served with the same frozen clock
+  // in front of it, so the copy's date is read against the harness's "now".
+  await context.route("**/manifest-sw.js", async (route) => {
+    const response = await route.fetch();
+    const frozen = `const __fixed = new Date(${JSON.stringify(E2E_FROZEN_CLOCK)}).getTime();
+const __RealDate = Date;
+globalThis.Date = new Proxy(__RealDate, {
+  construct: (target, args) => Reflect.construct(target, args.length === 0 ? [__fixed] : args),
+  get: (target, prop, receiver) => (prop === "now" ? () => __fixed : Reflect.get(target, prop, receiver)),
+});
+`;
+    await route.fulfill({ response, body: frozen + (await response.text()) });
+  });
+  const stamp = e2eNow().getTime();
+  const staffTrip = await tripPathByTitle(page, "blue-mantis", OPEN_BOAT);
+  await signOut(page);
+  await page.goto(publicTripUrl(staffTrip), { waitUntil: "domcontentloaded" });
+  await bookASeatAndOpenThread(
+    page,
+    `Olive Offline ${stamp}`,
+    `olive-offline-${stamp}@example.com`,
+  );
+  const readyPath = new URL(page.url()).pathname;
+  // The booking lands here by a client-side navigation, and a service worker
+  // sees a page by the address its document was created at (the trip page), so
+  // it would not recognise this one as a readiness link. A diver opening the
+  // link is a full load, which is what this does.
+  await page.goto(readyPath, { waitUntil: "domcontentloaded" });
+
+  // Online, the page asks its worker to keep a copy; wait for the phone to hold it.
+  await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBeGreaterThan(0);
+  await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
+
+  // No signal: the reload is answered from the saved copy, and says so.
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Running late" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "No signal" })).toBeVisible();
+
+  // Back online, the diver lands on the page their own cancel redirects to.
+  await context.setOffline(false);
+  await page.goto(`${readyPath}?cancelled=1`, { waitUntil: "domcontentloaded" });
+  await expect.poll(() => keptCopies(page), { timeout: 30_000 }).toBe(0);
+
+  // And with no signal again there is nothing saved to show.
+  await context.setOffline(true);
+  await expect(page.goto(readyPath, { waitUntil: "domcontentloaded" })).rejects.toThrow();
+  await context.setOffline(false);
+});

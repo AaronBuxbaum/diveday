@@ -68,6 +68,7 @@ export function BookingPartyFields({
   onLeadEmailSettled,
   participantChoices,
   onTypesChange,
+  leadOnly = false,
 }: {
   maxPartySize: number;
   /** Show an optional phone field for the lead booker (diver 1). */
@@ -113,6 +114,8 @@ export function BookingPartyFields({
    * caller's money block can price each seat. Pass a stable reference.
    */
   onTypesChange?: (types: ParticipantType[]) => void;
+  /** The size and only the lead's details: a wait-list party (`TripFullSection`). */
+  leadOnly?: boolean;
 }) {
   const t = useTranslations();
   const [size, setSize] = useState(1);
@@ -262,7 +265,7 @@ export function BookingPartyFields({
               : t("party.bigGroupContactGeneric", { count: limit })}
         </p>
       ) : null}
-      {diverSlots.slice(0, size).map((slot, index) => {
+      {diverSlots.slice(0, leadOnly ? 1 : size).map((slot, index) => {
         const member = party[index] ?? emptyMember;
         const nameError = fieldErrors?.[`fullName-${index}`];
         const emailError = fieldErrors?.[`email-${index}`];
@@ -368,6 +371,7 @@ export function BookingPartyFields({
                       </select>
                     </Field>
                   ) : null}
+                  {leadOnly ? null : <UnderEighteenChoice index={index} />}
                   {index === 0 || !useLeadEmail[index] ? (
                     <Field
                       label={
@@ -448,5 +452,30 @@ export function BookingPartyFields({
         );
       })}
     </>
+  );
+}
+
+/**
+ * **The parent's "Under 18"** (H-113, 2026-10-13). The form asks nobody a date
+ * of birth, so without this a parent who booked a twelve-year-old watched her
+ * sign her release alone. Stamped on the seat (`minor-N`); the waiver then asks
+ * a parent or guardian to co-sign. Controlled so a refused submit keeps the
+ * tick, and never remembered with the diver: a child grows up, and the next
+ * booking asks again.
+ */
+function UnderEighteenChoice({ index }: { index: number }) {
+  const t = useTranslations();
+  const [checked, setChecked] = useState(false);
+  return (
+    <ChoiceRow
+      type="checkbox"
+      name={`minor-${index}`}
+      checked={checked}
+      onChange={(event) => setChecked(event.target.checked)}
+      className="text-sm"
+    >
+      {t("party.under18")}
+      {checked ? <span className="block text-muted">{t("party.under18Hint")}</span> : null}
+    </ChoiceRow>
   );
 }

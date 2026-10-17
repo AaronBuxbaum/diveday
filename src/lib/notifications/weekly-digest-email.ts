@@ -1,6 +1,11 @@
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { formatCalendarDateRange, formatTimeZoneName } from "@/lib/format";
+import {
+  formatCalendarDateRange,
+  formatMoneyCents,
+  formatTimeZoneName,
+  formatWeekdayTime,
+} from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import { firstNameOf } from "@/lib/person-name";
 import { seatFillPercent } from "@/lib/weekly-digest";
@@ -26,7 +31,16 @@ export type WeeklyDigestEmailInput = {
   turnOffUrl: string;
 };
 
-type Block = { heading: string; lines: string[]; url: string; linkLabel: string };
+/** A line that carries its own link: "… has 1 of 8 booked. Send a last-minute deal". */
+type Action = { text: string; label: string; url: string };
+
+type Block = {
+  heading: string;
+  lines: string[];
+  action?: Action;
+  url: string;
+  linkLabel: string;
+};
 
 function blockFor(
   section: WeeklyDigestEmailSection,
@@ -56,6 +70,56 @@ function blockFor(
         linkLabel: t("notifications.weeklyDigest.lastWeek.link"),
       };
     }
+    case "money": {
+      const money = (cents: number) => formatMoneyCents(cents, section.currency, input.locale);
+      const lines: string[] = [];
+      // Against the same week last year once there is one (fifth loop, item
+      // 29): "$630 more than the same week last year".
+      const lastYear = section.lastYearRevenueCents ?? null;
+      if (section.revenueCents > 0 && lastYear !== null && lastYear > 0) {
+        const diff = section.revenueCents - lastYear;
+        lines.push(
+          t("notifications.weeklyDigest.money.tookVsLastYear", {
+            amount: money(section.revenueCents),
+            diff: money(Math.abs(diff)),
+            direction: diff > 0 ? "more" : diff < 0 ? "less" : "same",
+          }),
+        );
+      } else if (section.revenueCents > 0) {
+        lines.push(
+          t("notifications.weeklyDigest.money.took", { amount: money(section.revenueCents) }),
+        );
+      }
+      if (section.tipsCents > 0) {
+        lines.push(
+          t("notifications.weeklyDigest.money.tips", { amount: money(section.tipsCents) }),
+        );
+      }
+      // "Owed": the Orders page's line, in the email (fourth UX review, item 23).
+      const { owed } = section;
+      if (owed.orderCents > 0) {
+        lines.push(
+          t("notifications.weeklyDigest.money.owedOrders", {
+            amount: money(owed.orderCents),
+            count: owed.orderCount,
+          }),
+        );
+      }
+      if (owed.seatCents > 0) {
+        lines.push(
+          t("notifications.weeklyDigest.money.owedSeats", {
+            amount: money(owed.seatCents),
+            count: owed.seatCount,
+          }),
+        );
+      }
+      return {
+        heading: t("notifications.weeklyDigest.money.heading"),
+        lines,
+        url: section.url,
+        linkLabel: t("notifications.weeklyDigest.money.link"),
+      };
+    }
     case "this_week": {
       const range = formatCalendarDateRange(input.thisWeekFrom, input.thisWeekTo, input.locale);
       return {
@@ -68,6 +132,19 @@ function blockFor(
             percent: seatFillPercent(section.seatsFilled, section.seats) ?? 0,
           }),
         ],
+        // The emptiest boat no deal has gone out for (fifth loop, item 29).
+        action: section.weakest
+          ? {
+              text: t("notifications.weeklyDigest.thisWeek.weakest", {
+                when: formatWeekdayTime(section.weakest.startsAt, input.locale, input.timezone),
+                title: section.weakest.title,
+                booked: section.weakest.booked,
+                capacity: section.weakest.capacity,
+              }),
+              label: t("notifications.weeklyDigest.thisWeek.dealLink"),
+              url: section.weakest.url,
+            }
+          : undefined,
         url: section.url,
         linkLabel: t("notifications.weeklyDigest.thisWeek.link"),
       };
@@ -115,6 +192,34 @@ function blockFor(
         url: section.url,
         linkLabel: t("notifications.weeklyDigest.overdue.link"),
       };
+    // The owner's safety sentence and gear line (fourth UX review, item 24).
+    case "safety": {
+      const lines: string[] = [];
+      if (section.openRollCalls > 0) {
+        lines.push(
+          t("notifications.weeklyDigest.safety.rollCalls", { count: section.openRollCalls }),
+        );
+      }
+      if (section.uncrewed > 0) {
+        lines.push(t("notifications.weeklyDigest.safety.uncrewed", { count: section.uncrewed }));
+      }
+      if (section.incidents > 0) {
+        lines.push(t("notifications.weeklyDigest.safety.incidents", { count: section.incidents }));
+      }
+      return {
+        heading: t("notifications.weeklyDigest.safety.heading"),
+        lines,
+        url: section.url,
+        linkLabel: t("notifications.weeklyDigest.safety.link"),
+      };
+    }
+    case "gear_service":
+      return {
+        heading: t("notifications.weeklyDigest.gearService.heading"),
+        lines: [t("notifications.weeklyDigest.gearService.body", { count: section.due })],
+        url: section.url,
+        linkLabel: t("notifications.weeklyDigest.gearService.link"),
+      };
   }
 }
 
@@ -148,8 +253,21 @@ export function weeklyDigestEmail(input: WeeklyDigestEmailInput): NotificationEm
   const turnOff = t("notifications.weeklyDigest.turnOff");
 
   const textBlocks = blocks
-    .map((block) => [block.heading, ...block.lines, `${block.linkLabel}: ${block.url}`].join("\n"))
+    .map((block) =>
+      [
+        block.heading,
+        ...block.lines,
+        ...(block.action
+          ? [`${block.action.text} ${block.action.label}: ${block.action.url}`]
+          : []),
+        `${block.linkLabel}: ${block.url}`,
+      ].join("\n"),
+    )
     .join("\n\n");
+  const actionHtml = (action: Action | undefined) =>
+    action
+      ? `<p style="${SECTION_LINE_STYLE}">${escapeHtml(action.text)} <a href="${escapeHtml(action.url)}">${escapeHtml(action.label)}</a></p>`
+      : "";
   const htmlBlocks = blocks
     .map(
       (block) =>
@@ -157,7 +275,7 @@ export function weeklyDigestEmail(input: WeeklyDigestEmailInput): NotificationEm
           .map((line) => `<p style="${SECTION_LINE_STYLE}">${escapeHtml(line)}</p>`)
           .join(
             "",
-          )}<p style="margin: 4px 0 0;"><a href="${escapeHtml(block.url)}">${escapeHtml(block.linkLabel)}</a></p>`,
+          )}${actionHtml(block.action)}<p style="margin: 4px 0 0;"><a href="${escapeHtml(block.url)}">${escapeHtml(block.linkLabel)}</a></p>`,
     )
     .join("");
 

@@ -1,5 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { depthToMeters } from "@/lib/depth-units";
 import type { DbExecutor } from "./client";
 import {
   type courses,
@@ -7,6 +8,7 @@ import {
   type diveSites,
   people,
   personRoles,
+  shops,
   type TripAssignmentRole,
   tripAssignments,
   tripDives,
@@ -14,7 +16,46 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
-import { at, DEMO_TODAY_DEPARTURE_MS, demoTodayDepartureStart } from "./seed-clock";
+import {
+  at,
+  DEMO_TODAY_DEPARTURE_MS,
+  demoTodayDepartureStart,
+  sailsAfterDayBoats,
+} from "./seed-clock";
+
+/** Today's departure's name, which the other seed modules look it up by. */
+export const DEMO_TODAY_TRIP_TITLE = "Two-Tank Reef — Molasses & French";
+
+/**
+ * **Today's departure, named for the hour it sails** (issue #2440). Seeded in
+ * the shop's evening, the one boat that must sail today can only leave late
+ * (`demoTodayDepartureStart`), and a two-tank reef trip at 11:30 PM reads as a
+ * bug. Past the day boats' last slot it becomes the night dive it would be.
+ * Run once every scenario has found the trip by its day name: a rename, and
+ * nothing else about the departure changes.
+ */
+export async function nameDemoNightDeparture(
+  db: DbExecutor,
+  shopId: string,
+  startsAt: Date = demoTodayDepartureStart(),
+): Promise<void> {
+  if (!sailsAfterDayBoats(startsAt)) return;
+  // No night gate on purpose (#2574): many shops take open-water divers on
+  // guided night dives, and a real trip can require the night specialty.
+  await db
+    .update(trips)
+    .set({
+      title: "Night Dive — Molasses & French",
+      description: "Torches and tarpon on the outer reef.",
+    })
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.startsAt, startsAt),
+        eq(trips.title, DEMO_TODAY_TRIP_TITLE),
+      ),
+    );
+}
 
 /**
  * The three headline boats plus the rest of the week: each departure with its
@@ -87,7 +128,7 @@ export async function seedTrips(
         shopId,
         boatId: boatByName.get("Mantis I"),
         diveSiteId: siteByName.get("Molasses Reef")?.id,
-        title: "Two-Tank Reef — Molasses & French",
+        title: DEMO_TODAY_TRIP_TITLE,
         // Time-neutral copy: this trip sails at whatever hour keeps it on
         // today's board, so "morning" would read as a bug after lunch.
         description: "Double dip on the outer reef.",
@@ -395,8 +436,8 @@ export async function seedTrips(
   await db.insert(tripRequirements).values(
     tripRows.map((trip) => {
       // The night dive has no site of its own, so its Night gate is trip-level;
-      // night diving needs the Night specialty, not a higher level. The wreck
-      // trip inherits AOW + Deep from the Spiegel Grove site and adds a
+      // this shop requires the Night specialty on that dive, not a higher level.
+      // The wreck trip inherits AOW + Deep from the Spiegel Grove site and adds a
       // trip-level nitrox requirement (deep wreck bottom time).
       const isNight = trip.title.startsWith("Night Dive");
       const isWreck = trip.title.startsWith("Wreck Trip");
@@ -564,17 +605,41 @@ export async function seedTrips(
     }),
   );
 
-  // Conditions are a live reading, not a description: the boat that sails today
-  // has this morning's numbers, the next two have yesterday's, and everything
-  // further out is honestly blank because nobody has looked yet.
+  await seedCrewConditions(db, shopId, tripRows);
+
+  return { tripRows, captainId, divemasterId };
+}
+
+/**
+ * Conditions are a live reading, not a description: the boat that sails today
+ * has this morning's numbers, the next two have yesterday's, and everything
+ * further out is honestly blank because nobody has looked yet.
+ */
+async function seedCrewConditions(
+  db: DbExecutor,
+  shopId: string,
+  tripRows: readonly { id: string }[],
+): Promise<void> {
+  // Typed the way a crew types them, in the shop's own unit: a round 60 ft is
+  // stored as its metres, so it reads back as 60 ft, not as 18 m's odd 59 ft
+  // (fourth review, item 54). Today's boat sails at whatever hour keeps it on
+  // the board, so its sentence names no time of day.
+  const [shopUnits] = await db
+    .select({ depthUnit: shops.depthUnit })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  const depthUnit = shopUnits?.depthUnit ?? "meters";
+  const visibility = (feet: number, meters: number) =>
+    depthToMeters(depthUnit === "feet" ? feet : meters, depthUnit);
   const conditions: Array<[number, Record<string, unknown>]> = [
     [
       0,
       {
         conditionsSummary:
-          "A calm morning is expected; the crew will confirm the final call at the dock.",
+          "Settled on the outer reef today. The crew make the final call at the dock.",
         waterTemperatureC: 27,
-        visibilityMeters: 18,
+        visibilityMeters: visibility(60, 18),
         surfaceConditions: "Light east breeze · gentle chop",
       },
     ],
@@ -584,18 +649,17 @@ export async function seedTrips(
         conditionsSummary:
           "Warm and still after dark. Bring a light layer for the surface interval.",
         waterTemperatureC: 28,
-        visibilityMeters: 15,
+        visibilityMeters: visibility(50, 15),
         surfaceConditions: "Glassy · no swell forecast",
       },
     ],
     [
       2,
       {
-        conditionsSummary:
-          "Open water, so the call is made at the dock. Expect current on the line.",
+        conditionsSummary: "Offshore, so the call is made at the dock. Expect current on the line.",
         waterTemperatureC: 26,
-        visibilityMeters: 24,
-        surfaceConditions: "Moderate southeast wind · 1 m swell",
+        visibilityMeters: visibility(80, 24),
+        surfaceConditions: `Moderate southeast wind · ${depthUnit === "feet" ? "3 ft" : "1 m"} swell`,
       },
     ],
   ];
@@ -607,6 +671,4 @@ export async function seedTrips(
       .set({ ...values, conditionsUpdatedAt: nowDate() })
       .where(eq(trips.id, trip.id));
   }
-
-  return { tripRows, captainId, divemasterId };
 }

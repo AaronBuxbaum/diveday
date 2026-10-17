@@ -1,9 +1,17 @@
 // @vitest-environment node
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull, lt, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { certifications, nitroxCertifications, specialtyCertifications } from "./schema";
+import {
+  bookings,
+  certifications,
+  nitroxCertifications,
+  people,
+  specialtyCertifications,
+  trips,
+} from "./schema";
 
 /**
  * **A verified card names who checked it, and when** — across the whole seeded
@@ -53,6 +61,32 @@ describe("the seeded shop's verified cards", () => {
         rows.map((row) => row.identifier),
         `${name} with no reviewer`,
       ).toEqual([]);
+    }
+  });
+
+  it("were checked before any boat a diver holding one has sailed on", async () => {
+    // UX review 2026-10-13, item 40: the dawn boat's departure log, the page a
+    // shop hands an insurer, read "reviewed by Marcus Webb" fourteen hours
+    // after the boat sailed, because every seeded review was stamped at the
+    // moment the seed ran.
+    const { db, shop } = await seededShopContext({ history: true });
+    for (const { name, table } of CARD_TABLES) {
+      const late = await db
+        .select({ diver: people.fullName, trip: trips.title })
+        .from(table)
+        .innerJoin(people, eq(people.id, table.personId))
+        .innerJoin(bookings, eq(bookings.personId, table.personId))
+        .innerJoin(trips, eq(trips.id, bookings.tripId))
+        .where(
+          and(
+            eq(table.shopId, shop.id),
+            notAReview(table),
+            ne(bookings.status, "cancelled"),
+            lt(trips.startsAt, nowDate()),
+            gt(table.reviewedAt, trips.startsAt),
+          ),
+        );
+      expect(late, `${name} reviewed after the diver sailed`).toEqual([]);
     }
   });
 

@@ -8,7 +8,16 @@
   however, evidence — `buildIncidentExport` renders it into a SHA-256-sealed document for an
   investigator or a treating physician, which is why a dive nobody logged must read as *not
   recorded* rather than being interpolated from its neighbours.
-- **Marine-life catalog** — DiveDay's own list of 148 wider-Caribbean species
+- **Dispute sheet** — a seat's printable attendance record for a card dispute
+  (`/shop/<slug>/orders/<id>/print/dispute`, issue #2390): the order, the diver's signed waiver (title,
+  version, signed-at, typed name), the check-in, one roll-call row per planned checkpoint (aboard, not
+  aboard or not recorded, with time and recorder) and what staff did, drawn from a closed allowlist of
+  activity codes. Owner and manager only (`canExportDisputeSheet`). Built as a **closed list, not a
+  filter**: it selects named columns and never the waiver's status or medical answers, so a physician
+  referral cannot be inferred from it. It shows the newest release signed *before departure*, because
+  one signed after the boat left proves nothing about the morning. Not the **incident export**, which
+  is the sealed record for an investigator or physician.
+- **Marine-life catalog** — DiveDay's own list of wider-Caribbean species
   (`src/db/marine-life-catalog.ts`): a slug, a Latin binomial, a category and a photo, and no prose
   at all. Every word a person reads about one is DiveDay's, written once in every language and
   resolved at render (`src/i18n/marine-life-labels.ts`, ADR 20260813-marine-life-is-diveday-copy). A
@@ -17,6 +26,23 @@
   **course template**, whose words are copied onto the shop's row and owned by the shop from then on:
   a dive plan for one reef is the shop's to write, and what a stoplight parrotfish looks like is the
   same sentence for every shop in the Caribbean.
+- **Dive area** — a named stretch of coast DiveDay's dive-site catalog is organised and measured
+  by (`src/content/dive-areas.ts`): the Upper Keys, Bonaire, Cozumel. Each **site template** names
+  one. An area carries where it is as an address says it (a country, and a subdivision where the
+  country holds other places), which is what decides whether the catalog is offered to a shop, and
+  it is the grain of the catalog's coverage promise. Not a **dive site**, which is one shop's place.
+- **Coverage denominator** — the named sites shops in one **dive area** actually run, drawn up
+  from public lists (a marine-park or mooring list, operators' site lists) into
+  `src/content/coverage/<area>.json`, each mapped to the template that defines it or to none. What
+  "the catalog covers 80% of an area" is measured against; an area is **promised** once it reaches
+  that, and may not fall back (`pnpm content:coverage`). The **marine-life catalog** is measured the
+  same way, one denominator per animal group in `src/content/species-coverage.json`: fish from
+  REEF survey sighting frequencies, everything else from iNaturalist observation counts.
+- **Photo ledger** — one record per photograph DiveDay bundles for its starting content, and one
+  entry per template that was searched for and has none worth bundling
+  (`src/content/photo-records.json`). It says where a file came from, under what licence, how big
+  the original was and the day a person looked at it and kept it. Written only by
+  `pnpm content:photos`; the folders' credit lists are rendered from it.
 - **Field guide** — the faces a **dive site** is known for: up to eight catalog species a shop picks
   for that site (`dive_site_creatures`, `MAX_SITE_CREATURES`), in the order it chose. A **briefing
   selection**, not an inventory — the point is to tell a diver what to *expect*, so it holds the
@@ -75,7 +101,15 @@
   yesterday's fell silent. The longer wait is the one that costs nothing if wrong, and reaching
   repetitive can never shorten one, because the fixed `repetitive` is longer than the fixed `single`.
   A record that is short of its plan, or missing its last exit, anchors on the return, never on an
-  earlier dive. Rendered on the thread's after-state and in the recap email, in the shop's zone. The
+  earlier dive. Rendered on the thread's after-state and in the recap email, in the shop's zone; and
+  before the dive on `/ready`, in a **planned** form (`plannedFlySafeFrom`, `src/lib/fly-safe.ts`)
+  for a visitor booking the flight before the boat sails. The planned form anchors on the scheduled
+  end plus an hour, and its sentence says that hour ("plus an hour in case we run late"). It goes
+  repetitive when the departure plans more than one dive or the diver holds another dive day here
+  inside the lookback window. It is said with weekday, date, time and zone, because it is read days
+  ahead and from other zones. It answers a diver's seat only, and stays **silent** past
+  no-decompression limits, with no scheduled end, or when the diver's next seat with the shop
+  starts before the time it would name (that boat's own page says the time). The
   sentence states its reason on the two routes a diver cannot check for themselves — the earlier
   day, which is nowhere on a recap of today, and the multi-dive *plan*, whose figure can be more
   than the diver dived — because neither surface carries a dive count at all: the record card
@@ -105,7 +139,10 @@
   depth (`src/lib/day-profile.ts`, rendered in "The day"). Every figure is **planned, never
   observed** — the source is `shops.bottom_time_minutes` / `surface_interval_minutes`, a site's
   `expected_bottom_time_minutes` and a departure's `trip_dives.travel_minutes`, so the copy says
-  "usually" and the page states no clock. Its gap is deliberately *not* the **surface interval**
+  "usually". "The day" opens with the two clock times the departure is scheduled to, when to be at
+  the dock (on a shore or pool day, where to meet) and when it is back ("At the dock 2:00 PM · back
+  about 6:00 PM", one-day charters only, `dayRhythmLine` over `dockDayTimeline`); the profile below
+  that line states no clock of its own. Its gap is deliberately *not* the **surface interval**
   above, which is measured between two executed dives; and it never crosses a night, so a course
   weekend's day-one close and day-two open are two days rather than one long rest. The arithmetic is
   the dock-day timeline's own (`betweenDivesMinutes`), so the figure a diver reads before booking is
@@ -132,3 +169,33 @@
   credential read — which the booking gate, the seat cap and the crew editor's refusals use, because
   H-59 keeps a locally recorded renewal date from ever refusing a sale or an assignment (issue
   #1853). A surface showing a gap the two claims disagree about names who lapsed.
+- **Sailed with no crew on record** — a departure that went back in the month with nobody on its
+  crew counted as sailing (`SafetyMonth.noCrewDepartures`, `src/lib/safety-report.ts`; fourth
+  review item 13). Its own figure on the Safety report, listed by name, because a departure with no
+  crew never reaches the lapsed-credential check, so the emptiest record would otherwise read as
+  the cleanest. "Who was the captain?" is an insurer's first question; zero here means every boat
+  that sailed had somebody on record, never that nobody was asked. Boats only: "sailed" is a
+  boat's word, so a shore day or pool session is never listed. A month in which no departure has
+  a single crew row is a shop that does not roster crew here, so the figure gives way to one quiet
+  line, "No crew recorded on any departure this month" (`noCrewOnRecord`; review F1); a month whose
+  rostered crew were all recorded ashore did record crew, and lists its boats (review N7). Its
+  denominator is the boats back, not every departure (dive-domain review N5). On the **Safety
+  year** the figure is the sum of the months, each by that rule, so a month before the shop
+  rostered crew adds no boats to the figure or to its denominator, which counts only the boats of
+  months with crew on record (chain-r5 review F1); the year says how many months had none ("No crew
+  recorded in 9 of 12 months").
+- **Safety year** — the Safety report over a whole year (`/shop/<slug>/safety?year=`; fifth loop,
+  item 33), the one page an insurer or broker is handed at renewal instead of twelve. Figures only,
+  each the sum of that year's month views read by their own rules (`getSafetyYear`,
+  `summarizeSafetyYear`; dive-domain review F1), with the boarding caveat under them. Printed, it
+  names the shop, the days it covers and the zone ("January 1 to October 16, 2026 · Eastern
+  Daylight Time") and the day it was printed, because an undated "so far" is worthless a month
+  later. Incident reports count filed reports, with drafts named beside them ("3 filed · 1 draft"):
+  a draft can still be discarded. The lists behind each figure stay on the months, and the year
+  says so. The roll-call figure keeps "not closed" apart from "no roll call taken" (review F2). The
+  boarding caveat says what the dock count proves: the rail records nobody as boarded while
+  readiness blocks them, and a seat whose readiness changed after boarding is not separated
+  (review F4). Credentials are read as the records stand today, with two limits: one issued after
+  a sailing never answers for it, so a renewal entered as a new record leaves the earlier lapsed
+  sailing lapsed (review F3); and a credential since deleted is gone from the record, so a sailing
+  once on a lapsed card reads as unrecorded instead, which errs toward attention (review N6).

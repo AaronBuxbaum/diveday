@@ -48,8 +48,9 @@
  * outcome available, so it either all lands or none of it does.
  */
 
-import { and, eq, inArray, isNotNull, isNull, ne, or, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, like, ne, or, type SQL, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
 import { ANONYMIZED_PERSON_NAME, REDACTED_TEXT, redactedUniqueValue } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
@@ -68,6 +69,7 @@ import {
 } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
+import { BOOKKEEPER_CLEARED, tellOwnersAboutBookkeeper } from "./bookkeeper";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
 import {
@@ -99,6 +101,7 @@ import {
   gearReservations,
   importedPaymentHistory,
   inboundMessages,
+  inboxSavedAnswers,
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
@@ -120,15 +123,21 @@ import {
   recapPhotos,
   recapPulses,
   rentalFitProfiles,
+  reviewModerationEvents,
   reviewReplies,
   rollCallCrewEvents,
   rollCallEvents,
+  shopShoreAlertTokens,
+  shops,
   specialtyCertifications,
   staffCredentials,
   staffReplies,
   tips,
+  tripChangeEvents,
   tripLastMinutePromoRecipients,
   tripReviews,
+  tripSeries,
+  trips,
   tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
@@ -136,6 +145,7 @@ import {
   workOrderLines,
   workOrders,
 } from "./schema";
+import { recordShopActivityWithin } from "./shop-activity";
 import { customerProviderFromEnvironment } from "./stripe-providers";
 
 export type AnonymizeDiverRefusal =
@@ -202,6 +212,9 @@ const ERASED_PERSON_COLUMNS = {
   // there — an assertion about a body whose record is supposed to be gone.
   noCertificationClearedAt: null,
   noCertificationClearedByPersonId: null,
+  drysuitExperienceSeenAt: null,
+  drysuitExperienceSeenByPersonId: null,
+  drysuitExperienceSeenNote: null,
   // A published name is a personal name, and it is the one that was on a page
   // the whole internet could read. Unreachable today — `anonymizeDiver` refuses
   // anybody holding a staff role, and the only way to lose every staff role is
@@ -265,8 +278,9 @@ const REGEX_METACHARACTERS = /[\\^$.|?*+()[\]{}]/g;
  * The same rendering also *escapes* — a quote becomes `\"`, a backslash `\\` —
  * while the pattern is built from the name as stored, so `Bea "Bee" Ochoa`
  * would have slipped past it. That is not a near-miss: a `recordTripActivity`
- * row carries no booking and no subject, so this pass is the **only** handle on
- * it, and her name would have stood in the trail after her own erasure.
+ * row other than a roster change (which names its subject, security review
+ * 2026-10-16) carries no booking and no subject, so this pass is the **only**
+ * handle on it, and her name would have stood in the trail after her own erasure.
  *
  * `jsonb_each_text` answers both at once. It hands back each value **decoded**,
  * so keys are out of scope and JSON escaping never enters the comparison
@@ -283,13 +297,8 @@ const REGEX_METACHARACTERS = /[\\^$.|?*+()[\]{}]/g;
  * trailing `.` would match nothing at all.
  */
 function activityMessageNameMatch(fullName: string) {
-  const trimmed = fullName.trim();
-  const wordChars = [...trimmed].filter((char) => WORD_CHAR.test(char)).length;
-  if (wordChars < MIN_NAME_MATCH_CHARS) return undefined;
-  const escaped = trimmed.replace(REGEX_METACHARACTERS, "\\$&");
-  const first = trimmed[0] ?? "";
-  const last = trimmed[trimmed.length - 1] ?? "";
-  const pattern = `${WORD_CHAR.test(first) ? "\\y" : ""}${escaped}${WORD_CHAR.test(last) ? "\\y" : ""}`;
+  const pattern = buddyMemberNameMatch(fullName);
+  if (!pattern) return undefined;
   return sql`exists (
     select 1 from jsonb_each_text(${activityEvents.params}) as named(key, value)
     where named.value ~* ${pattern}
@@ -297,23 +306,60 @@ function activityMessageNameMatch(fullName: string) {
 }
 
 /**
- * The same word-boundary name pattern as {@link activityMessageNameMatch}, but
- * returned as the bare pattern rather than a predicate over one column — the
- * buddy sweep applies it per *array element* twice (once to find the rows, once
- * to rewrite them), so it cannot be handed a column-bound comparison, and the
- * internal-notes sweep needs it against a third column.
- *
- * `undefined` for a name too short to anchor safely, exactly as above: the
- * two-character-name blast radius is the same hazard on either table.
+ * One handle as a whole-word pattern: escaped, any run of spaces in it matching
+ * any run of whitespace ("Dana  Lee", a line break in a pasted note), and
+ * anchored with `\y` only where its own end is a word character (see
+ * {@link activityMessageNameMatch}). `undefined` below
+ * {@link MIN_NAME_MATCH_CHARS} word characters.
  */
-function buddyMemberNameMatch(fullName: string): string | undefined {
-  const trimmed = fullName.trim();
+function wholeWordPattern(handle: string): string | undefined {
+  const trimmed = handle.trim();
   const wordChars = [...trimmed].filter((char) => WORD_CHAR.test(char)).length;
   if (wordChars < MIN_NAME_MATCH_CHARS) return undefined;
-  const escaped = trimmed.replace(REGEX_METACHARACTERS, "\\$&");
+  const escaped = trimmed.replace(REGEX_METACHARACTERS, "\\$&").replace(/\s+/g, "\\s+");
   const first = trimmed[0] ?? "";
   const last = trimmed[trimmed.length - 1] ?? "";
   return `${WORD_CHAR.test(first) ? "\\y" : ""}${escaped}${WORD_CHAR.test(last) ? "\\y" : ""}`;
+}
+
+/**
+ * The word-boundary name pattern every name sweep here uses, as a bare pattern
+ * rather than a predicate over one column — the buddy sweep applies it per
+ * *array element* twice (once to find the rows, once to rewrite them), so it
+ * cannot be handed a column-bound comparison, and the internal-notes sweep
+ * needs it against a third column.
+ *
+ * It matches the full name with any whitespace between its words, and, for a
+ * name of more than one word, the family-first form a register writes ("Lee,
+ * Dana" or "Lee Dana"). With `familyName`, the family name alone as a whole
+ * word too: for the free-text trails kept for ever, where a staffer writes
+ * "pick up at Halvorsen's" (the privacy page promises it); at the price of a
+ * namesake's line, the same trade the activity sweep states.
+ *
+ * `undefined` for a name too short to anchor safely: the two-character-name
+ * blast radius is the same hazard on every table.
+ */
+function buddyMemberNameMatch(
+  fullName: string,
+  options: { familyName?: boolean } = {},
+): string | undefined {
+  const full = wholeWordPattern(fullName);
+  if (!full) return undefined;
+  const words = fullName.trim().split(/\s+/).filter(Boolean);
+  const alternatives = [full];
+  if (words.length > 1) {
+    const edges = /^[^\p{L}\p{N}_]+|[^\p{L}\p{N}_]+$/gu;
+    const family = (words[words.length - 1] ?? "").replace(edges, "");
+    const given = words.slice(0, -1).join(" ").replace(edges, "");
+    const reversed = wholeWordPattern(`${family} ${given}`);
+    // The first gap of the family-first form may carry a comma: "Lee, Dana".
+    if (reversed) alternatives.push(reversed.replace(/^(\\y)?(.+?)\\s\+/, "$1$2,?\\s+"));
+    if (options.familyName) {
+      const alone = wholeWordPattern(family);
+      if (alone) alternatives.push(alone);
+    }
+  }
+  return alternatives.join("|");
 }
 
 /**
@@ -413,6 +459,7 @@ export async function anonymizeDiver(
         alreadyAnonymized: true,
         queuedMediaDeletions: 0,
         raisedProcessorErasures: [] as ProcessorErasureObligation[],
+        bookkeeperCleared: false,
       } as const;
     }
 
@@ -456,6 +503,16 @@ export async function anonymizeDiver(
       owed: stillOwed,
     });
   }
+  // The shop's month-end files stop with the address, so its owners hear it
+  // and why, without the address (second-pass N3). Never throws.
+  if (outcome.bookkeeperCleared) {
+    await tellOwnersAboutBookkeeper(db, {
+      shopId: input.shopId,
+      what: { event: "cleared", by: "erasure" },
+      at: now,
+      actorPersonId: input.actorPersonId,
+    });
+  }
   return {
     ok: true,
     alreadyAnonymized: outcome.alreadyAnonymized,
@@ -480,6 +537,8 @@ type ScrubResult = {
   queuedMediaDeletions: number;
   /** The obligation rows this scrub created — the caller attempts them post-commit. */
   raisedProcessorErasures: ProcessorErasureObligation[];
+  /** The diver's address was the shop's bookkeeper's; the caller tells the owners post-commit. */
+  bookkeeperCleared: boolean;
 };
 
 /**
@@ -586,6 +645,8 @@ type ScrubSectionContext = ScrubContext & {
     kind: "recap_photo" | "waiver_document" | "payment_receipt",
     url: string | null,
   ) => Promise<void>;
+  /** What a sweep found that the caller acts on after the commit. */
+  found: { bookkeeperCleared: boolean };
 };
 
 /** The erasure's "people" sweep. */
@@ -1096,8 +1157,19 @@ async function scrubBookingRows(
         lastDivedBand: null,
         reEntryAsk: null,
         welcomeSharedAt: null,
+        welcomeHello: null,
         // "Running late" (J3) is the diver's own statement on the seat.
         runningLateAt: null,
+        // The booker's "Under 18" is an age fact about this person, cleared
+        // with their date of birth. The release keeps the fact that a guardian
+        // co-signed, which is the evidence; this only said why it was asked.
+        minorDeclaredAt: null,
+        // Why the desk turned them away is a category, but "medical" is still a
+        // health fact about this person; it goes with them. *That* the desk
+        // turned them away stays (`turnedAwayAt`, untouched here), so the
+        // released seat never reads "did not arrive" afterwards (layer 3
+        // review, dde-2 #4); it is the shop's own record, like the status.
+        turnedAwayReason: null,
         // The instructor's next step is prose about this named student — "book
         // your deep dive with Marcus before the card arrives" — so it goes
         // with them (issues #1196, #1205). All three columns together, or the
@@ -1107,9 +1179,16 @@ async function scrubBookingRows(
         courseNextStepByPersonId: null,
         hotelPickupLocation: null,
         pickupTime: null,
+        // Their lunch preference (ideas item 56) is health-adjacent prose about
+        // this person, typed for one boat's galley.
+        dietaryNote: null,
         // The name a held seat was booked under (H-13) is somebody's name, and
         // after an erasure no one is left to ask whether it was them.
         identityBookedAs: null,
+        // The contact the desk recorded for the person on a held seat (issue
+        // #2145) names somebody and their number.
+        heldEmergencyContactName: null,
+        heldEmergencyContactPhone: null,
       })
       .where(inArray(bookings.id, bookingIds));
 
@@ -1137,6 +1216,22 @@ async function scrubBookingRows(
           eq(rollCallEvents.shopId, shopId),
           inArray(rollCallEvents.bookingId, bookingIds),
           isNotNull(rollCallEvents.note),
+        ),
+      );
+
+    // The blockers a `boarded` event kept (ADR 20261015-roll-call-records-
+    // readiness, issue #2414) are the reasons one person could not board: a
+    // physician's review, a missing card. They are about the person, so they go
+    // with the note; `readiness_status` stays, saying only that this count was
+    // made while blocked. The shape check allows a `blocked` status with no list.
+    await tx
+      .update(rollCallEvents)
+      .set({ readinessBlockers: null })
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          inArray(rollCallEvents.bookingId, bookingIds),
+          isNotNull(rollCallEvents.readinessBlockers),
         ),
       );
 
@@ -1266,6 +1361,30 @@ async function scrubActivityEvents(
   // an event naming a *different person with the same name* loses its wording.
   // That trade is still the right way round — a line of history against a name
   // someone asked to have forgotten — but it is a line, not the log.
+  //
+  // One line is field-level rather than whole-line (issue #2315, Aaron
+  // 2026-10-13): an `order_refunded` line is a fact about the staffer who
+  // refunded, and names the customer only by `subject_person_id`. Erasing the
+  // customer drops that pointer and keeps nothing in `params` but the actor's
+  // name, so "who refunded this order?" survives. It runs first so the
+  // whole-line statement below no longer finds it by subject. A line the erased
+  // person wrote, or one hanging off a seat, is left to that statement.
+  await tx
+    .update(activityEvents)
+    .set({
+      subjectPersonId: null,
+      params: sql`jsonb_strip_nulls(jsonb_build_object('actor', ${activityEvents.params} -> 'actor'))`,
+    })
+    .where(
+      and(
+        eq(activityEvents.shopId, shopId),
+        eq(activityEvents.code, "order_refunded"),
+        eq(activityEvents.subjectPersonId, personId),
+        ne(activityEvents.actorPersonId, personId),
+        isNull(activityEvents.bookingId),
+      ),
+    );
+
   await tx
     .update(activityEvents)
     .set(ACTIVITY_REDACTED)
@@ -1298,6 +1417,221 @@ async function scrubActivityEvents(
       .returning({ id: activityEvents.id });
     logFuzzyMatch(ctx, "activity_event_name", byName.length);
   }
+  return [];
+}
+
+/**
+ * The handles a departure's title is searched for after an erasure: the full
+ * name and, when the name has more than one word, the family name (its last
+ * word), each trimmed of surrounding punctuation and dropped below
+ * {@link MIN_NAME_MATCH_CHARS} word characters.
+ */
+function titleNameHandles(fullName: string): string[] {
+  const edges = /^[^\p{L}\p{N}_]+|[^\p{L}\p{N}_]+$/gu;
+  const full = fullName.trim().replace(edges, "");
+  const words = full.split(/\s+/).filter(Boolean);
+  const family = words.length > 1 ? (words[words.length - 1] ?? "").replace(edges, "") : "";
+  const longEnough = (value: string) =>
+    [...value].filter((char) => WORD_CHAR.test(char)).length >= MIN_NAME_MATCH_CHARS;
+  return [...new Set([full, family].filter(longEnough))];
+}
+
+/**
+ * The erasure's "departure titles" sweep (issue #2315).
+ *
+ * A private departure is often titled with the diver's name ("Smith family
+ * charter"), and the title shows wherever the departure does: the schedule,
+ * the manifest, the activity log. A title is free text, so it cannot be
+ * scrubbed by matching a name in general; the rule is the product owner's
+ * (Aaron, 2026-10-13), narrowed on review:
+ *
+ * - **only their party is booked**: every seat on the departure that is not
+ *   cancelled is the erased diver's own or one of the party they lead
+ *   (`party_lead_booking_id` pointing at their seat), and they hold a seat
+ *   there in some state. A departure with anyone else aboard keeps its title,
+ *   because it is other people's departure too; a diver who joined someone
+ *   else's party does not get to rename it. A seat with no person is someone
+ *   else.
+ * - **the title names them**. On a *private* departure, the full name or the
+ *   family name anywhere in the title, case-insensitively: "The Smiths" must
+ *   go as surely as "Smith charter", and a private charter is theirs. On a
+ *   *public* one, only the full name as whole words: a public title is the
+ *   shop's ("Leeward Wall Dive" is not about Dana Lee), so the family name and
+ *   a match inside a word are not used. A name under three word characters is
+ *   never used, the floor every name match here keeps.
+ * - **a repeating charter goes whole**: when the diver holds a seat on a date
+ *   of a series and nobody else holds one on any of its dates, the series row
+ *   and its unbooked dates are renamed under the same title rule, because the
+ *   nightly roll copies the newest date's title onto every new one.
+ *
+ * The new title is the staff bundle's neutral one in the shop's own language
+ * (`trips.erasedTitle`), "Private charter" or "Departure" by `is_private`.
+ * Deleted departures are reached too: the activity log keeps naming one. Each
+ * renamed departure, or each renamed series on its earliest date, gets a
+ * `departure_retitled_by_erasure` line by the staffer who erased, naming
+ * nobody else and never the old title.
+ */
+async function scrubDepartureTitles(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const { shopId, personId, owned } = ctx;
+  const handles = titleNameHandles(ctx.fullName);
+  if (!owned || handles.length === 0) return [];
+  const fullNamePattern = buddyMemberNameMatch(ctx.fullName);
+
+  const [shop] = await tx
+    .select({ defaultLocale: shops.defaultLocale })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  const t = staffTranslator(shop?.defaultLocale);
+  const privateTitle = t("trips.erasedTitle.private");
+  const publicTitle = t("trips.erasedTitle.public");
+
+  const names = (title: SQL | AnyPgColumn, isPrivate: SQL | AnyPgColumn) => {
+    const anywhere = or(
+      ...handles.map((handle) => sql`strpos(lower(${title}), lower(${handle})) > 0`),
+    ) as SQL;
+    const asWords = fullNamePattern ? sql`${title} ~* ${fullNamePattern}` : sql`false`;
+    return sql`(case when ${isPrivate} then (${anywhere}) else (${asWords}) end)`;
+  };
+  const holdsSeat = (tripId: SQL | AnyPgColumn) => sql`exists (
+    select 1 from ${bookings} own
+    where own.trip_id = ${tripId} and own.shop_id = ${shopId} and own.person_id = ${personId}
+  )`;
+  const nobodyElse = (tripId: SQL | AnyPgColumn) => sql`not exists (
+    select 1 from ${bookings} other
+    where other.trip_id = ${tripId}
+      and other.shop_id = ${shopId}
+      and other.status <> 'cancelled'
+      and (
+        other.person_id is null
+        or (
+          other.person_id <> ${personId}
+          and not exists (
+            select 1 from ${bookings} lead
+            where lead.id = other.party_lead_booking_id
+              and lead.trip_id = ${tripId}
+              and lead.shop_id = ${shopId}
+              and lead.person_id = ${personId}
+          )
+        )
+      )
+  )`;
+  // The series this diver has a date on and nobody else has a seat on.
+  const theirSeries = sql`(
+    select series.id from ${tripSeries} series
+    where series.shop_id = ${shopId}
+      and exists (
+        select 1 from ${trips} dated
+        where dated.series_id = series.id and dated.shop_id = ${shopId}
+          and ${holdsSeat(sql`dated.id`)}
+      )
+      and not exists (
+        select 1 from ${trips} dated
+        where dated.series_id = series.id and dated.shop_id = ${shopId}
+          and not ${nobodyElse(sql`dated.id`)}
+      )
+  )`;
+  const seriesIsPrivate = sql`exists (
+    select 1 from ${trips} dated
+    where dated.series_id = ${tripSeries.id} and dated.shop_id = ${shopId} and dated.is_private
+  )`;
+
+  await tx
+    .update(tripSeries)
+    .set({
+      title: sql`case when ${seriesIsPrivate} then ${privateTitle} else ${publicTitle} end`,
+    })
+    .where(
+      and(
+        eq(tripSeries.shopId, shopId),
+        sql`${tripSeries.id} in ${theirSeries}`,
+        names(tripSeries.title, seriesIsPrivate),
+      ),
+    );
+
+  const retitled = await tx
+    .update(trips)
+    .set({
+      title: sql`case when ${trips.isPrivate} then ${privateTitle} else ${publicTitle} end`,
+    })
+    // diveday:allow-deleted-trips: a deleted departure's title still shows in
+    // the activity log, so the erasure reaches it too.
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        or(holdsSeat(trips.id), sql`${trips.seriesId} in ${theirSeries}`),
+        nobodyElse(trips.id),
+        names(trips.title, trips.isPrivate),
+      ),
+    )
+    .returning({ id: trips.id, seriesId: trips.seriesId, startsAt: trips.startsAt });
+  // One line per one-off departure, and one per repeating run, on its
+  // earliest renamed date: the same grain the board's own series lines keep.
+  const lineOn = new Map<string, { id: string; startsAt: Date }>();
+  for (const trip of retitled) {
+    const key = trip.seriesId ?? trip.id;
+    const held = lineOn.get(key);
+    if (!held || trip.startsAt < held.startsAt) lineOn.set(key, trip);
+  }
+  for (const trip of lineOn.values()) {
+    await recordShopActivityWithin(tx, {
+      shopId,
+      actorPersonId: ctx.actorPersonId,
+      write: { code: "departure_retitled_by_erasure", tripId: trip.id },
+    });
+  }
+  logFuzzyMatch(ctx, "departure_title_name", retitled.length);
+  return [];
+}
+
+/**
+ * The erasure's "departure change trail" sweep. `trip_change_events` keeps a
+ * meeting point's or the conditions' values before and after for ever
+ * (`src/lib/retention.ts`), and a value is free text a staffer typed ("Pick up
+ * at the Halvorsens'"). Each string value naming the diver, by the same
+ * whole-word name match as the activity sweep plus the family name alone,
+ * becomes `[redacted]`; the
+ * keys, the other values and the row stay, so the change still reads as one.
+ */
+async function scrubDepartureChangeTrail(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<ProcessorErasureTargetInput[]> {
+  const pattern = buddyMemberNameMatch(ctx.fullName, { familyName: true });
+  if (!pattern) return [];
+  const redactValues = (
+    column: AnyPgColumn,
+  ) => sql`case when jsonb_typeof(${column}) is distinct from 'object' then ${column} else (
+    select coalesce(jsonb_object_agg(
+      entry.key,
+      case when jsonb_typeof(entry.value) = 'string' and (entry.value #>> '{}') ~* ${pattern}
+        then to_jsonb(${REDACTED_TEXT}::text) else entry.value end
+    ), '{}'::jsonb)
+    from jsonb_each(${column}) as entry(key, value)
+  ) end`;
+  const naming = (column: AnyPgColumn) => sql`exists (
+    select 1 from jsonb_each_text(
+      case when jsonb_typeof(${column}) = 'object' then ${column} else '{}'::jsonb end
+    ) as named(key, value)
+    where named.value ~* ${pattern}
+  )`;
+  const scrubbed = await tx
+    .update(tripChangeEvents)
+    .set({
+      beforeValue: redactValues(tripChangeEvents.beforeValue),
+      afterValue: redactValues(tripChangeEvents.afterValue),
+    })
+    .where(
+      and(
+        eq(tripChangeEvents.shopId, ctx.shopId),
+        or(naming(tripChangeEvents.beforeValue), naming(tripChangeEvents.afterValue)),
+      ),
+    )
+    .returning({ id: tripChangeEvents.id });
+  logFuzzyMatch(ctx, "trip_change_event_name", scrubbed.length);
   return [];
 }
 
@@ -1383,6 +1717,32 @@ async function scrubReviews(
             .select({ id: tripReviews.id })
             .from(tripReviews)
             .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId))),
+        ),
+      ),
+    );
+  // The moderation trail is kept for ever (`src/lib/retention.ts`), and its
+  // `reason_note` is a moderator's own words about a review: on the diver's
+  // own reviews it is about what they wrote, and on anyone's it may name them.
+  // The row (who acted, what, why by code) stays; the words become
+  // `[redacted]`, never null, since an `other` reason must carry a note.
+  const notePattern = buddyMemberNameMatch(ctx.fullName, { familyName: true });
+  await tx
+    .update(reviewModerationEvents)
+    .set({ reasonNote: REDACTED_TEXT })
+    .where(
+      and(
+        eq(reviewModerationEvents.shopId, shopId),
+        isNotNull(reviewModerationEvents.reasonNote),
+        ne(reviewModerationEvents.reasonNote, REDACTED_TEXT),
+        or(
+          inArray(
+            reviewModerationEvents.reviewId,
+            tx
+              .select({ id: tripReviews.id })
+              .from(tripReviews)
+              .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId))),
+          ),
+          notePattern ? sql`${reviewModerationEvents.reasonNote} ~* ${notePattern}` : undefined,
         ),
       ),
     );
@@ -1762,6 +2122,16 @@ async function scrubOrders(
     // consistent answer (issue #1607, found by a `security-reviewer` pass).
     .set({ hostedInvoiceUrl: null, invoicePdfUrl: null, description: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
+  // The room a room charge went to (fifth-loop ideas, item 57) placed this
+  // diver in one hotel room on one night. Redacted rather than cleared, since a
+  // room charge must name a room; the hotel stays, being the shop's own
+  // account with the front desk and what the month's total is grouped by.
+  await tx
+    .update(orders)
+    .set({ roomNumber: REDACTED_TEXT })
+    .where(
+      and(eq(orders.shopId, shopId), eq(orders.personId, personId), isNotNull(orders.roomNumber)),
+    );
 
   // The per-line half of the same text, on the same form, carried out of the
   // shop under the same exclusion.
@@ -2011,6 +2381,41 @@ async function scrubPiiBlob(
       .returning({ id: notificationSendQueue.id });
     logFuzzyMatch(ctx, "send_queue_address", dropped.length);
   }
+  // **The shop's shore contact** (H-118 security review). A shop can name
+  // somebody it also has as a diver as the address its stale roll-call alerts
+  // go to. That address is the diver's, held in the shop's settings with the
+  // consent and confirmation that vouch for it, and in the links minted for
+  // it; erasing the diver takes all of it, and the shop has no shore contact
+  // until it saves one again. By address only, case-insensitively, the same
+  // handle every other address sweep here uses.
+  if (ctx.email) {
+    const address = ctx.email.toLowerCase();
+    const cleared = await tx
+      .update(shops)
+      .set({
+        shoreAlertEmail: null,
+        shoreAlertConsentAt: null,
+        shoreAlertConsentByPersonId: null,
+        shoreAlertConfirmedAt: null,
+      })
+      .where(and(eq(shops.id, shopId), sql`lower(${shops.shoreAlertEmail}) = ${address}`))
+      .returning({ id: shops.id });
+    logFuzzyMatch(ctx, "shore_alert_email", cleared.length);
+    // The bookkeeper's month-end address (item 35), on the same footing: a
+    // diver's address there goes with the diver, with its confirmation, the
+    // hash of its confirm link and its claim, and the month stops leaving the
+    // shop until an owner sets an address again.
+    const unsent = await tx
+      .update(shops)
+      .set(BOOKKEEPER_CLEARED)
+      .where(and(eq(shops.id, shopId), sql`lower(${shops.bookkeeperEmail}) = ${address}`))
+      .returning({ id: shops.id });
+    logFuzzyMatch(ctx, "bookkeeper_email", unsent.length);
+    if (unsent.length > 0) ctx.found.bookkeeperCleared = true;
+    await tx
+      .delete(shopShoreAlertTokens)
+      .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));
+  }
   // The number, for the lead that gave one and no address. Runs after the
   // address sweep so the count is the rows the number reached that the address
   // did not — the over-reach, isolated, exactly as the `course_inquiries`
@@ -2066,7 +2471,7 @@ async function scrubUnfinishedForms(
   // The bound the table was trusted to have is smaller than it looked. Its
   // reader drops anything over 24h and `NEVER_DRAFTED` keeps card, medical and
   // token fields out — but not a name, an address or a phone, and the retention
-  // prune runs **weekly** against that one-day cutoff (`30 3 * * 0`). So a draft
+  // prune runs **weekly** against that one-day cutoff (`8 3 * * 0`). So a draft
   // could outlive an erasure by five more days (issue #1620).
   //
   // Deleted rather than redacted. A draft is one person's unfinished work about
@@ -2214,6 +2619,118 @@ async function scrubCourseInquiries(
   return [];
 }
 
+/** Meta's message ids start `wamid.`; SES's and SNS's never do. */
+const WHATSAPP_MESSAGE_ID = "wamid.%";
+
+/** A `wamid.` this erasure already rewrote: the prefix and a SHA-256, nothing else. */
+const FORGOTTEN_WHATSAPP_MESSAGE_ID = "^wamid\\.[0-9a-f]{64}$";
+
+/**
+ * Rewrite every WhatsApp message id kept for this diver to `wamid.` plus a
+ * SHA-256 of itself (security review of #1721, F1). Meta's id embeds the
+ * recipient's number in base64, so a kept id is the erased number in another
+ * spelling. The rewrite keeps what the row is for — evidence that a WhatsApp
+ * message went, still found by its `wamid.` prefix — and drops the number.
+ * A delivery status Meta sends later for one of these no longer matches, which
+ * is the price: the diver is erased.
+ *
+ * Runs before every sweep, so the inbox redaction has not yet overwritten the
+ * number a message came from. The same rows the redaction reaches: by the
+ * diver's bookings, their waiver records, their person link, and the number
+ * on their record.
+ *
+ * Nothing is owed at Meta for these (ADR 20260803-processor-erasure-obligations,
+ * "Widened 2026-10-17"): the Cloud API keeps a message at most 30 days and
+ * offers a business no view or delete, so this rewrite, the inbox redaction
+ * and DiveDay's own retention are the whole of WhatsApp's share.
+ */
+async function forgetWhatsAppMessageIds(
+  tx: AppTransaction,
+  ctx: ScrubSectionContext,
+): Promise<void> {
+  const { shopId, personId, bookingIds } = ctx;
+  const forgotten = (column: AnyPgColumn) =>
+    sql`'wamid.' || encode(sha256(convert_to(${column}, 'UTF8')), 'hex')`;
+  const unforgotten = (column: AnyPgColumn) =>
+    and(like(column, WHATSAPP_MESSAGE_ID), sql`${column} !~ ${FORGOTTEN_WHATSAPP_MESSAGE_ID}`);
+
+  if (bookingIds.length > 0) {
+    await tx
+      .update(notificationDeliveries)
+      .set({ providerMessageId: forgotten(notificationDeliveries.providerMessageId) })
+      .where(
+        and(
+          eq(notificationDeliveries.shopId, shopId),
+          inArray(notificationDeliveries.bookingId, bookingIds),
+          unforgotten(notificationDeliveries.providerMessageId),
+        ),
+      );
+    await tx
+      .update(notificationDeliveryAttempts)
+      .set({ providerMessageId: forgotten(notificationDeliveryAttempts.providerMessageId) })
+      .where(
+        and(
+          eq(notificationDeliveryAttempts.shopId, shopId),
+          inArray(notificationDeliveryAttempts.bookingId, bookingIds),
+          unforgotten(notificationDeliveryAttempts.providerMessageId),
+        ),
+      );
+  }
+
+  const records = tx
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(and(eq(waiverRecords.shopId, shopId), eq(waiverRecords.personId, personId)));
+  await tx
+    .update(waiverDeliveries)
+    .set({ providerMessageId: forgotten(waiverDeliveries.providerMessageId) })
+    .where(
+      and(
+        eq(waiverDeliveries.shopId, shopId),
+        inArray(waiverDeliveries.waiverRecordId, records),
+        unforgotten(waiverDeliveries.providerMessageId),
+      ),
+    );
+  await tx
+    .update(waiverRecords)
+    .set({ deliveryProviderMessageId: forgotten(waiverRecords.deliveryProviderMessageId) })
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        unforgotten(waiverRecords.deliveryProviderMessageId),
+      ),
+    );
+
+  const recordDigits = erasablePhoneDigits(ctx.phone);
+  await tx
+    .update(inboundMessages)
+    .set({ providerMessageId: forgotten(inboundMessages.providerMessageId) })
+    .where(
+      and(
+        eq(inboundMessages.shopId, shopId),
+        eq(inboundMessages.channel, "whatsapp"),
+        recordDigits
+          ? or(
+              eq(inboundMessages.personId, personId),
+              eq(inboundMessages.fromAddress, recordDigits),
+            )
+          : eq(inboundMessages.personId, personId),
+        unforgotten(inboundMessages.providerMessageId),
+      ),
+    );
+  await tx
+    .update(staffReplies)
+    .set({ providerMessageId: forgotten(staffReplies.providerMessageId) })
+    .where(
+      and(
+        eq(staffReplies.shopId, shopId),
+        eq(staffReplies.personId, personId),
+        unforgotten(staffReplies.providerMessageId),
+      ),
+    );
+}
+
 /** The erasure's "the inbox (ADR 20260907-two-way-inbox)" sweep. */
 async function scrubInbox(
   tx: AppTransaction,
@@ -2276,6 +2793,15 @@ async function scrubInbox(
     // would leave their address in the one row this sweep had just cleaned.
     .set({ body: REDACTED_TEXT, toAddress: REDACTED_TEXT, sendError: null })
     .where(and(eq(staffReplies.shopId, shopId), eq(staffReplies.personId, personId)));
+  // A saved answer copied from a reply to them: the name was swapped out, but
+  // the words were still written to this diver, so the copy goes too. A merge
+  // leaves `source_person_id` on the merged-away record, so its shells count.
+  const sources = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
+  await tx
+    .delete(inboxSavedAnswers)
+    .where(
+      and(eq(inboxSavedAnswers.shopId, shopId), inArray(inboxSavedAnswers.sourcePersonId, sources)),
+    );
   return [];
 }
 
@@ -2373,6 +2899,8 @@ const SCRUB_SECTIONS = [
   scrubDiverLogin,
   scrubBookingRows,
   scrubActivityEvents,
+  scrubDepartureTitles,
+  scrubDepartureChangeTrail,
   scrubBuddyTrail,
   scrubReviews,
   scrubPrivateWord,
@@ -2404,7 +2932,14 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     if (!url) return;
     if (await queueMediaDeletion(tx, { shopId, kind, url })) queued += 1;
   };
-  const section: ScrubSectionContext = { ...ctx, bookingIds, owned: bookingIds.length > 0, retire };
+  const found = { bookkeeperCleared: false };
+  const section: ScrubSectionContext = {
+    ...ctx,
+    bookingIds,
+    owned: bookingIds.length > 0,
+    retire,
+    found,
+  };
 
   // Every Stripe object this scrub finds standing for the erased diver, raised
   // as one ledger row apiece at the end of the transaction. Three tables feed
@@ -2413,6 +2948,10 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // dedupe, and the obligations land inside the same transaction as the
   // redactions that made them owed (issue #1621, ADR
   // 20260803-processor-erasure-obligations).
+  // The WhatsApp message ids that embed the diver's number are rewritten
+  // before any sweep, while the inbox still holds the number they are found
+  // by (issue #1721).
+  await forgetWhatsAppMessageIds(tx, section);
   const processorTargets: ProcessorErasureTargetInput[] = [];
   for (const sweep of SCRUB_SECTIONS) processorTargets.push(...(await sweep(tx, section)));
 
@@ -2431,5 +2970,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     targets: processorTargets,
   });
 
-  return { queuedMediaDeletions: queued, raisedProcessorErasures };
+  return {
+    queuedMediaDeletions: queued,
+    raisedProcessorErasures,
+    bookkeeperCleared: found.bookkeeperCleared,
+  };
 }

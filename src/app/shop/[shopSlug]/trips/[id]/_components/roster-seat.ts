@@ -3,12 +3,15 @@ import { identityReasonText } from "@/i18n/identity-check-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
+import { formatDateTimeTz, formatMoneyCents } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { waiverState } from "@/lib/waivers";
 import type { RosterRowContext } from "./RosterRow";
+import { seatMoveForRow } from "./roster-model";
 import type { RosterEntry } from "./types";
 
 /**
@@ -33,6 +36,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     signedToday,
     offersCreateOrder,
     record,
+    recordBelow,
   } = context;
   const {
     shopSlug,
@@ -57,31 +61,45 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     notesByBooking,
     courseNextStepByBooking,
     elearningQueryByBooking,
+    elearningChecksOff,
     courseMaterialsDoneByPerson,
+    issuedCardByPerson,
     sameNameHeldSeats,
+    sameNamePeople,
+    dependentCharters,
     heldSeatLastDiveDay,
     packageDivesByBooking,
+    paymentMarksByBooking,
+    aboardAtSea,
     keepOpenBookingId,
+    paymentMarkRetry,
+    partyPreview,
     namesakeRefusedBookingId,
     participantTypeCertBookingId,
   } = rows;
   const {
     markRosterWaiverInPersonAction,
     markPaymentAction,
+    previewPartyPaymentAction,
+    markPartyPaidAction,
     removeBookingAction,
     setParticipantTypeAction,
     confirmIdentityAction,
     splitIdentityAction,
+    repointIdentityAction,
     sendNewWaiverAction,
     addNoteAction,
     deleteNoteAction,
     saveEmergencyContactAction,
     certifyDiverAction,
     saveCourseNextStepAction,
+    markCardProcessedAction,
     setCourseMaterialsDoneAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
     updatePickupAction,
+    updateDietaryNoteAction,
+    moveSeat,
   } = actions;
   // A course student whose learning materials nobody has marked done (ADR
   // 20261008-course-learning-materials). Bookkeeping, never a gate: it is a
@@ -101,8 +119,66 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     paymentStatus,
     readinessByBooking.get(booking.id)?.paymentProvider,
   );
-  const paymentSource =
-    paymentSourceCode === "online"
+  // The Paid mark's own record (batch 6 item 1): a counter payment says how
+  // much, how, and who took it, where it used to say only "at the counter".
+  const markFacts = paymentMarksByBooking?.get(booking.id) ?? null;
+  const counterMark =
+    paymentSourceCode === "counter" && markFacts?.mark
+      ? {
+          amount: formatMoneyCents(markFacts.mark.amountCents, markFacts.mark.currency, locale),
+          method: markFacts.mark.method,
+        }
+      : null;
+  const markCurrency = markFacts?.shopCurrency ?? markFacts?.mark?.currency ?? "usd";
+  const paymentMark = {
+    amountCents: markFacts?.balanceOwedCents ?? markFacts?.mark?.amountCents ?? null,
+    currency: markCurrency,
+    locale,
+    // On a deposit, the field opens on the balance; the hint says that is
+    // what it is, so a staffer taking a different figure knows what is left.
+    balanceHint:
+      paymentStatus === "deposit_paid" && markFacts?.balanceOwedCents
+        ? t("trips.roster.paymentBalanceOwed", {
+            amount: formatMoneyCents(markFacts.balanceOwedCents, markCurrency, locale),
+          })
+        : null,
+    handMarkRefused: paymentSourceCode === "online" || paymentSourceCode === "package",
+    retry: paymentMarkRetry?.bookingId === booking.id ? paymentMarkRetry : null,
+  };
+  // **Mark the party paid** (issue #2605), offered on a lead's seat while two or
+  // more seats of the party still owe money and none of them was paid online
+  // (the server refuses that, so the door is not drawn). The party is the
+  // lead and every seat on the roster that points at it.
+  const partySeats = rows.roster.filter(
+    (entry) => entry.booking.id === booking.id || entry.booking.partyLeadBookingId === booking.id,
+  );
+  const partyOwing = partySeats.filter(
+    (entry) => (paymentMarksByBooking?.get(entry.booking.id)?.balanceOwedCents ?? 0) > 0,
+  );
+  const partyOwedCents = partyOwing.reduce(
+    (sum, entry) => sum + (paymentMarksByBooking?.get(entry.booking.id)?.balanceOwedCents ?? 0),
+    0,
+  );
+  const partyPay =
+    requiresPayment &&
+    partyOwing.length >= 2 &&
+    !partyOwing.some((entry) => readinessByBooking.get(entry.booking.id)?.paymentProvider)
+      ? {
+          seatCount: partyOwing.length,
+          owed: formatMoneyCents(partyOwedCents, markCurrency, locale),
+          currency: markCurrency,
+          locale,
+          preview: partyPreview?.leadBookingId === booking.id ? partyPreview : null,
+        }
+      : null;
+  const paymentSource = counterMark
+    ? markFacts?.mark?.recordedByName
+      ? t("trips.roster.paymentMarkLine", {
+          ...counterMark,
+          name: markFacts.mark.recordedByName,
+        })
+      : t("trips.roster.paymentMarkLineUnnamed", counterMark)
+    : paymentSourceCode === "online"
       ? t("trips.roster.paymentSourceOnline")
       : paymentSourceCode === "package"
         ? t("trips.roster.paymentSourcePackage")
@@ -162,8 +238,12 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   // every diver who has never been asked (H-21).
   const dateOfBirth = person.dateOfBirth;
   const age = showsPersonDetail && dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
-  const minor = showsPersonDetail && dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : false;
-  const requiresGuardian = guardianSignatureRequired(dateOfBirth, signedToday);
+  // The booker's "Under 18" on this seat stands in for a date the shop does
+  // not hold, for the badge and the co-signature alike (decision 2026-10-13).
+  const minorDeclared = Boolean(booking.minorDeclaredAt);
+  const minor =
+    showsPersonDetail && (dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : minorDeclared);
+  const requiresGuardian = guardianSignatureRequired(dateOfBirth, signedToday, minorDeclared);
   const birthday = showsPersonDetail ? birthdayCallout(dateOfBirth, tripDate) : null;
   const hasEmergencyContact = Boolean(person.emergencyContactName && person.emergencyContactPhone);
   // A warning, never a gate: the site goes deeper than this diver's
@@ -202,6 +282,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     ? checkDrysuitCard(
         rentalFitByBooking.get(booking.id)?.divesDry ?? false,
         readinessByBooking.get(booking.id)?.specialtyCertifications ?? [],
+        person.drysuitExperienceSeenAt ?? null,
       )
     : ({ status: "ok" } as const);
   // The namesake refusal (issue #1573) holds its row open for the same
@@ -210,7 +291,25 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   // happened and not where to act on it.
   const namesakeRefused = namesakeRefusedBookingId === booking.id;
   const arrivalControl = arrival?.controls.get(booking.id);
-  const arrivalBelow = arrival?.below.get(booking.id);
+  // A finished departure has no desk; its record carries the rebooking line
+  // (fifth-loop ideas, item 4).
+  const arrivalBelow = arrival?.below.get(booking.id) ?? recordBelow?.get(booking.id);
+  // The charter seats sold only on this course seat (issue #2058), said in
+  // its Remove confirm and its move: those seats stay booked, and still need
+  // the card to board.
+  const carried = dependentCharters?.get(booking.id) ?? [];
+  const carriedChartersNote =
+    carried.length > 0
+      ? t("trips.roster.courseSeatCarriesCharters", {
+          name: person.fullName,
+          trips: cachedListFormat(locale, { type: "conjunction" }).format(
+            carried.map(
+              (charter) =>
+                `${charter.title} · ${formatDateTimeTz(charter.startsAt, locale, shopTimezone)}`,
+            ),
+          ),
+        })
+      : undefined;
   const holdOpen =
     keepOpenBookingId === booking.id ||
     namesakeRefused ||
@@ -240,31 +339,46 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     rentalFitByBooking,
     courseNextStepByBooking,
     elearningQueryByBooking,
+    elearningChecksOff,
     sameNameHeldSeats,
+    sameNamePeople,
     heldSeatLastDiveDay,
     packageDivesByBooking,
     participantTypeCertBookingId,
     markRosterWaiverInPersonAction,
     markPaymentAction,
+    previewPartyPaymentAction,
+    markPartyPaidAction,
     removeBookingAction,
     setParticipantTypeAction,
     confirmIdentityAction,
     splitIdentityAction,
+    repointIdentityAction,
     sendNewWaiverAction,
     addNoteAction,
     deleteNoteAction,
     saveEmergencyContactAction,
     certifyDiverAction,
     saveCourseNextStepAction,
+    markCardProcessedAction,
+    issuedCard: issuedCardByPerson?.get(person.id) ?? null,
     setCourseMaterialsDoneAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
     updatePickupAction,
+    updateDietaryNoteAction,
+    // A booked seat, or one turned away before the start (`seatMoveForRow`).
+    moveSeat: seatMoveForRow(booking, moveSeat),
+    // Marked aboard a boat that has left: Remove says so and changes nothing (H-133).
+    removeRefusedAboard: aboardAtSea?.get(booking.id) ?? null,
+    carriedChartersNote,
     materialsDone,
     materialsPending,
     readiness,
     paymentStatus,
     paymentSource,
+    paymentMark,
+    partyPay,
     currentWaiver,
     waiverStatus,
     refusalRetired,

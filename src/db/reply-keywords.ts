@@ -14,16 +14,18 @@ import {
   parseReplyKeyword,
 } from "@/lib/reply-keywords";
 import { hasSailed } from "@/lib/trips";
+import { heldAtTheDoor } from "./aboard-at-sea";
 import {
   type CancellationRefundSeen,
   sendBookingCancelledNotice,
 } from "./booking-cancelled-notice";
-import { selfCancelBooking } from "./bookings";
+import { previewPartyCancel, selfCancelBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { getInboundMessage } from "./inbound-messages";
 import { refundBookingOnCancellation } from "./refunds";
 import { markPersonRunningLate } from "./running-late";
 import { bookings, inboundMessages, notificationDeliveries, people, shops, trips } from "./schema";
+import { partyCounts, settleReleasedPartySeats } from "./self-cancel-settle";
 import { sendStaffReply } from "./staff-reply";
 import { liveTrip } from "./trips-live";
 
@@ -163,7 +165,20 @@ async function cancellableBookings(
     )
     .orderBy(asc(trips.startsAt))
     .limit(MAX_CANDIDATE_BOOKINGS);
-  return rows.filter((row) => !hasSailed(row.startsAt, now));
+  const open: CandidateBooking[] = [];
+  for (const row of rows) {
+    if (hasSailed(row.startsAt, now)) continue;
+    // Counted aboard a boat past its time: `selfCancelBooking` refuses it (H-133).
+    const held = await heldAtTheDoor(db, {
+      shopId,
+      tripId: row.tripId,
+      startsAt: row.startsAt,
+      now,
+      bookingIds: [row.bookingId],
+    });
+    if (!held.has(row.bookingId)) open.push(row);
+  }
+  return open;
 }
 
 /**
@@ -407,10 +422,14 @@ export async function handleInboundReplyKeyword(
     return "code_mismatch";
   }
 
+  // A lead's unclaimed seats go with them, the same rule `/ready` applies
+  // (batch 6 item 10): a lead who cancels by reply must not leave seats they
+  // booked held under nobody.
   const cancelled = await selfCancelBooking(db, {
     shopId: input.shopId,
     bookingId: matched.bookingId,
     now,
+    withUnclaimedParty: true,
   });
   if (!cancelled.ok) {
     // Never distinguished to the diver: the same fail-closed-uniformly rule
@@ -462,7 +481,13 @@ export async function handleInboundReplyKeyword(
       // `selfCancelBooking` only ever cancels a booked seat.
       from: "booked",
       refund,
+      party: partyCounts(cancelled.party),
     },
+    { provider: input.provider, now },
+  );
+  await settleReleasedPartySeats(
+    db,
+    { shopId: input.shopId, leadBookingId: matched.bookingId, party: cancelled.party },
     { provider: input.provider, now },
   );
   return "cancelled";
@@ -567,8 +592,23 @@ async function handleCancelRequest(
   // Stamped before the answer goes out, so the pending state exists no matter
   // what the send does. A code nobody received cancels nothing on its own.
   await stampIntent(db, shopId, message.id, "cancel");
+  // A lead's unclaimed party seats go with them, so a lead answering by text
+  // is told so before they confirm. The count is the one `selfCancelBooking`
+  // will act on (`previewPartyCancel` reads what `cancelUnclaimedPartySeats`
+  // decides), so the prompt cannot promise what the settle does not do.
+  const party = await previewPartyCancel(db, {
+    shopId,
+    leadBookingId: subject.bookingId,
+    now,
+  });
   await answer(
-    t("notifications.replyKeyword.confirmCancel", { ...departure(subject), code }),
+    party.goes > 0
+      ? t("notifications.replyKeyword.confirmCancelParty", {
+          ...departure(subject),
+          code,
+          count: party.goes,
+        })
+      : t("notifications.replyKeyword.confirmCancel", { ...departure(subject), code }),
     true,
   );
   return "awaiting_confirmation";

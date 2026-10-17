@@ -3,8 +3,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { MediaDeletionKind, PaymentOperationKind, WorkOrderLineKindValue } from "@/db/schema";
 import { BOAT_PAPERS, MUST_CARRY_KIT_KINDS } from "@/lib/boat-safety";
+import type { BoatWorkCode } from "@/lib/boat-work";
 import type { CertificationCardRowState } from "@/lib/certification-cards";
 import type { DepthUnit } from "@/lib/depth-units";
+import { DESK_PAYMENTS } from "@/lib/desk-payment";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import type { RentalItemKind } from "@/lib/dive-prep";
 import { DIVE_SITE_DIFFICULTIES } from "@/lib/dive-site-difficulty";
@@ -15,8 +17,10 @@ import {
   type GearServiceKind,
 } from "@/lib/gear";
 import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
+import { INCIDENT_KINDS, INCIDENT_SEVERITIES } from "@/lib/incident-reports";
 import type { BuddyAlert, RollCallLabel } from "@/lib/manifests";
 import { CARDINAL_DIRECTIONS, SEA_STATES, WIND_STATES } from "@/lib/marine-forecast";
+import type { PartyLeftReason } from "@/lib/party-teams";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import {
   BLOCKER_CATEGORY,
@@ -33,9 +37,11 @@ import {
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { WORK_ORDER_OUTCOMES, WORK_ORDER_STATUSES } from "@/lib/work-orders";
+import { stripComments } from "@/test/source";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { boatSafetyNoticeText } from "./boat-safety-labels";
-import { buddyAlertText } from "./buddy-labels";
+import { boatWorkText } from "./boat-work-labels";
+import { buddyAlertText, partyLeftReasonText } from "./buddy-labels";
 import {
   CARD_STATUS_KEYS,
   CERTIFICATION_ROW_STATE_BADGE,
@@ -48,6 +54,7 @@ import {
 } from "./closeout-labels";
 import { compassText } from "./compass-labels";
 import { customerGearDueText, customerGearPieceText } from "./customer-gear-labels";
+import { DESK_PAYMENT_KEYS } from "./desk-payment-labels";
 import {
   DIVER_DIVE_INTENT_KEYS,
   DIVER_RE_ENTRY_KEYS,
@@ -67,6 +74,7 @@ import {
   guardianRelationshipText,
   staffGuardianRelationshipOptions,
 } from "./guardian-labels";
+import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "./incident-labels";
 import { rollCallLabelText } from "./manifest-labels";
 import { diverTranslator } from "./messages";
 import {
@@ -126,7 +134,13 @@ import {
   seasonalBriefingText,
   stuckOperationKindText,
 } from "./today-labels";
-import { depthText, seaStateText, temperatureText, windText } from "./unit-labels";
+import {
+  depthText,
+  diveSiteDepthText,
+  seaStateText,
+  temperatureText,
+  windText,
+} from "./unit-labels";
 import { type WaiverRowState, waiverRowStateText } from "./waiver-labels";
 import {
   workOrderLineKindLabel,
@@ -173,24 +187,14 @@ import {
  *
  * ## Every map, not most of them
  *
- * The table began at thirty-four of the directory's fifty-eight maps, with
- * seven modules deferred to their own test files in a `PROVED_BY_MODULE_TEST`
- * list. That was the weaker claim of the two and said so: `gear-labels.ts`
- * carries four maps and `gear-labels.test.ts` exercised one of them, so
- * `STATUS_KEYS`, `SERVICE_KIND_KEYS` and `PHASE_KEYS` had no proof that the key
- * each code maps to resolves at all. The list is gone (issue #1756) and every
- * map in the directory has a row; the scan at the bottom now has no allowlist
- * to fall through, and it holds the table to the map count as well as to the
- * names, so a row left behind by a deleted map fails too.
- *
- * The two maps that made it real work were `today-labels.ts`'s
- * `STUCK_OPERATION_KIND_KEYS` and `MEDIA_DELETION_KIND_KEYS`, keyed by `string`
- * rather than a union, so "every code" had no compiler answer and the keys of
- * the literal would only ever have proved the rows somebody already wrote.
- * Both had a closed source of truth sitting unused — the `payment_operation_kind`
- * and `media_deletion_kind` pg enums — so they are keyed on those now, and the
- * second one turned out to hold seven of nine reachable kinds: a stuck
- * `shop_logo` or `shop_hero` deletion put the raw enum value on the Today queue.
+ * Every map in the directory has a row (issue #1756 retired the deferral list
+ * that left three of `gear-labels.ts`'s four maps unproved). The scan at the
+ * bottom has no allowlist, and holds the table to the map count as well as the
+ * names, so a row left behind by a deleted map fails too. A map keyed by
+ * `string` is keyed on its closed source instead: `today-labels.ts`'s two
+ * Today-queue maps read the `payment_operation_kind` and `media_deletion_kind`
+ * pg enums, which is how a stuck `shop_logo` deletion was found printing its
+ * raw enum value.
  *
  * The failure the issue opens with — a code mapped to the **wrong real key** —
  * is caught by none of that on its own: a wrong-but-real key renders a
@@ -254,9 +258,26 @@ function everyCodeOf<Code extends string>(present: Record<Code, true>): readonly
   return Object.keys(present) as Code[];
 }
 
+const BOAT_WORK_CODES = everyCodeOf<BoatWorkCode>({
+  missing_sizes: true,
+  ungated_nitrox: true,
+  missing_contact: true,
+  open_orders: true,
+});
+
 const BUDDY_ALERTS = everyCodeOf<BuddyAlert>({
   separated_dock: true,
   separated_after_dive: true,
+});
+
+const PARTY_LEFT_REASONS = everyCodeOf<PartyLeftReason>({
+  intro_course: true,
+  training_course: true,
+  young_child: true,
+  minor_age_conflict: true,
+  minor_age_unknown: true,
+  junior_without_adult: true,
+  too_large: true,
 });
 
 const WAIVER_ROW_STATES = everyCodeOf<WaiverRowState>({
@@ -411,6 +432,7 @@ const MEDIA_DELETION_KINDS = everyCodeOf<MediaDeletionKind>({
 const BLOCKER_PARAMS: Partial<Record<ReadinessBlockerCode, ReadinessBlockerParams>> = {
   certification_insufficient: { requiredLevel: "advanced_open_water" },
   certification_in_training: { requiredLevel: "advanced_open_water" },
+  certification_not_yet: { requiredLevel: "advanced_open_water" },
   specialty_missing: { specialty: "wreck" },
   specialty_pending: { specialty: "wreck" },
   specialty_import_unconfirmed: { specialty: "wreck" },
@@ -459,7 +481,7 @@ const CASES: readonly LabelMapCase[] = [
     rows: codeRows(GEAR_SERVICE_KINDS, (locale, clock) =>
       [false, true]
         .map((expired) =>
-          boatSafetyNoticeText(staffTranslator(locale), {
+          boatSafetyNoticeText(staffTranslator(locale), locale, {
             code: "kit_clock",
             gearItemId: "unit",
             label: "AED",
@@ -479,7 +501,7 @@ const CASES: readonly LabelMapCase[] = [
     rows: codeRows(BOAT_PAPERS, (locale, paper) =>
       [false, true]
         .map((expired) =>
-          boatSafetyNoticeText(staffTranslator(locale), {
+          boatSafetyNoticeText(staffTranslator(locale), locale, {
             code: "paper",
             paper,
             dueOn: "2026-10-21",
@@ -494,13 +516,34 @@ const CASES: readonly LabelMapCase[] = [
     module: "boat-safety-labels.ts",
     map: "MISSING_KEYS",
     rows: codeRows(MUST_CARRY_KIT_KINDS, (locale, kind) =>
-      boatSafetyNoticeText(staffTranslator(locale), { code: "kit_missing", kind }),
+      boatSafetyNoticeText(staffTranslator(locale), locale, { code: "kit_missing", kind }),
+    ),
+  },
+  {
+    module: "boat-work-labels.ts",
+    map: "BOAT_WORK_KEYS",
+    rows: codeRows(BOAT_WORK_CODES, (locale, code) =>
+      boatWorkText(staffTranslator(locale), { code, count: 2, tone: "work" }),
     ),
   },
   {
     module: "buddy-labels.ts",
     map: "BUDDY_ALERT_KEYS",
     rows: codeRows(BUDDY_ALERTS, (locale, alert) => buddyAlertText(staffTranslator(locale), alert)),
+  },
+  {
+    module: "buddy-labels.ts",
+    map: "BUDDY_ALERT_NAMED_KEYS",
+    rows: codeRows(BUDDY_ALERTS, (locale, alert) =>
+      buddyAlertText(staffTranslator(locale), alert, ["Ravi Patel"]),
+    ),
+  },
+  {
+    module: "buddy-labels.ts",
+    map: "PARTY_LEFT_KEYS",
+    rows: codeRows(PARTY_LEFT_REASONS, (locale, reason) =>
+      partyLeftReasonText(staffTranslator(locale), reason),
+    ),
   },
   {
     module: "card-labels.ts",
@@ -629,6 +672,29 @@ const CASES: readonly LabelMapCase[] = [
     map: "DIVER_FACT_SOURCE_KEYS",
     rows: codeRows(keysOf(DIVER_FACT_SOURCE_KEYS), (locale, source) =>
       diverTranslator(locale)(DIVER_FACT_SOURCE_KEYS[source]),
+    ),
+  },
+  {
+    module: "incident-labels.ts",
+    map: "INCIDENT_KIND_KEYS",
+    // `injury` reads "Injury or illness", and `fatality` is its own kind
+    // (dive-domain review 20261014).
+    rows: codeRows(INCIDENT_KINDS, (locale, kind) =>
+      staffTranslator(locale)(INCIDENT_KIND_KEYS[kind]),
+    ),
+  },
+  {
+    module: "incident-labels.ts",
+    map: "INCIDENT_SEVERITY_KEYS",
+    rows: codeRows(INCIDENT_SEVERITIES, (locale, severity) =>
+      staffTranslator(locale)(INCIDENT_SEVERITY_KEYS[severity]),
+    ),
+  },
+  {
+    module: "desk-payment-labels.ts",
+    map: "DESK_PAYMENT_KEYS",
+    rows: codeRows(DESK_PAYMENTS, (locale, code) =>
+      diverTranslator(locale)(DESK_PAYMENT_KEYS[code]),
     ),
   },
   {
@@ -997,6 +1063,13 @@ const CASES: readonly LabelMapCase[] = [
   },
   {
     module: "unit-labels.ts",
+    map: "DEPTH_RANGE_KEYS",
+    rows: codeRows(DEPTH_UNITS, (locale, unit) =>
+      diveSiteDepthText(diverTranslator(locale), { depthMinMeters: 6, maxDepthMeters: 18 }, unit),
+    ),
+  },
+  {
+    module: "unit-labels.ts",
     map: "TEMPERATURE_UNIT_KEYS",
     rows: codeRows(TEMPERATURE_UNITS, (locale, unit) =>
       temperatureText(diverTranslator(locale), 24, unit),
@@ -1150,6 +1223,8 @@ const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   // translate. The spelled-out forms (`course.depthUnits.*`) do, and differ.
   ["DEPTH_UNIT_KEYS.meters", "the unit’s abbreviation, and the template is nothing else"],
   ["DEPTH_UNIT_KEYS.feet", "the unit’s abbreviation, and the template is nothing else"],
+  ["DEPTH_RANGE_KEYS.meters", "two numbers and the unit’s abbreviation, nothing else"],
+  ["DEPTH_RANGE_KEYS.feet", "two numbers and the unit’s abbreviation, nothing else"],
 ]);
 
 /** A rendered label that is nothing but a dotted key — what a missing key renders as. */
@@ -1215,15 +1290,10 @@ describe.each(CASES)("$module › $map", ({ rows, map }) => {
  * directory and requires the table to hold exactly those maps, so a map added
  * tomorrow fails here rather than joining the twenty-four that had no proof
  * for months. It is a text scan for the same reason
- * `provider-coverage.test.ts` is: the maps it looks for are private to their
+ * `scripts/check-intl-providers.mjs` is: the maps it looks for are private to their
  * modules and there is nothing to import.
  */
 const I18N_DIR = path.join(process.cwd(), "src/i18n");
-
-/** Comments in this directory quote map literals constantly — never scan them. */
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
-}
 
 /**
  * Every `const NAME: Record<…>` whose type arguments name a message key.

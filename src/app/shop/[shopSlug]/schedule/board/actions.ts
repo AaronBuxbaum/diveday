@@ -54,6 +54,7 @@ import { uuidParam } from "@/lib/uuid";
 import type { PatternDeparture } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
+import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
 
 const removeDepartureForm = z.object({ tripId: z.uuid() });
 
@@ -447,6 +448,11 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   }
   const crewPersonIds = crewPersonIdsFrom(formData);
   if (!crewPersonIds) return await invalid();
+  // One date per later day when the course skips days (third UX review, item
+  // 10). Absent or empty is the consecutive run; `meetingDaysFor` checks the
+  // rest, so a list that disagrees with the count is refused there.
+  const laterDates = z.array(z.string()).safeParse(formData.getAll("meetingDate"));
+  if (!laterDates.success) return await invalid();
 
   // The same tenant rule the hull obeys: a lens id arriving on this form has to
   // be one of *this* shop's live words.
@@ -464,6 +470,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       startTime,
       endTime,
       dayCount,
+      laterDates: laterDates.data,
       priceDollars,
       depositDollars,
       cancellationWindowHours,
@@ -505,9 +512,26 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       });
       redirect(`${back}?builder=end-before-start`);
     }
+    if (details.reason === "days_out_of_order") {
+      await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
+      redirect(`${back}?builder=days-out-of-order`);
+    }
     return await invalid();
   }
   const { startsAt, endsAt, scheduleDays } = details.patch;
+  // **A repeating departure ends before its next one begins.** Named days can
+  // stretch one departure over weeks; on a weekly cadence that would lay each
+  // occurrence over the next, two rosters for the same students. Refused with
+  // its own sentence rather than trimmed.
+  const lastDay = scheduleDays.at(-1);
+  if (
+    repeatIntervalWeeks > 0 &&
+    lastDay &&
+    lastDay.startsAt.getTime() - startsAt.getTime() >= repeatIntervalWeeks * 7 * 86_400_000
+  ) {
+    await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "invalid" });
+    redirect(`${back}?builder=days-span-repeat`);
+  }
 
   // The per-dive cards only exist while the panel is expanded, so an all-blank
   // read means they were never on screen — fall back to the quick row's single
@@ -858,12 +882,6 @@ export async function moveDepartureAction(shopSlug: string, formData: FormData) 
   revalidateAndRedirect(back, `${back}?${params}`);
 }
 
-const duplicateSchema = z.object({
-  tripId: z.uuid(),
-  date: z.string(),
-  startTime: z.string(),
-});
-
 export async function duplicateDepartureAction(shopSlug: string, formData: FormData) {
   const back = boardPath(shopSlug);
   const { session, db, shop } = await requireBoardAuthor(shopSlug);
@@ -888,13 +906,14 @@ export async function duplicateDepartureAction(shopSlug: string, formData: FormD
     await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "invalid" });
     redirect(`${back}?builder=invalid`);
   }
+  const crewCame = await copyCrewIfAsked(db, shop.id, parsed.data, copy.id, session.user.personId);
   await trackEvent({ name: "schedule_builder_action", action: "copy", outcome: "ok" });
   await recordShopActivity(db, {
     shopId: shop.id,
     actorPersonId: session.user.personId,
     write: { code: "departure_copied", tripId: copy.id },
   });
-  revalidateAndRedirect(back, `${back}?builder=copied`);
+  revalidateAndRedirect(back, `${back}?builder=${crewCame ? "copied" : "copied-no-crew"}`);
 }
 
 export async function removeDepartureAction(shopSlug: string, formData: FormData) {

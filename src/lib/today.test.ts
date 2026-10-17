@@ -11,6 +11,8 @@ import {
   factOfScaleFor,
   filterActionsForRoles,
   getSeasonalBriefing,
+  groupByDeparture,
+  KIND_AUDIENCE,
   type OwedRefundInput,
   primaryBlocker,
   readNeedsYou,
@@ -123,6 +125,43 @@ describe("diverBlockerAction", () => {
     expect(result?.waiver).toBeUndefined();
   });
 
+  /**
+   * H-105: a card still waiting for its check names its diver, so the shop
+   * home can offer "Check with SSI" from the row. The cards themselves are the
+   * read's to find (`withAgencyChecks`), and the row keeps its door.
+   */
+  it("names the diver on a pending card's row, and on no other kind", () => {
+    const pending = diverBlockerAction(
+      { ...input, blockers: [blocker("certification_pending")] },
+      "blue-reef",
+      NOW,
+    );
+    expect(pending?.agencyCheck).toEqual({ personId: "p1", cards: [] });
+    expect(pending?.href).toBe("/shop/blue-reef/divers/p1");
+
+    for (const code of ["certification_missing", "nitrox_pending", "waiver_not_sent"] as const) {
+      const other = diverBlockerAction({ ...input, blockers: [blocker(code)] }, "blue-reef", NOW);
+      expect(other?.agencyCheck).toBeUndefined();
+    }
+  });
+
+  /**
+   * A held seat (H-13): the human on this booking may not be the one whose
+   * cards are on file, so no row offers to check that person's card with an
+   * agency until a staffer confirms who it is, whichever blocker heads it.
+   */
+  it("offers no agency check on a held seat, even with a pending card", () => {
+    for (const blockers of [
+      [blocker("certification_pending"), blocker("identity_unconfirmed")],
+      [blocker("identity_unconfirmed"), blocker("certification_pending")],
+    ]) {
+      for (const aboard of [false, true]) {
+        const held = diverBlockerAction({ ...input, blockers, aboard }, "blue-reef", NOW);
+        expect(held?.agencyCheck).toBeUndefined();
+      }
+    }
+  });
+
   it("says the headline blocker in a few words, and nothing about the rest", () => {
     // The record the row opens lists every blocker in full; the row names the
     // one the tap fixes (Aaron, 2026-10-05: "reduce the amount of copy").
@@ -213,8 +252,8 @@ describe("diverBlockerAction", () => {
     );
     expect(result?.detail).toBe("Medical answer needs a doctor’s sign-off.");
     if (!result) throw new Error("expected a row");
-    expect(filterActionsForRoles([result], ["captain"]).visibleActions).toHaveLength(1);
-    expect(filterActionsForRoles([result], ["divemaster"]).visibleActions).toHaveLength(1);
+    expect(filterActionsForRoles([result], ["captain"])).toHaveLength(1);
+    expect(filterActionsForRoles([result], ["divemaster"])).toHaveLength(1);
   });
 
   it("takes the aboard kind once the diver is on the boat, keeping the fix", () => {
@@ -507,40 +546,34 @@ describe("filterActionsForRoles", () => {
     action({ id: "8", kind: "gear_due_back" }),
   ];
 
-  it("shows all actions to an owner with zero withheld", () => {
+  it("shows all actions to an owner", () => {
     const result = filterActionsForRoles(sampleActions, ["owner"]);
-    expect(result.visibleActions).toHaveLength(8);
-    expect(result.withheldCount).toBe(0);
+    expect(result).toHaveLength(8);
   });
 
-  it("shows all actions to a manager with zero withheld", () => {
+  it("shows all actions to a manager", () => {
     const result = filterActionsForRoles(sampleActions, ["manager"]);
-    expect(result.visibleActions).toHaveLength(8);
-    expect(result.withheldCount).toBe(0);
+    expect(result).toHaveLength(8);
   });
 
   it("filters out clerical and commercial rows for a captain", () => {
     const result = filterActionsForRoles(sampleActions, ["captain"]);
-    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "8"]);
-    expect(result.withheldCount).toBe(4);
+    expect(result.map((a) => a.id)).toEqual(["1", "2", "3", "8"]);
   });
 
   it("filters out clerical and commercial rows for a divemaster", () => {
     const result = filterActionsForRoles(sampleActions, ["divemaster"]);
-    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "8"]);
-    expect(result.withheldCount).toBe(4);
+    expect(result.map((a) => a.id)).toEqual(["1", "2", "3", "8"]);
   });
 
   it("shows certs and waivers to an instructor but withholds payment and deals", () => {
     const result = filterActionsForRoles(sampleActions, ["instructor"]);
-    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
-    expect(result.withheldCount).toBe(2);
+    expect(result.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
   });
 
   it("shows the union for a person holding multiple roles", () => {
     const result = filterActionsForRoles(sampleActions, ["captain", "instructor"]);
-    expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
-    expect(result.withheldCount).toBe(2);
+    expect(result.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
   });
 
   it("returns the whole queue when there is no viewer to filter for", () => {
@@ -552,9 +585,8 @@ describe("filterActionsForRoles", () => {
     // owed refund because nobody was looking would be a falsified reading
     // rather than a tightened gate.
     const noRoles = filterActionsForRoles(sampleActions, undefined);
-    expect(noRoles.visibleActions).toHaveLength(8);
-    expect(noRoles.withheldCount).toBe(0);
-    expect(filterActionsForRoles(sampleActions, []).visibleActions).toHaveLength(8);
+    expect(noRoles).toHaveLength(8);
+    expect(filterActionsForRoles(sampleActions, [])).toHaveLength(8);
   });
 });
 
@@ -581,7 +613,9 @@ function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
     crew: [{ fullName: "Keiko Tanaka" }],
     crewAccountedFor: true,
     crewReason: null,
+    rehearsal: false,
     ...overrides,
+    sellableCapacity: overrides.sellableCapacity ?? overrides.capacity ?? 12,
   };
 }
 
@@ -843,47 +877,17 @@ describe("sortStationRows", () => {
     sortStationRows(input);
     expect(input.map((row) => row.id)).toEqual(["quiet", "danger"]);
   });
-
-  it("puts saying hello below every piece of work in the station", () => {
-    // The courtesy row (issue #1182, delight report D22). It is a thing the
-    // desk may do if the morning allows, so it never leads a station and never
-    // outranks something somebody has to do.
-    const at = hoursFromNow(2);
-    const sorted = sortStationRows([
-      action({ id: "hello", kind: "say_hello", dueAt: at }),
-      action({ id: "prep", kind: "dive_prep", dueAt: at }),
-      action({ id: "medical", kind: "medical_review", dueAt: at }),
-      action({ id: "waiver", kind: "waiver", dueAt: at }),
-    ]);
-    expect(sorted.map((row) => row.id)).toEqual(["medical", "waiver", "prep", "hello"]);
-  });
 });
 
 /**
- * The Say hello row's own registry entries (issue #1182). Each is a decision
- * rather than a default, and each is the kind of thing that quietly drifts:
- * a warning tone would read as a thing that has gone wrong, a narrower audience
- * would hide it from the captain who is actually at the dock.
+ * **Saying hello is not a job** (fifth loop, item 10). A greeting has no done
+ * state, so it is a line on the departure card (`SpineDeparture.welcome`) and
+ * the roster's own cue, never a Needs you row or a number in its count.
  */
-describe("the Say hello row", () => {
-  it("is neutral-toned, at the bottom of the severity order, and visible to everyone", () => {
-    expect(ACTION_KIND_META.say_hello.tone).toBe("neutral");
-    const at = hoursFromNow(2);
-    const belowEverything = sortStationRows([
-      action({ id: "hello", kind: "say_hello", dueAt: at }),
-      action({ id: "units", kind: "units_unconfirmed", dueAt: at }),
-    ]);
-    expect(belowEverything.map((row) => row.id)).toEqual(["units", "hello"]);
-    for (const role of [
-      "owner",
-      "manager",
-      "instructor",
-      "divemaster",
-      "captain",
-      "crew",
-    ] as const) {
-      expect(filterActionsForRoles([action({ kind: "say_hello" })], [role]).withheldCount).toBe(0);
-    }
+describe("saying hello", () => {
+  it("is not a kind the queue can hold", () => {
+    expect(Object.keys(ACTION_KIND_META)).not.toContain("say_hello");
+    expect(Object.keys(KIND_AUDIENCE)).not.toContain("say_hello");
   });
 });
 
@@ -905,9 +909,9 @@ describe("the unanswered-messages row", () => {
       "captain",
       "crew",
     ] as const) {
-      expect(
-        filterActionsForRoles([action({ kind: "unanswered_messages" })], [role]).withheldCount,
-      ).toBe(0);
+      expect(filterActionsForRoles([action({ kind: "unanswered_messages" })], [role])).toHaveLength(
+        1,
+      );
     }
   });
 });
@@ -929,9 +933,7 @@ describe("the failed-email row", () => {
       "captain",
       "crew",
     ] as const) {
-      expect(
-        filterActionsForRoles([action({ kind: "email_delivery" })], [role]).withheldCount,
-      ).toBe(0);
+      expect(filterActionsForRoles([action({ kind: "email_delivery" })], [role])).toHaveLength(1);
     }
   });
 });
@@ -1111,7 +1113,6 @@ describe("readNeedsYou, one reading for every role", () => {
     // The blocked diver's fix: the desk's, withheld from a captain's lens.
     action({ id: "waiver", kind: "waiver", subject: "Priya", departure: boat("t1") }),
     action({ id: "prep", kind: "dive_prep", subject: "4 sizes", departure: boat("t1") }),
-    action({ id: "hello", kind: "say_hello", subject: "Priya and Tom", departure: boat("t1") }),
     action({ id: "fill", kind: "last_minute_fill", subject: "3 seats", departure: boat("t1") }),
     action({ id: "messages", kind: "unanswered_messages", subject: "3", departure: undefined }),
   ];
@@ -1123,7 +1124,7 @@ describe("readNeedsYou, one reading for every role", () => {
   ] as const;
 
   function readFor(role: (typeof ROLES)[number]) {
-    const { visibleActions } = filterActionsForRoles(queue, [role.role]);
+    const visibleActions = filterActionsForRoles(queue, [role.role]);
     const spine = assembleDaySpine(
       { departures: [evening], actions: visibleActions },
       { departures: [], actions: [] },
@@ -1158,19 +1159,20 @@ describe("readNeedsYou, one reading for every role", () => {
     },
   );
 
-  it("reads the captain's day as the captain's list: two things, both before the boat", () => {
+  it("reads the captain's day as the captain's list: one thing, before the boat", () => {
     const reading = readFor({ role: "captain", crews: true });
-    expect(reading.lead.map((row) => row.id)).toEqual(["prep", "hello"]);
-    expect(reading.count).toBe(2);
-    expect(reading.dueBeforeNext).toBe(2);
+    // No greeting row: saying hello is a line on the card (fifth loop, item 10).
+    expect(reading.lead.map((row) => row.id)).toEqual(["prep"]);
+    expect(reading.count).toBe(1);
+    expect(reading.dueBeforeNext).toBe(1);
     // The desk's messages fold behind one line; they are not the boat's.
     expect(reading.folded?.map((row) => row.id)).toEqual(["messages"]);
   });
 
   it("reads the owner's day whole, with the desk's row counted but not as due before the boat", () => {
     const reading = readFor({ role: "owner", crews: false });
-    expect(reading.count).toBe(5);
-    expect(reading.dueBeforeNext).toBe(4);
+    expect(reading.count).toBe(4);
+    expect(reading.dueBeforeNext).toBe(3);
     expect(reading.folded).toBeNull();
   });
 
@@ -1597,7 +1599,7 @@ describe("the boat's emergency kit on Today (dive-domain review 2026-10-09)", ()
   it("is danger, and every role on the boat sees it", () => {
     expect(ACTION_KIND_META.boat_safety_kit.tone).toBe("danger");
     for (const role of ["crew", "captain", "divemaster", "assistant_instructor"] as const) {
-      expect(filterActionsForRoles([kit], [role]).visibleActions).toEqual([kit]);
+      expect(filterActionsForRoles([kit], [role])).toEqual([kit]);
     }
   });
 
@@ -1610,12 +1612,37 @@ describe("the boat's emergency kit on Today (dive-domain review 2026-10-09)", ()
     expect(sorted.map((row) => row.id)[0]).toBe("boat-safety-kit:t1");
   });
 
-  it("keeps the papers the owner's errand, quiet while due and a warning once lapsed", () => {
+  it("keeps the boat errands the owner's, a paper due quiet and expired kit a warning", () => {
     const due = action({ id: "papers", kind: "boat_papers_due", urgency: "later" });
     const lapsed = action({ id: "lapsed", kind: "boat_safety_expired" });
     expect(ACTION_KIND_META.boat_papers_due.tone).toBe("neutral");
     expect(ACTION_KIND_META.boat_safety_expired.tone).toBe("warning");
-    expect(filterActionsForRoles([due, lapsed], ["crew"]).visibleActions).toEqual([]);
-    expect(filterActionsForRoles([due, lapsed], ["manager"]).visibleActions).toHaveLength(2);
+    expect(filterActionsForRoles([due, lapsed], ["crew"])).toEqual([]);
+    expect(filterActionsForRoles([due, lapsed], ["manager"])).toHaveLength(2);
+  });
+});
+
+describe("groupByDeparture", () => {
+  it("says each boat once, keeps the rank inside it, and puts the desk last", () => {
+    const rows = sortStationRows([
+      action({ id: "messages", kind: "unanswered_messages", subject: "3", departure: undefined }),
+      action({ id: "waiver-late", kind: "waiver", subject: "Ana", departure: boat("late") }),
+      action({ id: "medical", kind: "medical_review", subject: "Bo", departure: boat("early") }),
+      action({ id: "prep", kind: "dive_prep", subject: "4 sizes", departure: boat("early") }),
+    ]);
+    const groups = groupByDeparture(rows);
+    expect(groups.map((group) => group.departure?.tripId ?? "desk")).toEqual([
+      "early",
+      "late",
+      "desk",
+    ]);
+    expect(groups[0]?.rows.map((row) => row.id)).toEqual(["medical", "prep"]);
+    expect(groups.flatMap((group) => group.rows)).toHaveLength(rows.length);
+  });
+
+  it("draws no desk group when every row is about a boat", () => {
+    const groups = groupByDeparture([action({ id: "w", kind: "waiver", departure: boat("t1") })]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.departure?.tripId).toBe("t1");
   });
 });

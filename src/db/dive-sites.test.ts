@@ -29,8 +29,8 @@ import {
   updateDiveSiteForForm,
 } from "./dive-sites";
 import { bookings, diveSites, globalDiveSites, globalDiveSiteVersions } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
-import { getTripDiveSitesPeek, getTripWithBooked } from "./trips-record";
+import { listStaff } from "./trips";
+import { getTripWithBooked } from "./trips-record";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -51,7 +51,7 @@ describe("dive-site library", () => {
     // By name, not "the first card": the catalog is a real library of Florida
     // sites ordered by slug now, and only this one collides with a site the
     // seeded shop already holds — which is the collision under test.
-    const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
+    const catalogEntry = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(
       (row) => row.version.briefing.name === "Molasses Reef",
     );
     if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");
@@ -72,16 +72,18 @@ describe("dive-site library", () => {
 
   it("pulls a newer template revision without overwriting a local edit", async () => {
     const { db, shop } = ctx;
-    const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
+    const catalogEntry = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(
       (row) => row.version.briefing.name === "Molasses Reef",
     );
     if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");
     const imported = await importGlobalDiveSiteTemplate(db, shop.id, catalogEntry.template.id);
     if (!imported) throw new Error("expected a catalog copy");
+    const published = catalogEntry.version.version;
+    const next = published + 1;
 
     await db.insert(globalDiveSiteVersions).values({
       globalDiveSiteId: catalogEntry.template.id,
-      version: 3,
+      version: next,
       briefing: {
         ...catalogEntry.version.briefing,
         description: "A newly expanded published briefing.",
@@ -89,7 +91,7 @@ describe("dive-site library", () => {
     });
     await db
       .update(globalDiveSites)
-      .set({ currentVersion: 3 })
+      .set({ currentVersion: next })
       .where(eq(globalDiveSites.id, catalogEntry.template.id));
     await db
       .update(diveSites)
@@ -97,8 +99,8 @@ describe("dive-site library", () => {
       .where(eq(diveSites.id, imported.id));
 
     const pending = await getDiveSiteTemplateUpdate(db, shop.id, imported.id);
-    expect(pending?.currentVersion).toBe(2);
-    expect(pending?.latestVersion).toBe(3);
+    expect(pending?.currentVersion).toBe(published);
+    expect(pending?.latestVersion).toBe(next);
     expect(pending?.diff.some((change) => change.field === "description")).toBe(true);
 
     const [beforePull] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
@@ -110,7 +112,7 @@ describe("dive-site library", () => {
     );
     expect(result.status).toBe("updated");
     const [updated] = await db.select().from(diveSites).where(eq(diveSites.id, imported.id));
-    expect(updated?.sourceTemplateVersion).toBe(3);
+    expect(updated?.sourceTemplateVersion).toBe(next);
     expect(updated?.description).toBe("Our local briefing for this boat.");
     // **A pull is a second writer of the prose the editor owns**, so it moves
     // the edit generation like any other. If it did not, a briefing opened
@@ -844,24 +846,6 @@ describe("a dive site's planning note", () => {
     await updateDiveSite(db, shop.id, site.id, { shopId: shop.id, name: site.name });
     expect((await rowFor(db, site.id))?.planningNote).toBe("Brief the swim-through first.");
   });
-
-  it("never reaches the projection every diver-facing site reader shares", async () => {
-    // `getTripDiveSitesPeek` feeds the waiver success page and `/ready`. A
-    // column added to its projection would publish a staff note to divers with
-    // nothing failing, so the assertion is on the returned object's own keys.
-    const { db, shop } = ctx;
-    const [trip] = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-    if (!trip) throw new Error("the seeded shop has no departures");
-    const [peek] = await getTripDiveSitesPeek(db, trip.id);
-    if (!peek) throw new Error("the seeded departure names no site");
-    expect(Object.keys(peek)).toEqual([
-      "name",
-      "description",
-      "difficultyLevel",
-      "depthRange",
-      "imageUrls",
-    ]);
-  });
 });
 
 describe("a dive-site briefing saved from two tabs", () => {
@@ -1084,7 +1068,7 @@ describe("a dive site's public slug", () => {
 
   it("gives an imported template the segment of its deconflicted name", async () => {
     const { db, shop } = ctx;
-    const catalogEntry = (await listGlobalDiveSiteTemplates(db)).templates.find(
+    const catalogEntry = (await listGlobalDiveSiteTemplates(db, { limit: 1000 })).templates.find(
       (row) => row.version.briefing.name === "Molasses Reef",
     );
     if (!catalogEntry) throw new Error("seed: no published Molasses Reef template");

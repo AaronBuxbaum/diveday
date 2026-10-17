@@ -4,7 +4,7 @@ import { HOUR_MS, nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { CREW_WEEK_LINES, crewWeekFor } from "./crew-week";
-import { bookings, people, trips } from "./schema";
+import { bookings, people, shops, staffShifts, trips } from "./schema";
 import { createTrip, listStaff, setTripCrew } from "./trips";
 
 /** Far past the seeded demo's own crew calendar, so its departures never interleave. */
@@ -93,6 +93,35 @@ describe("crewWeekFor", () => {
     expect(lines.map((line) => line.title)).toEqual(["Rostered 0", "Rostered 1", "Rostered 2"]);
   });
 
+  it("says when to be at the dock: their own covering shift, else the divers' call named as theirs", async () => {
+    const { db, shop } = ctx;
+    const staff = await listStaff(db, shop.id);
+    const captain = staff.find((entry) => entry.roles.includes("captain"));
+    if (!captain) throw new Error("seeded captain missing");
+    await db.update(shops).set({ dockCallMinutes: 30 }).where(eq(shops.id, shop.id));
+    const reef = await departure(db, shop.id, "Dock call reef", 5);
+    await setTripCrew(db, shop.id, reef.id, [{ personId: captain.person.id, tripRole: "captain" }]);
+    const read = async () =>
+      (await crewWeekFor(db, { shopId: shop.id, personId: captain.person.id, ...window() }))[0]
+        ?.crewCall;
+
+    expect(await read()).toEqual({
+      at: new Date(reef.startsAt.getTime() - 30 * 60 * 1000),
+      source: "divers",
+    });
+
+    await db.insert(staffShifts).values({
+      shopId: shop.id,
+      personId: captain.person.id,
+      startsAt: new Date(reef.startsAt.getTime() - 45 * 60 * 1000),
+      endsAt: new Date(reef.startsAt.getTime() + 6 * HOUR_MS),
+    });
+    expect(await read()).toEqual({
+      at: new Date(reef.startsAt.getTime() - 45 * 60 * 1000),
+      source: "shift",
+    });
+  });
+
   it("reads nothing for somebody rostered on nothing", async () => {
     const { db, shop } = ctx;
     const [diver] = await db
@@ -101,5 +130,41 @@ describe("crewWeekFor", () => {
       .returning();
     if (!diver) throw new Error("failed to insert person");
     expect(await crewWeekFor(db, { shopId: shop.id, personId: diver.id, ...window() })).toEqual([]);
+  });
+
+  /**
+   * **Said once** (fourth review, item 14): an instructor's Today lists their
+   * sessions above, so "Your week" leaves those out before it counts three,
+   * and still names the boat they crew.
+   */
+  it("leaves out the departures the page already lists, before the limit counts", async () => {
+    const { db, shop } = ctx;
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+    const sessions = [
+      await departure(db, shop.id, "Refresher session A", 50),
+      await departure(db, shop.id, "Refresher session B", 56),
+      await departure(db, shop.id, "Refresher session C", 62),
+    ];
+    const charter = await departure(db, shop.id, "Deep wreck charter", 70);
+    for (const trip of [...sessions, charter]) {
+      expect(
+        await setTripCrew(db, shop.id, trip.id, [
+          { personId: instructor.person.id, tripRole: "instructor" },
+        ]),
+      ).toBe(true);
+    }
+    const read = (excludeTripIds?: string[]) =>
+      crewWeekFor(db, {
+        shopId: shop.id,
+        personId: instructor.person.id,
+        ...window(),
+        excludeTripIds,
+      });
+    expect((await read()).map((line) => line.title)).not.toContain("Deep wreck charter");
+    expect((await read(sessions.map((trip) => trip.id))).map((line) => line.title)).toContain(
+      "Deep wreck charter",
+    );
   });
 });

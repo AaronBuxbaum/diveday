@@ -1,0 +1,1014 @@
+{
+  "area": "honduras-roatan",
+  "method": "Roatán (whole island, West Bay Point to Camp Bay and Port Royal, north and south shores) plus the offshore seamounts and Cayos Cochinos dived from Roatán. Official list: the Roatán Marine Park mooring dataset ('RMP dive sites', folder 'September 2026 dive sites.xlsx', 435 rows with lat/lon, depth and maintenance status; the Google My Maps layer Roatan Divers embeds as the Roatan Marine Park Dive Site Map, read as KML), counted as one list; its snorkel-site and yacht-mooring rows were ignored, and positions are its own, rounded to 5 decimals. Its rows mostly carry sponsor names, so a traditional operator name was matched to a mooring only on the same name in the same area. Operator lists, one each: CoCo View Resort's site page; Roatan Dive Center's north-shore, south-shore and wreck pages; Roatan Splash Inn's site log; Roatan Divers' best-dive-sites article; Coconut Tree Divers' site page (domain no longer resolves, read from its May 2026 Wayback copy); Anthony's Key Resort's site page and its public daily dive-sites log (Google Calendar, entries from 2025-01-01 on, spelling variants merged); Native Sons' fun-dive page; Sun Divers' top-ten, beginner-site and wreck pages; Turquoise Divers' site page; Blue Reef Explorers' site page. West End Divers' site list (westenddivers.info) is a parked domain and was not used; DivePlanner Pro's per-shop 'reachable' lists and magazine or aggregator guides were leads only. A site is counted when it is named on at least two of these independent lists and is a recreational scuba dive; a dive sold as one over several moorings is one row with aliases. Excluded: one-list names (grouped per operator where several), the Josie J (213 ft, technical only) and Cordelia Banks (closed to divers). Cayos Cochinos itself has no operator site list beyond Blue Reef Explorers and the Fundación Cayos Cochinos publishes none, so only the seamounts reach two lists. Counted 2026-10-14.",
+  "sources": [
+    "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+    "https://cocoviewresort.com/?p=500",
+    "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+    "https://www.roatandivecenter.com/roatan-dive-sites",
+    "https://www.roatandivecenter.com/roatan-wreck-dives",
+    "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+    "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+    "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+    "https://anthonyskey.com/dive-sites/",
+    "https://anthonyskey.com/daily-dive-sites-log/",
+    "https://www.roatandivingnativesons.com/fun-dives-1",
+    "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/",
+    "https://sundiversroatan.com/2026/02/24/discover-the-best-beginner-dive-sites-in-roatan-honduras/",
+    "https://sundiversroatan.com/diving/roatan-wreck-diving/",
+    "https://www.turquoisedivers.com/courses/dive-sites",
+    "https://bluereefexplorers.com/diving/dive-sites"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Pablo's Place",
+      "template": "pablos-place-roatan",
+      "listedBy": [
+        "https://www.roatandivecenter.com/roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/"
+      ]
+    },
+    {
+      "name": "Texas",
+      "template": "texas-roatan",
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/"
+      ]
+    },
+    {
+      "name": "West End Wall",
+      "template": "west-end-wall-roatan",
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/"
+      ]
+    },
+    {
+      "name": "Black Rock",
+      "template": "black-rock-roatan",
+      "position": [16.27033, -86.60288],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Josie J",
+      "template": null,
+      "listedBy": [
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/"
+      ],
+      "excluded": "technical depth (213 ft / 65 m per Roatan Divers, Tec divers only)"
+    },
+    {
+      "name": "Sandra's Grotto",
+      "template": null,
+      "position": [16.2673, -86.59904],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Mandy's Eel Garden (Temptation Reef)",
+      "template": "mandys-eel-garden-roatan",
+      "position": [16.27247, -86.60213],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://sundiversroatan.com/2026/02/24/discover-the-best-beginner-dive-sites-in-roatan-honduras/"
+      ]
+    },
+    {
+      "name": "Butcher's Bank",
+      "template": "butchers-bank-roatan",
+      "position": [16.27861, -86.60422],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://sundiversroatan.com/2026/02/24/discover-the-best-beginner-dive-sites-in-roatan-honduras/"
+      ]
+    },
+    {
+      "name": "Herbie's Fantasy (Herbies)",
+      "template": null,
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://www.roatandivecenter.com/roatan-dive-sites",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Seaquest Deep (Sea Quest)",
+      "template": "seaquest-deep-roatan",
+      "position": [16.28713, -86.60368],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/",
+        "https://sundiversroatan.com/2026/02/24/discover-the-best-beginner-dive-sites-in-roatan-honduras/"
+      ]
+    },
+    {
+      "name": "Seaquest Shallow",
+      "template": null,
+      "position": [16.29075, -86.60259],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Turtle Crossing",
+      "template": null,
+      "listedBy": [
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "The Chief's Quarters",
+      "template": "chiefs-quarters-roatan",
+      "position": [16.29433, -86.60211],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://sundiversroatan.com/2026/02/24/discover-the-best-beginner-dive-sites-in-roatan-honduras/"
+      ]
+    },
+    {
+      "name": "Chris Fisher",
+      "template": null,
+      "position": [16.29978, -86.6002],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan"
+      ]
+    },
+    {
+      "name": "Bikini Bottom",
+      "template": null,
+      "position": [16.29783, -86.60091],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Blue Channel",
+      "template": "blue-channel-roatan",
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/",
+        "https://bluereefexplorers.com/diving/dive-sites"
+      ]
+    },
+    {
+      "name": "El Aquario",
+      "template": null,
+      "position": [16.3022, -86.59823],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan"
+      ]
+    },
+    {
+      "name": "Lighthouse (Lighthouse Reef)",
+      "template": "lighthouse-reef-roatan",
+      "position": [16.30474, -86.5977],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Moonlight",
+      "template": "moonlight-roatan",
+      "position": [16.30546, -86.59741],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/"
+      ]
+    },
+    {
+      "name": "Dixie's Place",
+      "template": "dixies-place-roatan",
+      "position": [16.30646, -86.59742],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://www.roatandivingnativesons.com/fun-dives-1"
+      ]
+    },
+    {
+      "name": "Divemaster's Choice",
+      "template": null,
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Half Moon Bay Wall",
+      "template": "half-moon-bay-wall-roatan",
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/"
+      ]
+    },
+    {
+      "name": "Vern's Dropoff (Werns' Dropoff)",
+      "template": null,
+      "position": [16.30919, -86.59612],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan"
+      ]
+    },
+    {
+      "name": "The Wife",
+      "template": null,
+      "position": [16.31235, -86.59393],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Hole in the Wall",
+      "template": "hole-in-the-wall-roatan",
+      "position": [16.31384, -86.59179],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/"
+      ]
+    },
+    {
+      "name": "Mangrove Bight",
+      "template": null,
+      "listedBy": ["https://anthonyskey.com/daily-dive-sites-log/"],
+      "excluded": "on one operator list only (Anthony's Key); not a named Marine Park mooring"
+    },
+    {
+      "name": "Fish Den",
+      "template": "fish-den-roatan",
+      "position": [16.31733, -86.58871],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://sundiversroatan.com/2026/02/24/discover-the-best-beginner-dive-sites-in-roatan-honduras/"
+      ]
+    },
+    {
+      "name": "Canyon Reef",
+      "template": "canyon-reef-roatan",
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Dennis' Dropoff",
+      "template": null,
+      "position": [16.31975, -86.58655],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan"
+      ]
+    },
+    {
+      "name": "Overheat Reef",
+      "template": "overheat-reef-roatan",
+      "position": [16.32338, -86.58294],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Scuba Mermaids (Mermaid)",
+      "template": null,
+      "position": [16.32404, -86.58245],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Diane's Delight",
+      "template": null,
+      "position": [16.32468, -86.58294],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Pillar Coral",
+      "template": "pillar-coral-roatan",
+      "position": [16.32628, -86.58086],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Green Outhouse Wall",
+      "template": "green-outhouse-wall-roatan",
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Gibson Bight",
+      "template": "gibson-bight-roatan",
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/"
+      ]
+    },
+    {
+      "name": "Melissa's Reef",
+      "template": null,
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "El Aguila (Deep Eel Garden)",
+      "template": "el-aguila-roatan",
+      "position": [16.32751, -86.57904],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://www.roatandivecenter.com/roatan-wreck-dives",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/dive-sites/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://sundiversroatan.com/diving/roatan-wreck-diving/",
+        "https://bluereefexplorers.com/diving/dive-sites"
+      ]
+    },
+    {
+      "name": "Peter's Place (Pete's Place)",
+      "template": "peters-place-roatan",
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://www.roatandivingnativesons.com/fun-dives-1"
+      ]
+    },
+    {
+      "name": "Mike's Place",
+      "template": null,
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Conrad Cave",
+      "template": null,
+      "position": [16.33205, -86.57424],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Green Pearl",
+      "template": null,
+      "position": [16.33491, -86.57138],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan"
+      ]
+    },
+    {
+      "name": "Zack's Patch",
+      "template": null,
+      "position": [16.33409, -86.57166],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Nelson's Nest",
+      "template": null,
+      "position": [16.3325, -86.57226],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Baby Stan",
+      "template": null,
+      "position": [16.33564, -86.57026],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Bear's Den",
+      "template": "bears-den-roatan",
+      "position": [16.33681, -86.56886],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/"
+      ]
+    },
+    {
+      "name": "CJ's Place",
+      "template": null,
+      "position": [16.33739, -86.56801],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "White Hole",
+      "template": "white-hole-roatan",
+      "position": [16.33763, -86.56641],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Spooky Channel",
+      "template": "spooky-channel-roatan",
+      "position": [16.3394, -86.56445],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://web.archive.org/web/20260508085919/https://coconuttreedivers.com/scuba-diving-roatan/over-80-dive-sites-to-visit-in-caribbean-roatan-honduras/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/"
+      ]
+    },
+    {
+      "name": "Wrasse Hole",
+      "template": null,
+      "position": [16.34053, -86.56186],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Barry's Reef",
+      "template": null,
+      "position": [16.34179, -86.56135],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Mora Channel",
+      "template": null,
+      "position": [16.34901, -86.55142],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Front Porch (Front Porch Reef)",
+      "template": null,
+      "listedBy": [
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://anthonyskey.com/dive-sites/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "The Odyssey",
+      "template": "odyssey-wreck-roatan",
+      "position": [16.35227, -86.54429],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+        "https://www.roatandivecenter.com/roatan-wreck-dives",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://anthonyskey.com/dive-sites/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/",
+        "https://sundiversroatan.com/diving/roatan-wreck-diving/"
+      ]
+    },
+    {
+      "name": "Big Surprise",
+      "template": null,
+      "position": [16.36485, -86.51595],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Keyhole Reef (Key Hole)",
+      "template": null,
+      "listedBy": [
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Church Wall",
+      "template": null,
+      "listedBy": [
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Four Sponges; Wayne's Place; Double D Wall; Happy Place; Alabama Point; Chaz's Choice; Devil's Canyon; Sea Grape Escape; Stovall's Serenity; Herbie's Place; Tuk's Treasure; Romeo's Elbow; Las Rocas; Marbella Canyon; Palmetto Bay Wall; Flowers Bay Wall; Maya Key Wall; Nico's Palace; Coral Garden",
+      "template": null,
+      "listedBy": [
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://anthonyskey.com/dive-sites/"
+      ],
+      "excluded": "each on one operator list only (Anthony's Key daily dive-site log or site page); no Marine Park mooring of that name"
+    },
+    {
+      "name": "Shark Dive (Cara a Cara, Marco's Place)",
+      "template": "shark-dive-cara-a-cara-roatan",
+      "position": [16.28744, -86.52007],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites",
+        "https://anthonyskey.com/dive-sites/",
+        "https://anthonyskey.com/daily-dive-sites-log/",
+        "https://bluereefexplorers.com/diving/dive-sites"
+      ]
+    },
+    {
+      "name": "Insidious Reef (Insidious Wall)",
+      "template": "insidious-reef-roatan",
+      "position": [16.29328, -86.51877],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatansplashinn.com/en/roatan/roatan-diving-sites/",
+        "https://bluereefexplorers.com/diving/dive-sites",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "The Bowl (Cordelia Banks)",
+      "template": null,
+      "listedBy": ["https://www.roatandivecenter.com/roatan-dive-sites"],
+      "excluded": "closed to divers (Roatan Dive Center)"
+    },
+    {
+      "name": "Lita's Hole (Dirty Dog)",
+      "template": null,
+      "position": [16.31933, -86.49464],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "D2T",
+      "template": null,
+      "position": [16.32034, -86.49279],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Shark Bait Deep",
+      "template": null,
+      "position": [16.32184, -86.48538],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Marilyn's Front Porch",
+      "template": null,
+      "position": [16.32582, -86.48238],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Connie's Dream",
+      "template": null,
+      "position": [16.32366, -86.48381],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "MacCallum Girls",
+      "template": null,
+      "position": [16.32843, -86.48215],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Brick Bay Wall",
+      "template": null,
+      "position": [16.32976, -86.48082],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Garden of Eden",
+      "template": null,
+      "listedBy": ["https://www.roatandivecenter.com/roatan-dive-sites"],
+      "excluded": "on one operator list only (Roatan Dive Center, Dixon Cove/Mahogany Bay); the Marine Park's Garden of Eden mooring is on the north shore"
+    },
+    {
+      "name": "John's Spot",
+      "template": "johns-spot-roatan",
+      "position": [16.33366, -86.47303],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Cemetery Wall",
+      "template": "cemetery-wall-roatan",
+      "position": [16.33657, -86.47165],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Doc's Retreat (Doc's Treat)",
+      "template": null,
+      "position": [16.33724, -86.47],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Mary's Place",
+      "template": "marys-place-roatan",
+      "position": [16.33766, -86.46859],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500",
+        "https://www.roatandivecenter.com/roatan-dive-sites",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/",
+        "https://bluereefexplorers.com/diving/dive-sites",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Osman's Reef",
+      "template": null,
+      "position": [16.34854, -86.44871],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Mr. Bud",
+      "template": "mr-bud-wreck-roatan",
+      "position": [16.34836, -86.44609],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500",
+        "https://www.roatandivecenter.com/roatan-dive-sites",
+        "https://www.roatandivecenter.com/roatan-wreck-dives",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "French Cay Cut",
+      "template": null,
+      "position": [16.3502, -86.44604],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Single Diver",
+      "template": null,
+      "listedBy": ["https://www.roatandivecenter.com/roatan-dive-sites"],
+      "excluded": "on one operator list only (Roatan Dive Center); the Marine Park has six SingleDivers.com moorings and none can be matched"
+    },
+    {
+      "name": "Island Fueller (Gracias)",
+      "template": null,
+      "listedBy": ["https://www.roatandivecenter.com/roatan-wreck-dives"],
+      "excluded": "on one operator list only (Roatan Dive Center)"
+    },
+    {
+      "name": "Gold Chain Reef",
+      "template": "gold-chain-reef-roatan",
+      "position": [16.35099, -86.43958],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Valley of the Kings",
+      "template": null,
+      "position": [16.35095, -86.43782],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "40 Foot Point",
+      "template": null,
+      "position": [16.35221, -86.4354],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Ben's Clubhouse",
+      "template": null,
+      "position": [16.35493, -86.43754],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Prince Albert",
+      "template": "prince-albert-wreck-roatan",
+      "listedBy": [
+        "https://cocoviewresort.com/?p=500",
+        "https://www.roatandivecenter.com/roatan-dive-sites",
+        "https://www.roatandivecenter.com/roatan-wreck-dives",
+        "https://www.roatandivingnativesons.com/fun-dives-1",
+        "https://anthonyskey.com/daily-dive-sites-log/"
+      ]
+    },
+    {
+      "name": "Newman's Wall",
+      "template": "newmans-wall-roatan",
+      "position": [16.35358, -86.43505],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500"
+      ]
+    },
+    {
+      "name": "Too Tall Too Small (Two Tall Two Small)",
+      "template": "too-tall-too-small-roatan",
+      "position": [16.3575, -86.42665],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500",
+        "https://www.roatandivecenter.com/roatan-dive-sites"
+      ]
+    },
+    {
+      "name": "Anka's Place",
+      "template": "ankas-place-roatan",
+      "position": [16.35807, -86.42465],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500"
+      ]
+    },
+    {
+      "name": "Inside Outside",
+      "template": "inside-outside-roatan",
+      "position": [16.35967, -86.41577],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500"
+      ]
+    },
+    {
+      "name": "Neverstain Bight",
+      "template": null,
+      "position": [16.36531, -86.40216],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500"
+      ]
+    },
+    {
+      "name": "Carib Point",
+      "template": "carib-point-roatan",
+      "position": [16.36857, -86.38907],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500"
+      ]
+    },
+    {
+      "name": "Calvin's Crack",
+      "template": "calvins-crack-roatan",
+      "position": [16.38116, -86.37129],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://cocoviewresort.com/?p=500"
+      ]
+    },
+    {
+      "name": "CoCo View Wall; Castle Canyon; Chimney's; Little French Cay; Menagerhea's Reef; Missing Link; Parrot Tree; Patty's Paradise",
+      "template": null,
+      "listedBy": ["https://cocoviewresort.com/?p=500"],
+      "excluded": "each on one operator list only (CoCo View Resort); no Marine Park mooring of that name"
+    },
+    {
+      "name": "Rock Star (Rockstar)",
+      "template": null,
+      "position": [16.38877, -86.46129],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/",
+        "https://www.turquoisedivers.com/courses/dive-sites"
+      ]
+    },
+    {
+      "name": "Sponges Wall",
+      "template": null,
+      "position": [16.40355, -86.42073],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.turquoisedivers.com/courses/dive-sites"
+      ]
+    },
+    {
+      "name": "Underground",
+      "template": null,
+      "position": [16.40639, -86.41339],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan"
+      ]
+    },
+    {
+      "name": "Fuego del Mar",
+      "template": null,
+      "position": [16.41251, -86.39427],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://www.turquoisedivers.com/courses/dive-sites"
+      ]
+    },
+    {
+      "name": "Dolphin's Den",
+      "template": null,
+      "position": [16.41583, -86.38831],
+      "listedBy": [
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://www.turquoisedivers.com/courses/dive-sites",
+        "https://bluereefexplorers.com/diving/dive-sites"
+      ]
+    },
+    {
+      "name": "Groupers Galley",
+      "template": null,
+      "listedBy": ["https://www.turquoisedivers.com/courses/dive-sites"],
+      "excluded": "on one operator list only (Turquoise Divers)"
+    },
+    {
+      "name": "Dolphin Graveyard",
+      "template": null,
+      "listedBy": ["https://www.roatandivingnativesons.com/fun-dives-1"],
+      "excluded": "on one operator list only (Native Sons)"
+    },
+    {
+      "name": "Morat Wall",
+      "template": null,
+      "listedBy": ["https://www.roatandivingnativesons.com/fun-dives-1"],
+      "excluded": "on one operator list only (Native Sons)"
+    },
+    {
+      "name": "The Seamounts (Roatán Banks)",
+      "template": null,
+      "listedBy": [
+        "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+        "https://sundiversroatan.com/2022/07/13/best-dive-sites-in-roatan/",
+        "https://bluereefexplorers.com/diving/dive-sites",
+        "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA"
+      ]
+    },
+    {
+      "name": "C.J.'s Garden",
+      "template": null,
+      "listedBy": ["https://bluereefexplorers.com/diving/dive-sites"],
+      "excluded": "on one operator list only (Blue Reef Explorers); the Marine Park's Cayos seamount moorings are named by depth only"
+    },
+    {
+      "name": "Rocky Domes",
+      "template": null,
+      "listedBy": ["https://bluereefexplorers.com/diving/dive-sites"],
+      "excluded": "on one operator list only (Blue Reef Explorers)"
+    }
+  ]
+}

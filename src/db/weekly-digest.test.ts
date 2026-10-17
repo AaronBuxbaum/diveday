@@ -1,10 +1,14 @@
 import { and, eq, ne } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { nowDate } from "@/lib/clock";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { messageFor } from "@/lib/notifications/render";
 import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db";
+import { readOwed } from "./owed";
 import {
   bookings,
+  courseInquiries,
+  orders,
   paymentOperationIntents,
   people,
   shops,
@@ -15,6 +19,7 @@ import {
   listWeeklyDigestRecipients,
   previewWeeklyDigest,
   readWeeklyDigestChoice,
+  readWeeklyDigestFacts,
   resolveWeeklyDigestUnsubscribeToken,
   sendDueWeeklyDigests,
   sendWeeklyDigestForShop,
@@ -64,6 +69,7 @@ async function context() {
     timezone: shop.timezone,
     defaultLocale: shop.defaultLocale,
     diversPerDivemaster: shop.diversPerDivemaster,
+    currency: shop.currency,
   };
   const staff = await db
     .select({ personId: people.id, email: userAccounts.email })
@@ -287,6 +293,25 @@ describe("sendDueWeeklyDigests", () => {
 });
 
 describe("previewWeeklyDigest", () => {
+  it("never asks the marine forecast provider for anything (#2489)", async () => {
+    const { db, shop, owner } = await context();
+    const fetcher = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("no network"));
+    try {
+      await previewWeeklyDigest(db, {
+        shop,
+        personId: owner.personId,
+        origin: ORIGIN,
+        // Today's own clock: the seeded departures sit inside the provider's window.
+        now: nowDate(),
+      });
+      // The request, if one went out, starts a tick after the queue returns.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(fetcher).not.toHaveBeenCalled();
+    } finally {
+      fetcher.mockRestore();
+    }
+  });
+
   it("builds this staffer's email without claiming the week or minting a link", async () => {
     const { db, shop, instructor, monday } = await context();
     const preview = await previewWeeklyDigest(db, {
@@ -365,6 +390,134 @@ describe("previewWeeklyDigest", () => {
       // The owner's overdue count is the crew's plus the stuck Stripe call.
       expect(overdueOf(ownerPreview)).toBe(overdueOf(crewPreview) + 1);
     }
+  });
+
+  /**
+   * **What the week made, by role** (third UX review, item 33; decision 5).
+   * The owner's email says what last week's departures took and how many
+   * orders are open, Reports' own figures; a crew member's never carries a
+   * dollar or the Orders link.
+   */
+  it("gives the owner the week's money and the crew none of it", async () => {
+    const { db, shop, owner, captain, monday } = await context();
+    const previewFor = async (personId: string) => {
+      const preview = await previewWeeklyDigest(db, {
+        shop,
+        personId,
+        origin: ORIGIN,
+        now: monday,
+      });
+      if (preview?.kind !== "weekly_digest") throw new Error("no preview");
+      return preview;
+    };
+    // One invoice still waiting on the diver, so the owner has money to hear about.
+    await db.insert(orders).values({
+      shopId: shop.id,
+      personId: owner.personId,
+      createdByPersonId: owner.personId,
+      status: "open",
+      currency: shop.currency,
+      totalCents: 9_500,
+      stripeAccountId: "acct_digest",
+      stripeCustomerId: "cus_digest",
+      stripeInvoiceId: "in_digest_open",
+    });
+    const owed = await readOwed(db, shop, monday);
+
+    const ownerPreview = await previewFor(owner.personId);
+    const money = ownerPreview.sections.find((section) => section.kind === "money");
+    expect(money?.kind).toBe("money");
+    if (money?.kind === "money") {
+      expect(money.owed.orderCount).toBe(owed.orders.count);
+      expect(money.owed.orderCents).toBe(owed.orders.cents);
+      expect(money.owed.seatCents).toBe(owed.seats.cents);
+      expect(money.currency).toBe(shop.currency);
+      expect(money.url).toBe(`${ORIGIN}/shop/${shop.slug}/orders`);
+    }
+
+    const crewPreview = await previewFor(captain.personId);
+    expect(crewPreview.sections.map((section) => section.kind)).not.toContain("money");
+    expect(messageFor(crewPreview).text).not.toContain("/orders");
+  });
+
+  /**
+   * **A request marked done is not waiting** (fourth UX review, item 24): the
+   * digest filters on `handledAt` like every staff reader of requests.
+   */
+  it("counts only the date requests nobody has marked done", async () => {
+    const { db, shop, monday } = await context();
+    const day = new Date(monday.getTime() + 10 * 24 * 3_600_000).toISOString().slice(0, 10);
+    const waitingOf = async () =>
+      (await readWeeklyDigestFacts(db, shop, monday)).grades.reports.dateRequestsWaiting;
+    const before = await waitingOf();
+    await db.insert(courseInquiries).values([
+      { shopId: shop.id, interest: "Night dive", name: "Waiting", preferredDate: day },
+      {
+        shopId: shop.id,
+        interest: "Night dive",
+        name: "Done",
+        preferredDate: day,
+        handledAt: monday,
+        handledAs: "done",
+      },
+    ]);
+    expect(await waitingOf()).toBe(before + 1);
+  });
+
+  it("gives the owner the gear line and the safety sentence, and the crew neither", async () => {
+    const { db, shop, owner, captain, monday } = await context();
+    const facts = await readWeeklyDigestFacts(db, shop, monday);
+    expect(facts.grades.staff.gearServiceDue).toBe(0);
+    expect(facts.grades.staff.safety).toEqual({ openRollCalls: 0, uncrewed: 0, incidents: 0 });
+    const kindsFor = async (personId: string) => {
+      const preview = await previewWeeklyDigest(db, {
+        shop,
+        personId,
+        origin: ORIGIN,
+        now: monday,
+      });
+      if (preview?.kind !== "weekly_digest") throw new Error("no preview");
+      return preview.sections.map((section) => section.kind);
+    };
+    const crewKinds = await kindsFor(captain.personId);
+    expect(crewKinds).not.toContain("safety");
+    expect(crewKinds).not.toContain("gear_service");
+    const ownerKinds = await kindsFor(owner.personId);
+    expect(ownerKinds.includes("gear_service")).toBe(facts.grades.reports.gearServiceDue > 0);
+  });
+
+  /**
+   * **The boat worth a deal, and last year's week** (fifth loop, item 29):
+   * both are money calls, so the owner reads them and the crew does not.
+   */
+  it("names the week's emptiest boat for the owner only, linked to its deal form", async () => {
+    const { db, shop, owner, captain, monday } = await context();
+    const facts = await readWeeklyDigestFacts(db, shop, monday);
+    expect(facts.grades.staff.thisWeek.weakest).toBeNull();
+    expect(facts.grades.staff.money.lastYearRevenueCents).toBeNull();
+    const weakest = facts.grades.reports.thisWeek.weakest;
+    if (weakest) {
+      expect(weakest.booked * 2).toBeLessThan(weakest.capacity);
+      expect(weakest.startsAt.getTime()).toBeGreaterThan(monday.getTime());
+    }
+    const thisWeekOf = async (personId: string) => {
+      const preview = await previewWeeklyDigest(db, {
+        shop,
+        personId,
+        origin: ORIGIN,
+        now: monday,
+      });
+      if (preview?.kind !== "weekly_digest") throw new Error("no preview");
+      return preview.sections.find((section) => section.kind === "this_week");
+    };
+    const ownerWeek = await thisWeekOf(owner.personId);
+    if (weakest && ownerWeek?.kind === "this_week") {
+      expect(ownerWeek.weakest?.url).toBe(
+        `${ORIGIN}/shop/${shop.slug}/trips/${weakest.tripId}?view=details#last-minute-deal`,
+      );
+    }
+    const crewWeek = await thisWeekOf(captain.personId);
+    if (crewWeek?.kind === "this_week") expect(crewWeek.weakest).toBeNull();
   });
 
   it("previews nothing for somebody who is not staff here", async () => {

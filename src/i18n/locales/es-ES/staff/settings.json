@@ -3,9 +3,14 @@
     "eyebrow": "Ajustes",
     "notice": {
       "packingSaved": "Lista de equipo guardada para todas las salidas.",
-      "packingInvalid": "Añade entre uno y doce artículos a la lista.",
+      "packingInvalid": "Agrega entre uno y doce artículos a la lista.",
       "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
+      "pickupSaved": "Guardado. A los buceadores solo se les pregunta por la recogida cuando esto está activado.",
+      "deskPaymentSaved": "Guardado. Cada plaza a pagar en el centro dice cómo pagar.",
+      "deskPaymentInvalid": "No cambió nada: elige tarjeta, efectivo, tarjeta y efectivo o no decirlo.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
+      "turnaroundSaved": "Margen entre salidas guardado.",
+      "turnaroundInvalid": "Introduce un margen de entre 0 y 240 minutos.",
       "unitsSaved": "Unidades guardadas.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
       "taxSaved": "Configuración de impuestos guardada.",
@@ -46,10 +51,16 @@
       "seasonSaved": "Inicio de temporada guardado.",
       "seasonInvalid": "Elige un día que ese mes tenga.",
       "reopensSaved": "Guardado. Tu página pública muestra esta fecha mientras su calendario esté tranquilo.",
-      "reopensInvalid": "Esa fecha no existe en el calendario. Elige una en el campo.",
+      "reopensInvalid": "No podemos publicar esa fecha. Elige una dentro de los próximos 18 meses.",
       "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
       "emergencySaved": "Referencia de emergencia guardada.",
-      "packageSaved": "Paquete añadido.",
+      "shoreAlertInvalid": "Ese correo del contacto en tierra no es una dirección válida. No se guardó nada.",
+      "shoreAlertConsentMissing": "Marca que el contacto en tierra aceptó recibir los avisos del pase de lista en esta dirección; si la dirección es nueva, márcalo otra vez. No se guardó nada.",
+      "shoreAlertConfirmationSent": "Guardado. Enviamos un enlace al contacto en tierra; los avisos empiezan cuando lo confirme.",
+      "shoreAlertConfirmationNotSent": "Guardado, pero el enlace de confirmación no salió. Prueba “Enviar el enlace otra vez” dentro de unos minutos.",
+      "shoreAlertSavedDemo": "Guardado. Los centros de demostración no envían nada, así que no salió ningún enlace.",
+      "shoreAlertCleared": "Correo del contacto en tierra quitado. Ya no recibe avisos del pase de lista.",
+      "packageSaved": "Paquete agregado.",
       "packageDeleted": "Paquete eliminado.",
       "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar."
     },
@@ -123,7 +134,7 @@
       "tagline": "Lema",
       "taglinePlaceholder": "ej. Buceando en Key Largo y los Cayos de Florida desde 2012",
       "descriptionLabel": "Acerca de tu centro",
-      "descriptionPlaceholder": "Una breve presentación de tu centro, embarcaciones, equipo o buceo local...",
+      "descriptionPlaceholder": "Una breve presentación de tu centro, embarcaciones, equipo o buceo local…",
       "logo": "Logotipo del centro",
       "logoHint": "PNG, JPG o WebP. Se recomienda una imagen cuadrada.",
       "removeLogo": "Eliminar logotipo actual",
@@ -200,7 +211,7 @@
       "label": "Fotos",
       "hint": "(hasta {max}, {perSave} a la vez)",
       "tooMany": "{count, plural, one {Elige hasta # foto cada vez.} other {Elige hasta # fotos cada vez.}}",
-      "add": "Añadir fotos",
+      "add": "Agregar fotos",
       "remove": "Quitar",
       "submit": "Guardar fotos",
       "submitting": "Guardando…"
@@ -221,6 +232,22 @@
       "submit": "Guardar lista de equipo",
       "submitting": "Guardando…",
       "value": "{count, plural, one {# artículo} other {# artículos}}"
+    },
+    "pickup": {
+      "label": "Ofrecemos recogida en el hotel",
+      "description": "Si está activado, la página de cada buceador pregunta si quiere que lo recojan y dónde se aloja.",
+      "submit": "Guardar recogida",
+      "submitting": "Guardando…"
+    },
+    "deskPayment": {
+      "legend": "Cómo pagan los buceadores en el mostrador",
+      "description": "Se dice dondequiera que una plaza se paga en el centro: el formulario de reserva, la confirmación y la página del buceador.",
+      "none": "No decirlo",
+      "card": "Tarjeta",
+      "cash": "Efectivo",
+      "card_and_cash": "Tarjeta y efectivo",
+      "submit": "Guardar cómo pagan",
+      "submitting": "Guardando…"
     },
     "dockCall": {
       "heading": "Ritmo del día de buceo",
@@ -253,6 +280,11 @@
       "siteOverrides": "{count, plural, one {# sitio de buceo tiene su propio tiempo en el agua, así que este ritmo no describe una inmersión allí:} other {# sitios de buceo tienen su propio tiempo en el agua, así que este ritmo no describe una inmersión en ninguno de ellos:}}",
       "siteOverride": "{name} · {count} min"
     },
+    "turnaround": {
+      "label": "Margen entre salidas",
+      "description": "Al mover una salida, avisa si un barco, o un tripulante que sale desde otro punto de encuentro, tiene menos que esto. Con 0 no avisa.",
+      "submit": "Guardar margen"
+    },
     "units": {
       "heading": "Unidades",
       "depthLabel": "Mostrar profundidades en",
@@ -269,8 +301,8 @@
     },
     "tax": {
       "heading": "Impuestos (IVA y ventas)",
-      "description": "Añade IVA, impuestos sobre las ventas y otros impuestos similares a los nuevos pagos de reservas y facturas del personal mediante Stripe.",
-      "detail": "El impuesto se añade al precio publicado y se muestra al buceador en el checkout de Stripe. Las propinas posteriores a la salida son independientes y este ajuste no las afecta. Desactívalo si gestionas los impuestos por tu cuenta.",
+      "description": "Agrega IVA, impuestos sobre las ventas y otros impuestos similares a los nuevos pagos de reservas y facturas del personal mediante Stripe.",
+      "detail": "El impuesto se agrega al precio publicado y se muestra al buceador en el checkout de Stripe. Las propinas posteriores a la salida son independientes y este ajuste no las afecta. Desactívalo si gestionas los impuestos por tu cuenta.",
       "enabledValue": "Activados",
       "disabledValue": "Desactivados",
       "checkboxLabel": "Usar Stripe Tax para nuevos pagos de reservas y facturas",
@@ -280,7 +312,7 @@
     "passThrough": {
       "heading": "Cuota del parque marino o de conservación",
       "value": "{price} / buceador",
-      "description": "Añade opcionalmente una cuota por buceador para un tercero identificado.",
+      "description": "Agrega opcionalmente una cuota por buceador para un tercero identificado.",
       "detail": "Se muestra como una línea propia en el checkout y se mantiene fuera de los ingresos del centro.",
       "nameLabel": "Nombre de la cuota",
       "namePlaceholder": "Cuota del parque marino",
@@ -294,7 +326,7 @@
       "notice": "El catálogo de alquiler, sus precios y la conexión con Stripe están limitados a propietarios y gerentes. Los ajustes de arriba están abiertos a todo el equipo."
     },
     "rentals": {
-      "heading": "Qué alquilamos",
+      "heading": "Alquiler",
       "detail": "Marca lo que alquilas. Lo que no marques sale del formulario de equipo, y los ajustes de alquiler que ya lo piden siguen en la lista de preparación, marcados.",
       "legend": "Equipo y servicios de alquiler",
       "submit": "Guardar catálogo de alquiler",
@@ -363,16 +395,18 @@
     },
     "certCheck": {
       "heading": "Verificación de certificaciones",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y marca la certificación como certificada cuando la agencia la muestra. Verifica SSI, NAUI, SDI, GUE y CMAS, en Chrome o Edge en un ordenador.",
-      "added": "Añadida a este navegador",
-      "notAdded": "Sin añadir",
-      "install": "Añadir a Chrome"
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y, cuando la agencia muestra la certificación, la marca como certificada a nombre de ese miembro del equipo, como lo haría “Marcar certificado”. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Reservas y exenciones, en Chrome o Edge en una computadora.",
+      "added": "Agregada a este navegador ({version})",
+      "notAdded": "Sin agregar",
+      "outdated": "Actualiza la extensión: este navegador tiene la versión {version} y DiveDay necesita la {minimum}.",
+      "try": "Prueba las verificaciones",
+      "install": "Agregar a Chrome"
     },
     "integrations": {
       "heading": "Integraciones del centro"
     },
     "support": {
-      "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo. Escribe cuando quieras.",
+      "description": "Escribe cuando quieras: una mala mañana en el mostrador, una función que te falta o un error.",
       "emailCta": "Escribir a {email}"
     },
     "groups": {
@@ -382,8 +416,7 @@
       "bookingsWaivers": "Reservas y exenciones",
       "rentals": "Alquiler",
       "money": "Dinero",
-      "messages": "Mensajes",
-      "notifications": "Avisos",
+      "reach": "Cómo te contactan los buceadores",
       "website": "Sitio web",
       "data": "Datos",
       "account": "Cuenta",
@@ -416,7 +449,7 @@
       },
       "lastMinuteList": {
         "heading": "Lista de última hora",
-        "label": "Permitir que los buceadores se apunten a una lista de última hora",
+        "label": "Permitir que los buceadores se anoten en una lista de última hora",
         "description": "Los buceadores dejan su correo y puedes ofrecerles plazas libres en una salida cercana."
       },
       "tips": {
@@ -428,6 +461,11 @@
         "heading": "Nuestro año",
         "label": "Mostrar “Nuestro año” en tu calendario",
         "description": "El año hasta hoy en cifras al pie de tu calendario público: buceadores, salidas y sitios. Nunca dinero. Apagado hasta que lo actives."
+      },
+      "padiChecks": {
+        "heading": "Verificación con PADI (beta)",
+        "label": "Verificar certificaciones y eLearning de PADI",
+        "description": "Beta: nadie lo ha probado todavía en la página real de DiveChek de PADI, y PADI no ha dicho si acepta que una extensión la rellene. Funciona en un navegador donde uno de tus profesionales PADI tiene la sesión iniciada en el PADI Pros’ Site, con la afiliación de ese profesional. Desactivado, el enlace al PADI Pros’ Site se mantiene. Un propietario o un gerente puede activarlo."
       }
     },
     "crewSchedule": {
@@ -447,7 +485,7 @@
       "heading": "Sitios de buceo"
     },
     "waivers": {
-      "heading": "Plantilla de exención"
+      "heading": "Exenciones y registros firmados"
     },
     "safetyChecklist": {
       "heading": "Lista de verificación previa a la salida"
@@ -483,7 +521,12 @@
       "processorErasures": {
         "sectionLabel": "Borrados sin terminar en Stripe",
         "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen en Stripe",
-        "detail": "Borrar a un buceador también elimina su cliente de Stripe. Estos no se completaron. Un registro de cliente se reintenta solo esta noche. Una factura o una página de pago no: solo una solicitud de eliminación de datos a Stripe borra el nombre y el correo que copiaron. Preséntala y márcalo como hecho.",
+        "detail": "Borrado en DiveDay, pero aún no en Stripe.",
+        "todo": {
+          "stripe_customer": "Se reintenta solo esta noche, o reinténtalo ahora.",
+          "stripe_invoice_snapshot": "Presenta una solicitud de eliminación de datos a Stripe y márcalo como hecho.",
+          "stripe_checkout_session_snapshot": "Presenta una solicitud de eliminación de datos a Stripe y márcalo como hecho."
+        },
         "raised": "registrado el {date}",
         "retry": "Reintentar borrado",
         "retrying": "Reintentando…",
@@ -507,7 +550,21 @@
       "lineExamples": "Cámara hiperbárica, línea de accidentes de buceo, guardacostas…",
       "phoneLabel": "Número {n}",
       "vesselLabel": "Embarcación",
+      "vesselHint": "Solo se imprime en las salidas sin embarcación. El indicativo y el MMSI de cada embarcación van en Embarcaciones.",
       "shoreContactLabel": "Contacto en tierra",
+      "shoreContactDescription": "Un nombre y un número que lee la tripulación. DiveDay nunca escribe a esta línea.",
+      "shoreAlertEmailLabel": "Correo del contacto en tierra para avisos del pase de lista",
+      "shoreAlertEmailDescription": "Si un pase de lista sigue abierto pasada la hora de regreso del barco, esta dirección recibe un correo sobre esa salida, sin nombres. Antes recibe un enlace para confirmar, y no se envía nada hasta que lo haga.",
+      "shoreAlertConsent": "Aceptó recibir estos avisos",
+      "shoreAlertConsentRecorded": "Registrado {when} por {name}",
+      "shoreAlertConsentRecordedNoName": "Registrado {when}",
+      "shoreAlertConfirmed": "Lo confirmó {when}.",
+      "shoreAlertWaiting": "Esperando a que lo confirme. Envía el enlace de nuevo si no le llegó.",
+      "shoreAlertPhone": "Los avisos le dicen que llame al {phone}.",
+      "shoreAlertNoPhone": "El centro no tiene teléfono guardado, así que los avisos no le dan ningún número al que llamar.",
+      "shoreAlertResend": "Enviar el enlace otra vez",
+      "shoreAlertResending": "Enviando…",
+      "shoreAlertDemo": "Los centros de demostración no envían nada: ni enlace ni avisos.",
       "planLabel": "Si algo sale mal",
       "submit": "Guardar referencia de emergencia",
       "saving": "Guardando…"
@@ -523,14 +580,16 @@
       "validityLabel": "Válido hasta",
       "validityDescription": "Elige la fecha final inclusiva. Déjalo en blanco y no caduca.",
       "scopeLabel": "Cubre",
-      "submit": "Añadir paquete",
-      "submitting": "Añadiendo…",
+      "submit": "Agregar paquete",
+      "submitting": "Agregando…",
       "delete": "Eliminar",
-      "deleting": "Eliminando…"
+      "deleting": "Eliminando…",
+      "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})"
     }
   },
   "team": {
     "title": "Equipo",
+    "unnamedInviter": "Un compañero",
     "notice": {
       "invited": "Invitación enviada.",
       "inviteResent": "Invitación reenviada.",
@@ -610,10 +669,13 @@
       "save": "Guardar contacto",
       "saving": "Guardando…",
       "label": "Contacto de emergencia",
-      "addValue": "Añadir"
+      "addValue": "Agregar"
     },
-    "languagesEmpty": "No indicado",
-    "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}"
+    "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}",
+    "year": {
+      "certified": "{count, plural, one {# certificación emitida este año} other {# certificaciones emitidas este año}}",
+      "daysAtSea": "{count, plural, one {# día en el mar} other {# días en el mar}}"
+    }
   },
   "safetyChecklist": {
     "title": "Lista de verificación previa a la salida",
@@ -621,16 +683,17 @@
     "listHeading": "Lista de verificación",
     "empty": {
       "title": "Aún no hay nada en la lista",
-      "body": "Añade la primera línea abajo. La tripulación la ve en el manifiesto de cada salida."
+      "body": "Agrega la primera línea abajo. La tripulación la ve en el manifiesto de cada salida."
     },
+    "defaultLine": "Equipo de oxígeno a bordo y botella llena",
     "addLabel": "Nueva línea",
-    "addPlaceholder": "Kit de oxígeno de emergencia a bordo",
-    "addSubmit": "Añadir",
+    "addPlaceholder": "Chalecos salvavidas contados, uno por persona",
+    "addSubmit": "Agregar",
     "delete": "Eliminar",
     "moveUp": "Subir",
     "moveDown": "Bajar",
     "notice": {
-      "added": "Añadido a la lista de verificación.",
+      "added": "Agregado a la lista de verificación.",
       "deleted": "Eliminado de la lista de verificación.",
       "invalid": "Eso no se guardó. Inténtalo de nuevo.",
       "duplicateLabel": "Esa línea ya está en la lista.",
@@ -779,10 +842,10 @@
         "wetsuit_size": "Talla de neopreno",
         "boot_size": "Talla de botas (se guarda como una sola talla de aletas y escarpines)",
         "fin_size": "Talla de aletas y escarpines",
-        "waiver_accepted": "Waiver aceptado",
-        "waiver_signed_at": "Waiver firmado",
-        "waiver_source_name": "Origen del waiver",
-        "waiver_document_url": "Documento del waiver",
+        "waiver_accepted": "Exención aceptada",
+        "waiver_signed_at": "Exención firmada",
+        "waiver_source_name": "Origen de la exención",
+        "waiver_document_url": "Documento de la exención",
         "medical_document_url": "Documento médico",
         "payment_date": "Fecha de pago",
         "payment_status": "Estado del pago",
@@ -800,7 +863,7 @@
         "visit_reference": "Referencia de reserva",
         "internal_notes": "Notas internas"
       },
-      "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de waiver, así que su contenido nunca se importa. En su lugar se confía en una columna “waiver aceptado” reconocida; ver más abajo.",
+      "ignoredMedicalColumns": "Dejadas fuera a propósito: {columns}. No se reconocieron como columna de exención, así que su contenido nunca se importa. En su lugar se confía en una columna “Exención aceptada” reconocida; ver más abajo.",
       "unmappedColumns": "No reconocidas, así que se ignoran: {columns}.",
       "waiverRowsNoticeOne": "{count} fila declara una exención ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud médica, y la marca como “importada”.",
       "waiverRowsNoticeOther": "{count} filas declaran una exención ya aceptada en un centro anterior. DiveDay lo acepta, incluida la aptitud médica, y la marca como “importada”.",
@@ -845,8 +908,8 @@
       "submitting": "Importando…",
       "result": {
         "summary": "Importado. {addedPart}, {updatedPart}.",
-        "summaryAddedOne": "{added} añadido",
-        "summaryAddedOther": "{added} añadidos",
+        "summaryAddedOne": "{added} agregado",
+        "summaryAddedOther": "{added} agregados",
         "summaryUpdatedOne": "{updated} actualizado",
         "summaryUpdatedOther": "{updated} actualizados",
         "cardsLineOne": "{cards} importada y marcada como importada, con confirmación de un toque en cada buceador.",
@@ -857,22 +920,22 @@
         "cardsSpecialtyOther": "{count} certificaciones de especialidad",
         "cardsNitroxOne": "{count} certificación de nitrox",
         "cardsNitroxOther": "{count} certificaciones de nitrox",
-        "rowsMergedNote": " {count} fila(s) añadieron certificaciones a un buceador que trajo una fila anterior.",
+        "rowsMergedNote": " {count} fila(s) agregaron certificaciones a un buceador que trajo una fila anterior.",
         "cardsSkippedNote": " {count} certificación(es) ya presentes en esos registros se dejaron sin tocar.",
         "rowsSkippedNote": " {count} fila(s) omitidas.",
-        "cardsHeldByAnother": "{count} número(s) de certificación del archivo ya están en otro buceador de tu centro, así que esos registros no se añadieron a nadie. Revisa el archivo por si hay un número repetido y luego revisa y añade los registros de certificación en DiveDay.",
+        "cardsHeldByAnother": "{count} número(s) de certificación del archivo ya están en otro buceador de tu centro, así que esos registros no se agregaron a nadie. Revisa el archivo por si hay un número repetido y luego revisa y agrega los registros de certificación en DiveDay.",
         "specialtyGateNote": "Una inmersión que requiere una de esas especialidades espera esa confirmación. Tócala en el registro del buceador y la puerta se abre.",
-        "waiversLineOne": "{count} waiver importado como aceptado, marcado “importado” en el perfil del buceador.",
-        "waiversLineOther": "{count} waivers importados como aceptados, marcados “importado” en el perfil del buceador.",
-        "waiversSkippedExistingNote": " {count} buceador(es) ya tenían un waiver vigente en el archivo, se dejaron sin tocar.",
+        "waiversLineOne": "{count} exención importada como aceptada, marcada “importado” en el perfil del buceador.",
+        "waiversLineOther": "{count} exenciones importadas como aceptadas, marcadas “importado” en el perfil del buceador.",
+        "waiversSkippedExistingNote": " {count} buceador(es) ya tenían una exención vigente en el archivo, se dejaron sin tocar.",
         "waiversSkippedNoTemplateNoteOne": " {count} omitido. Configura primero una plantilla de exención.",
         "waiversSkippedNoTemplateNoteOther": " {count} omitidos. Configura primero una plantilla de exención.",
         "waiverDocumentsFailedNote": " {count} enlace(s) de documento no se pudieron descargar y se dejaron fuera del registro.",
-        "visitsLineOne": "{count} visita anterior añadida al historial del centro de los buceadores.",
-        "visitsLineOther": "{count} visitas anteriores añadidas al historial del centro de los buceadores.",
+        "visitsLineOne": "{count} visita anterior agregada al historial del centro de los buceadores.",
+        "visitsLineOther": "{count} visitas anteriores agregadas al historial del centro de los buceadores.",
         "visitsSkippedNote": " {count} ya estaban importadas y se dejaron como están, así que volver a ejecutar la misma exportación no duplica el historial de nadie.",
-        "paymentHistoryLineOne": "{count} registro de pago / recibo del origen sin verificar añadido a Pedidos.",
-        "paymentHistoryLineOther": "{count} registros de pago / recibo del origen sin verificar añadidos a Pedidos.",
+        "paymentHistoryLineOne": "{count} registro de pago / recibo del origen sin verificar agregado a Pedidos.",
+        "paymentHistoryLineOther": "{count} registros de pago / recibo del origen sin verificar agregados a Pedidos.",
         "paymentHistorySkippedNote": " {count} ya estaban importados y se dejaron como están.",
         "notesLineOne": "{count} nota interna importada a perfiles de buceadores.",
         "notesLineOther": "{count} notas internas importadas a perfiles de buceadores.",
@@ -892,15 +955,15 @@
       "specialtyImportedPendingOne": "Certificación de especialidad importada para revisión del personal.",
       "specialtyImportedPendingOther": "{count} certificaciones de especialidad importadas para revisión del personal.",
       "agencyUnrecognized": "Agencia de certificación no reconocida, así que se importó como “otra”.",
-      "levelNamesSpecialty": "La certificación “{level}” nombra una especialidad, no un nivel, así que se usó la columna de especialidad y no se importó ningún nivel. Añade ese registro de certificación en DiveDay si es independiente.",
+      "levelNamesSpecialty": "La certificación “{level}” nombra una especialidad, no un nivel, así que se usó la columna de especialidad y no se importó ningún nivel. Agrega ese registro de certificación en DiveDay si es independiente.",
       "levelIsTechnical": "La titulación “{level}” es técnica o de entornos con techo, no un peldaño recreativo, así que no se importó. Regístrala a mano si tu centro la exige.",
-      "levelNotGated": "La certificación “{level}” no es un nivel que controlemos, así que la certificación no se importó. Añade el registro en DiveDay si tu centro necesita conservarlo.",
+      "levelNotGated": "La certificación “{level}” no es un nivel que controlemos, así que la certificación no se importó. Agrega el registro en DiveDay si tu centro necesita conservarlo.",
       "levelNoCardNumber": "El nivel de certificación “{level}” no tiene un número de certificación utilizable, así que la certificación no se importó.",
       "certImportedVerified": "Certificación importada como verificada desde tus registros.",
       "certImportedPending": "Certificación importada para revisión del personal.",
       "nitroxImportedVerified": "Certificación de nitrox importada como verificada desde tus registros. Los rellenos dan aire normal hasta que el personal confirme.",
       "nitroxImportedPending": "Certificación de nitrox importada para revisión del personal. Una salida que exige nitrox retiene a este buceador hasta que se confirme.",
-      "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de certificación. Añade y verifica la certificación de nitrox en DiveDay.",
+      "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de certificación. Agrega y verifica la certificación de nitrox en DiveDay.",
       "waiverDateInvalid": "La fecha de aceptación de la exención “{value}” no es una fecha de calendario real (se espera AAAA-MM-DD), así que se importó fechada hoy en su lugar.",
       "waiverImported": "Exención importada como aceptada: se acepta la del centro anterior, incluida la aptitud médica, y se marca como “importada”.",
       "dobInvalid": "La fecha de nacimiento “{value}” no es una fecha de calendario plausible (se espera AAAA-MM-DD, 1900 o posterior, no en el futuro), así que el buceador se importó sin ella.",
@@ -910,7 +973,7 @@
       "paymentHistoryDateUnreadable": "La fecha del historial de pagos “{value}” no es una fecha que podamos leer, así que ese registro del origen no se importará.",
       "paymentHistoryNoDate": "Esta fila de pago o recibo del origen no tiene una fecha utilizable, así que no se importará.",
       "noName": "Esta fila no tiene nombre y se omitió.",
-      "mergedDuplicate": "Mismo buceador que la fila {row} ({email}), así que las certificaciones, la exención y la visita anterior de esta fila se añaden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
+      "mergedDuplicate": "Mismo buceador que la fila {row} ({email}), así que las certificaciones, la exención y la visita anterior de esta fila se agregan a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
       "noEmailNewRecord": "Esta fila no tiene correo y se importó como registro nuevo; una reimportación no podrá relacionarlo para actualizarlo.",
       "sizeTooLong": "{field}: “{value}” es demasiado larga para un campo de talla, así que el buceador se importa sin ella. Indícala en su ficha, o su formulario de equipo se la pedirá.",
       "shoeSizeCollapsed": "La talla de botas y la de aletas no coinciden, y DiveDay guarda una sola talla de calzado. Este buceador se importa con la talla de aletas, “{value}”, que es la que lee cada formulario de equipo."
@@ -939,7 +1002,7 @@
     "starting": "Iniciando…",
     "disable": "Desactivar dos pasos",
     "disabling": "Desactivando…",
-    "secretLabel": "Añade este secreto a tu aplicación de autenticación y escribe el código actual de seis cifras:",
+    "secretLabel": "Agrega este secreto a tu aplicación de autenticación y escribe el código actual de seis cifras:",
     "codeLabel": "Código de autenticación",
     "enable": "Activar",
     "enabling": "Activando…",
@@ -1038,19 +1101,19 @@
     "platforms": {
       "html": {
         "name": "HTML",
-        "note": "Pégalo donde deba aparecer el widget. La primera línea se carga una vez por página, añadas los widgets que añadas."
+        "note": "Pégalo donde deba aparecer el widget. La primera línea se carga una vez por página, agregues los widgets que agregues."
       },
       "wordpress": {
         "name": "WordPress",
-        "note": "Añade un bloque HTML personalizado donde deba aparecer el widget y pega el código dentro."
+        "note": "Agrega un bloque HTML personalizado donde deba aparecer el widget y pega el código dentro."
       },
       "squarespace": {
         "name": "Squarespace",
-        "note": "Añade un bloque de código (Insertar → Código) donde deba aparecer el widget y pega el código dentro."
+        "note": "Agrega un bloque de código (Insertar → Código) donde deba aparecer el widget y pega el código dentro."
       },
       "wix": {
         "name": "Wix",
-        "note": "Añade un elemento Insertar HTML, pega el código y ajusta el tamaño del elemento al widget."
+        "note": "Agrega un elemento Insertar HTML, pega el código y ajusta el tamaño del elemento al widget."
       }
     },
     "bookButton": {
@@ -1066,5 +1129,27 @@
     "partnerLinkField": "Enlace de referido",
     "showRequired": "Elige la salida de esta tarjeta.",
     "fromFareharbor": "¿Te cambias desde FareHarbor? <link>Mira qué inserción sustituye a cada uno de sus widgets</link>."
+  },
+  "certChecks": {
+    "title": "Prueba las verificaciones",
+    "description": "Solo páginas de muestra en este navegador: no se busca en ninguna agencia y ningún dato de un buceador sale de él.",
+    "run": "Ejecutar las verificaciones",
+    "running": "Ejecutando…",
+    "extension": "Extensión",
+    "samples": "Búsquedas de muestra",
+    "padi": "Sesión en el PADI Pros’ Site",
+    "report": "Informe de la sesión",
+    "passed": "Correcta",
+    "failed": "Fallida",
+    "notListed": "No está en esta versión",
+    "signedIn": "Sesión iniciada",
+    "signedOut": "Sin sesión",
+    "noTab": "Ninguna pestaña de PADI abierta",
+    "noAnswer": "Sin respuesta",
+    "noAccess": "Sin acceso al sitio de PADI",
+    "allowSite": "Chrome no deja entrar a la extensión en el sitio de {agency}. Actívalo en Extensiones, DiveDay certification check, Detalles, Acceso al sitio.",
+    "failedNext": "Envíanos el informe de abajo.",
+    "reportHint": "Cópialo y pégalo en un correo para nosotros.",
+    "copy": "Copiar informe"
   }
 }

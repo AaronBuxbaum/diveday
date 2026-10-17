@@ -5,8 +5,14 @@ import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { latestShopPayouts, type ShopPayout } from "@/db/payouts";
 import { listFailedRefunds } from "@/db/refund-failures";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
+import { type RoomChargeTotal, roomChargesByHotel } from "@/db/room-charges";
+import { listUnattributedRefunds } from "@/db/unattributed-refunds";
 import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
+import { monthNames } from "@/lib/format";
+import { shopMonthBounds, utcToWallTime } from "@/lib/zoned";
+import { RoomChargesLine } from "./RoomChargesLine";
 
 /**
  * The Orders index's back-office reads, each behind
@@ -27,29 +33,60 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  * - **Failed refunds**: refunds Stripe accepted and then reported failed
  *   (issue #2291): the money is back in the shop's balance and the diver is
  *   owed it again.
+ * - **Refunds made in Stripe**: a dashboard refund on a party's checkout,
+ *   which names no seat, held until staff pick one (issue #2293). Left out of
+ *   the stuck operations above so it is listed once, with its choices.
  * - **Payouts**: what Stripe last paid into the bank, and a payout that failed
  *   since (ADR 20261012-payouts-reach-diveday). Stored rows only, never a
  *   Stripe call.
  */
-export async function readBackOffice(db: AppDb, shopId: string, visible: boolean) {
+export async function readBackOffice(
+  db: AppDb,
+  shop: { id: string; timezone: string },
+  visible: boolean,
+) {
+  const shopId = shop.id;
   if (!visible) {
     return {
       stuckPaymentOperations: [],
       owedRefunds: [],
       paidAfterClose: [],
       failedRefunds: [],
-      payouts: { paid: null, failed: null },
+      unattributedRefunds: [],
+      payouts: { paid: null, failed: null, roomCharges: null },
     };
   }
-  const [stuckPaymentOperations, owedRefunds, paidAfterClose, failedRefunds, payouts] =
-    await Promise.all([
-      listStuckPaymentOperations(db, shopId),
-      listOwedShopCancellationRefunds(db, shopId),
-      listPaidAfterCloseCheckouts(db, shopId),
-      listFailedRefunds(db, shopId),
-      latestShopPayouts(db, shopId),
-    ]);
-  return { stuckPaymentOperations, owedRefunds, paidAfterClose, failedRefunds, payouts };
+  // This month's room charges per hotel, for the owner or manager who settles
+  // with the front desk (fifth-loop ideas, item 57), beside the payouts.
+  const wall = utcToWallTime(nowDate(), shop.timezone);
+  const month = { year: wall.year, month: wall.month };
+  const { from, to } = shopMonthBounds(month, shop.timezone);
+  const [
+    stuckPaymentOperations,
+    owedRefunds,
+    paidAfterClose,
+    failedRefunds,
+    unattributedRefunds,
+    latest,
+    totals,
+  ] = await Promise.all([
+    listStuckPaymentOperations(db, shopId, undefined, { withoutUnattributedRefunds: true }),
+    listOwedShopCancellationRefunds(db, shopId),
+    listPaidAfterCloseCheckouts(db, shopId),
+    listFailedRefunds(db, shopId),
+    listUnattributedRefunds(db, shopId),
+    latestShopPayouts(db, shopId),
+    roomChargesByHotel(db, shopId, from, to),
+  ]);
+  const payouts = { ...latest, roomCharges: { month: month.month, totals } };
+  return {
+    stuckPaymentOperations,
+    owedRefunds,
+    paidAfterClose,
+    failedRefunds,
+    unattributedRefunds,
+    payouts,
+  };
 }
 
 /**
@@ -63,7 +100,12 @@ export function PayoutLines({
   timeZone,
   t,
 }: {
-  payouts: { paid: ShopPayout | null; failed: ShopPayout | null };
+  payouts: {
+    paid: ShopPayout | null;
+    failed: ShopPayout | null;
+    /** This month's room charges per hotel; null for a reader who does not see money. */
+    roomCharges?: { month: number; totals: RoomChargeTotal[] } | null;
+  };
   locale: string;
   timeZone: string;
   t: StaffTranslator;
@@ -81,6 +123,14 @@ export function PayoutLines({
         <p className="mb-6 text-sm text-muted tabular-nums">
           {payoutSentence(t, payouts.paid, { locale, timeZone })}
         </p>
+      ) : null}
+      {payouts.roomCharges ? (
+        <RoomChargesLine
+          totals={payouts.roomCharges.totals}
+          month={monthNames(locale)[payouts.roomCharges.month - 1] ?? ""}
+          locale={locale}
+          t={t}
+        />
       ) : null}
     </>
   );

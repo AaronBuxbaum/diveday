@@ -1,9 +1,17 @@
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { listDeskEventsSince, markTripCaughtUp, recordDeskEvent } from "./desk-events";
-import { bookings, people, personRoles, shops, tripReadMarks, trips } from "./schema";
+import {
+  bookings,
+  people,
+  personRoles,
+  shops,
+  tripHelpRequests,
+  tripReadMarks,
+  trips,
+} from "./schema";
 
 /**
  * The catch-up strip's reader, against a real database (issues #1202, #1187).
@@ -35,6 +43,32 @@ async function catchUpFixture() {
   const [seat] = roster;
   if (!seat) throw new Error("catch-up fixture needs a seated diver");
   return { db, shop, reader, desk, trip, seat };
+}
+
+/**
+ * A diver's ask for a hand, as `saveHelpRequest` writes it: the request row,
+ * and the crew's line with no staff actor. Written here rather than through
+ * it because the fixture's departure may already have sailed, which that
+ * writer refuses, and what is under test is the reader.
+ */
+async function askForAHand(
+  db: Awaited<ReturnType<typeof catchUpFixture>>["db"],
+  input: { shopId: string; tripId: string; bookingId: string; personId: string },
+) {
+  await db.insert(tripHelpRequests).values({
+    shopId: input.shopId,
+    tripId: input.tripId,
+    bookingId: input.bookingId,
+    kind: "carry_gear",
+    status: "requested",
+  });
+  await recordDeskEvent(db, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    kind: "help_request",
+    bookingId: input.bookingId,
+    subjectPersonId: input.personId,
+  });
 }
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -121,12 +155,11 @@ describe("listDeskEventsSince", () => {
       actorPersonId: desk.id,
     });
     // A help request has no staff actor: the diver asked on their own link.
-    await recordDeskEvent(db, {
+    await askForAHand(db, {
       shopId: shop.id,
       tripId: trip.id,
-      kind: "help_request",
       bookingId: seat.id,
-      subjectPersonId: seat.personId,
+      personId: seat.personId,
     });
 
     const seen = await listDeskEventsSince(db, shop.id, trip.id, desk.id);
@@ -201,7 +234,7 @@ describe("listDeskEventsSince", () => {
     await recordDeskEvent(db, {
       shopId: shop.id,
       tripId: trip.id,
-      kind: "arrival",
+      kind: "gear_changed",
       bookingId: seat.id,
       subjectPersonId: seat.personId,
       actorPersonId: desk.id,
@@ -220,6 +253,102 @@ describe("listDeskEventsSince", () => {
     // erasure with no sweep of its own.
     const after = await listDeskEventsSince(db, shop.id, trip.id, reader.id);
     expect(after.events[0]?.subjectName).not.toBe(before.events[0]?.subjectName);
+  });
+});
+
+/**
+ * **The strip says a roster line only while the roster still says it** (UX
+ * review 2026-10-13, item 3): the demo's manifest opened on "Priya Sharma and
+ * Tom Okafor have checked in." directly above "0 of 11 people aboard" and
+ * Priya's row reading Blocked, because the lines were read from the event log
+ * alone.
+ */
+describe("listDeskEventsSince, against the roster it sits above", () => {
+  async function arrivalAfterMark(status: "booked" | "checked_in") {
+    const fixture = await catchUpFixture();
+    const { db, shop, reader, desk, trip, seat } = fixture;
+    await markTripCaughtUp(db, { shopId: shop.id, tripId: trip.id, personId: reader.id });
+    await db.update(bookings).set({ status }).where(eq(bookings.id, seat.id));
+    await recordDeskEvent(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      kind: "arrival",
+      bookingId: seat.id,
+      subjectPersonId: seat.personId,
+      actorPersonId: desk.id,
+    });
+    return fixture;
+  }
+
+  it("says an arrival while the seat is checked in", async () => {
+    const { db, shop, reader, trip } = await arrivalAfterMark("checked_in");
+    const seen = await listDeskEventsSince(db, shop.id, trip.id, reader.id);
+    expect(seen.events.map((event) => event.kind)).toEqual(["arrival"]);
+  });
+
+  it("drops an arrival whose check-in was taken back", async () => {
+    // `undoCheckInBooking` writes no event (an undo is not news), so the only
+    // thing that can retract the line is the seat it names.
+    const { db, shop, reader, trip, seat } = await arrivalAfterMark("checked_in");
+    await db.update(bookings).set({ status: "booked" }).where(eq(bookings.id, seat.id));
+    expect((await listDeskEventsSince(db, shop.id, trip.id, reader.id)).events).toEqual([]);
+  });
+
+  it("drops an arrival once the checked-in seat moves to another departure", async () => {
+    // Domain review 1: a seat move keeps the status, so the status alone would
+    // leave the old strip saying the diver arrived for a boat they are not on.
+    const { db, shop, reader, trip, seat } = await arrivalAfterMark("checked_in");
+    const [other] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), ne(trips.id, trip.id)))
+      .limit(1);
+    if (!other) throw new Error("expected a second departure");
+    await db.update(bookings).set({ tripId: other.id }).where(eq(bookings.id, seat.id));
+    expect((await listDeskEventsSince(db, shop.id, trip.id, reader.id)).events).toEqual([]);
+  });
+
+  it("never says an arrival for a seat the counter has not checked in", async () => {
+    const { db, shop, reader, trip } = await arrivalAfterMark("booked");
+    expect((await listDeskEventsSince(db, shop.id, trip.id, reader.id)).events).toEqual([]);
+  });
+
+  it("says a diver's ask for a hand only while it is still open", async () => {
+    const { db, shop, reader, trip, seat } = await catchUpFixture();
+    await markTripCaughtUp(db, { shopId: shop.id, tripId: trip.id, personId: reader.id });
+    await askForAHand(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: seat.id,
+      personId: seat.personId,
+    });
+    const open = await listDeskEventsSince(db, shop.id, trip.id, reader.id);
+    expect(open.events.map((event) => event.kind)).toEqual(["help_request"]);
+
+    // Withdrawn on the diver's own link: the line goes with the ask.
+    await db
+      .update(tripHelpRequests)
+      .set({ status: "withdrawn" })
+      .where(eq(tripHelpRequests.bookingId, seat.id));
+    expect((await listDeskEventsSince(db, shop.id, trip.id, reader.id)).events).toEqual([]);
+  });
+
+  it("drops a seat taken once that seat is released, and keeps the release", async () => {
+    const { db, shop, reader, desk, trip, seat } = await catchUpFixture();
+    await markTripCaughtUp(db, { shopId: shop.id, tripId: trip.id, personId: reader.id });
+    for (const kind of ["seat_taken", "seat_released"] as const) {
+      await recordDeskEvent(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        kind,
+        bookingId: seat.id,
+        subjectPersonId: seat.personId,
+        actorPersonId: desk.id,
+      });
+    }
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, seat.id));
+    const seen = await listDeskEventsSince(db, shop.id, trip.id, reader.id);
+    expect(seen.events.map((event) => event.kind)).toEqual(["seat_released"]);
   });
 });
 
@@ -258,6 +387,24 @@ describe("the seeded morning handoff", () => {
     expect(catchUp.mark).not.toBeNull();
     expect(catchUp.events.length).toBeGreaterThan(0);
     expect(catchUp.events.map((event) => event.kind)).toContain("arrival");
+
+    // And every line of it is true of the roster under it (UX review
+    // 2026-10-13, item 3): each named arrival is a checked-in seat, and the
+    // meeting point the strip says moved is one the departure actually has.
+    const checkedIn = await db
+      .select({ name: people.fullName })
+      .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
+      .where(and(eq(bookings.tripId, reefId), eq(bookings.status, "checked_in")));
+    const arrivals = catchUp.events.filter((event) => event.kind === "arrival");
+    expect(arrivals.map((event) => event.subjectName).sort()).toEqual(
+      checkedIn.map((row) => row.name).sort(),
+    );
+    const [reef] = await db
+      .select({ label: trips.meetingPointLabel })
+      .from(trips)
+      .where(eq(trips.id, reefId));
+    expect(reef?.label).toBeTruthy();
 
     const consented = await db
       .select({ id: bookings.id })

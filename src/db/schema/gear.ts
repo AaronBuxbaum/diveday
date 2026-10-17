@@ -13,6 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { orders } from "./payments";
 import { boats } from "./trips";
@@ -239,8 +240,8 @@ export const rentalFitProfiles = pgTable(
     fitConfirmedBy: uuid("fit_confirmed_by").references(() => people.id),
     /** Which piece they kept, so the sentence can name it beside the size on file. */
     fitConfirmedItem: rentalFitItem("fit_confirmed_item"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     uniqueIndex("rental_fit_profiles_shop_person_unique").on(table.shopId, table.personId),
@@ -409,6 +410,31 @@ export const gearItems = pgTable(
      */
     aboardBoatId: uuid("aboard_boat_id").references(() => boats.id, { onDelete: "set null" }),
     /**
+     * **This regulator is kept for enriched air** (issue #2207; Aaron
+     * 2026-10-13): O2-cleaned or set aside by the shop's own policy. Many
+     * shops run standard regulators up to 40%, many keep a designated set,
+     * and some manufacturers require it, so this is the shop's fact to hold,
+     * not DiveDay's rule.
+     *
+     * Only a regulator carries one (`updateGearItem` clears it for any other
+     * kind). Null is "the shop has not said", which reads the same as false
+     * everywhere. What it changes is narrow: the Gear tab's picker labels a
+     * designated regulator on a nitrox diver's row, and `proposeRentalUnits`
+     * proposes a nitrox diver only a designated regulator. It never blocks
+     * assigning any other one: that would be a boarding gate in disguise.
+     */
+    nitroxDesignated: boolean("nitrox_designated"),
+    /**
+     * **A wetsuit's thickness in whole millimetres** (issue #2206; Aaron
+     * 2026-10-13): the thickest panel, so a 5/4 is 5. Only a wetsuit carries
+     * one (`updateGearItem` clears it for any other kind); null is "not said".
+     * The Gear tab proposes a wetsuit only when this matches the departure's
+     * `trips.wetsuit_thickness_mm` as well as the size, and proposes nothing
+     * when either is unknown. A size label like "3mm L" stays free text: this
+     * is the column the proposal reads.
+     */
+    thicknessMm: integer("thickness_mm"),
+    /**
      * Set when staff delete a unit (ADR 20260820-every-delete-is-soft). The row
      * stays, and so do its `gear_service_events` and `gear_reservations` — a
      * fleet's care history is the last thing a delete should take, and it is
@@ -421,8 +447,8 @@ export const gearItems = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /** Staff member who deleted it, so the act is not anonymous. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // Partial on the live rows, so deleting "BCD #14" frees that tag for the
@@ -448,6 +474,11 @@ export const gearItems = pgTable(
       .on(table.aboardBoatId)
       .where(sql`${table.aboardBoatId} is not null and ${table.deletedAt} is null`),
     index("gear_items_label_trgm_idx").using("gin", sql`${table.label} gin_trgm_ops`),
+    // `WETSUIT_THICKNESS_MM` in src/lib/gear.ts, which the forms read.
+    check(
+      "gear_items_thickness_mm_range",
+      sql`${table.thicknessMm} is null or ${table.thicknessMm} between 1 and 10`,
+    ),
     index("gear_items_serial_trgm_idx").using("gin", sql`${table.serialNumber} gin_trgm_ops`),
     index("gear_items_brand_model_trgm_idx").using("gin", sql`${table.brandModel} gin_trgm_ops`),
   ],
@@ -500,7 +531,7 @@ export const gearServiceEvents = pgTable(
      * Attribution only; nulled if the person is ever erased.
      */
     recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("gear_service_events_item_idx").on(table.gearItemId, table.servicedOn),
@@ -589,6 +620,24 @@ export const gearReservations = pgTable(
      */
     divesLogged: integer("dives_logged"),
     /**
+     * **The gas in a counter-rented tank** (issue #2257, Aaron 2026-10-13,
+     * option a), as oxygen percent: 21 is air, 22 to 40 is EANx. Null means
+     * nobody recorded it. Only a counter rental carries it (a booking's gas is
+     * its nitrox request, H-11), and only a tank (the writer refuses any other
+     * kind). Above 21 the writer refuses unless the person holds a nitrox card
+     * that authorizes a fill (`authorizesNitroxFill`, the trip gate's own
+     * predicate). Not a fill log and not an analyzer reading: what the staffer
+     * said went in the tank, printed on the ticket.
+     */
+    fillO2Percent: integer("fill_o2_percent"),
+    /**
+     * When and by whom the gas above was recorded or last corrected (domain
+     * review A3). Set together with `fill_o2_percent`, never apart
+     * (`gear_reservations_fill_recorded`). Not an analysis: the ticket says so.
+     */
+    fillRecordedAt: timestamp("fill_recorded_at", { withTimezone: true }),
+    fillRecordedByPersonId: uuid("fill_recorded_by_person_id").references(() => people.id),
+    /**
      * **When a hold that never left the counter was let go** (issue #2258).
      * Releasing stamps the row instead of deleting it (ADR
      * 20260820-every-delete-is-soft), so the record that a unit was held for
@@ -606,7 +655,7 @@ export const gearReservations = pgTable(
      * moved onto dates the unit is taken for. Attribution only.
      */
     releasedByPersonId: uuid("released_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("gear_reservations_item_idx").on(table.gearItemId),
@@ -621,6 +670,14 @@ export const gearReservations = pgTable(
     check(
       "gear_reservations_dives_logged",
       sql`${table.divesLogged} is null or (${table.divesLogged} >= 0 and ${table.divesLogged} <= 200)`,
+    ),
+    check(
+      "gear_reservations_fill_o2_percent",
+      sql`${table.fillO2Percent} is null or (${table.bookingId} is null and ${table.fillO2Percent} >= 21 and ${table.fillO2Percent} <= 40)`,
+    ),
+    check(
+      "gear_reservations_fill_recorded",
+      sql`(${table.fillO2Percent} is null) = (${table.fillRecordedAt} is null)`,
     ),
     check(
       "gear_reservations_release_never_left",
@@ -654,7 +711,7 @@ export const priorGearAssignments = pgTable(
     note: text("note"),
     dedupeKey: text("dedupe_key").notNull(),
     importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("prior_gear_assignments_shop_gear_idx").on(

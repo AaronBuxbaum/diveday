@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeCheckout, recordingCheckout } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
-import { bookings, tips } from "./schema";
+import { bookings, integrationEvents, tips } from "./schema";
 import { setShopCurrency, setShopFeature } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
@@ -245,6 +246,7 @@ describe("getLatestTipForBooking", () => {
     const [firstRow] = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
     if (!firstRow) throw new Error("first tip row missing");
     await markTipExpiredBySessionId(db, firstRow.stripeSessionId);
+    advanceClock();
     const second = await startTipCheckout(db, tipInput(bookingId, 1500), provider);
     if (!second.ok) throw new Error("expected ok");
 
@@ -269,6 +271,33 @@ describe("markTipPaidBySessionId / markTipExpiredBySessionId", () => {
     // Re-running must not throw or move completedAt.
     const again = await markTipPaidBySessionId(db, row.stripeSessionId);
     expect(again?.completedAt?.getTime()).toBe(paid?.completedAt?.getTime());
+  });
+
+  it("puts a paid tip on the shop's books as income on its own line, once", async () => {
+    const { db, shop, bookingId } = await tipContext();
+    const started = await startTipCheckout(db, tipInput(bookingId, 1500), fakeCheckout());
+    if (!started.ok) throw new Error("expected ok");
+    const [row] = await db.select().from(tips).where(eq(tips.bookingId, bookingId));
+    if (!row) throw new Error("tip row missing");
+    await markTipPaidBySessionId(db, row.stripeSessionId);
+    await markTipPaidBySessionId(db, row.stripeSessionId);
+
+    const events = await db
+      .select()
+      .from(integrationEvents)
+      .where(eq(integrationEvents.entityId, row.id));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      shopId: shop.id,
+      eventType: "order.paid",
+      entityType: "tip",
+      idempotencyKey: `tip:${row.id}:paid`,
+    });
+    expect(events[0]?.payload).toMatchObject({
+      source: "tip",
+      totalCents: 1500,
+      lineItems: [expect.objectContaining({ kind: "tip", unitAmountCents: 1500 })],
+    });
   });
 
   it("expires a pending tip and leaves a paid one alone", async () => {

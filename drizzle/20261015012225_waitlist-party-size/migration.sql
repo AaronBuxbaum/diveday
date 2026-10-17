@@ -1,0 +1,2 @@
+ALTER TABLE "trip_waitlist_entries" ADD COLUMN "party_size" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "trip_waitlist_entries" ADD CONSTRAINT "trip_waitlist_entries_party_size_range" CHECK ("party_size" between 1 and 20);

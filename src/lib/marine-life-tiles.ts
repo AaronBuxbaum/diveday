@@ -33,8 +33,8 @@
  * byte-for-byte as it does today. Only a capture is served a variant, and only
  * because a capture is the one context with no srcset to choose from.
  *
- * The variants are written by `scripts/fetch-marine-life-photo.mjs`
- * (`--tiles-only` re-derives the whole set); `src/db/marine-life-catalog.test.ts`
+ * The variants are written by `pnpm content:photos` when a species photo is
+ * accepted (`pnpm content:photos tiles` re-derives the whole set); `src/db/marine-life-catalog.test.ts`
  * fails if a species is missing one.
  */
 
@@ -79,7 +79,7 @@ const BUNDLED_PHOTO = /^\/marine-life\/([a-z0-9-]+\.jpg)$/;
  * (or is enlarging a thumbnail into a hero), and it should fail loudly at the
  * first render rather than show up months later as an unexplained visual diff.
  * The fix when it fires is to add the width to `MARINE_LIFE_TILE_WIDTHS` and
- * re-run `scripts/fetch-marine-life-photo.mjs --tiles-only`.
+ * re-run `pnpm content:photos tiles`.
  */
 export function tileWidthFor(boxes: number | readonly number[]): number {
   const rendered = typeof boxes === "number" ? [boxes] : [...boxes];
@@ -102,8 +102,7 @@ export function tileWidthFor(boxes: number | readonly number[]): number {
     throw new RangeError(
       `marine-life tile: boxes ${rendered.join(", ")} share no committed width inside (${low}, ${high}) — committed are ${MARINE_LIFE_TILE_WIDTHS.join(
         ", ",
-      )}. Add one to MARINE_LIFE_TILE_WIDTHS and run ` +
-        "`node scripts/fetch-marine-life-photo.mjs --tiles-only`.",
+      )}. Add one to MARINE_LIFE_TILE_WIDTHS and run \`pnpm content:photos tiles\`.`,
     );
   }
   const widest = Math.max(...rendered);

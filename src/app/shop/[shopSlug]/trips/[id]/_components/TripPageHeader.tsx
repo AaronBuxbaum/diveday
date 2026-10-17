@@ -24,8 +24,9 @@ export function TripCapacityBadge({
   trip: TripCapacity & { status: string; sellableCapacity: number };
   cancelledLabel: string;
   /**
-   * The departure is back (`tripPhaseOf`): nothing is for sale, so "4 spots
-   * left" would be a live-day word on a record (UX review 2026-10-10, item 10).
+   * The boat has left the dock (`departureSailed`): nothing is for sale, so
+   * "4 seats left" would be a dock word at sea or on a record (UX review
+   * 2026-10-10, item 10; fourth review, item 16).
    */
   finished?: boolean;
   t: StaffTranslator;
@@ -43,7 +44,7 @@ export function TripCapacityBadge({
       <Badge tone={isFull(onSale) ? "success" : "primary"} tabularNums>
         {capacity.kind === "full"
           ? t("shared.capacity.full")
-          : t("shared.capacity.spotsLeft", { count: capacity.remaining })}
+          : t("shared.capacity.seatsLeft", { count: capacity.remaining })}
       </Badge>
       {trip.sellableCapacity < trip.capacity ? (
         <span className="text-muted tabular-nums">
@@ -100,6 +101,7 @@ export function TripPageHeader({
   actions,
   headerAside,
   price,
+  daySpan,
   className,
 }: {
   trip: { title: string; startsAt: Date; endsAt: Date };
@@ -132,11 +134,19 @@ export function TripPageHeader({
   headerAside?: ReactNode;
   /** Optional fare shown with the departure's date and time. */
   price?: ReactNode;
+  /**
+   * "3 days · Fri, Oct 23 – Sun, Oct 25" for a departure meeting on more than
+   * one day, in place of the first day's date and hours (item 26).
+   */
+  daySpan?: string;
   /** Allows a surface to tighten the space after its masthead when needed. */
   className?: string;
 }) {
   return (
-    <header className={className ?? "mb-8"}>
+    // `data-trip-page-header`: the printed packet drops the manifest's copy on
+    // the sheet it shares with the dive plan, whose header already said it
+    // (`globals.css`, fourth review item 17).
+    <header data-trip-page-header="" className={className ?? "mb-8"}>
       {/* **The way back up.** These are the deepest pages in the staff app and
           were once the only ones at depth 2-3 with no link to their parent at
           all: the first link in the header was a tab strip, which moved you
@@ -201,8 +211,12 @@ export function TripPageHeader({
       >
         {badge}
         <span>
-          {formatShortDate(trip.startsAt, locale, timeZone)} ·{" "}
-          {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
+          {daySpan ?? (
+            <>
+              {formatShortDate(trip.startsAt, locale, timeZone)} ·{" "}
+              {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, timeZone)}
+            </>
+          )}
           {price ? <> · {price}</> : null}
         </span>
       </div>

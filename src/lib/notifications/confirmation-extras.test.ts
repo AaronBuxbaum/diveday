@@ -49,6 +49,23 @@ describe("confirmationExtras", () => {
     });
   });
 
+  it("carries what the party's card checkout settled, beside the seat's own line (#2447)", () => {
+    expect(
+      confirmationExtras({
+        shop,
+        trip,
+        course: null,
+        participantType: "diver",
+        chargesOnline: true,
+        origin: null,
+        partyPaid: { amountCents: 63_180, currency: "usd", seats: 4 },
+      }),
+    ).toMatchObject({
+      money: { due: "deposit" },
+      partyPaid: { amountCents: 63_180, currency: "usd", seats: 4 },
+    });
+  });
+
   it("owes the whole seat at the shop when nothing went to a checkout", () => {
     expect(
       confirmationExtras({
@@ -60,6 +77,51 @@ describe("confirmationExtras", () => {
         origin: null,
       }),
     ).toMatchObject({ money: { due: "at_shop", amountCents: 15_000 } });
+  });
+
+  it("carries how the desk takes money with a seat due there, and never with one paid online (ideas item 21)", () => {
+    const desk = { ...shop, deskPayment: "cash" as const };
+    const atShop = confirmationExtras({
+      shop: desk,
+      trip,
+      course: null,
+      participantType: "diver",
+      chargesOnline: false,
+      origin: null,
+    });
+    expect(atShop).toMatchObject({ money: { due: "at_shop", deskPayment: "cash" } });
+    const online = confirmationExtras({
+      shop: desk,
+      trip,
+      course: null,
+      participantType: "diver",
+      chargesOnline: true,
+      origin: null,
+    });
+    expect(online.money).not.toHaveProperty("deskPayment");
+    const unsaid = confirmationExtras({
+      shop,
+      trip,
+      course: null,
+      participantType: "diver",
+      chargesOnline: false,
+      origin: null,
+    });
+    expect(unsaid.money).not.toHaveProperty("deskPayment");
+  });
+
+  it("sums the party's seats the lead still holds into one figure (fourth UX review, item 5)", () => {
+    expect(
+      confirmationExtras({
+        shop,
+        trip: { ...trip, depositCents: null },
+        course: null,
+        participantType: "diver",
+        partyTypes: ["diver", "diver"],
+        chargesOnline: false,
+        origin: null,
+      }),
+    ).toMatchObject({ money: { due: "at_shop", amountCents: 45_000, seats: 3 } });
   });
 
   it("says nothing of money, window or calendar for a free seat with no policy and no origin", () => {

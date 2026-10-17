@@ -28,13 +28,15 @@ import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { ariaLabelsIn, findElements, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 import { PayoutLines } from "./_components/PayoutLines";
+
+const ctx = fileScopedShopContext();
 
 // Same mocking shape as ../settings/SettingsPage.test.tsx: the page is invoked
 // directly, outside Next's request scope, so the three things that only exist
@@ -53,15 +55,12 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 };
 const auth = authModule.auth;
 const OrdersIndexPage = (await import("./page")).default;
-const { FailedRefundsQueue, OwedRefundsQueue, PaidAfterCloseQueue } = await import(
-  "./_components/OwedMoneyQueues"
-);
 
 const SHOP_SLUG = "blue-mantis";
 
 /** A session for the seeded staff member who really holds `role`, roles and all. */
 async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySession }> {
-  const db: AppDb = await seededTestDb();
+  const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, SHOP_SLUG);
   if (!shop) throw new Error("demo shop missing");
   const member = (await listShopStaff(db, shop.id)).find((staff) => staff.roles.includes(role));
@@ -83,7 +82,7 @@ async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySess
 
 /** The page, rendered for whatever `?…` a test wants to put to it. */
 /** The back-office queues, rendered in place so the tree walkers can read them. */
-const QUEUES = new Set<unknown>([OwedRefundsQueue, PaidAfterCloseQueue, FailedRefundsQueue]);
+const QUEUES = new Set<unknown>(Object.values(await import("./_components/OwedMoneyQueues")));
 
 function expandQueues(node: unknown): unknown {
   if (Array.isArray(node)) return node.map(expandQueues);
@@ -922,6 +921,6 @@ describe("the day ledger", () => {
     // Two of the three orders are Thursday's in New York; the 02:00Z one is
     // Wednesday evening there, and its money belongs to Wednesday.
     expect(thursday?.rows).toHaveLength(2);
-    expect(thursday?.meta).toBe("2 orders · $268.00");
+    expect(thursday?.meta).toBe("2 entries · $268.00");
   });
 });

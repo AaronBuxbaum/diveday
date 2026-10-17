@@ -94,6 +94,18 @@ describe("resolveRegSuitKeys", () => {
     expect(keys).toMatchObject({ actualKey: HEAD, expectedKey: PARENT, stacked: false });
   });
 
+  it("keys a dispatched run of main to the previous commit, as the push it stands in for", () => {
+    // durations-refresh.yml's commit gets no push run; it dispatches one. Read
+    // as a local run, it would ask git for `rev-parse main`, which a dispatch
+    // checkout need not have.
+    const keys = resolveRegSuitKeys({
+      env: { GITHUB_EVENT_NAME: "workflow_dispatch" },
+      git: git({ "rev-parse HEAD": HEAD, "rev-parse HEAD^": PARENT }),
+    });
+    expect(keys).toMatchObject({ actualKey: HEAD, expectedKey: PARENT, stacked: false });
+    expect(keys.source).toBe("the previous commit");
+  });
+
   it("keys a local run on a topic branch to its fork point from main", () => {
     const keys = resolveRegSuitKeys({
       env: {},

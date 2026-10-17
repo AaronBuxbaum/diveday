@@ -4,24 +4,14 @@ import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import {
-  GroupLabel,
-  groupLabelClass,
-  LedgerRow,
-  ledgerRowBoxClass,
-  ledgerRowRoomClass,
-} from "@/components/ui/ledger";
+import { GroupLabel, groupLabelClass } from "@/components/ui/group-label";
+import { LedgerRow, ledgerRowBoxClass, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { WeekPager } from "@/components/ui/week-pager";
+import { awayDatesText } from "@/i18n/away-labels";
 import { fill } from "@/i18n/fill";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import type { AvailabilityBlock } from "@/lib/crew-requests";
-import {
-  formatDayParts,
-  formatShortDate,
-  formatTime,
-  formatTimeRange,
-  formatTimeRangeTz,
-} from "@/lib/format";
+import { formatDayParts, formatShortDate, formatTimeRange, formatTimeRangeTz } from "@/lib/format";
 import {
   GAP_TONE,
   type PlacedGap,
@@ -30,6 +20,7 @@ import {
   type StaffWeek,
   type WeekShift,
 } from "@/lib/staffing-week";
+import { windowOnThisDay } from "./window-on-this-day";
 
 /**
  * **Staffing as a week** — ADR 20260827-the-shops-shelves, decision 3, which
@@ -65,6 +56,8 @@ import {
  * leaves Remove one tap away.
  */
 export type StaffingWeekWords = {
+  /** Each person's week in one figure, by person id (`personTotalsWords`, item 52). */
+  personTotals?: Readonly<Record<string, string>>;
   /** Names the grid to a screen reader. */
   ariaLabel: string;
   previous: string;
@@ -125,6 +118,14 @@ export type StaffingWeekWords = {
    * the crew list names somebody, and the chip alone read as nobody.
    */
   ratingLapsed: string;
+  /**
+   * "until {time} · from {day}" — a window that began on an earlier day and
+   * ends on this one (UX review 2026-10-13, item 21). The whole range on the
+   * second day read as a second night boat.
+   */
+  continuedUntil: string;
+  /** "from {day}" — a middle day of a window that neither starts nor ends on it. */
+  continuedFrom: string;
 };
 
 export type StaffingWeekLinks = {
@@ -357,7 +358,7 @@ function CrewChip({
     >
       <span className="sr-only">{words.crewing}: </span>
       <span className="font-semibold tabular-nums">
-        {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
+        {windowOnThisDay(trip, words, locale, timeZone, "range")}
       </span>
       <span className="line-clamp-2 font-medium">{trip.title}</span>
       {/* **One person, two hulls, these same hours** (issue #1695) — a state
@@ -387,15 +388,7 @@ function CrewChip({
           the week says so, and the conversation is the shop's to have. */}
       {trip.awayBlocks.length > 0 ? (
         <WarningLine size="xs" className="mt-0.5">
-          {fill(words.awayConflict, {
-            dates: trip.awayBlocks
-              .map((block) =>
-                block.startsOn === block.endsOn
-                  ? formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")
-                  : `${formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")} – ${formatShortDate(calendarDateToUtcMidnight(block.endsOn), locale, "UTC")}`,
-              )
-              .join(", "),
-          })}
+          {fill(words.awayConflict, { dates: awayDatesText(trip.awayBlocks, locale) })}
         </WarningLine>
       ) : null}
     </Link>
@@ -462,7 +455,8 @@ function GapChip({
   // question here is which boat, not how long it is out.
   const departure = (
     <>
-      <span className="tabular-nums">{formatTime(gap.startsAt, locale, timeZone)}</span> {gap.title}
+      <span className="tabular-nums">{windowOnThisDay(gap, words, locale, timeZone, "start")}</span>{" "}
+      {gap.title}
     </>
   );
   return (
@@ -599,6 +593,28 @@ const GRID_CLASS = "grid grid-cols-[9rem_repeat(7,minmax(0,1fr))]";
  *   fixed `h-11` was the chip before K-498 gave it its 1px edge, 2px short
  *   of the 46px it is now, a row (K-274).
  */
+/**
+ * The grid's name cell: the person, their roles, and their week in one figure
+ * (fifth-loop ideas, item 52), the last only when they work at all.
+ */
+export function PersonFace({
+  person,
+  totals,
+}: {
+  person: { name: string; roles: readonly string[] };
+  totals: string | undefined;
+}) {
+  return (
+    <>
+      <p className="text-sm font-semibold">{person.name}</p>
+      {person.roles.length > 0 ? (
+        <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
+      ) : null}
+      {totals ? <p className="text-xs text-muted tabular-nums">{totals}</p> : null}
+    </>
+  );
+}
+
 export const WEEK_GRID = {
   row: `${GRID_CLASS} ${ledgerRowBoxClass}`,
   personHead: "pe-2 py-2.5",
@@ -748,10 +764,7 @@ export function StaffingWeek({
         {week.people.map((person) => (
           <div key={person.personId} className={WEEK_GRID.row}>
             <div className={WEEK_GRID.person}>
-              <p className="text-sm font-semibold">{person.name}</p>
-              {person.roles.length > 0 ? (
-                <p className="text-xs text-muted">{person.roles.join(" · ")}</p>
-              ) : null}
+              <PersonFace person={person} totals={words.personTotals?.[person.personId]} />
             </div>
             {person.days.map((cell, index) => {
               const day = week.days[index];
@@ -835,7 +848,7 @@ export function StaffingWeek({
                   >
                     <p className="text-sm">
                       <span className="tabular-nums">
-                        {formatTime(gap.startsAt, locale, timeZone)}
+                        {windowOnThisDay(gap, words, locale, timeZone, "start")}
                       </span>{" "}
                       <span className="font-medium">{gap.title}</span>
                     </p>
@@ -963,7 +976,7 @@ export function StaffingWeek({
                           <span>
                             <span className="sr-only">{words.crewing}: </span>
                             <span className="tabular-nums">
-                              {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
+                              {windowOnThisDay(trip, words, locale, timeZone, "range")}
                             </span>{" "}
                             {trip.title}
                             {/* Whole: the space after the dot broke, and left

@@ -13,7 +13,7 @@ import {
 /**
  * The group-organizer loop (docs ADR 20260804-seat-claim-links): one
  * organizer books several seats, shares a claim link, and the invited diver
- * takes the seat over as themselves — own contact, own waiver, own prep —
+ * takes the seat over as themselves — own contact, own waiver, own prep by email —
  * while the organizer watches the claimed state land. The whole point is
  * killing "the organizer does everyone's paperwork".
  */
@@ -55,8 +55,17 @@ test.describe("seat claim links", () => {
     await page.getByLabel("Email", { exact: true }).fill(`orla-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Reyes");
     await page.getByLabel("Use the main contact’s email for this diver").check();
-    await page.getByRole("button", { name: "Book these spots" }).click();
+    // How the desk takes money, under "Due at the shop" (fifth-loop ideas,
+    // item 21): the demo shop takes cards and cash.
+    await expect(page.getByText("Pay by card or cash when you arrive.")).toBeVisible();
+    await page.getByRole("button", { name: "Book 2 seats" }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Orla/ })).toBeVisible();
+
+    // What the party owes at the shop, said once on the page the lead keeps,
+    // in the confirmation's own words (fourth UX review, item 5).
+    await expect(
+      page.getByText(/^2 seats: \$180\.00, due at the shop\. Pay by card or cash/),
+    ).toBeVisible();
 
     // The organizer's panel: the second seat, unclaimed, with a shareable link.
     const panel = page.locator("section", {
@@ -90,17 +99,12 @@ test.describe("seat claim links", () => {
     await claimantPage.getByLabel(/Your phone/).fill("+1-305-555-0134");
     await claimantPage.getByRole("button", { name: "Claim this seat" }).click();
 
-    // They land on their own prep hub, told plainly whose page this now is.
-    await expect(claimantPage).toHaveURL(/\/ready\//);
-    await expect(claimantPage.getByText(/This seat is yours now/)).toBeVisible();
-    await expect(claimantPage.getByRole("heading", { name: title })).toBeVisible();
-
-    // Their own waiver flow works from here — the one-hop sign button.
-    await claimantPage.getByRole("button", { name: "Sign your waiver" }).click();
-    await expect(claimantPage).toHaveURL(/\/waivers\//);
-    await expect(
-      claimantPage.getByRole("heading", { name: "A quick step before the dock" }),
-    ).toBeVisible();
+    // They land on the static "check your email" page, the same page a claim
+    // for an address already on the trip gets (issue #2381): their own prep
+    // link is in the confirmation email, not on screen.
+    await expect(claimantPage).toHaveURL(/\/claim\/[^/?#]+\?sent=1$/);
+    await expect(claimantPage.getByRole("heading", { name: "Check your email" })).toBeVisible();
+    await expect(claimantPage.getByText(/We’ve sent a note to the address you gave/)).toBeVisible();
 
     // The spent link is dead for everyone — and because the token still
     // resolves to a capability this app issued, it dies in the *booking* tier

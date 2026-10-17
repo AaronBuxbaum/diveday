@@ -18,6 +18,12 @@ export type PersonCandidateContext = {
   tripId: string;
   seatAction?: (formData: FormData) => void;
   /**
+   * The date request this seating answers, when the door was opened from one
+   * (third UX review, item 13). Posted beside the seat so the request closes
+   * as booked.
+   */
+  requestId?: string;
+  /**
    * The row's second button, offered only where a door can invite. One object
    * so a door that offers it carries every word for it: a missing label used
    * to fall back to English the copy guard could not see.
@@ -72,6 +78,7 @@ export function PersonCandidateList({
     candidates,
     tripId,
     seatAction,
+    requestId,
     invite,
     personHref,
     extraLine,
@@ -112,6 +119,7 @@ export function PersonCandidateList({
                   <form action={seatAction}>
                     <input type="hidden" name="tripId" value={tripId} />
                     <input type="hidden" name="personId" value={person.id} />
+                    {requestId ? <input type="hidden" name="request" value={requestId} /> : null}
                     <SubmitButton
                       pendingLabel={pendingLabel}
                       ariaLabel={addPersonAriaLabel(person.fullName)}

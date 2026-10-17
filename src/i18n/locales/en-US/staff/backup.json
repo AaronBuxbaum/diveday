@@ -12,8 +12,7 @@
     "disconnected": "Backup destination removed. The delivery history below stays.",
     "test-delivered": "Test delivery landed in your bucket.",
     "test-failed": "The test delivery didn’t land. {reason}",
-    "no-destination": "Save a destination first, then run a test delivery.",
-    "not-authorized": "Only an owner or manager can change backup settings."
+    "no-destination": "Save a destination first, then run a test delivery."
   },
   "status": {
     "configuredHeading": "Backups are set up",
@@ -75,7 +74,7 @@
   },
   "deliveryError": {
     "upload_unauthorized": "The bucket refused the credential. Check the access key and its write permission.",
-    "bucket_not_found": "No bucket by that name answered at the endpoint. Check both.",
+    "bucket_not_found": "No bucket by that name answered at that endpoint. Check the bucket name and the endpoint.",
     "upload_rejected": "The storage provider rejected the upload.",
     "network_unreachable": "The endpoint couldn’t be reached.",
     "credential_unreadable": "The stored secret key can’t be opened any more. Enter it again to fix this.",

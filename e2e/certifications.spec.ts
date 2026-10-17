@@ -190,7 +190,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await page.getByLabel("Name").fill(diverName);
   await page.getByLabel("Email").fill(diverEmail);
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You.ve got a seat/ })).toBeVisible();
 });
 
@@ -450,4 +450,68 @@ test("a diver types their card in from the readiness page, and staff verify it t
   await expect(
     page.locator("li").filter({ hasText: cardNumber }).filter({ visible: true }).last(),
   ).toContainText("certified");
+});
+
+/**
+ * **"I'm not certified yet", on the diver's own page** (third UX review, item
+ * 23). The sale does not ask (2026-08-27), so the certification step is where
+ * a first-timer meets agency, level and number with nothing to pick. They get
+ * an honest answer instead: the seat stays Blocked under its own reason, the
+ * page points at the shop's try-it course, and the diver record says it.
+ */
+test("a diver with no card says so on the readiness page, and the desk sees why", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  // Unique per attempt: the database outlives a retry, and two records with
+  // one name make the diver search ambiguous.
+  const stamp = Date.now();
+  const title = `Not Yet Run ${stamp}`;
+  const diver = `Tomás Ferreira ${stamp}`;
+  await createTrip(page, {
+    title,
+    date: daysFromNow(5),
+    departsAt: "08:00",
+    returnsAt: "11:00",
+    capacity: 6,
+  });
+  await signOut(page);
+
+  await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+  await page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: title })
+    .getByRole("link")
+    .click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill(diver);
+  await page.getByLabel("Email", { exact: true }).fill(`notyet-${stamp}@example.com`);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+
+  const certification = await openThreadStep(page, "certification");
+  await certification.getByText("No card yet?").waitFor();
+  await certification.getByRole("button", { name: "I’m not certified yet" }).click();
+  // Asked once: the statement cannot be taken back from this page.
+  await expect(certification.getByText("Tell the shop you have no card yet?")).toBeVisible();
+  await certification.getByRole("button", { name: "Yes, tell them" }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "The shop will get in touch about your options" }),
+  ).toBeVisible();
+
+  // Still Blocked, under its own reason, with the try-it course as the door
+  // and the card form still there for a card found in a drawer.
+  const step = await openThreadStep(page, "certification");
+  await expect(
+    step.getByRole("link", { name: "Not certified? Discover Scuba Diving is how to start" }),
+  ).toBeVisible();
+  await expect(step.getByText("Add your certification", { exact: true })).toBeVisible();
+  await expect(step.getByRole("button", { name: "I’m not certified yet" })).toHaveCount(0);
+
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/divers");
+  await page.getByRole("searchbox", { name: "Search divers" }).fill(diver);
+  await page.getByRole("link", { name: diver }).click();
+  await expect(page.getByText(/Says they’re not certified yet/).first()).toBeVisible();
 });

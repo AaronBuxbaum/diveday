@@ -140,6 +140,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // Off unless the shop said yes: a restore must not publish its counts
       // for a shop that never chose to.
       "public_year_enabled",
+      // The shop's own yes to the PADI checks (H-121): a restore must not
+      // run them under a PADI membership whose shop never chose to.
+      "padi_checks_enabled",
       "contact_email",
       "contact_phone",
       "address_street",
@@ -148,6 +151,12 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "address_postal_code",
       "address_country",
       "dock_call_minutes",
+      // Whether the shop runs hotel pickups: a restore must not start asking
+      // divers about a pickup the shop does not offer (fourth UX review, item 8).
+      "offers_hotel_pickup",
+      // How the desk takes money, so a restore still tells divers to bring
+      // cash or a card (fifth-loop ideas, item 21). Blank when never said.
+      "desk_payment",
       // The rest of the shop's dock-day rhythm (ADR
       // 20260812-configurable-dock-day-rhythm). Six numbers that describe
       // how this shop runs a day — as much the shop's own record as its
@@ -157,6 +166,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "boat_ride_minutes",
       "bottom_time_minutes",
       "surface_interval_minutes",
+      // The turnaround the shop wants between departures (issue #2141): its
+      // own operating policy, so the backup records it. No importer reads
+      // `shops` columns, so a restore does not bring it back: the Move
+      // panel's advice waits until it is set again in Settings.
+      "min_turnaround_minutes",
       "review_url",
       "packing_list",
       "rental_items",
@@ -230,6 +244,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.lastMinuteListEnabled,
         shop.tipsEnabled,
         shop.publicYearEnabled,
+        shop.padiChecksEnabled,
         shop.contactEmail,
         shop.contactPhone,
         shop.addressStreet,
@@ -238,11 +253,14 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.addressPostalCode,
         shop.addressCountry,
         shop.dockCallMinutes,
+        shop.offersHotelPickup,
+        shop.deskPayment ?? "",
         shop.gearSetupMinutes,
         shop.briefingMinutes,
         shop.boatRideMinutes,
         shop.bottomTimeMinutes,
         shop.surfaceIntervalMinutes,
+        shop.minTurnaroundMinutes,
         shop.reviewUrl,
         JSON.stringify(shop.packingList),
         JSON.stringify(shop.rentalItems),
@@ -280,9 +298,13 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "capacity",
       "description",
       "certified_passengers",
+      "certified_total_persons",
+      "coi_expires_on",
       "inspection_due_on",
       "registration_expires_on",
       "insurance_expires_on",
+      "call_sign",
+      "mmsi",
       "created_at",
     ],
     rows: ({ boatRows }) =>
@@ -292,9 +314,13 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.capacity,
         row.description,
         row.certifiedPassengers,
+        row.certifiedTotalPersons,
+        row.coiExpiresOn,
         row.inspectionDueOn,
         row.registrationExpiresOn,
         row.insuranceExpiresOn,
+        row.callSign,
+        row.mmsi,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["boats.csv"],
@@ -463,6 +489,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // answer the guardian rule read when no date was on file.
       "adult_attested_at",
       "adult_attested_by_person_id",
+      // A staffer's "seen diving dry", and whose (#2136). Staff-observed,
+      // never a card: it has no row in specialty_certifications.csv.
+      "drysuit_experience_seen_at",
+      "drysuit_experience_seen_by_person_id",
+      "drysuit_experience_seen_note",
       // **Where this record came from.** Set once, when a diver put
       // themselves on file at the shop's counter QR rather than being
       // typed in by staff (issue #1236). It changes how a destination
@@ -505,6 +536,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.noCertificationClearedByPersonId,
         row.adultAttestedAt,
         row.adultAttestedByPersonId,
+        row.drysuitExperienceSeenAt,
+        row.drysuitExperienceSeenByPersonId,
+        row.drysuitExperienceSeenNote,
         row.selfRegisteredAt,
         row.deletedAt,
         row.anonymizedAt,
@@ -575,7 +609,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // The shop's own answer about this departure, not a derived fact,
       // so it leaves with the shop (issue #973).
       "self_guided",
+      "lunch_aboard",
       "exceeds_no_deco_limits",
+      // The wetsuit the boat ran that day, in millimetres (issue #2206).
+      "wetsuit_thickness_mm",
       // The bundle carries deleted departures (they are still the shop's
       // rows), so it has to carry the stamp that says which — a file that
       // hands back a deleted departure looking live is worse than one
@@ -627,7 +664,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.arrivalPhotoUrl,
         row.isPrivate,
         row.selfGuided,
+        row.lunchAboard,
         row.exceedsNoDecoLimits,
+        row.wetsuitThicknessMm,
         row.deletedAt,
         row.createdAt,
       ]),
@@ -841,6 +880,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "person_name",
       "roles",
       "trip_role",
+      "assigned_by_person_id",
+      "assigned_by_name",
     ],
     rows: ({ personName, personRolesText, tripTitle, tripStartsAt, assignmentRows }) =>
       assignmentRows.map((row) => [
@@ -851,6 +892,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         personName.get(row.personId),
         personRolesText(row.personId),
         row.tripRole,
+        row.assignedByPersonId,
+        row.assignedByPersonId ? personName.get(row.assignedByPersonId) : null,
       ]),
     note: EXPORT_FILE_NOTES["trip_assignments.csv"],
   },
@@ -1296,7 +1339,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         templateRows.find((template) => template.id === row.templateId)?.title,
         row.material,
         row.actorPersonId,
-        personName.get(row.actorPersonId),
+        row.actorPersonId ? personName.get(row.actorPersonId) : null,
         row.decidedAt,
         row.seq,
       ]),
@@ -1305,7 +1348,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
   shopFile(WAIVER_RECORDS_CSV),
   {
     file: "course_forms.csv",
-    header: ["id", "title", "current_version", "deleted_at", "created_at"],
+    header: ["id", "title", "current_version", "medical_screening", "deleted_at", "created_at"],
     rows: ({ courseFormRows, courseFormVersionRows }) =>
       courseFormRows.map((row) => {
         const latest = courseFormVersionRows
@@ -1314,7 +1357,14 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
             (newest, version) => (!newest || version.version > newest.version ? version : newest),
             undefined,
           );
-        return [row.id, latest?.title, latest?.version, row.deletedAt, row.createdAt];
+        return [
+          row.id,
+          latest?.title,
+          latest?.version,
+          row.medicalScreening,
+          row.deletedAt,
+          row.createdAt,
+        ];
       }),
     note: EXPORT_FILE_NOTES["course_forms.csv"],
   },
@@ -1345,13 +1395,14 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
   },
   {
     file: "course_form_requirements.csv",
-    header: ["id", "course_id", "form_id", "position", "deleted_at", "created_at"],
+    header: ["id", "course_id", "form_id", "position", "max_age_years", "deleted_at", "created_at"],
     rows: ({ courseFormRequirementRows }) =>
       courseFormRequirementRows.map((row) => [
         row.id,
         row.courseId,
         row.formId,
         row.position,
+        row.maxAgeYears,
         row.deletedAt,
         row.createdAt,
       ]),
@@ -1372,6 +1423,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "status",
       "service_note",
       "aboard_boat_id",
+      // true on a regulator the shop keeps for enriched air (issue #2207);
+      // empty when the shop has not said, and on every other kind.
+      "nitrox_designated",
+      // A wetsuit's thickness in whole millimetres (issue #2206).
+      "thickness_mm",
       "deleted_at",
       "created_at",
       "updated_at",
@@ -1388,6 +1444,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.status,
         row.serviceNote,
         row.aboardBoatId,
+        row.nitroxDesignated,
+        row.thicknessMm,
         row.deletedAt,
         row.createdAt,
         row.updatedAt,
@@ -1520,6 +1578,80 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["pre_departure_check_events.csv"],
   },
+  {
+    file: "boat_snags.csv",
+    header: [
+      "id",
+      "boat_id",
+      "boat_name",
+      "checklist_item_id",
+      "checklist_item_label",
+      "note",
+      "noted_on_trip_id",
+      "noted_by_person_id",
+      "noted_by_name",
+      "noted_at",
+      "still_there_on_trip_id",
+      "still_there_by_person_id",
+      "still_there_by_name",
+      "still_there_at",
+      "fixed_on_trip_id",
+      "fixed_by_person_id",
+      "fixed_by_name",
+      "fixed_at",
+      "created_at",
+      "updated_at",
+    ],
+    rows: ({ personName, boatName, checklistItemLabel, boatSnagRows }) =>
+      boatSnagRows.map((row) => [
+        row.id,
+        row.boatId,
+        boatName.get(row.boatId),
+        row.checklistItemId,
+        checklistItemLabel.get(row.checklistItemId),
+        row.note,
+        row.notedOnTripId,
+        row.notedByPersonId,
+        personName.get(row.notedByPersonId),
+        row.notedAt,
+        row.stillThereOnTripId,
+        row.stillThereByPersonId,
+        row.stillThereByPersonId ? personName.get(row.stillThereByPersonId) : null,
+        row.stillThereAt,
+        row.fixedOnTripId,
+        row.fixedByPersonId,
+        row.fixedByPersonId ? personName.get(row.fixedByPersonId) : null,
+        row.fixedAt,
+        row.createdAt,
+        row.updatedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["boat_snags.csv"],
+  },
+  {
+    file: "departure_boat_safety_snapshots.csv",
+    header: [
+      "id",
+      "trip_id",
+      "boat_id",
+      "boat_name",
+      "judged_on",
+      "papers",
+      "notices",
+      "captured_at",
+    ],
+    rows: ({ boatSafetySnapshotRows }) =>
+      boatSafetySnapshotRows.map((row) => [
+        row.id,
+        row.tripId,
+        row.boatId,
+        row.boatName,
+        row.judgedOn,
+        JSON.stringify(row.papers),
+        JSON.stringify(row.notices),
+        row.capturedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["departure_boat_safety_snapshots.csv"],
+  },
   shopFile(PRIOR_VISITS_CSV),
   shopFile(IMPORTED_PAYMENT_HISTORY_CSV),
   {
@@ -1559,6 +1691,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "dive_site_id",
       "location_text",
       "what_happened",
+      "kind",
+      "severity",
       "first_aid_given",
       "oxygen_given",
       "oxygen_minutes",
@@ -1574,6 +1708,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "filed_at",
       "filed_by_person_id",
       "filed_by_name",
+      "legal_hold_at",
+      "deleted_at",
+      "deleted_by_person_id",
+      "deleted_by_name",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, incidentReportRows }) =>
       incidentReportRows.map((row) => [
@@ -1586,6 +1724,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.diveSiteId,
         row.locationText,
         row.whatHappened,
+        row.kind,
+        row.severity,
         row.firstAidGiven,
         row.oxygenGiven,
         row.oxygenMinutes,
@@ -1601,6 +1741,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.filedAt,
         row.filedByPersonId,
         row.filedByPersonId ? personName.get(row.filedByPersonId) : null,
+        row.legalHoldAt,
+        row.deletedAt,
+        row.deletedByPersonId,
+        row.deletedByPersonId ? personName.get(row.deletedByPersonId) : null,
       ]),
     note: EXPORT_FILE_NOTES["incident_reports.csv"],
   },
@@ -1656,6 +1800,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "booking_id",
       "actor_person_id",
       "actor_name",
+      "system_reason",
       "subject_person_id",
       "subject_name",
       "code",
@@ -1670,7 +1815,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.tripId ? tripTitle.get(row.tripId) : null,
         row.bookingId,
         row.actorPersonId,
-        personName.get(row.actorPersonId),
+        row.actorPersonId ? personName.get(row.actorPersonId) : null,
+        row.systemReason,
         row.subjectPersonId,
         row.subjectPersonId ? personName.get(row.subjectPersonId) : null,
         row.code,
@@ -1730,7 +1876,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "location_name",
       "description",
       "difficulty_level",
+      // true, false, or empty for "the shop has not said" (issue #2214).
+      "snorkel_suitable",
       "depth_range",
+      "depth_min_meters",
       "max_depth_meters",
       "expected_bottom_time_minutes",
       "current_note",
@@ -1781,7 +1930,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         // 20260813-dive-site-difficulty-is-a-code). The column keeps its
         // three stable values, so a destination system can map them.
         row.difficultyLevel,
+        row.snorkelSuitable,
         row.depthRange,
+        row.depthMinMeters,
         row.maxDepthMeters,
         row.expectedBottomTimeMinutes,
         row.currentNote,
@@ -1869,29 +2020,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         ];
       }),
     note: EXPORT_FILE_NOTES["dive_site_creatures.csv"],
-  },
-  {
-    file: "dive_site_moments.csv",
-    header: [
-      "id",
-      "dive_site_id",
-      "dive_site_name",
-      "caption",
-      "is_published",
-      "image_url",
-      "created_at",
-    ],
-    rows: ({ siteName, momentRows }) =>
-      momentRows.map((row) => [
-        row.id,
-        row.diveSiteId,
-        siteName.get(row.diveSiteId),
-        row.caption,
-        row.isPublished,
-        row.imageUrl,
-        row.createdAt,
-      ]),
-    note: EXPORT_FILE_NOTES["dive_site_moments.csv"],
   },
   shopFile(RECAP_PHOTOS_CSV),
   {
@@ -2067,6 +2195,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "is_active",
       "is_intro_course",
       "nitrox_compatible",
+      "gear_included",
       "created_at",
     ],
     rows: ({ courseRows }) =>
@@ -2101,6 +2230,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.isActive,
         row.isIntroCourse,
         row.nitroxCompatible,
+        row.gearIncluded,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["courses.csv"],

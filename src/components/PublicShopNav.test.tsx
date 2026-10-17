@@ -81,19 +81,16 @@ describe("PublicShopNav", () => {
     expect(screen.queryByRole("link", { name: "Courses" })).toBeNull();
   });
 
-  it("folds the schedule tab into the shop's name on a phone once there are three tabs", () => {
-    // At 390px the name, three tabs and the language control need more than
-    // the bar's 358 points, and the name was the slot that gave. The name link
-    // already leads to the schedule, so below `sm` that tab goes and the two
-    // the name cannot stand in for stay; the row keeps one height and 16px.
+  it("keeps every tab on a phone, three of them included", () => {
+    // The shop's name has its own line above the tabs below `sm` (issue
+    // #2303), so nothing folds into it and no tab is hidden at any width.
     pathname = "/s/blue-mantis";
     const three = [...ITEMS, { href: "/s/blue-mantis/packages", label: "Packages" }];
     render(<PublicShopNav ariaLabel="Shop pages" items={three} />);
 
-    const schedule = screen.getByRole("link", { name: "Schedule" }).closest("li");
-    expect(schedule?.className).toBe("hidden sm:block");
-    for (const label of ["Courses", "Packages"]) {
-      expect(screen.getByRole("link", { name: label }).closest("li")?.className).toBe("");
+    for (const label of ["Schedule", "Courses", "Packages"]) {
+      const item = screen.getByRole("link", { name: label }).closest("li");
+      expect(item?.className).toBe("");
     }
   });
 

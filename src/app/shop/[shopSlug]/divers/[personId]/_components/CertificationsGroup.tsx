@@ -1,14 +1,10 @@
-import type { ReactNode } from "react";
-import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import type { ComponentProps, ReactNode } from "react";
 import { CertificationCardRow } from "@/components/person/rows";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { agencyCheckQuery } from "@/lib/agency-check";
 import {
   type CertificationCardKind,
   certificationCardRowState,
@@ -18,24 +14,25 @@ import {
 } from "@/lib/certification-cards";
 import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate } from "@/lib/format";
-import { isUnsightedSelfDeclaration } from "@/lib/readiness";
+import { isUnsightedSelfDeclaration, needsCardSighting } from "@/lib/readiness";
 import {
-  addCardAction,
-  agencyCheckAction,
-  clearNoCertificationAction,
   deleteCertificationAction,
   deleteSpecialtyAction,
   markCertifiedAction,
   reviewAction,
   reviewSpecialtyAction,
 } from "../card-actions";
+import { AddCertificationForm } from "./AddCertificationForm";
 import { AgencyCheckLink } from "./AgencyCheckLink";
 import { CardSightingForm } from "./CardSightingForm";
+import { agencyCheckActions, levelCardCheck, listedChecks } from "./card-checks";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
+import { DrysuitExperienceRow } from "./DrysuitExperienceRow";
 import { fileGap } from "./file-gap";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
-import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
+import { NoCertificationRows } from "./NoCertificationRows";
+import type { DiverNotice } from "./NoticeBanner";
 import {
   AGENCY_KEYS,
   type CardAwaitingKind,
@@ -74,9 +71,6 @@ import {
 
 /** The anchor the status ledger's "Verify it" lands on — see `STATUS_TARGET_ANCHORS`. */
 const AWAITING_ANCHOR = "card-awaiting";
-
-/** The anchor the ledger's "Add certification" lands on: the capture form's own disclosure. */
-const ADD_ANCHOR = "card-add";
 
 /**
  * The one card row every kind renders through, so the three tables cannot
@@ -123,6 +117,76 @@ function CardRow({
       rowId={rowAnchor}
     />
   );
+}
+
+/** What a card's mark-certified control shows: the import to confirm, the card waiting, or settled. */
+function markState(card: {
+  status: "pending" | "verified";
+  importedAt: Date | null;
+  reviewedAt: Date | null;
+}) {
+  return needsImportConfirm(card) ? "confirm" : card.status === "pending" ? "pending" : "settled";
+}
+
+/**
+ * Under a nitrox or specialty card: the agency's link while it waits
+ * (`awaiting`), and the agency's own words when it has any. A card an agency
+ * check filed from the page's list (layer 3) carries them, and says where they
+ * came from by its stamp (`listedFromCertificationId`), before and after Mark
+ * certified: its note is the agency's words, never a staffer's.
+ */
+function PendingCardFoot({
+  t,
+  card,
+  awaiting,
+  check,
+}: {
+  t: StaffTranslator;
+  card: {
+    reviewNote: string | null;
+    listedFromCertificationId: string | null;
+    agency: keyof typeof AGENCY_KEYS;
+  };
+  awaiting: boolean;
+  /**
+   * The agency check, for a card the extension may check (issue #2592): the
+   * link becomes a button when the extension is here. Rendered for a settled
+   * card too, so a check that just certified it keeps its Undo toast.
+   */
+  check?: ComponentProps<typeof AgencyCheckLink>["check"];
+}) {
+  return (
+    <>
+      {check ? (
+        <AgencyCheckLink agency={card.agency} t={t} check={check} />
+      ) : awaiting ? (
+        <AgencyCheckLink agency={card.agency} t={t} />
+      ) : null}
+      {card.listedFromCertificationId ? (
+        <span className="block">
+          {t("divers.certifications.listedByAgency", { agency: t(AGENCY_KEYS[card.agency]) })}
+        </span>
+      ) : null}
+      {card.reviewNote ? <span className="block italic">{card.reviewNote}</span> : null}
+    </>
+  );
+}
+
+/**
+ * A card an agency check listed with no number of its own (an agency that
+ * numbers each card, its page showing none): confirmed through the sighting,
+ * as an unsighted self-declaration is.
+ */
+function listedWithoutANumber(card: {
+  status: "pending" | "verified";
+  listedFromCertificationId: string | null;
+  identifier: string | null;
+}): boolean {
+  return needsCardSighting({
+    status: card.status,
+    listedFromCertificationId: card.listedFromCertificationId,
+    identifier: card.identifier,
+  });
 }
 
 /** A no-break space, by code point, because a literal one is invisible in the source. */
@@ -258,6 +322,36 @@ function summarySaysGap(
   return waitingForALook && tone === "warning";
 }
 
+/**
+ * **Quiet ink, not a bordered button.** A filled `danger` control stood on
+ * every card row at rest — the loudest thing in the group a staffer reads to
+ * decide whether somebody dives, and the one act on the row that is never the
+ * reason they opened it. `danger-ghost` keeps the warning colour the rule
+ * requires for a destructive control while dropping the border and the fill,
+ * which is the same weight the record's note rows already use.
+ *
+ * No confirm dialog: the delete lands and a toast offers a one-tap undo.
+ */
+function deleteButton(
+  t: StaffTranslator,
+  action: (formData: FormData) => void,
+  id: string,
+  nitrox: boolean,
+) {
+  return (
+    <form action={action}>
+      <input type="hidden" name="certificationId" value={id} />
+      {nitrox ? <input type="hidden" name="cardType" value="nitrox" /> : null}
+      <SubmitButton
+        pendingLabel={t("divers.certifications.deleting")}
+        className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+      >
+        {t("divers.certifications.delete")}
+      </SubmitButton>
+    </form>
+  );
+}
+
 export function CertificationsGroup({
   diver,
   shop,
@@ -296,7 +390,8 @@ export function CertificationsGroup({
 
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
-  const agencyCheck = agencyCheckAction.bind(null, shopSlug, personId);
+  const agencyCheck = agencyCheckActions(shopSlug, personId);
+  const listed = listedChecks(diver.person, shop, agencyCheck);
   const deleteLevel = deleteCertificationAction.bind(null, shopSlug, personId);
   const deleteSpecialty = deleteSpecialtyAction.bind(null, shopSlug, personId);
   // The diver's own "I hold no card", still standing: set, never cleared by
@@ -333,31 +428,6 @@ export function CertificationsGroup({
     claimedKinds.add(kind);
     return cardAwaitingAnchor(kind);
   };
-
-  /**
-   * **Quiet ink, not a bordered button.** A filled `danger` control stood on
-   * every card row at rest — the loudest thing in the group a staffer reads to
-   * decide whether somebody dives, and the one act on the row that is never the
-   * reason they opened it. `danger-ghost` keeps the warning colour the rule
-   * requires for a destructive control while dropping the border and the fill,
-   * which is the same weight the record's note rows already use.
-   *
-   * No confirm dialog: the delete lands and a toast offers a one-tap undo.
-   */
-  function deleteButton(action: (formData: FormData) => void, id: string, nitrox: boolean) {
-    return (
-      <form action={action}>
-        <input type="hidden" name="certificationId" value={id} />
-        {nitrox ? <input type="hidden" name="cardType" value="nitrox" /> : null}
-        <SubmitButton
-          pendingLabel={t("divers.certifications.deleting")}
-          className={buttonClass({ variant: "danger-ghost", size: "sm" })}
-        >
-          {t("divers.certifications.delete")}
-        </SubmitButton>
-      </form>
-    );
-  }
 
   const rows: ReactNode[] = [];
 
@@ -405,15 +475,8 @@ export function CertificationsGroup({
               check={{
                 certificationId: card.id,
                 awaiting: awaiting || needsImportConfirm(card),
-                query: selfDeclared
-                  ? null
-                  : agencyCheckQuery({
-                      agency: card.agency,
-                      fullName: diver.person.fullName,
-                      dateOfBirth: diver.person.dateOfBirth,
-                      identifier: card.identifier,
-                    }),
-                action: agencyCheck,
+                ...levelCardCheck(card, diver.person, shop, selfDeclared),
+                ...agencyCheck,
               }}
             />
             {card.reviewNote ? <span className="block italic">{card.reviewNote}</span> : null}
@@ -451,17 +514,11 @@ export function CertificationsGroup({
                 action={markCertify}
                 certificationId={card.id}
                 cardType="level"
-                state={
-                  needsImportConfirm(card)
-                    ? "confirm"
-                    : card.status === "pending"
-                      ? "pending"
-                      : "settled"
-                }
+                state={markState(card)}
                 copy={markCertified}
               />
             )}
-            {deleteButton(deleteLevel, card.id, false)}
+            {deleteButton(t, deleteLevel, card.id, false)}
           </>
         }
       />,
@@ -487,12 +544,17 @@ export function CertificationsGroup({
         detail={
           <>
             {card.identifier}
-            {awaiting ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+            <PendingCardFoot
+              t={t}
+              card={card}
+              awaiting={awaiting}
+              check={listed(card, { id: card.id, type: "specialty", kind: card.specialty })}
+            />
           </>
         }
         actions={
           <>
-            {selfDeclared ? (
+            {selfDeclared || listedWithoutANumber(card) ? (
               <CardSightingForm
                 t={t}
                 action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
@@ -504,17 +566,11 @@ export function CertificationsGroup({
                 action={markCertify}
                 certificationId={card.id}
                 cardType="specialty"
-                state={
-                  needsImportConfirm(card)
-                    ? "confirm"
-                    : card.status === "pending"
-                      ? "pending"
-                      : "settled"
-                }
+                state={markState(card)}
                 copy={markCertified}
               />
             )}
-            {deleteButton(deleteSpecialty, card.id, false)}
+            {deleteButton(t, deleteSpecialty, card.id, false)}
           </>
         }
       />,
@@ -544,12 +600,21 @@ export function CertificationsGroup({
                 sighted: its agency is often the "other" placeholder and its
                 title drops the agency, so a lookup link would send the staffer
                 to an agency nobody named. The sighted claim gets one. */}
-            {awaiting && !selfDeclared ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+            <PendingCardFoot
+              t={t}
+              card={card}
+              awaiting={awaiting && !selfDeclared}
+              check={
+                selfDeclared
+                  ? undefined
+                  : listed(card, { id: card.id, type: "nitrox", kind: "nitrox" })
+              }
+            />
           </>
         }
         actions={
           <>
-            {selfDeclared ? (
+            {selfDeclared || listedWithoutANumber(card) ? (
               <CardSightingForm
                 t={t}
                 action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
@@ -562,17 +627,11 @@ export function CertificationsGroup({
                 action={markCertify}
                 certificationId={card.id}
                 cardType="nitrox"
-                state={
-                  needsImportConfirm(card)
-                    ? "confirm"
-                    : card.status === "pending"
-                      ? "pending"
-                      : "settled"
-                }
+                state={markState(card)}
                 copy={markCertified}
               />
             )}
-            {deleteButton(deleteSpecialty, card.id, true)}
+            {deleteButton(t, deleteSpecialty, card.id, true)}
           </>
         }
       />,
@@ -602,146 +661,30 @@ export function CertificationsGroup({
         bodyAs="ul"
       >
         {rows}
-        {noCertificationDeclared ? (
-          /* **The one statement on this record a staffer could not correct.**
-             `people.no_certification_declared_at` is written by two
-             unauthenticated forms that resolve a person by shop + email, so for
-             a diver the shop holds no card for, anybody with a name and an
-             email address off a manifest can leave it here.
-
-             Warning ink and worded as the diver's own word, the same way a
-             self-declared card is, because it is exactly as weak. Clearing it
-             takes the record to *silence*, never to "certified". The phrase
-             comes from `shared.certificationSummary.notCertified` and is never
-             respelled here. */
-          <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <div className="min-w-0">
-              <p className="font-medium text-warning-strong">
-                {t("shared.certificationSummary.notCertified")}
-              </p>
-              <p className="mt-1 text-sm text-muted">
-                {t("divers.certifications.clearNoCertificationHint")}
-              </p>
-              {/* **This came back after somebody already corrected it.** A set
-                  `clearedByPersonId` beside a null `clearedAt` is the one state
-                  the plain panel would render identically to a first-time
-                  answer — and the difference is the signal: it separates
-                  "somebody is looping this through the public form" from "the
-                  diver really did answer that". */}
-              {diver.person.noCertificationClearedByPersonId ? (
-                <p className="mt-1 text-sm text-muted">
-                  {t("divers.certifications.noCertificationRestated")}
-                </p>
-              ) : null}
-            </div>
-            <form action={clearNoCertificationAction.bind(null, shopSlug, personId)}>
-              <SubmitButton
-                pendingLabel={t("divers.certifications.clearingNoCertification")}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("divers.certifications.clearNoCertification")}
-              </SubmitButton>
-            </form>
-          </li>
-        ) : null}
-        {rows.length === 0 && !noCertificationDeclared ? (
-          <li className="px-5 py-4 text-sm text-muted sm:px-6">
-            {t("divers.certifications.empty")}
-          </li>
-        ) : null}
-        {/* **A correction that leaves no mark is not a correction.** The panel
-            above unmounts the moment it succeeds, so without this line the next
-            staffer cannot see that this diver ever gave that answer, or that a
-            colleague overrode it. */}
-        {!noCertificationDeclared && diver.person.noCertificationClearedAt ? (
-          <li className="px-5 py-4 text-sm text-muted sm:px-6">
-            {t("divers.certifications.noCertificationClearedNote", {
-              date: formatShortDate(diver.person.noCertificationClearedAt, locale, shop.timezone),
-              name:
-                diver.noCertificationClearedByName ??
-                t("divers.certifications.noCertificationClearedByUnknown"),
-            })}
-          </li>
-        ) : null}
-        {/* `<li>`, not `<div>`: the shell above is a `<ul>`, and a list that
-            directly contains anything but a list item is a serious axe
-            violation (`only-listitems`) — the count a screen reader is given
-            before it starts reading is exactly what stops being true. Every
-            non-row block in this group is one for the same reason. */}
-        <li className="px-5 py-3 sm:px-6">
-          {/* The status ledger's "Add certification" lands here
-              (`STATUS_TARGET_ANCHORS.add_card`), and opens it: a fix that
-              scrolled to a shut door would leave the form one more tap away. */}
-          <AutoOpenDetails id={ADD_ANCHOR} openOnHash={ADD_ANCHOR} className="group scroll-mt-8">
-            <summary
-              className={buttonClass({
-                variant: "link",
-                size: "sm",
-                flush: true,
-                className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-              })}
-            >
-              {t("divers.certifications.addCard")}
-              <DisclosureCaret direction="down" className="group-open:rotate-180" />
-            </summary>
-            {/* No `encType`: a function `action` is a server action, not a
-                native form post — React builds the `FormData` and ships it over
-                its own transport, so the browser never reads that attribute. */}
-            <FieldGrid
-              as="form"
-              action={addCardAction.bind(null, shopSlug, personId)}
-              columns={2}
-              // Flat, not a card: it already sits inside the group's own panel,
-              // and a bordered card in a bordered card read as a second page.
-              className="mt-4 gap-y-3"
-            >
-              <Field label={t("divers.certifications.agency")}>
-                <select name="agency" className={controlClass}>
-                  {Object.entries(AGENCY_KEYS).map(([value, key]) => (
-                    <option key={value} value={value}>
-                      {t(key)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              {/* One question, not two: a staffer holding a card reads what it
-                  is, and the ladder and the specialties are the same list to
-                  them. The `<optgroup>`s are what keeps a rung from reading as
-                  a specialty. */}
-              <Field label={t("divers.certifications.cardLabel")}>
-                <select name="card" className={controlClass} defaultValue="level:open_water">
-                  <optgroup label={t("divers.certifications.cardKindLevel")}>
-                    {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
-                      <option key={value} value={`level:${value}`}>
-                        {t(key)}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label={t("divers.certifications.cardKindSpecialty")}>
-                    {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                      <option key={value} value={`specialty:${value}`}>
-                        {t(key)}
-                      </option>
-                    ))}
-                    <option value="nitrox">{t("divers.specialty.nitroxOption")}</option>
-                  </optgroup>
-                </select>
-              </Field>
-              <Field label={t("divers.certifications.cardNumber")}>
-                <input name="identifier" required className={controlClass} />
-              </Field>
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("divers.certifications.capturing")}
-                  className={buttonClass({ variant: "secondary" })}
-                >
-                  {t("divers.certifications.captureForReview")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          </AutoOpenDetails>
-          <DiverFormStatus status={groupStatus} className="mt-3" />
-        </li>
+        <NoCertificationRows
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          t={t}
+          declared={noCertificationDeclared}
+          empty={rows.length === 0}
+        />
+        <DrysuitExperienceRow
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          t={t}
+        />
+        <AddCertificationForm
+          t={t}
+          shopSlug={shopSlug}
+          personId={personId}
+          groupStatus={groupStatus}
+        />
       </InsetGroup>
     </DiverFileGroupDisclosure>
   );

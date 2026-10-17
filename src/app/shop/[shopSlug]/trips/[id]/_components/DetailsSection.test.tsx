@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DetailsSection } from "./DetailsSection";
 import type { Trip } from "./types";
@@ -39,17 +39,23 @@ const trip = {
 
 const wall = { year: 2026, month: 10, day: 3, hour: 8, minute: 0 };
 
-function renderDetails() {
+function renderDetails(
+  days: { dayCount: number; laterDates: string[] } = {
+    dayCount: 1,
+    laterDates: [],
+  },
+  shown: Trip = trip,
+) {
   return render(
     <DetailsSection
       context={{
         action: () => {},
-        trip: trip,
+        trip: shown,
         diveSiteList: [],
         tripDiveList: [],
         startWall: wall,
         endWall: { ...wall, hour: 12 },
-        dayCount: 1,
+        ...days,
         locale: "en-US",
         currency: "USD",
         boats: [],
@@ -57,6 +63,7 @@ function renderDetails() {
         hasBoatDiving: true,
         hasShoreDiving: false,
         hasPoolDiving: false,
+        rentalItems: [],
       }}
     />,
   );
@@ -82,5 +89,51 @@ describe("DetailsSection — the stored arrival photo", () => {
     expect(wrapper?.className).not.toMatch(/grid-cols/);
     // Why: the field it sits in is one cell of a two-column grid.
     expect(wrapper?.closest('[class*="grid-cols"]')).toHaveClass("sm:grid-cols-2");
+  });
+});
+
+/**
+ * **A departure's days run back to back, for now** (`MAX_MEETING_DAY_GAP_DAYS`):
+ * Today and the roll call read a departure as one window, so the edit form
+ * asks only how many days and offers no date to put a gap in. The date boxes
+ * themselves are `MeetingDaysField.test.tsx`'s.
+ */
+describe("a departure that meets on several days", () => {
+  it("asks only how many days, with no date box for a later day", () => {
+    renderDetails({ dayCount: 1, laterDates: [] });
+    fireEvent.change(screen.getByRole("spinbutton", { name: /Days/ }), { target: { value: "3" } });
+    expect(screen.queryByLabelText("Day 2")).toBeNull();
+    expect(document.querySelector('input[name="meetingDate"]')).toBeNull();
+  });
+});
+
+/**
+ * A priced course holds the session's price (fourth UX review, item 26):
+ * checkout charges the course fee plus its eLearning fee, so an editable box
+ * here set a number nobody is charged.
+ */
+describe("a session of a priced course", () => {
+  it("states the course's price and offers no price box, keeping the stored value", () => {
+    const session = {
+      ...trip,
+      courseId: "course-1",
+      course: { title: "Open Water", priceCents: 54_900, eLearningPriceCents: 16_000 },
+    } as unknown as Trip;
+    renderDetails(undefined, session);
+    expect(screen.getByText(/^\$709(\.00)? per diver, the course’s price$/)).toBeTruthy();
+    const price = document.querySelector<HTMLInputElement>('input[name="priceDollars"]');
+    expect(price?.type).toBe("hidden");
+    expect(price?.value).toBe("120");
+  });
+
+  it("keeps the price box for a course with no price of its own", () => {
+    const session = {
+      ...trip,
+      courseId: "course-1",
+      course: { title: "Open Water", priceCents: null, eLearningPriceCents: null },
+    } as unknown as Trip;
+    renderDetails(undefined, session);
+    const price = document.querySelector<HTMLInputElement>('input[name="priceDollars"]');
+    expect(price?.type).toBe("number");
   });
 });

@@ -6,6 +6,7 @@ import process from "node:process";
 
 import {
   findIssueProblems,
+  IDEA_LABEL,
   INBOX_CEILING,
   inboxProblem,
   LABEL,
@@ -168,7 +169,8 @@ const SECTION_FIELDS = new Map([
  * filing an issue whose `Kind:` is `--effort`.
  *
  * `--label` is the one repeatable flag (it is a set), and `needs-triage` is
- * always in that set whether or not it was named.
+ * always in that set whether or not it was named — except under `--idea`, which files under
+ * `idea` instead: out of the triage inbox and every ready-for-* sweep until a human promotes it.
  *
  * Returns `{ error }` instead of exiting, so the tests can read the message.
  */
@@ -176,12 +178,18 @@ export function parseFileArgs(argv) {
   const values = {};
   const labels = [];
   let dryRun = false;
+  let idea = false;
   const seen = new Set();
   for (let at = 0; at < argv.length; at += 1) {
     const name = argv[at];
     if (name === "--dry-run") {
       if (dryRun) return { error: `file-follow-up: ${name} given twice` };
       dryRun = true;
+      continue;
+    }
+    if (name === "--idea") {
+      if (idea) return { error: `file-follow-up: ${name} given twice` };
+      idea = true;
       continue;
     }
     const isLabel = name === "--label";
@@ -196,6 +204,7 @@ export function parseFileArgs(argv) {
     if (
       value === undefined ||
       value === "--dry-run" ||
+      value === "--idea" ||
       value === "--label" ||
       value in VALUE_FLAGS
     ) {
@@ -220,7 +229,15 @@ export function parseFileArgs(argv) {
 
   // A question is a decision only a human can make: it goes straight to the human queue, not
   // into the agent inbox where 31 of 128 sat on 2026-10-13.
-  const applied = new Set([values.kind === "question" ? QUESTION_LABEL : LABEL, ...labels]);
+  // An idea is the opposite of a question: nobody owes it an answer, so it skips both queues.
+  if (idea && values.kind === "question") {
+    return {
+      error:
+        "file-follow-up: --idea files something nobody has to decide yet; a question needs a human's answer, so drop --idea",
+    };
+  }
+  const queue = idea ? IDEA_LABEL : values.kind === "question" ? QUESTION_LABEL : LABEL;
+  const applied = new Set([queue, ...labels]);
   // The prose and the label have to agree, and only one direction of that is
   // caught downstream. `--label waiting-on-external` with no `--waiting-on` is
   // refused by `findIssueProblems`, which demands the line. The reverse is
@@ -247,6 +264,7 @@ export function parseFileArgs(argv) {
       .map((token) => token.trim())
       .filter(Boolean),
     labels: [...applied],
+    idea,
     dryRun,
   };
 }
@@ -562,7 +580,8 @@ async function main() {
 
   const ledger = ledgerPath(root);
   const recent = filedInWindow(readLedger(ledger));
-  if (recent >= FOLLOW_UP_QUOTA && !parsed.overQuota) {
+  // Ideas sit on a shelf nobody is asked to read, so the quota guarding the inbox does not apply.
+  if (!parsed.idea && recent >= FOLLOW_UP_QUOTA && !parsed.overQuota) {
     console.error(
       `file-follow-up: DID NOT FILE — ${recent} follow-ups were filed from this clone (every worktree, so a whole stack) in the last ${QUOTA_WINDOW_HOURS} hours, and the quota is ${FOLLOW_UP_QUOTA}. Do the most valuable of what is left, fold related notes into one issue, or say in your hand-off what you did not file. If this one cannot wait, pass --over-quota "<why>". See docs/agents/issue-tracker.md's Filing a follow-up section.`,
     );
@@ -580,12 +599,13 @@ async function main() {
     );
   }
   if (open) {
+    // A warning, not a refusal: word overlap cannot tell three different capture requests from
+    // one item filed twice, and the triage routine folds true twins (check-follow-ups.mjs).
     const twin = nearDuplicate(parsed.title, open);
     if (twin) {
       console.error(
-        `file-follow-up: DID NOT FILE — #${twin.number} “${twin.title}” is open and starts with the same words. Add this to it as a comment, or fold both into one issue; if it really is a different item, give it a title that says how.`,
+        `file-follow-up: #${twin.number} “${twin.title}” is open and reads like this one. Filing anyway; if it is the same item, comment on #${twin.number} and close the new one as a duplicate.`,
       );
-      process.exit(1);
     }
     const inbox = open.filter((issue) =>
       (issue.labels ?? []).some((label) => label.name === LABEL),
@@ -606,7 +626,8 @@ async function main() {
     process.exit(1);
   }
   try {
-    appendFileSync(ledger, `${new Date().toISOString()}\t${currentBranch(root)}\n`);
+    if (!parsed.idea)
+      appendFileSync(ledger, `${new Date().toISOString()}\t${currentBranch(root)}\n`);
   } catch {
     // An unwritable ledger loses a count, never an issue.
   }

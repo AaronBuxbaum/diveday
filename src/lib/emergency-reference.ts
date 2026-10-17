@@ -83,6 +83,80 @@ export function normalizeEmergencyReference(input: {
 }
 
 /**
+ * **The boat a departure sails on, as a coastguard asks for it** (fourth
+ * review, item 11): its name, call sign and MMSI, each off the boat's own row
+ * in Settings > Boats. Call sign and MMSI are null when the shop has not typed
+ * them.
+ */
+export type VesselIdentity = {
+  name: string;
+  callSign: string | null;
+  mmsi: string | null;
+};
+
+/**
+ * The shop's reference as one departure prints it: the shop's own numbers and
+ * plan, and the departure's own boat in place of the shop-wide vessel line.
+ * `boat` is optional so a snapshot an older build saved offline, which never
+ * carried it, still reads as the shop line.
+ */
+export type DepartureEmergencyReference = EmergencyReference & {
+  boat?: VesselIdentity | null;
+};
+
+/**
+ * **The departure's own boat, the shop line only as the fallback.** The shop's
+ * vessel line is one free-text field for the whole fleet, so on a two-boat
+ * shop it names the wrong hull on half the departures, and the MMSI read off
+ * the card is the other boat's. A departure on a boat prints that boat and
+ * drops the shop line; a departure on no boat (a shore day, or one nobody has
+ * put on a hull yet) keeps the shop line, which is all there is.
+ *
+ * **A boat whose row holds neither radio fact keeps the shop line too**
+ * (review B1). The two fields arrived empty on every existing boat, and the
+ * shop line is where a shop typed its MMSI and working channel; clearing it
+ * then would print a card with only a hull name on it until someone found the
+ * fields in Settings > Boats, whose hub row names how many are still empty.
+ */
+export function emergencyReferenceForDeparture(
+  reference: EmergencyReference,
+  boat: VesselIdentity | null,
+): DepartureEmergencyReference {
+  if (!boat) return { ...reference, boat: null };
+  if (!boat.callSign && !boat.mmsi) return { ...reference, boat };
+  return { ...reference, vessel: "", boat };
+}
+
+/** The longest call sign a form accepts: ITU call signs run to seven, ship stations to nine. */
+export const MAX_CALL_SIGN_LENGTH = 12;
+
+/**
+ * A call sign as typed, made what is read over the radio: trimmed, inner runs
+ * of space collapsed, upper-cased. Null for an empty box; `"invalid"` for
+ * anything past {@link MAX_CALL_SIGN_LENGTH} or holding more than letters,
+ * digits, a space or a hyphen, so a typo refuses the save rather than printing.
+ */
+export function normalizeCallSign(input: string): string | null | "invalid" {
+  const value = input.trim().replace(/\s+/g, " ").toUpperCase();
+  if (value === "") return null;
+  if (value.length > MAX_CALL_SIGN_LENGTH || !/^[A-Z0-9][A-Z0-9 -]*$/.test(value)) {
+    return "invalid";
+  }
+  return value;
+}
+
+/**
+ * An MMSI as typed: spaces and hyphens a shop copies off a licence are
+ * dropped, and what is left must be exactly nine digits (ITU-R M.585). Null
+ * for an empty box, `"invalid"` otherwise, matching the column's check.
+ */
+export function normalizeMmsi(input: string): string | null | "invalid" {
+  const value = input.replace(/[\s-]/g, "");
+  if (value === "") return null;
+  return /^[0-9]{9}$/.test(value) ? value : "invalid";
+}
+
+/**
  * Whether the shop has recorded anything at all.
  *
  * Two readers, two answers. The manifest keeps the panel either way and states
@@ -92,10 +166,22 @@ export function normalizeEmergencyReference(input: {
  * the form that ends it.
  */
 export function hasEmergencyReference(reference: EmergencyReference): boolean {
+  // The departure's boat is not counted: a hull name is not a number to call,
+  // so a card that prints only the boat still states the absence.
   return (
     reference.lines.length > 0 ||
     reference.vessel.length > 0 ||
     reference.shoreContact.length > 0 ||
     reference.plan.length > 0
   );
+}
+
+/**
+ * **Whether the card carries a number a crew can dial** (fifth loop, item 3).
+ * The vessel, the shore contact and the plan are worth having, but a crew at
+ * sea reaches for a chamber or a coast guard number first; with none, the card
+ * is blank for the question Today's row and the first-run step ask.
+ */
+export function emergencyCardHasNumbers(reference: Pick<EmergencyReference, "lines">): boolean {
+  return reference.lines.some((line) => line.phone.trim().length > 0);
 }

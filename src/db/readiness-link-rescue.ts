@@ -183,6 +183,7 @@ export async function sendPlannedReadinessLink(
       bookingId: plan.bookingId,
       purpose: "readiness",
       now,
+      delivered: true,
     });
   });
   if (issued === "raced") return "current_link_live";

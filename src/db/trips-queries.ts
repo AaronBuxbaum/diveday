@@ -18,6 +18,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { sellableSeats } from "@/lib/boat-safety";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { perDiverBookingPriceCents } from "@/lib/courses";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import type { SeatCounts } from "@/lib/participant-types";
 import {
@@ -42,7 +43,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * Reading the board: the schedule lists, their aggregates, and the calendar
@@ -291,6 +292,12 @@ export const tripBoatCertifiedPassengers = () =>
     number | null
   >`(select ${boats.certifiedPassengers} from ${boats} where ${boats.id} = ${trips.boatId} and ${boats.shopId} = ${trips.shopId})`;
 
+/** The same subquery for total persons, crew included (#2302): never a seat ceiling. */
+export const tripBoatCertifiedTotalPersons = () =>
+  sql<
+    number | null
+  >`(select ${boats.certifiedTotalPersons} from ${boats} where ${boats.id} = ${trips.boatId} and ${boats.shopId} = ${trips.shopId})`;
+
 /**
  * `sellableSeats` spelled in SQL, for the one place the number has to be
  * compared inside the query: `hasSpace`'s `having`, which a page of results
@@ -361,6 +368,12 @@ export const liveBookingJoin = and(eq(bookings.tripId, trips.id), seatHeld);
  */
 export const bookedDiversCount = () =>
   sql<number>`count(${bookings.id}) filter (where ${bookings.participantType} = 'diver')`.mapWith(
+    Number,
+  );
+
+/** The snorkelers among the held seats, the same count shape as `bookedDiversCount`. */
+export const bookedSnorkelersCount = () =>
+  sql<number>`count(${bookings.id}) filter (where ${bookings.participantType} = 'snorkeler')`.mapWith(
     Number,
   );
 
@@ -944,10 +957,11 @@ export async function listUpcomingSessionsForCourse(
  * **Who is asking when this course next runs.** There are two honest answers
  * and they are not the same date.
  *
- * - `"storefront"` — what a diver may turn up to: live, scheduled, **public**,
- *   within the hour's late-arrival buffer. Exactly
+ * - `"storefront"` — what a diver may book: live, scheduled, **public**, not a
+ *   rehearsal, not on a conditions hold, **with a seat left**, within the
+ *   hour's late-arrival buffer. Every such session is in
  *   {@link listUpcomingSessionsForCourse}'s scope, so the shelf never promises
- *   a date the course page then lacks.
+ *   a date the course page then lacks (dive-domain review r4-4, F3).
  * - `"shop"` — what the shop has on its own books, private sessions included.
  *   A course booked out to one family is scheduled; telling the staff who
  *   scheduled it that it is not would be a lie about their own week.
@@ -977,6 +991,7 @@ export async function nextSessionStartByCourse(
   now: Date = nowDate(),
 ): Promise<Map<string, Date>> {
   if (courseIds.length === 0) return new Map();
+  if (scope === "storefront") return nextSellableSessionByCourse(db, shopId, courseIds, now);
   const rows = await db
     .select({ courseId: trips.courseId, startsAt: sql<Date>`min(${trips.startsAt})` })
     .from(trips)
@@ -986,7 +1001,6 @@ export async function nextSessionStartByCourse(
         eq(trips.shopId, shopId),
         inArray(trips.courseId, [...courseIds]),
         eq(trips.status, "scheduled"),
-        ...(scope === "storefront" ? [eq(trips.isPrivate, false)] : []),
         gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
       ),
     )
@@ -996,14 +1010,57 @@ export async function nextSessionStartByCourse(
   );
 }
 
+/**
+ * The storefront's answer: the first session a diver could book today, so a
+ * catalog row's "Next Sat, Oct 24" never names one they open to find full
+ * (dive-domain review r4-4, F3). Public, never a rehearsal, not on a
+ * conditions hold, and with a seat left under the same `having` the board's
+ * `hasSpace` uses; a course with none of those has no key, and the catalog
+ * asks for a date instead.
+ */
+async function nextSellableSessionByCourse(
+  db: AppDb,
+  shopId: string,
+  courseIds: readonly string[],
+  now: Date,
+): Promise<Map<string, Date>> {
+  const rows = await db
+    .select({ courseId: trips.courseId, startsAt: trips.startsAt })
+    .from(trips)
+    .leftJoin(bookings, liveBookingJoin)
+    .where(
+      and(
+        liveTrip(),
+        notRehearsal(),
+        eq(trips.shopId, shopId),
+        inArray(trips.courseId, [...courseIds]),
+        eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
+        eq(trips.conditionsHold, false),
+        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+      ),
+    )
+    .groupBy(trips.id)
+    .having(hasSpaceHaving(true))
+    .orderBy(asc(trips.startsAt));
+  const next = new Map<string, Date>();
+  for (const row of rows) {
+    if (row.courseId && !next.has(row.courseId)) next.set(row.courseId, row.startsAt);
+  }
+  return next;
+}
+
 /** One single-day departure as the week board draws it. */
 export type WeekBoardEntry = {
   tripId: string;
   title: string;
+  /** A rehearsal departure (ADR 20261012-rehearsal-departures): its own mark, and no price prompt. */
+  isRehearsal: boolean;
   startsAt: Date;
   endsAt: Date;
   booked: number;
   capacity: number;
+  /** Per seat, as the booking charges it: a course session's is the course total (H-125). */
   priceCents: number | null;
   /**
    * `sailed` once the boat is back — the departure has *ended*, with the
@@ -1058,6 +1115,7 @@ export type WeekBoardSpan = {
   status: "upcoming" | "sailed";
   booked: number;
   capacity: number;
+  /** Per seat, as the booking charges it: a course session's is the course total (H-125). */
   priceCents: number | null;
   instructorName: string | null;
 };
@@ -1111,10 +1169,18 @@ export async function weekBoard(
       // multi-day course's rows by its days, and a plain count would report a
       // three-day class as three times as booked as it is.
       booked: countDistinct(bookings.id),
+      // A course session is priced at the course total the booking charges,
+      // as the public schedule rows read it (H-125), never the trip row's own.
+      course: {
+        title: courses.title,
+        priceCents: courses.priceCents,
+        eLearningPriceCents: courses.eLearningPriceCents,
+      },
     })
     .from(trips)
     .innerJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
     .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+    .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
@@ -1125,7 +1191,7 @@ export async function weekBoard(
         gt(tripScheduleDays.endsAt, from),
       ),
     )
-    .groupBy(trips.id, diveSites.id)
+    .groupBy(trips.id, diveSites.id, courses.id)
     .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 
   if (overlapping.length === 0) return { days, spans: [] };
@@ -1152,7 +1218,8 @@ export async function weekBoard(
 
   const spans: WeekBoardSpan[] = [];
   const sailedBefore = new Date(now.getTime() - 60 * 60 * 1000);
-  for (const { trip, diveSiteName, booked } of overlapping) {
+  for (const { trip, diveSiteName, booked, course } of overlapping) {
+    const priceCents = perDiverBookingPriceCents(trip, course);
     // A trip with no meeting rows at all is its own single window — the same
     // reading `tripScheduleDayCounts` callers already take.
     const windows = windowsByTrip.get(trip.id) ?? [trip.startsAt];
@@ -1167,7 +1234,7 @@ export async function weekBoard(
         status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",
         booked,
         capacity: trip.capacity,
-        priceCents: trip.priceCents,
+        priceCents,
         instructorName: null,
       });
       continue;
@@ -1180,7 +1247,8 @@ export async function weekBoard(
       endsAt: trip.endsAt,
       booked,
       capacity: trip.capacity,
-      priceCents: trip.priceCents,
+      priceCents,
+      isRehearsal: trip.isRehearsal,
       status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",
       courseId: trip.courseId,
       diveSiteName,

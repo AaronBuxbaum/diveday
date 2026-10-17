@@ -229,11 +229,14 @@ export function SettingsDoorRow({
   href,
   heading,
   external,
+  note,
 }: {
   href: string;
   heading: string;
   /** A `mailto:`/`https:` destination rather than an app route. */
   external?: boolean;
+  /** An errand behind the door, in a line under the heading (the fleet's missing radio identity). */
+  note?: string;
 }) {
   // **Focus is ringed on the stretched overlay, the row a pointer has**, drawn
   // inset like a setting's summary (`LIST_ROW_SUMMARY_RING`) and bent into the
@@ -251,17 +254,20 @@ export function SettingsDoorRow({
   return (
     <div className="group/door">
       <div className="relative flex min-h-14 items-center justify-between gap-4 px-4 py-3 transition-brand hover:bg-surface-sunken sm:px-5">
-        <h3 className="min-w-0 text-base">
-          {external ? (
-            <a href={href} className={linkClass}>
-              {heading}
-            </a>
-          ) : (
-            <Link href={href} className={linkClass}>
-              {heading}
-            </Link>
-          )}
-        </h3>
+        <div className="min-w-0">
+          <h3 className="text-base">
+            {external ? (
+              <a href={href} className={linkClass}>
+                {heading}
+              </a>
+            ) : (
+              <Link href={href} className={linkClass}>
+                {heading}
+              </Link>
+            )}
+          </h3>
+          {note ? <p className="text-sm text-warning-strong">{note}</p> : null}
+        </div>
         <DisclosureCaret direction="right" className="text-muted" />
       </div>
     </div>

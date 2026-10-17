@@ -7,11 +7,11 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { listDiverMergeDuplicateIds } from "@/db/diver-merge";
-import { isDiverFilter, listDiverSummaries } from "@/db/divers";
+import { isDiverFilter, isDiverSort, listDiverSummaries } from "@/db/divers";
 import { rosterFacts } from "@/db/roster-facts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { canDeleteDiver, canImportShopData, canMergeDiver } from "@/lib/authz";
+import { canDeleteDiver, canExportShopData, canImportShopData, canMergeDiver } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
@@ -20,6 +20,7 @@ import { rosterLetter, rosterRowFact } from "@/lib/roster-rows";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { DiverList, type RosterBadge, type RosterRow } from "./_components/DiverList";
+import { RosterOrderLine, rosterHref } from "./_components/RosterOrderLine";
 import { restoreDiverAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -69,10 +70,11 @@ export default async function DiversPage({
     q?: string;
     page?: string;
     filter?: string;
+    sort?: string;
   }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, deleted, q, page, filter: filterParam } = await searchParams;
+  const { notice, deleted, q, page, filter: filterParam, sort: sortParam } = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   reportRenderQueries("/shop/[shopSlug]/divers", after);
   const locale = await requestLocale(shop.defaultLocale);
@@ -101,6 +103,8 @@ export default async function DiversPage({
   const canDelete = liveRoles !== null && canDeleteDiver(liveRoles);
   const canImport = liveRoles !== null && canImportShopData(liveRoles);
   const canMerge = liveRoles !== null && canMergeDiver(liveRoles);
+  const canDownload = liveRoles !== null && canExportShopData(liveRoles);
+  const sort = isDiverSort(sortParam) ? sortParam : "name";
   const requested = isDiverFilter(filterParam) ? filterParam : "all";
   const filter = requested === "removed" && !canDelete ? "all" : requested;
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
@@ -112,6 +116,7 @@ export default async function DiversPage({
       query,
       page: Number.parseInt(page ?? "", 10),
       filter,
+      sort,
       // "Diving today" is the shop's own calendar day, not the server's.
       timeZone: shop.timezone,
       now,
@@ -128,15 +133,9 @@ export default async function DiversPage({
     diverPage.divers.map((diver) => diver.id),
     { now },
   );
-  /** The roster's URL with the search and view kept and only `page` swapped. */
-  const pageHref = (target: number) => {
-    const search = new URLSearchParams();
-    if (query) search.set("q", query);
-    if (filter !== "all") search.set("filter", filter);
-    if (target > 1) search.set("page", String(target));
-    const roster = shopPath(shopSlug, "divers");
-    return search.size ? `${roster}?${search}` : roster;
-  };
+  /** The roster's URL with the search, view and order kept and only `page` swapped. */
+  const roster = shopPath(shopSlug, "divers");
+  const pageHref = (target: number) => rosterHref(roster, { query, filter, sort, page: target });
 
   /** What a diver is blocked on, as a badge word — one key per kind. */
   const BLOCKED_LABELS: Record<AboardBlockerKind, StaffMessageKey> = {
@@ -183,7 +182,13 @@ export default async function DiversPage({
    * gets is `rosterRowFact`'s call (`src/lib/roster-rows.ts`); this only
    * spells it.
    */
-  const factFor = (personId: string): string | null => {
+  const factFor = (personId: string, lastDivedAt: Date | null): string | null => {
+    // Ordered or narrowed by the last dive, the row says when it was (item 27).
+    if (sort === "last_dived" || filter === "not_back") {
+      return lastDivedAt
+        ? t("divers.list.lastDived", { date: formatShortDate(lastDivedAt, locale, shop.timezone) })
+        : t("divers.list.neverDived");
+    }
     const row = facts.get(personId);
     if (!row) return null;
     const fact = rosterRowFact(row);
@@ -214,7 +219,7 @@ export default async function DiversPage({
     href: shopPath(shopSlug, "divers", diver.id),
     letter: rosterLetter(diver.fullName),
     badges: badgesFor(diver.id),
-    fact: factFor(diver.id),
+    fact: factFor(diver.id, diver.lastDivedAt),
   }));
 
   const banner = noticeFromParam(notice, NOTICES);
@@ -259,6 +264,19 @@ export default async function DiversPage({
         shopSlug={shopSlug}
         query={query}
         filter={filter}
+        sort={sort}
+        orderLine={
+          rows.length > 0 ? (
+            <RosterOrderLine
+              roster={roster}
+              query={query}
+              filter={filter}
+              sort={sort}
+              canDownload={canDownload}
+              t={t}
+            />
+          ) : null
+        }
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
         canRestore={canDelete}
         quickAddAction={createDiverFromSearchAction}
@@ -277,6 +295,8 @@ export default async function DiversPage({
           viewDivingToday: t("divers.list.viewDivingToday"),
           viewNeedsAttention: t("divers.list.viewNeedsAttention"),
           viewMissingContact: t("divers.list.viewMissingContact"),
+          viewNotBack: t("divers.list.viewNotBack"),
+          lastDivedGroup: t("divers.list.lastDivedGroup"),
           viewRemoved: t("divers.list.viewRemoved"),
           viewsAriaLabel: t("divers.list.viewsAriaLabel"),
           removedNote: t("divers.list.removedNote"),

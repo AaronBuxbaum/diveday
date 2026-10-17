@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MAP_REACHABILITY_PROBE } from "@/lib/maps";
+import { useMapState } from "./use-map-reachable";
 
 /**
  * The map frame behind a drawn route, shown only once the provider has
@@ -10,7 +10,19 @@ import { MAP_REACHABILITY_PROBE } from "@/lib/maps";
  * frame stays invisible and the route draws alone over the panel's own
  * surface: no broken-document glyph under the line. `invisible`, never
  * unmounted, so the frame's box and the route's percentages never move.
+ *
+ * **It says which of three it is** (`data-map-state`, issue #2013): `waiting`
+ * until the provider answers, `reachable`, or `failed` once the probe errors or
+ * {@link MAP_GIVE_UP_MS} pass with no answer. A cross-origin frame gives no
+ * reliable `onError`, so the probe's error and the timeout are the only
+ * signals there are. A surface that wants a line for the failed state asks the
+ * document for it (`group-has-[[data-map-state=failed]]`) rather than lifting
+ * this state, so the line can sit outside a scaled or cropped box.
  */
+
+/** How long a map may stay silent before it counts as not loading. */
+export const MAP_GIVE_UP_MS = 8000;
+
 export function MapFrame({
   title,
   src,
@@ -24,7 +36,6 @@ export function MapFrame({
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [onScreen, setOnScreen] = useState(false);
-  const [reachable, setReachable] = useState(false);
 
   // Nothing is asked until the frame is on screen: a map inside a folded
   // editor section (`display: none` below `lg`) never intersects, so opening
@@ -44,40 +55,8 @@ export function MapFrame({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (!onScreen) return;
-    let settled = false;
-    let probe: HTMLImageElement | null = null;
-    const ask = () => {
-      window.removeEventListener("online", ask);
-      probe = new Image();
-      // Google learns that something asked, never which page.
-      probe.referrerPolicy = "no-referrer";
-      probe.onload = () => {
-        if (!settled) setReachable(true);
-      };
-      // Said, not left to a missing handler: the frame stays hidden.
-      probe.onerror = () => {
-        if (!settled) setReachable(false);
-      };
-      probe.src = MAP_REACHABILITY_PROBE;
-    };
-    // With the radio off, ask once the signal comes back (a boat leaving the
-    // dock with the page already open), never in a loop.
-    if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      window.addEventListener("online", ask);
-    } else {
-      ask();
-    }
-    return () => {
-      settled = true;
-      window.removeEventListener("online", ask);
-      if (probe) {
-        probe.onload = null;
-        probe.onerror = null;
-      }
-    };
-  }, [onScreen]);
+  const state = useMapState(onScreen, MAP_GIVE_UP_MS);
+  const reachable = state === "reachable";
   return (
     <iframe
       ref={frameRef}
@@ -86,6 +65,7 @@ export function MapFrame({
       tabIndex={interactive ? undefined : -1}
       aria-hidden={reachable ? undefined : true}
       data-map-reachable={reachable ? "true" : "false"}
+      data-map-state={state}
       className={`${className}${reachable ? "" : " invisible"}`}
       loading="lazy"
       referrerPolicy="strict-origin-when-cross-origin"

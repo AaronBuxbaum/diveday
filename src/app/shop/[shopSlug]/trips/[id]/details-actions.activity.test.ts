@@ -4,13 +4,15 @@ import type { AppDb } from "@/db/client";
 import { activityEvents, bookings, trips } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { utcToWallTime } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
   SEEDED_OWNER_EMAIL,
   seededStaffPersonId,
   staffSession,
 } from "@/test/staff-session";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **A departure moved from its own details form is a move** (issue #2313).
@@ -34,7 +36,7 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
-const { saveDetails } = await import("./details-actions");
+const { cancelTripAction, saveDetails } = await import("./details-actions");
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
@@ -62,7 +64,7 @@ async function emptyFutureTrip(db: AppDb, shopId: string) {
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   vi.mocked(getDb).mockResolvedValue(db);
   const owner = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
   vi.mocked(requireShopSurface).mockResolvedValue({
@@ -129,5 +131,38 @@ describe("the details form in the activity log", () => {
       ),
     ).toContain("notice=saved");
     expect(await movedLines(db, trip.id)).toEqual([]);
+  });
+});
+
+describe("Cancel trip on a boat that may be on the water", () => {
+  it("refuses a departure that sailed with seats nobody counted, and leaves it scheduled", async () => {
+    const { db, shop, trip } = await context();
+    const startsAt = new Date(nowDate().getTime() - 2 * 60 * 60 * 1000);
+    await db
+      .update(trips)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
+      .where(eq(trips.id, trip.id));
+
+    expect(await redirectedTo(() => cancelTripAction(shop.slug, trip.id))).toContain(
+      "notice=cancel-underway",
+    );
+    const [row] = await db
+      .select({ status: trips.status })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(row?.status).toBe("scheduled");
+  });
+
+  it("cancels a departure still to sail", async () => {
+    const { db, shop, trip } = await context();
+
+    expect(await redirectedTo(() => cancelTripAction(shop.slug, trip.id))).toContain(
+      "notice=cancelled",
+    );
+    const [row] = await db
+      .select({ status: trips.status })
+      .from(trips)
+      .where(eq(trips.id, trip.id));
+    expect(row?.status).toBe("cancelled");
   });
 });

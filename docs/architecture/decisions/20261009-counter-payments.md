@@ -28,7 +28,8 @@ Stripe-settled order does.
   the gear out (H-06). Billing a diver by invoice stays owner/manager (H-14, `createOrder`).
 - **Correcting a mistake is local and owner/manager.** `voidCounterOrder` sets `void`, stamps
   `voided_at` and zeroes `amount_paid_cents`, so Reports drops it. Only a `paid` counter order
-  qualifies; a counter order is never refunded, since no processor holds the money.
+  qualifies (not a counter-settled invoice; see the 2026-10-14 amendment); a counter order is never
+  refunded, since no processor holds the money.
 - **Every Stripe operation refuses a counter order** through `stripeInvoiceOf(order)`, which returns
   the ids only for a `stripe_invoice` row: refund (`not_invoiced`), void, resend, refresh. Webhook
   lookups by invoice id are unchanged; a counter order has no id to match. Erasure queues no
@@ -52,3 +53,76 @@ Stripe-settled order does.
 - Integrations receive `order.paid` for counter money with no hint of how it was taken; an
   accounting adapter that books to a Stripe clearing account would misfile it. Revisit when one does.
 - Adding a fourth method (bank transfer) is one enum value and one word in each locale.
+
+## Amendment, 2026-10-14: counter money on an invoice already sent, and online seats on the ledger
+
+Fourth UX review, items 18 and 19. Two gaps in "money the shop took":
+
+- **Record payment on an open order.** A diver invoiced $340 walks in and pays cash. The order was
+  a Stripe invoice and stayed Open forever. `recordPaymentOnOpenOrder` (`src/db/orders.ts`)
+  **claims the row first**: under its lock, an open `stripe_invoice` takes the counter method as
+  its `collection` while it stays `open`, and that commits. Then it marks the invoice paid out of
+  band at Stripe (`markInvoicePaidOutOfBand`, so Stripe stops asking; a diver who paid online a
+  moment earlier makes Stripe refuse, and the claim is given back). Then, under the lock again, it
+  finishes the claim: `amount_paid_cents` its total, `paid_at` now, and the booking it was raised
+  for marked paid. **The three Stripe ids stay**, so diver erasure still files the Stripe
+  customer's deletion request. `orders_stripe_ids_match_collection` now allows a non-Stripe
+  collection to carry either none of the ids or all three, never a PaymentIntent (migration
+  `20261014220545_counter-settled-invoice`), and `recordOrderPaymentIntent` only ever writes to a
+  `stripe_invoice` row. `stripeInvoiceOf` still refuses every Stripe operation on it. Any active
+  staff member may record it, behind the money step-up, as any counter money, and the shop's
+  activity log names who did (`order_paid_cash` / `order_paid_card_machine`).
+- **Why the claim comes before Stripe** (security review of layer r4-3). The mark sends back an
+  `invoice.paid` that can arrive before the mark's own call returns. Marked first and written
+  second, that echo found an open `stripe_invoice` and booked the cash as a Stripe payment.
+  Claimed first, the echo (`paid_out_of_band: true`) finds the claim and finishes the counter
+  settlement itself (`applyInvoicePaid`); any other `invoice.paid` for a claimed row is the diver's
+  own online payment in the same moment and is deferred (non-2xx, no page) until the claim is given
+  back. The claim is the order row itself, not a `payment_operation_intents` row: it lasts one
+  round trip, stamped in its own `counter_claimed_at` (migration `20261015052453_counter-claimed-at`,
+  checked to exist only on an open invoice with a counter method) so no other write to the row can
+  move it. One older than `STALE_AFTER_MS` belonged to a call that died and may be taken again, by a
+  second tap or by the next `invoice.paid`; while it stands, a second tap is told a payment is being
+  recorded rather than that it failed.
+- **Only a refusal Stripe answered gives the claim back** (second security review of layer r4-3).
+  `markInvoicePaidOutOfBand` tells `refused` (a 4xx carrying Stripe's error envelope) from
+  `unknown` (threw, timed out, 5xx, 409). On `unknown` Stripe may have marked the invoice, and a
+  released row would let the echo book the cash as Stripe money, so the claim stands: the echo
+  finishes it, or it goes stale. The call times out at 30 seconds, well inside the claim's horizon,
+  so it is over before anyone can retake its claim, and it carries one idempotency key per order
+  (`order:<id>:paid_out_of_band`), so a retake replays it rather than issuing a second mark.
+- **A counter line with no activity row means the call died after Stripe.** The actor is not stored
+  on the claim, so when Stripe's echo finishes it, nothing names who tapped. The webhook's
+  `order_paid_at_counter` outcome logs the order id, which the request log can be joined on.
+- **A counter-settled invoice is never voided.** Stripe holds it paid out of band and has no way to
+  un-pay an invoice, so a local void would leave the books disagreeing with Stripe and the diver's
+  hosted invoice reading paid with no Stripe path left to collect through. `voidCounterOrder`
+  refuses any counter order that carries Stripe ids (`isVoidableCounterOrder`), and the order page
+  does not offer Void on one. Money taken back over the counter after such a settle is not
+  recordable yet.
+- **A bench ticket paid at pickup.** `recordWorkOrderCounterPayment`
+  (`src/db/work-order-follow-up.ts`) records the ticket's lines through `recordCounterOrder` and
+  links the order as the ticket's bill. One bill per ticket is re-checked under the ticket's lock;
+  the loser of a double tap is voided by `voidPaidCounterOrder` (the void without its role gate,
+  the system undoing its own race rather than anyone's decision).
+- **Online seat payments on the ledger.** A diver who paid at booking left a `booking_checkouts`
+  row and no order, so the Money ledger and "Download orders (CSV)" never showed that money.
+  `src/db/seat-payments.ts` lists one row per seat of a completed checkout, its share of the
+  settled charge split by what each seat was asked, merged with orders by a `unionAll` in
+  `pagedOrdersByDay` and filtered alike. Nothing is written: the seats stay `booking_checkouts`,
+  and refunds stay on the checkout. The CSV gains "Paid on" and "Method".
+
+## Amendment 2026-10-16: room charge (fifth-loop ideas, item 57)
+
+A resort dive center bills a guest's dives to their room and settles with the hotel's front desk
+monthly. `order_collection` gains `room_charge`, and an order charged to a room names it:
+`orders.room_number` (required with `room_charge`, and only with it:
+`orders_room_charge_names_room`) and `orders.room_hotel` (optional, for a shop serving more than
+one hotel; `orders_room_hotel_only_on_room_charge`). It is a third way to settle an **open
+invoice** from the order page (`recordPaymentOnOpenOrder`), behind the same money step-up, the
+same claim, and the same out-of-band mark to Stripe, so the diver is not asked twice; the claim
+writes the room with the method and a released claim clears both. Counter rentals and bench
+tickets stay cash and card machine. The activity log says `order_paid_room_charge`; the Orders
+index tells an owner or manager the month's room charges per hotel ("Room charges in October: Reef
+Hotel $1,840 on 14 orders", `src/db/room-charges.ts`), net of refunds; the CSV method code is
+`room_charge`. This does not revive hotel rate cards (#1237).

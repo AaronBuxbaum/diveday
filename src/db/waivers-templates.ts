@@ -50,7 +50,11 @@ export async function getCurrentWaiverTemplate(db: DbExecutor, shopId: string) {
     .select()
     .from(waiverTemplates)
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
-    .orderBy(desc(waiverTemplates.createdAt))
+    // `version`, never `createdAt`: versions are numbered under the shop's
+    // lock in `saveWaiverTemplate`, while `createdAt` is transaction time,
+    // taken before the lock, so two overlapping saves can stamp the lower
+    // version later. `createdAt` is for display only.
+    .orderBy(desc(waiverTemplates.version))
     .limit(1);
   return template ?? null;
 }
@@ -70,7 +74,11 @@ export async function getCurrentWaiverGeneration(
     .select({ materialGeneration: waiverTemplates.materialGeneration })
     .from(waiverTemplates)
     .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
-    .orderBy(desc(waiverTemplates.createdAt))
+    // `version`, never `createdAt`: versions are numbered under the shop's
+    // lock in `saveWaiverTemplate`, while `createdAt` is transaction time,
+    // taken before the lock, so two overlapping saves can stamp the lower
+    // version later. `createdAt` is for display only.
+    .orderBy(desc(waiverTemplates.version))
     .limit(1);
   return template ?? null;
 }
@@ -117,9 +125,15 @@ export async function saveWaiverTemplate(
     // template, when a row lock on the target table would have nothing yet
     // to hold. The unit suite runs on PGlite, which is single-connection and
     // cannot exhibit the race; the real-Postgres CI job is where a lock like
-    // this one is provable (see `src/db/bookings.postgres.test.ts` for the
-    // pattern — this particular lock does not yet have its own such test).
-    await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, input.shopId)).for("update");
+    // this one is provable: `waivers-templates.postgres.test.ts` races two saves.
+    // `no key update`, not `update`: it still serializes with itself, and it
+    // leaves alone the `KEY SHARE` every insert naming this shop takes on the
+    // row (`self-declared-cards.ts` tells the deadlock `update` causes).
+    await tx
+      .select({ id: shops.id })
+      .from(shops)
+      .where(eq(shops.id, input.shopId))
+      .for("no key update");
     // The whole current row, not just the version numbers: the body is needed
     // for the comparison below, and the highest version is the current one.
     const [current] = await tx

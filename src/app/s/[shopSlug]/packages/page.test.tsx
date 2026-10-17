@@ -31,6 +31,9 @@ vi.mock("@/i18n/request", () => ({
   requestTranslator: vi.fn(async () => ({ locale: "en-US", t: diverTranslator("en-US") })),
 }));
 
+vi.mock("./actions", () => ({ buyPackageAction: vi.fn() }));
+
+const { listPackagesOnSale } = await import("@/db/dive-packages");
 const { default: PublicPackagesPage } = await import("./page");
 
 afterEach(cleanup);
@@ -49,5 +52,46 @@ describe("the public packages page with nothing on sale", () => {
     await expect(
       PublicPackagesPage({ params: Promise.resolve({ shopSlug: "nobody" }) }),
     ).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404/);
+  });
+});
+
+/**
+ * **The page says what a package is** (third UX review, item 28): what it is
+ * under the title, whether courses count, and whether it runs out, said either
+ * way. "Fun dives only" left a diver to guess what it excluded.
+ */
+describe("the public packages page with a package on sale", () => {
+  const card = {
+    id: "pkg-1",
+    name: "Five-dive card",
+    priceCents: 40_000,
+    diveCount: 5,
+    scope: "fun_dives",
+    validUntil: null,
+  };
+
+  async function renderOnSale(rows: unknown[]) {
+    vi.mocked(listPackagesOnSale).mockResolvedValueOnce(rows as never);
+    render(await PublicPackagesPage({ params: Promise.resolve({ shopSlug: "blue-mantis" }) }));
+  }
+
+  it("says what a package is, that courses are not included, and that it never runs out", async () => {
+    await renderOnSale([card]);
+
+    expect(screen.getByText("Pay once, then book the dives as you go.")).toBeInTheDocument();
+    expect(document.body.textContent).toContain("Courses not included");
+    expect(document.body.textContent).toContain("No expiry date");
+    // A dive is a tank, said where the money is decided (H-123).
+    expect(document.body.textContent).toContain(
+      "One dive is one tank, so a two-tank trip uses two",
+    );
+  });
+
+  it("names the use-by date and courses when the shop sold them that way", async () => {
+    await renderOnSale([{ ...card, scope: "all", validUntil: "2026-12-31" }]);
+
+    expect(document.body.textContent).toContain("Courses included");
+    expect(document.body.textContent).toMatch(/Use by Dec\s31,\s2026/);
+    expect(document.body.textContent).not.toContain("No expiry date");
   });
 });

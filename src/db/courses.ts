@@ -1,5 +1,24 @@
-import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { courseTemplateSnapshot, getCourseTemplate } from "@/content/course-templates";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  ne,
+  not,
+  sql,
+} from "drizzle-orm";
+import {
+  courseTemplateSnapshot,
+  getCourseTemplate,
+  standardFormAgeBounds,
+} from "@/content/course-templates";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import {
   type CourseTemplateDiff,
   type CourseTemplateSnapshot,
@@ -13,11 +32,12 @@ import {
 import { type CourseContent, canonicalAgency } from "@/lib/courses";
 import { REFRESHER_TEMPLATE_SLUGS } from "@/lib/re-entry";
 import type { CertificationLevel } from "@/lib/readiness";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { attachStandardCourseForms, courseFormsAwaitingTextByCourse } from "./course-forms";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import type { Course } from "./schema";
-import { courses, shops } from "./schema";
+import { courses, shops, trips } from "./schema";
+import { liveTrip } from "./trips-live";
 
 export type NewCourse = {
   shopId: string;
@@ -31,6 +51,8 @@ export type NewCourse = {
   minimumCertificationLevel?: CertificationLevel | null;
   /** Whether a session of this course may run on enriched air — see the column's own note. */
   nitroxCompatible?: boolean;
+  /** Whether rental gear is part of the course fee — see the column's own note. */
+  gearIncluded?: boolean;
 } & Partial<CourseContent>;
 
 /**
@@ -42,7 +64,7 @@ export type NewCourse = {
  */
 export type CoursePatch = Pick<
   NewCourse,
-  "priceCents" | "eLearningPriceCents" | "privatePriceCents" | "nitroxCompatible"
+  "priceCents" | "eLearningPriceCents" | "privatePriceCents" | "nitroxCompatible" | "gearIncluded"
 >;
 
 /**
@@ -132,6 +154,29 @@ export async function listActiveCourses(
 }
 
 /**
+ * Every course the shop has, hidden ones too, in progression order: the
+ * course ladder's catalog (`src/db/course-ladder.ts`), where a hidden taster
+ * still had students and only an active course can be a next step.
+ */
+export async function listCatalogInProgressionOrder(db: DbExecutor, shopId: string) {
+  return db
+    .select({
+      id: courses.id,
+      slug: courses.slug,
+      title: courses.title,
+      agency: courses.agency,
+      isActive: courses.isActive,
+      isIntroCourse: courses.isIntroCourse,
+      minimumCertificationLevel: courses.minimumCertificationLevel,
+      certifiesLevel: courses.certifiesLevel,
+      minimumAge: courses.minimumAge,
+    })
+    .from(courses)
+    .where(eq(courses.shopId, shopId))
+    .orderBy(...progressionOrder);
+}
+
+/**
  * Whether this shop's public catalog has anything in it.
  *
  * The one fact the diver-facing header needs to decide whether a "Courses" tab
@@ -177,6 +222,28 @@ export async function hasActiveRefresherCourse(db: AppDb, shopId: string): Promi
     )
     .limit(1);
   return rows.length > 0;
+}
+
+/**
+ * The first try-it course this shop publishes (Discover Scuba, Try Scuba), the
+ * door `/ready` opens for a diver who said they are not certified yet (third UX
+ * review, item 23). `is_intro_course` says which entries these are, never the
+ * title. Null when the shop publishes none: the page then says only that the
+ * crew will talk to them at the dock.
+ */
+export async function firstActiveIntroCourse(
+  db: AppDb,
+  shopId: string,
+): Promise<{ slug: string; title: string } | null> {
+  const [row] = await db
+    .select({ slug: courses.slug, title: courses.title })
+    .from(courses)
+    .where(
+      and(eq(courses.shopId, shopId), eq(courses.isActive, true), eq(courses.isIntroCourse, true)),
+    )
+    .orderBy(...progressionOrder)
+    .limit(1);
+  return row ?? null;
 }
 
 /**
@@ -240,6 +307,72 @@ export type CoursePage = {
 };
 
 /**
+ * The roster's three views beside "All" (third UX review, item 35): a course
+ * with a session ahead of it, a course on the catalog with none, and a course
+ * hidden from divers. "Scheduled" asks the question `nextSessionStartByCourse`
+ * answers for the row's "Next {date}", in the same words, so a row in that
+ * view always carries a date.
+ */
+export const COURSE_LIST_VIEWS = ["scheduled", "notYet", "hidden"] as const;
+export type CourseListView = (typeof COURSE_LIST_VIEWS)[number];
+
+export function courseListViewParam(value: string | undefined): CourseListView | undefined {
+  return COURSE_LIST_VIEWS.find((view) => view === value);
+}
+
+function courseListViewWhere(
+  db: AppDb,
+  shopId: string,
+  view: CourseListView | undefined,
+  now: Date,
+) {
+  if (!view) return undefined;
+  if (view === "hidden") return eq(courses.isActive, false);
+  const upcoming = exists(
+    db
+      .select({ one: sql`1` })
+      .from(trips)
+      .where(
+        and(
+          liveTrip(),
+          eq(trips.shopId, shopId),
+          eq(trips.courseId, courses.id),
+          eq(trips.status, "scheduled"),
+          gte(trips.startsAt, new Date(now.getTime() - HOUR_MS)),
+        ),
+      ),
+  );
+  return view === "scheduled" ? upcoming : and(eq(courses.isActive, true), not(upcoming));
+}
+
+/**
+ * The courses among `courseIds` that have ever been on the board: a session
+ * ahead, or one that ran. The roster offers "Schedule" on these and on the
+ * shop's own courses, not on every catalog entry a template put there (third
+ * UX review, item 35): 55 rows each offering Schedule read as 55 products the
+ * shop sells.
+ */
+export async function courseIdsEverOnBoard(
+  db: AppDb,
+  shopId: string,
+  courseIds: readonly string[],
+): Promise<Set<string>> {
+  if (courseIds.length === 0) return new Set();
+  const rows = await db
+    .selectDistinct({ courseId: trips.courseId })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        inArray(trips.courseId, [...courseIds]),
+        ne(trips.status, "cancelled"),
+      ),
+    );
+  return new Set(rows.flatMap((row) => (row.courseId ? [row.courseId] : [])));
+}
+
+/**
  * The staff roster's paginated view of the full catalog — hidden entries
  * included, one page at a time. Callers that need the complete set for a
  * dropdown or picker use {@link listActiveCourses}, not this.
@@ -271,9 +404,21 @@ export type CoursePage = {
 export async function pagedCourses(
   db: AppDb,
   shopId: string,
-  options: { page?: number; limit?: number } = {},
+  options: {
+    page?: number;
+    limit?: number;
+    /** A substring of the course's title (third UX review, item 35). */
+    query?: string;
+    view?: CourseListView;
+    now?: Date;
+  } = {},
 ): Promise<CoursePage> {
-  const scope = eq(courses.shopId, shopId);
+  const query = options.query?.trim();
+  const scope = and(
+    eq(courses.shopId, shopId),
+    query ? ilike(courses.title, `%${query}%`) : undefined,
+    courseListViewWhere(db, shopId, options.view, options.now ?? nowDate()),
+  );
 
   const paged = await offsetPage({
     page: options.page,
@@ -343,6 +488,7 @@ export async function updateCourse(
       // did not have it and the column keeps its own default rather than
       // silently flipping.
       ...(input.nitroxCompatible === undefined ? {} : { nitroxCompatible: input.nitroxCompatible }),
+      ...(input.gearIncluded === undefined ? {} : { gearIncluded: input.gearIncluded }),
     })
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .returning();
@@ -460,6 +606,7 @@ export async function pullCourseTemplateUpdates(
       courseId: course.id,
       titles: update.latest.standardForms ?? [],
       offeredBefore: mode === "preserve-shop-edits" ? (update.baseline?.standardForms ?? []) : [],
+      maxAgeByTitle: standardFormAgeBounds(getCourseTemplate(update.sourceTemplateSlug)),
     });
     return { status: "updated" as const, course, mode, diff: update.diff };
   });

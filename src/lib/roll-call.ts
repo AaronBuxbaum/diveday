@@ -294,3 +294,60 @@ export function blockedAtRail(input: {
   if (input.isDeparture) return true;
   return input.boardedEarlier !== true && !input.notBackAboard;
 }
+
+/** The readiness blockers that are a physician's word, not paperwork (#2380). */
+export type MedicalHoldCode = "medical_not_cleared" | "medical_review";
+
+/**
+ * **A medical block stays on the row between dives** (issue #2380, Aaron's
+ * decision (b), 2026-10-13): which medical blocker a row names after a dive,
+ * for a diver a captain boarded over it — or null.
+ *
+ * `blockedAtRail` stops speaking readiness for that diver after a dive
+ * (decision 4 of ADR 20260827-the-departure-is-two-working-surfaces): roll
+ * call there is a head count, and a danger-toned "Blocked" would compete with
+ * the one red that means somebody is in the water. That stays. But a person a
+ * physician did not clear, between dives, is not a paperwork state, and a
+ * rider under the same "no" already keeps a chip at every checkpoint (H-109).
+ * So this names the medical fact for a warning-toned capsule, ranked where the
+ * rider's sits — never "Blocked", and never a gate on the after-dive mark.
+ *
+ * Quiet at the dock and for a diver nobody boarded earlier: `blockedAtRail`
+ * already shows "Blocked" there, so between the two predicates a medical
+ * blocker is never silent at a rail. Quiet on a row recorded not back aboard:
+ * that row is the alarm and carries nothing else (DD9). A physician's "no"
+ * outranks an open review when both stand.
+ *
+ * One predicate for the live roll call and the offline copy, so the two never
+ * disagree. Takes the codes as plain strings to stay dependency-free.
+ */
+export function medicalHoldAfterDive(input: {
+  checkpoint: RollCallCheckpoint;
+  boardedEarlier?: boolean;
+  notBackAboard: boolean;
+  blockerCodes: readonly string[];
+}): MedicalHoldCode | null {
+  if (input.checkpoint === "departure") return null;
+  if (input.boardedEarlier !== true || input.notBackAboard) return null;
+  if (input.blockerCodes.includes("medical_not_cleared")) return "medical_not_cleared";
+  if (input.blockerCodes.includes("medical_review")) return "medical_review";
+  return null;
+}
+
+/**
+ * **What a cancelled departure's manifest says about its roll call** (#2285),
+ * read off the writers' own gate (`rollCallOpenOnTrip`). `closed`: nobody was
+ * counted before the cancel, so every roll-call write is refused and the page
+ * draws no control that only refuses. `still_counting`: the count had begun,
+ * so it stays open to the end (dive-domain review, 2026-10-09) and the page
+ * says why. Null for a departure that is not cancelled.
+ */
+export type CancelledRollCall = "closed" | "still_counting";
+
+export function cancelledRollCall(input: {
+  cancelled: boolean;
+  rollCallOpen: boolean;
+}): CancelledRollCall | null {
+  if (!input.cancelled) return null;
+  return input.rollCallOpen ? "still_counting" : "closed";
+}

@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { StoredPhoto } from "@/components/StoredPhoto";
+import { NaturalPhoto, StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import {
   FIGURE_CLASS,
   ITEM_TITLE_CLASS,
@@ -89,13 +89,13 @@ export function CourseHero({
     // outside the shared vocabulary.
     <SectionCard as="div" padding="none" className="overflow-hidden">
       {course.heroImageUrl ? (
-        <StoredPhoto
+        <NaturalPhoto
           src={course.heroImageUrl}
           alt={resolveImageAlt(
             course.heroImageAlt,
             t("course.photoAltFallback", { course: course.title, n: 1 }),
           )}
-          className="h-56 w-full sm:h-80"
+          maxHeightClass="max-h-56 sm:max-h-80"
           sizes="(min-width: 896px) 896px, 100vw"
         />
       ) : null}

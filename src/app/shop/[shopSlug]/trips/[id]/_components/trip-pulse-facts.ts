@@ -1,8 +1,11 @@
 import type { getTripOverview } from "@/db/trips";
+import { boatWorkText } from "@/i18n/boat-work-labels";
 import { overRatioPulseKey } from "@/i18n/crew-gap-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
+import type { TodayAction } from "@/lib/today";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -17,7 +20,12 @@ import { boatClashText } from "./trip-crew-notes";
 type TripOverview = NonNullable<Awaited<ReturnType<typeof getTripOverview>>>;
 
 /** One quiet link in the Divers tab's pulse: a fact about the boat and the door to its fix. */
-export type TripPulseFact = { text: string; href: string; tone?: "danger" };
+export type TripPulseFact = {
+  text: string;
+  href: string;
+  tone?: "danger" | "warning";
+  key?: string;
+};
 
 /**
  * Capacity moved into the masthead ring in slice 5e. Non-seat pulse facts
@@ -34,6 +42,9 @@ export function tripPulseFacts({
   liveBoatClashes,
   shopSlug,
   tripId,
+  startsAt,
+  now,
+  needs,
   t,
 }: {
   pulseNeeded: boolean;
@@ -46,6 +57,14 @@ export function tripPulseFacts({
   liveBoatClashes: TripOverview["boatClashes"];
   shopSlug: string;
   tripId: string;
+  /** When the boat leaves, and the page's clock: the boat's work asks both. */
+  startsAt: Date;
+  now: Date;
+  /**
+   * Today's own rows for this departure (`getDepartureNeeds`), or null when
+   * the boat is outside Today's window and the band says the boat's work alone.
+   */
+  needs: readonly TodayAction[] | null;
   t: StaffTranslator;
 }): TripPulseFact[] {
   return pulseNeeded
@@ -117,29 +136,83 @@ export function tripPulseFacts({
               },
             ]
           : []),
-        ...(pulse.prepGaps > 0
-          ? [
-              {
-                text: t("trips.pulse.prepGaps", { count: pulse.prepGaps }),
-                // The packing list is the Gear tab (ADR 20261001-logbook).
-                href: `${shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}`,
-              },
-            ]
-          : []),
-        // Money owed is work, not a boarding hazard — so it reads in the pulse's
-        // neutral ink, below the facts that hold the boat up, and it is the one
-        // fact here whose fix lives off the trip entirely. `range=all` because the
-        // count is unwindowed: a seat sold months ahead was invoiced months ago,
-        // and the index's default 90-day window would open on fewer orders than
-        // the fact just promised.
-        ...(pulse.openOrders > 0
-          ? [
-              {
-                text: t("trips.pulse.awaitingPayment", { count: pulse.openOrders }),
-                href: `${shopPath(shopSlug, "orders")}?tripId=${tripId}&status=open&range=all`,
-              },
-            ]
-          : []),
+        // **What Needs you lists for this boat** (fourth review, item 36):
+        // Today's own rows, so "Needs you · 7" here is the seven Today shows,
+        // in the words it shows them. Work, not hazards, so it reads in the
+        // pulse's neutral ink below the facts that hold the boat up; a hazard
+        // Today also lists (a blocked diver's waiver) is both a line above and
+        // a row in the list, as it is one tap away on Today. Outside Today's
+        // window, the boat's work alone (`boatWorkItems`, third review item 4):
+        // the same items, counts and words, except nitrox asked for with no
+        // verified card, which carries its warning tone.
+        ...(needs
+          ? needs.map((action) => ({
+              key: action.id,
+              text: todayRowText(action),
+              href: awayFromThisPage(action.href, shopPath(shopSlug, "trips", tripId)),
+            }))
+          : boatWorkItems(pulse.work, { startsAt, now }).map((item) => ({
+              text: boatWorkText(t, item),
+              href: boatWorkHref(item, { shopSlug, tripId }),
+              ...(item.tone === "warning" ? { tone: "warning" as const } : {}),
+            }))),
       ]
     : [];
+}
+
+/** A Today row as one line: the person, then the sentence, as the row reads on Today. */
+function todayRowText(action: TodayAction): string {
+  if (action.aboutDeparture || !action.subject) return action.detail;
+  return action.detail ? `${action.subject} · ${action.detail}` : action.subject;
+}
+
+/** A Today row that opens this very page lands on its roster instead, never a dead tap. */
+function awayFromThisPage(href: string, tripHref: string): string {
+  return href === tripHref ? `${tripHref}#roster` : href;
+}
+
+/**
+ * Where each item of the boat's work is fixed. Sizes and nitrox are the Gear
+ * tab's packing list (ADR 20261001-logbook); a missing contact is the diver's
+ * own row on the roster; money owed is the Orders index filtered to this
+ * departure, `range=all` because the count is unwindowed: a seat sold months
+ * ahead was invoiced months ago, and the index's default 90-day window would
+ * open on fewer orders than the fact just promised.
+ */
+function boatWorkHref(
+  item: BoatWorkItem,
+  { shopSlug, tripId }: { shopSlug: string; tripId: string },
+) {
+  switch (item.code) {
+    case "missing_sizes":
+    case "ungated_nitrox":
+      return `${shopPath(shopSlug, "trips", tripId, "prep")}#${PREP_SECTION_ID}`;
+    case "missing_contact":
+      return `${shopPath(shopSlug, "trips", tripId)}#roster`;
+    case "open_orders":
+      return `${shopPath(shopSlug, "orders")}?tripId=${tripId}&status=open&range=all`;
+  }
+}
+
+/** The page's call: the overview's own parts, read off it here rather than spelled out at the route. */
+export function tripPulseFactsOf(
+  overview: Pick<
+    TripOverview,
+    "pulseNeeded" | "pulse" | "crew" | "requirement" | "cancelled" | "trip"
+  >,
+  page: Pick<
+    Parameters<typeof tripPulseFacts>[0],
+    "liveBoatClashes" | "shopSlug" | "tripId" | "now" | "t" | "needs"
+  >,
+): TripPulseFact[] {
+  return tripPulseFacts({
+    pulseNeeded: overview.pulseNeeded,
+    pulse: overview.pulse,
+    crewGap: overview.crew.crewGap,
+    requirement: overview.requirement,
+    cancelled: overview.cancelled,
+    course: overview.trip.course,
+    startsAt: overview.trip.startsAt,
+    ...page,
+  });
 }

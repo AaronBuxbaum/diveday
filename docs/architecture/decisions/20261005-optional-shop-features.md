@@ -62,6 +62,8 @@ discount that does not exist.
   signal rather than an exposure: the codes stay unguessable, and a refused code still reads the
   same whatever the reason.
 
+- **Amended 2026-10-15: the PADI checks.** `padi_checks_enabled`, **default false**, switches both PADI checks of [20261008-cert-check-extension](20261008-cert-check-extension.md) (DiveChek and eLearning). Its row sits in Bookings & waivers under the extension's own row. It defaults off for the same reason as "Our year": the check runs under the shop's own PADI membership, so the shop says yes. Off, `agencyCheckOffered` hides every PADI check and the actions refuse one.
+
 ## Alternatives considered
 
 - **One "Features" group in Settings listing every switch.** It is easier to scan as a list, but a

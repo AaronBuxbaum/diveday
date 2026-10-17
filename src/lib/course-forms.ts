@@ -1,3 +1,5 @@
+import { ageOnDate } from "./age";
+import type { CalendarDate } from "./calendar-date";
 import { type GuardianSigner, guardianSignatureRequired, signingDate } from "./guardian";
 
 /**
@@ -41,6 +43,18 @@ export type RequiredCourseForm = {
   version: number;
   title: string;
   position: number;
+  /**
+   * A medical statement: blocks boarding whatever
+   * `COURSE_FORMS_BLOCK_BOARDING` says (#2337).
+   */
+  medicalScreening?: boolean;
+  /**
+   * Asked only of a student this age or younger on `sessionFirstDay` (issue
+   * #2265). Absent asks every student.
+   */
+  maxAgeYears?: number;
+  /** The session's first day in the shop's zone, beside `maxAgeYears`. */
+  sessionFirstDay?: CalendarDate;
   /**
    * Older versions that still count for this session: the one that was
    * current when a session that has started began. A student who signed the
@@ -88,7 +102,19 @@ export function signatureSatisfies(
   if (signature.bookingId !== enrollment.bookingId) return false;
   if (signature.personId !== enrollment.personId) return false;
   if (!signatureNamesForm(signature, form)) return false;
-  return !guardianStillOwed(signature, enrollment.signer);
+  return !guardianStillOwed(signature, form, enrollment.signer);
+}
+
+/**
+ * **A youth form is a minor's paper** (dive-domain review H6): one bounded at
+ * 17 or under is signed by a guardian beside the student whatever the record
+ * says, since it is asked only of a minor or of a student whose age the shop
+ * does not know. A medical statement's bound is ignored (G3), so this one too.
+ */
+export function isYouthForm(
+  form: Pick<RequiredCourseForm, "maxAgeYears" | "medicalScreening">,
+): boolean {
+  return !form.medicalScreening && typeof form.maxAgeYears === "number" && form.maxAgeYears <= 17;
 }
 
 function signatureNamesForm(signature: CourseFormSignature, form: RequiredCourseForm): boolean {
@@ -99,9 +125,19 @@ function signatureNamesForm(signature: CourseFormSignature, form: RequiredCourse
 }
 
 /** A minor on the day they signed, with no guardian's signature beside theirs. */
-function guardianStillOwed(signature: CourseFormSignature, signer: GuardianSigner): boolean {
+function guardianStillOwed(
+  signature: CourseFormSignature,
+  form: RequiredCourseForm,
+  signer: GuardianSigner,
+): boolean {
+  if (signature.guardianSignedAt !== null) return false;
+  if (isYouthForm(form)) return true;
   const signedOn = signature.paperSignedOn ?? signingDate(signature.signedAt, signer.timezone);
-  const minorWhenSigned = guardianSignatureRequired(signer.dateOfBirth, signedOn);
+  const minorWhenSigned = guardianSignatureRequired(
+    signer.dateOfBirth,
+    signedOn,
+    signer.minorDeclared,
+  );
   return minorWhenSigned && signature.guardianSignedAt === null;
 }
 
@@ -122,8 +158,15 @@ export function courseFormGaps(input: {
   required: readonly RequiredCourseForm[];
   signatures: readonly CourseFormSignature[];
   signer: GuardianSigner;
-}): { form: RequiredCourseForm; gap: CourseFormGap }[] {
+}): { form: RequiredCourseForm; gap: CourseFormGap; ageUnknown: boolean }[] {
   return outstandingCourseForms(input).map((form) => {
+    // Asked only because the shop does not know how old the student is: the
+    // dock is told so, since a date of birth may be the whole fix (H6).
+    const ageUnknown =
+      !form.medicalScreening &&
+      form.maxAgeYears !== undefined &&
+      !input.signer.dateOfBirth &&
+      !input.signer.minorDeclared;
     const studentSigned = input.signatures.some(
       (signature) =>
         signature.shopId === input.shopId &&
@@ -132,8 +175,26 @@ export function courseFormGaps(input: {
         form.shopId === input.shopId &&
         signatureNamesForm(signature, form),
     );
-    return { form, gap: studentSigned ? "guardian_missing" : "unsigned" };
+    return { form, gap: studentSigned ? "guardian_missing" : "unsigned", ageUnknown };
   });
+}
+
+/**
+ * **Whether a form is asked of this student at all** (issue #2265). A form
+ * with an age bound is asked of a student at or under it on the session's
+ * first day, and of one whose age the shop does not know: a youth
+ * acknowledgment missed for a child is the failure nobody catches at the
+ * dock, so an unknown birthday asks rather than skips.
+ */
+export function courseFormAskedOf(
+  form: Pick<RequiredCourseForm, "maxAgeYears" | "sessionFirstDay" | "medicalScreening">,
+  dateOfBirth: CalendarDate | null | undefined,
+): boolean {
+  // A medical statement is asked of every student, bound or none (G3).
+  if (form.medicalScreening) return true;
+  if (form.maxAgeYears === undefined) return true;
+  if (!dateOfBirth || !form.sessionFirstDay) return true;
+  return ageOnDate(dateOfBirth, form.sessionFirstDay) <= form.maxAgeYears;
 }
 
 /**
@@ -151,6 +212,7 @@ export function outstandingCourseForms(input: {
 }): RequiredCourseForm[] {
   return [...input.required]
     .sort((a, b) => a.position - b.position)
+    .filter((form) => courseFormAskedOf(form, input.signer.dateOfBirth))
     .filter(
       (form) => !input.signatures.some((signature) => signatureSatisfies(signature, form, input)),
     );

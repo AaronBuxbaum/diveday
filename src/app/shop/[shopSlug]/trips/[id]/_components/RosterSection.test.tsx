@@ -27,6 +27,57 @@ afterEach(cleanup);
  * a restyle may move everything here except what these assert.
  */
 
+describe("the decompression reminder on the roster (H-144)", () => {
+  const words = "decompression card";
+  const rowsFor = (type: "diver" | "snorkeler" | "rider") => ({
+    roster: [entry("b1", "Meera Iyer", { participantType: type })],
+    readiness: new Map([["b1", readinessRow("ready")]]) as unknown as ReadinessByBooking,
+    waivers: new Map() as unknown as WaiverByBooking,
+  });
+
+  it("shows once on a decompression departure with a diver aboard", () => {
+    renderRoster({ ...rowsFor("diver"), exceedsNoDecoLimits: true });
+    expect(screen.getAllByText(new RegExp(words))).toHaveLength(1);
+  });
+
+  it("is silent on a departure not marked as decompression diving", () => {
+    renderRoster({ ...rowsFor("diver"), exceedsNoDecoLimits: false });
+    expect(screen.queryByText(new RegExp(words))).toBeNull();
+  });
+
+  it.each(["snorkeler", "rider"] as const)("is silent when only a %s is booked", (type) => {
+    renderRoster({ ...rowsFor(type), exceedsNoDecoLimits: true });
+    expect(screen.queryByText(new RegExp(words))).toBeNull();
+  });
+
+  it("shows for a guide in the water when every guest is a snorkeler", () => {
+    renderRoster({ ...rowsFor("snorkeler"), exceedsNoDecoLimits: true, divingCrew: true });
+    expect(screen.getAllByText(new RegExp(words))).toHaveLength(1);
+  });
+
+  it("is silent once the last diver is released as a no-show", () => {
+    const released = rowsFor("diver");
+    (released.roster[0].booking as { status: string }).status = "no_show";
+    renderRoster({ ...released, exceedsNoDecoLimits: true });
+    expect(screen.queryByText(new RegExp(words))).toBeNull();
+  });
+
+  it("is silent on a finished departure's record", () => {
+    renderRoster({
+      ...rowsFor("diver"),
+      exceedsNoDecoLimits: true,
+      record: {
+        dock: new Map(),
+        afterDive: new Set(),
+        rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map(),
+      } as never,
+    });
+    expect(screen.queryByText(new RegExp(words))).toBeNull();
+  });
+});
+
 describe("the guests ledger (slice 5d)", () => {
   it("files every seat under a group band that owns the state word and the count", () => {
     renderRoster(fixtures);
@@ -34,6 +85,20 @@ describe("the guests ledger (slice 5d)", () => {
     // The band is a real heading, once per group — the word plus the tally.
     expect(screen.getByRole("heading", { name: "Still to clear · 1" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Ready · 1" })).toBeVisible();
+  });
+
+  /**
+   * **The bands are the Divers tab's second level** (UX review 2026-10-13,
+   * item 39). The departure page draws the roster under its own H1 with no
+   * summary heading, and the bands were H3: a screen reader moving by level
+   * found nothing at 2 on the page the desk uses most.
+   */
+  it("gives its group bands the level under the page title, skipping none", () => {
+    renderRoster(fixtures);
+
+    const bands = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    expect(bands).toEqual(expect.arrayContaining(["Still to clear · 1", "Ready · 1"]));
+    expect(screen.queryAllByRole("heading", { level: 3 })).toEqual([]);
   });
 
   it("never repeats the group's state word down its rows: a cleared seat is a name and a drawn mark", () => {
@@ -69,7 +134,7 @@ describe("the guests ledger (slice 5d)", () => {
     ).toHaveAttribute("href", `/shop/blue-mantis/divers/${blocked.person.id}#cards`);
 
     // And the groups order the page's answer: open work above cleared seats.
-    const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(headings.indexOf("Still to clear · 1")).toBeLessThan(headings.indexOf("Ready · 1"));
   });
 
@@ -96,7 +161,6 @@ describe("the guests ledger (slice 5d)", () => {
         ["c", signedWaiver],
         ["d", signedWaiver],
       ]) as WaiverByBooking,
-      compact: true,
     });
 
     expect(screen.getByRole("link", { name: "Asha Osei" })).toHaveClass(
@@ -151,6 +215,8 @@ describe("the guests ledger (slice 5d)", () => {
         ]),
         afterDive: new Set(),
         rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map(),
       },
     });
     expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
@@ -160,6 +226,21 @@ describe("the guests ledger (slice 5d)", () => {
     expect(screen.queryByText("No certification is on file for this trip.")).toBeNull();
   });
 
+  it("says the sailed diver's next dive under their row (fifth-loop ideas, item 4)", () => {
+    renderRoster({
+      ...fixtures,
+      record: {
+        dock: new Map([[ready.booking.id, "boarded"]]),
+        afterDive: new Set(),
+        rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map(),
+        below: new Map([[ready.booking.id, <p key="next">Booked Sat 11:30 AM</p>]]),
+      },
+    });
+    expect(screen.getByText("Booked Sat 11:30 AM")).toBeVisible();
+  });
+
   it("files a seat nobody counted at the dock under its own band, never as Didn't sail", () => {
     renderRoster({
       ...fixtures,
@@ -167,12 +248,60 @@ describe("the guests ledger (slice 5d)", () => {
         dock: new Map([[ready.booking.id, "boarded"]]),
         afterDive: new Set(),
         rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map(),
       },
     });
     expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Not counted at the dock · 1" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: /Didn’t sail/ })).toBeNull();
     expect(screen.queryByRole("heading", { name: /No roll call taken/ })).toBeNull();
+  });
+
+  it("files a diver counted out and not back under its own band, never as Sailed", () => {
+    renderRoster({
+      ...fixtures,
+      record: {
+        dock: new Map([
+          [ready.booking.id, "boarded"],
+          [blocked.booking.id, "boarded"],
+        ]),
+        afterDive: new Set([blocked.booking.id]),
+        rollCallTaken: true,
+        unaccounted: new Set([blocked.booking.id]),
+        countedAboardBlocked: new Map(),
+      },
+    });
+    expect(screen.getByRole("heading", { name: "Not back aboard · 1" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Sailed · 1" })).toBeVisible();
+  });
+
+  it("says on a sailed row, in words and with no control, that the diver was counted aboard while blocked", () => {
+    renderRoster({
+      ...fixtures,
+      record: {
+        dock: new Map([
+          [ready.booking.id, "boarded"],
+          [blocked.booking.id, "boarded"],
+        ]),
+        afterDive: new Set([blocked.booking.id]),
+        rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map([
+          [
+            blocked.booking.id,
+            { checkpoint: "after_dive_1", blockers: [{ code: "certification_missing" }] },
+          ],
+        ]),
+      },
+    });
+    expect(screen.getByRole("heading", { name: "Sailed · 2" })).toBeVisible();
+    expect(screen.getByText("1 counted aboard while blocked")).toBeVisible();
+    const line = screen.getByText(/Counted aboard \(After dive 1\) while blocked: /);
+    expect(line).toBeVisible();
+    // One line on the one seat, and the record asks for nothing: no Blocked capsule, no fixes.
+    expect(screen.getAllByText(/while blocked: /)).toHaveLength(1);
+    expect(screen.queryByText("Blocked")).toBeNull();
   });
 
   it("makes add diver the terminal ledger group, including on an empty roster", () => {
@@ -186,7 +315,7 @@ describe("the guests ledger (slice 5d)", () => {
     const addDiver = container.querySelector("#add-diver");
     expect(addDiver).not.toBeNull();
     expect(
-      within(addDiver as HTMLElement).getByRole("heading", { name: "Add a diver" }),
+      within(addDiver as HTMLElement).getByRole("heading", { name: "Add a booking" }),
     ).toBeVisible();
     expect(within(addDiver as HTMLElement).getByTestId("add-diver-form")).toBeVisible();
     expect(screen.queryByText("No one on this boat yet")).toBeNull();
@@ -435,12 +564,11 @@ describe("the roster's row geometry", () => {
  * own step.
  */
 describe("the roster's place on the departure page", () => {
-  it("carries no top margin of its own when compact", () => {
+  it("carries no top margin of its own", () => {
     const { container } = renderRoster({
       roster: [],
       readiness: new Map() as ReadinessByBooking,
       waivers: new Map() as WaiverByBooking,
-      compact: true,
     });
     const roster = container.querySelector("#roster");
     expect(roster).not.toBeNull();
@@ -506,5 +634,56 @@ describe("the one-line row", () => {
       waivers: new Map() as WaiverByBooking,
     });
     expect(screen.queryByText("Waiver not signed yet")).toBeNull();
+  });
+});
+
+/**
+ * **A snorkeler held on a medical is told how to board them riding only**
+ * (H-109, issue #2382). Staff switch the seat to rider; the rider chip carries
+ * the warning. No new clearance exists, so the hint is only a pointer, and only
+ * on a seat that is in the water on a medical hold.
+ */
+describe("a snorkeler held on a medical", () => {
+  const hint = /change this seat to Rider/i;
+  const medicalBlockers = {
+    medical_review: [{ code: "medical_review", params: undefined }],
+    medical_not_cleared: [{ code: "medical_not_cleared", params: undefined }],
+  };
+
+  it.each(["medical_review", "medical_not_cleared"] as const)(
+    "points a snorkeler's %s hold at the switch to rider",
+    (code) => {
+      const snorkeler = entry("s", "Sky Lund", { participantType: "snorkeler" });
+      renderRoster({
+        roster: [snorkeler],
+        readiness: new Map([
+          ["s", readinessRow("blocked", medicalBlockers[code])],
+        ]) as ReadinessByBooking,
+        waivers: new Map([["s", signedWaiver]]) as WaiverByBooking,
+      });
+      expect(screen.getAllByText(hint)).toHaveLength(1);
+    },
+  );
+
+  it("says nothing of the kind to a diver on the same hold", () => {
+    renderRoster({
+      roster: [entry("d", "Dee Park", { participantType: "diver" })],
+      readiness: new Map([
+        ["d", readinessRow("blocked", medicalBlockers.medical_review)],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["d", signedWaiver]]) as WaiverByBooking,
+    });
+    expect(screen.queryByText(hint)).toBeNull();
+  });
+
+  it("says nothing on a snorkeler blocked for something else", () => {
+    renderRoster({
+      roster: [entry("s", "Sky Lund", { participantType: "snorkeler" })],
+      readiness: new Map([
+        ["s", readinessRow("blocked", [{ code: "waiver_not_sent", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+    });
+    expect(screen.queryByText(hint)).toBeNull();
   });
 });

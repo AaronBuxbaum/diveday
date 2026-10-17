@@ -94,6 +94,12 @@ export function ExpiredLink({
  * The card for a readiness link that resolves nothing at all: no shop can be
  * named without weakening the guarantee that a bearer token reveals only its
  * own record, so it offers DiveDay's own door (UX review 2026-10-10, item 11).
+ *
+ * It reads `ready.unavailableBody`, not the waiver subtree's identical
+ * sentence, which the page read until issue #1334. The two say the same words
+ * today, but `/waivers` and `/ready` are different surfaces with different
+ * rescues, and a reword of one should not be able to reach the other by
+ * accident.
  */
 export function UnavailableReadyLink({ t }: { t: DiverTranslator }) {
   return (

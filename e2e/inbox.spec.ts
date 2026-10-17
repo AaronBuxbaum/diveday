@@ -34,7 +34,7 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
 
   // The worklist shape: unanswered first, under a group carrying the count.
-  await expect(page.getByRole("heading", { name: /Waiting on you/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Needs you/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Done" })).toBeVisible();
   // A stranger's row has no record to open, so it shows the address instead.
   await expect(page.getByText("marta.keller@mail.example")).toBeVisible();
@@ -45,14 +45,14 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\/.*#message-/);
   const messageId = new URL(page.url()).hash.slice(1);
   const target = page.locator(`[id="${messageId}"]`);
-  await expect(target).toContainText(/Could I switch to the afternoon boat/);
+  await expect(target).toContainText(/won.t make today.s reef boat/);
   await expect(target).toBeInViewport({ ratio: 1 });
 
   // The group is a landmark of its own (`DiverFileGroupDisclosure` renders a
   // `<section aria-label>`), which is what lets this scope its assertions to
   // the conversation rather than to a record six sections long.
   const conversation = page.getByRole("region", { name: "Conversation" });
-  await expect(conversation.getByText(/Could I switch to the afternoon boat/)).toBeVisible();
+  await expect(conversation.getByText(/won.t make today.s reef boat/)).toBeVisible();
 
   // The composer names where the answer is going, not only how it will travel:
   // a diver can write from an address that is not the one on their record, and
@@ -117,14 +117,83 @@ test("a staffer deletes the message from a sender nobody on the roster holds", a
  */
 test("a staffer marks a message done and moves it back", async ({ page }) => {
   await page.goto("/shop/blue-mantis/inbox");
-  const waiting = page.getByRole("heading", { name: /Waiting on you · 3/ });
+  const waiting = page.getByRole("heading", { name: /Needs you · 3/ });
   await expect(waiting).toBeVisible();
 
   await page.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
   await page.getByRole("button", { name: "Mark done" }).click();
-  await expect(page.getByRole("heading", { name: /Waiting on you · 2/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Needs you · 2/ })).toBeVisible();
 
   await page.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
   await page.getByRole("button", { name: "Move back to waiting" }).click();
-  await expect(page.getByRole("heading", { name: /Waiting on you · 3/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Needs you · 3/ })).toBeVisible();
+});
+
+/**
+ * **A message asking to move a seat reaches the move** (fourth UX review, item
+ * 32). Priya's message names each seat she holds as a link to it on its
+ * roster, and the row's "⋯" offers a move for each, which lands on that
+ * seat with the roster's own move already open. Nothing on the Inbox moves a
+ * seat; the roster's one path does.
+ */
+test("a message about a seat opens it, and its menu opens the seat's move", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/inbox");
+  // She holds more than one seat (the reef boat and the wreck), so the row
+  // names each, and each has its own move (dive-domain review r4-4, F1).
+  const seat = page
+    .getByRole("link", { name: /^Booked on Two-Tank Reef — Molasses & French/ })
+    .first();
+  await expect(seat).toBeVisible();
+  await expect(seat).toHaveAttribute("href", /\/shop\/blue-mantis\/trips\/[^#]+#booking-/);
+
+  await page.getByRole("button", { name: "More for the message from Priya Sharma" }).click();
+  await page
+    .getByRole("link", { name: /^Move Priya Sharma’s seat on Two-Tank Reef — Molasses & French/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/trips\/[^#]+#move-booking-/);
+  // The roster's move, open on her seat: its one select and its button.
+  const move = page.locator(`[id="${new URL(page.url()).hash.slice(1)}"]`);
+  await expect(move.getByLabel("Departure")).toBeVisible();
+  await expect(move.getByRole("button", { name: "Move" })).toBeVisible();
+});
+
+/**
+ * **Saved answers** (fifth loop, item 15): a reply the desk just wrote is
+ * kept with "Save this answer", with the diver's name taken out; it comes back
+ * as a chip above the reply box, filled for whoever the record is; and the
+ * Inbox lists it with a soft Delete and Put back.
+ */
+test("a staffer saves an answer, uses it as a chip, and deletes it softly", async ({ page }) => {
+  test.setTimeout(45_000);
+  await page.goto("/shop/blue-mantis/inbox");
+  await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
+  const conversation = page.getByRole("region", { name: "Conversation" });
+
+  const composer = page.getByLabel("Reply by email to priya.sharma@mail.example", { exact: true });
+  await composer.fill("Hi Priya, the gate opens at 7:10 on dive days.");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(conversation.getByText(/the gate opens at 7:10/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Save this answer" }).click();
+  await expect(page.getByText(/^Saved\. It’s above the reply box now/)).toBeVisible();
+
+  // The chip, named from the answer without the diver's name in it.
+  const chips = page.getByRole("group", { name: "Saved answers" });
+  const chip = chips.getByRole("button", { name: "Hi, the gate opens at 7:10 on dive days." });
+  await expect(chip).toBeVisible();
+  await chip.click();
+  await expect(composer).toHaveValue("Hi Priya, the gate opens at 7:10 on dive days.");
+
+  await page.goto("/shop/blue-mantis/inbox#saved-answers");
+  const saved = page.getByRole("region", { name: "Saved answers" });
+  await expect(saved.getByText(/^Hi \{name\}, the gate opens at 7:10/)).toBeVisible();
+  await saved
+    .getByRole("button", { name: "Delete Hi, the gate opens at 7:10 on dive days." })
+    .click();
+  await expect(page.getByText("Saved answer deleted.")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Put back Hi, the gate opens at 7:10 on dive days." })
+    .click();
+  await expect(page.getByText("Saved answer put back.")).toBeVisible();
 });

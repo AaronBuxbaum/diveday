@@ -1,3 +1,4 @@
+import { type CourseSeatInTraining, inTrainingBefore } from "./in-training";
 import { offeredParticipantTypes, type ParticipantType, seatRefusal } from "./participant-types";
 import type { CertRequirementSource, SiteCertRequirement } from "./readiness";
 import { decideTripAdmission, type TripAdmissionEvidence } from "./trip-admission";
@@ -34,7 +35,8 @@ import { decideTripAdmission, type TripAdmissionEvidence } from "./trip-admissio
  *   to a boat they're already booked on;
  * - **admission-eligible** — `decideTripAdmission` over the trip's own
  *   requirement row, its sites' inherent gates, and the diver's certification
- *   evidence at this shop.
+ *   evidence at this shop, with the levels their booked courses reach before
+ *   the candidate sails (`inTrainingBefore`), as at the booking door.
  *
  * Zero survivors is a legitimate answer, not an error: the message still goes
  * out with the cancellation and the money story, pointing at the public
@@ -80,6 +82,12 @@ export type BlowoutDiverContext = {
   bookedTripIds: readonly string[];
   /** What the blown-out seat was: offered the same kind of seat elsewhere. Absent means diver. */
   participantType?: ParticipantType;
+  /**
+   * The diver's course seats (`listCourseSeatsInTraining`), so a departure
+   * after a course they are booked on is offered exactly as the booking door
+   * would sell it (issue #2058). Absent means none.
+   */
+  courseSeats?: readonly CourseSeatInTraining[];
 };
 
 export type BlowoutOfferInput = {
@@ -124,7 +132,14 @@ export function qualifyingAlternatives(input: BlowoutOfferInput): string[] {
       return decideTripAdmission({
         requirement: candidate.requirement,
         siteRequirement: candidate.siteRequirement,
-        evidence: input.diver.evidence,
+        evidence: {
+          ...input.diver.evidence,
+          levelsInTraining: inTrainingBefore(
+            input.diver.courseSeats ?? [],
+            candidate,
+            input.now,
+          ).map((course) => course.level),
+        },
         identityUnconfirmed: input.diver.identityUnconfirmed,
         participantType: type,
       }).admitted;

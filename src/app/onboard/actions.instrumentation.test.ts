@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext, type seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **The founder's new-shop alert** (docs ADR
@@ -129,7 +131,7 @@ async function signUp(form = onboardForm()): Promise<string> {
  * uniqueness checks have something real to miss.
  */
 async function useDb(): Promise<TestDb> {
-  const db = await seededTestDb();
+  const db = ctx.db;
   vi.mocked(getDb).mockResolvedValue(db);
   await mintLink(db);
   return db;
@@ -281,7 +283,7 @@ describe("onboardAction instrumentation", () => {
     // argument to `sendNotification`, so it rejects before any `.catch` on the
     // returned promise exists. The trailing `.catch()` this used to carry
     // never saw it, and it surfaced as an unhandled rejection.
-    const db = await seededTestDb();
+    const db = ctx.db;
     await mintLink(db);
     vi.mocked(getDb)
       .mockResolvedValueOnce(db) // the action's own handle

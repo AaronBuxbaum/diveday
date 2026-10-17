@@ -78,7 +78,7 @@ test.describe("staff-prepared trip", () => {
     // keeps the address label. Both ride inside Day-of details, which gates on
     // neither (ADR 20260827-the-divers-thread, decision 3).
     await openThreadStep(page, "dayof");
-    await expect(page.getByRole("heading", { name: "Want a morning pickup?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Want a pickup?" })).toBeVisible();
     await expect(page.getByLabel("Where you’re staying")).toBeVisible();
   });
 
@@ -148,13 +148,16 @@ test.describe("staff-prepared trip", () => {
     // the copy the crew is not reading.
     await expect(page.getByRole("heading", { name: "Emergency contact" })).toHaveCount(0);
 
-    // The diver's own words to the crew: inside Day-of details, saved on its
-    // own action, so it cannot blank the sizes beside it (issue 627).
+    // The diver's own words to the crew: inside Day-of details, written to
+    // the note column alone, so it cannot blank the sizes beside it (issue
+    // 627). One Save for the whole step (third UX review, item 24): the pickup
+    // answered beside it is kept too, not only the last thing typed.
     await openThreadStep(page, "dayof");
     await page.getByLabel("Anything else the crew should know?").fill("Titanium hip, I run heavy.");
-    await page.getByRole("button", { name: "Save note" }).click();
+    await page.getByLabel("Where you’re staying").fill("Ocean Pointe, room 12");
+    await page.getByRole("button", { name: "Save day-of details" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Saved. The crew will see that" }),
+      page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
     ).toBeVisible();
     // Read back off the control itself, which is what the diver comes back to.
     // Re-opened first, because the save is a redirect: the fresh render puts
@@ -163,6 +166,7 @@ test.describe("staff-prepared trip", () => {
     await expect(page.getByLabel("Anything else the crew should know?")).toHaveValue(
       "Titanium hip, I run heavy.",
     );
+    await expect(page.getByLabel("Where you’re staying")).toHaveValue("Ocean Pointe, room 12");
 
     // Where the diver is actually going, and how to reach the people who will
     // be there. This page used to close on a one-line "Questions? Reach out to
@@ -179,32 +183,24 @@ test.describe("staff-prepared trip", () => {
     await expect(
       arrivalCard.getByRole("link", { name: "front.desk@mail.example" }),
     ).toHaveAttribute("href", "mailto:front.desk@mail.example");
-    // The map is a plain roadmap embed built from the shop's own address —
-    // never a guessed location. The e2e context answers maps.google.com
-    // with an empty page (fixtures.ts), so this asserts the frame, not its
-    // contents.
-    await expect(arrivalCard.locator('iframe[title="Map of Blue Mantis Divers"]')).toHaveAttribute(
-      "src",
-      /100%20Ocean%20Drive/,
-    );
-    // And it is the *only* one: the deleted card is gone, not relocated.
+    // The map is drawn only once the map host answers (fourth UX review
+    // item 4, `useMapReachable`). The e2e context refuses that probe
+    // (fixtures.ts), which is a marina with one bar: the card carries no
+    // empty frame, and the address above it stands alone. The frame's own
+    // `src`, the shop's own address, is pinned in TripArrivalCard.test.tsx.
     await expect(page.getByRole("heading", { name: "Your dive shop" })).toHaveCount(0);
-    await expect(page.locator("iframe[title^='Map of']")).toHaveCount(1);
+    await expect(page.locator("iframe[title^='Map of']")).toHaveCount(0);
 
     // The question no form asked until 2026-08-21 (ADR
     // 20260821-currency-is-what-catches-people). It gates nothing, so what is
     // worth proving is that the answer round-trips and the row settles.
     await openThreadStep(page, "dayof");
-    const currencyForm = page.locator("form").filter({ hasText: "When did you last dive?" });
-    await currencyForm
+    await page
       .getByLabel("When did you last dive?")
       .selectOption({ label: "More than five years ago" });
-    // Scoped to its own form: the page now also carries "What's this dive for?",
-    // whose Save is the same word on the same page. Two questions, two forms,
-    // and this one is about currency.
-    await currencyForm.getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByRole("button", { name: "Save day-of details" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Thanks. The crew will see that" }),
+      page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),
     ).toBeVisible();
     // The answer is the Day-of step's settled line now, so it reads without
     // opening anything — and the step has moved the figure, which is the
@@ -222,9 +218,14 @@ test.describe("staff-prepared trip", () => {
     // relaxed-revocation branch — which is the half of this that a unit test
     // cannot reach. Its own test because it ends the booking, which every
     // check in the test above needs live.
-    await page.getByRole("button", { name: "Cancel my spot" }).click();
-    await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
+    await page.getByRole("button", { name: "Cancel my seat" }).click();
+    await page.getByRole("button", { name: "Yes, cancel my seat" }).click();
     await expect(page.getByRole("heading", { name: "This booking was canceled" })).toBeVisible();
+    // Never a dead end: the schedule is one tap away (third UX review, item 16).
+    await expect(page.getByRole("link", { name: "See what’s coming up" })).toHaveAttribute(
+      "href",
+      /^\/s\/[^/]+$/,
+    );
 
     // **And the same dead token, opened again later, names the shop.**
     //
@@ -271,7 +272,7 @@ test.describe("staff-prepared trip", () => {
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(
       page.getByRole("list", { name: "Upcoming trips" }).locator("li").filter({ hasText: title }),
-    ).toContainText("6 spots left");
+    ).toContainText("6 seats left");
   });
 });
 
@@ -281,6 +282,18 @@ test("a tampered readiness token reveals nothing, and still leaves a door", asyn
   // No shop to name, so DiveDay's own door rather than a dead end (UX review
   // 2026-10-10, item 11).
   await expect(page.getByRole("link", { name: "Go to DiveDay" })).toHaveAttribute("href", "/");
+});
+
+// The course-forms page signs a student's paperwork on the prep link's own
+// capability (course-forms.spec.ts signs a real one). A forged link opens no
+// form: it falls back to the prep link, which says the link is not available.
+test("a tampered course-forms link opens no form and falls back to the prep link", async ({
+  page,
+}) => {
+  await page.goto("/ready/not-a-real-token/forms");
+  await expect(page).toHaveURL(/\/ready\/not-a-real-token$/);
+  await expect(page.getByRole("heading", { name: /readiness link isn.t available/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sign/ })).toHaveCount(0);
 });
 
 /**

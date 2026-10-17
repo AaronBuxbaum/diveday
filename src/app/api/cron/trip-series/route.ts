@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { clearFinishedRehearsals } from "@/db/rehearsals";
+import { clearPassedReopensOn } from "@/db/shops";
+import { voidStalePublicPackageInvoices } from "@/db/stale-package-invoices";
 import { rollAllSeriesForward } from "@/db/trips";
+import { rollSailedSeriesWaitlists } from "@/db/waitlist-roll";
+import { nowDate } from "@/lib/clock";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
@@ -34,7 +38,7 @@ const CRON_MONITOR_SLUG =
  * nothing a diver can see.
  */
 const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "15 3 * * *" },
+  schedule: { type: "crontab", value: "7 3 * * *" },
   checkinMargin: 240,
   maxRuntime: 5,
   timezone: "Etc/UTC",
@@ -75,6 +79,29 @@ export async function GET(request: Request) {
     // The same nightly pass takes finished rehearsals off the board once
     // fly-safe no longer reads them (ADR 20261012-rehearsal-departures).
     const rehearsalsCleared = await clearFinishedRehearsals(db);
+    // A "Back on the water" date that has passed comes off Settings
+    // (`clearPassedReopensOn`); the storefront had already stopped reading it.
+    const reopensCleared = await clearPassedReopensOn(db);
+    // Leads nobody invited on a series date that sailed roll onto the run's
+    // next date (third UX review, item 12).
+    const waitlist = await rollSailedSeriesWaitlists(db);
+    // A dive package bought on the public pages and left unpaid past its
+    // window is voided at Stripe and on the order (issue #2304). Its own
+    // failure never fails the roll: tomorrow's pass tries again.
+    const staleInvoices = await voidStalePublicPackageInvoices(db, { now: nowDate() }).catch(
+      async (error: unknown) => {
+        await sentry.captureException(error, { tags: { cron_scan: "stale_package_invoices" } });
+        return { considered: 0, voided: 0, refreshed: 0, failed: 0, unread: 0, stuck: 0 };
+      },
+    );
+    // An invoice Stripe has refused to void night after night needs a person:
+    // raised once, on the night it reaches the limit.
+    if (staleInvoices.stuck > 0) {
+      await sentry.captureMessage("a stale package invoice could not be voided", {
+        level: "warning",
+        tags: { stale_invoices_stuck: String(staleInvoices.stuck) },
+      });
+    }
 
     // A series that cannot be rolled is not a transient blip: it has had every
     // instance deleted, or its course was archived under it, and it will fail
@@ -100,6 +127,13 @@ export async function GET(request: Request) {
       // more slowly than they should.
       seriesDeferred: summary.deferred,
       rehearsalsCleared,
+      reopensCleared,
+      waitlistRolled: waitlist.rolled,
+      waitlistInvited: waitlist.invited,
+      staleInvoicesVoided: staleInvoices.voided,
+      staleInvoicesRefreshed: staleInvoices.refreshed,
+      staleInvoicesFailed: staleInvoices.failed,
+      staleInvoicesUnread: staleInvoices.unread,
     });
 
     await sentry.captureCheckIn({
@@ -112,7 +146,7 @@ export async function GET(request: Request) {
     // with Sentry that this run was not clean. The pass is idempotent, so a
     // retry re-attempts only what is still missing.
     return NextResponse.json(
-      { ...summary, rehearsalsCleared },
+      { ...summary, rehearsalsCleared, waitlistRolled: waitlist.rolled },
       { status: summary.failures > 0 ? 500 : 200 },
     );
   } catch (error) {

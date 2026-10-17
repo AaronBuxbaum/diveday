@@ -15,7 +15,7 @@ import {
 
 const sesConfig = {
   region: "us-east-1",
-  from: "DiveDay <noreply@ses.dive.day>",
+  from: "DiveDay <notifications@ses.dive.day>",
   accessKeyId: "AKIA_TEST",
   secretAccessKey: "test-secret",
 };
@@ -83,7 +83,7 @@ describe("notify", () => {
       Destination: { ToAddresses: ["delivered+booking@dive.day"] },
       Content: {
         Simple: {
-          Subject: { Data: "You’re on the boat — Two-Tank Reef", Charset: "UTF-8" },
+          Subject: { Data: "You’re on the boat: Two-Tank Reef", Charset: "UTF-8" },
         },
       },
     });
@@ -387,11 +387,11 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
       // Sent as the shop, on DiveDay's own verified address (ux review
       // 2026-10-11, item 3): only the display name moves, so DMARC still
       // aligns on the DiveDay domain.
-      FromEmailAddress: '"Blue Mantis via DiveDay" <noreply@ses.dive.day>',
+      FromEmailAddress: '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
       Destination: { ToAddresses: ["delivered+booking@dive.day"] },
       Content: {
         Simple: {
-          Subject: { Data: "You’re on the boat — Two-Tank Reef", Charset: "UTF-8" },
+          Subject: { Data: "You’re on the boat: Two-Tank Reef", Charset: "UTF-8" },
         },
       },
     });
@@ -462,6 +462,40 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     expect(command.input.Content?.Simple?.Headers).toContainEqual({
       Name: "List-Unsubscribe",
       Value: "<https://diveday.example/unsubscribe/tok_digest/one-click>",
+    });
+  });
+
+  // H-118 security review: the shore contact's roll-call alert can be stopped
+  // from the mail client's own button too.
+  it("lifts the shore contact's stop link into the one-click header pair", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await notify(
+      {
+        kind: "roll_call_stale_shore",
+        shopId: "00000000-0000-4000-8000-000000000010",
+        tripId: "00000000-0000-4000-8000-000000000012",
+        to: "delivered+shore@dive.day",
+        locale: "en-US",
+        shopName: "Blue Mantis",
+        shopPhone: null,
+        tripTitle: "Two-Tank Reef",
+        diveNumber: 1,
+        notBackAboard: 0,
+        awaiting: 1,
+        endsAt: new Date("2026-10-14T20:00:00Z"),
+        timezone: "America/New_York",
+        alertedAt: new Date("2026-10-14T21:06:00Z"),
+        stopUrl: "https://diveday.example/unsubscribe/tok_shore",
+      },
+      provider,
+    );
+
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.Content?.Simple?.Headers).toContainEqual({
+      Name: "List-Unsubscribe",
+      Value: "<https://diveday.example/unsubscribe/tok_shore/one-click>",
     });
   });
 
@@ -537,19 +571,15 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
       retryable: false,
       httpStatus: 400,
       errorCode: "MessageRejected",
-      detail: "Email address is not verified",
     });
   });
 
-  // A 403 whose resource ARN names a personal mailbox is the SES *sandbox*, not a
-  // misconfigured sender: a pre-verified recipient is an identity too, and a send is
-  // authorized against every identity it touches. The sender user is granted
-  // `ses.dive.day` and the configuration set alone, so the recipient's own identity is
-  // what the denial names — reading it as a bad `SES_FROM_EMAIL` sends an operator after
-  // the wrong thing, which is why docs/engineering/ses-email-runbook.md's troubleshooting
-  // table gives the sender case and this one separate rows. Either way the address may
-  // never reach the log line.
-  it("keeps the refused identity in the failure detail but out of the log line", async () => {
+  // **No SES prose is kept** (security review of issue #2531). A rejection can
+  // name the recipient, and an AccessDeniedException in the sandbox names a
+  // pre-verified recipient's own identity, so the failure row would hold an
+  // address in a column built for diagnosis. The AWS error's name and status
+  // are the diagnosis; the runbook says how to read the ARN when it matters.
+  it("keeps the refused address out of the failure row and the log line", async () => {
     const error = Object.assign(
       new Error(
         "User `arn:aws:iam::417160702652:user/diveday-ses-sender' is not authorized to perform `ses:SendEmail' on resource `arn:aws:ses:us-east-1:417160702652:identity/diver@gmail.com'",
@@ -561,20 +591,29 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const delivery = await notify(booking, provider);
-    // The operator-facing failure row keeps the address — it is the whole diagnosis.
-    expect(delivery).toMatchObject({
+    expect(delivery).toEqual({
       status: "failed",
       retryable: false,
       httpStatus: 403,
       errorCode: "AccessDeniedException",
-      detail: expect.stringContaining("identity/diver@gmail.com"),
     });
 
     const line = warn.mock.calls[0]?.[0] as string;
-    expect(line).not.toContain("diver@gmail.com");
-    expect(line).toContain("identity/<redacted>@gmail.com");
+    expect(line).not.toContain("diver");
     expect(line).toContain("AccessDeniedException");
     warn.mockRestore();
+  });
+
+  it("keeps a rejected recipient out of the failure row", async () => {
+    const error = Object.assign(
+      new Error("Email address is not verified. The following identities failed: nora@example.com"),
+      { name: "MessageRejected", $metadata: { httpStatusCode: 400 } },
+    );
+    const client = { send: vi.fn().mockRejectedValue(error) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    const delivery = await notify(booking, provider);
+    expect(JSON.stringify(delivery)).not.toContain("nora");
   });
 
   it("marks a thrown throttling error as retryable", async () => {
@@ -615,7 +654,8 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
       status: "failed",
       retryable: true,
       errorCode: "network_error",
-      detail: "fetch failed",
+      // The thrown error's class or its cause's code, never its message.
+      detail: "Error",
     });
   });
 });
@@ -657,6 +697,23 @@ describe("notificationProviderFromEnvironment (ADR 20260803-ses-sole-email-provi
     expect(command.input.FromEmailAddress).toBe(
       '"Blue Mantis via DiveDay" <notifications@demo.invalid>',
     );
+  });
+
+  it("sends from the compiled production sender when SES_FROM_EMAIL is unset, and nothing when it is set empty", async () => {
+    const credentials = {
+      SES_AWS_REGION: "us-east-1",
+      SES_AWS_ACCESS_KEY_ID: "AKIA_TEST",
+      SES_AWS_SECRET_ACCESS_KEY: "test-secret",
+    };
+    const sesClient = { send: vi.fn().mockResolvedValue({ MessageId: "ses-id" }) };
+    await notify(booking, notificationProviderFromEnvironment(credentials, { client: sesClient }));
+    const command = sesClient.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.FromEmailAddress).toBe(
+      '"Blue Mantis via DiveDay" <notifications@ses.dive.day>',
+    );
+    await expect(
+      notify(booking, notificationProviderFromEnvironment({ ...credentials, SES_FROM_EMAIL: "" })),
+    ).resolves.toEqual({ status: "not_configured" });
   });
 
   it("is disabled when SES config is incomplete", async () => {
@@ -708,6 +765,39 @@ describe("waitlistInviteEmail", () => {
     expect(email.html).toContain('href="https://diveday.example/s/blue-mantis/trips/trip-1"');
     expect(email.html).toContain("&lt;Reef &quot;Special&quot;&gt;");
     expect(email.html).toContain("Blue Mantis &amp; Co.");
+  });
+});
+
+describe("waitlistInviteEmail for a party and for a rolled lead", () => {
+  const base = {
+    locale: "en-US" as const,
+    diverName: "Nora Quinn",
+    shopName: "Blue Mantis",
+    tripTitle: "Saturday Two-Tank",
+    // Saturday Oct 24, 8:00 AM in New York.
+    startsAt: new Date("2026-10-24T12:00:00.000Z"),
+    endsAt: new Date("2026-10-24T15:00:00.000Z"),
+    timezone: "America/New_York",
+    bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-2",
+    unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
+  };
+
+  it("offers a waiting party its seats together (fourth review, item 34)", () => {
+    const email = waitlistInviteEmail({ ...base, partySize: 2 });
+    expect(email.subject).toBe("2 seats opened up on Saturday Two-Tank");
+    expect(email.text).toContain("2 seats just opened on Saturday Two-Tank");
+  });
+
+  // "has sailed", not "filled": the roll carries every date that sailed with
+  // leads, and one may have sailed with a seat free (dive-domain review r4-4, N6).
+  it("says the date they asked for has sailed and this one has room (fourth review, item 31)", () => {
+    const email = waitlistInviteEmail({
+      ...base,
+      sailedStartsAt: new Date("2026-10-17T12:00:00.000Z"),
+    });
+    expect(email.text).toMatch(/Sat,\sOct\s17 has sailed\. Sat,\sOct\s24 has room/);
+    expect(email.text).not.toContain("just opened");
+    expect(email.html).toContain("<strong>Saturday Two-Tank</strong>");
   });
 });
 

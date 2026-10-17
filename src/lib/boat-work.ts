@@ -1,0 +1,92 @@
+import { isDiver, type ParticipantType } from "./participant-types";
+import { urgencyFor } from "./today";
+
+/**
+ * **A boat's work, in one vocabulary** (third review, item 4). The jobs a
+ * departure carries that are not hazards, decided once: Today's rows for the
+ * boat and the boat's own band on the Divers tab both list these items, with
+ * these counts, in this order, so the desk is never told the same boat's state
+ * twice and differently. Hazards (who can't board, a missing instructor, a
+ * boat clash) stay where they are; Today lists them for the boat beside its other rows.
+ *
+ * The counts come from one db reader (`src/db/boat-work.ts`); the rules about
+ * which of them is worth saying live here, framework-free.
+ */
+export type BoatWorkCode = "missing_sizes" | "ungated_nitrox" | "missing_contact" | "open_orders";
+
+export type BoatWorkCounts = {
+  /** Asked, with a rented piece left unsized. */
+  missingSize: number;
+  /** Never asked about their own kit. */
+  kitUnasked: number;
+  ungatedNitrox: number;
+  missingContact: number;
+  openOrders: number;
+};
+
+/**
+ * How loud a job reads. `work` is the neutral "things to sort"; `warning` is a
+ * fact that stands on its own line in warning ink, matching Today's chip for it.
+ * Neither holds the boat up: that is a hazard, and hazards are not boat work.
+ */
+export type BoatWorkTone = "work" | "warning";
+
+/**
+ * One job and how many divers it names. The sizes job carries its two halves
+ * (fourth review, item 36): one line, "1 missing a size · 3 not asked about
+ * kit", because the Gear tab answers both, but never one sum that hides which
+ * conversation the desk is about to have.
+ */
+export type BoatWorkItem = {
+  code: BoatWorkCode;
+  count: number;
+  tone: BoatWorkTone;
+  sizes?: { missing: number; unasked: number };
+};
+
+/**
+ * The items worth saying about a boat, in reading order.
+ *
+ * A missing emergency contact is a dock-settleable nudge, worth raising only
+ * once the boat is within three days (`urgencyFor` past "later"): further out
+ * the diver still has time to fill it in. Every other item stands whatever
+ * the date, because the packer, the fill station and the invoice each need
+ * the answer before the day.
+ */
+export function boatWorkItems(
+  counts: BoatWorkCounts,
+  { startsAt, now }: { startsAt: Date; now: Date },
+): BoatWorkItem[] {
+  const close = urgencyFor(startsAt, now) !== "later";
+  const items: BoatWorkItem[] = [
+    {
+      code: "missing_sizes",
+      count: counts.missingSize + counts.kitUnasked,
+      tone: "work",
+      sizes: { missing: counts.missingSize, unasked: counts.kitUnasked },
+    },
+    // A diver who planned for nitrox and breathes air has shorter
+    // no-decompression limits than planned, so this one is a warning
+    // (issue #2549, decided 2026-10-16), as Today's `nitrox_gate` already is.
+    { code: "ungated_nitrox", count: counts.ungatedNitrox, tone: "warning" },
+    { code: "missing_contact", count: close ? counts.missingContact : 0, tone: "work" },
+    { code: "open_orders", count: counts.openOrders, tone: "work" },
+  ];
+  return items.filter((item) => item.count > 0);
+}
+
+/**
+ * **Whether a seat counts as nitrox asked for with no card that authorizes a
+ * fill** (issue #2549): a diver who wants nitrox and holds no verified card.
+ * Only a diver breathes a tank, so a snorkeler or a rider never counts, whatever
+ * their flag says (the database refuses the flag on them, and this holds the
+ * line if a row ever carried it). `hasFillCard` is the fill gate's own answer,
+ * `authorizesNitroxFill`.
+ */
+export function seatUngatedNitrox(seat: {
+  participantType: ParticipantType | null | undefined;
+  wantsNitrox: boolean;
+  hasFillCard: boolean;
+}): boolean {
+  return isDiver(seat.participantType) && seat.wantsNitrox && !seat.hasFillCard;
+}

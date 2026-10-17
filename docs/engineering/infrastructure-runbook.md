@@ -167,13 +167,20 @@ handoff already current is omitted from the wizard; if its read-only check canno
 question remains visible and the existing write step reports the failure. The final Vercel
 Production deploy question is always explicit because a deploy can be intentional even when every
 handoff is current. Press Enter or `n` to skip any shown question; `--no-wizard` skips all of it and
-only creates the three files. In CI, the `deploy` job answers yes to every shown question
+only creates the three files.
+
+The Vercel check reads two witnesses: the hashed checkpoint of what the last sync sent (SSM
+`/diveday/env-sync/vercel/production`) and Vercel's own listing (`vercel env ls --format json`). A
+variable missing from Vercel, or one whose readable value differs, is pushed again even when the
+checkpoint calls it current; Vercel never returns a sensitive value, so for those only presence is
+proved. When Vercel may hold a stale sensitive value (a dashboard edit, a push someone declined),
+`pnpm infra:deploy --resync-vercel` ignores the checkpoint and pushes every value. In CI, the `deploy` job answers yes to every shown question
 automatically instead — see
 [ADR 20260811-ci-deploy-full-wizard](../architecture/decisions/20260811-ci-deploy-full-wizard.md) —
 once the required-reviewer approval on `infra-deploy` has already gated the run. SES DNS defaults to
 the `dive.day` Vercel zone; set `VERCEL_DNS_ZONE=example.com` for a different authoritative zone. The
-Vercel CLI is pinned to one exact version in `scripts/vercel-cli.mjs` and run with `pnpm dlx`, never
-a floating version and never a dev dependency (its own tree carried most of `pnpm audit`'s advisories).
+Vercel CLI is pinned in this repository's dev dependencies and is invoked with `pnpm exec vercel`,
+never a floating version.
 
 Each of `.env.local`, `.env.vercel`, and `.env.github` is rendered fresh on every deploy, from
 exactly two sources: the `diveday/env` credentials document CloudFormation just produced, and
@@ -715,6 +722,45 @@ The trade accepted in exchange: removing a key's construct from the stack now *d
 breaking anything still holding it, where a hand-minted key would have survived untouched. That is
 the correct default — a credential this stack no longer describes should stop working — but it is a
 sharp edge worth knowing before deleting a user.
+
+### Rotating the secret-sealing key
+
+`SECRET_ENCRYPTION_KEY` seals every staffer's two-factor secret and HMACs their recovery codes, so a key swapped in
+one step **locks out every account that turned on two-factor**: sign-in demands the second factor and
+nothing can check it. It also seals WhatsApp tokens, connector credentials, backup destinations,
+reusable waiver links and queued notifications, which degrade instead. The app therefore reads two
+keys (`src/lib/secret-box.ts`): `SECRET_ENCRYPTION_KEY` seals and opens, and
+`SECRET_ENCRYPTION_KEY_PREVIOUS` only opens.
+
+1. Copy the current `SECRET_ENCRYPTION_KEY` out of `.env.local` into `.env.manual` as
+   `SECRET_ENCRYPTION_KEY_PREVIOUS`.
+2. Rotate the seed (`diveday/app-secret-seed`), run `pnpm infra:deploy`, then import `.env.vercel`
+   as the table above says. The seed also derives `AUTH_SECRET` and `CRON_SECRET`, which rotate with
+   it.
+3. From then on every value is sealed under the new key when it is next written. A two-factor secret
+   is re-sealed at the account's next sign-in; recovery codes issued before the rotation stay hashed
+   under the old key and keep working while it is set.
+4. Remove `SECRET_ENCRYPTION_KEY_PREVIOUS` only when every two-factor account has signed in since the
+   rotation and replaced its old recovery codes (turn two-factor off and on again), and every shop has
+   reconnected WhatsApp and its connectors and re-saved its backup destination. Whatever is still
+   sealed under the old key stops opening at that moment. Each `account_security` row records the
+   fingerprint of the key that sealed its secret and of the key that hashed its recovery codes, so
+   the accounts still depending on the old key can be listed. Take the new key's fingerprint
+   (`printf %s "$SECRET_ENCRYPTION_KEY" | base64 -d | sha256sum | cut -c1-16`) and run:
+
+   ```sql
+   select user_account_id from account_security where totp_enabled_at is not null and (totp_secret_key_id is distinct from '<fingerprint>' or (jsonb_array_length(recovery_code_hashes) > 0 and recovery_codes_key_id is distinct from '<fingerprint>'));
+   ```
+
+   An empty result means no staffer is locked out by removing the key. A row with a null fingerprint
+   predates the column: treat it as still on the old key until it signs in or re-enrols.
+5. To remove it, delete the line from `.env.manual` and redeploy, which drops it from `.env.local`.
+   The Vercel import only uploads values that changed and never deletes one, so also run
+   `vercel env rm SECRET_ENCRYPTION_KEY_PREVIOUS production` (and for any preview environment that
+   has it); until then the deployment still holds the old key.
+
+A malformed `SECRET_ENCRYPTION_KEY_PREVIOUS` is reported as an invalid key, as a malformed current key
+is: it would otherwise quietly fail everything it was set to open.
 
 ### Why two secrets, not ten
 

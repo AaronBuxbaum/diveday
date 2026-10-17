@@ -15,6 +15,7 @@ import {
 import type { DraftFields } from "@/lib/form-drafts";
 import type { HeldSendPayload } from "@/lib/held-sends";
 import { bookings } from "./bookings";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { diveSites } from "./dive-sites";
 import { orders } from "./payments";
@@ -50,7 +51,7 @@ export const internalNotes = pgTable(
     createdByPersonId: uuid("created_by_person_id")
       .notNull()
       .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("internal_notes_shop_person_idx").on(table.shopId, table.personId, table.createdAt),
@@ -69,14 +70,27 @@ export const activityEvents = pgTable(
       .references(() => shops.id),
     tripId: uuid("trip_id").references(() => trips.id, { onDelete: "cascade" }),
     bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "set null" }),
-    actorPersonId: uuid("actor_person_id")
-      .notNull()
-      .references(() => people.id),
+    /**
+     * Who did it. Null only for a line no account wrote: the system's own (an
+     * automatic call-off) or the shore contact stopping roll-call alerts from
+     * the link in one (`shore_alert_contact_stopped`, H-118 re-review), or the
+     * bookkeeper stopping month-end files (`bookkeeper_email_stopped`). Then {@link activityEvents.systemReason} says
+     * why; the check below holds the two together (issue #2539).
+     */
+    actorPersonId: uuid("actor_person_id").references(() => people.id),
+    /**
+     * **Why the system acted**, as a code from `SYSTEM_REASONS` in
+     * `src/lib/activity.ts` (`minimum_not_met`), set exactly when there is no
+     * actor. Never a sentence: the words come from the activity labels bundle.
+     */
+    systemReason: text("system_reason"),
     /**
      * The person this line is **about**, where that is neither the actor nor
      * reachable through `booking_id` — today, a note written on a diver's
      * record rather than on one of their seats (`addDiverNote`).
      *
+     * It is also set on the one departure line about a diver with no seat on
+     * it: a staffer emailing them that date (`departure_offered`, #2480).
      * Every other line in this table is about a departure or a seat, and stays
      * that way: this column is null for all of them. It exists because the
      * diver record's Activity panel claims a line when the booking is one of
@@ -127,7 +141,7 @@ export const activityEvents = pgTable(
      * sweep matches against this column's text.
      */
     params: jsonb("params").$type<Record<string, string>>().notNull().default({}),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    occurredAt: appNowTimestamp("occurred_at").notNull(),
     /**
      * The order these were written in, for reading a trail whose timestamps tie.
      *
@@ -146,6 +160,18 @@ export const activityEvents = pgTable(
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("activity_events_subject_person_id_idx").on(table.subjectPersonId),
+    index("activity_events_actor_person_id_idx").on(table.actorPersonId),
+    // Every line has a person who did it or a reason the system did, never
+    // neither and never both.
+    check(
+      "activity_events_actor_or_system_reason",
+      sql`(${table.actorPersonId} is null) = (${table.systemReason} is not null)`,
+    ),
     index("activity_events_shop_trip_idx").on(table.shopId, table.tripId, table.occurredAt),
     index("activity_events_shop_subject_idx").on(
       table.shopId,
@@ -183,10 +209,15 @@ export const tripChangeEvents = pgTable(
       .$type<Record<string, string | number | boolean | null>>()
       .notNull(),
     actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    occurredAt: appNowTimestamp("occurred_at").notNull(),
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("trip_change_events_actor_person_id_idx").on(table.actorPersonId),
     index("trip_change_events_shop_trip_idx").on(
       table.shopId,
       table.tripId,
@@ -241,7 +272,7 @@ export const tripStageEvents = pgTable(
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
       .references(() => people.id),
-    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    recordedAt: appNowTimestamp("recorded_at").notNull(),
     /** The final tiebreak when two taps share an instant, as on the roll call. */
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
@@ -274,7 +305,7 @@ export const formDrafts = pgTable(
       .references(() => people.id, { onDelete: "cascade" }),
     form: text("form").notNull(),
     fields: jsonb("fields").$type<DraftFields>().notNull(),
-    savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+    savedAt: appNowTimestamp("saved_at").notNull(),
   },
   (table) => [
     uniqueIndex("form_drafts_person_form_unique").on(table.shopId, table.personId, table.form),
@@ -313,7 +344,7 @@ export const heldSends = pgTable(
     /** Who tapped Send; the deal's creator, the trail's actor. Null once they are gone. */
     actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
     runAt: timestamp("run_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [index("held_sends_run_at_idx").on(table.runAt)],
 );
@@ -359,6 +390,9 @@ export const tripDeskEventKind = pgEnum("trip_desk_event_kind", [
   // A type change raised a paid seat's price: the difference is owed, and
   // nothing collects it on its own.
   "balance_owed",
+  // A seat the desk turned away (H-135) taken off the roster: the strip says
+  // so, rather than that the diver gave it up.
+  "seat_turned_away",
 ]);
 
 export const tripDeskEvents = pgTable(
@@ -388,7 +422,7 @@ export const tripDeskEvents = pgTable(
      * actor's own read mark.
      */
     actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    occurredAt: appNowTimestamp("occurred_at").notNull(),
     /**
      * The tiebreak, for the same reason `activity_events.seq` carries one:
      * `occurred_at` alone cannot order this table. Two desk acts in one request
@@ -400,6 +434,12 @@ export const tripDeskEvents = pgTable(
     seq: bigserial("seq", { mode: "number" }).notNull(),
   },
   (table) => [
+    // Leads on the person column so deleting a person (a demo shop's cascade,
+    // `discardUnusedBuyer`) probes this foreign key by index, not by scanning
+    // every shop's rows; a (shop_id, …) composite cannot serve that probe.
+    // `people-fk-indexes.test.ts` holds the list (fourth review, row 31).
+    index("trip_desk_events_subject_person_id_idx").on(table.subjectPersonId),
+    index("trip_desk_events_actor_person_id_idx").on(table.actorPersonId),
     index("trip_desk_events_shop_trip_idx").on(table.shopId, table.tripId, table.seq),
     index("trip_desk_events_occurred_idx").on(table.occurredAt),
   ],
@@ -431,7 +471,7 @@ export const tripReadMarks = pgTable(
       .notNull()
       .references(() => people.id, { onDelete: "cascade" }),
     lastSeenSeq: bigint("last_seen_seq", { mode: "number" }).notNull().default(0),
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: appNowTimestamp("last_seen_at").notNull(),
   },
   (table) => [
     uniqueIndex("trip_read_marks_trip_person_unique").on(table.tripId, table.personId),

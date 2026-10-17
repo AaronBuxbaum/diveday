@@ -3,7 +3,7 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceRow, FieldActions, FieldGrid } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { requireShopSurface } from "@/lib/session";
 import { type ShopFeature, shopOffers } from "@/lib/shop-features";
@@ -47,8 +47,7 @@ export const [
   BOOKINGS_GROUP,
   RENTALS_GROUP,
   MONEY_GROUP,
-  MESSAGES_GROUP,
-  NOTIFICATIONS_GROUP,
+  REACH_GROUP,
   WEBSITE_GROUP,
   DATA_GROUP,
   ACCOUNT_GROUP,

@@ -1,5 +1,7 @@
+import { agencyCheckOffered } from "@/lib/agency-check";
 import { nowDate } from "@/lib/clock";
 import { courseCertifiesStudents, readLearningMaterials } from "@/lib/courses";
+import { departureUnderway } from "@/lib/day-blowout";
 import { demandRecommendation } from "@/lib/demand";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { type ElearningQuery, elearningCheckQuery } from "@/lib/elearning-check";
@@ -11,22 +13,30 @@ import {
 import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
+import { listAgencyCheckableCards } from "./agency-check";
+import { type IssuedCard, issuedCardsForTrip } from "./agency-processing";
 import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
+import { chartersRelyingOnCourseSeats, type DependentCharter } from "./course-dependent-seats";
 import { type CourseMaterialsDone, courseMaterialsDoneByPerson } from "./course-materials";
 import { courseNextStepsByBooking } from "./course-next-step";
 import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
+import { otherSameNamePeople } from "./identity-repoint";
+import { listInviteSuggestions } from "./invite-suggestions";
 import { listLastMinuteList } from "./last-minute-list";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
+import { getTripRosterWithPaymentMarks } from "./payment-marks";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
 import { listTripPrepDivers } from "./rental-fit";
 import { listCertificationSummaries } from "./self-declared-cards";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
+import { trainingMarksForRoster } from "./training-marks";
 import { listTripInvitations } from "./trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
 import { getTripWithBooked } from "./trips-record";
-import { getTripRoster, getTripWaitlist } from "./trips-roster";
+import { getTripWaitlist } from "./trips-roster";
 import type { TripSharedReads } from "./trips-shared-reads";
 
 /**
@@ -47,7 +57,8 @@ import type { TripSharedReads } from "./trips-shared-reads";
  * Returns `null` when the trip is absent so the page keeps its own `notFound()`.
  */
 
-export type TripGuestsShop = { id: string; timezone: string };
+/** `padiChecksEnabled`: whether PADI's eLearning check is offered here (H-121). */
+export type TripGuestsShop = { id: string; timezone: string; padiChecksEnabled: boolean };
 
 export type TripGuestsFilters = {
   /** The returning-diver picker's query. Blank means the picker is closed. */
@@ -76,13 +87,14 @@ export async function getTripGuests(
   const [
     confirmMatches,
     diverCandidates,
-    roster,
+    { roster, paymentMarksByBooking },
     requirement,
     siteRequirement,
     readinessRows,
     prepDivers,
     waitlist,
     invitations,
+    inviteSuggestions,
     lastMinuteList,
     lastMinutePromos,
     lastMinutePromoRecipients,
@@ -91,6 +103,7 @@ export async function getTripGuests(
     activity,
     stripeAccount,
     courseNextStepByBooking,
+    aboardAtSea,
   ] = await Promise.all([
     filters.confirmName ? findSimilarDivers(db, shop.id, filters.confirmName) : [],
     // The returning-diver picker only books, so it is skipped once the boat is
@@ -98,13 +111,19 @@ export async function getTripGuests(
     isFull(trip) || diverQuery === ""
       ? []
       : listBookableDivers(db, shop.id, tripId, { query: diverQuery }),
-    getTripRoster(db, shop.id, tripId),
+    // The roster with what each seat's Paid mark recorded and still owes
+    // (batch 6 item 1), so the amount field opens on the usual figure: one
+    // statement over the seats, not a second beside it.
+    getTripRosterWithPaymentMarks(db, shop.id, tripId),
     shared ? shared.requirement : getTripRequirements(db, shop.id, tripId),
     shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
     shared ? shared.readiness : listTripReadiness(db, shop.id, tripId),
     shared ? shared.prepDivers : listTripPrepDivers(db, shop.id, tripId),
     getTripWaitlist(db, shop.id, tripId),
     listTripInvitations(db, shop.id, tripId),
+    // Past divers of this departure's site worth asking (H-130), only while
+    // it has a seat to offer.
+    isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
     listLastMinuteList(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listTripLastMinutePromoRecipients(db, shop.id, tripId),
@@ -115,6 +134,14 @@ export async function getTripGuests(
     // What each student on a course session has already been told to do next
     // (issues #1196, #1205), so the roster's box opens holding it.
     courseNextStepsByBooking(db, shop.id, tripId),
+    // Who Remove refuses on this roster: seats the boat carried or may be
+    // carrying (H-133), the rule `cancelBooking` applies under its locks.
+    // Asked from the scheduled time on, so a boat still to sail pays nothing;
+    // a crew who take it out early with someone counted aboard are refused by
+    // `cancelBooking` itself, and the row's notice says why.
+    departureUnderway({ startsAt: trip.startsAt, rollCallStarted: false }, nowDate())
+      ? aboardAtSeaBookingIds(db, { shopId: shop.id, tripId, now: nowDate() })
+      : new Map<string, AboardHold>(),
   ]);
 
   // The last-minute pipeline: who said they are around on this date, who among
@@ -132,10 +159,15 @@ export async function getTripGuests(
   // one after another, most of the trip page's serial phases.
   const [
     sameNameHeldSeats,
+    sameNamePeople,
     heldLastDiveDays,
     packageDivesByPerson,
     certificationSummaries,
     courseMaterialsDone,
+    agencyCheckCardsByPerson,
+    issuedCardByPerson,
+    dependentCharters,
+    trainingMarks,
   ] = await Promise.all([
     // What "Different person" on a held seat can offer to move along with it:
     // other held seats under the same name on the same matched diver, on other
@@ -147,6 +179,18 @@ export async function getTripGuests(
         bookingId: booking.id,
         personId: booking.personId,
         tripId,
+        bookedAs: booking.identityBookedAs,
+      })),
+    ),
+    // "Another diver on file": the shop's other live people with the seat's
+    // name, by name only, for a seat held because two divers share it
+    // (issue #2129).
+    otherSameNamePeople(
+      db,
+      shop.id,
+      heldSeats.map(({ booking }) => ({
+        bookingId: booking.id,
+        personId: booking.personId,
         bookedAs: booking.identityBookedAs,
       })),
     ),
@@ -187,6 +231,55 @@ export async function getTripGuests(
           around: trip.startsAt,
         })
       : new Map<string, CourseMaterialsDone>(),
+    // The cards the DiveDay browser extension could check from this tab
+    // (H-105), and the N of its "Check all N". Never a held seat's: until a
+    // staffer confirms who is standing there, the matched diver's name, birth
+    // date and card number are not this seat's to send to an agency.
+    listAgencyCheckableCards(db, {
+      shopId: shop.id,
+      // The nitrox and specialty cards too (issue #2592).
+      includeListedCards: true,
+      personIds: roster
+        .filter(({ booking }) => !booking.identityUnconfirmedAt)
+        .map(({ person }) => person.id),
+    }),
+    // The cards this session issued, so each one can carry "Processed with
+    // PADI" (fifth-loop ideas, item 46). Only a course session issues any.
+    trip.courseId ? issuedCardsForTrip(db, shop.id, tripId) : new Map<string, IssuedCard>(),
+    // On a course session, the charter seats each student was sold only on
+    // this course, for the warning in its cancel and move confirmations
+    // (issue #2058). Nothing on a charter.
+    trip.courseId
+      ? chartersRelyingOnCourseSeats(
+          db,
+          shop.id,
+          tripId,
+          roster
+            .filter(({ booking }) => booking.status === "booked")
+            .map(({ booking }) => ({ bookingId: booking.id, personId: booking.personId })),
+          nowDate(),
+        )
+      : new Map<string, DependentCharter[]>(),
+    // On a charter, each seat's training mark and the course seats one may
+    // name (issue #2275). Nothing on a course session.
+    trainingMarksForRoster(
+      db,
+      shop.id,
+      trip,
+      roster.map(({ booking }) => ({
+        bookingId: booking.id,
+        personId: booking.personId,
+        participantType: booking.participantType,
+        status: booking.status,
+        identityHeld: booking.identityUnconfirmedAt !== null,
+        trainingEnrollmentBookingId: booking.trainingEnrollmentBookingId,
+        trainingMarkedAt: booking.trainingMarkedAt,
+        trainingMarkedByPersonId: booking.trainingMarkedByPersonId,
+        trainingClearedAt: booking.trainingClearedAt,
+        trainingClearedReason: booking.trainingClearedReason,
+        trainingClearedByPersonId: booking.trainingClearedByPersonId,
+      })),
+    ),
   ]);
 
   const heldSeatLastDiveDay = new Map<string, Date | null>(
@@ -287,12 +380,21 @@ export async function getTripGuests(
     requirement,
     waitlist,
     invitations,
+    inviteSuggestions,
     activity,
     confirmMatches,
     diverCandidates,
     notesByBooking,
     courseNextStepByBooking,
     sameNameHeldSeats,
+    /** Seats the boat carried or may be carrying: Remove refuses them (H-133). */
+    aboardAtSea,
+    /** Per same-name held seat, the shop's other people with that name (issue #2129). */
+    sameNamePeople,
+    /** Per course seat, the charter seats sold only on it (issue #2058). */
+    dependentCharters,
+    /** On a charter, the training marks and the course seats one may name (issue #2275). */
+    trainingMarks,
     /**
      * Per held seat, the matched diver's last dive day at this shop, or null
      * when there is none (issue #1789). Only held seats have an entry.
@@ -303,6 +405,8 @@ export async function getTripGuests(
      * departure; seats with none are absent (issue #1697).
      */
     packageDivesByBooking,
+    /** Per seat, the Paid mark's money and what the seat still owes (`getTripRosterWithPaymentMarks`). */
+    paymentMarksByBooking,
     /**
      * A split on this departure must take a date of birth: it is a course
      * with a minimum age, which reads the new record's date (issue #2081). A
@@ -329,7 +433,19 @@ export async function getTripGuests(
      * What the DiveDay browser extension would search the agency's eLearning
      * page for, per seat, where it can (H-106): a PADI course with materials.
      */
-    elearningQueryByBooking: elearningQueries(trip.course ?? null, roster),
+    elearningQueryByBooking: elearningQueries(trip.course ?? null, roster, shop),
+    /** The same course, where the shop's switch keeps PADI's eLearning check off (H-121). */
+    elearningChecksOff:
+      Boolean(trip.course) &&
+      readLearningMaterials(trip.course?.learningMaterials).length > 0 &&
+      !agencyCheckOffered(trip.course?.agency ?? "", shop),
+    /**
+     * Per diver, the cards the DiveDay browser extension could check with
+     * their agencies from this tab (H-105). Held seats are never in it.
+     */
+    agencyCheckCardsByPerson,
+    /** Per student, the card this session issued and whether the agency has it yet. */
+    issuedCardByPerson,
     /** Done, who and when, by person: the roster's capsule and done line read here. */
     courseMaterialsDoneByPerson: courseMaterialsDone,
     /**
@@ -343,7 +459,8 @@ export async function getTripGuests(
     demand: demandRecommendation({
       capacity: trip.capacity,
       booked: trip.booked,
-      waitlisted: waitlist.length,
+      // Seats wanted, not leads: a waiting couple is two (fourth review, item 34).
+      waitlisted: waitlist.reduce((seats, { entry }) => seats + entry.partySize, 0),
     }),
     lastMinute: {
       matched: lastMinuteMatched,
@@ -375,9 +492,12 @@ function elearningQueries(
     booking: { id: string };
     person: { fullName: string; email: string | null };
   }[],
+  shop: { padiChecksEnabled: boolean },
 ): Map<string, ElearningQuery> {
   const queries = new Map<string, ElearningQuery>();
   if (!course || readLearningMaterials(course.learningMaterials).length === 0) return queries;
+  // PADI's eLearning waits for the shop's own switch (H-121).
+  if (!agencyCheckOffered(course.agency, shop)) return queries;
   for (const { booking, person } of roster) {
     const query = elearningCheckQuery({
       agency: course.agency,

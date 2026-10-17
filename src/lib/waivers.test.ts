@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { WaiverRecord } from "@/db/schema";
+import type { GuardianSigner } from "./guardian";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "./medical";
 import { localTypedConsentProvider, namesakeAttestationProvider } from "./signatures";
 import {
+  DEFAULT_WAIVER_BODY,
   effectiveReleaseForRiderSeat,
   effectiveWaiverForBooking,
   isCleanCompletion,
   isCompletedWaiverCurrent,
+  isSampleRelease,
   isUnresolvedMedicalHold,
   type MedicalWaiverMark,
   medicalWaiverMark,
@@ -15,6 +18,7 @@ import {
   overriddenReferral,
   overriddenReferralAt,
   overriddenRefusal,
+  releaseLapsedForBooking,
   riderMedicalHold,
   shopWaiverStatus,
   WAIVER_SIGNATURE_VALIDITY_MS,
@@ -125,6 +129,16 @@ describe("waiver signature currency", () => {
       signedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS + 1000),
     });
     expect(isCompletedWaiverCurrent(justInside, 1, SIGN_NOW)).toBe(true);
+  });
+
+  it("stands today and not on a departure three weeks out, when the year runs out between", () => {
+    const signedAt = new Date(
+      SIGN_NOW.getTime() + 14 * 24 * 60 * 60 * 1000 - WAIVER_SIGNATURE_VALIDITY_MS,
+    );
+    const release = completedWaiver({ signedAt, completedAt: signedAt });
+    const departure = new Date(SIGN_NOW.getTime() + 21 * 24 * 60 * 60 * 1000);
+    expect(isCompletedWaiverCurrent(release, 1, SIGN_NOW)).toBe(true);
+    expect(isCompletedWaiverCurrent(release, 1, departure)).toBe(false);
   });
 
   it("exempts an imported record from the template-version check, but not the age check", () => {
@@ -355,6 +369,89 @@ describe("effective waiver (sign once per diver)", () => {
 });
 
 /**
+ * **A signed release that ran out is not one nobody sent** (dive-domain review
+ * of the test-suite layer 1). Both block; the words and the fix differ, so the
+ * engine needs to know which it is.
+ */
+describe("releaseLapsedForBooking", () => {
+  const lapsedAt = new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1);
+  const lapsed = completedWaiver({ signedAt: lapsedAt, completedAt: lapsedAt });
+  const resolve = (overrides: Partial<Parameters<typeof releaseLapsedForBooking>[0]>) =>
+    releaseLapsedForBooking({
+      bookingWaiver: null,
+      personSignedWaivers: [],
+      currentTemplateVersion: 1,
+      now: SIGN_NOW,
+      ...overrides,
+    });
+
+  it("is false for a diver who never signed here", () => {
+    expect(resolve({})).toBe(false);
+  });
+
+  it("is true for a release signed on this booking that aged past its year", () => {
+    expect(resolve({ bookingWaiver: lapsed, personSignedWaivers: [lapsed] })).toBe(true);
+  });
+
+  it("is true for a release signed on another booking that aged out", () => {
+    expect(resolve({ personSignedWaivers: [lapsed] })).toBe(true);
+  });
+
+  it("is true for a release signed against terms the shop has since changed", () => {
+    expect(resolve({ personSignedWaivers: [completedWaiver()], currentTemplateVersion: 2 })).toBe(
+      true,
+    );
+  });
+
+  it("is true for a cleared referral whose physician's evaluation is over a year old", () => {
+    const cleared = completedWaiver({
+      status: "medical_review",
+      medicalClearedAt: SIGN_NOW,
+      medicalClearanceEvaluatedOn: "2025-01-02",
+    });
+    expect(resolve({ personSignedWaivers: [cleared] })).toBe(true);
+  });
+
+  it("is false while a current release covers the seat", () => {
+    expect(resolve({ personSignedWaivers: [lapsed, completedWaiver({ id: "record-2" })] })).toBe(
+      false,
+    );
+  });
+
+  it("is false once a fresh link is out: the seat reads as awaiting that signature", () => {
+    const fresh = completedWaiver({
+      id: "record-2",
+      status: "pending",
+      signedAt: null,
+      completedAt: null,
+      expiresAt: new Date(SIGN_NOW.getTime() + 60_000),
+    });
+    expect(resolve({ bookingWaiver: fresh, personSignedWaivers: [lapsed] })).toBe(false);
+  });
+
+  it("is false under an open medical hold, which outranks it", () => {
+    const hold = completedWaiver({ id: "record-2", status: "medical_review" });
+    expect(resolve({ personSignedWaivers: [lapsed, hold] })).toBe(false);
+  });
+
+  it("counts a signature a fresh link on another seat superseded (D2)", () => {
+    // The evidence carries a superseded clean signature only from the
+    // signer's own seat (`listSignedWaiversByPerson`); it still lapsed.
+    expect(resolve({ personSignedWaivers: [{ ...lapsed, supersededAt: SIGN_NOW }] })).toBe(true);
+  });
+
+  it("reads a rider's lapsed release the same way, held record or not", () => {
+    const parked = completedWaiver({
+      status: "medical_review",
+      signedAt: lapsedAt,
+      completedAt: lapsedAt,
+    });
+    expect(resolve({ personSignedWaivers: [parked], heldToMedical: false })).toBe(true);
+    expect(resolve({ personSignedWaivers: [completedWaiver()], heldToMedical: false })).toBe(false);
+  });
+});
+
+/**
  * The diver record answers "has this person signed?" — a fact about the person
  * and the shop, not about any one booking. Before this, that question could
  * only be answered from inside a booking, so a diver with no booking yet had
@@ -434,13 +531,22 @@ describe("shop-level waiver standing", () => {
     expect(status([hold, signed]).state).toBe("current");
   });
 
-  it("ignores a superseded hold", () => {
+  it("keeps a superseded referral no physician cleared as a hold (glossary: Medical hold)", () => {
+    // Superseding moves the hold off its seat so the seat can take a fresh
+    // link; only a clearance or a later clean release ends it.
     const hold = completedWaiver({
       id: "hold",
       status: "medical_review",
       supersededAt: SIGN_NOW,
     });
-    expect(status([hold]).state).toBe("none");
+    expect(status([hold]).state).toBe("medical_review");
+    const cleared = completedWaiver({
+      id: "cleared",
+      status: "medical_review",
+      supersededAt: SIGN_NOW,
+      medicalClearedAt: SIGN_NOW,
+    });
+    expect(status([cleared]).state).not.toBe("medical_review");
   });
 
   it("tells a refused evaluation apart from one nobody has answered", () => {
@@ -495,7 +601,7 @@ describe("shop-level waiver standing", () => {
 describe("a minor's co-signature", () => {
   const guardianSignedAt = new Date(SIGN_NOW.getTime() - 60_000);
   /** Twelve on the day the release was signed, in the shop's own zone. */
-  const minor = { dateOfBirth: "2014-01-01", timezone: "America/New_York" };
+  const minor = { dateOfBirth: "2014-01-01", minorDeclared: false, timezone: "America/New_York" };
   const soloRecord = () => completedWaiver({ guardianSignedAt: null });
   const coSignedRecord = () =>
     completedWaiver({
@@ -504,7 +610,7 @@ describe("a minor's co-signature", () => {
       guardianRelationship: "parent",
       medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
     });
-  const standing = (records: WaiverRecord[], signer?: { dateOfBirth: string; timezone: string }) =>
+  const standing = (records: WaiverRecord[], signer?: GuardianSigner) =>
     shopWaiverStatus({
       personSignedWaivers: records,
       currentTemplateVersion: 1,
@@ -812,6 +918,35 @@ describe("overriddenRefusal", () => {
     });
   });
 
+  it("lets a clearance a fresh link superseded still answer a refusal, only when decided after it and on its questions", () => {
+    // A clean signature a fresh link replaced stays in the evidence
+    // (`listSignedWaiversByPerson`), so a superseded clearance is read too: a
+    // physician's later "yes" is no less an answer for its seat taking a link.
+    const supersededYes = (overrides: Partial<WaiverRecord> = {}) =>
+      completedWaiver({
+        id: "superseded-yes",
+        status: "medical_review",
+        signedAt: new Date(SIGN_NOW.getTime() - 300_000),
+        completedAt: new Date(SIGN_NOW.getTime() - 300_000),
+        medicalClearedAt: new Date(SIGN_NOW.getTime() - 200_000),
+        supersededAt: new Date(SIGN_NOW.getTime() - 100_000),
+        ...overrides,
+      });
+    expect(overriddenRefusal(reSigned(), [refusal(), supersededYes(), reSigned()])).toBeNull();
+
+    // Decided before the "no": not an answer to it.
+    const earlyYes = supersededYes({ medicalClearanceEvaluatedOn: "2026-07-01" });
+    const lateNo = refusal({ medicalClearanceEvaluatedOn: "2026-07-10" });
+    expect(overriddenRefusal(reSigned(), [lateNo, earlyYes, reSigned()])?.recordId).toBe("refusal");
+
+    // About another question: not an answer to it either.
+    const cardiacNo = refusal({ medicalAnswers: flagging(cardiacId) });
+    const earsYes = supersededYes({ medicalAnswers: flagging(earsId) });
+    expect(overriddenRefusal(reSigned(), [cardiacNo, earsYes, reSigned()])?.recordId).toBe(
+      "refusal",
+    );
+  });
+
   it("says nothing for a diver no physician refused, or with no clean release", () => {
     expect(overriddenRefusal(reSigned(), [reSigned()])).toBeNull();
     expect(overriddenRefusal(null, [refusal()])).toBeNull();
@@ -951,6 +1086,71 @@ describe("a referral a later clean signature stood over", () => {
       completedAt: new Date(SIGN_NOW.getTime() - 600_000),
     });
     expect(overriddenReferralAt(reSigned(), [resolvedReferral, reSigned()])).toBeNull();
+  });
+
+  const [heartId, earId] = RSTC_QUESTIONNAIRE.questions
+    .filter((question) => question.referral)
+    .map((question) => question.id);
+  const flags = (...ids: string[]) => ({
+    ...clear,
+    responses: { ...clear.responses, ...Object.fromEntries(ids.map((id) => [id, true])) },
+  });
+
+  it("says nothing once a physician cleared a later referral on the same questions", () => {
+    // Without this the record read "stood over a referral" beside "Cleared
+    // by physician" for one diver: the clearance answered both disclosures.
+    const heartReferral = completedWaiver({
+      id: "referral",
+      status: "medical_review",
+      medicalAnswers: flags(heartId),
+      signedAt: new Date(SIGN_NOW.getTime() - 600_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 600_000),
+    });
+    const heartCleared = cleared({
+      id: "heart-cleared",
+      medicalAnswers: flags(heartId),
+      signedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      medicalClearanceEvaluatedOn: "2026-07-18",
+    });
+    expect(overriddenReferral(heartCleared, [heartReferral, heartCleared])).toBeNull();
+    expect(overriddenReferral(reSigned(), [heartReferral, heartCleared, reSigned()])).toBeNull();
+    expect(medicalWaiverMark(heartCleared, [heartReferral, heartCleared])).toMatchObject({
+      source: "cleared",
+      overriddenReferral: null,
+    });
+  });
+
+  it("still names the referral when the clearance was about another question, or came before it", () => {
+    const heartReferral = completedWaiver({
+      id: "referral",
+      status: "medical_review",
+      medicalAnswers: flags(heartId),
+      signedAt: new Date(SIGN_NOW.getTime() - 600_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 600_000),
+    });
+    // An ENT clearing ears says nothing about the heart.
+    const earCleared = cleared({
+      id: "ear-cleared",
+      medicalAnswers: flags(earId),
+      signedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      medicalClearanceEvaluatedOn: "2026-07-18",
+    });
+    expect(overriddenReferral(earCleared, [heartReferral, earCleared])?.recordId).toBe("referral");
+    // A clearance a physician gave before the diver disclosed again is not an
+    // answer to the new disclosure, whatever it covered.
+    const oldClearance = cleared({
+      id: "old-clearance",
+      medicalAnswers: flags(heartId),
+      signedAt: new Date("2026-06-01T12:00:00.000Z"),
+      completedAt: new Date("2026-06-01T12:00:00.000Z"),
+      medicalClearanceEvaluatedOn: "2026-06-03",
+      medicalClearedAt: new Date("2026-06-04T12:00:00.000Z"),
+    });
+    expect(
+      overriddenReferral(reSigned(), [oldClearance, heartReferral, reSigned()])?.recordId,
+    ).toBe("referral");
   });
 });
 
@@ -1184,5 +1384,19 @@ describe("riderMedicalHold", () => {
     expect(
       medicalWarningDays(null, "America/New_York", riderMedicalHold(referral, [referral])),
     ).toEqual({ ridingReferredOn: "2026-07-01" });
+  });
+});
+
+describe("isSampleRelease", () => {
+  it("is true while the live release is DiveDay's starting text, or there is none", () => {
+    expect(isSampleRelease(DEFAULT_WAIVER_BODY)).toBe(true);
+    expect(isSampleRelease(null)).toBe(true);
+    expect(isSampleRelease(undefined)).toBe(true);
+  });
+
+  it("is false once the shop has published any words of its own", () => {
+    expect(isSampleRelease(`${DEFAULT_WAIVER_BODY}\n\nBlue Mantis Diving, Key Largo.`)).toBe(false);
+    // Byte-equal, not near-equal: one changed character is the shop's edit.
+    expect(isSampleRelease(DEFAULT_WAIVER_BODY.replace("crew", "Crew"))).toBe(false);
   });
 });

@@ -53,6 +53,12 @@ export type AgencyVerificationPage = {
    *   login ("Check with PADI (member sign-in)").
    */
   kind: "check" | "search_portal" | "member_sign_in";
+  /**
+   * Where the DiveDay browser extension runs the lookup, when that is not the
+   * link itself: PADI's DiveChek sits a page inside the Pros' Site the link
+   * opens. Never a link a staffer is sent to.
+   */
+  checkUrl?: string;
 };
 
 export const AGENCY_VERIFICATION_PAGES: Readonly<
@@ -103,10 +109,18 @@ export const AGENCY_VERIFICATION_PAGES: Readonly<
   // client side and could not be confirmed from outside a login, and a guessed
   // deep link that moves fails silently where the site's front door does not.
   // Pro Chek is a different tool and checks professionals, not divers.
+  // The link and the extension's DiveChek lookup (`checkUrl`) are on one host,
+  // the Pros' Site the eLearning check uses, so a staffer signed in for one is
+  // signed in for the other. pro.padi.com is the host PADI's own pages send
+  // pros to (its sign-in page and 2024 member brochure); pros.padi.com also
+  // answers, and the extension reads either (`origins` in
+  // `extension/agencies.js`). DiveChek's path is a best guess until a
+  // signed-in PADI Pro has tried it (#2259).
   padi: {
     url: "https://pro.padi.com/",
     searchesBy: "card_number_or_name_and_birth_date",
     kind: "member_sign_in",
+    checkUrl: "https://pro.padi.com/divechek",
   },
 };
 

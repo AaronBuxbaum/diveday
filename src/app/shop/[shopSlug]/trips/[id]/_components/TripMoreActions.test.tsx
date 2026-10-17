@@ -31,6 +31,7 @@ function show(over: Partial<React.ComponentProps<typeof TripMoreActions>> = {}) 
       series={null}
       crewNames={[]}
       lifecycleStatus={undefined}
+      refundsHeld={false}
       locale="en-US"
       t={t}
       {...over}

@@ -1,6 +1,6 @@
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import { inboundMessages, type people, staffReplies } from "./schema";
+import { inboundMessages, inboxSavedAnswers, type people, staffReplies } from "./schema";
 import { hoursFromNow } from "./seed-clock";
 
 /**
@@ -75,9 +75,12 @@ export async function seedInbox(
       channel: "email",
       fromAddress: priya.email.toLowerCase(),
       // i18n-exempt: fixture text — what a diver typed, stored verbatim
-      subject: "Re: Your Saturday departure",
+      // About the seat she holds, today's reef boat (fourth UX review, item
+      // 32): the row names that boat, and its "⋯" offers the move. No hour:
+      // the boat sails at whatever hour keeps it on today's board.
+      subject: "Re: Your departure today",
       // i18n-exempt: fixture text — what a diver typed, stored verbatim
-      body: "Hi! Could I switch to the afternoon boat on Saturday? My flight lands at nine and I don't want to hold everyone up.\n\nPriya",
+      body: "Hi! My flight got pushed back and I won't make today's reef boat. Could I move to another day this week?\n\nPriya",
       receivedAt: hoursFromNow(-3),
       providerMessageId: `seed-inbox-${shopId}-priya`,
     },
@@ -103,6 +106,25 @@ export async function seedInbox(
       body: "Hello, do you run night dives in October? Two of us, both Advanced. Thanks, Marta",
       receivedAt: hoursFromNow(-26),
       providerMessageId: `seed-inbox-${shopId}-marta`,
+    },
+  ]);
+
+  // Two saved answers, so the composer's chips have something to offer in a
+  // demo and a capture (fifth loop, item 15). The second carries both markers.
+  await db.insert(inboxSavedAnswers).values([
+    {
+      shopId,
+      // i18n-exempt: fixture text, the shop's own saved words
+      title: "Parking",
+      // i18n-exempt: fixture text, the shop's own saved words
+      body: "Hi {name}, park behind the shop by the tank racks. The gate opens at 7:15.",
+    },
+    {
+      shopId,
+      // i18n-exempt: fixture text, the shop's own saved words
+      title: "Wetsuit sizes",
+      // i18n-exempt: fixture text, the shop's own saved words
+      body: "We rent 5mm wetsuits in every size, women's cuts too. I'll put one aside for {trip}.",
     },
   ]);
 }

@@ -1,13 +1,16 @@
 import type { ReactNode } from "react";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import type { TripUnitToCheckIn } from "@/db/gear";
 import type { TripPrep } from "@/db/trips";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { PrepGrouping } from "@/lib/dive-prep";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type NoticeTone, noticeCountParam, noticeFromParam } from "@/lib/staff-notices";
 import { PrepAssignments } from "./PrepAssignments";
+import { PrepBackFromBoat } from "./PrepBackFromBoat";
 import { PrepFitGaps } from "./PrepFitGaps";
 import { PrepKitList } from "./PrepKitList";
+import { PrepLunch } from "./PrepLunch";
 import { PrepPickups } from "./PrepPickups";
 import { PrepTanks } from "./PrepTanks";
 import type { PrepView } from "./prep-view";
@@ -22,6 +25,7 @@ const GEAR_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey; cou
   "gear-not-found": { tone: "danger", key: "gear.notice.notFound" },
   "gear-already-returned": { tone: "warning", key: "gear.notice.alreadyReturned" },
   "gear-returned-set": { tone: "success", key: "gear.notice.returnedSet" },
+  "gear-returned-flagged": { tone: "success", key: "gear.notice.returnedFlagged" },
   "gear-returned-set-pulled": {
     tone: "success",
     key: "gear.notice.returnedSetPulled",
@@ -55,6 +59,9 @@ export function PrepBody({
   grouping,
   groupPath,
   cancelled = false,
+  sailed = false,
+  home = false,
+  backFromBoat = [],
   emptyState = null,
   idPrefix,
   className,
@@ -106,6 +113,23 @@ export function PrepBody({
    */
   cancelled?: boolean;
   /**
+   * **A boat at sea packs nothing more** (fourth review, item 16). Once it
+   * has left the dock (`departureSailed`), "6 people missing rental sizes",
+   * "12 pieces still to pick" and "Assign all" are instructions for a
+   * morning that is over. The tanks, the kit list and every unit already on a
+   * diver stay: they are what went out, and what has to come back.
+   */
+  sailed?: boolean;
+  /**
+   * **The boat is home** (fifth-loop ideas, item 5): the list leads with
+   * `backFromBoat`, every unit still out, one answer per unit, and the
+   * per-diver hand-over and set return below give way to it, so a unit has one
+   * way home. Its notice banner moves up with it.
+   */
+  home?: boolean;
+  /** Units out on this departure (`listTripUnitsToCheckIn`); read only once home. */
+  backFromBoat?: readonly TripUnitToCheckIn[];
+  /**
    * What stands here when there is nobody to pack for. `/prep` is a page about
    * this list alone, so it says so and points at the roster; on the departure
    * page the roster is the section directly above, already saying the boat is
@@ -124,7 +148,17 @@ export function PrepBody({
   className: string;
 }) {
   const { checklist, gearFleetTotal, assignmentRows } = prep;
-  const view: PrepView = { prep, t, locale, shopSlug, tripId, idPrefix, cancelled };
+  const view: PrepView = {
+    prep,
+    t,
+    locale,
+    shopSlug,
+    tripId,
+    idPrefix,
+    cancelled,
+    sailed,
+    home,
+  };
   // A shop that has never offered nitrox can never have live nitrox data here
   // (setBookingNitrox fails closed), so this is purely cosmetic for that
   // common case — but a shop that *disabled* nitrox after a diver requested
@@ -139,6 +173,11 @@ export function PrepBody({
   const gearNotice = noticeFromParam(notice, GEAR_NOTICES);
   const gearBanner =
     gearNotice && (!gearNotice.counted || gearCount !== null) ? gearNotice : undefined;
+  const banner = gearBanner ? (
+    <StaffNoticeBanner tone={gearBanner.tone}>
+      {t(gearBanner.key, { count: gearCount ?? 0 })}
+    </StaffNoticeBanner>
+  ) : null;
 
   return (
     <>
@@ -148,6 +187,12 @@ export function PrepBody({
         emptyState
       ) : (
         <div className={className}>
+          {/* Once home, the answer to a "Back" tap sits over the list it was
+              tapped in, which leads the page. */}
+          {home ? banner : null}
+          {home ? (
+            <PrepBackFromBoat units={backFromBoat} tripId={tripId} t={t} idPrefix={idPrefix} />
+          ) : null}
           {cancelled ? (
             // Said, not merely absent: a staffer who knows the list lives here
             // must not read the gap as a bug, and an empty packing list that
@@ -157,7 +202,7 @@ export function PrepBody({
           ) : (
             <>
               <PrepTanks view={view} showNitrox={showNitrox} />
-              <PrepFitGaps view={view} />
+              {sailed ? null : <PrepFitGaps view={view} />}
             </>
           )}
 
@@ -165,6 +210,8 @@ export function PrepBody({
               blow-out morning this run is the list of hotels somebody has to
               phone before a diver is standing in a lobby at 06:00. */}
           <PrepPickups view={view} />
+
+          {cancelled ? null : <PrepLunch view={view} />}
 
           {cancelled ? null : <PrepKitList view={view} grouping={grouping} groupPath={groupPath} />}
 
@@ -181,11 +228,7 @@ export function PrepBody({
               the banner's own `mb-6` outranks the stack's zero-specificity
               margin, so it sits 24px over the assignments it answers for —
               the space every notice keeps over what follows it. */}
-          {gearBanner ? (
-            <StaffNoticeBanner tone={gearBanner.tone}>
-              {t(gearBanner.key, { count: gearCount ?? 0 })}
-            </StaffNoticeBanner>
-          ) : null}
+          {home ? null : banner}
           {gearFleetTotal > 0 && assignmentRows.length > 0 ? <PrepAssignments view={view} /> : null}
         </div>
       )}

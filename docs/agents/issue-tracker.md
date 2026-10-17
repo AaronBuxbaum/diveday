@@ -153,13 +153,30 @@ migration step.
 
 ### When
 
-You are finishing a change and you have any of these:
+**File only three kinds of thing** (the bar since 2026-10-14):
 
-- an improvement you can see but that is outside the scope you were given
-- a question whose answer would change what you built (policy, pricing, tone, dive-safety practice)
-- a risk, latent bug, or piece of debt you noticed while reading nearby code
-- a decision you made under an assumption, where the other branch is worth a human's look
-- work you started and deliberately stopped (say what is half-done and where)
+- **a bug**: behavior that is wrong today, outside the change you were given
+- **a safety gap**: something a diver, a crew member, or a diver's personal or medical data is
+  exposed to, however unlikely
+- **a decision**: a question only a human can answer, whose answer would change what gets built
+  (policy, pricing, tone, dive-safety practice), or work you stopped half-done that needs one
+
+**An idea or a feature is filed too, on its own shelf** (Aaron, 2026-10-17): an improvement or
+feature with a concrete first step goes in through `file-follow-up.mjs --idea`, which labels it
+`idea` instead of `needs-triage`. That label keeps it out of the triage inbox, out of the filing
+quota and inbox ceiling, and out of every sweep over `ready-for-agent` or `ready-for-human`, so
+"close all ready-for-agent issues" never picks one up. It moves into a queue only when a human
+relabels it. `--idea` refuses `--kind question`: a question is a decision and goes to
+`ready-for-human`.
+
+**Everything else is one "Notes" comment on your PR**: the debt you read past, the assumption
+you made, a cleanup too small to name a first step for. One comment per PR,
+a bullet each, headed `**Notes**`; whoever reads the PR reads it, and nobody has to triage it. A
+PR you are not opening (a review, a sweep) puts them in its hand-off instead.
+
+Why: on 2026-10-14 the tracker held over 100 `ready-for-agent` issues, more than any routine will
+drain, while filing and daily triage cost about $5 a day (token review, ideas row 9). An issue
+that will never be worked is paid for twice and read never.
 
 Do not file: a bug in your own change (fix it), a failing or flaky test (fix it — AGENTS.md hard
 rules), a note already covered by an existing roadmap/story-backlog/human-decision entry (link to
@@ -301,8 +318,14 @@ comment saying what would un-park it, so the next reader does not re-triage it f
 - **A question goes to the human.** `--kind question` files with `ready-for-human` instead of
   `needs-triage`: it is a decision only a human can make, and the agent inbox is not where one
   reads those.
-- **No near-duplicates.** `file-follow-up` refuses a title that starts with the same six words as
-  an open issue; add to that issue, or fold both into one.
+- **No near-duplicates.** `file-follow-up` warns, naming the twin, when a title's words overlap an
+  open issue's by 80 percent or more (leading verb and stopwords aside); add to that issue, or fold
+  both into one. It warns rather than refuses because word overlap cannot tell three different
+  capture requests from one item filed twice.
+- **Closed means no queue label.** `tracker.closeIssue` and the `closed-issue-labels.yml` workflow
+  strip `in-progress` and `ready-for-agent` from a closed issue, whichever door closed it;
+  `node scripts/check-follow-ups.mjs --sweep-closed` sweeps the ones closed before. `needs-triage`
+  stays, since `persona-bots.mjs` reads closed ones to avoid refiling a finding.
 - **One issue per item**, labelled `needs-triage`.
 - **Every section filled**, including a runnable prompt that names real paths and tells the session
   to close the issue.
@@ -334,6 +357,16 @@ comment saying what would un-park it, so the next reader does not re-triage it f
   many are waiting on somebody else. It runs daily in `.github/workflows/follow-ups.yml`, not in
   `pnpm check:repo`: what it reads is the tracker, not the branch. Locally it reports **SKIPPED**
   (exit 2) when it can't reach GitHub — a network hiccup is not a content problem.
+- **Stale agent work closes itself, weekly.** A weekly routine (Sonnet, low effort; documented
+  here, not yet scheduled) closes every open `ready-for-agent` issue older than 30 days that
+  carries no claim (no `in-progress` label, no assignee, no linked open PR), as not planned, with
+  one comment: "Closed by the weekly sweep: 30 days with no claim. Reopen when someone will build
+  it." It never touches `ready-for-human`, `needs-triage`, `parked`, `waiting-on-external` or a
+  `wayfinder:*` issue, and it closes at most 50 a run. Its prompt: *"List open issues in
+  AaronBuxbaum/diveday labelled ready-for-agent, created more than 30 days ago, with no assignee,
+  no `in-progress` label and no open pull request that references them. Close each as not planned
+  with the comment above, at most 50, and reply with the numbers closed."* Scheduling it is
+  Aaron's call: an auto-close needs his OK (token review 2026-10-14, ideas row 9).
 - `pnpm gates` ages every open `needs-triage` issue — id, status, kind, effort, and days since
   GitHub's own `createdAt`, oldest first — beside the human-decision gates it reports on. Age is
   deliberately reported there and nowhere else: an issue waiting on your judgment is not a build

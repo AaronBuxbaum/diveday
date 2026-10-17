@@ -22,6 +22,7 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  boatSnags,
   boats,
   bookingArrivalEvents,
   bookingCapabilities,
@@ -43,6 +44,7 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   customerGearItems,
+  departureBoatSafetySnapshots,
   divePackageEntitlements,
   diveSiteCreatures,
   diveSiteMoments,
@@ -54,6 +56,7 @@ import {
   gearServiceEvents,
   importedPaymentHistory,
   inboundMessages,
+  inboxSavedAnswers,
   integrationDeliveries,
   integrationEvents,
   integrationOauthStates,
@@ -84,6 +87,7 @@ import {
   reviewReplies,
   shopPromoCodes,
   shopPromoRedemptions,
+  shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
   specialtyCertifications,
@@ -132,6 +136,7 @@ import { seedCertGates } from "./seed-cert-gates";
 import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, demoTodayShifts } from "./seed-clock";
 import { seedCounterBlockers } from "./seed-counter-blockers";
 import { seedCounterRental } from "./seed-counter-rental";
+import { seedCourseFormWording } from "./seed-course-form-wording";
 import { seedCourseInquiries } from "./seed-course-inquiries";
 import { seedCourseMaterials } from "./seed-course-materials";
 import { seedCoursePhotos } from "./seed-course-photos";
@@ -169,9 +174,10 @@ import { seedSightings } from "./seed-sightings";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
-import { seedTrips } from "./seed-trips";
+import { nameDemoNightDeparture, seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
 import { seedWaiverVersions } from "./seed-waiver-versions";
+import { seedWeeklyRun } from "./seed-weekly-run";
 import { seedWorkOrders } from "./seed-work-orders";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 
@@ -206,7 +212,7 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
  * | `./seed-packages.ts` | two dive packages on sale, so the public Packages tab and price list have something to show |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
  * | `./seed-cert-gates.ts` | the boats a card can be refused on, one gate each, and the course carve-out |
- * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder |
+ * | `./seed-buddy-pairs.ts` | two buddy teams on today's reef boat, plus the odd-roster remainder; the dawn boat's divers paired at the dock |
  * | `./seed-demo-lifecycle.ts` | minting, reaping, and capping throwaway demo shops |
  * | `./seed-backup.ts` | the shop-owned backup destination and its weekly delivery history |
  * | `./seed-orders.ts` | the billing states past "paid": open, part-paid, refunded, void, written off |
@@ -275,9 +281,10 @@ async function seedStaffShifts(
   const now = nowDate();
   await db.insert(staffShifts).values(
     cast.flatMap((person) =>
-      // The dawn boat's crew (`DEMO_DAWN_CREW_ROLES`) are on from 4:30 too.
+      // The boats' crew (`DEMO_DAWN_CREW_ROLES`) are on from 4:30 too, and
+      // only they work a night boat's hours.
       demoTodayShifts(now, DEMO_SHOP_TIMEZONE, {
-        dawnCrew: person.roles.some((role) => DEMO_DAWN_CREW_ROLES.has(role)),
+        crew: person.roles.some((role) => DEMO_DAWN_CREW_ROLES.has(role)),
       }).map(({ startsAt, endsAt }) => ({
         shopId,
         personId: person.id,
@@ -350,7 +357,7 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
  * below is where it is exercised. The photo is one of the bundled Molasses
  * Reef frames the site catalog already ships.
  */
-const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
+export const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
   brandHeroImageUrl: `/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`,
   // i18n-exempt: a shop writes its own alt text, like its tagline.
   brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
@@ -359,10 +366,10 @@ const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
   // The photo strip under the cover: four of the bundled reef frames, so the
   // storefront captures draw the strip at the width a real shop's would.
   shopfrontPhotoUrls: [
-    "Blue Tangs Molasses Reef 1999.jpg",
+    "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
     "French Angelfish Pickles Reef 20230713.jpg",
     "FGBNMS - nurse shark (27551309652).jpg",
-    "Yellowtail Snappers Molasses Reef 1999.jpg",
+    "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
   ].map((file) => `/dive-sites/${encodeURIComponent(file)}`),
 };
 
@@ -384,13 +391,14 @@ export const MINTED_DEMO_BRAND_COLOR = "#158462";
  *
  * The logo is a bundled frame, as the cover photo is, because the fleet
  * configures no media storage, so an upload through the form is refused. A
- * different frame, so the tile and the cover read as two photos.
+ * different frame from the cover and from every seeded site's lead photo, so
+ * the tile reads as its own picture (`seed-brand-photos.test.ts` holds it).
  */
-const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
+export const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
   ...DEMO_SHOP_BRAND,
   brandColor: MINTED_DEMO_BRAND_COLOR,
   brandDisplayFont: "bricolage_grotesque",
-  logoUrl: `/dive-sites/${encodeURIComponent("French Angelfish Molasses Reef 20080309.jpg")}`,
+  logoUrl: `/dive-sites/${encodeURIComponent("Sand Key Light 2005.jpg")}`,
 };
 
 /**
@@ -433,6 +441,18 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // new shop (`shops.crew_schedule_enabled`), and the demo is where every
       // crew surface is photographed and exercised.
       crewScheduleEnabled: true,
+      // A Key Largo shop picks divers up from the resorts, so `/ready` asks
+      // "Want a pickup?" here; a new shop runs none until it says so (fourth
+      // UX review, item 8).
+      offersHotelPickup: true,
+      // The desk takes cards and cash, and every "due at the shop" says so
+      // (fifth-loop ideas, item 21); a new shop says nothing until it chooses.
+      deskPayment: "card_and_cash",
+      // **Blue Mantis runs the PADI checks (beta)**, off for a new shop and for
+      // a minted one (`shops.padi_checks_enabled`, H-121): the demo is where
+      // "Check with PADI" and the eLearning check are photographed and
+      // exercised.
+      padiChecksEnabled: true,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: demoEmail("front.desk"),
@@ -453,7 +473,9 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
           // i18n-exempt: the shop's own words, not DiveDay's.
           { label: "DAN emergency hotline", phone: "+1 919 555 0111" },
         ],
-        vessel: "Mantis II - VHF 16, MMSI 338055501",
+        // Only the fallback now (fourth review, item 11): a departure on a
+        // boat prints that boat's own name, call sign and MMSI, seeded below.
+        vessel: "Both boats keep VHF 16",
         shoreContact: "Front desk, +1 305 555 0142",
         plan: "Give O2, call the chamber first, then the Coast Guard on 16.",
       },
@@ -522,12 +544,18 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       name: "Mantis I",
       capacity: 14,
       description: "The small boat — fourteen aboard, a shaded deck, ten minutes to the reef.",
+      // Each hull's radio identity, printed on its departures' emergency card
+      // (fourth review, item 11). Fictional, in the US MMSI range.
+      callSign: "WDM2201",
+      mmsi: "338055502",
     },
     {
       shopId: shop.id,
       name: "Mantis II",
       capacity: 20,
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      callSign: "WDM2202",
+      mmsi: "338055501",
     },
   ]);
 
@@ -597,6 +625,12 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     shop.id,
     staff.map((person, i) => ({ id: person.id, roles: staffDefs[i].roles })),
   );
+  // The shop's own checklist items are settings, not schedule (ADR
+  // 20260824-pre-departure-safety-check): seeded once here, never re-seeded by
+  // a reset, which is why it is not inside seedDemoSchedule. Before it, so the
+  // finished dawn boat can record its check against them (UX review
+  // 2026-10-13, item 40).
+  await seedPreDepartureChecklist(db, shop.id);
   await seedDemoSchedule(db, shop.id, opts);
   // Pay-at-booking in Stripe test mode, when configured (ADR
   // 20261009-demo-test-mode-payments); nothing otherwise.
@@ -606,10 +640,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // settings row a demo visitor cannot break, so it lives outside the
   // resettable schedule (ADR 20260804-shop-owned-backup-export).
   await seedBackup(db, shop.id);
-  // Same tier: the shop's own checklist items are settings, not schedule
-  // (ADR 20260824-pre-departure-safety-check) — seeded once here, never
-  // re-seeded by a reset, which is why it is not inside seedDemoSchedule.
-  await seedPreDepartureChecklist(db, shop.id);
   // Same tier: packages are shop configuration a reset leaves standing.
   await seedPackages(db, shop.id);
   // Two listed shops beside a demo no listing may show. Stable half: real
@@ -776,12 +806,18 @@ export async function createDemoShop(
       name: "Mantis I",
       capacity: 14,
       description: "The small boat — fourteen aboard, a shaded deck, ten minutes to the reef.",
+      // Each hull's radio identity, printed on its departures' emergency card
+      // (fourth review, item 11). Fictional, in the US MMSI range.
+      callSign: "WDM2201",
+      mmsi: "338055502",
     },
     {
       shopId: shop.id,
       name: "Mantis II",
       capacity: 20,
       description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+      callSign: "WDM2202",
+      mmsi: "338055501",
     },
   ]);
 
@@ -844,6 +880,9 @@ export async function createDemoShop(
   // canonical demo, including sailed trips, tips, and reviews. Test-only
   // private shops can opt into the lean schedule when they need isolation
   // from history-only rows.
+  // The same checklist the canonical demo keeps, for the same reason and in
+  // the same place: before the schedule, whose dawn boat records against it.
+  await seedPreDepartureChecklist(db, shop.id);
   await seedDemoSchedule(db, shop.id, { history: opts.history !== false });
   // The canonical demo's two packages, for a visitor's demo too. A private
   // test shop mints without history and starts with nothing on sale, which is
@@ -1051,16 +1090,6 @@ export async function seedDemoSchedule(
         divers: customers,
         actorPersonId: instructor.id,
       });
-      // The morning handoff on that same boat: what the desk did after the
-      // owner last looked, plus the two divers who said the crew may know it
-      // is their first trip (src/db/seed-desk-handoff.ts, issues #1202/#1187
-      // and #1182). Written by the instructor so the owner's own login — the
-      // one a demo signs in with — is the reader who is behind on them.
-      await seedDeskHandoff(db, shopId, {
-        trip: reefTrip,
-        roster: bookingRows,
-        actorPersonId: instructor.id,
-      });
       // One unpaid seat on that same boat, so the Overview's pulse has a money
       // fact to state and the Orders index has something to be narrowed to
       // (src/db/seed-open-invoice.ts). Deliberately `open`: a booking-linked
@@ -1204,6 +1233,53 @@ export async function seedDemoSchedule(
   // policy/legal decision behind production medical handling is still H-01–H-03.
   await seedMedicalReview(db, shopId, waiverTemplate, tripRows, instructor.id, isCanonicalDemo);
 
+  // The morning handoff on today's reef boat: what the desk did after the
+  // owner last looked, plus the two divers who said the crew may know it is
+  // their first trip (src/db/seed-desk-handoff.ts, issues #1202/#1187 and
+  // #1182). Written by the instructor so the owner's own login — the one a
+  // demo signs in with — is the reader who is behind on them. Late, after
+  // every scenario that can block a diver on this boat: its check-ins are
+  // real ones, so they ask readiness the question the counter would (UX
+  // review 2026-10-13, item 3). No waiver row is written, so it may sit
+  // before the evidence pass below.
+  if (opts.history !== false && reef) {
+    await seedDeskHandoff(db, shopId, {
+      trip: reef,
+      roster: bookingRows,
+      actorPersonId: instructor.id,
+    });
+  }
+
+  // Late, after every scenario that books a course session: the shop's own
+  // words on its course forms, and a paper signature for every student
+  // already booked, so no seeded seat changes readiness
+  // (src/db/seed-course-form-wording.ts, fourth review, item 53). Rides the
+  // history flag, so the lean template keeps its forms empty.
+  if (opts.history !== false) {
+    await seedCourseFormWording(db, shopId, { recordedByPersonId: instructor.id });
+  }
+
+  // Adds-only and late, after every scenario that crews a departure, so each
+  // Saturday asks its standing crew about every other boat already on the
+  // board: the shop's weekly run (src/db/seed-weekly-run.ts, fourth review,
+  // item 51). Rides the history flag, so the lean template keeps its board.
+  if (opts.history !== false) {
+    // The owner skippers it and the assistant instructor leads the water:
+    // the captain and the divemaster are already on the long boats, and a
+    // standing crew asked of a date they are busy on is left off it.
+    const [assistant] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(people.id, personRoles.personId))
+      .where(and(eq(people.shopId, shopId), eq(personRoles.role, "assistant_instructor")))
+      .limit(1);
+    await seedWeeklyRun(db, shopId, { skipperId: owner.id, divemasterId: assistant?.id });
+  }
+
+  // Updates-only, and after every scenario that finds today's boat by its day
+  // name: an evening seed's late boat is named as a night dive (issue #2440).
+  await nameDemoNightDeparture(db, shopId);
+
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated
   // across the weeks divers actually signed in rather than all at this instant,
@@ -1273,7 +1349,12 @@ export async function resetDemoSchedule(
   // The shop's own checklist *items* are settings, not schedule — kept, like
   // boats and dive_packages below (RESET_KEEPS). Only the per-departure taps
   // against them are schedule-scoped operational history.
+  // Snags name the departures they were written and answered on.
+  await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
+  await db
+    .delete(departureBoatSafetySnapshots)
+    .where(eq(departureBoatSafetySnapshots.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   await deleteHeldSendsAndDeskRows(db, shopId);
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
@@ -1320,6 +1401,8 @@ export async function resetDemoSchedule(
     .update(boats)
     .set({
       certifiedPassengers: null,
+      certifiedTotalPersons: null,
+      coiExpiresOn: null,
       inspectionDueOn: null,
       registrationExpiresOn: null,
       insuranceExpiresOn: null,
@@ -1374,6 +1457,9 @@ export async function resetDemoSchedule(
   // second, and both before the people and delivery rows they point at.
   await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
+  // Saved answers are re-seeded beside the inbox, so a spec that saves one
+  // does not leave the next one an extra chip.
+  await db.delete(inboxSavedAnswers).where(eq(inboxSavedAnswers.shopId, shopId));
   // Stripe checkout/refund state references bookings, trips, and orders, so it
   // must be cleared before those parents or the deletes below FK-violate and
   // abort the whole reset mid-run — leaving a prior payment test's trips and
@@ -1463,10 +1549,10 @@ export async function resetDemoSchedule(
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }
   await db.delete(trips).where(eq(trips.shopId, shopId));
-  // After the trips that point at them. Series rows are never seeded — only the
-  // schedule board writes one — so a spec that creates a recurring departure
-  // used to leave the series behind while its trips went, and the next spec in
-  // the same worker opened the board on a stale recurrence nothing had booked.
+  // After the trips that point at them. The seed writes one run (the weekly
+  // Saturday boat) and specs create more on the schedule board, so a reset
+  // that left the series behind while its trips went opened the next spec's
+  // board on a stale recurrence nothing had booked.
   // Not an FK violation, which is exactly why it survived: this reset's other
   // omissions announced themselves with a 23503, and a silent leak does not.
   // Found by the shop-scoped sweep in `delete-path-coverage.test.ts`, which the
@@ -1475,6 +1561,7 @@ export async function resetDemoSchedule(
   await db.delete(tripSeriesSkips).where(eq(tripSeriesSkips.shopId, shopId));
   await db.delete(tripSeriesCrew).where(eq(tripSeriesCrew.shopId, shopId));
   await db.delete(tripSeries).where(eq(tripSeries.shopId, shopId));
+  // Retired (#2330) but still declared: an old row would hold its site's FK.
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   // A species request points at the site the staffer was writing when they hit
@@ -1491,9 +1578,9 @@ export async function resetDemoSchedule(
   // reset mid-run — the same class of bug the comment above already walks.
   await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
-  await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
+  await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
 
   // Everyone except the staff seeded once at shop creation (`staffDefs`, by
@@ -1632,10 +1719,21 @@ export async function resetDemoSchedule(
   // `shops.temperature_unit` rides along for the same reason: it is the second
   // half of the same settings pair and leaks exactly the same way once a spec
   // flips it.
+  // The shore contact's alert address (H-118) is the same class of leak: a
+  // spec that saves one would leave the next spec's emergency reference
+  // holding it. A demo shop never sends to it, and its links go with it.
   await db
     .update(shops)
-    .set({ reviewUrl: null, ...DEMO_SHOP_UNIT_COLUMNS })
+    .set({
+      reviewUrl: null,
+      ...DEMO_SHOP_UNIT_COLUMNS,
+      shoreAlertEmail: null,
+      shoreAlertConsentAt: null,
+      shoreAlertConsentByPersonId: null,
+      shoreAlertConfirmedAt: null,
+    })
     .where(eq(shops.id, shopId));
+  await db.delete(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   // ...and puts back the one connection the canonical demo is configured with:
   // its Stripe test-mode account, when the deployment names one (ADR

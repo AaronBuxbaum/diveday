@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { HeldAfterDiveCard, NoShowCard } from "@/app/ready/[token]/_components/AfterDiveDoors";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
+import { readyAfterStateProps } from "@/app/ready/[token]/_components/after-state-actions";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
-import { cancelledNotice } from "@/app/ready/[token]/_components/CancelledNotice";
+import { cancelledNoticeForReady } from "@/app/ready/[token]/_components/CancelledNotice";
 import { CertificationEntries } from "@/app/ready/[token]/_components/CertificationEntries";
 import { ChangedFacts, fitRecallFrom } from "@/app/ready/[token]/_components/ChangedFacts";
+import { CourseNextStepNote } from "@/app/ready/[token]/_components/CourseNextStepNote";
 import { DayOfDetails } from "@/app/ready/[token]/_components/DayOfDetails";
 import { readyDeadLink } from "@/app/ready/[token]/_components/dead-link";
 import { PayStepBody } from "@/app/ready/[token]/_components/PayStepBody";
-import { payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
+import { atShopMoneyLine, payStepLines } from "@/app/ready/[token]/_components/pay-step-lines";
 import { resolvePaymentReceipt } from "@/app/ready/[token]/_components/payment-receipt";
 import { ReadyFitForm } from "@/app/ready/[token]/_components/ReadyFitForm";
 import { ReadyBookedPage, ReadyMastheadMeta } from "@/app/ready/[token]/_components/ReadyMasthead";
@@ -20,20 +21,15 @@ import { SignStepActions } from "@/app/ready/[token]/_components/SignStepActions
 import { ThreadSections } from "@/app/ready/[token]/_components/ThreadSections";
 import {
   ThreadSpine,
-  type ThreadSpineStep,
   ThreadStatus,
+  threadSpineSteps,
 } from "@/app/ready/[token]/_components/ThreadSpine";
 import {
   boatStageLine,
   readyStepLine,
   readyThreadFacts,
 } from "@/app/ready/[token]/_components/thread-facts";
-import {
-  startTipAction,
-  submitRecapPulseAction,
-  submitReviewAction,
-  uploadRecapPhotoAction,
-} from "@/app/recap/[token]/actions";
+import { YourDays } from "@/app/ready/[token]/_components/YourDays";
 import { FlashParams } from "@/components/FlashParams";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { RememberBooker } from "@/components/RememberBooker";
@@ -43,31 +39,26 @@ import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
-import { countSpendableDives } from "@/db/dive-packages";
-import { getBookingPayment } from "@/db/payments";
+import { diverCrewWithAway } from "@/db/crew-away-diver";
+import { packageDivesForBooking } from "@/db/dive-packages";
+import { readPlannedFlySafe } from "@/db/fly-safe-plan";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
-import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
-import { buildAfterStateProps } from "@/features/recap-after-state";
+import { getTripWithBookedOnce, listTripDives } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
-import {
-  THREAD_STEP_STATE_KEYS,
-  THREAD_STEP_TITLE_KEYS,
-  threadNextKey,
-} from "@/i18n/thread-labels";
+import { threadNextKey } from "@/i18n/thread-labels";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
 import { readyCopyKeepUntil } from "@/lib/ready-offline";
-import { signRecapToken } from "@/lib/recap-links";
 import { nitroxAvailableOn } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
@@ -77,10 +68,12 @@ import {
   type ThreadStep,
   theBoatIsHome,
 } from "@/lib/thread-steps";
+import { HeldAfterDiveCard, NoShowCard, releasedSeat } from "./_components/AfterDiveDoors";
 import { readAfterTheDive } from "./_components/after-dive-reads";
 import { UnavailableReadyLink } from "./_components/ExpiredLink";
 import { confirmCarriedFactsFromReady, saveTanksFromReady } from "./gear-actions";
 import { saveEmergencyContactFromReady } from "./paperwork-actions";
+import { terminalCardIn } from "./terminal-card";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = diverTranslator(await requestLocale());
@@ -133,7 +126,7 @@ export default async function ReadyTokenPage({
   if (!capability) {
     return readyDeadLink({ db, token, cancelled, sent, anonT });
   }
-  const { bookingId, shopId: capabilityShopId } = capability;
+  const { bookingId, shopId: capabilityShopId, delivered } = capability;
 
   /**
    * **The booked card in the first paint** (UX review 2026-10-10, items 7 and
@@ -148,7 +141,7 @@ export default async function ReadyTokenPage({
    * `getBookedCard`), and a held diver reads the hold in the thread under it.
    */
   const found = justBooked
-    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId })
+    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId, delivered })
     : null;
   const card =
     found && !found.bookingCancelled && !found.departureCancelled && !theBoatIsHome(found.trip)
@@ -159,6 +152,7 @@ export default async function ReadyTokenPage({
       db={db}
       token={token}
       bookingId={bookingId}
+      delivered={delivered}
       search={{ saved, error, pay, justBooked }}
       anonT={anonT}
       underBookedHeader={card !== null}
@@ -185,6 +179,7 @@ async function DiverReadinessPage({
   db,
   token,
   bookingId,
+  delivered,
   search: { saved, error, pay, justBooked },
   anonT,
   underBookedHeader,
@@ -192,46 +187,41 @@ async function DiverReadinessPage({
   db: AppDb;
   token: string;
   bookingId: string;
+  delivered: boolean;
   search: { saved?: string; error?: string; pay?: string; justBooked: boolean };
   anonT: DiverTranslator;
   underBookedHeader: boolean;
 }) {
+  const alone = terminalCardIn(underBookedHeader, token);
   const data = await getReadyPageData(db, bookingId);
-  if (!data) {
-    // `ready.unavailableBody`, not the waiver subtree's identical sentence,
-    // which this read until issue #1334. The two say the same words today, so
-    // nothing on screen moves — but `/waivers` and `/ready` are different
-    // surfaces with different rescues, and a reword of one should not be able
-    // to reach the other by accident.
-    return <UnavailableReadyLink t={anonT} />;
-  }
+  // `ready.unavailableBody`, not the waiver subtree's identical sentence
+  // (issue #1334): `/waivers` and `/ready` have different rescues, and a
+  // reword of one should not reach the other by accident.
+  if (!data) return alone(<UnavailableReadyLink t={anonT} />);
 
   const { detail, shop, person } = data;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
+  const yourDays = (
+    <YourDays ready={{ db, token, bookingId, data, delivered }} locale={locale} t={t} />
+  );
 
   if (detail.cancelled) {
     // The shop took this seat off the boat and this diver still holds a live
-    // link to it. Staff cancellation revokes the booking's capabilities too, so
-    // reaching here means the read above won the race against that revoke —
-    // rare, and the one path on which a diver learns from this page rather than
-    // from the shop. What it says about their money is read from the payment
-    // row, never from anything on the URL.
-    const payment = await getBookingPayment(db, data.shop.id, bookingId);
-    return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name, t);
+    // link: the read above won a race against the capability revoke. Rare, and
+    // the one path a diver learns from this page, not the shop. Money is read
+    // from the payment row. `alone(null)` is the exit under the booked header.
+    return alone(null) ?? cancelledNoticeForReady(db, data, bookingId, locale, t);
   }
 
   /**
-   * The shop's own published identity, in the shape the two terminal notices
-   * below hand to `ExpiredLinkCard`. A live token has already resolved the
-   * shop, and a diver holding a phone on a day that went wrong needs somebody
-   * to ask (issue #801).
+   * The shop's own published identity, in the shape the terminal notices below
+   * hand to `ExpiredLinkCard`. A live token has already resolved the shop, and
+   * a diver holding a phone on a day that went wrong needs somebody to ask
+   * (issue #801).
    */
-  const shopContact = {
-    name: detail.shop.name,
-    contactEmail: shop.contactEmail,
-    contactPhone: shop.contactPhone,
-  };
+  const { contactEmail, contactPhone } = shop;
+  const shopContact = { name: detail.shop.name, contactEmail, contactPhone };
 
   /**
    * **After the dive, the same link** (ADR 20260827-the-divers-thread,
@@ -264,39 +254,31 @@ async function DiverReadinessPage({
     identityHeld: data.identityHeld,
   });
   if (afterDive.afterTheDive) {
-    if (data.identityHeld) return <HeldAfterDiveCard shop={shopContact} t={t} />;
+    if (data.identityHeld) return alone(<HeldAfterDiveCard shop={shopContact} t={t} />);
     const recapState = await afterDive.recap();
-    if (recapState.kind === "waiting") return <RecapWaitingCard shop={shopContact} t={t} />;
+    if (recapState.kind === "waiting") return alone(<RecapWaitingCard shop={shopContact} t={t} />);
     const recap = recapState.kind === "recap" ? recapState.data : null;
-    if (!recap) return <NoShowCard shop={shopContact} t={t} />;
-    const recapToken = signRecapToken(bookingId);
-    const after = await buildAfterStateProps({
+    if (!recap) return alone(<NoShowCard shop={shopContact} t={t} turnedAway={data.turnedAway} />);
+    const after = await readyAfterStateProps({
       db,
       data: recap,
       bookingId,
       locale,
       t,
-      mintHandoff: true,
-      // This route carries none of the three: each action redirects to
-      // `/recap/<token>`, which is where its notice is read.
-      params: {},
-      actions: {
-        submitReview: submitReviewAction.bind(null, recapToken),
-        uploadPhoto: uploadRecapPhotoAction.bind(null, recapToken),
-        startTip: startTipAction.bind(null, recapToken),
-        submitPulse: submitRecapPulseAction.bind(null, recapToken),
-      },
+      token,
+      delivered,
     });
-    return (
+    return alone(
       <DiverIntlProvider
         locale={locale}
         timeZone={detail.shop.timezone}
         namespaces={["recap", "common", "booking", "reviews", "trip"]}
       >
-        <AfterState context={after} />
-      </DiverIntlProvider>
+        <AfterState context={{ ...after, yourDays }} />
+      </DiverIntlProvider>,
     );
   }
+  if (data.seatReleased) return releasedSeat(db, shop.id, bookingId, locale, shopContact, t);
 
   const notice = noticeFromParam(
     saved ? `saved-${saved}` : error ? `error-${error}` : pay ? `pay-${pay}` : undefined,
@@ -341,14 +323,12 @@ async function DiverReadinessPage({
     // shop row `PackingSection` needs for its units and rental catalogue.
     const threadTripReads = Promise.all([
       getShopBySlug(db, shop.slug),
-      getTripWithBooked(db, shop.id, data.trip.id),
+      getTripWithBookedOnce(db, shop.id, data.trip.id),
       listTripDives(db, shop.id, data.trip.id),
       listTripChangeEvents(db, shop.id, data.trip.id),
-      // Only the crew who agreed to be named (issue #1181, D21). This thread is
-      // reached by a capability URL rather than indexed, but the consent is the
-      // person's answer about divers, not about search engines — so it is the
-      // same filter and the same words as the public page.
-      tripPublicCrew(db, shop.id, data.trip.id),
+      // The crew who agreed to be named (issue #1181, D21), the same filter as
+      // the public page, each marked away on this departure's days (item 12).
+      diverCrewWithAway(db, shop.id, detail.trip, detail.shop.timezone),
       // Where the crew last said this boat was (ADR
       // 20260904-reef-all-the-way-down, Budget rule 4). Read whatever its age;
       // `liveStageOf` below decides whether it still speaks, so a stage nobody
@@ -362,7 +342,7 @@ async function DiverReadinessPage({
     // verified `readiness` capability above; the query only ever walks seats
     // led by this booking, so a member's own /ready renders no panel. One wave with
     // the rest: each needs only the verified booking, shop and person (review 2026-10-11).
-    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDivesLeft] =
+    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDives, flySafePlan] =
       await Promise.all([
         issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
         threadTripReads,
@@ -370,12 +350,8 @@ async function DiverReadinessPage({
         // I pay?" is a question the night before too — and it is what the Pay step's
         // settled line says, now that the receipt panel that used to say it above
         // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
-        //
-        // The emails line went with that panel. It claimed, in the minutes after a
-        // submit, that two messages were on their way — a third statement of the
-        // booking's status in one screenful, on a page whose status is now said once
-        // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
-        // thing the reader gets, which is the embed's confirmation and not this page.
+        // The emails line went with that panel; `EmbedBookedNotice` still carries it,
+        // where it is the only thing the reader gets.
         resolvePaymentReceipt(
           db,
           shop.id,
@@ -389,8 +365,10 @@ async function DiverReadinessPage({
           toShopCurrency(shop.currency),
         ),
         // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
-        data.trip.course ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
-        countSpendableDives(db, shop.id, data.person.id),
+        data.asksCourseForms ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
+        packageDivesForBooking(db, { shopId: shop.id, personId: data.person.id, bookingId }),
+        // When to fly home, as a plan, before the boat sails (fifth-loop ideas, item 18).
+        readPlannedFlySafe(db, data),
       ]);
     const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
     const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
@@ -422,26 +400,23 @@ async function DiverReadinessPage({
     });
 
     /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
-    const ownSignStep = spine.steps.find((step) => step.id === "sign");
     const currentStep = spine.steps.find((step) => step.id === spine.current);
     const partyAllSet = partyIsAllSet({
       seats: partySeatClaims,
-      ownSignSettled: !ownSignStep || ownSignStep.state === "done",
+      ownSignSettled: (spine.steps.find((step) => step.id === "sign")?.state ?? "done") === "done",
       diveDay,
     });
 
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
-    const { paidLine, depositBalanceLine } = payStepLines(
-      t,
-      money,
-      paymentReceipt,
-      packageDivesLeft,
-    );
+    const paid = payStepLines(t, money, paymentReceipt, packageDives, data.shop.deskPayment);
+
+    // What is owed at the shop, said once (fourth UX review, item 5).
+    const atShopLine = atShopMoneyLine(t, locale, shop.currency, data, fullTrip, partySeatClaims);
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
     const stepLine = (step: ThreadStep): string | null =>
-      readyStepLine(step, { t, facts, lastDivedBand: data.lastDivedBand, paidLine });
+      readyStepLine(step, { t, facts, lastDivedBand: data.lastDivedBand, paidLine: paid.paidLine });
 
     /**
      * The step's form, or nothing.
@@ -497,6 +472,7 @@ async function DiverReadinessPage({
               token={token}
               item={step.item}
               offerNitrox={nitroxCardEntryOffered}
+              notYet={data.certificationNotYet}
               t={t}
             />
           );
@@ -504,12 +480,12 @@ async function DiverReadinessPage({
           const payable =
             data.canPay &&
             (step.item?.code === "payment_due" || step.item?.code === "payment_refunded");
-          if (!payable && !depositBalanceLine) return null;
+          if (!payable && !paid.depositBalanceLine) return null;
           return (
             <PayStepBody
               token={token}
               payable={payable}
-              depositBalanceLine={depositBalanceLine}
+              depositBalanceLine={paid.depositBalanceLine}
               actionButton={actionButton}
               fullShop={fullShop}
               fullTrip={fullTrip}
@@ -541,19 +517,11 @@ async function DiverReadinessPage({
             />
           );
         case "dayof":
-          return <DayOfDetails token={token} data={data} t={t} />;
+          return <DayOfDetails token={token} data={data} saved={saved === "day-of"} t={t} />;
       }
     };
 
-    const spineSteps: ThreadSpineStep[] = spine.steps.map((step) => ({
-      id: step.id,
-      state: step.state,
-      current: step.id === spine.current,
-      title: t(THREAD_STEP_TITLE_KEYS[step.id]),
-      stateWord: step.state === "done" ? null : t(THREAD_STEP_STATE_KEYS[step.state]),
-      line: stepLine(step),
-      body: stepBody(step) ?? undefined,
-    }));
+    const spineSteps = threadSpineSteps(spine, t, stepLine, stepBody);
 
     return (
       <>
@@ -567,9 +535,7 @@ async function DiverReadinessPage({
           <p className="mt-8 text-base text-muted">{checklistDetailText(t, spine.setupItem)}</p>
         ) : (
           <>
-            {stageLine ? (
-              <BoatStageLine sentence={stageLine.sentence} said={stageLine.said} />
-            ) : null}
+            {stageLine ? <BoatStageLine {...stageLine} /> : null}
             <ThreadStatus
               lead={
                 spine.done === spine.countable
@@ -581,9 +547,11 @@ async function DiverReadinessPage({
               progress={t("thread.stepsDone", { done: spine.done, total: spine.countable })}
               settled={spine.done === spine.countable}
             />
-            <ThreadSpine steps={spineSteps} />
+            <ThreadSpine steps={spineSteps} heading={t("ready.checklistHeading")} />
+            {atShopLine ? <p className="mt-4 text-base text-muted">{atShopLine}</p> : null}
           </>
         )}
+        <CourseNextStepNote db={db} shopId={shop.id} bookingId={bookingId} t={t} />
         <ThreadSections
           context={{
             token,
@@ -597,8 +565,10 @@ async function DiverReadinessPage({
             publicCrew,
             partySeatClaims,
             partyAllSet,
+            flySafePlan,
           }}
         />
+        {yourDays}
       </>
     );
   })();

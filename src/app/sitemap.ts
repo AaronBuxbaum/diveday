@@ -9,7 +9,12 @@ import { listShopsForSitemap } from "@/db/shops";
 import { FEATURE_PAGE_SLUGS, featurePagePath } from "@/lib/feature-pages";
 import { MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
 import { publicAppUrl } from "@/lib/notifications";
-import { publicCoursePath, publicDiveSitePath, publicSchedulePath } from "@/lib/public-routes";
+import {
+  FIND_YOUR_BOOKING_PATH,
+  publicCoursePath,
+  publicDiveSitePath,
+  publicSchedulePath,
+} from "@/lib/public-routes";
 
 /**
  * The public marketing surface (the pages in docs/product/marketing.md plus
@@ -47,6 +52,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...FEATURE_PAGE_SLUGS.map((slug) => ({ path: featurePagePath(slug), priority: 0.8 })),
     { path: "/pricing", priority: 0.9 },
     { path: "/about", priority: 0.6 },
+    // The diver's door back to a lost link (fourth review, item 50): what a
+    // diver searching "DiveDay booking" should land on.
+    { path: FIND_YOUR_BOOKING_PATH, priority: 0.5 },
     { path: "/switching", priority: 0.7 },
     { path: "/switching/spreadsheet", priority: 0.8 },
     ...MIGRATION_GUIDE_SLUGS.map((slug) => ({ path: `/switching/${slug}`, priority: 0.8 })),

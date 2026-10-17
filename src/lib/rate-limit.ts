@@ -360,6 +360,29 @@ export async function checkRateLimit(
 }
 
 /**
+ * {@link checkRateLimit}, but a store error **refuses** rather than allows.
+ * For the one bucket where a guess that slips through costs more than a
+ * refused legitimate try: the doctor's page's date-of-birth unlock, which
+ * stands in front of medical answers (second-pass security review of layer
+ * r5-3, N4). The failure is reported exactly as the fail-open path reports it.
+ */
+export async function checkRateLimitFailClosed(
+  key: string,
+  config: RateLimitConfig,
+  now: number = nowMs(),
+  store: RateLimitStore = defaultStore,
+): Promise<RateLimitResult> {
+  if (rateLimitDisabled()) return { allowed: true, retryAfterMs: 0 };
+  announceMemoryStoreInProduction(store);
+  try {
+    return await store.take(key, config, now);
+  } catch (error) {
+    await reportStoreFailure(error, store, now);
+    return { allowed: false, retryAfterMs: 60_000 };
+  }
+}
+
+/**
  * Hashes the key's parts so a raw bearer token, email address, or other
  * sensitive value is never held as a literal Map key or written to a log —
  * only its hash, which cannot be reversed into the original (CR-013's "no
@@ -452,6 +475,15 @@ export const RATE_LIMITS = {
   waitlistJoin: perHour(10),
   /** Course inquiry submissions from the public course page, per IP. */
   courseInquiry: perHour(10),
+  /**
+   * The acknowledgment a date request sends the diver, per recipient address
+   * across every shop. The address is whatever was typed into a public form,
+   * so the IP bucket above is not what keeps one inbox from being written to
+   * in a shop's name on every submission. Two a day covers a diver who asks
+   * about a course and then about a date; past that the send is dropped and
+   * the request is still recorded.
+   */
+  courseInquiryAck: perDay(2),
   /**
    * Set-up requests from `/get-set-up` (ADR 20261007-setup-request-form), per
    * IP. A shop asks once; five an hour covers a typo resubmitted and a second
@@ -596,6 +628,14 @@ export const RATE_LIMITS = {
   /** RFC 8058 unsubscribe POSTs, per capability token rather than shared provider IP. */
   oneClickUnsubscribe: perHour(10),
   /**
+   * The same POSTs per IP (third-pass security N3), as the confirm page limits
+   * by IP: random tokens each get a fresh token bucket, so only this stops a
+   * flood of guesses. Generous, because a mail provider POSTs every one-click
+   * from a shared pool of addresses and one of its IPs may carry many real
+   * unsubscribes in an hour.
+   */
+  oneClickUnsubscribeByIp: perHour(300),
+  /**
    * Second-factor attempts (TOTP or a recovery code), per signed-in account.
    *
    * Tighter than sign-in, because the caller is already holding a session: the
@@ -685,6 +725,27 @@ export const RATE_LIMITS = {
    */
   readinessLinkResendByBooking: perHour(5),
   /**
+   * "Your days" sends, per *person* (security review of layer r5-4, N1). The
+   * per-target bucket above is one booking's; a regular holds a dozen rows, so
+   * without this one inbox could be sent five mails an hour per row. Every row
+   * mails the same person, so the person is the budget.
+   */
+  yourDayLinkByPerson: perHour(5),
+  /**
+   * Unlocking the answers on the doctor's page (`/waivers/[token]/doctor`) by
+   * typing the diver's date of birth, per **diver** (the held release's
+   * person) rather than per IP or per record, so neither rotating addresses
+   * nor a reissued link buys a fresh budget. Five a quarter hour is plenty for
+   * a diver mistyping their own birthday, but a bucket refills: sustained, it
+   * is 20 an hour, so on its own it would walk a known birth year in under a
+   * day. The real bound is the record's lifetime ceiling,
+   * `DOCTOR_UNLOCK_FAILURE_LIMIT` wrong dates, after which the answers stay
+   * locked for the rest of the hold; this only paces the tries before it.
+   * Checked with `checkRateLimitFailClosed` (security review of layer r5-3,
+   * F1, and its second pass).
+   */
+  doctorAnswersByPerson: per15Min(5),
+  /**
    * Core Web Vitals beacons to `/api/vitals`, per IP.
    *
    * Public and unauthenticated by necessity — the report comes from a diver's
@@ -714,6 +775,15 @@ export const RATE_LIMITS = {
    * below a useful firehose is the size worth having.
    */
   cspReport: perHour(120),
+  /**
+   * A failed cert check's page-shape report (`reportAgencyCheckPageAction`),
+   * per signed-in staffer, and per shop. Each is one log line; a staffer
+   * checking a busy departure fails a few at most, and two failures in a row
+   * stop a "Check all", so 30 an hour is far past real use. The shop's bucket
+   * bounds every staff session at one shop together.
+   */
+  agencyCheckReportByPerson: perHour(30),
+  agencyCheckReportByShop: perHour(120),
 } as const satisfies Record<string, RateLimitConfig>;
 
 /**

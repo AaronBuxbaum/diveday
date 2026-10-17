@@ -6,8 +6,8 @@ import type { FormDraftProps } from "@/components/FormDraft";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { ForgivingInput } from "@/components/ui/ForgivingInput";
-import { DateField, Field, FieldGrid } from "@/components/ui/form";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { ChoiceRow, DateField, Field, FieldGrid } from "@/components/ui/form";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import type { MovePreflight, MovePreflightSection } from "@/lib/move-preflight";
@@ -285,6 +285,22 @@ function impactLines(section: MovePreflightSection, copy: BuilderCopy): string[]
       );
     case "crewAway":
       return section.names.map((name) => fill(copy.impactCrewAway, { name }));
+    // Advice, never a gate (issue #2141): muted with the costs, under every
+    // clash line, naming the other departure and the minutes between them.
+    case "turnaround":
+      return section.items.map((item) =>
+        item.kind === "boat"
+          ? fill(copy.impactTurnaroundBoat, {
+              boat: item.name,
+              minutes: item.minutes,
+              departure: item.departure,
+            })
+          : fill(copy.impactTurnaroundCrew, {
+              name: item.name,
+              minutes: item.minutes,
+              departure: item.departure,
+            }),
+      );
     case "told":
       return [
         fill(
@@ -447,6 +463,15 @@ function CopyPanel({
           copy={{ typedAs: copy.typedAs }}
         />
       </Field>
+      {/* **The crew comes along unless unticked** (fifth-loop ideas, item 53):
+          Thursday's boat copied to Friday was crewed again by hand. Someone
+          already on another boat then, or the course's rules, refuse the crew
+          as a whole and the copy says so. */}
+      <div className="sm:col-span-2">
+        <ChoiceRow type="checkbox" name="sameCrew" value="on" defaultChecked>
+          {copy.copySameCrew}
+        </ChoiceRow>
+      </div>
       <div className="flex items-center gap-3 sm:col-span-2">
         <SubmitButton pendingLabel={copy.copying} className={buttonClass()}>
           {copy.copyIt}

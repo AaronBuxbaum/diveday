@@ -1,14 +1,33 @@
+import { and, eq, isNull } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { ParticipantType } from "@/lib/participant-types";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
-import { type BookingOutcome, createBooking, type FreshPersonDetails } from "./bookings";
+import { hasSailed } from "@/lib/trips";
+import {
+  type BookingOutcome,
+  createBooking,
+  createBookingParty,
+  type FreshPersonDetails,
+  type MoveBookingOutcome,
+  moveBooking,
+} from "./bookings";
 import type { AppDb } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { publishManifestEvent } from "./manifest-events";
-import { sendCourseSeatConfirmation } from "./notifications";
-import { recordTripActivity, type TripActivityEntry } from "./operations";
-import { type IssueAndDeliverWaiverResult, issueWaiverOnJoin } from "./waiver-issue";
+import { sendCourseSeatConfirmation, sendStaffSeatingConfirmation } from "./notifications";
+import { recordSeatChange, type SeatChangeCode } from "./operations";
+import { people, shops, trips } from "./schema";
+import { type SendRescheduleNoticesOptions, sendSeatMoveNotice } from "./trip-rescheduled";
+import { liveTrip } from "./trips-live";
+import {
+  type IssueAndDeliverWaiverResult,
+  issueJoinWaiverLink,
+  issueWaiverOnJoin,
+  settleJoinWaiverDelivery,
+} from "./waiver-issue";
 
 /**
  * Seating a diver has never been just the booking row. Every staff door that
@@ -116,6 +135,21 @@ export type SeatDiverInput = {
  */
 export type SeatDiverWaiver = "not_needed" | "sent" | "not_delivered" | "failed";
 
+/**
+ * Whether the diver was sent the booking confirmation (fourth UX review,
+ * item 3), so the door can say "Their confirmation is on its way."
+ *
+ * - `sent` — the departure has not sailed (at the walk-in counter, it is on a
+ *   later day than today at the shop), and the confirmation (with the waiver
+ *   riding in it when one was owed) went out.
+ * - `not_sent` — it was owed and could not go: no address, no provider, a
+ *   provider error. The door's ordinary notice stands.
+ * - `not_needed` — the counter's seat on today's boat (the diver is standing
+ *   there), a departure that has sailed, or a held seat, which is owed nothing
+ *   until its identity is confirmed (#2125).
+ */
+export type SeatDiverConfirmation = "sent" | "not_sent" | "not_needed";
+
 export type SeatDiverResult =
   | {
       ok: true;
@@ -123,6 +157,7 @@ export type SeatDiverResult =
       personId: string;
       personName: string;
       waiver: SeatDiverWaiver;
+      confirmation: SeatDiverConfirmation;
       /**
        * The release link to hand over when `waiver` is `not_delivered` — the
        * bearer path the crew can open on their own phone for the person in
@@ -170,17 +205,17 @@ export type SeatDiverResult =
  * A walk-in and a booked seat are the same insert with different stories behind
  * them, and the trail is where a shop reads the difference back. The words are
  * picked where the trail is rendered (issue #1655) — this only says which
- * sentence, and the one name it needs.
+ * sentence; `recordSeatChange` reads the name off the seat.
  */
-function activityEntry(entry: SeatDiverEntry, personName: string): TripActivityEntry {
+function activityCode(entry: SeatDiverEntry): SeatChangeCode {
   switch (entry) {
     case "walk_in":
-      return { code: "seat_added_walk_in", diver: personName };
+      return "seat_added_walk_in";
     // A rider the crew added at the boat (`src/db/dock-rider.ts`).
     case "dock":
-      return { code: "rider_added_at_dock", diver: personName };
+      return "rider_added_at_dock";
     case "roster":
-      return { code: "seat_added", diver: personName };
+      return "seat_added";
   }
 }
 
@@ -238,46 +273,214 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
   }
   await trackEvent({ name: "booking_completed", source: "staff", partySize: 1 });
 
-  let waiver: SeatDiverWaiver;
+  return seatConsequences(db, input, outcome);
+}
+
+/** What every party member carries, whoever they are. */
+type SeatPartyMemberFacts = {
+  /** The row's "Under 18" tick: a parent or guardian co-signs this seat's release. */
+  minor: boolean;
+  /** The row's "Coming as" (ADR 20261007-participant-types); absent is a diver. */
+  participantType?: ParticipantType;
+  /**
+   * A date of birth the counter asked for beside "Under 18", `YYYY-MM-DD`,
+   * already checked by the caller. Written onto the person only where their
+   * record has none: the counter never overwrites a date on file.
+   */
+  dateOfBirth?: string;
+};
+
+/**
+ * One person on the walk-in form's party rows (fifth loop, item 9): a name
+ * typed for somebody new, or the record the staffer picked for that row from
+ * the on-file prompt, with the name they had typed for it (`typedName`, which
+ * the booking compares the way the single walk-in's prompt does, issue #1556).
+ */
+export type SeatPartyMember = SeatPartyMemberFacts &
+  ({ fullName: string; email?: string; phone?: string } | { personId: string; typedName: string });
+
+export type SeatPartyResult =
+  | { ok: true; seats: Extract<SeatDiverResult, { ok: true }>[] }
+  | (Extract<SeatDiverResult, { ok: false }> & {
+      /** Which member the party was refused on, so the form can point at that row. */
+      failedIndex: number;
+    });
+
+/**
+ * **A walk-in family on the boat in one pass** (fifth loop, item 9). Every
+ * member is booked in one all-or-nothing transaction (`createBookingParty`):
+ * the counter never leaves two of four seated and the other two refused, and
+ * capacity is checked for the whole party at once. Each seat past the first
+ * leads back to the first, which is how a party is a party everywhere else.
+ *
+ * An "Under 18" tick is the seat's `minor_declared_at`, the same fact the
+ * public party form writes, so the release asks a parent or guardian to sign
+ * with them and boarding waits for both (`guardianSignatureRequired`). It
+ * gates nothing at the counter. After the commit each seat is owed exactly
+ * what one walk-in is (`seatConsequences`), and the manifest refreshes once.
+ */
+export async function seatParty(
+  db: AppDb,
+  input: Omit<SeatDiverInput, "diver"> & { members: readonly SeatPartyMember[] },
+): Promise<SeatPartyResult> {
+  const outcome = await createBookingParty(
+    db,
+    input.members.map((member) => ({
+      actor: "staff" as const,
+      shopId: input.shopId,
+      tripId: input.tripId,
+      participantType: member.participantType ?? input.participantType ?? "diver",
+      ...("personId" in member
+        ? { personId: member.personId, fromNameMatch: { typedName: member.typedName } }
+        : { fullName: member.fullName, email: member.email, phone: member.phone }),
+      minorDeclared: member.minor || undefined,
+    })),
+  );
+  if (!outcome.ok) {
+    await trackEvent({ name: "booking_blocked", source: "staff", reason: outcome.reason });
+    const reason = collapse(outcome.reason, input.refusals);
+    return outcome.reason === "trip_prerequisite" && reason === "trip_prerequisite"
+      ? { ok: false, reason, refusal: outcome.refusal, failedIndex: outcome.failedIndex }
+      : { ok: false, reason, failedIndex: outcome.failedIndex };
+  }
+  await trackEvent({
+    name: "booking_completed",
+    source: "staff",
+    partySize: outcome.bookings.length,
+  });
+  // Before the release goes out, so the waiver reads the age the counter asked.
+  for (const [index, booking] of outcome.bookings.entries()) {
+    const dateOfBirth = input.members[index]?.dateOfBirth;
+    // A record the name match left in doubt may be someone else; nothing typed lands on it.
+    if (!dateOfBirth || booking.identityUnconfirmed) continue;
+    await db
+      .update(people)
+      .set({ dateOfBirth })
+      .where(
+        and(
+          eq(people.id, booking.personId),
+          eq(people.shopId, input.shopId),
+          isNull(people.dateOfBirth),
+        ),
+      );
+  }
+  const seats: Extract<SeatDiverResult, { ok: true }>[] = [];
+  for (const booking of outcome.bookings) {
+    seats.push(await seatConsequences(db, input, booking, { publish: false }));
+  }
+  await publishManifestEvent(db, input.shopId, input.tripId);
+  return { ok: true, seats };
+}
+
+/** What a booking that just committed hands its consequences: who sits where. */
+type SeatedBooking = {
+  bookingId: string;
+  personId: string;
+  personName: string;
+  identityUnconfirmed: boolean;
+};
+
+/**
+ * **Every consequence a staff seating owes, after the seat commits**: the
+ * confirmation or the waiver, the course materials, the trail, the desk event
+ * and the manifest refresh. One path for one diver (`seatDiver`) and for each
+ * member of a party (`seatParty`), so a family seated together is owed exactly
+ * what four walk-ins were.
+ */
+async function seatConsequences(
+  db: AppDb,
+  input: Omit<SeatDiverInput, "diver" | "refusals">,
+  outcome: SeatedBooking,
+  options: { publish?: boolean } = {},
+): Promise<Extract<SeatDiverResult, { ok: true }>> {
+  let waiver: SeatDiverWaiver = "not_needed";
   let waiverPath: string | undefined;
-  try {
-    // Uses the resolved booking, so a returning diver picked by identity gets
-    // the same waiver-on-join a hand-entered walk-in does. Idempotent: a
-    // diver already holding a link or a signature is skipped, not re-sent.
-    const issued = await issueWaiverOnJoin(db, input.shopId, outcome.bookingId);
+  let confirmation: SeatDiverConfirmation = "not_needed";
+  const takeWaiver = (issued: IssueAndDeliverWaiverResult | null) => {
     waiver = waiverOutcome(issued);
     if (issued?.ok && issued.delivery !== "sent") {
       waiverPath = issued.path ?? `/waivers/${issued.token}`;
     }
-  } catch (error) {
-    log("booking.waiver_on_join_failed", "error", {
-      bookingId: outcome.bookingId,
-      errorCode: error instanceof Error ? error.name : "unknown_error",
-    });
-    waiver = "failed";
+  };
+
+  // **A staff seating gets the confirmation an online booking gets** (fourth
+  // UX review, item 3): a phone booking (the 1:30 booked at 9 AM included), a
+  // seat from a date request, a regular put on next Saturday. The waiver
+  // rides in it as its first step, the way `bookSpot`'s does, so one seating
+  // is still one email; when the confirmation cannot go, the waiver goes on
+  // its own the old way. Only the walk-in counter knows the diver is standing
+  // at the desk, so only its seat on today's boat keeps the counter's path;
+  // a held seat is owed nothing until its identity is confirmed (#2125).
+  const confirms =
+    !outcome.identityUnconfirmed &&
+    (await departureOwesConfirmation(db, input.shopId, input.tripId, input.entry));
+  if (confirms) {
+    try {
+      const link = await issueJoinWaiverLink(db, input.shopId, outcome.bookingId);
+      const delivery = await sendStaffSeatingConfirmation(db, input.shopId, outcome.bookingId, {
+        waiver: link,
+      });
+      confirmation = delivery?.status === "sent" ? "sent" : "not_sent";
+      if (link) {
+        const fallback = await settleJoinWaiverDelivery(db, {
+          shopId: input.shopId,
+          bookingId: outcome.bookingId,
+          link,
+          confirmationSent: confirmation === "sent",
+        });
+        if (confirmation === "sent") waiver = "sent";
+        else takeWaiver(fallback);
+      } else {
+        // No link minted: nothing was owed, or issuing failed. The join-send
+        // tells the two apart and reports which.
+        takeWaiver(await issueWaiverOnJoin(db, input.shopId, outcome.bookingId));
+      }
+    } catch (error) {
+      log("booking.staff_confirmation_failed", "error", {
+        bookingId: outcome.bookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+      if (confirmation === "not_needed") confirmation = "not_sent";
+      if (waiver === "not_needed") waiver = "failed";
+    }
+  } else {
+    try {
+      // Uses the resolved booking, so a returning diver picked by identity gets
+      // the same waiver-on-join a hand-entered walk-in does. Idempotent: a
+      // diver already holding a link or a signature is skipped, not re-sent.
+      takeWaiver(await issueWaiverOnJoin(db, input.shopId, outcome.bookingId));
+    } catch (error) {
+      log("booking.waiver_on_join_failed", "error", {
+        bookingId: outcome.bookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+      waiver = "failed";
+    }
+
+    // A course student seated for today still hears what to work through, the
+    // same confirmation a self-booked student gets, sent only when the course
+    // carries learning materials (ADR 20261008-course-learning-materials).
+    // Best-effort like the waiver: the seat stands whatever the mail does.
+    try {
+      await sendCourseSeatConfirmation(db, input.shopId, outcome.bookingId);
+    } catch (error) {
+      log("booking.course_confirmation_failed", "error", {
+        bookingId: outcome.bookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
   }
 
-  // A course student hears what to work through before day 1 now, not a week
-  // out: the same confirmation a self-booked student gets, sent only when the
-  // course carries learning materials (ADR 20261008-course-learning-materials).
-  // Best-effort like the waiver: the seat stands whatever the mail does.
-  try {
-    await sendCourseSeatConfirmation(db, input.shopId, outcome.bookingId);
-  } catch (error) {
-    log("booking.course_confirmation_failed", "error", {
-      bookingId: outcome.bookingId,
-      errorCode: error instanceof Error ? error.name : "unknown_error",
-    });
-  }
-
-  // `outcome.personName` rather than whatever was typed: the identity path
-  // submits no name at all, and the hand-entry path may have matched an
-  // existing person by email whose name on file is the one the crew knows.
-  await recordTripActivity(db, {
+  // Named off the seat rather than whatever was typed: the identity path
+  // submits no name at all, and a held seat reads as it was booked (issue
+  // #2128). After the seat commits, not inside it: `createBooking` is every
+  // door's insert, and this is the one consequence path for staff seating.
+  await recordSeatChange(db, {
     shopId: input.shopId,
     tripId: input.tripId,
     actorPersonId: input.actorPersonId,
-    entry: activityEntry(input.entry, outcome.personName),
+    bookingId: outcome.bookingId,
+    code: activityCode(input.entry),
   });
 
   // "Lina Costa took a seat." on the manifest's catch-up strip (issue #1202).
@@ -300,7 +503,7 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
   // (ADR 20260804-manifest-web-push). Best-effort and never thrown, like every
   // other call to it, and deliberately after the booking and its side effects
   // rather than inside them.
-  await publishManifestEvent(db, input.shopId, input.tripId);
+  if (options.publish !== false) await publishManifestEvent(db, input.shopId, input.tripId);
 
   return {
     ok: true,
@@ -309,6 +512,103 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     personName: outcome.personName,
     waiver,
     waiverPath,
+    confirmation,
     identityUnconfirmed: outcome.identityUnconfirmed,
   };
+}
+
+/**
+ * Whether a staff seating on this departure is a booking to confirm: any
+ * departure that has not sailed, except the walk-in counter's seat on today's
+ * boat (both days read in the shop's own time zone), where the diver is
+ * standing at the desk. The door says which it is; the calendar never guesses.
+ */
+async function departureOwesConfirmation(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  entry: SeatDiverEntry,
+  now: Date = nowDate(),
+): Promise<boolean> {
+  const [row] = await db
+    .select({ startsAt: trips.startsAt, timezone: shops.timezone })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  if (!row || hasSailed(row.startsAt, now)) return false;
+  if (entry === "roster") return true;
+  return (
+    calendarDateInTimezone(row.startsAt, row.timezone) > calendarDateInTimezone(now, row.timezone)
+  );
+}
+
+export type { MoveBookingRefusal as MoveSeatRefusal } from "./bookings";
+
+export type MoveSeatResult =
+  | Exclude<MoveBookingOutcome, { ok: true }>
+  | (Extract<MoveBookingOutcome, { ok: true }> & {
+      waiver: SeatDiverWaiver;
+      /** Whether the diver heard the new time: `skipped` when it did not change. */
+      notice: "told" | "failed" | "skipped";
+    });
+
+/**
+ * **Move a booked seat to another departure, with every consequence a seating
+ * owes** (ADR 20261013-staff-move-a-seat). The move itself is one transaction
+ * (`moveBooking`); after it commits, in the order a person would want: the new
+ * departure's waiver if it asks for one the seat does not hold, the diver told
+ * the new time, and both manifests refreshed. Both trails' lines are written
+ * inside the move itself. Each consequence is
+ * best-effort: the seat has moved whatever the mail does.
+ */
+export async function moveSeat(
+  db: AppDb,
+  input: {
+    shopId: string;
+    fromTripId: string;
+    toTripId: string;
+    bookingId: string;
+    actorPersonId: string;
+  },
+  notices: SendRescheduleNoticesOptions = {},
+): Promise<MoveSeatResult> {
+  const moved = await moveBooking(db, input);
+  if (!moved.ok) return moved;
+  const movedAt = notices.now ?? nowDate();
+
+  let waiver: SeatDiverWaiver;
+  try {
+    waiver = waiverOutcome(await issueWaiverOnJoin(db, input.shopId, input.bookingId));
+  } catch (error) {
+    log("booking.waiver_on_join_failed", "error", {
+      bookingId: input.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    waiver = "failed";
+  }
+
+  let notice: "told" | "failed" | "skipped";
+  try {
+    notice = await sendSeatMoveNotice(
+      db,
+      {
+        shopId: input.shopId,
+        bookingId: input.bookingId,
+        fromTripId: moved.fromTripId,
+        movedAt,
+      },
+      notices,
+    );
+  } catch (error) {
+    log("booking.seat_move_notice_failed", "error", {
+      bookingId: input.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    notice = "failed";
+  }
+
+  await publishManifestEvent(db, input.shopId, moved.fromTripId);
+  await publishManifestEvent(db, input.shopId, moved.toTripId);
+  return { ...moved, waiver, notice };
 }

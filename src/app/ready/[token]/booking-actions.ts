@@ -1,23 +1,23 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import {
-  type CancellationRefundSeen,
-  sendBookingCancelledNotice,
-} from "@/db/booking-cancelled-notice";
+import { z } from "zod";
 import { addPartySeat, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { recordDiverSelfCancel } from "@/db/operations";
+import { recordMoveAsk } from "@/db/inbound-messages";
+import { startPartySeatCheckout } from "@/db/party-seat-checkout";
 import {
   planReadinessLinkRescue,
   type ReadinessLinkRescue,
   sendPlannedReadinessLink,
 } from "@/db/readiness-link-rescue";
-import { refundBookingOnCancellation } from "@/db/refunds";
+import { settleReleasedPartySeats, settleSelfCancelledSeat } from "@/db/self-cancel-settle";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { trackEvent } from "@/lib/analytics";
+import { nowDate } from "@/lib/clock";
+import { formValue, parseForm, readForm, single } from "@/lib/form-parse";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
@@ -64,11 +64,99 @@ export async function payFromReady(token: string) {
 }
 
 /**
+ * **Ask to move** (H-126). Past the free-cancellation window, cancelling
+ * forfeits what was paid; this files a request in the shop's Inbox naming the
+ * seat instead, with the diver's optional note. Nothing moves here: moving a
+ * paid seat stays staff-side (ADR 20260821-the-diver-may-release-their-own-seat).
+ *
+ * Re-derived from the page's own read, never the form: only an `open` ask is
+ * filed, so a held seat, a seat inside the window or one already asked about
+ * is refused for who is asking. A repeat is the same row (`recordMoveAsk`),
+ * and only a row this tap filed says "Sent": an ask that already stood is
+ * shown as the page's own asked line, never reported as news.
+ */
+const moveAskForm = z.object({ note: formValue() });
+
+export async function askToMoveAction(token: string, formData: FormData) {
+  const ip = await clientIp();
+  if (
+    !(await checkRateLimit(rateLimitKey("booking-move-ask", ip), RATE_LIMITS.bookingSelfCancel))
+      .allowed
+  ) {
+    redirect(bounceTarget(token, "rate_limited"));
+  }
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
+  if (ctx.data.moveAsk === "asked") redirect(`${base(token)}#move-ask`);
+  if (ctx.data.moveAsk !== "open") redirect(`${base(token)}?error=move-ask`);
+  const { note } = readForm(moveAskForm, formData);
+  const outcome = await recordMoveAsk(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    note: typeof note === "string" ? note : null,
+    now: nowDate(),
+  });
+  if (outcome.status === "not_found") redirect(`${base(token)}?error=move-ask`);
+  if (outcome.status === "already") revalidateAndRedirect(base(token), `${base(token)}#move-ask`);
+  revalidateAndRedirect(base(token), `${base(token)}?saved=move-ask#move-ask`);
+}
+
+/**
+ * **A party lead pays for one seat they added** (issue #2474). The seat's id
+ * arrives in the form, so it is the db function that decides whether it is
+ * this lead's, unclaimed, unpaid and on this departure; here only the page's
+ * own gate (`canPayPartySeats`) and a per-IP bucket come first. Every refusal
+ * is the same quiet notice: the seat stays held, and a failure never reads as
+ * a lost seat.
+ */
+const partySeatPayForm = z.object({ seatBookingId: formValue() });
+
+export async function payForPartySeatFromReady(token: string, formData: FormData) {
+  const ip = await clientIp();
+  if (!(await checkRateLimit(rateLimitKey("booking", ip), RATE_LIMITS.booking)).allowed) {
+    redirect(bounceTarget(token, "rate_limited"));
+  }
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
+  const origin = publicAppUrl();
+  const { seatBookingId } = readForm(partySeatPayForm, formData);
+  if (
+    !ctx.data.canPayPartySeats ||
+    !origin ||
+    !ctx.data.person.email ||
+    typeof seatBookingId !== "string"
+  ) {
+    redirect(`${base(token)}?error=seat-pay`);
+  }
+  const returnBase = `${origin}${base(token)}`;
+  const t = diverTranslator(recipientLocale(ctx.ownLocale, ctx.data.shop.defaultLocale));
+  const outcome = await startPartySeatCheckout(ctx.db, {
+    shopId: ctx.data.shop.id,
+    tripId: ctx.data.trip.id,
+    leadBookingId: ctx.bookingId,
+    seatBookingId,
+    customerEmail: ctx.data.person.email,
+    successUrl: `${returnBase}?pay=seat-paid#party-seats`,
+    cancelUrl: `${returnBase}?pay=cancelled#party-seats`,
+    describeLine: (parts) => describeCheckoutLine(t, parts),
+  }).catch(() => null);
+  const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
+  if (!url) redirect(`${base(token)}?error=seat-pay#party-seats`);
+  redirect(url);
+}
+
+/**
  * Cancel the diver's own booking. Rate-limited harder than the rest of this
  * file — this is irreversible and, when paid, moves money. Cancellation and
  * refund stay the two independent steps the staff path uses (docs H-07): the
  * seat is freed by `selfCancelBooking` first, and a refund failure afterward
  * never re-opens it or blocks the cancellation the diver already sees.
+ *
+ * A party lead's unclaimed seats go with them (batch 6 item 10), released in
+ * the same transaction and then refunded one by one under the same policy as
+ * the lead's own. A claimed seat stays, and the cancelled page says which.
  *
  * The move a diver cannot make here is a *move* — rescheduling is the shop's
  * (ADR 20260821-the-diver-may-release-their-own-seat).
@@ -84,9 +172,11 @@ export async function cancelMyBookingAction(token: string) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
 
+  const shopId = ctx.data.shop.id;
   const cancelled = await selfCancelBooking(ctx.db, {
-    shopId: ctx.data.shop.id,
+    shopId,
     bookingId: ctx.bookingId,
+    withUnclaimedParty: true,
   });
   if (!cancelled.ok) redirect(`${base(token)}?error=cancel`);
   await trackEvent({ name: "booking_cancelled", source: "diver" });
@@ -97,54 +187,16 @@ export async function cancelMyBookingAction(token: string) {
   // the booking's own current payment status — an edited or replayed query
   // string cannot be used to claim a refund that did not happen, or hide one
   // that did.
-  //
-  // Caught, not left to throw: the cancellation above already committed and
-  // this token is already revoked, so a refund failure (a transient DB error,
-  // say) must never turn an already-successful cancellation into an error
-  // response — the diver would see a generic failure with no way to tell the
-  // destructive action actually went through, since refreshing the dead link
-  // only shows the unavailable notice. Staff can still see and fix a missed
-  // refund from the booking's payment record; the diver just needs the
-  // confirmation either way.
-  let refund: CancellationRefundSeen = { status: "not_attempted" };
-  try {
-    refund = await refundBookingOnCancellation(ctx.db, {
-      shopId: ctx.data.shop.id,
-      bookingId: ctx.bookingId,
-    });
-    if (refund.status !== "no_policy" && refund.status !== "unpaid") {
-      await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
-    }
-  } catch (error) {
-    log("booking.self_cancel_refund_failed", "error", {
-      bookingId: ctx.bookingId,
-      errorCode: error instanceof Error ? error.name : "unknown_error",
-    });
-  }
-  // The departure's trail names the diver, so the owner's "who refunded what"
-  // has an answer that is not a staffer. Caught for the same reason as the
-  // refund: the cancellation has already happened.
-  try {
-    await recordDiverSelfCancel(ctx.db, {
-      shopId: ctx.data.shop.id,
-      bookingId: ctx.bookingId,
-      refunded: refund.status === "refunded",
-    });
-  } catch (error) {
-    log("booking.self_cancel_activity_failed", "error", {
-      bookingId: ctx.bookingId,
-      errorCode: error instanceof Error ? error.name : "unknown_error",
-    });
-  }
-  // The written record of what just happened, with the money in it: the page
-  // below says it once, and this is what the diver still has tomorrow.
-  await sendBookingCancelledNotice(ctx.db, {
-    shopId: ctx.data.shop.id,
+  await settleSelfCancelledSeat(ctx.db, {
+    shopId,
     bookingId: ctx.bookingId,
-    cancelledBy: "diver",
-    // `selfCancelBooking` only ever cancels a booked seat.
-    from: "booked",
-    refund,
+    notify: true,
+    partyOutcome: cancelled.party,
+  });
+  await settleReleasedPartySeats(ctx.db, {
+    shopId,
+    leadBookingId: ctx.bookingId,
+    party: cancelled.party,
   });
   redirect(`${base(token)}?cancelled=1`);
 }
@@ -214,6 +266,8 @@ export async function emailFreshReadinessLinkAction(token: string) {
  * a notice. The new seat's claim link appears in the party panel on the page
  * the redirect lands on.
  */
+const addSeatForm = z.object({ seatName: single(diverNameSchema) });
+
 export async function addSeatFromReady(token: string, formData: FormData) {
   // A seat is a booking, so it spends the same per-IP budget the schedule's
   // booking form does, on top of the token chokepoint every action here takes.
@@ -225,8 +279,8 @@ export async function addSeatFromReady(token: string, formData: FormData) {
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   refuseWhileHeld(token, ctx.data);
   if (!ctx.data.canAddSeat) redirect(`${base(token)}?error=seat`);
-  const parsed = diverNameSchema.safeParse(formData.get("seatName"));
-  if (!parsed.success) redirect(`${base(token)}?error=seat-name`);
+  const parsed = parseForm(addSeatForm, formData);
+  if (!parsed.ok) redirect(`${base(token)}?error=seat-name`);
   // **Per booking, decided first** (security review of layer 8, D3): the link
   // is shared by design, so the per-IP bucket above is not the cap on how many
   // seats one booking can add. Every holder of this link spends from one
@@ -244,7 +298,7 @@ export async function addSeatFromReady(token: string, formData: FormData) {
   const outcome = await addPartySeat(ctx.db, {
     shopId: ctx.data.shop.id,
     leadBookingId: ctx.bookingId,
-    seatName: parsed.data,
+    seatName: parsed.data.seatName,
   }).catch((error: unknown) => {
     log("ready.add_seat_failed", "error", {
       errorCode: error instanceof Error ? error.name : "unknown_error",

@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { CONFIRMATION_WINDOW_MS, confirmationCode } from "@/lib/reply-keywords";
 import { fileScopedShopContext } from "@/test/db";
-import { createBooking } from "./bookings";
+import { createBooking, createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
 import { recordInboundMessage } from "./inbound-messages";
 import { handleInboundReplyKeyword } from "./reply-keywords";
-import { bookings, inboundMessages, people, staffReplies, trips } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { bookings, inboundMessages, people, rollCallEvents, staffReplies, trips } from "./schema";
+import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **The failure paths are the feature** (ADR 20260909-reply-keywords).
@@ -222,6 +222,35 @@ describe("handleInboundReplyKeyword — what it refuses", () => {
         shopId: shop.id,
         inboundMessageId: messageId,
         now: afterwards,
+        provider,
+      }),
+    ).toBe("nothing_to_cancel");
+    expect(await statusOf(db, bookingId)).toBe("booked");
+  });
+
+  it("refuses a `C` inside the late hour once the dock counted the diver aboard (H-133)", async () => {
+    const { db, shop, trip, bookingId } = await context();
+    const provider = acceptingProvider();
+    const [recorder] = await listStaff(db, shop.id);
+    if (!recorder) throw new Error("seeded staff missing");
+    await db.insert(rollCallEvents).values({
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId,
+      recordedByPersonId: recorder.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      occurredAt: new Date(trip.startsAt.getTime() + 5 * 60 * 1000),
+    });
+    // Twenty minutes past its time: `hasSailed` says not yet, the dock says aboard.
+    const at = new Date(trip.startsAt.getTime() + 20 * 60 * 1000);
+    const messageId = await inbound(db, shop.id, "C", { receivedAt: at });
+
+    expect(
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: messageId,
+        now: at,
         provider,
       }),
     ).toBe("nothing_to_cancel");
@@ -462,6 +491,189 @@ describe("handleInboundReplyKeyword — what it does", () => {
         money: { story: "none" },
       }),
     ]);
+  });
+
+  /**
+   * **A lead's cancel by code takes their unclaimed seats too** (batch 6 layer 2
+   * review): the same rule as `/ready`, so a lead who cancels by reply does not
+   * leave seats they paid for booked under nobody. A seat with its own address
+   * is told; one with no address is not.
+   */
+  it("cancels a lead's unclaimed party seats with the lead's own on the code", async () => {
+    const { db, shop } = ctx;
+    const open = (await upcomingTripsWithCounts(db, shop.id)).find(
+      (trip) => trip.title === "Two-Tank Reef — Christ of the Abyss",
+    );
+    if (!open) throw new Error("expected seeded trip missing");
+    const party = await createBookingParty(db, [
+      { actor: "public", shopId: shop.id, tripId: open.id, ...DIVER },
+      {
+        actor: "public",
+        shopId: shop.id,
+        tripId: open.id,
+        fullName: "Milo Quinn",
+        email: "milo-quinn@example.com",
+      },
+      { actor: "public", shopId: shop.id, tripId: open.id, fullName: "Pia Quinn" },
+    ]);
+    if (!party.ok) throw new Error(`setup party failed: ${party.reason}`);
+    const [lead, milo, pia] = party.bookings.map((seat) => seat.bookingId);
+    const [leadRow] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, lead ?? ""));
+    const now = new Date(open.startsAt.getTime() - 24 * 60 * 60 * 1000);
+    const provider = acceptingProvider();
+    await handleInboundReplyKeyword(db, {
+      shopId: shop.id,
+      inboundMessageId: await inbound(db, shop.id, "C", { receivedAt: now }),
+      now,
+      provider,
+    });
+    const code = confirmationCode(
+      {
+        shopId: shop.id,
+        bookingId: lead ?? "",
+        personId: leadRow?.personId ?? "",
+        channel: "email",
+        toAddress: DIVER.email,
+      },
+      now.getTime(),
+    );
+    const later = new Date(now.getTime() + 60_000);
+    expect(
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: await inbound(db, shop.id, code, { receivedAt: later }),
+        now: later,
+        provider,
+      }),
+    ).toBe("cancelled");
+
+    expect(await statusOf(db, lead ?? "")).toBe("cancelled");
+    expect(await statusOf(db, milo ?? "")).toBe("cancelled");
+    expect(await statusOf(db, pia ?? "")).toBe("cancelled");
+    const notices = provider.sent.filter((sent) => sent.kind === "booking_cancelled");
+    expect(notices.map((notice) => notice.to).sort()).toEqual(
+      [DIVER.email, "milo-quinn@example.com"].sort(),
+    );
+  });
+
+  /**
+   * **The lead is told before they confirm** (issue #2604): the text prompt says
+   * how many party seats go with them, counted by the rule the settle applies,
+   * and the lead's own cancellation email says how many went and how many stayed.
+   */
+  describe("telling a party lead what their cancel takes with it", () => {
+    async function leadConversation(
+      seats: Array<{ fullName: string; email?: string; claimed?: boolean }>,
+    ) {
+      const { db, shop } = ctx;
+      const open = (await upcomingTripsWithCounts(db, shop.id)).find(
+        (trip) => trip.title === "Two-Tank Reef — Christ of the Abyss",
+      );
+      if (!open) throw new Error("expected seeded trip missing");
+      const party = await createBookingParty(db, [
+        { actor: "public", shopId: shop.id, tripId: open.id, ...DIVER },
+        ...seats.map((seat) => ({
+          actor: "public" as const,
+          shopId: shop.id,
+          tripId: open.id,
+          fullName: seat.fullName,
+          email: seat.email,
+        })),
+      ]);
+      if (!party.ok) throw new Error(`setup party failed: ${party.reason}`);
+      const [lead, ...others] = party.bookings.map((seat) => seat.bookingId);
+      for (const [index, seat] of seats.entries()) {
+        if (seat.claimed) {
+          await db
+            .update(bookings)
+            .set({ claimedAt: new Date("2030-01-01T00:00:00.000Z") })
+            .where(eq(bookings.id, others[index] ?? ""));
+        }
+      }
+      const [leadRow] = await db
+        .select({ personId: bookings.personId })
+        .from(bookings)
+        .where(eq(bookings.id, lead ?? ""));
+      const now = new Date(open.startsAt.getTime() - 24 * 60 * 60 * 1000);
+      const provider = acceptingProvider();
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: await inbound(db, shop.id, "C", { receivedAt: now }),
+        now,
+        provider,
+      });
+      const prompt = replyBodies(provider.sent)[0] ?? "";
+      const code = confirmationCode(
+        {
+          shopId: shop.id,
+          bookingId: lead ?? "",
+          personId: leadRow?.personId ?? "",
+          channel: "email",
+          toAddress: DIVER.email,
+        },
+        now.getTime(),
+      );
+      const later = new Date(now.getTime() + 60_000);
+      await handleInboundReplyKeyword(db, {
+        shopId: shop.id,
+        inboundMessageId: await inbound(db, shop.id, code, { receivedAt: later }),
+        now: later,
+        provider,
+      });
+      const leadNotice = provider.sent.find(
+        (sent) => sent.kind === "booking_cancelled" && sent.to === DIVER.email,
+      );
+      return { db, prompt, others, leadNotice };
+    }
+
+    const partyOf = (notice: Notification | undefined) =>
+      notice?.kind === "booking_cancelled" ? notice.party : "wrong kind";
+
+    it("says nothing about a party when the lead has none", async () => {
+      const { prompt, leadNotice } = await leadConversation([]);
+      expect(prompt).toContain("Nothing has changed yet.");
+      expect(prompt).not.toContain("party seat");
+      expect(partyOf(leadNotice)).toBeUndefined();
+    });
+
+    it("counts only unclaimed seats, and the email says the same number went", async () => {
+      const { db, prompt, others, leadNotice } = await leadConversation([
+        { fullName: "Milo Quinn", email: "milo-quinn@example.com" },
+        { fullName: "Pia Quinn" },
+      ]);
+      expect(prompt).toContain("This also cancels 2 party seats.");
+      expect(partyOf(leadNotice)).toEqual({ cancelled: 2, stayed: 0 });
+      for (const id of others) expect(await statusOf(db, id)).toBe("cancelled");
+    });
+
+    it("counts a lone seat in the singular", async () => {
+      const { prompt } = await leadConversation([{ fullName: "Milo Quinn" }]);
+      expect(prompt).toContain("This also cancels 1 party seat.");
+      expect(prompt).not.toContain("1 party seats");
+    });
+
+    it("leaves a claimed seat out of the prompt, and names it as staying in the email", async () => {
+      const { db, prompt, others, leadNotice } = await leadConversation([
+        { fullName: "Milo Quinn", claimed: true },
+        { fullName: "Pia Quinn" },
+      ]);
+      expect(prompt).toContain("This also cancels 1 party seat.");
+      expect(partyOf(leadNotice)).toEqual({ cancelled: 1, stayed: 1 });
+      expect(await statusOf(db, others[0] ?? "")).toBe("booked");
+      expect(await statusOf(db, others[1] ?? "")).toBe("cancelled");
+    });
+
+    it("promises nothing when every seat is already claimed, and the email says they stay", async () => {
+      const { db, prompt, others, leadNotice } = await leadConversation([
+        { fullName: "Milo Quinn", claimed: true },
+      ]);
+      expect(prompt).not.toContain("party seat");
+      expect(partyOf(leadNotice)).toEqual({ cancelled: 0, stayed: 1 });
+      expect(await statusOf(db, others[0] ?? "")).toBe("booked");
+    });
   });
 
   /**

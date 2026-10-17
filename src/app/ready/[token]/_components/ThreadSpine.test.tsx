@@ -71,6 +71,13 @@ describe("ThreadStatus", () => {
 });
 
 describe("ThreadSpine", () => {
+  it("names the checklist for a screen reader, above the steps' own H3s (fourth review, item 47)", () => {
+    render(<ThreadSpine steps={[step({ id: "sign" })]} heading="Your checklist" />);
+    const heading = screen.getByRole("heading", { level: 2, name: "Your checklist" });
+    expect(heading).toHaveClass("sr-only");
+    expect(heading.nextElementSibling?.tagName).toBe("OL");
+  });
+
   it("opens exactly one step at rest, and it is the current one", () => {
     const { container } = render(
       <ThreadSpine
@@ -127,6 +134,21 @@ describe("ThreadSpine", () => {
     // a disclosure — that is the whole of what a collapsed step says.
     expect(screen.getByText("Signed and on file.")).toBeVisible();
     expect(screen.getByText("Your shop is confirming your readiness.")).toBeVisible();
+  });
+
+  it("names each step's state on its row, settled steps included", () => {
+    const { container } = render(
+      <ThreadSpine
+        steps={[
+          step({ id: "sign", state: "your_turn", current: true, body: <p>Sign</p> }),
+          step({ id: "pay", state: "done", stateWord: null }),
+        ]}
+      />,
+    );
+    const stateOf = (id: string) =>
+      container.querySelector(`li[data-thread-step='${id}']`)?.getAttribute("data-step-state");
+    expect(stateOf("sign")).toBe("your_turn");
+    expect(stateOf("pay")).toBe("done");
   });
 
   it("gives every state a word, never color alone", () => {

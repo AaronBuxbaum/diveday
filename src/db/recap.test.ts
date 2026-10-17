@@ -929,16 +929,16 @@ describe("a departure with somebody not back aboard", () => {
     expect(recapsTo(email, missing)).toHaveLength(1);
   });
 
-  it("keeps waiting while an earlier dive's not-back word stands under a later boarding", async () => {
-    // Counted back after dive two does not retract dive one's word: Today
-    // still raises the row about it until somebody corrects that checkpoint.
+  it("stops waiting once a later dive's boarding settles an earlier not-back word", async () => {
+    // The latest checkpoint speaks (#2404): counted back after dive two settles
+    // dive one's word, as Today's row and the manifest already read it.
     const { db, missing, record, afterTrip } = await missingContext();
     await record(missing, "not_boarded", "after_dive_1");
     await record(missing, "boarded", "after_dive_2");
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
-    expect(recapsTo(email, missing)).toHaveLength(0);
-    expect(await getRecapPageData(db, missing, undefined, afterTrip)).toBeNull();
+    expect(recapsTo(email, missing)).toHaveLength(1);
+    expect(await getRecapPageData(db, missing, undefined, afterTrip)).not.toBeNull();
   });
 
   it("ignores the word on a booking cancelled since", async () => {
@@ -1223,6 +1223,30 @@ describe("getRecapPageData tip reconciliation", () => {
       }),
     );
     expect(data?.tip?.status).toBe("expired");
+  });
+
+  // The page's reads now go out before the gate answers (code review
+  // 2026-10-13b, item 32); Stripe is the one read that waits for it, so a
+  // closed recap never reaches out to reconcile a tip nobody will be shown.
+  it("never asks Stripe about a tip on a recap the gate closed", async () => {
+    const { db, bookingId, shop } = await pendingTipContext();
+    await db
+      .update(bookings)
+      .set({ status: "no_show" })
+      .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shop.id)));
+    let asked = 0;
+    const state = await getRecapPageState(
+      db,
+      bookingId,
+      fakeCheckout({
+        async retrieveCheckoutSession() {
+          asked += 1;
+          return { status: "failed" as const };
+        },
+      }),
+    );
+    expect(state.kind).toBe("dead");
+    expect(asked).toBe(0);
   });
 
   it("leaves a tip pending, checkout link intact, when Stripe can't be reached to reconcile it", async () => {

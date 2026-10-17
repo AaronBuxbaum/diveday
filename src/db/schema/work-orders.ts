@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { gearItemKind, gearItemStatus, gearItems, gearServiceKind } from "./gear";
 
@@ -120,8 +121,8 @@ export const customerGearItems = pgTable(
     hydroDueOn: date("hydro_due_on"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     // Partial on the live rows, like the register's: every read that means
@@ -178,7 +179,7 @@ export const workOrders = pgTable(
     technicianNotes: text("technician_notes"),
     /** What was done, written for the customer. */
     workPerformed: text("work_performed"),
-    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    receivedAt: appNowTimestamp("received_at").notNull(),
     /** When it first became ready for pickup; kept if the status moves back. */
     readyAt: timestamp("ready_at", { withTimezone: true }),
     pickedUpAt: timestamp("picked_up_at", { withTimezone: true }),
@@ -197,8 +198,8 @@ export const workOrders = pgTable(
     unitPriorServiceNote: text("unit_prior_service_note"),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("work_orders_shop_status_idx")
@@ -232,7 +233,7 @@ export const workOrderItems = pgTable(
     customerGearItemId: uuid("customer_gear_item_id")
       .notNull()
       .references(() => customerGearItems.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     uniqueIndex("work_order_items_unique").on(table.workOrderId, table.customerGearItemId),
@@ -268,8 +269,8 @@ export const workOrderLines = pgTable(
     quantityHundredths: integer("quantity_hundredths").notNull().default(100),
     unitAmountCents: integer("unit_amount_cents").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
   },
   (table) => [
     index("work_order_lines_order_idx")
@@ -314,7 +315,7 @@ export const workOrderEvents = pgTable(
      * reads as erased while the history keeps its shape.
      */
     actorPersonId: uuid("actor_person_id").references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
     /**
      * The order these actually happened in, which `created_at` cannot answer:
      * two moves inside one second share an instant (and in a frozen-clock test
@@ -357,7 +358,7 @@ export const workOrderCare = pgTable(
     performedOn: date("performed_on").notNull(),
     nextDueOn: date("next_due_on"),
     nextDueDives: integer("next_due_dives"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [
     index("work_order_care_order_idx").on(table.workOrderId),

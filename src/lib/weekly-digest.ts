@@ -128,13 +128,110 @@ export type WeeklyDigestFacts = {
     seatsFilled: number;
     seats: number;
   };
-  thisWeek: { departures: number; seatsFilled: number; seats: number };
+  thisWeek: {
+    departures: number;
+    seatsFilled: number;
+    seats: number;
+    /** The week's emptiest boat no deal has gone out for; Reports grade only. */
+    weakest: WeakestDeparture | null;
+  };
   /** Divers on this week's boats still owing a waiver, and on how many boats. */
   waiversOutstanding: { divers: number; departures: number };
   reviews: { received: number; awaitingModeration: number };
   dateRequestsWaiting: number;
   overdueTodayItems: number;
+  /**
+   * What last week made, for the Reports grade only (third UX review, item
+   * 33): revenue after tax and pass-through on last week's departures and the
+   * tips settled on them, Reports' own month query cut to the week, and the
+   * orders still open shop-wide. Zero in the staff grade, so the section is
+   * never built for a crew member.
+   */
+  money: {
+    revenueCents: number;
+    /**
+     * What the same week a year before took, on the same basis (fifth loop,
+     * item 29); null until the shop has a departure in that week.
+     */
+    lastYearRevenueCents: number | null;
+    tipsCents: number;
+    /** What the shop is owed (`readOwed`, fourth UX review, item 23). */
+    owed: WeeklyDigestOwed;
+    currency: string;
+  };
+  /**
+   * Units whose service clock is overdue or due soon, as Today lists them
+   * (fourth UX review, item 24). Reports grade only; zero for staff.
+   */
+  gearServiceDue: number;
+  /**
+   * The week's safety sentence, Reports grade only (fourth UX review, item
+   * 24): roll calls Today still holds open, departures in the horizon with no
+   * crew on them, and incident reports filed last week. Zero for staff.
+   */
+  safety: WeeklyDigestSafety;
 };
+
+/** A departure this week worth a last-minute deal (fifth loop, item 29). */
+export type WeakestDeparture = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  booked: number;
+  capacity: number;
+};
+
+/**
+ * **The boat to send a deal for**: of this week's departures still to leave,
+ * the one with the smallest share of its seats booked, under half, that no
+ * last-minute deal has gone out for. Earliest first on a tie, since the
+ * nearer boat has less time to fill. Null when every boat is at least half
+ * full or already had its deal.
+ */
+export function weakestDeparture(
+  trips: readonly {
+    id: string;
+    title: string;
+    startsAt: Date;
+    booked: number;
+    capacity: number;
+  }[],
+  neverSentDeal: ReadonlySet<string>,
+  now: Date,
+): WeakestDeparture | null {
+  let weakest: WeakestDeparture | null = null;
+  for (const trip of trips) {
+    if (trip.startsAt.getTime() <= now.getTime()) continue;
+    if (trip.capacity <= 0 || trip.booked * 2 >= trip.capacity) continue;
+    if (!neverSentDeal.has(trip.id)) continue;
+    const share = trip.booked / trip.capacity;
+    const best = weakest ? weakest.booked / weakest.capacity : Number.POSITIVE_INFINITY;
+    if (
+      share < best ||
+      (weakest && share === best && trip.startsAt.getTime() < weakest.startsAt.getTime())
+    ) {
+      weakest = {
+        tripId: trip.id,
+        title: trip.title,
+        startsAt: trip.startsAt,
+        booked: trip.booked,
+        capacity: trip.capacity,
+      };
+    }
+  }
+  return weakest;
+}
+
+export type WeeklyDigestOwed = {
+  orderCents: number;
+  orderCount: number;
+  seatCents: number;
+  seatCount: number;
+};
+
+export type WeeklyDigestSafety = { openRollCalls: number; uncrewed: number; incidents: number };
+
+export const NO_SAFETY: WeeklyDigestSafety = { openRollCalls: 0, uncrewed: 0, incidents: 0 };
 
 /**
  * The same week told twice: once for someone who may read Reports and once
@@ -154,6 +251,17 @@ export function weeklyDigestGrade(roles: readonly Role[]): keyof WeeklyDigestFac
   return canViewShopReports(roles) ? "reports" : "staff";
 }
 
+/** The staff-grade money: nothing, so the money section is never built. */
+export function noMoney(currency: string): WeeklyDigestFacts["money"] {
+  return {
+    revenueCents: 0,
+    lastYearRevenueCents: null,
+    tipsCents: 0,
+    owed: { orderCents: 0, orderCount: 0, seatCents: 0, seatCount: 0 },
+    currency,
+  };
+}
+
 /** The staff-grade last week: nothing, so the Reports section is never built. */
 export const NO_LAST_WEEK: WeeklyDigestFacts["lastWeek"] = {
   bookingsMade: 0,
@@ -170,11 +278,27 @@ export type WeeklyDigestSection =
       seatsFilled: number;
       seats: number;
     }
-  | { kind: "this_week"; departures: number; seatsFilled: number; seats: number }
+  | {
+      kind: "money";
+      revenueCents: number;
+      lastYearRevenueCents: number | null;
+      tipsCents: number;
+      owed: WeeklyDigestOwed;
+      currency: string;
+    }
+  | {
+      kind: "this_week";
+      departures: number;
+      seatsFilled: number;
+      seats: number;
+      weakest: WeakestDeparture | null;
+    }
   | { kind: "waivers"; divers: number; departures: number }
   | { kind: "reviews"; received: number; awaitingModeration: number }
   | { kind: "date_requests"; waiting: number }
-  | { kind: "overdue"; count: number };
+  | { kind: "overdue"; count: number }
+  | ({ kind: "safety" } & WeeklyDigestSafety)
+  | { kind: "gear_service"; due: number };
 
 export type WeeklyDigestSectionKind = WeeklyDigestSection["kind"];
 
@@ -188,8 +312,17 @@ export function weeklyDigestSections(facts: WeeklyDigestFacts): WeeklyDigestSect
   if (lastWeek.bookingsMade > 0 || lastWeek.departures > 0) {
     sections.push({ kind: "last_week", ...lastWeek });
   }
+  const { money } = facts;
+  const owes = money.owed.orderCents > 0 || money.owed.seatCents > 0;
+  if (money.revenueCents > 0 || money.tipsCents > 0 || owes) {
+    sections.push({ kind: "money", ...money });
+  }
   if (thisWeek.departures > 0) sections.push({ kind: "this_week", ...thisWeek });
   if (waiversOutstanding.divers > 0) sections.push({ kind: "waivers", ...waiversOutstanding });
+  const { safety } = facts;
+  if (safety.openRollCalls > 0 || safety.uncrewed > 0 || safety.incidents > 0) {
+    sections.push({ kind: "safety", ...safety });
+  }
   if (reviews.received > 0 || reviews.awaitingModeration > 0) {
     sections.push({ kind: "reviews", ...reviews });
   }
@@ -199,6 +332,7 @@ export function weeklyDigestSections(facts: WeeklyDigestFacts): WeeklyDigestSect
   if (facts.overdueTodayItems > 0) {
     sections.push({ kind: "overdue", count: facts.overdueTodayItems });
   }
+  if (facts.gearServiceDue > 0) sections.push({ kind: "gear_service", due: facts.gearServiceDue });
   return sections;
 }
 
@@ -214,11 +348,14 @@ export function seatFillPercent(seatsFilled: number, seats: number): number | nu
  */
 export const WEEKLY_DIGEST_SECTION_PATHS: Record<WeeklyDigestSectionKind, readonly string[]> = {
   last_week: ["reports"],
+  money: ["orders"],
   this_week: ["schedule", "board"],
   waivers: [],
   reviews: ["reviews"],
   date_requests: ["requests"],
   overdue: [],
+  safety: [],
+  gear_service: ["gear"],
 };
 
 /**

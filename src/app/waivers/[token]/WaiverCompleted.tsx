@@ -5,6 +5,7 @@ import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import type { TripSitePeek } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
+import type { DepthUnit } from "@/lib/depth-units";
 import { MedicalReviewContact } from "./MedicalReviewContact";
 import { type WaiverRailProgress, WaiverStepRail } from "./WaiverStepRail";
 import { railDoneLabel, railLabels } from "./waiver-rail-copy";
@@ -25,14 +26,22 @@ export function WaiverCompleted({
   locale,
   needsReview,
   readyPath,
+  doctorPath,
   signedRail,
   diveSitesList,
 }: {
-  shop: { name: string; contactEmail: string | null; contactPhone: string | null };
+  shop: {
+    name: string;
+    contactEmail: string | null;
+    contactPhone: string | null;
+    depthUnit: DepthUnit;
+  };
   t: DiverTranslator;
   locale: string;
   needsReview: boolean;
   readyPath: string | null;
+  /** "Take this to your doctor", while the release waits on a physician (H-127). */
+  doctorPath: string | null;
   signedRail: WaiverRailProgress;
   diveSitesList: TripSitePeek[];
 }) {
@@ -55,6 +64,14 @@ export function WaiverCompleted({
               controls. */}
             <p className="mt-3">{t("waiver.medicalReviewNext")}</p>
             <MedicalReviewContact shop={shop} t={t} />
+            {doctorPath ? (
+              <Link
+                href={doctorPath}
+                className={buttonClass({ variant: "secondary", className: "mt-5 me-3" })}
+              >
+                {t("waiver.doctor.open")}
+              </Link>
+            ) : null}
           </>
         ) : null}
         {readyPath ? (
@@ -79,7 +96,12 @@ export function WaiverCompleted({
         doneLabel={railDoneLabel(t, locale, signedRail.done)}
       />
 
-      <DiveSitesPeek sites={diveSitesList} heading={t("waiver.scheduledSites")} t={t} />
+      <DiveSitesPeek
+        sites={diveSitesList}
+        heading={t("waiver.scheduledSites")}
+        depthUnit={shop.depthUnit}
+        t={t}
+      />
     </main>
   );
 }

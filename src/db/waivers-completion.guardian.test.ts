@@ -1,10 +1,13 @@
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { isMinorOnDate } from "@/lib/age";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
+import { getTripManifest } from "./manifests";
 import { getBookingReadiness } from "./readiness";
-import { people, waiverRecords } from "./schema";
+import { bookings, people, waiverRecords } from "./schema";
 import { listStaff } from "./trips";
 import { completeWaiver, getWaiverForToken } from "./waivers-completion";
 import { recordInPersonWaiver } from "./waivers-in-person";
@@ -275,6 +278,42 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
   });
 
   /**
+   * **Seventeen when the pen moved, eighteen on the boat** (dive-domain review
+   * of the test-suite layer 1). The guardian co-signed, so the release stands,
+   * and on the departure's own day the diver is an adult: no guardian blocker,
+   * and no Minor badge on the manifest.
+   */
+  it("boards a diver who signed at seventeen with a guardian and is eighteen on the day, with no Minor badge", async () => {
+    const ctx = await waiverContext();
+    const signedOn = calendarDateInTimezone(now, ctx.shop.timezone);
+    const tripDate = calendarDateInTimezone(ctx.trip.startsAt, ctx.shop.timezone);
+    // Turns eighteen on the departure's own day, which falls after the signing.
+    expect(tripDate > signedOn).toBe(true);
+    const dateOfBirth = `${Number(tripDate.slice(0, 4)) - 18}${tripDate.slice(4)}`;
+    expect(isMinorOnDate(dateOfBirth, signedOn)).toBe(true);
+    await makeMinor(ctx.db, ctx.person.id, dateOfBirth);
+    const issued = await liveLink(ctx);
+    expect(
+      await completeWaiver(ctx.db, issued.token, {
+        signerName: ctx.person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        guardian,
+        now,
+      }),
+    ).toMatchObject({ ok: true });
+
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.booking.id);
+    expect(readiness?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "guardian_signature_missing" }),
+    );
+    const manifest = await getTripManifest(ctx.db, ctx.shop.id, ctx.trip.id);
+    const row = manifest?.divers.find((diver) => diver.bookingId === ctx.booking.id);
+    expect(row?.age).toBe(18);
+    expect(row?.minor).toBe(false);
+  });
+
+  /**
    * The backfill case, and the one a shop will actually meet: the release was
    * signed before anyone asked the diver's age, and the date of birth lands
    * afterwards. The standing signature becomes a blocker rather than a silent
@@ -294,6 +333,9 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
     ).toMatchObject({ ok: true });
 
     // Before the date of birth: an ordinary signed release, and no second link.
+    expect(
+      (await getBookingReadiness(ctx.db, ctx.shop.id, ctx.booking.id))?.blockers ?? [],
+    ).not.toContainEqual(expect.objectContaining({ code: "guardian_signature_missing" }));
     expect(
       await issueWaiverRequest(ctx.db, { shopId: ctx.shop.id, bookingId: ctx.booking.id, now }),
     ).toEqual({ ok: false, reason: "already_completed" });
@@ -591,4 +633,68 @@ describe("the guardian co-signature (ADR 20260907-guardian-co-signature)", () =>
   function db_record(ctx: Awaited<ReturnType<typeof waiverContext>>, recordId: string) {
     return ctx.db.select().from(waiverRecords).where(eq(waiverRecords.id, recordId));
   }
+});
+
+/**
+ * **The booker's "Under 18"** (decision 2026-10-13, after H-21): a seat the
+ * public party form marked, for a diver with no date of birth on file, takes
+ * the same co-signature a known minor's does, at every writer and at the gate.
+ */
+describe("a seat marked Under 18 by its booker", () => {
+  const guardian = {
+    name: "Ana Okafor",
+    relationship: "parent",
+    email: "ana@example.com",
+    agreed: true,
+  };
+
+  async function declaredSeat() {
+    const ctx = await waiverContext();
+    await ctx.db.update(people).set({ dateOfBirth: null }).where(eq(people.id, ctx.person.id));
+    await ctx.db
+      .update(bookings)
+      .set({ minorDeclaredAt: now })
+      .where(eq(bookings.id, ctx.booking.id));
+    return ctx;
+  }
+
+  it("refuses the diver signing alone, then takes the co-signed release and clears the gate", async () => {
+    const ctx = await declaredSeat();
+    const issued = await issueWaiverRequest(ctx.db, {
+      shopId: ctx.shop.id,
+      bookingId: ctx.booking.id,
+      now,
+    });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    const sign = (extra: { guardian?: typeof guardian }) =>
+      completeWaiver(ctx.db, issued.token, {
+        signerName: ctx.person.fullName,
+        agreed: true,
+        medicalAnswers: clearAnswers,
+        now,
+        ...extra,
+      });
+
+    expect(await sign({})).toEqual({ ok: false, reason: "guardian_required" });
+    expect((await sign({ guardian })).ok).toBe(true);
+    const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, ctx.booking.id);
+    expect(readiness?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "guardian_signature_missing" }),
+    );
+  });
+
+  it("asks the counter for the guardian on a paper release too", async () => {
+    const ctx = await declaredSeat();
+    const [staff] = await listStaff(ctx.db, ctx.shop.id);
+    if (!staff) throw new Error("seed has no staff");
+    expect(
+      await recordInPersonWaiver(ctx.db, {
+        shopId: ctx.shop.id,
+        subject: { bookingId: ctx.booking.id },
+        recordedByPersonId: staff.person.id,
+        medicalAttested: true,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "guardian_required" });
+  });
 });

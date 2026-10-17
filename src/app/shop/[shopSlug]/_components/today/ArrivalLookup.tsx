@@ -1,10 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { LedgerRow } from "@/components/ui/ledger";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
+import type { ArrivalElsewhere } from "@/db/arrival-elsewhere";
 import type { CheckInQueueRow } from "@/db/check-in";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatTime, formatWeekdayTime } from "@/lib/format";
+import { formatShortDate, formatTime, formatWeekdayTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
 import { counterRowId } from "../../trips/[id]/_arrivals/focus";
 import { ArrivalSearch } from "./ArrivalSearch";
@@ -25,6 +26,7 @@ import { ArrivalSearch } from "./ArrivalSearch";
 export function ArrivalLookup({
   query,
   rows,
+  elsewhere = [],
   shopSlug,
   locale,
   timeZone,
@@ -33,13 +35,24 @@ export function ArrivalLookup({
   query: string;
   /** The counter queue for `query`, empty until something is typed. */
   rows: readonly CheckInQueueRow[];
+  /**
+   * The shop-wide answer when nobody arriving matches (`arrivalElsewhere`,
+   * fifth loop, item 12): the people the query names and their next seat.
+   */
+  elsewhere?: readonly ArrivalElsewhere[];
   shopSlug: string;
   locale: string;
   timeZone: string;
   t: StaffTranslator;
 }) {
   return (
-    <section aria-label={t("shopHome.arrivals.label")} className="mb-10">
+    <section aria-labelledby="arrival-search-heading" className="mb-10">
+      {/* The box's own name, said (fifth loop, item 12): the placeholder
+          promised what the header search promises, and the label that says
+          this one is about arrivals was a screen reader's alone. */}
+      <h2 id="arrival-search-heading" className="mb-2 text-sm font-medium">
+        {t("shopHome.arrivals.label")}
+      </h2>
       <ArrivalSearch
         query={query}
         copy={{
@@ -49,7 +62,34 @@ export function ArrivalLookup({
       />
       {query ? (
         rows.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">{t("shopHome.arrivals.none", { query })}</p>
+          elsewhere.length > 0 ? (
+            // **Falls through to the shop** rather than to ⌘K: the person the
+            // desk typed, and the seat they do have.
+            <div className="mt-4" data-testid="arrival-elsewhere">
+              <p className="text-sm text-muted">{t("shopHome.arrivals.notToday")}</p>
+              <ul className="mt-2">
+                {elsewhere.map((person) => (
+                  <LedgerRow
+                    key={person.personId}
+                    href={shopPath(shopSlug, "divers", person.personId)}
+                    linkLabel={t("shopHome.arrivals.openRecord", { name: person.fullName })}
+                  >
+                    <p className="min-w-0 text-sm tabular-nums">
+                      {person.next
+                        ? t("shopHome.arrivals.bookedOn", {
+                            name: person.fullName,
+                            date: formatShortDate(person.next.startsAt, locale, timeZone),
+                            time: formatTime(person.next.startsAt, locale, timeZone),
+                          })
+                        : t("shopHome.arrivals.nothingBooked", { name: person.fullName })}
+                    </p>
+                  </LedgerRow>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted">{t("shopHome.arrivals.none", { query })}</p>
+          )
         ) : (
           <div className="mt-4">
             <h2 className="sr-only">{t("shopHome.arrivals.resultsFor", { query })}</h2>
@@ -66,7 +106,9 @@ export function ArrivalLookup({
                     row.bookingStatus === "checked_in" ? (
                       <Badge tone="success">{t("checkIn.row.arrived")}</Badge>
                     ) : row.bookingStatus === "no_show" ? (
-                      <Badge tone="neutral">{t("checkIn.noShow.badge")}</Badge>
+                      <Badge tone="neutral">
+                        {row.turnedAwayAt ? t("checkIn.turnAway.badge") : t("checkIn.noShow.badge")}
+                      </Badge>
                     ) : (
                       <Badge tone={readinessStatusTone(row.readiness.status)}>
                         {readinessStatusText(t, row.readiness.status)}

@@ -338,7 +338,7 @@ export default async function StaffingPage({
               // Absent while it would only reload the week already on screen.
               thisWeekHref: weekStart === weekStartOf(today) ? null : staffingPath,
             }}
-            words={staffingWeekWords(t)}
+            words={staffingWeekWords(t, week)}
           />
 
           {canManage ? (

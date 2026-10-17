@@ -314,4 +314,39 @@ describePostgres("seat writers on one departure take the trip, then the booking"
     // The rail never refuses a statement about somebody in the water.
     expect(railed).toMatchObject({ value: { ok: true } });
   });
+
+  /**
+   * H-133: a removal at the desk and the rail's Aboard tap on the same seat.
+   * Both take the trip, then the booking, so the removal reads the tap that
+   * landed first and refuses: the diver is marked aboard a boat that has left.
+   */
+  it("a removal at the desk waits for the rail's Aboard tap and then refuses it", async () => {
+    const pg = await postgresTestDb();
+    const seat = await readySeat(pg.db);
+    const atSea = new Date(seat.startsAt.getTime() + 2 * 60 * 60 * 1000);
+
+    const gate = await holdRowLock(
+      pg,
+      sql`select id from trips where id = ${seat.tripId} for update`,
+    );
+    const board = recordRollCall(pg.connect(), {
+      shopId: seat.shopId,
+      tripId: seat.tripId,
+      bookingId: seat.bookingId,
+      recordedByPersonId: seat.staffId,
+      status: "boarded",
+      occurredAt: seat.startsAt,
+    });
+    await waitForLockWaiters(pg.db, 1);
+    const remove = cancelBooking(pg.connect(), seat.shopId, seat.bookingId, { now: atSea });
+    await waitForLockWaiters(pg.db, 2);
+    await gate.release();
+
+    const [boarded, removed] = await Promise.allSettled([board, remove]);
+    expect(failure(boarded)).toBeNull();
+    expect(failure(removed)).toBeNull();
+    expect(boarded).toMatchObject({ value: { ok: true } });
+    expect(removed).toMatchObject({ value: { ok: false, reason: "aboard_at_sea" } });
+    expect(await statusOf(pg.db, seat.bookingId)).toBe("booked");
+  });
 });

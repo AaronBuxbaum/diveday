@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { PrintButton } from "@/components/PrintButton";
@@ -10,22 +11,28 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
-import { canPersonManageOrders, canPersonRefund } from "@/db/authz";
-import { getOrder } from "@/db/orders";
-import type { OrderStatus } from "@/db/schema";
+import { canPersonExportDisputeSheet, canPersonManageOrders, canPersonRefund } from "@/db/authz";
+import { getOrderBookingContext } from "@/db/order-booking";
+import { getOrder, isVoidableCounterOrder } from "@/db/orders";
 import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents } from "@/lib/format";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { PaidAtCounterLine, VoidCounterOrderForm } from "./_components/CounterPayment";
+import {
+  PaidAtCounterLine,
+  RecordPaymentForm,
+  VoidCounterOrderForm,
+} from "./_components/CounterPayment";
 import { DisabledDemoButton } from "./_components/DisabledDemoButton";
-import { OrderDisputeBanner, OrderMeta } from "./_components/OrderMeta";
+import { OrderBookingLine } from "./_components/OrderBookingLine";
+import { OrderDisputes, OrderMeta } from "./_components/OrderMeta";
 import { refreshAction, refundAction, voidAction } from "./actions";
+import { KIND_KEYS, NOTICES, STATUS_KEYS } from "./order-detail-keys";
 import { loadOrderHeader } from "./order-header";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -38,56 +45,6 @@ import { loadOrderHeader } from "./order-header";
 export const instant = true;
 
 export const metadata: Metadata = { title: "Order — DiveDay" };
-
-/**
- * Keyed by the enum rather than by `string`, so a status added to the column
- * is a compile error here instead of a page rendering the raw value.
- *
- * It was `Record<string, …>` until `partly_refunded` arrived and this heading
- * read literally "partly_refunded" to the shop (issue #699) — the lookup falls
- * through to the enum value, which looks like data and reads like a bug. The
- * sibling map on the Orders index and `ORDER_STATUS_KEYS` in
- * `src/i18n/order-labels.ts` are the same shape for the same reason.
- */
-const STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
-  open: "orders.detail.status.open",
-  paid: "orders.detail.status.paid",
-  void: "orders.detail.status.void",
-  uncollectible: "orders.detail.status.uncollectible",
-  partly_refunded: "orders.detail.status.partlyRefunded",
-  refunded: "orders.detail.status.refunded",
-};
-
-const KIND_KEYS: Record<string, StaffMessageKey> = {
-  trip_fee: "orders.detail.kind.trip_fee",
-  course_fee: "orders.detail.kind.course_fee",
-  rental: "orders.detail.kind.rental",
-  nitrox: "orders.detail.kind.nitrox",
-  deposit: "orders.detail.kind.deposit",
-  merchandise: "orders.detail.kind.merchandise",
-  other: "orders.detail.kind.other",
-};
-
-// A notice query param maps to a message key, never to a sentence — the words
-// come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
-const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
-  refreshed: { tone: "success", key: "orders.detail.notice.refreshed" },
-  "refresh-failed": { tone: "danger", key: "orders.detail.notice.refreshFailed" },
-  voided: { tone: "success", key: "orders.detail.notice.voided" },
-  "void-failed": { tone: "danger", key: "orders.detail.notice.voidFailed" },
-  "void-not-authorized": { tone: "danger", key: "orders.detail.notice.voidNotAuthorized" },
-  refunded: { tone: "success", key: "orders.detail.notice.refunded" },
-  "partly-refunded": { tone: "success", key: "orders.detail.notice.partlyRefunded" },
-  "refund-invalid-amount": { tone: "danger", key: "orders.detail.notice.refundInvalidAmount" },
-  "refund-failed": { tone: "danger", key: "orders.detail.notice.refundFailed" },
-  "refund-in-progress": { tone: "warning", key: "orders.detail.notice.refundInProgress" },
-  "refund-needs-reconciliation": {
-    tone: "warning",
-    key: "orders.detail.notice.refundNeedsReconciliation",
-  },
-  "not-authorized": { tone: "danger", key: "orders.detail.notice.notAuthorized" },
-  "demo-disabled": { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
-};
 
 export default async function OrderDetailPage({
   params,
@@ -112,22 +69,27 @@ export default async function OrderDetailPage({
   const timezone = shop.timezone ?? "UTC";
   // Refunds are owner/manager only (H-14, ADR 20260724-role-authorization);
   // hide the control from other staff. refundAction re-checks regardless.
-  const [canRefund, header] = await Promise.all([
+  const [canRefund, canDisputeSheet, header, booking] = await Promise.all([
     canPersonRefund(db, shop.id, session.user.personId),
+    // The dispute sheet needs a seat to describe, so an order raised for none
+    // (a gear sale, a package) has no door to it.
+    order.order.bookingId ? canPersonExportDisputeSheet(db, shop.id, session.user.personId) : false,
     loadOrderHeader(db, {
       shopId: shop.id,
       orderId: order.order.id,
       personId: session.user.personId,
     }),
+    // The departure a deposit or a trip fee was raised for (`OrderBookingLine`).
+    order.order.bookingId ? getOrderBookingContext(db, shop.id, order.order.bookingId) : null,
   ]);
-  // Money taken at the counter, in cash or on the shop's own card machine (ADR
-  // 20261009-counter-payments). It has no Stripe invoice, so none of the
-  // Stripe controls below apply; an owner or manager can void it instead.
+  // Money taken at the counter, or charged to a room (ADR 20261009-counter-payments). It has no
+  // Stripe invoice, so none of the Stripe controls below apply; an owner or manager can void it
+  // instead, unless it was an invoice settled at the counter, which Stripe holds paid and cannot
+  // un-pay.
   const counterCollection =
     order.order.collection === "stripe_invoice" ? null : order.order.collection;
   const canVoidCounter =
-    counterCollection !== null &&
-    order.order.status === "paid" &&
+    isVoidableCounterOrder(order.order) &&
     (await canPersonManageOrders(db, shop.id, session.user.personId));
   // What is left to give back, as a number a person types. Read off the order
   // rather than its total, so a second partial refund offers the remainder
@@ -155,7 +117,21 @@ export default async function OrderDetailPage({
         title={order.person.fullName}
         description={order.order.description || t("orders.detail.fallbackDescription")}
         // A diver who paid at the counter and asks for something on paper.
-        actions={<PrintButton label={t("print.sheet.door")} quiet />}
+        actions={
+          <>
+            {canDisputeSheet ? (
+              <Link
+                href={shopPath(shopSlug, "orders", order.order.id, "print", "dispute")}
+                // Opening the sheet writes a trail line, so a viewport prefetch must not open it.
+                prefetch={false}
+                className={buttonClass({ variant: "ghost", size: "sm", className: "print:hidden" })}
+              >
+                {t("disputeSheet.door")}
+              </Link>
+            ) : null}
+            <PrintButton label={t("print.sheet.door")} quiet />
+          </>
+        }
         meta={
           <OrderMeta
             order={order.order}
@@ -175,7 +151,7 @@ export default async function OrderDetailPage({
         // never sees the button that would have answered it.
         <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
       ) : null}
-      <OrderDisputeBanner dispute={header.dispute} timezone={timezone} locale={locale} t={t} />
+      <OrderDisputes header={header} timezone={timezone} locale={locale} t={t} />
       {/* `padding="lg"`: the receipt is a card someone works *inside* —
           Refresh, Void and Refund all live in it. No `title`; the page header
           above already names the order, and the status badge is the heading
@@ -195,10 +171,23 @@ export default async function OrderDetailPage({
           </span>
         </div>
 
+        {booking ? (
+          <OrderBookingLine
+            booking={booking}
+            personName={order.person.fullName}
+            currency={order.order.currency}
+            shopSlug={shopSlug}
+            locale={locale}
+            timezone={timezone}
+            t={t}
+          />
+        ) : null}
+
         {counterCollection && order.order.paidAt ? (
           <PaidAtCounterLine
             collection={counterCollection}
             paidAt={order.order.paidAt}
+            room={order.order}
             locale={locale}
             timezone={timezone}
             t={t}
@@ -289,6 +278,11 @@ export default async function OrderDetailPage({
             demo ? (
               <>
                 <DisabledDemoButton
+                  label={t("orders.detail.recordPayment.label")}
+                  hint={demoActionHint}
+                  variant="secondary"
+                />
+                <DisabledDemoButton
                   label={t("orders.detail.refreshStatus")}
                   hint={demoActionHint}
                   variant="secondary"
@@ -301,6 +295,9 @@ export default async function OrderDetailPage({
               </>
             ) : (
               <>
+                {/* Money that came over the counter for an invoice already
+                    sent (fourth UX review, item 19). */}
+                <RecordPaymentForm orderId={order.order.id} t={t} />
                 <form action={refreshAction}>
                   <input type="hidden" name="orderId" value={order.order.id} />
                   <SubmitButton

@@ -4,14 +4,15 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { GroupLabel } from "@/components/ui/group-label";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { GroupLabel } from "@/components/ui/ledger";
 import { MENU_PANEL, MENU_TICK, MENU_TICK_GUTTER, menuRowClass } from "@/components/ui/menu";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { isBoatModeOn, setBoatMode } from "@/lib/boat-mode";
 import { motionMs } from "@/lib/motion";
 import { tellUsMailto, tellUsPath } from "@/lib/tell-us";
+import { forgetThisDevice } from "./forget-device";
 
 export type ShopIdentityMenuCopy = {
   boatMode: string;
@@ -204,6 +205,8 @@ export function ShopIdentityMenu({
               the rule rather than in the same stack as the language rows. */}
           <form
             action={signOutAction}
+            // A shared tablet keeps no recents or kept forms past a sign-out.
+            onSubmit={forgetThisDevice}
             data-scroll-reset="true"
             className="mt-1 border-t border-border pt-1"
           >

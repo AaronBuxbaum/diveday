@@ -336,7 +336,7 @@ test.describe("schedule builder", () => {
     // Details summary states it at rest, and the form behind the Edit
     // disclosure comes back pre-filled with what the board was told.
     await row.getByRole("link", { name: title }).click();
-    await expect(page.getByText("$129.00 per seat")).toBeVisible();
+    await expect(page.getByText("$129 per diver")).toBeVisible();
     await openTripAbout(page);
     await page.getByText("Edit details", { exact: true }).click();
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
@@ -531,13 +531,15 @@ test.describe("schedule builder", () => {
         await expect(page.locator("header.sticky")).toBeVisible();
         const measured = await measure();
 
-        // One height, both shells. Preflight makes the bar `border-box`, so
-        // the 3.5rem `--chrome-h` names is its whole outside edge with the
-        // hairline inside it — 56px measured, not 56 plus a border.
+        // The height `--chrome-h` names. Preflight makes the bar `border-box`,
+        // so the token is its whole outside edge with the hairline inside it:
+        // 56px for one row, and 88px (5.5rem) for the shopfront's two rows
+        // below `sm` (#2303, the shop's name above its tabs).
+        const barHeight = surface === "the public schedule" && width < 640 ? 88 : 56;
         expect(
           measured.barHeight,
-          `the chrome bar on ${surface} is ${measured.barHeight}px tall at ${width}px, not the 56px --chrome-h names`,
-        ).toBeCloseTo(56, 0);
+          `the chrome bar on ${surface} is ${measured.barHeight}px tall at ${width}px, not the ${barHeight}px --chrome-h names`,
+        ).toBeCloseTo(barHeight, 0);
         expect(
           measured.dayCount,
           `${surface} rendered no day headers at ${width}px`,

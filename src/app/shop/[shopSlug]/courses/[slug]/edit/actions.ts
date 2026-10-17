@@ -5,7 +5,11 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonConfigureTrips, canPersonManageWaiverTemplates } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { listCourseFormRequirements, setCourseFormRequirements } from "@/db/course-forms";
+import {
+  listCourseFormAgeBounds,
+  listCourseFormRequirements,
+  setCourseFormRequirements,
+} from "@/db/course-forms";
 import {
   getCourseBySlug,
   pullCourseTemplateUpdates,
@@ -89,6 +93,7 @@ const courseExtrasForm = z.object({
   heroImageAlt: trimmedText(),
   expectedVersion: text(),
   nitroxCompatible: checkbox("true"),
+  gearIncluded: checkbox("true"),
 });
 
 /** Each form's place in the order is posted as `order-<formId>`. */
@@ -294,6 +299,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     eLearningPriceCents: centsFromAmount(value.eLearningPrice, currency),
     privatePriceCents: centsFromAmount(value.privatePrice, currency),
     nitroxCompatible: extras.nitroxCompatible,
+    gearIncluded: extras.gearIncluded,
   });
 
   // Once the content row is durably saved, any photo it no longer references
@@ -394,20 +400,61 @@ export async function saveCourseFormRequirementsAction(slug: string, formData: F
     .map((id, index) => ({ id, index, order: orderOf(id) }))
     .sort((a, b) => a.order - b.order || a.index - b.index)
     .map((entry) => entry.id);
-  if (!(await canPersonManageWaiverTemplates(db, staff.user.shopId, staff.user.personId))) {
+  // The optional age under each ticked form (issue #2265): blank asks every
+  // student; anything else that is not a whole age in range refuses the save.
+  const maxAgeYears = new Map<string, number>();
+  const maxAges = readForm(
+    z.object(Object.fromEntries(ordered.map((id) => [`maxAge-${id}`, trimmedText()]))),
+    formData,
+  );
+  for (const id of ordered) {
+    const raw = maxAges[`maxAge-${id}`] ?? "";
+    if (raw === "") continue;
+    const age = /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
+    if (!Number.isInteger(age)) redirect(noticeUrl(anchor, "forms-invalid-age"));
+    maxAgeYears.set(id, age);
+  }
+
+  // **Asking fewer students is taking a form off** (G1): a dropped form, a
+  // bound on a form everyone was asked, or a lowered bound is the owner's or
+  // manager's call, the same gate as writing the forms themselves.
+  const mayNarrow = await canPersonManageWaiverTemplates(
+    db,
+    staff.user.shopId,
+    staff.user.personId,
+  );
+  if (!mayNarrow) {
     const posted = new Set(ordered);
-    const current = await listCourseFormRequirements(db, staff.user.shopId, course.id);
-    if (current.some((formId) => !posted.has(formId))) {
-      redirect(noticeUrl(anchor, "forms-remove-not-authorized"));
-    }
+    const [current, currentBounds] = await Promise.all([
+      listCourseFormRequirements(db, staff.user.shopId, course.id),
+      listCourseFormAgeBounds(db, staff.user.shopId, course.id),
+    ]);
+    const narrows = current.some((formId) => {
+      if (!posted.has(formId)) return true;
+      const next = maxAgeYears.get(formId);
+      const was = currentBounds.get(formId);
+      return next !== undefined && (was === undefined || next < was);
+    });
+    if (narrows) redirect(noticeUrl(anchor, "forms-remove-not-authorized"));
   }
 
   const result = await setCourseFormRequirements(db, {
     shopId: staff.user.shopId,
     courseId: course.id,
     formIds: ordered,
+    maxAgeYears,
+    mayNarrow,
   });
-  if (!result.ok) redirect(noticeUrl(anchor, "forms-invalid"));
+  if (!result.ok) {
+    const notice = {
+      invalid_age: "forms-invalid-age",
+      medical_bound: "forms-medical-age",
+      not_authorized: "forms-remove-not-authorized",
+      not_found: "forms-invalid",
+      unknown_form: "forms-invalid",
+    }[result.reason];
+    redirect(noticeUrl(anchor, notice));
+  }
   // Every roster and prep page reading this course's readiness changes with it.
   revalidatePath(shopPath(staff.user.shopSlug), "layout");
   revalidateAndRedirect(base, noticeUrl(anchor, "forms-saved"));

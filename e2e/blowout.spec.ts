@@ -45,12 +45,15 @@ test.describe("weather blow-out cascade", () => {
     await openTripMore(page);
     await page.getByRole("link", { name: "Weather blow-out…" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
+    // The tab says what the page is, by its cause once there is one (#2460).
+    await expect(page).toHaveTitle("Call a blow-out? — DiveDay");
     // The confirm names the roster it is about to message.
     await expect(page.getByRole("heading", { name: /divers? will be messaged/ })).toBeVisible();
 
     await page.getByRole("button", { name: "Call the blow-out" }).click();
     await expect(page.getByRole("status")).toContainText("Blow-out called");
     await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+    await expect(page).toHaveTitle("Blow-out cascade — DiveDay");
 
     // The cascade record: per-diver rows with message, money, offers, and
     // resolution state. With no provider configured every message reads
@@ -136,9 +139,13 @@ test.describe("weather blow-out cascade", () => {
     // landed (ADR 20260806-one-trip-create-form).
     await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
 
+    // Straight to the confirm page: the first test in this file walks the
+    // board → departure → More path to it, and this test's subject is the
+    // empty cascade, not the way in.
     await openTripFromBoard(page, title);
-    await openTripMore(page);
-    await page.getByRole("link", { name: "Weather blow-out…" }).click();
+    const tripId = page.url().match(/\/trips\/([^/?#]+)/)?.[1];
+    expect(tripId).toBeTruthy();
+    await page.goto(`/shop/${SHOP}/schedule/blowout/${tripId}`);
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
     await expect(page.getByText("Nobody is booked on this departure.")).toBeVisible();
 
@@ -184,11 +191,10 @@ test.describe("weather blow-out cascade", () => {
     await page.getByRole("button", { name: "Save rental fit" }).click();
     await expect(page.getByText("the crew will have your sizes")).toBeVisible();
 
-    // The captain calls it off.
-    await page.goto(`/shop/${SHOP}/schedule/board`);
-    await openTripFromBoard(page, REEF_TRIP);
-    await openTripMore(page);
-    await page.getByRole("link", { name: "Weather blow-out…" }).click();
+    // The captain calls it off. Straight to the confirm page: the first test
+    // in this file walks the board → departure → More path to it, and this
+    // test's subject is the diver's link afterwards, not the way in.
+    await page.goto(`/shop/${SHOP}/schedule/blowout/${tripId}`);
     // Wait on what the confirm page itself renders before clicking through it
     // — the click is a navigation, not an in-place toggle.
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();

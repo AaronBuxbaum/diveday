@@ -215,6 +215,19 @@ const nextConfig: NextConfig = {
     // `/s/[shopSlug]/opengraph-image`, which genuinely needs the module, and
     // these keys have no negation.
     "/shop/**": ["node_modules/**/next/dist/compiled/@vercel/og/**"],
+    // **sharp's natives, out of the cron functions** (#2486). `process-image.ts`
+    // loads sharp with `await import("sharp")` on the first upload, never at
+    // import, so a cron closure reaches it only through a path that resizes an
+    // image, and none does. Without this the tracer still follows the dynamic
+    // import and ships the 18.7 MB libvips into every cron function. Scoped to
+    // `/api/cron/**` and not `**`: uploads, the photo actions and the
+    // opengraph-image routes need the linux native (see `next-config.test.ts`).
+    "/api/cron/**": [
+      "node_modules/.pnpm/@img+sharp-libvips-linux*/**",
+      "node_modules/.pnpm/@img+sharp-linux*/**",
+      "node_modules/@img/sharp-libvips-linux*/**",
+      "node_modules/@img/sharp-linux*/**",
+    ],
   },
   cacheComponents: true,
   images: {
@@ -405,8 +418,9 @@ export default withSentryConfig(nextConfig, {
   // bundled. Also worth knowing: `bundleSizeOptimizations` is now deprecated in
   // favour of `webpack.treeshake.*`, and it is the latter that the webpack
   // `DefinePlugin` path actually reads — so this block is doubly inert here.
-  // Sentry's ~63 KB of the floor is real and still worth removing; the lever is
-  // not a build flag.
+  // Sentry's ~63 KB of the floor was real and the lever was not a build flag:
+  // `src/instrumentation-client.ts` now loads the browser SDK on idle
+  // (`deferSentry`, code review 2026-10-13b item 34), and the floor fell 57 KB.
   bundleSizeOptimizations: {
     excludeDebugStatements: true,
     excludeTracing: true,

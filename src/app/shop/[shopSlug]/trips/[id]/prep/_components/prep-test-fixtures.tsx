@@ -248,7 +248,8 @@ export function renderPrep(
     grouping = "item",
     notice,
     noticeCount,
-  }: { grouping?: PrepGrouping; notice?: string; noticeCount?: string } = {},
+    sailed = false,
+  }: { grouping?: PrepGrouping; notice?: string; noticeCount?: string; sailed?: boolean } = {},
 ) {
   return render(
     <PrepBody
@@ -263,6 +264,7 @@ export function renderPrep(
       grouping={grouping}
       groupPath="/shop/blue-mantis/trips/t1"
       cancelled={false}
+      sailed={sailed}
       className={STACK}
     />,
   );
@@ -305,7 +307,11 @@ export const PREP_GROUP_PATH = "/shop/blue-mantis/trips/t1";
 /** The `PrepView` `PrepBody` builds for a section, on a route (no id prefix). */
 export function viewOf(
   prep: TripPrep,
-  { cancelled = false }: { cancelled?: boolean } = {},
+  {
+    cancelled = false,
+    sailed = false,
+    home = false,
+  }: { cancelled?: boolean; sailed?: boolean; home?: boolean } = {},
 ): PrepView {
   return {
     prep,
@@ -315,5 +321,7 @@ export function viewOf(
     tripId: "t1",
     idPrefix: undefined,
     cancelled,
+    sailed,
+    home,
   };
 }

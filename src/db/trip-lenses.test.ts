@@ -1,16 +1,19 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { advanceClock } from "@/test/clock";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { shops, tripLenses, trips } from "./schema";
 import {
-  countTripLensDepartures,
+  countDeparturesByTripLens,
   createTripLens,
   deleteTripLens,
   getTripLens,
   listTripLenses,
   renameTripLens,
 } from "./trip-lenses";
+
+const ctx = fileScopedShopContext();
 
 /**
  * The seeded demo shop already owns a six-word vocabulary
@@ -33,16 +36,14 @@ function mustCreate(lens: Awaited<ReturnType<typeof createTripLens>>) {
 }
 
 describe("a shop's trip tags", () => {
-  // A fresh database per test, not the file-scoped transaction: the rail's order
-  // is `created_at`, which `defaultNow()` stamps from `now()`, and Postgres
-  // freezes `now()` for a whole transaction. Inside one rolled-back transaction
-  // both writes below would carry the same instant and the order would fall to
-  // the random uuid tiebreak (src/test/db.ts, "When NOT to use this").
+  // The rail's order is `created_at`, which the app clock stamps, and the test
+  // clock is frozen: the second write is a second later, or the order would fall
+  // to the random uuid tiebreak.
   it("writes them, keeps them in the order they were written, and reads one back", async () => {
     const { db, shop } = await seededShopContext();
-    const before = await listTripLenses(db, shop.id);
-
+    advanceClock();
     const drift = mustCreate(await createTripLens(db, shop.id, "Drift days"));
+    advanceClock();
     const blue = mustCreate(await createTripLens(db, shop.id, "Blue water"));
 
     expect(drift.slug).toBe("drift-days");
@@ -50,8 +51,9 @@ describe("a shop's trip tags", () => {
 
     const listed = await listTripLenses(db, shop.id);
     // Insertion order *is* the rail's order — the order the shop wrote its own
-    // vocabulary in, never alphabetical, so the two new words land at the end.
-    expect(listed.slice(before.length).map((lens) => lens.name)).toEqual([
+    // vocabulary in, never alphabetical.
+    const written = new Set([drift.id, blue.id]);
+    expect(listed.filter((lens) => written.has(lens.id)).map((lens) => lens.name)).toEqual([
       "Drift days",
       "Blue water",
     ]);
@@ -60,7 +62,7 @@ describe("a shop's trip tags", () => {
 
   it("keeps the slug where it is when the shop corrects the word", async () => {
     // The link a diver shared yesterday still has to land on the same list.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const lens = mustCreate(await createTripLens(db, shop.id, "Drift days"));
 
     const renamed = await renameTripLens(db, shop.id, lens.id, "Drifting");
@@ -78,7 +80,7 @@ describe("two words written in the same instant", () => {
    * so the old order is the wrong one.
    */
   it("are listed by name, never by their random ids", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const rival = await rivalShop(db);
     const createdAt = new Date("2026-07-21T13:30:00.000Z");
     await db.insert(tripLenses).values([
@@ -106,7 +108,7 @@ describe("two words written in the same instant", () => {
 
 describe("deleting a word", () => {
   it("stamps it instead of removing it, and takes it off the rail", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const lens = mustCreate(await createTripLens(db, shop.id, "Long range"));
 
     expect(await deleteTripLens(db, shop.id, lens.id)).toBe(true);
@@ -121,7 +123,7 @@ describe("deleting a word", () => {
   it("leaves every departure still naming the word it wore", async () => {
     // The reason the row survives at all: a past day still says which kind of
     // day it was (ADR 20260820-every-delete-is-soft).
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const lens = mustCreate(await createTripLens(db, shop.id, "Blue water"));
     const [trip] = await db
       .select({ id: trips.id })
@@ -141,9 +143,9 @@ describe("deleting a word", () => {
   });
 
   it("counts the departures the delete touches, so the confirm can say", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const lens = mustCreate(await createTripLens(db, shop.id, "Shark season"));
-    expect(await countTripLensDepartures(db, shop.id, lens.id)).toBe(0);
+    expect((await countDeparturesByTripLens(db, shop.id)).get(lens.id) ?? 0).toBe(0);
 
     const rows = await db
       .select({ id: trips.id })
@@ -153,11 +155,12 @@ describe("deleting a word", () => {
     for (const row of rows) {
       await db.update(trips).set({ lensId: lens.id }).where(eq(trips.id, row.id));
     }
-    expect(await countTripLensDepartures(db, shop.id, lens.id)).toBe(rows.length);
+    // One read for the whole vocabulary (code review 2026-10-13b, item 36).
+    expect((await countDeparturesByTripLens(db, shop.id)).get(lens.id)).toBe(rows.length);
   });
 
   it("frees the word for reuse, because the unique slug covers live rows only", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = mustCreate(await createTripLens(db, shop.id, "Photo mornings"));
     expect(first.slug).toBe("photo-mornings");
     await deleteTripLens(db, shop.id, first.id);
@@ -170,7 +173,7 @@ describe("deleting a word", () => {
   });
 
   it("suffixes a slug that collides with a word already in use", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(mustCreate(await createTripLens(db, shop.id, "Photo mornings")).slug).toBe(
       "photo-mornings",
     );
@@ -181,7 +184,7 @@ describe("deleting a word", () => {
   });
 
   it("does not retire the same word twice, keeping the date it was retired", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const lens = mustCreate(await createTripLens(db, shop.id, "Quiet mornings"));
     expect(await deleteTripLens(db, shop.id, lens.id)).toBe(true);
     const [first] = await db.select().from(tripLenses).where(eq(tripLenses.id, lens.id));
@@ -195,14 +198,14 @@ describe("deleting a word", () => {
 
 describe("another shop's vocabulary", () => {
   it("cannot be read, renamed, deleted or counted across the tenant line", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const rival = await rivalShop(db);
     const lens = mustCreate(await createTripLens(db, shop.id, "Drift days"));
 
     expect(await getTripLens(db, rival.id, lens.id)).toBeNull();
     expect(await renameTripLens(db, rival.id, lens.id, "Stolen")).toBeNull();
     expect(await deleteTripLens(db, rival.id, lens.id)).toBe(false);
-    expect(await countTripLensDepartures(db, rival.id, lens.id)).toBe(0);
+    expect((await countDeparturesByTripLens(db, rival.id)).get(lens.id) ?? 0).toBe(0);
     expect(await listTripLenses(db, rival.id)).toEqual([]);
 
     // And the word is untouched at the shop that wrote it.

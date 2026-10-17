@@ -2,8 +2,11 @@ import type { ReactNode } from "react";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { formatCalendarDate, formatCalendarMonth } from "@/lib/calendar-date";
 import { mailtoHref, telHref } from "@/lib/contact-links";
+import type { DiverStanding } from "@/lib/diver-standing";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
+import { formatMoneyCents } from "@/lib/format";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
 
@@ -16,7 +19,7 @@ import type { DiverProfile } from "./shared";
  * the page's own column, which is the pattern the settings sub-pages already
  * use.
  *
- * **Book a departure is the page's one primary control**, and the only one:
+ * **Add a booking is the page's one primary control**, and the only one:
  * this record used to carry three to four primary-weight buttons and lead with
  * money. Its disclosure sits on the line beneath the header rather than in the
  * header's right-hand column, because the column is the width of its buttons
@@ -35,7 +38,9 @@ export function DiverHeader({
   status,
   book,
   moment,
-  visits,
+  standing,
+  locale,
+  packages,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -43,7 +48,7 @@ export function DiverHeader({
   /** A saved-details confirmation, shown under the masthead. A refusal stays on the form. */
   status?: DiverNotice;
   /**
-   * The one primary: "Book a departure" and the trip picker it discloses.
+   * The one primary: "Add a booking" and the trip picker it discloses.
    * Absent for a removed diver, who may not be seated onto a boat at all.
    */
   book?: ReactNode;
@@ -53,8 +58,15 @@ export function DiverHeader({
    * (20260827-clearwater-surface-language, decision 11).
    */
   moment?: ReactNode;
-  /** How many times this diver has been out with the shop, sailed plus imported. */
-  visits: number;
+  /**
+   * Who this person is to the shop (fifth-loop ideas, item 36): visits since
+   * when, last out, money kept (null unless the reader may see money) and the
+   * friends they brought. `src/lib/diver-standing.ts`.
+   */
+  standing: DiverStanding;
+  locale: string;
+  /** Dives left on the packages this diver holds (fourth UX review, item 20); null when none. */
+  packages?: { left: number; of: number } | null;
 }) {
   return (
     <>
@@ -112,8 +124,37 @@ export function DiverHeader({
             {diver.person.diveInsurance ? (
               <span>{t("divers.header.diveInsuranceOnFile")}</span>
             ) : null}
-            {visits > 0 ? (
-              <span className="tabular-nums">{t("divers.header.visits", { count: visits })}</span>
+            {standing.visits > 0 ? (
+              <span className="tabular-nums">
+                {standing.since
+                  ? t("divers.header.visitsSince", {
+                      count: standing.visits,
+                      since: formatCalendarMonth(standing.since, locale),
+                    })
+                  : t("divers.header.visits", { count: standing.visits })}
+              </span>
+            ) : null}
+            {standing.lastOut ? (
+              <span className="tabular-nums">
+                {t("divers.header.lastOut", {
+                  date: formatCalendarDate(standing.lastOut, locale),
+                })}
+              </span>
+            ) : null}
+            {standing.spent ? (
+              <span className="tabular-nums">
+                {t("divers.header.spent", {
+                  amount: formatMoneyCents(standing.spent.cents, standing.spent.currency, locale),
+                })}
+              </span>
+            ) : null}
+            {standing.friends > 0 ? (
+              <span className="tabular-nums">
+                {t("divers.header.broughtFriends", { count: standing.friends })}
+              </span>
+            ) : null}
+            {packages ? (
+              <span className="tabular-nums">{t("divers.header.packageBalance", packages)}</span>
             ) : null}
           </div>
         }

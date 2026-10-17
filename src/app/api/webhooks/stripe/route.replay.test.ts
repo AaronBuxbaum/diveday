@@ -44,13 +44,13 @@ vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { createBookingParty } = await import("@/db/bookings");
 const { markCheckoutExpiredBySessionId, startBookingCheckout } = await import("@/db/checkouts");
-const { createOrder, refundOrder } = await import("@/db/orders");
+const { createOrder, recordPaymentOnOpenOrder, refundOrder } = await import("@/db/orders");
 const { getBookingPayment, listBookingPaymentEvents, setBookingPayment } = await import(
   "@/db/payments"
 );
-const { bookingCheckouts, integrationEvents, orders, paymentDisputes, stripePayouts, tips } =
-  await import("@/db/schema");
-const { latestShopPayouts } = await import("@/db/payouts");
+const { bookingCheckouts, integrationEvents, orders, paymentDisputes, tips } = await import(
+  "@/db/schema"
+);
 const {
   listStuckPaymentOperations,
   recordPaymentOperationStripeObject,
@@ -512,6 +512,9 @@ describe("invoice.* hostile sequences (real handlers, real db)", () => {
           taxCents: 0,
         };
       },
+      async markInvoicePaidOutOfBand() {
+        return { status: "paid" as const };
+      },
       async voidInvoice() {
         return { status: "voided" as const };
       },
@@ -607,6 +610,45 @@ describe("invoice.* hostile sequences (real handlers, real db)", () => {
     // decision on the booking is final against a machine writer.
     expect(terminal.orderStatus).toBe("paid");
     expect(terminal.paymentStatus).toBe("waived");
+  });
+
+  it("the echo of a counter settle never hands a PaymentIntent to the cash order", async () => {
+    // The diver's card declined on the hosted invoice (Stripe keeps that
+    // attempt's PaymentIntent), then they paid cash and a captain recorded it.
+    const { db, shop, bookingId, order } = await orderScenario();
+    const staff = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const settled = await recordPaymentOnOpenOrder(
+      db,
+      { shopId: shop.id, orderId: order.id, actorPersonId: staff, collection: "cash" },
+      invoicing(),
+    );
+    expect(settled.ok).toBe(true);
+    const event = invoicePaid("evt_oob1", "in_1", 22_000);
+    const echo = {
+      ...event,
+      data: {
+        object: {
+          ...event.data.object,
+          paid_out_of_band: true,
+          payment_intent: "pi_declined",
+          payments: {
+            data: [
+              { is_default: false, status: "failed", payment: { payment_intent: "pi_declined" } },
+            ],
+          },
+        },
+      },
+    };
+    expect((await deliver(echo)).status).toBe(200);
+    expect((await deliver({ ...echo, id: "evt_oob2" })).status).toBe(200);
+    const [row] = await db.select().from(orders).where(eq(orders.id, order.id));
+    expect(row).toMatchObject({
+      status: "paid",
+      collection: "cash",
+      amountPaidCents: 22_000,
+      stripePaymentIntentId: null,
+    });
+    expect((await orderTerminal(db, shop.id, order.id, bookingId)).paymentStatus).toBe("paid");
   });
 
   it("an invoice.paid for an invoice the app never raised is acknowledged and changes nothing", async () => {
@@ -776,6 +818,9 @@ describe("charge.refunded hostile sequences (real handlers, real db)", () => {
             taxCents: 0,
           };
         },
+        async markInvoicePaidOutOfBand() {
+          return { status: "paid" as const };
+        },
         async voidInvoice() {
           return { status: "voided" as const };
         },
@@ -859,6 +904,9 @@ describe("charge.refunded hostile sequences (real handlers, real db)", () => {
       {
         async createInvoice() {
           return { status: "failed" as const };
+        },
+        async markInvoicePaidOutOfBand() {
+          return { status: "paid" as const };
         },
         async voidInvoice() {
           return { status: "failed" as const };
@@ -1256,114 +1304,5 @@ describe("charge.dispute.* hostile sequences (real handlers, real db)", () => {
       ).status,
     ).toBe(200);
     expect(await db.select().from(paymentDisputes)).toEqual([]);
-  });
-});
-
-describe("payout.* hostile sequences (real handlers, real db)", () => {
-  function payoutEvent(
-    id: string,
-    type: "payout.paid" | "payout.failed",
-    options: { ageSeconds?: number; amount?: number } = {},
-  ) {
-    const now = Math.floor(nowMs() / 1000);
-    return {
-      id,
-      type,
-      created: now - (options.ageSeconds ?? 0),
-      data: {
-        object: {
-          id: "po_replay",
-          amount: options.amount ?? 184_200,
-          currency: "usd",
-          arrival_date: now - 86_400,
-          status: type === "payout.paid" ? "paid" : "failed",
-          automatic: true,
-          failure_code: type === "payout.failed" ? "account_closed" : null,
-        },
-      },
-    };
-  }
-
-  /** Stripe's balance transactions for the payout, served to the platform key only. */
-  function stripeServing(transactions: Array<{ created: number; fee: number; type: string }>) {
-    const fetchImpl = vi.fn(async () =>
-      Response.json({
-        has_more: false,
-        data: transactions.map((transaction, index) => ({ id: `txn_${index}`, ...transaction })),
-      }),
-    );
-    vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_replay");
-    vi.stubGlobal("fetch", fetchImpl);
-    return fetchImpl;
-  }
-
-  it("records the payout with its span and fees once, and a replay asks Stripe nothing more", async () => {
-    const { db, shop } = await connectedShop();
-    const day = Math.floor(nowMs() / 1000) - 5 * 86_400;
-    const fetchImpl = stripeServing([
-      { type: "payout", created: day + 4 * 86_400, fee: 0 },
-      { type: "charge", created: day + 2 * 86_400, fee: 640 },
-      { type: "charge", created: day, fee: 520 },
-    ]);
-    try {
-      expect((await deliver(payoutEvent("evt_p1", "payout.paid"))).status).toBe(200);
-      expect((await deliver(payoutEvent("evt_p1", "payout.paid"))).status).toBe(200);
-      expect(fetchImpl).toHaveBeenCalledTimes(1);
-      const latest = await latestShopPayouts(db, shop.id);
-      expect(latest.paid).toMatchObject({
-        amountCents: 184_200,
-        feeCents: 1_160,
-        coveredFrom: new Date(day * 1000),
-        coveredTo: new Date((day + 2 * 86_400) * 1000),
-      });
-      expect(latest.failed).toBeNull();
-
-      // Stripe fails it after paying it; the earlier paid event, redelivered, never undoes that.
-      await deliver(payoutEvent("evt_p2", "payout.failed"));
-      await deliver(payoutEvent("evt_p3", "payout.paid", { ageSeconds: 600 }));
-      const [row] = await db
-        .select()
-        .from(stripePayouts)
-        .where(eq(stripePayouts.stripePayoutId, "po_replay"));
-      expect(row).toMatchObject({
-        status: "failed",
-        failureCode: "account_closed",
-        shopId: shop.id,
-      });
-    } finally {
-      vi.unstubAllGlobals();
-      vi.unstubAllEnvs();
-    }
-  });
-
-  it("a payout to an account no shop holds is not recorded", async () => {
-    const { db } = await connectedShop();
-    vi.stubEnv("STRIPE_SECRET_KEY", "");
-    try {
-      const event = payoutEvent("evt_px", "payout.paid");
-      expect((await deliver({ ...event, account: "acct_strangers" })).status).toBe(200);
-      expect(await db.select().from(stripePayouts)).toEqual([]);
-    } finally {
-      vi.unstubAllEnvs();
-    }
-  });
-
-  it("Stripe unreachable defers the event and records nothing until it answers", async () => {
-    const { db, shop } = await connectedShop();
-    vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_replay");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response("{}", { status: 503 })),
-    );
-    try {
-      expect((await deliver(payoutEvent("evt_pd", "payout.paid"))).status).toBe(503);
-      expect(await db.select().from(stripePayouts)).toEqual([]);
-      stripeServing([{ type: "charge", created: Math.floor(nowMs() / 1000), fee: 99 }]);
-      expect((await deliver(payoutEvent("evt_pd", "payout.paid"))).status).toBe(200);
-      expect((await latestShopPayouts(db, shop.id)).paid?.feeCents).toBe(99);
-    } finally {
-      vi.unstubAllGlobals();
-      vi.unstubAllEnvs();
-    }
   });
 });

@@ -66,10 +66,10 @@ describe("an unanswered referral's warning", () => {
     const printed = container.querySelector<HTMLElement>(".hidden.print\\:block");
     expect(printed).toHaveTextContent(/A physician did not clear this person/);
     expect(within(printed as HTMLElement).queryAllByRole("link")).toHaveLength(0);
-    expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "View the physician’s decision" })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
-    const links = screen.getAllByRole("link", { name: "View the refusal" });
+    const links = screen.getAllByRole("link", { name: "View the physician’s decision" });
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAttribute(
       "href",
@@ -98,7 +98,7 @@ describe("an unanswered referral's warning", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Open details for Maria" }));
     expect(screen.queryByRole("link", { name: "View the referral" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "View the refusal" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "View the physician’s decision" })).toBeNull();
     expect(screen.getByRole("dialog")).not.toHaveTextContent(/physician/);
   });
 
@@ -262,9 +262,15 @@ describe("DiverFacts, drawn on its own", () => {
   });
 
   it("says a held seat's facts wait for confirmation instead of naming anybody's", () => {
+    // As `withholdHeldSeatParticulars` hands it over: the matched record's
+    // contact already cleared.
     render(
       <DiverFacts
-        diver={diver({ identityWithheld: true })}
+        diver={diver({
+          identityWithheld: true,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+        })}
         locale="en-US"
         timezone="America/New_York"
         columns={2}
@@ -273,5 +279,43 @@ describe("DiverFacts, drawn on its own", () => {
     );
     expect(screen.getByText(t("manifest.identityWithheldDetails"))).toBeInTheDocument();
     expect(screen.queryByText(/Asha Iyer/)).toBeNull();
+  });
+
+  it("prints the contact the desk recorded for a held seat, on paper too (issue 2145)", () => {
+    render(
+      <DiverFacts
+        diver={diver({
+          identityWithheld: true,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          heldEmergencyContact: { name: "Rosa Vega", phone: "+34 600 333 444" },
+        })}
+        locale="en-US"
+        timezone="America/New_York"
+        columns={2}
+        t={t}
+      />,
+    );
+    expect(screen.getByText(t("manifest.heldEmergencyContactLabel"))).toBeInTheDocument();
+    expect(screen.getByText(/Rosa Vega/)).toBeInTheDocument();
+    expect(screen.getByText(t("manifest.identityWithheldDetails"))).toBeInTheDocument();
+  });
+
+  it("prints nothing from the record's contact on a held seat, whatever reaches it (H7)", () => {
+    render(
+      <DiverFacts
+        diver={diver({
+          identityWithheld: true,
+          emergencyContactName: "Pilar Vega",
+          emergencyContactPhone: "+34 600 111 222",
+        })}
+        locale="en-US"
+        timezone="America/New_York"
+        columns={2}
+        t={t}
+      />,
+    );
+    expect(screen.queryByText(/Pilar Vega/)).toBeNull();
+    expect(screen.queryByText(t("manifest.heldEmergencyContactLabel"))).toBeNull();
   });
 });

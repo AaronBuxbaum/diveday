@@ -82,7 +82,7 @@ export function ConditionsSection({
        value is the crew's own read — including the hold, which used to be
        restated here in warning ink one line below the row that already said it
        (`TripAboutSection`, design review 2026-09-17). What is left is what the
-       row's one line cannot hold: the water temperature, when it was published,
+       row's one line cannot hold: when it was published,
        the model's own outlook and the tide. */
     <div className="pt-1">
       {published ? (

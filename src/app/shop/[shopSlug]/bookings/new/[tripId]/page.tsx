@@ -55,6 +55,7 @@ const NOTICE_KEYS: Record<string, { tone: "danger"; key: StaffMessageKey }> = {
   // email", which is true there and false here — this door takes the no-email
   // diver the counter always could.
   "diver-invalid": { tone: "danger", key: "bookings.new.noticeInvalid" },
+  "seat-busy": { tone: "danger", key: "seatDiver.busy" },
   "diver-full": { tone: "danger", key: "trips.notices.diverFull" },
   "diver-divers-full": { tone: "danger", key: "participants.notices.diversFull" },
   "diver-type-unavailable": { tone: "danger", key: "participants.notices.typeUnavailable" },

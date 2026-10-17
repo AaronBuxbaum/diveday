@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
+import { listTripUnitsToCheckIn } from "@/db/gear";
+import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripPrep } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -14,8 +16,8 @@ import { PREP_SECTION_ID, scopedId } from "@/lib/element-id";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { departureStage } from "@/lib/trip-phase";
 import { uuidParam } from "@/lib/uuid";
+import { readDepartureStage } from "../_arrivals/departure-record";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { TripStageBadge, TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
@@ -94,15 +96,23 @@ export default async function TripPrepPage({
   if (!prep) notFound();
   const { trip } = prep;
   const now = nowDate();
-  // The crew's word for the header chip, and whether the departure is home.
-  const { shown: shownStage, finished } = departureStage({
+  // The crew's word for the header chip, and whether the boat has left the dock.
+  const {
+    shown: shownStage,
+    sailed,
+    finished,
+  } = await readDepartureStage(db, shop.id, tripId, {
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
     timeZone: shop.timezone,
     stage: stageReading,
     cancelled: trip.status === "cancelled",
+    meetingWindows: (await meetingWindowsByTrip(db, [trip])).get(tripId),
   });
+
+  // Once home, every unit still out on this boat (fifth-loop ideas, item 5).
+  const backFromBoat = finished ? await listTripUnitsToCheckIn(db, shop.id, tripId) : [];
 
   return (
     <>
@@ -118,7 +128,7 @@ export default async function TripPrepPage({
             <TripStageBadge stage={shownStage?.stage ?? null} copy={tripTabsCopy(t)} />
             <TripCapacityBadge
               trip={trip}
-              finished={finished}
+              finished={sailed}
               cancelledLabel={t("trips.detail.cancelledBadge")}
               t={t}
             />
@@ -140,6 +150,9 @@ export default async function TripPrepPage({
           noticeCount={count}
           grouping={grouping}
           cancelled={trip.status === "cancelled"}
+          sailed={sailed}
+          home={finished}
+          backFromBoat={backFromBoat}
           groupPath={shopPath(shopSlug, "trips", tripId, "prep")}
           emptyState={
             // The whole page's content region, so this one wears an h2 — and the

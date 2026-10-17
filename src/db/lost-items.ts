@@ -1,7 +1,7 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { diverTranslator } from "@/i18n/messages";
-import { nowDate } from "@/lib/clock";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import { containsLink } from "@/lib/departure-notes";
 import { type NotificationProvider, recipientLocale } from "@/lib/notifications";
 import { type CourtesyProvider, sendCourtesyMessage } from "@/lib/notifications/courtesy";
@@ -307,3 +307,67 @@ export async function listOpenLostItems(db: DbExecutor, shopId: string) {
 }
 
 export type OpenLostItem = Awaited<ReturnType<typeof listOpenLostItems>>[number];
+
+/**
+ * **What is waiting for each of these people** (fifth loop, item 7): their
+ * open items, oldest first, keyed by person, so the check-in row and the
+ * diver's record can say "Has a blue mask in lost and found" on the visit it
+ * can be handed over. Only items the crew tied to a seat have a person.
+ */
+export async function openLostItemsByPerson(
+  db: DbExecutor,
+  shopId: string,
+  personIds: readonly string[],
+): Promise<Map<string, string[]>> {
+  const byPerson = new Map<string, string[]>();
+  if (personIds.length === 0) return byPerson;
+  const rows = await db
+    .select({ personId: lostItems.personId, description: lostItems.description })
+    .from(lostItems)
+    .innerJoin(trips, and(eq(trips.id, lostItems.tripId), liveTrip()))
+    .where(
+      and(
+        eq(lostItems.shopId, shopId),
+        eq(lostItems.status, "open"),
+        inArray(lostItems.personId, [...new Set(personIds)]),
+      ),
+    )
+    .orderBy(lostItems.createdAt, lostItems.description, lostItems.id);
+  for (const row of rows) {
+    if (!row.personId) continue;
+    const list = byPerson.get(row.personId) ?? [];
+    list.push(row.description);
+    byPerson.set(row.personId, list);
+  }
+  return byPerson;
+}
+
+/** How long an item nobody owns keeps a place in Today's count. */
+export const UNCLAIMED_LOST_ITEM_COUNTED_MS = 30 * DAY_MS;
+
+/**
+ * How many found items are still waiting to go home (Today's row, fifth loop
+ * item 7): every open item the crew tied to a diver, plus an unclaimed one
+ * from the last thirty days. Most boxes never empty, and an unclaimed towel
+ * from March is nobody's job this morning (review fixes, dive-domain N3);
+ * Lost and found itself still lists everything open.
+ */
+export async function countOpenLostItems(
+  db: DbExecutor,
+  shopId: string,
+  now: Date,
+): Promise<number> {
+  const since = new Date(now.getTime() - UNCLAIMED_LOST_ITEM_COUNTED_MS);
+  const [row] = await db
+    .select({ n: count() })
+    .from(lostItems)
+    .innerJoin(trips, and(eq(trips.id, lostItems.tripId), liveTrip()))
+    .where(
+      and(
+        eq(lostItems.shopId, shopId),
+        eq(lostItems.status, "open"),
+        or(isNotNull(lostItems.personId), gte(lostItems.createdAt, since)),
+      ),
+    );
+  return row?.n ?? 0;
+}

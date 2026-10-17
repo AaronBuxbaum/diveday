@@ -249,7 +249,9 @@ const SENDERS: Record<string, string> = {
   "src/lib/notifications/courtesy.ts": "the SMS/WhatsApp primitive; its callers are listed here",
   "src/lib/notifications/web-push.ts": "the push primitive; its one caller is push-subscriptions",
   "src/db/notifications.ts": "the chokepoint itself",
-  "src/db/push-subscriptions.ts": "reads the departure with `notRehearsal()` before any push",
+  "src/db/push-subscriptions.ts":
+    "`pushManifestChanged` reads the departure with `notRehearsal()`; `pushTripAlert`'s one caller is roll-call-alerts",
+  "src/db/roll-call-alerts.ts": "the candidate scan carries `notRehearsal()`, so no email or push",
   "src/db/manifest-events.ts": "calls `pushManifestChanged`, which reads with `notRehearsal()`",
   "src/db/reminders.ts": "the candidate scan carries `notRehearsal()`, so no email or text",
   "src/db/recap.ts": "the candidate scan carries `notRehearsal()`, so no email or text",
@@ -261,10 +263,16 @@ const SENDERS: Record<string, string> = {
   "src/db/booking-handoff.ts": HELD_AT_CHOKEPOINT,
   "src/db/checkout-recovery.ts": HELD_AT_CHOKEPOINT,
   "src/db/find-my-booking.ts": HELD_AT_CHOKEPOINT,
+  "src/db/your-days.ts": HELD_AT_CHOKEPOINT,
   "src/db/readiness-link-rescue.ts": HELD_AT_CHOKEPOINT,
   "src/db/trip-invitations.ts": HELD_AT_CHOKEPOINT,
   "src/db/waitlist.ts": HELD_AT_CHOKEPOINT,
   "src/db/waiver-guardian-copy.ts": HELD_AT_CHOKEPOINT,
+  "src/db/party-payment-receipt.ts":
+    "a rehearsal starts no card checkout, so nothing settles; the email is also held at the chokepoint",
+  "src/db/seat-already-held.ts": HELD_AT_CHOKEPOINT,
+  "src/db/missing-diver-alerts.ts":
+    "refuses a rehearsal's report itself, before any email or push; the email is also held at the chokepoint",
   "src/app/s/[shopSlug]/trips/[id]/actions.ts":
     "the public trip page, which a rehearsal never reaches",
   "src/app/shop/[shopSlug]/trips/[id]/conditions-actions.ts": HELD_AT_CHOKEPOINT,
@@ -272,7 +280,11 @@ const SENDERS: Record<string, string> = {
   "src/db/lost-items.ts": "its tell reads the departure with `notRehearsal()`, so nobody is told",
   "src/db/trip-rescheduled.ts":
     "its hold and its send read the departure with `notRehearsal()`, so no email or text",
+  "src/db/course-certified.ts":
+    "its departure read carries `notRehearsal()`, so a practice run certifies nobody and tells nobody",
   "src/db/desk-pings.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/db/stripe-restricted.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/db/shore-alert-tokens.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/staff-reply.ts": NOT_ABOUT_A_DEPARTURE,
   "src/db/weekly-digest.ts": "its counts carry `notRehearsal()`",
   "src/db/work-order-follow-up.ts": NOT_ABOUT_A_DEPARTURE,
@@ -281,8 +293,15 @@ const SENDERS: Record<string, string> = {
   "src/app/forgot-password/actions.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/onboard/actions.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/reset-password/[token]/actions.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/app/shop/[shopSlug]/settings/boat-actions.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/shop/[shopSlug]/settings/shop-actions.ts": NOT_ABOUT_A_DEPARTURE,
   "src/app/shop/[shopSlug]/settings/team/actions.ts": NOT_ABOUT_A_DEPARTURE,
+  // The bookkeeper's month-end files (fifth loop, r5-5): the owner's notices,
+  // the address's confirmation and the month's files, all to the shop's own
+  // people about a month. The files are Reports' own downloads.
+  "src/db/bookkeeper.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/app/api/cron/bookkeeper/month-end-pass.ts": NOT_ABOUT_A_DEPARTURE,
+  "src/app/shop/[shopSlug]/reports/bookkeeper-actions.ts": NOT_ABOUT_A_DEPARTURE,
 };
 
 const SENDER_CALL =

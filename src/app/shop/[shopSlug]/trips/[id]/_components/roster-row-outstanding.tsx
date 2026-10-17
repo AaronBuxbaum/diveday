@@ -1,25 +1,34 @@
 import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
+import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
-import { GroupLabel } from "@/components/ui/ledger";
+import { GroupLabel } from "@/components/ui/group-label";
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
+import type { IssuedCard } from "@/db/agency-processing";
 import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import { COURSE_FORMS_BLOCK_BOARDING } from "@/lib/course-forms";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { isDiver } from "@/lib/participant-types";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { CourseFormsRowControl } from "./CourseFormsRowControl";
 import { ElearningCheck } from "./ElearningCheck";
 import { elearningCheckCopy } from "./elearning-check-copy";
+import { PartyPaymentSection } from "./PartyPaymentSection";
 import { PaymentStatusControl } from "./PaymentStatusControl";
-import { PAYMENT_STATUSES_ALL, PAYMENT_STATUSES_RECORDING_ONLY } from "./roster-model";
+import {
+  PAYMENT_STATUSES_ALL,
+  PAYMENT_STATUSES_RECORDING_ONLY,
+  type RosterRows,
+} from "./roster-model";
 import type { RowIdentity } from "./roster-row-identity";
 import type { RowReasonList } from "./roster-row-reason-list";
 import type { RosterSeat } from "./roster-seat";
 import { SeatCourseControls } from "./SeatCourseControls";
+import { TrainingMarkControl } from "./TrainingMarkControl";
 
 /** **Outstanding**: what the seat still needs, the first band of its panel. */
 /**
@@ -47,16 +56,24 @@ export type RowOutstandingInput = Pick<
   | "readinessByBooking"
   | "courseNextStepByBooking"
   | "elearningQueryByBooking"
+  | "elearningChecksOff"
   | "markRosterWaiverInPersonAction"
   | "markPaymentAction"
+  | "previewPartyPaymentAction"
+  | "markPartyPaidAction"
+  | "partyPay"
   | "certifyDiverAction"
   | "saveCourseNextStepAction"
+  | "markCardProcessedAction"
+  | "issuedCard"
   | "setCourseMaterialsDoneAction"
   | "elearningCheckAction"
   | "recordPaperCourseFormAction"
+  | "actions"
   | "materialsDone"
   | "paymentStatus"
   | "paymentSource"
+  | "paymentMark"
   | "waiverStatus"
   | "waiverControl"
   | "identityUnconfirmed"
@@ -66,7 +83,13 @@ export type RowOutstandingInput = Pick<
   | "namesakeRefused"
 > &
   Pick<RowIdentity, "identityContact" | "packageNote"> &
-  Pick<RowReasonList, "deskPrivateLines">;
+  Pick<RowReasonList, "deskPrivateLines"> &
+  Pick<RosterRows, "trainingMarks">;
+
+/** The agency a card goes to, by name; "the agency" where the course named none. */
+function processingAgencyName(agency: IssuedCard["agency"], t: RosterSeat["t"]): string {
+  return agency === "other" ? t("trips.roster.processedAgencyUnnamed") : t(AGENCY_KEYS[agency]);
+}
 
 export function rowOutstanding(seat: RowOutstandingInput) {
   const {
@@ -89,16 +112,25 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     readinessByBooking,
     courseNextStepByBooking,
     elearningQueryByBooking,
+    elearningChecksOff,
     markRosterWaiverInPersonAction,
     markPaymentAction,
+    previewPartyPaymentAction,
+    markPartyPaidAction,
+    partyPay,
     certifyDiverAction,
     saveCourseNextStepAction,
+    markCardProcessedAction,
+    issuedCard,
     setCourseMaterialsDoneAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
+    actions,
+    trainingMarks,
     materialsDone,
     paymentStatus,
     paymentSource,
+    paymentMark,
     waiverStatus,
     waiverControl,
     identityUnconfirmed,
@@ -110,6 +142,14 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     packageNote,
     deskPrivateLines,
   } = seat;
+  // This seat's training mark on a charter (issue #2275); none on a course session.
+  const trainingMark = trainingMarks?.bySeat.get(booking.id) ?? null;
+  // Only a seat in the water on a medical hold: a rider is never held on one.
+  const snorkelerMedicalHold =
+    booking.participantType === "snorkeler" &&
+    blockerTexts.some(
+      ({ blocker }) => blocker.code === "medical_review" || blocker.code === "medical_not_cleared",
+    );
   const outstanding = (
     <>
       {arrival ? identityContact : null}
@@ -158,43 +198,72 @@ export function rowOutstanding(seat: RowOutstandingInput) {
               {t("trips.roster.reviewCertificationsLink")}
             </Link>
           ) : null}
+          {/* A snorkeler is held on the dive medical exactly as a diver is (H-109).
+              The way aboard without it is a rider's seat, whose chip carries the
+              warning; this only points at that switch, it clears nothing. */}
+          {snorkelerMedicalHold ? (
+            <p className="mt-2 text-sm text-muted">
+              {t("participants.roster.snorkelerMedicalHint")}
+            </p>
+          ) : null}
         </>
       ) : null}
 
-      <SeatCourseControls
-        bookingId={booking.id}
-        personId={person.id}
-        t={t}
-        certifyDiverAction={certifyDiverAction}
-        certifyDefaultLevel={certifyDefaultLevel}
-        saveCourseNextStepAction={saveCourseNextStepAction}
-        nextStep={courseNextStepByBooking?.get(booking.id) ?? ""}
-        setCourseMaterialsDoneAction={setCourseMaterialsDoneAction}
-        materialsDoneLine={
-          materialsDone
-            ? materialsDone.byName
-              ? t("trips.roster.materialsDoneLineBy", {
-                  date: formatShortDate(materialsDone.at, locale, shopTimezone),
-                  name: materialsDone.byName,
-                })
-              : t("trips.roster.materialsDoneLine", {
-                  date: formatShortDate(materialsDone.at, locale, shopTimezone),
-                })
-            : null
-        }
-        certifyMaterialsNote={
-          courseHasMaterials && !materialsDone ? t("trips.roster.certifyMaterialsNote") : null
-        }
-      />
+      {/* A course's student is its diver: a snorkeler or a rider on the
+          session is not certified, nudged or ticked off (issue #2226). */}
+      {isDiver(booking.participantType) ? (
+        <SeatCourseControls
+          bookingId={booking.id}
+          personId={person.id}
+          t={t}
+          certifyDiverAction={certifyDiverAction}
+          certifyDefaultLevel={certifyDefaultLevel}
+          saveCourseNextStepAction={saveCourseNextStepAction}
+          nextStep={courseNextStepByBooking?.get(booking.id) ?? ""}
+          markCardProcessedAction={markCardProcessedAction}
+          processedCard={
+            issuedCard
+              ? {
+                  kind: issuedCard.kind,
+                  certificationId: issuedCard.certificationId,
+                  agency: processingAgencyName(issuedCard.agency, t),
+                  doneLine: issuedCard.processedAt
+                    ? t("trips.roster.processedLine", {
+                        agency: processingAgencyName(issuedCard.agency, t),
+                        date: formatShortDate(issuedCard.processedAt, locale, shopTimezone),
+                      })
+                    : null,
+                }
+              : null
+          }
+          setCourseMaterialsDoneAction={setCourseMaterialsDoneAction}
+          materialsDoneLine={
+            materialsDone
+              ? materialsDone.byName
+                ? t("trips.roster.materialsDoneLineBy", {
+                    date: formatShortDate(materialsDone.at, locale, shopTimezone),
+                    name: materialsDone.byName,
+                  })
+                : t("trips.roster.materialsDoneLine", {
+                    date: formatShortDate(materialsDone.at, locale, shopTimezone),
+                  })
+              : null
+          }
+          certifyMaterialsNote={
+            courseHasMaterials && !materialsDone ? t("trips.roster.certifyMaterialsNote") : null
+          }
+        />
+      ) : null}
       {/* The materials tick, read off PADI's own eLearning page when the
           DiveDay browser extension is here (H-106). */}
-      {elearningCheckAction ? (
+      {elearningCheckAction && isDiver(booking.participantType) ? (
         <ElearningCheck
           query={elearningQueryByBooking?.get(booking.id) ?? null}
           bookingId={booking.id}
           materialsDone={Boolean(materialsDone)}
           action={elearningCheckAction}
           copy={elearningCheckCopy(t)}
+          offNote={elearningChecksOff ? t("shared.padiChecksOff") : null}
         />
       ) : null}
 
@@ -250,6 +319,21 @@ export function rowOutstanding(seat: RowOutstandingInput) {
         </div>
       ) : null}
 
+      {/* A training dive on a charter (issue #2275): the mark, or the course
+          seats it may name. Before the forms it brings with it. */}
+      {trainingMark ? (
+        <TrainingMarkControl
+          bookingId={booking.id}
+          training={trainingMark}
+          instructorRostered={trainingMarks?.instructorRostered ?? false}
+          markAction={actions.markTrainingDiveAction}
+          clearAction={actions.clearTrainingDiveAction}
+          locale={locale}
+          timezone={shopTimezone}
+          t={t}
+        />
+      ) : null}
+
       {/* The course's own forms, which the release's control above does not
           speak for (ADR 20261008-course-forms). Withheld on a held seat, like
           every other write onto the diver's record from this row. */}
@@ -280,6 +364,7 @@ export function rowOutstanding(seat: RowOutstandingInput) {
               mayWriteOffPayment ? PAYMENT_STATUSES_ALL : PAYMENT_STATUSES_RECORDING_ONLY
             }
             sourceNote={paymentSource}
+            mark={paymentMark}
             packageNote={packageNote}
             refundNote={
               refundEligible && cancellationDeadline
@@ -290,6 +375,16 @@ export function rowOutstanding(seat: RowOutstandingInput) {
             }
             copy={paymentStatusCopy}
           />
+          {partyPay ? (
+            <PartyPaymentSection
+              bookingId={booking.id}
+              party={partyPay}
+              previewAction={previewPartyPaymentAction}
+              confirmAction={markPartyPaidAction}
+              copy={paymentStatusCopy}
+              t={t}
+            />
+          ) : null}
         </div>
       ) : null}
     </>
@@ -306,10 +401,12 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     Boolean(arrival && booking.reEntryAsk) ||
     flaggedPrompts.length > 0 ||
     certificationBlocked ||
+    snorkelerMedicalHold ||
     Boolean(certifyDiverAction) ||
     Boolean(saveCourseNextStepAction) ||
     Boolean(setCourseMaterialsDoneAction) ||
     waiverControl.action !== null ||
+    trainingMark !== null ||
     requiresPayment;
 
   /**

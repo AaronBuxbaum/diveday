@@ -1,23 +1,27 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
 import type { TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
+import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
 import { setBookingNitrox } from "./nitrox";
-import { nitroxCertifications, people, tripWaitlistEntries } from "./schema";
+import { boats, nitroxCertifications, orders, people, tripWaitlistEntries } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
+import { getDepartureNeeds } from "./today-departure-needs";
 import { pushDepartureRows } from "./today-departure-rows";
 import { rowsContext } from "./today-rows-test-fixtures";
 import { sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { listStaff } from "./trips-crew";
+import { getTripOverview } from "./trips-overview";
+import { setWelcomeConsent } from "./welcome-cues";
 
 const emptyWave = {
-  missingFit: new Map(),
-  ungatedNitrox: new Map(),
-  missingContact: new Map(),
+  boatWork: new Map(),
   waitlisted: new Map(),
   courseCrewCounts: new Map(),
   deliveryIssues: [],
@@ -115,6 +119,29 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(row?.detail).toContain(`${reef.capacity - reef.booked} seats open`);
   });
 
+  /** The seats to fill are the seats on sale (H-107, #2388), not the stated number. */
+  it("counts the seats to fill against the boat's certificate", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef?.boatId) throw new Error("demo reef trip missing its boat");
+    await db
+      .update(boats)
+      .set({ certifiedPassengers: reef.booked + 1 })
+      .where(eq(boats.id, reef.boatId));
+    expect(reef.capacity - reef.booked).toBeGreaterThan(1);
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      fullName: "Nora Quinn",
+      email: "nora@example.com",
+      declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
+    });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`);
+    expect(row?.detail).toMatch(/^1 seat open/);
+  });
+
   it("does not nudge to fill seats when nobody on the last-minute list is around for that date", async () => {
     // The row's whole job is "send a deal to the people waiting for one." With
     // nobody reachable there is nothing to send, the trip's Guests tab hides
@@ -208,7 +235,9 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     const nitroxAction = after.actions.find((action) => action.id === `nitrox:${reef.id}`);
     // One diver is a row about that person, by name, never "1 diver wants…".
     expect(nitroxAction?.subject).toBe("Priya Sharma");
-    expect(nitroxAction?.detail).toBe("Wants nitrox, no verified card.");
+    expect(nitroxAction?.detail).toBe(
+      "Wants nitrox, gets air unless a card is verified before the boat leaves.",
+    );
   });
 
   it("nudges staff about missing emergency contacts on a near boat, and clears once filled", async () => {
@@ -252,5 +281,131 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     }
     const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(cleared.actions.some((action) => action.id === `contact:${reef.id}`)).toBe(false);
+  });
+
+  // Third review, item 4, then fourth review, item 36: Today listed seven rows
+  // for the 1:30 PM boat while its own band said "3 things to sort", because
+  // the band counted only the boat's work and this test only compared that
+  // subset. The band now reads Today's rows for the departure themselves, so
+  // what is pinned here is the whole list a person sees on each screen.
+  it("gives the boat's band exactly the rows Today lists for that boat", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const roster = await getTripRoster(db, shop.id, reef.id);
+    for (const entry of roster) {
+      await db
+        .update(people)
+        .set({ emergencyContactName: null, emergencyContactPhone: null })
+        .where(eq(people.id, entry.person.id));
+    }
+    const now = nowDate();
+    const t = staffTranslator("en-US");
+    const [today, needs] = await Promise.all([
+      getTodayWork(db, shop.id, shop.slug, shop.timezone, now),
+      getDepartureNeeds(db, shop, reef.id, {
+        now,
+        t,
+        locale: "en-US",
+        session: { user: { roles: ["owner"] } },
+      }),
+    ]);
+    const onToday = today.actions.filter((action) => action.departure?.tripId === reef.id);
+    expect(needs?.map((action) => action.id)).toEqual(onToday.map((action) => action.id));
+    expect(needs?.map((action) => action.detail)).toEqual(onToday.map((action) => action.detail));
+    // More than the boat's work: the contacts row is there, and so is every
+    // row the boat's work never counted.
+    expect(needs?.some((action) => action.id === `contact:${reef.id}`)).toBe(true);
+    expect(needs?.some((action) => !/^(prep|nitrox|contact|orders):/.test(action.id))).toBe(true);
+  });
+
+  it("gives no list for a boat outside Today's window, which Today does not show", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const far = trips.find((trip) => trip.startsAt.getTime() - now.getTime() > 14 * 86_400_000);
+    if (!far) throw new Error("demo has no departure two weeks out");
+    const t = staffTranslator("en-US");
+    expect(
+      await getDepartureNeeds(db, shop, far.id, {
+        now,
+        t,
+        locale: "en-US",
+        session: { user: { roles: ["owner"] } },
+      }),
+    ).toBeNull();
+  });
+
+  // Layer 1 review, finding 3: the orders count read every booking on the
+  // departure, so an unpaid invoice on a seat the diver gave up still said
+  // "1 order awaiting payment" while sizes, nitrox and contacts read only the
+  // seats still on the boat. All four now count the same seats.
+  it("does not count an open order on a cancelled seat as the boat's work", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const [seat] = await getTripRoster(db, shop.id, reef.id);
+    if (!seat) throw new Error("demo bookings missing");
+    const owner = (await listStaff(db, shop.id)).find((entry) => entry.roles.includes("owner"));
+    if (!owner) throw new Error("seeded shop has no owner");
+    await db.insert(orders).values({
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      personId: seat.person.id,
+      createdByPersonId: owner.person.id,
+      status: "open",
+      currency: "usd",
+      totalCents: 17_500,
+      amountPaidCents: 0,
+      description: "Two-tank charter balance",
+      stripeAccountId: "acct_demo",
+      stripeCustomerId: "cus_test_cancelled_seat",
+      stripeInvoiceId: "in_test_cancelled_seat",
+      finalizedAt: nowDate(),
+    });
+    const ordersRow = `orders:${reef.id}`;
+
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(before.actions.some((action) => action.id === ordersRow)).toBe(true);
+
+    await cancelBooking(db, shop.id, seat.booking.id);
+
+    const [today, overview] = await Promise.all([
+      getTodayWork(db, shop.id, shop.slug, shop.timezone),
+      getTripOverview(db, shop, reef.id, owner.person.id),
+    ]);
+    expect(today.actions.some((action) => action.id === ordersRow)).toBe(false);
+    expect(overview?.pulse.work.openOrders).toBe(0);
+  });
+});
+
+/**
+ * **Saying hello is a line on the card, not a job** (fifth loop, item 10). A
+ * diver who shared that this is their first trip is named on today's
+ * departure, and nothing in the queue (or its count) asks anyone to greet them.
+ */
+describe("the welcome cue on Today", () => {
+  it("rides on the departure and never becomes a Needs you row", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const departure = before.departures.find((row) => row.booked > 0);
+    if (!departure) throw new Error("demo needs a booked departure today");
+    const roster = await getTripRoster(db, shop.id, departure.tripId);
+    const seat = roster[0];
+    if (!seat) throw new Error("departure has no roster");
+    await setWelcomeConsent(db, {
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      shared: true,
+      now,
+    });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const card = work.departures.find((row) => row.tripId === departure.tripId);
+    expect(card?.welcome?.map((entry) => entry.name)).toContain(seat.person.fullName);
+    expect(work.actions.map((action) => action.kind as string)).not.toContain("say_hello");
   });
 });

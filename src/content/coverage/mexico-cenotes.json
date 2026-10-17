@@ -1,0 +1,304 @@
+{
+  "area": "mexico-cenotes",
+  "method": "Yucatán Peninsula cenotes run as guided cavern-zone or open-water cenote dives for open-water-certified divers, chiefly along the Puerto Morelos–Playa del Carmen–Tulum corridor of Quintana Roo, plus Yucatán state. No official list exists, and no Quintana Roo or Riviera Maya tourism-board list of dive cenotes was found; Yucatán state's board (yucatan.travel) lists Kankirixché under scuba diving and counts as one list. Operator lists stand in: Pro Dive International, Deep Mexico, Scuba Cancún, Solo Buceo, Tank-Ha, Koox, Mexidivers, Cancún Scuba Center, Dive Mike, ProTec (its 2026-27 cavern price list), Akumal Dive Shop, Akumal Dive Center, Scuba Total, Scuba Playa and Squalo Adventures, each counted once. A cenote counts when named, run as a cavern or open-water dive, and on two independent lists. One cenote sold under several names or lines is one row with the aliases (Dos Ojos with its Barbie and Bat Cave lines, Jardín del Edén/Ponderosa/Eden, Carwash/Aktun Ha, Calavera/Temple of Doom, Casa Cenote/Manatí, Tajma Ha/Taj Mahal); Kukulkan stays its own row because ProTec sells it apart from Chac Mool. Cave-only systems are excluded; overhead is a property of the row the template step gates, not a reason to drop it. Under the Jungle, Zero Gravity, Xibalba, Yucatek Divers, Manta Divers and Mundaca Divers publish no named cenote list; no working site was found for Go Cenotes, Bel Air or Cenote Dive Center; aggregators and blogs were read for leads only. Counted 2026-10-14.",
+  "sources": [
+    "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+    "https://deepmexico.com/",
+    "https://scubacancun.com.mx/tour-type/diving/for-certified-divers/",
+    "https://solobuceo.com/cancun-diving-sites",
+    "https://tankha.com/diving/cenote-caverns",
+    "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+    "https://www.mexidivers.com/cenote-diving",
+    "https://cancunscubacenter.com/diving/diving-cenotes/",
+    "https://www.divemike.com/cenotes.php",
+    "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+    "https://akumaldiveshop.com/cenote-diving/",
+    "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun",
+    "https://scubaplaya.com/en/cenote-adventure/",
+    "https://squaloadventures.com/mexico/cenotes/",
+    "https://www.akumaldivecenter.com/post/scuba-diving-tulum-discover-the-best-reefs-and-cenotes",
+    "https://yucatan.travel/en/experience/313-cenote-kankirixche"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Kankirixché (Yucatán)",
+      "template": null,
+      "listedBy": ["https://yucatan.travel/en/experience/313-cenote-kankirixche"],
+      "excluded": "on the Yucatán tourism board list only; Mérida-area dives were found only on aggregators"
+    },
+    {
+      "name": "Chac Mool (Little Brother)",
+      "template": "chac-mool-cenote",
+      "listedBy": [
+        "https://scubacancun.com.mx/tour-type/diving/for-certified-divers/",
+        "https://tankha.com/diving/cenote-caverns",
+        "https://cancunscubacenter.com/diving/diving-cenotes/",
+        "https://www.divemike.com/cenotes.php",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+        "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun"
+      ]
+    },
+    {
+      "name": "Kukulkan",
+      "template": null,
+      "listedBy": [
+        "https://tankha.com/diving/cenote-caverns",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf"
+      ]
+    },
+    {
+      "name": "Jardín del Edén (Ponderosa, Eden)",
+      "template": "jardin-del-eden-cenote",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://deepmexico.com/",
+        "https://scubacancun.com.mx/tour-type/diving/for-certified-divers/",
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://cancunscubacenter.com/diving/diving-cenotes/",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+        "https://akumaldiveshop.com/cenote-diving/"
+      ]
+    },
+    {
+      "name": "Chikin Ha",
+      "template": "chikin-ha-cenote",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://deepmexico.com/",
+        "https://scubacancun.com.mx/tour-type/diving/for-certified-divers/",
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://cancunscubacenter.com/diving/diving-cenotes/",
+        "https://www.divemike.com/cenotes.php",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf"
+      ]
+    },
+    {
+      "name": "Tajma Ha (Taj Mahal)",
+      "template": "tajma-ha-cenote",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://scubacancun.com.mx/tour-type/diving/for-certified-divers/",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://cancunscubacenter.com/diving/diving-cenotes/",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+        "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun"
+      ]
+    },
+    {
+      "name": "Maravilla",
+      "template": null,
+      "listedBy": [
+        "https://deepmexico.com/",
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf"
+      ]
+    },
+    {
+      "name": "Zapote (Hell's Bells)",
+      "template": null,
+      "listedBy": [
+        "https://deepmexico.com/",
+        "https://solobuceo.com/cancun-diving-sites",
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://www.divemike.com/cenotes.php"
+      ]
+    },
+    {
+      "name": "Kin Ha",
+      "template": null,
+      "listedBy": ["https://www.kooxdiving.com/actividades/buceo-en-cenotes/"],
+      "excluded": "on one operator list only (Koox)"
+    },
+    {
+      "name": "Yaakun",
+      "template": null,
+      "listedBy": ["https://deepmexico.com/", "https://tankha.com/diving/cenote-caverns"]
+    },
+    {
+      "name": "Nicte Ha",
+      "template": null,
+      "listedBy": [
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.mexidivers.com/cenote-diving",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf"
+      ]
+    },
+    {
+      "name": "Dos Ojos (Barbie Line, Bat Cave)",
+      "template": "dos-ojos-cenote",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://deepmexico.com/",
+        "https://scubacancun.com.mx/tour-type/diving/for-certified-divers/",
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://www.mexidivers.com/cenote-diving",
+        "https://cancunscubacenter.com/diving/diving-cenotes/",
+        "https://www.divemike.com/cenotes.php",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+        "https://akumaldiveshop.com/cenote-diving/",
+        "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun",
+        "https://scubaplaya.com/en/cenote-adventure/",
+        "https://squaloadventures.com/mexico/cenotes/",
+        "https://www.akumaldivecenter.com/post/scuba-diving-tulum-discover-the-best-reefs-and-cenotes"
+      ]
+    },
+    {
+      "name": "The Pit (El Pit)",
+      "template": "el-pit-cenote",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://deepmexico.com/",
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://www.mexidivers.com/cenote-diving",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+        "https://akumaldiveshop.com/cenote-diving/",
+        "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun",
+        "https://scubaplaya.com/en/cenote-adventure/"
+      ]
+    },
+    {
+      "name": "Pet Cemetery",
+      "template": null,
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun"
+      ]
+    },
+    {
+      "name": "Nohoch Nah Chich",
+      "template": null,
+      "listedBy": ["https://tankha.com/diving/cenote-caverns"],
+      "excluded": "on one operator list only (Tank-Ha)"
+    },
+    {
+      "name": "Taak Bi Ha",
+      "template": null,
+      "listedBy": [
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.mexidivers.com/cenote-diving",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf"
+      ]
+    },
+    {
+      "name": "Taak Bi Luum",
+      "template": null,
+      "listedBy": ["https://www.mexidivers.com/cenote-diving"],
+      "excluded": "on one operator list only (Mexidivers)"
+    },
+    {
+      "name": "Dreamgate",
+      "template": null,
+      "listedBy": [
+        "https://deepmexico.com/",
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://www.mexidivers.com/cenote-diving",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+        "https://akumaldiveshop.com/cenote-diving/",
+        "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun"
+      ]
+    },
+    {
+      "name": "Casa Cenote (Manatí)",
+      "template": "casa-cenote",
+      "listedBy": [
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://www.mexidivers.com/cenote-diving",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+        "https://akumaldiveshop.com/cenote-diving/"
+      ]
+    },
+    {
+      "name": "Naval",
+      "template": null,
+      "listedBy": ["https://www.mexidivers.com/cenote-diving"],
+      "excluded": "on one operator list only (Mexidivers)"
+    },
+    {
+      "name": "Yaxchen",
+      "template": null,
+      "listedBy": ["https://www.mexidivers.com/cenote-diving"],
+      "excluded": "on one operator list only (Mexidivers)"
+    },
+    {
+      "name": "Gran Cenote",
+      "template": "gran-cenote",
+      "listedBy": [
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://cancunscubacenter.com/diving/diving-cenotes/",
+        "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun",
+        "https://www.akumaldivecenter.com/post/scuba-diving-tulum-discover-the-best-reefs-and-cenotes"
+      ]
+    },
+    {
+      "name": "Calavera (Temple of Doom)",
+      "template": "calavera-cenote",
+      "listedBy": [
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://cancunscubacenter.com/diving/diving-cenotes/",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+        "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun"
+      ]
+    },
+    {
+      "name": "Carwash (Aktun Ha)",
+      "template": "carwash-cenote",
+      "listedBy": [
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://www.mexidivers.com/cenote-diving",
+        "https://cancunscubacenter.com/diving/diving-cenotes/",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+        "https://akumaldiveshop.com/cenote-diving/",
+        "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun"
+      ]
+    },
+    {
+      "name": "Teresita",
+      "template": null,
+      "listedBy": ["https://www.mexidivers.com/cenote-diving"],
+      "excluded": "on one operator list only (Mexidivers)"
+    },
+    {
+      "name": "Angelita",
+      "template": "angelita-cenote",
+      "listedBy": [
+        "https://prodiveinternational.com/location/mexico/playa-del-carmen-3/",
+        "https://deepmexico.com/",
+        "https://tankha.com/diving/cenote-caverns",
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://www.mexidivers.com/cenote-diving",
+        "https://cancunscubacenter.com/diving/diving-cenotes/",
+        "https://www.divemike.com/cenotes.php",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf",
+        "https://akumaldiveshop.com/cenote-diving/",
+        "https://www.scubatotal.com/post/top-10-cenotes-dive-sites-in-mexico-from-cancun",
+        "https://scubaplaya.com/en/cenote-adventure/",
+        "https://www.akumaldivecenter.com/post/scuba-diving-tulum-discover-the-best-reefs-and-cenotes"
+      ]
+    },
+    {
+      "name": "Laguna Kaan Luum",
+      "template": null,
+      "listedBy": [
+        "https://www.kooxdiving.com/actividades/buceo-en-cenotes/",
+        "https://protecdivecenters.com/wp-content/uploads/2026/08/Cavern-Diving-Tours-Jul-26-Jun-27-USD.pdf"
+      ]
+    },
+    {
+      "name": "Sac Actun and Ox Bel Ha cave systems",
+      "template": null,
+      "listedBy": ["https://www.mexidivers.com/cenote-diving"],
+      "excluded": "cave beyond the cavern zone (Mexidivers: full-cave certification, not a standard tour)"
+    }
+  ]
+}

@@ -1,24 +1,15 @@
 import type { Metadata } from "next";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
-import {
-  controlClass,
-  DateField,
-  Field,
-  FieldActions,
-  FieldGrid,
-  FormStatus,
-} from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   countGearItemsByKind,
@@ -33,11 +24,11 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
-import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { AddUnitDetails } from "./_components/AddUnitDetails";
+import { AddUnitForm } from "./_components/AddUnitForm";
 import { AddUnitLink } from "./_components/AddUnitLink";
 import { DeletedList } from "./_components/DeletedGearList";
 import { GearRegisterLedger, GearServiceDueList } from "./_components/GearRegisterLedger";
@@ -45,7 +36,6 @@ import { GearRentalsList } from "./_components/GearRentalsList";
 import { RegisterHeaderActions } from "./_components/RegisterHeaderActions";
 import {
   checkOutGearReservationAction,
-  createGearItemAction,
   releaseGearReservationFromRegisterAction,
   restoreGearItemAction,
   returnGearReservationAction,
@@ -306,7 +296,7 @@ export default async function GearRegisterPage({
         {fleetTotal === 0 && !showDeleted ? (
           <EmptyState
             title={t("gear.empty.heading")}
-            action={<AddUnitLink className={buttonClass()}>{t("gear.addUnit.door")}</AddUnitLink>}
+            action={<AddUnitLink className={buttonClass()}>{t("gear.addUnit.title")}</AddUnitLink>}
             className="mt-4"
           />
         ) : (
@@ -383,15 +373,15 @@ export default async function GearRegisterPage({
           </section>
         )}
 
-        {/* `AddUnitDetails`, not `SectionCard as="details"` (no `open` prop)
-            or a plain `<details>`: its React state lets `AddUnitLink` open it
-            reliably. `initialOpen` also opens it on a refusal to show. On an
-            empty register the closed band hides, so the empty state's "Add
-            gear" is the one door to it (UX review 2026-10-10, item 30). */}
+        {/* `AddUnitDetails`: its React state lets `AddUnitLink` open it, and
+            `initialOpen` opens it on a refusal. The closed band hides wherever
+            a door opens it, header or empty state, so one door has one name
+            (2026-10-10 item 30; third review #36); only the deleted view of an
+            empty register has no door, so the band stays there. */}
         <AddUnitDetails
           className={sectionCardClass({
             padding: "none",
-            className: `group/add-unit scroll-mt-24${fleetTotal === 0 && !showDeleted ? " hidden open:block" : ""}`,
+            className: `group/add-unit scroll-mt-24${fleetTotal > 0 || !showDeleted ? " hidden open:block" : ""}`,
           })}
           initialOpen={Boolean(addStatus)}
         >
@@ -407,71 +397,17 @@ export default async function GearRegisterPage({
               className="size-4 text-muted group-open/add-unit:rotate-90"
             />
           </summary>
-          <div className="border-t border-border p-5 sm:p-6">
-            <FieldGrid as="form" action={createGearItemAction} columns={2}>
-              <Field label={t("gear.form.kind")}>
-                <select name="kind" className={controlClass} defaultValue="bcd">
-                  {GEAR_KIND_ORDER.map((option) => (
-                    <option key={option} value={option}>
-                      {gearItemKindLabel(t, option)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field
-                label={t("gear.form.label")}
-                hint={t("gear.form.labelHint")}
-                error={fieldError("label")}
-              >
-                <input
-                  name="label"
-                  required
-                  maxLength={80}
-                  placeholder={t("gear.form.labelPlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-              {/* The action's own cap, which is the fit forms' cap
-                  (`RENTAL_FIT_TEXT_LIMITS.size`) because `keepRentalFitAction`
-                  copies this value into `rental_fit_profiles` — issue #1754. */}
-              <Field label={t("gear.form.size")} hint={t("gear.form.optionalHint")}>
-                <input
-                  name="size"
-                  maxLength={RENTAL_FIT_TEXT_LIMITS.size}
-                  placeholder={t("gear.form.sizePlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-              <Field label={t("gear.form.serialNumber")} hint={t("gear.form.optionalHint")}>
-                <input name="serialNumber" maxLength={80} className={controlClass} />
-              </Field>
-              <Field label={t("gear.form.brandModel")} hint={t("gear.form.optionalHint")}>
-                <input
-                  name="brandModel"
-                  maxLength={120}
-                  placeholder={t("gear.form.brandModelPlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-              <Field
-                label={t("gear.form.purchasedOn")}
-                hint={t("gear.form.optionalHint")}
-                error={fieldError("purchasedOn")}
-              >
-                <DateField name="purchasedOn" />
-              </Field>
-              <FieldActions>
-                <SubmitButton pendingLabel={t("gear.addUnit.pending")} className={buttonClass()}>
-                  {t("gear.addUnit.submit")}
-                </SubmitButton>
-                <FormStatus tone={addStatus?.tone}>
-                  {addStatus && !noticeField ? t(addStatus.key) : null}
-                </FormStatus>
-              </FieldActions>
-            </FieldGrid>
-            {/* Keyed on the notice so a repeated refusal re-fires the focus. */}
-            <FieldErrorFocus key={notice} scope="add-unit" />
-          </div>
+          <AddUnitForm
+            t={t}
+            keptScope={keptTypedScope(shopSlug, session.user.personId)}
+            refused={Boolean(addStatus)}
+            labelError={fieldError("label")}
+            purchasedOnError={fieldError("purchasedOn")}
+            status={
+              addStatus && { tone: addStatus.tone, text: noticeField ? null : t(addStatus.key) }
+            }
+            focusKey={notice}
+          />
         </AddUnitDetails>
       </div>
     </main>

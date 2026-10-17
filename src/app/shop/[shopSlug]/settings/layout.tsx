@@ -13,6 +13,7 @@ import {
   canManageWaiverTemplates,
 } from "@/lib/authz";
 import { requireShopSurface } from "@/lib/session";
+import { RailOffTheHub } from "./_components/RailOffTheHub";
 import { SettingsRail } from "./_components/SettingsRail";
 import { SettingsRailSkeleton } from "./_components/SettingsRailSkeleton";
 import { SETTINGS_GROUPS, settingsRailGatesFor, settingsRailRowsFor } from "./settings-groups";
@@ -46,9 +47,11 @@ export default function SettingsLayout({
        fixed-width sibling when it exists, and when it does not the pane simply
        takes the width. */
     <div className="mx-auto w-full max-w-6xl lg:flex lg:gap-8 lg:px-6">
-      <Suspense fallback={<SettingsRailSkeleton />}>
-        <SettingsRailPanel params={params} />
-      </Suspense>
+      <RailOffTheHub>
+        <Suspense fallback={<SettingsRailSkeleton />}>
+          <SettingsRailPanel params={params} />
+        </Suspense>
+      </RailOffTheHub>
       <div className="min-w-0 lg:flex-1">{children}</div>
     </div>
   );

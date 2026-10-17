@@ -21,28 +21,43 @@ Before every commit:
    selects:
    `pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot`
 4. **A flow, a page or its copy changed**: `pnpm e2e:affected` names the specs that read what
-   you changed; run them with `pnpm e2e <spec…> --reporter=line` (section 2).
+   you changed, plus five smoke tests; run them with `pnpm e2e <spec…> --reporter=line`
+   (section 2).
 5. **UI changed**: look at it (section 3).
 
 Before every push:
 
-6. **`pnpm verify:push`**, in the background: everything above for the whole diff against the
-   layer below, plus what CI kept catching that this list used to leave out — `pnpm regen` and a
-   clean tree, the `guards` project, every unit test that reads source from disk (which
-   `vitest --changed` can never select), `vitest related` over the changed code, and the Playwright specs the diff
-   reaches (`pnpm e2e:affected` prints them and why). It stops at the first red step and prints
+6. **`pnpm verify:push --quick`**, the default before a push (Aaron, 2026-10-16: batch work into
+   large stacked PRs, don't wait on the full validation, fix forward when CI fails): `pnpm regen`
+   and a clean tree, lint, typecheck, `check:repo`, the `guards` project and `vitest related` over
+   the diff. Minutes, no browser. Push when it is green, open or update the PR, and work CI's
+   answer: a red job is the next commit on the same layer, not a reason to have waited.
+   **`pnpm verify:push`** (no flag) is the full run, worth its hour only when you want the
+   browser's answer before CI's: the whole unit suite in CI's four shards and every Playwright
+   spec the diff reaches (`pnpm e2e:affected` prints them and why). Either run ends with what it
+   did not run: say "verify:push --quick green" or "verify:push green", never "all tests pass
+   locally". It stops at the first red step and prints
    that step's tail. Green, it stamps HEAD; `git push` is refused for a commit without a stamp
-   (`scripts/guard-push.mjs`), so a merge from the layer below means another run. The reasons
+   (`scripts/guard-push.mjs`), so a merge from the layer below means another run. It reads the
+   layer below's CI first: on a red base it re-runs the files CI names and stamps only when they
+   pass here, so carry the fix or wait for the layer that broke; a red job naming no file needs
+   `--base-red <file…>` from its log. The reasons
    and the measurements: [verifying.md](../../../docs/agents/verifying.md#the-pre-push-gate).
 7. **One validated push per round.** Commit as often as you like; push once, when
-   `verify:push` is green for the round's work, because each push cancels the CI run of the one
+   `verify:push --quick` is green for the round's work, because each push cancels the CI run of the one
    before it (the measurement is in [verifying.md](../../../docs/agents/verifying.md#one-validated-push-per-round)).
    A push without a green run is right only when the `unpushed-work` hook is saving work before
    a turn ends, or when you push to learn what only CI can answer; write the reason in front of
-   the command (`DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`) and in the PR.
+   the command (`DIVEDAY_PUSH_UNVERIFIED="<why>" git push …`) and in the PR. "Red on main" or
+   "not mine" is never one: the guard refuses it, since that push is red on every layer above.
 8. **A PR body** names its reviews in the template's `## Reviews launched` section, one line per
    reviewer with its answer on the same line; `scripts/guard-pr-body.mjs` runs CI's check over
    the body before `create_pull_request` or `update_pull_request` sends it.
+
+**A review finding is acted on once its test runs and fails.** Turn the finding's failing input
+into a test (a reviewer agent's, a bot's, or a claim in a PR thread), run it, and fix only when it
+goes red; a finding whose test passes is answered with that test, not a code change. At most two
+review rounds on one change: after the second, ask Aaron before another round of fixes.
 
 CI runs anything whole: `pnpm check`, the whole unit suite, `next build`, the whole e2e suite and
 the visual run. The shell guard refuses the bare local forms. When you do read a `pnpm check` log,
@@ -60,54 +75,13 @@ lint` includes the `clock` rule, which fails if domain/data code reads the wall 
 
 ## 3. UI changed: look at it
 
-Never ship UI you haven't seen. The visual spec asserts nothing — it writes PNGs at both the
-phone and desktop widths — so a filtered run of it is the capture step. Look in light only; dark
-joins it only when the change is colour work (a token, a tint, a hue — the owner's rule,
-[H-90](../../../docs/product/human-decisions/README.md#decision-register)), and the `light mode.*` prefix
-is what keeps the run to one scheme:
-
-```bash
-pnpm e2e:build
-pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*<name of the capture group>' --reporter=line
-```
-
-Read the PNGs in `e2e/screenshots/` (gitignored) and check them against the checklist at the bottom of
-`docs/design/principles.md`. Then probe them: the same run with `PIXEL_PROBE=1` in front, then
-`node scripts/pixel-probe-report.mjs`, and give every flag in `e2e/pixel-probe/REPORT.md` a verdict
-— the `design-review` skill's pixel pass has the rest, and
-[pixel-craft.md](../../../docs/design/pixel-craft.md) the rubric. For significant UI work, also run
-the `design-review` skill. Send the screenshots to the user when reporting completion.
-
-Prefer this Playwright-driven capture over backgrounding `pnpm dev` and browsing it manually: the
-Playwright commands build, run, and exit on their own, while a backgrounded dev server doesn't —
-see the `debug` skill's **Long-running background processes** section for why a leaked one causes
-real problems (stale-server corruption, and sessions getting stuck waiting on a readiness signal
-that a leftover process will never emit).
-
-For a surface with no visual-spec capture group yet, or a quick mid-iteration look while a dev
-server is already running, use `node scripts/screenshot.mjs <path> [--as owner]` — it captures
-the light phone/desktop pair into `screenshots/` (gitignored), `--both` adds dark for colour work,
-`--probe` runs the pixel probe on it, and it signs in through the seeded dev credentials for
-`/shop/**` paths. Never hand-write a throwaway driver for this; the script exists so scratch
-`.shots*.mjs` files stop reaching the index.
-
-**A long capture run kills the dev server, and the corpse takes the next one with it.** Two facts
-worth knowing before you point that script at thirty paths:
-
-- A Turbopack `next-server` never unloads a route it has served. On a memory-capped container it is
-  OOM-killed
-  outright at roughly **thirty page renders** in 16 GB — well inside one capture matrix over a
-  handful of staff pages. `scripts/dev-server.mjs` restarts it before the kernel does where it can,
-  and `screenshot.mjs` shoots that path again by itself; a kill it cannot come back from is now
-  reported as one, naming how many captures landed, rather than as
-  "Nothing answering — start `pnpm dev` first" (issue #1321). Capture in smaller batches.
-- **Restart with `pnpm dev`, never a bare `next dev`.** A server started over the build state a
-  killed one left serves 404 for the routes that one was compiling, in ~50ms of application code
-  and before any page code runs, until a file change forces Turbopack to recompile. That reads
-  exactly like the change you just made breaking those routes — one session spent most of an hour
-  on it, and a `git checkout` that "fixed" it made a correct change look like the cause. The
-  supervisor now throws that state away before it starts and prints a `dev:` line saying so (issue
-  #1882); a server started any other way needs `rm -rf .next/dev` first.
+Never ship UI you haven't seen; the commands, the probe and the dev-server traps are in
+[look.md](look.md). In light only (dark only for colour work, H-90): `pnpm e2e:build` once, then
+`pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*<capture group>' --reporter=line` (or the
+captures the diff reaches, by the **e2e-and-visual** skill's `--grep` recipe), read the PNGs
+in `e2e/screenshots/` against `docs/design/principles.md`'s checklist, and give every pixel-probe
+flag a verdict. No capture group: `node scripts/screenshot.mjs <path>`. Significant UI: the
+`design-review` skill. Send the screenshots with your report.
 
 ## 4. Behavior changed: exercise it
 
@@ -117,20 +91,9 @@ uncertified diver, a nitrox request with no verified card).
 
 ## 5. File what you're leaving behind
 
-Before you report done, empty your head into GitHub issues — one issue per item, labelled
-`needs-triage` (see [docs/agents/issue-tracker.md](../../../docs/agents/issue-tracker.md)'s "Filing
-a follow-up" section):
+Before you report done:
 
-- the improvement you can see but were not asked for
-- the question whose answer would have changed what you built
-- the risk or latent bug you noticed in nearby code
-- the assumption you made where the other branch deserves a human's look
-- work you started and deliberately stopped (say what is half-done, and where)
-
-Then say in your closing message that you filed them, by issue number. A thought that exists only
-in your final message is gone the moment the session ends — that is the whole reason the tracker
-exists. `pnpm check:follow-ups` will refuse an issue whose prompt is too thin to run cold. Filing is
-never a substitute for the work you were asked to do, and never the answer to a failing test.
+- [filing.md](filing.md) — a bug, safety gap or decision becomes a `needs-triage` issue (ten a run at most), an idea or feature an `idea` issue, anything else a bullet in one "Notes" PR comment; name the issues in your closing message.
 
 ## Report honestly
 

@@ -215,6 +215,25 @@ describe("the chrome bar", () => {
     );
   });
 
+  /**
+   * Issue #2303: the shopfront's bar is two rows below `sm`, the shop's name
+   * above its tabs. The height stays the token: the bar marks itself stacked
+   * and the stylesheet sets the token for two 44px rows only where it finds
+   * the mark, so no other shell's height moves.
+   */
+  it("sets the token for a stacked bar on a phone, and only for a bar that says so", async () => {
+    const css = await read("src/app/globals.css");
+    expect(css).toMatch(
+      /@media \(max-width: 39\.99rem\)\s*\{\s*html:has\(\[data-chrome-stacked\]\)\s*\{\s*--chrome-h:\s*5\.5rem;/,
+    );
+    const bar = await read("src/components/chrome/ChromeBar.tsx");
+    expect(bar).toMatch(/data-chrome-stacked=\{stackedOnPhone \|\| undefined\}/);
+    const shopfront = await read("src/components/PublicShopChrome.tsx");
+    expect(shopfront).toMatch(/<ChromeBar\s+stackedOnPhone\b/);
+    const staff = await read("src/components/ShopNav.tsx");
+    expect(staff).not.toContain("stackedOnPhone");
+  });
+
   it("and the bar carries the marker that selector looks for", async () => {
     const source = await read("src/components/chrome/ChromeBar.tsx");
     expect(source).toMatch(/<header[^>]*\bdata-chrome-bar\b/s);
@@ -257,8 +276,13 @@ describe("the chrome bar", () => {
     expect(theme).toContain("--chrome-h: 3.5rem;");
     // Declared once. A second height is two bars again, wearing one name. The
     // one other declaration is the bar's absence: 0px where the live manifest
-    // hides it (below).
-    expect(css.match(/--chrome-h:[^;]*/g)).toEqual(["--chrome-h: 3.5rem", "--chrome-h: 0px"]);
+    // hides it (below), and the shopfront's two-row phone bar (issue #2303,
+    // `data-chrome-stacked`), which is the same bar with two rows in it.
+    expect(css.match(/--chrome-h:[^;]*/g)).toEqual([
+      "--chrome-h: 3.5rem",
+      "--chrome-h: 5.5rem",
+      "--chrome-h: 0px",
+    ]);
   });
 
   it("pins itself at one height, one edge and one layer", () => {

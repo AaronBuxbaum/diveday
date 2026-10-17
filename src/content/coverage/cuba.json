@@ -1,0 +1,352 @@
+{
+  "area": "cuba",
+  "method": "Cuba's recreational dive areas: María la Gorda and Guanahacabibes, Cayo Levisa, Havana, Varadero and the Bay of Pigs, Isla de la Juventud with Punta Francés, Cayo Largo, Jardines de la Reina and Santa Lucía in Camagüey. No official list exists: the CNAP park pages, Cuba Travel (the Ministry of Tourism portal) and the state dive operators Marlin, Gaviota and Cubanacán name no individual dive sites, only counts (Marlin Colony 39 sites, Cabo de San Antonio 50, Cayo Largo 32, Santa Lucía about 35; checked on the Marlin site through the Wayback Machine and on the Gaviota and Cuba Travel pages). Named lists exist only on private dive and tour operators, so those were read: Varadero Diving Tour, Varadiving Club, Atlantis Varadero, CubaTopTravel, Cuba Tech Travel (a travel agency that sells the Colony dives), and for Jardines de la Reina Avalon (Cuban Diving Centers), All Star Avalon II and Dive The World, which sell the same Avalon fleet and count as one operator. Travel agencies and receptive operators that sell dive packages were counted as operator lists, which is a looser reading than elsewhere, because no dive center in the country publishes its own. A site is counted when named on at least two independent lists. That leaves five counted sites: Coral Beach and the Bay of Pigs shore dive (three Varadero operators) and the three Punta Francés sites on the two Isla de la Juventud agency lists. Jardines de la Reina has a single operator, Avalon, so all its sites are excluded under the counting rule; María la Gorda's sites sit on one agency list and an unofficial guide (cubadiving.org, a personal website that reproduces a 39-site map and was not counted), so they are excluded too; this denominator is therefore a floor, not a census. Magazines, blogs, PADI, EcuRed and travel-guide sites were used for leads only. No list gave coordinates. Counted 2026-10-14.",
+  "sources": [
+    "https://www.cubatoptravel.com/en/destinations-cuba/maria-la-gorda.html",
+    "https://www.varadiving.club/scuba-diving/varadero-cuba/",
+    "https://www.scubaatlantisvaradero.com/diving",
+    "https://www.varaderodivingtour.com/",
+    "https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html",
+    "https://www.cubatechtravel.com/destination/extrahotel/es/2026/centro-de-buceo-colony",
+    "https://cubandivingcenters.com/diving-spots.php",
+    "https://allstarliveaboards.com/cuba-liveaboard-diving/",
+    "https://www.dive-the-world.com/diving-sites-cuba.php",
+    "https://www.varaderodivingtour.com/diving-in-santa-lucia-beach/"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Paraíso Perdido",
+      "template": null,
+      "listedBy": ["https://www.cubatoptravel.com/en/destinations-cuba/maria-la-gorda.html"],
+      "excluded": "on one list only (CubaTopTravel; the Centro Internacional de Buceo María la Gorda publishes no list of its own, and the 39-site map on cubadiving.org is an unofficial guide, not counted)"
+    },
+    {
+      "name": "Ancla del Pirata (María la Gorda)",
+      "template": null,
+      "listedBy": ["https://www.cubatoptravel.com/en/destinations-cuba/maria-la-gorda.html"],
+      "excluded": "on one list only (CubaTopTravel; the Centro Internacional de Buceo María la Gorda publishes no list of its own, and the 39-site map on cubadiving.org is an unofficial guide, not counted)"
+    },
+    {
+      "name": "Las Tetas de María",
+      "template": null,
+      "listedBy": ["https://www.cubatoptravel.com/en/destinations-cuba/maria-la-gorda.html"],
+      "excluded": "on one list only (CubaTopTravel; the Centro Internacional de Buceo María la Gorda publishes no list of its own, and the 39-site map on cubadiving.org is an unofficial guide, not counted)"
+    },
+    {
+      "name": "El Salón de María",
+      "template": null,
+      "listedBy": ["https://www.cubatoptravel.com/en/destinations-cuba/maria-la-gorda.html"],
+      "excluded": "on one list only (CubaTopTravel; the Centro Internacional de Buceo María la Gorda publishes no list of its own, and the 39-site map on cubadiving.org is an unofficial guide, not counted)"
+    },
+    {
+      "name": "El Almirante",
+      "template": null,
+      "listedBy": ["https://www.cubatoptravel.com/en/destinations-cuba/maria-la-gorda.html"],
+      "excluded": "on one list only (CubaTopTravel; the Centro Internacional de Buceo María la Gorda publishes no list of its own, and the 39-site map on cubadiving.org is an unofficial guide, not counted)"
+    },
+    {
+      "name": "Yemayá",
+      "template": null,
+      "listedBy": ["https://www.cubatoptravel.com/en/destinations-cuba/maria-la-gorda.html"],
+      "excluded": "on one list only (CubaTopTravel; the Centro Internacional de Buceo María la Gorda publishes no list of its own, and the 39-site map on cubadiving.org is an unofficial guide, not counted)"
+    },
+    {
+      "name": "El Acuario (María la Gorda)",
+      "template": null,
+      "listedBy": ["https://www.cubatoptravel.com/en/destinations-cuba/maria-la-gorda.html"],
+      "excluded": "on one list only (CubaTopTravel; the Centro Internacional de Buceo María la Gorda publishes no list of its own, and the 39-site map on cubadiving.org is an unofficial guide, not counted)"
+    },
+    {
+      "name": "Jardín de las Gorgonias",
+      "template": null,
+      "listedBy": ["https://www.cubatoptravel.com/en/destinations-cuba/maria-la-gorda.html"],
+      "excluded": "on one list only (CubaTopTravel; the Centro Internacional de Buceo María la Gorda publishes no list of its own, and the 39-site map on cubadiving.org is an unofficial guide, not counted)"
+    },
+    {
+      "name": "El Encanto",
+      "template": null,
+      "listedBy": ["https://www.cubatoptravel.com/en/destinations-cuba/maria-la-gorda.html"],
+      "excluded": "on one list only (CubaTopTravel; the Centro Internacional de Buceo María la Gorda publishes no list of its own, and the 39-site map on cubadiving.org is an unofficial guide, not counted)"
+    },
+    {
+      "name": "Cayo Levisa dive sites",
+      "template": null,
+      "listedBy": [],
+      "excluded": "no named site on any list read (Varadero Diving Tour page names none)"
+    },
+    {
+      "name": "Marina Hemingway and Tarará sites (Havana)",
+      "template": null,
+      "listedBy": [],
+      "excluded": "no named site on any list read (Varadero Diving Tour says 26 sites without naming them)"
+    },
+    {
+      "name": "Coral Beach (Playa Coral)",
+      "template": "coral-beach-varadero",
+      "listedBy": [
+        "https://www.varadiving.club/scuba-diving/varadero-cuba/",
+        "https://www.scubaatlantisvaradero.com/diving",
+        "https://www.varaderodivingtour.com/"
+      ]
+    },
+    {
+      "name": "Bay of Pigs wall (Playa Larga, Playa Girón shore dives)",
+      "template": "bay-of-pigs-wall",
+      "listedBy": [
+        "https://www.varadiving.club/scuba-diving/varadero-cuba/",
+        "https://www.scubaatlantisvaradero.com/diving",
+        "https://www.varaderodivingtour.com/"
+      ]
+    },
+    {
+      "name": "Neptuno Wreck",
+      "template": null,
+      "listedBy": ["https://www.varadiving.club/scuba-diving/varadero-cuba/"],
+      "excluded": "on one list only (Varadiving Club)"
+    },
+    {
+      "name": "Caribe Wreck",
+      "template": null,
+      "listedBy": ["https://www.varadiving.club/scuba-diving/varadero-cuba/"],
+      "excluded": "on one list only (Varadiving Club)"
+    },
+    {
+      "name": "Sletrea Wreck",
+      "template": null,
+      "listedBy": ["https://www.varadiving.club/scuba-diving/varadero-cuba/"],
+      "excluded": "on one list only (Varadiving Club)"
+    },
+    {
+      "name": "Cayo Piedra reef (Cayo Piedras del Norte)",
+      "template": null,
+      "listedBy": ["https://www.varadiving.club/scuba-diving/varadero-cuba/"],
+      "excluded": "on one list only (Varadiving Club)"
+    },
+    {
+      "name": "Clara Boyas 1",
+      "template": null,
+      "listedBy": ["https://www.varadiving.club/scuba-diving/varadero-cuba/"],
+      "excluded": "on one list only (Varadiving Club)"
+    },
+    {
+      "name": "Clara Boyas 2",
+      "template": null,
+      "listedBy": ["https://www.varadiving.club/scuba-diving/varadero-cuba/"],
+      "excluded": "on one list only (Varadiving Club)"
+    },
+    {
+      "name": "Saturno Cave",
+      "template": null,
+      "listedBy": ["https://www.varaderodivingtour.com/"],
+      "excluded": "cave, snorkel and cavern excursion on one list only (Varadero Diving Tour)"
+    },
+    {
+      "name": "La Cueva de los Peces (Playa Larga cenote)",
+      "template": null,
+      "listedBy": [],
+      "excluded": "cave dive beyond the cavern zone, not on an operator list read"
+    },
+    {
+      "name": "Pared de Coral Negro (Punta Francés)",
+      "template": null,
+      "listedBy": [
+        "https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html",
+        "https://www.cubatechtravel.com/destination/extrahotel/es/2026/centro-de-buceo-colony"
+      ]
+    },
+    {
+      "name": "Túnel del Amor (Punta Francés)",
+      "template": null,
+      "listedBy": [
+        "https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html",
+        "https://www.cubatechtravel.com/destination/extrahotel/es/2026/centro-de-buceo-colony"
+      ]
+    },
+    {
+      "name": "Cueva Azul (Punta Francés)",
+      "template": null,
+      "listedBy": [
+        "https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html",
+        "https://www.cubatechtravel.com/destination/extrahotel/es/2026/centro-de-buceo-colony"
+      ]
+    },
+    {
+      "name": "El Pasaje Escondido",
+      "template": null,
+      "listedBy": ["https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html"],
+      "excluded": "on one list only (CubaTopTravel)"
+    },
+    {
+      "name": "Cueva de los Sábalos",
+      "template": null,
+      "listedBy": ["https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html"],
+      "excluded": "on one list only (CubaTopTravel)"
+    },
+    {
+      "name": "Piedra de Coral",
+      "template": null,
+      "listedBy": ["https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html"],
+      "excluded": "on one list only (CubaTopTravel)"
+    },
+    {
+      "name": "El Salto",
+      "template": null,
+      "listedBy": ["https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html"],
+      "excluded": "on one list only (CubaTopTravel)"
+    },
+    {
+      "name": "Ancla del Pirata (Punta Francés)",
+      "template": null,
+      "listedBy": ["https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html"],
+      "excluded": "on one list only (CubaTopTravel)"
+    },
+    {
+      "name": "Paraíso de las Levisas",
+      "template": null,
+      "listedBy": ["https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html"],
+      "excluded": "on one list only (CubaTopTravel)"
+    },
+    {
+      "name": "Pequeño Reino",
+      "template": null,
+      "listedBy": ["https://cubatoptravel.com/en/destinations-cuba/isla-juventud.html"],
+      "excluded": "on one list only (CubaTopTravel)"
+    },
+    {
+      "name": "Pipín (Jardines de la Reina)",
+      "template": null,
+      "listedBy": [
+        "https://cubandivingcenters.com/diving-spots.php",
+        "https://allstarliveaboards.com/cuba-liveaboard-diving/",
+        "https://www.dive-the-world.com/diving-sites-cuba.php"
+      ],
+      "excluded": "Avalon and its resellers count as one operator; the park has no second operator and no published park list"
+    },
+    {
+      "name": "Farallón",
+      "template": null,
+      "listedBy": [
+        "https://cubandivingcenters.com/diving-spots.php",
+        "https://allstarliveaboards.com/cuba-liveaboard-diving/",
+        "https://www.dive-the-world.com/diving-sites-cuba.php"
+      ],
+      "excluded": "Avalon and its resellers count as one operator; the park has no second operator and no published park list"
+    },
+    {
+      "name": "Vicente",
+      "template": null,
+      "listedBy": [
+        "https://cubandivingcenters.com/diving-spots.php",
+        "https://www.dive-the-world.com/diving-sites-cuba.php"
+      ],
+      "excluded": "Avalon and its resellers count as one operator; the park has no second operator and no published park list"
+    },
+    {
+      "name": "Black Coral I and II",
+      "template": null,
+      "listedBy": [
+        "https://cubandivingcenters.com/diving-spots.php",
+        "https://www.dive-the-world.com/diving-sites-cuba.php"
+      ],
+      "excluded": "Avalon and its resellers count as one operator; the park has no second operator and no published park list"
+    },
+    {
+      "name": "Five Seas",
+      "template": null,
+      "listedBy": ["https://allstarliveaboards.com/cuba-liveaboard-diving/"],
+      "excluded": "Avalon and its resellers count as one operator (All Star Avalon II only)"
+    },
+    {
+      "name": "Cueva del Pulpo",
+      "template": null,
+      "listedBy": ["https://allstarliveaboards.com/cuba-liveaboard-diving/"],
+      "excluded": "Avalon and its resellers count as one operator (All Star Avalon II only)"
+    },
+    {
+      "name": "Snapper Head",
+      "template": null,
+      "listedBy": ["https://allstarliveaboards.com/cuba-liveaboard-diving/"],
+      "excluded": "Avalon and its resellers count as one operator (All Star Avalon II only)"
+    },
+    {
+      "name": "Caballos",
+      "template": null,
+      "listedBy": ["https://allstarliveaboards.com/cuba-liveaboard-diving/"],
+      "excluded": "Avalon and its resellers count as one operator (All Star Avalon II only)"
+    },
+    {
+      "name": "Pepper Farms",
+      "template": null,
+      "listedBy": ["https://allstarliveaboards.com/cuba-liveaboard-diving/"],
+      "excluded": "Avalon and its resellers count as one operator (All Star Avalon II only)"
+    },
+    {
+      "name": "Anclitas",
+      "template": null,
+      "listedBy": ["https://www.dive-the-world.com/diving-sites-cuba.php"],
+      "excluded": "Avalon and its resellers count as one operator (Dive The World only)"
+    },
+    {
+      "name": "Boca de Amortiguada",
+      "template": null,
+      "listedBy": ["https://www.dive-the-world.com/diving-sites-cuba.php"],
+      "excluded": "Avalon and its resellers count as one operator (Dive The World only)"
+    },
+    {
+      "name": "Cabeza de la Cubera",
+      "template": null,
+      "listedBy": ["https://www.dive-the-world.com/diving-sites-cuba.php"],
+      "excluded": "Avalon and its resellers count as one operator (Dive The World only)"
+    },
+    {
+      "name": "El Faro (Jardines de la Reina)",
+      "template": null,
+      "listedBy": ["https://www.dive-the-world.com/diving-sites-cuba.php"],
+      "excluded": "Avalon and its resellers count as one operator (Dive The World only)"
+    },
+    {
+      "name": "El Galeón",
+      "template": null,
+      "listedBy": ["https://www.dive-the-world.com/diving-sites-cuba.php"],
+      "excluded": "Avalon and its resellers count as one operator (Dive The World only)"
+    },
+    {
+      "name": "La Cueva (Jardines de la Reina)",
+      "template": null,
+      "listedBy": ["https://www.dive-the-world.com/diving-sites-cuba.php"],
+      "excluded": "Avalon and its resellers count as one operator (Dive The World only)"
+    },
+    {
+      "name": "Tortuga (Jardines de la Reina)",
+      "template": null,
+      "listedBy": ["https://www.dive-the-world.com/diving-sites-cuba.php"],
+      "excluded": "Avalon and its resellers count as one operator (Dive The World only)"
+    },
+    {
+      "name": "Poseidón I to VI (Santa Lucía)",
+      "template": null,
+      "listedBy": ["https://www.varaderodivingtour.com/diving-in-santa-lucia-beach/"],
+      "excluded": "on one list only (Varadero Diving Tour)"
+    },
+    {
+      "name": "Nuestra Señora Virgen de Altagracia (Santa Lucía wreck)",
+      "template": null,
+      "listedBy": ["https://www.varaderodivingtour.com/diving-in-santa-lucia-beach/"],
+      "excluded": "on one list only (Varadero Diving Tour)"
+    },
+    {
+      "name": "Mortera (Santa Lucía wreck)",
+      "template": null,
+      "listedBy": ["https://www.varaderodivingtour.com/diving-in-santa-lucia-beach/"],
+      "excluded": "on one list only (Varadero Diving Tour)"
+    },
+    {
+      "name": "Punto de los Tiburones (Santa Lucía bull-shark site)",
+      "template": null,
+      "listedBy": ["https://www.varaderodivingtour.com/diving-in-santa-lucia-beach/"],
+      "excluded": "on one list only (Varadero Diving Tour)"
+    }
+  ]
+}

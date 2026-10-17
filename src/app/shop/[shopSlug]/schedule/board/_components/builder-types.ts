@@ -102,6 +102,8 @@ export type BuilderCopy = {
   noPriceSet: string;
   noPriceSetAria: string;
   noPriceSetAll: string;
+  /** The mark a rehearsal departure wears on the board. */
+  rehearsal: string;
   /** What a week's day with nothing on it says (slice 23f). */
   noBoats: string;
   /** "{first} to {last}": days gone by with no boats, as one row. */
@@ -157,6 +159,14 @@ export type BuilderCopy = {
   impactCrewClash: string;
   impactCrewAway: string;
   /**
+   * A tight turnaround (issue #2141): advice, one line per near miss, under the
+   * clash lines. The hull's takes `{boat}`, `{minutes}` and `{departure}`; the
+   * crew member's takes `{name}` in place of `{boat}`. Minutes as "min", so no
+   * plural pair.
+   */
+  impactTurnaroundBoat: string;
+  impactTurnaroundCrew: string;
+  /**
    * The hull already out on another departure at those hours (H-80: one hull,
    * one departure at a time). Takes `{boat}` and `{departure}`; one line per
    * other departure, so no plural pair.
@@ -175,6 +185,8 @@ export type BuilderCopy = {
   impactBlockedNotScheduled: string;
   copyTo: string;
   copyDescription: string;
+  /** "Same crew", the copy panel's ticked box (item 53). */
+  copySameCrew: string;
   departureTime: string;
   copying: string;
   copyIt: string;
@@ -197,6 +209,8 @@ export type BuilderCopy = {
   selfGuidedHint: string;
   daysLabel: string;
   daysDescription: string;
+  /** "Day {number}" over each later day's date box (third UX review, item 10). */
+  meetingDayLabel: string;
   payAtBookingLegend: string;
   payAtBookingDescription: string;
   depositLabel: string;
@@ -319,4 +333,15 @@ export type BuilderMoreOptions = {
   maxDays: number;
   /** The per-dive cards' own words, shared with the trip editor. */
   diveFields: TripDiveFieldsCopy;
+};
+
+/** One day the divers asked for, and the act that answers it. */
+export type WeekAsk = {
+  dateIso: string;
+  /** "Wed, Sep 2 · four people" — the date and the heads, already pluralised. */
+  lead: string;
+  /** Who asked, in the reader's own list grammar. */
+  who: string;
+  /** The builder, opened on that day with these leads carried forward. */
+  href: string;
 };

@@ -5,7 +5,12 @@
       "packingSaved": "Packing checklist saved for every trip.",
       "packingInvalid": "Add between one and twelve packing items.",
       "dockSaved": "Dock call time saved for every confirmation and reminder.",
+      "pickupSaved": "Saved. Divers are asked about a pickup only when this is on.",
+      "deskPaymentSaved": "Saved. Every seat due at the shop says how to pay.",
+      "deskPaymentInvalid": "Nothing changed: choose card, cash, card and cash, or don’t say.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
+      "turnaroundSaved": "Turnaround saved.",
+      "turnaroundInvalid": "Enter a turnaround between 0 and 240 minutes.",
       "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "taxSaved": "Tax setting saved.",
@@ -46,9 +51,15 @@
       "seasonSaved": "Season start saved.",
       "seasonInvalid": "Pick a day that month has.",
       "reopensSaved": "Saved. Your public page names this date while its schedule is quiet.",
-      "reopensInvalid": "That isn’t a date on the calendar. Pick one from the box.",
+      "reopensInvalid": "That date isn’t one we can post. Pick one within the next 18 months.",
       "timezoneInvalid": "That isn’t a timezone we recognize. Pick one from the list.",
       "emergencySaved": "Emergency reference saved.",
+      "shoreAlertInvalid": "That shore contact email isn’t an address. Nothing was saved.",
+      "shoreAlertConsentMissing": "Tick that the shore contact agreed to get roll-call alerts at this address; for a new address, tick it again. Nothing was saved.",
+      "shoreAlertConfirmationSent": "Saved. We emailed the shore contact a link; alerts start once they confirm.",
+      "shoreAlertConfirmationNotSent": "Saved, but the confirmation link didn’t go. Try “Send the link again” in a few minutes.",
+      "shoreAlertSavedDemo": "Saved. Demo shops send nothing, so no link went.",
+      "shoreAlertCleared": "Shore contact’s email removed. It gets no more roll-call alerts.",
       "packageSaved": "Package added.",
       "packageDeleted": "Package deleted.",
       "packageInvalid": "That didn’t save. Check the number of dives, the price, and how long it stays usable."
@@ -123,7 +134,7 @@
       "tagline": "Tagline",
       "taglinePlaceholder": "e.g. Diving Key Largo & the Florida Keys since 2012",
       "descriptionLabel": "About your shop",
-      "descriptionPlaceholder": "A short introduction to your shop, boats, crew, or local diving...",
+      "descriptionPlaceholder": "A short introduction to your shop, boats, crew, or local diving…",
       "logo": "Shop logo",
       "logoHint": "PNG, JPG, or WebP. Square image recommended.",
       "removeLogo": "Remove current logo",
@@ -222,6 +233,22 @@
       "submitting": "Saving…",
       "value": "{count, plural, one {# item} other {# items}}"
     },
+    "pickup": {
+      "label": "We offer hotel pickup",
+      "description": "When on, each diver’s page asks whether they want a pickup and where they’re staying.",
+      "submit": "Save pickup",
+      "submitting": "Saving…"
+    },
+    "deskPayment": {
+      "legend": "How divers pay at the desk",
+      "description": "Said wherever a seat is due at the shop: the booking form, the confirmation and the diver’s page.",
+      "none": "Don’t say",
+      "card": "Card",
+      "cash": "Cash",
+      "card_and_cash": "Card and cash",
+      "submit": "Save how divers pay",
+      "submitting": "Saving…"
+    },
     "dockCall": {
       "heading": "Dock-day rhythm",
       "description": "Every number here is in minutes.",
@@ -252,6 +279,11 @@
       "atDeparture": "On time",
       "siteOverrides": "{count, plural, one {# dive site sets its own time in the water, so this rhythm doesn’t describe a dive there:} other {# dive sites set their own time in the water, so this rhythm doesn’t describe a dive at any of them:}}",
       "siteOverride": "{name} · {count} min"
+    },
+    "turnaround": {
+      "label": "Turnaround between departures",
+      "description": "Moving a departure warns when a boat, or crew leaving from another meeting point, gets less than this. 0 turns it off.",
+      "submit": "Save turnaround"
     },
     "units": {
       "heading": "Units",
@@ -294,7 +326,7 @@
       "notice": "The rental catalog, rental prices, and Stripe connection are limited to owners and managers. The settings above are open to all staff."
     },
     "rentals": {
-      "heading": "What we rent",
+      "heading": "Rentals",
       "detail": "Tick what you rent. Unticked gear leaves the kit form, and fits that already ask for it stay on the prep list, marked.",
       "legend": "Rentable gear and services",
       "submit": "Save rental catalog",
@@ -363,16 +395,18 @@
     },
     "certCheck": {
       "heading": "Certification checks",
-      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and marks the certification certified when the agency shows it. It checks SSI, NAUI, SDI, GUE and CMAS, in Chrome or Edge on a computer.",
-      "added": "Added to this browser",
+      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and, when the agency shows the certification, marks it certified in that staffer’s name, as Mark certified would. It checks SSI, NAUI, SDI, GUE and CMAS, and PADI once “PADI checks (beta)” in Bookings & waivers is on, in Chrome or Edge on a computer.",
+      "added": "Added to this browser ({version})",
       "notAdded": "Not added",
+      "outdated": "Update the extension: this browser has {version}, DiveDay needs {minimum}.",
+      "try": "Try the checks",
       "install": "Add to Chrome"
     },
     "integrations": {
       "heading": "Shop integrations"
     },
     "support": {
-      "description": "A bad morning at the counter, a feature you’re missing, a bug. Write in any time.",
+      "description": "Write in any time: a bad morning at the counter, a feature you’re missing or a bug.",
       "emailCta": "Email {email}"
     },
     "groups": {
@@ -382,8 +416,7 @@
       "bookingsWaivers": "Bookings & waivers",
       "rentals": "Rentals",
       "money": "Money",
-      "messages": "Messages",
-      "notifications": "Notifications",
+      "reach": "How divers reach you",
       "website": "Website",
       "data": "Data",
       "account": "Account",
@@ -428,6 +461,11 @@
         "heading": "Our year",
         "label": "Show “Our year” on your schedule",
         "description": "The year so far in counts at the foot of your public schedule: divers, boats out, and sites. Never money. Off until you turn it on."
+      },
+      "padiChecks": {
+        "heading": "PADI checks (beta)",
+        "label": "Check PADI certifications and eLearning with the extension",
+        "description": "Beta: nobody has tried this on PADI’s real DiveChek page yet, and PADI hasn’t said yes or no to an extension filling it in. It runs in a browser where one of your PADI Pros is signed in to the Pros’ Site, under that Pro’s membership. Off, the link to the Pros’ Site stays. An owner or manager can turn it on."
       }
     },
     "crewSchedule": {
@@ -447,7 +485,7 @@
       "heading": "Dive sites"
     },
     "waivers": {
-      "heading": "Waiver template"
+      "heading": "Waivers and signed records"
     },
     "safetyChecklist": {
       "heading": "Pre-departure checklist"
@@ -483,7 +521,12 @@
       "processorErasures": {
         "sectionLabel": "Erasures not finished at Stripe",
         "heading": "{count, plural, one {# record} other {# records}} from an erased diver still at Stripe",
-        "detail": "Erasing a diver also deletes their Stripe customer. These didn’t finish. A customer record retries on its own tonight. An invoice or a payment page can’t: only a data-deletion request to Stripe clears the name and email it copied. File one, then mark it done.",
+        "detail": "Erased in DiveDay, not yet at Stripe.",
+        "todo": {
+          "stripe_customer": "Retries on its own tonight, or retry now.",
+          "stripe_invoice_snapshot": "File a data-deletion request with Stripe, then mark it done.",
+          "stripe_checkout_session_snapshot": "File a data-deletion request with Stripe, then mark it done."
+        },
         "raised": "raised {date}",
         "retry": "Retry delete",
         "retrying": "Retrying…",
@@ -507,7 +550,21 @@
       "lineExamples": "Chamber, dive-accident hotline, coast guard…",
       "phoneLabel": "Number {n}",
       "vesselLabel": "Vessel",
+      "vesselHint": "Printed only on departures with no boat. Each boat’s call sign and MMSI go in Boats.",
       "shoreContactLabel": "Shore contact",
+      "shoreContactDescription": "A name and number the crew reads. DiveDay never messages this line.",
+      "shoreAlertEmailLabel": "Shore contact’s email for roll-call alerts",
+      "shoreAlertEmailDescription": "If a roll call is still open after the boat was due back, this address gets one email for that departure, with no names. It is sent a link to confirm first, and nothing goes until they do.",
+      "shoreAlertConsent": "They agreed to get these alerts",
+      "shoreAlertConsentRecorded": "Recorded {when} by {name}",
+      "shoreAlertConsentRecordedNoName": "Recorded {when}",
+      "shoreAlertConfirmed": "They confirmed {when}.",
+      "shoreAlertWaiting": "Waiting for them to confirm. Send the link again if they didn’t get it.",
+      "shoreAlertPhone": "Alerts tell them to call {phone}.",
+      "shoreAlertNoPhone": "No shop phone on file, so alerts give them no number to call.",
+      "shoreAlertResend": "Send the link again",
+      "shoreAlertResending": "Sending…",
+      "shoreAlertDemo": "Demo shops send nothing: no link and no alerts.",
       "planLabel": "If something goes wrong",
       "submit": "Save emergency reference",
       "saving": "Saving…"
@@ -526,11 +583,13 @@
       "submit": "Add package",
       "submitting": "Adding…",
       "delete": "Delete",
-      "deleting": "Deleting…"
+      "deleting": "Deleting…",
+      "owed": "Dives owed on packages: {dives, number} ({value})"
     }
   },
   "team": {
     "title": "Team",
+    "unnamedInviter": "A teammate",
     "notice": {
       "invited": "Invite sent.",
       "inviteResent": "Invite resent.",
@@ -612,8 +671,11 @@
       "label": "Emergency contact",
       "addValue": "Add"
     },
-    "languagesEmpty": "Not set",
-    "publicNameSeen": "Divers see “{name}”, agreed on {date}"
+    "publicNameSeen": "Divers see “{name}”, agreed on {date}",
+    "year": {
+      "certified": "{count, plural, one {# certification issued this year} other {# certifications issued this year}}",
+      "daysAtSea": "{count, plural, one {# day at sea} other {# days at sea}}"
+    }
   },
   "safetyChecklist": {
     "title": "Pre-departure checklist",
@@ -623,8 +685,9 @@
       "title": "Nothing on the list yet",
       "body": "Add the first line below. The crew sees it on every departure’s manifest."
     },
+    "defaultLine": "O2 kit aboard and cylinder full",
     "addLabel": "New line",
-    "addPlaceholder": "Emergency oxygen kit aboard",
+    "addPlaceholder": "Life jackets counted, one per person",
     "addSubmit": "Add",
     "delete": "Delete",
     "moveUp": "Move up",
@@ -1066,5 +1129,27 @@
     "partnerLinkField": "Referral link",
     "showRequired": "Pick the departure this card is for.",
     "fromFareharbor": "Switching from FareHarbor? <link>See which embed replaces each of its widgets</link>."
+  },
+  "certChecks": {
+    "title": "Try the checks",
+    "description": "Sample pages in this browser only: no agency is searched, and no diver’s details leave it.",
+    "run": "Run the checks",
+    "running": "Running…",
+    "extension": "Extension",
+    "samples": "Sample lookups",
+    "padi": "PADI Pros’ Site",
+    "report": "Session report",
+    "passed": "Passed",
+    "failed": "Failed",
+    "notListed": "Not in this copy",
+    "signedIn": "Signed in",
+    "signedOut": "Signed out",
+    "noTab": "No PADI tab open",
+    "noAnswer": "No answer",
+    "noAccess": "Not allowed on PADI’s site",
+    "allowSite": "Chrome keeps the extension off {agency}’s site. Turn it on in Extensions, DiveDay certification check, Details, Site access.",
+    "failedNext": "Send us the report below.",
+    "reportHint": "Copy it, then paste it into an email to us.",
+    "copy": "Copy report"
   }
 }

@@ -1,0 +1,104 @@
+import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
+import { forgivingCopy } from "@/components/ui/forgiving-copy";
+import { controlClass, Field, FieldGrid, PriceField, textareaClassFor } from "@/components/ui/form";
+import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { ShopCurrency } from "@/lib/money";
+import type { EditableCourse } from "./course-types";
+
+/** The editor's pitch and pricing sections. */
+export function CoursePitchPricingSections({
+  course,
+  pitch,
+  pricing,
+  currency,
+  locale,
+  t,
+}: {
+  course: EditableCourse;
+  pitch: EditorSectionRef;
+  pricing: EditorSectionRef;
+  currency: ShopCurrency;
+  locale: string;
+  t: StaffTranslator;
+}) {
+  return (
+    <>
+      <EditorSection {...pitch} as="fieldset" lead>
+        <FieldGrid columns={1} className="gap-y-5">
+          <Field
+            label={t("courses.edit.subheadLabel")}
+            description={t("courses.edit.subheadDescription")}
+          >
+            <input
+              id="summary"
+              name="summary"
+              maxLength={200}
+              defaultValue={course.summary ?? ""}
+              className={controlClass}
+            />
+          </Field>
+          <Field
+            label={t("courses.edit.overviewLabel")}
+            description={t("courses.edit.overviewDescription")}
+          >
+            <textarea
+              id="overview"
+              name="overview"
+              rows={8}
+              maxLength={6000}
+              defaultValue={course.overview ?? ""}
+              className={textareaClassFor(8)}
+            />
+          </Field>
+          {/* Beside the boxes it governs rather than in a panel above the
+                  whole form: a depth marker is typed into this section's prose,
+                  and it is the one piece of syntax this editor asks a shop to
+                  learn. Unboxed, like everything else in a section now. */}
+          <p className="text-sm text-muted">
+            {t.rich("courses.edit.depthMarkersHint", {
+              marker: (chunks) => (
+                <code className="rounded bg-surface-sunken px-1 font-mono text-xs text-foreground">
+                  {chunks}
+                </code>
+              ),
+            })}
+          </p>
+        </FieldGrid>
+      </EditorSection>
+
+      <EditorSection as="fieldset" {...pricing} description={t("courses.edit.pricingDescription")}>
+        <FieldGrid columns={2} className="gap-y-5">
+          <PriceField
+            id="price"
+            name="price"
+            label={t("courses.edit.instructionFeeLabel")}
+            cents={course.priceCents}
+            currency={currency}
+            locale={locale}
+            copy={forgivingCopy(t)}
+          />
+          <PriceField
+            id="eLearningPrice"
+            name="eLearningPrice"
+            label={t("courses.edit.eLearningFeeLabel")}
+            hint={t("courses.edit.eLearningFeeHint")}
+            cents={course.eLearningPriceCents}
+            currency={currency}
+            locale={locale}
+            copy={forgivingCopy(t)}
+          />
+          <PriceField
+            id="privatePrice"
+            name="privatePrice"
+            label={t("courses.edit.privatePriceLabel")}
+            hint={t("courses.edit.privatePriceHint")}
+            cents={course.privatePriceCents}
+            currency={currency}
+            locale={locale}
+            copy={forgivingCopy(t)}
+          />
+        </FieldGrid>
+      </EditorSection>
+    </>
+  );
+}

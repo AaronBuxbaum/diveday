@@ -60,7 +60,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { default: CourseFormsPage } = await import("./page");
-const { saveNoteFromReady } = await import("../day-of-actions");
+const { saveDayOfDetailsFromReady } = await import("../day-of-actions");
 const { signCourseFormFromReady } = await import("../paperwork-actions");
 
 afterEach(() => vi.clearAllMocks());
@@ -113,7 +113,12 @@ async function enrolled(options: { forms?: number; dateOfBirth?: string } = {}) 
     });
     formIds.push(form.id);
   }
-  await setCourseFormRequirements(db, { shopId: shop.id, courseId: seat.courseId, formIds });
+  await setCourseFormRequirements(db, {
+    mayNarrow: true,
+    shopId: shop.id,
+    courseId: seat.courseId,
+    formIds,
+  });
   const issued = await issueBookingCapability(db, {
     shopId: shop.id,
     bookingId: seat.bookingId,
@@ -163,7 +168,7 @@ describe("the course-form page", () => {
 
     expect(html).toContain("Course form 1");
     expect(html).toContain("Form 1 of 2");
-    expect(html).toContain(BODY.replace("'", "&#x27;"));
+    expect(html).toContain(BODY.replaceAll("'", "&#x27;"));
     expect(html).toContain(`As booked: ${ctx.seat.fullName}`);
     // An adult signs alone: no guardian card.
     expect(html).not.toContain('name="guardianName"');
@@ -425,7 +430,7 @@ describe("the forms-only link", () => {
     formData.set("note", "Written with a forms-only link");
     let to = "";
     try {
-      await saveNoteFromReady(token, formData);
+      await saveDayOfDetailsFromReady(token, formData);
     } catch (error) {
       to = error instanceof Error ? error.message : "";
     }
@@ -443,7 +448,7 @@ describe("the forms-only link", () => {
     const html = await rendered(token);
     expect(html).toContain("This link no longer works");
     expect(html).toContain(
-      `Ask ${ctx.shop.name.replace("'", "&#x27;")} to send your course forms again.`,
+      `Ask ${ctx.shop.name.replaceAll("'", "&#x27;")} to send your course forms again.`,
     );
     expect(html).not.toContain("Course form 1");
   });

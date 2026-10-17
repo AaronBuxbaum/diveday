@@ -2,14 +2,20 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { moduleIndex } from "./symbol-reach.mjs";
 import {
   captureSpans,
+  changedLines,
+  changedMessageKeys,
   changedRoutes,
   covers,
   FULL_SHARDS,
   filterReport,
   helperBodies,
+  lightGrep,
   literalPaths,
+  messageConsumers,
+  packageJsonReach,
   SMOKE,
   selectCaptures,
   shardCount,
@@ -142,7 +148,6 @@ describe("what a pull request captures", () => {
       ["next.config.ts"],
       ["scripts/visual-compare.mjs"],
       [".github/workflows/ci.yml"],
-      ["src/lib/orphan.ts"],
       ["src/lib/deleted.ts"],
     ]) {
       expect(picked(changed).mode, changed[0]).toBe("all");
@@ -159,8 +164,328 @@ describe("what a pull request captures", () => {
         "e2e/booking.spec.ts",
         "scripts/verify-push.mjs",
         ".github/workflows/durations-refresh.yml",
+        "drizzle/20261014024814_date-request-handled/migration.sql",
+        "drizzle/meta/_journal.json",
+        "src/db/__snapshots__/export-bundle.shop.snap",
+        ".gitignore",
+        ".env.example",
+        "pnpm-lock.yaml",
+        "vercel.json",
+        "e2e/fixtures/booking-party.spec.ts",
+        "src/lib/orphan.ts",
+        ".coderabbit.yaml",
+        ".agents/skills/tdd/SKILL.md",
+        ".gitattributes",
       ]),
     ).toHaveLength(2);
+    // Imported by next.config.ts and src/, so never inert.
+    expect(picked(["config/env-registry.mjs"]).mode).toBe("all");
+  });
+});
+
+/** A small tree read by name: a page, a layout, a label module, the proxy and the seed. */
+const tree = new Map([
+  [
+    "src/app/shop/[shopSlug]/gear/page.tsx",
+    [
+      'import { gearTitle } from "@/lib/gear";',
+      'import { t } from "@/i18n";',
+      "export default function Page() {",
+      '  return <h1>{gearTitle()} {t("gear.register.heading")}</h1>;',
+      "}",
+    ].join("\n"),
+  ],
+  [
+    "src/app/shop/[shopSlug]/layout.tsx",
+    [
+      'import { chromeLabel } from "@/lib/gear";',
+      "export default function Layout() {",
+      "  return chromeLabel();",
+      "}",
+    ].join("\n"),
+  ],
+  [
+    "src/app/s/[shopSlug]/courses/[slug]/page.tsx",
+    [
+      'import { courseTitle } from "@/lib/courses";',
+      "export default function Page() {",
+      "  return courseTitle();",
+      "}",
+    ].join("\n"),
+  ],
+  [
+    "src/lib/gear.ts",
+    [
+      'import { slugify } from "./text";', // 1
+      "", // 2
+      "export function gearTitle() {", // 3
+      '  return slugify("gear");', // 4
+      "}", // 5
+      "", // 6
+      "export function chromeLabel() {", // 7
+      '  return "chrome";', // 8
+      "}", // 9
+    ].join("\n"),
+  ],
+  ["src/lib/courses.ts", 'export function courseTitle() {\n  return "course";\n}'],
+  ["src/lib/text.ts", "export function slugify(s) {\n  return s;\n}"],
+  ["src/lib/orphan.ts", "export const unused = 1;"],
+  ["src/i18n/index.ts", "export function t(key) {\n  return key;\n}"],
+  ["src/proxy.ts", 'import { courseTitle } from "@/lib/courses";\nexport const x = courseTitle;'],
+  ["src/db/seed.ts", 'import { slugify } from "@/lib/text";\nexport const seed = slugify;'],
+]);
+
+const bySymbol = (changed, context = {}) => {
+  const modules = moduleIndex(tree);
+  const graph = new Map([...tree.keys()].map((file) => [file, new Set()]));
+  return changedRoutes(changed, graph, { modules, sources: tree, ...context });
+};
+
+describe("following an edit name by name", () => {
+  it("reaches only the pages that read the function whose lines changed", () => {
+    const lines = new Map([["src/lib/gear.ts", new Set([8])]]);
+    expect(bySymbol(["src/lib/gear.ts"], { lines }).routes).toEqual([
+      { route: "/shop/[shopSlug]", broad: true },
+    ]);
+    const other = new Map([["src/lib/gear.ts", new Set([4])]]);
+    expect(bySymbol(["src/lib/gear.ts"], { lines: other }).routes).toEqual([
+      { route: "/shop/[shopSlug]/gear", broad: false },
+    ]);
+  });
+
+  it("moves nothing for a comment, or for a module no page reads", () => {
+    const lines = new Map([["src/lib/gear.ts", new Set([2])]]);
+    expect(bySymbol(["src/lib/gear.ts"], { lines }).routes).toEqual([]);
+    expect(bySymbol(["src/lib/orphan.ts"]).routes).toEqual([]);
+  });
+
+  it("captures everything when an edit reaches the proxy or the seed", () => {
+    expect(bySymbol(["src/lib/courses.ts"]).all).toMatch(/src\/proxy\.ts/);
+    const lines = new Map([["src/lib/text.ts", new Set([2])]]);
+    expect(bySymbol(["src/lib/text.ts"], { lines }).all).toMatch(/src\/db\/seed\.ts/);
+  });
+
+  it("maps a reworded message to the module that names it, and drops a removed one", () => {
+    const bundle = (value, extra = {}) =>
+      JSON.stringify({ register: { heading: value, ...extra } });
+    const file = "src/i18n/locales/en-US/staff/gear.json";
+    const reworded = bySymbol([file], {
+      before: () => bundle("Gear"),
+      after: () => bundle("Your gear"),
+    });
+    expect(reworded.routes).toEqual([{ route: "/shop/[shopSlug]/gear", broad: false }]);
+    const removed = bySymbol([file], {
+      before: () => bundle("Gear", { old: "Gone" }),
+      after: () => bundle("Gear"),
+    });
+    expect(removed.routes).toEqual([]);
+  });
+
+  it("maps a public asset to the module that names its path, or its folder", () => {
+    const sources = new Map([
+      ...tree,
+      ["src/lib/photos.ts", "export const photo = (slug) => `/marine-life/${slug}.jpg`;"],
+      ["src/app/globals.css", ".hero { background: url(/hero/reef.jpg); }"],
+    ]);
+    expect(bySymbol(["public/marine-life/turtle.jpg"], { sources }).routes).toEqual([]);
+    expect(bySymbol(["public/hero/reef.jpg"], { sources }).all).toMatch(/globals\.css/);
+  });
+
+  it("reads package.json for what renders", () => {
+    const pkg = (fields) => JSON.stringify({ name: "diveday", ...fields });
+    expect(
+      packageJsonReach(
+        pkg({ scripts: { lint: "biome" }, devDependencies: { vitest: "1" } }),
+        pkg({ scripts: { lint: "biome check" }, devDependencies: { vitest: "2" } }),
+      ),
+    ).toBeNull();
+    expect(
+      packageJsonReach(
+        pkg({ devDependencies: { next: "16.0.0" } }),
+        pkg({ devDependencies: { next: "16.1.0" } }),
+      ),
+    ).toMatch(/next/);
+    expect(
+      packageJsonReach(pkg({ dependencies: { a: "1" } }), pkg({ dependencies: { a: "2" } })),
+    ).toMatch(/dependencies/);
+    expect(
+      packageJsonReach(
+        pkg({ scripts: { "e2e:build": "a" } }),
+        pkg({ scripts: { "e2e:build": "b" } }),
+      ),
+    ).toMatch(/e2e:build/);
+  });
+
+  it("names a key's readers whether written out, templated or scoped", () => {
+    const sources = new Map([
+      ["a.ts", 't("shopHome.spine.quietSentence")'],
+      ["b.ts", "t(`spine.${kind}`)"],
+      ["c.ts", 'useTranslations("shopHome.spine"); t("quietSentence")'],
+      ["d.ts", 't("quietSentence")'],
+    ]);
+    expect([...messageConsumers("shopHome.spine.quietSentence", sources).keys()]).toEqual([
+      "a.ts",
+      "b.ts",
+      "c.ts",
+    ]);
+    expect(
+      changedMessageKeys(
+        "src/i18n/locales/en-US/staff/shopHome.json",
+        '{"a":{"b":"x","c":"y"}}',
+        '{"a":{"b":"z"}}',
+      ),
+    ).toEqual([
+      { key: "shopHome.a.b", removed: false },
+      { key: "shopHome.a.c", removed: true },
+    ]);
+  });
+});
+
+describe("edits to the visual spec and its helpers", () => {
+  const visual = (lines, extra = {}) => {
+    const result = selectCaptures({
+      changed: ["e2e/visual.spec.ts"],
+      graph,
+      report,
+      source,
+      helpers,
+      visualLines: new Set(lines),
+      ...extra,
+    });
+    return result.mode === "all"
+      ? result
+      : [...result.lines].map((line) => line.split(" › ").at(-1));
+  };
+
+  it("recaptures a capture whose own lines changed", () => {
+    expect(visual([16])).toContain("the public course page renders true to the design (light)");
+    expect(visual([16])).not.toContain("the gear register renders true to the design (light)");
+  });
+
+  it("recaptures what reads an edited constant, and everything for a line outside them all", () => {
+    expect(visual([1])).toContain("the gear register renders true to the design (light)");
+    expect(visual([1])).not.toContain("the public course page renders true to the design (light)");
+    expect(
+      selectCaptures({
+        changed: ["e2e/visual.spec.ts"],
+        graph,
+        report: { suites: [] },
+        source: 'import { x } from "./y";\ntest.use({ colorScheme: "dark" });',
+        helpers,
+        visualLines: new Set([2]),
+      }).mode,
+    ).toBe("all");
+  });
+
+  it("recaptures what calls an edited helper in e2e/helpers.ts", () => {
+    const helpersSource = [
+      'import { expect } from "@playwright/test";', // 1
+      "", // 2
+      "async function openSailedTrip(page: Page) {", // 3
+      '  await page.goto("/shop/blue-mantis/schedule/board");', // 4
+      "}", // 5
+    ].join("\n");
+    const picked = (lines) => {
+      const result = selectCaptures({
+        changed: ["e2e/helpers.ts"],
+        graph,
+        report,
+        source,
+        helpers,
+        helperLines: new Set(lines),
+        helpersSource,
+      });
+      return result.mode === "all"
+        ? result
+        : [...result.lines].map((line) => line.split(" › ").at(-1));
+    };
+    expect(picked([4])).toContain("a trip's crew renders true to the design (light)");
+    expect(picked([4])).not.toContain("the gear register renders true to the design (light)");
+    expect(picked([1]).mode).toBe("all");
+  });
+
+  it("captures everything when the edited lines were not read, or another file is unbounded", () => {
+    expect(picked(["e2e/visual.spec.ts"]).mode).toBe("all");
+    expect(picked(["e2e/helpers.ts"]).mode).toBe("all");
+    expect(visual([16], { changed: ["e2e/visual.spec.ts", "src/app/globals.css"] }).mode).toBe(
+      "all",
+    );
+  });
+
+  it("reads a diff's changed lines, a deletion marking both neighbours", () => {
+    expect([...changedLines("@@ -3,0 +4,2 @@\n@@ -9 +11,0 @@")]).toEqual([4, 5, 11, 12]);
+  });
+
+  it("gives a local run the light-mode captures only, as a --grep", () => {
+    expect(
+      lightGrep([
+        "visual.spec.ts › light mode › the day (light)",
+        "visual.spec.ts › dark mode › the day (dark)",
+      ]),
+    ).toBe(String.raw`(?:the day \(light\))$`);
+    expect(lightGrep([])).toBeNull();
+  });
+});
+
+describe("the 28 pull requests the test review replayed", () => {
+  // Path by path, the reasons left to capture everything are the ones that can move any pixel:
+  // the capture's plumbing, its harness, the seed and the schema, the workspace config. Before
+  // this, 26 of the 28 captured everything over a migration, an image, a locale bundle, a
+  // functional spec, `.gitignore` or a snapshot.
+  const recorded = JSON.parse(
+    readFileSync(new URL("./visual-affected.fixtures.json", import.meta.url), "utf8"),
+  );
+  const prs = Object.entries(recorded).filter(([pr]) => !pr.startsWith("_"));
+
+  /** A bundle holding `keys` (dotted, after the namespace), each set to `value`. */
+  const bundleOf = (keys, value) => {
+    const root = {};
+    for (const key of keys) {
+      const parts = key.split(".");
+      let at = root;
+      for (const part of parts.slice(0, -1)) at = at[part] ??= {};
+      at[parts.at(-1)] = value;
+    }
+    return JSON.stringify(root);
+  };
+
+  const reasons = new Map();
+  for (const [pr, { files, keys = {}, packageJson }] of prs) {
+    const before = (file) => {
+      if (file === "package.json") return JSON.stringify({ name: "x" });
+      return bundleOf(
+        (keys[file] ?? []).map((key) => key.replace(/^-/, "")),
+        "before",
+      );
+    };
+    const after = (file) => {
+      if (file === "package.json") {
+        return JSON.stringify(
+          packageJson ? { name: "x", dependencies: { next: "1" } } : { name: "x" },
+        );
+      }
+      return bundleOf(
+        (keys[file] ?? []).filter((key) => !key.startsWith("-")),
+        "after",
+      );
+    };
+    const result = changedRoutes(files, new Map(), {
+      before,
+      after,
+      sources: new Map(),
+      modules: moduleIndex(new Map()),
+    });
+    reasons.set(pr, result.all ?? null);
+  }
+
+  it("bounds every one whose only unbounded paths were inert", () => {
+    for (const [pr, why] of reasons) {
+      if (why === null) continue;
+      expect(why, `#${pr}`).toMatch(
+        /capture's own plumbing|capture harness|data every capture shows|pnpm-workspace\.yaml/,
+      );
+    }
+    expect([...reasons.values()].filter((why) => why === null).length).toBe(18);
   });
 });
 

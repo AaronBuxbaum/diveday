@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GearReturnPane } from "./GearReturnPane";
 
 afterEach(cleanup);
@@ -102,5 +103,53 @@ describe("GearReturnPane's open concern", () => {
     expect(screen.queryByRole("checkbox")).toBeNull();
     expect(screen.queryByLabelText("What to tell the technician")).toBeNull();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Service concern" }));
+  });
+});
+
+/**
+ * **Each answer posts its own outcome** (dive-domain review of the SubmitButton change): the
+ * outcome rides on the pressed button as the submitter, so a tap on "Fit adjusted" must not
+ * record the set as fine.
+ */
+describe("GearReturnPane's answers", () => {
+  function renderWithSpy() {
+    const action = vi.fn(async (_data: FormData) => {});
+    render(
+      <GearReturnPane
+        fields={{ tripId: "t1", bookingId: "b1" }}
+        action={action}
+        labels={LABELS}
+        bench={BENCH}
+      />,
+    );
+    return action;
+  }
+  const posted = (action: ReturnType<typeof renderWithSpy>) => action.mock.calls[0]?.[0];
+
+  it("posts all_good from All good", async () => {
+    const action = renderWithSpy();
+    await userEvent.click(screen.getByRole("button", { name: "All good" }));
+    await waitFor(() => expect(action).toHaveBeenCalledOnce());
+    expect(posted(action)?.get("outcome")).toBe("all_good");
+    expect(posted(action)?.get("bookingId")).toBe("b1");
+  });
+
+  it("posts fit_adjusted from Fit adjusted", async () => {
+    const action = renderWithSpy();
+    await userEvent.click(screen.getByRole("button", { name: "Fit adjusted" }));
+    await waitFor(() => expect(action).toHaveBeenCalledOnce());
+    expect(posted(action)?.get("outcome")).toBe("fit_adjusted");
+  });
+
+  it("posts service_concern, with its note and ticks, from the open concern", async () => {
+    const action = renderWithSpy();
+    await userEvent.click(screen.getByRole("button", { name: "Service concern" }));
+    await userEvent.type(screen.getByLabelText("What to tell the technician"), "Torn strap");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Reg #4" }));
+    await userEvent.click(screen.getByRole("button", { name: "Service concern" }));
+    await waitFor(() => expect(action).toHaveBeenCalledOnce());
+    expect(posted(action)?.get("outcome")).toBe("service_concern");
+    expect(posted(action)?.get("note")).toBe("Torn strap");
+    expect(posted(action)?.getAll("pull")).toEqual([BENCH.units[0]?.id]);
   });
 });

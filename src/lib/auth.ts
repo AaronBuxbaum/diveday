@@ -16,7 +16,7 @@ import {
 } from "@/db/schema";
 import { trackEvent } from "@/lib/analytics";
 import { authSecret } from "@/lib/auth-secret";
-import type { Role } from "@/lib/authz";
+import { isStaff, type Role } from "@/lib/authz";
 import { nowMs } from "@/lib/clock";
 import { verifyCredentials } from "@/lib/credentials";
 import { log } from "@/lib/log";
@@ -154,12 +154,37 @@ function diveDayCredentialsPlugin() {
           // better-auth quickstart, a client SDK, OAuth — an explicit three
           // fields is what keeps a staff member's bcrypt hash out of a login
           // response (security review finding).
-          return ctx.json({ user: { id: user.id, email: user.email, name: verified.name } });
+          //
+          // `shopSlug` is beside the user, not in it: the one place sign-in
+          // lands (`src/app/sign-in/actions.ts`) goes straight to the staffer's
+          // own shop instead of bouncing through `/shop`. Only a staff session
+          // names one, the same condition the edge's `/shop` redirect asks
+          // (`src/proxy.ts`).
+          return ctx.json({
+            user: { id: user.id, email: user.email, name: verified.name },
+            shopSlug: isStaff(verified.roles) && verified.shopSlug ? verified.shopSlug : null,
+          });
         },
       ),
     },
   } satisfies BetterAuthPlugin;
 }
+
+/**
+ * better-auth's by-user session endpoints, switched off (issue #2493). They
+ * read sessions back without naming a token, and with the token stored as its
+ * digest (src/lib/session-token-hash.ts) they would list digests and revoke
+ * nothing, while reporting success. DiveDay revokes by session id
+ * (`src/db/account-security.ts`). `disabledPaths` closes them over HTTP for
+ * the day a route mounts the handler; `auth-session-token.test.ts` refuses an
+ * in-process `auth.api.*` call to any of them, which the option does not reach.
+ */
+export const DIGEST_BLIND_SESSION_PATHS = [
+  "/list-sessions",
+  "/revoke-session",
+  "/revoke-sessions",
+  "/revoke-other-sessions",
+] as const;
 
 /** better-auth's adapter factory, with every adapter it builds hashing session tokens. */
 function hashedSessionAdapter<O, A extends object>(factory: (options: O) => A) {
@@ -246,6 +271,7 @@ export function createAuth(db: AppDb) {
       useSecureCookies: process.env.DIVEDAY_E2E !== "1",
     },
     emailAndPassword: { enabled: false },
+    disabledPaths: [...DIGEST_BLIND_SESSION_PATHS],
     plugins: [diveDayCredentialsPlugin(), nextCookies()],
   });
 }

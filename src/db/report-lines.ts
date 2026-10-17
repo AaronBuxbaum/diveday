@@ -23,6 +23,7 @@ import {
   revenueByLine,
   revenueLineForOrderItem,
 } from "@/lib/report-lines";
+import { type BuddyReferrer, buddyReferrersForWindow } from "./buddy-referrals";
 import type { DbExecutor } from "./client";
 import { packageOrderStillBacks } from "./dive-packages";
 import { listShopPayoutsArriving, type ShopPayout } from "./payouts";
@@ -37,6 +38,7 @@ import {
   importedPaymentHistory,
   orderLineItems,
   orders,
+  paymentDisputes,
   trips,
   workOrderBills,
 } from "./schema";
@@ -63,9 +65,17 @@ export type MonthMoneyDetail = {
    * payouts that reached the bank this month — null when no payout this month
    * says what its fees were, which is not the same as none.
    */
-  out: { refundedCents: number; discountedCents: number; stripeFeesCents: number | null };
+  out: {
+    refundedCents: number;
+    discountedCents: number;
+    stripeFeesCents: number | null;
+    /** Card disputes lost this month: their reversal lines, by the day each was lost (issue #2292). */
+    disputesLostCents: number;
+  };
   /** Stripe payouts arriving at the bank this month, oldest first (ADR 20261012-payouts-reach-diveday). */
   payouts: ShopPayout[];
+  /** The divers whose buddy links brought this month's buddy seats, most friends first (fifth-loop ideas, item 41). */
+  buddyReferrers: BuddyReferrer[];
 };
 
 /** Same set the roster and every other report figure count as "on the boat". */
@@ -105,12 +115,13 @@ export async function getMonthMoneyDetail(
    */
   payoutMonth?: { year: number; month: number },
 ): Promise<MonthMoneyDetail> {
-  const [lines, packageDivesOwed, divers, out, payouts] = await queryAll(db, [
+  const [lines, packageDivesOwed, divers, out, payouts, buddyReferrers] = await queryAll(db, [
     () => moneyByLine(db, shopId, startUtc, endUtc, shopMoney),
     () => packageDivesOwedAt(db, shopId, endUtc < now ? endUtc : now),
     () => returningDivers(db, shopId, startUtc, endUtc),
     () => moneyOut(db, shopId, startUtc, endUtc),
     () => listShopPayoutsArriving(db, shopId, payoutWindow(payoutMonth, startUtc, endUtc)),
+    () => buddyReferrersForWindow(db, shopId, startUtc, endUtc),
   ]);
   const paidFees = payouts.flatMap((payout) =>
     payout.status === "paid" && payout.feeCents !== null ? [payout.feeCents] : [],
@@ -124,6 +135,7 @@ export async function getMonthMoneyDetail(
       stripeFeesCents: paidFees.length > 0 ? paidFees.reduce((sum, fee) => sum + fee, 0) : null,
     },
     payouts,
+    buddyReferrers,
   };
 }
 
@@ -139,7 +151,7 @@ async function moneyOut(
   shopId: string,
   startUtc: Date,
   endUtc: Date,
-): Promise<{ refundedCents: number; discountedCents: number }> {
+): Promise<{ refundedCents: number; discountedCents: number; disputesLostCents: number }> {
   const [orderRefunds] = await db
     .select({ total: sql<string>`coalesce(sum(${orders.refundedCents}), 0)` })
     .from(orders)
@@ -161,9 +173,20 @@ async function moneyOut(
         lt(bookingCheckouts.completedAt, endUtc),
       ),
     );
+  const [lostDisputes] = await db
+    .select({ total: sql<string>`coalesce(sum(${paymentDisputes.amountCents}), 0)` })
+    .from(paymentDisputes)
+    .where(
+      and(
+        eq(paymentDisputes.shopId, shopId),
+        gte(paymentDisputes.reversedAt, startUtc),
+        lt(paymentDisputes.reversedAt, endUtc),
+      ),
+    );
   return {
     refundedCents: Number(orderRefunds?.total ?? 0) + Number(checkoutMoney?.refunded ?? 0),
     discountedCents: Number(checkoutMoney?.discounted ?? 0),
+    disputesLostCents: Number(lostDisputes?.total ?? 0),
   };
 }
 
@@ -329,8 +352,11 @@ async function moneyByLine(
  * spent by then (`consumed_at` empty or later), and not lapsed by then. Only
  * on an order the shop still holds money for — a refunded package is owed
  * nothing.
+ *
+ * Also the "Dives owed on packages" line under Dive packages, at now (fourth
+ * UX review, item 20).
  */
-async function packageDivesOwedAt(
+export async function packageDivesOwedAt(
   db: DbExecutor,
   shopId: string,
   asOf: Date,

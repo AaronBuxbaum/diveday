@@ -90,6 +90,19 @@ export type TripCrewAssignment = {
 export type RatingCredential = { kind: string; renewsAt: string | null };
 
 /**
+ * The kinds that must carry a renewal date when they are recorded (issue
+ * #2172). Pro ratings renew every year, so a missing date is missing data, and
+ * {@link lapsedRungs} reads an undated card as current: one old undated card
+ * would keep a lapsed pro counted toward supervision. Every other kind stays
+ * optional, and an undated rating already on file is still read as current,
+ * never as lapsed.
+ */
+export const RENEWAL_DATE_REQUIRED_KINDS: readonly string[] = [
+  "instructor_rating",
+  "divemaster_rating",
+];
+
+/**
  * The credential kinds that evidence each rung. An instructor stands on an
  * instructor rating. A certified assistant stands on any dive-professional
  * rating — a Divemaster's, or the instructor-track one an Assistant Instructor
@@ -110,6 +123,52 @@ const RUNG_EVIDENCE: Record<LapsedRung, readonly string[]> = {
 export const RUNG_EVIDENCE_KINDS: readonly string[] = [
   ...new Set(Object.values(RUNG_EVIDENCE).flat()),
 ];
+
+/**
+ * The roles a recorded credential can answer (issue #2548): the staff roles
+ * that sail on a card. A shop role and a per-trip role share these names, so
+ * one map reads both.
+ */
+export type CredentialedRole = "instructor" | "assistant_instructor" | "divemaster" | "captain";
+
+/**
+ * **The credential kinds that answer each role**, following the rung order
+ * {@link RUNG_EVIDENCE} uses: a higher rating answers a lower in-water role
+ * (an instructor rating answers a divemaster's job), and only a captain's
+ * license answers a captain. First aid, oxygen, insurance and `other` answer
+ * no role: a free-text "other" is never read as a rating. Words only, never a
+ * gate (H-59).
+ */
+export const ROLE_CREDENTIAL_KINDS: Record<CredentialedRole, readonly string[]> = {
+  instructor: ["instructor_rating"],
+  assistant_instructor: ["instructor_rating", "assistant_instructor_rating"],
+  divemaster: ["instructor_rating", "assistant_instructor_rating", "divemaster_rating"],
+  captain: ["captains_licence"],
+};
+
+export function isCredentialedRole(role: string): role is CredentialedRole {
+  return Object.hasOwn(ROLE_CREDENTIAL_KINDS, role);
+}
+
+/**
+ * **The credentialed roles a person has no matching credential for**, given
+ * the roles they are acting in and the kinds of their live credentials.
+ *
+ * - With nothing recorded for a role, that role is missing.
+ * - A role no credential can answer (a deckhand, a diver) is never reported;
+ *   the caller decides what a person with no credentialed role and nothing on
+ *   file means.
+ * - Several roles at once (a shop-wide captain and divemaster with no trip
+ *   role named) are each reported when unanswered.
+ */
+export function rolesMissingCredential(
+  roles: readonly string[],
+  credentialKinds: readonly string[],
+): CredentialedRole[] {
+  return roles
+    .filter(isCredentialedRole)
+    .filter((role) => !ROLE_CREDENTIAL_KINDS[role].some((kind) => credentialKinds.includes(kind)));
+}
 
 /**
  * **Which rungs a person's recorded ratings have lapsed off on `divesOn`**

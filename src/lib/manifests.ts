@@ -22,6 +22,7 @@ import type { WelcomeCue } from "./welcome-cue";
  * fails the build.
  */
 export type {
+  MedicalHoldCode,
   RollCallCheckpoint,
   RollCallRecord,
   RollCallState,
@@ -41,6 +42,7 @@ export {
   carryForwardNotBoarded,
   isNotBackAboard,
   isRollCallCheckpoint,
+  medicalHoldAfterDive,
   RETRACTION_SUPERSEDED,
   ROLL_CALL_NOTE_MAX,
   rollCallCheckpointOrdinal,
@@ -154,13 +156,31 @@ export type ManifestDiverInput = {
    * (`identityReasonText`) rather than say "might be someone else" with
    * nothing to compare. Absent on a seat that was never held.
    */
-  identityClaim?: { bookedAs: string | null; matchedBy: IdentityMatchKind | null };
+  identityClaim?: {
+    bookedAs: string | null;
+    matchedBy: IdentityMatchKind | null;
+    /**
+     * The emergency contact the desk recorded for the person on this held seat
+     * (`bookings.held_emergency_contact_*`, issue #2145), which
+     * `withholdHeldSeatParticulars` shows in place of the matched record's.
+     * Null when none was recorded; absent on a manifest built by hand.
+     */
+    heldEmergencyContact?: { name: string; phone: string } | null;
+  };
   /**
    * Set only by `withholdHeldSeatParticulars` (`src/lib/held-seat.ts`): this
    * row is a held seat and the matched person's particulars were cleared, so a
    * surface says they wait for confirmation instead of "Not on file".
    */
   identityWithheld?: boolean;
+  /**
+   * Set only by `withholdHeldSeatParticulars`, beside `identityWithheld`: the
+   * contact the desk recorded for the person on this held seat (issue #2145).
+   * Its own field, never `emergencyContact*`, which a withheld row leaves
+   * empty, so no surface can show the matched record's next of kin as the
+   * seat's (dive-domain review H7, security review Y3).
+   */
+  heldEmergencyContact?: { name: string; phone: string } | null;
   /**
    * Set beside `identityWithheld`: withholding dropped at least one blocker
    * measured against the matched person, so the crew line says other holds may
@@ -189,7 +209,7 @@ export type ManifestDiverInput = {
   /** The diver has a birthday today or within the callout window (H-21). */
   birthday?: BirthdayCallout | null;
   /**
-   * The word under this diver's name: first time with us, or back after a long
+   * The word under this diver's name: "First dive with us", or "Back after" a long
    * gap (issue #1182, delight report D22). Null unless the diver themselves
    * said the crew may know, and null again an hour after the boat is home.
    *
@@ -224,11 +244,31 @@ export type ManifestDiverInput = {
    */
   riderMedicalHold?: RiderMedicalHold | null;
   /**
+   * A staffer cleared this seat's training mark in a way that relaxed a
+   * boarding block (issue #2275) — its course forms still owed, or a mark that
+   * no longer held — and the crew sees who decided. Never a blocker.
+   */
+  trainingMarkCleared?: TrainingMarkCleared | null;
+  /**
+   * A training mark that stands on this seat (issue #2275): the course the
+   * dive counts toward, and whether an instructor is on this departure's crew
+   * as the manifest is read — a warning when not, never a blocker. Null on an
+   * unmarked seat and on a mark that no longer stands (`training_mark_invalid`
+   * says that).
+   */
+  trainingDive?: { courseTitle: string; instructorAboard: boolean } | null;
+  /**
    * Lodging / hotel location stated by diver on /ready (marker only, not a checkpoint).
    */
   hotelPickupLocation?: string | null;
   /** Staff-set pickup time for this booking (e.g. "07:15"). */
   pickupTime?: string | null;
+  /**
+   * The lunch note on this booking (fifth-loop ideas, item 56): a meal
+   * preference for the galley, from the diver's Day-of form or the desk. Not
+   * an allergy record (dive-domain review B1), and it gates nothing.
+   */
+  dietaryNote?: string | null;
   /**
    * When the diver said they were running late (J3, #2319), already through
    * `runningLateShown`, so it is null on a seat that has arrived or been
@@ -280,6 +320,12 @@ export type ManifestDiverInput = {
    * every roster looked like before the first writer landed.
    */
   notHere?: boolean;
+  /**
+   * The desk saw this diver and turned them away (H-135): a released seat like
+   * `notHere`, worded apart from it on the row. Display only, never a gate;
+   * absent reads as false.
+   */
+  turnedAway?: boolean;
   /**
    * Whether a standing `boarded` result sits at a checkpoint **before** this
    * one (domain review of #2123). False at an after-dive checkpoint means a
@@ -613,12 +659,43 @@ export function buddyAlertFor(
   // After a dive the crew is *counting a boat back*, believing everyone is
   // already on it. There an uncalled teammate is "not yet", not a split: only a
   // recorded "did not come back" earns the alarm (see the note above).
-  const split =
-    checkpoint === "departure"
-      ? teammates.some((mate) => mate?.state !== "boarded" && !isRecordedAshore(checkpoint, mate))
-      : teammates.some((mate) => isNotBackAboard(checkpoint, mate));
-  if (!split) return null;
+  if (!teammates.some((mate) => teammateRaisesAlert(checkpoint, mate))) return null;
   return checkpoint === "departure" ? "separated_dock" : "separated_after_dive";
+}
+
+/** Whether one teammate's record is the one that raises the alert at this checkpoint. */
+function teammateRaisesAlert(checkpoint: RollCallCheckpoint, mate: MaybeRollCall): boolean {
+  return checkpoint === "departure"
+    ? mate?.state !== "boarded" && !isRecordedAshore(checkpoint, mate)
+    : isNotBackAboard(checkpoint, mate);
+}
+
+/**
+ * **Who the buddy alert is about** (#2403): the full names of the teammates
+ * whose records raise it, across every team the row is on, in team order.
+ * Empty when the row has no alert. The words and the first-name rule live in
+ * `src/i18n/buddy-labels.ts`; this only answers who, from the same predicate
+ * `buddyAlertFor` asks, so the name and the alert cannot disagree. A
+ * teammate the caller cannot resolve is dropped like everywhere here.
+ */
+function buddyMissingNamesIn(
+  checkpoint: RollCallCheckpoint,
+  self: MaybeRollCall,
+  teams: ReadonlyArray<ManifestBuddyTeam | null | undefined>,
+  byBooking: ReadonlyMap<string, MaybeRollCall>,
+  byCrewId: ReadonlyMap<string, MaybeRollCall>,
+): string[] {
+  if (self?.state !== "boarded") return [];
+  return teams.flatMap((team) =>
+    (team?.others ?? []).flatMap((other) => {
+      const known =
+        other.kind === "diver" ? byBooking.has(other.bookingId) : byCrewId.has(other.personId);
+      if (!known) return [];
+      const record =
+        other.kind === "diver" ? byBooking.get(other.bookingId) : byCrewId.get(other.personId);
+      return teammateRaisesAlert(checkpoint, record) ? [other.fullName] : [];
+    }),
+  );
 }
 
 /** One crew member, reduced to the only field a head count reads. */
@@ -877,10 +954,31 @@ export type TripManifest = {
      */
     capacity?: number;
     /**
+     * The boat's certificate passenger limit (`boats.certified_passengers`),
+     * null for no boat or none recorded. The head count turns danger past it
+     * (`passengersAboveCertificateAboard`). Optional for the same reason as
+     * `capacity`: absent says nothing.
+     */
+    certifiedPassengers?: number | null;
+    /**
+     * The certificate's total persons, crew included
+     * (`boats.certified_total_persons`, #2302); null for no boat or none
+     * recorded. The head count turns danger past it. Optional like `capacity`.
+     */
+    certifiedTotalPersons?: number | null;
+    /**
      * A rehearsal (ADR 20261012-rehearsal-departures): the paper manifest says
      * so beside souls on board. Optional for the same reason as `capacity`.
      */
     isRehearsal?: boolean;
+    /** Past no-decompression limits: the roll call reminds crew to check technical cards. */
+    exceedsNoDecoLimits?: boolean;
+    /**
+     * A cancelled departure: the dock takes no rider (#2394). Optional for the
+     * same reason as `capacity`; absent reads as not cancelled, which only
+     * shows a form whose submit the server refuses.
+     */
+    cancelled?: boolean;
   };
   checkpoint: RollCallCheckpoint;
   crew: (ManifestCrewMember & {
@@ -890,6 +988,11 @@ export type TripManifest = {
      * 20260804-buddy-teams).
      */
     buddyAlert: BuddyAlert | null;
+    /**
+     * Who raises it: the teammates' full names, empty without an alert
+     * (#2403). Absent on a hand-built row, which reads as the generic words.
+     */
+    buddyMissing?: string[];
   })[];
   /**
    * Whether this checkpoint is closed — divers *and* crew. Derived here so the
@@ -908,6 +1011,11 @@ export type TripManifest = {
      * know who came back, so it displays teams and computes nothing.
      */
     buddyAlert: BuddyAlert | null;
+    /**
+     * Who raises it: the teammates' full names, empty without an alert
+     * (#2403). Absent on a hand-built row, which reads as the generic words.
+     */
+    buddyMissing?: string[];
   })[];
   summary: {
     /**
@@ -1081,6 +1189,13 @@ export function buildTripManifest(input: {
     readiness: diver.readiness ?? unavailableReadiness(),
     rollCall: diver.rollCall,
     buddyAlert: buddyAlertFor(checkpoint, diver.rollCall, teammateRollCalls([diver.buddyTeam])),
+    buddyMissing: buddyMissingNamesIn(
+      checkpoint,
+      diver.rollCall,
+      [diver.buddyTeam],
+      rollCallByBooking,
+      rollCallByCrewId,
+    ),
   }));
   const crew = input.crew.map((member) => ({
     ...member,
@@ -1088,6 +1203,13 @@ export function buildTripManifest(input: {
       checkpoint,
       member.rollCall,
       teammateRollCalls(member.buddyTeams ?? []),
+    ),
+    buddyMissing: buddyMissingNamesIn(
+      checkpoint,
+      member.rollCall,
+      member.buddyTeams ?? [],
+      rollCallByBooking,
+      rollCallByCrewId,
     ),
   }));
   const awaiting = divers.filter((diver) => !diver.rollCall).length;
@@ -1192,3 +1314,9 @@ export function blockedAtDock(
   }
   return { undecided, aboard };
 }
+
+/** Who cleared a seat's training mark over a boarding block, and which one (issue #2275). */
+export type TrainingMarkCleared = {
+  byName: string | null;
+  reason: "forms_owed" | "mark_invalid";
+};

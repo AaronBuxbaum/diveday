@@ -339,7 +339,7 @@
    * **IBM Plex Sans, everywhere** (ADR 20261001-logbook). One face the app
    * owns rather than the device's: it reads the same on a Mac, an Android
    * phone at the dock and CI's Linux runner, and its figures are clear at
-   * small sizes. Self-hosted by `next/font` in the root layout.
+   * small sizes. Self-hosted from committed files by `next/font/local` (`src/app/_fonts/fonts.ts`).
    */
   --font-sans: var(--font-plex-sans), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
@@ -419,6 +419,19 @@
  */
 html:has([data-chrome-bar]) {
   scroll-padding-top: var(--chrome-h);
+}
+
+/*
+ * **A bar of two rows on a phone** (issue #2303): the shopfront's name on its
+ * own line above its tabs. Two 44px rows, so the token is 5.5rem below `sm`
+ * (40rem) and the sticky day headers, the scroll padding and every `top-(--chrome-h)`
+ * beneath the bar move with it. Marked by the bar (`stackedOnPhone`), so no
+ * other shell's height changes.
+ */
+@media (max-width: 39.99rem) {
+  html:has([data-chrome-stacked]) {
+    --chrome-h: 5.5rem;
+  }
 }
 
 /*
@@ -609,11 +622,17 @@ body {
   --primary: #0a141c;
   --primary-hover: #1d3140;
   --primary-foreground: #ffd23f;
-  --primary-tint: #fff0b3;
+  /* The selected wash is Boat's navy, never its yellow (#2401). Every
+     `bg-primary-tint` in the app means selected or info (the rail's current
+     row, a checked choice, a chosen filter, a primary badge), and yellow is
+     the deck's colour for warning and for the one action; a pale yellow wash
+     put "attention" on every selected row. Navy ink on it 14.1:1. */
+  --primary-tint: #d6e2ec;
   --accent: #0a141c;
   --accent-foreground: #ffd23f;
   --accent-deep: #0a141c;
-  --accent-tint: #fff0b3;
+  /* Navy like `--primary-tint`, not pale yellow (#2569): yellow is the warning. */
+  --accent-tint: #d6e2ec;
   --success: #0b5e2e;
   --warning: #7a4100;
   --danger: #a30f1b;
@@ -651,11 +670,12 @@ body {
     --primary: #ffd23f;
     --primary-hover: #ffe38a;
     --primary-foreground: #1a1500;
-    --primary-tint: #2e2a12;
+    /* Navy lifted off the surface, not a dark yellow (#2401): yellow ink on it 8.2:1. */
+    --primary-tint: #223a4b;
     --accent: #ffd23f;
     --accent-foreground: #241400;
     --accent-deep: #ffe38a;
-    --accent-tint: #2e2a12;
+    --accent-tint: #223a4b;
     --success: #58e08f;
     --warning: #ffb648;
     --danger: #ff7a7a;
@@ -1261,6 +1281,17 @@ select:not([multiple]):not([size]):dir(rtl) {
     margin-top: 1.5rem;
     border-top: 1px solid var(--border);
     padding-top: 1.5rem;
+  }
+
+  /*
+   * **The title and date once per sheet** (fourth review, item 17). The
+   * manifest runs on under the dive plan, and its own header printed the
+   * departure's title and date a second time a few lines below the plan's.
+   * The section that continues a sheet drops its header; one that starts a
+   * page keeps it, so the packing list still says which boat it is for.
+   */
+  .trip-print-bundle .print-bundle-continues [data-trip-page-header] {
+    display: none;
   }
 
   /*

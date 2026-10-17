@@ -7,7 +7,6 @@ import { PRIMARY_REGION } from "../config/aws-regions.mjs";
 import { ensureAwsLogin } from "./aws-login.mjs";
 import { dotenvMap } from "./dotenv.mjs";
 import { isTimeout, readBounded, runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
-import { VERCEL_CLI } from "./vercel-cli.mjs";
 
 // Never a bare `process.env.CI`: it is a generic convention many local dev
 // tools set, not proof this is really the unattended CI deploy job. `--ci-unattended`
@@ -19,12 +18,17 @@ import { VERCEL_CLI } from "./vercel-cli.mjs";
 const rawArguments = process.argv.slice(2);
 const isCiDeploy = rawArguments.includes("--ci-unattended");
 const checkOnly = rawArguments.includes("--check");
+// Push every value whatever the checkpoint says: the checkpoint is DiveDay's
+// memory of what it last sent, not a reading of Vercel, so this is the way to
+// put Vercel back in line after it drifted from that memory.
+const resync = rawArguments.includes("--resync");
+const FLAGS = new Set(["--ci-unattended", "--check", "--resync"]);
 const [inputPath, environment = "production"] = rawArguments.filter(
-  (argument) => argument !== "--ci-unattended" && argument !== "--check",
+  (argument) => !FLAGS.has(argument),
 );
 if (!inputPath || !["production", "preview", "development"].includes(environment)) {
   console.error(
-    "Usage: node scripts/import-vercel-env.mjs <dotenv-file> [production|preview|development] [--check]",
+    "Usage: node scripts/import-vercel-env.mjs <dotenv-file> [production|preview|development] [--check] [--resync]",
   );
   process.exit(2);
 }
@@ -72,8 +76,9 @@ if (entries.size === 0) {
 
 // Every value is pushed with `--sensitive` below, and Vercel never returns a
 // sensitive value again once set -- not to the dashboard, not to `vercel env
-// pull`, not to the API. There is nothing to diff a value against, so this
-// diffs a fingerprint instead: a SHA-256 of each value, never the value
+// pull`, not to the API. There is nothing to diff a sensitive value against,
+// so this diffs a fingerprint of what the last sync sent (and, since
+// 2026-10-14, checks Vercel's own listing beside it -- readVercelState): a SHA-256 of each value, never the value
 // itself, held in one SSM Parameter Store String parameter per environment
 // (see ADR 20260811-vercel-sync-checkpoint-in-ssm). Unlike a checkpoint file
 // on one workstation, this travels with the AWS account: a second operator,
@@ -166,9 +171,102 @@ function readCheckpoint() {
   }
 }
 
-const previous = readCheckpoint();
+const previous = resync ? new Map() : readCheckpoint();
 
-const changed = [...entries].filter(([key, value]) => previous.get(key) !== fingerprint(value));
+/**
+ * What Vercel itself holds for this environment, read so the checkpoint is not
+ * the only witness. The checkpoint records what the last sync *sent*; a
+ * variable deleted or edited in the dashboard since, or a push that was never
+ * answered "yes", leaves it claiming a value Vercel does not have, and every
+ * later deploy then reported "already in sync" (the platform backup's region,
+ * 2026-10-14). Vercel never returns a sensitive value, so for those this proves
+ * only that the key exists; a readable value is compared too.
+ *
+ * Returns `null` when the listing cannot be read, and the sync falls back to the
+ * checkpoint alone: a CLI hiccup must not turn into a full re-push or a refusal.
+ * The JSON carries readable values, so it is parsed here and never printed.
+ */
+function readVercelState() {
+  let output;
+  try {
+    output = readBounded("pnpm", ["exec", "vercel", "env", "ls", environment, "--format", "json"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeoutMs: SUBPROCESS_TIMEOUTS.vercelCli,
+    });
+  } catch (error) {
+    // The status and whether it timed out, never the child's stderr: that output
+    // ran with the ambient environment and may carry values from it.
+    const why = isTimeout(error) ? "timed out" : `exit ${error.status ?? "unknown"}`;
+    return listingUnavailable(
+      `Could not list the ${environment} Vercel environment variables (${why})`,
+    );
+  }
+  try {
+    const parsed = JSON.parse(String(output).slice(String(output).indexOf("{")));
+    const list = Array.isArray(parsed?.envs) ? parsed.envs : null;
+    if (!list) throw new Error("no envs array");
+    const state = new Map();
+    for (const entry of list) {
+      if (typeof entry?.key !== "string") continue;
+      // An entry naming no target (a custom environment) proves nothing about this one.
+      const targets = Array.isArray(entry.target) ? entry.target : [entry.target];
+      if (!targets.includes(environment)) continue;
+      // Only a "plain" entry lists its value verbatim. Any other non-sensitive
+      // type (the "Config" the CLI reports for a NEXT_PUBLIC_ push, "encrypted")
+      // lists a ciphertext or normalised form that never equals what was sent:
+      // comparing it re-pushed the four NEXT_PUBLIC_RUM_* values on every deploy
+      // (2026-10-15). For those the listing proves only that the key exists.
+      const readable =
+        entry.type === "plain" && typeof entry.value === "string" && entry.value !== ""
+          ? entry.value
+          : null;
+      state.set(entry.key, readable);
+    }
+    return state;
+  } catch {
+    return listingUnavailable(`Could not read the ${environment} Vercel environment listing`);
+  }
+}
+
+/**
+ * On a workstation a missing listing falls back to the checkpoint with a
+ * warning someone sees. In the unattended CI deploy nobody reads a warning, and
+ * falling back is exactly the silent "already in sync" this listing exists to
+ * end, so there it stops the run instead.
+ */
+function listingUnavailable(reason) {
+  if (isCiDeploy) {
+    console.error(`${reason}; refusing to trust the checkpoint alone in the unattended deploy.`);
+    process.exit(1);
+  }
+  console.warn(`${reason}; trusting the last sync's checkpoint for what Vercel holds.`);
+  return null;
+}
+
+const live = readVercelState();
+
+/** Why a key is pushed: checkpoint says it changed, Vercel lacks it, or Vercel's readable value differs. */
+const driftedInVercel = (key, value) => {
+  if (!live) return false;
+  if (!live.has(key)) return true;
+  const readable = live.get(key);
+  return readable !== null && readable !== value;
+};
+
+const changed = [...entries].filter(
+  ([key, value]) => previous.get(key) !== fingerprint(value) || driftedInVercel(key, value),
+);
+// Names only: a key is not a secret, and naming it is what tells an operator
+// which variable someone changed in the dashboard.
+const drifted = [...entries]
+  .filter(([key, value]) => previous.get(key) === fingerprint(value) && driftedInVercel(key, value))
+  .map(([key]) => key);
+if (drifted.length > 0) {
+  console.log(
+    `Vercel ${environment} no longer matches the last sync for ${drifted.join(", ")}; ${checkOnly ? "they need pushing again" : "pushing them again"}.`,
+  );
+}
 
 // Only recorded after every push succeeds, and as fingerprints of the full
 // current document -- not just the changed subset, and never the values
@@ -180,9 +278,7 @@ const changed = [...entries].filter(([key, value]) => previous.get(key) !== fing
 const checkpointDocument = [...entries]
   .map(([key, value]) => `${key}=${fingerprint(value)}`)
   .join("\n");
-const checkpointNeedsRefresh =
-  previous.size !== entries.size ||
-  [...entries].some(([key, value]) => previous.get(key) !== fingerprint(value));
+const checkpointNeedsRefresh = previous.size !== entries.size || changed.length > 0;
 const checkpointBytes = Buffer.byteLength(checkpointDocument, "utf8");
 if (checkpointBytes > 4096) {
   console.error(
@@ -227,7 +323,7 @@ try {
     // value from stdin; --force makes rerunning a rotation deterministic.
     const result = runBounded(
       "pnpm",
-      [...VERCEL_CLI, "env", "add", key, environment, "--force", sensitivity],
+      ["exec", "vercel", "env", "add", key, environment, "--force", sensitivity],
       {
         input: value,
         stdio: ["pipe", "inherit", "inherit"],

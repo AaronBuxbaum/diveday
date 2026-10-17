@@ -1,8 +1,9 @@
-import { and, inArray, isNotNull, isNull, lt, SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, SQL, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import {
+  dietaryNoteCutoff,
   PRUNE_BATCH_LIMIT,
   RETENTION_DAYS,
   type RetainedTable,
@@ -15,6 +16,7 @@ import {
   activityEvents,
   bookingCapabilities,
   bookingPaymentEvents,
+  bookings,
   crewNotices,
   demoEntries,
   departureNotes,
@@ -30,10 +32,12 @@ import {
   pushSubscriptions,
   setupRequests,
   shopContactEmailConfirmationTokens,
+  shopShoreAlertTokens,
   staffReplies,
   stripeWebhookEvents,
   tripDeskEvents,
   tripReadMarks,
+  trips,
   waiverDeliveries,
   weeklyDigestSends,
 } from "./schema";
@@ -65,11 +69,14 @@ import {
  */
 export type PruneOutcome = {
   table: RetainedTable;
-  /** Rows actually deleted this pass. */
+  /** Rows actually deleted this run, across every batch it took. */
   deleted: number;
-  /** True when the batch cap was hit, i.e. more rows are still eligible. */
+  /**
+   * True when the run's last batch from this table hit the cap: the time budget
+   * ran out with rows still eligible. Logged as `cron_retention.prune_capped`.
+   */
   capped: boolean;
-  /** True when this arm threw; `deleted` is then 0 and means nothing. */
+  /** True when a batch from this table threw; it is not retried this run. */
   failed: boolean;
   /** The window applied, echoed so a report never has to re-derive it. */
   retentionDays: number;
@@ -79,7 +86,40 @@ export type PruneSummary = {
   outcomes: PruneOutcome[];
   totalDeleted: number;
   failedTables: RetainedTable[];
+  /** Lunch notes cleared from seats whose boat sailed long enough ago (security review N5). */
+  dietaryNotesCleared: number;
 };
+
+/**
+ * **Clears the lunch note from seats whose boat sailed more than
+ * `DIETARY_NOTE_RETENTION_DAYS` ago** (item 56; security review N5). The
+ * booking stays; only the diver's words about their food go. Bounded like a
+ * prune batch, and measured from the departure's own start.
+ */
+export async function clearExpiredDietaryNotes(
+  db: AppDb,
+  now: Date,
+  batchLimit: number = PRUNE_BATCH_LIMIT,
+): Promise<number> {
+  const rows = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    // diveday:allow-deleted-trips: a deleted departure's seats are cleared too; nothing reads the note after it sails.
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(and(isNotNull(bookings.dietaryNote), lt(trips.startsAt, dietaryNoteCutoff(now))))
+    .limit(batchLimit);
+  if (rows.length === 0) return 0;
+  await db
+    .update(bookings)
+    .set({ dietaryNote: null })
+    .where(
+      inArray(
+        bookings.id,
+        rows.map((row) => row.id),
+      ),
+    );
+  return rows.length;
+}
 
 /**
  * `clock < cutoff`, for a column or an expression. The two branches are the
@@ -91,7 +131,7 @@ function olderThan(clock: PgColumn | SQL, cutoff: Date): SQL {
 }
 
 /**
- * Deletes at most `PRUNE_BATCH_LIMIT` rows in two statements — select the
+ * Deletes at most `batchLimit` rows (`PRUNE_BATCH_LIMIT` in production) in two statements — select the
  * eligible ids, then delete exactly those — rather than one `DELETE ... LIMIT`,
  * which Postgres does not support and which a subquery would only emulate.
  * Two statements are also what makes the count returned here the count actually
@@ -102,6 +142,7 @@ async function pruneBatch(
   table: RetainedTable,
   arm: PruneArm,
   now: Date,
+  batchLimit: number = PRUNE_BATCH_LIMIT,
 ): Promise<PruneOutcome> {
   const retentionDays = RETENTION_DAYS[table];
   try {
@@ -109,7 +150,7 @@ async function pruneBatch(
       .select({ id: arm.id })
       .from(arm.from)
       .where(and(olderThan(arm.clock, retentionCutoff(table, now)), arm.extraWhere))
-      .limit(PRUNE_BATCH_LIMIT)) as { id: string }[];
+      .limit(batchLimit)) as { id: string }[];
     if (rows.length === 0) {
       return { table, deleted: 0, capped: false, failed: false, retentionDays };
     }
@@ -122,7 +163,7 @@ async function pruneBatch(
     return {
       table,
       deleted: rows.length,
-      capped: rows.length >= PRUNE_BATCH_LIMIT,
+      capped: rows.length >= batchLimit,
       failed: false,
       retentionDays,
     };
@@ -216,6 +257,13 @@ export const PRUNE_ARMS = {
     from: shopContactEmailConfirmationTokens,
     id: shopContactEmailConfirmationTokens.id,
     clock: shopContactEmailConfirmationTokens.expiresAt,
+  },
+  // The shore contact's links (H-118): from `created_at`, since a stop link
+  // has no `expires_at` of its own.
+  shop_shore_alert_tokens: {
+    from: shopShoreAlertTokens,
+    id: shopShoreAlertTokens.id,
+    clock: shopShoreAlertTokens.createdAt,
   },
   // Booking links (H-82, issue #1726), on the same clock as the two token
   // arms above. `expires_at` only, never `revoked_at`: a revoked link can still
@@ -348,34 +396,75 @@ export const PRUNE_ARMS = {
   },
   // Incident reports (ADR 20261012-incident-reports): seven years from when the
   // incident happened, or from when a draft that never said so was started.
-  // Its people and addenda cascade with it.
+  // Its people and addenda cascade with it. A report an owner has put a legal
+  // hold on is skipped until the hold is released.
   incident_reports: {
     from: incidentReports,
     id: incidentReports.id,
     clock: sql`coalesce(${incidentReports.occurredAt}, ${incidentReports.createdAt})`,
+    extraWhere: isNull(incidentReports.legalHoldAt),
   },
 } satisfies Record<RetainedTable, PruneArm>;
 
 /**
- * One prune pass over every retained table. Safe to run repeatedly and safe to
+ * How long one prune run keeps taking batches from a table that is still over
+ * its window: 45 of the route's 60 seconds (`maxDuration`), leaving the rest
+ * for the batch already in flight, the log line and the check-in.
+ */
+export const PRUNE_TIME_BUDGET_MS = 45_000;
+
+/**
+ * Prune every retained table, a batch at a time, until each is inside its
+ * window or the run's time budget is spent. Safe to run repeatedly and safe to
  * run concurrently with itself: each arm deletes only rows it has just
  * observed to be past the window, so a second pass simply finds fewer.
  *
+ * **Rounds, not one table to exhaustion.** The first round takes one batch from
+ * every table, so a single deep backlog can never starve the rest; later
+ * rounds revisit only the tables that came back `capped`, while the budget
+ * lasts. Until 2026-10-13 a run took exactly one batch per table, so a table
+ * gaining more than `PRUNE_BATCH_LIMIT` rows a week (about 714 a day) never
+ * converged and only a log field said so (fourth review, row 18). A table still
+ * `capped` when the budget runs out is now logged as
+ * `cron_retention.prune_capped`, which the CronPassFailures alarm counts.
+ *
  * `now` defaults through `nowDate()` — the repo's one clock seam — so the e2e
  * fleet's frozen instant reaches this the same way it reaches every other scan.
+ * The budget is measured with `performance.now()`, not that clock: the e2e
+ * fleet freezes the clock, and a frozen budget would never run out
+ * (`src/lib/observability/query-timing.ts` makes the same choice).
  */
 export async function pruneExpiredRecords(
   db: AppDb,
-  opts: { now?: Date } = {},
+  opts: { now?: Date; budgetMs?: number; batchLimit?: number } = {},
 ): Promise<PruneSummary> {
   const now = opts.now ?? nowDate();
-  const outcomes: PruneOutcome[] = [];
-  for (const [table, arm] of Object.entries(PRUNE_ARMS) as [RetainedTable, PruneArm][]) {
-    outcomes.push(await pruneBatch(db, table, arm, now));
+  const budgetMs = opts.budgetMs ?? PRUNE_TIME_BUDGET_MS;
+  const batchLimit = opts.batchLimit ?? PRUNE_BATCH_LIMIT;
+  const started = performance.now();
+  const arms = Object.entries(PRUNE_ARMS) as [RetainedTable, PruneArm][];
+  const byTable = new Map<RetainedTable, PruneOutcome>();
+  let pending = arms;
+  while (pending.length > 0) {
+    for (const [table, arm] of pending) {
+      const batch = await pruneBatch(db, table, arm, now, batchLimit);
+      const before = byTable.get(table);
+      byTable.set(table, { ...batch, deleted: (before?.deleted ?? 0) + batch.deleted });
+    }
+    if (performance.now() - started >= budgetMs) break;
+    pending = pending.filter(([table]) => byTable.get(table)?.capped);
+  }
+  const outcomes = arms.map(([table]) => byTable.get(table) as PruneOutcome);
+  let dietaryNotesCleared = 0;
+  try {
+    dietaryNotesCleared = await clearExpiredDietaryNotes(db, now, batchLimit);
+  } catch {
+    log("retention.dietary_note_clear_failed", "error", {});
   }
   return {
     outcomes,
     totalDeleted: outcomes.reduce((sum, outcome) => sum + outcome.deleted, 0),
     failedTables: outcomes.filter((outcome) => outcome.failed).map((outcome) => outcome.table),
+    dietaryNotesCleared,
   };
 }

@@ -2,7 +2,7 @@ import { and, eq, gte, inArray, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
@@ -45,6 +45,8 @@ import {
 } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
 
+const fileCtx = fileScopedShopContext({ history: true });
+
 /**
  * A managed storage origin, the shape `isManagedStorageUrl` accepts. A blob URL
  * on any other host is refused by `queueMediaDeletion` and queues nothing.
@@ -52,7 +54,7 @@ import { upsertShopStripeAccount } from "./stripe-accounts";
 const MANAGED_BLOB_HOST = "https://diveday-media.s3.us-east-1.amazonaws.com";
 
 async function erasureFixtures() {
-  const { db, shop } = await seededShopContext({ history: true });
+  const { db, shop } = fileCtx;
   const [owner] = await db
     .select({ id: people.id })
     .from(people)
@@ -300,6 +302,8 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
         welcomeSharedAt: new Date("2026-07-20T12:00:00Z"),
         // "Running late" (J3) is the diver's own statement too.
         runningLateAt: new Date("2026-07-20T12:30:00Z"),
+        // So is the booker's "Under 18" on the seat (H-113).
+        minorDeclaredAt: new Date("2026-07-20T12:45:00Z"),
       })
       .where(eq(bookings.id, booking.id));
 
@@ -311,11 +315,16 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
     expect(erased.ok).toBe(true);
 
     const [after] = await db
-      .select({ welcomeSharedAt: bookings.welcomeSharedAt, runningLateAt: bookings.runningLateAt })
+      .select({
+        welcomeSharedAt: bookings.welcomeSharedAt,
+        runningLateAt: bookings.runningLateAt,
+        minorDeclaredAt: bookings.minorDeclaredAt,
+      })
       .from(bookings)
       .where(eq(bookings.id, booking.id));
     expect(after?.welcomeSharedAt).toBeNull();
     expect(after?.runningLateAt).toBeNull();
+    expect(after?.minorDeclaredAt).toBeNull();
   });
 
   /**

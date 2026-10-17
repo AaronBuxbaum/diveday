@@ -66,7 +66,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
     .filter({ hasText: title })
     .filter({ visible: true });
   await expect(card).toBeVisible();
-  await expect(card.getByText("8 spots left").filter({ visible: true })).toBeVisible();
+  await expect(card.getByText("8 seats left").filter({ visible: true })).toBeVisible();
 
   await card.click();
   // What the staffer typed, read back in the diver's own words: the three tanks
@@ -275,7 +275,9 @@ test("a departure's own meeting point reaches the diver once they hold a seat", 
   await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
   await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByRole("status")).toContainText("Changes saved");
+  await expect(page.getByRole("status").filter({ hasText: "Changes saved" })).toBeVisible();
+  // A booked diver hears about a moved meeting point on its own (#2443).
+  await expect(page.getByRole("status").filter({ hasText: "the new meeting point" })).toBeVisible();
 
   const tripId = tripPath.split("/").pop();
   await page.context().clearCookies();

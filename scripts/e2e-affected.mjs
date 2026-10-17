@@ -19,10 +19,19 @@
 //            a module the diff edits. Wide by nature (a barrel reaches everything), so
 //            `verify-push.mjs` runs it only while the estimated time stays inside a budget.
 //
-//   node scripts/e2e-affected.mjs [--base <ref>] [--json]
+//   smoke  — five tests a push always runs when the diff changes the app ({@link SMOKE}): the
+//            booking loop, a waiver, a check-in, roll call offline, sign-in.
 //
-// The visual spec is never selected: it asserts nothing, and the capture run is the verify
-// skill's section 3. Every git call is a constant argument array plus refs git itself printed.
+// The reach tier is ordered by how much of the diff's vocabulary a spec names (an identifier
+// the diff touches, a seeded name it changed), then by the narrowest route, so a budget spends
+// itself on the specs most likely to break (#2517).
+//
+//   node scripts/e2e-affected.mjs [--base <ref> | --commit <sha>] [--json]
+//
+// `--commit` replays one commit against its parent, to score the selector against what CI
+// caught. The visual spec is never selected as a file: its captures are picked one by one
+// ({@link selectCaptures}, #2517) and run in light mode only. A path-gated spec (`PATH_GATED`) is picked only when what it tests changed. Every git call is
+// a constant argument array plus refs git itself printed.
 
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -30,11 +39,50 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { gitReader } from "./stack-map.mjs";
+import { changedLinesByFile, moduleIndex, readModules, symbolReach } from "./symbol-reach.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Specs this selector never picks: the capture run is not a test (verify skill, section 3). */
+/** Specs this selector never picks: the capture run is `visual-affected.mjs --grep`'s. */
 const NEVER = new Set(["e2e/visual.spec.ts"]);
+
+/**
+ * Specs that test a tool rather than a page, run only when what they test changed (ci.yml's
+ * `pixel_probe` gate is the same list).
+ */
+export const PATH_GATED = new Map([
+  ["e2e/pixel-probe.spec.ts", /^(?:scripts\/pixel-probe\/|src\/app\/globals\.css$)/],
+]);
+
+/**
+ * The critical journeys a push always proves, one test each, whatever the diff: the booking
+ * loop, a waiver signed, a check-in, roll call on an offline manifest, staff sign-in. Picked by
+ * title and run as `file:line`; about four minutes at two workers.
+ */
+export const SMOKE = [
+  {
+    spec: "e2e/booking.spec.ts",
+    title: "full loop: staff schedules, visitor books, staff sees the roster",
+  },
+  {
+    spec: "e2e/waivers.spec.ts",
+    title: "one waiver button sends a resumable link and a medical yes surfaces follow-up",
+  },
+  {
+    spec: "e2e/check-in.spec.ts",
+    title:
+      "a ready diver checks in with one tap, sinks into the checked-in group, and a re-tap undoes it",
+  },
+  {
+    spec: "e2e/manifest.spec.ts",
+    title:
+      "captain saves the full checkpoint manifest, reloads it offline, and reconciles roll call",
+  },
+  {
+    spec: "e2e/auth.spec.ts",
+    title: "staff sign-in lands on the shop dashboard and sign-out locks it again",
+  },
+];
 
 /** Removed text shorter than this matches too much to mean anything. */
 const MIN_FRAGMENT = 12;
@@ -151,6 +199,54 @@ export function removedText(files) {
   }
   const addedText = added.join("\n");
   return [...removed].filter((piece) => !addedText.includes(piece));
+}
+
+/**
+ * The smoke tests as Playwright `file:line` arguments, from the specs' current source; a title
+ * no longer found is returned in `missing`, never silently dropped.
+ */
+export function smokeTests(specs) {
+  const found = [];
+  const missing = [];
+  for (const { spec, title } of SMOKE) {
+    const source = specs.get(spec) ?? "";
+    const at = source.indexOf(`test(${JSON.stringify(title)}`);
+    if (at < 0) missing.push(`${spec}: ${title}`);
+    else found.push(`${spec}:${source.slice(0, at).split("\n").length}`);
+  }
+  return { found, missing };
+}
+
+/** Identifiers and literal fragments a diff's changed lines hold, four characters or more. */
+export function symbolsOf(files) {
+  const symbols = new Set();
+  for (const [file, { removed, added }] of files) {
+    if (!file.startsWith("src/") || TEST_FILE.test(file)) continue;
+    for (const line of [...removed, ...added]) {
+      for (const match of line.matchAll(/[A-Za-z_$][\w$]{3,}/g)) symbols.add(match[0]);
+      for (const match of line.matchAll(/["'`]([^"'`]{4,80})["'`]/g)) symbols.add(match[1]);
+    }
+  }
+  return symbols;
+}
+
+/**
+ * How much of a diff's vocabulary each spec names: the sum over the diff's symbols a spec holds
+ * of one over how many specs hold it, so a word every spec says (`page`, `expect`) counts for
+ * nothing and a seeded diver's name or a component's own identifier counts for a lot. A symbol
+ * half the specs hold is not counted at all.
+ */
+export function overlapScores(symbols, specs, candidates) {
+  const sources = [...specs.values()];
+  const scores = new Map(candidates.map((spec) => [spec, 0]));
+  for (const symbol of symbols) {
+    const df = sources.filter((source) => source.includes(symbol)).length;
+    if (df === 0 || df > sources.length / 2) continue;
+    for (const spec of candidates) {
+      if (specs.get(spec)?.includes(symbol)) scores.set(spec, scores.get(spec) + 1 / df);
+    }
+  }
+  return scores;
 }
 
 /**
@@ -281,12 +377,15 @@ export const HUB_SPECS = 10;
 
 /**
  * The selection. `changed` is every file the diff touches, `diff` its parsed hunks, `specs`
- * every spec's source, `graph` the import graph (or null to skip the reach tier).
+ * every spec's source, `graph` the import graph (or null to skip the reach tier). With
+ * `modules` (the `symbol-reach.mjs` index) and `lines` (each file's changed lines), the reach
+ * tier follows an edit name by name instead of file by file.
  *
- * `strong` maps a spec to why it was picked. `reach` does too, and `rank` gives each reach spec
- * its narrowest route's spec count, so the most specific ones run first inside a budget.
+ * `strong` maps a spec to why it was picked. `reach` does too, and `rank` orders the reach
+ * specs for {@link withinBudget}: the ones naming most of the diff's vocabulary first
+ * ({@link overlapScores}), then the narrowest route.
  */
-export function selectSpecs({ changed, diff, specs, graph }) {
+export function selectSpecs({ changed, diff, specs, graph, modules, lines }) {
   const strong = new Map();
   const reach = new Map();
   const rank = new Map();
@@ -308,6 +407,12 @@ export function selectSpecs({ changed, diff, specs, graph }) {
     const stem = path.posix.basename(helper).replace(/\.tsx?$/, "");
     const pattern = new RegExp(String.raw`from\s+["']\./(?:[\w/-]*/)?${stem}["']`);
     for (const [spec] of matching(pattern)) note(strong, spec, helper);
+  }
+
+  // A tool's spec, when the tool changed.
+  for (const [spec, gate] of PATH_GATED) {
+    const hit = changed.find((file) => gate.test(file));
+    if (hit) note(strong, spec, hit);
   }
 
   // Text the diff removed, still quoted by a spec.
@@ -336,7 +441,13 @@ export function selectSpecs({ changed, diff, specs, graph }) {
     const edited = changed.filter((file) => graph.has(file) && !file.startsWith("src/app/"));
     if (edited.length > 0) {
       const reached = new Map();
-      for (const file of importersOf(graph, edited)) {
+      const importers = modules
+        ? symbolReach(
+            modules,
+            new Map(edited.map((file) => [file, lines?.get(file) ?? "all"])),
+          ).keys()
+        : importersOf(graph, edited);
+      for (const file of importers) {
         if (!ENTRY.test(file)) continue;
         const route = routeOf(file);
         if (route) reached.set(route.route, { ...route, broad: false });
@@ -352,11 +463,18 @@ export function selectSpecs({ changed, diff, specs, graph }) {
     rank.delete(spec);
   }
 
-  return { strong, reach, rank };
+  // Most of the diff's vocabulary first, then the narrowest route: `rank` becomes the order.
+  const overlap = overlapScores(symbolsOf(diff), specs, [...reach.keys()]);
+  const ordered = [...reach.keys()].sort(
+    (a, b) => overlap.get(b) - overlap.get(a) || rank.get(a) - rank.get(b) || a.localeCompare(b),
+  );
+  for (const [position, spec] of ordered.entries()) rank.set(spec, position);
+
+  return { strong, reach, rank, overlap };
 }
 
 /**
- * The reach specs to run inside `budgetMs` of recorded CI time, narrowest route first, then
+ * The reach specs to run inside `budgetMs` of recorded CI time, lowest `rank` first, then
  * shortest; the rest are named for CI.
  */
 export function withinBudget(reach, rank, record, budgetMs) {
@@ -377,6 +495,104 @@ export function withinBudget(reach, rank, record, budgetMs) {
   return { run, left: ordered.filter((spec) => !run.includes(spec)) };
 }
 
+/** The capture spec, whose tests are picked one at a time rather than as a file. */
+const VISUAL_SPEC = "e2e/visual.spec.ts";
+
+/**
+ * The tests of `e2e/visual.spec.ts` by title, each with its own source (up to the next
+ * `test(`). A title written with a template hole matches any text at the hole.
+ */
+export function visualBlocks(source) {
+  const starts = [...source.matchAll(/^[ \t]*test\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1\s*,/gm)];
+  return starts.map((match, i) => ({
+    title: match[2],
+    body: source.slice(match.index, starts[i + 1]?.index ?? source.length),
+  }));
+}
+
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * A Playwright `-g` source for one test title: its literal text, `${scheme}` as the light run
+ * and any other template hole as anything.
+ */
+function titlePattern(title) {
+  return title
+    .replace(/\\(["'`\\])/g, "$1")
+    .split(/(\$\{[^}]*\})/)
+    .map((piece) =>
+      /^\$\{scheme\}$/.test(piece) ? "light" : /^\$\{/.test(piece) ? ".*" : escapeRegex(piece),
+    )
+    .join("");
+}
+
+/**
+ * The captures a diff can move, by test title: a capture whose source quotes text the diff
+ * removed, visits a route whose own directory the diff edits (a hub route, visited by more than
+ * {@link HUB_SPECS} captures, selects none), or sits on a line the diff changed in the capture
+ * spec itself. Each value says why. A capture is a screenshot; running it here is what finds the
+ * heading it waits for gone (five visual shards, 2026-10-09 to 2026-10-12).
+ */
+export function selectCaptures({ changed, diff, source }) {
+  const picked = new Map();
+  if (!source) return picked;
+  const blocks = visualBlocks(source);
+  const note = (block, why) => {
+    if (!picked.has(block.title)) picked.set(block.title, new Set());
+    picked.get(block.title).add(why);
+  };
+  for (const piece of removedText(diff)) {
+    for (const block of blocks) if (block.body.includes(piece)) note(block, `quotes "${piece}"`);
+  }
+  const routes = new Map();
+  for (const file of changed) {
+    const route = routeOf(file);
+    if (route) routes.set(`${route.route}|${route.broad}`, route);
+  }
+  for (const route of routes.values()) {
+    const pattern = routePattern(route);
+    const hits = blocks.filter((block) => pattern.test(block.body));
+    if (hits.length > HUB_SPECS) continue;
+    for (const block of hits) note(block, route.route);
+  }
+  const added =
+    diff
+      .get(VISUAL_SPEC)
+      ?.added.map((line) => line.trim())
+      .filter((line) => line.length >= 20) ?? [];
+  for (const block of blocks) {
+    if (added.some((line) => block.body.includes(line))) note(block, "edited");
+  }
+  return picked;
+}
+
+/**
+ * The `-g` argument that runs `titles` in light mode only (a dark capture is the same test
+ * under another `describe`, and CI's reg-suit run has both): any of the titles, none under a
+ * `dark mode` describe. Null for no titles.
+ */
+export function captureGrep(titles) {
+  if (titles.length === 0) return null;
+  return `^(?!.*dark mode).*(?:${titles.map(titlePattern).join("|")})`;
+}
+
+/** Recorded CI milliseconds for the light-mode run of each title, from the `visual` record. */
+export function captureMs(titles, root = ROOT) {
+  let record = {};
+  try {
+    record =
+      JSON.parse(readFileSync(path.join(root, "scripts/e2e-durations.json"), "utf8")).visual ?? {};
+  } catch {}
+  let total = 0;
+  for (const title of titles) {
+    const own = new RegExp(`(?:^| › )${titlePattern(title)}$`);
+    for (const [key, ms] of Object.entries(record)) {
+      if (!key.includes("dark mode") && own.test(key)) total += ms;
+    }
+  }
+  return total;
+}
+
 /** Recorded CI milliseconds per spec, and a default for a spec the record has not met. */
 export function durations(root = ROOT) {
   try {
@@ -392,21 +608,59 @@ export function estimateMs(specs, record) {
   return specs.reduce((sum, spec) => sum + (record[spec] ?? UNRECORDED_MS), 0);
 }
 
-/** Everything the CLI and `verify-push.mjs` need, from git and the working tree. */
-export function affectedSpecs({ root = ROOT, base, git = gitReader(root) } = {}) {
-  const from = base ?? stackBase(git);
+/** A diff that can change what a page does: any non-test `src/` file, or the e2e harness. */
+const APP_CHANGE = /^src\/(?!.*\.test\.[^/]+$)|^e2e\/(?:fixtures|helpers|servers|browser)\.ts$/;
+
+/**
+ * Everything the CLI and `verify-push.mjs` need, from git and the working tree: the diff from
+ * `base`'s fork point to HEAD, or, with `commit`, that one commit against its parent (to score
+ * the selector against what CI later caught; the specs and graph are still the working tree's).
+ *
+ * A diff that changes the app also runs the {@link SMOKE} tests, as strong `file:line` picks.
+ */
+export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root) } = {}) {
+  let from;
+  let to = "HEAD";
+  let label;
+  if (commit) {
+    from = git(["rev-parse", "--verify", "--quiet", `${commit}~1`]);
+    to = commit;
+    label = `${commit}~1..${commit}`;
+  } else {
+    const ref = base ?? stackBase(git);
+    if (!ref) return null;
+    from = git(["merge-base", ref, "HEAD"]);
+    label = ref;
+  }
   if (!from) return null;
-  const mergeBase = git(["merge-base", from, "HEAD"]);
-  if (!mergeBase) return null;
-  const names = (git(["diff", "--name-only", mergeBase, "HEAD"]) ?? "").split("\n").filter(Boolean);
-  const diffText = git(["diff", "-U0", "--no-color", mergeBase, "HEAD", "--", "src", "e2e"]) ?? "";
+  const names = (git(["diff", "--name-only", from, to]) ?? "").split("\n").filter(Boolean);
+  const diffText = git(["diff", "-U0", "--no-color", from, to, "--", "src", "e2e"]) ?? "";
+  const specs = readSpecs(root);
   const selection = selectSpecs({
     changed: names,
     diff: parseDiff(diffText),
-    specs: readSpecs(root),
+    specs,
     graph: importGraph(root),
+    modules: moduleIndex(readModules(root)),
+    lines: changedLinesByFile(diffText),
   });
-  return { base: from, changed: names, ...selection };
+  if (names.some((file) => APP_CHANGE.test(file))) {
+    for (const test of smokeTests(specs).found) {
+      const spec = test.replace(/:\d+$/, "");
+      if (selection.strong.has(spec)) continue;
+      selection.strong.set(test, new Set(["smoke"]));
+      selection.reach.delete(spec);
+      selection.rank.delete(spec);
+    }
+  }
+  let captureSource = "";
+  try {
+    captureSource = readFileSync(path.join(root, VISUAL_SPEC), "utf8");
+  } catch {}
+  const captures = names.some((file) => APP_CHANGE.test(file) || file === VISUAL_SPEC)
+    ? selectCaptures({ changed: names, diff: parseDiff(diffText), source: captureSource })
+    : new Map();
+  return { base: label, changed: names, ...selection, captures };
 }
 
 function render(result, record) {
@@ -422,7 +676,13 @@ function render(result, record) {
   };
   block("Strong", result.strong);
   block("Reach", result.reach);
-  if (result.strong.size + result.reach.size === 0)
+  if (result.captures?.size > 0) {
+    lines.push(`Captures (${result.captures.size}, light mode only):`);
+    for (const [title, why] of [...result.captures].sort()) {
+      lines.push(`  ${title}  — ${[...why].slice(0, 2).join("; ")}`);
+    }
+  }
+  if (result.strong.size + result.reach.size + (result.captures?.size ?? 0) === 0)
     lines.push("No spec reads what this diff changed.");
   return lines.join("\n");
 }
@@ -430,13 +690,18 @@ function render(result, record) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const baseAt = args.indexOf("--base");
-  const result = affectedSpecs({ base: baseAt >= 0 ? args[baseAt + 1] : undefined });
+  const commitAt = args.indexOf("--commit");
+  const result = affectedSpecs({
+    base: baseAt >= 0 ? args[baseAt + 1] : undefined,
+    commit: commitAt >= 0 ? args[commitAt + 1] : undefined,
+  });
   if (args.includes("--json")) {
     const plain = result && {
       base: result.base,
       changed: result.changed.length,
       strong: Object.fromEntries([...result.strong].map(([k, v]) => [k, [...v]])),
       reach: Object.fromEntries([...result.reach].map(([k, v]) => [k, [...v]])),
+      captures: Object.fromEntries([...result.captures].map(([k, v]) => [k, [...v]])),
     };
     process.stdout.write(`${JSON.stringify(plain, null, 2)}\n`);
   } else {

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { courses, diveSites, gearItems, orders, people, shops, trips } from "./schema";
-import { searchShop } from "./search";
+import { resolveRecentRecords, searchShop } from "./search";
 
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
@@ -348,5 +348,67 @@ describe("CR-018 trigram search indexes", () => {
       sql`select extname from pg_extension where extname = 'pg_trgm'`,
     );
     expect(rows.rows).toHaveLength(1);
+  });
+});
+
+/**
+ * **⌘K's recents are ids, read back live** (security review F2): the browser
+ * keeps only `{kind, id}`, and the words come from here each time the palette
+ * opens, inside the session's shop. A record removed or erased since simply
+ * does not come back.
+ */
+describe("resolveRecentRecords", () => {
+  it("reads back this shop's records by id, and drops one that is gone or another shop's", async () => {
+    const { db, shop } = ctx;
+    const [priya] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Priya Sharma")))
+      .limit(1);
+    if (!priya) throw new Error("seeded diver missing");
+    const [gone] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Gone Diver", deletedAt: new Date("2026-06-01Z") })
+      .returning({ id: people.id });
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Third Shop", slug: "third-shop", timezone: "UTC" })
+      .returning();
+    const [elsewhere] = await db
+      .insert(people)
+      .values({ shopId: otherShop?.id as string, fullName: "Elsewhere Diver" })
+      .returning({ id: people.id });
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .limit(1);
+    if (!gone || !elsewhere || !trip) throw new Error("fixture insert failed");
+
+    const result = await resolveRecentRecords(
+      db,
+      shop.id,
+      [
+        { kind: "diver", id: priya.id },
+        { kind: "diver", id: gone.id },
+        { kind: "diver", id: elsewhere.id },
+        { kind: "trip", id: trip.id },
+      ],
+      "America/New_York",
+      "en-US",
+    );
+    expect(result.divers.map((row) => row.fullName)).toEqual(["Priya Sharma"]);
+    expect(result.trips.map((row) => row.id)).toEqual([trip.id]);
+    expect(result.orders).toEqual([]);
+  });
+
+  it("asks nothing for no ids", async () => {
+    const { db, shop } = ctx;
+    expect(await resolveRecentRecords(db, shop.id, [], "UTC", "en-US")).toMatchObject({
+      divers: [],
+      trips: [],
+      orders: [],
+      gear: [],
+    });
   });
 });

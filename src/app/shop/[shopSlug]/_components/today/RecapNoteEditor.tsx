@@ -5,8 +5,9 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { Field, FormStatus, textareaClassFor } from "@/components/ui/form";
+import { GroupLabel } from "@/components/ui/group-label";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { GroupLabel, ledgerKindColumnClass } from "@/components/ui/ledger";
+import { ledgerKindColumnClass } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { RecapSendControl } from "./RecapSendControl";
@@ -27,6 +28,8 @@ export type RecapNoteEditorContext = {
     caption: string | null;
     diverName: string;
     bookingId: string;
+    /** Shared by its diver with everyone on the boat (H-129); deleting it removes it from every recap. */
+    sharedWithBoat?: boolean;
   }[];
   deletePhotoAction?: (formData: FormData) => void;
   crewPhotos?: {
@@ -296,6 +299,13 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
                     {photo.caption ? (
                       <p className="truncate text-xs text-muted">{photo.caption}</p>
                     ) : null}
+                    {/* It reaches every recap on the boat (H-129), so whoever
+                        takes it down knows how far it went. */}
+                    {photo.sharedWithBoat ? (
+                      <p className="truncate text-xs text-muted">
+                        {t("trips.recapPhotos.sharedWithBoat")}
+                      </p>
+                    ) : null}
                   </div>
                   {!recapLocked && deletePhotoAction ? (
                     <form action={deletePhotoAction}>
@@ -312,7 +322,11 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
                           size: "sm",
                           busy: true,
                         })}
-                        message={t("trips.recapPhotos.confirmRemove")}
+                        message={
+                          photo.sharedWithBoat
+                            ? t("trips.recapPhotos.confirmRemoveShared")
+                            : t("trips.recapPhotos.confirmRemove")
+                        }
                         confirmLabel={t("trips.recapPhotos.removeConfirmButton")}
                         cancelLabel={t("trips.recapPhotos.removeCancel")}
                         pendingLabel={t("trips.recapPhotos.removing")}

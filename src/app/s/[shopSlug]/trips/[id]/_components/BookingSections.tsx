@@ -15,12 +15,13 @@ import {
   DIVER_PARTICIPANT_CHOICE_KEYS,
   DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS,
 } from "@/i18n/participant-labels";
+import type { DeskPayment } from "@/lib/desk-payment";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import { type ParticipantType, rentsGear } from "@/lib/participant-types";
 import type { PassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
+import { hasAnyRentalPricing, type LastGear, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import type { BookingFormTrip } from "../_lib/booking-form-trip";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
@@ -162,7 +163,6 @@ export function TripFullSection({
   shopSlug,
   trip,
   tripRef,
-  remaining,
   errorMessage,
   contactEmail,
   contactPhone,
@@ -174,7 +174,6 @@ export function TripFullSection({
   shopSlug: string;
   trip: BookingFormTrip;
   tripRef: TripRef;
-  remaining: number;
   errorMessage?: string;
   contactEmail?: string | null;
   contactPhone?: string | null;
@@ -204,8 +203,8 @@ export function TripFullSection({
     tripId: string;
     title: string;
     href: string;
-    when: { weekday: string; day: string; month: string };
-    reason: "same_course" | "same_site";
+    when: string;
+    reason: "same_run" | "same_course" | "same_site";
   }[];
 }) {
   const t = useTranslations("booking");
@@ -251,12 +250,12 @@ export function TripFullSection({
               </Link>{" "}
               <span className="text-muted">
                 {t(
-                  alternative.reason === "same_course"
-                    ? "alternativeSameCourse"
-                    : "alternativeSameSite",
-                  {
-                    date: `${alternative.when.weekday} ${alternative.when.day} ${alternative.when.month}`,
-                  },
+                  alternative.reason === "same_run"
+                    ? "alternativeSameRun"
+                    : alternative.reason === "same_course"
+                      ? "alternativeSameCourse"
+                      : "alternativeSameSite",
+                  { date: alternative.when },
                 )}
               </span>
             </li>
@@ -281,12 +280,22 @@ export function TripFullSection({
             </p>
           ) : null}
         </div>
+        {/* A party waits together as one lead with a count, invited when that
+            many seats are free (fourth review, item 34). Up to the boat's own
+            seats: a party bigger than the boat is a charter, and the line
+            under the count says to ask the shop. Nobody else's name is asked
+            for a seat that may never open, nor the lead's "Under 18": nothing
+            is signed until a seat is booked. */}
         <BookingPartyFields
-          maxPartySize={remaining}
+          maxPartySize={trip.capacity}
+          leadOnly
           leadPhone
           contactEmail={contactEmail}
           contactPhone={contactPhone}
         />
+        {/* Two joiners from one couple would each count the couple, so the
+            shop reads demand that is not there (dive-domain review r4-4, N8). */}
+        {trip.capacity > 1 ? <p className="text-sm text-muted">{t("waitlistPartyHint")}</p> : null}
         {/* The same optional question the shop-wide deal list asks, in the same
             words, so a staffer working either list is reading one claim rather
             than two (FU-20260813). It describes the person joining — the lead
@@ -380,6 +389,11 @@ export type BookSpotSectionContext = {
    */
   taxEnabled?: boolean;
   /**
+   * How the shop takes money at the desk (fifth-loop ideas, item 21), said
+   * under "Due at the shop". Null says nothing.
+   */
+  deskPayment?: DeskPayment | null;
+  /**
    * A course session's two priced halves, per diver (`courseCharges`), resolved
    * by the page so the arithmetic stays server-side. Null on an ordinary
    * charter, and each hides its own line in `MoneyBlock`.
@@ -409,6 +423,8 @@ export type BookSpotSectionContext = {
   knownDiver?:
     | (KnownDiverPanelProps & {
         lead: { fullName: string; email: string | null; phone: string | null };
+        /** Their last trip's gear, to start their own (the first) gear step from (item 40). */
+        lastGear?: LastGear | null;
       })
     | null;
   /**
@@ -461,6 +477,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
     rentalPricing,
     passThroughFee,
     taxEnabled,
+    deskPayment = null,
     courseFeeCents,
     eLearningFeeCents,
     depositCents,
@@ -538,13 +555,15 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
         .filter(([index]) => activeGearIndexes.has(index))
         .reduce((sum, [, cents]) => sum + cents, 0)
     : 0;
+  // Sized by the party, not the boat's free seats: one diver booking reads
+  // "Book this seat", never "these spots" (fourth UX review item 7, H-122).
   const bookLabel = payAtBooking
     ? remaining === 1
-      ? t("bookAndPayLastSpot")
+      ? t("bookAndPayLastSeat")
       : t("bookAndPay")
     : remaining === 1
-      ? t("bookLastSpot")
-      : t("bookSpots");
+      ? t("bookLastSeat")
+      : t("bookSeats", { count: partySize });
   const capacityLabelValue = capacityLabel(trip);
   const capacityText =
     capacityLabelValue.kind === "full"
@@ -613,6 +632,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
                   plannedDives={trip.plannedDives}
                   currency={currency}
                   onSubtotalChange={onGearSubtotalChange}
+                  asLastTime={index === 0 ? (knownDiver?.lastGear ?? null) : null}
                 />
               ))
           : null}
@@ -699,6 +719,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
               // read in the wrong branch).
               taxLine: taxEnabled && payAtBooking ? "checkout" : "none",
               dueNow: payAtBooking ? "checkout" : "at_shop",
+              deskPayment,
               depositCents: depositCents ?? null,
               balanceDueAt: balanceDueAt ?? null,
               currency,

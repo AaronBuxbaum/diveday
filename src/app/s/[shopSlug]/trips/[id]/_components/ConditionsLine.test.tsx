@@ -159,6 +159,21 @@ describe("ConditionsLine — the crew's own prediction", () => {
     expect(screen.getByText("18 m visibility")).toBeInTheDocument();
   });
 
+  it("adds the reader's unit after the shop's when theirs differs (ideas item 22)", () => {
+    render(
+      <ConditionsLine
+        shop={shop}
+        trip={trip}
+        crewPrediction
+        automatedForecast={null}
+        crewLanguages={null}
+        locale={DEFAULT_DIVER_LOCALE}
+        readerUnits={{ depth: "feet", temperature: "fahrenheit" }}
+      />,
+    );
+    expect(screen.getByText("18 m (59 ft) visibility")).toBeInTheDocument();
+  });
+
   it("carries no forecast credit — the reading is the shop's own", () => {
     renderCrew();
     expect(screen.queryByRole("link", { name: "Open-Meteo" })).not.toBeInTheDocument();
@@ -229,7 +244,7 @@ describe("ConditionsLine — a forecast still on its way", () => {
       locale: DEFAULT_DIVER_LOCALE,
     });
 
-    render(<>{element.props.fallback}</>);
+    render(element.props.fallback);
     expect(screen.getByText(/English and Spanish/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open-Meteo" })).not.toBeInTheDocument();
   });

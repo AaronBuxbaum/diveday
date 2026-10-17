@@ -81,7 +81,7 @@ test.describe("refunds", () => {
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name").fill("Nora Quinn");
     await page.getByLabel("Email").fill(`nora-${emailTag}-${e2eNow().getTime()}@example.com`);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
     await signInAsOwner(page);
@@ -91,7 +91,12 @@ test.describe("refunds", () => {
     // The payment control is one of the row's fixes, behind its fold; the
     // save holds the row open on the way back.
     await openRosterDetails(noraRow);
-    await noraRow.getByRole("combobox").selectOption("paid");
+    await noraRow.getByRole("combobox", { name: "Payment status" }).selectOption("paid");
+    // The Paid mark asks how much and how (batch 6 item 1). The amount opens
+    // holding what the seat owes, so a staffer taking the usual fare only says
+    // how it came in.
+    await expect(noraRow.getByLabel("Amount taken")).toHaveValue(/\d/);
+    await noraRow.getByRole("radio", { name: "Cash" }).check();
     await noraRow.getByRole("button", { name: "Update" }).click();
     await expect(page.getByRole("status")).toContainText("Payment status updated");
     await expect(noraRow.getByText("Payment: Paid")).toBeVisible();
@@ -160,7 +165,7 @@ test.describe("refunds", () => {
     await expect(
       page
         .getByRole("status")
-        .filter({ hasText: "past the cancellation window, so the seat was non-refundable" }),
+        .filter({ hasText: "past the cancellation window, so it was non-refundable" }),
     ).toBeVisible();
     // Same roster scoping as above: the activity trail now names the removed
     // diver on purpose.

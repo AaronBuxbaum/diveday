@@ -11,7 +11,12 @@ const seen = vi.hoisted(() => ({
   party: null as Record<string, unknown> | null,
 }));
 
-vi.mock("../booking-actions", () => ({ cancelMyBookingAction: async () => {} }));
+vi.mock("../booking-actions", () => ({
+  cancelMyBookingAction: async () => {},
+  addSeatFromReady: async () => {},
+  payForPartySeatFromReady: async () => {},
+  askToMoveAction: async () => {},
+}));
 vi.mock("./RunningLate", () => ({ RunningLate: () => <p>late</p> }));
 vi.mock("./CourseMaterials", () => ({ CourseMaterials: () => <p>materials</p> }));
 vi.mock("@/components/TripArrivalCard", () => ({
@@ -50,7 +55,10 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
   return {
     token: "tok",
     data: {
-      detail: { trip: { title: "Two-Tank Reef" }, shop: { timezone: "America/New_York" } },
+      detail: {
+        trip: { title: "Two-Tank Reef" },
+        shop: { name: "Blue Mantis Divers", timezone: "America/New_York" },
+      },
       shop: { dockCallMinutes: 30 },
       pickupTime: null,
       rentalFit: null,
@@ -83,6 +91,7 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
     publicCrew: [],
     partySeatClaims: [],
     partyAllSet: false,
+    flySafePlan: null,
     ...over,
   };
 }
@@ -99,18 +108,33 @@ describe("ThreadSections", () => {
     expect(screen.getByRole("button", { name: t("ready.cancelSpot") })).toBeTruthy();
   });
 
-  it("names the planned sites in order and the dock call unless a pickup replaces it", () => {
+  it("names the planned sites in order, and leaves the dock call to the masthead (ideas item 23)", () => {
     render(<ThreadSections context={context()} />);
     expect(seen.arrival?.sites).toEqual(["Molasses"]);
-    expect(seen.arrival?.dockCallMinutes).toBe(30);
+    expect(seen.arrival).not.toHaveProperty("dockCallMinutes");
     expect(seen.arrival?.downloadHref).toContain("?booking=tok");
     expect(seen.packing?.siteBottomTimes).toEqual([45, undefined]);
     expect(seen.packing?.legTravelTimes).toEqual([20, 15]);
+  });
+
+  it("says when to fly home as a plan, and nothing when there is no plan (ideas item 18)", () => {
+    render(<ThreadSections context={context()} />);
+    expect(screen.queryByTestId("ready-fly-safe-plan")).toBeNull();
     cleanup();
-    const pickedUp = context();
-    (pickedUp.data as unknown as { pickupTime: string }).pickupTime = "7:00 AM";
-    render(<ThreadSections context={pickedUp} />);
-    expect(seen.arrival?.dockCallMinutes).toBeNull();
+    render(
+      <ThreadSections
+        context={context({
+          flySafePlan: {
+            from: new Date("2026-10-16T08:30:00.000Z"),
+            reason: "dives_planned",
+            hours: 24,
+          },
+        })}
+      />,
+    );
+    expect(screen.getByTestId("ready-fly-safe-plan").textContent).toMatch(
+      /^Flying home soon\? Blue Mantis Divers asks you to plan your flight no earlier than Fri, Oct\s16, 4:30\sAM\sEDT: we plan more than one dive, so 24 hours after we’re due back, plus an hour in case we run late, following DAN’s guidance\.$/,
+    );
   });
 
   it("shows the party panel only to a party lead, with its all-set close", () => {
@@ -139,6 +163,25 @@ describe("ThreadSections", () => {
     expect(seats[0].claimUrl).toContain("claim-token");
   });
 
+  it("lists which party seats go with the lead and which stay, inside the confirm (batch 6 item 10)", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(
+      <ThreadSections
+        context={context({
+          partySeatClaims: [
+            { bookingId: "b2", seatName: "Milo", claimed: false, cancelsWithLead: true },
+            { bookingId: "b3", seatName: "Pia", claimed: true, cancelsWithLead: false },
+          ] as unknown as ReadyThreadSectionsContext["partySeatClaims"],
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: t("ready.cancelSpot") }));
+    const plan = screen.getByTestId("party-cancel-plan");
+    expect(plan.textContent).toContain(t("ready.cancelPartyGoes", { names: "Milo" }));
+    expect(plan.textContent).toContain(t("ready.cancelPartyStays", { count: 1, names: "Pia" }));
+    expect(screen.getByText(t("ready.cancelConfirmParty", { trip: "Two-Tank Reef" }))).toBeTruthy();
+  });
+
   it("offers no cancel door the booking would refuse, and nothing without the trip on record", () => {
     const closed = context({ fullShop: undefined, fullTrip: null });
     (closed.data as unknown as { canCancelBooking: boolean }).canCancelBooking = false;
@@ -146,5 +189,43 @@ describe("ThreadSections", () => {
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByText("arrival")).toBeNull();
     expect(screen.queryByText("packing")).toBeNull();
+  });
+
+  /** H-126: past the free window, the ask comes before the forfeit. */
+  it("offers Ask to move above the cancel once a cancel would forfeit, with the shop's phone", () => {
+    const past = context({
+      fullShop: {
+        name: "Blue Mantis Divers",
+        contactPhone: "+1 305-555-0100",
+      } as unknown as ReadyThreadSectionsContext["fullShop"],
+    });
+    Object.assign(past.data, { moveAsk: "open", cancelPreview: "forfeit" });
+    const { container } = render(<ThreadSections context={past} />);
+    expect(
+      screen.getByText(
+        "Can’t make this date? Ask Blue Mantis Divers to move you to another one, or call +1 305-555-0100.",
+      ),
+    ).toBeTruthy();
+    const ask = screen.getByRole("button", { name: "Ask to move" });
+    const cancel = screen.getByRole("button", { name: t("ready.cancelSpot") });
+    expect(ask.compareDocumentPosition(cancel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelector('input[name="note"]')).toBeTruthy();
+  });
+
+  it("says the ask was sent instead of offering it twice, and shows nothing before the window closes", () => {
+    const asked = context();
+    Object.assign(asked.data, { moveAsk: "asked" });
+    render(<ThreadSections context={asked} />);
+    expect(
+      screen.getByText(
+        "You asked Blue Mantis Divers to move you. They’ll be in touch about another date.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Ask to move" })).toBeNull();
+    cleanup();
+    const early = context();
+    Object.assign(early.data, { moveAsk: null });
+    render(<ThreadSections context={early} />);
+    expect(screen.queryByRole("button", { name: "Ask to move" })).toBeNull();
   });
 });

@@ -17,6 +17,6 @@ Whether the "never fetches" stance stands for the staffer's own browser; whether
 
 ## Unblocks / follow-up
 
-Publishing the extension to the Chrome Web Store (DiveDay's developer account, privacy policy, listing) is a human step; until then Settings offers no install link. PADI DiveChek needs a PADI Pro sign-in to build against.
+Publishing the extension to the Chrome Web Store (DiveDay's developer account, privacy policy, listing) is a human step; until then Settings offers no install link. PADI DiveChek needs a PADI Pro sign-in to build against; built on a best guess as [H-121](H-121-padi-divechek.md).
 
 Part of the [human decision log](README.md#decision-register).

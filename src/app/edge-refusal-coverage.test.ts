@@ -31,7 +31,7 @@ const PROXY_SOURCE = join(APP_DIR, "..", "proxy.ts");
  * would have cost nothing and been noticed by nobody.
  *
  * So recognition is pinned to the route tree rather than to memory. The tree
- * is read off the filesystem for the reason `capability-refusals.test.ts` gives
+ * is read off the filesystem for the reason `scripts/check-capability-refusals.mjs` gives
  * about capability routes: a route is created by adding a directory, and
  * nothing about that act reminds anyone to come here.
  *
@@ -87,7 +87,7 @@ const STAFF_PREFIX = "/shop/";
  * Every entry today is a bearer-token route, where the URL *is* the capability:
  * the token has to be hashed, compared and checked for expiry, which is a row
  * question and the page's own. None of them can soft-404 in the first place —
- * `capability-refusals.test.ts` holds every one of them to never calling
+ * `scripts/check-capability-refusals.mjs` holds every one of them to never calling
  * `notFound()` at all, each refusing in place with its own expired-link card —
  * and each is `noindex`, so no crawler is reading a status off them.
  */
@@ -103,6 +103,7 @@ const EDGE_EXEMPT = new Map<string, string>(
     "/unsubscribe/[token]",
     "/verify/[token]",
     "/waivers/[token]",
+    "/waivers/[token]/doctor",
   ].map((route) => [
     route,
     "a bearer-token route: the token is a row question, and the page is noindex",

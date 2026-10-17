@@ -51,10 +51,11 @@ export async function createDiveSiteAction(
   if (!photos.ok) {
     return refuse(photos.reason === "not_configured" ? "imagesUnconfigured" : "images");
   }
-  // `maxDepth` and `expectedBottomTime` are the form's own fields, not
-  // columns — they became `parsed.maxDepthMeters` /
-  // `parsed.expectedBottomTimeMinutes`, so neither may reach the spread.
+  // `minDepth`, `maxDepth` and `expectedBottomTime` are the form's own fields,
+  // not columns — they became `parsed.depthMinMeters` / `parsed.maxDepthMeters` /
+  // `parsed.expectedBottomTimeMinutes`, so none may reach the spread.
   const {
+    minDepth: _minDepth,
     maxDepth: _maxDepth,
     expectedBottomTime: _expectedBottomTime,
     // The note and its author are one value on the row (issue #1204).
@@ -75,8 +76,10 @@ export async function createDiveSiteAction(
     requiredSpecialties: specialties.data,
     requiresNitrox: extras.requiresNitrox,
     difficultyLevel: parsed.difficultyLevel,
+    snorkelSuitable: parsed.snorkelSuitable,
     depthRange: parsed.fields.depthRange,
     maxDepthMeters: parsed.maxDepthMeters,
+    depthMinMeters: parsed.depthMinMeters,
     expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
     currentNote: parsed.fields.currentNote,
     divePlan: parsed.fields.divePlan,

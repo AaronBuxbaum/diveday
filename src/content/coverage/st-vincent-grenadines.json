@@ -1,0 +1,346 @@
+{
+  "area": "st-vincent-grenadines",
+  "method": "St Vincent and the Grenadines: the leeward coast of St Vincent and the Grenadine islands to the south (Bequia, Mustique, Canouan, Mayreau, Tobago Cays, Union Island, Petit St Vincent, Sail Rock). No marine-park or government mooring list with named dive sites is published online (the Tobago Cays Marine Park publishes zoning, not a dive-site list), so the denominator rests on one tourism list and operator lists. Lists read: the government tourism pages (tourism.gov.vc dive-sites page and the SVG Tourism Authority discoversvg.com diving page, one tourism body, counted once); Dive St. Vincent's own list of dive sites (DiveSites2.html and DiveSites.html, one operator); Grenadines Dive of Union Island (its ScubaDiving page, plus the Mandarin Oriental Canouan page that publishes the Grenadines Dive Center's Canouan trips, one operator). Dive Bequia, Bequia Dive Adventures and Dive Antilles were read but publish no named site list; Indigo Dive, Sea Hunt, the Cousteau center at Petit St Vincent and Canouan resort sites could not be read, and Sea Hunt could not be found at all. Bequia, Mustique and Canouan therefore sit almost entirely on the tourism list alone and fall to the one-list exclusion; this denominator is thin for the Grenadines and should be rechecked when an operator list appears. A site is counted when named on at least two independent lists. Same-site alternate names are merged (Mayreau Gardens / Mayreau Garden, Puruni / Purini Wreck, Petit Tabac / Petit Tabacc, Ends Reef / End's Reef, Seimstrand is one of the Capital Wrecks). Counted 2026-10-14.",
+  "sources": [
+    "https://tourism.gov.vc/tourism/index.php/diving-a-watersports/63-dive-sites",
+    "https://discoversvg.com/what-to-do/diving-snorkelling/",
+    "http://www.divestvincent.com/DiveSites2.html",
+    "http://www.divestvincent.com/DiveSites.html",
+    "https://grenadinesdive.com/ScubaDiving.html",
+    "https://www.mandarinoriental.com/en/canouan/caribbean/explore/scuba-diving"
+  ],
+  "counted": "2026-10-14",
+  "promised": false,
+  "sites": [
+    {
+      "name": "Bat Cave",
+      "template": null,
+      "listedBy": [
+        "https://tourism.gov.vc/tourism/index.php/diving-a-watersports/63-dive-sites",
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "http://www.divestvincent.com/DiveSites2.html",
+        "http://www.divestvincent.com/DiveSites.html"
+      ]
+    },
+    {
+      "name": "Anchor Reef",
+      "template": null,
+      "listedBy": [
+        "https://tourism.gov.vc/tourism/index.php/diving-a-watersports/63-dive-sites",
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "http://www.divestvincent.com/DiveSites2.html"
+      ]
+    },
+    {
+      "name": "Layou Wall",
+      "template": null,
+      "listedBy": [
+        "https://tourism.gov.vc/tourism/index.php/diving-a-watersports/63-dive-sites",
+        "https://discoversvg.com/what-to-do/diving-snorkelling/"
+      ],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Capital Wrecks (Siemstrand and others)",
+      "template": null,
+      "listedBy": [
+        "https://tourism.gov.vc/tourism/index.php/diving-a-watersports/63-dive-sites",
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "http://www.divestvincent.com/DiveSites.html"
+      ]
+    },
+    {
+      "name": "Mayreau Gardens",
+      "template": "mayreau-gardens",
+      "listedBy": [
+        "https://tourism.gov.vc/tourism/index.php/diving-a-watersports/63-dive-sites",
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "https://grenadinesdive.com/ScubaDiving.html",
+        "https://www.mandarinoriental.com/en/canouan/caribbean/explore/scuba-diving"
+      ]
+    },
+    {
+      "name": "Puruni Wreck",
+      "template": "puruni-wreck",
+      "listedBy": [
+        "https://tourism.gov.vc/tourism/index.php/diving-a-watersports/63-dive-sites",
+        "https://grenadinesdive.com/ScubaDiving.html",
+        "https://www.mandarinoriental.com/en/canouan/caribbean/explore/scuba-diving"
+      ]
+    },
+    {
+      "name": "Horseshoe Reef",
+      "template": "horseshoe-reef-tobago-cays",
+      "listedBy": [
+        "https://tourism.gov.vc/tourism/index.php/diving-a-watersports/63-dive-sites",
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "https://grenadinesdive.com/ScubaDiving.html",
+        "https://www.mandarinoriental.com/en/canouan/caribbean/explore/scuba-diving"
+      ]
+    },
+    {
+      "name": "Mopion Reef",
+      "template": "mopion-reef",
+      "listedBy": [
+        "https://tourism.gov.vc/tourism/index.php/diving-a-watersports/63-dive-sites",
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "https://grenadinesdive.com/ScubaDiving.html"
+      ]
+    },
+    {
+      "name": "Back Door",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Fizzy Reef",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Japanese Garden",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Petit Byahaut",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Romark Wreck",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Over There",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Rock Fort",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Sub Rock",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Turtle Bay",
+      "template": null,
+      "listedBy": [
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "http://www.divestvincent.com/DiveSites2.html",
+        "http://www.divestvincent.com/DiveSites.html"
+      ]
+    },
+    {
+      "name": "Boulders",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Stratmann Wreck",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Cathedral",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Moonhole Wreck",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Petit Canouan",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Airport Reef",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Glossy Point Reef",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Petit Tabac",
+      "template": "petit-tabac-reef",
+      "listedBy": [
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "https://grenadinesdive.com/ScubaDiving.html",
+        "https://www.mandarinoriental.com/en/canouan/caribbean/explore/scuba-diving"
+      ]
+    },
+    {
+      "name": "Number 9",
+      "template": null,
+      "listedBy": ["https://discoversvg.com/what-to-do/diving-snorkelling/"],
+      "excluded": "on one list only (tourism)"
+    },
+    {
+      "name": "Ends Reef",
+      "template": "ends-reef-tobago-cays",
+      "listedBy": [
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "https://grenadinesdive.com/ScubaDiving.html"
+      ]
+    },
+    {
+      "name": "Round About Reef",
+      "template": null,
+      "listedBy": [
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "https://grenadinesdive.com/ScubaDiving.html"
+      ]
+    },
+    {
+      "name": "Pinese Reef",
+      "template": "pinese-reef-petit-st-vincent",
+      "listedBy": [
+        "https://discoversvg.com/what-to-do/diving-snorkelling/",
+        "https://grenadinesdive.com/ScubaDiving.html"
+      ]
+    },
+    {
+      "name": "The Forest",
+      "template": null,
+      "listedBy": ["http://www.divestvincent.com/DiveSites2.html"],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "The Garden",
+      "template": null,
+      "listedBy": ["http://www.divestvincent.com/DiveSites2.html"],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "The Wall",
+      "template": null,
+      "listedBy": ["http://www.divestvincent.com/DiveSites2.html"],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "Orca Point",
+      "template": null,
+      "listedBy": ["http://www.divestvincent.com/DiveSites2.html"],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "Orca II",
+      "template": null,
+      "listedBy": ["http://www.divestvincent.com/DiveSites2.html"],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "Critter Corner",
+      "template": null,
+      "listedBy": ["http://www.divestvincent.com/DiveSites2.html"],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "The Steps",
+      "template": null,
+      "listedBy": ["http://www.divestvincent.com/DiveSites2.html"],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "New Guinea Reef",
+      "template": null,
+      "listedBy": [
+        "http://www.divestvincent.com/DiveSites2.html",
+        "http://www.divestvincent.com/DiveSites.html"
+      ],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "Bottle Reef",
+      "template": null,
+      "listedBy": [
+        "http://www.divestvincent.com/DiveSites2.html",
+        "http://www.divestvincent.com/DiveSites.html"
+      ],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "Coral Castle",
+      "template": null,
+      "listedBy": [
+        "http://www.divestvincent.com/DiveSites2.html",
+        "http://www.divestvincent.com/DiveSites.html"
+      ],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "Pinnacle",
+      "template": null,
+      "listedBy": ["http://www.divestvincent.com/DiveSites2.html"],
+      "excluded": "on one list only (divestvincent)"
+    },
+    {
+      "name": "Clipper's Point (Yankee Clipper)",
+      "template": null,
+      "listedBy": ["https://grenadinesdive.com/ScubaDiving.html"],
+      "excluded": "on one list only (grenadinesdive)"
+    },
+    {
+      "name": "Valley Dive",
+      "template": null,
+      "listedBy": ["https://grenadinesdive.com/ScubaDiving.html"],
+      "excluded": "on one list only (grenadinesdive)"
+    },
+    {
+      "name": "Hot Springs",
+      "template": null,
+      "listedBy": ["https://grenadinesdive.com/ScubaDiving.html"],
+      "excluded": "on one list only (grenadinesdive)"
+    },
+    {
+      "name": "Sail Rock",
+      "template": null,
+      "listedBy": ["https://grenadinesdive.com/ScubaDiving.html"],
+      "excluded": "on one list only (grenadinesdive)"
+    },
+    {
+      "name": "Level Table",
+      "template": null,
+      "listedBy": ["https://www.mandarinoriental.com/en/canouan/caribbean/explore/scuba-diving"],
+      "excluded": "on one list only (grenadinesdive)"
+    },
+    {
+      "name": "Chatham Rocks",
+      "template": null,
+      "listedBy": ["https://www.mandarinoriental.com/en/canouan/caribbean/explore/scuba-diving"],
+      "excluded": "on one list only (grenadinesdive)"
+    },
+    {
+      "name": "Bloody Head",
+      "template": null,
+      "listedBy": ["https://www.mandarinoriental.com/en/canouan/caribbean/explore/scuba-diving"],
+      "excluded": "on one list only (grenadinesdive)"
+    }
+  ]
+}

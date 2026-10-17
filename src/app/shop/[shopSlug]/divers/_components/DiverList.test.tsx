@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { DiverFilter } from "@/db/divers";
+import type { DiverFilter, DiverSort } from "@/db/divers";
 import { staffTranslator } from "@/i18n/staff-messages";
 
 // The list drives the URL as you type, so it reaches for the app router. One
@@ -49,6 +49,8 @@ const copy = {
   viewDivingToday: t("divers.list.viewDivingToday"),
   viewNeedsAttention: t("divers.list.viewNeedsAttention"),
   viewMissingContact: t("divers.list.viewMissingContact"),
+  viewNotBack: t("divers.list.viewNotBack"),
+  lastDivedGroup: t("divers.list.lastDivedGroup"),
   viewRemoved: t("divers.list.viewRemoved"),
   viewsAriaLabel: t("divers.list.viewsAriaLabel"),
   removedNote: t("divers.list.removedNote"),
@@ -67,6 +69,7 @@ const copy = {
 function renderList({
   query = "",
   filter = "all" as DiverFilter,
+  sort = "name" as DiverSort,
   importHref = "/shop/blue-mantis/settings/import" as string | null,
   rows = [] as RosterRow[],
   // Annotated because `total`'s default reads `rows`, and an inferred
@@ -87,6 +90,7 @@ function renderList({
       shopSlug="blue-mantis"
       query={query}
       filter={filter}
+      sort={sort}
       importHref={importHref}
       canRestore={canRestore}
       quickAddAction={quickAddAction}
@@ -338,7 +342,7 @@ describe("DiverList ledger", () => {
   /**
    * **The slice's pin.** A diver with nothing outstanding wears no pill at all
    * — not "Certified", not "Ready", not a level. The roster used to badge
-   * every row of the "Needs attention" view with the very count that view is
+   * every row of the "Needs you" view with the very count that view is
    * *made* of, which is the same fact at two volumes (principle 9).
    */
   it("carries no badge on a clear diver's row", () => {
@@ -451,8 +455,10 @@ describe("DiverList roster views", () => {
     ).toEqual([
       ["All divers", "/shop/blue-mantis/divers"],
       ["Diving today", "/shop/blue-mantis/divers?filter=diving_today"],
-      ["Needs attention", "/shop/blue-mantis/divers?filter=needs_attention"],
+      ["Needs you", "/shop/blue-mantis/divers?filter=needs_attention"],
       ["Missing contact", "/shop/blue-mantis/divers?filter=missing_contact"],
+      // Who has not been back in a year: the list a quiet week is filled from.
+      ["Not back in 12 months", "/shop/blue-mantis/divers?filter=not_back"],
       // Last, and apart from the three: not a question about today, but the
       // only way to find a diver somebody removed.
       ["Deleted", "/shop/blue-mantis/divers?filter=removed"],
@@ -467,9 +473,24 @@ describe("DiverList roster views", () => {
     expect([...views.querySelectorAll("a")].map((link) => link.textContent)).toEqual([
       "All divers",
       "Diving today",
-      "Needs attention",
+      "Needs you",
       "Missing contact",
+      "Not back in 12 months",
     ]);
+  });
+
+  it("keeps the order on every chip, and files a last-dived roster under one label", () => {
+    renderList({
+      filter: "not_back",
+      sort: "last_dived",
+      rows: [rosterRow({ personId: "p-1", fullName: "Zed Last", letter: "Z" })],
+    });
+    const views = screen.getByRole("navigation", { name: "Roster views" });
+    expect(views.querySelector("a")?.getAttribute("href")).toBe(
+      "/shop/blue-mantis/divers?sort=last_dived",
+    );
+    expect(screen.getByRole("heading", { name: "Most recent dive first" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Z" })).toBeNull();
   });
 });
 
@@ -528,7 +549,7 @@ describe("DiverList removed view", () => {
 
   it("keeps the search on when a view chip is followed", () => {
     renderList({ query: "nadia" });
-    expect(screen.getByRole("link", { name: "Needs attention" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Needs you" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers?q=nadia&filter=needs_attention",
     );
@@ -547,7 +568,7 @@ describe("DiverList removed view", () => {
       renderList({ filter: "diving_today" });
       const input = screen.getByRole("searchbox", { name: "Search divers" });
       fireEvent.change(input, { target: { value: "priya" } });
-      fireEvent.click(screen.getByRole("link", { name: "Needs attention" }));
+      fireEvent.click(screen.getByRole("link", { name: "Needs you" }));
       act(() => {
         vi.advanceTimersByTime(1000);
       });

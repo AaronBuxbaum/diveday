@@ -1,7 +1,8 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { bookingIdFromBuddyReferral } from "@/lib/buddy-tokens";
 import type { DbExecutor } from "./client";
-import { bookingReferrals, bookings, trips } from "./schema";
+import { bookingReferrals, bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -108,4 +109,85 @@ export async function buddyReferredSeatsForWindow(
       ),
     );
   return Number(row?.seats ?? 0);
+}
+
+/**
+ * **How many friends this person brought to the shop** (fifth-loop ideas,
+ * items 36 and 41): distinct people, other than them, holding a live seat that
+ * arrived on a link from one of their bookings. People, not seats: a friend who
+ * came back on the same link three times was brought once.
+ */
+export async function friendsBroughtBy(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<number> {
+  const referrer = alias(bookings, "referrer");
+  const [row] = await db
+    .select({ friends: sql<number>`count(distinct ${bookings.personId})` })
+    .from(bookingReferrals)
+    .innerJoin(referrer, eq(referrer.id, bookingReferrals.referredByBookingId))
+    .innerJoin(bookings, eq(bookings.id, bookingReferrals.bookingId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        liveTrip(),
+        eq(bookingReferrals.shopId, shopId),
+        // Every joined row this shop's too, not only the referral's: the
+        // write side scopes the referrer, and the read does not lean on it
+        // (security review r5-4, N4).
+        eq(referrer.shopId, shopId),
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
+        eq(referrer.personId, personId),
+        ne(bookings.personId, personId),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  return Number(row?.friends ?? 0);
+}
+
+export type BuddyReferrer = { personId: string; fullName: string; friends: number };
+
+/**
+ * **Who brought this month's buddy seats**: each referring diver, by name,
+ * with the distinct friends they brought on this month's live departures, most
+ * first. The referrer is the shop's own diver, so naming them to staff is safe
+ * (unlike a partner link); an erased or removed person is left out. At most
+ * `limit`, so a busy month stays a line.
+ */
+export async function buddyReferrersForWindow(
+  db: DbExecutor,
+  shopId: string,
+  windowStart: Date,
+  windowEnd: Date,
+  limit = 3,
+): Promise<BuddyReferrer[]> {
+  const referrer = alias(bookings, "referrer");
+  const friends = sql<number>`count(distinct ${bookings.personId})`.mapWith(Number);
+  return db
+    .select({ personId: people.id, fullName: people.fullName, friends })
+    .from(bookingReferrals)
+    .innerJoin(referrer, eq(referrer.id, bookingReferrals.referredByBookingId))
+    .innerJoin(people, eq(people.id, referrer.personId))
+    .innerJoin(bookings, eq(bookings.id, bookingReferrals.bookingId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        liveTrip(),
+        eq(bookingReferrals.shopId, shopId),
+        eq(referrer.shopId, shopId),
+        eq(people.shopId, shopId),
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
+        sql`${trips.startsAt} >= ${windowStart} and ${trips.startsAt} < ${windowEnd}`,
+        ne(bookings.status, "cancelled"),
+        ne(bookings.personId, referrer.personId),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .groupBy(people.id, people.fullName)
+    .orderBy(desc(friends), asc(people.fullName))
+    .limit(limit);
 }

@@ -1,9 +1,11 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
+import { type CheckpointGap, homewardCheckpointGap, isHomewardStage } from "@/lib/checkpoint-gaps";
 import { nowDate } from "@/lib/clock";
 import type { TripStage, TripStageReading } from "@/lib/trip-stages";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
+import { getTripManifests } from "./manifests";
 import { diveSites, people, tripDives, tripStageEvents, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -17,7 +19,18 @@ import { liveTrip } from "./trips-live";
  */
 
 export type RecordTripStageOutcome =
-  | { ok: true; eventId: string }
+  | {
+      ok: true;
+      eventId: string;
+      /**
+       * "Heading in" or "Home" said while the last after-dive roll call still
+       * has somebody unmarked (batch 6, item 4): the checkpoint and how many.
+       * The word is recorded all the same; this is the warning, reported by
+       * the server so it never rests on the screen alone. Null for any other
+       * word, and once the count has everyone.
+       */
+      rollCallOpen: CheckpointGap | null;
+    }
   | { ok: false; reason: "staff_not_found" | "trip_unavailable" };
 
 /**
@@ -39,16 +52,16 @@ export async function recordTripStage(
     recordedAt?: Date;
   },
 ): Promise<RecordTripStageOutcome> {
-  return db.transaction(async (tx): Promise<RecordTripStageOutcome> => {
+  const recorded = await db.transaction(async (tx) => {
     const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
-    if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" };
+    if (!roles || !isStaff(roles)) return { ok: false, reason: "staff_not_found" } as const;
 
     const [trip] = await tx
       .select({ id: trips.id })
       .from(trips)
       .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
       .limit(1);
-    if (!trip) return { ok: false, reason: "trip_unavailable" };
+    if (!trip) return { ok: false, reason: "trip_unavailable" } as const;
 
     // The site is snapshotted from the plan as it stands at the tap, never
     // resolved at render: a later edit to the dive plan must not rewrite a
@@ -73,9 +86,21 @@ export async function recordTripStage(
         recordedAt: input.recordedAt ?? nowDate(),
       })
       .returning({ id: tripStageEvents.id });
-    if (!event) return { ok: false, reason: "trip_unavailable" };
-    return { ok: true, eventId: event.id };
+    if (!event) return { ok: false, reason: "trip_unavailable" } as const;
+    return { ok: true, eventId: event.id } as const;
   });
+  if (!recorded.ok) return recorded;
+  // Read after the word commits, from the manifest itself — the same count the
+  // roll call the crew would open closes on (`homewardCheckpointGap`).
+  // A read that fails here must not turn a recorded word into an error the
+  // crew answers by tapping again: the manifest re-renders with the same
+  // warning from its own read (`stageStripProps`).
+  const rollCallOpen = isHomewardStage(input.stage)
+    ? await getTripManifests(db, input.shopId, input.tripId)
+        .then((manifests) => homewardCheckpointGap(manifests ?? []))
+        .catch(() => null)
+    : null;
+  return { ...recorded, rollCallOpen };
 }
 
 const READING_COLUMNS = {

@@ -1,17 +1,27 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  captureGrep,
+  captureMs,
   HUB_SPECS,
   importersOf,
+  overlapScores,
   parseDiff,
+  readSpecs,
   removedText,
   routeOf,
   routePattern,
+  SMOKE,
+  selectCaptures,
   selectSpecs,
+  smokeTests,
   stackBase,
+  symbolsOf,
   textOf,
+  visualBlocks,
   withinBudget,
 } from "./e2e-affected.mjs";
+import { moduleIndex } from "./symbol-reach.mjs";
 
 /**
  * The cases are the breaks that reached CI between 2026-10-09 and 2026-10-12: each one is a
@@ -197,6 +207,112 @@ describe("reach through imports", () => {
   });
 });
 
+describe("ranking the reach tier by what the diff says", () => {
+  it("puts the spec that names the diff's own words first, and words every spec says count for nothing", () => {
+    const diff = parseDiff(
+      [
+        "diff --git a/src/db/seed-staff.ts b/src/db/seed-staff.ts",
+        "--- a/src/db/seed-staff.ts",
+        "+++ b/src/db/seed-staff.ts",
+        "@@ -1 +1 @@",
+        '-  { name: "Dana Reyes", shift: "07:00" },',
+        '+  { name: "Dana Reyes", shift: "06:30" },',
+      ].join("\n"),
+    );
+    const specs = new Map([
+      ["e2e/a.spec.ts", 'await page.goto("/shop"); expect(name).toBe(1)'],
+      ["e2e/staffing.spec.ts", 'await page.getByText("Dana Reyes"); expect(name)'],
+      ["e2e/c.spec.ts", "await page.goto(x); expect(name)"],
+    ]);
+    expect(symbolsOf(diff)).toContain("Dana Reyes");
+    const scores = overlapScores(symbolsOf(diff), specs, [...specs.keys()]);
+    expect(scores.get("e2e/staffing.spec.ts")).toBeGreaterThan(0);
+    expect(scores.get("e2e/a.spec.ts")).toBe(0);
+  });
+
+  it("orders `rank` so the budget runs the overlapping spec before a narrower stranger", () => {
+    const graph = new Map([
+      ["src/app/shop/[shopSlug]/staffing/page.tsx", new Set(["src/lib/shifts.ts"])],
+      ["src/app/shop/[shopSlug]/gear/page.tsx", new Set(["src/lib/shifts.ts"])],
+      ["src/lib/shifts.ts", new Set()],
+    ]);
+    const specs = new Map([
+      ["e2e/gear.spec.ts", 'goto("/shop/blue-mantis/gear")'],
+      ["e2e/staffing.spec.ts", 'goto("/shop/blue-mantis/staffing"); getByText("openingShift")'],
+      ["e2e/staffing-2.spec.ts", 'goto("/shop/blue-mantis/staffing")'],
+    ]);
+    const diff = parseDiff(
+      [
+        "diff --git a/src/lib/shifts.ts b/src/lib/shifts.ts",
+        "--- a/src/lib/shifts.ts",
+        "+++ b/src/lib/shifts.ts",
+        "@@ -1 +1 @@",
+        "-export const openingShift = 7;",
+        "+export const openingShift = 6;",
+      ].join("\n"),
+    );
+    const { reach, rank } = selectSpecs({ changed: ["src/lib/shifts.ts"], diff, specs, graph });
+    expect(reach.size).toBe(3);
+    expect([...rank].sort((a, b) => a[1] - b[1])[0][0]).toBe("e2e/staffing.spec.ts");
+  });
+
+  it("follows the changed lines name by name when given the module index", () => {
+    const modules = moduleIndex(
+      new Map([
+        [
+          "src/lib/shifts.ts",
+          "export function opening() {\n  return 7;\n}\n\nexport function closing() {\n  return 5;\n}",
+        ],
+        [
+          "src/app/shop/[shopSlug]/staffing/page.tsx",
+          'import { opening } from "@/lib/shifts";\nexport default function P() {\n  return opening();\n}',
+        ],
+        [
+          "src/app/shop/[shopSlug]/gear/page.tsx",
+          'import { closing } from "@/lib/shifts";\nexport default function P() {\n  return closing();\n}',
+        ],
+      ]),
+    );
+    const graph = new Map([
+      ["src/lib/shifts.ts", new Set()],
+      ["src/app/shop/[shopSlug]/staffing/page.tsx", new Set(["src/lib/shifts.ts"])],
+      ["src/app/shop/[shopSlug]/gear/page.tsx", new Set(["src/lib/shifts.ts"])],
+    ]);
+    const specs = new Map([
+      ["e2e/gear.spec.ts", 'goto("/shop/blue-mantis/gear")'],
+      ["e2e/staffing.spec.ts", 'goto("/shop/blue-mantis/staffing")'],
+    ]);
+    const { reach } = selectSpecs({
+      changed: ["src/lib/shifts.ts"],
+      diff: new Map(),
+      specs,
+      graph,
+      modules,
+      lines: new Map([["src/lib/shifts.ts", new Set([2])]]),
+    });
+    expect([...reach.keys()]).toEqual(["e2e/staffing.spec.ts"]);
+  });
+});
+
+describe("what every push runs, and what only its tool's change runs", () => {
+  it("names five smoke tests the specs still have, as file:line", () => {
+    const { found, missing } = smokeTests(readSpecs());
+    expect(missing).toEqual([]);
+    expect(found).toHaveLength(SMOKE.length);
+    for (const test of found) expect(test).toMatch(/^e2e\/[\w-]+\.spec\.ts:\d+$/);
+  });
+
+  it("runs pixel-probe only when the probe or the stylesheet changed", () => {
+    const specs = new Map([["e2e/pixel-probe.spec.ts", "setContent()"]]);
+    const pick = (changed) => [
+      ...selectSpecs({ changed, diff: new Map(), specs, graph: null }).strong.keys(),
+    ];
+    expect(pick(["scripts/pixel-probe/collect.mjs"])).toEqual(["e2e/pixel-probe.spec.ts"]);
+    expect(pick(["src/app/globals.css"])).toEqual(["e2e/pixel-probe.spec.ts"]);
+    expect(pick(["src/lib/format.ts"])).toEqual([]);
+  });
+});
+
 describe("the base a layer is measured from", () => {
   const fake = (answers) => (args) => answers[args.join(" ")] ?? null;
 
@@ -221,5 +337,90 @@ describe("the base a layer is measured from", () => {
       "rev-parse --verify --quiet origin/main": "def",
     });
     expect(stackBase(git)).toBe("origin/main");
+  });
+});
+
+/**
+ * Five visual-shard jobs between 2026-10-09 and 2026-10-12 failed on one capture ("the desk's
+ * settled boat renders true to the design" waited for a "Checked in · N" heading a change had
+ * moved), on every layer above it, and nothing before the push ran a capture (#2517).
+ */
+describe("picking captures out of the visual spec", () => {
+  const source = [
+    "test.describe(`${scheme} mode`, () => {",
+    '  test("the desk\'s settled boat renders true to the design", async ({ page }) => {',
+    '    await page.goto("/shop/blue-mantis/trips/abc");',
+    '    await expect(page.getByRole("heading", { name: "Checked in · 3" })).toBeVisible();',
+    "  });",
+    "  test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {",
+    '    await page.goto("/");',
+    "  });",
+    '  test("the dive sites index renders", async ({ page }) => {',
+    '    await page.goto("/s/blue-mantis/dive-sites");',
+    "  });",
+    "});",
+  ].join("\n");
+
+  it("splits the spec into its tests by title, each with its own body", () => {
+    const blocks = visualBlocks(source);
+    expect(blocks.map((block) => block.title)).toEqual([
+      "the desk's settled boat renders true to the design",
+      "the landing page renders true to the design (${scheme})",
+      "the dive sites index renders",
+    ]);
+    expect(blocks[0].body).toContain("Checked in · 3");
+    expect(blocks[0].body).not.toContain("landing");
+  });
+
+  it("names the capture that waits for a heading the diff removed", () => {
+    const diff = parseDiff(
+      diffOf("src/i18n/locales/en-US/staff/trip.json", ['  "checkedIn": "Checked in · 3"']),
+    );
+    const picked = selectCaptures({
+      changed: ["src/i18n/locales/en-US/staff/trip.json"],
+      diff,
+      source,
+    });
+    expect([...picked.keys()]).toEqual(["the desk's settled boat renders true to the design"]);
+  });
+
+  it("names the captures of a route whose own directory the diff edits, and no other", () => {
+    const picked = selectCaptures({
+      changed: ["src/app/s/[shopSlug]/dive-sites/page.tsx"],
+      diff: new Map(),
+      source,
+    });
+    expect([...picked.keys()]).toEqual(["the dive sites index renders"]);
+  });
+
+  it("names nothing for a diff no capture reads", () => {
+    expect(selectCaptures({ changed: ["src/lib/clock.ts"], diff: new Map(), source }).size).toBe(0);
+    expect(selectCaptures({ changed: [], diff: new Map(), source: "" }).size).toBe(0);
+  });
+
+  it("builds a -g that runs the titles in light mode and never under a dark describe", () => {
+    expect(captureGrep([])).toBeNull();
+    const grep = new RegExp(
+      captureGrep(["the landing page renders true to the design (${scheme})", "a.b"]) ?? "",
+    );
+    expect(
+      grep.test(
+        "visual.spec.ts light mode public the landing page renders true to the design (light)",
+      ),
+    ).toBe(true);
+    expect(
+      grep.test(
+        "visual.spec.ts dark mode public the landing page renders true to the design (dark)",
+      ),
+    ).toBe(false);
+    expect(grep.test("visual.spec.ts light mode public a.b")).toBe(true);
+    expect(grep.test("visual.spec.ts light mode public axb")).toBe(false);
+  });
+
+  it("counts the recorded time of the light run only", () => {
+    expect(captureMs(["the landing page renders true to the design (${scheme})"])).toBeGreaterThan(
+      0,
+    );
+    expect(captureMs(["a title no record has met"])).toBe(0);
   });
 });

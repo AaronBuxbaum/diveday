@@ -68,6 +68,9 @@ function invoicing(refundId: string): InvoicingProvider {
         taxCents: 0,
       };
     },
+    async markInvoicePaidOutOfBand() {
+      return { status: "paid" as const };
+    },
     async voidInvoice() {
       return { status: "voided" };
     },

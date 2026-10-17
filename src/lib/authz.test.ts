@@ -3,9 +3,13 @@ import { messagesFor } from "@/i18n/messages";
 import { DIVER_LOCALES, type DiverLocale } from "@/i18n/settings";
 import {
   ALL_ROLES,
+  canAddDiver,
+  canBackfillIntegrations,
   canCallDayBlowout,
   canConfigureTrips,
   canDeleteDiver,
+  canErasePersonalData,
+  canExportDisputeSheet,
   canExportIncidentRecord,
   canExportShopData,
   canImportShopData,
@@ -18,6 +22,7 @@ import {
   canOverrideCertBlock,
   canOverrideGearRequest,
   canReadEveryIncidentReport,
+  canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
   canRefund,
@@ -64,6 +69,9 @@ describe("accountable-role gates (export/import/reports)", () => {
     // bulk — gating one letter tighter than the questionnaires beneath it would
     // move the door without moving the wall.
     ["canReadMedicalClearanceDocument", canReadMedicalClearanceDocument],
+    // Every answer and the physician's name on a signed record. Same wall as the
+    // bulk export; every other staff role sees only the flagged prompts.
+    ["canReadMedicalAnswers", canReadMedicalAnswers],
     // #1410: what a diver privately asked the shop to fix. Same boundary as the
     // physician's letter above, and promised to the diver in as many words —
     // the roster below holds the promise to the role set.
@@ -185,6 +193,42 @@ describe("canExportIncidentRecord (owner only)", () => {
   });
 });
 
+describe("canExportDisputeSheet (owner or manager)", () => {
+  it("admits the accountable roles and nobody who runs the water", () => {
+    expect(canExportDisputeSheet(["owner"])).toBe(true);
+    expect(canExportDisputeSheet(["manager"])).toBe(true);
+    for (const role of ["instructor", "divemaster", "captain", "crew", "diver"] as const) {
+      expect(canExportDisputeSheet([role])).toBe(false);
+    }
+  });
+
+  it("admits a manager who also holds an operating role, and refuses empty roles", () => {
+    expect(canExportDisputeSheet(["captain", "manager"])).toBe(true);
+    expect(canExportDisputeSheet([])).toBe(false);
+    expect(canExportDisputeSheet(undefined)).toBe(false);
+  });
+});
+
+describe("canErasePersonalData (owner only)", () => {
+  it("admits only the owner: erasure is one-way, removal is the manager's tool", () => {
+    expect(canErasePersonalData(["owner"])).toBe(true);
+    for (const role of ALL_ROLES.filter((r) => r !== "owner")) {
+      expect(canErasePersonalData([role])).toBe(false);
+    }
+    // Narrower than removal, which a manager may do.
+    expect(canDeleteDiver(["manager"])).toBe(true);
+  });
+
+  it("admits an owner who also holds an operating role", () => {
+    expect(canErasePersonalData(["captain", "owner"])).toBe(true);
+  });
+
+  it("rejects empty and undefined roles", () => {
+    expect(canErasePersonalData([])).toBe(false);
+    expect(canErasePersonalData(undefined)).toBe(false);
+  });
+});
+
 describe("canOverrideCertBlock (owner/manager/instructor)", () => {
   it("admits the roles that set a trip's card gate, and nobody else", () => {
     for (const role of ["owner", "manager", "instructor"] as const) {
@@ -281,11 +325,34 @@ describe("canReadPrivateRecapPulse and the promise on the recap form", () => {
   }
 });
 
+describe("canBackfillIntegrations", () => {
+  it("is the owner's alone, because it posts history into the shop's books", () => {
+    expect(canBackfillIntegrations(["owner"])).toBe(true);
+    expect(canBackfillIntegrations(["manager"])).toBe(false);
+    expect(canBackfillIntegrations(["captain", "crew", "divemaster", "instructor"])).toBe(false);
+    expect(canBackfillIntegrations(undefined)).toBe(false);
+  });
+});
+
 describe("canManageBilling", () => {
   it("is the owner's alone — not a manager's, not the crew's", () => {
     expect(canManageBilling(["owner"])).toBe(true);
     expect(canManageBilling(["manager"])).toBe(false);
     expect(canManageBilling(["captain", "crew", "divemaster", "instructor"])).toBe(false);
     expect(canManageBilling(undefined)).toBe(false);
+  });
+});
+
+describe("canAddDiver (every staff role)", () => {
+  it("admits each staff role on its own, a captain included", () => {
+    for (const role of ALL_ROLES.filter((role) => isStaff([role]))) {
+      expect(canAddDiver([role])).toBe(true);
+    }
+  });
+
+  it("refuses a diver, an empty role list and none at all", () => {
+    expect(canAddDiver(["diver"])).toBe(false);
+    expect(canAddDiver([])).toBe(false);
+    expect(canAddDiver(undefined)).toBe(false);
   });
 });

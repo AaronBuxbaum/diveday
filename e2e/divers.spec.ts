@@ -75,7 +75,7 @@ test("a diver's record puts the boat they are on at the top of the story", async
  * 20260827-people-not-lists, decision 1). The jump nav that used to lead this
  * page is gone with the ten sections it indexed: the record is a masthead, a
  * status ledger, a story and four inset groups, and the only filled control on
- * it is Book a departure.
+ * it is Add a booking.
  *
  * The status ledger's fix is a fragment onto the control that does the work,
  * so "Verify it" both scrolls to and focuses the Verify button — no JavaScript,
@@ -92,7 +92,7 @@ test("the record leads with what is open, and offers exactly one primary act", a
   await expect(page.getByRole("heading", { name: "Specialty certifications" })).toHaveCount(0);
 
   // One primary, and it discloses the picker in place rather than navigating.
-  const book = page.getByText("Book a departure", { exact: true });
+  const book = page.locator("summary", { hasText: "Add a booking" });
   await expect(book).toBeVisible();
   await expect(page.getByLabel("Departure", { exact: true })).toBeHidden();
   await book.click();

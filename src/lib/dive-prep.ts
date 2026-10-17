@@ -157,6 +157,8 @@ export type PrepDiver = {
   hotelPickupLocation?: string | null;
   /** Staff-set pickup time for this booking (e.g. "07:15"). */
   pickupTime?: string | null;
+  /** This seat's meal preference for the galley, not an allergy record (ideas item 56). */
+  dietaryNote?: string | null;
   /**
    * What this seat is for (ADR 20261007-participant-types). Absent is a
    * diver's. A rider is packed nothing and breathes no tank; a snorkeler is

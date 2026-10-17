@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { violationFor } from "./guard-bash.mjs";
+import { quietFormFor, violationFor } from "./guard-bash.mjs";
 
 /**
  * What matters about a guard that blocks a tool call is not the blocking. It is that it
@@ -157,6 +157,54 @@ describe("a generated artifact printed through the shell", () => {
   });
 });
 
+/**
+ * The settings deny the Read tool six `.env` names, and the shell was the way round it:
+ * `grep -r . .env.local` printed production keys with no prompt (2026-10-13 review, row 26).
+ */
+describe("an environment file read through the shell", () => {
+  it("refuses a reader handed a .env file, and names what to use instead", () => {
+    expect(violationFor("grep -r . .env.local", scripts)).toMatch(/env-registry/);
+    expect(refuses("cat .env")).toBe(true);
+    expect(refuses("head -5 .env.manual")).toBe(true);
+    expect(refuses("rg SECRET ../wt-x/.env.vercel")).toBe(true);
+    expect(refuses("sed -n 1,20p /home/claude/diveday/.env.github")).toBe(true);
+    expect(refuses("ls && awk -F= '{print $2}' .env.local")).toBe(true);
+    expect(refuses("cat .env.local | grep STRIPE")).toBe(true);
+    expect(refuses("source .env.local")).toBe(true);
+  });
+
+  /** Every form the shell reads the same file through (security review of row 26). */
+  it("refuses a quoted path, a glob, a brace expansion, dd and a redirected read", () => {
+    expect(refuses('cat ".env.local"')).toBe(true);
+    expect(refuses("cat '.env'")).toBe(true);
+    expect(refuses("cat .env*")).toBe(true);
+    expect(refuses("cat .env.{local,vercel}")).toBe(true);
+    expect(refuses("head -3 .env.l?cal")).toBe(true);
+    expect(refuses("dd if=.env.local")).toBe(true);
+    expect(refuses("cat .env.local>x")).toBe(true);
+    expect(refuses("grep KEY < .env.local")).toBe(true);
+    expect(refuses("grep KEY <.env.vercel")).toBe(true);
+  });
+
+  /** `.env.example` is generated from the registry, holds no value, and is checked in. */
+  it("leaves .env.example, a listing, and a name that only starts with .env alone", () => {
+    expect(refuses("cat .env.example")).toBe(false);
+    expect(refuses("grep -n SECRET_ENCRYPTION_KEY .env.example")).toBe(false);
+    expect(refuses("ls -la .env.local")).toBe(false);
+    expect(refuses("cat .envrc.md")).toBe(false);
+    expect(refuses("grep -rn 'env.local' docs")).toBe(false);
+    expect(refuses("node scripts/render-env-example.mjs --write")).toBe(false);
+  });
+
+  it("leaves writing an env file, a quoted .env.example, and a glob over other names alone", () => {
+    expect(refuses("cat >> .env.local <<'EOF'\nFOO=bar\nEOF")).toBe(false);
+    expect(refuses("cat > .env.manual <<EOF\nSTRIPE_SECRET_KEY=\nEOF")).toBe(false);
+    expect(refuses('cat ".env.example"')).toBe(false);
+    expect(refuses("cat src/*.ts")).toBe(false);
+    expect(refuses('git commit -m "guard: refuse cat .env.local"')).toBe(false);
+  });
+});
+
 describe("discarding a shared working tree", () => {
   const dirty = { changes: () => [" M src/db/schema.ts", "?? scratch.ts"] };
   const clean = { changes: () => [] };
@@ -207,5 +255,101 @@ describe("discarding a shared working tree", () => {
     expect(violationFor("git push", scripts, clean)).toBeNull();
     // A branch whose *name* ends in main is not main.
     expect(violationFor("git push -u origin claude/fix-domain", scripts, clean)).toBeNull();
+  });
+});
+
+describe("cancelling a push run on main", () => {
+  const runs = {
+    "repos/{owner}/{repo}/101": { event: "push", branch: "main" },
+    "repos/AaronBuxbaum/diveday/101": { event: "push", branch: "main" },
+    "repos/{owner}/{repo}/202": { event: "pull_request", branch: "claude/x-1" },
+    "repos/{owner}/{repo}/303": { event: "schedule", branch: "main" },
+  };
+  const runOf = (repoPath, id) => runs[`${repoPath}/${id}`] ?? null;
+  const verdict = (command) => violationFor(command, scripts, { runOf, changes: () => [] });
+
+  it("refuses `gh run cancel` of a main push run, and says why", () => {
+    const reason = verdict("gh run cancel 101");
+    expect(reason).toMatch(/push to main/);
+    expect(reason).toMatch(/20-job cap/);
+    expect(verdict("gh run cancel 101 --repo AaronBuxbaum/diveday")).not.toBeNull();
+  });
+
+  it("refuses the REST endpoint, force-cancel included", () => {
+    expect(
+      verdict("gh api -X POST repos/AaronBuxbaum/diveday/actions/runs/101/cancel"),
+    ).not.toBeNull();
+    expect(
+      verdict("gh api --method POST /repos/AaronBuxbaum/diveday/actions/runs/101/force-cancel"),
+    ).not.toBeNull();
+  });
+
+  it("leaves alone a pull request's run, the nightly, a run it cannot read, and reading a run", () => {
+    expect(verdict("gh run cancel 202")).toBeNull();
+    expect(verdict("gh run cancel 303")).toBeNull();
+    expect(verdict("gh run cancel 999")).toBeNull();
+    expect(verdict("gh run cancel")).toBeNull();
+    expect(verdict("gh run view 101 --log-failed")).toBeNull();
+    expect(verdict("gh api repos/AaronBuxbaum/diveday/actions/runs/101")).toBeNull();
+  });
+});
+
+/**
+ * The quiet reporter is mechanical, so the hook writes it in rather than refusing the run and
+ * paying for a retry: the session gets the command it meant, with the output it can afford.
+ */
+describe("the quiet reporter, written in", () => {
+  const quiet = (command) => quietFormFor(command, new Set([...scripts, "e2e:run"]));
+
+  it("appends --reporter=dot to a focused unit run and --reporter=line to a spec", () => {
+    expect(quiet("pnpm test src/db/bookings.test.ts")).toBe(
+      "pnpm test src/db/bookings.test.ts --reporter=dot",
+    );
+    expect(quiet("pnpm run test scripts/guard-bash.test.mjs")).toBe(
+      "pnpm run test scripts/guard-bash.test.mjs --reporter=dot",
+    );
+    expect(quiet("pnpm e2e e2e/booking.spec.ts")).toBe(
+      "pnpm e2e e2e/booking.spec.ts --reporter=line",
+    );
+    expect(quiet("pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*orders'")).toBe(
+      "pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*orders' --reporter=line",
+    );
+  });
+
+  it("puts the flag before a redirection, so the file still gets the whole output", () => {
+    expect(quiet("pnpm test src/lib/trips.test.ts > /tmp/out.txt 2>&1")).toBe(
+      "pnpm test src/lib/trips.test.ts --reporter=dot > /tmp/out.txt 2>&1",
+    );
+    expect(quiet("CI=1 pnpm e2e e2e/booking.spec.ts 2>&1 > /tmp/e2e.txt")).toBe(
+      "CI=1 pnpm e2e e2e/booking.spec.ts --reporter=line 2>&1 > /tmp/e2e.txt",
+    );
+  });
+
+  it("leaves a run that already names a reporter alone", () => {
+    expect(quiet("pnpm test src/foo.test.ts --reporter=verbose")).toBeNull();
+    expect(quiet("pnpm test src/foo.test.ts --reporter dot")).toBeNull();
+    expect(quiet("pnpm e2e e2e/booking.spec.ts --reporter=html")).toBeNull();
+  });
+
+  /**
+   * One simple command only. A chain or a pipe is the session's own composition, and a
+   * rewrite that has to guess which half to touch is a rewrite that will one day touch the
+   * wrong one.
+   */
+  it("leaves chains, pipes, other scripts and quoted mentions alone", () => {
+    expect(quiet("pnpm lint && pnpm test src/foo.test.ts")).toBeNull();
+    expect(quiet("pnpm test src/foo.test.ts; echo done")).toBeNull();
+    expect(quiet("pnpm test src/foo.test.ts | grep --line-buffered FAIL")).toBeNull();
+    expect(quiet("pnpm test:watch src/foo.test.ts")).toBeNull();
+    expect(quiet("pnpm verify:push")).toBeNull();
+    expect(quiet("pnpm exec vitest run src/foo.test.ts")).toBeNull();
+    expect(quiet(`git commit -m "pnpm test src/foo.test.ts"`)).toBeNull();
+    expect(quiet("pnpm test src/foo.test.ts &")).toBeNull();
+    expect(quietFormFor("pnpm test src/foo.test.ts", new Set(["lint"]))).toBeNull();
+  });
+
+  it("never rewrites a command the guard refuses", () => {
+    expect(quiet("pnpm test")).toBeNull();
+    expect(quiet("pnpm test -- src/foo.test.ts")).toBeNull();
   });
 });

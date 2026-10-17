@@ -11,6 +11,7 @@ import { SheetCode } from "../../../../print/_components/SheetCode";
 const COLLECTION_KEYS: Record<(typeof orders.$inferSelect)["collection"], StaffMessageKey> = {
   cash: "counterRentals.ticket.payment.cash",
   card_machine: "counterRentals.ticket.payment.cardMachine",
+  room_charge: "orders.collection.room_charge",
   stripe_invoice: "counterRentals.ticket.payment.invoice",
 };
 

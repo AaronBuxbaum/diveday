@@ -170,6 +170,28 @@ export function formatWeekdayTime(date: Date, locale = "en-US", timeZone: string
 }
 
 /**
+ * "Sun, Oct 26, 3:00 PM EDT" — a weekday, a date and a time that names its
+ * zone, for an instant a diver plans against from far away and long before:
+ * `/ready`'s planned fly-safe time, read while booking flights a week or more
+ * ahead and often from another zone. `formatWeekdayTime` stays for the recap,
+ * whose answer is never more than three days out (dive-domain review of layer
+ * r5-3, FIX 5).
+ */
+export function formatPlannedDateTimeTz(date: Date, locale = "en-US", timeZone: string): string {
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }).formatToParts(date),
+  );
+}
+
+/**
  * "Saturday" — the weekday alone, in the shop's zone.
  *
  * For a sentence whose subject is the *day of the week* rather than a date.
@@ -357,6 +379,35 @@ export function formatRelativeDay(
     diffDays,
     "day",
   );
+}
+
+/**
+ * "Today" / "Tomorrow" / "Yesterday" in the reader's language, capitalized to
+ * open a line, when `date` falls within one calendar day of `now` in
+ * `timeZone`; null further out, where a date says more than a day name would.
+ *
+ * Staff timestamps used to be dates only (fourth review, item 45): the Inbox
+ * stamped this morning's WhatsApp "Oct 14, 7:00 AM EDT" and its seat
+ * "Wednesday 1:30 PM" on that same Wednesday, and nobody could tell this
+ * afternoon from next week. The diver side already said "Today" through
+ * {@link formatRelativeDay}; this is the same reading, bounded.
+ *
+ * `lead: false` keeps the platform's own case for the middle of a sentence
+ * ("Booked on Two-Tank Reef, today 1:30 PM").
+ */
+export function formatNearDay(
+  date: Date,
+  now: Date,
+  locale = "en-US",
+  timeZone: string,
+  { lead = true }: { lead?: boolean } = {},
+): string | null {
+  const diffDays = Math.round(
+    (calendarDayMs(date, timeZone) - calendarDayMs(now, timeZone)) / 86_400_000,
+  );
+  if (Math.abs(diffDays) > 1) return null;
+  const word = formatRelativeDay(date, now, locale, timeZone);
+  return lead ? word.charAt(0).toLocaleUpperCase(locale) + word.slice(1) : word;
 }
 
 /**
@@ -549,4 +600,37 @@ export function formatOrdinal(count: number, locale = "en-US"): string {
   );
   const suffix = suffixes[rule] ?? "th";
   return `${count}${suffix}`;
+}
+
+/**
+ * A past month as a reader places it: "Mar" within the year `now` is in,
+ * "Mar 2025" before it. For a line like "dived here before: Nadia Petrov
+ * (Mar)", where the day is noise and last year's March is not this one.
+ */
+export function formatPastMonth(date: Date, locale = "en-US", timeZone: string, now: Date): string {
+  const year = (d: Date) =>
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, { year: "numeric", timeZone }).format(d);
+  const sameYear = year(date) === year(now);
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      month: "short",
+      ...(sameYear ? {} : { year: "numeric" }),
+      timeZone,
+    }).formatToParts(date),
+  );
+}
+
+/**
+ * "Mon, 11:30 AM" — a near deadline, for a line that already names its week
+ * (a boat in the next two weeks needing divers by its call).
+ */
+export function formatWeekdayShortTime(date: Date, locale = "en-US", timeZone: string): string {
+  return keepUnitsWhole(
+    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone,
+    }).formatToParts(date),
+  );
 }

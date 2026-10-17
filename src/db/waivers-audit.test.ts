@@ -5,7 +5,7 @@ import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { verifyWaiverIntegrity, WAIVER_INTEGRITY_VERSION_ERASED } from "@/lib/waiver-integrity";
 import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { people, shops, waiverRecords, waiverTemplates } from "./schema";
+import { bookings, people, shops, waiverRecords, waiverTemplates } from "./schema";
 import {
   getSignedWaiverRecordForShop,
   listSignedWaiversByPerson,
@@ -81,6 +81,188 @@ describe("listWaiverIntegrityAudit pagination", () => {
     const past = await listWaiverIntegrityAudit(db, shop.id, { page: 9_999, limit: 5 });
     expect(past.page).toBe(past.pageCount);
     expect(past.entries.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * **A signed release is findable in one line** (third UX review, item 31).
+ * 521 records over 27 pages had Next and Previous and nothing else; "did
+ * Ling Zhao sign, and which version?" meant paging. A search on the diver
+ * and two views: records whose seal cannot be checked, and records holding a
+ * medical follow-up. The count narrows with the rows, so the pager and the
+ * total never describe a different list from the one on screen.
+ */
+describe("listWaiverIntegrityAudit search and views", () => {
+  async function importedRecord(ctx: Awaited<ReturnType<typeof waiverContext>>, fullName: string) {
+    const { db, shop, template } = ctx;
+    const [diver] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
+    if (!diver) throw new Error("diver insert failed");
+    const [record] = await db
+      .insert(waiverRecords)
+      .values({
+        shopId: shop.id,
+        bookingId: null,
+        personId: diver.id,
+        templateId: template.id,
+        templateTitle: template.title,
+        templateVersion: template.version,
+        templateBody: template.body,
+        status: "completed",
+        tokenHash: `imported-${fullName}`,
+        expiresAt: now,
+        signedAt: now,
+        importedFromLabel: "Prior shop system",
+      })
+      .returning({ id: waiverRecords.id });
+    if (!record) throw new Error("record insert failed");
+    return record.id;
+  }
+
+  it("finds a diver's records by name, and counts only those", async () => {
+    const ctx = await waiverContext();
+    const id = await importedRecord(ctx, "Quillon Vasquez-Orr");
+    const found = await listWaiverIntegrityAudit(ctx.db, ctx.shop.id, { query: "quillon vas" });
+    expect(found.entries.map((entry) => entry.id)).toEqual([id]);
+    expect(found.total).toBe(1);
+    expect(found.pageCount).toBe(1);
+  });
+
+  it("shows only records whose seal cannot be checked under that view", async () => {
+    const ctx = await waiverContext();
+    const unsealed = await importedRecord(ctx, "Unsealed Import");
+    const page = await listWaiverIntegrityAudit(ctx.db, ctx.shop.id, {
+      view: "unchecked",
+      limit: 1000,
+    });
+    expect(page.entries.map((entry) => entry.id)).toContain(unsealed);
+    expect(page.entries.every((entry) => entry.integrity === "unsealed")).toBe(true);
+    expect(page.total).toBe(page.entries.length);
+  });
+
+  it("shows every record on a medical hold under that view", async () => {
+    const ctx = await waiverContext();
+    const { db, person, shop, booking } = ctx;
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+      now,
+    });
+    const page = await listWaiverIntegrityAudit(db, shop.id, { view: "medical", limit: 1000 });
+    expect(page.entries.map((entry) => entry.id)).toContain(issued.recordId);
+    expect(page.entries.length).toBeGreaterThan(0);
+    expect(page.entries.every((entry) => entry.status === "medical_review")).toBe(true);
+    expect(page.total).toBe(page.entries.length);
+  });
+
+  /** A record on a medical hold, inserted as a paper or status-only hold is: no stored answers. */
+  async function heldRecord(
+    ctx: Awaited<ReturnType<typeof waiverContext>>,
+    fullName: string,
+    outcome: "open" | "cleared" | "declined" = "open",
+  ) {
+    const { db, shop, template } = ctx;
+    const [diver] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
+    if (!diver) throw new Error("diver insert failed");
+    const answered = {
+      medicalClearanceEvaluatedOn: "2026-07-17",
+      medicalClearancePhysicianName: "Dr. Imani Okafor",
+    };
+    const [record] = await db
+      .insert(waiverRecords)
+      .values({
+        shopId: shop.id,
+        bookingId: null,
+        personId: diver.id,
+        templateId: template.id,
+        templateTitle: template.title,
+        templateVersion: template.version,
+        templateBody: template.body,
+        status: "medical_review",
+        medicalReviewRequired: true,
+        medicalAnswers: null,
+        tokenHash: `held-${fullName}`,
+        expiresAt: now,
+        signedAt: now,
+        ...(outcome === "cleared"
+          ? { ...answered, medicalClearedAt: now, medicalClearedByPersonId: diver.id }
+          : {}),
+        ...(outcome === "declined"
+          ? {
+              ...answered,
+              medicalClearanceDeclinedAt: now,
+              medicalClearanceDeclinedByPersonId: diver.id,
+            }
+          : {}),
+      })
+      .returning({ id: waiverRecords.id });
+    if (!record) throw new Error("record insert failed");
+    return record.id;
+  }
+
+  /**
+   * **The hold is the status, not the answers** (dive-domain-expert review of
+   * #2579, finding 1). A paper or status-only hold stores no questionnaire and
+   * still refuses boarding, so the log must carry it as a hold in both views:
+   * a row that reads as a plain signature here is a diver nobody chases.
+   */
+  it("carries a hold with no stored answers as a hold, under All and under Medical holds", async () => {
+    const ctx = await waiverContext();
+    const id = await heldRecord(ctx, "Quorvane Paper-Hold");
+    for (const view of [undefined, "medical"] as const) {
+      const page = await listWaiverIntegrityAudit(ctx.db, ctx.shop.id, {
+        query: "Quorvane",
+        ...(view ? { view } : {}),
+      });
+      expect(page.entries.map((entry) => entry.id)).toEqual([id]);
+      expect(page.entries[0]).toMatchObject({
+        status: "medical_review",
+        flaggedPrompts: [],
+        medicalClearedAt: null,
+        medicalClearanceDeclinedAt: null,
+      });
+    }
+  });
+
+  /**
+   * A cleared diver stays in the medical history (the record keeps
+   * `medical_review` on clearance, `isCleanCompletion`), but carries the
+   * clearance so the log can say so rather than calling them flagged
+   * (dive-domain-expert review of #2579, finding 2).
+   */
+  it("keeps a physician-cleared or refused record under Medical holds, carrying its outcome", async () => {
+    const ctx = await waiverContext();
+    const cleared = await heldRecord(ctx, "Thaddeus Cleared", "cleared");
+    const declined = await heldRecord(ctx, "Thaddeus Declined", "declined");
+    const page = await listWaiverIntegrityAudit(ctx.db, ctx.shop.id, {
+      query: "Thaddeus",
+      view: "medical",
+    });
+    const byId = new Map(page.entries.map((entry) => [entry.id, entry]));
+    expect(byId.get(cleared)).toMatchObject({
+      status: "medical_review",
+      medicalClearedAt: now,
+      medicalClearanceDeclinedAt: null,
+    });
+    expect(byId.get(declined)).toMatchObject({
+      status: "medical_review",
+      medicalClearedAt: null,
+      medicalClearanceDeclinedAt: now,
+    });
+    expect(page.total).toBe(2);
+  });
+
+  it("combines a search with a view", async () => {
+    const ctx = await waiverContext();
+    await importedRecord(ctx, "Zephyrine Unsealed");
+    const page = await listWaiverIntegrityAudit(ctx.db, ctx.shop.id, {
+      query: "Zephyrine",
+      view: "medical",
+    });
+    expect(page.total).toBe(0);
+    expect(page.entries).toEqual([]);
   });
 });
 
@@ -425,5 +607,103 @@ describe("signed waivers after a diver is erased", () => {
     const records = signed.get(personId) ?? [];
     expect(records).toHaveLength(1);
     expect(records[0]).toMatchObject({ signedName: null, medicalAnswers: null });
+  });
+});
+
+/**
+ * **A clean signature a fresh link replaced stays in the evidence only on the
+ * signer's own seat** (`listSignedWaiversByPerson`). It is there so the diver
+ * record reads "lapsed" rather than "nothing on file" while the link is out.
+ * A split or claimed seat's records are superseded under someone else's name
+ * (`splitBookingIdentity`, the seat claim), so carrying them would lend a
+ * stranger's signature to the record's person.
+ */
+describe("listSignedWaiversByPerson with superseded clean signatures", () => {
+  async function supersededClean() {
+    const { db, shop, booking, person } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now,
+    });
+    const [record] = await db
+      .update(waiverRecords)
+      .set({ supersededAt: new Date(now.getTime() + 60_000) })
+      .where(and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "completed")))
+      .returning();
+    if (!record) throw new Error("expected a completed record to supersede");
+    return { db, shop, booking, person, record };
+  }
+
+  it("keeps one given on the signer's own seat", async () => {
+    const { db, shop, person, record } = await supersededClean();
+    const signed = await listSignedWaiversByPerson(db, shop.id, [person.id]);
+    expect((signed.get(person.id) ?? []).map((row) => row.id)).toContain(record.id);
+  });
+
+  it("drops one given on a seat that now belongs to somebody else", async () => {
+    const { db, shop, booking, person, record } = await supersededClean();
+    // The seat was claimed by, or split off to, a diver who never signed it.
+    const [claimant] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Seat Claimant", email: "seat.claimant@example.org" })
+      .returning({ id: people.id });
+    if (!claimant) throw new Error("fixture insert failed");
+    await db.update(bookings).set({ personId: claimant.id }).where(eq(bookings.id, booking.id));
+    const signed = await listSignedWaiversByPerson(db, shop.id, [person.id, claimant.id]);
+    expect((signed.get(person.id) ?? []).map((row) => row.id)).not.toContain(record.id);
+    expect(signed.get(claimant.id) ?? []).toEqual([]);
+  });
+});
+
+/**
+ * **A superseded referral no physician cleared carries only from the signer's
+ * own seat too** (security-reviewer run 2, S1). A split or claimed seat's
+ * records are superseded under someone else's name, so a hold signed there is
+ * a stranger's answers: carrying it would pin their medical disclosure on the
+ * record's person.
+ */
+describe("listSignedWaiversByPerson with superseded uncleared referrals", () => {
+  async function supersededReferral() {
+    const { db, shop, booking, person } = await waiverContext();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+      now,
+    });
+    const [record] = await db
+      .update(waiverRecords)
+      .set({ supersededAt: new Date(now.getTime() + 60_000) })
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      )
+      .returning();
+    if (!record) throw new Error("expected a referred record to supersede");
+    return { db, shop, booking, person, record };
+  }
+
+  it("keeps one given on the signer's own seat", async () => {
+    const { db, shop, person, record } = await supersededReferral();
+    const signed = await listSignedWaiversByPerson(db, shop.id, [person.id]);
+    expect((signed.get(person.id) ?? []).map((row) => row.id)).toContain(record.id);
+  });
+
+  it("drops one given on a seat that now belongs to somebody else", async () => {
+    const { db, shop, booking, person, record } = await supersededReferral();
+    const [claimant] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Held Claimant", email: "held.claimant@example.org" })
+      .returning({ id: people.id });
+    if (!claimant) throw new Error("fixture insert failed");
+    await db.update(bookings).set({ personId: claimant.id }).where(eq(bookings.id, booking.id));
+    const signed = await listSignedWaiversByPerson(db, shop.id, [person.id, claimant.id]);
+    expect((signed.get(person.id) ?? []).map((row) => row.id)).not.toContain(record.id);
+    expect(signed.get(claimant.id) ?? []).toEqual([]);
   });
 });

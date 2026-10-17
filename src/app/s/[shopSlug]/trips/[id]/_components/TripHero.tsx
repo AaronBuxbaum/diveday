@@ -1,9 +1,11 @@
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
+import type { PublicRun } from "@/db/series-next";
 import type { DiverTranslator } from "@/i18n/messages";
-import { formatDateTimeTz } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import type { MinimumSeatsState } from "@/lib/minimum-seats";
 import { publicTripCalendarPath } from "@/lib/public-routes";
+import { runCadenceWords } from "../../../_components/run-cadence";
 import { TripActions } from "./TripActions";
 import { TripHeader } from "./TripHeader";
 
@@ -25,6 +27,7 @@ export function TripHero({
   shopSlug,
   coverPhoto,
   minimumSeats,
+  run = null,
   t,
 }: {
   shop: HeaderProps["shop"] & { timezone: string };
@@ -35,9 +38,18 @@ export function TripHero({
   shopSlug: string;
   coverPhoto: string | null;
   minimumSeats: MinimumSeatsState;
+  /** The run this departure is one of (fourth review, item 35), or null. */
+  run?: PublicRun | null;
   t: DiverTranslator;
 }) {
   const tripId = trip.id;
+  // "Runs every Saturday · next Sat, Oct 24": said only while a next date sells.
+  const runLine = run?.next
+    ? t("trip.runLine", {
+        cadence: runCadenceWords(t, locale, run),
+        date: formatShortDate(run.next, locale, shop.timezone),
+      })
+    : null;
   return (
     <div>
       {/* No standalone "← All trips" link: the header's own eyebrow is the
@@ -50,6 +62,7 @@ export function TripHero({
         locale={locale}
         embed={isEmbed}
         showMeetingPoint={false}
+        runLine={runLine}
       />
       {/* The hero's two conveniences, inside the hero rather than as a row of
               buttons under it. */}

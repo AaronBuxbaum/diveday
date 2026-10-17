@@ -375,6 +375,36 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       );
     });
 
+    it("offers the other same-name divers by name only, unpicked, beside a link to each record (issue 2129)", () => {
+      const sameName = entry("u", "Alex Kim", {
+        identityBookedAs: "Alex Kim",
+        identityMatchedBy: "picked_name",
+      });
+      const { unmount } = renderRoster({
+        roster: [sameName],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+      });
+      expect(document.querySelector('input[name="toPersonId"]')).toBeNull();
+      unmount();
+
+      renderRoster({
+        roster: [sameName],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+        sameNamePeople: new Map([["u", [{ personId: "p-2", fullName: "Alex Kim" }]]]),
+      });
+      const radios = document.querySelectorAll<HTMLInputElement>('input[name="toPersonId"]');
+      expect([...radios].map((radio) => [radio.value, radio.checked])).toEqual([["p-2", false]]);
+      const form = radios[0]?.form;
+      // Name only: the form carries nothing else from the other record.
+      expect(form?.textContent).toContain("Alex Kim");
+      expect(form?.querySelector("a")?.getAttribute("href")).toBe("/shop/blue-mantis/divers/p-2");
+      expect(form?.textContent).toContain("The seat stays held until you confirm it’s them.");
+    });
+
     it("asks for a date of birth when a seat it would move is on an age-gated course", () => {
       renderRoster({
         roster: [heldSeat()],
@@ -629,5 +659,41 @@ describe("a held seat's paid-for gear", () => {
       waivers: new Map() as WaiverByBooking,
     });
     expect(container.querySelector('input[name="applyPaidGear"]')).toBeNull();
+  });
+});
+
+/**
+ * **A held seat's emergency contact at "Same person"** (dive-domain review
+ * H3): when the record holds a different one, the staffer picks which stands.
+ */
+describe("a held seat's emergency contact at confirm", () => {
+  function heldWithContacts(record: { name: string; phone: string } | null) {
+    const held = entry("w", "Wen Ito", { identityBookedAs: "Wen I." });
+    Object.assign(held.booking, {
+      identityUnconfirmedAt: new Date("2026-10-01T12:00:00Z"),
+      heldEmergencyContactName: "Rosa Vega",
+      heldEmergencyContactPhone: "+34600333444",
+    });
+    Object.assign(held.person, {
+      emergencyContactName: record?.name ?? null,
+      emergencyContactPhone: record?.phone ?? null,
+    });
+    return renderRoster({
+      roster: [held],
+      readiness: new Map([["w", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+    });
+  }
+
+  it("asks which contact to keep when the record's differs", () => {
+    const { container } = heldWithContacts({ name: "Pilar Vega", phone: "+34600111222" });
+    const choices = container.querySelectorAll<HTMLInputElement>('input[name="heldContact"]');
+    expect([...choices].map((choice) => choice.value)).toEqual(["use_held", "keep_record"]);
+    expect([...choices].every((choice) => choice.required && !choice.checked)).toBe(true);
+  });
+
+  it("asks nothing when the record has no contact", () => {
+    const { container } = heldWithContacts(null);
+    expect(container.querySelector('input[name="heldContact"]')).toBeNull();
   });
 });

@@ -2,26 +2,28 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
+import {
+  AgencyListedOffer,
+  agencyListedForm,
+} from "@/app/shop/[shopSlug]/_components/agency-check/AgencyListedOffer";
+import type { AgencyCheckCopy } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
+import {
+  type AgencyCheckFailure,
+  agencyCheckEvidence,
+  agencyCheckFailure,
+  agencyCheckForm,
+  agencyCheckMatchedText,
+  agencyCheckOutcomeText,
+  agencyCheckSendsToAgency,
+} from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-outcome";
+import { reportFailedCheck } from "@/app/shop/[shopSlug]/_components/agency-check/report-failed-check";
 import { UndoToast } from "@/components/UndoToast";
 import { FormStatus } from "@/components/ui/form";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
-import type { AgencyCheckResult } from "../card-actions";
+import type { AgencyCheckResult, AgencyListedAddResult } from "../agency-check-actions";
 
-/** Every word this control renders, translated on the server with the agency's name in it. */
-export type AgencyCheckCopy = {
-  /** The link's own words, which the button keeps: "Check with SSI". */
-  check: string;
-  checking: string;
-  matched: string;
-  levelUnconfirmed: string;
-  noRecord: string;
-  unreadable: string;
-  invalid: string;
-  undo: string;
-  undoPending: string;
-  undoFailed: string;
-};
+export type { AgencyCheckCopy };
 
 const LINK_CLASS =
   "mt-1 block w-fit text-sm font-semibold text-primary hover:underline print:hidden";
@@ -35,8 +37,11 @@ const LINK_CLASS =
  * looks the diver up on the agency's page in the background and hands back the
  * page's text; `agencyCheckAction` decides on the server whether that page
  * names this diver at this level, and certifies the card if it does. Every
- * other answer writes nothing and puts the link back beside a sentence saying
- * what the agency's page showed.
+ * other answer writes nothing and says what the agency's page showed. When
+ * the next step is the agency's own page (it answered short of a match, asks
+ * whether the staffer is human, has changed, or is not one this copy checks),
+ * its link takes the button's place; a page that could not be read, or a
+ * signed-out PADI, keeps the button for another try, with the link beside it.
  *
  * Like `MarkCertifiedControl`, it renders for a card that has just been
  * certified too, drawing nothing but the toast, because the toast's Undo has
@@ -46,68 +51,85 @@ export function AgencyCheck({
   href,
   query,
   certificationId,
+  cardType,
   awaiting,
   action,
+  addListed,
   copy,
+  offNote,
 }: {
   href: string;
   /** The lookup the extension types, or null when this card cannot be checked. */
   query: AgencyCheckQuery | null;
   certificationId: string;
+  /** The table a nitrox or specialty card is in (issue #2592); absent for a level card. */
+  cardType?: "nitrox" | "specialty";
   /** The card is still waiting for somebody to confirm it. */
   awaiting: boolean;
   /** `agencyCheckAction` bound to this shop and diver, on the server. */
   action: (previous: AgencyCheckResult, formData: FormData) => Promise<AgencyCheckResult>;
+  /** `addAgencyListedCardsAction` bound to this shop and diver: the page's other cards (layer 3). */
+  addListed?: (
+    previous: AgencyListedAddResult,
+    formData: FormData,
+  ) => Promise<AgencyListedAddResult>;
   copy: AgencyCheckCopy;
+  /**
+   * "PADI checks are off for this shop…": said under the link when the
+   * extension is here but the shop's switch keeps this agency's check off
+   * (H-121), so a staffer with the extension knows why there is no button.
+   */
+  offNote?: string;
 }) {
   const hasExtension = useCertCheckExtension();
   const [result, formAction, judging] = useActionState(action, null);
   const [asking, setAsking] = useState(false);
-  const [extensionFailed, setExtensionFailed] = useState(false);
+  const [failure, setFailure] = useState<AgencyCheckFailure>(null);
+  // The page the server judged, kept so a ticked offer posts the same text
+  // and the server can judge it again.
+  const [pageText, setPageText] = useState("");
+  // Once the offer's cards are filed the page's text is dropped (S5); the
+  // offer stays, saying so.
+  const [listedAdded, setListedAdded] = useState(false);
   const [, startTransition] = useTransition();
   const busy = asking || judging;
 
   async function check() {
     if (!query) return;
     setAsking(true);
-    setExtensionFailed(false);
+    setFailure(null);
     const reply = await requestAgencyPage(query);
     setAsking(false);
     if (!reply.ok) {
-      setExtensionFailed(true);
+      reportFailedCheck(query.agency, reply);
+      setFailure(agencyCheckFailure(reply.reason));
       return;
     }
-    const formData = new FormData();
-    formData.set("certificationId", certificationId);
-    formData.set("pageText", reply.pageText);
+    setPageText(reply.pageText);
+    setListedAdded(false);
+    const formData = agencyCheckForm(certificationId, reply.pageText, { cardType });
     startTransition(() => formAction(formData));
   }
 
   const link = (
     <a href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
-      {copy.check}
+      {copy.link}
     </a>
   );
-  const undo = result?.ok && result.verdict === "match" ? result.undo : undefined;
-  const outcome = extensionFailed
-    ? copy.unreadable
-    : !result
-      ? null
-      : !result.ok
-        ? result.reason === "not-undoable"
-          ? copy.undoFailed
-          : copy.invalid
-        : result.verdict === "level_unconfirmed"
-          ? copy.levelUnconfirmed
-          : result.verdict === "no_record"
-            ? copy.noRecord
-            : result.verdict === "unreadable"
-              ? copy.unreadable
-              : null;
+  const match = result?.ok && result.verdict === "match" ? result : null;
+  const undo = match?.undo;
+  const evidence = agencyCheckEvidence(result);
+  const outcome = agencyCheckOutcomeText(
+    result,
+    failure,
+    copy,
+    query ? `${query.firstName} ${query.lastName}` : "",
+  );
+  const sendsToAgency = agencyCheckSendsToAgency(result, failure);
 
   return (
     <>
-      {!awaiting ? null : hasExtension && query ? (
+      {!awaiting ? null : hasExtension && query && !sendsToAgency ? (
         <button
           type="button"
           onClick={check}
@@ -117,23 +139,43 @@ export function AgencyCheck({
         >
           {busy ? copy.checking : copy.check}
         </button>
-      ) : (
+      ) : hasExtension && query && outcome ? null : (
         link
       )}
+      {awaiting && hasExtension && !query && offNote ? (
+        <span className="mt-1 block text-sm text-muted print:hidden">{offNote}</span>
+      ) : null}
       {awaiting && outcome ? (
         <span className="mt-1 block">
           <FormStatus tone={result && !result.ok ? "danger" : "warning"}>{outcome}</FormStatus>
-          {result?.ok && result.verdict === "level_unconfirmed" ? (
-            <span className="mt-1 block italic">{result.evidence}</span>
-          ) : null}
+          {evidence ? <span className="mt-1 block italic">{evidence}</span> : null}
           {hasExtension && query ? link : null}
         </span>
       ) : null}
+      {match?.offers && addListed && (pageText || listedAdded) ? (
+        <AgencyListedOffer
+          lead={copy.listedLead}
+          offers={match.offers}
+          copy={copy}
+          add={async (kinds) => {
+            const added = await addListed(null, agencyListedForm(certificationId, pageText, kinds));
+            if (added?.ok) {
+              setListedAdded(true);
+              setPageText("");
+            }
+            return added;
+          }}
+        />
+      ) : null}
       {undo ? (
         <UndoToast
-          message={copy.matched}
+          message={match ? agencyCheckMatchedText(match, copy) : copy.matched}
           action={formAction}
-          fields={{ certificationId: undo.certificationId, intent: "undo" }}
+          fields={{
+            certificationId: undo.certificationId,
+            ...(cardType ? { cardType } : {}),
+            intent: "undo",
+          }}
           pendingLabel={copy.undoPending}
           undoLabel={copy.undo}
         />

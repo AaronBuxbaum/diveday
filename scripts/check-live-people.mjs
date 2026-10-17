@@ -66,14 +66,15 @@ async function walk(relativeDirectory) {
 /**
  * Named predicates that carry the filter for every read in their module, so a
  * read passes by naming one: the merge's `activeDiverWhere`, the roster's
- * `scope` (through `removalScope`, where the Removed filter is the one view
- * that asks for removed people on purpose), and the inbox's `live`. Each is
+ * `rosterScope` and `scope` (through `removalScope`, where the Removed filter
+ * is the one view that asks for removed people on purpose), and the inbox's
+ * `live`. Each is
  * listed by hand, and each definition must itself carry the filter or another
  * listed carrier, or it carries nothing ({@link carriersIn}).
  */
 export const CARRIERS = {
   "src/db/diver-merge.ts": ["activeDiverWhere"],
-  "src/db/divers.ts": ["removalScope", "scope"],
+  "src/db/divers.ts": ["removalScope", "rosterScope", "scope"],
   "src/db/inbound-messages.ts": ["live"],
 };
 

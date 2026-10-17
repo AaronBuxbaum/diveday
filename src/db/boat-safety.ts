@@ -1,8 +1,10 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte } from "drizzle-orm";
 import {
+  type BoatPaperRecord,
   type BoatSafetyNotice,
   boatPaperNotices,
   boatSafetyNotices,
+  boatSnapshotNotices,
   departureSafetyDate,
   expiredBoatSafetyNotices,
   isLifeSafetyKitKind,
@@ -12,11 +14,14 @@ import {
   type SafetyKitUnit,
   safetyKitNotices,
 } from "@/lib/boat-safety";
-import type { CalendarDate } from "@/lib/calendar-date";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import type { GearItemKind } from "@/lib/gear";
+import { log } from "@/lib/log";
+import { hasSailed } from "@/lib/trips";
 import type { DbExecutor } from "./client";
 import { latestServiceClocks } from "./gear";
-import { boats, gearItems, trips } from "./schema";
+import { boats, departureBoatSafetySnapshots, gearItems, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -69,6 +74,8 @@ const boatPaperColumns = {
   id: boats.id,
   name: boats.name,
   certifiedPassengers: boats.certifiedPassengers,
+  certifiedTotalPersons: boats.certifiedTotalPersons,
+  coiExpiresOn: boats.coiExpiresOn,
   inspectionDueOn: boats.inspectionDueOn,
   registrationExpiresOn: boats.registrationExpiresOn,
   insuranceExpiresOn: boats.insuranceExpiresOn,
@@ -82,7 +89,8 @@ export type DepartureBoatSafety = {
 
 /**
  * **What the pre-departure check says about this departure's boat**: the
- * people aboard against its certificate, its papers, the O2 kit or AED it
+ * people aboard against its certificate (passengers, and persons with the
+ * crew), its papers, the O2 kit or AED it
  * should carry and does not, and every clock on the safety kit assigned aboard
  * it that has run out or will inside its horizon — all judged on `onDate`, the
  * departure's own local date.
@@ -97,7 +105,11 @@ export async function departureBoatSafety(
   input: {
     boatId: string | null;
     passengers: { booked: number; boarded: number };
+    /** The departure's named crew, and how many are recorded aboard (#2302). */
+    crew: { assigned: number; boarded: number };
     onDate: CalendarDate;
+    /** The shop's own date, when `onDate` is a later departure's. */
+    today?: CalendarDate;
   },
 ): Promise<DepartureBoatSafety | null> {
   if (!input.boatId) return null;
@@ -117,7 +129,9 @@ export async function departureBoatSafety(
       kit: kit.filter((unit) => unit.aboardBoatId === boat.id),
       kindsOnRegister: kindsOf(kit),
       passengers: input.passengers,
+      crew: input.crew,
       onDate: input.onDate,
+      today: input.today,
     }),
   };
 }
@@ -192,6 +206,8 @@ export async function todayBoatSafety(
         kit.filter((unit) => unit.aboardBoatId === boat.id),
         input.todayLocal,
       ),
+      // A lapsed certificate or inspection (dive-domain review D3).
+      ...boatPaperNotices(boat, input.todayLocal),
     ]);
     if (notices.length > 0) {
       departures.push({ tripId: departure.tripId, boatId: boat.id, boatName: boat.name, notices });
@@ -244,6 +260,7 @@ export async function departureBoatSafetyFor(
     timeZone: string;
     now: Date;
     passengers: { booked: number; boarded: number };
+    crew: { assigned: number; boarded: number };
   },
 ): Promise<DepartureBoatSafety | null> {
   const onDate = departureSafetyDate(input.startsAt, input.now, input.timeZone);
@@ -251,7 +268,9 @@ export async function departureBoatSafetyFor(
   return departureBoatSafety(db, shopId, {
     boatId: await departureBoatId(db, shopId, input.tripId),
     passengers: input.passengers,
+    crew: input.crew,
     onDate,
+    today: calendarDateInTimezone(input.now, input.timeZone),
   });
 }
 
@@ -270,4 +289,165 @@ export async function departureBoatId(
     .where(and(eq(trips.shopId, shopId), eq(trips.id, tripId), liveTrip()))
     .limit(1);
   return trip?.boatId ?? null;
+}
+
+/**
+ * **The oxygen and first aid kit aboard a departure's boat, as the register
+ * holds them** (fourth review, item 17). The printed packet left "Oxygen kit
+ * is kept / Last checked / O2 pressure" as blanks even when the shop's gear
+ * register says which kit is aboard this hull and when it was last serviced.
+ *
+ * Only what the shop recorded, never a guess: the in-service units aboard, by
+ * their own labels, and the newest `service` record on an oxygen kit. A
+ * cylinder's hydro test or visual inspection is not a kit service, and a note
+ * is not a check, so neither counts (review F2). Null for a departure on no
+ * boat; empty lists when the register has nothing aboard.
+ *
+ * The packet prints these as a line of their own above the kit blanks, never
+ * in them: "kept ___" asks where on the boat, and "last checked ___ · O2
+ * pressure ___" is the crew's own pre-trip check, which no register answers.
+ */
+export type DepartureKitRecord = {
+  boatName: string;
+  oxygenKits: string[];
+  firstAidKits: string[];
+  oxygenServicedOn: CalendarDate | null;
+};
+
+export async function departureKitRecord(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<DepartureKitRecord | null> {
+  const boatId = await departureBoatId(db, shopId, tripId);
+  if (!boatId) return null;
+  const [boat] = await db
+    .select({ name: boats.name })
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), eq(boats.id, boatId)))
+    .limit(1);
+  if (!boat) return null;
+  const aboard = (await listSafetyKit(db, shopId)).filter(
+    (unit) => unit.aboardBoatId === boatId && unit.status === "in_service",
+  );
+  const oxygen = aboard.filter((unit) => unit.kind === "o2_kit");
+  const services = oxygen
+    .flatMap((unit) => unit.clocks)
+    .filter((clock) => clock.kind === "service")
+    .map((clock) => clock.servicedOn)
+    .sort();
+  return {
+    boatName: boat.name,
+    oxygenKits: oxygen.map((unit) => unit.label),
+    firstAidKits: aboard.filter((unit) => unit.kind === "first_aid_kit").map((unit) => unit.label),
+    oxygenServicedOn: services.at(-1) ?? null,
+  };
+}
+
+/**
+ * **Keep the boat's papers and kit notices as they stand at the departure
+ * checkpoint** (#2300). Called after every departure-checkpoint roll-call
+ * write, diver or crew, live or offline, with that tap's own `occurredAt` as
+ * `asOf`: a tap made before the departure sailed (`hasSailed`) keeps the boat,
+ * however late it syncs, and one made after keeps nothing. An older tap never
+ * overwrites a newer one, so the log reads the boat as of the last count
+ * before it left. A deleted hull keeps nothing.
+ *
+ * Never throws. The roll call it follows is already committed, and a missing
+ * snapshot is stated on the log as missing; a failure is logged, not raised
+ * into the rail.
+ */
+export async function captureDepartureBoatSafety(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  asOf: Date = nowDate(),
+): Promise<"captured" | "kept_newer" | "sailed" | "no_boat" | "failed"> {
+  try {
+    // Its own transaction (a savepoint when the caller holds one), so a failed
+    // statement here never aborts the caller's.
+    return await db.transaction((tx) => captureInTransaction(tx, shopId, tripId, asOf));
+  } catch (error) {
+    log("boat_safety.snapshot_failed", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+    return "failed";
+  }
+}
+
+async function captureInTransaction(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  asOf: Date,
+): Promise<"captured" | "kept_newer" | "sailed" | "no_boat"> {
+  const [trip] = await db
+    .select({ startsAt: trips.startsAt, boatId: trips.boatId, timeZone: shops.timezone })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(and(eq(trips.shopId, shopId), eq(trips.id, tripId), liveTrip()))
+    .limit(1);
+  if (!trip?.boatId) return "no_boat";
+  if (hasSailed(trip.startsAt, asOf)) return "sailed";
+  const [boat] = await db
+    .select(boatPaperColumns)
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), eq(boats.id, trip.boatId), isNull(boats.deletedAt)))
+    .limit(1);
+  if (!boat) return "no_boat";
+  const judgedOn = calendarDateInTimezone(trip.startsAt, trip.timeZone);
+  const kit = await listSafetyKit(db, shopId);
+  const notices = boatSnapshotNotices(
+    boatSafetyNotices({
+      boat,
+      kit: kit.filter((unit) => unit.aboardBoatId === boat.id),
+      kindsOnRegister: kindsOf(kit),
+      // The head count is the roll call's own record; nothing here counts it.
+      passengers: { booked: 0, boarded: 0 },
+      crew: { assigned: 0, boarded: 0 },
+      onDate: judgedOn,
+    }),
+  );
+  const papers: BoatPaperRecord = {
+    certifiedPassengers: boat.certifiedPassengers,
+    certifiedTotalPersons: boat.certifiedTotalPersons,
+    coiExpiresOn: boat.coiExpiresOn,
+    inspectionDueOn: boat.inspectionDueOn,
+    registrationExpiresOn: boat.registrationExpiresOn,
+    insuranceExpiresOn: boat.insuranceExpiresOn,
+  };
+  const row = { boatId: boat.id, boatName: boat.name, judgedOn, papers, notices, capturedAt: asOf };
+  const written = await db
+    .insert(departureBoatSafetySnapshots)
+    .values({ shopId, tripId, ...row })
+    .onConflictDoUpdate({
+      target: departureBoatSafetySnapshots.tripId,
+      set: row,
+      // An offline tap from before the last one kept arrives second: keep the newer.
+      setWhere: lte(departureBoatSafetySnapshots.capturedAt, asOf),
+    })
+    .returning({ id: departureBoatSafetySnapshots.id });
+  return written.length > 0 ? "captured" : "kept_newer";
+}
+
+/** The departure-checkpoint snapshot of this departure's boat, or null if none was taken. */
+export async function departureBoatSafetySnapshot(db: DbExecutor, shopId: string, tripId: string) {
+  const [row] = await db
+    .select({
+      boatId: departureBoatSafetySnapshots.boatId,
+      boatName: departureBoatSafetySnapshots.boatName,
+      judgedOn: departureBoatSafetySnapshots.judgedOn,
+      papers: departureBoatSafetySnapshots.papers,
+      notices: departureBoatSafetySnapshots.notices,
+      capturedAt: departureBoatSafetySnapshots.capturedAt,
+    })
+    .from(departureBoatSafetySnapshots)
+    .where(
+      and(
+        eq(departureBoatSafetySnapshots.shopId, shopId),
+        eq(departureBoatSafetySnapshots.tripId, tripId),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
 }

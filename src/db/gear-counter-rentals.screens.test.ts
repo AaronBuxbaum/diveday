@@ -4,6 +4,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowMs } from "@/lib/clock";
 import { counterRentalWaiverFlag } from "@/lib/counter-rentals";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
+import { advanceClock } from "@/test/clock";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { latestServiceClocks, recordGearService } from "./gear";
@@ -385,6 +386,8 @@ describe("counter rentals over a departure's window", () => {
     const reg = await unit(db, shop.id, "Reg #1", "regulator");
     const fins = await unit(db, shop.id, "Fins #1", "fins");
     rented(await lend(db, shop.id, diver.id, [reg.id], { reservedUntil: "2026-10-10" }));
+    // A rental is its insert's stamp, so the second one is made a moment later.
+    advanceClock();
     const back = rented(await lend(db, shop.id, diver.id, [fins.id]));
     await checkOutCounterRental(db, { shopId: shop.id, ticketId: back.ticketId });
     await returnCounterRental(db, {

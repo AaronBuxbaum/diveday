@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   blockedAtRail,
   boardedBefore,
+  cancelledRollCall,
   carryForwardNotBoarded,
   isNotBackAboard,
+  medicalHoldAfterDive,
   RETRACTION_SUPERSEDED,
   ROLL_CALL_NOTE_MAX,
   type RollCallCheckpoint,
@@ -190,6 +192,146 @@ describe("blockedAtRail", () => {
   });
 });
 
+/**
+ * **A medical "no" stays on the row between dives** (issue #2380, Aaron's
+ * decision (b)). `blockedAtRail` stops speaking readiness after a dive for a
+ * diver boarded over the block (decision 4); a medical blocker is not
+ * paperwork, so it keeps a warning-toned capsule there instead — never the
+ * danger "Blocked", which the not-back alarm keeps for itself.
+ */
+describe("medicalHoldAfterDive", () => {
+  const afterDives: RollCallCheckpoint[] = ["after_dive_1", "after_dive_2", "after_dive_3"];
+
+  it("names a physician's no at every after-dive checkpoint for a diver boarded over it", () => {
+    for (const checkpoint of afterDives) {
+      expect(
+        medicalHoldAfterDive({
+          checkpoint,
+          boardedEarlier: true,
+          notBackAboard: false,
+          blockerCodes: ["medical_not_cleared"],
+        }),
+      ).toBe("medical_not_cleared");
+    }
+  });
+
+  it("names an open medical review the same way", () => {
+    for (const checkpoint of afterDives) {
+      expect(
+        medicalHoldAfterDive({
+          checkpoint,
+          boardedEarlier: true,
+          notBackAboard: false,
+          blockerCodes: ["waiver_missing", "medical_review"],
+        }),
+      ).toBe("medical_review");
+    }
+  });
+
+  it("puts the physician's no ahead of an open review when both stand", () => {
+    expect(
+      medicalHoldAfterDive({
+        checkpoint: AFTER_DIVE,
+        boardedEarlier: true,
+        notBackAboard: false,
+        blockerCodes: ["medical_review", "medical_not_cleared"],
+      }),
+    ).toBe("medical_not_cleared");
+  });
+
+  it("says nothing at the dock, where the row already says Blocked", () => {
+    expect(
+      medicalHoldAfterDive({
+        checkpoint: "departure",
+        boardedEarlier: true,
+        notBackAboard: false,
+        blockerCodes: ["medical_not_cleared"],
+      }),
+    ).toBeNull();
+  });
+
+  it("says nothing for a diver nobody boarded earlier, whose row still says Blocked", () => {
+    for (const boardedEarlier of [false, undefined]) {
+      const input = {
+        checkpoint: AFTER_DIVE,
+        boardedEarlier,
+        notBackAboard: false,
+        blockerCodes: ["medical_not_cleared"],
+      };
+      expect(medicalHoldAfterDive(input)).toBeNull();
+      // The two predicates never both stay quiet on a medical block.
+      expect(blockedAtRail({ ready: false, isDeparture: false, ...input })).toBe(true);
+    }
+  });
+
+  it("lets the not-back alarm win: nothing beside somebody in the water", () => {
+    expect(
+      medicalHoldAfterDive({
+        checkpoint: AFTER_DIVE,
+        boardedEarlier: true,
+        notBackAboard: true,
+        blockerCodes: ["medical_not_cleared"],
+      }),
+    ).toBeNull();
+  });
+
+  it("stays quiet for a paperwork blocker, which decision 4 keeps off the rail", () => {
+    for (const code of ["waiver_missing", "cert_unverified", "readiness_unavailable"]) {
+      expect(
+        medicalHoldAfterDive({
+          checkpoint: AFTER_DIVE,
+          boardedEarlier: true,
+          notBackAboard: false,
+          blockerCodes: [code],
+        }),
+      ).toBeNull();
+    }
+    expect(
+      medicalHoldAfterDive({
+        checkpoint: AFTER_DIVE,
+        boardedEarlier: true,
+        notBackAboard: false,
+        blockerCodes: [],
+      }),
+    ).toBeNull();
+  });
+
+  /**
+   * **A missing mark is not carried, so the hold comes back** (#2380 review).
+   * Only the dock's not-boarded carries forward; a not-back at after_dive_1
+   * leaves after_dive_2 awaiting. That awaiting row is no alarm, and the diver
+   * boarded at the dock, so it wears the hold again. Pinned as it stands.
+   */
+  it("wears the hold on the awaiting row after a not-back nobody has touched since", () => {
+    const checkpoints: RollCallCheckpoint[] = ["departure", "after_dive_1", "after_dive_2"];
+    const effective = carryForwardNotBoarded([standing("boarded"), standing("not_boarded")]);
+    const at = (index: number) => {
+      const checkpoint = checkpoints[index] as RollCallCheckpoint;
+      return medicalHoldAfterDive({
+        checkpoint,
+        boardedEarlier: boardedBefore(effective.slice(0, index)),
+        notBackAboard: isNotBackAboard(checkpoint, effective[index]),
+        blockerCodes: ["medical_not_cleared"],
+      });
+    };
+    // The alarm at after_dive_1 carries nothing else.
+    expect(at(1)).toBeNull();
+    expect(effective[2]).toBeUndefined();
+    expect(at(2)).toBe("medical_not_cleared");
+  });
+
+  it("leaves blockedAtRail's answer for the same diver unchanged (decision 4)", () => {
+    expect(
+      blockedAtRail({
+        ready: false,
+        isDeparture: false,
+        boardedEarlier: true,
+        notBackAboard: false,
+      }),
+    ).toBe(false);
+  });
+});
+
 describe("rollCallCheckpointOrdinal", () => {
   it("orders the dock before every dive, and dives by number", () => {
     expect(
@@ -206,5 +348,25 @@ describe("boardedBefore", () => {
     expect(boardedBefore([undefined, null])).toBe(false);
     expect(boardedBefore([standing("not_boarded"), standing("not_boarded", true)])).toBe(false);
     expect(boardedBefore([standing("not_boarded"), standing("boarded")])).toBe(true);
+  });
+});
+
+describe("cancelledRollCall (#2285)", () => {
+  it("says nothing on a departure that is not cancelled", () => {
+    expect(cancelledRollCall({ cancelled: false, rollCallOpen: true })).toBeNull();
+  });
+
+  it("closes the roll call of a cancelled departure nobody counted on", () => {
+    expect(cancelledRollCall({ cancelled: true, rollCallOpen: false })).toBe("closed");
+  });
+
+  it("keeps a cancelled departure's count open once it has begun", () => {
+    expect(cancelledRollCall({ cancelled: true, rollCallOpen: true })).toBe("still_counting");
+  });
+
+  it("never closes a departure that is not cancelled, whatever the writers say", () => {
+    // Only a cancellation closes a page: a scheduled trip whose gate read
+    // false (a stale read) keeps its controls, and the writer answers.
+    expect(cancelledRollCall({ cancelled: false, rollCallOpen: false })).toBeNull();
   });
 });

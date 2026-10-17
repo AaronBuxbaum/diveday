@@ -1,4 +1,9 @@
-import type { RollCallCheckpoint, RollCallLabel } from "@/lib/manifests";
+import type {
+  MedicalHoldCode,
+  RollCallCheckpoint,
+  RollCallLabel,
+  TrainingMarkCleared,
+} from "@/lib/manifests";
 import type { MedicalWarningDays } from "@/lib/waivers";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
@@ -78,6 +83,17 @@ export function medicalWarningChips(t: StaffTranslator, days: MedicalWarningDays
   ].filter((chip): chip is string => chip !== null);
 }
 
+/**
+ * The capsule for a diver boarded over a medical blocker, after a dive
+ * (`medicalHoldAfterDive`, issue #2380): the live roll call and the offline
+ * copy word it through this one function.
+ */
+export function medicalHoldChip(t: StaffTranslator, code: MedicalHoldCode): string {
+  return code === "medical_not_cleared"
+    ? t("manifest.medicalHoldNotClearedChip")
+    : t("manifest.medicalHoldReviewChip");
+}
+
 /** The riding-only sentences of {@link medicalWarningChips}, dated. */
 export function ridingOnlyMedicalSentences(
   t: StaffTranslator,
@@ -92,4 +108,38 @@ export function ridingOnlyMedicalSentences(
       ? t("manifest.medicalRidingOnlyReferral", { date: formatDay(days.ridingReferredOn) })
       : null,
   ].filter((line): line is string => line !== null);
+}
+
+/**
+ * A training dive's lines on a manifest row (issue #2275), live and offline
+ * alike: the course it counts toward, then the warnings — no instructor on the
+ * crew, and a mark someone cleared with the course's forms unsigned.
+ */
+export function trainingDiveLines(
+  t: StaffTranslator,
+  diver: {
+    trainingDive?: { courseTitle: string; instructorAboard: boolean } | null;
+    trainingMarkCleared?: TrainingMarkCleared | null;
+  },
+): { fact: string | null; warnings: string[] } {
+  const { trainingDive, trainingMarkCleared } = diver;
+  return {
+    fact: trainingDive ? t("manifest.trainingDive", { course: trainingDive.courseTitle }) : null,
+    warnings: [
+      trainingDive && !trainingDive.instructorAboard
+        ? t("manifest.trainingDiveNoInstructor")
+        : null,
+      trainingMarkCleared
+        ? t(
+            trainingMarkCleared.reason === "mark_invalid"
+              ? "manifest.trainingMarkClearedInvalid"
+              : "manifest.trainingMarkCleared",
+            {
+              hasName: trainingMarkCleared.byName ? "yes" : "no",
+              name: trainingMarkCleared.byName ?? "",
+            },
+          )
+        : null,
+    ].filter((line): line is string => line !== null),
+  };
 }

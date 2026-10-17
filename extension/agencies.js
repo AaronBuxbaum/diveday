@@ -3,6 +3,14 @@
 // src/lib/cert-check-extension.test.ts fails if they drift. `fields` lists
 // what the form is filled with, in the order the agency's form asks for it.
 // `dateFormat` is how a typed (not date-picker) birth-date box wants it.
+// `origins`, on a lookup behind the shop's own sign-in, lists every host the
+// lookup may be sent between and still be the signed-in site (background.js).
+
+// PADI's own pages send pros to pro.padi.com (its sign-in page, its 2024
+// member brochure, its member FAQ); pros.padi.com also answers. Either may
+// send the tab to the other, so both are PADI's Pros' Site.
+const PADI_ORIGINS = ["https://pro.padi.com", "https://pros.padi.com"];
+
 globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
   AGENCIES: {
     ssi: {
@@ -32,6 +40,19 @@ globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
       dateFormat: "YYYY-MM-DD",
       either: true,
     },
+    // DiveChek, on the PADI Pros' Site, behind the shop's own PADI sign-in:
+    // the staffer's browser is already signed in, DiveDay never is. `signIn`
+    // holds the filler and the service worker tighter (fill.js, background.js):
+    // search boxes only, never a sign-in or account page, and only this
+    // diver's lines come back. The address and the form are a best guess that
+    // has not been tried against the live site (issue #2259).
+    padi: {
+      url: "https://pro.padi.com/divechek",
+      origins: PADI_ORIGINS,
+      fields: ["name", "birthDate"],
+      dateFormat: "MM/DD/YYYY",
+      signIn: true,
+    },
   },
   // Where a course student's eLearning progress is read, by agency. PADI shows
   // it only to a professional signed in to the PADI Pros' Site, so this opens
@@ -41,9 +62,11 @@ globalThis.DiveDayCertCheck = Object.assign(globalThis.DiveDayCertCheck || {}, {
   // does not read as a result writes nothing.
   ELEARNING: {
     padi: {
-      url: "https://pros.padi.com/",
+      url: "https://pro.padi.com/",
+      origins: PADI_ORIGINS,
       fields: ["email"],
       dateFormat: "YYYY-MM-DD",
+      signIn: true,
     },
   },
 });

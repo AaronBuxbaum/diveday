@@ -53,7 +53,7 @@ already verifies, rather than inventing a fourth inbound auth scheme for one cal
 | SNS status | Recorded as | Detail kept |
 | --- | --- | --- |
 | `SUCCESS` | `delivered` | none — the success `providerResponse` is boilerplate |
-| `FAILURE` | `failed` | the carrier's `providerResponse`, verbatim |
+| `FAILURE` | `failed` | `providerResponse` when it is one of SNS's own reasons (`KNOWN_FAILURE_RESPONSES` in `src/lib/notifications/sms-events.ts`), else `unrecognized_response`: a carrier's free text may quote the number |
 | anything else | ignored, answered 200 | — |
 
 `SUCCESS` maps to **delivered**, not sent: SNS reports it on carrier confirmation of handset
@@ -131,11 +131,11 @@ stands.
 
 Use case description:
 
-> DiveDay is booking and operations software for recreational scuba dive shops. Divers book a boat trip or course with a dive shop on the shop's DiveDay booking page. DiveDay sends text messages only about a booking the diver made: a reminder a week before and the day before the trip with the departure time and anything the diver still needs to finish, a link to sign the shop's dive waiver, and a link to the trip recap afterward. Every message names the dive shop and ends with how to opt out. DiveDay does not send marketing or promotional messages and does not share or sell phone numbers.
+> DiveDay is booking and operations software for recreational scuba dive shops. Divers book a boat trip or course with a dive shop on the shop's DiveDay booking page, or give the shop their number in person. DiveDay sends text messages only about the diver's own bookings, courses and gear left with the shop: a reminder a week before and the day before the trip with the departure time and anything the diver still needs to finish, a link to sign the shop's dive waiver, notice when the trip's time or meeting point changes, a short note from the crew about the day's departure, word that something the diver left aboard was found, a link to the trip recap afterward, word that the diver's course certification was issued, and word that gear the diver left for service is ready or due for its next service. Every message names the dive shop and ends with how to opt out. DiveDay does not send marketing or promotional messages and does not share or sell phone numbers.
 
 Opt-in workflow:
 
-> A diver opts in on the dive shop's DiveDay booking page, for example [booking page URL]. The mobile number field is optional. Directly under it the form says: "By giving a mobile number, you agree to texts from DiveDay about your bookings: reminders, waiver links and trip recaps, up to four per booking. Message and data rates may apply. Reply STOP to opt out, HELP for help. Privacy policy" (linked to https://dive.day/privacy). Divers who leave the field blank are never texted. The same line sits under the phone field on the shop's self-registration and seat-claim pages. Screenshot attached.
+> A diver opts in on the dive shop's DiveDay booking page, for example [booking page URL]. The mobile number field is optional. Directly under it the form says: "By giving a mobile number, you agree to texts from DiveDay about your bookings and courses: reminders, waiver links, trip changes, notes from the crew, lost property and recaps. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help. Privacy policy" (linked to https://dive.day/privacy). Divers who leave the field blank are never texted. The same line sits under the phone field on the shop's self-registration and seat-claim pages. A diver who books at the counter or leaves gear for service gives the shop their mobile number in person, and staff enter it for that purpose. Screenshot attached.
 
 Sample messages:
 
@@ -143,6 +143,10 @@ Sample messages:
 
 > Blue Reef Divers: please sign your dive release for Morning two-tank — https://dive.day/waivers/[token] Reply STOP to opt out.
 
+> Blue Reef Divers: we moved Morning two-tank to Oct 13, 7:30 – 11:30 AM EDT. It was Oct 12, 7:30 AM EDT. Reply STOP to opt out.
+
 > Blue Reef Divers: thanks for diving Morning two-tank! Your recap: https://dive.day/recap/[token] Reply STOP to opt out.
+
+> Blue Reef Divers: your gear on ticket #1042 is ready to collect (regulator, BCD). Reply STOP to opt out.
 
 Message type: transactional. Use case: account notifications. Privacy policy: https://dive.day/privacy. Terms: https://dive.day/terms.

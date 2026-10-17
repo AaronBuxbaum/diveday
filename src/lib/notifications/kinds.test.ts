@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { ZodObject, ZodType } from "zod";
 
 import {
+  NOTIFICATION_TRIP_TITLE_MAX,
   type Notification,
+  notificationIdempotencyKey,
   notificationSchema,
   notificationSubjectEmail,
   notificationSubjectPhone,
@@ -131,6 +133,22 @@ describe("every handle a notification carries is reachable by the erasure sweep"
       source: "pricing",
       requestLocale: "en-US",
     } as Notification,
+    // The bookkeeper's address, in a notice to an owner (item 35). Never
+    // queued, but reachable all the same.
+    bookkeeper_notice: {
+      kind: "bookkeeper_notice",
+      shopId: "00000000-0000-4000-8000-000000000001",
+      personId: "00000000-0000-4000-8000-000000000002",
+      to: "owner@shop.invalid",
+      locale: "en-US",
+      recipientName: "Dana Reyes",
+      shopName: "Reef Line Divers",
+      reportsUrl: "https://diveday.invalid/shop/reef-line/reports#bookkeeper",
+      event: "sent",
+      email: "books@ledger.invalid",
+      month: "2026-09",
+      at: new Date("2026-10-02T13:09:00Z"),
+    } as Notification,
   };
 
   it("finds every kind in the union", () => {
@@ -153,8 +171,27 @@ describe("every handle a notification carries is reachable by the erasure sweep"
     expect(inquiry?.phone).toEqual(["inquirerPhone"]);
   });
 
+  /**
+   * **The shop's own published number, not a person's** — out of scope for
+   * the same reason `sender.replyTo` is. A date request's acknowledgment tells
+   * the diver how to reach the shop sooner (third UX review, item 13); the
+   * number is `shops.contact_phone`, resolved server-side, and erasing a diver
+   * never reaches it. Listed by kind and field, so a second phone on the same
+   * kind is still caught.
+   */
+  const SHOP_OWNED_NUMBERS: Record<string, readonly string[]> = {
+    course_inquiry_received: ["shopPhone"],
+    // The stale-roll-call alert's shore copy says whom to call first: the
+    // shop's own `contact_phone` (H-118). Never queued, either.
+    roll_call_stale_shore: ["shopPhone"],
+  };
+
   it.each(branches())("$kind surfaces every handle it carries", ({ kind, email, phone }) => {
-    const extra = [...email.filter((field) => field !== "to"), ...phone];
+    const shopOwned = SHOP_OWNED_NUMBERS[kind] ?? [];
+    const extra = [
+      ...email.filter((field) => field !== "to"),
+      ...phone.filter((field) => !shopOwned.includes(field)),
+    ];
     if (extra.length === 0) return;
 
     const sample = SUBJECT_SAMPLES[kind];
@@ -227,5 +264,110 @@ describe("setup_request_alert", () => {
     for (const shopName of ["Reef\r\nBcc: x@example.com", "Reef‮Line", "Reef Line"]) {
       expect(notificationSchema.safeParse({ ...alert, shopName }).success).toBe(false);
     }
+  });
+});
+
+/**
+ * **A long trip title shortens a notification, it never fails one** (issue
+ * #2603). `trips.title` is unbounded text, so every kind that carries a
+ * `tripTitle` shares one schema that clips it. Found by walking the union, so
+ * a kind added later with its own `max(200)` is caught here.
+ */
+describe("every kind's tripTitle shortens a long title instead of rejecting it", () => {
+  /** Every `tripTitle` schema in the union, with the kind it belongs to, nested ones included. */
+  function tripTitleFields(): { where: string; schema: ZodType }[] {
+    const union = (
+      notificationSchema as unknown as { def: { left: { def: { options: ZodType[] } } } }
+    ).def.left.def.options;
+    const found: { where: string; schema: ZodType }[] = [];
+    const walk = (where: string, shape: Record<string, ZodType>) => {
+      for (const [name, field] of Object.entries(shape)) {
+        if (name === "tripTitle") found.push({ where, schema: field });
+        let def = (field as unknown as { def: Record<string, unknown> }).def;
+        while (def?.innerType) def = (def.innerType as { def: Record<string, unknown> }).def;
+        const element = def?.element as { def?: { shape?: Record<string, ZodType> } } | undefined;
+        if (element?.def?.shape) walk(`${where}.${name}[]`, element.def.shape);
+      }
+    };
+    for (const option of union) {
+      const shape = (option as ZodObject).def.shape as Record<string, ZodType>;
+      const kind = (shape.kind as unknown as { def: { values: string[] } }).def.values[0] ?? "";
+      walk(kind, shape);
+    }
+    return found;
+  }
+
+  const fields = tripTitleFields();
+
+  it("finds the kinds that carry a trip title", () => {
+    // A floor, not a count: the walk must not pass vacuously over an empty list.
+    expect(fields.length).toBeGreaterThanOrEqual(19);
+    expect(fields.map((field) => field.where)).toContain("roll_call_stale");
+    expect(fields.map((field) => field.where)).toContain("booking_confirmation");
+    expect(fields.map((field) => field.where)).toContain("crew_schedule_change.changes[]");
+  });
+
+  it.each(fields.map((field) => [field.where, field.schema] as const))(
+    "%s shortens 500 characters, keeps 200 whole, and still refuses blank",
+    (_where, schema) => {
+      const long = schema.safeParse("Reef ".repeat(100));
+      expect(long.success).toBe(true);
+      if (long.success) {
+        expect((long.data as string).length).toBeLessThanOrEqual(NOTIFICATION_TRIP_TITLE_MAX);
+        expect((long.data as string).endsWith("…")).toBe(true);
+      }
+      const exact = "x".repeat(NOTIFICATION_TRIP_TITLE_MAX);
+      expect(schema.safeParse(exact)).toMatchObject({ success: true, data: exact });
+      expect(schema.safeParse(`  ${exact}  `)).toMatchObject({ success: true, data: exact });
+      expect(schema.safeParse("   ").success).toBe(false);
+    },
+  );
+
+  it("sends a booking confirmation for a trip with a 500-character title, subject shortened", () => {
+    const parsed = notificationSchema.parse({
+      kind: "booking_confirmation",
+      bookingId: "00000000-0000-4000-8000-000000000011",
+      shopId: "00000000-0000-4000-8000-000000000012",
+      to: "ana@example.com",
+      locale: "en-US",
+      diverName: "Ana Ruiz",
+      shopName: "Blue Mantis Divers",
+      tripTitle: "Reef ".repeat(100),
+      startsAt: new Date("2026-11-01T12:00:00Z"),
+      endsAt: new Date("2026-11-01T16:00:00Z"),
+      timezone: "America/New_York",
+      manageUrl: "https://diveday.example/ready/x",
+    });
+    if (parsed.kind !== "booking_confirmation") throw new Error("wrong kind");
+    expect(parsed.tripTitle.length).toBeLessThanOrEqual(NOTIFICATION_TRIP_TITLE_MAX);
+  });
+});
+
+describe("seat_already_held is keyed once per held seat per hour", () => {
+  const heldBookingId = "00000000-0000-4000-8000-0000000000a1";
+  const keyAt = (heldId: string, requestedAt: Date) =>
+    notificationIdempotencyKey({
+      kind: "seat_already_held",
+      heldBookingId: heldId,
+      shopId: "00000000-0000-4000-8000-0000000000a2",
+      to: "holder@example.com",
+      locale: "en-US",
+      diverName: "Orla Organizer",
+      shopName: "Blue Mantis",
+      tripTitle: "Two-Tank Reef",
+      startsAt: new Date("2026-10-20T14:00:00Z"),
+      timezone: "America/New_York",
+      requestedAt,
+    });
+
+  it("gives every attempt inside one hour the same key, and the next hour another", () => {
+    const first = keyAt(heldBookingId, new Date("2026-10-16T10:01:00Z"));
+    expect(keyAt(heldBookingId, new Date("2026-10-16T10:59:59Z"))).toBe(first);
+    expect(keyAt(heldBookingId, new Date("2026-10-16T11:00:00Z"))).not.toBe(first);
+  });
+
+  it("keeps two held seats apart in the same hour", () => {
+    const at = new Date("2026-10-16T10:01:00Z");
+    expect(keyAt(heldBookingId, at)).not.toBe(keyAt("00000000-0000-4000-8000-0000000000a3", at));
   });
 });

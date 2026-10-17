@@ -40,9 +40,11 @@ function linkedVercelOrgId() {
 // ACTIONS_ID_TOKEN_REQUEST_URL, was tried first and rejected after CI itself
 // proved it is present on ordinary non-deploy Actions jobs too).
 const isCiDeploy = process.argv.includes("--ci-unattended");
-const cdkArguments = process.argv
-  .slice(2)
-  .filter((argument) => argument !== "--no-wizard" && argument !== "--ci-unattended");
+// Push every Vercel value whatever the sync checkpoint says (import-vercel-env.mjs
+// `--resync`): the repair for a Vercel that drifted from what the last sync sent.
+const resyncVercel = process.argv.includes("--resync-vercel");
+const WRAPPER_FLAGS = new Set(["--no-wizard", "--ci-unattended", "--resync-vercel"]);
+const cdkArguments = process.argv.slice(2).filter((argument) => !WRAPPER_FLAGS.has(argument));
 
 // The app builds three stacks (ADR 20260910-one-region-in-us-east-2, ADR
 // 20260910-one-region-in-us-east-2), and `cdk deploy` with neither a stack id nor
@@ -258,6 +260,7 @@ if (process.argv.includes("--no-wizard")) {
       cdkArguments,
       credentialsDocument: document,
       syncEnvironment,
+      resyncVercel,
     });
   } finally {
     terminal.close();
@@ -280,6 +283,7 @@ if (process.argv.includes("--no-wizard")) {
     credentialsDocument: document,
     syncEnvironment,
     ciUnattended: true,
+    resyncVercel,
   });
 } else {
   console.log("Run this command in a terminal to use the optional post-deploy wizard.");

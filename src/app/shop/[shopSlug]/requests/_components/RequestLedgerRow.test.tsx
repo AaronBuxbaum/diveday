@@ -26,6 +26,8 @@ const BASE: DateRequestRow = {
   divers: 2,
   message: null,
   createdAt: new Date("2027-02-20T14:00:00.000Z"),
+  handledAt: null,
+  handledAs: null,
 };
 
 function row(request: Partial<DateRequestRow> = {}) {
@@ -36,6 +38,8 @@ function row(request: Partial<DateRequestRow> = {}) {
         locale="en-US"
         timezone="America/Cancun"
         shopSlug="blue-mantis"
+        shopName="Blue Mantis Divers"
+        markDoneAction={() => {}}
         t={t}
       />
     </ul>,
@@ -144,9 +148,9 @@ describe("where a request's lines may break", () => {
    * that half into the inset below `sm`, where the link has its own line, and
    * the box then ends on the rule, so its ring is drawn inside it.
    */
-  it("sinks the link's unseen lower half into the row's inset below sm", () => {
+  it("sinks the last act's unseen lower half into the row's inset below sm", () => {
     row({});
-    expect(screen.getByRole("link", { name: "Create a booking" })).toHaveClass(
+    expect(screen.getByRole("button", { name: "Mark done" })).toHaveClass(
       "max-sm:-mb-3",
       "max-sm:align-bottom",
       "focus-visible:focus-ring-inset",
@@ -180,8 +184,32 @@ describe("what one request says", () => {
     const email = screen.getByRole("link", { name: "tomas.ferreira@example.com" });
     expect(email.getAttribute("href")).toBe("mailto:tomas.ferreira@example.com");
     // Left exactly as the diver typed it: this column is their own text, not a
-    // normalised `people.phone` (#1712).
-    expect(screen.getByText(/\+1-305-555-0433/)).toBeTruthy();
+    // normalised `people.phone` (#1712). A tap calls it (third UX review, item 13).
+    const number = screen.getByRole("link", { name: /\+1-305-555-0433/ });
+    expect(number.getAttribute("href")).toBe("tel:+13055550433");
+  });
+
+  it("replies by email with the shop named in the subject", () => {
+    row({});
+    const reply = screen.getByRole("link", { name: "Reply" });
+    expect(reply.getAttribute("href")).toBe(
+      "mailto:tomas.ferreira@example.com?subject=Your%20request%20to%20Blue%20Mantis%20Divers",
+    );
+  });
+
+  it("replies by phone when the diver left only a number", () => {
+    row({ email: null });
+    expect(screen.getByRole("link", { name: "Reply" }).getAttribute("href")).toBe(
+      "tel:+13055550433",
+    );
+  });
+
+  it("closes the lead with Mark done", () => {
+    const item = row({});
+    const form = screen.getByRole("button", { name: "Mark done" }).closest("form");
+    expect(form?.querySelector('input[name="requestId"]')).toHaveValue(BASE.id);
+    expect(form?.querySelector('input[name="outcome"]')).toHaveValue("done");
+    expect(item).toBeTruthy();
   });
 
   it("groups a number a diver typed as one unbroken run", () => {

@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { KeepTypedOnRefusal } from "@/components/KeepTypedOnRefusal";
+import { keptTypedScope } from "@/components/kept-typed-scope";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import {
   ChoiceFieldset,
   ChoiceRow,
@@ -24,27 +27,19 @@ import { listStaff } from "@/db/trips";
 import { listBenchUnits, listCustomerGearItems, searchWorkOrderCustomers } from "@/db/work-orders";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { GEAR_KIND_ORDER } from "@/lib/gear";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { WORK_ORDER_TEXT_LIMITS } from "@/lib/work-orders";
 import { pieceDueLine } from "../_components/piece-dates";
+import {
+  NEW_ORDER_NOTICE_FIELD,
+  NEW_ORDER_NOTICES,
+  type NewOrderNoticeField,
+} from "../_lib/new-order-notices";
 import { addCustomerGearItemAction, createWorkOrderAction } from "../actions";
-
-/** The refusals this form renders beside itself. */
-const NOTICES: Record<string, StaffMessageKey> = {
-  "empty-problem": "workOrders.notice.emptyProblem",
-  "no-items": "workOrders.notice.noItems",
-  "no-subject": "workOrders.notice.noSubject",
-  "two-subjects": "workOrders.notice.twoSubjects",
-  "invalid-date": "workOrders.notice.invalidDate",
-  "not-found": "workOrders.notice.notFound",
-  "unknown-technician": "workOrders.notice.unknownTechnician",
-  invalid: "workOrders.notice.invalid",
-  "piece-added": "workOrders.notice.pieceAdded",
-};
 
 export const instant = true;
 
@@ -69,7 +64,7 @@ export default async function NewWorkOrderPage({
 }) {
   const { shopSlug } = await params;
   const search = await searchParams;
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { db, shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const board = shopPath(shopSlug, "gear", "work-orders");
@@ -96,7 +91,13 @@ export default async function NewWorkOrderPage({
     unitId && !unit ? (await listBenchUnits(db, shop.id)).find((row) => row.id === unitId) : unit;
   if (unitId && !chosenUnit) notFound();
 
-  const noticeKey = noticeFromParam(search.notice, NOTICES);
+  const noticeKey = noticeFromParam(search.notice, NEW_ORDER_NOTICES);
+  // A refusal says itself beside the box it is about (fifth loop, item 14);
+  // the foot keeps the ones no single box owns.
+  const noticeField = noticeFromParam(search.notice, NEW_ORDER_NOTICE_FIELD);
+  const fieldError = (field: NewOrderNoticeField) =>
+    noticeField === field && noticeKey ? t(noticeKey) : undefined;
+  const refused = noticeKey != null && search.notice !== "piece-added";
   const subjectName = customer?.person.fullName ?? chosenUnit?.label;
 
   return (
@@ -196,6 +197,12 @@ export default async function NewWorkOrderPage({
         {personId || chosenUnit ? (
           <SectionCard title={t("workOrders.new.jobHeading")} padding="lg">
             <FieldGrid as="form" action={createWorkOrderAction} columns={2}>
+              {/* The customer's paragraph survives a refused date. */}
+              <KeepTypedOnRefusal
+                form="work-order-new"
+                scope={keptTypedScope(shopSlug, session.user.personId)}
+                restore={refused}
+              />
               {personId ? <input type="hidden" name="personId" value={personId} /> : null}
               {chosenUnit ? <input type="hidden" name="gearItemId" value={chosenUnit.id} /> : null}
 
@@ -239,6 +246,7 @@ export default async function NewWorkOrderPage({
                 htmlFor="reported-problem"
                 required
                 className="col-span-full"
+                error={fieldError("reported-problem")}
               >
                 <textarea
                   id="reported-problem"
@@ -255,6 +263,7 @@ export default async function NewWorkOrderPage({
                 label={t("workOrders.form.promisedOn")}
                 hint={t("workOrders.form.optionalHint")}
                 htmlFor="promised-on"
+                error={fieldError("promised-on")}
               >
                 <DateField id="promised-on" name="promisedOn" />
               </Field>
@@ -263,6 +272,7 @@ export default async function NewWorkOrderPage({
                 label={t("workOrders.form.technician")}
                 hint={t("workOrders.form.optionalHint")}
                 htmlFor="technician"
+                error={fieldError("technician")}
               >
                 <select id="technician" name="technicianPersonId" className={controlClass}>
                   <option value="">{t("workOrders.form.technicianNone")}</option>
@@ -278,11 +288,14 @@ export default async function NewWorkOrderPage({
                 <SubmitButton pendingLabel={t("workOrders.new.pending")} className={buttonClass()}>
                   {t("workOrders.new.submit")}
                 </SubmitButton>
-                {noticeKey && search.notice !== "piece-added" ? (
+                {refused && !noticeField ? (
                   <FormStatus tone="danger">{t(noticeKey)}</FormStatus>
                 ) : null}
               </FieldActions>
             </FieldGrid>
+            {refused && noticeField ? (
+              <FieldErrorFocus key={search.notice} field={noticeField} />
+            ) : null}
           </SectionCard>
         ) : null}
       </div>

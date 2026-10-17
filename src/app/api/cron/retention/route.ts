@@ -7,12 +7,12 @@ import { flushLogs } from "@/lib/observability";
 import { sentry } from "@/lib/observability/sentry";
 
 /**
- * A prune pass is a handful of bounded deletes (`PRUNE_BATCH_LIMIT` rows per
- * table), so it should finish in seconds — but it is still a set of DELETEs
- * against a growing table, and a bound beats an unbounded hold on a function
- * slot. 60s is far above the observed tick and still kills a pass that has
- * wedged, rather than letting it sit open. Raise it only with evidence from
- * `cron_retention.prune_complete`.
+ * A prune run takes batches of `PRUNE_BATCH_LIMIT` rows per table until each
+ * table is inside its window or 45 seconds have gone (`PRUNE_TIME_BUDGET_MS`),
+ * so an ordinary week finishes in seconds and a backlog spends at most the
+ * budget plus one batch. 60s leaves room for that last batch and the log line,
+ * and still kills a run that has wedged. Raise both together, and only with
+ * evidence from `cron_retention.prune_complete`.
  */
 export const maxDuration = 60;
 
@@ -34,7 +34,7 @@ const CRON_MONITOR_SLUG =
  * run the platform killed reads as timed-out rather than still running.
  */
 const CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab", value: "30 3 * * 0" },
+  schedule: { type: "crontab", value: "8 3 * * 0" },
   checkinMargin: 240,
   maxRuntime: 5,
   timezone: "Etc/UTC",
@@ -85,20 +85,25 @@ export async function GET(request: Request) {
       }
     }
 
+    // Still over the window after the whole time budget: the backlog grows
+    // faster than a run can drain it. Counted by the CronPassFailures alarm
+    // (infra/lib/observability.ts), which is why it is its own line.
+    const stillCapped = summary.outcomes.filter((outcome) => outcome.capped);
+    if (stillCapped.length > 0) {
+      log("cron_retention.prune_capped", "warn", {
+        tablesCapped: stillCapped.map((outcome) => outcome.table).join(","),
+      });
+    }
+
     // One line per run naming every table, its window, and what it removed —
     // ids and codes only (LogContext's rule), which is all this pass ever
     // knows about a row anyway.
     log("cron_retention.prune_complete", "info", {
       totalDeleted: summary.totalDeleted,
+      dietaryNotesCleared: summary.dietaryNotesCleared,
       tablesFailed: summary.failedTables.length,
       failedTables: summary.failedTables.length > 0 ? summary.failedTables.join(",") : undefined,
-      // `capped` is the signal that a backlog is still draining: the next
-      // weekly pass will take another batch.
-      tablesCapped:
-        summary.outcomes
-          .filter((outcome) => outcome.capped)
-          .map((outcome) => outcome.table)
-          .join(",") || undefined,
+      tablesCapped: stillCapped.map((outcome) => outcome.table).join(",") || undefined,
       ...Object.fromEntries(
         summary.outcomes.map((outcome) => [`${outcome.table}_deleted`, outcome.deleted]),
       ),

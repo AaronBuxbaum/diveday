@@ -2,10 +2,12 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { personSearchMatch } from "./person-search";
 import { people } from "./schema";
+
+const ctx = fileScopedShopContext();
 
 /**
  * **The predicate every staff search box runs, tested where it lives.**
@@ -32,7 +34,7 @@ describe("personSearchMatch", () => {
   }
 
   it("finds an E.164 row from the grouped number printed on the screen", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const stored = "+13055550654";
     const person = await seatedDiver(db, shop.id, "Paste Case", stored);
 
@@ -45,7 +47,7 @@ describe("personSearchMatch", () => {
   });
 
   it("finds the same row from the shapes a staffer types instead of pasting", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await seatedDiver(db, shop.id, "Typed Case", "+13055550655");
 
     // Off a handwritten card or a caller ID — no calling code to type, and
@@ -64,7 +66,7 @@ describe("personSearchMatch", () => {
    * Only the stored-side `regexp_replace` finds it.
    */
   it("finds a row whose stored value was never E.164 at all", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await seatedDiver(db, shop.id, "Extension Case", "+1 305 555 0656 x21");
     // The screen shows this one exactly as stored, so proving the search finds
     // it proves the column side is doing the work.
@@ -78,7 +80,7 @@ describe("personSearchMatch", () => {
   });
 
   it("matches name and email as before, and nothing on an empty query", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Priya Namesake", email: "namesake@example.com" })
@@ -98,10 +100,32 @@ describe("personSearchMatch", () => {
    * proves the digits arm is on, and a miss one digit shorter proves it is off.
    */
   it("compares digits only once the query carries enough of them", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await seatedDiver(db, shop.id, "Floor Case", "+1 (999) 888-7766");
 
     expect(await matches(db, shop.id, "8877")).toContain(person.id);
     expect(await matches(db, shop.id, "877")).not.toContain(person.id);
+  });
+
+  /**
+   * **What a staffer types is matched as written** (security review of #2579).
+   * `%` and `_` are `like` wildcards, so unescaped a lone `%` listed every
+   * person in the shop and `_` stood for any one letter. They are literal
+   * characters here, and a value that really holds one is still found.
+   */
+  it("treats % and _ as the characters typed, not as wildcards", async () => {
+    const { db, shop } = ctx;
+    const plain = await seatedDiver(db, shop.id, "Wildcard Plain", "+13055550111");
+    const literal = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Wildcard Odd", email: "odd_100%@example.com" })
+      .returning()
+      .then(([row]) => row);
+    if (!literal) throw new Error("person insert returned no row");
+
+    expect(await matches(db, shop.id, "%")).toEqual([literal.id]);
+    expect(await matches(db, shop.id, "Wildcard_Plain")).toEqual([]);
+    expect(await matches(db, shop.id, "Wildcard Pl_in")).not.toContain(plain.id);
+    expect(await matches(db, shop.id, "odd_100%")).toEqual([literal.id]);
   });
 });

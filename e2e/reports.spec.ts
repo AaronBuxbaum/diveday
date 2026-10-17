@@ -30,6 +30,13 @@ test.describe("owner", () => {
     await expect(metrics.getByText("Fill", { exact: true })).toBeVisible();
     await expect(metrics.getByText("Waivers", { exact: true })).toBeVisible();
 
+    // Two "this month" totals on one page say which month each one means
+    // (third review, item 1): the headline by departure, the by-line table by
+    // the day the money was paid.
+    await expect(
+      page.getByText("Paid this month, whichever departure it was for, after tax and refunds"),
+    ).toBeVisible();
+
     // The tax figure is a footnote to net revenue now, not a sixth tile beside
     // it — it shares one quiet line with the CSV door.
     await expect(page.getByText(/Tax collected/)).toBeVisible();
@@ -138,10 +145,15 @@ test.describe("owner", () => {
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toMatch(/^text\/csv/);
     const body = await response.text();
-    expect(body).toContain("Net revenue");
-    expect(body).toContain("Crew assigned");
+    // One tidy table, not three stacked under three headers (third UX review,
+    // item 34): one header row, then one fact per row.
+    const [header, ...rows] = body.trimEnd().split("\r\n");
+    expect(header).toBe("Section,Item,Date,Measure,Value");
+    expect(rows).not.toContain(header);
+    expect(body).toContain("Summary,,,Net revenue,");
+    expect(body).toContain(",Crew assigned,");
     // The page's "Money in, by line", from the same query (issue #2305).
-    expect(body).toContain('"Money in, by line",This month');
+    expect(body).toContain('"Money in, by line",');
   });
 
   test("the month and its numbers lead the page, above the departures ledger", {
@@ -168,6 +180,30 @@ test.describe("owner", () => {
   });
 });
 
+test.describe("owner, the Safety page", () => {
+  signedInAsOwner();
+
+  // The month's safety record (ADR 20261012-incident-reports): the figures and
+  // the roll calls left open, read from what the shop already records.
+  test("shows the month's safety figures and the roll calls left open", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/safety");
+
+    await expect(page.getByRole("region", { name: "This month’s safety record" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Roll calls left open" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Incident reports" })).toBeVisible();
+
+    const chooser = page.getByRole("navigation", { name: "Choose month" });
+    await chooser.getByRole("link", { name: "Previous month" }).click();
+    await expect(page).toHaveURL(/\/safety\?month=\d{4}-\d{2}/);
+    // Safety is a place of its own (not a Money tab) and wears its own name.
+    // The manager's way in is pinned in safety/page.test.tsx; the demo shop has
+    // no manager login to sign in with here.
+    await expect(page.getByRole("heading", { level: 1, name: "Safety" })).toBeVisible();
+  });
+});
+
 test.describe("as captain", () => {
   signedInAs("captain");
 
@@ -179,5 +215,11 @@ test.describe("as captain", () => {
     // them — bounced to Today rather than shown a read-only/explained page.
     await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
     await expect(page.getByRole("region", { name: "This month’s numbers" })).toHaveCount(0);
+  });
+
+  test("the Safety page is gated the same way", { tag: READ_ONLY }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/safety");
+    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+    await expect(page.getByRole("region", { name: "Roll calls left open" })).toHaveCount(0);
   });
 });

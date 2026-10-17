@@ -21,6 +21,12 @@ describe("builderNoticeMessage", () => {
     );
   });
 
+  it("counts the departures a week copy put up (fifth loop, item 30)", () => {
+    expect(builderNoticeMessage(st, "schedule.notices.weekCopied", "6")).toBe(
+      "Copied 6 departures from last year. Add their crew from each one’s page.",
+    );
+  });
+
   it("leaves every other notice alone", () => {
     expect(builderNoticeMessage(st, "schedule.notices.moved", "10")).toBe(
       st("schedule.notices.moved"),

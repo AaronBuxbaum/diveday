@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  answeredMedicalForm,
   applicableMedicalQuestions,
   applicableResponsesOnly,
   calculateMedicalResult,
@@ -11,6 +12,7 @@ import {
   questionnaireForJurisdiction,
   RSTC_QUESTIONNAIRE,
   readMedicalAnswers,
+  referralItems,
   validateMedicalAnswers,
 } from "./medical";
 
@@ -326,5 +328,69 @@ describe("pruning inapplicable answers", () => {
 
   it("drops a key the questionnaire does not have at all", () => {
     expect(applicableResponsesOnly(RSTC_QUESTIONNAIRE, { not_a_question: true })).toEqual({});
+  });
+});
+
+/**
+ * **What the doctor's page shows once unlocked** (fifth-loop ideas, item 17;
+ * H-127 as amended by the layer r5-3 reviews): each answer that calls for a
+ * physician, by its place on the form and the form's own prompt.
+ */
+describe("referral items", () => {
+  const answered = (yes: string[]) => {
+    const answers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
+    for (const id of yes) answers.responses[id] = true;
+    return answers;
+  };
+  const promptOf = (id: string) =>
+    RSTC_QUESTIONNAIRE.questions.find((question) => question.id === id)?.prompt;
+
+  it("names a numbered question and a Box item with their published prompts", () => {
+    expect(referralItems(answered(["q3", "q2", "box_b_2"]))).toEqual([
+      { ref: { kind: "question", number: 3 }, prompt: promptOf("q3") },
+      { ref: { kind: "box", box: "B", number: 2 }, prompt: promptOf("box_b_2") },
+    ]);
+  });
+
+  it("leaves out a yes that only opened a Box", () => {
+    expect(referralItems(answered(["q2"]))).toEqual([]);
+  });
+
+  it("names nothing for a clear form, no form, or an unfinished one", () => {
+    expect(referralItems(answered([]))).toEqual([]);
+    expect(referralItems(null)).toEqual([]);
+    const unfinished = answered(["q3"]);
+    delete unfinished.responses.q5;
+    expect(referralItems(unfinished)).toEqual([]);
+  });
+
+  it("names v2's dental question as itself", () => {
+    const v2 = findQuestionnaireVersion("rstc", 2);
+    if (!v2) throw new Error("v2 missing");
+    const answers = emptyMedicalAnswers(v2);
+    answers.responses.dental_recovery = true;
+    expect(referralItems(answers)).toEqual([
+      {
+        ref: { kind: "dental" },
+        prompt: "Still healing/recovering from a recent dental/oral procedure.",
+      },
+    ]);
+  });
+});
+
+describe("the published form an answer set was given on", () => {
+  it("is the 2026-01-01 UHMS/DMSC questionnaire, for v3 and the v2 transcription of it", () => {
+    const form = answeredMedicalForm(emptyMedicalAnswers(RSTC_QUESTIONNAIRE));
+    expect(form).toMatchObject({ productNumber: "10346 EN", versionDate: "2026-01-01" });
+    expect(form?.url).toMatch(/^https:\/\/uhms\.org\/.+10346_EN.+\.pdf$/);
+    const v2 = findQuestionnaireVersion("rstc", 2);
+    if (!v2) throw new Error("v2 missing");
+    expect(answeredMedicalForm(emptyMedicalAnswers(v2))).toBe(form);
+  });
+
+  it("is nothing for no answers or a version nothing reads", () => {
+    expect(answeredMedicalForm(null)).toBeNull();
+    const unknown = { ...emptyMedicalAnswers(RSTC_QUESTIONNAIRE), questionnaireVersion: 99 };
+    expect(answeredMedicalForm(unknown)).toBeNull();
   });
 });

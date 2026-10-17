@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   HELD_SEND_TIMEOUT_MS,
@@ -63,7 +64,7 @@ test.describe("as captain", () => {
       page.getByText("Editing the waiver is limited to owners and managers."),
     ).toBeVisible();
     // No signed-record evidence ever reaches the page for a refused role.
-    await expect(page.getByText("Medical follow-up flagged")).toHaveCount(0);
+    await expect(page.getByText("Waiting on physician")).toHaveCount(0);
   });
 });
 
@@ -250,6 +251,29 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // and turns up at the dock unboardable.
   await expect(page.getByTestId("waiver-step-rail")).toContainText("2 of 3 done");
 
+  // The page a referred diver hands their doctor (H-127, amended after the
+  // layer r5-3 reviews): their name and the official form to print; the
+  // answers wait behind their date of birth, which the page never prints.
+  await page.getByRole("link", { name: "Take this to your doctor" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Take this to your doctor", level: 1 }),
+  ).toBeVisible();
+  const form = page.getByTestId("doctor-evaluation-form");
+  await expect(form).toContainText(/Diver Medical \| Participant Questionnaire/);
+  await expect(form).toContainText("Priya Sharma");
+  await expect(
+    form.getByRole("link", { name: "Open the official form and print page 3" }),
+  ).toHaveAttribute("href", /uhms\.org\/.+10346_EN/);
+  await expect(page.getByText("Question 3")).toHaveCount(0);
+  await expect(page.getByText("I struggle to perform moderate exercise")).toHaveCount(0);
+  await page.getByLabel("Date of birth").fill("1900-01-01");
+  await page.getByRole("button", { name: "Show my answers" }).click();
+  await expect(page.getByText(/^That date doesn’t match the one/)).toBeVisible();
+  await expect(page.getByText("Question 3")).toHaveCount(0);
+  await expect(
+    page.getByText(/^Send a photo of the signed form to front\.desk@mail\.example before/),
+  ).toBeVisible();
+
   // Back on the roster, the single button now reports the completed-but-flagged
   // state, and the medical answer is spelled out for staff follow-up.
   await page.goto(staffTripUrl);
@@ -268,6 +292,14 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
     .filter({ hasText: "I struggle to perform moderate exercise" });
   await expect(flagged).toContainText("Yes");
   await expect(page.getByText("Waiting on a physician’s evaluation.")).toBeVisible();
+  // The rest of the questionnaire is read on purpose (issue #2157): at rest
+  // only the flagged prompt is on the page, and "Show answers" puts the
+  // reader on the diver's trail before every answer arrives.
+  const answers = page.getByRole("listitem").filter({ hasText: /No$/ });
+  await expect(answers).toHaveCount(0);
+  await page.getByRole("button", { name: "Show answers" }).click();
+  await expect(answers.first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show answers" })).toHaveCount(0);
 });
 
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({
@@ -1076,6 +1108,41 @@ test("the signature audit pages both ways, and keeps a pinned record while it do
 });
 
 /**
+ * **A signed release is findable in one line** (third UX review, item 31).
+ * The demo holds hundreds of signed records; a search on the diver and a
+ * medical view narrow the log and its count together, and keep each other.
+ */
+test("the signed records search by diver and narrow to medical holds", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/waivers");
+  const pager = page.getByRole("navigation", { name: "Pages" });
+  await expect(pager).toContainText(/Page 1 of \d+/);
+  const rows = page.locator('details[id^="waiver-record-"]');
+
+  // The demo's medical hold is status-only: a physician referral with no
+  // answers stored. It is a hold all the same, so the view lists it.
+  const views = page.getByRole("navigation", { name: "Signed record views" });
+  await views.getByRole("link", { name: "Medical holds" }).click();
+  await page.waitForURL(/[?&]view=medical/);
+  await expect(rows.filter({ hasText: "Morgan Vale" }).first()).toBeVisible();
+
+  // A search keeps the view it was typed under.
+  const search = page.getByRole("searchbox", { name: "Search signed records" });
+  await search.fill("Morgan Vale");
+  await search.press("Enter");
+  await page.waitForURL(/[?&]q=Morgan/);
+  await expect(page).toHaveURL(/[?&]view=medical/);
+  await expect(rows.filter({ hasNotText: "Morgan Vale" })).toHaveCount(0);
+
+  // Nothing matching says so, and clearing the search widens back out.
+  await search.fill("Nobody-by-this-name");
+  await search.press("Enter");
+  await expect(page.getByText("No signed records match.")).toBeVisible();
+  await page.getByRole("link", { name: "Clear search" }).click();
+  await expect(rows.first()).toBeVisible();
+  await expect(page).not.toHaveURL(/[?&]q=/);
+});
+
+/**
  * The waiver is signed on a phone, on a dock, from a text message — so the page
  * must never lay itself out wider than the screen it arrives on.
  *
@@ -1181,7 +1248,9 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   await page.getByLabel("Date of the physician’s evaluation").fill("2020-01-01");
   await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
   await page.getByRole("button", { name: "Record the answer" }).click();
-  await expect(page.getByText("That evaluation predates the answers it would clear")).toBeVisible();
+  await expect(
+    page.getByText(staffTranslator("en-US")("divers.notices.medicalClearanceDateTooEarly")),
+  ).toBeVisible();
 
   await page.getByRole("radio", { name: "Cleared to dive" }).check();
   await page.getByLabel("Date of the physician’s evaluation").fill(EVALUATED_ON);

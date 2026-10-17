@@ -1,12 +1,22 @@
-import { and, asc, count, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { seatsWithinCertificate } from "@/lib/boat-safety";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
-import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/lib/zoned";
+import { shiftWeek } from "@/lib/week-board";
+import {
+  shiftInstantByCalendarDays,
+  shiftInstantByWallTimeDelta,
+  utcToWallTime,
+  wallTimeDeltaMs,
+  wallTimeToUtc,
+} from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
 import { flushUrgentCrewNotices, recordCrewTimeMoved } from "./crew-notices";
 import { rewindowTripGearReservations } from "./gear";
+import { publishManifestEvent } from "./manifest-events";
 import { queryAll } from "./query-helpers";
+import { rearmTripReminders } from "./reminder-rearm";
 import type { Trip } from "./schema";
 import {
   bookings,
@@ -223,6 +233,8 @@ export async function moveTrip(
       tripId,
       window: tripReservationWindow(trip, shop.timezone),
     });
+    // The divers' reminders fire again for the new date (#2444).
+    await rearmTripReminders(tx, { shopId, tripId });
     await recordCrewTimeMoved(tx, {
       shopId,
       tripId,
@@ -239,7 +251,11 @@ export async function moveTrip(
     };
   });
   // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
-  if (moved) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId], now });
+  if (moved) {
+    await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId], now });
+    // Its manifest, and any charter whose training mark rests on its times.
+    await publishManifestEvent(db, shopId, tripId);
+  }
   return outcome;
 }
 
@@ -336,7 +352,7 @@ export async function deleteTrip(
  * never a second view of it.
  */
 export async function duplicateTrip(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   tripId: string,
   startsAt: Date,
@@ -439,5 +455,97 @@ export async function duplicateTrip(
         endsAt: shift(day.endsAt),
       })),
     });
+  });
+}
+
+/** 52 weeks: the same weekday a year on, so a Saturday boat lands on a Saturday. */
+export const YEAR_OF_WEEKS = 52;
+
+/** The instants a shop-local week runs between, Monday 00:00 to the next. */
+function weekWindow(weekStart: CalendarDate, timeZone: string): { from: Date; to: Date } {
+  const midnight = (iso: CalendarDate) => {
+    const [year, month, day] = iso.split("-").map(Number);
+    return wallTimeToUtc({ year, month, day, hour: 0, minute: 0 }, timeZone);
+  };
+  return { from: midnight(weekStart), to: midnight(shiftWeek(weekStart, 1)) };
+}
+
+/**
+ * The departures a year-ago week ran that a copy would put back up: live,
+ * scheduled, not a rehearsal, and starting inside that week (a course that
+ * began the Sunday before belongs to the week before, as the copy would).
+ */
+export async function departuresWeekBefore(
+  db: DbExecutor,
+  shopId: string,
+  weekStart: CalendarDate,
+  timeZone: string,
+): Promise<{ id: string; startsAt: Date }[]> {
+  const { from, to } = weekWindow(shiftWeek(weekStart, -YEAR_OF_WEEKS), timeZone);
+  return db
+    .select({ id: trips.id, startsAt: trips.startsAt })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        eq(trips.isRehearsal, false),
+        gte(trips.startsAt, from),
+        lt(trips.startsAt, to),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
+}
+
+export type CopyWeekOutcome =
+  | { ok: true; tripIds: string[] }
+  | { ok: false; reason: "week_not_empty" | "nothing_to_copy" };
+
+/**
+ * **"Last year this week: 6 departures. Copy them here"** (fifth loop, item
+ * 30). Puts last year's week back on an empty one, each departure 52 weeks on
+ * at its own wall-clock time, through `duplicateTrip` so every copy is
+ * re-checked as one the builder made (the hull's certificate, the course).
+ * Crew is never copied: who is free a year on is a new question.
+ *
+ * Refuses a week that already has a live departure starting in it, so a
+ * second tap, or a staffer who added a boat meanwhile, can never double the
+ * week. A departure whose copy would already have left is skipped.
+ */
+export async function copyWeekFromYearBefore(
+  db: AppDb,
+  shopId: string,
+  weekStart: CalendarDate,
+  timeZone: string,
+  now: Date = nowDate(),
+): Promise<CopyWeekOutcome> {
+  const { from, to } = weekWindow(weekStart, timeZone);
+  return db.transaction(async (tx) => {
+    // The shop row, locked, so two taps at once queue behind one another and
+    // the second finds the week no longer empty.
+    await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, shopId)).for("no key update");
+    const [present] = await tx
+      .select({ n: count() })
+      .from(trips)
+      .where(
+        and(
+          liveTrip(),
+          eq(trips.shopId, shopId),
+          eq(trips.status, "scheduled"),
+          gte(trips.startsAt, from),
+          lt(trips.startsAt, to),
+        ),
+      );
+    if ((present?.n ?? 0) > 0) return { ok: false, reason: "week_not_empty" };
+    const sources = await departuresWeekBefore(tx, shopId, weekStart, timeZone);
+    const tripIds: string[] = [];
+    for (const source of sources) {
+      const startsAt = shiftInstantByCalendarDays(source.startsAt, YEAR_OF_WEEKS * 7, timeZone);
+      if (!(startsAt.getTime() > now.getTime())) continue;
+      const copy = await duplicateTrip(tx, shopId, source.id, startsAt);
+      if (copy) tripIds.push(copy.id);
+    }
+    return tripIds.length > 0 ? { ok: true, tripIds } : { ok: false, reason: "nothing_to_copy" };
   });
 }

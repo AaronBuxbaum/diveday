@@ -44,13 +44,65 @@ export type DrysuitCardCheck =
 export function checkDrysuitCard(
   divesDry: boolean,
   specialtyCertifications: readonly SpecialtyCertification[],
+  /**
+   * `people.drysuit_experience_seen_at`: a staffer recorded seeing this diver
+   * dive dry (issue #2136, Aaron 2026-10-13). It clears the `no_card`
+   * advisory and nothing else; an unconfirmed card keeps firing (F4). It is not a card, so a site or trip requiring the `drysuit`
+   * specialty still refuses without one. Required, so no caller can forget it.
+   */
+  drysuitExperienceSeenAt: Date | null,
 ): DrysuitCardCheck {
   if (!divesDry) return { status: "ok" };
   if (holdsSpecialtyCard(specialtyCertifications, "drysuit")) return { status: "ok" };
   // The split is worth two sentences for the same reason `specialtyBlocker`
   // splits its codes: "nothing on file" and "one tap from cleared" are
-  // different jobs for the staffer reading the roster.
-  return specialtyCertifications.some((card) => card.specialty === "drysuit")
-    ? { status: "unconfirmed" }
-    : { status: "no_card" };
+  // different jobs for the staffer reading the roster. A card awaiting review
+  // keeps firing whatever a staffer saw: confirming the card is the fix
+  // (domain review F4).
+  if (specialtyCertifications.some((card) => card.specialty === "drysuit")) {
+    return { status: "unconfirmed" };
+  }
+  return drysuitExperienceSeenAt !== null ? { status: "ok" } : { status: "no_card" };
 }
+
+/**
+ * Whether "seen diving dry" may be recorded for this diver (issue #2136,
+ * security review X2): they dive dry and have no drysuit card on file at all.
+ * Exactly where the advisory says `no_card`; a card awaiting review has its
+ * own fix (F4). The writer and the diver record both read this.
+ */
+export function drysuitExperienceRecordable(
+  divesDry: boolean,
+  specialtyCertifications: readonly Pick<SpecialtyCertification, "specialty">[],
+): boolean {
+  return divesDry && !specialtyCertifications.some((card) => card.specialty === "drysuit");
+}
+
+/**
+ * Who may record it, by live roles (domain review A4): the people who lead
+ * dives and would have watched one. A captain, crew or desk role may not.
+ */
+export const DRYSUIT_EXPERIENCE_RECORDER_ROLES = [
+  "owner",
+  "manager",
+  "instructor",
+  "assistant_instructor",
+  "divemaster",
+] as const;
+
+export function canRecordDrysuitExperience(roles: readonly string[]): boolean {
+  return roles.some((role) =>
+    (DRYSUIT_EXPERIENCE_RECORDER_ROLES as readonly string[]).includes(role),
+  );
+}
+
+/** Clearing is the recorder's, or an owner's or manager's (security review X3). */
+export function canClearDrysuitExperience(roles: readonly string[], isRecorder: boolean): boolean {
+  return (
+    (isRecorder && canRecordDrysuitExperience(roles)) ||
+    roles.some((role) => role === "owner" || role === "manager")
+  );
+}
+
+/** The note's bounds, after trimming: what was seen, briefly. */
+export const DRYSUIT_EXPERIENCE_NOTE_MAX = 200;

@@ -32,10 +32,14 @@ const NOTICE_KEYS: Record<
     tone: "success" | "danger" | "warning";
     key: StaffMessageKey;
     countKey?: StaffMessageKey;
+    /** The words name the seat's diver (`TripNoticeInput.roster`); said only when known. */
+    named?: true;
   }
 > = {
   saved: { form: "details", tone: "success", key: "trips.notices.saved" },
   cancelled: { form: "lifecycle", tone: "danger", key: "trips.notices.cancelled" },
+  // Refused: the boat may be on the water (`cancelDeparture`). Nothing changed.
+  "cancel-underway": { form: "lifecycle", tone: "danger", key: "trips.notices.cancelUnderway" },
   reinstated: { form: "lifecycle", tone: "success", key: "trips.notices.reinstated" },
   crew: { form: "crew", tone: "success", key: "trips.notices.crew" },
   "crew-conflict": { form: "crew", tone: "danger", key: "trips.notices.crewConflict" },
@@ -62,6 +66,12 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.bookingRemovedRefundFailed",
   },
+  // Warning: a turned-away seat's money is a person's call, not the window's.
+  "booking-removed-turned-away": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.bookingRemovedTurnedAway",
+  },
   "booking-removed-refund-review": {
     form: "roster",
     tone: "danger",
@@ -85,8 +95,70 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRemovedRefundOwner",
   },
   "booking-restored": { form: "roster", tone: "success", key: "trips.notices.bookingRestored" },
+  // Refused: the boat carried this seat or may be carrying it (H-133). Nothing
+  // changed, and the row stays open on the Remove that was tapped.
+  "booking-remove-aboard": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.roster.removeAboard",
+    named: true,
+  },
+  // Refused the same way for a seat nobody counted at the dock of a sailed
+  // departure: never "sailed", and the way through is the dock's Not boarded.
+  "booking-remove-uncounted": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.roster.removeUncounted",
+    named: true,
+  },
+  // A seat moved to another departure, or why it stayed (ADR 20261013-staff-move-a-seat).
+  "seat-moved": { form: "roster", tone: "success", key: "trips.notices.seatMoved" },
+  "seat-moved-untold": { form: "roster", tone: "warning", key: "trips.notices.seatMovedUntold" },
+  "seat-moved-owed": { form: "roster", tone: "warning", key: "trips.notices.seatMovedOwed" },
+  "seat-move-not-movable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMoveNotMovable",
+  },
+  "seat-move-departed": { form: "roster", tone: "danger", key: "trips.notices.seatMoveDeparted" },
+  "seat-move-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMoveUnavailable",
+  },
+  "seat-move-course": { form: "roster", tone: "danger", key: "trips.notices.seatMoveCourse" },
+  "seat-move-already": { form: "roster", tone: "danger", key: "trips.notices.seatMoveAlready" },
+  "seat-move-earlier": { form: "roster", tone: "danger", key: "trips.notices.seatMoveEarlier" },
+  "seat-move-party": { form: "roster", tone: "danger", key: "trips.notices.seatMoveParty" },
+  "seat-move-buddy": { form: "roster", tone: "danger", key: "trips.notices.seatMoveBuddy" },
+  "seat-move-roll-call": { form: "roster", tone: "danger", key: "trips.notices.seatMoveRollCall" },
+  "seat-move-full": { form: "roster", tone: "danger", key: "trips.notices.seatMoveFull" },
+  "seat-move-unstaffed": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMoveUnstaffed",
+  },
+  "seat-move-min-age": { form: "roster", tone: "danger", key: "trips.notices.seatMoveMinAge" },
+  "waitlist-carried": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.waitlistCarried",
+    countKey: "trips.notices.waitlistCarriedCount",
+  },
+  "waitlist-carry-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.waitlistCarryUnavailable",
+  },
+  "seat-move-prerequisite": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.seatMovePrerequisite",
+  },
   "pickup-saved": { form: "roster", tone: "success", key: "trips.notices.pickupSaved" },
   "pickup-invalid": { form: "roster", tone: "danger", key: "trips.notices.pickupInvalid" },
+  "dietary-saved": { form: "roster", tone: "success", key: "trips.notices.dietarySaved" },
+  "dietary-invalid": { form: "roster", tone: "danger", key: "trips.notices.dietaryInvalid" },
   "booking-restore-full": {
     form: "roster",
     tone: "danger",
@@ -103,6 +175,13 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.bookingRestoreCancelled",
   },
   "diver-added": { form: "add-diver", tone: "success", key: "trips.notices.diverAdded" },
+  // Seated for a later day and told so: the confirmation an online booking
+  // gets went out (fourth UX review, item 3).
+  "diver-added-confirmed": {
+    form: "add-diver",
+    tone: "success",
+    key: "trips.notices.diverAddedConfirmed",
+  },
   // Seated, but the waiver never left the building. Warning rather than
   // success: the booking is real and nothing needs undoing, yet the staffer
   // still owes the diver a link (src/app/actions/seat-diver-surfaces.ts).
@@ -131,8 +210,54 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "trips.notices.invitationOptedOut",
   },
+  // A suggested past diver contacted with an invite inside the cooldown
+  // (H-130): nothing was recorded or sent.
+  "invite-cooldown": { form: "add-diver", tone: "warning", key: "trips.notices.inviteCooldown" },
+  // A suggested diver this departure would no longer sell a seat to (its
+  // level, a specialty, a full boat): nothing was recorded or sent (review F1).
+  "invite-unavailable": {
+    form: "add-diver",
+    tone: "warning",
+    key: "trips.notices.inviteUnavailable",
+  },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },
+  // Moved to the other same-name record and still held (issue #2129).
+  "identity-repointed": {
+    form: "roster",
+    tone: "success",
+    key: "trips.notices.identityRepointed",
+  },
+  "identity-repoint-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointUnavailable",
+  },
+  "identity-repoint-medical-hold": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointMedicalHold",
+  },
+  "identity-split-contact-conflict": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identitySplitContactConflict",
+  },
+  "identity-departure-closed": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityDepartureClosed",
+  },
+  "identity-contact-differs": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityContactDiffers",
+  },
+  "identity-repoint-already-booked": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identityRepointAlreadyBooked",
+  },
   // The release a held seat was owed, sent once the desk knew who it is. When
   // it reached nobody the row hands it over (`…-waiver-ready`); when it could
   // not be issued the notice is `new-waiver-failed` (issue #2125).
@@ -253,9 +378,29 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "trips.notices.materialsNotACourse",
   },
+  // A training mark on a charter seat (issue #2275), and its refusals.
+  "training-marked": { form: "roster", tone: "success", key: "trips.notices.trainingMarked" },
+  "training-cleared": { form: "roster", tone: "success", key: "trips.notices.trainingCleared" },
+  "training-mark-already": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.trainingMarkAlready",
+  },
+  "training-mark-invalid": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.trainingMarkInvalid",
+  },
+  "training-mark-over": { form: "roster", tone: "danger", key: "trips.notices.trainingMarkOver" },
+  "training-mark-forms-owed": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.trainingMarkFormsOwed",
+  },
   "contact-saved": { form: "roster", tone: "success", key: "trips.notices.contactSaved" },
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },
+  "seat-busy": { form: "add-diver", tone: "danger", key: "seatDiver.busy" },
   "diver-full": { form: "add-diver", tone: "danger", key: "trips.notices.diverFull" },
   "diver-divers-full": {
     form: "add-diver",
@@ -278,17 +423,19 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "participants.notices.diversFull",
   },
+  // A type change, unlike an add, has a fix on the row: Remove booking and
+  // seat them again (dive-domain review H9).
   "participant-type-unavailable": {
     form: "roster",
     tone: "danger",
-    key: "participants.notices.typeUnavailable",
+    key: "participants.notices.typeChangeUnavailable",
   },
   "participant-type-on-team": {
     form: "roster",
     tone: "danger",
     key: "participants.notices.onBuddyTeam",
   },
-  // Too late: joining after the departure time, or anything once home.
+  // Too late: the departure is home or cancelled.
   "participant-type-closed": {
     form: "roster",
     tone: "danger",
@@ -402,6 +549,14 @@ const NOTICE_KEYS: Record<
     key: "tripSeries.notices.seriesCancelled",
     countKey: "tripSeries.notices.seriesCancelledCount",
   },
+  // The caller may not refund (H-139): the run is canceled and the divers told,
+  // and the card refunds wait for an owner or manager.
+  "series-cancelled-held": {
+    form: "series",
+    tone: "success",
+    key: "tripSeries.notices.seriesCancelledHeldCount",
+    countKey: "tripSeries.notices.seriesCancelledHeldCount",
+  },
   // Some dates still stand: underway by the time the call reached them, or
   // their setup failed. The shop has a next act, so it is a warning.
   "series-cancelled-partly": {
@@ -456,6 +611,16 @@ const NOTICE_KEYS: Record<
     countKey: "trips.notices.requirementsBlockingCount",
   },
   payment: { form: "roster", tone: "success", key: "trips.notices.payment" },
+  "payment-amount": { form: "roster", tone: "danger", key: "trips.notices.paymentAmount" },
+  "payment-method": { form: "roster", tone: "danger", key: "trips.notices.paymentMethod" },
+  "payment-short": { form: "roster", tone: "danger", key: "trips.notices.paymentShort" },
+  "payment-online": { form: "roster", tone: "danger", key: "trips.notices.paymentOnline" },
+  "party-preview": { form: "roster", tone: "warning", key: "trips.notices.partyPreview" },
+  "party-paid": { form: "roster", tone: "success", key: "trips.notices.partyPaid" },
+  "party-paid-short": { form: "roster", tone: "warning", key: "trips.notices.partyPaidShort" },
+  "party-over": { form: "roster", tone: "danger", key: "trips.notices.partyOver" },
+  "party-nothing-owed": { form: "roster", tone: "danger", key: "trips.notices.partyNothingOwed" },
+  "party-changed": { form: "roster", tone: "danger", key: "trips.notices.partyChanged" },
   conditions: { form: "conditions", tone: "success", key: "trips.notices.conditions" },
   "conditions-cleared": {
     form: "conditions",
@@ -465,6 +630,7 @@ const NOTICE_KEYS: Record<
   "not-authorized": { form: "page", tone: "danger", key: "trips.notices.notAuthorized" },
   invalid: { form: "page", tone: "danger", key: "trips.notices.invalid" },
   "end-before-start": { form: "details", tone: "danger", key: "trips.notices.endBeforeStart" },
+  "days-out-of-order": { form: "details", tone: "danger", key: "trips.notices.daysOutOfOrder" },
   "capacity-below-booked": {
     form: "details",
     tone: "danger",
@@ -602,6 +768,13 @@ export type TripNoticeInput = {
    */
   tripId: string;
   locale: string;
+  /** The seat `?bid=` names, for a notice whose words name its diver. */
+  bid?: string;
+  /**
+   * The page's own roster, where that seat's name is read: never from the URL,
+   * and a `bid` that is not on it names nobody.
+   */
+  roster?: readonly { booking: { id: string }; person: { fullName: string } }[];
 };
 
 /**
@@ -618,9 +791,21 @@ export function resolveTripNotice({
   gate,
   tripId,
   locale,
+  bid,
+  roster,
 }: TripNoticeInput): FormNotice | undefined {
   const banner = noticeFromParam(notice, NOTICE_KEYS);
   if (!banner) return undefined;
+  if (banner.named) {
+    const diverName = roster?.find(({ booking }) => booking.id === bid)?.person.fullName;
+    // No seat by that id on this roster: a hand-edited URL, with nobody to name.
+    if (!diverName) return undefined;
+    return {
+      form: tripNoticeForm(form, banner.form),
+      tone: banner.tone,
+      text: staffTranslator(locale)(banner.key, { name: diverName }),
+    };
+  }
   const t = staffTranslator(locale);
   const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
   const refusal =

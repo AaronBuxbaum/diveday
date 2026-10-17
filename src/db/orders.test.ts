@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { courseTotalCents } from "@/lib/courses";
 import type {
   CreateInvoiceRequest,
@@ -83,6 +84,9 @@ function fakeInvoicing(overrides: Partial<InvoicingProvider> = {}): InvoicingPro
         totalCents,
         taxCents: 0,
       };
+    },
+    async markInvoicePaidOutOfBand() {
+      return { status: "paid" as const };
     },
     async voidInvoice(): Promise<VoidInvoiceResult> {
       return { status: "voided" };
@@ -1439,10 +1443,8 @@ describe("orders", () => {
       // Date range: a window around now catches both; a window that closes
       // before now catches neither (Reports' "revenue rows" link a month range
       // this same way).
-      // Bounded against the database's clock, not the (frozen) app clock:
-      // `orders.created_at` is a `defaultNow()` column, so Postgres is what
-      // stamped the rows this window has to straddle.
-      const dbTime = (await dbNow(db)).getTime();
+      // Bounded around the app clock, which stamps `orders.created_at`.
+      const dbTime = nowDate().getTime();
       const soon = new Date(dbTime + 60_000);
       const justNow = new Date(dbTime - 60_000);
       const longAgo = new Date("2000-01-01T00:00:00Z");
@@ -1862,6 +1864,38 @@ describe("orders — a partial refund", () => {
     });
   });
 
+  it("never reverses twice when Stripe left the first refund unanswered", async () => {
+    const { db, shop, order } = await paidOrder();
+    let calls = 0;
+    const invoicing = (status: "unanswered" | "refunded") =>
+      fakeInvoicing({
+        async refundInvoice(_a, _i, _k, amountCents): Promise<RefundInvoiceResult> {
+          calls += 1;
+          return status === "refunded"
+            ? { status, refundId: "re_second", amountCents }
+            : { status };
+        },
+      });
+
+    // A timeout after the refund went out: Stripe may have reversed it. A
+    // `failed` here let the second press mint a fresh idempotency key.
+    expect(
+      await refundOrder(db, shop.id, order.id, invoicing("unanswered"), { amountCents: 5_000 }),
+    ).toEqual({ status: "needs_reconciliation" });
+    expect(
+      await refundOrder(db, shop.id, order.id, invoicing("refunded"), {
+        staleBefore: await dbNowPlus(db, 1_000),
+        amountCents: 5_000,
+      }),
+    ).toEqual({ status: "needs_reconciliation" });
+    expect(calls).toBe(1);
+    const [intent] = await db
+      .select()
+      .from(paymentOperationIntents)
+      .where(eq(paymentOperationIntents.orderId, order.id));
+    expect(intent).toMatchObject({ status: "started", errorMessage: "unanswered" });
+  });
+
   it("refuses rather than reverses again when Stripe already paid out on a stalled attempt", async () => {
     const { db, shop, order } = await paidOrder();
     // An attempt that reached Stripe and died before its local write: the
@@ -2121,6 +2155,11 @@ describe("pagedOrdersByDay", () => {
     return { db, shop, invoice };
   }
 
+  // The seeded shop's own money (its demo seats paid online, which the ledger
+  // lists beside orders since the fourth UX review's item 18) is all from
+  // before August; these tests read only the orders they write.
+  const AUGUST_ON = { from: new Date("2026-08-01T00:00:00Z") };
+
   it("files each order under the day the shop was in, not the day UTC was in", async () => {
     const { db, shop, invoice } = await ledgerFixture();
     // 02:00Z on the 27th is 22:00 on the 26th in New York. A ledger grouped by
@@ -2130,7 +2169,7 @@ describe("pagedOrdersByDay", () => {
     await invoice({ createdAt: new Date("2026-08-27T13:00:00Z") });
     await invoice({ createdAt: new Date("2026-08-27T15:00:00Z") });
 
-    const ledger = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { pageSize: 20 });
+    const ledger = await pagedOrdersByDay(db, shop.id, SHOP_TZ, AUGUST_ON, { pageSize: 20 });
     expect(ledger.groups.map((group) => group.day)).toEqual(["2026-08-27", "2026-08-26"]);
     expect(ledger.groups.map((group) => group.count)).toEqual([2, 1]);
     expect(ledger.groups.flatMap((group) => group.orders)).toHaveLength(3);
@@ -2142,7 +2181,7 @@ describe("pagedOrdersByDay", () => {
     await invoice({ createdAt: new Date(day), status: "open", totalCents: 12_000 });
     await invoice({ createdAt: new Date(day), status: "paid", totalCents: 9_000 });
 
-    const everything = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { pageSize: 20 });
+    const everything = await pagedOrdersByDay(db, shop.id, SHOP_TZ, AUGUST_ON, { pageSize: 20 });
     expect(everything.groups[0]?.count).toBe(2);
     expect(everything.groups[0]?.subtotals).toEqual([{ currency: "usd", cents: 21_000 }]);
 
@@ -2172,7 +2211,7 @@ describe("pagedOrdersByDay", () => {
       refundedCents: 5_000,
     });
 
-    const ledger = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { pageSize: 20 });
+    const ledger = await pagedOrdersByDay(db, shop.id, SHOP_TZ, AUGUST_ON, { pageSize: 20 });
     // Three rows on screen, and the day is worth what it actually kept:
     // 10,000 + 0 + 15,000. The question a day's foot answers is "what came
     // in", so an invoice that was cancelled is worth nothing and one that gave
@@ -2193,7 +2232,7 @@ describe("pagedOrdersByDay", () => {
     await invoice({ createdAt: new Date(day), totalCents: 9_000, currency: "eur" });
     await invoice({ createdAt: new Date(day), totalCents: 2_000, currency: "eur" });
 
-    const ledger = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { pageSize: 20 });
+    const ledger = await pagedOrdersByDay(db, shop.id, SHOP_TZ, AUGUST_ON, { pageSize: 20 });
     expect(ledger.groups).toHaveLength(1);
     // All three rows still belong to the one day, and the day still owns their
     // count — it is only the money that splits.
@@ -2213,12 +2252,15 @@ describe("pagedOrdersByDay", () => {
     await invoice({ createdAt: new Date("2026-08-27T15:00:00Z"), totalCents: 20_000 });
     await invoice({ createdAt: new Date("2026-08-27T14:00:00Z"), totalCents: 30_000 });
 
-    const first = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { page: 1, pageSize: 2 });
+    const first = await pagedOrdersByDay(db, shop.id, SHOP_TZ, AUGUST_ON, { page: 1, pageSize: 2 });
     expect(first.groups).toHaveLength(1);
     expect(first.groups[0]?.orders).toHaveLength(2);
     expect(first.groups[0]?.continued).toBe(false);
 
-    const second = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { page: 2, pageSize: 2 });
+    const second = await pagedOrdersByDay(db, shop.id, SHOP_TZ, AUGUST_ON, {
+      page: 2,
+      pageSize: 2,
+    });
     expect(second.groups).toHaveLength(1);
     expect(second.groups[0]?.orders).toHaveLength(1);
     // The header comes back rather than leaving page 2 opening on rows under
@@ -2344,6 +2386,7 @@ describe("counter orders", () => {
     return {
       createInvoice: fail,
       voidInvoice: fail,
+      markInvoicePaidOutOfBand: fail,
       refundInvoice: fail,
       retrieveInvoice: fail,
       resendInvoice: fail,
@@ -2935,6 +2978,40 @@ describe("a diver buying a package online", () => {
       .from(people)
       .where(eq(people.email, "sid.stripefail@example.com"));
     expect(person).toBeDefined();
+  });
+
+  it("leaves an invoice Stripe never answered for a human, not closed as failed", async () => {
+    const { db, shop, pkg } = await packageShop();
+    const result = await createDiverPackageOrder(
+      db,
+      {
+        shopId: shop.id,
+        packageId: pkg.id,
+        fullName: "Una Answered",
+        email: "una@example.com",
+        lineDescription: "Ten-dive card",
+      },
+      fakeInvoicing({
+        async createInvoice(): Promise<CreateInvoiceResult> {
+          return { status: "unanswered" };
+        },
+      }),
+    );
+    expect(result).toEqual({ ok: false, reason: "stripe_failed" });
+    // The invoice may exist at Stripe: still `started`, so the stuck queue
+    // shows it once it ages.
+    const intents = await db
+      .select()
+      .from(paymentOperationIntents)
+      .where(
+        and(
+          eq(paymentOperationIntents.shopId, shop.id),
+          eq(paymentOperationIntents.kind, "invoice"),
+        ),
+      );
+    expect(intents).toEqual([
+      expect.objectContaining({ status: "started", errorMessage: "unanswered" }),
+    ]);
   });
 
   it("takes back the emailless record it made when Stripe refuses the invoice", async () => {

@@ -181,7 +181,7 @@ describe("the diver record's skeleton", () => {
     }
   });
 
-  // One act: Book a departure. Contact details is a file door, not a button
+  // One act: Add a booking. Contact details is a file door, not a button
   // beside it (ADR 20261001-logbook, decision 2).
   it("draws the one act at the md button's 48px", () => {
     expect(buttonClass().split(" ")).toContain("min-h-12");
@@ -507,6 +507,8 @@ describe("the waivers skeleton", () => {
             guardian: null,
             integrity: "valid",
             flaggedPrompts: [],
+            medicalClearedAt: null,
+            medicalClearanceDeclinedAt: null,
           },
         ]}
         shopSlug="blue-mantis"

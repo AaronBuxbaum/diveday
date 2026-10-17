@@ -1,4 +1,6 @@
 import type { DepthCeilingCheck } from "@/lib/depth-ceiling";
+import type { DepthUnit } from "@/lib/depth-units";
+import { siteDepthInUnit } from "@/lib/dive-site-depth";
 import type { StaffTranslator } from "./staff-messages";
 
 /**
@@ -21,4 +23,26 @@ export function depthWarningText(
   if (advisory.basis === "junior_age") return t("trips.roster.depthWarningJunior", values);
   if (advisory.basis === "no_card") return t("trips.roster.depthWarningNoCard", values);
   return t("trips.roster.depthWarning", values);
+}
+
+/**
+ * A dive site's depth on a staff surface, in the shop's unit: "15–28 m" with a
+ * shallow end and a deepest point, "28 m" with only the deepest, the shop's own
+ * depth note with neither, null with nothing. The diver pages say the same
+ * through `diveSiteDepthText`.
+ */
+export function staffDiveSiteDepthText(
+  t: StaffTranslator,
+  depth: {
+    depthMinMeters?: number | null;
+    maxDepthMeters?: number | null;
+    depthRange?: string | null;
+  },
+  unit: DepthUnit,
+): string | null {
+  const inUnit = siteDepthInUnit(depth, unit);
+  if (!inUnit) return depth.depthRange?.trim() || null;
+  const unitWord = t(unit === "feet" ? "shared.depth.feet" : "shared.depth.meters");
+  if (inUnit.min === null) return t("shared.depthSingle", { max: inUnit.max, unit: unitWord });
+  return t("shared.depthRange", { min: inUnit.min, max: inUnit.max, unit: unitWord });
 }

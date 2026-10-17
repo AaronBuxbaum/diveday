@@ -5,6 +5,7 @@ import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { RollCallCheckpoint, RollCallRecord, TripManifest } from "@/lib/manifests";
 import { CrewRollCall } from "./CrewRollCall";
+import type { MissingReportAction } from "./MissingReportButton";
 
 /**
  * **The crew half of the same two rules** slice 5a owes ADR
@@ -53,9 +54,11 @@ function notBackAt(): RollCallRecord {
 function renderCrew({
   members,
   checkpoint = "after_dive_1",
+  startMissingReport = null,
 }: {
   members: TripManifest["crew"];
   checkpoint?: RollCallCheckpoint;
+  startMissingReport?: MissingReportAction | null;
 }) {
   return render(
     <CrewRollCall
@@ -68,6 +71,7 @@ function renderCrew({
       timezone="America/New_York"
       crewRollCallAction={vi.fn(async () => ({ ok: true }) as const)}
       crewRollCallButtonCopy={{ errorRefusal: "Try again", blockedMessage: "Blocked" }}
+      startMissingReport={startMissingReport}
       buddyTeamLabel={() => null}
       t={t}
     />,
@@ -340,5 +344,34 @@ describe("a crew member rostered on another boat", () => {
     renderCrew({ members: [keiko, sal], checkpoint: "after_dive_1" });
     expect(screen.queryByText(/rostered on/)).toBeNull();
     expect(screen.queryByText(/Confirm who sails/)).toBeNull();
+  });
+});
+
+/**
+ * Domain review 2026-10-16: a crew member marked not back aboard is a missing
+ * person too, and their report starts from their own panel, as a diver's does.
+ */
+describe("a crew member's missing diver report starts from their own panel", () => {
+  const start = () => screen.queryByRole("button", { name: /Start a missing diver report/ });
+  const open = () =>
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Keiko Tanaka" }));
+
+  it("offers it, named for the crew member, on a row marked not back aboard", () => {
+    renderCrew({
+      members: [crew({ rollCall: notBackAt() })],
+      startMissingReport: vi.fn(async () => null),
+    });
+    open();
+    expect(start()).toHaveAccessibleName(`${t("incidents.missingDiver.start")} — Keiko Tanaka`);
+  });
+
+  it("offers nothing to a reader who may not start a report, or on a row not missing", () => {
+    renderCrew({ members: [crew({ rollCall: notBackAt() })] });
+    open();
+    expect(start()).toBeNull();
+    cleanup();
+    renderCrew({ members: [crew()], startMissingReport: vi.fn(async () => null) });
+    open();
+    expect(start()).toBeNull();
   });
 });

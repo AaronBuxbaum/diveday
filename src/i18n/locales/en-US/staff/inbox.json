@@ -2,13 +2,14 @@
   "emptyHeading": "Nothing yet",
   "emptyDetail": "Replies to the emails and WhatsApp messages you send land here.",
   "group": {
-    "waiting": "Waiting on you · {count}",
+    "waiting": "Needs you · {count}",
     "answered": "Done"
   },
   "channel": {
     "email": "Email",
     "whatsapp": "WhatsApp",
-    "sms": "Text"
+    "sms": "Text",
+    "page": "Booking page"
   },
   "unknownSender": "Unknown sender",
   "keyword": {
@@ -18,6 +19,21 @@
     "late": "Running late"
   },
   "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
+  "seat": "Booked on {trip}, {when}",
+  "nearStamp": "{day}, {time}",
+  "nearSeat": "{day} {time}",
+  "move": "Move to another departure",
+  "moveFor": "Move {name}’s seat on {trip} to another departure",
+  "moveSeat": "Move {trip}, {when}",
+  "moveSeatFor": "Move {name}’s seat on {trip}, {when}, to another departure",
+  "late": {
+    "action": "Mark running late",
+    "actionFor": "Mark {name} running late for {trip}",
+    "marked": "On the manifest: running late, said {time}",
+    "actionTrip": "Mark running late for {trip}",
+    "actionForSeat": "Mark {name} running late for {trip}, {when}",
+    "markedFor": "On the manifest for {trip}: running late, said {time}"
+  },
   "openRecord": "Open the record for {name}",
   "delete": {
     "action": "Delete",
@@ -40,6 +56,7 @@
     "heading": "Conversation",
     "summary": "{count, plural, one {# message} other {# messages}}",
     "received": "{name} · {date}",
+    "askedToMove": "{name} asked to move this seat from their booking page · {date}",
     "sent": "{name} replied · {date}",
     "sentAutomatically": "Sent automatically · {date}",
     "sendFailed": "This one did not reach them.",
@@ -60,14 +77,36 @@
     "emptyBody": "Type an answer before sending.",
     "tooLong": "That is longer than a reply can be. Trim it and send again.",
     "notFound": "That message is no longer on this record.",
-    "sendLimit": "You have sent a lot of replies this hour. Nothing went out; try again in a little while.",
     "channelUnsupported": "DiveDay cannot answer a text message yet.",
     "noReplyAddress": "There is no address to answer on.",
     "cannotBeSent": "This reply cannot be sent as it stands. Nothing went out, and trying again will not change that.",
     "whatsappWindowClosed": "WhatsApp takes a typed reply for 24 hours after a diver’s last message. Theirs is older than that.",
     "whatsappNotConnected": "Answering on WhatsApp needs the sender you connect in Settings.",
     "notAuthorized": "Your account can’t answer divers for this shop any more. Ask an owner or manager to check your access.",
+    "lateMarked": "Marked running late. The roster and the manifest show it.",
+    "lateClosed": "That seat is past running late: checked in, canceled, or the boat has sailed.",
     "deleted": "Message deleted.",
-    "gone": "That message is no longer in the inbox."
+    "gone": "That message is no longer in the inbox.",
+    "answerSaved": "Saved. It’s above the reply box now, on every diver’s record.",
+    "answerDuplicate": "That answer is already saved.",
+    "answersFull": "{count, plural, one {You keep # saved answer.} other {You keep # saved answers.}} Delete one in the Inbox to make room.",
+    "answerDeleted": "Saved answer deleted.",
+    "answerRestored": "Saved answer put back.",
+    "answerGone": "That saved answer is no longer there."
+  },
+  "savedAnswers": {
+    "heading": "Saved answers",
+    "empty": "Send a reply from a diver’s record and choose Save this answer. It shows up here, and above every reply box.",
+    "markersHint": "'{name}' becomes the diver’s first name, and '{trip}' the departure they are booked on next.",
+    "save": "Save this answer",
+    "saving": "Saving…",
+    "delete": "Delete",
+    "deleteFor": "Delete {title}",
+    "deleting": "Deleting…",
+    "deletedHeading": "Deleted",
+    "restore": "Put back",
+    "restoreFor": "Put back {title}",
+    "restoring": "Putting back…",
+    "tripFill": "{title} on {date} at {time}"
   }
 }

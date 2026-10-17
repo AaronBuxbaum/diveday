@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { groupLabelClass } from "@/components/ui/ledger";
+import { groupLabelClass } from "@/components/ui/group-label";
 import { AboutRowDetails } from "./AboutRowDetails";
 
 /**

@@ -23,20 +23,53 @@
 // The contract is Claude Code's: JSON on stdin, exit 2 with the reason on stderr to block, exit 0
 // to stay out of the way. It fails open on anything it does not understand.
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { recordOverride, recordRefusal } from "./hook-log.mjs";
 import { gitReader } from "./stack-map.mjs";
+import { branchLabel, tracker } from "./tracker.mjs";
 
 export const OVERRIDE = "DIVEDAY_PUSH_UNVERIFIED";
 
 /** A reason shorter than this is "skip", not a reason. */
 const MIN_REASON = 10;
 
+/**
+ * A reason that says the red is someone else's: the base, main, the layer below, a flake. That
+ * was the override's commonest use (#2594 and #2608 on 2026-10-14), and it is the one push that
+ * is certain to be red, on this layer and every layer above it. `pnpm verify:push` now reads the
+ * base's CI itself and stamps a layer that makes the base's red tests pass here
+ * (`scripts/base-ci.mjs`), so the override is left for the two cases it was for: work saved
+ * before the container is reclaimed, and a question only CI can answer.
+ */
+export const INHERITED_REASON =
+  /\b(?:not (?:mine|ours|this (?:pr|layer)'?s?)|inherit\w*|flak\w*|pre-?existing)\b|\b(?:red|fail\w*|broken)\b[^.]*\b(?:main|base|below|lower layer|upstream)\b|\b(?:main|base|below)\b[^.]*\b(?:red|fail\w*|broken)\b/i;
+
 const STAMP = "diveday-verified.json";
+
+/**
+ * **The stamp, keyed by sha, in the common git dir.** The per-worktree `diveday-verified.json`
+ * (`git rev-parse --git-path`) is invisible from any other worktree, and every thread's session
+ * cwd is the shared checkout while it builds in a worktree, so a push verified in the worktree
+ * was refused. `verify:push` now also writes `<git common dir>/diveday-verified/<sha>`, which
+ * every worktree of the clone shares; the old file is still read.
+ */
+export const STAMP_DIR = "diveday-verified";
+
+/** Where the sha-keyed stamp for `sha` lives under `commonDir`, or null for a non-sha. */
+export function verifiedFile(commonDir, sha) {
+  if (!commonDir || !/^[0-9a-f]{7,64}$/.test(sha ?? "")) return null;
+  return path.join(commonDir, STAMP_DIR, sha);
+}
+
+function unquote(word) {
+  const bare = word.replace(/^["']|["']$/g, "");
+  return bare === "~" || bare.startsWith("~/") ? path.join(os.homedir(), bare.slice(1)) : bare;
+}
 
 function segments(command) {
   return command
@@ -61,11 +94,16 @@ export function parsePush(segment) {
   const tokens = rest.split(/\s+/);
   if (tokens[0] !== "git") return null;
   let i = 1;
-  while (tokens[i] === "-C" || tokens[i] === "-c") i += 2;
+  let dir = null;
+  while (tokens[i] === "-C" || tokens[i] === "-c") {
+    if (tokens[i] === "-C" && tokens[i + 1]) dir = unquote(tokens[i + 1]);
+    i += 2;
+  }
   if (tokens[i] !== "push") return null;
   const after = tokens.slice(i + 1);
   return {
     reason,
+    dir,
     flags: after.filter((token) => token.startsWith("-")),
     positional: after.filter((token) => !token.startsWith("-")),
   };
@@ -73,14 +111,34 @@ export function parsePush(segment) {
 
 /**
  * Why `command` may not run, or null. `read` answers from git: `head()`, `branch()`,
- * `sha(ref)`, `remoteHas(sha)` and `stamp()` (the verified sha, or null).
+ * `sha(ref)`, `remoteHas(sha)`, `stamp()` (the per-worktree verified sha, or null) and
+ * `verified(sha)` (the sha-keyed stamp). It is either those answers or a function from a
+ * directory to them: the push is read in the directory the command names (a leading
+ * `cd <dir> &&`, or `git -C <dir>`), resolved from `cwd`, the session's own.
  */
-export function pushViolation(command, read) {
+export function pushViolation(command, read, cwd = ".") {
   if (typeof command !== "string") return null;
+  const at = typeof read === "function" ? read : () => read;
+  let dir = cwd;
   for (const segment of segments(command)) {
+    const cd = segment.match(/^cd\s+("[^"]*"|'[^']*'|\S+)$/);
+    if (cd) {
+      dir = path.resolve(dir, unquote(cd[1]));
+      continue;
+    }
     const push = parsePush(segment);
     if (!push) continue;
+    const here = at(push.dir ? path.resolve(dir, push.dir) : dir);
     if (push.reason !== null) {
+      if (INHERITED_REASON.test(push.reason)) {
+        return (
+          `\`${OVERRIDE}\` is not for a red that came from the base ("${push.reason}"): that push is ` +
+          "red on this layer and on every layer above it. Run `pnpm verify:push`: it reads the " +
+          "layer below's CI and stamps this commit once the base's red tests pass here, so carry " +
+          "the fix, or get it fixed in the layer that broke and merge that once it is green " +
+          "(docs/agents/verifying.md#the-pre-push-gate)."
+        );
+      }
       if (push.reason.length >= MIN_REASON) continue;
       return `\`${OVERRIDE}\` needs a reason a reviewer can read (at least ${MIN_REASON} characters), in quotes: \`${OVERRIDE}="why this push skips verify:push" ${segment.replace(/^.*?git /, "git ")}\`.`;
     }
@@ -91,16 +149,21 @@ export function pushViolation(command, read) {
     if (refspecs.some((spec) => spec.startsWith(":"))) continue;
     const named = refspecs.map((spec) => spec.split(":")[0].replace(/^\+/, ""));
     const sources = named.length > 0 ? named : ["HEAD"];
+    if (sources.includes("HEAD") || sources.includes(here.branch())) {
+      const fork = here.fork?.();
+      if (fork) return fork;
+    }
     for (const source of sources) {
-      const sha = source === "HEAD" || source === read.branch() ? read.head() : read.sha(source);
+      const sha = source === "HEAD" || source === here.branch() ? here.head() : here.sha(source);
       if (!sha) continue;
-      if (read.remoteHas(sha)) continue;
-      if (read.stamp() === sha) continue;
+      if (here.remoteHas(sha)) continue;
+      if (here.verified?.(sha) || here.stamp?.() === sha) continue;
       return (
         `\`${segment}\` pushes ${sha.slice(0, 9)}, which \`pnpm verify:push\` has not passed. ` +
-        "Run it (in the background: it builds and runs the Playwright specs your diff reaches), " +
-        "fix what it finds, and push once it says green. Each red CI run costs the whole stack a " +
-        `cycle (docs/agents/verifying.md#the-pre-push-gate). To push anyway — work saved before ` +
+        "Run `pnpm verify:push --quick` (lint, typecheck, check:repo, guards and the unit tests " +
+        "the diff reaches; minutes, no browser), fix what it finds, push once it says green, and " +
+        "fix forward if CI goes red. The full `pnpm verify:push` adds the whole unit suite and " +
+        `every affected Playwright spec (docs/agents/verifying.md#the-pre-push-gate). To push anyway — work saved before ` +
         `the container is reclaimed, or a push to learn what only CI can answer — say why in front of it: ` +
         `\`${OVERRIDE}="<reason>" ${segment.replace(/^.*?git /, "git ")}\`, and say so in the PR.`
       );
@@ -119,6 +182,46 @@ export function overrideReason(command) {
   return null;
 }
 
+/**
+ * **A fork, refused where it is made.** Two threads cut a branch from the same open layer on
+ * 2026-10-14 (#2582 and #2584 on #2581); `stack.yml` refused the fork, correctly, and told no
+ * one, so three layers above it sat unstacked until the PR list was read (#2587). `parent` is
+ * the open PR head branch this branch grew from, `pulls` the open pull requests
+ * (`headRefName`, `baseRefName`, `number`). A branch that already has its own pull request is
+ * placed and left alone. Returns the sentence that names the current top, or null.
+ */
+export function forkRefusal({ branch, parent, pulls }) {
+  if (!parent || pulls.some((pull) => pull.headRefName === branch)) return null;
+  const siblings = pulls.filter(
+    (pull) => pull.baseRefName === parent && pull.headRefName !== branch,
+  );
+  if (siblings.length === 0) return null;
+  const seen = new Set([parent]);
+  let top = parent;
+  for (;;) {
+    const next = pulls.find((pull) => pull.baseRefName === top && !seen.has(pull.headRefName));
+    if (!next) break;
+    top = next.headRefName;
+    seen.add(top);
+  }
+  const topPull = pulls.find((pull) => pull.headRefName === top);
+  const topSafe = topPull ? branchLabel(top, topPull.number) : branchLabel(top, "?");
+  const named = topPull ? `#${topPull.number} (${topSafe})` : topSafe;
+  // A branch name that is not plainly one is not printed into a command to paste.
+  const rebase =
+    /^[A-Za-z0-9._/-]+$/.test(top) && /^[A-Za-z0-9._/-]+$/.test(parent)
+      ? `\`git fetch origin && git rebase --onto origin/${top} origin/${parent} ${branch}\``
+      : `a \`git rebase --onto\` from ${branchLabel(parent, siblings[0].number)} onto ${topSafe}`;
+  return (
+    `\`${branch}\` grew from \`${parent}\`, which ${siblings.map((pull) => `#${pull.number}`).join(", ")} ` +
+    `already stack on, so a push would fork the chain and \`stack.yml\` would leave every layer ` +
+    `above the fork unstacked. The current top is ${named}. Rebase onto it: ` +
+    `${rebase}, then push ` +
+    "(.claude/skills/stacked-prs/pipeline.md#registration-which-is-not-yours-to-do). " +
+    "If this is meant to be a separate stack, base it on main."
+  );
+}
+
 /** The answers `pushViolation` needs, from the repository at `cwd`. */
 export function gitAnswers(cwd) {
   const git = gitReader(cwd);
@@ -131,6 +234,36 @@ export function gitAnswers(cwd) {
         : null,
     remoteHas: (sha) =>
       Boolean(git(["branch", "-r", "--contains", sha, "--format=%(refname:short)"])),
+    // Fails open: no `gh`, no network, or a branch with no open parent layer all answer null.
+    fork: () => {
+      try {
+        const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+        if (!branch || branch === "HEAD") return null;
+        const pulls = tracker().listPulls();
+        const isAncestor = (a, b) => git(["merge-base", "--is-ancestor", a, b]) !== null;
+        const ancestors = pulls
+          .map((pull) => pull.headRefName)
+          .filter((head) => head && head !== branch)
+          .filter(
+            (head) =>
+              git(["rev-parse", "--verify", "--quiet", `origin/${head}`]) &&
+              isAncestor(`origin/${head}`, "HEAD"),
+          );
+        const parent = ancestors.find((head) =>
+          ancestors.every(
+            (other) => other === head || isAncestor(`origin/${other}`, `origin/${head}`),
+          ),
+        );
+        return forkRefusal({ branch, parent, pulls });
+      } catch {
+        return null;
+      }
+    },
+    verified: (sha) => {
+      const common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+      const file = verifiedFile(common, sha);
+      return file !== null && existsSync(file);
+    },
     stamp: () => {
       const file = git(["rev-parse", "--git-path", STAMP]);
       if (!file) return null;
@@ -151,7 +284,7 @@ async function main() {
   const command = parsed.tool_input?.command;
   if (typeof command !== "string" || !/\bgit\b[^\n]*\bpush\b/.test(command)) return;
   const cwd = parsed.cwd ?? process.cwd();
-  const reason = pushViolation(command, gitAnswers(cwd));
+  const reason = pushViolation(command, (dir) => gitAnswers(dir), cwd);
   const override = overrideReason(command);
   if (!reason && override) {
     recordOverride("guard-push", override, {

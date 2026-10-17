@@ -20,7 +20,7 @@ function row(id: string, dayKey: string, day: string, weekday: string): WeekLedg
     site: null,
     requirements: [],
     aboveLevel: null,
-    capacityText: "5 spots left",
+    capacityText: "5 seats left",
     capacityTone: "quiet",
     price: null,
   };

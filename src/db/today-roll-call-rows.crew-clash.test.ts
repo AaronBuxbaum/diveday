@@ -98,25 +98,50 @@ describe("crew clashes on Today (H-80)", () => {
     );
   }
 
-  it("raises crew_clash on both departures, naming the person and the other boat", async () => {
+  // Issue #2211: one person on two boats is one fact, said once, as the
+  // staffing week says it. The row sits on the earlier departure and names the
+  // other, so a shop reads one row where it used to read two.
+  it("raises one crew_clash for the pair, on the earlier departure, naming the other boat", async () => {
     const now = nowDate();
     const hostStartsAt = new Date(now.getTime() + 2 * 24 * HOUR);
-    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+    const { host, mover } = await movedOnto(hostStartsAt, new Date(hostStartsAt.getTime() - HOUR));
 
     const rows = await clashRows(now, [host.id, mover.id]);
-    expect(rows.map((row) => [row.id, row.kind]).sort()).toEqual(
-      [
-        [`crew-clash:${host.id}`, "crew_clash"],
-        [`crew-clash:${mover.id}`, "crew_clash"],
-      ].sort(),
-    );
-    const onMover = rows.find((row) => row.id === `crew-clash:${mover.id}`);
-    expect(onMover).toMatchObject({
+    expect(rows.map((row) => [row.id, row.kind])).toEqual([
+      [`crew-clash:${mover.id}`, "crew_clash"],
+    ]);
+    expect(rows[0]).toMatchObject({
       aboutDeparture: true,
       urgency: "soon",
       detail: "Kai Clashwell is also rostered on Clash host reef at these hours.",
       href: `/shop/${ctx.shop.slug}/trips/${mover.id}?view=details#crew`,
     });
+  });
+
+  it("still says it once when the two sail at the same minute", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() + 2 * 24 * HOUR);
+    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+    const rows = await clashRows(now, [host.id, mover.id]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kind).toBe("crew_clash");
+  });
+
+  // Issue #2788: at the same minute the row sat on whichever trip id sorted
+  // first, and ids are minted fresh by every seed, so the row (and the Needs
+  // you group it leads) swapped boats between runs. Titles are chosen against
+  // the ids here, so an id tiebreak puts it on the wrong one every time.
+  it("puts a same-minute clash on the departure whose title reads first, whatever the ids", async () => {
+    const { db } = ctx;
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() + 2 * 24 * HOUR);
+    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+    const [lowId, highId] = [host.id, mover.id].sort((a, b) => a.localeCompare(b));
+    if (!lowId || !highId) throw new Error("fixture");
+    await db.update(tripsTable).set({ title: "Two-Tank Reef" }).where(eq(tripsTable.id, lowId));
+    await db.update(tripsTable).set({ title: "Morning Two-Tank" }).where(eq(tripsTable.id, highId));
+    const rows = await clashRows(now, [host.id, mover.id]);
+    expect(rows.map((row) => row.id)).toEqual([`crew-clash:${highId}`]);
   });
 
   it("leaves a crew member handed from one boat to the next alone", async () => {

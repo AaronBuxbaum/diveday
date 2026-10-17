@@ -8,6 +8,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { canPersonManageMessagingSettings } from "@/db/authz";
 import { getShopWhatsAppAccount, type WhatsAppConnectRefusal } from "@/db/whatsapp-accounts";
 import { requestLocale } from "@/i18n/request";
+import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { whatsAppSignupConfigFromEnvironment } from "@/lib/notifications/whatsapp-signup";
@@ -129,7 +130,9 @@ export default async function WhatsAppSettingsPage({
           // banner predates.
           role={NOTICE_TONE[banner] === "danger" ? "alert" : "status"}
         >
-          {t(`whatsapp.notice.${banner}`)}
+          {banner === "not-authorized"
+            ? sayWords(t, ownerOrManagerWords("whatsapp"))
+            : t(`whatsapp.notice.${banner}`)}
         </p>
       ) : null}
 

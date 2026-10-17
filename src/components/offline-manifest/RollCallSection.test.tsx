@@ -145,7 +145,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
       // (review of #1840); left ashore keeps its own recorded tone.
       if (status === "boarded") {
         expect(row.className).toContain("border-danger");
-        expect(row.className).not.toContain("bg-success/20");
+        expect(row.className).not.toContain("bg-success-tint");
       } else {
         expect(row.className).toContain("border-warning");
       }

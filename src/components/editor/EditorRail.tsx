@@ -247,3 +247,26 @@ export function useDirtySections(sections: readonly { id: string }[]): readonly 
 function sectionIdKey(sections: readonly { id: string }[]): string {
   return sections.map((section) => section.id).join(" ");
 }
+
+/**
+ * **The folded sections, before the editor arrives** — below `lg` the loaded
+ * editor opens one section and folds the rest to a header each, so a skeleton
+ * that drew three open sections stood taller than the page it stood in for
+ * (about 7,400px loaded against 2,300 folded at 390, issue #2437). One stub per
+ * folded section, about 90px: the hairline, the name and the preview line of
+ * `EditorSection`'s folded header. From `lg` up nothing is folded, so nothing
+ * is drawn.
+ */
+export function EditorFoldedSectionsSkeleton({ count }: { count: number }) {
+  return Array.from({ length: Math.max(count - 1, 0) }, (_, entry) => (
+    <div
+      // biome-ignore lint/suspicious/noArrayIndexKey: a fixed run of placeholders, never reordered.
+      key={entry}
+      data-folded-stub=""
+      className="h-22.5 border-t border-border pt-4 lg:hidden"
+    >
+      <div className="h-3 w-32 rounded bg-surface-sunken" />
+      <div className="mt-3 h-4 w-48 max-w-full rounded bg-surface-sunken" />
+    </div>
+  ));
+}

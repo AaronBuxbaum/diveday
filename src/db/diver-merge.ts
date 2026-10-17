@@ -283,12 +283,21 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "activity_events.subject_person_id": "an event trail records who it happened to at the time",
   "bookings.course_next_step_by_person_id": "which instructor wrote the student their next step",
   "bookings.course_materials_done_by_person_id": "which staffer marked the materials done",
+  "bookings.training_marked_by_person_id": "which staffer marked the dive as training",
+  "bookings.training_cleared_by_person_id": "which staffer cleared a training mark with forms owed",
+  "trip_assignments.assigned_by_person_id": "which staffer rostered the crew member",
   "buddy_pair_members.crew_person_id": "a crew member on a team, refused as a staff record",
   "booking_arrival_events.recorded_by_person_id": "who checked the diver in at the counter",
+  "booking_payment_events.recorded_by_person_id": "who marked the payment by hand",
+  "booking_payments.recorded_by_person_id": "who marked the payment by hand",
+  "boat_snags.fixed_by_person_id": "who said the boat's snag was fixed",
+  "boat_snags.noted_by_person_id": "who wrote the boat's snag",
+  "boat_snags.still_there_by_person_id": "who found the boat's snag still there",
   "buddy_pair_members.paired_by_person_id": "who built the team",
   "buddy_team_events.recorded_by_person_id": "who recorded the team change",
   "certifications.deleted_by_person_id": "who removed the card",
   "certifications.issued_by_person_id": "who entered the card",
+  "certifications.processed_by_person_id": "who told the agency about the card",
   "certifications.reviewed_by_person_id": "who confirmed the card",
   "crew_assignment_requests.decided_by_person_id": "who answered the ask",
   "crew_notices.actor_person_id": "who made the crew change",
@@ -300,14 +309,17 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "customer_gear_items.deleted_by_person_id": "who removed the piece from the record",
   "gear_items.deleted_by_person_id": "who retired the unit",
   "gear_reservations.released_by_person_id": "who let go of the hold",
+  "gear_reservations.fill_recorded_by_person_id": "who recorded a counter tank's gas",
   "gear_service_events.recorded_by_person_id": "who serviced the unit",
   "incident_report_addenda.author_person_id": "who wrote the addendum",
   "incident_reports.created_by_person_id": "who started the incident report",
   "incident_reports.filed_by_person_id": "who filed the incident report",
+  "incident_reports.deleted_by_person_id": "who deleted the unfiled incident draft",
   "internal_notes.created_by_person_id": "who wrote the note",
   "marine_life_requests.requested_by_person_id": "which staffer asked for the species",
   "nitrox_certifications.deleted_by_person_id": "who removed the card",
   "nitrox_certifications.issued_by_person_id": "who entered the card",
+  "nitrox_certifications.processed_by_person_id": "who told the agency about the card",
   "nitrox_certifications.reviewed_by_person_id": "who confirmed the card",
   "orders.created_by_person_id": "who took the order",
   "people.anonymized_by_person_id": "provenance for an erasure, and anonymized rows never merge",
@@ -315,13 +327,18 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "people.merged_into_person_id":
     "the merge pointer itself — structural, and what makes the shell resolve",
   "people.no_certification_cleared_by_person_id": "who cleared the no-card stamp",
+  "people.drysuit_experience_seen_by_person_id": "who saw the diver dive dry (#2136)",
   "people.adult_attested_by_person_id": "who said the diver is 18 or older (H-100)",
+  "shops.shore_alert_consent_by_person_id": "who recorded the shore contact's consent (H-118)",
+  "shops.bookkeeper_email_set_by_person_id": "who set the bookkeeper's address (item 35)",
   "pre_departure_check_events.recorded_by_person_id": "who ticked the check",
   "pre_departure_checklist_items.deleted_by_person_id": "who removed the check",
   "held_sends.actor_person_id": "who tapped Send; the hold lives eight seconds",
   "processor_erasure_obligations.discharged_by_person_id": "who discharged the obligation",
   "recap_pulses.addressed_by_person_id": "which staffer picked the pulse up",
   "staff_replies.sent_by_person_id": "which staffer wrote the reply",
+  "inbox_saved_answers.source_person_id":
+    "whose reply a saved answer was copied from; the erasure follows the merge chain to it",
   "review_moderation_events.recorded_by_person_id": "who published or withheld the review",
   "review_replies.written_by_person_id": "which staffer wrote the shop's reply",
   "roll_call_crew_events.recorded_by_person_id": "who called the crew roll",
@@ -329,6 +346,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "shop_promo_codes.created_by_person_id": "who wrote the code",
   "specialty_certifications.deleted_by_person_id": "who removed the card",
   "specialty_certifications.issued_by_person_id": "who entered the card",
+  "specialty_certifications.processed_by_person_id": "who told the agency about the card",
   "specialty_certifications.reviewed_by_person_id": "who confirmed the card",
   "staff_credentials.deleted_by_person_id": "who removed the credential",
   "staff_credentials.reviewed_by_person_id": "who confirmed the credential",
@@ -569,6 +587,32 @@ function noCertificationStamp(
     noCertificationDeclaredAt: pick.noCertificationDeclaredAt,
     noCertificationClearedAt: pick.noCertificationClearedAt,
     noCertificationClearedByPersonId: pick.noCertificationClearedByPersonId,
+  };
+}
+
+type DrysuitExperienceSeen = {
+  drysuitExperienceSeenAt: Date | null;
+  drysuitExperienceSeenByPersonId: string | null;
+  drysuitExperienceSeenNote: string | null;
+};
+
+/** Whichever record has the earlier "seen diving dry", with that record's author. */
+function drysuitExperienceSeen(
+  survivor: DrysuitExperienceSeen,
+  source: DrysuitExperienceSeen,
+): DrysuitExperienceSeen {
+  const pick =
+    survivor.drysuitExperienceSeenAt &&
+    (!source.drysuitExperienceSeenAt ||
+      survivor.drysuitExperienceSeenAt <= source.drysuitExperienceSeenAt)
+      ? survivor
+      : source;
+  return {
+    drysuitExperienceSeenAt: pick.drysuitExperienceSeenAt,
+    drysuitExperienceSeenByPersonId: pick.drysuitExperienceSeenAt
+      ? pick.drysuitExperienceSeenByPersonId
+      : null,
+    drysuitExperienceSeenNote: pick.drysuitExperienceSeenAt ? pick.drysuitExperienceSeenNote : null,
   };
 }
 
@@ -1163,6 +1207,7 @@ export async function mergeDiverRecords(input: {
         .select()
         .from(people)
         // diveday:allow-deleted-people: both records locked as they stand; the merge's own checks decide.
+        // diveday:allow-update-lock: the merge soft-deletes the source and repoints every key at the survivor; nothing may hold either row meanwhile.
         .where(and(eq(people.shopId, input.shopId), inArray(people.id, lockedIds)))
         .orderBy(asc(people.id))
         .for("update");
@@ -1263,6 +1308,9 @@ export async function mergeDiverRecords(input: {
           // all: the stamp vanishes from the record, the certification send
           // lists and the export, with nothing saying so.
           ...noCertificationStamp(survivor, source),
+          // A staffer's "seen diving dry" (#2136) travels with its author and
+          // note: the earliest record wins, survivor on a tie.
+          ...drysuitExperienceSeen(survivor, source),
           courtesyEmailOptOutAt: oldestDate(
             survivor.courtesyEmailOptOutAt,
             source.courtesyEmailOptOutAt,

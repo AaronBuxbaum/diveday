@@ -26,6 +26,7 @@ export function boatNoticeMessages(t: StaffTranslator): NoticeMessages {
     "boat-updated": { tone: "success", text: t("boats.boatUpdated") },
     "boat-deleted": { tone: "success", text: t("boats.boatDeleted") },
     "boat-invalid": { tone: "danger", text: t("boats.boatInvalid") },
+    "boat-radio-invalid": { tone: "danger", text: t("boats.boatRadioInvalid") },
   };
 }
 
@@ -51,6 +52,24 @@ export function rentalPricingNoticeMessages(t: StaffTranslator): NoticeMessages 
 export function emergencyReferenceNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "emergency-saved": { tone: "success", text: t("settings.main.notice.emergencySaved") },
+    "shore-alert-invalid": { tone: "danger", text: t("settings.main.notice.shoreAlertInvalid") },
+    "shore-alert-consent-missing": {
+      tone: "danger",
+      text: t("settings.main.notice.shoreAlertConsentMissing"),
+    },
+    "shore-alert-confirmation-sent": {
+      tone: "success",
+      text: t("settings.main.notice.shoreAlertConfirmationSent"),
+    },
+    "shore-alert-confirmation-not-sent": {
+      tone: "warning",
+      text: t("settings.main.notice.shoreAlertConfirmationNotSent"),
+    },
+    "shore-alert-saved-demo": {
+      tone: "success",
+      text: t("settings.main.notice.shoreAlertSavedDemo"),
+    },
+    "shore-alert-cleared": { tone: "success", text: t("settings.main.notice.shoreAlertCleared") },
   };
 }
 
@@ -59,6 +78,11 @@ export function dockDayNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
+    "pickup-saved": { tone: "success", text: t("settings.main.notice.pickupSaved") },
+    "turnaround-saved": { tone: "success", text: t("settings.main.notice.turnaroundSaved") },
+    "turnaround-invalid": { tone: "danger", text: t("settings.main.notice.turnaroundInvalid") },
+    "desk-payment-saved": { tone: "success", text: t("settings.main.notice.deskPaymentSaved") },
+    "desk-payment-invalid": { tone: "danger", text: t("settings.main.notice.deskPaymentInvalid") },
   };
 }
 

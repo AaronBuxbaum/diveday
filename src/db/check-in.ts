@@ -8,6 +8,7 @@ import { arrivalsWindow } from "@/lib/operational-window";
 import { priorVisitStanding } from "@/lib/prior-visits";
 import type { ReadinessResult } from "@/lib/readiness";
 import { runningLateShown } from "@/lib/running-late";
+import type { TurnAwayReason } from "@/lib/turn-away";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
@@ -61,6 +62,18 @@ export type CheckInQueueRow = {
    * does, like every other row.
    */
   bookingStatus: "booked" | "checked_in" | "no_show";
+  /**
+   * On a released seat, why the desk turned the diver away (H-135); null on a
+   * plain "Not here" and on every seat still held. The two are different
+   * statements — seen and refused, or never came — and every surface that
+   * reads the release says which.
+   */
+  turnedAwayReason: TurnAwayReason | null;
+  /**
+   * When the desk turned the diver away: the fact itself, which erasure keeps
+   * when it clears the category. Null on a plain "Not here".
+   */
+  turnedAwayAt: Date | null;
   /**
    * When the diver said they are running late (J3), on a seat still to
    * arrive; null otherwise. Already filtered through `runningLateShown`, so a
@@ -185,6 +198,8 @@ export async function listCheckInQueue(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       bookingStatus: bookings.status,
+      turnedAwayReason: bookings.turnedAwayReason,
+      turnedAwayAt: bookings.turnedAwayAt,
       runningLateAt: bookings.runningLateAt,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,

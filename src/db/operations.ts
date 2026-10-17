@@ -1,5 +1,9 @@
 import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import type { SystemReason } from "@/lib/activity";
 import { nowDate } from "@/lib/clock";
+import { seatName } from "@/lib/held-seat";
+import type { RosterChangeCode } from "@/lib/incident-export";
+import type { TurnAwayReason } from "@/lib/turn-away";
 import { isUuid } from "@/lib/uuid";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
@@ -128,8 +132,14 @@ export async function addDiverNote(
 export type DiverActivityCode =
   | "identity_confirmed"
   | "identity_split_off"
+  | "identity_repointed_off"
+  | "identity_repointed_onto"
   | "medical_clearance_opened"
-  | "record_exported";
+  | "medical_answers_read"
+  | "date_of_birth_cleared_as_adult"
+  | "record_exported"
+  | "dispute_sheet_printed"
+  | "running_late_from_message";
 
 /**
  * One line on the diver-record trail, subject-only — the same shape
@@ -140,7 +150,7 @@ export type DiverActivityCode =
  * or a booking.
  */
 export async function recordDiverActivity(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; personId: string; actorPersonId: string; code: DiverActivityCode },
 ): Promise<boolean> {
   const [diver] = await db
@@ -464,16 +474,37 @@ export async function pagedDiverActivity(
  * typed per code so a sentence about a crew member cannot be filed with a
  * diver's name in it.
  */
-export type TripActivityEntry =
+export type TripActivityEntry = RosterTripActivityEntry | OtherTripActivityEntry;
+
+/**
+ * **A line that changes who is aboard** (`ROSTER_CHANGE_CODES`): the departure
+ * log prints these, so each one is written with whose seat or crew place it
+ * was, by record (`subject_person_id`), and erasure reaches it by that rather
+ * than by a name in its params (security review 2026-10-16, F1).
+ */
+export type RosterTripActivityEntry =
   | {
-      code:
-        | "booking_removed"
-        | "booking_restored"
-        | "identity_confirmed"
-        | "identity_split"
-        | "seat_added"
-        | "seat_added_walk_in"
-        | "rider_added_at_dock";
+      code: Exclude<
+        RosterChangeCode,
+        CrewChangeCode | "seat_self_cancelled" | "seat_self_refunded" | "booking_turned_away"
+      >;
+      diver: string;
+    }
+  | { code: "booking_turned_away"; diver: string; reason: TurnAwayReason }
+  | { code: CrewChangeCode; crew: string }
+  | { code: "seat_self_cancelled" | "seat_self_refunded" };
+
+type CrewChangeCode = "crew_assigned" | "crew_removed";
+
+/** A seat change named by `recordSeatChange`, which reads the name itself. */
+export type SeatChangeCode = Exclude<
+  Extract<RosterTripActivityEntry, { diver: string }>["code"],
+  "booking_turned_away"
+>;
+
+type OtherTripActivityEntry =
+  | {
+      code: "identity_confirmed" | "identity_split" | "identity_repointed" | "departure_offered";
       diver: string;
     }
   | {
@@ -485,25 +516,51 @@ export type TripActivityEntry =
       certCheck: "none" | "cleared" | "overridden";
       /** The certification blocker codes the seat stopped facing, comma-joined; empty for none. */
       cleared: string;
+      /** Whether the change was made after the time on the board (issue #2225). */
+      atSea: "yes" | "no";
     }
-  | { code: "crew_assigned" | "crew_removed"; crew: string }
   | {
       code:
         | "blowout_called"
         | "series_cancelled"
         | "booking_link_requested"
         | "seat_claimed"
-        | "seat_self_cancelled"
-        | "seat_self_refunded"
+        // A held seat's own cancel (issue #2467) names nobody but "the diver on
+        // this seat", and its actor is a guess: not a roster line the log prints.
+        | "seat_holder_cancelled"
+        | "seat_holder_refunded"
         | "incident_report_filed"
         | "incident_report_addendum_added"
+        | "incident_draft_discarded"
+        | "incident_legal_hold_set"
+        | "incident_legal_hold_released"
         | "departure_note_sent";
     };
 
-export async function recordTripActivity(
-  db: DbExecutor,
-  input: { shopId: string; tripId: string; actorPersonId: string; entry: TripActivityEntry },
-) {
+type TripActivityInput = {
+  shopId: string;
+  tripId: string;
+  actorPersonId: string;
+  /**
+   * The seat a line is about, so erasure's sweep by booking reaches it from
+   * whoever holds the seat now, a held seat split off to its own record
+   * included (security re-review 2026-10-16, item 1).
+   */
+  bookingId?: string;
+} & (
+  | {
+      entry: RosterTripActivityEntry;
+      /** Whose seat or crew place it was: required, so no roster line is a bare name. */
+      subjectPersonId: string;
+    }
+  | {
+      entry: OtherTripActivityEntry;
+      /** The diver a line is about when no booking carries them (`activity_events.subject_person_id`). */
+      subjectPersonId?: string;
+    }
+);
+
+export async function recordTripActivity(db: DbExecutor, input: TripActivityInput) {
   const entry = input.entry;
   const [scope] = await db
     .select({ actorName: people.fullName })
@@ -526,8 +583,82 @@ export async function recordTripActivity(
       shopId: input.shopId,
       tripId: input.tripId,
       actorPersonId: input.actorPersonId,
+      bookingId: input.bookingId ?? null,
+      subjectPersonId: input.subjectPersonId ?? null,
       code: entry.code,
       params: { actor: scope.actorName, ...names },
+      occurredAt: nowDate(),
+    })
+    .returning();
+  return event ?? null;
+}
+
+/**
+ * **A seat change on a departure's trail, named from the seat itself**: whose
+ * seat by record, and by the name it was booked as when it is held (issue
+ * #2128), never the person it was matched to. Called inside the transaction
+ * that changed the seat where the caller has one, so the change and its line
+ * commit together. A booking that is not this shop's writes nothing.
+ */
+export async function recordSeatChange(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    tripId: string;
+    actorPersonId: string;
+    bookingId: string;
+    code: SeatChangeCode;
+  },
+) {
+  const [seat] = await db
+    .select({
+      personId: bookings.personId,
+      fullName: people.fullName,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      identityBookedAs: bookings.identityBookedAs,
+    })
+    .from(bookings)
+    // diveday:allow-deleted-people: the seat's own diver, named on its trail line.
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!seat) return null;
+  return recordTripActivity(db, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    actorPersonId: input.actorPersonId,
+    bookingId: input.bookingId,
+    subjectPersonId: seat.personId,
+    entry: { code: input.code, diver: seatName(seat.fullName, seat) },
+  });
+}
+
+/**
+ * **A line the system wrote on its own** (issue #2539): an automatic call-off,
+ * where no person acted. The row has no actor and says why in `system_reason`,
+ * which the table's check holds in step. Returns null for a departure that is
+ * not this shop's.
+ */
+export async function recordSystemTripActivity(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; reason: SystemReason },
+) {
+  const [trip] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    // diveday:allow-deleted-trips: the call-off line is written as the departure is called off.
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId)))
+    .limit(1);
+  if (!trip) return null;
+  const [event] = await db
+    .insert(activityEvents)
+    .values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      actorPersonId: null,
+      systemReason: input.reason,
+      code: "departure_called_off_automatically",
+      params: { reason: input.reason },
       occurredAt: nowDate(),
     })
     .returning();
@@ -546,18 +677,63 @@ export async function recordTripActivity(
  */
 export async function recordDiverSelfCancel(
   db: DbExecutor,
-  input: { shopId: string; bookingId: string; refunded: boolean },
+  input: {
+    shopId: string;
+    bookingId: string;
+    refunded: boolean;
+    /**
+     * A party seat that went with its lead's cancel (batch 6 item 10): the
+     * lead's booking and the seat's name, so the line names who cancelled and
+     * whose seat it was.
+     */
+    party?: { leadBookingId: string; seatName: string };
+  },
 ) {
   const [booking] = await db
-    .select({ tripId: bookings.tripId, personId: bookings.personId })
+    .select({
+      tripId: bookings.tripId,
+      personId: bookings.personId,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+    })
     .from(bookings)
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
   if (!booking) return null;
+  if (input.party) {
+    const [lead] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.id, input.party.leadBookingId), eq(bookings.shopId, input.shopId)))
+      .limit(1);
+    if (!lead) return null;
+    return recordTripActivity(db, {
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      actorPersonId: lead.personId,
+      subjectPersonId: booking.personId,
+      entry: {
+        code: input.refunded ? "party_seat_self_refunded" : "party_seat_self_cancelled",
+        diver: input.party.seatName,
+      },
+    });
+  }
+  // A seat whose identity is held for review (issue #2467, #2082) is matched to
+  // this person on a guess, and whoever held the link is not known to be them:
+  // the line says "the diver on this seat", never their name. The event still
+  // carries the matched person as its actor, which the column requires.
+  if (booking.identityUnconfirmedAt !== null) {
+    return recordTripActivity(db, {
+      shopId: input.shopId,
+      tripId: booking.tripId,
+      actorPersonId: booking.personId,
+      entry: { code: input.refunded ? "seat_holder_refunded" : "seat_holder_cancelled" },
+    });
+  }
   return recordTripActivity(db, {
     shopId: input.shopId,
     tripId: booking.tripId,
     actorPersonId: booking.personId,
+    subjectPersonId: booking.personId,
     entry: { code: input.refunded ? "seat_self_refunded" : "seat_self_cancelled" },
   });
 }

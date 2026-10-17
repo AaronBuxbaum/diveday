@@ -16,6 +16,7 @@ import { createBookingParty } from "./bookings";
 import { recordRollCall } from "./manifests";
 import { drainNotificationRetries } from "./notifications";
 import { setBookingPayment } from "./payments";
+import { listOwedShopCancellationRefunds, refundBookingsForShopCancelledTrip } from "./refunds";
 import { crewNotices, notificationSendQueue, people, trips as tripsTable } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { createTrip, upcomingTripsWithCounts } from "./trips";
@@ -401,6 +402,110 @@ describe("callTripBlowout — what the message says", () => {
     expect(send.paymentStory).toBe("refunded");
     const record = await getTripBlowout(ctx.db, ctx.shop.id, ctx.trip.id);
     expect(record?.divers[0].paymentStatus).toBe("refunded");
+  });
+
+  // H-139: whoever may call a departure off, only a refund holder moves money.
+  describe("when the caller may not refund (refunds: queue)", () => {
+    async function paidByCard(ctx: Ctx, ref: string) {
+      await connectStripe(ctx);
+      await setBookingPayment(ctx.db, {
+        shopId: ctx.shop.id,
+        bookingId: ctx.bookingIds[0],
+        status: "paid",
+        amountCents: 15_000,
+        currency: "usd",
+        provider: "stripe",
+        providerRef: ref,
+      });
+    }
+
+    it("cancels and tells the diver a refund is owed, but sends nothing to Stripe", async () => {
+      const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
+      await paidByCard(ctx, "cs_queued");
+      let refundCalls = 0;
+      const checkout = fakeCheckout({
+        async refundCheckoutSession() {
+          refundCalls += 1;
+          return { status: "refunded", refundId: "re_never" };
+        },
+      });
+      const email = fakeEmail();
+      const outcome = await callTripBlowout(ctx.db, {
+        ...callInput(ctx, email.provider),
+        checkout,
+        refunds: "queue",
+      });
+      expect(outcome).toMatchObject({ ok: true, total: 1, sent: 1 });
+      expect(refundCalls).toBe(0);
+      expect(blowoutSends(email.sent)[0].paymentStory).toBe("refund_owed");
+      const record = await getTripBlowout(ctx.db, ctx.shop.id, ctx.trip.id);
+      expect(record?.divers[0].paymentStatus).toBe("paid");
+      const [trip] = await ctx.db
+        .select({ status: tripsTable.status })
+        .from(tripsTable)
+        .where(eq(tripsTable.id, ctx.trip.id));
+      expect(trip.status).toBe("cancelled");
+    });
+
+    it("leaves the queued money on the owed list, and a refund holder's release sends it once", async () => {
+      const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
+      await paidByCard(ctx, "cs_released");
+      await callTripBlowout(ctx.db, {
+        ...callInput(ctx, fakeEmail().provider),
+        checkout: fakeCheckout(),
+        refunds: "queue",
+      });
+      const owed = await listOwedShopCancellationRefunds(ctx.db, ctx.shop.id);
+      expect(owed.map((row) => row.bookingId)).toEqual([ctx.bookingIds[0]]);
+
+      let refundCalls = 0;
+      const checkout = fakeCheckout({
+        async refundCheckoutSession() {
+          refundCalls += 1;
+          return { status: "refunded", refundId: "re_released" };
+        },
+      });
+      const first = await refundBookingsForShopCancelledTrip(
+        ctx.db,
+        { shopId: ctx.shop.id, tripId: ctx.trip.id },
+        checkout,
+      );
+      expect(first.get(ctx.bookingIds[0])).toEqual({ status: "refunded", amountCents: 15_000 });
+      const again = await refundBookingsForShopCancelledTrip(
+        ctx.db,
+        { shopId: ctx.shop.id, tripId: ctx.trip.id },
+        checkout,
+      );
+      expect(again.get(ctx.bookingIds[0])?.status).toBe("already_refunded");
+      expect(refundCalls).toBe(1);
+      expect(await listOwedShopCancellationRefunds(ctx.db, ctx.shop.id)).toEqual([]);
+    });
+
+    it("still says nothing about money to an unpaid diver", async () => {
+      const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
+      const email = fakeEmail();
+      await callTripBlowout(ctx.db, { ...callInput(ctx, email.provider), refunds: "queue" });
+      expect(blowoutSends(email.sent)[0].paymentStory).toBe("none");
+    });
+
+    it("applies to every departure of a day call", async () => {
+      const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
+      await paidByCard(ctx, "cs_day_queue");
+      const email = fakeEmail();
+      const results = await callDayBlowout(ctx.db, {
+        shopId: ctx.shop.id,
+        tripIds: [ctx.trip.id],
+        calledByPersonId: ctx.ownerId,
+        provider: email.provider,
+        checkout: fakeCheckout(),
+        refunds: "queue",
+      });
+      expect(results[0]?.outcome.ok).toBe(true);
+      expect(blowoutSends(email.sent)[0].paymentStory).toBe("refund_owed");
+      expect(
+        (await getTripBlowout(ctx.db, ctx.shop.id, ctx.trip.id))?.divers[0].paymentStatus,
+      ).toBe("paid");
+    });
   });
 
   it("says nothing about money to a diver who never paid", async () => {

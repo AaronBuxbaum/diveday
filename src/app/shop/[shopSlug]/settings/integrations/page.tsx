@@ -2,18 +2,10 @@ import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import {
-  ChoiceFieldset,
-  ChoicePill,
-  controlClass,
-  Field,
-  FieldActions,
-  FieldGrid,
-} from "@/components/ui/form";
-import { canPersonManageShopSettings } from "@/db/authz";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { canPersonBackfillIntegrations, canPersonManageShopSettings } from "@/db/authz";
 import {
   listIntegrationSummaries,
   quickBooksConfigFromEnvironment,
@@ -21,26 +13,24 @@ import {
   xeroConfigFromEnvironment,
 } from "@/features/integrations";
 import { requestLocale } from "@/i18n/request";
+import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz } from "@/lib/format";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import {
-  disconnectIntegrationAction,
-  saveZapierIntegrationAction,
   startQuickBooksConnectionAction,
   startShopifyConnectionAction,
   startXeroConnectionAction,
   syncShopifyCatalogAction,
-  testZapierIntegrationAction,
   updateQuickBooksSettingsAction,
   updateXeroSettingsAction,
-  updateZapierEventsAction,
 } from "./actions";
-import { EVENT_OPTIONS, type EventLabelKey } from "./event-options";
+import { EarlierCheckoutsCard } from "./EarlierCheckoutsCard";
+import { ConnectedMeta, DisconnectForm, NotAvailable, statusBadge } from "./integration-parts";
+import { ZapierCard } from "./ZapierCard";
 
 export const instant = true;
 export const metadata: Metadata = { title: "Integrations — DiveDay" };
@@ -57,7 +47,7 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     "test-sent": { tone: "success", text: t("integrations.notice.test-sent") },
     invalid: { tone: "danger", text: t("integrations.notice.invalid") },
     "not-configured": { tone: "warning", text: t("integrations.notice.not-configured") },
-    "not-authorized": { tone: "danger", text: t("integrations.notice.not-authorized") },
+    "not-authorized": { tone: "danger", text: sayWords(t, ownerOrManagerWords("integrations")) },
     failed: { tone: "danger", text: t("integrations.notice.failed") },
     "encryption-key-unset": {
       tone: "danger",
@@ -70,120 +60,15 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
   };
 }
 
-function EventCheckboxes({ t, selected }: { t: StaffTranslator; selected: readonly string[] }) {
-  return (
-    <ChoiceFieldset
-      legend={t("integrations.common.selectedEvents")}
-      bodyClassName="grid gap-2 sm:grid-cols-3"
-    >
-      {EVENT_OPTIONS.map((event) => (
-        <ChoicePill
-          key={event.value}
-          type="checkbox"
-          name="eventType"
-          value={event.value}
-          defaultChecked={selected.includes(event.value)}
-        >
-          {t(event.label as EventLabelKey)}
-        </ChoicePill>
-      ))}
-    </ChoiceFieldset>
-  );
-}
-
-function statusBadge(t: StaffTranslator, row: { status: string } | undefined) {
-  if (!row) return <Badge tone="neutral">{t("integrations.status.notConnected")}</Badge>;
-  if (row.status === "error") return <Badge tone="danger">{t("integrations.status.error")}</Badge>;
-  return <Badge tone="success">{t("integrations.status.connected")}</Badge>;
-}
-
-function ConnectedMeta({
-  t,
-  row,
-  locale,
-  timezone,
-}: {
-  t: StaffTranslator;
-  row: {
-    externalAccountId: string | null;
-    externalLabel: string | null;
-    connectedAt: Date;
-    lastSyncedAt: Date | null;
-  };
-  locale: string;
-  timezone: string;
-}) {
-  return (
-    <dl className="grid gap-2 text-sm sm:grid-cols-2">
-      <div>
-        <dt className="text-muted">{t("integrations.status.account")}</dt>
-        <dd>{row.externalLabel ?? row.externalAccountId ?? "—"}</dd>
-      </div>
-      <div>
-        <dt className="text-muted">{t("integrations.status.connectedAt")}</dt>
-        <dd>{formatDateTimeTz(row.connectedAt, locale, timezone)}</dd>
-      </div>
-      {row.lastSyncedAt ? (
-        <div>
-          <dt className="text-muted">{t("integrations.status.lastSynced")}</dt>
-          <dd>{formatDateTimeTz(row.lastSyncedAt, locale, timezone)}</dd>
-        </div>
-      ) : null}
-    </dl>
-  );
-}
-
-/**
- * A provider this deployment carries no credentials for. One muted line and
- * **no control**: the three pale "Not configured" buttons that stood here read
- * as disabled primaries a shop could fix by clicking, and nothing on this page
- * can fix them (principle 8 — a control that cannot act is not a control).
- */
-/**
- * A card whose provider is not switched on. With `askedAbove` the way to ask
- * for it is said once, over the cards, and each card keeps only its state:
- * four cards each ending in the same support address read as a page of
- * repeated small print, worst on a phone where they stack.
- */
-function NotAvailable({ t, askedAbove }: { t: StaffTranslator; askedAbove: boolean }) {
-  return (
-    <p className="text-sm text-muted">
-      {askedAbove
-        ? t("integrations.common.notAvailableShort")
-        : t("integrations.common.notAvailable", { email: SUPPORT_EMAIL })}
-    </p>
-  );
-}
-
-function DisconnectForm({
-  provider,
-  t,
-}: {
-  provider: "shopify" | "quickbooks" | "xero" | "zapier";
-  t: StaffTranslator;
-}) {
-  return (
-    <form action={disconnectIntegrationAction}>
-      <input type="hidden" name="provider" value={provider} />
-      <SubmitButton
-        pendingLabel={t("integrations.common.disconnecting")}
-        className={buttonClass({ variant: "danger", size: "sm" })}
-      >
-        {t("integrations.common.disconnect")}
-      </SubmitButton>
-    </form>
-  );
-}
-
 export default async function IntegrationsSettingsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; count?: string }>;
+  searchParams: Promise<{ notice?: string; count?: string; backfill?: string; since?: string }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, count } = await searchParams;
+  const { notice, count, backfill, since } = await searchParams;
   const { db, session, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonManageShopSettings,
     refusal: { notice: "integrations-not-authorized" },
@@ -191,6 +76,7 @@ export default async function IntegrationsSettingsPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const summaries = await listIntegrationSummaries(db, shop.id);
+  const ownerBackfill = await canPersonBackfillIntegrations(db, shop.id, session.user.personId);
   const shopify = summaries.find((row) => row.provider === "shopify");
   const quickbooks = summaries.find((row) => row.provider === "quickbooks");
   const xero = summaries.find((row) => row.provider === "xero");
@@ -423,66 +309,29 @@ export default async function IntegrationsSettingsPage({
           )}
         </SectionCard>
 
-        <SectionCard
-          padding="lg"
-          title={t("integrations.zapier.name")}
-          description={t("integrations.zapier.description")}
-          actions={statusBadge(t, zapier)}
-        >
-          {zapier ? (
-            <div className="space-y-5">
-              <ConnectedMeta t={t} row={zapier} locale={locale} timezone={shop.timezone} />
-              <p className="text-sm text-muted">{t("integrations.zapier.eventsDescription")}</p>
-              <FieldGrid as="form" action={updateZapierEventsAction}>
-                <EventCheckboxes t={t} selected={zapier.settings.eventTypes ?? []} />
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("integrations.common.saving")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("integrations.common.save")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-              <div className="flex flex-wrap items-center gap-3">
-                <form action={testZapierIntegrationAction}>
-                  <SubmitButton
-                    pendingLabel={t("integrations.zapier.testing")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("integrations.zapier.test")}
-                  </SubmitButton>
-                </form>
-                <DisconnectForm provider="zapier" t={t} />
-              </div>
-            </div>
-          ) : zapierConfigured ? (
-            <FieldGrid as="form" action={saveZapierIntegrationAction}>
-              <Field
-                label={t("integrations.zapier.webhookLabel")}
-                description={t("integrations.zapier.webhookDescription")}
-              >
-                <input
-                  name="webhookUrl"
-                  className={controlClass}
-                  placeholder={t("integrations.zapier.webhookPlaceholder")}
-                  required
-                />
-              </Field>
-              <EventCheckboxes t={t} selected={EVENT_OPTIONS.map((event) => event.value)} />
-              <FieldActions>
-                <SubmitButton
-                  pendingLabel={t("integrations.common.connect")}
-                  className={buttonClass()}
-                >
-                  {t("integrations.zapier.connect")}
-                </SubmitButton>
-              </FieldActions>
-            </FieldGrid>
-          ) : (
-            <NotAvailable t={t} askedAbove={askOnce} />
-          )}
-        </SectionCard>
+        <ZapierCard
+          t={t}
+          zapier={zapier}
+          configured={zapierConfigured}
+          askOnce={askOnce}
+          locale={locale}
+          timezone={shop.timezone}
+        />
+
+        {ownerBackfill ? (
+          <EarlierCheckoutsCard
+            db={db}
+            shopId={shop.id}
+            timezone={shop.timezone}
+            locale={locale}
+            t={t}
+            integrations={summaries}
+            backfill={backfill}
+            since={since}
+            notice={notice}
+            count={count}
+          />
+        ) : null}
       </div>
     </main>
   );

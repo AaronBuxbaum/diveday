@@ -62,7 +62,9 @@ test("a snorkeler books from the public page and is on the manifest and the roll
   // The shop names a snorkeler price. Until it does, the public form sells
   // diving only, which is asserted below before the price exists.
   await page.goto(`/s/blue-mantis/trips/${tripId}`);
-  await expect(page.getByRole("button", { name: /^Book (this spot|these spots)$/ })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }),
+  ).toBeVisible();
   await expect(page.getByLabel("Joining as")).toHaveCount(0);
 
   await page.goto(tripUrl);
@@ -80,7 +82,7 @@ test("a snorkeler books from the public page and is on the manifest and the roll
   await joiningAs.selectOption("snorkeler");
   await page.getByLabel("Name", { exact: true }).fill(guest);
   await page.getByLabel("Email", { exact: true }).fill(`lena-${e2eNow().getTime()}@example.com`);
-  await page.getByRole("button", { name: /^Book (this spot|these spots)$/ }).click();
+  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
 
   // Staff see who they are on the roster.

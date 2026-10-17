@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, makeActivitySafe, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
@@ -69,7 +69,7 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await page.getByLabel("Name").fill("Nora Quinn");
   await page.getByLabel("Email").fill("nora@example.com");
   await acceptAgeAttestation(page);
-  await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
   await expect(page.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
 
   // Sizes live in the thread's "Gear and sizes" step, and at most one step is
@@ -95,6 +95,14 @@ test("a signed-out visitor browses the public course catalog, with the editor st
   await expect(
     page.getByRole("heading", { level: 3, name: "Open Water Diver", exact: true }),
   ).toBeVisible();
+  // When each course next runs, as the storefront's shelf says it (fourth
+  // review, item 33), and a door to ask on a course with nothing on the board.
+  const openWater = page
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("heading", { name: "Open Water Diver", exact: true }) });
+  await expect(openWater).toContainText(/Next \w{3},\s\w{3}\s\d{1,2}/);
+  const ask = page.getByRole("link").filter({ hasText: "Ask for a date" }).first();
+  await expect(ask).toHaveAttribute("href", /^\/s\/blue-mantis\/courses\/[^#]+#get-in-touch$/);
   // No staff affordance renders at all — not disabled, absent (AGENTS.md
   // hard rule: gate by not rendering).
   await expect(page.getByRole("link", { name: "Edit" })).toHaveCount(0);
@@ -114,7 +122,7 @@ test("a signed-out visitor browses the public course catalog, with the editor st
   await page.goto("/s/blue-mantis/courses/paths");
   // Inside a shop's namespace the refusal is the shop's own, framed by its
   // chrome and pointing back at its schedule (issue #765).
-  await expect(page.getByRole("heading", { name: "That page isn’t here any more" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That page isn’t here" })).toBeVisible();
 });
 
 /**
@@ -327,12 +335,14 @@ test.describe("staff", () => {
   test("a course row schedules a session of itself, opening the board's add panel", async ({
     page,
   }) => {
+    // A course the shop runs: the seed seats Discover Scuba Diving on the
+    // board, so its row offers Schedule (third UX review, item 35).
     await page.goto("/shop/blue-mantis/courses");
     const row = page
       .getByRole("listitem")
-      .filter({ has: page.getByText("Rescue Diver", { exact: true }) });
+      .filter({ has: page.getByText("Discover Scuba Diving", { exact: true }) });
 
-    await row.getByRole("link", { name: "Schedule a session of Rescue Diver" }).click();
+    await row.getByRole("link", { name: "Schedule a session of Discover Scuba Diving" }).click();
     // The one trip-creation path, not a second one (ADR
     // 20260806-one-trip-create-form) — the panel opens with the course
     // preselected and the title placeholder already shaped for it.
@@ -345,11 +355,44 @@ test.describe("staff", () => {
     await expect(course).toHaveValue(/[0-9a-f-]{36}/);
     // The preselected course is the one whose row was clicked, not the first
     // in the list — the whole point of arriving here from the catalog.
-    await expect(course).toContainText("Rescue Diver");
+    await expect(course).toContainText("Discover Scuba Diving");
     await expect(page.getByLabel("What is it")).toHaveAttribute(
       "placeholder",
-      /Rescue Diver — Session 1/,
+      /Discover Scuba Diving — Session 1/,
     );
+  });
+
+  /**
+   * **55 courses, findable in one line** (third UX review, item 35): a title
+   * search and Scheduled / Not yet / Hidden views, and "Schedule" only on a
+   * course the shop runs rather than on every catalog entry.
+   */
+  test("the roster searches by title and narrows to a view", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/courses");
+    const search = page.getByRole("searchbox", { name: "Search courses" });
+    await search.fill("Drift");
+    await search.press("Enter");
+    await page.waitForURL(/[?&]q=Drift/);
+    const drift = page
+      .getByRole("listitem")
+      .filter({ has: page.getByText("Drift Diver", { exact: true }) });
+    await expect(drift).toBeVisible();
+    // Copied from the catalog and never on the board (the seed runs no Drift
+    // Diver session): a door to its editor, no Schedule.
+    await expect(drift.getByRole("link", { name: /^Schedule a session of/ })).toHaveCount(0);
+
+    const views = page.getByRole("navigation", { name: "Course views" });
+    await views.getByRole("link", { name: "Scheduled" }).click();
+    await page.waitForURL(/[?&]view=scheduled/);
+    await expect(page.getByText("No courses match.")).toBeVisible();
+
+    await page.getByRole("link", { name: "Clear search" }).click();
+    await expect(page).not.toHaveURL(/[?&]q=/);
+    const scheduled = page
+      .getByRole("listitem")
+      .filter({ has: page.getByText("Discover Scuba Diving", { exact: true }) });
+    await expect(scheduled).toContainText(/Next /);
+    await expect(page.getByText("Not scheduled")).toHaveCount(0);
   });
 
   test("staff edit a seeded course page, toggle it live, and a signed-out diver reads it", async ({
@@ -530,7 +573,7 @@ test.describe("staff", () => {
     await page.getByLabel("Name").fill(diver);
     await page.getByLabel("Email").fill(`ravi-${e2eNow().getTime()}@example.com`);
     await acceptAgeAttestation(page);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(page.getByRole("heading", { name: /You’ve got a seat, Ravi/ })).toBeVisible();
   });
 
@@ -588,7 +631,9 @@ test.describe("staff", () => {
         await emailField.fill(`ratio-${stamp}-${label}@example.com`);
       }
       await acceptAgeAttestation(page);
-      await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+      await page
+        .getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ })
+        .click();
       await expect(page.getByRole("heading", { name: /You’ve got a seat/ })).toBeVisible();
     };
 
@@ -604,7 +649,7 @@ test.describe("staff", () => {
     await page.getByLabel("Name", { exact: true }).fill(`Ratio Diver ${stamp}-9`);
     await page.getByLabel("Email", { exact: true }).fill(`ratio-${stamp}-9@example.com`);
     await acceptAgeAttestation(page);
-    await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+    await page.getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ }).click();
     await expect(
       page.getByText("This session is at its instructor-to-student ratio limit"),
     ).toBeVisible();
@@ -1257,7 +1302,9 @@ test("a course's learning materials reach the student's thread, and staff tick t
   await diverPage.getByLabel("Name").fill(diver);
   await diverPage.getByLabel("Email").fill(`mira-${e2eNow().getTime()}@example.com`);
   await acceptAgeAttestation(diverPage);
-  await diverPage.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
+  await diverPage
+    .getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ })
+    .click();
   await expect(diverPage).toHaveURL(/\/ready\//);
 
   await expect(diverPage.getByRole("heading", { name: "Before your first day" })).toBeVisible();
@@ -1285,16 +1332,73 @@ test("a course's learning materials reach the student's thread, and staff tick t
 });
 
 /**
+ * **A course whose fee includes the gear** (fifth-loop ideas, item 16). The
+ * shop ticks the course's switch; a student who books a session is asked for
+ * sizes with no rental price, and the bag list says the shop brings the set.
+ *
+ * `privateShop`, because it writes the course's own row.
+ */
+test("a course that includes its gear asks the student for sizes, not money", async ({
+  privateShop,
+  page,
+  browser,
+  workerBaseURL,
+}) => {
+  test.setTimeout(60_000);
+  const slug = privateShop.slug;
+  await page.goto(`/shop/${slug}/courses/open-water-diver/edit`);
+  await expect(editorHydrated(page)).toBeVisible();
+  await page.getByRole("checkbox", { name: "The scuba unit is part of the course fee" }).check();
+  await page.getByRole("button", { name: "Save course page" }).click();
+  await expect(page.getByRole("status")).toContainText("Course page saved");
+  await page.reload();
+  await expect(
+    page.getByRole("checkbox", { name: "The scuba unit is part of the course fee" }),
+  ).toBeChecked();
+
+  const diverContext = await browser.newContext({ baseURL: workerBaseURL });
+  const diverPage = makeActivitySafe(await diverContext.newPage());
+  await diverPage.goto(`/s/${slug}/courses/open-water-diver`);
+  await diverPage.getByRole("link", { name: "Book this date" }).first().click();
+  await expect(diverPage.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await diverPage.getByLabel("Name").fill(`Tove ${e2eNow().getTime()}`);
+  await diverPage.getByLabel("Email").fill(`tove-${e2eNow().getTime()}@example.com`);
+  await acceptAgeAttestation(diverPage);
+  await diverPage
+    .getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ })
+    .click();
+  await expect(diverPage).toHaveURL(/\/ready\//);
+
+  const gear = await openThreadStep(diverPage, "gear");
+  await expect(
+    gear.getByText(/^Your scuba unit \(BCD, regulator, tank, weights\) comes with the course\./),
+  ).toBeVisible();
+  await expect(gear.getByText(/Estimated rental/)).toHaveCount(0);
+  // Personal gear is the student's own: not offered here, listed to bring.
+  await expect(gear.getByRole("checkbox", { name: /^Mask/ })).toHaveCount(0);
+  await expect(diverPage.getByText(/^Scuba unit \(BCD, regulator, tank, weights\)$/)).toBeVisible();
+  await expect(diverPage.getByText("Snorkel", { exact: true })).toBeVisible();
+  await diverContext.close();
+});
+
+/**
  * **The agency-wording door is for the staffer who can walk through it** (UX
  * review 2026-10-10, item 16). The course editor draws its Forms section only
  * for someone who may configure courses, so a divemaster reading the roster is
  * told the wording is missing and is offered no link into an editor with no
- * Forms in it.
+ * Forms in it. The demo's forms carry the shop's words (fourth review, item
+ * 53), so each test first adds one the shop has named and not yet written.
  */
+async function addUnwordedForm(request: APIRequestContext) {
+  const seeded = await request.post("/api/test/seed-unworded-course-form");
+  expect(seeded.ok(), await seeded.text()).toBe(true);
+}
+
 test.describe("the agency-wording notice on the course roster", () => {
   test.describe("for an owner", () => {
     signedInAsOwner();
-    test("says what is missing and opens the first course's Forms", async ({ page }) => {
+    test("says what is missing and opens the first course's Forms", async ({ page, request }) => {
+      await addUnwordedForm(request);
       await page.goto("/shop/blue-mantis/courses");
       const notice = page.getByText(/needs? (its|their) agency form wording/);
       await expect(notice).toBeVisible();
@@ -1309,7 +1413,9 @@ test.describe("the agency-wording notice on the course roster", () => {
     signedInAs("divemaster");
     test("says what is missing and offers no door into a Forms section they cannot see", async ({
       page,
+      request,
     }) => {
+      await addUnwordedForm(request);
       await page.goto("/shop/blue-mantis/courses");
       await expect(page.getByText(/needs? (its|their) agency form wording/)).toBeVisible();
       await expect(page.getByRole("link", { name: /^Start with / })).toHaveCount(0);

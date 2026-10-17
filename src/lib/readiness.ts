@@ -7,6 +7,7 @@ import type {
   TripRequirement,
 } from "@/db/schema";
 import { checkMinimumAge } from "./age";
+import { AGENCY_CHECKS, isCheckableAgency } from "./agency-check";
 import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import {
@@ -17,7 +18,7 @@ import {
 } from "./course-forms";
 import { guardianSignatureMissing } from "./guardian";
 import { isDiver, isHeldToMedical, type ParticipantType } from "./participant-types";
-import { type WaiverStateFields, waiverState } from "./waivers";
+import { type ReleaseLapse, type WaiverStateFields, waiverState } from "./waivers";
 
 /**
  * Payment states that clear the "ready to board" payment gate.
@@ -186,6 +187,19 @@ export type ReadinessBlockerCode =
   | "requirements_not_configured"
   | "identity_unconfirmed"
   | "waiver_not_sent"
+  /**
+   * A release the diver signed here has lapsed (its year, a physician's
+   * evaluation's year, or the shop's terms changed) and no fresh link is out.
+   * Blocks exactly as `waiver_not_sent` does; the fix is the diver signing again.
+   */
+  | "waiver_lapsed"
+  /**
+   * A release that still stands today but runs out before the trip ends
+   * (issue #2611, `waiverClockInstant`). Blocks as `waiver_lapsed` does, and
+   * the fix is the same, the diver signing again now; the word differs because
+   * "lapsed" would be untrue of a release valid today.
+   */
+  | "waiver_runs_out"
   | "waiver_pending"
   | "waiver_expired"
   | "medical_review"
@@ -195,7 +209,8 @@ export type ReadinessBlockerCode =
   /**
    * A form the course asks every student to sign is unsigned for this
    * enrollment — one blocker per form, carrying its title (ADR
-   * 20261008-course-forms). Raised only while `COURSE_FORMS_BLOCK_BOARDING`.
+   * 20261008-course-forms). Raised while `COURSE_FORMS_BLOCK_BOARDING`, and for a form marked
+   * medical screening whatever the switch says (#2337).
    */
   | "course_form_unsigned"
   /**
@@ -204,6 +219,14 @@ export type ReadinessBlockerCode =
    * signature. The fix is the guardian's signature, not the student's again.
    */
   | "course_form_guardian_missing"
+  /**
+   * Staff marked this seat as a training dive for a course seat, and the mark
+   * no longer stands: the enrollment was canceled, held, moved off a course or
+   * ends before this departure (issue #2275). Raised until a staffer clears or
+   * replaces the mark, never read as "no mark": a stale mark must not relax
+   * boarding in silence.
+   */
+  | "training_mark_invalid"
   | "certification_missing"
   | "certification_pending"
   | "certification_self_declared"
@@ -214,6 +237,15 @@ export type ReadinessBlockerCode =
    * diver boards on the card the instructor issues, never on the enrollment.
    */
   | "certification_in_training"
+  /**
+   * The diver said, on their own link, that they hold no card yet (third UX
+   * review, item 23). Still a blocker, never a refusal: the sale stays open
+   * (`decideTripAdmission`), and the shop gets in touch before the day about a
+   * Discover Scuba or the course. Its own code so Today and the roster say
+   * "Says not certified yet" rather than "No certification on file", which
+   * reads as paperwork the diver forgot.
+   */
+  | "certification_not_yet"
   | "specialty_missing"
   | "specialty_pending"
   | "specialty_import_unconfirmed"
@@ -239,6 +271,18 @@ export type ReadinessBlockerParams = {
   minimumAge?: number;
   /** The shop's own title for an unsigned course form — the shop's words, not DiveDay's. */
   formTitle?: string;
+  /**
+   * Beside a course form asked only because the shop holds no date of birth:
+   * the age the form is bounded at, so the line names the birthday as the fix
+   * (dive-domain review H6).
+   */
+  formMaxAge?: number;
+  /**
+   * The course session that should have certified this level and has ended
+   * without a card (issue #2058), beside a certification blocker the card
+   * would clear. Staff surfaces point at that session's roster with it.
+   */
+  endedCourseTripId?: string;
 };
 
 export type ReadinessBlocker = { code: ReadinessBlockerCode; params?: ReadinessBlockerParams };
@@ -251,6 +295,8 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   readiness_unavailable: "setup",
   identity_unconfirmed: "setup",
   waiver_not_sent: "waiver",
+  waiver_lapsed: "waiver",
+  waiver_runs_out: "waiver",
   waiver_pending: "waiver",
   waiver_expired: "waiver",
   medical_review: "waiver",
@@ -266,11 +312,15 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   // step on the diver's own page is where both are answered.
   course_form_unsigned: "waiver",
   course_form_guardian_missing: "waiver",
+  // The desk's own record is what is wrong, like a held identity: staff fix
+  // it on the Divers tab, and the student has nothing to do.
+  training_mark_invalid: "setup",
   certification_missing: "certification",
   certification_pending: "certification",
   certification_self_declared: "certification",
   certification_insufficient: "certification",
   certification_in_training: "certification",
+  certification_not_yet: "certification",
   specialty_missing: "certification",
   specialty_pending: "certification",
   specialty_import_unconfirmed: "certification",
@@ -338,6 +388,9 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   medical_not_cleared: "medical",
 
   waiver_not_sent: "unknown",
+  // A lapsed release is no current medical declaration either.
+  waiver_lapsed: "unknown",
+  waiver_runs_out: "unknown",
   waiver_pending: "unknown",
   waiver_expired: "unknown",
   // A minor's release with no guardian on it is not a release the shop can
@@ -348,6 +401,9 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   // nobody aboard can sign it for them.
   course_form_unsigned: "unknown",
   course_form_guardian_missing: "unknown",
+  // Which course's forms this seat owes is not known, so neither is whether
+  // they are signed.
+  training_mark_invalid: "unknown",
   identity_unconfirmed: "unknown",
   readiness_unavailable: "unknown",
   requirements_not_configured: "unknown",
@@ -357,6 +413,7 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   certification_self_declared: "certification",
   certification_insufficient: "certification",
   certification_in_training: "certification",
+  certification_not_yet: "certification",
   specialty_missing: "certification",
   specialty_pending: "certification",
   specialty_import_unconfirmed: "certification",
@@ -415,6 +472,13 @@ export type ReadinessInput = {
   /** The primary dive site's inherent gate, composed with the trip's own. */
   siteRequirement?: SiteCertRequirement | null;
   waiver: WaiverStateFields | null;
+  /**
+   * With no `waiver` handed in: the diver signed a release here that has since
+   * lapsed (`releaseLapseForBooking`). Changes the blocker's name from
+   * `waiver_not_sent` to `waiver_lapsed` (aged out already) or
+   * `waiver_runs_out` (runs out before the trip), never whether there is one.
+   */
+  releaseLapse?: ReleaseLapse | null;
   certifications: readonly Certification[];
   /**
    * Courses this diver is booked on that certify a level and finish before
@@ -423,6 +487,20 @@ export type ReadinessInput = {
    * into the softer `certification_in_training`, and nothing here clears.
    */
   certificationsInTraining?: readonly CertificationInTraining[];
+  /**
+   * Course sessions this diver sat that certify a level and have **already
+   * ended** before this trip (`courseEndedBefore`, src/lib/in-training.ts).
+   * Never evidence: they only name, on a blocker that stands anyway, the
+   * session whose result is the fix (issue #2058).
+   */
+  coursesEnded?: readonly (CertificationInTraining & { tripId: string })[];
+  /**
+   * The diver's own standing "I'm not certified yet" (`people.
+   * no_certification_declared_at`, not cleared by staff). Never evidence and
+   * never a clearance: it only names *why* a level gate is unmet, below every
+   * card the shop holds. See `noCertificationStands`.
+   */
+  noCertificationDeclared?: boolean;
   specialtyCertifications?: readonly SpecialtyCertification[];
   nitroxCertifications?: readonly NitroxCertification[];
   /** The booking's current payment state; absent is treated as unpaid. */
@@ -454,16 +532,24 @@ export type ReadinessInput = {
    */
   courseMinimumAge?: number | null;
   dateOfBirth?: CalendarDate | null;
+  /**
+   * The seat's booker said this diver is under 18
+   * (`bookings.minor_declared_at`). Read only by the guardian co-signature
+   * rule, and only where no date of birth is on file; never by the minimum-age
+   * gate, which needs an age, not a yes.
+   */
+  minorDeclared?: boolean;
   /** The shop-local calendar date the course runs, which is when age is measured. */
   courseDate?: CalendarDate | null;
   /**
    * The shop's zone, which turns the instant a release was signed into the
    * calendar day the guardian rule measures the diver's age on
-   * (`src/lib/guardian.ts`). Defaults to UTC for a caller with no shop in hand
-   * — a day of slack at the boundary against a rule measured in years — and
-   * the one production caller (`src/db/readiness.ts`) passes the shop's own.
+   * (`src/lib/guardian.ts`). Required: a guessed zone moves that day near
+   * midnight, and the guess decides whether a diver signing on the eve of
+   * their 18th birthday needs a guardian. The one production caller
+   * (`src/db/readiness.ts`) passes the shop's own.
    */
-  timezone?: string;
+  timezone: string;
   /**
    * What this person is doing on the boat (ADR 20261007-participant-types).
    * Absent is a diver.
@@ -506,6 +592,12 @@ export type ReadinessInput = {
      */
     timezone: string;
   };
+  /**
+   * The seat carries a training mark that no longer stands
+   * (`trainingMarkProblem`, issue #2275). A mark that stands arrives as
+   * `courseForms` above instead, keyed on the enrollment's booking.
+   */
+  trainingMarkInvalid?: boolean;
   now?: Date;
 };
 
@@ -586,10 +678,44 @@ export function isUnsightedSelfDeclaration(card: {
 export function needsCardSighting(card: {
   selfDeclaredAt?: Date | string | null;
   issuedByShopAt?: Date | string | null;
+  /** With `identifier`: a card an agency check listed with no number of its own (below). */
+  listedFromCertificationId?: string | null;
+  identifier?: string | null;
   status: "pending" | "verified";
 }): boolean {
   return (
-    card.status === "pending" && (Boolean(card.selfDeclaredAt) || Boolean(card.issuedByShopAt))
+    card.status === "pending" &&
+    (Boolean(card.selfDeclaredAt) || Boolean(card.issuedByShopAt) || listedWithoutANumber(card))
+  );
+}
+
+/**
+ * **A third numberless kind**: a card an agency check listed (layer 3 of ADR
+ * 20261008-cert-check-extension) at an agency that numbers each card, whose
+ * page showed no number for it. The page is good evidence of the card and none
+ * of its number, so its confirm asks for the card as the other two do.
+ */
+function listedWithoutANumber(card: {
+  listedFromCertificationId?: string | null;
+  identifier?: string | null;
+}): boolean {
+  return Boolean(card.listedFromCertificationId) && !card.identifier?.trim();
+}
+
+/**
+ * A card an agency check listed at an agency that numbers each card: its
+ * number may be the page's or a staffer's sighting, and a revert cannot tell
+ * which, so it is treated as sighted.
+ */
+function listedAtACardNumberingAgency(card: {
+  listedFromCertificationId?: string | null;
+  agency?: string;
+}): boolean {
+  return (
+    Boolean(card.listedFromCertificationId) &&
+    card.agency !== undefined &&
+    isCheckableAgency(card.agency) &&
+    !AGENCY_CHECKS[card.agency].numbersTheDiver
   );
 }
 
@@ -597,7 +723,14 @@ export function needsCardSighting(card: {
  * Why undoing a "Mark certified" tap was refused — never a silent no-op, since
  * the whole promise of the toast is that the card went back.
  */
-export type CardUnreviewRefusal = "not_found" | "not_reviewed" | "sighted_card";
+export type CardUnreviewRefusal =
+  | "not_found"
+  | "not_reviewed"
+  | "sighted_card"
+  /** The card has been reviewed since the review this Undo was offered for. */
+  | "stale"
+  /** An agency check made the review; its own Undo takes it back, this one never does. */
+  | "agency_checked";
 
 /**
  * **What a card should look like once its review is taken back.**
@@ -628,10 +761,40 @@ export function unreviewedCardState(card: {
   selfDeclaredAt?: Date | string | null;
   issuedByShopAt?: Date | string | null;
   importedAt?: Date | string | null;
+  /** With `agency`: a listed card at an agency that numbers each card (`listedAtACardNumberingAgency`). */
+  listedFromCertificationId?: string | null;
+  agency?: string;
 }): { ok: true; status: "pending" | "verified" } | { ok: false; reason: CardUnreviewRefusal } {
-  if (card.selfDeclaredAt || card.issuedByShopAt) return { ok: false, reason: "sighted_card" };
+  if (card.selfDeclaredAt || card.issuedByShopAt || listedAtACardNumberingAgency(card)) {
+    return { ok: false, reason: "sighted_card" };
+  }
   if (!card.reviewedAt) return { ok: false, reason: "not_reviewed" };
   return { ok: true, status: card.importedAt ? "verified" : "pending" };
+}
+
+/**
+ * **Whether an Undo still belongs to the review it was offered for** (issue
+ * #2612). The toast's form carries the `reviewedAt` it was rendered with; a
+ * card re-reviewed since (by a second tap, or by the agency check, which writes
+ * its evidence into the note) is no longer the review the staffer saw, and
+ * undoing it would wipe a later check and its evidence. The one-tap Undo also
+ * never reverses an agency-checked review, as the agency check's own Undo
+ * never reverses a one-tap one. Null means the Undo may proceed.
+ *
+ * Structural, like {@link unreviewedCardState}, so all three tables share it.
+ * Run it after that decision: a card with no review at all is `not_reviewed`,
+ * not stale.
+ */
+export function cardUndoRefusal(
+  card: { reviewedAt?: Date | null; agencyCheckedAt?: Date | null },
+  offeredReviewedAt: Date,
+  options: { reversingAgencyCheck?: boolean } = {},
+): "stale" | "agency_checked" | null {
+  if (!card.reviewedAt || card.reviewedAt.getTime() !== offeredReviewedAt.getTime()) {
+    return "stale";
+  }
+  if (card.agencyCheckedAt && !options.reversingAgencyCheck) return "agency_checked";
+  return null;
 }
 
 /** Shared rank check for course admission and final trip readiness. */
@@ -646,10 +809,57 @@ export function hasVerifiedCertificationAtLeast(
   );
 }
 
+/**
+ * Whether a person's "I'm not certified yet" still stands: said, and not since
+ * cleared by a staffer (`clearNoCertificationDeclaration`). A card on file
+ * outranks it in `certificationBlocker`, so this asks nothing about cards.
+ */
+export function noCertificationStands(person: {
+  noCertificationDeclaredAt: Date | null;
+  noCertificationClearedAt: Date | null;
+}): boolean {
+  return person.noCertificationDeclaredAt !== null && person.noCertificationClearedAt === null;
+}
+
+/**
+ * The blocker codes an ended course's card would clear, and so may name it.
+ * Not a self-declared card: the diver's own word is checked against the card
+ * they named, so verifying it is the fix (agency review G6).
+ */
+const ENDED_COURSE_CODES: ReadonlySet<ReadinessBlockerCode> = new Set([
+  "certification_missing",
+  "certification_insufficient",
+  "certification_not_yet",
+]);
+
+/**
+ * Names the latest ended course session that certifies at least the level on
+ * a blocker its card would clear (issue #2058). The code is unchanged and the
+ * blocker stands: this only says where the fix is.
+ */
+function withEndedCourse(
+  blocker: ReadinessBlocker,
+  minimumLevel: CertificationLevel,
+  coursesEnded: readonly (CertificationInTraining & { tripId: string })[] | undefined,
+): ReadinessBlocker {
+  if (!ENDED_COURSE_CODES.has(blocker.code)) return blocker;
+  const ended = (coursesEnded ?? [])
+    .filter((course) => levelRank[course.level] >= levelRank[minimumLevel])
+    .reduce<(CertificationInTraining & { tripId: string }) | null>(
+      (latest, course) =>
+        !latest || course.finishesAt.getTime() > latest.finishesAt.getTime() ? course : latest,
+      null,
+    );
+  return ended
+    ? { ...blocker, params: { ...blocker.params, endedCourseTripId: ended.tripId } }
+    : blocker;
+}
+
 function certificationBlocker(
   certifications: readonly Certification[],
   minimumLevel: CertificationLevel,
   inTraining: readonly CertificationInTraining[],
+  noCertificationDeclared: boolean,
   now: Date,
 ): ReadinessBlocker | null {
   const verified = certifications.filter(validVerifiedCertification);
@@ -708,6 +918,14 @@ function certificationBlocker(
       code: "certification_insufficient",
       params: { requiredLevel: minimumLevel, heldLevel },
     };
+  }
+  // **The diver's own "not yet"**, below every card the shop holds and every
+  // course that gets them there: a verified card, a number waiting on review
+  // or a course finishing first all answer more than the statement does. Above
+  // a bare self-declared level and plain `missing`, because it is the one
+  // answer that tells the desk what conversation to have before the day.
+  if (noCertificationDeclared) {
+    return { code: "certification_not_yet", params: { requiredLevel: minimumLevel } };
   }
   // Below every state backed by something the shop holds, and above plain
   // `missing` only because it can say more: the diver told us a level and gave
@@ -823,7 +1041,10 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // under-age student is under-age whether or not anyone has configured the
   // trip's cert gates yet. Measured on the day the course runs, matching the
   // booking gate (src/db/bookings.ts).
-  if (input.courseDate) {
+  // A course's student is its diver: a snorkeler or a rider beside them is
+  // asked neither the course's age nor its forms (issue #2226).
+  const student = isDiver(input.participantType);
+  if (input.courseDate && student) {
     const age = checkMinimumAge(input.dateOfBirth, input.courseMinimumAge, input.courseDate);
     if (age.status === "under") {
       blockers.push({
@@ -868,7 +1089,16 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
 
   // The release's own blockers follow the departure's setting.
   if (input.requirement.requiresWaiver) {
-    if (state === "not_sent") blockers.push({ code: "waiver_not_sent" });
+    if (state === "not_sent") {
+      blockers.push({
+        code:
+          input.releaseLapse === "before_trip"
+            ? "waiver_runs_out"
+            : input.releaseLapse
+              ? "waiver_lapsed"
+              : "waiver_not_sent",
+      });
+    }
     if (state === "awaiting_signature") {
       blockers.push({ code: "waiver_pending" });
     }
@@ -883,7 +1113,8 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       state === "complete" &&
       guardianSignatureMissing(input.waiver, {
         dateOfBirth: input.dateOfBirth,
-        timezone: input.timezone ?? "UTC",
+        minorDeclared: input.minorDeclared ?? false,
+        timezone: input.timezone,
       })
     ) {
       blockers.push({ code: "guardian_signature_missing" });
@@ -893,18 +1124,31 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // The course's own forms, one blocker per form still unsigned for this
   // enrollment. Independent of the departure's waiver setting: a course that
   // lists a form has said, on its own, that every student signs it. Behind one
-  // switch until the owner rules on block-or-warn (ADR 20261008-course-forms).
-  if (COURSE_FORMS_BLOCK_BOARDING && input.courseForms) {
-    for (const { form, gap } of courseFormGaps({
+  // switch until the owner rules on block-or-warn (ADR 20261008-course-forms);
+  // a form marked medical screening blocks whatever the switch says (#2337).
+  if (input.courseForms && student) {
+    for (const { form, gap, ageUnknown } of courseFormGaps({
       ...input.courseForms,
-      signer: { dateOfBirth: input.dateOfBirth, timezone: input.courseForms.timezone },
+      signer: {
+        dateOfBirth: input.dateOfBirth,
+        minorDeclared: input.minorDeclared ?? false,
+        timezone: input.courseForms.timezone,
+      },
     })) {
+      if (!COURSE_FORMS_BLOCK_BOARDING && !form.medicalScreening) continue;
       blockers.push({
         code: gap === "guardian_missing" ? "course_form_guardian_missing" : "course_form_unsigned",
-        params: { formTitle: form.title },
+        params:
+          ageUnknown && form.maxAgeYears !== undefined
+            ? { formTitle: form.title, formMaxAge: form.maxAgeYears }
+            : { formTitle: form.title },
       });
     }
   }
+
+  // A training mark that stopped being true. Whatever the course-forms switch
+  // says: until staff fix the mark, nobody knows which forms this seat owes.
+  if (input.trainingMarkInvalid) blockers.push({ code: "training_mark_invalid" });
 
   // A snorkeler or a rider is asked for no card: the trip's and its sites'
   // gates compose to nothing for a seat with no dive in it. Composed here, in
@@ -918,9 +1162,14 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
       input.certifications,
       effective.minimumCertificationLevel,
       input.certificationsInTraining ?? [],
+      input.noCertificationDeclared ?? false,
       now,
     );
-    if (certification) blockers.push(certification);
+    if (certification) {
+      blockers.push(
+        withEndedCourse(certification, effective.minimumCertificationLevel, input.coursesEnded),
+      );
+    }
   }
 
   for (const specialty of effective.requiredSpecialties) {

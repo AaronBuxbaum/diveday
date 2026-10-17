@@ -7,7 +7,9 @@ import {
   formatDateWithYear,
   formatDayParts,
   formatMonthDay,
+  formatNearDay,
   formatOrdinal,
+  formatPlannedDateTimeTz,
   formatRelativeDay,
   formatShortDate,
   formatTime,
@@ -213,6 +215,18 @@ describe("formatTime", () => {
   });
 });
 
+describe("formatPlannedDateTimeTz", () => {
+  it("says the weekday, the date, the time and the zone, for a time planned against from afar", () => {
+    const at = new Date("2026-10-26T19:00:00Z");
+    expect(formatPlannedDateTimeTz(at, "en-US", "America/New_York").replace(/\u00A0/g, " ")).toBe(
+      "Mon, Oct 26, 3:00 PM EDT",
+    );
+    const es = formatPlannedDateTimeTz(at, "es-ES", "America/New_York");
+    expect(es).toMatch(/26/);
+    expect(es).toMatch(/15:00/);
+  });
+});
+
 describe("formatDateTimeTz", () => {
   it("includes a timezone on safety-relevant timestamps", () => {
     expect(formatDateTimeTz(morning, "en-US", "UTC")).toBe("Jul\u00A017, 7:30\u00A0AM\u00A0UTC");
@@ -314,6 +328,40 @@ describe("rendering a stored instant in the shop's zone", () => {
     const lordHoweWinter = new Date("2026-07-15T21:30:00Z"); // 08:00 +10:30
     expect(formatTime(lordHoweSummer, "en-US", "Australia/Lord_Howe")).toBe("8:00\u00A0AM");
     expect(formatTime(lordHoweWinter, "en-US", "Australia/Lord_Howe")).toBe("8:00\u00A0AM");
+  });
+});
+
+describe("formatNearDay", () => {
+  const noon = (day: string) => new Date(`${day}T12:00:00Z`);
+  const now = noon("2026-10-14");
+
+  it("names yesterday, today and tomorrow, capitalized to open a line", () => {
+    expect(formatNearDay(noon("2026-10-14"), now, "en-US", "UTC")).toBe("Today");
+    expect(formatNearDay(noon("2026-10-15"), now, "en-US", "UTC")).toBe("Tomorrow");
+    expect(formatNearDay(noon("2026-10-13"), now, "en-US", "UTC")).toBe("Yesterday");
+    expect(formatNearDay(noon("2026-10-14"), now, "es-ES", "UTC")).toBe("Hoy");
+  });
+
+  it("keeps the platform's case mid-sentence", () => {
+    expect(formatNearDay(noon("2026-10-14"), now, "en-US", "UTC", { lead: false })).toBe("today");
+  });
+
+  it("says nothing two days out either way, where the date is the clearer word", () => {
+    expect(formatNearDay(noon("2026-10-16"), now, "en-US", "UTC")).toBeNull();
+    expect(formatNearDay(noon("2026-10-12"), now, "en-US", "UTC")).toBeNull();
+  });
+
+  it("reads the shop's calendar day, not UTC's", () => {
+    // 7:00 AM EDT on the 14th, read at 11:30 PM EDT on the 14th (03:30 UTC
+    // on the 15th): still today at the shop.
+    expect(
+      formatNearDay(
+        new Date("2026-10-14T11:00:00Z"),
+        new Date("2026-10-15T03:30:00Z"),
+        "en-US",
+        "America/New_York",
+      ),
+    ).toBe("Today");
   });
 });
 

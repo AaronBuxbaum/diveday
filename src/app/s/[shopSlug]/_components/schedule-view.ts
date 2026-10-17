@@ -198,7 +198,7 @@ export function scheduleDayWords(now: Date, locale: string, tz: string) {
 /**
  * Seat state as a word plus the tone that decides whether it earns a badge.
  * Low inventory keeps the urgent wording the booking form itself switches to
- * ("Book the last spot") — never colour alone (WCAG 1.4.1).
+ * ("Book the last seat") — never colour alone (WCAG 1.4.1).
  */
 export function scheduleSeatState(t: DiverTranslator, trip: { capacity: number; booked: number }) {
   const label = capacityLabel(trip);

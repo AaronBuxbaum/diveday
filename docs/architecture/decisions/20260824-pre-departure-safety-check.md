@@ -28,8 +28,8 @@ a crew has open at the rail) — nothing had assembled them.
   `pre_departure_check_events` (append-only, one row per tap, newest-per-item wins) — modeled
   directly on `gear_items`/`gear_service_events`'s shape, not on roll call's, because the safety
   stakes differ: a checklist item is never the record of a diver who did not come back from a dive.
-- **DiveDay authors no checklist content.** The required set differs by flag state, vessel class
-  and jurisdiction; a hard-coded US list rendered to a shop in Cozumel would be worse than no list.
+- **DiveDay authors no checklist content** (but one line since 2026-10-13: see the amendment
+  below). The required set differs by flag state, vessel class and jurisdiction; a hard-coded US list rendered to a shop in Cozumel would be worse than no list.
   The demo shop ships five realistic lines (`seedPreDepartureChecklist`) so the shape reads on
   first look, and nothing else is DiveDay's words.
 - **Informs, never gates.** Nothing here may block a departure page from rendering, a trip from
@@ -122,3 +122,18 @@ agree on what an absent field means.
 - The next feature that wants a shop-authored ordered list (checklist or otherwise) has a template
   to copy — `pre_departure_checklist_items`'s shape, `canPersonManageShopSettings`-gated CRUD, and
   the swap-and-rewrite reorder pattern — without inheriting anything checklist-specific.
+
+## Amendment, 2026-10-13: one default line, oxygen (owner decision, issue 2301)
+
+Emergency kit moves between hulls, but the gear register assigns a unit to one boat
+(`gear_items.aboard_boat_id`), so a departure on the second hull can show an O2 kit that is on the
+first. The owner chose a prompt over per-departure kit assignment: **every new shop starts with one
+pre-departure line, "O2 kit aboard and cylinder full"**, written by `createSignedUpShop`
+(`src/db/shop-signup.ts`) in the shop's language from `settings.safetyChecklist.defaultLine`.
+
+- It is an ordinary row of `pre_departure_checklist_items` from the moment it exists: the shop may
+  reword it, reorder it or delete it, and it informs, never gates.
+- Still no other DiveDay words. Oxygen is the one item every recreational operation carries
+  whatever its flag state; the rest of the list stays the shop's.
+- No backfill for shops created before the change (H-49). Per-departure kit assignment is left
+  until shops ask for it.

@@ -1,21 +1,161 @@
 # Testing
 
-## Layers
+The strategy: what each layer is for, what runs when, and how a change chooses its tests. The
+mechanics of each layer follow. A decision that changes a rule below edits its own row or line;
+every other section stands.
 
-| Layer | Tool | Where | What it proves |
+## What each layer is for
+
+| Layer | Tool, where | Owns | Never |
 | --- | --- | --- | --- |
-| Unit | Vitest | colocated `src/**/*.test.ts(x)` | domain logic: cert gating, capacity, pricing, formatting |
-| Component | Vitest + Testing Library | colocated | interactive components behave (role-based queries) |
-| Fetch boundary | Vitest + MSW | colocated, e.g. `offline-manifest-store.test.ts` | client code that calls a real `/api/*` route — narrow, see [ADR 20260719](../architecture/decisions/20260719-msw-offline-sync-only.md) |
-| Real Postgres | Vitest + a service container | `src/db/*.postgres.test.ts` | the committed `drizzle/` migrations apply to a genuine server, and the `FOR UPDATE` guards actually hold under two concurrent connections — see [below](#the-real-postgres-suites) |
-| E2E | Playwright | `e2e/*.spec.ts` | critical user flows survive integration |
-| Visual | reg-suit + S3 | `e2e/visual.spec.ts`, `.reg/` | key surfaces (light + dark × phone + desktop, plus print) still look right — see [ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md) |
+| Rules | Vitest `lib`, colocated `src/lib/**/*.test.ts` | every decision with a branch: cert gating, capacity, pricing, dates; the refusal case is mandatory | rendering |
+| Database | Vitest `db` on PGlite, `src/db/**/*.test.ts` | queries, transactions, erasure, reset | proving a race (PGlite is one connection) |
+| Real Postgres | Vitest + a `postgres:16` container, `src/db/*.postgres.test.ts` | every lock and race guard; the committed `drizzle/` set applying to a real server ([below](#the-real-postgres-suites)) | anything else |
+| Component | Vitest `ui` + Testing Library, colocated `.test.tsx` | interactive widgets: what a person clicks and sees, by role and label | class names, server pages |
+| Fetch boundary | Vitest + MSW, e.g. `offline-manifest-store.test.ts` | client code calling one of our own `/api/*` routes ([ADR 20260719](../architecture/decisions/20260719-msw-offline-sync-only.md)) | server-side providers |
+| Request-level | Playwright's `request` fixture, or a route-handler unit test | redirects, sitemap, feeds, webhooks, status probes, refusals | a browser |
+| Browser | Playwright, `e2e/*.spec.ts` | the [critical journeys](#critical-journeys) and the flows a change touches: the happy path plus the refusals that protect safety or money; found by role and message key | exact wording, layout, edge cases a rules test can carry |
+| Screenshots | reg-suit + S3, `e2e/visual.spec.ts` | a surface's populated and trouble states, per [captures.md](../../.claude/skills/e2e-and-visual/captures.md): light at phone and desktop, dark at desktop only, plus print ([ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md)) | proving behavior |
+| Repo checks | `pnpm check:repo` (`scripts/check-*.mjs`) and the Vitest `guards` project | every rule that reads source: "every X has Y", no raw colour, one way imports | a single page's markup |
+| Coverage floors | `@vitest/coverage-v8`, ci.yml's `coverage-floors` ([below](#coverage-floors)) | branch coverage of the eleven safety files never falling | a coverage target for the rest of the tree |
+| Mutation | Stryker, `mutation.yml` ([below](#mutation-testing)) | survivors in the safety rules, filed as issues | failing a run |
+| Nightly and weekly | `simulate-day.yml`, `persona-bots.yml`, ci.yml's schedule | a whole shop day, persona walks, real Postgres against what other branches merged | blocking a PR |
 
 Almost every page in `src/app/` is an `async function Page()` reading the database directly and
-mutating through inline `"use server"` closures — not a client fetching JSON. That's exactly the
-shape Next's own docs say Vitest doesn't support (`node_modules/next/dist/docs/01-app/02-guides/testing/vitest.md`).
-Don't reach for MSW or Testing Library to cover a flow like that; it belongs in `e2e/`. MSW is for
-the rare case where a client component makes a real `fetch` to one of our own routes (see the ADR).
+mutating through inline `"use server"` closures, which is the shape Next's own docs say Vitest
+does not support (`node_modules/next/dist/docs/01-app/02-guides/testing/vitest.md`). Such a flow
+belongs in `e2e/`; MSW is for the rare client component that fetches one of our own routes.
+
+**Mock the framework edge, never `@/db/*`.** A unit test may replace `next/*` (headers,
+navigation, cache), the session, and provider HTTP (Stripe, email, SMS: `src/test/fakes.ts`). The
+database is always real PGlite: a test that mocks `@/db/*` pins call shapes, breaks on a harmless
+refactor and stays green when the query's contract drifts. Files that still mock it move to a real
+database when touched; `src/app/s/[shopSlug]/trips/[id]/actions.gear-fit.test.ts` is the worked
+example.
+
+**Fixtures come from `src/test/`.** `db.ts` hands out the database (`fileScopedShopContext`,
+`seededShopContext`, `unseededTestDb`; [below](#the-test-database-is-a-snapshot-not-a-boot)),
+`fakes.ts` the providers, `staff-session.ts` a signed-in staff member, `frozen-clock.ts` the
+clock, `source.ts` the tree a guard walks. Rows come from `src/test/factories.ts` (`secondShop()`,
+`aDiver`, `aTrip`, `aBooking`, `staffWithRole`) before a raw `insert`: a cross-tenant case is then
+one line, so it gets written.
+
+**A rule over source is a guard.** A test that reads files to assert a rule lives in `check:repo`
+or the `guards` project ([repo-checks.md](../agents/repo-checks.md)), never beside a component. A
+class name, a marker order or a JSX count pinned in a unit test is a change detector: it fails on a
+refactor and passes on a broken render. **A geometry fix is proven by a capture**, not a class
+assertion: the screenshot shows the overlap gone.
+
+## How a change decides its tests
+
+1. A new rule or branch: a rules test, the refusal included. Always.
+2. New stored data: a database test. If it locks or can race: a real-Postgres test.
+3. A new or changed flow: extend the spec that walks it; a new spec file only for a new kind of
+   user or a new entry point. A new journey a shop could not run a day without gets a row in
+   [Critical journeys](#critical-journeys).
+4. A new screen or state: a capture in `e2e/visual.spec.ts`, in the matrix above;
+   [captures.md](../../.claude/skills/e2e-and-visual/captures.md) says which states earn one.
+5. A wording-only change: no new test.
+6. A redirect, feed, webhook or probe: a request-level test.
+
+Safety-critical logic (manifests, roll call, readiness, cert gating, medical, waivers, nitrox,
+erasure) merges with tests for the failure paths, not only the happy path.
+
+## Critical journeys
+
+The walks a shop cannot lose, each with the browser test that proves it. This list is the e2e
+floor, not "every important flow" (testing review decision 2, 2026-10-14):
+`pnpm check:critical-journeys` (in `check:repo`) fails when a row's spec is gone or its test is
+renamed, deleted or skipped. Renaming a journey's test renames its row in the same change.
+
+| Journey | Spec | Test |
+| --- | --- | --- |
+| A diver books a seat | `e2e/booking.spec.ts` | full loop: staff schedules, visitor books, staff sees the roster |
+| A diver pays online at booking | `e2e/booking.spec.ts` | a diver's card payment at booking settles their Pay step |
+| A full boat takes a wait list, not a seat | `e2e/booking.spec.ts` | a full boat lets a diver join the wait list without taking a seat |
+| The charter's gate refuses a booking | `e2e/trip-admission.spec.ts` | the public trip page states what the charter requires above the form, and says so again when the booking is refused |
+| A diver signs a waiver with a medical yes | `e2e/waivers.spec.ts` | one waiver button sends a resumable link and a medical yes surfaces follow-up |
+| A minor's waiver needs a parent | `e2e/guardian-co-signature.spec.ts` | a minor's release asks for a parent, refuses without one, and names who co-signed |
+| Staff verify a certification | `e2e/certifications.spec.ts` | staff captures and verifies level and specialty certifications before either can be trusted |
+| The counter checks a diver in | `e2e/check-in.spec.ts` | counter check-in finds a diver's boat, confirms live readiness, and keeps blocked rows out of the line |
+| Roll call on the live manifest | `e2e/manifest.spec.ts` | live manifest retains blocked divers and records an explicit not-boarded result |
+| Roll call offline | `e2e/manifest.spec.ts` | captain saves the full checkpoint manifest, reloads it offline, and reconciles roll call |
+| A canceled booking flags its refund | `e2e/refunds.spec.ts` | canceling a paid counter booking inside the free-cancellation window flags a manual refund |
+| Staff sign in and out | `e2e/auth.spec.ts` | staff sign-in lands on the shop dashboard and sign-out locks it again |
+| A role is refused what it may not touch | `e2e/role-permissions.spec.ts` | the daily crew (captain) is denied money, legal, deletion, and trip config |
+| One shop never reaches another's | `e2e/tenant-isolation.spec.ts` | a second shop's owner reaches none of Blue Mantis's staff surfaces |
+| A diver prepares from their own link | `e2e/readiness.spec.ts` | a booked diver's readiness page lets them act and answers its questions |
+| A deleted diver can be erased | `e2e/divers.spec.ts` | erase is absent on a live diver's record and appears once they are deleted |
+| The shop exports its data | `e2e/export.spec.ts` | staff download the whole shop as documented CSVs |
+
+## What runs when
+
+| When | What runs |
+| --- | --- |
+| Before a commit | the guard you touched, `pnpm lint`, `pnpm typecheck`, `pnpm test <file>`; a changed flow's specs; a changed surface's captures in light (the **verify** skill) |
+| Before a push | `pnpm verify:push`: regen and a clean tree, check:repo and `guards`, every source-reading test, `vitest related`, and the specs `pnpm e2e:affected` names ([verifying.md](../agents/verifying.md#the-pre-push-gate)) |
+| Every pull request | repo checks, lint, typecheck, all unit tests (4 shards) with the coverage floors, the build, every Playwright spec (6 shards), the captures `visual-affected` selects (up to 8 shards); real Postgres when `src/db/**` or `drizzle/**` changed |
+| Push to `main` | all of the above with every capture: the next baseline |
+| Nightly | real Postgres (ci.yml's schedule), the one-day simulation, quarantined tests and the flake hunt (`e2e-nightly.yml`), CodeQL, the follow-up scan |
+| Weekly | the persona walk, the shard-duration refresh; mutation testing once its runner works (manual until then) |
+
+**A scheduled run that goes red files itself.** `simulate-day.yml`, `durations-refresh.yml`,
+`e2e-nightly.yml` and `mutation.yml` end with `node scripts/workflow-alert.mjs`: a red run on the
+default branch opens one `ci-red` + `needs-triage` issue in the follow-up format, each later red
+run comments on it, and the first green run closes it. A manual run on another branch files
+nothing.
+
+**Flakes.** Playwright runs `retries: 0` locally and in CI, so a flake fails the run that meets it.
+One exception, decided 2026-10-16 (#2633): a CI shard, functional or visual, whose failure log
+carries the renderer probe's `wedged, not slow` verdict reruns only its failed tests once with
+`--last-failed`. That verdict proves the browser stopped answering; every other failure stays red.
+A failing or flaky test is part of the work that meets it, even when unrelated: fixed, after
+searching open PRs for a fix in flight, or quarantined; never skipped, never given a wider timeout
+(AGENTS.md, testing review decision 4).
+
+- **Flaky needs evidence**: it failed and passed on one sha with no code change, or failed in the
+  nightly flake hunt.
+- **Quarantine** is the tag `@quarantine` (in the title or the `tag:` option) with, on its line
+  or the four above, `// diveday:quarantine #<open issue> until <YYYY-MM-DD>: <what flakes>`.
+  `pnpm check:e2e-hygiene` refuses a tag without both, an expiry more than 7 days out, an expired
+  one (so a lapsed quarantine turns every branch red the next day), and more than 3 at once. The
+  fix removes the tag; the date is never moved.
+- **Where it runs**: `playwright.config.ts`'s `grepInvert` leaves quarantined tests out of every
+  PR, push-gate and local run. `.github/workflows/e2e-nightly.yml` sets
+  `DIVEDAY_RUN_QUARANTINE=1` and runs them every night, then runs each spec that failed on CI in
+  the last 7 days five times (`--repeat-each=5`, `scripts/e2e-recent-failures.mjs`, at most 8
+  specs).
+
+## Selection
+
+What a diff runs is decided by reading it, at two places:
+
+- **Captures on a pull request**: `scripts/visual-affected.mjs`, in ci.yml's `visual-plan`. It
+  follows each changed declaration by name (`scripts/symbol-reach.mjs`: through imports, barrels
+  and re-exports, not whole files) to the routes that render it, a changed message key to the
+  modules that name it, a `public/` asset to the code that names its path, and picks the captures
+  that visit those routes plus a fixed smoke set; an edit inside `e2e/visual.spec.ts` or a capture
+  helper picks the captures it touched. It captures everything for the capture harness, the seed
+  and schema, a stylesheet, a root config or renderer dependency, a module every page runs (the
+  proxy, the service worker), and its own plumbing (`ci.yml`, the setup action, these scripts). The `visual-all` label forces
+  everything; every surface not captured is copied from the baseline before the compare.
+  Locally, `--grep <file>` writes the light-mode Playwright grep for the same selection.
+- **Specs before a push**: `scripts/e2e-affected.mjs`, run by `verify:push`. *Strong*: a spec or
+  helper the diff edits, a spec quoting text the diff removed, a spec visiting a route whose own
+  directory changed. *Smoke*: five tests (booking, a waiver, check-in, roll call offline, sign-in)
+  whenever the app changed. *Reach*: specs visiting a route the changed names reach, ranked by how
+  much of the diff's vocabulary they name, run while they fit the time budget. `--commit <sha>`
+  replays one commit, to score the selector against what CI caught.
+
+**One `capture()` is three images** (four for a `TABLET_SURFACES` name): light at 390 and 1280
+(and 820 for a tablet surface), dark at 1280 only (`DARK_VIEWPORTS` in `e2e/visual.spec.ts`);
+`captureStickyFoot()` follows the same rule and the phone fold capture is light only. A full run is
+912 images, down from 1,218. The accepted risk is a dark-only defect that shows only at phone
+width.
+
+CI's Playwright shards run every spec but one: `e2e/pixel-probe.spec.ts` runs on `main` and when
+the probe, its spec, `e2e/fixtures.ts`, `globals.css`, a dependency or `ci.yml` changed
+(`changes.pixel_probe`).
 
 ## Commands
 
@@ -123,6 +263,40 @@ Options: `--dry-run` (shape the issues and print them, file nothing — what a s
 `--judge` (the opt-in judged pass; needs `ANTHROPIC_API_KEY`, and prints `DID NOT JUDGE` and carries
 on without it), `--no-build`, `--keep`, `--out <dir>`.
 
+### Coverage floors
+
+`vitest.config.ts` measures coverage only with `--coverage.enabled`, and only on the eleven safety
+files: `src/lib/{readiness,trip-admission,waivers,roll-call,trips,authz}.ts` and
+`src/db/{bookings,checkouts,refunds,promo-caps,account-security}.ts`. CI's four unit shards run with
+`--coverage.enabled --reporter=blob`; the `coverage-floors` job merges the blobs (`vitest run
+--merge-reports --coverage.enabled`, no second test run) and runs `node scripts/coverage-floors.mjs`,
+which fails when a file's branch coverage falls below its floor in `scripts/coverage-floors.json`.
+A higher reading prints "can rise" and passes. The merged summary is the `coverage-summary`
+artifact, so a floor can be raised without a local full run. Locally: `pnpm coverage:floors` (a full
+unit run).
+
+Floors only rise: `--write <summary>` banks rises and refuses falls; `--write --absorb "<why>"`
+records a fall with its reason. The first floors (2026-10-15, branch coverage): readiness 97.07%,
+trip-admission 97.61%, lib/waivers 93.39%, roll-call 83.33%, lib/trips and lib/authz 100%, bookings
+86.41%, checkouts 87.29%, refunds 83.15%, promo-caps 75%, account-security 81.81%. ADR
+[20261015-coverage-and-mutation-testing](../architecture/decisions/20261015-coverage-and-mutation-testing.md).
+
+### Mutation testing
+
+`pnpm test:mutation --mutate <module>` runs Stryker (`@stryker-mutator/core` and `vitest-runner`
+9.6.1; 10.0.0 pulls in Babel 8, which Sentry's bundler plugin refuses as a peer) against the `lib`
+project's pure tests (`stryker.config.mjs`, `stryker.vitest.config.ts`; the threads pool, which the
+PGlite files cannot use). The report is `reports/mutation/mutation.json`.
+
+`.github/workflows/mutation.yml` runs it on `src/lib/readiness.ts` and `src/lib/trip-admission.ts`,
+by hand for now and Sundays 04:00 UTC once the runner works. `scripts/mutation-issues.mjs` files a
+module's survivors (`Survived` and `NoCoverage`) as one `mutation-survivors` + `needs-triage` issue,
+comments each later run's list on it, and closes it when none survive. Survivors never fail the run.
+
+**Not yet a real score.** Under Vitest 5 the runner never switches on a mutant inside a function, so
+every such mutant survives with its tests green (#2622 carries the trial and the debugging).
+Until that is fixed, read a survivor list as noise.
+
 ### Why `playwright-core` is pinned in devDependencies
 
 `playwright-core` is declared explicitly at the exact version `@playwright/test` resolves to. It is
@@ -146,7 +320,8 @@ that photographs it, or a written `exempt` reason for the half it lacks. Most of
 derived from the tree every run — a spec whose source holds a path literal resolving to the route
 covers it, and a capture shot after the last such literal inside one `test(` photographs it.
 `scripts/route-coverage.json` holds only what no literal shows: the specs and captures that reach a
-route by clicks, and the exemptions.
+route by clicks, and the exemptions. A capture never counts as a route's spec: a photograph is not
+a flow.
 
 It exists because a page with no test is silent by construction: it produces no failure for anyone
 to notice. A 2026-08-03 evaluation of the test system found three staff pages that had shipped with
@@ -293,6 +468,12 @@ named, and all picked up by that glob rather than by a list anyone has to rememb
 | `refunds.postgres.test.ts` | Two — and five — simultaneous taps of Refund on one paid order reach Stripe exactly once; the losers are refused locally with `in_progress` rather than by Stripe's over-refund rejection (PAY-L3) |
 | `roll-call.postgres.test.ts` | The counter marking a diver not here and the crew boarding them at the rail serialise on the booking row, so a standing `boarded` result and a released seat never both stand — the rail overrules the desk, and never refuses |
 | `seat-lock-order.postgres.test.ts` | Seat writers meeting on one departure (an undo of a no-show, a counter check-in, a participant-type change, the rail boarding) take the trip and then the booking, so none of the pairs deadlocks (#2324) |
+| `seat-locks.postgres.test.ts` | `lockSeatDeparture` parks a second counter action on the departure before it holds the seat, leaves a roll-call insert's `KEY SHARE` alone, and gives up a wait on a stuck departure in five seconds (`55P03`, `boundLockWaits`) |
+| `work-orders.postgres.test.ts`, `waivers-templates.postgres.test.ts` | Two simultaneous tickets, or two saves of a release, get consecutive numbers; and neither waits behind an insert elsewhere in the shop, because the shop row is locked `for no key update` |
+| `course-forms.postgres.test.ts` | Two course syncs in one shop, each holding its course insert's `KEY SHARE`, both finish with one form per title; with the shop locked `for update` Postgres kills one with `40P01` |
+| `promo-caps.postgres.test.ts` | The last use of a capped code goes to exactly one of two checkouts |
+| `waitlist.postgres.test.ts` | One diver joining a full departure's wait list twice at once leaves one person and one entry |
+| `tips.postgres.test.ts` | One booking tipping twice at once asks Stripe for one session |
 | `postgres-harness.postgres.test.ts` | The harness itself: finishing a test never terminates a connection that is still alive, and an unreleased `holdRowLock` gate does not hang teardown |
 
 A new suite needs no wiring beyond the name: write `src/db/<thing>.postgres.test.ts` against
@@ -420,8 +601,12 @@ the full suite locally with identical pass counts across repeated runs.
 
 ## Conventions
 
-- **Test behavior, not implementation.** Query the DOM by role/label, assert outcomes; don't
-  reach into component internals or test styling classes.
+- **A spec never quotes a sentence.** A `getByText`/`toContainText` string of 40+ characters is
+  counted per file by `pnpm check:e2e-hygiene` (`e2e-long-literals` in `scripts/ratchets.json`,
+  testing review decision 8): the count may only fall, so a new one is refused. Find the element by
+  role and name, or read the sentence from its bundle by key (`diverTranslator("en-US")`,
+  `staffTranslator("en-US")`; `.claude/rules/e2e.md` shows both). Seed data (a shop's tagline, a
+  diver's review) is not copy: import its constant from the seed, or quote fewer words.
 - **Prefer `getByRole`/`getByLabel` over `getByText` in Playwright specs**, but don't hand-roll the
   visibility filter — `e2e/fixtures.ts`'s `page` fixture patches `getByText`, `getByRole`,
   `getByLabel`, and `getByPlaceholder` to `.filter({ visible: true })` automatically, so a
@@ -433,13 +618,8 @@ the full suite locally with identical pass counts across repeated runs.
   from `./fixtures`), aren't covered by the fixture and need the filter or wrapper at the call
   site. See the **e2e-and-visual** skill for the full pattern and its exceptions (elements with no
   layout box, intentional hidden-element assertions).
-- **Domain logic is where coverage lives.** `src/lib/` functions get thorough cases — edges
-  included (full boat, expired service, uncertified diver, physician-flagged medical). UI tests
-  stay thin.
 - **Time and zone are explicit.** Any date/time test passes an explicit `timeZone`; never depend
   on the runner's locale or clock. Fixed dates, not `new Date()`.
-- **E2E is a smoke layer, not a matrix.** One spec per critical flow (book a trip, sign a
-  waiver, run roll call), kept fast and unflaky; edge cases belong in unit tests.
 - **E2E keeps real application boundaries and disables third-party HTTP.** Exercise Next, auth,
   and the isolated PGlite database together. Test provider adapters with injected fakes in Vitest;
   do not add browser-level service-worker mocks for server-side providers.
@@ -476,17 +656,14 @@ the full suite locally with identical pass counts across repeated runs.
   `DIVEDAY_E2E_SECRET` bearer token, failing closed). `pnpm check:e2e-fixtures` fails when a handler
   under `src/app/api/test/**` doesn't call it, and each route carries auth-gate unit tests asserting
   the refusal lands before any database work.
-- **Safety-critical logic** (manifest counts, roll-call state, cert gating) merges only with
-  tests for the failure paths, not just the happy path.
-- **Visual regression freezes the clock, never masks.** Playwright visual tests in
-  `e2e/visual.spec.ts` capture each on-screen surface at light/dark ×
-  phone/desktop and the two dock surfaces in print mode. Nothing is masked: the server clock is
-  pinned by `DIVEDAY_CLOCK` and the browser clock by fixture setup, so
-  clock-derived text is pixel-stable and a regression in a date remains visible. Nothing in that
-  spec asserts — it writes raw PNGs into `e2e/screenshots/` (gitignored) — so a visual change never
-  shows up as a failed Playwright test. `pnpm visual` runs the capture and then `reg-suit run`,
-  which diffs against the S3 baseline for the parent commit and publishes the run and its HTML
-  report. There is no local baseline to update: merging is what makes a change the next baseline.
+- **Visual regression freezes the clock, never masks.** `e2e/visual.spec.ts` photographs each
+  surface through `capture()` (or `capturePrint()` for the dock surfaces). Nothing is masked: the
+  server clock is pinned by `DIVEDAY_CLOCK` and the browser clock by fixture setup, so
+  clock-derived text is pixel-stable and a regression in a date stays visible. Each capture first
+  waits on the heading or control it photographs, so a moved heading fails the capture as a test;
+  a changed look never does: it is a reg-suit diff against the S3 baseline for the fork point.
+  `pnpm visual` runs the capture and `reg-suit run`. There is no local baseline to update:
+  merging is what makes a change the next baseline.
 
 ## Adding a test
 
@@ -494,7 +671,9 @@ Unit: create `thing.test.ts` next to `thing.ts` — Vitest picks it up. Componen
 setup already imports jest-dom matchers. Fetch boundary: same, using `msw/node`'s `setupServer` —
 see `src/lib/offline-manifest-store.test.ts`. E2E: add `e2e/flow.spec.ts`, importing `test`/`expect`
 from `./fixtures` (not `@playwright/test`) so it gets the per-worker server and per-test reset; the
-config builds and boots the server fleet itself.
+config builds and boots the server fleet itself. Request-level: a test in the spec that owns the route, taking
+the `request` fixture instead of `page` (`e2e/seo.spec.ts`), with `maxRedirects: 0` to read a
+redirect's own status and `location`.
 
 A new e2e spec or visual capture that reaches its routes by URL is credited to them with no edit. One
 that reaches a route only by clicks names itself on that route's entry in

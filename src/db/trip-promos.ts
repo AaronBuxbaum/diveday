@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, count, countDistinct, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   filterEligibleLastMinuteRecipients,
@@ -23,8 +23,11 @@ import type { AppDb, DbExecutor } from "./client";
 import { issueLastMinuteListUnsubscribeToken, listLastMinuteList } from "./last-minute-list";
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { offsetPage, PAGE_SIZE } from "./paging";
+import { queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
+  bookingCheckoutBookings,
+  bookingCheckouts,
   people,
   type TripLastMinutePromo,
   tripLastMinutePromoRecipients,
@@ -485,4 +488,102 @@ export async function tripIdsNeverSentLastMinuteDeal(
     );
   const alreadySent = new Set(sent.map((row) => row.tripId));
   return new Set(tripIds.filter((id) => !alreadySent.has(id)));
+}
+
+/**
+ * **The departures a last-minute deal suits** (dive-domain review N7): of
+ * `tripIds`, the scheduled public boat departures that are not a course
+ * session. A half-empty Open Water session, a pool day or a private charter
+ * is not an offer a shop makes to its last-minute list, so the Monday email
+ * never suggests one.
+ */
+export async function tripIdsSuitedToADeal(
+  db: DbExecutor,
+  shopId: string,
+  tripIds: string[],
+): Promise<Set<string>> {
+  if (tripIds.length === 0) return new Set();
+  const rows = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        inArray(trips.id, tripIds),
+        eq(trips.status, "scheduled"),
+        eq(trips.diveMode, "boat"),
+        eq(trips.isPrivate, false),
+        isNull(trips.courseId),
+        liveTrip(),
+      ),
+    );
+  return new Set(rows.map((row) => row.id));
+}
+
+/** What a last-minute deal sold (fifth loop, item 28). */
+export type DealOutcome = { seats: number; seatsCents: number };
+
+/**
+ * **What each deal sold**: the seats on completed checkouts that carried the
+ * deal's code, and what those checkouts settled for net of tax, Stripe's own
+ * figure where it reported one and the asked total otherwise (the basis
+ * `getMonthlyReport` recovers deposits on). Without it a deal reads "Sent to 8
+ * divers" and stops, and the owner cannot tell a deal that filled a boat from
+ * one that discounted divers who were coming anyway.
+ */
+export async function lastMinuteDealOutcomes(
+  db: DbExecutor,
+  shopId: string,
+  dealIds: readonly string[],
+): Promise<Map<string, DealOutcome>> {
+  if (dealIds.length === 0) return new Map();
+  const [seatRows, moneyRows] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          dealId: bookingCheckouts.tripPromoId,
+          seats: countDistinct(bookingCheckoutBookings.bookingId),
+        })
+        .from(bookingCheckouts)
+        .innerJoin(
+          bookingCheckoutBookings,
+          and(
+            eq(bookingCheckoutBookings.checkoutId, bookingCheckouts.id),
+            eq(bookingCheckoutBookings.shopId, shopId),
+          ),
+        )
+        .where(
+          and(
+            eq(bookingCheckouts.shopId, shopId),
+            eq(bookingCheckouts.status, "completed"),
+            inArray(bookingCheckouts.tripPromoId, [...dealIds]),
+          ),
+        )
+        .groupBy(bookingCheckouts.tripPromoId),
+    () =>
+      db
+        .select({
+          dealId: bookingCheckouts.tripPromoId,
+          cents: sql<string>`coalesce(sum(greatest(coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents}) - coalesce(${bookingCheckouts.taxCents}, 0), 0)), 0)`,
+        })
+        .from(bookingCheckouts)
+        .where(
+          and(
+            eq(bookingCheckouts.shopId, shopId),
+            eq(bookingCheckouts.status, "completed"),
+            inArray(bookingCheckouts.tripPromoId, [...dealIds]),
+          ),
+        )
+        .groupBy(bookingCheckouts.tripPromoId),
+  ]);
+  const outcomes = new Map<string, DealOutcome>();
+  for (const row of seatRows) {
+    if (row.dealId) outcomes.set(row.dealId, { seats: Number(row.seats), seatsCents: 0 });
+  }
+  for (const row of moneyRows) {
+    if (!row.dealId) continue;
+    const seen = outcomes.get(row.dealId) ?? { seats: 0, seatsCents: 0 };
+    outcomes.set(row.dealId, { ...seen, seatsCents: Number(row.cents) });
+  }
+  return outcomes;
 }

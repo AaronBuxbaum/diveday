@@ -1,17 +1,4 @@
-import {
-  and,
-  desc,
-  eq,
-  gte,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  ne,
-  or,
-  type SQL,
-  sql,
-} from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, ne, or, type SQL, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { refundOnCancellation } from "@/lib/deposits";
 import { log } from "@/lib/log";
@@ -21,9 +8,13 @@ import type { PaymentSourceLookup } from "@/lib/payments/payment-sources";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { lockSeatsInOrder } from "./checkouts";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
+import { checkoutRefundKey, enqueueCheckoutIntegrationEvent } from "./integration-events";
+import { boundLockWaits } from "./lock-bounds";
 import { applyStripeRefundedTotalToOrder } from "./orders";
 import {
+  awaitingStripeReconciliation,
   idempotencyKeyFor,
+  markPaymentOperationUnanswered,
   recordPaymentOperationStripeObject,
   resolvePaymentOperation,
   STALE_AFTER_MS,
@@ -59,7 +50,16 @@ export type CancellationRefundOutcome =
   /** Nothing was captured (unpaid, waived, or already refunded). */
   | { status: "unpaid" }
   /** Refund is owed but can't be automated here — staff must issue it. */
-  | { status: "manual"; reason: "not_stripe" | "not_connected" | "not_refundable" }
+  /**
+   * Refund is owed, or may be, but can't be automated here — staff must issue
+   * it. `turned_away`: the desk turned this diver away before the seat was
+   * removed (H-135), so the diver's cancellation window does not apply and
+   * whether the fare is moved, refunded or kept is a person's call.
+   */
+  | {
+      status: "manual";
+      reason: "not_stripe" | "not_connected" | "not_refundable" | "turned_away";
+    }
   /**
    * Another refund of this same seat is already at Stripe. Refused *locally*
    * rather than sent as a second reversal — see {@link claimBookingRefund}.
@@ -148,7 +148,9 @@ type BookingRefundClaim<Outcome> =
  * idempotency key (deliberately, PAY-C1) and Stripe would accept a second
  * reversal against the balance still on the charge, which on a party checkout
  * is somebody else's fare. It belongs on the stuck-payment-operations panel,
- * where a human reconciles it, and answers `needs_reconciliation` here.
+ * where a human reconciles it, and answers `needs_reconciliation` here. So does
+ * a stale intent marked unanswered: the refund went out, no answer came back,
+ * and Stripe may have made it (`UNANSWERED_BY_STRIPE`).
  *
  * **PGlite caveat**, the same one `claimOrderRefund` carries: the default test
  * database is single-connection, so `FOR UPDATE` never blocks there and the
@@ -176,6 +178,7 @@ async function claimBookingRefund<Outcome>(
     eq(paymentOperationIntents.status, "started"),
   );
   return db.transaction(async (tx): Promise<BookingRefundClaim<Outcome>> => {
+    await boundLockWaits(tx);
     const [booking] = await tx
       .select({ id: bookings.id })
       .from(bookings)
@@ -200,7 +203,7 @@ async function claimBookingRefund<Outcome>(
     const [settledByStripe] = await tx
       .select({ id: paymentOperationIntents.id })
       .from(paymentOperationIntents)
-      .where(and(refundIntentsForThisBooking, isNotNull(paymentOperationIntents.stripeObjectId)))
+      .where(and(refundIntentsForThisBooking, awaitingStripeReconciliation()))
       .limit(1);
     if (settledByStripe) return { status: "needs_reconciliation" };
 
@@ -249,7 +252,7 @@ async function checkoutHasUnreconciledReversal(
         eq(paymentOperationIntents.shopId, shopId),
         eq(paymentOperationIntents.kind, "refund"),
         eq(paymentOperationIntents.status, "started"),
-        isNotNull(paymentOperationIntents.stripeObjectId),
+        awaitingStripeReconciliation(),
         eq(bookingCheckouts.stripeSessionId, plan.providerRef),
         eq(bookingCheckouts.stripeAccountId, plan.stripeAccountId),
       ),
@@ -279,6 +282,12 @@ async function parkStripeReversal(
     chargeId: string;
     reason: "unattributed_refund" | "unrecorded_refund";
     amountRefundedCents: number;
+    /**
+     * An unattributed refund's own share of that figure — what this event took
+     * that no seat carries — which staff match to seats from the Orders index
+     * (`src/db/unattributed-refunds.ts`, issue #2293).
+     */
+    unattributedCents?: number;
   },
 ): Promise<void> {
   const note = `${input.reason}:${input.amountRefundedCents}`;
@@ -307,6 +316,7 @@ async function parkStripeReversal(
     ...input.target,
     stripeObjectId: input.chargeId,
     errorMessage: note,
+    amountCents: input.unattributedCents ?? null,
   });
   log("stripe_refund.parked", "warn", {
     shopId: input.shopId,
@@ -329,7 +339,7 @@ async function countCheckoutRefund(
   tx: AppTransaction,
   plan: Pick<BookingRefundPlan, "providerRef" | "stripeAccountId" | "refundCents">,
 ): Promise<void> {
-  await tx
+  const [counted] = await tx
     .update(bookingCheckouts)
     .set({ refundedCents: sql`${bookingCheckouts.refundedCents} + ${plan.refundCents}` })
     .where(
@@ -337,7 +347,33 @@ async function countCheckoutRefund(
         eq(bookingCheckouts.stripeSessionId, plan.providerRef),
         eq(bookingCheckouts.stripeAccountId, plan.stripeAccountId),
       ),
-    );
+    )
+    .returning({
+      id: bookingCheckouts.id,
+      shopId: bookingCheckouts.shopId,
+      refundedCents: bookingCheckouts.refundedCents,
+    });
+  // The shop's books hear about the refund in the same transaction that
+  // counts it, keyed on the running total, so the `charge.refunded` webhook
+  // that reports this same refund later finds nothing new to send (batch 6
+  // item 9).
+  if (counted) await enqueueCheckoutRefundEvent(tx, counted, plan.refundCents);
+}
+
+/** One refund against a completed checkout, for QuickBooks, Xero and Zapier (H-120). */
+async function enqueueCheckoutRefundEvent(
+  tx: AppTransaction,
+  checkout: { id: string; shopId: string; refundedCents: number },
+  refundCents: number,
+): Promise<void> {
+  if (refundCents <= 0) return;
+  await enqueueCheckoutIntegrationEvent(tx, {
+    shopId: checkout.shopId,
+    checkoutId: checkout.id,
+    eventType: "order.refunded",
+    idempotencyKey: checkoutRefundKey(checkout.id, checkout.refundedCents),
+    refundCents,
+  });
 }
 
 /**
@@ -364,7 +400,7 @@ export async function refundBookingOnCancellation(
   const now = input.now ?? nowDate();
 
   const [row] = await db
-    .select({ trip: trips })
+    .select({ trip: trips, turnedAwayAt: bookings.turnedAwayAt })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
@@ -384,6 +420,14 @@ export async function refundBookingOnCancellation(
     async (tx, payment) => {
       if (!isCapturedPaymentStatus(payment?.status)) {
         return { proceed: false, outcome: { status: "unpaid" } };
+      }
+      // **Turned away, then removed** (layer 3 review, dde-2 #2): the diver
+      // did not cancel, so their cancellation window is not the rule. A
+      // "past the window, non-refundable" here would be a forfeit nobody
+      // decided. Nothing moves automatically; the order is where a person
+      // moves, refunds or keeps it.
+      if (row.turnedAwayAt) {
+        return { proceed: false, outcome: { status: "manual", reason: "turned_away" } };
       }
 
       const decision = refundOnCancellation(row.trip, payment.amountCents ?? 0, now);
@@ -458,10 +502,15 @@ export async function refundBookingOnCancellation(
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
     return { status: "refunded", amountCents: plan.refundCents };
   }
-  // Left `started` only when Stripe answered *and* said no; a reversal Stripe
-  // did make has its id recorded above, and a crash before this line leaves the
-  // intent for `listStuckPaymentOperations` and for the reconciliation refusal
-  // in `claimBookingRefund`.
+  // Resolved `failed` only when Stripe answered *and* said no. A call that got
+  // no answer stays `started`, marked unanswered, because the reversal may
+  // exist: `claimBookingRefund` refuses on it and `listStuckPaymentOperations`
+  // shows it to a human. A reversal Stripe confirmed has its id recorded above,
+  // and a crash before this line leaves the intent for the same two.
+  if (result.status === "unanswered") {
+    await markPaymentOperationUnanswered(db, intent.id);
+    return { status: "needs_reconciliation" };
+  }
   await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
   if (result.status === "not_refundable") return { status: "manual", reason: "not_refundable" };
   if (result.status === "not_configured") return { status: "manual", reason: "not_connected" };
@@ -506,7 +555,13 @@ export type ShopCancellationRefundOutcome =
    */
   | { status: "needs_reconciliation" }
   /** Stripe was asked to refund and failed; staff should retry. */
-  | { status: "failed" };
+  | { status: "failed" }
+  /**
+   * The caller who cancelled may not move money (H-139), so the capture stays
+   * where it is and a refund holder releases it
+   * ({@link refundBookingsForShopCancelledTrip}). The diver is told it is owed.
+   */
+  | { status: "queued" };
 
 /**
  * Refund a booking because the shop cancelled its departure — a weather
@@ -623,10 +678,48 @@ export async function refundBookingOnShopCancellation(
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });
     return { status: "refunded", amountCents: plan.refundCents };
   }
+  // Unanswered is not failed: see `refundBookingOnCancellation`.
+  if (result.status === "unanswered") {
+    await markPaymentOperationUnanswered(db, intent.id);
+    return { status: "needs_reconciliation" };
+  }
   await resolvePaymentOperation(db, intent.id, { status: "failed", errorMessage: result.status });
   if (result.status === "not_refundable") return { status: "manual", reason: "not_refundable" };
   if (result.status === "not_configured") return { status: "manual", reason: "not_connected" };
   return { status: "failed" };
+}
+
+/**
+ * What a shop cancellation does with a seat's money when the person who called
+ * it off may not refund (H-139): nothing moves, and a captured seat reads
+ * `queued`. Everything else reads exactly as {@link refundBookingOnShopCancellation}
+ * would answer it, so the diver's mail is right for an unpaid seat, a package
+ * dive and a seat already refunded. The queue itself is the derivable list of
+ * captured seats on cancelled departures ({@link listOwedShopCancellationRefunds}).
+ */
+export async function queueBookingRefundOnShopCancellation(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+): Promise<ShopCancellationRefundOutcome> {
+  const payment = await getBookingPayment(db, input.shopId, input.bookingId);
+  if (payment?.status === "refunded") return { status: "already_refunded" };
+  if (isCapturedPaymentStatus(payment?.status)) {
+    return payment?.provider === "dive_package"
+      ? { status: "dive_returned" }
+      : { status: "queued" };
+  }
+  const [packageConsumption] = await db
+    .select({ id: bookingPaymentEvents.id })
+    .from(bookingPaymentEvents)
+    .where(
+      and(
+        eq(bookingPaymentEvents.shopId, input.shopId),
+        eq(bookingPaymentEvents.bookingId, input.bookingId),
+        eq(bookingPaymentEvents.operation, "package_consumed"),
+      ),
+    )
+    .limit(1);
+  return packageConsumption ? { status: "dive_returned" } : { status: "unpaid" };
 }
 
 /**
@@ -822,7 +915,9 @@ export async function refundBookingsForShopCancelledTrip(
  *   `order.refunded` integration event) or the seat now say what Stripe says.
  * - `checkout_unattributed` — recorded against a party checkout's running
  *   total, but no single seat on it can be named as the one refunded, so no
- *   seat's payment row was guessed at. Logged for staff to settle by hand.
+ *   seat's payment row was guessed at. Held as an unattributed amount on the
+ *   Orders index until staff pick the seat (`src/db/unattributed-refunds.ts`,
+ *   issue #2293); never split across the seats on a rule.
  * - `already_recorded` — Stripe's figure is already in DiveDay's books: the
  *   refund was DiveDay's own, or this is an older event arriving late.
  * - `deferred` — not yet: DiveDay's own refund of this money is mid-flight,
@@ -873,8 +968,10 @@ export type ExternalRefundInput = {
  * a `started` intent of any age that carries a Stripe object id: Stripe
  * confirmed that refund and the local write after it never landed, so this
  * event may be its echo, and counting it here would count it a second time
- * when a human reconciles the stuck operation. Only an old intent with no
- * Stripe object (the process died before Stripe answered) is ignored.
+ * when a human reconciles the stuck operation. So does one marked unanswered:
+ * the request went out and may have been honoured. Only an old intent with
+ * neither (the process died, and nothing says Stripe was ever reached) is
+ * ignored.
  */
 async function ownRefundInFlight(
   db: AppDb,
@@ -891,10 +988,7 @@ async function ownRefundInFlight(
         eq(paymentOperationIntents.shopId, shopId),
         eq(paymentOperationIntents.kind, "refund"),
         eq(paymentOperationIntents.status, "started"),
-        or(
-          gte(paymentOperationIntents.startedAt, staleBefore),
-          isNotNull(paymentOperationIntents.stripeObjectId),
-        ),
+        or(gte(paymentOperationIntents.startedAt, staleBefore), awaitingStripeReconciliation()),
         "orderId" in scope
           ? eq(paymentOperationIntents.orderId, scope.orderId)
           : inArray(paymentOperationIntents.bookingId, scope.bookingIds),
@@ -995,11 +1089,9 @@ async function countPaidAfterCloseRefund(
           eq(paymentOperationIntents.checkoutId, current.id),
           eq(paymentOperationIntents.kind, "refund"),
           eq(paymentOperationIntents.status, "started"),
-          // Fresh, or confirmed by Stripe and never counted: `ownRefundInFlight`'s rule.
-          or(
-            gte(paymentOperationIntents.startedAt, staleBefore),
-            isNotNull(paymentOperationIntents.stripeObjectId),
-          ),
+          // Fresh, or confirmed or unanswered by Stripe and never counted:
+          // `ownRefundInFlight`'s rule.
+          or(gte(paymentOperationIntents.startedAt, staleBefore), awaitingStripeReconciliation()),
         ),
       )
       .limit(1);
@@ -1087,6 +1179,11 @@ async function applyStripeChargeRefund(
       .update(bookingCheckouts)
       .set({ refundedCents: current.refundedCents + delta })
       .where(eq(bookingCheckouts.id, current.id));
+    await enqueueCheckoutRefundEvent(
+      tx,
+      { id: current.id, shopId: current.shopId, refundedCents: current.refundedCents + delta },
+      delta,
+    );
 
     // The seats this session still holds money for. Read under the checkout's
     // lock; each seat's own write below takes that seat's lock as well.
@@ -1105,7 +1202,18 @@ async function applyStripeChargeRefund(
               ),
             );
     const [seat, ...others] = holding;
-    if (!seat || others.length > 0) {
+    if (!seat) {
+      // No seat of this checkout holds money from it any more: every seat was
+      // already refunded or released. There is nothing for staff to match it
+      // to, so it is counted on the checkout and not parked; a parked row
+      // here would sit on the Orders queue with no seat to offer for ever.
+      log("stripe_refund.checkout_nothing_held", "warn", {
+        shopId: current.shopId,
+        checkoutId: current.id,
+      });
+      return { status: "checkout_unattributed" };
+    }
+    if (others.length > 0) {
       // Counted on the checkout, matched to no seat — and parked, so that a
       // human matches it and no seat of this charge is reversed on top of it
       // meanwhile ({@link checkoutHasUnreconciledReversal}). Inside this
@@ -1116,6 +1224,7 @@ async function applyStripeChargeRefund(
         chargeId: input.chargeId,
         reason: "unattributed_refund",
         amountRefundedCents: input.amountRefundedCents,
+        unattributedCents: delta,
       });
       log("stripe_refund.checkout_unattributed", "warn", {
         shopId: current.shopId,

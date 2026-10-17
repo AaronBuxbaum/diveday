@@ -128,6 +128,14 @@ describe("threadNextKey", () => {
       "Next: ask the shop for your waiver.",
       "Siguiente: pide tu exención al centro.",
     ],
+    waiver_lapsed: [
+      "Next: get a fresh waiver link.",
+      "Siguiente: consigue un enlace nuevo para la exención.",
+    ],
+    waiver_runs_out: [
+      "Next: get a fresh waiver link.",
+      "Siguiente: consigue un enlace nuevo para la exención.",
+    ],
     waiver_pending: ["Next: sign your waiver.", "Siguiente: firma tu exención."],
     waiver_expired: [
       "Next: get a fresh waiver link.",
@@ -172,6 +180,10 @@ describe("threadNextKey", () => {
       "Siguiente: consulta tu nivel de certificación con el centro.",
     ],
     certification_in_training: ["Next: finish your course.", "Siguiente: termina tu curso."],
+    certification_not_yet: [
+      "Next: nothing from you. The shop will get in touch before the day.",
+      "Siguiente: nada de tu parte. El centro se pondrá en contacto contigo antes del día.",
+    ],
     specialty_missing: [
       "Next: add your specialty card.",
       "Siguiente: agrega tu tarjeta de especialidad.",

@@ -9,6 +9,7 @@ import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { getBookingTripId, getWaiverSignerOnFile, getWaiverTripHeader } from "@/db/waiver-signing";
 import {
+  doctorPageOpen,
   getEmergencyContactForBearer,
   getEmergencyContactForPerson,
   getWaiverForToken,
@@ -153,13 +154,11 @@ export default async function WaiverPage({
         })
       : null;
     const readyPath = readyCapability ? readinessLinkPath(readyCapability.token) : null;
-    // **The medical step does not tick on a hold.** A record the shop is
-    // holding for a written sign-off is signed and received, and its medical
-    // side is *open* — the copy three lines above says a doctor must confirm
-    // before this diver can go out. A rail closing at "3 of 3 done" under that
-    // sentence is the product turning its own blocking state into a checkbox
-    // (glossary, **Waiver / release**), and the diver who reads the last thing
-    // on the page walks away believing the paperwork is finished.
+    // The same gate the doctor's page opens on, so the door never leads to a redirect.
+    const doctorDoor = needsReview && (await doctorPageOpen(db, state.record));
+    // **The medical step does not tick on a hold**: the record is signed but its
+    // medical side is open, and "3 of 3 done" under "a doctor must confirm" would
+    // turn the blocking state into a checkbox (glossary, **Waiver / release**).
     const signedRail = waiverRailProgress({
       medicalAnswered: 0,
       medicalTotal: 0,
@@ -173,6 +172,7 @@ export default async function WaiverPage({
         locale={locale}
         needsReview={needsReview}
         readyPath={readyPath}
+        doctorPath={doctorDoor ? `/waivers/${encodeURIComponent(token)}/doctor` : null}
         signedRail={signedRail}
         diveSitesList={diveSitesList}
       />
@@ -188,17 +188,18 @@ export default async function WaiverPage({
   // anything else). Shown as the field's hint so the rule is guidance before
   // it is ever a refusal — and it discloses nothing this booking-scoped
   // bearer link doesn't already stand for.
-  const signerOnFile = await getWaiverSignerOnFile(db, record.shopId, record.personId);
+  const signerOnFile = await getWaiverSignerOnFile(db, record);
   /**
    * **A minor signs twice** (ADR 20260907-guardian-co-signature). Decided from
-   * the date of birth the shop holds, on the shop's calendar day this page is
-   * being signed — the same rule `completeWaiver` refuses on, so the section
-   * is never rendered for a diver the writer would not ask, and never absent
-   * for one it would. No date on file reads as an adult (H-08's fail-open).
+   * the date of birth the shop holds or, with none, the seat's "Under 18"
+   * (H-113), on the shop's calendar day this page is being signed: the rule
+   * `completeWaiver` refuses on, so the section is never rendered for a diver
+   * the writer would not ask, and never absent for one it would.
    */
   const guardianRequired = guardianSignatureRequired(
     signerOnFile?.dateOfBirth,
     signingDate(nowDate(), shop.timezone),
+    signerOnFile?.minorDeclared ?? false,
   );
   const draftGuardian = record.draftGuardian;
   const questionnaire = questionnaireForJurisdiction(shop.jurisdiction);

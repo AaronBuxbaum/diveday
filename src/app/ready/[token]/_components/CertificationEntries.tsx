@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { certificationAgency, certificationLevel, type DiveSpecialty } from "@/db/schema";
 import type { DiverTranslator } from "@/i18n/messages";
 import {
@@ -13,6 +15,7 @@ import {
 import type { ReadinessBlockerCode } from "@/lib/readiness";
 import type { DiverChecklistItem } from "@/lib/readiness-summary";
 import {
+  declareNoCertificationFromReady,
   saveCertificationFromReady,
   saveNitroxCertificationFromReady,
   saveSpecialtyFromReady,
@@ -32,11 +35,25 @@ import {
  * nothing for a unique index to collide with, nothing for a staffer to look up,
  * and if this form were withheld the diver would be told their card was being
  * verified while holding the only copy of it (ADR 20260814-self-declared-cards).
+ *
+ * `certification_not_yet` is "waiting" (the diver has answered), so it never
+ * arrives in `actionable`; `notYet` below carries it instead.
  */
 const CERT_ENTRY_CODES = new Set<ReadinessBlockerCode>([
   "certification_missing",
   "certification_self_declared",
   "certification_insufficient",
+]);
+
+/**
+ * Where "I'm not certified yet" is offered (third UX review, item 23): the
+ * shop holds nothing for the diver, so a first-timer is looking at agency,
+ * level and number with nothing to pick. Never on `insufficient`, where a card
+ * is on file and the statement would be refused (`card_on_file`).
+ */
+const NOT_YET_OFFER_CODES = new Set<ReadinessBlockerCode>([
+  "certification_missing",
+  "certification_self_declared",
 ]);
 
 /**
@@ -118,20 +135,41 @@ export function CertificationEntries({
   token,
   item,
   offerNitrox,
+  notYet,
   t,
 }: {
   token: string;
   item: DiverChecklistItem;
   offerNitrox: boolean;
+  /**
+   * Present when the seat's level gate is unmet because the diver said "I'm
+   * not certified yet" (`certification_not_yet`): the shop's try-it course, if
+   * it publishes one, and the card form kept for a card found in a drawer (a
+   * card on file outranks the statement in `certificationBlocker`).
+   */
+  notYet: { introCourse: { title: string; href: string } | null } | null;
   t: DiverTranslator;
 }) {
   // Derived first, in its own pass: this used to be a flag set from inside the
   // `flatMap` below, which made whether the optional offer renders depend on a
   // side effect of building an unrelated array.
   const nitroxRequired = item.actionable.some((blocker) => NITROX_ENTRY_CODES.has(blocker.code));
-  const forms = item.actionable.flatMap((blocker) => {
+  const forms: React.ReactNode[] = notYet
+    ? [
+        ...(notYet.introCourse
+          ? [<IntroCourseDoor key="intro-course" course={notYet.introCourse} t={t} />]
+          : []),
+        <CertificationEntry key="certification_not_yet" token={token} t={t} />,
+      ]
+    : [];
+  for (const blocker of item.actionable) forms.push(...entriesFor(blocker));
+  function entriesFor(blocker: DiverChecklistItem["actionable"][number]): React.ReactNode[] {
     if (CERT_ENTRY_CODES.has(blocker.code)) {
-      return [<CertificationEntry key={blocker.code} token={token} t={t} />];
+      const entries = [<CertificationEntry key={blocker.code} token={token} t={t} />];
+      if (NOT_YET_OFFER_CODES.has(blocker.code)) {
+        entries.push(<NotYetAnswer key="not-yet" token={token} t={t} />);
+      }
+      return entries;
     }
     if (SPECIALTY_ENTRY_CODES.has(blocker.code) && blocker.params?.specialty) {
       return [
@@ -147,7 +185,7 @@ export function CertificationEntries({
       return [<NitroxEntry key={blocker.code} token={token} t={t} />];
     }
     return [];
-  });
+  }
   // Never both: a trip that demands nitrox already rendered the required one
   // above, and a second disclosure calling the same card optional would be the
   // page contradicting itself.
@@ -228,6 +266,60 @@ function CertificationEntry({ token, t }: { token: string; t: DiverTranslator })
         </div>
       </form>
     </CertificationDisclosure>
+  );
+}
+
+/**
+ * **The honest answer for a diver with no card** (third UX review, item 23).
+ *
+ * The sale does not ask for a rung (Aaron, 2026-08-27), so a first-timer meets
+ * agency, level and number here with nothing to pick. One tap records their
+ * word (`declareNoCertificationFromReady`); the step then says the crew will
+ * get in touch before the day, and Today names the reason. It clears nothing.
+ *
+ * **Asked once**, the shape Running late has (RunningLate.tsx): the diver
+ * cannot take the statement back from this page, only a card can supersede it.
+ */
+function NotYetAnswer({ token, t }: { token: string; t: DiverTranslator }) {
+  return (
+    <form
+      action={declareNoCertificationFromReady.bind(null, token)}
+      className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
+    >
+      <span className="text-muted">{t("ready.certNotYetLead")}</span>
+      <InlineConfirm
+        triggerLabel={t("ready.certNotYetButton")}
+        triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
+        message={t("ready.certNotYetConfirm")}
+        confirmLabel={t("ready.certNotYetConfirmButton")}
+        cancelLabel={t("ready.neverMind")}
+        pendingLabel={t("common.saving")}
+        confirmClassName={buttonClass({ size: "sm" })}
+      />
+    </form>
+  );
+}
+
+/**
+ * Once the diver has said "not yet": the shop's try-it course, the one door
+ * that gets a non-diver into the water. Absent when the shop publishes none,
+ * and the checklist line already says the shop will get in touch. Worded as
+ * where to start, not "first": the trip may be gated well above Open Water,
+ * and this component never sees its level.
+ */
+function IntroCourseDoor({
+  course,
+  t,
+}: {
+  course: { title: string; href: string };
+  t: DiverTranslator;
+}) {
+  return (
+    <div>
+      <Link href={course.href} className={buttonClass({ variant: "secondary", size: "sm" })}>
+        {t("ready.certNotYetHowToStart", { course: course.title })}
+      </Link>
+    </div>
   );
 }
 

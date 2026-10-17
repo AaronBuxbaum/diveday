@@ -5,8 +5,9 @@ import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
 import {
   type MastheadFacts,
+  MastheadWhen,
   mastheadArrivalLine,
-  mastheadWhenLine,
+  mastheadWhenParts,
   ReadyBookedHeader,
   ReadyMastheadMeta,
 } from "./ReadyMasthead";
@@ -41,7 +42,21 @@ function withProvider(locale: "en-US" | "es-ES", node: React.ReactNode) {
   );
 }
 
-describe("mastheadWhenLine", () => {
+/** The when line as a reader hears it: the day and date, then the range. */
+function mastheadWhenLine(facts: typeof FACTS, locale: string, now: Date): string {
+  const { day, hours } = mastheadWhenParts(facts, locale, now);
+  return `${day} · ${hours}`;
+}
+
+describe("the masthead's when line", () => {
+  it("never breaks inside the time range", () => {
+    // Fourth review, item 48: "7:00 AM" / "– 10:30 AM EDT" at 390.
+    render(<MastheadWhen facts={FACTS} locale="en-US" now={NIGHT_BEFORE} />);
+    const range = screen.getByText(/^7:00\sAM/);
+    expect(range).toHaveClass("whitespace-nowrap");
+    expect(range.textContent).toMatch(/EDT$/);
+  });
+
   it("leads with the relative day, so it can never orphan at the end of a wrapped line", () => {
     // UX review 2026-10-10, item 8: "Sun, Oct 11 · 7:00 AM – 10:30 AM EDT ·
     // tomorrow" wrapped on a phone and left "· tomorrow" alone on a line.
@@ -104,6 +119,47 @@ describe("ReadyBookedHeader", () => {
     expect(screen.getByText(/Aim to be at the dock by 6:30/)).toBeTruthy();
     // Still the page's own doors under the card.
     expect(screen.getByRole("link", { name: "Add to calendar" })).toBeTruthy();
+  });
+
+  it("says a milestone boat once, as a count, and nothing on any other (H-128)", () => {
+    render(
+      withProvider(
+        "en-US",
+        <ReadyBookedHeader
+          facts={FACTS}
+          greetingName="Priya Sharma"
+          milestone={25}
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={diverTranslator("en-US")}
+        />,
+      ),
+    );
+    expect(screen.getByText("Your 25th dive day with Blue Mantis Divers.")).toBeTruthy();
+  });
+
+  /**
+   * **The time range never splits** (#2504): at 390 the one line broke inside
+   * it ("7:00" / "AM to 11:30 AM"). The day and the date are one line, the
+   * whole range the next, and the range cannot wrap.
+   */
+  it("puts the date on one line and the unbroken time range on the next", () => {
+    render(
+      withProvider(
+        "en-US",
+        <ReadyBookedHeader
+          facts={FACTS}
+          greetingName="Priya Sharma"
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={diverTranslator("en-US")}
+        />,
+      ),
+    );
+    const date = screen.getByText(/^Tomorrow · Sun, Oct\s11$/);
+    const hours = screen.getByText(/^7:00\sAM\s–\s10:30\sAM\sEDT$/);
+    expect(date).toHaveClass("block");
+    expect(hours).toHaveClass("block", "whitespace-nowrap");
   });
 
   it("claims the seat and never the boat, in either language", () => {

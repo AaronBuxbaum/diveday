@@ -51,19 +51,29 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 export function EarnedMomentLine({
   children,
   animate = true,
+  tone = "wash",
   className = "",
 }: {
   children: React.ReactNode;
   /** Play the `rise-in` entrance. Off for a moment that was already true on arrival. */
   animate?: boolean;
+  /**
+   * `wash` is the coral fill. `ink` is coral text on a neutral surface, for a
+   * line that has to be read as good news at a glance on a phone in the sun,
+   * where the fill reads as the amber of a warning (issue #2400; Today's
+   * good-news lines).
+   */
+  tone?: "wash" | "ink";
   className?: string;
 }) {
   return (
     <p
       role="status"
-      className={`${
-        animate ? "rise-in " : ""
-      }rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold ${className}`.trim()}
+      className={`${animate ? "rise-in " : ""}rounded-lg border px-3 py-2 text-sm font-semibold ${
+        tone === "ink"
+          ? "border-border bg-surface text-accent-deep"
+          : "border-accent/40 bg-accent/10"
+      } ${className}`.trim()}
     >
       {children}
     </p>

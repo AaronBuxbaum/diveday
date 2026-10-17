@@ -15,6 +15,7 @@ import {
 import { commandPaletteCopy, signOutAction } from "./command-palette-props";
 import { type ShopSectionNavCopy, ShopSidebar, ShopTabBar } from "./ShopSectionNav";
 import { CommandPalette, type SettingsShortcut } from "./search/CommandPalette";
+import type { PaletteTodayBoat } from "./search/palette-start-rows";
 
 /**
  * The words both forms of the section nav read — the sidebar and the phone's
@@ -32,6 +33,7 @@ function sectionNavCopy(
       divers: t("shared.shopSections.divers"),
       inbox: t("shared.shopSections.inbox"),
       money: t("shared.shopSections.money"),
+      safety: t("shared.shopSections.safety"),
       courses: t("shared.shopSections.courses"),
       gear: t("shared.shopSections.gear"),
       settings: t("shared.shopSections.settings"),
@@ -76,6 +78,8 @@ export function ShopNav({
   shopName,
   logoUrl,
   boatBoardingHref,
+  todayBoats,
+  readerId,
   navGates,
   navOffers,
   navCounts,
@@ -89,6 +93,10 @@ export function ShopNav({
   logoUrl?: string;
   /** Today's next departure's boarding, when the shop has a boat out today. */
   boatBoardingHref?: string;
+  /** Today's departures, for ⌘K before anything is typed (fifth loop, item 13). */
+  todayBoats?: readonly PaletteTodayBoat[];
+  /** The signed-in staffer, so ⌘K's "Recent" on a shared device is theirs alone. */
+  readerId?: string;
   /** Owner/manager surfaces (H-14) to hide from the bar and search for everyone else. */
   navGates: StaffDestinationGates;
   /** Whether the shop teaches and keeps a fleet, so Courses and Gear show. */
@@ -166,6 +174,8 @@ export function ShopNav({
             <CommandPalette
               shopSlug={shopSlug}
               boatBoardingHref={boatBoardingHref}
+              todayBoats={todayBoats}
+              readerId={readerId}
               gates={navGates}
               crewSchedule={navOffers.crew}
               locale={locale}

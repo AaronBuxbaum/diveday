@@ -22,6 +22,7 @@ import {
   dailyPassesWithin,
   nextDailyTickAtOrAfter,
 } from "@/lib/cron-schedule";
+import { errorClassToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
 import {
   type Notification,
@@ -41,8 +42,10 @@ import {
 } from "@/lib/notifications";
 import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
+import { shopVoiceOf } from "@/lib/notifications/shop-voice";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { issueBookingCapability } from "./booking-capabilities";
+import { settledPartyPayment } from "./checkouts";
 import type { AppDb } from "./client";
 import { findCourtesyEmailRecipientByAddress } from "./courtesy-email";
 import { notificationHeldForRehearsal, REHEARSAL_HELD_DELIVERY } from "./rehearsals";
@@ -312,7 +315,7 @@ type QueueRefusal = "no_shop" | "not_queueable" | "queue_seal_unavailable";
  * driver's bound parameters.
  */
 function thrownErrorDetail(error: unknown): string {
-  return error instanceof Error ? error.name : "unknown_error";
+  return errorClassToken(error);
 }
 
 async function queueRetry(
@@ -404,6 +407,8 @@ export async function shopSenderFor(
       isDemo: shops.isDemo,
       logoUrl: shops.logoUrl,
       brandColor: shops.brandColor,
+      nameFlaggedAt: shops.nameFlaggedAt,
+      nameClearedAt: shops.nameClearedAt,
     })
     .from(shops)
     .where(eq(shops.id, shopId))
@@ -424,9 +429,19 @@ async function withShopSender(
   input: Notification,
   cache: Map<string, NotificationSender | undefined> = new Map(),
 ): Promise<Notification> {
-  if (!("shopId" in input) || input.sender) return input;
+  if (!("shopId" in input)) return input;
+  // A caller that brought its own sender profile cannot vouch for the shop's
+  // name: whether it is held for review (issue #2450) is read from the shop
+  // here, for every message that speaks in a shop's voice, so a path that
+  // skipped the flag cannot send a flagged name through the From column.
+  if (input.sender && shopVoiceOf(input) === null) return input;
   if (!cache.has(input.shopId)) cache.set(input.shopId, await shopSenderFor(db, input.shopId));
   const sender = cache.get(input.shopId);
+  if (input.sender) {
+    return sender?.nameUnderReview && !input.sender.nameUnderReview
+      ? { ...input, sender: { ...input.sender, nameUnderReview: true } }
+      : input;
+  }
   return sender ? { ...input, sender } : input;
 }
 
@@ -1233,8 +1248,25 @@ export async function retryBookingConfirmation(
   shopId: string,
   bookingId: string,
   provider?: NotificationProvider,
+  /** The live waiver link to carry as the confirmation's first step (`resendConfirmationWithWaiver`). */
+  waiver?: { url: string; expiresAt: Date },
 ) {
-  return sendStoredBookingConfirmation(db, shopId, bookingId, { isRetry: true, provider });
+  return sendStoredBookingConfirmation(db, shopId, bookingId, { isRetry: true, provider, waiver });
+}
+
+/**
+ * The booking confirmation for a seat someone has just claimed from a party
+ * link (#2381): the claimant is shown a page that says to check their email,
+ * and this is the email, carrying their own prep link. A first send, not a
+ * retry. Returns null, and sends nothing, for a booking with no address.
+ */
+export async function sendClaimedSeatConfirmation(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  provider?: NotificationProvider,
+) {
+  return sendStoredBookingConfirmation(db, shopId, bookingId, { isRetry: false, provider });
 }
 
 /**
@@ -1257,11 +1289,41 @@ export async function sendCourseSeatConfirmation(
   });
 }
 
+/**
+ * **A diver the desk books for a later day hears what an online booker hears**
+ * (fourth UX review, item 3). A phone booking, a seat made from a date request
+ * or a weekly regular put on next Saturday used to get only the waiver
+ * request, and nothing at all when a signature was already on file: no date,
+ * no dock time, no meeting point, no `/ready` link until the seven-day
+ * reminder. The same confirmation `bookSpot` sends, built from the stored
+ * rows, with the diver's waiver riding in it as its first step when one is
+ * owed (`issueJoinWaiverLink`), so one seating is still one email. Null when
+ * the diver has no address on file.
+ */
+export async function sendStaffSeatingConfirmation(
+  db: AppDb,
+  shopId: string,
+  bookingId: string,
+  options: { waiver: { url: string; expiresAt: Date } | null; provider?: NotificationProvider },
+) {
+  return sendStoredBookingConfirmation(db, shopId, bookingId, {
+    isRetry: false,
+    provider: options.provider,
+    waiver: options.waiver,
+  });
+}
+
 async function sendStoredBookingConfirmation(
   db: AppDb,
   shopId: string,
   bookingId: string,
-  options: { isRetry: boolean; provider?: NotificationProvider; onlyWithMaterials?: boolean },
+  options: {
+    isRetry: boolean;
+    provider?: NotificationProvider;
+    onlyWithMaterials?: boolean;
+    /** The diver's waiver link, when it rides in this confirmation. */
+    waiver?: { url: string; expiresAt: Date } | null;
+  },
 ) {
   const [row] = await db
     .select({
@@ -1299,6 +1361,7 @@ async function sendStoredBookingConfirmation(
         shopId,
         bookingId: row.booking.id,
         purpose: "readiness",
+        delivered: true,
       })
     : null;
   return sendAndRecordNotification(
@@ -1323,6 +1386,9 @@ async function sendStoredBookingConfirmation(
         ? new URL(readinessLinkPath(readinessCapability.token), `${origin}/`).toString()
         : undefined,
       ...(learningMaterials.length > 0 ? { learningMaterials } : {}),
+      ...(options.waiver
+        ? { waiverUrl: options.waiver.url, waiverExpiresAt: options.waiver.expiresAt }
+        : {}),
       // The same where, calendar, money and window the booking-time send
       // carried (ux review 2026-10-11, items 4 and 5). Online when a card
       // checkout took this seat's money; otherwise it is owed at the shop.
@@ -1333,6 +1399,11 @@ async function sendStoredBookingConfirmation(
         participantType: row.booking.participantType,
         chargesOnline: row.paymentProvider === "stripe",
         origin,
+        // What the party's card checkout settled, for the lead (#2447).
+        partyPaid:
+          row.paymentProvider === "stripe"
+            ? await settledPartyPayment(db, shopId, row.booking.id)
+            : null,
       }),
       // A staff-triggered resend is a new logical send, not a replay of the
       // original booking confirmation's provider idempotency key.
@@ -1456,8 +1527,10 @@ export async function applyProviderEmailEvent(
       ),
     )
     .returning({ id: notificationDeliveries.id });
-  if (updated || updatedChannel) return "applied";
-
+  // The waiver record's own latest-attempt columns follow the same message id
+  // (issue #2473): a confirmation that carried the waiver link shares its id with
+  // the record, so a bounce must reach `getDiverWaiverRequestStatus` as well as
+  // the per-channel row and the notification.
   const [updatedIndependent] = await db
     .update(waiverRecords)
     .set({
@@ -1482,7 +1555,7 @@ export async function applyProviderEmailEvent(
       ),
     )
     .returning({ id: waiverRecords.id });
-  if (updatedIndependent) return "applied";
+  if (updated || updatedChannel || updatedIndependent) return "applied";
 
   // The condition filtered zero rows either because no delivery row carries
   // this provider message id, or because one exists but already holds a
@@ -1560,6 +1633,12 @@ export async function listNotificationDeliveryIssues(
         or(
           inArray(notificationDeliveries.status, ["failed", "not_configured"]),
           inArray(notificationDeliveries.providerStatus, ACTIONABLE_PROVIDER_STATUSES),
+        ),
+        // A send held for a rehearsal is not an issue: nothing was meant to
+        // leave (#2395, ADR 20261012-rehearsal-departures).
+        or(
+          isNull(notificationDeliveries.sendErrorCode),
+          ne(notificationDeliveries.sendErrorCode, REHEARSAL_HELD_DELIVERY.errorCode),
         ),
         ne(bookings.status, "cancelled"),
         window.from ? gte(trips.startsAt, window.from) : undefined,
