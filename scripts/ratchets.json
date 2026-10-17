@@ -569,7 +569,7 @@
     "src/lib/today.test.ts": 1648,
     "src/lib/trip-admission.test.ts": 992,
     "src/lib/waivers.test.ts": 1402,
-    "src/proxy.test.ts": 1241
+    "src/proxy.test.ts": 1221
   },
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
