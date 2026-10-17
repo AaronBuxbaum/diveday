@@ -312,27 +312,25 @@ export async function recordMoveAsk(
  * Whether this booking's diver has an ask to move it standing (H-126): one
  * about the departure the seat is on now, not answered and not deleted.
  *
- * `seatTripId` is that departure when the caller read the seat in the same
- * request (`/ready` does), which saves a round trip; without it the seat is
- * read here.
+ * A caller that already holds the seat's row passes its `tripId` (read under
+ * `shopId`), and the departure is not looked up again.
  */
 export async function hasMoveAsk(
   db: DbExecutor,
   shopId: string,
   bookingId: string,
-  seatTripId?: string,
+  knownTripId?: string,
 ): Promise<boolean> {
-  const seat =
-    seatTripId === undefined
-      ? (
-          await db
-            .select({ tripId: bookings.tripId })
-            .from(bookings)
-            .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
-            .limit(1)
-        )[0]
-      : { tripId: seatTripId };
-  if (!seat) return false;
+  const tripId =
+    knownTripId ??
+    (
+      await db
+        .select({ tripId: bookings.tripId })
+        .from(bookings)
+        .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+        .limit(1)
+    )[0]?.tripId;
+  if (!tripId) return false;
   const [row] = await db
     .select({ id: inboundMessages.id })
     .from(inboundMessages)
@@ -340,7 +338,7 @@ export async function hasMoveAsk(
       and(
         eq(inboundMessages.shopId, shopId),
         eq(inboundMessages.channel, "page"),
-        eq(inboundMessages.providerMessageId, moveAskProviderId(bookingId, seat.tripId)),
+        eq(inboundMessages.providerMessageId, moveAskProviderId(bookingId, tripId)),
         isNull(inboundMessages.answeredAt),
         isNull(inboundMessages.deletedAt),
       ),

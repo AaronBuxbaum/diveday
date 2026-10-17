@@ -19,6 +19,14 @@ export function SiteDiveFields({
   depthUnit: DepthUnit;
   values?: SiteFieldValues;
 }) {
+  const unitKey = depthUnit === "feet" ? "Feet" : "Meters";
+  // The folded section's preview reads these off the two depth inputs, in
+  // page order (shallow, then deep): see `sectionPreview`.
+  const depthPreview = {
+    "data-preview-pair": "depth",
+    "data-preview-one": t.raw(`diveSites.form.depthPreview${unitKey}One`),
+    "data-preview-range": t.raw(`diveSites.form.depthPreview${unitKey}Range`),
+  };
   return (
     <>
       <FieldGrid columns={2} className="gap-y-5">
@@ -100,6 +108,7 @@ export function SiteDiveFields({
         >
           <input
             name="minDepth"
+            {...depthPreview}
             type="number"
             inputMode="numeric"
             min={0}
@@ -126,6 +135,7 @@ export function SiteDiveFields({
         >
           <input
             name="maxDepth"
+            {...depthPreview}
             type="number"
             inputMode="numeric"
             min={1}

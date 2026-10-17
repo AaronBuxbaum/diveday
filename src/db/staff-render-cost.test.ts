@@ -654,12 +654,11 @@ const PUBLIC_TRIP_CEILING = 20;
 // away on the departure's days (`diverCrewWithAway`), which reads the
 // schedule days and the days away beside the crew. Measured 38; the phases
 // stay 5, since both ride the thread's one wave.
-// 38 → 39 (H-126): whether a standing ask to move the seat exists
-// (`hasMoveAsk`), read in the page's one fan-out on every booked seat whose
-// identity is not held, rather than after the payment says the ask is
-// offered: one statement more and no round trip more. The seat the test picks
-// is ordered by a random id, so the ceiling holds for any seat on the
-// departure, not one the seed happened to draw (CI read 40 and 7 phases).
+// 38 → 39 (#2687, H-126): a seat that can still be released reads whether an
+// ask to move stands (`hasMoveAsk`, one read), beside the rest of the page's
+// fan-out, so the phases stay 5. The seed's booking ids are random, so which
+// seat the test lands on varies: both a seat past the free window and one not
+// past it must stay inside the ceiling.
 // 39 → 40: the dive-package line reads what this seat itself spends beside
 // what the diver has left (`packageDivesForBooking`, one `queryAll` wave), one
 // statement more than the count it replaced, in the same round trip.
@@ -684,4 +683,6 @@ const READY_PHASE_CEILING = 5;
 const READY_PARTY_PHASE_CEILING = 7;
 // A party of three or six: the single seat's 40, plus the party panel's
 // own reads and one claim-link mint for every unclaimed seat together.
+// 40 → 42 (#2687, H-126): the same move-ask read as the single seat's, and
+// the same dive-package read.
 const READY_PARTY_CEILING = 42;

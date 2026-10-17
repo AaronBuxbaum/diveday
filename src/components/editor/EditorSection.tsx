@@ -380,11 +380,25 @@ const PREVIEW_INPUT_TYPES = new Set([
  * in step with the fields, and nothing to translate: it is the shop's text.
  * A section whose content is a drawn route or a photo grid says nothing here
  * rather than guess.
+ *
+ * Two inputs sharing `data-preview-pair` are one part, named by the templates
+ * their first carries: `data-preview-range` ("{min}–{max} ft") when both hold
+ * a value, `data-preview-one` ("{value} ft") when only one does.
  */
 export function sectionPreview(body: Element): string {
   const parts: string[] = [];
+  const paired = new Set<string>();
   for (const control of body.querySelectorAll("input, textarea, select")) {
     let text = "";
+    const pair = control.getAttribute("data-preview-pair");
+    if (pair) {
+      if (paired.has(pair)) continue;
+      paired.add(pair);
+      text = pairedPreview(body.querySelectorAll(`[data-preview-pair="${pair}"]`));
+      if (text) parts.push(text);
+      if (parts.length === 2) break;
+      continue;
+    }
     if (control instanceof HTMLSelectElement) {
       if (control.value !== "") text = control.selectedOptions[0]?.textContent ?? "";
     } else if (control instanceof HTMLTextAreaElement) {
@@ -401,6 +415,16 @@ export function sectionPreview(body: Element): string {
     if (parts.length === 2) break;
   }
   return parts.join(" · ");
+}
+
+function pairedPreview(controls: NodeListOf<Element>): string {
+  const [first, second] = [...controls].map((c) => (c as HTMLInputElement).value.trim());
+  if (!first && !second) return "";
+  const fill = (template: string | null | undefined, values: Record<string, string>) =>
+    (template ?? "").replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? "");
+  if (first && second)
+    return fill(controls[0]?.getAttribute("data-preview-range"), { min: first, max: second });
+  return fill(controls[0]?.getAttribute("data-preview-one"), { value: first || second });
 }
 
 function SectionDescription({ children, hidden }: { children: ReactNode; hidden: boolean }) {
