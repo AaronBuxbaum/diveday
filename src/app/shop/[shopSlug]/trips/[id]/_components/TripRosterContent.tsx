@@ -77,6 +77,8 @@ export type TripRosterActions = {
 /** Everything `TripRosterContent` draws, assembled once by its caller and handed over as one object. */
 export type TripRosterContentContext = {
   guests: TripGuests;
+  /** A guide in the water is rostered (`overview.crew.inWaterCrew`): the decompression reminder covers them too. */
+  inWaterCrew?: { instructorCount: number; assistantCount: number };
   shopSlug: string;
   shopName: string;
   locale: string;
@@ -160,6 +162,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     afterRoster = null,
     arrival,
     record,
+    inWaterCrew,
     walkInOpen = false,
     acceptsDivers,
     mayInviteFromWaitlist,
@@ -249,6 +252,10 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         trip={{
           shopSlug,
           rehearsal: trip.isRehearsal,
+          exceedsNoDecoLimits: trip.exceedsNoDecoLimits,
+          divingCrew: Boolean(
+            inWaterCrew && inWaterCrew.instructorCount + inWaterCrew.assistantCount > 0,
+          ),
           shopTimezone: timezone,
           locale,
           tripId: trip.id,

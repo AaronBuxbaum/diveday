@@ -27,6 +27,57 @@ afterEach(cleanup);
  * a restyle may move everything here except what these assert.
  */
 
+describe("the decompression reminder on the roster (H-144)", () => {
+  const words = "decompression card";
+  const rowsFor = (type: "diver" | "snorkeler" | "rider") => ({
+    roster: [entry("b1", "Meera Iyer", { participantType: type })],
+    readiness: new Map([["b1", readinessRow("ready")]]) as unknown as ReadinessByBooking,
+    waivers: new Map() as unknown as WaiverByBooking,
+  });
+
+  it("shows once on a decompression departure with a diver aboard", () => {
+    renderRoster({ ...rowsFor("diver"), exceedsNoDecoLimits: true });
+    expect(screen.getAllByText(new RegExp(words))).toHaveLength(1);
+  });
+
+  it("is silent on a departure not marked as decompression diving", () => {
+    renderRoster({ ...rowsFor("diver"), exceedsNoDecoLimits: false });
+    expect(screen.queryByText(new RegExp(words))).toBeNull();
+  });
+
+  it.each(["snorkeler", "rider"] as const)("is silent when only a %s is booked", (type) => {
+    renderRoster({ ...rowsFor(type), exceedsNoDecoLimits: true });
+    expect(screen.queryByText(new RegExp(words))).toBeNull();
+  });
+
+  it("shows for a guide in the water when every guest is a snorkeler", () => {
+    renderRoster({ ...rowsFor("snorkeler"), exceedsNoDecoLimits: true, divingCrew: true });
+    expect(screen.getAllByText(new RegExp(words))).toHaveLength(1);
+  });
+
+  it("is silent once the last diver is released as a no-show", () => {
+    const released = rowsFor("diver");
+    (released.roster[0].booking as { status: string }).status = "no_show";
+    renderRoster({ ...released, exceedsNoDecoLimits: true });
+    expect(screen.queryByText(new RegExp(words))).toBeNull();
+  });
+
+  it("is silent on a finished departure's record", () => {
+    renderRoster({
+      ...rowsFor("diver"),
+      exceedsNoDecoLimits: true,
+      record: {
+        dock: new Map(),
+        afterDive: new Set(),
+        rollCallTaken: true,
+        unaccounted: new Set(),
+        countedAboardBlocked: new Map(),
+      } as never,
+    });
+    expect(screen.queryByText(new RegExp(words))).toBeNull();
+  });
+});
+
 describe("the guests ledger (slice 5d)", () => {
   it("files every seat under a group band that owns the state word and the count", () => {
     renderRoster(fixtures);
