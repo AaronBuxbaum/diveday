@@ -42,6 +42,7 @@ import {
   sortStationRows,
   spineJobCount,
   type TodayAction,
+  weekCrewAway,
 } from "@/lib/today";
 import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
@@ -1229,6 +1230,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
             <WeekHorizon
               panelClass={HORIZON_PANEL_CLASS}
               jobs={spine.week.jobs}
+              crewAway={weekCrewAway(spine.week.rows, timeZone)}
               shopSlug={shopSlug}
               t={t}
             >

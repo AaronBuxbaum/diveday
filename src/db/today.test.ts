@@ -866,6 +866,8 @@ describe("crew rostered while away", () => {
     expect(rows[0]?.detail).toContain(`${instructor.fullName} is away`);
     expect(rows[0]?.href).toBe(`/shop/${shop.slug}/trips/${trip.id}?view=details#crew`);
     expect(rows[0]?.staffPersonId).toBe(instructor.id);
+    // The week line counts the people these rows name (issue #2671).
+    expect(rows[0]?.awayPersonIds).toEqual([instructor.id]);
 
     // Not a course session, so it is not on "Your sessions"; the row is the
     // reader's own lead instead. A session the reader teaches carries the days.

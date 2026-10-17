@@ -38,6 +38,7 @@ export function pushCrewAwayRows(actions: TodayAction[], ctx: TodayRowsContext):
       actionLabel: openCrewActionText(t),
       href: `/shop/${shopSlug}/trips/${trip.id}?view=details#crew`,
       ...(away.length === 1 && away[0] ? { staffPersonId: away[0].personId } : {}),
+      awayPersonIds: away.map((person) => person.personId),
       dueAt: trip.startsAt,
     });
   }

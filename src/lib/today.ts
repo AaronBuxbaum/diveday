@@ -11,6 +11,7 @@ import {
   owedRefundGroupSubjectText,
   pointingLabelText,
 } from "@/i18n/today-labels";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import type { AgencyCheckableCard } from "./agency-check-queue";
@@ -961,6 +962,11 @@ export type TodayAction = {
    * lens can keep a reader's own row open rather than fold it with the desk's.
    */
   staffPersonId?: string;
+  /**
+   * Who a `crew_away` row names (issue #2671): the week line counts these
+   * people, once each however many departures they are away for.
+   */
+  awayPersonIds?: readonly string[];
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };
@@ -1792,6 +1798,28 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
     },
     week: { jobs: weekRows.length, rows: sortStationRows(weekRows) },
   };
+}
+
+/**
+ * **Who is away this week, named on the week line** (issue #2671, decided by
+ * Aaron 2026-10-17): the rostered crew the week's `crew_away` rows name, each
+ * counted once, and the shop-local day of the soonest such departure, which
+ * the line's board link opens on. Null when nobody is. Every other later-day
+ * row stays a count: the page is about today.
+ */
+export function weekCrewAway(
+  rows: readonly TodayAction[],
+  timeZone: string,
+): { people: number; firstDay: CalendarDate } | null {
+  const people = new Set<string>();
+  let soonest: Date | null = null;
+  for (const row of rows) {
+    if (row.kind !== "crew_away" || !row.awayPersonIds || row.awayPersonIds.length === 0) continue;
+    for (const personId of row.awayPersonIds) people.add(personId);
+    if (row.dueAt && (soonest === null || row.dueAt < soonest)) soonest = row.dueAt;
+  }
+  if (people.size === 0 || soonest === null) return null;
+  return { people: people.size, firstDay: calendarDateInTimezone(soonest, timeZone) };
 }
 
 /** Every row the spine holds, wherever it filed. */
