@@ -124,40 +124,42 @@ async function monthTripSpine(db: DbExecutor, shopId: string, where: SQL | undef
   // The hull and the kind of day ride along (fifth loop, item 26): which boat
   // and which trip kind earned the money is the owner's monthly question, and
   // both are names on the departure's own row, re-scoped to the shop.
-  return db
-    .select({
-      tripId: trips.id,
-      title: trips.title,
-      startsAt: trips.startsAt,
-      capacity: trips.capacity,
-      activeBookings: count(bookings.id),
-      boatName: boats.name,
-      lensName: tripLenses.name,
-      courseId: trips.courseId,
-    })
-    .from(trips)
-    .leftJoin(
-      bookings,
-      and(
-        eq(bookings.tripId, trips.id),
-        eq(bookings.shopId, shopId),
-        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
-      ),
-    )
-    .leftJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
-    .leftJoin(tripLenses, and(eq(tripLenses.id, trips.lensId), eq(tripLenses.shopId, shopId)))
-    // `notRehearsal()` here too, not only in the caller's window: a practice
-    // run is never a month's departure, whoever asks for the spine.
-    .where(and(where, liveTrip(), notRehearsal()))
-    .groupBy(
-      trips.id,
-      trips.title,
-      trips.startsAt,
-      trips.capacity,
-      boats.name,
-      tripLenses.name,
-      trips.courseId,
-    );
+  return (
+    db
+      .select({
+        tripId: trips.id,
+        title: trips.title,
+        startsAt: trips.startsAt,
+        capacity: trips.capacity,
+        activeBookings: count(bookings.id),
+        boatName: boats.name,
+        lensName: tripLenses.name,
+        courseId: trips.courseId,
+      })
+      .from(trips)
+      .leftJoin(
+        bookings,
+        and(
+          eq(bookings.tripId, trips.id),
+          eq(bookings.shopId, shopId),
+          inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+        ),
+      )
+      .leftJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
+      .leftJoin(tripLenses, and(eq(tripLenses.id, trips.lensId), eq(tripLenses.shopId, shopId)))
+      // `notRehearsal()` here too, not only in the caller's window: a practice
+      // run is never a month's departure, whoever asks for the spine.
+      .where(and(where, liveTrip(), notRehearsal()))
+      .groupBy(
+        trips.id,
+        trips.title,
+        trips.startsAt,
+        trips.capacity,
+        boats.name,
+        tripLenses.name,
+        trips.courseId,
+      )
+  );
 }
 
 type DepartureMoney = { gross: number; tax: number; passThrough: number };
