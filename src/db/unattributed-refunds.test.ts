@@ -11,7 +11,7 @@ import {
   startBookingCheckout,
 } from "./checkouts";
 import { listStuckPaymentOperations } from "./payment-operations";
-import { getBookingPayment } from "./payments";
+import { getBookingPayment, setBookingPayment } from "./payments";
 import { recordStripeChargeRefund } from "./refunds";
 import { activityEvents, paymentOperationIntents } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -312,5 +312,35 @@ describe("attributeUnattributedRefund", () => {
         actorPersonId: actor,
       }),
     ).toEqual({ status: "not_found" });
+  });
+
+  it("is not held when no seat of the checkout still holds money from it", async () => {
+    const { db, shop, lead, guest, checkout } = await paidParty();
+    for (const bookingId of [lead, guest]) {
+      await setBookingPayment(db, {
+        shopId: shop.id,
+        bookingId,
+        status: "refunded",
+        amountCents: 10_000,
+        currency: "usd",
+        provider: "stripe",
+        providerRef: checkout.stripeSessionId,
+        operation: "stripe_dashboard_refund",
+      });
+    }
+
+    await dashboardRefund(db, 6_000);
+
+    expect(await listUnattributedRefunds(db, shop.id)).toEqual([]);
+    const parked = await db
+      .select({ id: paymentOperationIntents.id })
+      .from(paymentOperationIntents)
+      .where(
+        and(
+          eq(paymentOperationIntents.shopId, shop.id),
+          eq(paymentOperationIntents.checkoutId, checkout.id),
+        ),
+      );
+    expect(parked).toEqual([]);
   });
 });
