@@ -54,7 +54,6 @@
       "unitOutOfService": "Una de esas unidades está fuera de la pared por mantenimiento.",
       "unitUnavailable": "{label} ya está reservado para esos días, así que elige otra unidad.",
       "unitUnavailableUnnamed": "Una de esas unidades ya está reservada para esos días.",
-      "notAuthorized": "Solo un propietario o un gerente puede enviar una factura.",
       "paymentNotConnected": "Los pagos no están conectados, así que no se puede enviar una factura.",
       "needsEmail": "Una factura necesita un correo registrado.",
       "duplicate": "Ya hay una persona registrada con ese correo: búscala arriba.",

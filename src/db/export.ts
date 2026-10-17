@@ -183,8 +183,9 @@ async function readSafetyRecordRows(tx: AppTransaction, scope: ShopExportScope) 
 
 /**
  * What a departure was checked against as it left: the shop's checklist lines
- * and every tap on them, and the boat's papers and kit at the departure roll
- * call (`departure_boat_safety_snapshots`, issue 2300).
+ * and every tap on them, the boat's papers and kit at the departure roll call
+ * (`departure_boat_safety_snapshots`, issue 2300), and the snags a crew noted
+ * against an item for the boat's next crew (fifth-loop ideas, item 1).
  */
 async function readDepartureCheckRows(tx: AppTransaction, scope: ShopExportScope) {
   const checklistItemRows = await readScoped(tx, "preDepartureChecklistItems", scope);
@@ -193,6 +194,7 @@ async function readDepartureCheckRows(tx: AppTransaction, scope: ShopExportScope
     checklistItemLabel: new Map(checklistItemRows.map((row) => [row.id, row.label])),
     checklistEventRows: await readScoped(tx, "preDepartureCheckEvents", scope),
     boatSafetySnapshotRows: await readScoped(tx, "departureBoatSafetySnapshots", scope),
+    boatSnagRows: await readScoped(tx, "boatSnags", scope),
   };
 }
 
@@ -1283,6 +1285,7 @@ export async function loadShopExportCounts(
       shopId,
     ),
     "pre_departure_check_events.csv": await countShopScoped(db, "preDepartureCheckEvents", shopId),
+    "boat_snags.csv": await countShopScoped(db, "boatSnags", shopId),
     "departure_boat_safety_snapshots.csv": await countShopScoped(
       db,
       "departureBoatSafetySnapshots",

@@ -52,6 +52,20 @@ export function formatCalendarDate(date: CalendarDate, locale = "en-US"): string
   );
 }
 
+/**
+ * The month a calendar date falls in, e.g. "Mar 2024": "since" on the diver
+ * record's standing line, where the day itself would be noise. Through UTC for
+ * the same reason as {@link formatCalendarDate}.
+ */
+export function formatCalendarMonth(date: CalendarDate, locale = "en-US"): string {
+  const [year, month] = date.split("-").map(Number);
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    year: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
 /** A calendar date as a UTC-midnight instant — for a timestamp column that needs one. */
 export function calendarDateToUtcMidnight(date: CalendarDate): Date {
   const [year, month, day] = date.split("-").map(Number);

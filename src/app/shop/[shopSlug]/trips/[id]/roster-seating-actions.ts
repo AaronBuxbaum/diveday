@@ -5,8 +5,14 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonOverrideCertBlock, canPersonRefund } from "@/db/authz";
 import { sendBookingCancelledNotice } from "@/db/booking-cancelled-notice";
-import { restoreBooking, setBookingParticipantType, setBookingPickupDetails } from "@/db/bookings";
+import {
+  restoreBooking,
+  setBookingDietaryNote,
+  setBookingParticipantType,
+  setBookingPickupDetails,
+} from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { createInvitationUnderCooldown } from "@/db/invite-suggestions";
 import { getBookingPayment } from "@/db/payments";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { type MoveSeatRefusal, moveSeat } from "@/db/seat-diver";
@@ -20,7 +26,9 @@ import {
 import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
 import { carryWaitlist } from "@/db/waitlist-roll";
 import { trackEvent } from "@/lib/analytics";
+import { nowDate } from "@/lib/clock";
 import { blankAsAbsent, parseForm, readForm, single, text } from "@/lib/form-parse";
+import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
@@ -130,17 +138,50 @@ export async function createDirectTripInvitationAction(
   tripId: string,
   formData: FormData,
 ) {
+  await inviteOneDiver(shopSlug, tripId, formData, { cooldown: false });
+}
+
+/**
+ * **Invites one past diver the departure suggested** (fifth-loop ideas, items
+ * 43 and 44; H-130): the same one-to-one invite as above, staff-chosen and for
+ * this named departure, and refused for a person already contacted with an
+ * invite inside `INVITE_COOLDOWN_DAYS`. The list leaves such people out; this
+ * holds the line for a page left open across the window.
+ */
+export async function invitePastDiverAction(shopSlug: string, tripId: string, formData: FormData) {
+  await inviteOneDiver(shopSlug, tripId, formData, { cooldown: true });
+}
+
+async function inviteOneDiver(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+  rule: { cooldown: boolean },
+): Promise<never> {
   const guests = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const parsed = parseForm(directInvitationSchema, formData);
   if (!uuidParam(tripId) || !parsed.ok) redirect(`${guests}#invite-person`);
   const db = await getDb();
-  const created = await createDirectTripInvitation(db, {
+  const input = {
     shopId: s.user.shopId,
     tripId,
     personId: parsed.data.personId,
     createdByPersonId: s.user.personId,
-  });
+  };
+  let created: boolean;
+  if (rule.cooldown) {
+    // A suggestion: the cooldown and the departure's own gate, re-checked
+    // under one lock for a page left open (H-130; review F1, N2).
+    const outcome = await createInvitationUnderCooldown(db, { ...input, now: nowDate() });
+    if (outcome === "cooldown") redirect(noticeUrl(`${guests}#invitations`, "invite-cooldown"));
+    if (outcome === "unavailable") {
+      redirect(noticeUrl(`${guests}#invitations`, "invite-unavailable"));
+    }
+    created = outcome === "created";
+  } else {
+    created = await createDirectTripInvitation(db, input);
+  }
   let delivery: TripInvitationDelivery | null = null;
   if (created) {
     const invitation = (await listTripInvitations(db, s.user.shopId, tripId)).find(
@@ -451,6 +492,42 @@ const updatePickupSchema = z.object({
   pickupTime: z.string().trim().max(20).optional(),
   hotelPickupLocation: z.string().trim().max(300).optional(),
 });
+
+const dietaryNoteSchema = z.object({
+  dietaryNote: z.string().trim().max(DIETARY_NOTE_MAX).optional(),
+});
+
+/**
+ * **The desk writes a seat's lunch note** (fifth-loop ideas, item 56;
+ * dive-domain review F8): for a walk-up, a phone booking, or one person who
+ * filled in a whole group's forms. The same note the diver's Day-of form
+ * writes, held to the same {@link DIETARY_NOTE_MAX}; a meal preference for the
+ * galley, never an allergy record. Any staffer, like the pickup beside it.
+ */
+export async function updateBookingDietaryNoteAction(
+  shopSlug: string,
+  tripId: string,
+  bookingId: string,
+  formData: FormData,
+) {
+  const s = (await requireShopSurface(shopSlug)).session;
+  const back = tripPath(shopSlug, tripId);
+  const parsed = dietaryNoteSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(noticeUrl(back, "dietary-invalid", { bid: bookingId }));
+  const db = await getDb();
+  await requireRosterBooking(db, s.user.shopId, tripId, bookingId, back);
+  // The writer refuses a departure that does not serve lunch aboard (N-a):
+  // the roster shows no lunch control there, so nothing was asked of anyone.
+  const saved = await setBookingDietaryNote(db, {
+    shopId: s.user.shopId,
+    bookingId,
+    note: parsed.data.dietaryNote ?? null,
+  });
+  if (!saved) redirect(back);
+  revalidatePath(shopPath(shopSlug, "trips", tripId, "prep"));
+  revalidatePath(shopPath(shopSlug, "trips", tripId, "manifest"));
+  revalidateAndRedirect(back, noticeUrl(back, "dietary-saved", { bid: bookingId }));
+}
 
 export async function updateBookingPickupAction(
   shopSlug: string,

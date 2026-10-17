@@ -24,7 +24,7 @@ import {
 } from "@/db/dive-sites";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
-import { requestTranslator } from "@/i18n/request";
+import { requestReaderUnits, requestTranslator } from "@/i18n/request";
 import { diveSiteDepthText } from "@/i18n/unit-labels";
 import { parseDiveSiteSlug } from "@/lib/dive-site-slug";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
@@ -79,7 +79,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    robots: shopSearchListingRobots(shop.searchListingOptOutAt),
+    robots: shopSearchListingRobots(shop),
     openGraph: { ...openGraphSite, title, description, url: canonical },
   };
 }
@@ -131,8 +131,10 @@ export default async function DiveSitePage({
 
   // The recorded range in the shop's unit, the same line the departure page's
   // day rows print, so the two surfaces never name different depths for one
-  // reef. The shop's note stands in only where no depth is recorded.
-  const depth = diveSiteDepthText(t, site, shop.depthUnit);
+  // reef. The shop's note stands in only where no depth is recorded. The
+  // reader's unit follows the shop's when it differs (fifth-loop ideas, item 22).
+  const readerDepth = (await requestReaderUnits(locale)).depth;
+  const depth = diveSiteDepthText(t, site, shop.depthUnit, readerDepth);
   const facts = [site.locationName, depth].filter((fact) => fact !== null);
   const [cover = null, ...gallery] = site.imageUrls;
 

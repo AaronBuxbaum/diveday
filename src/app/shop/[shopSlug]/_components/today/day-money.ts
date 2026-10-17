@@ -1,9 +1,11 @@
+import type { CrewReading } from "@/app/shop/[shopSlug]/_components/today/CrewLines";
 import type { DbExecutor } from "@/db/client";
-import { crewTipShare, tipsByDeparture } from "@/db/crew-tips";
+import { crewMonth, crewTipShare, tipsByDeparture } from "@/db/crew-tips";
 import { getMonthlyReport } from "@/db/reporting";
+import { nowDate } from "@/lib/clock";
 import { type DayTakings, dayTakings } from "@/lib/closeout";
 import { summarizeMonth } from "@/lib/reporting";
-import { shiftInstantByCalendarDays } from "@/lib/zoned";
+import { shiftInstantByCalendarDays, shopMonthBounds, utcToWallTime } from "@/lib/zoned";
 
 /**
  * **The Today page's money reads**, in one round trip of the second wave.
@@ -29,15 +31,22 @@ import { shiftInstantByCalendarDays } from "@/lib/zoned";
  * divers left on the boats this reader crewed over the last seven shop days.
  * It is the reader's own and needs no money gate: it is their boats, and
  * nothing else.
+ *
+ * **The reader's month on the boats** (fifth-loop ideas, item 51): the
+ * departures they crewed this shop month that are back, with their dives and
+ * hours (`crewMonth`). Their own, like the tips, so no gate. Not money, but
+ * the same one-line-under-the-spine reading, so it rides this round trip.
  */
 export async function readDayMoney(
   db: DbExecutor,
   shop: { id: string; currency: string; timezone: string },
   day: { from: Date; to: Date },
   reader: { personId: string; withTakings: boolean },
-): Promise<{ takings: DayTakings | null; crewTipsCents: number }> {
+): Promise<{ takings: DayTakings | null; crew: CrewReading }> {
   const week = { from: shiftInstantByCalendarDays(day.from, -6, shop.timezone), to: day.to };
-  const [report, boatTips, crewTipsCents] = await Promise.all([
+  const wall = utcToWallTime(day.from, shop.timezone);
+  const month = shopMonthBounds({ year: wall.year, month: wall.month }, shop.timezone);
+  const [report, boatTips, tipsCents, season] = await Promise.all([
     reader.withTakings
       ? getMonthlyReport(db, shop.id, day.from, day.to, {
           currency: shop.currency,
@@ -46,6 +55,10 @@ export async function readDayMoney(
       : null,
     reader.withTakings ? tipsByDeparture(db, shop.id, day) : [],
     crewTipShare(db, shop.id, reader.personId, week),
+    crewMonth(db, shop.id, reader.personId, { from: month.from, now: nowDate() }),
   ]);
-  return { takings: report ? dayTakings(summarizeMonth(report), boatTips) : null, crewTipsCents };
+  return {
+    takings: report ? dayTakings(summarizeMonth(report), boatTips) : null,
+    crew: { tipsCents, month: season.boats > 0 ? { ...season, month: wall.month } : null },
+  };
 }

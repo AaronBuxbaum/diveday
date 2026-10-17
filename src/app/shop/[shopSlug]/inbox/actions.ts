@@ -10,6 +10,11 @@ import {
   markInboundAnswered,
   reopenInboundMessage,
 } from "@/db/inbound-messages";
+import {
+  deleteSavedAnswer,
+  restoreSavedAnswer,
+  saveAnswerFromReply,
+} from "@/db/inbox-saved-answers";
 import { markMessageRunningLate } from "@/db/running-late";
 import { nowDate } from "@/lib/clock";
 import { parseForm } from "@/lib/form-parse";
@@ -163,4 +168,75 @@ export async function markInboxSenderLateAction(formData: FormData): Promise<voi
     inbox,
     noticeUrl(inbox, outcome.status === "closed" ? "late-closed" : "late-marked"),
   );
+}
+
+const savedAnswerForm = z.object({
+  replyId: z.string().default(""),
+  answerId: z.string().default(""),
+});
+
+/**
+ * **"Save this answer"** (fifth loop, item 15), offered under a reply that just
+ * went out on a diver's record. Only the reply's id is posted: the words are
+ * read from the stored reply inside the session's shop, with the diver's name
+ * swapped for `{name}` (`saveAnswerFromReply`), and the way back is that
+ * reply's own diver, never a posted one.
+ *
+ * Same gate and tenant binding as the acts above: any live staff role may
+ * answer a diver, so any may keep the words they answered with.
+ */
+export async function saveAnswerFromReplyAction(formData: FormData): Promise<void> {
+  const session = await requireStaffSession();
+  const inbox = shopPath(session.user.shopSlug, "inbox");
+  const db = await getDb();
+  if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
+
+  const parsed = parseForm(savedAnswerForm, formData);
+  const replyId = parsed.ok ? uuidParam(parsed.data.replyId) : null;
+  if (!replyId) revalidateAndRedirect(inbox, noticeUrl(inbox, "answer-gone"));
+
+  const outcome = await saveAnswerFromReply(db, { shopId: session.user.shopId, replyId });
+  if (!("personId" in outcome)) revalidateAndRedirect(inbox, noticeUrl(inbox, "answer-gone"));
+  const record = shopPath(session.user.shopSlug, "divers", outcome.personId);
+  const code = outcome.ok
+    ? "answer-saved"
+    : outcome.reason === "full"
+      ? "answers-full"
+      : "answer-duplicate";
+  revalidateAndRedirect(record, noticeUrl(`${record}#conversation`, code, { form: "reply" }));
+}
+
+/** Delete a saved answer, softly; the Inbox's list offers it back. */
+export async function deleteSavedAnswerAction(formData: FormData): Promise<void> {
+  const session = await requireStaffSession();
+  const inbox = shopPath(session.user.shopSlug, "inbox");
+  const db = await getDb();
+  if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
+
+  const parsed = parseForm(savedAnswerForm, formData);
+  const answerId = parsed.ok ? uuidParam(parsed.data.answerId) : null;
+  const deleted = answerId ? await deleteSavedAnswer(db, session.user.shopId, answerId) : false;
+  revalidateAndRedirect(
+    inbox,
+    noticeUrl(`${inbox}#saved-answers`, deleted ? "answer-deleted" : "answer-gone"),
+  );
+}
+
+/** Put a deleted saved answer back among the chips. */
+export async function restoreSavedAnswerAction(formData: FormData): Promise<void> {
+  const session = await requireStaffSession();
+  const inbox = shopPath(session.user.shopSlug, "inbox");
+  const db = await getDb();
+  if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
+
+  const parsed = parseForm(savedAnswerForm, formData);
+  const answerId = parsed.ok ? uuidParam(parsed.data.answerId) : null;
+  const outcome = answerId ? await restoreSavedAnswer(db, session.user.shopId, answerId) : "gone";
+  const code =
+    outcome === "restored"
+      ? "answer-restored"
+      : outcome === "full"
+        ? "answers-full"
+        : "answer-gone";
+  revalidateAndRedirect(inbox, noticeUrl(`${inbox}#saved-answers`, code));
 }

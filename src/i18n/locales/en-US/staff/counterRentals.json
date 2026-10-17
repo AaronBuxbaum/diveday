@@ -54,7 +54,6 @@
       "unitOutOfService": "One of those units is off the wall for service.",
       "unitUnavailable": "{label} is already spoken for on those days, so pick another unit.",
       "unitUnavailableUnnamed": "One of those units is already spoken for on those days.",
-      "notAuthorized": "Only an owner or manager can send an invoice.",
       "paymentNotConnected": "Payments aren’t connected, so no invoice can go.",
       "needsEmail": "An invoice needs an email on file.",
       "duplicate": "A person with that email is already on file: search for them above.",

@@ -13,6 +13,7 @@ import { cachedFormatter } from "@/lib/intl-cache";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { currencySymbol, minorToMajor, type ShopCurrency } from "@/lib/money";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
+import { ShareWithBoatTick } from "./ShareWithBoatTick";
 import { TipAmountPicker } from "./TipAmountPicker";
 
 /**
@@ -157,6 +158,7 @@ export function PhotoDoor({
   tripTitle,
   photos,
   maxPhotos,
+  canShareWithBoat,
   notice,
   action,
 }: {
@@ -165,9 +167,16 @@ export function PhotoDoor({
   tripTitle: string;
   photos: AfterStateProps["photos"];
   maxPhotos: number;
+  /** The share tick, from the readiness link only (`AfterStateProps.canShareWithBoat`). */
+  canShareWithBoat: boolean;
   notice: { tone: "success" | "danger"; key: DiverMessageKey } | undefined;
   action: (formData: FormData) => void | Promise<void>;
 }) {
+  // Another diver's shared photos sit under their own words (H-129): the
+  // diver's own and the crew's stay the grid they always were, and nothing a
+  // stranger chose reads as this diver's.
+  const own = photos.filter((photo) => !photo.sharedBy);
+  const fromBoat = photos.filter((photo) => photo.sharedBy);
   return (
     <Door id="photos" summary={t("recap.yourPhotos")} open={Boolean(notice) || photos.length > 0}>
       <p className="text-base text-muted">{t("recap.photosBody", { shop: shopName })}</p>
@@ -176,30 +185,14 @@ export function PhotoDoor({
           {notice.key === "recap.photoLimit" ? t(notice.key, { max: maxPhotos }) : t(notice.key)}
         </FormStatus>
       ) : null}
-      {photos.length ? (
-        <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {photos.map((image) => (
-            <li key={image.id} className="overflow-hidden rounded-inset border border-border">
-              <div className="relative aspect-square w-full">
-                {/* Diver photos always come from the blob store
-                    (storeRecapImage), so the remotePatterns entry in
-                    next.config.ts covers every url here. */}
-                <Image
-                  src={image.imageUrl}
-                  alt={image.caption ?? t("recap.photoAlt", { trip: tripTitle })}
-                  fill
-                  sizes="(min-width: 640px) 33vw, 50vw"
-                  className="object-cover"
-                />
-              </div>
-              {image.caption ? (
-                <p className="px-2 py-1.5 text-xs text-muted">{image.caption}</p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+      {own.length ? <PhotoGrid photos={own} tripTitle={tripTitle} t={t} /> : null}
+      {fromBoat.length ? (
+        <>
+          <h3 className="mt-6 text-sm font-semibold text-muted">{t("recap.fromTheBoat")}</h3>
+          <PhotoGrid photos={fromBoat} tripTitle={tripTitle} t={t} />
+        </>
       ) : null}
-      {photos.length >= maxPhotos ? (
+      {ownCount(photos) >= maxPhotos ? (
         <p className="mt-4 text-sm text-muted">{t("recap.photoLimitReached")}</p>
       ) : (
         <form action={action} className="mt-4">
@@ -212,14 +205,14 @@ export function PhotoDoor({
               required
               multiple
               shape="square"
-              maxFiles={Math.max(0, maxPhotos - photos.length)}
+              maxFiles={Math.max(0, maxPhotos - ownCount(photos))}
               copy={{
                 choose: t("recap.addAPhoto"),
                 chooseAnother: t("recap.chooseDifferentPhotos"),
                 wrongTypeSuffix: t("recap.photoWrongTypeSuffix"),
                 tooBigSuffix: t("recap.photoTooBigSuffix", { maxMb: MAX_IMAGE_MB }),
                 tooMany: t("recap.photoTooMany", {
-                  max: Math.max(0, maxPhotos - photos.length),
+                  max: Math.max(0, maxPhotos - ownCount(photos)),
                 }),
               }}
             />
@@ -248,6 +241,7 @@ export function PhotoDoor({
               placeholder={t("recap.captionLabel")}
               className={controlClass}
             />
+            {canShareWithBoat ? <ShareWithBoatTick label={t("recap.shareWithBoat")} /> : null}
             <div>
               <SubmitButton
                 pendingLabel={t("recap.addingPhoto")}
@@ -260,6 +254,60 @@ export function PhotoDoor({
         </form>
       )}
     </Door>
+  );
+}
+
+/**
+ * The photos that count against this page's room: everything but what another
+ * diver shared with the boat, whose photos use up their own recap's room and
+ * never this one's. `canAddRecapPhoto` is the gate; this only sizes the picker.
+ */
+function ownCount(photos: AfterStateProps["photos"]): number {
+  return photos.filter((photo) => !photo.sharedBy).length;
+}
+
+/** One grid of recap photos, with a caption line and, on a shared one, who shared it. */
+function PhotoGrid({
+  photos,
+  tripTitle,
+  t,
+}: {
+  photos: AfterStateProps["photos"];
+  tripTitle: string;
+  t: DiverTranslator;
+}) {
+  return (
+    <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {photos.map((image) => (
+        <li key={image.id} className="overflow-hidden rounded-inset border border-border">
+          <div className="relative aspect-square w-full">
+            {/* Diver photos always come from the blob store
+                (storeRecapImage), so the remotePatterns entry in
+                next.config.ts covers every url here. */}
+            <Image
+              src={image.imageUrl}
+              alt={image.caption ?? t("recap.photoAlt", { trip: tripTitle })}
+              fill
+              sizes="(min-width: 640px) 33vw, 50vw"
+              className="object-cover"
+            />
+          </div>
+          {image.caption || image.sharedBy || image.sharedWithBoat ? (
+            <p className="px-2 py-1.5 text-xs text-muted">
+              {image.sharedBy
+                ? image.caption
+                  ? t("recap.sharedByCaption", { name: image.sharedBy, caption: image.caption })
+                  : t("recap.sharedBy", { name: image.sharedBy })
+                : image.sharedWithBoat
+                  ? image.caption
+                    ? t("recap.sharedWithBoatCaption", { caption: image.caption })
+                    : t("recap.sharedWithBoat")
+                  : image.caption}
+            </p>
+          ) : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 

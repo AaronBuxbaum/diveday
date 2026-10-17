@@ -59,6 +59,12 @@ export type SafetyRollCallEvent = {
 export type SafetyCredential = {
   personId: string;
   kind: string;
+  /**
+   * When it was issued; absent or null says nothing. A credential issued
+   * after a sailing never answers for it (dive-domain review F3), so a
+   * renewal added as a new record leaves an earlier lapsed sailing lapsed.
+   */
+  issuedAt?: CalendarDate | null;
   renewsAt: string | null;
 };
 
@@ -80,7 +86,11 @@ export type SafetyMonth = {
   rollCallsClosed: number;
   /** Departures whose head count never closed, or was never taken. */
   openRollCalls: { tripId: string; title: string; startsAt: Date; closure: RollCallClosure }[];
-  /** Divers boarded at the dock: the rail boards nobody the readiness check refuses. */
+  /**
+   * Seats boarded at the dock, every participant type: the rail records nobody
+   * as boarded while readiness blocks them, but readiness that changed after
+   * boarding is not read here (dive-domain review F4).
+   */
   boardedAtDock: number;
   /** Seats with no dock mark at all — never boarded, never marked ashore. */
   unmarkedAtDock: number;
@@ -128,12 +138,35 @@ export type SafetyMonth = {
   noCrewDepartures: { tripId: string; title: string; startsAt: Date }[];
   /**
    * **No crew recorded on any departure that came back this month** (review
-   * F1). The crew schedule is off for a new shop and the crew list optional,
-   * so a shop that never rosters crew was never asked; the report says so in
-   * one quiet line and `noCrewDepartures` is left empty rather than listing
-   * every boat it ran.
+   * F1): no departure has a single crew row. The crew schedule is off for a
+   * new shop and the crew list optional, so a shop that never rosters crew was
+   * never asked; the report says so in one quiet line and `noCrewDepartures`
+   * is left empty rather than listing every boat it ran. A month whose
+   * rostered crew were all recorded ashore did record crew, so its boats are
+   * listed (review N7).
    */
   noCrewOnRecord: boolean;
+  /**
+   * Boat departures back: the no-crew figure's denominator, since that figure
+   * counts boats only (dive-domain review N5). On the year, only the boats of
+   * months that had crew on record, the months the figure judged (chain-r5
+   * review F1).
+   */
+  boatsBack: number;
+};
+
+/**
+ * **The Safety year**: the year's figures as the sum of its months, each read
+ * by its own rules (dive-domain review F1). A month with no crew rostered
+ * anywhere is one quiet line in its own view and adds no boats to the year's
+ * no-crew figure here, so the year never prints hundreds of "unmanned" boats
+ * from the months before a shop rostered crew.
+ */
+export type SafetyYear = SafetyMonth & {
+  /** Months with at least one departure back. */
+  monthsBack: number;
+  /** …of which had no crew recorded on any departure. */
+  monthsWithoutCrew: number;
 };
 
 /** The newest standing result per subject and checkpoint; a `cleared` undo leaves none. */
@@ -301,7 +334,10 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
       // A crew member recorded ashore at the dock did not sail.
       if (crewResult(departure.tripId, personId, dock) === "not_boarded") continue;
       crewSailings += 1;
-      const onFile = credentialsByPerson.get(personId) ?? [];
+      // Only what was on file by the day they sailed (review F3).
+      const onFile = (credentialsByPerson.get(personId) ?? []).filter(
+        ({ issuedAt }) => !issuedAt || issuedAt <= divesOn,
+      );
       if (onFile.length === 0) nothingOnFileSailings += 1;
       if (answersTheirJob(tripRole, shopRoles, onFile) === false) {
         unrecordedSailings += 1;
@@ -335,6 +371,8 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
     }
   }
 
+  const noCrewOnRecord =
+    departures.length > 0 && departures.every((departure) => departure.crew.length === 0);
   return {
     departuresBack: departures.length,
     rollCallsClosed,
@@ -347,7 +385,41 @@ export function summarizeSafetyMonth(input: SafetyMonthInput): SafetyMonth {
     unrecordedSailings,
     unrecordedCrew: [...unrecorded.values()],
     checkedSailings: crewSailings - nothingOnFileSailings,
-    noCrewDepartures: crewSailings === 0 ? [] : noCrewDepartures,
-    noCrewOnRecord: departures.length > 0 && crewSailings === 0,
+    noCrewDepartures: noCrewOnRecord ? [] : noCrewDepartures,
+    noCrewOnRecord,
+    boatsBack: departures.filter((departure) => departure.diveMode === "boat").length,
+  };
+}
+
+/** Folds the year's months, in order, into one {@link SafetyYear}. */
+export function summarizeSafetyYear(months: readonly SafetyMonth[]): SafetyYear {
+  const sum = (pick: (month: SafetyMonth) => number) =>
+    months.reduce((total, month) => total + pick(month), 0);
+  const unrecorded = new Map<string, SafetyMonth["unrecordedCrew"][number]>();
+  for (const row of months.flatMap((month) => month.unrecordedCrew)) {
+    const entry = unrecorded.get(row.personId) ?? { ...row, sailings: 0 };
+    entry.sailings += row.sailings;
+    unrecorded.set(row.personId, entry);
+  }
+  const monthsBack = months.filter((month) => month.departuresBack > 0).length;
+  const monthsWithoutCrew = months.filter((month) => month.noCrewOnRecord).length;
+  return {
+    departuresBack: sum((month) => month.departuresBack),
+    rollCallsClosed: sum((month) => month.rollCallsClosed),
+    openRollCalls: months.flatMap((month) => month.openRollCalls),
+    boardedAtDock: sum((month) => month.boardedAtDock),
+    unmarkedAtDock: sum((month) => month.unmarkedAtDock),
+    certOverrides: sum((month) => month.certOverrides),
+    crewSailings: sum((month) => month.crewSailings),
+    lapsedSailings: months.flatMap((month) => month.lapsedSailings),
+    unrecordedSailings: sum((month) => month.unrecordedSailings),
+    unrecordedCrew: [...unrecorded.values()],
+    checkedSailings: sum((month) => month.checkedSailings),
+    noCrewDepartures: months.flatMap((month) => month.noCrewDepartures),
+    noCrewOnRecord: monthsBack > 0 && monthsWithoutCrew === monthsBack,
+    // A month with no crew on record judged none of its boats (review F1).
+    boatsBack: sum((month) => (month.noCrewOnRecord ? 0 : month.boatsBack)),
+    monthsBack,
+    monthsWithoutCrew,
   };
 }

@@ -3,6 +3,7 @@ import { and, eq, getTableName, isNull } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { schemaTableNameOf } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
 import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
@@ -207,12 +208,9 @@ function erasureWriteSites(): { written: Set<string>; unresolved: string[] } {
   const unresolved: string[] = [];
   for (const match of source.matchAll(/\.(?:update|delete)\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
     const identifier = match[1] as string;
-    const value = (schema as Record<string, unknown>)[identifier];
-    try {
-      written.add(getTableName(value as Parameters<typeof getTableName>[0]));
-    } catch {
-      unresolved.push(identifier);
-    }
+    const name = schemaTableNameOf(identifier);
+    if (name) written.add(name);
+    else unresolved.push(identifier);
   }
   return { written, unresolved };
 }
@@ -226,13 +224,9 @@ function erasureHardDeleteOrder(): string[] {
   const source = stripCommentsAndStrings(readFileSync("src/db/anonymize.ts", "utf8"));
   const order: string[] = [];
   for (const match of source.matchAll(/\.delete\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\)/g)) {
-    const value = (schema as Record<string, unknown>)[match[1] as string];
-    try {
-      const name = getTableName(value as Parameters<typeof getTableName>[0]);
-      if (!order.includes(name)) order.push(name);
-    } catch {
-      // Resolved and reported by `erasureWriteSites`; not this function's job.
-    }
+    // An unresolved one is reported by `erasureWriteSites`; not this function's job.
+    const name = schemaTableNameOf(match[1] as string);
+    if (name && !order.includes(name)) order.push(name);
   }
   return order;
 }
@@ -342,6 +336,8 @@ const ERASURE_KEEPS: Record<string, string> = {
   executed_dives:
     "what the crew recorded about a dive that ran — depth, time, conditions, and why the plan changed",
   gear_service_events: "a technician's record of servicing a unit",
+  boat_snags:
+    "a crew member's note about a problem on a boat, and who later found it still there or fixed",
   pre_departure_check_events:
     "a crew member ticking a checklist line before a departure, and their note about the line",
   trip_stage_events: "the crew moving a departure through its stages",
@@ -391,7 +387,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
 
   // The shop's own record of itself. A diver is not on any of these.
   shops:
-    "the business: its name, its front-desk address and phone, its timezone and its own words. Erasing a diver does not touch the shop they dived with, except the shore contact's alert address (H-118), which the erasure clears when it is the diver's",
+    "the business: its name, its front-desk address and phone, its timezone and its own words. Erasing a diver does not touch the shop they dived with, except the shore contact's alert address (H-118) and the bookkeeper's month-end address with its confirmation and link (item 35), which the erasure clears when either is the diver's",
   shop_contact_email_confirmation_tokens:
     "the front-desk address's own proof of ownership (issue #1288) — the shop’s address, not a diver’s",
   shop_shore_alert_tokens:

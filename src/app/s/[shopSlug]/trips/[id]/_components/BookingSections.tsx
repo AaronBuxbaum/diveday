@@ -15,12 +15,13 @@ import {
   DIVER_PARTICIPANT_CHOICE_KEYS,
   DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS,
 } from "@/i18n/participant-labels";
+import type { DeskPayment } from "@/lib/desk-payment";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import { type ParticipantType, rentsGear } from "@/lib/participant-types";
 import type { PassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath } from "@/lib/public-routes";
-import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
+import { hasAnyRentalPricing, type LastGear, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import type { BookingFormTrip } from "../_lib/booking-form-trip";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
@@ -388,6 +389,11 @@ export type BookSpotSectionContext = {
    */
   taxEnabled?: boolean;
   /**
+   * How the shop takes money at the desk (fifth-loop ideas, item 21), said
+   * under "Due at the shop". Null says nothing.
+   */
+  deskPayment?: DeskPayment | null;
+  /**
    * A course session's two priced halves, per diver (`courseCharges`), resolved
    * by the page so the arithmetic stays server-side. Null on an ordinary
    * charter, and each hides its own line in `MoneyBlock`.
@@ -417,6 +423,8 @@ export type BookSpotSectionContext = {
   knownDiver?:
     | (KnownDiverPanelProps & {
         lead: { fullName: string; email: string | null; phone: string | null };
+        /** Their last trip's gear, to start their own (the first) gear step from (item 40). */
+        lastGear?: LastGear | null;
       })
     | null;
   /**
@@ -469,6 +477,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
     rentalPricing,
     passThroughFee,
     taxEnabled,
+    deskPayment = null,
     courseFeeCents,
     eLearningFeeCents,
     depositCents,
@@ -623,6 +632,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
                   plannedDives={trip.plannedDives}
                   currency={currency}
                   onSubtotalChange={onGearSubtotalChange}
+                  asLastTime={index === 0 ? (knownDiver?.lastGear ?? null) : null}
                 />
               ))
           : null}
@@ -709,6 +719,7 @@ export function BookSpotSection({ context }: { context: BookSpotSectionContext }
               // read in the wrong branch).
               taxLine: taxEnabled && payAtBooking ? "checkout" : "none",
               dueNow: payAtBooking ? "checkout" : "at_shop",
+              deskPayment,
               depositCents: depositCents ?? null,
               balanceDueAt: balanceDueAt ?? null,
               currency,

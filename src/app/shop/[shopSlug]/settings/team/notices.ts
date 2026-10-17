@@ -1,3 +1,5 @@
+import { type Role, STAFF_ROLES } from "@/lib/authz";
+
 /**
  * Which form on the team page a `?notice=` belongs to.
  *
@@ -13,6 +15,13 @@
  * to the page banner would be a refusal about a person the reader has
  * scrolled past. `ROLE_REFUSALS` below is the list a test holds this to.
  */
+
+/** A `?priorRoles=` value (the roles Undo puts back), kept to roles this app actually has. */
+export function parseRoles(value: string | undefined): Role[] {
+  return (value ?? "")
+    .split(",")
+    .filter((role): role is Role => (STAFF_ROLES as readonly string[]).includes(role));
+}
 
 /** The one spelling of each form's name, so the page and its tests agree. */
 export const TEAM_FORMS = {

@@ -160,6 +160,25 @@ export type OfflineManifestPayload = {
    * renders no section.
    */
   boatSafety?: BoatSafetySection;
+  /**
+   * **The boat's open snags** (fifth-loop ideas, item 1): what an earlier crew
+   * handed on and what this one wrote, as the live check worded them at the
+   * save, so the 5:15 crew on a marina connection reads them before they sail.
+   * Words, not codes, for the reason `boatSafety` gives; read-only here, since
+   * answering one is a write the server must check. Optional and additive: a
+   * copy with none carries no field and renders no section.
+   */
+  snags?: {
+    heading: string;
+    items: Array<{
+      /** "Radio check: VHF crackles on 16": the line and the crew's words. */
+      line: string;
+      /** "Noted by Sal Moretti, …". */
+      notedBy: string;
+      /** "Ana Ruiz found it still there, …", when a later crew looked. */
+      stillThere?: string;
+    }>;
+  };
   manifests: Array<
     Omit<TripManifest, "trip" | "divers" | "crew" | "completeness"> & {
       trip: Omit<TripManifest["trip"], "startsAt" | "endsAt"> & {
@@ -292,6 +311,13 @@ export type OfflineManifestPayload = {
            * additive like `participantType`; absent says nothing.
            */
           | "bookedAs"
+          /**
+           * The lunch note (item 56, dive-domain review B1): the crew who
+           * hand out lunch read the dock copy, not Prep. A meal preference,
+           * already staff-only like the rest of this record; optional and
+           * additive, so no record-version bump.
+           */
+          | "dietaryNote"
         > & {
           /**
            * **The counter's own answer, and the reason the dock copy can take
@@ -905,10 +931,13 @@ export function serializeManifests(
   }> = [],
   /** The worded boat section (`boatSafetySection`), or null for a boat with nothing to say. */
   boatSafety: BoatSafetySection | null = null,
+  /** The boat's open snags, worded; absent or empty carries none. */
+  snags?: OfflineManifestPayload["snags"],
 ): OfflineManifestPayload {
   return {
     shop,
     ...(boatSafety ? { boatSafety } : {}),
+    ...(snags && snags.items.length > 0 ? { snags } : {}),
     checklist: {
       items: checklist.map((item) => ({
         id: item.id,
@@ -984,6 +1013,7 @@ export function serializeManifests(
         nitroxRequested: diver.nitroxRequested,
         participantType: diver.participantType,
         bookedAs: diver.bookedAs,
+        ...(diver.dietaryNote ? { dietaryNote: diver.dietaryNote } : {}),
         checkedIn: diver.checkedIn,
         notHere: diver.notHere,
         ...(diver.notHere && diver.turnedAway ? { turnedAway: true as const } : {}),

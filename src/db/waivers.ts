@@ -61,7 +61,11 @@ export {
   recordInPersonWaiver,
 } from "./waivers-in-person";
 export {
+  type DoctorReferral,
+  type DoctorReferralAnswers,
+  doctorPageOpen,
   earlierReferralForOpenHold,
+  getDoctorReferral,
   getMedicalClearanceDocument,
   hasUnansweredMedicalHold,
   type MedicalEvaluationOutcome,
@@ -69,6 +73,7 @@ export {
   type RetireMedicalRefusalResult,
   recordMedicalEvaluation,
   retireMedicalRefusal,
+  revealDoctorReferral,
 } from "./waivers-medical";
 export {
   hasLivePersonWaiverRequest,

@@ -30,16 +30,16 @@ import { ExecutedDivesTable } from "./_components/ExecutedDivesTable";
 import { IncidentReportsSection } from "./_components/IncidentReportsSection";
 import { incidentSummaryRows } from "./_components/incident-summary";
 import { NumberedName } from "./_components/NumberedName";
+import { PreDepartureRecord } from "./_components/PreDepartureRecord";
 import {
   rollCallCheckpointPrintClass,
   rollCallTableMinWidth,
 } from "./_components/roll-call-columns";
 import { NoRollCallNote, TimelineEntryText } from "./_components/TimelineEntryText";
 
-// `instant = true` asserts that navigating *into* this page paints
-// immediately — the claim every trips/[id] sibling makes (ADR
-// 20260804-instant-navigation): arriving from the home, the staff shell is
-// already mounted and this segment's `loading.tsx` is what paints while the
+// `instant = true` asserts that navigating *into* this page paints immediately — the claim
+// every trips/[id] sibling makes (ADR 20260804-instant-navigation): arriving from the home, the
+// staff shell is already mounted and this segment's `loading.tsx` is what paints while the
 // document assembles.
 export const instant = true;
 
@@ -323,42 +323,18 @@ export default async function IncidentExportPage({
         )}
       </section>
 
-      {/* Absence is stated, never blank: a shop with no checklist defined says
-          so, rather than the section simply not appearing — the two mean
-          different things to an investigator. */}
+      {/* Absence is stated, never blank: a shop with no checklist defined says so, rather than the
+          section simply not appearing; the two mean different things to an investigator. */}
       <section aria-labelledby="incident-checklist-heading">
         <h2 id="incident-checklist-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.checklistHeading")}
         </h2>
-        {doc.preDepartureCheck.length === 0 ? (
-          <p className="mt-1 max-w-prose text-sm text-muted">
-            {t("incidentExport.checklistEmpty")}
-          </p>
-        ) : (
-          // No scroll floor: two columns share a phone's width and wrap. The
-          // roll-call tables keep theirs, which grow a column per dive.
-          <Table shellClassName="mt-3">
-            <THead>
-              <Th>{t("incidentExport.checklistColItem")}</Th>
-              <Th>{t("incidentExport.checklistColStatus")}</Th>
-            </THead>
-            <TBody>
-              {doc.preDepartureCheck.map((item) => (
-                <tr key={item.label}>
-                  <Td>{item.label}</Td>
-                  <Td>
-                    {item.checked && item.occurredAt && item.recordedByName
-                      ? t("incidentExport.checklistCheckedBy", {
-                          name: item.recordedByName,
-                          date: dateTime(item.occurredAt),
-                        })
-                      : t("incidentExport.checklistNotChecked")}
-                  </Td>
-                </tr>
-              ))}
-            </TBody>
-          </Table>
-        )}
+        <PreDepartureRecord
+          checks={doc.preDepartureCheck}
+          snags={doc.sailedWithSnags}
+          t={t}
+          dateTime={dateTime}
+        />
       </section>
 
       <BoatAtDeparture doc={doc} locale={locale} dateTime={dateTime} t={t} />

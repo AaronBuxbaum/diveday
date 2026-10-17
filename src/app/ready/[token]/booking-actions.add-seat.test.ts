@@ -62,6 +62,7 @@ beforeEach(() => {
     db: {} as never,
     bookingId: BOOKING_ID,
     ownLocale: null,
+    delivered: true,
     data: { canAddSeat: true, identityHeld: false, shop: { id: "shop-1" } } as never,
   });
   vi.mocked(addPartySeat).mockResolvedValue({ ok: true } as never);

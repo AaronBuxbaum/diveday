@@ -16,6 +16,7 @@ import {
   listCourseFormRequirements,
   listCourseForms,
 } from "@/db/course-forms";
+import { ownerOrManagerWords, sayWords } from "@/i18n/shared-sentences";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { courseFormAwaitingText } from "@/lib/course-forms";
 import type { NoticeTone } from "@/lib/staff-notices";
@@ -68,7 +69,10 @@ function courseFormsNotice(
     return { tone: "danger", text: t("courses.edit.forms.notAuthorized") };
   }
   if (notice === "forms-remove-not-authorized") {
-    return { tone: "danger", text: t("courses.edit.forms.removeNotAuthorized") };
+    return {
+      tone: "danger",
+      text: `${t("courses.edit.forms.removeNotSaved")} ${sayWords(t, ownerOrManagerWords("courseForm"))}`,
+    };
   }
   return undefined;
 }
@@ -228,7 +232,7 @@ export function CourseFormsRequirement({
           </p>
         ) : null}
         {!canWriteForms && required.length > 0 ? (
-          <p className="text-sm text-muted">{t("courses.edit.forms.removeLocked")}</p>
+          <p className="text-sm text-muted">{sayWords(t, ownerOrManagerWords("courseForm"))}</p>
         ) : null}
         {forms.length > required.length && addImpact.students > 0 ? (
           <p className="text-sm text-muted" data-course-form-add-impact>

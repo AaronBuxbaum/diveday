@@ -185,6 +185,7 @@ describe("a row that performs keeps its place", () => {
           ),
           shopSlug: "blue-mantis",
           shopName: "Blue Mantis",
+          mailShopName: "Blue Mantis",
           locale: "en-US",
           timeZone: "America/New_York",
           currency: "usd",
@@ -696,12 +697,50 @@ describe("what today made", () => {
 /** What the divers left on the reader's boats this week (UX review 2026-10-11, item 18). */
 describe("the crew's tips line", () => {
   it("tells a crew member their share of the week's tips", () => {
-    renderSpine({ crewTipsCents: 14_000 });
+    renderSpine({ crew: { tipsCents: 14_000, month: null } });
     expect(screen.getByText("Your share of tips this week: $140.")).toBeInTheDocument();
   });
 
   it("says nothing on a week with no tips", () => {
-    renderSpine({ crewTipsCents: 0 });
+    renderSpine({ crew: { tipsCents: 0, month: null } });
     expect(screen.queryByText(/share of tips this week/)).toBeNull();
+  });
+});
+
+/** Tomorrow from tonight (fifth-loop ideas, item 2): the evening says what tomorrow needs. */
+describe("tomorrow from tonight", () => {
+  const tomorrow = { departures: 2, tanks: { total: 42, air: 36, nitrox: 6 }, rentalPieces: 29 };
+
+  it("adds tomorrow's boats together once the day is closing", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], { takings: null }, tomorrow),
+    });
+    expect(screen.getByRole("heading", { name: "Tomorrow from tonight" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Print tomorrow" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("/print?day=tomorrow"),
+    );
+  });
+
+  it("waits while a boat is still out", () => {
+    renderSpine({
+      departures: [],
+      evening: evening(
+        [
+          closed({
+            tripId: "out",
+            status: "still_out",
+            startsAt: hoursFromNow(-2),
+            endsAt: hoursFromNow(1),
+            ended: false,
+          }),
+        ],
+        { takings: null },
+        tomorrow,
+      ),
+    });
+    expect(screen.queryByRole("heading", { name: "Tomorrow from tonight" })).toBeNull();
+    expect(screen.getByText("Still out")).toBeInTheDocument();
   });
 });

@@ -8,7 +8,6 @@
     "test-sent": "Zapier test hook delivered.",
     "invalid": "Check the details and choose at least one event.",
     "not-configured": "That integration isn’t available yet.",
-    "not-authorized": "Only an owner or manager can change integrations.",
     "failed": "The integration could not complete that request. Try again, or reconnect it.",
     "encryption-key-unset": "This DiveDay instance is not set up to store credentials securely yet, so nothing was saved.",
     "encryption-key-invalid": "This DiveDay instance’s encryption key is misconfigured, so nothing was saved.",

@@ -426,7 +426,7 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
                 action parses an absent checkbox as `false` rather than
                 `undefined`, so `updateTrip` writes the correction. */}
         {trip.courseId ? null : <SelfGuidedField t={t} checked={trip.selfGuided} />}
-        <DecompressionField t={t} checked={trip.exceedsNoDecoLimits} />
+        <AboardFields t={t} trip={trip} />
       </FieldGrid>
       <PayAtBookingFields
         t={t}
@@ -624,6 +624,39 @@ function DecompressionField({ t, checked }: { t: StaffTranslator; checked: boole
         className="text-sm"
       >
         {t("trips.details.exceedsNoDecoHint")}
+      </ChoiceRow>
+    </Field>
+  );
+}
+
+/** What the day aboard asks of the plan: deco, and lunch served (item 56). */
+function AboardFields({
+  t,
+  trip,
+}: {
+  t: StaffTranslator;
+  trip: { exceedsNoDecoLimits: boolean; lunchAboard: boolean };
+}) {
+  return (
+    <>
+      <DecompressionField t={t} checked={trip.exceedsNoDecoLimits} />
+      <LunchAboardField t={t} checked={trip.lunchAboard} />
+    </>
+  );
+}
+
+/** Lunch served aboard (fifth-loop ideas, item 56): asks each diver's dietary note. */
+function LunchAboardField({ t, checked }: { t: StaffTranslator; checked: boolean }) {
+  return (
+    <Field label={t("trips.details.lunchAboardLabel")} htmlFor="trip-details-lunch-aboard">
+      <ChoiceRow
+        type="checkbox"
+        id="trip-details-lunch-aboard"
+        name="lunchAboard"
+        defaultChecked={checked}
+        className="text-sm"
+      >
+        {t("trips.details.lunchAboardHint")}
       </ChoiceRow>
     </Field>
   );

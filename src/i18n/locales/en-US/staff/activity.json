@@ -56,6 +56,7 @@
     "order_refunded": "{actor} refunded an order",
     "order_paid_cash": "{actor} recorded an order paid in cash",
     "order_paid_card_machine": "{actor} recorded an order paid on the card machine",
+    "order_paid_room_charge": "{actor} recorded an order charged to a room",
     "paid_after_close_refunded": "{actor} refunded a card paid after its checkout closed",
     "seat_refunded": "{actor} removed {diver} and refunded the seat by card",
     "payment_waived": "{actor} marked {diver}’s seat waived",
@@ -79,6 +80,9 @@
     "shore_alert_contact_changed": "{actor} changed the shore contact’s email for roll-call alerts",
     "shore_alert_contact_cleared": "{actor} removed the shore contact’s email for roll-call alerts",
     "shore_alert_contact_stopped": "The shore contact stopped roll-call alerts with the link in one",
+    "bookkeeper_email_set": "{actor} set the bookkeeper’s email for month-end files",
+    "bookkeeper_email_changed": "{actor} changed the bookkeeper’s email for month-end files",
+    "bookkeeper_email_cleared": "{actor} removed the bookkeeper’s email for month-end files",
     "redacted": "[redacted]",
     "demo_charter_confirmed": "{actor} confirmed the charter with the captain",
     "demo_second_dive_moved": "{actor} moved the second dive to French Reef for the swell",
@@ -101,7 +105,9 @@
     "participant_type_changed": "{actor} changed {diver} from {from, select, snorkeler {snorkeling} rider {riding along} other {diving}} to {type, select, snorkeler {snorkeling} rider {riding along} other {diving}}{certCheck, select, cleared {, which cleared a card check} overridden {, past a missing card} other {}}{atSea, select, yes {, after departure} other {}}",
     "course_form_medical_changed": "{actor} {marked, select, yes {marked} other {took the medical mark off}} the course form {form}{marked, select, yes { as a medical statement} other {}}",
     "training_dive_marked": "{actor} marked {diver}’s dive as training for {course}",
-    "training_dive_cleared": "{actor} cleared the training mark on {diver}’s dive for {course}{formsOwed, select, yes {, with course forms still owed} other {}}"
+    "training_dive_cleared": "{actor} cleared the training mark on {diver}’s dive for {course}{formsOwed, select, yes {, with course forms still owed} other {}}",
+    "bookkeeper_email_vouched": "{actor} re-confirmed the bookkeeper’s email for month-end files",
+    "bookkeeper_email_stopped": "The bookkeeper stopped month-end files with the link in one"
   },
   "unknown": "An earlier entry",
   "review": {

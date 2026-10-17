@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { ActivityLog } from "@/components/ActivityLog";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { ScrollToHash } from "@/components/ScrollToHash";
@@ -25,7 +25,9 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { recordPaperCourseFormAction } from "../course-actions";
 import { AddDiverSection } from "./AddDiverSection";
 import { carryTargetLabel } from "./carry-target-label";
+import { DealLeadTime } from "./DealLeadTime";
 import { DepartureNoteSection } from "./DepartureNoteSection";
+import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
@@ -40,6 +42,7 @@ export type TripRosterActions = {
   addExistingDiverAction: FormAction;
   addToWaitlistAction: FormAction;
   createDirectTripInvitationAction: FormAction;
+  invitePastDiverAction: FormAction;
   /** A reducer, not a plain `FormAction`: a refused paper release answers in
    * the form with the typed values rather than redirecting (issue #1674). */
   markRosterWaiverInPersonAction: PaperWaiverAction;
@@ -58,6 +61,7 @@ export type TripRosterActions = {
   sendNewWaiverAction?: FormAction;
   certifyDiverAction?: FormAction;
   saveCourseNextStepAction?: FormAction;
+  markCardProcessedAction?: FormAction;
   setCourseMaterialsDoneAction?: FormAction;
   elearningCheckAction?: RosterActions["elearningCheckAction"];
   agencyCheckAction?: RosterActions["agencyCheckAction"];
@@ -66,6 +70,7 @@ export type TripRosterActions = {
   deleteInternalNoteAction: FormAction;
   saveRosterEmergencyContactAction: FormAction;
   updateBookingPickupAction: (bookingId: string, formData: FormData) => void | Promise<void>;
+  updateBookingDietaryNoteAction: (bookingId: string, formData: FormData) => void | Promise<void>;
   recordTripInvitationAction: (invitationId: string) => Promise<"sent" | "fallback">;
   undoRemoveBookingAction: FormAction;
   restoreInternalNoteAction: FormAction;
@@ -284,6 +289,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           elearningQueryByBooking: guests.elearningQueryByBooking,
           elearningChecksOff: guests.elearningChecksOff,
           agencyCheckCardsByPerson: guests.agencyCheckCardsByPerson,
+          issuedCardByPerson: guests.issuedCardByPerson,
           courseMaterialsDoneByPerson: guests.courseMaterialsDoneByPerson,
           sameNameHeldSeats: guests.sameNameHeldSeats,
           aboardAtSea: guests.aboardAtSea,
@@ -316,6 +322,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           saveEmergencyContactAction: actions.saveRosterEmergencyContactAction,
           certifyDiverAction: guests.certifies ? actions.certifyDiverAction : undefined,
           saveCourseNextStepAction: actions.saveCourseNextStepAction,
+          markCardProcessedAction: actions.markCardProcessedAction,
           setCourseMaterialsDoneAction: guests.courseHasMaterials
             ? actions.setCourseMaterialsDoneAction
             : undefined,
@@ -333,6 +340,10 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           markTrainingDiveAction: record ? undefined : actions.markTrainingDiveAction,
           clearTrainingDiveAction: record ? undefined : actions.clearTrainingDiveAction,
           updatePickupAction: actions.updateBookingPickupAction,
+          // Only a departure that serves lunch aboard asks for a lunch note.
+          updateDietaryNoteAction: trip.lunchAboard
+            ? actions.updateBookingDietaryNoteAction
+            : undefined,
         }}
         slots={{
           arrival,
@@ -373,19 +384,31 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
               </>
             ) : null,
           invitedGroup:
-            invitations.length > 0 ? (
-              <TripInvitationGroup
-                invitations={invitations}
-                shopSlug={shopSlug}
-                tripId={trip.id}
-                shopName={shopName}
-                tripTitle={trip.title}
-                tripStartsAt={trip.startsAt}
-                timezone={timezone}
-                inviteAction={actions.recordTripInvitationAction}
-                locale={locale}
-                canInvite={acceptsDivers && mayInviteFromWaitlist}
-              />
+            invitations.length > 0 || (acceptsDivers && guests.inviteSuggestions) ? (
+              <>
+                {invitations.length > 0 ? (
+                  <TripInvitationGroup
+                    invitations={invitations}
+                    shopSlug={shopSlug}
+                    tripId={trip.id}
+                    shopName={shopName}
+                    tripTitle={trip.title}
+                    tripStartsAt={trip.startsAt}
+                    timezone={timezone}
+                    inviteAction={actions.recordTripInvitationAction}
+                    locale={locale}
+                    canInvite={acceptsDivers && mayInviteFromWaitlist}
+                  />
+                ) : null}
+                {acceptsDivers && guests.inviteSuggestions ? (
+                  <InviteSuggestionsGroup
+                    suggestions={guests.inviteSuggestions}
+                    action={actions.invitePastDiverAction}
+                    locale={locale}
+                    timeZone={timezone}
+                  />
+                ) : null}
+              </>
             ) : null,
           addDiverGroup: !acceptsDivers ? null : (
             <AddDiverSection
@@ -500,6 +523,16 @@ export function TripPromoteAndActivity({
               currency={currency}
               status={noticeForForm(tripNotice, "last-minute-deal")}
               tripId={trip.id}
+              leadTime={
+                <Suspense fallback={null}>
+                  <DealLeadTime
+                    shopId={shop.id}
+                    startsAt={trip.startsAt}
+                    timeZone={timezone}
+                    locale={locale}
+                  />
+                </Suspense>
+              }
             />
           </div>
         </AutoOpenDetails>

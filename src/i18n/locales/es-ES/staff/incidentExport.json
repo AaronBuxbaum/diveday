@@ -119,5 +119,7 @@
   "reportDraft": "Borrador sin presentar, empezado por {name} el {date}.",
   "reportDeleted": "Borrador empezado por {creator}, eliminado sin presentar por {name} el {date}.",
   "reportAddenda": "{count, plural, =0 {Sin notas posteriores} one {# nota posterior} other {# notas posteriores}}",
-  "footerHashVersion": "versión {version}"
+  "footerHashVersion": "versión {version}",
+  "sailedWithSnag": "{item}: {note}. Anotado por {name}\u00a0· {date}",
+  "sailedWithSnagsHeading": "Pendiente en el barco al zarpar"
 }

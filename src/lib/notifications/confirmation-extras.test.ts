@@ -79,6 +79,37 @@ describe("confirmationExtras", () => {
     ).toMatchObject({ money: { due: "at_shop", amountCents: 15_000 } });
   });
 
+  it("carries how the desk takes money with a seat due there, and never with one paid online (ideas item 21)", () => {
+    const desk = { ...shop, deskPayment: "cash" as const };
+    const atShop = confirmationExtras({
+      shop: desk,
+      trip,
+      course: null,
+      participantType: "diver",
+      chargesOnline: false,
+      origin: null,
+    });
+    expect(atShop).toMatchObject({ money: { due: "at_shop", deskPayment: "cash" } });
+    const online = confirmationExtras({
+      shop: desk,
+      trip,
+      course: null,
+      participantType: "diver",
+      chargesOnline: true,
+      origin: null,
+    });
+    expect(online.money).not.toHaveProperty("deskPayment");
+    const unsaid = confirmationExtras({
+      shop,
+      trip,
+      course: null,
+      participantType: "diver",
+      chargesOnline: false,
+      origin: null,
+    });
+    expect(unsaid.money).not.toHaveProperty("deskPayment");
+  });
+
   it("sums the party's seats the lead still holds into one figure (fourth UX review, item 5)", () => {
     expect(
       confirmationExtras({

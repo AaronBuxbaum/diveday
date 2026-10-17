@@ -14,7 +14,11 @@ import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { countGearItems } from "@/db/gear";
 import { listShopRolesPresent } from "@/db/shop-roles";
 import { shopBySlugCached } from "@/db/shops-cached";
-import { countBlockedDiversNextBoatDay, todayNextDepartureTripId } from "@/db/today";
+import {
+  countBlockedDiversNextBoatDay,
+  nextOfTodaysDepartures,
+  todaysDepartures,
+} from "@/db/today";
 import { countWorkOrders } from "@/db/work-orders";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -24,8 +28,10 @@ import { isStaff, staffDestinationGates } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
+import { formatTime } from "@/lib/format";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { settingsShortcutsFor } from "../settings/settings-groups";
+import { staffShopName } from "./staff-shop-name";
 
 /**
  * **Everything above a staff page that has to be asked of this request** — the
@@ -169,16 +175,16 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   // Whether the shop teaches and keeps a fleet decides whether Courses and
   // Gear are rows in the nav (ADR 20261001-logbook); two existence reads,
   // in the same round trip.
-  const [navBlockersCount, boatBoardingHref, teaches, gearCount] =
+  const now = nowDate();
+  const [navBlockersCount, todays, teaches, gearCount] =
     showNav && shop
       ? await Promise.all([
-          countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, nowDate()).then(
+          countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, now).then(
             (blocked) => blocked.total,
           ),
-          todayNextDepartureTripId(db, shop.id, shop.timezone).then((tripId) =>
-            // The manifest opens on its "Before departure" checkpoint — the boarding pass.
-            tripId ? `/shop/${shopSlug}/trips/${tripId}/manifest` : undefined,
-          ),
+          // Today's boats: the boarding door below, and ⌘K's "Today" group
+          // before anything is typed (fifth loop, item 13), from one read.
+          todaysDepartures(db, shop.id, shop.timezone, now),
           hasActiveCourses(db, shop.id),
           // The fleet **or** the bench: a shop that services customers'
           // regulators and owns no rental kit of its own still has a Gear
@@ -187,7 +193,17 @@ const loadShopChrome = cache(async (shopSlug: string) => {
             ([units, tickets]) => units + tickets,
           ),
         ])
-      : [0, undefined, false, 0];
+      : [0, [], false, 0];
+  const boardingTripId = nextOfTodaysDepartures(todays, now);
+  // The manifest opens on its "Before departure" checkpoint — the boarding pass.
+  const boatBoardingHref = boardingTripId
+    ? `/shop/${shopSlug}/trips/${boardingTripId}/manifest`
+    : undefined;
+  const todayBoats = todays.map((trip) => ({
+    id: trip.id,
+    title: trip.title,
+    time: formatTime(trip.startsAt, locale, shop?.timezone ?? "UTC"),
+  }));
 
   const navGates = session?.user
     ? staffDestinationGates(session.user.roles)
@@ -204,6 +220,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
     showNav,
     navBlockersCount,
     boatBoardingHref,
+    todayBoats,
     navGates,
     navOffers: {
       courses: teaches,
@@ -226,10 +243,12 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
     showNav,
     navBlockersCount,
     boatBoardingHref,
+    todayBoats,
     navGates,
     navOffers,
   } = await loadShopChrome(shopSlug);
   const demoT = showBanner ? diverTranslator(locale) : undefined;
+  const shopName = shop ? await staffShopName(shop) : "";
   const staffT = staffTranslator(locale);
 
   return (
@@ -279,9 +298,11 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
       {showNav && session?.user && shop ? (
         <ShopNav
           shopSlug={shopSlug}
-          shopName={shop.name}
+          shopName={shopName}
           logoUrl={shop.logoUrl ?? undefined}
           boatBoardingHref={boatBoardingHref}
+          todayBoats={todayBoats}
+          readerId={session.user.personId}
           navGates={navGates}
           navOffers={navOffers}
           navCounts={{ blockers: navBlockersCount }}

@@ -1,4 +1,8 @@
 {
+  "limits": {
+    "sendLimit": "You have sent a lot of {thing, select, replies {replies} recaps {recaps} invites {invites} other {messages}} this hour. Nothing went out; try again in a little while.",
+    "ownerOrManager": "Only an owner or manager can {act, select, whatsapp {change WhatsApp settings} integrations {change integrations} backup {change backup settings} questionnaire {read the full questionnaire} invoice {send an invoice} bill {send a bill} courseForm {take a form off a course} other {do this}}."
+  },
   "operationalWindow": {},
   "padiChecksOff": "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings & waivers.",
   "skipToContent": "Skip to main content",
@@ -18,7 +22,7 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
     "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
-    "tooBigSuffix": ": that’s over {maxMb} MB, so try a smaller photo.",
+    "tooBigSuffix": ": that’s over {maxMb}\u00a0MB, so try a smaller photo.",
     "choose": "Choose a photo",
     "chooseAnother": "Choose a different photo",
     "chooseOthers": "Choose different photos"
@@ -140,9 +144,12 @@
     "meetingPoint": "Meeting point: {label}",
     "conditionsHeading": "Conditions",
     "dayTitle": "Day packet",
+    "dayTitleTomorrow": "Tomorrow’s packet",
     "daySubtitle": "{count, plural, one {# departure} other {# departures}} · {date}",
     "dayEmpty": "No departures today.",
-    "dayDoor": "Print the day"
+    "dayEmptyTomorrow": "No departures tomorrow.",
+    "dayDoor": "Print the day",
+    "dayDoorTomorrow": "Print tomorrow"
   },
   "commandPalette": {
     "search": "Search",
@@ -160,6 +167,8 @@
     "groupGear": "Gear",
     "groupSession": "Session",
     "groupGoTo": "Go to",
+    "groupRecent": "Recent",
+    "groupToday": "Today",
     "goToBoarding": "Boarding — today’s boat",
     "goToOfflineRollCall": "Open offline roll call",
     "hintMove": "to move",
@@ -539,6 +548,7 @@
     "firstTrip": "First dive with us",
     "firstTime": "First time with us",
     "returning": "Back after {years, plural, one {# year} other {# years}}",
+    "milestone": "{ordinal} dive day with us",
     "dockLine": "Say hello to {name}: {card}.",
     "dockLineNoCard": "Say hello to {name}.",
     "dockLineSays": "Say hello to {name}: says {level}.",

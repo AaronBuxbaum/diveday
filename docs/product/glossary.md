@@ -23,11 +23,13 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - C-card
 - Card sighting
 - Certification summary
+- Certifications issued here
 - Check all (agency)
 - Claimed certification
 - Clearing a declared-uncertified stamp
 - CMAS
 - Confirm to clear
+- Course ladder
 - Declared uncertified
 - Depth ceiling
 - Depth marker
@@ -51,6 +53,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - PADI Scuba Diver
 - Page-shape report
 - Prior visit
+- Processed with the agency
 - RAID
 - Readiness
 - Refresher / ReActivate
@@ -70,15 +73,19 @@ fails while it is stale. Grep the domain files for a term; this index says which
 [glossary/day-of-the-dive.md](glossary/day-of-the-dive.md)
 
 - Arrival card
+- Back from the boat
 - Blow-out
 - Change ledger
 - Conditions hold
+- Day load-out
 - Day-of help request
 - Departure note
 - Dock line
 - Dock rider
+- Last time line
 - Lost item
 - Saved trip-prep copy
+- Snag
 - Staff note
 
 ## Modeling notes
@@ -104,15 +111,18 @@ fails while it is stale. Grep the domain files for a term; this index says which
 [glossary/money.md](glossary/money.md)
 
 - Billing standing
+- Booking lead time
 - Cancellation notice
 - Card dispute
 - Checkout sale / tip sale
 - Dashboard refund
+- Desk payment
 - Dive (package unit)
 - Dives owed on packages
 - Failed refund
 - First paid month
 - Free term
+- Month-end email
 - Owed
 - Paid after close
 - Paid mark
@@ -120,6 +130,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Pass-through fee
 - Payments restricted
 - Payout
+- Room charge
 - Sailed / Still to sail
 - Stale package invoice
 - Subscription (DiveDay billing)
@@ -128,6 +139,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 
 [glossary/operations.md](glossary/operations.md)
 
+- 30-day invite cooldown
 - Activation milestone
 - After-state
 - Arrival event
@@ -164,6 +176,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Courtesy message
 - Crew clash
 - Crew gap
+- Crew month line
 - Crew news
 - Crew roll-call event
 - Crew schedule
@@ -177,6 +190,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Deposit
 - Desk hours
 - Didn't sail
+- Dietary note
 - Discarded draft
 - Dive briefing
 - Dive day
@@ -185,6 +199,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Dive site
 - Diver seats
 - Dock call time
+- Doctor's page
 - Emergency contact
 - Emergency reference
 - Export bundle
@@ -202,15 +217,18 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
+- Invite suggestion
 - Invoice
 - Last-minute deal
 - Last-minute list
 - Learning materials
 - Legal hold
+- Lunch aboard
 - Manifest
 - Medical hold
 - Medical questionnaire
 - Meeting point
+- Milestone
 - Milestone stamp
 - Minor unit
 - Monday email
@@ -229,6 +247,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Paper / in-person signature
 - Paper pass
 - Participant type
+- Party / Came together
 - Payment event
 - Per-trip crew role
 - Physician clearance
@@ -255,6 +274,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Safety kit
 - Sailed
 - Salvage offer
+- Saved answer
 - Seat
 - Seat claim
 - Seat held
@@ -264,6 +284,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Set-up request
 - Settled total
 - Setup link
+- Shared photo
 - Shop currency
 - Shop day scan
 - Shore alert contact
@@ -276,10 +297,12 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Staff invite
 - Stale roll call
 - Standing crew
+- Standing line
 - Station acknowledgement
 - Station echo
 - STOP list
 - The record
+- Thin boat
 - Tide window
 - Tight turnaround
 - Tip
@@ -299,8 +322,11 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Waiver / release
 - Waiver activity
 - Waiver completion
+- Weather day
+- Week totals
 - WhatsApp sender
 - Working shift
+- Your days
 - Your week
 
 ## Records and evidence
@@ -318,6 +344,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Material generation
 - Observed species
 - Photo ledger
+- Safety year
 - Sailed with no crew on record
 - Sighting
 - Staff credential
@@ -346,6 +373,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Gear register groups
 - Gear reservation
 - Gear unit
+- Gear-included course
 - Gear-request override
 - Late (work order)
 - Needs staff fit

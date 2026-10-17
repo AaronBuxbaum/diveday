@@ -98,5 +98,9 @@
   },
   "pagination": {
     "total": "{count, plural, one {# code} other {# codes}}"
+  },
+  "outcome": {
+    "deal": "{count, plural, =0 {None booked yet} one {# booked · {amount} in seats} other {# booked · {amount} in seats}}",
+    "code": "{off} off {of} of seats"
   }
 }

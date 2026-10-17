@@ -11,6 +11,7 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  boatSnags,
   boats,
   bookingArrivalEvents,
   bookingCapabilities,
@@ -45,6 +46,7 @@ import {
   gearServiceEvents,
   importedPaymentHistory,
   inboundMessages,
+  inboxSavedAnswers,
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
@@ -220,6 +222,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
   // Events before the shop's own item list they reference.
+  // A snag names its boat, its departures and its checklist line, none cascading.
+  await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db
     .delete(departureBoatSafetySnapshots)
@@ -240,6 +244,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // The inbox: replies before the messages and people they name.
   await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
+  await db.delete(inboxSavedAnswers).where(eq(inboxSavedAnswers.shopId, shopId));
   // Course forms, children first (records → requirements → versions → forms).
   await db.delete(courseFormRecords).where(eq(courseFormRecords.shopId, shopId));
   await db.delete(courseFormRequirements).where(eq(courseFormRequirements.shopId, shopId));

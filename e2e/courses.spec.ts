@@ -1332,6 +1332,56 @@ test("a course's learning materials reach the student's thread, and staff tick t
 });
 
 /**
+ * **A course whose fee includes the gear** (fifth-loop ideas, item 16). The
+ * shop ticks the course's switch; a student who books a session is asked for
+ * sizes with no rental price, and the bag list says the shop brings the set.
+ *
+ * `privateShop`, because it writes the course's own row.
+ */
+test("a course that includes its gear asks the student for sizes, not money", async ({
+  privateShop,
+  page,
+  browser,
+  workerBaseURL,
+}) => {
+  test.setTimeout(60_000);
+  const slug = privateShop.slug;
+  await page.goto(`/shop/${slug}/courses/open-water-diver/edit`);
+  await expect(editorHydrated(page)).toBeVisible();
+  await page.getByRole("checkbox", { name: "The scuba unit is part of the course fee" }).check();
+  await page.getByRole("button", { name: "Save course page" }).click();
+  await expect(page.getByRole("status")).toContainText("Course page saved");
+  await page.reload();
+  await expect(
+    page.getByRole("checkbox", { name: "The scuba unit is part of the course fee" }),
+  ).toBeChecked();
+
+  const diverContext = await browser.newContext({ baseURL: workerBaseURL });
+  const diverPage = makeActivitySafe(await diverContext.newPage());
+  await diverPage.goto(`/s/${slug}/courses/open-water-diver`);
+  await diverPage.getByRole("link", { name: "Book this date" }).first().click();
+  await expect(diverPage.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await diverPage.getByLabel("Name").fill(`Tove ${e2eNow().getTime()}`);
+  await diverPage.getByLabel("Email").fill(`tove-${e2eNow().getTime()}@example.com`);
+  await acceptAgeAttestation(diverPage);
+  await diverPage
+    .getByRole("button", { name: /^Book (this seat|\d+ seats|the last seat)$/ })
+    .click();
+  await expect(diverPage).toHaveURL(/\/ready\//);
+
+  const gear = await openThreadStep(diverPage, "gear");
+  await expect(
+    gear.getByText(/^Your scuba unit \(BCD, regulator, tank, weights\) comes with the course\./),
+  ).toBeVisible();
+  await expect(gear.getByText(/Estimated rental/)).toHaveCount(0);
+  // Personal gear is the student's own: not offered here, listed to bring.
+  await expect(gear.getByRole("checkbox", { name: /^Mask/ })).toHaveCount(0);
+  await expect(diverPage.getByText(/^Scuba unit \(BCD, regulator, tank, weights\)$/)).toBeVisible();
+  await expect(diverPage.getByText("Snorkel", { exact: true })).toBeVisible();
+  await diverContext.close();
+});
+
+/**
  * **The agency-wording door is for the staffer who can walk through it** (UX
  * review 2026-10-10, item 16). The course editor draws its Forms section only
  * for someone who may configure courses, so a divemaster reading the roster is

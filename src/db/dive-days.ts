@@ -1,4 +1,4 @@
-import { and, eq, ne, or, type SQL, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, or, type SQL, sql } from "drizzle-orm";
 import { bookings, executedDives, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -9,8 +9,8 @@ import { liveTrip } from "./trips-live";
  * the query to have joined them; none joins anything itself, so a reader never
  * gains a row per logged dive.
  *
- * The readers: the recap's dive-day count (`getRecapPageData`,
- * `src/db/recap.ts`, which feeds `visitMilestone`), the counter's name-match
+ * The readers: a diver's numbered days (the recap's count, the milestone and
+ * "Your days", through {@link numberedDiveDay} below), the counter's name-match
  * prompt (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`), and the fly-safe
  * multi-day advisory (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`). The
  * first two call {@link diveDay} whole. The fly-safe reader calls the two
@@ -57,4 +57,24 @@ export function deskCountsDiveDay(): SQL {
 /** The whole rule: a booking whose day counts as a dive day. */
 export function diveDay(): SQL {
   return and(seatCanBeDiveDay(), deskCountsDiveDay()) as SQL;
+}
+
+/**
+ * **A day on the diver's numbered history with the shop**: the milestone and
+ * the welcome cue (`src/db/welcome-cues.ts`), the recap's ordinal
+ * (`getRecapPageData`) and the rows of "Your days" (`src/db/your-days.ts`)
+ * count exactly these, so the three say one number (dive-domain review of
+ * layer r5-4, second pass, F1; security review, second pass, N-b). A
+ * {@link diveDay} on a **diver** seat that is **not held**: a day they rode
+ * along or snorkeled while somebody else dived is not one of their dive days,
+ * and a seat matched to them on a guess (#2082) may be somebody else's. The
+ * fly-safe reader does not use it: a snorkeler carries no nitrogen, and a held
+ * seat's diver is still the one who dived.
+ */
+export function numberedDiveDay(): SQL {
+  return and(
+    diveDay(),
+    eq(bookings.participantType, "diver"),
+    isNull(bookings.identityUnconfirmedAt),
+  ) as SQL;
 }

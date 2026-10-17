@@ -17,6 +17,7 @@ vi.mock("@/db/courtesy-email", () => ({ optOutPersonFromCourtesyEmailByToken: vi
 vi.mock("@/db/last-minute-list", () => ({ unsubscribeLastMinuteListEntryByToken: vi.fn() }));
 vi.mock("@/db/weekly-digest", () => ({ turnOffWeeklyDigestByToken: vi.fn() }));
 vi.mock("@/db/shore-alert-tokens", () => ({ stopShoreAlertsByToken: vi.fn() }));
+vi.mock("@/db/bookkeeper", () => ({ stopBookkeeperByToken: vi.fn() }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
@@ -27,6 +28,7 @@ const { optOutPersonFromCourtesyEmailByToken } = await import("@/db/courtesy-ema
 const { unsubscribeLastMinuteListEntryByToken } = await import("@/db/last-minute-list");
 const { turnOffWeeklyDigestByToken } = await import("@/db/weekly-digest");
 const { stopShoreAlertsByToken } = await import("@/db/shore-alert-tokens");
+const { stopBookkeeperByToken } = await import("@/db/bookkeeper");
 const { checkRateLimit, rateLimitKey, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { POST } = await import("./route");
 
@@ -45,6 +47,7 @@ beforeEach(() => {
   vi.mocked(optOutPersonFromCourtesyEmailByToken).mockResolvedValue(null);
   vi.mocked(turnOffWeeklyDigestByToken).mockResolvedValue(null);
   vi.mocked(stopShoreAlertsByToken).mockResolvedValue(null);
+  vi.mocked(stopBookkeeperByToken).mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -89,6 +92,26 @@ describe("POST /unsubscribe/[token]/one-click", () => {
     expect(stopShoreAlertsByToken).toHaveBeenCalledWith({}, { token: TOKEN });
   });
 
+  // Item 35, second-pass N1: a bookkeeper stops the month-end files, tried last.
+  it("stops a bookkeeper's month-end files when the token is none of the others", async () => {
+    const response = await post();
+
+    expect(response.status).toBe(200);
+    expect(stopBookkeeperByToken).toHaveBeenCalledWith({}, { token: TOKEN });
+  });
+
+  it("leaves the bookkeeper alone when a shore-contact token matched", async () => {
+    vi.mocked(stopShoreAlertsByToken).mockResolvedValue({
+      shopId: "s",
+      shopName: "Shop",
+      alreadyStopped: true,
+    });
+
+    await post();
+
+    expect(stopBookkeeperByToken).not.toHaveBeenCalled();
+  });
+
   it("leaves the shore contact alone when a Monday-email token matched", async () => {
     vi.mocked(turnOffWeeklyDigestByToken).mockResolvedValue({ personId: "p" } as never);
 
@@ -131,6 +154,24 @@ describe("POST /unsubscribe/[token]/one-click", () => {
       rateLimitKey("unsubscribe-token", "203.0.113.7"),
       RATE_LIMITS.accountTokenAction,
     );
+  });
+
+  it("limits by IP as well, before the token's own bucket (third-pass security N3)", async () => {
+    vi.mocked(checkRateLimit).mockImplementation(async (key) =>
+      key === rateLimitKey("unsubscribe-one-click-ip", "203.0.113.7")
+        ? { allowed: false, retryAfterMs: 60_000 }
+        : { allowed: true, retryAfterMs: 0 },
+    );
+
+    const response = await post("a-fresh-guess");
+
+    expect(response.status).toBe(429);
+    expect(checkRateLimit).toHaveBeenCalledWith(
+      rateLimitKey("unsubscribe-one-click-ip", "203.0.113.7"),
+      RATE_LIMITS.oneClickUnsubscribeByIp,
+    );
+    expect(unsubscribeLastMinuteListEntryByToken).not.toHaveBeenCalled();
+    expect(stopBookkeeperByToken).not.toHaveBeenCalled();
   });
 
   it("is idempotent — a second one-click POST for an already-unsubscribed token still answers 200", async () => {

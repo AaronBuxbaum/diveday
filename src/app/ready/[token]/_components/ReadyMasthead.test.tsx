@@ -121,6 +121,23 @@ describe("ReadyBookedHeader", () => {
     expect(screen.getByRole("link", { name: "Add to calendar" })).toBeTruthy();
   });
 
+  it("says a milestone boat once, as a count, and nothing on any other (H-128)", () => {
+    render(
+      withProvider(
+        "en-US",
+        <ReadyBookedHeader
+          facts={FACTS}
+          greetingName="Priya Sharma"
+          milestone={25}
+          locale="en-US"
+          now={NIGHT_BEFORE}
+          t={diverTranslator("en-US")}
+        />,
+      ),
+    );
+    expect(screen.getByText("Your 25th dive day with Blue Mantis Divers.")).toBeTruthy();
+  });
+
   /**
    * **The time range never splits** (#2504): at 390 the one line broke inside
    * it ("7:00" / "AM to 11:30 AM"). The day and the date are one line, the

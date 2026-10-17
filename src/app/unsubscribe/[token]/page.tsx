@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { EntryDone, EntryShell } from "@/components/account/EntryShell";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { resolveBookkeeperStopToken } from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
 import { resolveCourtesyEmailUnsubscribeToken } from "@/db/courtesy-email";
 import { resolveLastMinuteListUnsubscribeToken } from "@/db/last-minute-list";
@@ -155,6 +156,29 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
         description={t("shoreAlertStop.description", { shopName: shore.shopName })}
         submitLabel={t("shoreAlertStop.submit")}
         pendingLabel={t("shoreAlertStop.submitting")}
+        token={token}
+      />
+    );
+  }
+
+  // The fifth kind: a shop's bookkeeper, from a month-end email (item 35, N1).
+  const bookkeeper = await resolveBookkeeperStopToken(db, token);
+  if (bookkeeper) {
+    if (bookkeeper.alreadyStopped) {
+      return (
+        <EntryDone
+          glyph="quiet"
+          title={t("bookkeeperStop.confirmedTitle")}
+          text={t("bookkeeperStop.confirmedText", { shopName: bookkeeper.shopName })}
+        />
+      );
+    }
+    return (
+      <ConfirmUnsubscribe
+        title={t("bookkeeperStop.title", { shopName: bookkeeper.shopName })}
+        description={t("bookkeeperStop.description", { shopName: bookkeeper.shopName })}
+        submitLabel={t("bookkeeperStop.submit")}
+        pendingLabel={t("bookkeeperStop.submitting")}
         token={token}
       />
     );

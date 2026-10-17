@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
+import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
 import { GroupLabel } from "@/components/ui/group-label";
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
+import type { IssuedCard } from "@/db/agency-processing";
 import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import { COURSE_FORMS_BLOCK_BOARDING } from "@/lib/course-forms";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
@@ -62,6 +64,8 @@ export type RowOutstandingInput = Pick<
   | "partyPay"
   | "certifyDiverAction"
   | "saveCourseNextStepAction"
+  | "markCardProcessedAction"
+  | "issuedCard"
   | "setCourseMaterialsDoneAction"
   | "elearningCheckAction"
   | "recordPaperCourseFormAction"
@@ -81,6 +85,11 @@ export type RowOutstandingInput = Pick<
   Pick<RowIdentity, "identityContact" | "packageNote"> &
   Pick<RowReasonList, "deskPrivateLines"> &
   Pick<RosterRows, "trainingMarks">;
+
+/** The agency a card goes to, by name; "the agency" where the course named none. */
+function processingAgencyName(agency: IssuedCard["agency"], t: RosterSeat["t"]): string {
+  return agency === "other" ? t("trips.roster.processedAgencyUnnamed") : t(AGENCY_KEYS[agency]);
+}
 
 export function rowOutstanding(seat: RowOutstandingInput) {
   const {
@@ -111,6 +120,8 @@ export function rowOutstanding(seat: RowOutstandingInput) {
     partyPay,
     certifyDiverAction,
     saveCourseNextStepAction,
+    markCardProcessedAction,
+    issuedCard,
     setCourseMaterialsDoneAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
@@ -209,6 +220,22 @@ export function rowOutstanding(seat: RowOutstandingInput) {
           certifyDefaultLevel={certifyDefaultLevel}
           saveCourseNextStepAction={saveCourseNextStepAction}
           nextStep={courseNextStepByBooking?.get(booking.id) ?? ""}
+          markCardProcessedAction={markCardProcessedAction}
+          processedCard={
+            issuedCard
+              ? {
+                  kind: issuedCard.kind,
+                  certificationId: issuedCard.certificationId,
+                  agency: processingAgencyName(issuedCard.agency, t),
+                  doneLine: issuedCard.processedAt
+                    ? t("trips.roster.processedLine", {
+                        agency: processingAgencyName(issuedCard.agency, t),
+                        date: formatShortDate(issuedCard.processedAt, locale, shopTimezone),
+                      })
+                    : null,
+                }
+              : null
+          }
           setCourseMaterialsDoneAction={setCourseMaterialsDoneAction}
           materialsDoneLine={
             materialsDone

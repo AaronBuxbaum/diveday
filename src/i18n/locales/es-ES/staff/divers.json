@@ -156,7 +156,20 @@
     "confirmMatchesLastDive": "Último día de buceo aquí: {date}",
     "confirmMatchesNoDiveDay": "Ningún día de buceo aquí todavía",
     "confirmMatchesBorn": "Fecha de nacimiento: {date}",
-    "confirmMatchesSubmit": "Crear nuevo buceador de todos modos"
+    "confirmMatchesSubmit": "Crear nuevo buceador de todos modos",
+    "partyOnFile": "Algunos nombres se parecen a personas que ya tienen ficha. Elige para cada una.",
+    "party": {
+      "add": "Agregar otra persona",
+      "person": "Persona {n}",
+      "under18": "Menor de 18 años",
+      "under18Hint": "Un padre, madre o tutor legal firma la exención con esta persona.",
+      "dob": "Fecha de nacimiento",
+      "dobHint": "Opcional. Define el límite de profundidad de un buceador junior.",
+      "remove": "Quitar",
+      "removeFor": "Quitar a la persona {n}",
+      "useOnFile": "Usar la ficha que ya existe",
+      "newPerson": "Persona nueva"
+    }
   },
   "list": {
     "addDiverAction": "Agregar buceador",
@@ -221,6 +234,10 @@
     "saving": "Guardando…",
     "saveDetails": "Guardar datos",
     "visits": "{count, plural, one {# visita} other {# visitas}}",
+    "visitsSince": "{count, plural, one {# visita} other {# visitas}} desde {since}",
+    "lastOut": "Última salida: {date}",
+    "spent": "Gasto: {amount}",
+    "broughtFriends": "Trajo {count, plural, one {# amigo} other {# amigos}}",
     "packageBalance": "Paquete: quedan {left} de {of, plural, one {# inmersión} other {# inmersiones}}"
   },
   "bookActivity": {

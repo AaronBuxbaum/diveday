@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
+import { readyAfterStateProps } from "@/app/ready/[token]/_components/after-state-actions";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { cancelledNoticeForReady } from "@/app/ready/[token]/_components/CancelledNotice";
 import { CertificationEntries } from "@/app/ready/[token]/_components/CertificationEntries";
@@ -28,12 +29,7 @@ import {
   readyStepLine,
   readyThreadFacts,
 } from "@/app/ready/[token]/_components/thread-facts";
-import {
-  startTipAction,
-  submitRecapPulseAction,
-  submitReviewAction,
-  uploadRecapPhotoAction,
-} from "@/app/recap/[token]/actions";
+import { YourDays } from "@/app/ready/[token]/_components/YourDays";
 import { FlashParams } from "@/components/FlashParams";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
 import { RememberBooker } from "@/components/RememberBooker";
@@ -45,13 +41,13 @@ import { type AppDb, getDb } from "@/db/client";
 import { getCourseFormsForBooking } from "@/db/course-forms";
 import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { packageDivesForBooking } from "@/db/dive-packages";
+import { readPlannedFlySafe } from "@/db/fly-safe-plan";
 import { getBookedCard, getReadyPageData } from "@/db/ready";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBookedOnce, listTripDives } from "@/db/trips";
-import { buildAfterStateProps } from "@/features/recap-after-state";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { checklistDetailText } from "@/i18n/readiness-summary-labels";
@@ -63,7 +59,6 @@ import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { seatRentalItems } from "@/lib/participant-types";
 import { readyCopyKeepUntil } from "@/lib/ready-offline";
-import { signRecapToken } from "@/lib/recap-links";
 import { nitroxAvailableOn } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
@@ -131,7 +126,7 @@ export default async function ReadyTokenPage({
   if (!capability) {
     return readyDeadLink({ db, token, cancelled, sent, anonT });
   }
-  const { bookingId, shopId: capabilityShopId } = capability;
+  const { bookingId, shopId: capabilityShopId, delivered } = capability;
 
   /**
    * **The booked card in the first paint** (UX review 2026-10-10, items 7 and
@@ -146,7 +141,7 @@ export default async function ReadyTokenPage({
    * `getBookedCard`), and a held diver reads the hold in the thread under it.
    */
   const found = justBooked
-    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId })
+    ? await getBookedCard(db, { shopId: capabilityShopId, bookingId, delivered })
     : null;
   const card =
     found && !found.bookingCancelled && !found.departureCancelled && !theBoatIsHome(found.trip)
@@ -157,6 +152,7 @@ export default async function ReadyTokenPage({
       db={db}
       token={token}
       bookingId={bookingId}
+      delivered={delivered}
       search={{ saved, error, pay, justBooked }}
       anonT={anonT}
       underBookedHeader={card !== null}
@@ -183,6 +179,7 @@ async function DiverReadinessPage({
   db,
   token,
   bookingId,
+  delivered,
   search: { saved, error, pay, justBooked },
   anonT,
   underBookedHeader,
@@ -190,6 +187,7 @@ async function DiverReadinessPage({
   db: AppDb;
   token: string;
   bookingId: string;
+  delivered: boolean;
   search: { saved?: string; error?: string; pay?: string; justBooked: boolean };
   anonT: DiverTranslator;
   underBookedHeader: boolean;
@@ -204,6 +202,9 @@ async function DiverReadinessPage({
   const { detail, shop, person } = data;
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
+  const yourDays = (
+    <YourDays ready={{ db, token, bookingId, data, delivered }} locale={locale} t={t} />
+  );
 
   if (detail.cancelled) {
     // The shop took this seat off the boat and this diver still holds a live
@@ -258,23 +259,14 @@ async function DiverReadinessPage({
     if (recapState.kind === "waiting") return alone(<RecapWaitingCard shop={shopContact} t={t} />);
     const recap = recapState.kind === "recap" ? recapState.data : null;
     if (!recap) return alone(<NoShowCard shop={shopContact} t={t} turnedAway={data.turnedAway} />);
-    const recapToken = signRecapToken(bookingId);
-    const after = await buildAfterStateProps({
+    const after = await readyAfterStateProps({
       db,
       data: recap,
       bookingId,
       locale,
       t,
-      mintHandoff: true,
-      // This route carries none of the three: each action redirects to
-      // `/recap/<token>`, which is where its notice is read.
-      params: {},
-      actions: {
-        submitReview: submitReviewAction.bind(null, recapToken),
-        uploadPhoto: uploadRecapPhotoAction.bind(null, recapToken),
-        startTip: startTipAction.bind(null, recapToken),
-        submitPulse: submitRecapPulseAction.bind(null, recapToken),
-      },
+      token,
+      delivered,
     });
     return alone(
       <DiverIntlProvider
@@ -282,7 +274,7 @@ async function DiverReadinessPage({
         timeZone={detail.shop.timezone}
         namespaces={["recap", "common", "booking", "reviews", "trip"]}
       >
-        <AfterState context={after} />
+        <AfterState context={{ ...after, yourDays }} />
       </DiverIntlProvider>,
     );
   }
@@ -350,7 +342,7 @@ async function DiverReadinessPage({
     // verified `readiness` capability above; the query only ever walks seats
     // led by this booking, so a member's own /ready renders no panel. One wave with
     // the rest: each needs only the verified booking, shop and person (review 2026-10-11).
-    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDives] =
+    const [partySeatClaims, tripReads, paymentReceipt, courseForms, packageDives, flySafePlan] =
       await Promise.all([
         issuePartySeatClaims(db, { shopId: shop.id, leadBookingId: bookingId }),
         threadTripReads,
@@ -358,12 +350,8 @@ async function DiverReadinessPage({
         // I pay?" is a question the night before too — and it is what the Pay step's
         // settled line says, now that the receipt panel that used to say it above
         // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
-        //
-        // The emails line went with that panel. It claimed, in the minutes after a
-        // submit, that two messages were on their way — a third statement of the
-        // booking's status in one screenful, on a page whose status is now said once
-        // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
-        // thing the reader gets, which is the embed's confirmation and not this page.
+        // The emails line went with that panel; `EmbedBookedNotice` still carries it,
+        // where it is the only thing the reader gets.
         resolvePaymentReceipt(
           db,
           shop.id,
@@ -379,6 +367,8 @@ async function DiverReadinessPage({
         // Asked whatever `COURSE_FORMS_BLOCK_BOARDING` says: warn-only raises no blocker (#2266).
         data.asksCourseForms ? getCourseFormsForBooking(db, shop.id, bookingId) : null,
         packageDivesForBooking(db, { shopId: shop.id, personId: data.person.id, bookingId }),
+        // When to fly home, as a plan, before the boat sails (fifth-loop ideas, item 18).
+        readPlannedFlySafe(db, data),
       ]);
     const [fullShop, fullTrip, tripDives, changeEvents, publicCrew, boatStage] = tripReads;
     const courseFormsOwed = (courseForms?.outstanding.length ?? 0) > 0;
@@ -410,24 +400,23 @@ async function DiverReadinessPage({
     });
 
     /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
-    const ownSignStep = spine.steps.find((step) => step.id === "sign");
     const currentStep = spine.steps.find((step) => step.id === spine.current);
     const partyAllSet = partyIsAllSet({
       seats: partySeatClaims,
-      ownSignSettled: !ownSignStep || ownSignStep.state === "done",
+      ownSignSettled: (spine.steps.find((step) => step.id === "sign")?.state ?? "done") === "done",
       diveDay,
     });
 
     /** A money figure in the currency it was actually charged in, never today's shop setting. */
     const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
-    const { paidLine, depositBalanceLine } = payStepLines(t, money, paymentReceipt, packageDives);
+    const paid = payStepLines(t, money, paymentReceipt, packageDives, data.shop.deskPayment);
 
     // What is owed at the shop, said once (fourth UX review, item 5).
     const atShopLine = atShopMoneyLine(t, locale, shop.currency, data, fullTrip, partySeatClaims);
 
     /** One step's fact, and one step's form. The two things the spine cannot derive. */
     const stepLine = (step: ThreadStep): string | null =>
-      readyStepLine(step, { t, facts, lastDivedBand: data.lastDivedBand, paidLine });
+      readyStepLine(step, { t, facts, lastDivedBand: data.lastDivedBand, paidLine: paid.paidLine });
 
     /**
      * The step's form, or nothing.
@@ -491,12 +480,12 @@ async function DiverReadinessPage({
           const payable =
             data.canPay &&
             (step.item?.code === "payment_due" || step.item?.code === "payment_refunded");
-          if (!payable && !depositBalanceLine) return null;
+          if (!payable && !paid.depositBalanceLine) return null;
           return (
             <PayStepBody
               token={token}
               payable={payable}
-              depositBalanceLine={depositBalanceLine}
+              depositBalanceLine={paid.depositBalanceLine}
               actionButton={actionButton}
               fullShop={fullShop}
               fullTrip={fullTrip}
@@ -546,9 +535,7 @@ async function DiverReadinessPage({
           <p className="mt-8 text-base text-muted">{checklistDetailText(t, spine.setupItem)}</p>
         ) : (
           <>
-            {stageLine ? (
-              <BoatStageLine sentence={stageLine.sentence} said={stageLine.said} />
-            ) : null}
+            {stageLine ? <BoatStageLine {...stageLine} /> : null}
             <ThreadStatus
               lead={
                 spine.done === spine.countable
@@ -578,8 +565,10 @@ async function DiverReadinessPage({
             publicCrew,
             partySeatClaims,
             partyAllSet,
+            flySafePlan,
           }}
         />
+        {yourDays}
       </>
     );
   })();

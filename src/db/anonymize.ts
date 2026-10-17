@@ -69,6 +69,7 @@ import {
 } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { canPersonErasePersonalData } from "./authz";
+import { BOOKKEEPER_CLEARED, tellOwnersAboutBookkeeper } from "./bookkeeper";
 import type { AppDb, AppTransaction } from "./client";
 import { queueMediaDeletion } from "./media-deletions";
 import {
@@ -100,6 +101,7 @@ import {
   gearReservations,
   importedPaymentHistory,
   inboundMessages,
+  inboxSavedAnswers,
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
@@ -457,6 +459,7 @@ export async function anonymizeDiver(
         alreadyAnonymized: true,
         queuedMediaDeletions: 0,
         raisedProcessorErasures: [] as ProcessorErasureObligation[],
+        bookkeeperCleared: false,
       } as const;
     }
 
@@ -500,6 +503,16 @@ export async function anonymizeDiver(
       owed: stillOwed,
     });
   }
+  // The shop's month-end files stop with the address, so its owners hear it
+  // and why, without the address (second-pass N3). Never throws.
+  if (outcome.bookkeeperCleared) {
+    await tellOwnersAboutBookkeeper(db, {
+      shopId: input.shopId,
+      what: { event: "cleared", by: "erasure" },
+      at: now,
+      actorPersonId: input.actorPersonId,
+    });
+  }
   return {
     ok: true,
     alreadyAnonymized: outcome.alreadyAnonymized,
@@ -524,6 +537,8 @@ type ScrubResult = {
   queuedMediaDeletions: number;
   /** The obligation rows this scrub created — the caller attempts them post-commit. */
   raisedProcessorErasures: ProcessorErasureObligation[];
+  /** The diver's address was the shop's bookkeeper's; the caller tells the owners post-commit. */
+  bookkeeperCleared: boolean;
 };
 
 /**
@@ -630,6 +645,8 @@ type ScrubSectionContext = ScrubContext & {
     kind: "recap_photo" | "waiver_document" | "payment_receipt",
     url: string | null,
   ) => Promise<void>;
+  /** What a sweep found that the caller acts on after the commit. */
+  found: { bookkeeperCleared: boolean };
 };
 
 /** The erasure's "people" sweep. */
@@ -1162,6 +1179,9 @@ async function scrubBookingRows(
         courseNextStepByPersonId: null,
         hotelPickupLocation: null,
         pickupTime: null,
+        // Their lunch preference (ideas item 56) is health-adjacent prose about
+        // this person, typed for one boat's galley.
+        dietaryNote: null,
         // The name a held seat was booked under (H-13) is somebody's name, and
         // after an erasure no one is left to ask whether it was them.
         identityBookedAs: null,
@@ -2102,6 +2122,16 @@ async function scrubOrders(
     // consistent answer (issue #1607, found by a `security-reviewer` pass).
     .set({ hostedInvoiceUrl: null, invoicePdfUrl: null, description: null })
     .where(and(eq(orders.shopId, shopId), eq(orders.personId, personId)));
+  // The room a room charge went to (fifth-loop ideas, item 57) placed this
+  // diver in one hotel room on one night. Redacted rather than cleared, since a
+  // room charge must name a room; the hotel stays, being the shop's own
+  // account with the front desk and what the month's total is grouped by.
+  await tx
+    .update(orders)
+    .set({ roomNumber: REDACTED_TEXT })
+    .where(
+      and(eq(orders.shopId, shopId), eq(orders.personId, personId), isNotNull(orders.roomNumber)),
+    );
 
   // The per-line half of the same text, on the same form, carried out of the
   // shop under the same exclusion.
@@ -2371,6 +2401,17 @@ async function scrubPiiBlob(
       .where(and(eq(shops.id, shopId), sql`lower(${shops.shoreAlertEmail}) = ${address}`))
       .returning({ id: shops.id });
     logFuzzyMatch(ctx, "shore_alert_email", cleared.length);
+    // The bookkeeper's month-end address (item 35), on the same footing: a
+    // diver's address there goes with the diver, with its confirmation, the
+    // hash of its confirm link and its claim, and the month stops leaving the
+    // shop until an owner sets an address again.
+    const unsent = await tx
+      .update(shops)
+      .set(BOOKKEEPER_CLEARED)
+      .where(and(eq(shops.id, shopId), sql`lower(${shops.bookkeeperEmail}) = ${address}`))
+      .returning({ id: shops.id });
+    logFuzzyMatch(ctx, "bookkeeper_email", unsent.length);
+    if (unsent.length > 0) ctx.found.bookkeeperCleared = true;
     await tx
       .delete(shopShoreAlertTokens)
       .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));
@@ -2752,6 +2793,15 @@ async function scrubInbox(
     // would leave their address in the one row this sweep had just cleaned.
     .set({ body: REDACTED_TEXT, toAddress: REDACTED_TEXT, sendError: null })
     .where(and(eq(staffReplies.shopId, shopId), eq(staffReplies.personId, personId)));
+  // A saved answer copied from a reply to them: the name was swapped out, but
+  // the words were still written to this diver, so the copy goes too. A merge
+  // leaves `source_person_id` on the merged-away record, so its shells count.
+  const sources = [personId, ...(await mergedIntoChain(tx, shopId, personId))];
+  await tx
+    .delete(inboxSavedAnswers)
+    .where(
+      and(eq(inboxSavedAnswers.shopId, shopId), inArray(inboxSavedAnswers.sourcePersonId, sources)),
+    );
   return [];
 }
 
@@ -2882,7 +2932,14 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     if (!url) return;
     if (await queueMediaDeletion(tx, { shopId, kind, url })) queued += 1;
   };
-  const section: ScrubSectionContext = { ...ctx, bookingIds, owned: bookingIds.length > 0, retire };
+  const found = { bookkeeperCleared: false };
+  const section: ScrubSectionContext = {
+    ...ctx,
+    bookingIds,
+    owned: bookingIds.length > 0,
+    retire,
+    found,
+  };
 
   // Every Stripe object this scrub finds standing for the erased diver, raised
   // as one ledger row apiece at the end of the transaction. Three tables feed
@@ -2913,5 +2970,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     targets: processorTargets,
   });
 
-  return { queuedMediaDeletions: queued, raisedProcessorErasures };
+  return {
+    queuedMediaDeletions: queued,
+    raisedProcessorErasures,
+    bookkeeperCleared: found.bookkeeperCleared,
+  };
 }

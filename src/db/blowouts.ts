@@ -2,6 +2,7 @@ import {
   and,
   asc,
   count,
+  countDistinct,
   eq,
   gt,
   gte,
@@ -46,6 +47,7 @@ import {
 } from "./refunds";
 import type { BlowoutCause, BlowoutMessageStatus, PaymentStatus } from "./schema";
 import {
+  bookingPayments,
   bookings,
   certifications,
   nitroxCertifications,
@@ -965,4 +967,111 @@ export async function tripBlowoutCause(
     .where(and(eq(tripBlowouts.tripId, tripId), eq(tripBlowouts.shopId, shopId)))
     .limit(1);
   return row?.cause ?? null;
+}
+
+/** What the weather called off in a window, for Reports (fifth loop, item 27). */
+export type WeatherCalls = {
+  /** Departures the weather called off. */
+  departures: number;
+  /** Shop-local days with at least one of them. */
+  days: number;
+  /** Divers who held a seat on them when the call was made. */
+  divers: number;
+  /** What went back to those divers' cards, in minor units. */
+  refundedCents: number;
+  /** Of those divers, how many booked another departure after the call. */
+  moved: number;
+};
+
+/**
+ * **The weather's share of a month or a year** (fifth loop, item 27): every
+ * blow-out whose cause is the weather (`run_ended` is a schedule decision, not
+ * a weather day) on a departure that was due to leave in `[startUtc, endUtc)`,
+ * anchored like every other Reports figure to the departure, not to the call.
+ *
+ * Only departures still called off count: one reinstated and sailed is not
+ * the weather's (dive-domain review F2). `days` is shop-local days with at
+ * least one weather call, not days the whole fleet stayed in (N4: the words
+ * say "days with a weather call").
+ *
+ * Divers are the cascade's own snapshot (`trip_blowout_divers`), so a booking
+ * cancelled by the call still counts. "Refunded" is the money now standing as
+ * refunded on those seats; "moved" is a diver who holds a live seat on
+ * another departure with the shop, booked within 30 days of the call (N3), so
+ * next season's booking is not this call's make-up dive. A walk-up who comes
+ * back gets a fresh person row and is not counted: an undercount.
+ */
+export async function weatherCallsInWindow(
+  db: DbExecutor,
+  shopId: string,
+  window: { startUtc: Date; endUtc: Date; timeZone: string },
+): Promise<WeatherCalls> {
+  const called = and(
+    eq(tripBlowouts.shopId, shopId),
+    eq(tripBlowouts.cause, "weather"),
+    eq(trips.shopId, shopId),
+    // A call the shop took back and sailed keeps its blow-out row; it was not
+    // a departure the weather took (dive-domain review F2).
+    eq(trips.status, "cancelled"),
+    gte(trips.startsAt, window.startUtc),
+    lt(trips.startsAt, window.endUtc),
+  );
+  const [departureRows, diverRows, refundRows, movedRows] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          departures: count(tripBlowouts.id),
+          days: sql<number>`count(distinct to_char(${trips.startsAt} at time zone ${window.timeZone}::text, 'YYYY-MM-DD'))`,
+        })
+        .from(tripBlowouts)
+        .innerJoin(trips, eq(trips.id, tripBlowouts.tripId))
+        .where(and(called, liveTrip())),
+    () =>
+      db
+        .select({ divers: count(tripBlowoutDivers.id) })
+        .from(tripBlowoutDivers)
+        .innerJoin(tripBlowouts, eq(tripBlowouts.id, tripBlowoutDivers.blowoutId))
+        .innerJoin(trips, eq(trips.id, tripBlowouts.tripId))
+        .where(and(called, liveTrip(), eq(tripBlowoutDivers.shopId, shopId))),
+    () =>
+      db
+        .select({ cents: sql<string>`coalesce(sum(${bookingPayments.amountCents}), 0)` })
+        .from(tripBlowoutDivers)
+        .innerJoin(tripBlowouts, eq(tripBlowouts.id, tripBlowoutDivers.blowoutId))
+        .innerJoin(trips, eq(trips.id, tripBlowouts.tripId))
+        .innerJoin(
+          bookingPayments,
+          and(
+            eq(bookingPayments.bookingId, tripBlowoutDivers.bookingId),
+            eq(bookingPayments.shopId, shopId),
+            eq(bookingPayments.status, "refunded"),
+          ),
+        )
+        .where(and(called, liveTrip(), eq(tripBlowoutDivers.shopId, shopId))),
+    () =>
+      db
+        .select({ moved: countDistinct(tripBlowoutDivers.id) })
+        .from(tripBlowoutDivers)
+        .innerJoin(tripBlowouts, eq(tripBlowouts.id, tripBlowoutDivers.blowoutId))
+        .innerJoin(trips, eq(trips.id, tripBlowouts.tripId))
+        .innerJoin(
+          bookings,
+          and(
+            eq(bookings.personId, tripBlowoutDivers.personId),
+            eq(bookings.shopId, shopId),
+            ne(bookings.tripId, tripBlowouts.tripId),
+            ne(bookings.status, "cancelled"),
+            gte(bookings.createdAt, tripBlowouts.calledAt),
+            lt(bookings.createdAt, sql`${tripBlowouts.calledAt} + interval '30 days'`),
+          ),
+        )
+        .where(and(called, liveTrip(), eq(tripBlowoutDivers.shopId, shopId))),
+  ]);
+  return {
+    departures: Number(departureRows[0]?.departures ?? 0),
+    days: Number(departureRows[0]?.days ?? 0),
+    divers: Number(diverRows[0]?.divers ?? 0),
+    refundedCents: Number(refundRows[0]?.cents ?? 0),
+    moved: Number(movedRows[0]?.moved ?? 0),
+  };
 }

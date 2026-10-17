@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { isCardKind, setCardProcessed } from "@/db/agency-processing";
 import { getDb } from "@/db/client";
 import { tellCourseCertified } from "@/db/course-certified";
 import { type PaperCourseFormOutcome, recordPaperCourseForm } from "@/db/course-forms";
@@ -16,6 +17,7 @@ import {
   studentOnSeat,
 } from "@/db/readiness";
 import { diveSpecialty } from "@/db/schema";
+import { nowDate } from "@/lib/clock";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { formValue, readForm, text } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -38,6 +40,8 @@ import { requireRosterBooking, tripPath } from "./roster-booking";
 const courseRosterForm = z.object({
   award: text(),
   bookingId: text(),
+  cardKind: text(),
+  certificationId: text(),
   done: formValue(),
   formId: text(),
   guardianName: text(),
@@ -135,6 +139,36 @@ export async function certifyDiverFromRosterAction(
       { bid: bookingId },
     ),
   );
+}
+
+/**
+ * **"Processed with PADI"** (fifth-loop ideas, item 46): tick a card this
+ * session issued as submitted to its agency, or take the tick back. Any live
+ * staffer may, as with the materials tick; the stamp names who. Scoped to a
+ * card this session issued, so a posted id from elsewhere changes nothing.
+ */
+export async function markCardProcessedAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const fields = readForm(courseRosterForm, formData);
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const certificationId = fields.certificationId;
+  const kind = fields.cardKind;
+  if (!uuidParam(tripId) || !uuidParam(certificationId) || !isCardKind(kind)) redirect(back);
+  const db = await getDb();
+  const saved = await setCardProcessed(db, {
+    shopId: s.user.shopId,
+    kind,
+    certificationId,
+    actorPersonId: s.user.personId,
+    processed: fields.done === "true",
+    now: nowDate(),
+    tripId,
+  });
+  revalidateAndRedirect(back, saved ? back : noticeUrl(back, "invalid"));
 }
 
 /**

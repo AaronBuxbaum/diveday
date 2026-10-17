@@ -100,6 +100,7 @@ export async function GET(request: Request) {
     // knows about a row anyway.
     log("cron_retention.prune_complete", "info", {
       totalDeleted: summary.totalDeleted,
+      dietaryNotesCleared: summary.dietaryNotesCleared,
       tablesFailed: summary.failedTables.length,
       failedTables: summary.failedTables.length > 0 ? summary.failedTables.join(",") : undefined,
       tablesCapped: stillCapped.map((outcome) => outcome.table).join(",") || undefined,

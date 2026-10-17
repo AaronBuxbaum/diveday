@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { sendHoldCopy } from "@/components/send-hold-copy";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
@@ -73,6 +74,7 @@ export function LastMinuteDealSection({
   currency = "usd",
   locale,
   status,
+  leadTime,
 }: {
   /**
    * What the last blast did. This section is the reason `FormStatus` exists:
@@ -101,6 +103,8 @@ export function LastMinuteDealSection({
   /** The shop's currency: a fixed-amount deal is typed and shown in it. */
   currency?: string;
   locale: string;
+  /** "Saturday departures usually sell 40% of their seats in the last 3 days" (`DealLeadTime`). */
+  leadTime?: ReactNode;
 }) {
   const t = staffTranslator(locale);
   // The list is the audience, not a review queue. Keep people who do not meet
@@ -133,6 +137,7 @@ export function LastMinuteDealSection({
     <section id="last-minute-deal" className="scroll-mt-24">
       <h2 className={SECTION_TITLE_CLASS}>{t("trips.lastMinute.heading")}</h2>
       <p className="mt-1 text-sm text-muted">{t("trips.lastMinute.description")}</p>
+      {leadTime}
 
       {canSend ? (
         <LastMinuteSendHold

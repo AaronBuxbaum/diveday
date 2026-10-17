@@ -22,6 +22,7 @@ import {
   activityEvents,
   authProviderAccounts,
   authVerifications,
+  boatSnags,
   boats,
   bookingArrivalEvents,
   bookingCapabilities,
@@ -55,6 +56,7 @@ import {
   gearServiceEvents,
   importedPaymentHistory,
   inboundMessages,
+  inboxSavedAnswers,
   integrationDeliveries,
   integrationEvents,
   integrationOauthStates,
@@ -443,6 +445,9 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // "Want a pickup?" here; a new shop runs none until it says so (fourth
       // UX review, item 8).
       offersHotelPickup: true,
+      // The desk takes cards and cash, and every "due at the shop" says so
+      // (fifth-loop ideas, item 21); a new shop says nothing until it chooses.
+      deskPayment: "card_and_cash",
       // **Blue Mantis runs the PADI checks (beta)**, off for a new shop and for
       // a minted one (`shops.padi_checks_enabled`, H-121): the demo is where
       // "Check with PADI" and the eLearning check are photographed and
@@ -1344,6 +1349,8 @@ export async function resetDemoSchedule(
   // The shop's own checklist *items* are settings, not schedule — kept, like
   // boats and dive_packages below (RESET_KEEPS). Only the per-departure taps
   // against them are schedule-scoped operational history.
+  // Snags name the departures they were written and answered on.
+  await db.delete(boatSnags).where(eq(boatSnags.shopId, shopId));
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db
     .delete(departureBoatSafetySnapshots)
@@ -1450,6 +1457,9 @@ export async function resetDemoSchedule(
   // second, and both before the people and delivery rows they point at.
   await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
+  // Saved answers are re-seeded beside the inbox, so a spec that saves one
+  // does not leave the next one an extra chip.
+  await db.delete(inboxSavedAnswers).where(eq(inboxSavedAnswers.shopId, shopId));
   // Stripe checkout/refund state references bookings, trips, and orders, so it
   // must be cleared before those parents or the deletes below FK-violate and
   // abort the whole reset mid-run — leaving a prior payment test's trips and

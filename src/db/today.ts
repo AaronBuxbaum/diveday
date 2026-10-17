@@ -15,6 +15,7 @@ import type { AvailabilityBlock } from "@/lib/crew-requests";
 import { effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
 import type { DiveIntentCount } from "@/lib/dive-intent";
 import { DEFAULT_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
+import { emergencyCardHasNumbers } from "@/lib/emergency-reference";
 import {
   type CrewIncompleteReason,
   rollCallCheckpoints,
@@ -38,6 +39,7 @@ import {
 import { boatStageOf, tripPhaseOf } from "@/lib/trip-phase";
 import type { TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
+import { type WelcomeCue, welcomeCueFor } from "@/lib/welcome-cue";
 import { shopDayBounds } from "@/lib/zoned";
 import { listAgencyCheckableCards } from "./agency-check";
 import {
@@ -48,6 +50,7 @@ import {
   sharedInHorizonReadiness,
 } from "./blockers";
 import { todayBoatSafety } from "./boat-safety";
+import { openSnagsForShop } from "./boat-snags";
 import { readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
@@ -63,6 +66,7 @@ import { listTodayHelpRequests } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listUnfiledIncidentDrafts } from "./incident-reports";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
+import { countOpenLostItems } from "./lost-items";
 import {
   listBoardedAtAnyCheckpointByTrip,
   listDepartureCrewRollCallByTrip,
@@ -96,11 +100,13 @@ import {
 } from "./stripe-accounts";
 import { pushCrewAwayRows } from "./today-crew-away-rows";
 import { pushDepartureRows } from "./today-departure-rows";
+import { pushDeskRows } from "./today-desk-rows";
 import { pushEquipmentRows } from "./today-equipment-rows";
 import { pushBoatClashRows, pushRollCallRows } from "./today-roll-call-rows";
 import type { TodayRowsContext } from "./today-rows-context";
 import { at, shopDay } from "./today-shared";
 import { pushShopRows } from "./today-shop-rows";
+import { pushBoatSnagRows } from "./today-snag-rows";
 import { meetingWindowsByTrip } from "./trip-meeting-windows";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
@@ -128,10 +134,33 @@ export async function todayNextDepartureTripId(
   timeZone: string,
   now: Date = nowDate(),
 ): Promise<string | null> {
+  return nextOfTodaysDepartures(await todaysDepartures(db, shopId, timeZone, now), now);
+}
+
+/** The departure a boarding door opens: the first still out or to come, else the first. */
+export function nextOfTodaysDepartures(
+  todays: readonly { id: string; endsAt: Date }[],
+  now: Date,
+): string | null {
+  const active = todays.find((row) => row.endsAt >= now) ?? todays[0];
+  return active?.id ?? null;
+}
+
+/**
+ * **Today's scheduled departures, in clock order** — the boarding door's
+ * source, and ⌘K's "Today" group before anything is typed (fifth loop, item
+ * 13), from one read.
+ */
+export async function todaysDepartures(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date = nowDate(),
+): Promise<{ id: string; title: string; startsAt: Date; endsAt: Date }[]> {
   const today = shopDay(now, timeZone);
   const scan = shopDayWindow(now);
   const rows = await db
-    .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
     .from(trips)
     .where(
       and(
@@ -143,9 +172,7 @@ export async function todayNextDepartureTripId(
       ),
     )
     .orderBy(asc(trips.startsAt));
-  const todays = rows.filter((row) => shopDay(row.startsAt, timeZone) === today);
-  const active = todays.find((row) => row.endsAt >= now) ?? todays[0];
-  return active?.id ?? null;
+  return rows.filter((row) => shopDay(row.startsAt, timeZone) === today);
 }
 
 /** A departure happening today, with just enough to know whether it can sail. */
@@ -252,7 +279,8 @@ export type DepartureSummary = {
    *
    * Read for the whole day in one query below, never one per station.
    */
-  intents: DiveIntentCount[];
+  intents: DiveIntentCount[] /** Today's divers to greet (`SpineDeparture.welcome`); absent on tomorrow's cards. */;
+  welcome?: { name: string; cue: WelcomeCue }[];
 };
 
 export type CrewedSessionSummary = {
@@ -1630,6 +1658,7 @@ async function readTodayWave(
     openOrders,
     unfiledIncidentDrafts,
     crewAway,
+    boatSnags,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
     // needs to tell "already aboard" from "still ashore" from "never left the
@@ -1735,6 +1764,8 @@ async function readTodayWave(
         unitsConfirmedAt: shops.unitsConfirmedAt,
         currency: shops.currency,
         depthUnit: shops.depthUnit,
+        // The blank-card desk row (fifth loop, item 3) rides this read.
+        emergencyReference: shops.emergencyReference,
         temperatureUnit: shops.temperatureUnit,
       })
       .from(shops)
@@ -1795,6 +1826,9 @@ async function readTodayWave(
       inWindow.map((trip) => trip.id),
       timeZone,
     ),
+    // Problems a crew wrote against a boat's checklist, still open (fifth-loop
+    // ideas, item 1): the `boat_snag` rows.
+    openSnagsForShop(db, shopId, now),
   ]);
   return {
     departureRollCall,
@@ -1832,6 +1866,7 @@ async function readTodayWave(
     openOrders,
     unfiledIncidentDrafts,
     crewAway,
+    boatSnags,
   };
 }
 
@@ -1947,7 +1982,7 @@ export async function getTodayWork(
   // after the queue is built so they cost no phase of their own: every diver
   // the evidence blocks on a pending card is asked about, a superset of the
   // rows that end up carrying the offer (`attachAgencyChecks` keeps theirs).
-  const [wave, agencyCheckCards] = await Promise.all([
+  const [wave, agencyCheckCards, lostItemsWaiting] = await Promise.all([
     readTodayWave(db, shopId, {
       now,
       horizon,
@@ -1967,6 +2002,8 @@ export async function getTodayWork(
       shopId,
       personIds: agencyCheckCandidates(readinessByTrip),
     }),
+    // The found items waiting (fifth loop, item 7), beside the wave.
+    countOpenLostItems(db, shopId, now),
   ]);
   const {
     departureRollCall,
@@ -2028,6 +2065,8 @@ export async function getTodayWork(
 
   pushCrewAwayRows(actions, rows);
 
+  pushBoatSnagRows(actions, rows);
+
   pushDepartureRows(actions, rows);
 
   pushShopRows(actions, rows);
@@ -2082,6 +2121,17 @@ export async function getTodayWork(
 
   pushEquipmentRows(actions, rows);
 
+  pushDeskRows(actions, rows, {
+    // A shop row that is not there has no card to warn about.
+    emergencyCardHasNumbers: shopUnits
+      ? emergencyCardHasNumbers(shopUnits.emergencyReference)
+      : true,
+    lostItemsWaiting,
+  });
+
+  // **Who to say hello to** rides on the card (fifth loop, item 10): one line
+  // per departure, gone an hour after the boat is home because
+  // `welcomeCueFor` stops returning a cue there.
   const departures = summarizeDepartures(
     todayTrips,
     {
@@ -2096,7 +2146,20 @@ export async function getTodayWork(
     },
     now,
     timeZone,
-  );
+  ).map((departure) => ({
+    ...departure,
+    welcome: (wave.sharedWelcomeSeats.get(departure.tripId) ?? []).flatMap((seat) => {
+      const cue = welcomeCueFor({
+        sharedAt: seat.sharedAt,
+        lastDivedAt: seat.lastDivedAt,
+        nonDiver: seat.nonDiver,
+        diveDayCount: seat.diveDayCount,
+        tripEndsAt: departure.endsAt,
+        now,
+      });
+      return cue ? [{ name: seat.personName, cue }] : [];
+    }),
+  }));
 
   const next = todayTrips.length === 0 ? upcoming[0] : null;
 

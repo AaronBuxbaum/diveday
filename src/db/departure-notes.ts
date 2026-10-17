@@ -279,6 +279,7 @@ export async function sendDepartureNote(
         shopId: shop.id,
         bookingIds: seats.map(({ booking }) => booking.id),
         purpose: "readiness",
+        delivered: true,
       });
     } catch (error) {
       log("departure_note.links_failed", "error", {

@@ -78,6 +78,8 @@
     "groupSizePlaceholder": "Máx. 5 estudiantes por instructor",
     "nitroxCompatibleLabel": "Podemos impartir este curso con nitrox",
     "nitroxCompatibleHint": "Cuando está desactivado, las sesiones de este curso nunca ofrecen la casilla de aire enriquecido; además, para cualquier llenado el buceador necesita una titulación de nitrox verificada.",
+    "gearIncludedLabel": "El chaleco, el regulador, la botella y los plomos van incluidos en el precio del curso",
+    "gearIncludedHint": "Los alumnos traen su propia máscara y aletas, y nos dan sus tallas antes de cada sesión.",
     "enrollLegend": "Quién puede inscribirse",
     "orHigher": "{level} o superior",
     "ageSuffix": ", {age}+",
@@ -155,8 +157,7 @@
       "pasteWording": "Pega el texto de la agencia",
       "awaitingText": "Ningún estudiante lo firma hasta que tenga su texto.",
       "addImpact": "Un formulario agregado ahora pide firmarlo a {students, plural, one {# estudiante} other {# estudiantes}} de {sessions, plural, one {# sesión próxima} other {# sesiones próximas}}.",
-      "removeLocked": "Solo el propietario o un gerente puede quitar un formulario de un curso.",
-      "removeNotAuthorized": "No se guardó. Solo el propietario o un gerente puede quitar un formulario de un curso."
+      "removeNotSaved": "No se guardó."
     }
   },
   "dayByDay": {
@@ -200,5 +201,33 @@
     "add": "Agregar un material",
     "max": "Un curso admite hasta {max, plural, one {# material} other {# materiales}}.",
     "empty": "Aún no hay nada. Agrega el eLearning o la lectura que los alumnos terminan antes del día 1."
+  },
+  "processing": {
+    "heading": "Certificaciones por tramitar",
+    "agencyLine": "{count, plural, one {# certificación por tramitar con {agency}} other {# certificaciones por tramitar con {agency}}}",
+    "cardLine": "{card}, certificado el {date}",
+    "late": "Lleva más de 30 días esperando",
+    "mark": "Marcar como enviada a {agency}",
+    "earlier": "{count, plural, one {# certificación anterior al {date}} other {# certificaciones anteriores al {date}}}",
+    "earlierHint": "Son de antes de que existiera esta lista, así que ninguna se marca como atrasada."
+  },
+  "ladder": {
+    "heading": "Siguientes pasos",
+    "taster": "{count, plural, one {# hizo {course} en los últimos 12 meses} other {# hicieron {course} en los últimos 12 meses}} · {wentOn} siguieron con {next}",
+    "certified": "{count, plural, one {# buceador que se certificó como {course} aquí en los últimos 12 meses no tiene {next} reservado} other {# buceadores que se certificaron como {course} aquí en los últimos 12 meses no tienen {next} reservado}}",
+    "nextSession": "Próximo {next}: {date} ({booked} de {capacity})",
+    "noSession": "Todavía no hay {next} con plaza en el tablero.",
+    "seeWho": "Ver quiénes",
+    "invite": "Invitar",
+    "inviting": "Invitando…",
+    "inviteAria": "Invitar a {name} a {next}",
+    "referral": "Derivación médica pendiente: llama primero",
+    "notice": {
+      "invite-sent": "Invitación enviada.",
+      "invite-opted-out": "Invitación registrada, pero no enviada por correo: este buceador desactivó los correos opcionales del centro.",
+      "invite-cooldown": "No se envió: este buceador recibió una invitación del centro en los últimos 30 días.",
+      "invite-unavailable": "No se envió: este buceador no puede tomar esa sesión.",
+      "invite-failed": "Esa invitación no salió. Vuelve a intentarlo."
+    }
   }
 }

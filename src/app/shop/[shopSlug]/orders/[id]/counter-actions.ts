@@ -10,7 +10,7 @@ import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { recordPaymentNotice } from "./order-detail-keys";
-import { postedCollection, postedOrderId } from "./order-form";
+import { postedCollection, postedOrderId, postedRoom } from "./order-form";
 
 /**
  * Void an order paid at the counter, to correct a mistake (ADR
@@ -74,6 +74,7 @@ export async function recordPaymentAction(formData: FormData) {
           orderId,
           actorPersonId: session.user.personId,
           collection,
+          room: collection === "room_charge" ? postedRoom(formData) : null,
         })
       : null;
   if (outcome?.ok && collection) {

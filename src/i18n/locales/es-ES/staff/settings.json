@@ -6,6 +6,8 @@
       "packingInvalid": "Agrega entre uno y doce artículos a la lista.",
       "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
       "pickupSaved": "Guardado. A los buceadores solo se les pregunta por la recogida cuando esto está activado.",
+      "deskPaymentSaved": "Guardado. Cada plaza a pagar en el centro dice cómo pagar.",
+      "deskPaymentInvalid": "No cambió nada: elige tarjeta, efectivo, tarjeta y efectivo o no decirlo.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
       "turnaroundSaved": "Margen entre salidas guardado.",
       "turnaroundInvalid": "Introduce un margen de entre 0 y 240 minutos.",
@@ -28,7 +30,7 @@
       "profileSaved": "Perfil y marca del centro guardados.",
       "profileInvalid": "Revisa el lema, la descripción y el archivo del logotipo.",
       "shopPhotosSaved": "Fotos del centro guardadas.",
-      "shopPhotosInvalid": "Esas fotos no se guardaron. Usa JPG, PNG, WebP o HEIC de menos de {maxMb}\u00a0MB, y no pases de {max} en total.",
+      "shopPhotosInvalid": "Esas fotos no se guardaron. Usa JPG, PNG, WebP o HEIC de menos de {maxMb} MB, y no pases de {max} en total.",
       "addressSaved": "Dirección del centro guardada.",
       "addressRemoved": "Dirección del centro quitada.",
       "addressInvalid": "No se pudo guardar esa dirección. Busca otra vez y elige tu centro en la lista.",
@@ -237,6 +239,16 @@
       "submit": "Guardar recogida",
       "submitting": "Guardando…"
     },
+    "deskPayment": {
+      "legend": "Cómo pagan los buceadores en el mostrador",
+      "description": "Se dice dondequiera que una plaza se paga en el centro: el formulario de reserva, la confirmación y la página del buceador.",
+      "none": "No decirlo",
+      "card": "Tarjeta",
+      "cash": "Efectivo",
+      "card_and_cash": "Tarjeta y efectivo",
+      "submit": "Guardar cómo pagan",
+      "submitting": "Guardando…"
+    },
     "dockCall": {
       "heading": "Ritmo del día de buceo",
       "description": "Todos estos números están en minutos.",
@@ -404,8 +416,7 @@
       "bookingsWaivers": "Reservas y exenciones",
       "rentals": "Alquiler",
       "money": "Dinero",
-      "messages": "Mensajes",
-      "notifications": "Avisos",
+      "reach": "Cómo te contactan los buceadores",
       "website": "Sitio web",
       "data": "Datos",
       "account": "Cuenta",
@@ -589,7 +600,6 @@
       "restored": "Acceso al equipo restaurado.",
       "restoreFailed": "No se pudo restaurar el acceso de esa persona. Revisa su cuenta primero.",
       "inviteInvalid": "Introduce un nombre, un correo válido y marca al menos un rol.",
-      "sendLimit": "Has enviado muchas invitaciones en esta hora. No salió nada; vuelve a intentarlo en un rato.",
       "rolesInvalid": "Marca al menos un rol antes de guardar.",
       "rolesConflict": "Alguien más cambió estos roles mientras tenías la fila abierta, así que no se guardó nada. Recarga para ver cómo están ahora.",
       "inviteAlreadyOnTeam": "Esa persona ya tiene una cuenta aquí.",
@@ -661,7 +671,11 @@
       "label": "Contacto de emergencia",
       "addValue": "Agregar"
     },
-    "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}"
+    "publicNameSeen": "Los buceadores ven “{name}”, aceptado el {date}",
+    "year": {
+      "certified": "{count, plural, one {# certificación emitida este año} other {# certificaciones emitidas este año}}",
+      "daysAtSea": "{count, plural, one {# día en el mar} other {# días en el mar}}"
+    }
   },
   "safetyChecklist": {
     "title": "Lista de verificación previa a la salida",
@@ -773,7 +787,7 @@
       },
       "waiverDocuments": {
         "what": "Documentos de exención / médicos",
-        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5\u00a0MB."
+        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5 MB."
       },
       "role": {
         "what": "Rol",
@@ -969,7 +983,7 @@
       "notOwnerOrManager": "Importar contactos está limitado al propietario o gerente del centro.",
       "csvRequired": "Elige un archivo CSV para importar.",
       "noImportableRows": "No se pudo importar ninguna fila. A todas les faltaba un nombre o estaban duplicadas.",
-      "fileTooLarge": "El archivo es demasiado grande. El límite es {limitMb}\u00a0MB.",
+      "fileTooLarge": "El archivo es demasiado grande. El límite es {limitMb} MB.",
       "fileEmpty": "El archivo está vacío.",
       "tooManyColumns": "Demasiadas columnas ({count}). El límite es {limit}.",
       "tooManyRows": "Demasiadas filas ({count}). El límite es {limit} por importación, así que divide el archivo e impórtalo en lotes.",

@@ -1,8 +1,17 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { assembleDayCloseout, type DayCloseoutState, seatSailed } from "@/lib/closeout";
+import {
+  assembleDayCloseout,
+  type DayCloseoutState,
+  type DayLoadOut,
+  dayLoadOut,
+  loadOutDue,
+  seatSailed,
+  tomorrowNoon,
+} from "@/lib/closeout";
 import type { CrewRollCallSubject } from "@/lib/manifests";
 import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
+import { settleWithLimit } from "@/lib/settle-with-limit";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
@@ -22,6 +31,8 @@ import {
 import { listRollCallGaps } from "./today";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { liveTrip } from "./trips-live";
+import { getTripPrep, type TripPrepShop } from "./trips-prep";
+import { listShopDayDepartures } from "./trips-queries";
 
 /**
  * The db half of the day's closing state (the shop home's evening, ADR
@@ -369,12 +380,24 @@ export async function getDayCloseout(
   shopId: string,
   timeZone: string,
   now: Date = nowDate(),
+  /**
+   * The shop whose tomorrow to add up once every boat today has settled
+   * (fifth-loop ideas, item 2). Absent, tomorrow is never read.
+   */
+  loadOutShop?: TripPrepShop,
 ): Promise<DayCloseoutState> {
   const [tripsToday, gaps] = await Promise.all([
     todaysTrips(db, shopId, timeZone, now),
     listRollCallGaps(db, shopId, now),
   ]);
-  return assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
+  const state = assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
+  // Only once it is due (`loadOutDue`): a dozen prep reads for a day still sailing would
+  // be spent on a block nobody is shown.
+  if (!loadOutShop || !loadOutDue(state.departures, now)) return state;
+  return {
+    ...state,
+    tomorrow: await readDayLoadOut(db, loadOutShop, tomorrowNoon(now, timeZone), now),
+  };
 }
 
 /**
@@ -535,4 +558,37 @@ export async function shopHasSailedBefore(
     )
     .limit(1);
   return Boolean(row);
+}
+
+/** Departures whose prep is read at once: the paper day's own bound, for its reason. */
+const LOAD_OUTS_IN_FLIGHT = 3;
+
+/**
+ * **One shop day's tanks and rental pieces, added together** (fifth-loop
+ * ideas, item 2): every scheduled departure of the day `at` falls in, each
+ * read through its own Gear tab's reader (`getTripPrep`), so the evening's
+ * sum and each boat's tiles cannot disagree. Null for a day with no departure.
+ *
+ * A departure whose prep cannot be read (taken off the board mid-read) drops
+ * out of the sum, and `departures` says how many were counted.
+ */
+export async function readDayLoadOut(
+  db: AppDb,
+  shop: TripPrepShop,
+  /** Any instant inside the day to add up (`tomorrowNoon` for tomorrow). */
+  at: Date,
+  now: Date,
+): Promise<DayLoadOut | null> {
+  const departures = await listShopDayDepartures(db, shop.id, shop.timezone, at);
+  if (departures.length === 0) return null;
+  const preps = await settleWithLimit(departures, LOAD_OUTS_IN_FLIGHT, (departure) =>
+    getTripPrep(db, shop, departure.id, now),
+  );
+  return dayLoadOut(
+    preps.flatMap((settled) =>
+      settled.status === "fulfilled" && settled.value
+        ? [{ tanks: settled.value.checklist.tanks, lines: settled.value.checklist.lines }]
+        : [],
+    ),
+  );
 }

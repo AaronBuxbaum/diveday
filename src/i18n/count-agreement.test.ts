@@ -96,3 +96,25 @@ describe("an age a staffer reads", () => {
     expect(t("divers.header.clearDateAdultAttestedMinor", { age: 16 })).toContain("tiene 16 años.");
   });
 });
+
+/**
+ * **The seat line reads like the board's** (fifth loop, section 6). The walk-in
+ * and Add-booking headers said "11/14 booked" while the schedule board says
+ * "11 of 14", so one boat read two ways a tap apart.
+ */
+describe("the seat-diver trip summary", () => {
+  const args = { title: "Reef", date: "Oct 15", time: "9:00 AM", booked: 11, capacity: 14 };
+
+  it("says booked of capacity in words, as the board does", () => {
+    const en = staffTranslator("en-US");
+    expect(en("seatDiver.tripSummary", args)).toContain("11 of 14 booked");
+    expect(en("seatDiver.tripSummary", args)).not.toContain("11/14");
+    expect(staffTranslator("es-ES")("seatDiver.tripSummary", args)).toContain("reservas: 11 de 14");
+  });
+
+  it("reads the same at one, with no adjective to agree", () => {
+    const one = { ...args, booked: 1 };
+    expect(staffTranslator("es-ES")("seatDiver.tripSummary", one)).toContain("reservas: 1 de 14");
+    expect(staffTranslator("es-ES")("seatDiver.tripSummary", one)).not.toContain("reservado");
+  });
+});

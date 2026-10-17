@@ -138,6 +138,19 @@ const newOrderSchema = z.object({
   technicianPersonId: z.union([z.uuid(), z.literal("")]),
 });
 
+/**
+ * The new-ticket form for the subject the staffer already chose, so a refusal
+ * does not send them back to pick the customer or the unit again. Only an id
+ * that parses rides along.
+ */
+function newOrderPath(board: string, formData: FormData): string {
+  const personId = z.uuid().safeParse(formData.get("personId"));
+  if (personId.success) return `${board}/new?personId=${personId.data}`;
+  const unitId = z.uuid().safeParse(formData.get("gearItemId"));
+  if (unitId.success) return `${board}/new?unitId=${unitId.data}`;
+  return `${board}/new`;
+}
+
 /** Open a ticket. The one door that creates one. */
 export async function createWorkOrderAction(formData: FormData) {
   const { session, board, order } = await requireWorkOrderSurface();
@@ -145,7 +158,20 @@ export async function createWorkOrderAction(formData: FormData) {
     ...Object.fromEntries(formData),
     customerGearItemIds: formData.getAll("customerGearItemIds").map(String),
   });
-  if (!parsed.success) revalidateAndRedirect(board, noticeUrl(`${board}/new`, "invalid"));
+  if (!parsed.success) {
+    // Named for its box where one is to blame, and back on the same subject,
+    // so the refusal lands beside the field with the paragraph still typed
+    // (fifth loop, item 14).
+    const field = parsed.error.issues[0]?.path[0];
+    const code =
+      field === "promisedOn"
+        ? "invalid-date"
+        : field === "technicianPersonId"
+          ? "unknown-technician"
+          : "invalid";
+    const back = newOrderPath(board, formData);
+    revalidateAndRedirect(back, noticeUrl(back, code));
+  }
 
   const outcome = await createWorkOrder(await getDb(), {
     shopId: session.user.shopId,
@@ -161,12 +187,7 @@ export async function createWorkOrderAction(formData: FormData) {
     // The refusal belongs beside the form that earned it, with the subject
     // still chosen — a staffer who typed a paragraph into "what the customer
     // reports" should not get an empty form back.
-    const subject = parsed.data.personId
-      ? `?personId=${parsed.data.personId}`
-      : parsed.data.gearItemId
-        ? `?unitId=${parsed.data.gearItemId}`
-        : "";
-    const back = `${board}/new${subject}`;
+    const back = newOrderPath(board, formData);
     revalidateAndRedirect(back, noticeUrl(back, outcome.reason));
   }
   const landing = order(outcome.workOrder.id);

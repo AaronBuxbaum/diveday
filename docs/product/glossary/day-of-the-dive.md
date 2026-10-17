@@ -89,7 +89,11 @@
   are listed at Lost and found. Resolved items are pruned after 90 days, and an erasure deletes
   the diver's items outright (`src/db/lost-items.ts`). The Boat tab's "Left aboard" form opens
   at Heading in, Home, or once the departure is Back (`leftAboardOpen`; see **At sea**,
-  [operations.md](operations.md)).
+  [operations.md](operations.md)). Open items show in three more places (fifth loop, item 7): a
+  Today row in The desk group ("2 things waiting to go home"), counting every open item tied to a
+  diver and any unclaimed one from the last 30 days; and a found-item line on that diver's
+  check-in row and under their record's header, so it goes home on the visit it can be handed
+  over.
 - **Dock line** — the one sentence under a consented first-timer's "First dive with us" on the
   arrivals roster ("First time with us" under a snorkeler or a rider, whose seat is not a dive, and
   a no-show or a non-diving seat never counts as a prior dive; `src/db/welcome-cues.ts`): the first name to greet and the level they hold ("Say hello to Priya: Open
@@ -104,3 +108,30 @@
   first ocean dive, celebrating something, a little nervous), asked on `/ready` under the same
   yes as the cue, a fixed choice and never free text, cleared when the yes is taken back. A
   booking's free text never reaches the line.
+- **Snag** — a problem a crew member wrote against one pre-departure checklist line on one boat
+  ("VHF crackles on 16"), carried to that boat's next departures above their checklist until a
+  crew says **Fixed**; **Still there** keeps it open and names who looked last. Today holds one
+  row per open snag for the owner, manager and captain. A snag belongs to the boat, not the departure: a departure with no
+  boat cannot hold one, and a fixed snag is never reopened (a recurring problem is a new note).
+  Informs, never gates, like the checklist it hangs from (ADR
+  [20260824-pre-departure-safety-check](../../architecture/decisions/20260824-pre-departure-safety-check.md)).
+  Stored in `boat_snags`, never on the append-only `pre_departure_check_events`. The saved
+  offline manifest carries the open ones read-only, and the departure log lists those open when
+  the boat sailed (`snagsOpenWhenSailed`).
+- **Day load-out** — tomorrow's cylinders and rental pieces added across every departure of one
+  shop day, said on Today's evening as "Tomorrow from tonight" and on the printed packet
+  (`/print?day=tomorrow`). Tanks are (divers + diving crew) × dives, one cylinder per diver per
+  dive, with nitrox counted only for seats with a verified card. A count, never a fill log
+  ([H-11](../human-decisions/H-11-nitrox-fill-station-procedure-ppo.md)): each cylinder is still analyzed and signed for at the
+  fill station. It shows once today's boats are past their last scheduled return, or on a day
+  with none (`loadOutDue`, `dayLoadOut` in `src/lib/closeout.ts`).
+- **Back from the boat** — the Gear tab's list, once a departure is home, of every unit that went
+  out on it and is still out, one row per unit: **Back**, or **Back with a problem** with words,
+  which closes it as a service concern and can pull the unit to Needs service in the same act
+  (ticked from the start for a regulator, BCD or cylinder). Keyed to the departure, unlike the
+  register's due-back-by-date panel (`listTripUnitsToCheckIn`, `returnTripGearUnit`).
+- **Last time line** — under each planned dive, the newest earlier visit to that site: the last
+  live dive there in the crew's own words, or the last plan that moved elsewhere, whichever is
+  later ("Molasses: last dived Mon, Oct 12 (Sal Moretti): visibility 40 ft"). Never the
+  departure's own log; deleted dives and departures are left out. Informs, gates nothing
+  (`lastAtSites`, `src/lib/site-history.ts`).

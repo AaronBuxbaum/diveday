@@ -109,6 +109,15 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   await page.goto(readyUrl);
   await openThreadStep(page, "dayof");
   await expect(page.getByRole("heading", { name: "Want a pickup?" })).toBeVisible();
+
+  // **How divers pay at the desk** (fifth-loop ideas, item 21), on the same
+  // page: a new shop says nothing until it chooses.
+  await page.goto(`/shop/${SHOP}/settings/dock-day`);
+  await expect(page.getByRole("radio", { name: "Don’t say" })).toBeChecked();
+  await page.getByRole("radio", { name: "Cash", exact: true }).check();
+  await page.getByRole("button", { name: "Save how divers pay" }).click();
+  await expect(page.getByRole("status")).toContainText("says how to pay");
+  await expect(page.getByRole("radio", { name: "Cash", exact: true })).toBeChecked();
 });
 
 /**

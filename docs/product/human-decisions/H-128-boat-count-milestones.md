@@ -1,6 +1,6 @@
 # H-128: Is a regular's 10th, 25th, 50th or 100th boat said, and where?
 
-- **Status:** Chosen
+- **Status:** Implemented
 - **Human owner:** Product owner
 
 ## Decision or approval needed
@@ -17,6 +17,6 @@ The choice, and where it is said.
 
 ## Unblocks / follow-up
 
-Layer r5-4 builds it.
+Built by layer r5-4: the 10th, 25th, 50th and 100th boat is one line on the crew's roster row and one on the diver's booked moment, a count with no badge.
 
 Part of the [human decision log](README.md#decision-register).

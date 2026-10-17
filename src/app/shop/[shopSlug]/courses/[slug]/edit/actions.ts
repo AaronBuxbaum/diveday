@@ -93,6 +93,7 @@ const courseExtrasForm = z.object({
   heroImageAlt: trimmedText(),
   expectedVersion: text(),
   nitroxCompatible: checkbox("true"),
+  gearIncluded: checkbox("true"),
 });
 
 /** Each form's place in the order is posted as `order-<formId>`. */
@@ -298,6 +299,7 @@ export async function saveCourseContentAction(shopSlug: string, slug: string, fo
     eLearningPriceCents: centsFromAmount(value.eLearningPrice, currency),
     privatePriceCents: centsFromAmount(value.privatePrice, currency),
     nitroxCompatible: extras.nitroxCompatible,
+    gearIncluded: extras.gearIncluded,
   });
 
   // Once the content row is durably saved, any photo it no longer references

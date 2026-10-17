@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CLEAR_CONFIRM_MIN_GAP_MS, CLEAR_CONFIRM_TIMEOUT_MS } from "@/lib/pre-departure-check";
-import { OfflineChecklist } from "./Checklist";
+import { OfflineChecklist, OfflineSnags } from "./Checklist";
 import { controls, savedCopy, view } from "./section-fixtures";
 import { offlineTripView } from "./trip-view";
 
@@ -12,6 +12,30 @@ afterEach(cleanup);
 describe("OfflineChecklist", () => {
   it("draws no checklist for a shop that keeps none", () => {
     const { container } = render(<OfflineChecklist view={view()} controls={controls()} />);
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("draws the boat's open snags as saved, with nothing to press", () => {
+    const saved = view();
+    saved.envelope.snapshot.snags = {
+      heading: "Open on this boat",
+      items: [
+        {
+          line: "Radio check: VHF crackles on 16",
+          notedBy: "Noted by Sal Moretti, Wed, Oct 14, 5:16 AM EDT",
+          stillThere: "Ana Ruiz found it still there, Wed, Oct 14, 1:05 PM EDT",
+        },
+      ],
+    };
+    const { getByRole, getByText, queryByRole } = render(<OfflineSnags view={saved} />);
+    expect(getByRole("heading", { name: "Open on this boat" })).toBeTruthy();
+    expect(getByText("Radio check: VHF crackles on 16")).toBeTruthy();
+    expect(getByText(/Ana Ruiz found it still there/)).toBeTruthy();
+    expect(queryByRole("button")).toBeNull();
+  });
+
+  it("draws nothing when the copy carries no snags", () => {
+    const { container } = render(<OfflineSnags view={view()} />);
     expect(container.innerHTML).toBe("");
   });
 });

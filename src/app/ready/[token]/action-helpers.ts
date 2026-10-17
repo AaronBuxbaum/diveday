@@ -50,6 +50,12 @@ export type ReadyContext = {
    * than the row read a moment before the write.
    */
   ownLocale: DiverLocale | null;
+  /**
+   * The token reached its bearer only through the contact on file
+   * (`booking_capabilities.delivered`); false on the link a booking or a seat
+   * claim redirects to.
+   */
+  delivered: boolean;
 };
 export type ReadyContextResult =
   | ({ ok: true } & ReadyContext)
@@ -96,5 +102,12 @@ export async function contextFor(token: string): Promise<ReadyContextResult> {
       locale: ownLocale,
     });
   }
-  return { ok: true, db, bookingId: capability.bookingId, data, ownLocale };
+  return {
+    ok: true,
+    db,
+    bookingId: capability.bookingId,
+    data,
+    ownLocale,
+    delivered: capability.delivered,
+  };
 }

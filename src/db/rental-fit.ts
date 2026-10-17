@@ -610,6 +610,7 @@ export async function listTripPrepDivers(
       lastDivedBand: row.booking.lastDivedBand,
       hotelPickupLocation: row.booking.hotelPickupLocation,
       pickupTime: row.booking.pickupTime,
+      dietaryNote: row.booking.dietaryNote,
       participantType: row.booking.participantType,
     };
   });

@@ -863,3 +863,10 @@ describe("dayTakings", () => {
     ).toBe(4);
   });
 });
+
+/**
+ * **Tomorrow from tonight speaks once today's boats are due back** (fifth-loop
+ * ideas, item 2; dive-domain review FIX 3): past the day's last scheduled
+ * return, or on a day with no boats at all. The takings keep the stricter
+ * rule, every boat settled.
+ */

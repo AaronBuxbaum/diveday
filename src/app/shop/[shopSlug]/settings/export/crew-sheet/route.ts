@@ -1,17 +1,13 @@
 import { getDb } from "@/db/client";
-import { crewSheetForMonth } from "@/db/crew-sheet";
 import { canPersonExportShopData } from "@/db/export";
 import { getShopById } from "@/db/shops";
 import { requestLocale } from "@/i18n/request";
-import { staffTranslator } from "@/i18n/staff-messages";
-import { type MonthRef, monthKey, parseMonthKey } from "@/lib/calendar";
+import { type MonthRef, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
-import { assembleCrewSheet, buildCrewSheetCsv, crewSheetFileName } from "@/lib/crew-sheet";
-import { cachedListFormat } from "@/lib/intl-cache";
-import { toShopCurrency } from "@/lib/money";
 import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { utcToWallTime } from "@/lib/zoned";
+import { crewSheetFile } from "./crew-sheet-file";
 
 /**
  * **The crew sheet for one month, as a CSV** (N-43).
@@ -61,50 +57,14 @@ export async function GET(request: Request) {
   if (!month) return new Response("Expected month=YYYY-MM", { status: 400 });
 
   const locale = await requestLocale(shop.defaultLocale);
-  const t = staffTranslator(locale);
-  const input = await crewSheetForMonth(db, shop.id, shop.timezone, month);
-  const csv = buildCrewSheetCsv({
-    rows: assembleCrewSheet({ ...input, locale }),
-    currency: toShopCurrency(shop.currency),
-    /**
-     * **The header row is localized**, unlike the full-shop bundle's (which
-     * carries database column names, machine to machine) and the monthly
-     * report's (fixed English). This file is different in kind: it is handed
-     * to a person, and its *body* is already translated — the job words come
-     * from the shop's own bundle and the unassigned line is a sentence — so an
-     * English header on a Spanish sheet would be the one shape that reads
-     * wrong in both languages.
-     *
-     * The numbers stay locale-independent for the same reason: hours and tips
-     * are plain decimals in a fixed format, with the currency in its own
-     * column, so the destination spreadsheet sums a column of `42.5` instead
-     * of parsing `42,50 €` as text.
-     */
-    header: [
-      t("settings.crewSheet.column.person"),
-      t("settings.crewSheet.column.roles"),
-      t("settings.crewSheet.column.departures"),
-      t("settings.crewSheet.column.hours"),
-      t("settings.crewSheet.column.tips"),
-      t("settings.crewSheet.column.currency"),
-    ],
-    roleLabels: {
-      instructor: t("trips.crew.roleInstructor"),
-      divemaster: t("trips.crew.roleDivemaster"),
-      captain: t("trips.crew.roleCaptain"),
-      crew: t("trips.crew.roleCrew"),
-    },
-    roleUnspecifiedLabel: t("trips.crew.roleUnspecified"),
-    unassignedLabel: t("settings.crewSheet.unassigned"),
-    joinRoles: (roles) => cachedListFormat(locale, { type: "unit" }).format(roles),
-  });
+  const { fileName, csv } = await crewSheetFile(db, shop, month, locale);
 
   return new Response(csv, {
     headers: {
       // `charset=utf-8` is load-bearing: crew names carry accents, and a
       // spreadsheet that guesses the encoding renders "Nuñez" as mojibake.
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${crewSheetFileName(shop.slug, monthKey(month))}"`,
+      "Content-Disposition": `attachment; filename="${fileName}"`,
       "Cache-Control": "no-store",
     },
   });

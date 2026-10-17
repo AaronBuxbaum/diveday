@@ -3,20 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
-import {
-  canPersonDeleteDiver,
-  canPersonErasePersonalData,
-  canPersonManageOrders,
-  canPersonMergeDiver,
-  canPersonOverrideGearRequest,
-  canPersonReadMedicalClearanceDocument,
-} from "@/db/authz";
 import { diverPackageBalance } from "@/db/dive-packages";
 import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
-import { canPersonExportShopData } from "@/db/export";
 import { listGuardianEmails } from "@/db/guardian-erasure";
 import { personThread } from "@/db/inbound-messages";
+import { listSavedAnswers } from "@/db/inbox-saved-answers";
+import { openLostItemsByPerson } from "@/db/lost-items";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -24,11 +17,13 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { resolveDiverNotice } from "@/lib/diver-notices";
-import { bookingIsAhead, splitDiverStatus } from "@/lib/diver-status";
+import { diverStanding } from "@/lib/diver-standing";
+import { splitDiverStatus } from "@/lib/diver-status";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { counterRentalFormPath } from "../../gear/rentals/rental-form";
+import { saveAnswerFromReplyAction } from "../../inbox/actions";
 import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationsGroup } from "./_components/CertificationsGroup";
@@ -39,6 +34,7 @@ import { DiverNotesSection } from "./_components/DiverNotesSection";
 import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
+import { FoundItemLine } from "./_components/FoundItemLine";
 import { GearAndSizes } from "./_components/GearAndSizes";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
@@ -46,6 +42,8 @@ import { WaiverGroup } from "./_components/WaiverGroup";
 import { WorkOrdersGroup } from "./_components/WorkOrdersGroup";
 import { loadDiverGear } from "./_lib/gear-load";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
+import { loadDiverRecordGates } from "./_lib/record-gates";
+import { savedAnswerFillFor } from "./_lib/saved-answer-fill";
 import { diverStatusRows } from "./_lib/status-load";
 import { restoreCardAction } from "./card-actions";
 import { restoreDiverNoteAction } from "./note-actions";
@@ -151,21 +149,8 @@ export default async function DiverDetailPage({
   }
   const removed = Boolean(diver.person.deletedAt);
   const now = nowDate();
-  // Diver deletion and merging are owner/manager only (H-14, ADR
-  // 20260724-role-authorization); hide those controls from other staff. The
-  // server actions re-check regardless — hiding is a courtesy, not the gate.
-  // Rewriting a diver's stated rental fit is instructor/divemaster/manager work
-  // (H-06); flagging them for hands-on fitting stays open to all staff.
-  // Erasing a diver's personal and medical data is stricter still — owner only,
-  // one way, and never offered to anyone else (ADR 20260802-diver-data-erasure).
   const [
-    canDelete,
-    canMerge,
-    canOverrideFit,
-    canErase,
-    canExport,
-    canOpenClearance,
-    canManageOrders,
+    { canDelete, canMerge, canOverrideFit, canErase, canExport, canOpenClearance, canManageOrders },
     stripeAccount,
     notes,
     activityPage,
@@ -173,28 +158,7 @@ export default async function DiverDetailPage({
     gear,
     packages,
   ] = await Promise.all([
-    canPersonDeleteDiver(db, shop.id, session.user.personId),
-    canPersonMergeDiver(db, shop.id, session.user.personId),
-    canPersonOverrideGearRequest(db, shop.id, session.user.personId),
-    canPersonErasePersonalData(db, shop.id, session.user.personId),
-    // Same owner/manager gate the shop-wide export uses (issue #726) — a
-    // subject-access request properly goes through the same door as the
-    // shop's own copy of everything, re-checked against the database like
-    // the other roles on this page.
-    canPersonExportShopData(db, shop.id, session.user.personId),
-    // The physician's evaluation itself (issue #1283). Owner/manager, and
-    // deliberately not the staff who may *record* a clearance — the reasoning
-    // is at `canReadMedicalClearanceDocument`. Hiding the link is a courtesy;
-    // the route re-checks the same live roles before it signs anything.
-    canPersonReadMedicalClearanceDocument(db, shop.id, session.user.personId),
-    // Raising an invoice against this diver (#1920). Three gates already stand
-    // behind the link — `orders/new`'s own `allow:`, its action's re-check, and
-    // `src/db/orders.ts` refusing at the write — so it was never a hole, only a
-    // door a captain could not walk through. `src/db/authz.ts` states the rule
-    // it broke: the UI hides the control when the permission is false, so a
-    // crew member is never shown a button they will be bounced from (ADR
-    // 20260724-role-authorization).
-    canPersonManageOrders(db, shop.id, session.user.personId),
+    loadDiverRecordGates(db, shop.id, session.user.personId),
     getShopStripeAccount(db, shop.id),
     listDiverRecordNotes(db, shop.id, personId),
     // Shop-scoped from the session, never the slug, like every read on this
@@ -219,20 +183,23 @@ export default async function DiverDetailPage({
     canManageOrders,
     paymentsConnected,
   });
-  // Three reads that need the two gates above, so they could not ride the
-  // `Promise.all` that produced them — concurrent with each other instead of
-  // the serial pair they used to be.
-  const [mergeCandidates, status, { trips: scannedTrips }, guardianEmails] = await Promise.all([
-    canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
-    // The readiness of the departure this diver is next on, read through the
-    // entry the Today queue and the manifest already use — never a second
-    // detector (`_lib/status-load.ts`).
-    diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
-    pagedUpcomingTripsWithCounts(db, shop.id, { limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT }),
-    // The co-signing guardians' addresses, for the owner's control that erases
-    // one on the guardian's request (H-103). Nobody else is shown them here.
-    canErase ? listGuardianEmails(db, shop.id, personId) : [],
-  ]);
+  // Reads that need the gates above, so they could not ride the `Promise.all`
+  // that produced them; concurrent with each other instead of serial.
+  const [mergeCandidates, status, { trips: scannedTrips }, guardianEmails, found, savedAnswers] =
+    await Promise.all([
+      canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
+      // The readiness of the departure this diver is next on, read through the
+      // entry the Today queue and the manifest already use — never a second
+      // detector (`_lib/status-load.ts`).
+      diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
+      pagedUpcomingTripsWithCounts(db, shop.id, { limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT }),
+      // The co-signing guardians' addresses, for the owner's control that erases
+      // one on the guardian's request (H-103). Nobody else is shown them here.
+      canErase ? listGuardianEmails(db, shop.id, personId) : [],
+      openLostItemsByPerson(db, shop.id, [personId]), // found items, under the header
+      // Chips above the reply box, only when there is a conversation to answer.
+      thread.length > 0 && !removed ? listSavedAnswers(db, shop.id) : [],
+    ]);
   const upcoming = scannedTrips.filter(
     (trip) =>
       !diver.bookings.some(
@@ -276,13 +243,8 @@ export default async function DiverDetailPage({
   // came back empty — and stripped out of the URL by `FlashParams`, so a
   // reload never re-celebrates it.
   const cleared = detailsStatus?.code === "diver-clear" ? detailsStatus : undefined;
-  // Times out with this shop: a seat that has sailed plus the visits the
-  // importer brought across. Shares `bookingIsAhead`'s late-arrival buffer, so
-  // the boat somebody is still boarding is not counted as a visit yet.
-  const visits =
-    diver.bookings.filter(
-      (entry) => entry.booking.status !== "cancelled" && !bookingIsAhead(entry, now),
-    ).length + diver.priorVisits.length;
+  // Who this person is to the shop, in one line (item 36); money only for a reader who may see it.
+  const standing = diverStanding(diver, { now, shop, showMoney: canManageOrders });
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -291,7 +253,8 @@ export default async function DiverDetailPage({
         diver={diver}
         shopSlug={shopSlug}
         t={t}
-        visits={visits}
+        standing={standing}
+        locale={locale}
         packages={packages}
         status={cleared ? undefined : detailsStatus}
         moment={
@@ -320,6 +283,7 @@ export default async function DiverDetailPage({
           )
         }
       />
+      <FoundItemLine shopSlug={shopSlug} items={found.get(personId) ?? []} t={t} />
       {removed ? (
         <RestoreDiver
           shopSlug={shopSlug}
@@ -431,6 +395,9 @@ export default async function DiverDetailPage({
             removed={removed}
             t={t}
             status={noticeForForm(diverNotice, "reply")}
+            savedAnswers={savedAnswers}
+            fill={savedAnswerFillFor(diver, now, t, locale, shop.timezone)}
+            saveAnswerAction={saveAnswerFromReplyAction}
           />
           <GearAndSizes
             diver={diver}

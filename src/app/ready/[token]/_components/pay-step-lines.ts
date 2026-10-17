@@ -1,5 +1,7 @@
+import { deskPaymentSentence } from "@/i18n/desk-payment-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import { partyMoneyTerms } from "@/lib/deposits";
+import type { DeskPayment } from "@/lib/desk-payment";
 import { formatMoneyCents } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import type { ParticipantType } from "@/lib/participant-types";
@@ -34,6 +36,8 @@ export function payStepLines(
   money: (cents: number, currency: string) => string,
   receipt: Receipt,
   packageDives: { left: number; usedHere: number },
+  /** How the shop takes the balance at the desk, said after it (dive-domain review N4 of layer r5-3). */
+  deskPayment: DeskPayment | null = null,
 ): { paidLine: string; depositBalanceLine: string | null } {
   const paid =
     receipt && receipt.amountCents !== null
@@ -52,9 +56,14 @@ export function payStepLines(
           : paid,
     depositBalanceLine:
       receipt?.isDeposit && receipt.balanceDueCents > 0
-        ? t("booking.paymentDepositBalance", {
-            balance: money(receipt.balanceDueCents, receipt.currency),
-          })
+        ? [
+            t("booking.paymentDepositBalance", {
+              balance: money(receipt.balanceDueCents, receipt.currency),
+            }),
+            deskPaymentSentence(t, deskPayment),
+          ]
+            .filter(Boolean)
+            .join(" ")
         : null,
   };
 }
@@ -72,7 +81,11 @@ export function atShopMoneyLine(
   t: DiverTranslator,
   locale: string,
   currency: string,
-  data: { owesAtShop: boolean; participantType: ParticipantType },
+  data: {
+    owesAtShop: boolean;
+    participantType: ParticipantType;
+    shop: { deskPayment: DeskPayment | null };
+  },
   trip:
     | (Parameters<typeof partyMoneyTerms>[0] & { course: Parameters<typeof partyMoneyTerms>[1] })
     | null
@@ -94,5 +107,12 @@ export function atShopMoneyLine(
   // The figure drops when a seat is claimed; say why, so the lead does not
   // read it as a discount (dive-domain review N5 of layer r4-1).
   const claimed = partySeats.filter((seat) => seat.claimed).length;
-  return claimed > 0 ? `${line} ${t("ready.partyClaimedSeatsPayOwn", { count: claimed })}` : line;
+  // Then how the desk takes it, when the shop has said (fifth-loop ideas, item 21).
+  return [
+    line,
+    claimed > 0 ? t("ready.partyClaimedSeatsPayOwn", { count: claimed }) : null,
+    deskPaymentSentence(t, data.shop.deskPayment),
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

@@ -7,15 +7,18 @@ vi.mock("../actions", () => {
     [
       "addBuddyTeamMemberAction",
       "addManifestPrivateNoteAction",
+      "answerSnagAction",
       "crewRollCallAction",
       "dissolveBuddyTeamAction",
       "formBuddyTeamAction",
       "markTripCaughtUpAction",
+      "noteSnagAction",
       "preDepartureCheckAction",
       "removeBuddyTeamMemberAction",
       "rollCallAction",
       "saveExecutedDiveAction",
       "setTripStageAction",
+      "teamUpPartiesAction",
     ].map((name) => [name, named(name)]),
   );
 });
@@ -37,6 +40,10 @@ describe("bindManifestActions", () => {
     const actions = bindManifestActions(context);
     expect(actions.rollCall).toEqual({ name: "rollCallAction", context });
     expect(actions.saveExecutedDive).toEqual({ name: "saveExecutedDiveAction", context });
+    expect(actions.buddyTeams.teamUpPartiesAction).toEqual({
+      name: "teamUpPartiesAction",
+      context,
+    });
     expect(actions.buddyTeams.formBuddyTeamAction).toEqual({
       name: "formBuddyTeamAction",
       context,
@@ -50,6 +57,8 @@ describe("bindManifestActions", () => {
       actions.addPrivateNote,
       actions.markTripCaughtUp,
       actions.preDepartureCheck,
+      actions.noteSnag,
+      actions.answerSnag,
       actions.setTripStage,
     ]) {
       expect((action as unknown as { context: unknown }).context).toEqual(narrow);

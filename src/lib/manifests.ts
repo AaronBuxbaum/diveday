@@ -264,6 +264,12 @@ export type ManifestDiverInput = {
   /** Staff-set pickup time for this booking (e.g. "07:15"). */
   pickupTime?: string | null;
   /**
+   * The lunch note on this booking (fifth-loop ideas, item 56): a meal
+   * preference for the galley, from the diver's Day-of form or the desk. Not
+   * an allergy record (dive-domain review B1), and it gates nothing.
+   */
+  dietaryNote?: string | null;
+  /**
    * When the diver said they were running late (J3, #2319), already through
    * `runningLateShown`, so it is null on a seat that has arrived or been
    * released. Display only: `runningLateOnManifest` (src/lib/running-late.ts)

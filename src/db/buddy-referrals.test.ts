@@ -2,16 +2,19 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { buddyReferralId } from "@/lib/buddy-tokens";
+import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import {
   buddyReferredSeatsForWindow,
+  buddyReferrersForWindow,
+  friendsBroughtBy,
   recordBuddyReferral,
   resolveBuddyReferral,
 } from "./buddy-referrals";
 import type { AppDb } from "./client";
-import { bookingReferrals } from "./schema";
-import { upcomingTripsWithCounts } from "./trips";
+import { bookingReferrals, bookings, people, shops } from "./schema";
+import { createTrip, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **The buddy seat, at the database** (ADR 20260908-one-hand, decision 6,
@@ -196,5 +199,105 @@ describe("buddyReferredSeatsForWindow", () => {
     const before = new Date(open.startsAt.getTime() - 400 * 24 * 60 * 60 * 1000);
     const beforeEnd = new Date(open.startsAt.getTime() - 300 * 24 * 60 * 60 * 1000);
     expect(await buddyReferredSeatsForWindow(db, shop.id, before, beforeEnd)).toBe(0);
+  });
+});
+
+/**
+ * **Who brings their friends** (fifth-loop ideas, items 36 and 41): the
+ * referring diver is the shop's own, so staff may see them named. People are
+ * counted, not seats, and a seat that left the boat counts nothing.
+ */
+describe("the divers who bring friends", () => {
+  async function personOf(db: AppDb, bookingId: string) {
+    const [row] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    if (!row) throw new Error("seat missing");
+    return row.personId;
+  }
+
+  it("names each referrer with the distinct friends they brought, most first", async () => {
+    const { db, shop, open } = await context();
+    const priya = await book(db, shop.id, open.id, "Priya Sharma");
+    const bjorn = await book(db, shop.id, open.id, "Bjorn Aasen");
+    for (const [friend, by] of [
+      ["Ines Costa", priya],
+      ["Diego Alvarez", priya],
+      ["Omar Haddad", bjorn],
+    ] as const) {
+      const seat = await book(db, shop.id, open.id, friend);
+      await recordBuddyReferral(db, {
+        shopId: shop.id,
+        bookingId: seat.bookingId,
+        referredByBookingId: by.bookingId,
+      });
+    }
+    const window = [
+      new Date(open.startsAt.getTime() - 1),
+      new Date(open.startsAt.getTime() + 1),
+    ] as const;
+
+    expect(await buddyReferrersForWindow(db, shop.id, ...window)).toEqual([
+      { personId: await personOf(db, priya.bookingId), fullName: "Priya Sharma", friends: 2 },
+      { personId: await personOf(db, bjorn.bookingId), fullName: "Bjorn Aasen", friends: 1 },
+    ]);
+    expect(await friendsBroughtBy(db, shop.id, await personOf(db, priya.bookingId))).toBe(2);
+  });
+
+  it("counts nothing for a friend's canceled seat, and leaves out an erased referrer", async () => {
+    const { db, shop, open } = await context();
+    const priya = await book(db, shop.id, open.id, "Priya Sharma");
+    const friend = await book(db, shop.id, open.id, "Ines Costa");
+    await recordBuddyReferral(db, {
+      shopId: shop.id,
+      bookingId: friend.bookingId,
+      referredByBookingId: priya.bookingId,
+    });
+    const window = [
+      new Date(open.startsAt.getTime() - 1),
+      new Date(open.startsAt.getTime() + 1),
+    ] as const;
+    const priyaId = await personOf(db, priya.bookingId);
+
+    await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, priyaId));
+    expect(await buddyReferrersForWindow(db, shop.id, ...window)).toEqual([]);
+
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, friend.bookingId));
+    expect(await friendsBroughtBy(db, shop.id, priyaId)).toBe(0);
+  });
+
+  it("names no referrer whose seat is another shop's, even from a row that says otherwise (security review r5-4, N4)", async () => {
+    const { db, shop, open } = await context();
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef Co", slug: "other-reef-co-referrals", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!other) throw new Error("shop not created");
+    const elsewhere = await createTrip(db, {
+      shopId: other.id,
+      title: "Elsewhere",
+      startsAt: open.startsAt,
+      endsAt: new Date(open.startsAt.getTime() + 3 * 60 * 60 * 1000),
+      capacity: 6,
+      plannedDives: 1,
+    });
+    if (!elsewhere) throw new Error("trip not created");
+    const outsider = await book(db, other.id, elsewhere.id, "Outside Referrer");
+    const friend = await book(db, shop.id, open.id, "Ines Costa");
+    // The write side refuses this (`resolveBuddyReferral` is shop-scoped);
+    // the row is planted to prove the read does not lean on that alone.
+    await db.insert(bookingReferrals).values({
+      shopId: shop.id,
+      bookingId: friend.bookingId,
+      referredByBookingId: outsider.bookingId,
+    });
+    const window = [
+      new Date(open.startsAt.getTime() - 1),
+      new Date(open.startsAt.getTime() + 1),
+    ] as const;
+
+    expect(await buddyReferrersForWindow(db, shop.id, ...window)).toEqual([]);
+    expect(await friendsBroughtBy(db, shop.id, await personOf(db, outsider.bookingId))).toBe(0);
   });
 });

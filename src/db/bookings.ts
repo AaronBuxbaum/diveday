@@ -24,6 +24,7 @@ import {
 } from "@/lib/held-seat";
 import { inTrainingBefore } from "@/lib/in-training";
 import { normalizeEmailAddress } from "@/lib/inbox";
+import { cleanDietaryNote } from "@/lib/lunch-aboard";
 import { rowCanBeReactivated } from "@/lib/no-show";
 import {
   holdsRegisterKind,
@@ -457,11 +458,20 @@ export async function createBookingParty(
         // single-booking path never carries party state, and written even for
         // a reactivated row (whose stale linkage the reactivation path just
         // cleared) so a re-booked party member is claimable again.
+        //
+        // A party **staff** seat is stamped claimed as it is made (security
+        // review N3): the counter typed each name with that person standing at
+        // the desk, so no claim link from the lead's readiness page may
+        // re-point the seat to whoever opens it. The public party form's seats
+        // stay claimable, which is what the claim link is for.
         const leadBookingId = created[0]?.bookingId;
         if (index > 0 && leadBookingId) {
           await tx
             .update(bookings)
-            .set({ partyLeadBookingId: leadBookingId })
+            .set({
+              partyLeadBookingId: leadBookingId,
+              ...(request.actor === "staff" ? { claimedAt: nowDate() } : {}),
+            })
             .where(eq(bookings.id, outcome.bookingId));
         }
         created.push(outcome);
@@ -3208,6 +3218,41 @@ export async function setBookingLastDived(
     )
     .returning({ id: bookings.id });
   return Boolean(updated);
+}
+
+/**
+ * A meal preference for the galley, not an allergy record (dive-domain
+ * review B1), from the Day-of form or the roster of a departure that serves
+ * lunch aboard (fifth-loop ideas, item 56). The booking's, not the person's:
+ * it is for this boat's galley. Null clears it. False when nothing was
+ * written: no such live booking, or its departure does not serve lunch.
+ */
+export async function setBookingDietaryNote(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; note: string | null },
+): Promise<boolean> {
+  const updated = await db
+    .update(bookings)
+    .set({ dietaryNote: cleanDietaryNote(input.note) })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+        // Only a departure that serves lunch aboard takes a lunch note, from
+        // either writer (dive-domain second pass, N-a): the roster hides its
+        // control otherwise, and a hand-posted form is refused here too.
+        inArray(
+          bookings.tripId,
+          db
+            .select({ id: trips.id })
+            .from(trips)
+            .where(and(eq(trips.shopId, input.shopId), eq(trips.lunchAboard, true), liveTrip())),
+        ),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return updated.length > 0;
 }
 
 export async function setBookingHotelPickup(

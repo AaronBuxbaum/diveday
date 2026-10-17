@@ -25,6 +25,7 @@ import { getRentalFit, toDiverRentalFit } from "./rental-fit";
 import {
   bookings,
   people,
+  priorVisits,
   rollCallEvents,
   shops,
   trips as tripTable,
@@ -602,7 +603,7 @@ describe("carriedPreparationForDiver", () => {
 describe("getBookedCard", () => {
   it("states the masthead's facts exactly as the full loader does", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
-    const card = await getBookedCard(db, { shopId: shop.id, bookingId });
+    const card = await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true });
     const data = await getReadyPageData(db, bookingId);
     if (!card || !data) throw new Error("expected both reads to resolve");
     expect(card.trip).toEqual({
@@ -631,11 +632,49 @@ describe("getBookedCard", () => {
   it("says when the seat or the departure is gone, so the page can decline the fast path", async () => {
     const { db, shop, open, bookingId } = await unpaidBooking();
     await cancelBooking(db, shop.id, bookingId);
-    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.bookingCancelled).toBe(true);
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.bookingCancelled,
+    ).toBe(true);
     await setTripStatus(db, shop.id, open.id, "cancelled");
-    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.departureCancelled).toBe(
-      true,
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))
+        ?.departureCancelled,
+    ).toBe(true);
+  });
+
+  // H-128: the diver's side of a regular's milestone, said on the booked moment.
+  it("names a milestone boat, counting the shop's imported visits, and only that boat", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.milestone,
+    ).toBeNull();
+    const [seat] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    if (!seat) throw new Error("seat missing");
+    await db.insert(priorVisits).values(
+      Array.from({ length: 9 }, (_, index) => ({
+        shopId: shop.id,
+        personId: seat.personId,
+        visitedOn: `2024-0${index + 1}-10`,
+        dedupeKey: `ready-milestone-${index}`,
+        importedAt: nowDate(),
+      })),
     );
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.milestone,
+    ).toBe(10);
+    // A booking redirect proved only a typed name and address: no count of
+    // that record's days on it (security review r5-4, second pass, N-c).
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: false }))?.milestone,
+    ).toBeNull();
+    // A held seat speaks for a record nobody has matched yet: no count of it.
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "N. Q." })
+      .where(eq(bookings.id, bookingId));
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.milestone,
+    ).toBeNull();
   });
 
   it("greets a held identity by the name it was booked as, never the matched record's", async () => {
@@ -644,7 +683,9 @@ describe("getBookedCard", () => {
       .update(bookings)
       .set({ identityUnconfirmedAt: nowDate(), identityBookedAs: "N. Q." })
       .where(eq(bookings.id, bookingId));
-    expect((await getBookedCard(db, { shopId: shop.id, bookingId }))?.greetingName).toBe("N. Q.");
+    expect(
+      (await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true }))?.greetingName,
+    ).toBe("N. Q.");
   });
 
   /**
@@ -704,7 +745,7 @@ describe("getBookedCard", () => {
       expect.objectContaining({ code: "certification_insufficient" }),
     );
 
-    const card = await getBookedCard(db, { shopId: shop.id, bookingId });
+    const card = await getBookedCard(db, { shopId: shop.id, bookingId, delivered: true });
     expect(card?.bookingCancelled).toBe(false);
     for (const locale of DIVER_LOCALES) {
       const heading = diverTranslator(locale)("booking.confirmedHeading", {
@@ -726,6 +767,7 @@ describe("getBookedCard", () => {
       await getBookedCard(db, {
         shopId: shop.id,
         bookingId: "00000000-0000-4000-8000-000000000000",
+        delivered: true,
       }),
     ).toBeNull();
   });
@@ -733,7 +775,11 @@ describe("getBookedCard", () => {
   it("resolves nothing for a booking under another shop, whatever id the caller holds", async () => {
     const { db, bookingId } = await unpaidBooking();
     expect(
-      await getBookedCard(db, { shopId: "00000000-0000-4000-8000-000000000000", bookingId }),
+      await getBookedCard(db, {
+        shopId: "00000000-0000-4000-8000-000000000000",
+        bookingId,
+        delivered: true,
+      }),
     ).toBeNull();
   });
 });

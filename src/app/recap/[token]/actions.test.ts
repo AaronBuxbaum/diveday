@@ -35,6 +35,7 @@ vi.mock("@/db/recap", async (importOriginal) => {
     ...actual,
     isRecapOpen: vi.fn(async () => true),
     canAddRecapPhoto: vi.fn(async () => ({ ok: true })),
+    addRecapPhoto: vi.fn(async () => ({ ok: true, photo: { id: "photo" } })),
   };
 });
 vi.mock("@/db/reviews", () => ({ submitTripReview: vi.fn() }));
@@ -68,7 +69,7 @@ const { submitRecapPulse } = await import("@/db/recap-pulses");
 const { verifyRecapToken } = await import("@/lib/recap-links");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { startTipCheckout } = await import("@/db/tips");
-const { isRecapOpen } = await import("@/db/recap");
+const { addRecapPhoto, isRecapOpen } = await import("@/db/recap");
 const { submitTripReview } = await import("@/db/reviews");
 const { storeRecapImage } = await import("@/lib/storage");
 const { startTipAction, submitRecapPulseAction, submitReviewAction, uploadRecapPhotoAction } =
@@ -280,5 +281,32 @@ describe("a recap that is not open", () => {
   it("asks about the booking the token names", async () => {
     await landing(submitRecapPulseAction, form([["category", "gear"]]));
     expect(vi.mocked(isRecapOpen).mock.calls[0]?.[1]).toBe(BOOKING_ID);
+  });
+});
+
+/**
+ * **The recap link cannot publish to the boat** (security review of layer
+ * r5-4, F3). It is signed for 180 days, cannot be revoked and is written to be
+ * forwarded, so whoever it reaches may add photos to this diver's own recap,
+ * never onto everyone else's under the diver's name. The tick is honored only
+ * through the readiness link (`ready/[token]/recap-photo-actions.ts`).
+ */
+describe("uploadRecapPhotoAction and the share tick", () => {
+  it("adds the photo to this recap alone, whatever the post says", async () => {
+    vi.mocked(storeRecapImage).mockResolvedValue({
+      status: "stored",
+      url: "https://img/reef.jpg",
+    } as never);
+    const data = new FormData();
+    data.append("photo", new File(["x"], "reef.jpg", { type: "image/jpeg" }));
+    data.append("shareWithBoat", "on");
+
+    await uploadRecapPhotoAction(TOKEN, data).catch(() => undefined);
+
+    expect(addRecapPhoto).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(addRecapPhoto).mock.calls[0]?.[1]).toMatchObject({
+      bookingId: BOOKING_ID,
+      shareWithBoat: false,
+    });
   });
 });

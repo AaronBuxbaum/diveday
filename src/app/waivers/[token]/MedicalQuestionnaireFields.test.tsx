@@ -55,6 +55,7 @@ const BRANCHING: MedicalQuestionnaire = {
   version: 1,
   jurisdiction: "rstc",
   title: "Test questionnaire",
+  published: RSTC_QUESTIONNAIRE.published,
   intro: "Answer every question.",
   boxes: [{ section: "box_a", title: "BOX A - I HAVE/HAVE HAD:" }],
   questions: [

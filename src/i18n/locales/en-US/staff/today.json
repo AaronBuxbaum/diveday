@@ -55,7 +55,9 @@
   "yourWeek": {
     "heading": "Your week",
     "openTrip": "Open {title}",
-    "roleUnset": "On the crew"
+    "roleUnset": "On the crew",
+    "atTheDock": "At the dock {dock} · leaves {leaves}",
+    "diversAtTheDock": "Divers at the dock {dock} · leaves {leaves}"
   },
   "actionKind": {
     "rollCallMissingDiver": "Missing diver",
@@ -101,12 +103,14 @@
     "boatPapersLapsed": "Papers lapsed",
     "boatSafetyExpired": "Safety expired",
     "incidentReportUnfiled": "Incident report",
+    "boatSnag": "Boat snag",
     "workOrderLate": "Late repair",
     "workOrderUncollected": "Repair not collected",
     "staffCredentialDue": "Credential",
     "unitsUnconfirmed": "Setup",
+    "emergencyCardBlank": "Emergency reference",
+    "lostItemsWaiting": "Lost and found",
     "helpRequest": "Help request",
-    "sayHello": "Say hello",
     "rentalFit": "Gear",
     "blockedAboard": "Aboard",
     "crewAway": "Crew away"
@@ -203,7 +207,8 @@
     "crewAway": "{name} is away {dates}.",
     "rollCallAlerted": "Owners alerted: {time}.",
     "rollCallAlertedWithShore": "Owners and shore contact alerted: {time}.",
-    "rollCallShoreAlerted": "Shore contact alerted: {time}."
+    "rollCallShoreAlerted": "Shore contact alerted: {time}.",
+    "boatSnag": "{item}: {note}. Noted by {name}{count, plural, =0 {.} one {, # departure ago.} other {, # departures ago.}}"
   },
   "actionLabel": {
     "openIncidentReport": "Open report",
@@ -212,7 +217,6 @@
     "openTrip": "Open trip",
     "openCrew": "Open crew",
     "openLastMinuteDeal": "Open last-minute deal",
-    "openGuests": "Open divers",
     "inviteFromWaitlist": "Invite from wait list",
     "resendWaiverLink": "Resend waiver link",
     "resendConfirmation": "Resend confirmation",
@@ -284,6 +288,15 @@
     "fahrenheit": "Fahrenheit",
     "celsius": "Celsius"
   },
+  "emergencyCard": {
+    "subject": "Your emergency reference has no numbers",
+    "detail": "The {time} boat {day} sails without a chamber or coastguard number on it.",
+    "action": "Add the numbers"
+  },
+  "lostItems": {
+    "subject": "{count, plural, one {# thing waiting to go home} other {# things waiting to go home}}",
+    "action": "Open lost and found"
+  },
   "gear": {
     "overdueDetail": "{units} {count, plural, one {was} other {were}} due back {dueOn} and {count, plural, one {is} other {are}} still out.",
     "dueBackDetail": "Gear due back today.",
@@ -302,7 +315,8 @@
   "sayHello": {
     "firstTrip": "{names}: first dive with us.",
     "firstTime": "{names}: first time with us.",
-    "returning": "{name} is back after {years, plural, one {# year} other {# years}}."
+    "returning": "{name} is back after {years, plural, one {# year} other {# years}}.",
+    "milestone": "{name}: {ordinal} dive day with us."
   },
   "unfinished": {
     "label": "Unfinished",

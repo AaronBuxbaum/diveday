@@ -1,6 +1,6 @@
 import type { MedicalAnswers, WaiverRecord as StoredWaiverRecord } from "@/db/schema";
 import { type CalendarDate, calendarDateInTimezone, isValidCalendarDate } from "./calendar-date";
-import { nowDate } from "./clock";
+import { DAY_MS, nowDate } from "./clock";
 import {
   type GuardianSignature,
   type GuardianSigner,
@@ -95,24 +95,6 @@ function signatureTime(record: WaiverRecord): number {
 }
 
 /**
- * Whether a completed release still stands for a booking. It must be a clean
- * completion (never one parked in medical review), signed against the shop's
- * current material generation (a later material edit is different terms the
- * diver never agreed to), and inside the validity window. Display versions may
- * advance for a non-material correction without invalidating a signature.
- * Applied uniformly — to the
- * booking's own record and to any carried from another booking — so a signature
- * that is stale or against superseded terms is never treated as current, whoever
- * it was signed for. Fails closed on anything missing.
- *
- * An `imported` record (ADR 20260724-import-waiver-acceptance) is exempt from
- * the template-generation check: it was never signed against any version of this
- * shop's own template, only snapshotted against the current one for reference,
- * so comparing versions would always — and wrongly — read it as stale. Its
- * `signedAt` is the diver's real acceptance date at the prior shop, so the
- * validity window still ages it out exactly like any other signature.
- */
-/**
  * A medical hold nobody has resolved — the thing that fails closed.
  *
  * The questionnaire refers a diver, the record parks in `medical_review`, and
@@ -129,8 +111,52 @@ function signatureTime(record: WaiverRecord): number {
  * and nothing about who boards. Anything that wants that distinction asks
  * {@link waiverState}, which is presentation; this one is the gate.
  */
-export function isUnresolvedMedicalHold(record: WaiverRecord): boolean {
+export function isUnresolvedMedicalHold(
+  record: Pick<WaiverRecord, "status" | "supersededAt" | "medicalClearedAt">,
+): boolean {
   return record.status === "medical_review" && !record.supersededAt && !record.medicalClearedAt;
+}
+
+/**
+ * **Whether this release still waits on a physician's written answer**: an
+ * {@link isUnresolvedMedicalHold} nobody has answered either way, on a diver
+ * not erased. Built from the hold rather than spelled beside it, so the
+ * doctor's page and the held waiver page can never disagree about a hold
+ * (security review of layer r5-3, N2). A physician's "no" still holds the
+ * diver; it only means there is no form left to take to a doctor.
+ */
+export function awaitsPhysician(
+  record: Pick<
+    WaiverRecord,
+    "status" | "supersededAt" | "medicalClearedAt" | "medicalClearanceDeclinedAt" | "anonymizedAt"
+  >,
+): boolean {
+  return (
+    isUnresolvedMedicalHold(record) && !record.medicalClearanceDeclinedAt && !record.anonymizedAt
+  );
+}
+
+/**
+ * How long after its departure ends the doctor's page still opens. A hold on
+ * a trip that has sailed is rarely resolved by staff, so without a bound the
+ * page, and every copy of its link, would open for ever (security review of
+ * layer r5-3, F3). A day covers a late evening clinic on a multi-day trip's
+ * last night; nothing after that needs the page.
+ */
+export const DOCTOR_PAGE_TRIP_GRACE_MS = DAY_MS;
+
+/**
+ * Wrong dates of birth a held release takes on the doctor's page before its
+ * answers stay locked for the rest of the hold (second-pass security review of
+ * layer r5-3, FIX-1). Far more than a diver mistyping their own birthday needs,
+ * and a few days' guesses at most against a year the attacker already knows.
+ * After it, the page says to go through the whole questionnaire.
+ */
+export const DOCTOR_UNLOCK_FAILURE_LIMIT = 20;
+
+/** Whether a held seat's departure is still close enough for the doctor's page to open. */
+export function doctorPageWithinTrip(tripEndsAt: Date, now: Date): boolean {
+  return now.getTime() < tripEndsAt.getTime() + DOCTOR_PAGE_TRIP_GRACE_MS;
 }
 
 /**
@@ -192,6 +218,24 @@ export function isCleanCompletion(record: WaiverRecord): boolean {
   return record.status === "medical_review" && Boolean(record.medicalClearedAt);
 }
 
+/**
+ * Whether a completed release still stands for a booking. It must be a clean
+ * completion (never one parked in medical review), signed against the shop's
+ * current material generation (a later material edit is different terms the
+ * diver never agreed to), and inside the validity window. Display versions may
+ * advance for a non-material correction without invalidating a signature.
+ * Applied uniformly — to the
+ * booking's own record and to any carried from another booking — so a signature
+ * that is stale or against superseded terms is never treated as current, whoever
+ * it was signed for. Fails closed on anything missing.
+ *
+ * An `imported` record (ADR 20260724-import-waiver-acceptance) is exempt from
+ * the template-generation check: it was never signed against any version of this
+ * shop's own template, only snapshotted against the current one for reference,
+ * so comparing versions would always — and wrongly — read it as stale. Its
+ * `signedAt` is the diver's real acceptance date at the prior shop, so the
+ * validity window still ages it out exactly like any other signature.
+ */
 export function isCompletedWaiverCurrent(
   record: WaiverRecord,
   currentTemplateGeneration: number | null,

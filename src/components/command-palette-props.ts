@@ -80,6 +80,8 @@ function commandPaletteCopy(t: ReturnType<typeof staffTranslator>): CommandPalet
     // returns the code (`src/i18n/gear-labels.ts` owns the words).
     gearStatuses: gearStatusLabels(t),
     groupGoTo: t("shared.commandPalette.groupGoTo"),
+    groupRecent: t("shared.commandPalette.groupRecent"),
+    groupToday: t("shared.commandPalette.groupToday"),
     destinationLabels: destinationLabelsFor(t),
     destinationTitles: destinationTitlesFor(t),
     goToBoarding: t("shared.commandPalette.goToBoarding"),

@@ -463,6 +463,39 @@ export type StaffWeekPerson = {
   days: StaffWeekPersonDay[];
 };
 
+/**
+ * **One person's week, summed** (fifth-loop ideas, item 52): "6 days · 8
+ * boats · 34 h" under each name, so the owner balancing the long-range day
+ * reads one figure instead of seven columns. Days are the columns with a
+ * shift or a crewed departure in them; boats are distinct departures; time is
+ * the union of their shifts and crewed windows, so a shift that covers the
+ * boat it works is counted once. A day away alone is not a working day.
+ */
+export type PersonWeekTotals = { days: number; boats: number; minutes: number };
+
+export function personWeekTotals(person: StaffWeekPerson): PersonWeekTotals {
+  const windows = new Map<string, { from: number; to: number }>();
+  const boats = new Set<string>();
+  let days = 0;
+  for (const day of person.days) {
+    if (day.shifts.length > 0 || day.crewing.length > 0) days += 1;
+    for (const window of [...day.shifts, ...day.crewing]) {
+      const from = window.startsAt.getTime();
+      const to = window.endsAt.getTime();
+      if (to > from) windows.set(`${from}-${to}`, { from, to });
+    }
+    for (const trip of day.crewing) boats.add(trip.tripId);
+  }
+  let minutes = 0;
+  let reach = Number.NEGATIVE_INFINITY;
+  for (const { from, to } of [...windows.values()].sort((a, b) => a.from - b.from)) {
+    const start = Math.max(from, reach);
+    if (to > start) minutes += (to - start) / 60_000;
+    reach = Math.max(reach, to);
+  }
+  return { days, boats: boats.size, minutes: Math.round(minutes) };
+}
+
 /** The gap row's cell for one day. */
 export type StaffWeekGapDay = { date: CalendarDate; gaps: PlacedGap[] };
 

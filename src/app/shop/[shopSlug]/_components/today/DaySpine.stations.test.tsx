@@ -49,7 +49,7 @@ afterEach(() => {
  * title on every queue row that hung off it.
  */
 describe("a station owns its departure's facts", () => {
-  it("names each row's boat itself, now that the rows are one list under the departures", () => {
+  it("names the boat once over its rows, linked to the departure (fifth loop, item 11)", () => {
     renderSpine({
       actions: [
         action({ id: "r1", subject: "Priya Sharma", departure: boat("t1") }),
@@ -70,12 +70,34 @@ describe("a station owns its departure's facts", () => {
       "/shop/blue-mantis/trips/t1",
     );
     const needsYou = screen.getByText("Needs you").closest("div")?.parentElement as HTMLElement;
-    // Both rows say their boat on a quiet line under their words.
-    const labels = within(needsYou).getAllByText("Two-Tank Reef · 7:00 AM");
-    expect(labels).toHaveLength(2);
-    for (const label of labels) expect(label).toHaveClass("text-muted");
+    // One heading for the boat, a link to it; the rows under it do not repeat it.
+    const heading = within(needsYou).getByRole("heading", {
+      level: 3,
+      name: "Two-Tank Reef · 7:00 AM",
+    });
+    expect(within(heading).getByRole("link")).toHaveAttribute("href", "/shop/blue-mantis/trips/t1");
+    expect(within(needsYou).getAllByText("Two-Tank Reef · 7:00 AM")).toHaveLength(1);
     expect(within(needsYou).getByText("3 divers still need rental sizes.")).toBeInTheDocument();
     expect(within(needsYou).getByText("Priya Sharma")).toBeInTheDocument();
+  });
+
+  it("puts the rows bound to no boat under the desk's own heading", () => {
+    renderSpine({
+      actions: [
+        action({ id: "r1", subject: "Priya Sharma", departure: boat("t1") }),
+        action({
+          id: "m",
+          kind: "unanswered_messages",
+          subject: "3 messages",
+          departure: undefined,
+        }),
+      ],
+    });
+    const desk = screen.getByRole("heading", { level: 3, name: "The desk" });
+    const group = desk.parentElement as HTMLElement;
+    expect(within(group).getByText("3 messages")).toBeInTheDocument();
+    expect(within(group).queryByText("Priya Sharma")).toBeNull();
+    expect(screen.getByText("Priya Sharma")).toBeInTheDocument();
   });
 
   /**

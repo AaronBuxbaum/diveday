@@ -179,3 +179,36 @@ describe("MoneyBlock — the deposit split", () => {
     expect(loudFigures()).toEqual(["$95.00"]);
   });
 });
+
+describe("MoneyBlock — how the desk takes money (ideas item 21)", () => {
+  it("says it under a figure due at the shop, as a definition of it", () => {
+    renderDiver(<MoneyBlock context={props({ dueNow: "at_shop", deskPayment: "card" })} />);
+    const line = screen.getByText("Pay by card when you arrive.");
+    expect(line.tagName).toBe("DD");
+    // A `<dl>`'s groups may hold only `<dt>`/`<dd>` (axe `definition-list`).
+    for (const group of document.querySelectorAll("dl > div")) {
+      for (const child of group.children) expect(["DT", "DD"]).toContain(child.tagName);
+    }
+  });
+
+  it("says it under a deposit's balance too, which is paid on arrival", () => {
+    renderDiver(
+      <MoneyBlock
+        context={props({
+          dueNow: "checkout",
+          depositCents: 3_000,
+          balanceDueAt: new Date("2026-08-29T15:00:00Z"),
+          deskPayment: "card_and_cash",
+        })}
+      />,
+    );
+    expect(screen.getByText(/at the dock on Sat, Aug 29/).textContent).toMatch(
+      / Pay by card or cash when you arrive\.$/,
+    );
+  });
+
+  it("says nothing when the diver pays now", () => {
+    renderDiver(<MoneyBlock context={props({ dueNow: "checkout", deskPayment: "card" })} />);
+    expect(screen.queryByText("Pay by card when you arrive.")).toBeNull();
+  });
+});

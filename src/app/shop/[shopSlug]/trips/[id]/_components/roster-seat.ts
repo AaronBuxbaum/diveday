@@ -36,6 +36,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     signedToday,
     offersCreateOrder,
     record,
+    recordBelow,
   } = context;
   const {
     shopSlug,
@@ -62,6 +63,7 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     elearningQueryByBooking,
     elearningChecksOff,
     courseMaterialsDoneByPerson,
+    issuedCardByPerson,
     sameNameHeldSeats,
     sameNamePeople,
     dependentCharters,
@@ -91,10 +93,12 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     saveEmergencyContactAction,
     certifyDiverAction,
     saveCourseNextStepAction,
+    markCardProcessedAction,
     setCourseMaterialsDoneAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
     updatePickupAction,
+    updateDietaryNoteAction,
     moveSeat,
   } = actions;
   // A course student whose learning materials nobody has marked done (ADR
@@ -287,7 +291,9 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
   // happened and not where to act on it.
   const namesakeRefused = namesakeRefusedBookingId === booking.id;
   const arrivalControl = arrival?.controls.get(booking.id);
-  const arrivalBelow = arrival?.below.get(booking.id);
+  // A finished departure has no desk; its record carries the rebooking line
+  // (fifth-loop ideas, item 4).
+  const arrivalBelow = arrival?.below.get(booking.id) ?? recordBelow?.get(booking.id);
   // The charter seats sold only on this course seat (issue #2058), said in
   // its Remove confirm and its move: those seats stay booked, and still need
   // the card to board.
@@ -354,10 +360,13 @@ export function rosterSeat(entry: RosterEntry, settled: boolean, context: Roster
     saveEmergencyContactAction,
     certifyDiverAction,
     saveCourseNextStepAction,
+    markCardProcessedAction,
+    issuedCard: issuedCardByPerson?.get(person.id) ?? null,
     setCourseMaterialsDoneAction,
     elearningCheckAction,
     recordPaperCourseFormAction,
     updatePickupAction,
+    updateDietaryNoteAction,
     // A booked seat, or one turned away before the start (`seatMoveForRow`).
     moveSeat: seatMoveForRow(booking, moveSeat),
     // Marked aboard a boat that has left: Remove says so and changes nothing (H-133).

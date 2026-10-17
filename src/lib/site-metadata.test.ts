@@ -56,12 +56,23 @@ describe("sharedLinkCardImage", () => {
 
 describe("shopSearchListingRobots", () => {
   it("is absent for a shop that has not opted out, so the page inherits the site default", () => {
-    expect(shopSearchListingRobots(null)).toBeUndefined();
-    expect(shopSearchListingRobots(undefined)).toBeUndefined();
+    expect(shopSearchListingRobots({ searchListingOptOutAt: null, isDemo: false })).toBeUndefined();
+    expect(
+      shopSearchListingRobots({ searchListingOptOutAt: undefined, isDemo: false }),
+    ).toBeUndefined();
   });
 
   it("says no to indexing and following once the shop has opted out", () => {
-    expect(shopSearchListingRobots(new Date("2026-08-13T12:00:00Z"))).toEqual({
+    expect(
+      shopSearchListingRobots({
+        searchListingOptOutAt: new Date("2026-08-13T12:00:00Z"),
+        isDemo: false,
+      }),
+    ).toEqual({ index: false, follow: false });
+  });
+
+  it("never lists a demo shop, which may wear its visitor's shop name (H-131)", () => {
+    expect(shopSearchListingRobots({ searchListingOptOutAt: null, isDemo: true })).toEqual({
       index: false,
       follow: false,
     });

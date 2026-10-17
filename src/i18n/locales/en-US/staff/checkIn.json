@@ -54,6 +54,12 @@
     "moneyRemove": "Nothing was charged or refunded. Open their row to remove the booking and refund it by hand.",
     "noWaitlist": "Nobody is waiting for this seat."
   },
+  "sailedRebook": {
+    "booked": "Booked {when}",
+    "open": "Nothing else booked · {when} has {seats, plural, one {# seat} other {# seats}}",
+    "add": "Add them",
+    "addAriaLabel": "Add {name} to {title}, {when}"
+  },
   "settledAllBoarded": "All boarded",
   "settledSomeBoarded": "{count} boarded",
   "checkInButton": "Check in",
@@ -114,7 +120,9 @@
     "turnAwayOutsideWindow": "That departure is outside the desk’s hours. Change the booking from their row instead.",
     "turnAwayNotBlocked": "Nothing stops them boarding now. Check them in instead.",
     "turnAwayReasonNotBlocking": "Their row changed. Choose a reason it shows now.",
-    "noShowCourseRatioFull": "That session is at its instructor-to-student ratio, so that diver can’t go back on it. Assign another instructor first."
+    "noShowCourseRatioFull": "That session is at its instructor-to-student ratio, so that diver can’t go back on it. Assign another instructor first.",
+    "walkinPartyAdded": "Everyone is on this boat’s list, together. Check them in on their rows.",
+    "walkinPartyAddedWaiverUndelivered": "Everyone is on this boat’s list, together, but their releases weren’t emailed. Send them or share the links from their rows below. A parent or legal guardian signs with anyone under 18."
   },
   "walkIn": {
     "title": "Walk-in",

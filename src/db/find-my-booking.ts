@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -9,7 +9,8 @@ import { hasLiveReadinessCapability, issueBookingCapability } from "./booking-ca
 import type { AppDb } from "./client";
 import { sendAndRecordNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
-import { bookings, people, shops, trips } from "./schema";
+import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
+import { latestDiveDayBooking, planLogEntryLink, sendYourDayLink } from "./your-days";
 
 /**
  * The "Can't find your link?" rescue (issue #723) — the same shape as
@@ -38,9 +39,10 @@ import { bookings, people, shops, trips } from "./schema";
  * #723).
  *
 
- * Deliberately excludes: past departures (no recaps, no "your dive last
- * month" — a booking whose boat has already sailed has no readiness page
- * worth reissuing), cancelled bookings, and cancelled/completed trips. One
+ * Deliberately excludes: past departures (a booking whose boat has already
+ * sailed has no readiness page worth reissuing; an address with no current
+ * booking at all gets its latest log entry instead, `sendLatestLogEntry`,
+ * H-132), cancelled bookings, and cancelled/completed trips. One
  * email per current booking, never a single digest naming all of them —
  * a digest would tell whoever typed the address every trip that person has
  * booked, which is a disclosure a plain "we sent your link" is not.
@@ -85,6 +87,11 @@ export async function sendFindMyBookingLinks(
         gt(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
       ),
     );
+
+  if (rows.length === 0) {
+    await sendLatestLogEntry(db, { shopId: input.shopId, email, now, origin: input.origin });
+    return;
+  }
 
   // Decide first, spend second (see the doc comment above): an unlocked read
   // is enough to gate the rate limit, since every mint below re-checks the
@@ -142,6 +149,7 @@ export async function sendFindMyBookingLinks(
           bookingId: row.bookingId,
           purpose: "readiness",
           now,
+          delivered: true,
         });
       });
       // A live link already exists (nothing to send — the diver already has
@@ -181,5 +189,85 @@ export async function sendFindMyBookingLinks(
         errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
+  }
+}
+
+/** How long one log-entry send for a booking stands before find-my-booking will send another. */
+const LOG_ENTRY_RESEND_GAP_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * **An address with only past days gets its latest log entry** (fifth-loop
+ * ideas, item 38; H-132). One email, the newest dive day's recap link, to the
+ * address on file, never a list of every day: the same "one booking per mail"
+ * line the current-booking half holds.
+ *
+ * A recap link is stateless, so there is no "a live one exists" guard to read.
+ * Its stand-in is the delivery row: a readiness-link mail for that booking in
+ * the last day means the diver already has one, and nothing is sent or spent.
+ * Only then does the per-inbox budget pay for the send, so somebody who merely
+ * knows the address cannot mail a past diver more than once a day.
+ */
+async function sendLatestLogEntry(
+  db: AppDb,
+  input: { shopId: string; email: string; now: Date; origin: string },
+): Promise<void> {
+  const matches = await db
+    .select({ personId: people.id })
+    .from(people)
+    .where(
+      and(
+        eq(people.shopId, input.shopId),
+        eq(people.email, input.email),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .orderBy(desc(people.createdAt))
+    .limit(1);
+  const personId = matches[0]?.personId;
+  if (!personId) return;
+  const latest = await latestDiveDayBooking(db, { shopId: input.shopId, personId, now: input.now });
+  if (!latest) return;
+
+  const [recent] = await db
+    .select({ id: notificationDeliveries.id })
+    .from(notificationDeliveries)
+    .where(
+      and(
+        eq(notificationDeliveries.shopId, input.shopId),
+        eq(notificationDeliveries.bookingId, latest.bookingId),
+        eq(notificationDeliveries.kind, "readiness_link"),
+        gt(
+          notificationDeliveries.attemptedAt,
+          new Date(input.now.getTime() - LOG_ENTRY_RESEND_GAP_MS),
+        ),
+      ),
+    )
+    .limit(1);
+  if (recent) return;
+
+  const plan = await planLogEntryLink(db, {
+    shopId: input.shopId,
+    day: latest,
+    origin: input.origin,
+  });
+  if (!plan.ok) return;
+  if (
+    !(
+      await checkRateLimit(
+        rateLimitKey("find-my-booking-email", input.email),
+        RATE_LIMITS.findMyBookingByEmail,
+      )
+    ).allowed
+  ) {
+    return;
+  }
+  try {
+    await sendYourDayLink(db, plan, input.now);
+  } catch (error) {
+    log("find_my_booking.log_entry_failed", "error", {
+      bookingId: latest.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 }

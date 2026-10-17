@@ -265,6 +265,13 @@ export const bookings = pgTable(
     reEntryAsk: reEntryAsk("re_entry_ask"),
     /** Optional lodging / hotel pickup address or landmark provided by the diver on /ready. */
     hotelPickupLocation: text("hotel_pickup_location"),
+    /**
+     * This diver's meal preference for the galley, as they wrote it on /ready
+     * or the desk did on the roster (fifth-loop ideas, item 56), asked only on
+     * a departure with lunch aboard. Not an allergy record (dive-domain review
+     * B1): the question's hint sends a food allergy to the shop.
+     */
+    dietaryNote: text("dietary_note"),
     /** Optional staff-set pickup time for this booking (e.g., "07:15"). */
     pickupTime: text("pickup_time"),
     status: bookingStatus("status").notNull().default("booked"),
@@ -948,6 +955,15 @@ export const bookingCapabilities = pgTable(
      * revoked. `token_hash` is still what every lookup matches.
      */
     tokenSealed: text("token_sealed"),
+    /**
+     * True when the token left only inside a message to the contact on file
+     * (an email or a text), never handed to the browser that asked for it.
+     * A link the booking form or a seat claim redirects to proves only that
+     * someone typed a name and an address, so what the page shows about the
+     * person's *other* bookings ("Your days") waits for a delivered link
+     * (security review of layer r5-4, F1). False unless the minter says so.
+     */
+    delivered: boolean("delivered").notNull().default(false),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [

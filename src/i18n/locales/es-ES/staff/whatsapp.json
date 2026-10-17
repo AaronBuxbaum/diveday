@@ -36,7 +36,6 @@
     "tested": "Mensaje de prueba entregado.",
     "test-failed": "WhatsApp rechazó el mensaje de prueba. Revisa que tu token siga siendo válido y que tu plantilla esté aprobada en el idioma indicado arriba.",
     "invalid": "Revisa los datos e inténtalo de nuevo.",
-    "not-authorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
     "no-account": "Todavía no hay ningún número de WhatsApp conectado.",
     "encryption-key-unset": "Esta instancia de DiveDay aún no está preparada para guardar credenciales de forma segura, así que no se guardó nada.",
     "encryption-key-invalid": "La clave de cifrado de esta instancia de DiveDay está mal configurada, así que no se guardó nada.",

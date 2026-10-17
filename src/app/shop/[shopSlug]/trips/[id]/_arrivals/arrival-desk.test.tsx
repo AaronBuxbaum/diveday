@@ -6,7 +6,14 @@ import { isValidElement, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { listCheckInQueue } from "@/db/check-in";
 import { createCertification } from "@/db/readiness";
-import { bookings, certifications, nitroxCertifications, people, trips } from "@/db/schema";
+import {
+  bookings,
+  certifications,
+  lostItems,
+  nitroxCertifications,
+  people,
+  trips,
+} from "@/db/schema";
 import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -340,5 +347,35 @@ describe("the paper pass on an arrived row (fourth review, item 48)", () => {
     expect(isValidElement(end)).toBe(true);
     expect(end.type).not.toBe("span");
     expect(end.props.checkedIn).toBe(true);
+  });
+});
+
+/**
+ * **A found item meets its owner at the counter** (fifth loop, item 7): the
+ * crew tied it to their seat on an earlier boat, and today they are here.
+ */
+describe("the counter's found-item line", () => {
+  it("names what is waiting for the diver, and nothing once it went home", async () => {
+    const seat = await firstTimerAtTheCounter();
+    const [earlier] = await seat.db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, seat.shop.id))
+      .limit(1);
+    if (!earlier) throw new Error("no departure to have found it on");
+    await seat.db.insert(lostItems).values({
+      shopId: seat.shop.id,
+      tripId: earlier.id,
+      personId: seat.personId,
+      bookingId: seat.bookingId,
+      description: "Blue mask, black strap",
+    });
+    expect(await belowFor(seat)).toHaveTextContent("In lost and found: Blue mask, black strap");
+
+    await seat.db
+      .update(lostItems)
+      .set({ status: "returned", resolvedAt: seat.now })
+      .where(eq(lostItems.personId, seat.personId));
+    expect(await belowFor(seat)).not.toHaveTextContent("In lost and found");
   });
 });

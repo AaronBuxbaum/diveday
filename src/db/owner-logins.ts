@@ -7,6 +7,11 @@ import { people, personRoles, userAccounts } from "./schema";
  * goes to (the stale-roll-call alert, and the shore contact's stop, H-118).
  */
 export async function ownerLogins(db: DbExecutor, shopId: string) {
+  return roleLogins(db, shopId, "owner");
+}
+
+/** The shop's people holding `role` with an active login, the same way. */
+export async function roleLogins(db: DbExecutor, shopId: string, role: "owner" | "manager") {
   return db
     .selectDistinct({
       personId: people.id,
@@ -23,7 +28,7 @@ export async function ownerLogins(db: DbExecutor, shopId: string) {
         isNull(people.deletedAt),
         isNull(people.anonymizedAt),
         eq(userAccounts.status, "active"),
-        eq(personRoles.role, "owner"),
+        eq(personRoles.role, role),
       ),
     );
 }

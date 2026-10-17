@@ -588,7 +588,13 @@ const CHROME_CEILING = 20;
 // 69 → 70 (H-80, issue #2135): a boat on two departures at once is raised on
 // Today beside the crew clash (`boatClashesByTrip`), one batched read in the
 // same wave as the crew's.
-const TODAY_CEILING = 70;
+// 70 → 71 (fifth loop, items 3 and 7): the count of found items waiting to go
+// home, one statement beside the wave rather than after it, so the phase count
+// below does not move. The emergency card rides the shop row the wave reads.
+// 71 → 72 (fifth loop, ideas item 1): the open snags the crew wrote against a
+// boat's checklist (`openSnagsForShop`), one statement in the wave, so the
+// phase count does not move.
+const TODAY_CEILING = 72;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
@@ -605,7 +611,16 @@ const TODAY_CEILING = 70;
 // roster reads each diver's course seats a training mark may name
 // (`trainingMarksForRoster`), one statement in the same wave. The marks
 // themselves cost nothing until one is set.
-const TRIP_CEILING = 55;
+// 55 → 66 (fifth loop, r5-6 item 44, H-130): the Invite section's past divers
+// of the site (`listInviteSuggestions`): the departure row, who is aboard or
+// already asked, the 30-day cooldown and the boat's gate in one wave, the
+// site's past divers, then every candidate's cards and courses in training in
+// one pass (`admittedUnderGate`). As merged it sent each candidate through the
+// booking gate one after another: 117 statements and 31 phases here.
+// 66 → 67 (dive-domain second pass, X3): the same pass also asks which
+// candidates' releases wait on a physician's referral (`physicianReferrals`),
+// one statement in the cards' wave, so no new phase.
+const TRIP_CEILING = 67;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never
@@ -632,7 +647,10 @@ const TODAY_PHASE_CEILING = 5;
 // those skip themselves (no held seat, wait list or course).
 // 6 → 5 (#2487): the departure row went out beside the four reads that never
 // waited on it (`loadTripSharedReads`).
-const TRIP_PHASE_CEILING = 5;
+// 5 → 6 (fifth loop, r5-6 item 44): the invite suggestions need the
+// departure's site before its past divers, and those before their cards: three
+// waves inside `getTripGuests`' first, one more than the roster's own path.
+const TRIP_PHASE_CEILING = 6;
 // The same page on a course departure with a held seat and a waitlist: the
 // shared wave (2), then the longest chain after it: the permission read (3
 // here, one request-cached statement chain in a real render) and the

@@ -4,6 +4,7 @@ import type { CsvValue, ExportTable } from "@/lib/export";
 import type { DbExecutor } from "./client";
 import {
   activityEvents,
+  boatSnags,
   boats,
   bookingArrivalEvents,
   bookingCheckoutBookings,
@@ -546,6 +547,11 @@ export const EXPORT_TABLES = {
       asc(preDepartureCheckEvents.seq),
     ],
     scope: { shopColumn: preDepartureCheckEvents.shopId },
+  },
+  boatSnags: {
+    table: boatSnags,
+    order: [asc(boatSnags.notedAt), asc(boatSnags.id)],
+    scope: { shopColumn: boatSnags.shopId },
   },
   departureBoatSafetySnapshots: {
     table: departureBoatSafetySnapshots,

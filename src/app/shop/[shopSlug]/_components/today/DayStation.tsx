@@ -8,6 +8,7 @@ import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { sayHelloSentences } from "@/i18n/welcome-cue-labels";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { formatMoneyScanned, formatTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
@@ -101,6 +102,7 @@ export function DayStation({
     },
   ].filter((fact): fact is { text: string; phone: boolean } => Boolean(fact.text));
   const intentLine = staffDiveIntentLine(t, station.intents ?? [], locale);
+  const hello = sayHelloSentences(t, locale, station.welcome ?? []).join(" ");
   const [titleHead, titleLast] = lastWordApart(station.title);
   const crewRollCallOpen =
     station.booked > 0 &&
@@ -180,6 +182,18 @@ export function DayStation({
       {/* What the divers said they came for is the briefing's colour, not the
           day's work: a desktop line, never a phone's third row of grey. */}
       {intentLine ? <p className="mt-1 text-sm text-muted max-sm:hidden">{intentLine}</p> : null}
+      {/* **Who to say hello to** (fifth loop, item 10): a line on the card at
+          both widths, never a Needs you row, because a greeting has no done
+          state. The roster and manifest carry the same cue on the diver's row. */}
+      {hello ? (
+        <p className="mt-1 text-sm">
+          <span className="font-medium">{t("shopHome.spine.sayHello")}</span>
+          <span aria-hidden="true" className="text-muted">
+            {" · "}
+          </span>
+          <span className="text-muted">{hello}</span>
+        </p>
+      ) : null}
 
       {/* **The readiness bar.** Ready, then blocked, then the open seats, as
           one bar the boat's capacity wide; the words under it are the

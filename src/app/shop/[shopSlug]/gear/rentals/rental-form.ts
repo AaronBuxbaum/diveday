@@ -44,6 +44,9 @@ export function counterRentalFormPath(
   return query ? `${path}?${query}` : path;
 }
 
+/** The rent-out form's name for `KeepTypedOnRefusal`: a refusal brings the cart back filled. */
+export const COUNTER_RENTAL_FORM = "counter-rental";
+
 /** The payment choice posts under this name, one of `RENTAL_PAYMENTS`. */
 export const PAYMENT_FIELD = "payment";
 

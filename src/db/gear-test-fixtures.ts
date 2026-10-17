@@ -113,5 +113,10 @@ export async function aSetOut(db: AppDb, shopId: string) {
     await checkOutGearReservation(db, { shopId, reservationId: reserved.reservation.id });
     ids.push(reserved.reservation.id);
   }
-  return { bookingId: diver.bookingId, personId: diver.personId, reservationIds: ids };
+  return {
+    bookingId: diver.bookingId,
+    personId: diver.personId,
+    tripId: diver.trip.id,
+    reservationIds: ids,
+  };
 }

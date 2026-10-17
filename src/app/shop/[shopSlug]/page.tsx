@@ -11,6 +11,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
 import { firstRunChecklistCopy } from "@/app/shop/[shopSlug]/_components/today/first-run-copy";
+import { QuietDay } from "@/app/shop/[shopSlug]/_components/today/QuietDay";
 import { ReleaseStillSample } from "@/app/shop/[shopSlug]/_components/today/ReleaseStillSample";
 import { recapEditorsFor } from "@/app/shop/[shopSlug]/_components/today/recap-editors";
 import { TodayFirstBookable } from "@/app/shop/[shopSlug]/_components/today/TodayFirstBookable";
@@ -18,7 +19,7 @@ import { TodayHeaderNotes } from "@/app/shop/[shopSlug]/_components/today/TodayH
 import { TodayNoticeStack } from "@/app/shop/[shopSlug]/_components/today/TodayNoticeStack";
 import { TodayOrientation } from "@/app/shop/[shopSlug]/_components/today/TodayOrientation";
 import { TodayPrintDoor } from "@/app/shop/[shopSlug]/_components/today/TodayPrintDoor";
-import { TodayQuietDay } from "@/app/shop/[shopSlug]/_components/today/TodayQuietDay";
+import { TodayUpdated } from "@/app/shop/[shopSlug]/_components/today/TodayUpdated";
 import {
   readTodayFirstWave,
   readTodaySecondWave,
@@ -34,6 +35,7 @@ import { shopByIdCached } from "@/db/shops";
 import { canAcceptPayments } from "@/db/stripe-accounts";
 import { orientationRoleFor } from "@/i18n/orientation-labels";
 import { requestLocale } from "@/i18n/request";
+import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
@@ -56,6 +58,7 @@ import {
 } from "@/lib/today";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
+import { staffShopName } from "./_components/staff-shop-name";
 import { updateHelpRequestAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -67,9 +70,8 @@ import { updateHelpRequestAction } from "./actions";
 // 20260804-instant-navigation.
 export const instant = true;
 
-// A notice query param maps to a message key, never to a sentence — the words
-// come from the staff bundle at render time (docs ADR 20260730-staff-copy-localization).
-type EveningNotice = { key: StaffMessageKey; tone: NoticeTone };
+// A notice param maps to a message key, never a sentence (ADR 20260730-staff-copy-localization).
+type EveningNotice = { key: StaffMessageKey; values?: Record<string, string>; tone: NoticeTone };
 
 /**
  * The fit-keep's refusals, in the spelling `noticeUrl` gives them. The tap
@@ -83,21 +85,20 @@ type FitKeepRefusalCode = NoticeCodeOf<Exclude<ConfirmRentalFitOutcome, "saved">
 type EveningNoticeMap = Record<string, EveningNotice> & Record<FitKeepRefusalCode, EveningNotice>;
 
 /**
- * The evening's own `?notice=` codes, re-homed here when `/close-out` folded
- * into this page (H-62). Every code is unchanged — a bookmark carrying one
- * still lands on the right words, because the 308 keeps the query and this
- * page answers it. The refusals are why this is a tone table rather than a
- * bare key map: `invalid` is a recap send that failed, a crew photo this
- * departure cannot take, or a fit-keep whose reservation the desk could not
- * re-prove, and `unknown-person` is a fit-keep aimed at a person id that is
- * not this shop's — each has an entry, so no refusal renders as silence.
+ * The evening's own `?notice=` codes, re-homed here when `/close-out` folded into this page
+ * (H-62). Every code is unchanged — a bookmark carrying one still lands on the right words,
+ * because the 308 keeps the query and this page answers it. The refusals are why this is a tone
+ * table rather than a bare key map: `invalid` is a recap send that failed, a crew photo this
+ * departure cannot take, or a fit-keep whose reservation the desk could not re-prove, and
+ * `unknown-person` is a fit-keep aimed at a person id that is not this shop's — each has an entry,
+ * so no refusal renders as silence.
  */
 const EVENING_NOTICES: EveningNoticeMap = {
   "recap-sent": { key: "closeout.notice.recapSent", tone: "success" },
   "recap-send-attention": { key: "closeout.notice.recapAttention", tone: "warning" },
   "recap-not-ready": { key: "closeout.notice.recapNotReady", tone: "neutral" },
   "recap-held": { key: "closeout.notice.recapHeld", tone: "warning" },
-  "recap-send-limit": { key: "closeout.notice.recapSendLimit", tone: "warning" },
+  "recap-send-limit": { ...sendLimitWords("recaps"), tone: "warning" },
   "recap-locked": { key: "closeout.notice.recapLocked", tone: "neutral" },
   "recap-photo-removed": { key: "trips.notices.recapPhotoRemoved", tone: "success" },
   "crew-photo-added": { key: "closeout.notice.crewPhotoAdded", tone: "success" },
@@ -248,6 +249,7 @@ async function TodayBody({
     evidence,
     arrivalRows,
     counterOpen,
+    arrivalElsewhereRows,
     closeout,
     shopTripCount,
     stripeAccount,
@@ -275,7 +277,7 @@ async function TodayBody({
   // and badges the boat they crew; an instructor's leads with their sessions. It never re-orders
   // the spine — clock order wins.
   const lens = roleLensFor(session.user.roles);
-  const eveningClose = assembleEveningClose(closeout.departures, now);
+  const eveningClose = assembleEveningClose(closeout.departures, now, closeout.tomorrow);
   // **The shop's own calendar day**, as the two UTC instants that bracket it. Four readers below
   // want it — the first-boat-ever question, the day strip's window and ticks, and the day's takings
   // — and it is the host's day for none of them, so it is computed once here rather than per
@@ -496,6 +498,7 @@ async function TodayBody({
           timeZone={shop.timezone}
           t={t}
         />
+        <TodayUpdated t={t} time={formatTime(now, locale, shop.timezone)} />
       </DayHeader>
 
       {created && firstBookableMoment ? (
@@ -536,6 +539,7 @@ async function TodayBody({
         <ArrivalLookup
           query={arrivalQuery}
           rows={arrivalRows}
+          elsewhere={arrivalElsewhereRows}
           shopSlug={shopSlug}
           locale={locale}
           timeZone={shop.timezone}
@@ -551,11 +555,11 @@ async function TodayBody({
         t={t}
       />
       {quietDay ? (
-        <TodayQuietDay
-          shopSlug={shopSlug}
+        <QuietDay
+          shop={shop}
           nextDeparture={nextDeparture}
+          loadOut={eveningClose.tomorrow}
           locale={locale}
-          timeZone={shop.timezone}
           t={t}
         />
       ) : (
@@ -564,7 +568,8 @@ async function TodayBody({
             spine,
             highWind: work.highWind,
             shopSlug,
-            shopName: shop.name,
+            shopName: await staffShopName(shop),
+            mailShopName: shop.name,
             locale,
             timeZone: shop.timezone,
             currency: shop.currency,
@@ -575,7 +580,7 @@ async function TodayBody({
             showPaymentsRow,
             firstBooking,
             factOfScale,
-            crewTipsCents: dayMoney.crewTipsCents,
+            crew: dayMoney.crew,
             evening,
             needsYou,
             now,

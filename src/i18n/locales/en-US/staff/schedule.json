@@ -12,6 +12,7 @@
     "moved": "Moved.",
     "movedGearReleased": "Moved. {count, plural, one {# gear assignment} other {# gear assignments}} released. Reassign on the prep page.",
     "copied": "Copied.",
+    "copiedNoCrew": "Copied, without the crew: one of them is on another boat then, or the course needs an instructor. Add them on the Crew schedule.",
     "removed": "Taken off the board.",
     "invalid": "That didn’t save. Check the date, times, and seats, then try again.",
     "endBeforeStart": "The trip has to end after it starts. Check the times.",
@@ -27,7 +28,10 @@
     "capacityAboveBoat": "That capacity is above what the assigned boat holds.",
     "rehearsalRepeats": "A rehearsal is a single departure. Untick Repeat, or leave Rehearsal off.",
     "capacityAboveCertificate": "That capacity is above the passenger limit on the boat’s certificate.",
-    "capacityAboveCertificateCount": "{count, plural, one {The boat’s certificate allows # passenger. Pick a capacity no higher.} other {The boat’s certificate allows # passengers. Pick a capacity no higher.}}"
+    "capacityAboveCertificateCount": "{count, plural, one {The boat’s certificate allows # passenger. Pick a capacity no higher.} other {The boat’s certificate allows # passengers. Pick a capacity no higher.}}",
+    "weekCopied": "{count, plural, one {Copied # departure from last year. Add its crew from its page.} other {Copied # departures from last year. Add their crew from each one’s page.}}",
+    "weekNotEmpty": "This week already has departures, so nothing was copied.",
+    "nothingToCopy": "Last year’s departures for this week have already passed, so nothing was copied."
   },
   "builder": {
     "ariaLabel": "Schedule builder",
@@ -101,7 +105,8 @@
     "impactWindowOne": "Cancellations close {count} hour before it departs.",
     "impactWindowOther": "Cancellations close {count} hours before it departs.",
     "copyTo": "Copy to",
-    "copyDescription": "Same dive, same seats, same price, with no divers and no crew.",
+    "copyDescription": "Same dive, same seats, same price, with no divers.",
+    "copySameCrew": "Same crew",
     "departureTime": "Departure time",
     "copying": "Copying…",
     "copyIt": "Copy it",
@@ -185,7 +190,11 @@
     "quietDays": "{first} to {last}",
     "runsDays": "{days, plural, one {# day} other {# days}}",
     "sailed": "Sailed",
-    "crewAway": "{name} away {dates}"
+    "crewAway": "{name} away {dates}",
+    "lastYearTally": "Same week last year: {taken} of {total}",
+    "lastYearLine": "Last year this week: {count, plural, one {# departure} other {# departures}}.",
+    "lastYearCopy": "Copy them here",
+    "lastYearCopying": "Copying…"
   },
   "addBooking": "Add a booking"
 }

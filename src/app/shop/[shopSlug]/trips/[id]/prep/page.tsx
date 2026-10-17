@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
+import { listTripUnitsToCheckIn } from "@/db/gear";
 import { meetingWindowsByTrip } from "@/db/trip-meeting-windows";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripPrep } from "@/db/trips";
@@ -96,7 +97,11 @@ export default async function TripPrepPage({
   const { trip } = prep;
   const now = nowDate();
   // The crew's word for the header chip, and whether the boat has left the dock.
-  const { shown: shownStage, sailed } = await readDepartureStage(db, shop.id, tripId, {
+  const {
+    shown: shownStage,
+    sailed,
+    finished,
+  } = await readDepartureStage(db, shop.id, tripId, {
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
     now,
@@ -105,6 +110,9 @@ export default async function TripPrepPage({
     cancelled: trip.status === "cancelled",
     meetingWindows: (await meetingWindowsByTrip(db, [trip])).get(tripId),
   });
+
+  // Once home, every unit still out on this boat (fifth-loop ideas, item 5).
+  const backFromBoat = finished ? await listTripUnitsToCheckIn(db, shop.id, tripId) : [];
 
   return (
     <>
@@ -143,6 +151,8 @@ export default async function TripPrepPage({
           grouping={grouping}
           cancelled={trip.status === "cancelled"}
           sailed={sailed}
+          home={finished}
+          backFromBoat={backFromBoat}
           groupPath={shopPath(shopSlug, "trips", tripId, "prep")}
           emptyState={
             // The whole page's content region, so this one wears an h2 — and the

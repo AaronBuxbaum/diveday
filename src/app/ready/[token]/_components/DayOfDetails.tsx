@@ -13,6 +13,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_DIVE_RECENCY_KEYS } from "@/i18n/readiness-labels";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
+import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
 import { isDiver } from "@/lib/participant-types";
 import { reEntryOffersFor } from "@/lib/re-entry";
 import { WELCOME_HELLOS } from "@/lib/welcome-cue";
@@ -211,6 +212,28 @@ export function DayOfDetails({
                 maxLength={300}
                 placeholder={t("ready.hotelPickupPlaceholder")}
                 defaultValue={data.hotelPickupLocation ?? ""}
+                className={controlClass}
+              />
+            </Field>
+          </div>
+        ) : null}
+        {/* **Lunch aboard** (fifth-loop ideas, item 56): asked only on a
+            departure that serves it. For the galley; a severe allergy is told
+            to the shop directly too, and the hint says so. */}
+        {data.lunchAboard ? (
+          <div className="py-5">
+            <Field
+              label={t("ready.dietaryLabel")}
+              description={t("ready.dietaryHint")}
+              htmlFor="dietary-note"
+            >
+              <input
+                id="dietary-note"
+                type="text"
+                name="dietaryNote"
+                maxLength={DIETARY_NOTE_MAX}
+                placeholder={t("ready.dietaryPlaceholder")}
+                defaultValue={data.dietaryNote ?? ""}
                 className={controlClass}
               />
             </Field>

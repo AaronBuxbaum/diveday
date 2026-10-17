@@ -87,6 +87,9 @@ test.describe("as owner", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Settings", exact: true }),
     ).toBeVisible();
+    // On the hub the page is the map, so the rail stands down rather than
+    // list every row twice (fifth-loop ideas, item 58).
+    await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
   });
 
   test("the rail is a desktop column and the phone keeps its list", async ({ page }) => {
@@ -163,7 +166,8 @@ test.describe("settings that change the shop", () => {
     // editor longer than about three fields is a page of its own (#1854) —
     // the shop profile is one.
     test.setTimeout(60_000);
-    await page.goto(`/shop/${privateShop.slug}/settings`);
+    // From inside a setting: on the hub itself the page is the map.
+    await page.goto(`/shop/${privateShop.slug}/settings/email`);
     const rail = page.getByRole("navigation", { name: "Settings sections" });
     await rail.getByRole("link", { name: "Shop profile & branding" }).click();
     await expect(page).toHaveURL(new RegExp(`/shop/${privateShop.slug}/settings/profile$`));

@@ -59,6 +59,7 @@ function context(over: Record<string, unknown> = {}) {
     db: {} as never,
     bookingId: LEAD,
     ownLocale: null,
+    delivered: false,
     data: {
       canPayPartySeats: true,
       identityHeld: false,

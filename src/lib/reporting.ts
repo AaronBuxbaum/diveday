@@ -30,6 +30,18 @@ export type ReportTrip = {
   activeBookings: number;
   /** Of those active bookings, how many carry a completed, non-superseded waiver. */
   waiverComplete: number;
+  /**
+   * What this departure took, net of tax and pass-through (fifth loop, item
+   * 26): the same reads as the month's revenue, grouped by departure. Absent
+   * on the ledger's paged rows, which read it off the month's own trips.
+   */
+  netCents?: number;
+  /** The hull it sailed on, when it named one. */
+  boatName?: string | null;
+  /** The shop's own word for the kind of day (its lens), when it has one. */
+  kindName?: string | null;
+  /** A course session rather than a dive day. */
+  isCourse?: boolean;
 };
 
 export type MonthlyReportInput = {

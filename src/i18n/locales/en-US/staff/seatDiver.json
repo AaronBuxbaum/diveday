@@ -17,5 +17,5 @@
   "addDiverPrompt": "Not listed?",
   "addNewDiverAction": "Add diver",
   "busy": "Someone else is booking this trip right now. Tap again.",
-  "tripSummary": "{title} · {date} · {time} · {booked}/{capacity} booked"
+  "tripSummary": "{title} · {date} · {time} · {booked} of {capacity} booked"
 }

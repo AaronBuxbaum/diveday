@@ -229,7 +229,7 @@ export default async function OrdersIndexPage({
   ) : null;
   const { stuckPaymentOperations, payouts, ...queues } = await readBackOffice(
     db,
-    shop.id,
+    shop,
     canReconcilePayments,
   );
 

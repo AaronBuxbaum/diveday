@@ -45,6 +45,22 @@ export function ageOnDate(dateOfBirth: CalendarDate, onDate: CalendarDate): numb
 /** The oldest age that is still a minor. Eighteen is majority, so this is 17. */
 export const MINOR_AGE_CEILING = 17;
 
+/** Legal majority: the age a party's certified adult has reached. */
+export const ADULT_AGE = MINOR_AGE_CEILING + 1;
+
+/**
+ * **The junior diving bands, in one place** (PADI and SSI): under
+ * {@link JUNIOR_YOUNGEST_BAND_END} (10-11) a junior dives with a professional
+ * or a certified parent or guardian, at most 12 m; under
+ * {@link JUNIOR_AGE_END} (12-14) with a certified adult, at most 18 m or 21 m.
+ * A junior card becomes the full rating on the diver's 15th birthday. Read by
+ * the depth bands (`depth-ceiling.ts`), the agency check's junior upgrade
+ * (`agency-check.ts`) and one-tap party teams (`party-teams.ts`).
+ */
+export const JUNIOR_YOUNGEST_BAND_END = 12;
+/** The birthday a junior rating becomes the full one; under it the junior bands apply. */
+export const JUNIOR_AGE_END = 15;
+
 /**
  * Whether a diver is a minor on a given date.
  *

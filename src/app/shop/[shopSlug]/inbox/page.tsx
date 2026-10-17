@@ -5,17 +5,22 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { pagedInboxMessages } from "@/db/inbound-messages";
+import { listDeletedSavedAnswers, listSavedAnswers } from "@/db/inbox-saved-answers";
 import { inboxSeats } from "@/db/inbox-seats";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { SAVED_ANSWERS_MAX } from "@/lib/saved-answers";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { InboxRow } from "./_components/InboxRow";
+import { SavedAnswersSection } from "./_components/SavedAnswersSection";
 import {
   deleteInboxMessageAction,
+  deleteSavedAnswerAction,
   markInboxSenderLateAction,
+  restoreSavedAnswerAction,
   setInboxMessageDoneAction,
 } from "./actions";
 
@@ -36,6 +41,11 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   gone: { tone: "warning", key: "inbox.notices.gone" },
   "late-marked": { tone: "success", key: "inbox.notices.lateMarked" },
   "late-closed": { tone: "warning", key: "inbox.notices.lateClosed" },
+  // The saved answers at the foot of the page (fifth loop, item 15).
+  "answer-deleted": { tone: "success", key: "inbox.notices.answerDeleted" },
+  "answer-restored": { tone: "success", key: "inbox.notices.answerRestored" },
+  "answer-gone": { tone: "warning", key: "inbox.notices.answerGone" },
+  "answers-full": { tone: "warning", key: "inbox.notices.answersFull" },
 };
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -82,9 +92,11 @@ export default async function InboxPage({
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
   // into range, so a bookmarked page past the end lands on the last real one.
-  const messages = await pagedInboxMessages(db, shop.id, {
-    page: Number.parseInt(page ?? "", 10),
-  });
+  const [messages, savedAnswers, deletedAnswers] = await Promise.all([
+    pagedInboxMessages(db, shop.id, { page: Number.parseInt(page ?? "", 10) }),
+    listSavedAnswers(db, shop.id),
+    listDeletedSavedAnswers(db, shop.id),
+  ]);
   // One clock for the read and the stamps: "Today, 7:00 AM" and the seat it
   // links to are the same today (fourth review, item 45).
   const now = nowDate();
@@ -114,7 +126,11 @@ export default async function InboxPage({
         t={t}
       />
 
-      {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
+      {banner ? (
+        <StaffNoticeBanner tone={banner.tone}>
+          {t(banner.key, { count: SAVED_ANSWERS_MAX })}
+        </StaffNoticeBanner>
+      ) : null}
 
       {messages.total === 0 ? (
         <EmptyState title={t("inbox.emptyHeading")} body={t("inbox.emptyDetail")} />
@@ -176,6 +192,14 @@ export default async function InboxPage({
         href={pageHref}
         total={t("inbox.pagination.total", { count: messages.total })}
         words={staffPagerWords(t)}
+      />
+
+      <SavedAnswersSection
+        answers={savedAnswers}
+        deleted={deletedAnswers}
+        t={t}
+        deleteAction={deleteSavedAnswerAction}
+        restoreAction={restoreSavedAnswerAction}
       />
     </main>
   );

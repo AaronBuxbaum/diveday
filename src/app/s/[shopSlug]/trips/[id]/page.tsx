@@ -10,7 +10,7 @@ import { shopBySlugCached } from "@/db/shops-cached";
 import { checkoutMode } from "@/db/stripe-accounts";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
-import { requestLocale } from "@/i18n/request";
+import { requestLocale, requestReaderUnits } from "@/i18n/request";
 import { auth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
@@ -41,11 +41,11 @@ import { ConditionsLine } from "./_components/ConditionsLine";
 import { bookingCourseFees } from "./_components/course-fees";
 import { crewLanguagesSentence } from "./_components/crew-languages";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
-import { knownDiverFactLines } from "./_components/known-diver-lines";
+import { knownDiverPanelFor } from "./_components/known-diver-lines";
 import { fullTripAlternatives, worthALookList } from "./_components/other-boats";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripAlternatives } from "./_components/TripAlternatives";
-import { dayCoverPhoto, TripDayPlan } from "./_components/TripDayPlan";
+import { dayCoverPhoto, dayProfileFacts, TripDayPlan } from "./_components/TripDayPlan";
 import { TripHero } from "./_components/TripHero";
 import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
@@ -95,7 +95,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical },
-    robots: shopSearchListingRobots(shop.searchListingOptOutAt),
+    robots: shopSearchListingRobots(shop),
     openGraph: {
       ...openGraphSite,
       title,
@@ -174,6 +174,8 @@ export default async function TripDetailPage({
   // What this visitor's device asked for, falling back to the shop's own
   // default — DiveDay never asks (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
+  // The units this visitor thinks in, after the shop's (fifth-loop ideas, item 22).
+  const readerUnits = await requestReaderUnits(locale);
   // Every list price on this page is in the shop's own currency — a Cozumel
   // shop quotes pesos. Amounts a diver has already *paid* keep the currency
   // stored on their payment row instead (docs ADR 20260731-shop-currency).
@@ -240,21 +242,17 @@ export default async function TripDetailPage({
   const automatedForecast = crewPrediction
     ? Promise.resolve(null)
     : automatedForecastForDeparture(trip.diveSite, trip.startsAt);
-  const knownDiverPanel = knownDiver
-    ? {
-        name: knownDiver.fullName,
-        handoff: handoffToken ?? "",
-        blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
-        lead: { fullName: knownDiver.fullName, email: knownDiver.email, phone: knownDiver.phone },
-        lines: knownDiverFactLines(knownDiver.facts, t, { locale, timeZone: shop.timezone }),
-      }
-    : null;
+  const knownDiverPanel = knownDiverPanelFor(knownDiver, t, {
+    handoff: handoffToken,
+    blankHref: `${publicTripPath(shopSlug, tripId)}#book`,
+    locale,
+    timeZone: shop.timezone,
+  });
   const diveBriefings = dayBriefings(tripDives, briefing.extras, t);
   const coverPhoto = dayCoverPhoto(diveBriefings);
-  // The dock-day rhythm's inputs (per-site bottom times, per-leg travel) are
-  // gone from this page with `PackingSection`: what to bring and when to be
-  // there is preparation, and preparation belongs to the thread the diver
-  // reaches after booking (ADR 20260827-the-divers-thread, decision 2).
+  // The dock-day rhythm's full run stays on the thread the diver reaches after
+  // booking (ADR 20260827-the-divers-thread, decision 2); "The day" carries its
+  // two ends in one line (fifth-loop ideas, item 19).
   const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
   const { stripeAccount, payAtBooking, offerCodeField } = payment;
   // The money lines the form's one block states, resolved here so the deposit
@@ -375,14 +373,10 @@ export default async function TripDetailPage({
               briefings={diveBriefings}
               nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew, !!logEntry)}
               sightings={briefing.seen}
+              siteReviews={briefing.siteReviews}
               shop={shop}
               locale={locale}
-              profile={{
-                rhythm: shop,
-                depthUnit: shop.depthUnit,
-                diveMode: trip.diveMode,
-                dayCount: meetingDays.length,
-              }}
+              profile={dayProfileFacts(shop, trip, meetingDays.length, readerUnits.depth)}
             />
             {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
                 route, the rest of the field guide, the shop's
@@ -412,6 +406,7 @@ export default async function TripDetailPage({
                 automatedForecast={automatedForecast}
                 crewLanguages={crewLanguagesLine}
                 locale={locale}
+                readerUnits={readerUnits}
               />
             </div>
             <TripChangeLedger
@@ -486,6 +481,7 @@ export default async function TripDetailPage({
                     rentalPricing: shop.rentalPricing,
                     passThroughFee: parsePassThroughFee(shop.passThroughFee),
                     taxEnabled: shop.taxEnabled,
+                    deskPayment: shop.deskPayment,
                     courseFeeCents,
                     eLearningFeeCents,
                     ...checkoutSeatTerms(trip, trip.course),

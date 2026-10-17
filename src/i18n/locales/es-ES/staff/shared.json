@@ -1,4 +1,8 @@
 {
+  "limits": {
+    "sendLimit": "Has enviado {thing, select, replies {muchas respuestas} recaps {muchos resúmenes} invites {muchas invitaciones} other {muchos mensajes}} en esta hora. No salió nada; vuelve a intentarlo en un rato.",
+    "ownerOrManager": "Solo un propietario o gerente puede {act, select, whatsapp {cambiar los ajustes de WhatsApp} integrations {cambiar las integraciones} backup {cambiar los ajustes de respaldo} questionnaire {leer el cuestionario completo} invoice {enviar una factura} bill {enviar una factura} courseForm {quitar un formulario de un curso} other {hacer esto}}."
+  },
   "operationalWindow": {},
   "padiChecksOff": "La verificación con PADI está desactivada en este centro. Un propietario o un gerente puede activarla en Ajustes, Reservas y exenciones.",
   "skipToContent": "Saltar al contenido principal",
@@ -18,7 +22,7 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
     "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
-    "tooBigSuffix": ": supera los {maxMb} MB, prueba con una foto más pequeña.",
+    "tooBigSuffix": ": supera los {maxMb}\u00a0MB, prueba con una foto más pequeña.",
     "choose": "Elige una foto",
     "chooseAnother": "Elige otra foto",
     "chooseOthers": "Elige otras fotos"
@@ -140,9 +144,12 @@
     "meetingPoint": "Punto de encuentro: {label}",
     "conditionsHeading": "Condiciones",
     "dayTitle": "Paquete del día",
+    "dayTitleTomorrow": "Paquete de mañana",
     "daySubtitle": "{count, plural, one {# salida} other {# salidas}} · {date}",
     "dayEmpty": "Hoy no hay salidas.",
-    "dayDoor": "Imprimir el día"
+    "dayEmptyTomorrow": "Mañana no hay salidas.",
+    "dayDoor": "Imprimir el día",
+    "dayDoorTomorrow": "Imprimir mañana"
   },
   "commandPalette": {
     "search": "Buscar",
@@ -160,6 +167,8 @@
     "groupGear": "Equipo",
     "groupSession": "Sesión",
     "groupGoTo": "Ir a",
+    "groupRecent": "Recientes",
+    "groupToday": "Hoy",
     "goToBoarding": "Embarque — el barco de hoy",
     "goToOfflineRollCall": "Abrir pase de lista sin conexión",
     "hintMove": "para moverte",
@@ -539,6 +548,7 @@
     "firstTrip": "Primera inmersión con nosotros",
     "firstTime": "Primera vez con nosotros",
     "returning": "De vuelta tras {years, plural, one {# año} other {# años}}",
+    "milestone": "{ordinal} día de buceo con nosotros",
     "dockLine": "Saluda a {name}: {card}.",
     "dockLineNoCard": "Saluda a {name}.",
     "dockLineSays": "Saluda a {name}: dice {level}.",

@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
-import { eq, getTableName, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { RETENTION_DAYS, type RetainedTable, UNBOUNDED_BY_DECISION } from "@/lib/retention";
 import { fileScopedShopContext } from "@/test/db";
+import { schemaTableNames } from "@/test/schema-tables";
 import { setBookingPayment } from "./payments";
 import { PRUNE_ARMS, pruneExpiredRecords } from "./retention";
 import * as schema from "./schema";
@@ -932,25 +933,6 @@ describe("every retention window deletes", () => {
 });
 
 /**
- * Every table in the schema, by its database name.
- *
- * `getTableName` throws on everything the schema module exports that is not a
- * table — the enums and the views — which is how they are skipped, the same
- * way `export.test.ts` and `erasure-coverage.test.ts` skip them.
- */
-function schemaTableNames(): string[] {
-  return Object.values(schema)
-    .map((value) => {
-      try {
-        return getTableName(value as Parameters<typeof getTableName>[0]);
-      } catch {
-        return null;
-      }
-    })
-    .filter((name): name is string => typeof name === "string");
-}
-
-/**
  * Tables retention does not govern — and a list that has to be edited by hand
  * for every table added to the schema, which is the price of the guard below.
  *
@@ -986,6 +968,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "gear_items",
   "trip_series",
   "trip_series_crew",
+  "inbox_saved_answers", // kept until a staffer deletes one, like waiver templates
   "trip_series_skips",
   "trip_schedule_days",
   // DiveDay's own shared catalogue, and a shop asking for an addition to it.
@@ -1032,6 +1015,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trips",
   "trip_dives",
   "executed_dives",
+  // A boat's open problem is current state until somebody says it is fixed,
+  // and a fixed one is part of that boat's history, read like a logged dive.
+  "boat_snags",
   "trip_sightings",
   "trip_assignments",
   "trip_help_requests",

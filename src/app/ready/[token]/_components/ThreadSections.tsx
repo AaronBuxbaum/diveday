@@ -13,7 +13,8 @@ import type { listTripChangeEvents } from "@/db/trip-change-events";
 import type { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { formatShortDate } from "@/lib/format";
+import { type PlannedFlySafe, plannedFlySafeMessageKey } from "@/lib/fly-safe";
+import { formatPlannedDateTimeTz, formatShortDate } from "@/lib/format";
 import { publicTripArrivalCardPath } from "@/lib/public-routes";
 import {
   addSeatFromReady,
@@ -43,6 +44,8 @@ export type ReadyThreadSectionsContext = {
   partySeatClaims: Awaited<ReturnType<typeof issuePartySeatClaims>>;
   /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
   partyAllSet: boolean;
+  /** When to fly home, as a plan (fifth-loop ideas, item 18); null when nothing honest can be said. */
+  flySafePlan: PlannedFlySafe | null;
 };
 
 /**
@@ -64,8 +67,9 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
     publicCrew,
     partySeatClaims,
     partyAllSet,
+    flySafePlan,
   } = context;
-  const { detail, shop } = data;
+  const { detail } = data;
   const partySeats = partyClaimSeats(partySeatClaims);
   // Dive 1 first, in the dive plan's own order: where a site names its own
   // time in the water, that is what the day's rhythm counts rather than the
@@ -114,10 +118,6 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             sites={tripDives
               .map(({ diveSite }) => diveSite?.name)
               .filter((name): name is string => Boolean(name))}
-            // The same dock call the masthead names, so the card says it
-            // too (issue #2034) — and the same exception: a diver being
-            // collected from their hotel is told the pickup, not the dock.
-            dockCallMinutes={data.pickupTime ? null : shop.dockCallMinutes}
             downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
               token,
             )}`}
@@ -164,6 +164,19 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             temperatureStatedAbove={false}
             locale={locale}
           />
+        ) : null}
+        {/* When to fly home, said before the dive rather than only on the
+                recap after it (fifth-loop ideas, item 18): a visitor books the
+                flight before the boat sails. A sentence, not a panel, like the
+                recap's: it informs and never gates. */}
+        {flySafePlan ? (
+          <p data-testid="ready-fly-safe-plan" className="text-base">
+            {t(`ready.${plannedFlySafeMessageKey(flySafePlan.reason)}`, {
+              shopName: detail.shop.name,
+              when: formatPlannedDateTimeTz(flySafePlan.from, locale, detail.shop.timezone),
+              count: flySafePlan.hours,
+            })}
+          </p>
         ) : null}
         {/* Where the day ends up (UX review 2026-10-10, item 35): the recap's
                 log entry is the keepsake this same link turns into once the

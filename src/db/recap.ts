@@ -1,4 +1,18 @@
-import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  ne,
+  notInArray,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { isStaff } from "@/lib/authz";
 import type { BrandDisplayFontCode } from "@/lib/brand";
@@ -23,7 +37,8 @@ import {
 } from "@/lib/notifications/sms";
 import { isDiver } from "@/lib/participant-types";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
-import { mergeShopHistory, priorVisitStanding } from "@/lib/prior-visits";
+import { firstNameOf } from "@/lib/person-name";
+import { diveDayOrdinal } from "@/lib/prior-visits";
 import { recapLinkPath } from "@/lib/recap-links";
 import { RECAP_AUTOMATIC_DELAY_HOURS, unpauseRecapAutoSendAt } from "@/lib/recap-schedule";
 import { maySendNow } from "@/lib/send-window";
@@ -32,7 +47,7 @@ import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
-import { diveDay } from "./dive-days";
+import { numberedDiveDay } from "./dive-days";
 import { listSiteFieldGuides } from "./dive-sites";
 import { diveDaysBefore, listExecutedDives } from "./executed-dives";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
@@ -64,8 +79,24 @@ import { tripCrewByTrip } from "./trips-crew";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
-/** A diver's own recap photo, as the recap page renders it. */
-export type RecapPhotoView = { id: string; imageUrl: string; caption: string | null };
+/**
+ * A photo as the recap page renders it: the diver's own, the crew's, or one
+ * another diver on the same boat chose to share (H-129).
+ */
+export type RecapPhotoView = {
+  id: string;
+  imageUrl: string;
+  caption: string | null;
+  /**
+   * The first name of the diver who shared it with the boat, on a photo that
+   * is not this diver's own; absent on their own photos and the crew's. Only
+   * the first name: the recap is a forwardable page, and the boat already knew
+   * each other by it.
+   */
+  sharedBy?: string;
+  /** This diver's own photo, shared with the boat at upload. */
+  sharedWithBoat?: boolean;
+};
 
 /**
  * The post-trip recap: one reading of the day per diver per trip, generated
@@ -710,16 +741,16 @@ async function loadRecapPageData(
           eq(bookings.shopId, row.shopId),
           eq(bookings.personId, row.personId),
           // **The one dive-day rule** (`src/db/dive-days.ts`, issue #1694),
-          // which the counter's name-match prompt reads too. A blown-out
-          // departure is not a dive day unless the crew logged a dive on it
-          // (H-84): a cancellation leaves its bookings active by design, so a
-          // plain status read counts days nobody dived, and the imported half
-          // of this merge refuses exactly that (`did_not_happen`, below).
+          // on diver seats that are not held (`numberedDiveDay`), the days the
+          // milestone and "Your days" count too. A blown-out departure is not
+          // a dive day unless the crew logged a dive on it (H-84): a
+          // cancellation leaves its bookings active by design, so a plain
+          // status read counts days nobody dived, and the imported half of
+          // this merge refuses exactly that (`did_not_happen`, below).
           // `visitMilestone` is exact equality on {1, 10, 25, 50, 100}, so a
           // day that moves in or out skips a stamp permanently rather than
-          // blurring it: which is why this count may never disagree with the
-          // prompt that names the day to a staffer.
-          diveDay(),
+          // blurring it: which is why the three readers may never disagree.
+          numberedDiveDay(),
           lte(trips.startsAt, row.tripStartsAt),
         ),
       ),
@@ -858,16 +889,14 @@ async function loadRecapPageData(
       })
     : null;
 
-  const tripLocalDay = calendarDateInTimezone(trip.startsAt, row.timezone);
-  const effectivePriorVisits = priorVisitRows.filter(
-    (v) => priorVisitStanding(v.statusLabel) !== "did_not_happen" && v.visitedOn <= tripLocalDay,
-  );
-  const mergedHistory = mergeShopHistory(nativeBookings, effectivePriorVisits, {
-    bookingStartsAt: (b) => b.startsAt,
-    visitedOn: (v) => v.visitedOn,
+  // One calendar day is one dive day (glossary **Dive day**): the count every
+  // reader says, the milestone and "Your days" included (`diveDayOrdinal`).
+  const visitCount = diveDayOrdinal({
+    diveDayStarts: nativeBookings.map((booking) => booking.startsAt),
+    visits: priorVisitRows,
     timezone: row.timezone,
+    throughDay: calendarDateInTimezone(trip.startsAt, row.timezone),
   });
-  const visitCount = Math.max(1, mergedHistory.length);
   const crew = (crewMap.get(row.tripId) ?? []).map((c) => c.name);
 
   const sessionCertification = sessionCertifications[0] ?? null;
@@ -940,7 +969,18 @@ async function loadRecapPageData(
   return { data, latestTip };
 }
 
-/** A diver's recap photos, including staff-shared departure photos, newest first. */
+/**
+ * A diver's recap photos, newest first: their own, the crew's departure photos,
+ * and the photos other divers on the same departure chose to share with the
+ * boat (H-129, ADR 20261016-shared-boat-photos).
+ *
+ * **A shared photo shows only to the sharer's own boat.** The read is the
+ * departure the recap is for, and the sharer's seat must still be one the
+ * recap would show (not cancelled, not a no-show), so a seat taken off the
+ * boat afterwards takes its shared photos off everyone else's page with it.
+ * Erasure deletes the photo row itself (`src/db/anonymize.ts`), so an erased
+ * diver's name can never reach this read.
+ */
 async function listRecapPhotosForBooking(
   db: AppDb,
   shopId: string,
@@ -948,15 +988,32 @@ async function listRecapPhotosForBooking(
   tripId?: string,
 ): Promise<RecapPhotoView[]> {
   const [diverRows, crewRows] = await Promise.all([
+    // The diver's own photos and the boat's shared ones in one read: the
+    // other seats' half carries the rules of {@link boatShares}.
     db
       .select({
         id: recapPhotos.id,
+        bookingId: recapPhotos.bookingId,
         imageUrl: recapPhotos.imageUrl,
         caption: recapPhotos.caption,
+        sharedWithBoatAt: recapPhotos.sharedWithBoatAt,
         createdAt: recapPhotos.createdAt,
+        sharerName: people.fullName,
       })
       .from(recapPhotos)
-      .where(and(eq(recapPhotos.shopId, shopId), eq(recapPhotos.bookingId, bookingId)))
+      .innerJoin(
+        bookings,
+        and(eq(bookings.id, recapPhotos.bookingId), eq(bookings.shopId, recapPhotos.shopId)),
+      )
+      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, shopId)))
+      .where(
+        and(
+          eq(recapPhotos.shopId, shopId),
+          tripId
+            ? or(eq(recapPhotos.bookingId, bookingId), boatShares(tripId, bookingId))
+            : eq(recapPhotos.bookingId, bookingId),
+        ),
+      )
       .orderBy(desc(recapPhotos.createdAt)),
     tripId
       ? db
@@ -970,9 +1027,62 @@ async function listRecapPhotosForBooking(
           .orderBy(desc(tripRecapPhotos.createdAt))
       : Promise.resolve([]),
   ]);
-  return [...diverRows, ...crewRows.map((photo) => ({ ...photo, caption: null }))]
+  const own = diverRows.filter((row) => row.bookingId === bookingId);
+  const shared = diverRows.filter((row) => row.bookingId !== bookingId);
+  // A seat left at the dock is off the boat (ADR 20261016-shared-boat-photos
+  // §3), asked only when somebody shared anything at all.
+  const ashore =
+    shared.length > 0 && tripId
+      ? await bookingsLeftAtTheDock(
+          db,
+          [...new Set(shared.map((row) => row.bookingId))].map((id) => ({
+            booking: { id },
+            shop: { id: shopId },
+            trip: { id: tripId },
+          })),
+        )
+      : new Set<string>();
+  return [
+    ...own.map(({ id, imageUrl, caption, sharedWithBoatAt, createdAt }) =>
+      sharedWithBoatAt
+        ? { id, imageUrl, caption, createdAt, sharedWithBoat: true }
+        : { id, imageUrl, caption, createdAt },
+    ),
+    ...crewRows.map((photo) => ({ ...photo, caption: null })),
+    ...shared
+      .filter((row) => !ashore.has(row.bookingId))
+      .map(({ id, imageUrl, caption, createdAt, sharerName }) => ({
+        id,
+        imageUrl,
+        caption,
+        createdAt,
+        sharedBy: firstNameOf(sharerName, sharerName),
+      })),
+  ]
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .map(({ createdAt: _createdAt, ...photo }) => photo);
+}
+
+/**
+ * The photos other divers on this departure shared with the boat. Never this
+ * booking's own (those are the other half of the read above).
+ *
+ * Only from a seat a recap would show (ADR 20261016-shared-boat-photos §3;
+ * security review of layer r5-4, F2): not cancelled or a no-show, not held
+ * (its holder may not be the person whose name it would carry), and not a
+ * removed or erased diver's; a seat left at the dock is dropped after the read.
+ */
+function boatShares(tripId: string, bookingId: string): SQL {
+  return and(
+    eq(recapPhotos.tripId, tripId),
+    eq(bookings.tripId, tripId),
+    ne(recapPhotos.bookingId, bookingId),
+    isNotNull(recapPhotos.sharedWithBoatAt),
+    notInArray(bookings.status, ["cancelled", "no_show"]),
+    isNull(bookings.identityUnconfirmedAt),
+    isNull(people.deletedAt),
+    isNull(people.anonymizedAt),
+  ) as SQL;
 }
 
 export type RecapPhotoEligibility =
@@ -1037,7 +1147,14 @@ export type AddRecapPhotoResult =
  */
 export async function addRecapPhoto(
   db: AppDb,
-  input: { bookingId: string; imageUrl: string; caption?: string | null },
+  input: {
+    bookingId: string;
+    imageUrl: string;
+    caption?: string | null;
+    /** The sharer's own tick under "Add to my recap" (H-129); off unless given. */
+    shareWithBoat?: boolean;
+    now?: Date;
+  },
 ): Promise<AddRecapPhotoResult> {
   return db.transaction(async (tx) => {
     const [booking] = await tx
@@ -1070,6 +1187,7 @@ export async function addRecapPhoto(
         tripId: booking.tripId,
         imageUrl: input.imageUrl,
         caption,
+        sharedWithBoatAt: input.shareWithBoat ? (input.now ?? nowDate()) : null,
       })
       .returning({
         id: recapPhotos.id,
@@ -1081,7 +1199,12 @@ export async function addRecapPhoto(
   });
 }
 
-export type StaffRecapPhoto = RecapPhotoView & { diverName: string; bookingId: string };
+export type StaffRecapPhoto = RecapPhotoView & {
+  diverName: string;
+  bookingId: string;
+  /** The diver shared it with everyone on the boat, so it shows on their recaps too. */
+  sharedWithBoat: boolean;
+};
 
 /** Every diver photo on these trips, with who shared it — the close-out's moderation gallery. */
 export async function listRecapPhotosForTrips(
@@ -1098,6 +1221,7 @@ export async function listRecapPhotosForTrips(
       diverName: people.fullName,
       bookingId: recapPhotos.bookingId,
       tripId: recapPhotos.tripId,
+      sharedWithBoat: sql<boolean>`${recapPhotos.sharedWithBoatAt} is not null`,
     })
     .from(recapPhotos)
     .innerJoin(bookings, eq(bookings.id, recapPhotos.bookingId))
@@ -1647,9 +1771,7 @@ async function sendRecaps(
     // locale, exactly as before the column existed.
     const locale = recipientLocale(person.locale, shop.defaultLocale);
     const t = diverTranslator(locale);
-    const smsBody = recapUrl
-      ? t("notifications.sms.recap", { shopName: shop.name, tripTitle: trip.title, recapUrl })
-      : "";
+    const smsBody = recapUrl ? t("notifications.sms.recap", { shopName: shop.name, recapUrl }) : "";
 
     if (recapUrl && person.email && !person.courtesyEmailOptOutAt) {
       const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {

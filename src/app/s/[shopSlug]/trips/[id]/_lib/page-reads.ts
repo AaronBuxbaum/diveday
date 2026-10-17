@@ -12,7 +12,7 @@ import {
   getTripSiteRequirement,
   tripRequirementSummaries,
 } from "@/db/readiness";
-import { getShopReviewAggregate } from "@/db/reviews";
+import { getShopReviewAggregate, listSiteReviews } from "@/db/reviews";
 import { publicRunOf } from "@/db/series-next";
 import { tripMayTakeACode } from "@/db/shop-promos";
 import type { shopBySlugCached } from "@/db/shops-cached";
@@ -178,11 +178,15 @@ export async function readTripPage(
       const siteIds = dives
         .map(({ diveSite }) => diveSite?.id)
         .filter((id): id is string => Boolean(id));
-      const [extras, seen] = await Promise.all([
+      const [extras, seen, siteReviews] = await Promise.all([
         listDiveSiteBriefingExtras(db, shop.id, siteIds),
         siteSightings(db, shop.id, siteIds),
+        // What earlier divers said about these sites, under the plan
+        // (fifth-loop ideas, item 20). Off in the frame and for a shop that
+        // has reviews off, like the aggregate below.
+        isEmbed || !shop.reviewsEnabled ? [] : listSiteReviews(db, shop.id, siteIds),
       ]);
-      return { extras, seen };
+      return { extras, seen, siteReviews };
     }),
     // **What this trip asks of anybody**, read for every visitor rather than
     // only for a diver who already holds a seat (DOM-M6; see the note where

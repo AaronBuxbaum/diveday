@@ -300,10 +300,30 @@ const LIFE_SUPPORT_KINDS: ReadonlySet<GearItemKind> = new Set([
 /**
  * The units a diver breathes or ascends by. A hand pick of one with a lapsed
  * service clock or an open concern asks the staffer to assign it anyway, in
- * so many words (dive-domain review of issue #2215).
+ * so many words (dive-domain review of issue #2215). Not
+ * `PULL_STARTS_TICKED_KINDS`, on purpose: a dive computer is here because the
+ * desk must knowingly hand out a doubtful one, while a cylinder is there
+ * because one with a valve problem must come off the rack.
  */
 export function gearKindIsLifeSupport(kind: GearItemKind): boolean {
   return LIFE_SUPPORT_KINDS.has(kind);
+}
+
+const PULL_STARTS_TICKED_KINDS: ReadonlySet<GearItemKind> = new Set(["regulator", "bcd", "tank"]);
+
+/**
+ * Whether "Pull for service" starts ticked when one unit comes off the boat
+ * with a problem (dive-domain review of fifth-loop item 5): on for what a
+ * diver breathes from or floats by (regulator, BCD, cylinder), so a short rack
+ * at 7 AM does not hand out the regulator somebody wrote "inflator sticks"
+ * against; off for the rest, where a scratched mask is no reason to empty the
+ * wall. The set pane's armful keeps every box unticked. Not
+ * `LIFE_SUPPORT_KINDS`, on purpose: a cylinder with a valve problem must come
+ * off the rack, while a doubtful dive computer is a rental the desk can
+ * re-assign knowingly, so it starts unticked.
+ */
+export function pullStartsTicked(kind: GearItemKind): boolean {
+  return PULL_STARTS_TICKED_KINDS.has(kind);
 }
 
 /**
