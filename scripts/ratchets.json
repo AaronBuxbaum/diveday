@@ -459,6 +459,14 @@
           "src/app/api/webhooks/stripe/route.ts": "902 -> 923",
           "src/lib/notifications/index.test.ts": "0 -> 915"
         }
+      },
+      {
+        "why": "merge of batches 1-5 (#2058 #2129 #2145 #2225 #2226 #2265) into the safety stack top: the batch 2 seat, ratio and youth-form work grew these on that side; the three test files that grew most moved their new tests to siblings",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "1180 -> 1181",
+          "src/db/waiver-issue.test.ts": "1178 -> 1179",
+          "src/lib/staffing-week.test.ts": "1115 -> 1125"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -474,7 +482,7 @@
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 948,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1043,
-    "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1180,
+    "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1181,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 1016,
     "src/components/ui/button.test.ts": 971,
@@ -486,21 +494,21 @@
     "src/db/check-in.test.ts": 1212,
     "src/db/checkouts.test.ts": 2973,
     "src/db/closeout.test.ts": 903,
-    "src/db/course-forms.test.ts": 1274,
+    "src/db/course-forms.test.ts": 1234,
     "src/db/courses.test.ts": 1719,
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1285,
     "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1178,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1671,
+    "src/db/export.test.ts": 1579,
     "src/db/import.test.ts": 1077,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3725,
     "src/db/no-show.test.ts": 1165,
     "src/db/notifications.test.ts": 1875,
     "src/db/orders.test.ts": 3174,
-    "src/db/participant-types.test.ts": 1216,
+    "src/db/participant-types.test.ts": 1195,
     "src/db/readiness.test.ts": 1522,
     "src/db/recap.test.ts": 2138,
     "src/db/refunds.test.ts": 1154,
@@ -515,7 +523,7 @@
     "src/db/trips-crew.test.ts": 1489,
     "src/db/trips-queries.test.ts": 1209,
     "src/db/trips-series.test.ts": 1785,
-    "src/db/waiver-issue.test.ts": 1178,
+    "src/db/waiver-issue.test.ts": 1179,
     "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
@@ -526,15 +534,15 @@
     "src/lib/incident-export.test.ts": 1067,
     "src/lib/manifests.test.ts": 1320,
     "src/lib/notifications/email.test.ts": 1494,
+    "src/lib/notifications/index.test.ts": 915,
     "src/lib/offline-manifest-store.test.ts": 1018,
     "src/lib/offline-manifests.test.ts": 2179,
-    "src/lib/readiness.test.ts": 1684,
-    "src/lib/staffing-week.test.ts": 1115,
+    "src/lib/readiness.test.ts": 1575,
+    "src/lib/staffing-week.test.ts": 1125,
     "src/lib/today.test.ts": 1651,
     "src/lib/trip-admission.test.ts": 992,
     "src/lib/waivers.test.ts": 1402,
-    "src/proxy.test.ts": 1241,
-    "src/lib/notifications/index.test.ts": 915
+    "src/proxy.test.ts": 1241
   },
   "function-length": {
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
@@ -599,6 +607,13 @@
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": "424 -> 425"
         }
+      },
+      {
+        "why": "merge of batches 1-5 (#2058 #2129 #2145 #2225 #2226 #2265) into the safety stack top: the batch 2 seat, ratio and youth-form work grew these on that side; the three test files that grew most moved their new tests to siblings",
+        "files": {
+          "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "0 -> 308",
+          "src/db/reminders.ts#sendDueReminders": "332 -> 335"
+        }
       }
     ],
     "src/app/ready/[token]/page.tsx#DiverReadinessPage": 304,
@@ -612,12 +627,13 @@
     "src/app/shop/[shopSlug]/reports/page.tsx#ReportsPage": 378,
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 332,
-    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 321,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 310,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 308,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 336,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 368,
     "src/db/checkouts.ts#startBookingCheckout": 303,
-    "src/db/export.ts#loadShopExportContext": 335,
-    "src/db/reminders.ts#sendDueReminders": 332,
+    "src/db/export.ts#loadShopExportContext": 331,
+    "src/db/reminders.ts#sendDueReminders": 335,
     "src/db/reporting.ts#getMonthlyReport": 338,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
     "src/db/seed-history.ts#seedHistory": 726,

@@ -151,7 +151,7 @@ describe("saveCourseFormRequirementsAction", () => {
     );
   });
 
-  it("saves the age under a ticked form, and refuses one that is not a whole number (#2265)", async () => {
+  it("saves the age under a ticked form, and refuses one that is not a whole number (issue 2265)", async () => {
     vi.mocked(setCourseFormRequirements).mockResolvedValue({ ok: true });
 
     await posted([

@@ -281,7 +281,7 @@ describe("DiverFacts, drawn on its own", () => {
     expect(screen.queryByText(/Asha Iyer/)).toBeNull();
   });
 
-  it("prints the contact the desk recorded for a held seat, on paper too (#2145)", () => {
+  it("prints the contact the desk recorded for a held seat, on paper too (issue 2145)", () => {
     render(
       <DiverFacts
         diver={diver({

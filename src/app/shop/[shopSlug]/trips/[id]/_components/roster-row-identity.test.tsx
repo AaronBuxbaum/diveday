@@ -375,7 +375,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       );
     });
 
-    it("offers the other same-name divers by name only, unpicked, beside a link to each record (#2129)", () => {
+    it("offers the other same-name divers by name only, unpicked, beside a link to each record (issue 2129)", () => {
       const sameName = entry("u", "Alex Kim", {
         identityBookedAs: "Alex Kim",
         identityMatchedBy: "picked_name",

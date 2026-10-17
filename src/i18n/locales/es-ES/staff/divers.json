@@ -434,7 +434,7 @@
     "waiverChannelUnavailable": "Sin configurar"
   },
   "notices": {
-    "drysuitExperienceRecorded": "Anotado. La lista deja de avisarte de la certificación de traje seco de este buceador. No se ha añadido ninguna certificación.",
+    "drysuitExperienceRecorded": "Anotado. La lista deja de avisarte de la certificación de traje seco de este buceador. No se ha agregado ninguna certificación.",
     "drysuitExperienceCleared": "Quitado. La lista vuelve a avisarte de la certificación de traje seco de este buceador.",
     "drysuitExperienceUnchanged": "No ha cambiado nada. La ficha ya lo decía.",
     "drysuitExperienceNotAuthorized": "Solo un instructor, asistente de instructor, divemaster, gerente o propietario puede anotar que vio a alguien bucear con traje seco. Quitarlo corresponde a quien lo anotó, a un gerente o al propietario.",

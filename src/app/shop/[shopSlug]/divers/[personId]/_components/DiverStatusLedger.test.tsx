@@ -105,7 +105,7 @@ describe("an open item", () => {
     expect(screen.getByRole("link", { name: "Collect" })).toHaveAttribute("href", "#the-story");
   });
 
-  it("sends a card an ended course should have produced to that session's roster (#2058)", () => {
+  it("sends a card an ended course should have produced to that session's roster (issue 2058)", () => {
     renderLedger([
       {
         kind: "certification",

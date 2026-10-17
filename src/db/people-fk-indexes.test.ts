@@ -46,7 +46,10 @@ const MUST_LEAD = [
 // 109: `incident_reports.deleted_by_person_id` names who discarded a draft on
 // the departure log. Set once per discard on a table of a few rows a year, and
 // read by report, never by person.
-const UNINDEXED_CEILING = 109;
+// 110: `gear_reservations.fill_recorded_by_person_id` (#2257) names who
+// recorded a counter tank's fill. Written once per fill and read with the
+// reservation, never probed by person.
+const UNINDEXED_CEILING = 110;
 
 async function unindexedPeopleForeignKeys(db: AppDb): Promise<string[]> {
   const result = await db.execute(sql`

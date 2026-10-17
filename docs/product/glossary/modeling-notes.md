@@ -145,7 +145,7 @@
 - **Re-point a held seat** ("Another diver on file") — the third answer, offered only on a seat
   held because the shop holds more than one diver with its booked-as name (issue #2129, Aaron
   2026-10-13): the seat belongs to the *other* existing record with that name.
-  `otherSameNamePeople` offers the shop's other live people with exactly that name (trimmed,
+  The list (`otherSameNamePeople`) offers the shop's other live people with exactly that name (trimmed,
   lower-cased; not removed, erased or merged) **by name only**, each beside a link to their record
   for the staffer to check, and never pre-picks one. `repointHeldBooking`
   (`src/db/identity-repoint.ts`) moves the booking, its gear and its unsigned links to the chosen

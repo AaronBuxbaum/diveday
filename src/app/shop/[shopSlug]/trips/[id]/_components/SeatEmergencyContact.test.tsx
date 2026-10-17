@@ -39,7 +39,7 @@ describe("SeatEmergencyContact", () => {
     expect(screen.getByText(t("trips.roster.emergencyContactEdit"))).toBeTruthy();
   });
 
-  it("names a held seat's contact as the seat's own (#2145)", () => {
+  it("names a held seat's contact as the seat's own (issue 2145)", () => {
     renderContact(false, true);
     expect(screen.getByText(t("trips.roster.heldEmergencyContactHeading"))).toBeTruthy();
     expect(screen.getByText(t("trips.roster.emergencyContactAddFull"))).toBeTruthy();

@@ -67,7 +67,7 @@ export async function otherSameNamePeople(
         inArray(sql<string>`lower(trim(${people.fullName}))`, keys),
       ),
     )
-    .orderBy(asc(people.createdAt), asc(people.id));
+    .orderBy(asc(people.createdAt), asc(people.fullName), asc(people.id));
   for (const seat of named) {
     const key = nameKey(seat.bookedAs);
     const sameName = rows.filter((row) => nameKey(row.fullName) === key);
@@ -256,6 +256,8 @@ async function repointInTransaction(
     })
     .from(people)
     .where(
+      // diveday:allow-deleted-people: both rows by id, read with their removal
+      // columns so the refusal below can name a removed, erased or merged record.
       and(
         eq(people.shopId, input.shopId),
         inArray(people.id, [booking.personId, input.toPersonId]),
