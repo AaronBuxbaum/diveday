@@ -155,6 +155,7 @@ export type StaffDestinationId =
   | "team"
   | "calendarFeed"
   | "emailSettings"
+  | "security"
   | "activity";
 
 /**
@@ -220,6 +221,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   team: "shared.shopNavLinks.team",
   calendarFeed: "shared.shopNavLinks.calendarFeed",
   emailSettings: "shared.shopNavLinks.emailSettings",
+  security: "shared.shopNavLinks.security",
   activity: "shared.shopNavLinks.activity",
 };
 
@@ -348,6 +350,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // The staffer's own email (the Monday email, `src/lib/weekly-digest.ts`).
   // Ungated for the calendar feed's reason: any staffer may ask for it.
   { id: "emailSettings", suffix: "/settings/email", section: "settings", inPalette: true },
+  // A login's own password and sign-in (`/settings/security`). Ungated for the
+  // same reason: it is about the reader, not the shop.
+  { id: "security", suffix: "/settings/security", section: "settings", inPalette: true },
   // The shop's activity log (D5): who refunded, who wrote a seat past a
   // missing card, who changed a departure. Owner/manager reading, the
   // settings gate's own set (`canViewShopActivity`); filed under Settings'
@@ -588,3 +593,12 @@ export function isStaffDestinationPage(
 ): boolean {
   return pathname === staffDestinationHref(root, destination);
 }
+
+/**
+ * **My account** (issue #2813): the three destinations about the reader rather
+ * than the shop, in menu order. They are filed under `settings` by URL, but a
+ * staffer opens them from the identity menu, ungated, so a role without the
+ * Settings gate keeps its door. Settings' hub deliberately has no row for them
+ * (`settings-doors.test.ts` pins both halves).
+ */
+export const MY_ACCOUNT_DESTINATION_IDS = ["security", "calendarFeed", "emailSettings"] as const;

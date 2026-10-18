@@ -40,7 +40,7 @@ const COPY: CertCheckTryCopy = {
     "Chrome keeps the extension off {agency}’s site. Turn it on in Extensions, DiveDay certification check, Details, Site access.",
   failedNext: "Send us the report below.",
   padiOff:
-    "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings & waivers.",
+    "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings.",
   reportHint: "Copy it, then paste it into an email to us.",
   email: "Email support@dive.day",
   copy: "Copy report",

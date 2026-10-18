@@ -102,3 +102,13 @@ has to open in turn to answer one question. The settings sub-nav — derived fro
   and a shop that opens it to download once sees whether the copy is already happening weekly.
 - If a future half of this surface earns its own moment — a restore flow, say, which is a different
   question with a genuinely different gate — it gets a route then, on the day it clears the bar.
+
+## Amendment 2026-10-17 (issue #2813): tabs, not one long page
+
+The two halves are now two tabs of one **Your data** page set, under one `<h1>`, with Import and
+Integrations beside them (`settings/_components/DataTabs.tsx`): Export at `/settings/export`,
+Backups at `/settings/export/backups`, Import at `/settings/import`, Integrations at
+`/settings/integrations`. Settings has one door, and the rail one row, for all four. Backups moved
+to its own URL so a tab is a link and the backup actions redirect back to the tab they came from.
+`/settings/backup` is still a 308, now to `/settings/export/backups` with its query string. The
+gate, the download URL and the strings are unchanged.

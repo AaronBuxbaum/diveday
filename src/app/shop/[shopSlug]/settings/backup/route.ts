@@ -2,19 +2,16 @@ import type { NextRequest } from "next/server";
 import { requireStaffSession } from "@/lib/session";
 
 /**
- * Backups are no longer a page: they are the second half of the one data-out
- * surface, `/settings/export` (ADR 20260806-one-data-out-surface). This route
- * stays only to keep the links that already exist working — a bookmark, the
+ * Backups are not a page of their own under this address: they are the second
+ * tab of Your data, `/settings/export/backups` (ADR 20260806-one-data-out-surface,
+ * amended by issue #2813). This route stays only to keep the links that already
+ * exist working — a bookmark, the
  * runbook, an old chat message, a `?page=` deep link into the delivery
  * history.
  *
- * A permanent redirect, because the move is permanent: scheduled delivery *is*
- * the export bundle on a schedule (`run-backup.ts` builds it from the export
- * loader) behind the identical `canPersonExportShopData` gate, so it never
- * earned a route of its own. The whole query string is carried across rather
- * than dropped, and `#backups` lands the reader on the section they were
- * looking for instead of the top of a long page — the silent kind of "it still
- * works" is what makes staff re-hunt for something they had already found.
+ * A permanent redirect, because the move is permanent. The whole query string is
+ * carried across rather than dropped, so a `?page=` deep link into the delivery
+ * history still lands on the page it named.
  *
  * A Route Handler, not a `page.tsx` calling `permanentRedirect()`: under
  * `cacheComponents` a page is partially prerendered, so a redirect thrown from
@@ -33,7 +30,7 @@ import { requireStaffSession } from "@/lib/session";
  *   hole.
  * - **The target is built from the session's own slug, not the URL's** —
  *   symmetric with `settings/export/actions.ts`. A cross-shop bookmark then
- *   lands on the reader's own data-out page instead of the shop shell's
+ *   lands on the reader's own backups page instead of the shop shell's
  *   `notFound()`.
  */
 export async function GET(request: NextRequest) {
@@ -48,7 +45,7 @@ export async function GET(request: NextRequest) {
   return new Response(null, {
     status: 308,
     headers: {
-      Location: `/shop/${session.user.shopSlug}/settings/export${search ? `?${search}` : ""}#backups`,
+      Location: `/shop/${session.user.shopSlug}/settings/export/backups${search ? `?${search}` : ""}`,
     },
   });
 }

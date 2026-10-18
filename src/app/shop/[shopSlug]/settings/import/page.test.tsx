@@ -2,6 +2,7 @@ import { Children, isValidElement, type ReactElement, type ReactNode } from "rea
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
+import { staffTranslator } from "@/i18n/staff-messages";
 import type { DiveDaySession } from "@/lib/auth";
 import { IMPORT_HONESTY_TABLE } from "@/lib/import";
 import { fileScopedShopContext } from "@/test/db";
@@ -117,14 +118,22 @@ function elementsOf(node: unknown, component: unknown, found: ReactElement[] = [
  */
 describe("the import tabs", () => {
   it("opens on Divers, with the gear and dive-site tabs beside it", async () => {
+    const { ImportKindTabs } = await import("./ImportKindTabs");
     const { SectionTabs } = await import("@/components/SectionTabs");
     const tree = await renderImport();
-    const [tabs] = elementsOf(tree, SectionTabs) as ReactElement<{
+    const [kind] = elementsOf(tree, ImportKindTabs) as ReactElement<{
+      base: string;
       current: string;
-      tabs: { id: string; href: string }[];
     }>[];
-    expect(tabs?.props.current).toBe("divers");
-    expect(tabs?.props.tabs.map((tab) => tab.href)).toEqual([
+    expect(kind?.props.current).toBe("divers");
+    // The strip itself, rendered: one tab per kind of file.
+    const strip = ImportKindTabs({
+      t: staffTranslator("en-US"),
+      base: kind?.props.base ?? "",
+      current: "divers",
+    }) as ReactElement<{ tabs: { id: string; href: string }[] }>;
+    expect(strip.type).toBe(SectionTabs);
+    expect(strip.props.tabs.map((tab) => tab.href)).toEqual([
       "/shop/blue-mantis/settings/import",
       "/shop/blue-mantis/settings/import?what=gear",
       "/shop/blue-mantis/settings/import?what=dive-sites",

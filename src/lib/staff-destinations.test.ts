@@ -295,6 +295,7 @@ describe("what each consumer derives", () => {
       "team",
       "calendarFeed",
       "emailSettings",
+      "security",
       "activity",
       "settings",
     ]);

@@ -12,14 +12,21 @@ import { CounterQrCard } from "../../CounterQrCard";
 import { CertCheckExtensionStatus } from "../CertCheckExtensionStatus";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { BOOKINGS_GROUP, featureRow, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
+import { rentalRows } from "./rental-rows";
 
-/** The Bookings & waivers group: the waiver template, the counter's QR door, and the packing list. */
+/**
+ * The Bookings group: how a booking is taken and prepared. The waiver template,
+ * the counter's QR door, card checks and the packing list, the dock day's
+ * rhythm, and what the shop rents (for the reader who may manage payments).
+ */
 export function BookingsGroup({
   view,
   canManageWaivers,
+  canPayments,
 }: {
   view: SettingsView;
   canManageWaivers: boolean;
+  canPayments: boolean;
 }) {
   const { shop, shopSlug, t, banner, activeSection, notSet } = view;
   const packingValue =
@@ -120,6 +127,18 @@ export function BookingsGroup({
             </FieldActions>
           </FieldGrid>
         </SettingsRow>
+
+        {/* How the day on the dock runs: the arrival call and the minutes the
+          rest of the day is built from. A page of its own (#1854). */}
+        <SettingsDoorRow
+          href={`/shop/${shopSlug}/settings/dock-day`}
+          heading={t("settings.main.dockCall.heading")}
+        />
+
+        {/* Rentals are payment-settings work: the catalogue and its prices
+          price a booking. Currency is not here; it lives in the Shop group's
+          Units row with depth and water temperature. */}
+        {canPayments ? rentalRows(view) : null}
       </InsetGroup>
     </SettingsGroup>
   );

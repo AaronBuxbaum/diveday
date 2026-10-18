@@ -16,7 +16,7 @@ test.describe("shop integrations settings", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto(INTEGRATIONS_SETTINGS);
-    await expect(page.getByRole("heading", { level: 1, name: "Shop integrations" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Your data" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Shopify" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "QuickBooks Online" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Xero" })).toBeVisible();
@@ -33,11 +33,18 @@ test.describe("shop integrations settings", () => {
     await expect(page.getByRole("button", { name: "Connect Zapier" })).toBeVisible();
   });
 
-  test("is reachable from the data and integrations settings group", { tag: READ_ONLY }, async ({
+  test("is reachable from Your data, the Settings group's one door", { tag: READ_ONLY }, async ({
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings");
-    await page.getByRole("main").getByRole("link", { name: "Shop integrations" }).click();
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: "Export, import, backups and integrations" })
+      .click();
+    await page
+      .getByRole("navigation", { name: "Your data sections" })
+      .getByRole("link", { name: "Integrations" })
+      .click();
     await expect(page).toHaveURL(INTEGRATIONS_SETTINGS);
   });
 });
@@ -48,6 +55,6 @@ test.describe("shop integrations authorization", () => {
   test("a captain cannot reach provider credentials", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto(INTEGRATIONS_SETTINGS);
     await expect(page.getByText("Only an owner or manager can change integrations.")).toBeVisible();
-    await expect(page.getByRole("heading", { level: 1, name: "Shop integrations" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 1, name: "Your data" })).toHaveCount(0);
   });
 });

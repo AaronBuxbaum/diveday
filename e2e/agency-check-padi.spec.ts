@@ -9,7 +9,7 @@ const DEPARTURE = /Two-Tank Reef — French Reef/;
 
 type Mode = "match" | "several" | "signed_out";
 const PADI_CHECKS_OFF =
-  "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings & waivers.";
+  "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings.";
 
 /**
  * **"Check with PADI", on PADI's DiveChek** (layer 2 of the cert-check
@@ -262,7 +262,7 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
   ).toHaveCount(0);
   expect(await padiLookups(page)).toBe(0);
 
-  // Settings > Bookings & waivers: the switch, off, and turned on.
+  // Settings > Bookings: the switch, off, and turned on.
   await page.goto(`/shop/${privateShop.slug}/settings`);
   const row = page
     .locator("details")

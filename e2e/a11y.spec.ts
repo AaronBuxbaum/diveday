@@ -313,14 +313,13 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     await scanStaticRoutes(page, [
       { path: "/shop/blue-mantis/settings", heading: "Settings" },
       { path: "/shop/blue-mantis/settings/team", heading: "Team" },
-      { path: "/shop/blue-mantis/settings/import", heading: "Import" },
-      // One page, both halves: the download manifest and — since ADR
-      // 20260806-one-data-out-surface folded `/settings/backup` into it — the
-      // scheduled-backup credential form. That form is the reason this route
+      { path: "/shop/blue-mantis/settings/import", heading: "Your data" },
+      // The Backups tab of Your data: the scheduled-backup credential form
+      // (ADR 20260806-one-data-out-surface). That form is the reason this route
       // is scanned at all: a field nobody can label is a field a shop fills
       // wrong, on the surface that decides whether their data survives
       // losing us.
-      { path: "/shop/blue-mantis/settings/export", heading: "Data export" },
+      { path: "/shop/blue-mantis/settings/export/backups", heading: "Your data" },
       { path: "/shop/blue-mantis/settings/calendar", heading: "Calendar subscriptions" },
       // The app-wide `notFound()` backstop (src/app/not-found.tsx). Scanned
       // under a staff session because that is the session a mistyped `/shop`
@@ -357,7 +356,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/requests", heading: "Inbox" },
       { path: "/shop/blue-mantis/divers/new", heading: "Add a diver" },
       { path: "/shop/blue-mantis/settings/security", heading: "Account security" },
-      { path: "/shop/blue-mantis/settings/integrations", heading: "Shop integrations" },
+      { path: "/shop/blue-mantis/settings/integrations", heading: "Your data" },
       { path: "/shop/blue-mantis/settings/activity", heading: "Activity" },
       {
         path: "/shop/blue-mantis/safety-checklist",

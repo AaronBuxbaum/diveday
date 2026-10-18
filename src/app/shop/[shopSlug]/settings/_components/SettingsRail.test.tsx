@@ -133,16 +133,23 @@ describe("the selection model", () => {
     ).toBeNull();
   });
 
-  it("gives the bare route the tie when two rows share a path", () => {
-    // Backups and the download are one surface behind two doors
-    // (`/settings/export#backups` and `/settings/export`). Standing on the
-    // page is the bare row's fact.
-    expect(
-      currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
-        pathname: `${BASE}/settings/export`,
-        basePath: BASE,
-      }),
-    ).toBe("dataExport");
+  it("lights Your data on any of its four tabs", () => {
+    // Export, Backups, Import and Integrations are one rail row (issue #2813):
+    // standing on any of the four pages is standing on it.
+    for (const path of [
+      "/settings/export",
+      "/settings/export/backups",
+      "/settings/import",
+      "/settings/integrations",
+    ]) {
+      expect(
+        currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
+          pathname: `${BASE}${path}`,
+          basePath: BASE,
+        }),
+        path,
+      ).toBe("yourData");
+    }
   });
 });
 
@@ -481,9 +488,6 @@ describe("what the rail hides", () => {
     team: "team",
     waivers: "waivers",
     whatsapp: "messaging",
-    dataImport: "import",
-    backup: "export",
-    dataExport: "export",
     boats: "boats",
     stripe: "payments",
     tax: "payments",
@@ -497,7 +501,7 @@ describe("what the rail hides", () => {
     // And keeps the ones nobody is gated out of, so an empty gate set is not
     // simply an empty rail.
     expect(ids.has("diveSites")).toBe(true);
-    expect(ids.has("security")).toBe(true);
+    expect(ids.has("yourData")).toBe(true);
   });
 
   it("carries the gate the hub carries, row by row", () => {

@@ -1,7 +1,5 @@
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import {
-  canExportShopData,
-  canImportShopData,
   canManageBilling,
   canManageMessagingSettings,
   canManagePaymentSettings,
@@ -12,15 +10,17 @@ import {
 } from "@/lib/authz";
 
 /**
- * The settings hub's one list of groups, in render order: the ten of ADR
- * 20261001-logbook, each named for what a shop is setting up rather than for
- * where the row happened to be built, plus How divers reach you (the
- * shop's contact details, desk hours, mail, reviews and WhatsApp: once
- * Notifications and Messages, two groups a shop read as one) and Rarely
- * changed (the rows a shop sets once, kept out of the weekly groups). Both of the hub's
+ * The settings hub's one list of groups, in render order: **seven**, split by
+ * who the setting is about (issue #2813, Aaron 2026-10-17). It was twelve,
+ * with rows filed by where they were built (a staffer's own email under
+ * Notifications, a login's password beside the shop's subscription, "Rarely
+ * changed" for how often a row is opened). What is about the reader (security,
+ * calendar feed, email) is **My account** in the identity menu, not here; the
+ * shop's registers (dive sites, boats, trip tags, the checklist) are doors in
+ * Shop; Export, Import, Backups and Integrations are the tabs of one Your data.
  * `SettingsPage.tsx` renders its sections from this one list. It remains a
- * registry rather than three local constants so a new section cannot drift
- * from the hub's section order or its test coverage.
+ * registry rather than local constants so a new section cannot drift from the
+ * hub's section order or its test coverage.
  *
  * It used to carry a second list, `SETTINGS_DESTINATIONS`: the six full-page
  * settings surfaces, which a sub-nav card rendered as grouped pills above
@@ -33,15 +33,11 @@ import {
 export const SETTINGS_GROUPS = [
   { id: "shop", labelKey: "settings.main.groups.shop" },
   { id: "team", labelKey: "settings.main.groups.team" },
-  { id: "boats-sites", labelKey: "settings.main.groups.boatsSites" },
-  { id: "bookings-waivers", labelKey: "settings.main.groups.bookingsWaivers" },
-  { id: "rental-gear", labelKey: "settings.main.groups.rentals" },
+  { id: "bookings", labelKey: "settings.main.groups.bookings" },
   { id: "money", labelKey: "settings.main.groups.money" },
-  { id: "reach", labelKey: "settings.main.groups.reach" },
+  { id: "messages", labelKey: "settings.main.groups.messages" },
   { id: "website", labelKey: "settings.main.groups.website" },
   { id: "data", labelKey: "settings.main.groups.data" },
-  { id: "account", labelKey: "settings.main.groups.account" },
-  { id: "rarely-changed", labelKey: "settings.main.groups.rarelyChanged" },
 ] as const satisfies readonly { id: string; labelKey: StaffMessageKey }[];
 
 export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number]["id"];
@@ -134,15 +130,7 @@ export function settingsSectionFragment(id: SectionId): string {
  * grants one — every destination re-checks server-side, which is what keeps
  * this a convenience rather than a gate.
  */
-export type SettingsRailGate =
-  | "payments"
-  | "team"
-  | "waivers"
-  | "messaging"
-  | "import"
-  | "export"
-  | "boats"
-  | "billing";
+export type SettingsRailGate = "payments" | "team" | "waivers" | "messaging" | "boats" | "billing";
 
 /**
  * The one warning a rail row may carry, named as a code rather than a
@@ -162,7 +150,11 @@ export type SettingsRailRow = {
   id: string;
   labelKey: StaffMessageKey;
   group: SettingsGroupId;
-  target: { kind: "section"; id: SectionId } | { kind: "route"; path: string };
+  target:
+    | { kind: "section"; id: SectionId }
+    // `also`: the other paths of the same place (the tabs of Your data), so
+    // standing on any of them lights this one row.
+    | { kind: "route"; path: string; also?: readonly string[] };
   gate?: SettingsRailGate;
   badgeSource?: SettingsRailBadgeSource;
 };
@@ -203,6 +195,55 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "address" },
   },
   {
+    id: "season",
+    labelKey: "settings.main.season.heading",
+    group: "shop",
+    target: { kind: "section", id: "season" },
+  },
+  {
+    id: "divingOptions",
+    labelKey: "boats.divingOptionsHeading",
+    group: "shop",
+    target: { kind: "section", id: "divingOptions" },
+  },
+  {
+    id: "searchListing",
+    labelKey: "settings.main.searchListing.heading",
+    group: "shop",
+    target: { kind: "section", id: "searchListing" },
+  },
+  {
+    id: "emergency",
+    labelKey: "settings.main.emergency.heading",
+    group: "shop",
+    target: { kind: "route", path: "/settings/emergency-reference" },
+  },
+  {
+    id: "diveSites",
+    labelKey: "settings.main.diveSites.heading",
+    group: "shop",
+    target: { kind: "route", path: "/dive-sites" },
+  },
+  {
+    id: "boats",
+    labelKey: "boats.heading",
+    group: "shop",
+    target: { kind: "route", path: "/boats" },
+    gate: "boats",
+  },
+  {
+    id: "tripTags",
+    labelKey: "lenses.heading",
+    group: "shop",
+    target: { kind: "route", path: "/trip-tags" },
+  },
+  {
+    id: "safetyChecklist",
+    labelKey: "settings.main.safetyChecklist.heading",
+    group: "shop",
+    target: { kind: "route", path: "/safety-checklist" },
+  },
+  {
     id: "team",
     labelKey: "settings.main.team.heading",
     group: "team",
@@ -223,92 +264,67 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "route", path: "/settings/activity" },
   },
   {
-    id: "boats",
-    labelKey: "boats.heading",
-    group: "boats-sites",
-    target: { kind: "route", path: "/boats" },
-    gate: "boats",
-  },
-  {
-    id: "diveSites",
-    labelKey: "settings.main.diveSites.heading",
-    group: "boats-sites",
-    target: { kind: "route", path: "/dive-sites" },
-  },
-  {
-    id: "safetyChecklist",
-    labelKey: "settings.main.safetyChecklist.heading",
-    group: "boats-sites",
-    target: { kind: "route", path: "/safety-checklist" },
-  },
-  {
-    id: "emergency",
-    labelKey: "settings.main.emergency.heading",
-    group: "boats-sites",
-    target: { kind: "route", path: "/settings/emergency-reference" },
-  },
-  {
-    id: "dockCall",
-    labelKey: "settings.main.dockCall.heading",
-    group: "boats-sites",
-    target: { kind: "route", path: "/settings/dock-day" },
-  },
-  {
     id: "waivers",
     labelKey: "settings.main.waivers.heading",
-    group: "bookings-waivers",
+    group: "bookings",
     target: { kind: "route", path: "/waivers" },
     gate: "waivers",
   },
   {
     id: "counterCard",
     labelKey: "settings.main.counterQr.heading",
-    group: "bookings-waivers",
+    group: "bookings",
     target: { kind: "section", id: "counterCard" },
   },
   {
     id: "certCheck",
     labelKey: "settings.main.certCheck.heading",
-    group: "bookings-waivers",
+    group: "bookings",
     target: { kind: "section", id: "certCheck" },
   },
   {
     id: "padiChecks",
     labelKey: "settings.main.features.padiChecks.heading",
-    group: "bookings-waivers",
+    group: "bookings",
     target: { kind: "section", id: "padiChecks" },
   },
   {
     id: "packing",
     labelKey: "settings.main.packing.heading",
-    group: "bookings-waivers",
+    group: "bookings",
     target: { kind: "section", id: "packing" },
+  },
+  {
+    id: "dockCall",
+    labelKey: "settings.main.dockCall.heading",
+    group: "bookings",
+    target: { kind: "route", path: "/settings/dock-day" },
   },
   {
     id: "rentals",
     labelKey: "settings.main.rentals.heading",
-    group: "rental-gear",
+    group: "bookings",
     target: { kind: "route", path: "/settings/rentals" },
     gate: "payments",
   },
   {
     id: "rentalPricing",
     labelKey: "settings.main.rentalPricing.heading",
-    group: "rental-gear",
+    group: "bookings",
     target: { kind: "route", path: "/settings/rental-prices" },
     gate: "payments",
   },
   {
     id: "rentalTerms",
     labelKey: "settings.main.rentalTerms.heading",
-    group: "rental-gear",
+    group: "bookings",
     target: { kind: "section", id: "rentalTerms" },
     gate: "payments",
   },
   {
     id: "regulatorService",
     labelKey: "settings.main.regulatorService.heading",
-    group: "rental-gear",
+    group: "bookings",
     target: { kind: "section", id: "regulatorService" },
     gate: "payments",
   },
@@ -317,6 +333,13 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.tax.heading",
     group: "money",
     target: { kind: "section", id: "tax" },
+    gate: "payments",
+  },
+  {
+    id: "passThrough",
+    labelKey: "settings.main.passThrough.heading",
+    group: "money",
+    target: { kind: "section", id: "passThrough" },
     gate: "payments",
   },
   {
@@ -335,39 +358,40 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     badgeSource: "payments",
   },
   {
+    id: "billing",
+    labelKey: "billing.title",
+    group: "money",
+    target: { kind: "route", path: "/settings/billing" },
+    gate: "billing",
+  },
+  {
     id: "contact",
     labelKey: "settings.main.contact.heading",
-    group: "reach",
+    group: "messages",
     target: { kind: "section", id: "contact" },
   },
   {
     id: "deskHours",
     labelKey: "settings.main.deskHours.heading",
-    group: "reach",
+    group: "messages",
     target: { kind: "section", id: "deskHours" },
-  },
-  {
-    id: "email",
-    labelKey: "emailSettings.title",
-    group: "reach",
-    target: { kind: "route", path: "/settings/email" },
   },
   {
     id: "reviews",
     labelKey: "settings.main.features.reviews.heading",
-    group: "reach",
+    group: "messages",
     target: { kind: "section", id: "reviews" },
   },
   {
     id: "reviewLink",
     labelKey: "settings.main.reviewLink.heading",
-    group: "reach",
+    group: "messages",
     target: { kind: "section", id: "reviewLink" },
   },
   {
     id: "whatsapp",
     labelKey: "settings.main.whatsapp.heading",
-    group: "reach",
+    group: "messages",
     target: { kind: "route", path: "/settings/whatsapp" },
     gate: "messaging",
   },
@@ -408,81 +432,14 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "route", path: "/settings/embed" },
   },
   {
-    id: "integrations",
-    labelKey: "settings.main.integrations.heading",
+    id: "yourData",
+    labelKey: "settings.main.yourData.heading",
     group: "data",
-    target: { kind: "route", path: "/settings/integrations" },
-  },
-  {
-    id: "backup",
-    labelKey: "settings.main.backup.heading",
-    group: "data",
-    target: { kind: "route", path: "/settings/export#backups" },
-    gate: "export",
-  },
-  {
-    id: "dataImport",
-    labelKey: "settings.import.title",
-    group: "data",
-    target: { kind: "route", path: "/settings/import" },
-    gate: "import",
-  },
-  {
-    id: "dataExport",
-    labelKey: "settings.export.title",
-    group: "data",
-    target: { kind: "route", path: "/settings/export" },
-    gate: "export",
-  },
-  {
-    id: "security",
-    labelKey: "settings.main.security.heading",
-    group: "account",
-    target: { kind: "route", path: "/settings/security" },
-  },
-  {
-    id: "calendar",
-    labelKey: "settings.main.calendar.heading",
-    group: "account",
-    target: { kind: "route", path: "/settings/calendar" },
-  },
-  {
-    id: "billing",
-    labelKey: "billing.title",
-    group: "account",
-    target: { kind: "route", path: "/settings/billing" },
-    gate: "billing",
-  },
-  {
-    id: "season",
-    labelKey: "settings.main.season.heading",
-    group: "rarely-changed",
-    target: { kind: "section", id: "season" },
-  },
-  {
-    id: "divingOptions",
-    labelKey: "boats.divingOptionsHeading",
-    group: "rarely-changed",
-    target: { kind: "section", id: "divingOptions" },
-  },
-  {
-    id: "tripTags",
-    labelKey: "lenses.heading",
-    group: "rarely-changed",
-    target: { kind: "route", path: "/trip-tags" },
-  },
-  {
-    id: "passThrough",
-    labelKey: "settings.main.passThrough.heading",
-    group: "rarely-changed",
-    target: { kind: "section", id: "passThrough" },
-    gate: "payments",
-  },
-  {
-    id: "searchListing",
-    labelKey: "settings.main.searchListing.heading",
-    group: "rarely-changed",
-    target: { kind: "section", id: "searchListing" },
+    target: {
+      kind: "route",
+      path: "/settings/export",
+      also: ["/settings/export/backups", "/settings/import", "/settings/integrations"],
+    },
   },
 ];
 
@@ -504,8 +461,6 @@ export function settingsRailGatesFor(reader: {
   canManageTeam: boolean;
   canManageWaivers: boolean;
   canManageMessaging: boolean;
-  canImport: boolean;
-  canExport: boolean;
   canBilling: boolean;
   hasBoatDiving: boolean;
   isDemo: boolean;
@@ -515,8 +470,6 @@ export function settingsRailGatesFor(reader: {
   if (reader.canManageTeam) gates.add("team");
   if (reader.canManageWaivers) gates.add("waivers");
   if (reader.canManageMessaging) gates.add("messaging");
-  if (reader.canImport) gates.add("import");
-  if (reader.canExport) gates.add("export");
   if (reader.hasBoatDiving) gates.add("boats");
   // The hub's own condition for its Billing door (`SettingsPage.tsx`).
   if (!reader.isDemo && reader.canBilling) gates.add("billing");
@@ -549,8 +502,6 @@ export function settingsShortcutsFor(
       canManageTeam: canManageStaffAccounts(roles),
       canManageWaivers: canManageWaiverTemplates(roles),
       canManageMessaging: canManageMessagingSettings(roles),
-      canImport: canImportShopData(roles),
-      canExport: canExportShopData(roles),
       canBilling: canManageBilling(roles),
       hasBoatDiving: shop.hasBoatDiving,
       isDemo: shop.isDemo,
@@ -565,9 +516,10 @@ export function settingsShortcutsFor(
   }));
 }
 
-/** A row's destination path with any `#fragment` stripped. */
-function railRoutePath(row: SettingsRailRow): string | null {
-  return row.target.kind === "route" ? (row.target.path.split("#")[0] ?? "") : null;
+/** Every path a route row answers to, any `#fragment` stripped. */
+function railRoutePaths(row: SettingsRailRow): readonly string[] {
+  if (row.target.kind !== "route") return [];
+  return [row.target.path, ...(row.target.also ?? [])].map((path) => path.split("#")[0] ?? "");
 }
 
 /**
@@ -586,9 +538,8 @@ export function currentSettingsRailRowId(
   rows: readonly SettingsRailRow[],
   where: { pathname: string; basePath: string; sectionId?: string | null },
 ): string | null {
-  const onRoute = rows.filter(
-    (row) =>
-      railRoutePath(row) !== null && `${where.basePath}${railRoutePath(row)}` === where.pathname,
+  const onRoute = rows.filter((row) =>
+    railRoutePaths(row).some((path) => `${where.basePath}${path}` === where.pathname),
   );
   const standing =
     onRoute.find((row) => row.target.kind === "route" && !row.target.path.includes("#")) ??

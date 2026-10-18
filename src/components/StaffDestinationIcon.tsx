@@ -433,6 +433,13 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <path d="m3 7 9 6 9-6" />
     </>
   ),
+  // The login's own security: a padlock.
+  security: (
+    <>
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </>
+  ),
   // The activity log: a clock face, for "who did what, when".
   activity: (
     <>

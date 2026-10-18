@@ -386,9 +386,6 @@
     "embed": {
       "heading": "Widget para tu web"
     },
-    "calendar": {
-      "heading": "Suscripciones al calendario"
-    },
     "counterQr": {
       "heading": "La tarjeta del mostrador",
       "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía la exención, todo antes de llegar al frente de la cola."
@@ -402,9 +399,6 @@
       "try": "Prueba las verificaciones",
       "install": "Agregar a Chrome"
     },
-    "integrations": {
-      "heading": "Integraciones del centro"
-    },
     "support": {
       "description": "Escribe cuando quieras: una mala mañana en el mostrador, una función que te falta o un error.",
       "emailCta": "Escribir a {email}"
@@ -412,24 +406,17 @@
     "groups": {
       "shop": "Centro",
       "team": "Equipo",
-      "boatsSites": "Embarcaciones y sitios",
-      "bookingsWaivers": "Reservas y exenciones",
-      "rentals": "Alquiler",
+      "bookings": "Reservas",
       "money": "Dinero",
-      "reach": "Cómo te contactan los buceadores",
+      "messages": "Mensajes",
       "website": "Sitio web",
-      "data": "Datos",
-      "account": "Cuenta",
-      "rarelyChanged": "Se cambia poco"
+      "data": "Tus datos"
     },
     "rail": {
       "ariaLabel": "Secciones de configuración"
     },
     "whatsapp": {
       "heading": "WhatsApp"
-    },
-    "backup": {
-      "heading": "Respaldos"
     },
     "features": {
       "on": "Activado",
@@ -489,9 +476,6 @@
     },
     "safetyChecklist": {
       "heading": "Lista de verificación previa a la salida"
-    },
-    "security": {
-      "heading": "Seguridad de la cuenta"
     },
     "dataJobs": {
       "mediaKind": {
@@ -585,6 +569,9 @@
       "delete": "Eliminar",
       "deleting": "Eliminando…",
       "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})"
+    },
+    "yourData": {
+      "heading": "Exportar, importar, respaldos e integraciones"
     }
   },
   "team": {
@@ -702,7 +689,6 @@
     }
   },
   "export": {
-    "title": "Exportar datos",
     "downloadButton": {
       "idle": "Descargar exportación",
       "acknowledged": "En camino, revisa tus descargas"
@@ -735,7 +721,6 @@
     "unassigned": "Sin tripulación registrada"
   },
   "import": {
-    "title": "Importar",
     "tabs": {
       "label": "Qué importar",
       "divers": "Buceadores",
@@ -1151,5 +1136,15 @@
     "failedNext": "Envíanos el informe de abajo.",
     "reportHint": "Cópialo y pégalo en un correo para nosotros.",
     "copy": "Copiar informe"
+  },
+  "data": {
+    "title": "Tus datos",
+    "tabs": {
+      "label": "Secciones de tus datos",
+      "export": "Exportar",
+      "backups": "Respaldos",
+      "import": "Importar",
+      "integrations": "Integraciones"
+    }
   }
 }

@@ -386,9 +386,6 @@
     "embed": {
       "heading": "Website embed"
     },
-    "calendar": {
-      "heading": "Calendar subscriptions"
-    },
     "counterQr": {
       "heading": "The counter card",
       "description": "Print this and put it on the desk. A walk-in scans it, fills in their name, certification and sizes, and their release goes out, all before they reach the front of the queue."
@@ -402,9 +399,6 @@
       "try": "Try the checks",
       "install": "Add to Chrome"
     },
-    "integrations": {
-      "heading": "Shop integrations"
-    },
     "support": {
       "description": "Write in any time: a bad morning at the counter, a feature you’re missing or a bug.",
       "emailCta": "Email {email}"
@@ -412,24 +406,17 @@
     "groups": {
       "shop": "Shop",
       "team": "Team",
-      "boatsSites": "Boats & sites",
-      "bookingsWaivers": "Bookings & waivers",
-      "rentals": "Rentals",
+      "bookings": "Bookings",
       "money": "Money",
-      "reach": "How divers reach you",
+      "messages": "Messages",
       "website": "Website",
-      "data": "Data",
-      "account": "Account",
-      "rarelyChanged": "Rarely changed"
+      "data": "Your data"
     },
     "rail": {
       "ariaLabel": "Settings sections"
     },
     "whatsapp": {
       "heading": "WhatsApp"
-    },
-    "backup": {
-      "heading": "Backups"
     },
     "features": {
       "on": "On",
@@ -489,9 +476,6 @@
     },
     "safetyChecklist": {
       "heading": "Pre-departure checklist"
-    },
-    "security": {
-      "heading": "Account security"
     },
     "dataJobs": {
       "mediaKind": {
@@ -585,6 +569,9 @@
       "delete": "Delete",
       "deleting": "Deleting…",
       "owed": "Dives owed on packages: {dives, number} ({value})"
+    },
+    "yourData": {
+      "heading": "Export, import, backups and integrations"
     }
   },
   "team": {
@@ -702,7 +689,6 @@
     }
   },
   "export": {
-    "title": "Data export",
     "downloadButton": {
       "idle": "Download export",
       "acknowledged": "On its way, check your downloads"
@@ -735,7 +721,6 @@
     "unassigned": "No crew recorded"
   },
   "import": {
-    "title": "Import",
     "tabs": {
       "label": "What to import",
       "divers": "Divers",
@@ -1151,5 +1136,15 @@
     "failedNext": "Send us the report below.",
     "reportHint": "Copy it, then paste it into an email to us.",
     "copy": "Copy report"
+  },
+  "data": {
+    "title": "Your data",
+    "tabs": {
+      "label": "Your data sections",
+      "export": "Export",
+      "backups": "Backups",
+      "import": "Import",
+      "integrations": "Integrations"
+    }
   }
 }

@@ -7,8 +7,9 @@ import { InsetGroup } from "@/components/ui/ledger";
 import { canAcceptPayments, type getShopStripeAccount } from "@/db/stripe-accounts";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { disconnectAction, refreshAction, saveTaxAction } from "../../money-actions";
-import { SettingsRow } from "../SettingsRows";
+import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { featureRow, MONEY_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
+import { passThroughRow } from "./money-rows";
 
 function StatusRow({
   label,
@@ -42,11 +43,13 @@ export function MoneyGroup({
   canPayments,
   account,
   connectConfigured,
+  canViewBilling,
 }: {
   view: SettingsView;
   canPayments: boolean;
   account: Awaited<ReturnType<typeof getShopStripeAccount>>;
   connectConfigured: boolean;
+  canViewBilling: boolean;
 }) {
   const { shop, shopSlug, t, banner, activeSection } = view;
   const ready = canAcceptPayments(account);
@@ -93,6 +96,8 @@ export function MoneyGroup({
                 </SubmitButton>
               </form>
             </SettingsRow>
+
+            {passThroughRow(view)}
 
             {featureRow(view, "tips")}
 
@@ -205,6 +210,18 @@ export function MoneyGroup({
               )}
             </SettingsRow>
           </>
+        ) : null}
+
+        {/* What DiveDay itself costs: the trial, a free term, the card on
+          file. Its own page, owner only (ADR 20261007-subscription-billing).
+          Purely informational: nothing locks when a trial or a payment lapses.
+          It sat in an Account group beside a staffer's own password; it is the
+          shop's subscription, so it lives with the shop's money. */}
+        {canViewBilling ? (
+          <SettingsDoorRow
+            href={`/shop/${shopSlug}/settings/billing`}
+            heading={t("billing.title")}
+          />
         ) : null}
       </InsetGroup>
 

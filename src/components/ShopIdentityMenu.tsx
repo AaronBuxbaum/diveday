@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
@@ -26,6 +27,16 @@ export type ShopIdentityMenuCopy = {
   tellUsSubject: string;
   /** The body's opening line, with `{path}` where the page's path goes. */
   tellUsBody: string;
+};
+
+/**
+ * **My account** (issue #2813): the places about this reader rather than the
+ * shop (their sign-in, calendar feed and email), ungated, so every role keeps a
+ * door whether or not it may open Settings.
+ */
+export type ShopIdentityAccount = {
+  label: string;
+  links: readonly { href: string; label: string }[];
 };
 
 /**
@@ -56,8 +67,10 @@ export type TellUsTarget = {
  * **Settings left again, for the nav** (ADR 20261001-logbook): it has its own
  * row at the sidebar's foot, and a second door here would be the duplicate
  * control principle 8 forbids. The reader's calendar subscription left for the
- * same reason (Aaron, 2026-10-03): it is a row in Settings' Account group and
- * in ⌘K, so the menu opens on the language.
+ * same reason (Aaron, 2026-10-03). They came back as **My account** (issue
+ * #2813, Aaron, 2026-10-17): sign-in security, calendar feed and email are about
+ * this reader, so they are one labelled group here rather than rows in a
+ * shop's Settings.
  *
  * The sign-out itself keeps its two-tap `InlineConfirm` (task 81): an undo
  * banner is not safe here, because its grace window would keep the session
@@ -78,6 +91,7 @@ export function ShopIdentityMenu({
   languages,
   setLocaleAction,
   tellUs,
+  account,
   copy,
 }: {
   shopName: string;
@@ -89,6 +103,7 @@ export function ShopIdentityMenu({
   languages: readonly LanguageChoice[];
   setLocaleAction: (locale: string) => Promise<void>;
   tellUs?: TellUsTarget;
+  account?: ShopIdentityAccount;
   copy: ShopIdentityMenuCopy;
 }) {
   const [open, setOpen] = useState(false);
@@ -197,6 +212,23 @@ export function ShopIdentityMenu({
               />
             </div>
           </div>
+          {account && account.links.length > 0 ? (
+            <nav aria-label={account.label} className="mt-1 border-t border-border pt-1">
+              <GroupLabel className={MENU_TICK_GUTTER}>{account.label}</GroupLabel>
+              <div className="mt-1">
+                {account.links.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    className={menuRowClass("quiet")}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </nav>
+          ) : null}
           <div className="mt-1 border-t border-border pt-1">
             <BoatModeRow label={copy.boatMode} />
             {tellUs ? <TellUsRow to={tellUs.to} copy={copy} /> : null}

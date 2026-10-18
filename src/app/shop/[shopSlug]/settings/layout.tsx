@@ -5,8 +5,6 @@ import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
-  canExportShopData,
-  canImportShopData,
   canManageBilling,
   canManageMessagingSettings,
   canManageStaffAccounts,
@@ -90,8 +88,6 @@ async function SettingsRailPanel({ params }: { params: Promise<{ shopSlug: strin
       canManageTeam: canManageStaffAccounts(roles),
       canManageWaivers: canManageWaiverTemplates(roles),
       canManageMessaging: canManageMessagingSettings(roles),
-      canImport: canImportShopData(roles),
-      canExport: canExportShopData(roles),
       canBilling: canManageBilling(roles),
       hasBoatDiving: shop.hasBoatDiving,
       isDemo: shop.isDemo,

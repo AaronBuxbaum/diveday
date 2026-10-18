@@ -28,15 +28,11 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_SHOPFRONT_PHOTOS } from "@/lib/storage/limits";
-import { AccountGroup } from "./_components/groups/AccountGroup";
-import { BoatsSitesGroup } from "./_components/groups/BoatsSitesGroup";
 import { BookingsGroup } from "./_components/groups/BookingsGroup";
 import { DataGroup } from "./_components/groups/DataGroup";
 import { DATA_GROUP, SettingsGroup, type SettingsView } from "./_components/groups/kit";
+import { MessagesGroup } from "./_components/groups/MessagesGroup";
 import { MoneyGroup } from "./_components/groups/MoneyGroup";
-import { RarelyChangedGroup } from "./_components/groups/RarelyChangedGroup";
-import { ReachGroup } from "./_components/groups/ReachGroup";
-import { RentalsGroup } from "./_components/groups/RentalsGroup";
 import { ShopGroup } from "./_components/groups/ShopGroup";
 import { TeamGroup } from "./_components/groups/TeamGroup";
 import { WebsiteGroup } from "./_components/groups/WebsiteGroup";
@@ -265,24 +261,22 @@ export default async function SettingsPage({
           hasPricedRecords={hasPricedRecords}
           currencyMismatch={stripeCurrencyMismatch(toShopCurrency(shop.currency), account)}
           addressLookupEnabled={isAddressLookupConfigured()}
+          boatsWithoutRadioIdentity={boatsWithoutRadioIdentity}
         />
 
         <TeamGroup view={view} canManageTeam={canManageTeam} />
 
-        <BoatsSitesGroup view={view} boatsWithoutRadioIdentity={boatsWithoutRadioIdentity} />
-
-        <BookingsGroup view={view} canManageWaivers={canManageWaivers} />
-
-        {canPayments ? <RentalsGroup view={view} /> : null}
+        <BookingsGroup view={view} canManageWaivers={canManageWaivers} canPayments={canPayments} />
 
         <MoneyGroup
           view={view}
           canPayments={canPayments}
+          canViewBilling={canViewBilling}
           account={account}
           connectConfigured={connectConfigured}
         />
 
-        <ReachGroup view={view} canManageMessaging={canManageMessaging} />
+        <MessagesGroup view={view} canManageMessaging={canManageMessaging} />
 
         <WebsiteGroup view={view} />
 
@@ -295,10 +289,6 @@ export default async function SettingsPage({
             canImport={canImport}
           />
         </Suspense>
-
-        <AccountGroup view={view} canViewBilling={canViewBilling} />
-
-        <RarelyChangedGroup view={view} canPayments={canPayments} />
 
         {/* The stack's last child, so it sits a section's 40px under the last
             card like every section above it; on its own `mt-12` it sat 48px

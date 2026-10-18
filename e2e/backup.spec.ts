@@ -2,15 +2,14 @@ import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 /**
- * The Backups half of the one data-out surface (docs ADR
- * 20260806-one-data-out-surface): scheduled delivery lives at
- * `/settings/export#backups` now, because it is the export bundle on a
- * schedule behind the identical gate. `/settings/backup` is a 308 that this
- * spec also pins.
+ * The Backups tab of Your data (docs ADR 20260806-one-data-out-surface, tabs
+ * since issue #2813): scheduled delivery lives at `/settings/export/backups`,
+ * beside the download it schedules and behind the identical gate.
+ * `/settings/backup` is a 308 that this spec also pins.
  */
-const BACKUP_SETTINGS = "/shop/blue-mantis/settings/export#backups";
+const BACKUP_SETTINGS = "/shop/blue-mantis/settings/export/backups";
 const OLD_BACKUP_SETTINGS = "/shop/blue-mantis/settings/backup";
-const backupSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/export#backups`;
+const backupSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/export/backups`;
 
 /**
  * The shop-owned backup settings surface (docs ADR
@@ -71,7 +70,7 @@ test.describe("backup settings", () => {
       maxRedirects: 0,
     });
     expect(direct.status()).toBe(308);
-    expect(direct.headers().location).toBe("/shop/blue-mantis/settings/export?page=2#backups");
+    expect(direct.headers().location).toBe("/shop/blue-mantis/settings/export/backups?page=2");
 
     // Removing a surface never removes the destination (ADR
     // 20260806-one-data-out-surface). A bookmark deep into the delivery
@@ -79,31 +78,30 @@ test.describe("backup settings", () => {
     // the quiet kind of "it still works" that makes staff re-hunt.
     await page.goto(`${OLD_BACKUP_SETTINGS}?page=2`);
 
-    await expect(page).toHaveURL("/shop/blue-mantis/settings/export?page=2#backups");
+    await expect(page).toHaveURL("/shop/blue-mantis/settings/export/backups?page=2");
     await expect(page.getByRole("heading", { name: "Delivery history" })).toBeVisible();
 
     // And the bare URL, which is what the runbook and every older link say.
     await page.goto(OLD_BACKUP_SETTINGS);
-    await expect(page).toHaveURL("/shop/blue-mantis/settings/export#backups");
+    await expect(page).toHaveURL("/shop/blue-mantis/settings/export/backups");
   });
 
-  test("one surface: the bundle you would download, and the copy that keeps happening", async ({
+  test("one place: the bundle you would download, and the copy that keeps happening", async ({
     page,
   }) => {
-    // The whole point of the merge — both halves answer "how do I get my data
-    // out?" and are now read without navigating between them.
-    await page.goto(BACKUP_SETTINGS);
-
-    await expect(page.getByRole("heading", { level: 1, name: "Data export" })).toBeVisible();
+    // Both halves answer "how do I get my data out?" and are tabs of the same
+    // "Your data" page: one tap apart, under one title.
+    await page.goto("/shop/blue-mantis/settings/export");
+    await expect(page.getByRole("heading", { level: 1, name: "Your data" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Download export" })).toBeVisible();
-    // The bundle's file list is behind a closed disclosure now (its own spec,
-    // e2e/export.spec.ts, opens it). What this test is about is that both
-    // halves are read without navigating between them, so the assertion is
-    // that the download half is *here* — heading included — not that its
-    // reference list happens to be expanded.
     await expect(
       page.getByRole("heading", { level: 2, name: "What’s in the bundle" }),
     ).toBeVisible();
+
+    const tabs = page.getByRole("navigation", { name: "Your data sections" });
+    await tabs.getByRole("link", { name: "Backups" }).click();
+    await expect(page).toHaveURL("/shop/blue-mantis/settings/export/backups");
+    await expect(page.getByRole("heading", { level: 1, name: "Your data" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
   });
 
