@@ -7,9 +7,9 @@ import type { DiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatTime } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { combineCertRequirements } from "@/lib/readiness";
 import { buildDiverChecklist } from "@/lib/readiness-summary";
 import { nitroxCardWanted } from "@/lib/rentals";
+import { unionRequirements } from "@/lib/requirement";
 import type { ThreadStep } from "@/lib/thread-steps";
 import { liveStageOf, STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
 
@@ -94,7 +94,7 @@ export function readyThreadFacts(data: ReadyPageData, tripOnRecord: boolean, loc
    * on specialties or nitrox but no level, which is a real shape.
    */
   const requiredLevel = detail.requirement
-    ? combineCertRequirements(detail.requirement, detail.siteRequirement).minimumCertificationLevel
+    ? unionRequirements(detail.requirement, detail.siteRequirement).minimumCertificationLevel
     : null;
   // A rental fit is on file — the diver has answered the gear question at least
   // once, whatever they answered. "Bringing my own" is a complete answer, so

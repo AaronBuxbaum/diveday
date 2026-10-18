@@ -4,6 +4,7 @@ import {
   type CertRequirementSource,
   certificationRank,
 } from "./readiness";
+import { requirementDemandsNothing } from "./requirement";
 
 /**
  * Fill-the-boat promo logic — matching last-minute-list entries to a
@@ -141,12 +142,7 @@ export type LastMinuteRecipientReview<T> = {
  * fail to meet.
  */
 function demandsAnything(requirement: LastMinuteDepartureBar | null): boolean {
-  if (!requirement) return false;
-  return (
-    requirement.minimumCertificationLevel !== null ||
-    requirement.requiredSpecialties.length > 0 ||
-    requirement.requiresNitrox
-  );
+  return !requirementDemandsNothing(requirement);
 }
 
 export function ranksBelow(

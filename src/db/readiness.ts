@@ -16,7 +16,6 @@ import {
   BLOCKER_CATEGORY,
   calculateReadiness,
   cardUndoRefusal,
-  combineCertRequirements,
   combineSiteRequirements,
   isUnsightedSelfDeclaration,
   needsCardSighting,
@@ -24,6 +23,7 @@ import {
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
+import { parseRequirement, requirementDemandsNothing, unionRequirements } from "@/lib/requirement";
 import type { TrainingMarkState } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
 import {
@@ -240,31 +240,13 @@ export async function tripRequirementSummaries(
   ]);
 
   const byTrip = new Map<string, SiteCertRequirement>();
-  const fold = (tripId: string, part: SiteCertRequirement) => {
-    const soFar = byTrip.get(tripId) ?? {
-      minimumCertificationLevel: null,
-      requiredSpecialties: [],
-      requiresNitrox: false,
-    };
-    byTrip.set(tripId, combineCertRequirements(soFar, part));
-  };
   for (const row of [...ownRows, ...siteRows]) {
-    fold(row.tripId, {
-      minimumCertificationLevel: row.minimumCertificationLevel,
-      requiredSpecialties: row.requiredSpecialties ?? [],
-      requiresNitrox: Boolean(row.requiresNitrox),
-    });
+    byTrip.set(row.tripId, unionRequirements(byTrip.get(row.tripId), parseRequirement(row)));
   }
 
   const demanding = new Map<string, SiteCertRequirement>();
   for (const [tripId, requirement] of byTrip) {
-    if (
-      requirement.minimumCertificationLevel ||
-      requirement.requiredSpecialties.length > 0 ||
-      requirement.requiresNitrox
-    ) {
-      demanding.set(tripId, requirement);
-    }
+    if (!requirementDemandsNothing(requirement)) demanding.set(tripId, requirement);
   }
   return demanding;
 }

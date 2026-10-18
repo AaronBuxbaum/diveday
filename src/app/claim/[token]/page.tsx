@@ -17,7 +17,7 @@ import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
-import { combineCertRequirements } from "@/lib/readiness";
+import { unionRequirements } from "@/lib/requirement";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { claimSeatAction } from "./actions";
 
@@ -176,18 +176,7 @@ export default async function SeatClaimPage({
       getTripRequirements(db, data.shopId, data.tripId),
       getTripSiteRequirement(db, data.shopId, data.tripId),
     ]);
-    const list = tripRequirementList(
-      t,
-      combineCertRequirements(
-        requirement ?? {
-          minimumCertificationLevel: null,
-          requiredSpecialties: [],
-          requiresNitrox: false,
-        },
-        siteRequirement,
-      ),
-      locale,
-    );
+    const list = tripRequirementList(t, unionRequirements(requirement, siteRequirement), locale);
     if (list) {
       requirementNotice = data.contactEmail
         ? t("booking.errors.tripRequirementWithContact", { list, contact: data.contactEmail })

@@ -6,6 +6,7 @@ import {
   type ReadinessBlockerCode,
   type ReadinessResult,
 } from "./readiness";
+import { requirementDemandsNothing } from "./requirement";
 
 /**
  * The diver-facing half of the readiness engine. `readiness.ts` decides in
@@ -211,13 +212,7 @@ export function buildDiverChecklist(
   // checklist honest instead of silently dropping a card they must bring.
   const gated = new Set<Exclude<ChecklistCategory, "setup">>();
   if (requirement.requiresWaiver) gated.add("waiver");
-  if (
-    requirement.minimumCertificationLevel ||
-    (requirement.requiredSpecialties?.length ?? 0) > 0 ||
-    requirement.requiresNitrox
-  ) {
-    gated.add("certification");
-  }
+  if (!requirementDemandsNothing(requirement)) gated.add("certification");
   if (requirement.requiresPayment) gated.add("payment");
   for (const category of byCategory.keys()) {
     if (category !== "setup") gated.add(category);

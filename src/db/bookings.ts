@@ -42,6 +42,7 @@ import {
   hasVerifiedCertificationAtLeast,
 } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
+import { requirementDemandsNothing, unionRequirements } from "@/lib/requirement";
 import {
   decideTripAdmission,
   type SelfDeclaration,
@@ -700,11 +701,8 @@ export async function tripAdmissionFor(
     () => getTripRequirements(tx, shopId, tripId),
     () => getTripSiteRequirement(tx, shopId, tripId),
   ]);
-  const demandsSomething = Boolean(
-    requirement?.minimumCertificationLevel ||
-      requirement?.requiredSpecialties.length ||
-      requirement?.requiresNitrox ||
-      siteRequirement,
+  const demandsSomething = !requirementDemandsNothing(
+    unionRequirements(requirement, siteRequirement),
   );
   // The three evidence reads are skipped entirely when the trip demands
   // nothing or the diver is unknown to it — neither case can produce a

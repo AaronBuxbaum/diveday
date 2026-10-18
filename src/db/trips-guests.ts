@@ -10,7 +10,7 @@ import {
   lastMinuteEntryMatchesTripDate,
   orderLastMinuteRecipients,
 } from "@/lib/last-minute-list";
-import { combineCertRequirements } from "@/lib/readiness";
+import { unionRequirements } from "@/lib/requirement";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { type AboardHold, aboardAtSeaBookingIds } from "./aboard-at-sea";
@@ -317,14 +317,7 @@ export async function getTripGuests(
     rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
   }
 
-  const dealRequirement = combineCertRequirements(
-    requirement ?? {
-      minimumCertificationLevel: null,
-      requiredSpecialties: [],
-      requiresNitrox: false,
-    },
-    siteRequirement,
-  );
+  const dealRequirement = unionRequirements(requirement, siteRequirement);
   const courseTarget = trip.course
     ? {
         slug: trip.course.slug,
