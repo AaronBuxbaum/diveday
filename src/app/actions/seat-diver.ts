@@ -325,8 +325,8 @@ export async function seatExistingDiverAction(
 
 /**
  * Seat a diver typed in by hand — a genuine first-timer, or someone tracked in
- * another system. Whether an email is required is the surface's call: the
- * counter can add a diver on a name alone and collect the rest later.
+ * another system. Whether an email is required is the surface's call, and
+ * walk-in mode waives it: the counter can add a diver on a name alone and collect the rest later.
  */
 export async function seatNewDiverAction(
   surfaceId: SeatSurfaceId,
@@ -344,7 +344,7 @@ export async function seatNewDiverAction(
     personId: "",
     walkIn: walkInAsked(surface, raw),
   };
-  if (!parsed.ok || (surface.email === "required" && !email)) {
+  if (!parsed.ok || (surface.email === "required" && !landing.walkIn && !email)) {
     refuse(surface, landing, surface.invalidNotice);
   }
   if (!(await holdsWalkInOpen(landing, session.user.shopId))) {

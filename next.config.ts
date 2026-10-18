@@ -34,7 +34,16 @@ const nextConfig: NextConfig = {
    * redirects, then proxy), so the auth layer never sees the old paths at all.
    */
   async redirects() {
-    return LEGACY_PUBLIC_SHOP_REDIRECTS.map((rule) => ({ ...rule, permanent: true }));
+    return [
+      ...LEGACY_PUBLIC_SHOP_REDIRECTS.map((rule) => ({ ...rule, permanent: true })),
+      // The counter's walk-in page folded into the departure door (#2816); a
+      // bookmark or a printed link lands on the same door, in walk-in mode.
+      {
+        source: "/shop/:shopSlug/trips/:id/walk-in",
+        destination: "/shop/:shopSlug/divers/new?surface=departure&tripId=:id&walkIn=true",
+        permanent: true,
+      },
+    ];
   },
   // PGlite ships WASM assets that must load from node_modules at runtime,
   // not be inlined into the server bundle (ADR-0005). node-postgres (pg)

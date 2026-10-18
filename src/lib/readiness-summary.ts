@@ -1,4 +1,5 @@
 import type { TripRequirement } from "@/db/schema";
+import { isDiver, type ParticipantType } from "./participant-types";
 import {
   BLOCKER_CATEGORY,
   type BlockerCategory,
@@ -6,7 +7,7 @@ import {
   type ReadinessBlockerCode,
   type ReadinessResult,
 } from "./readiness";
-import { requirementDemandsNothing } from "./requirement";
+import { NO_REQUIREMENT, requirementDemandsNothing } from "./requirement";
 
 /**
  * The diver-facing half of the readiness engine. `readiness.ts` decides in
@@ -181,6 +182,12 @@ function worstBlocker(blockers: readonly ReadinessBlocker[]): ReadinessBlocker |
 export function buildDiverChecklist(
   requirement: TripRequirement | null,
   readiness: ReadinessResult,
+  /**
+   * Whose checklist it is. A snorkeler or rider is asked for no card, so the
+   * trip's level is not theirs to be told "verified and on file" about; their
+   * certification line appears only if the engine raised a blocker for it.
+   */
+  participantType?: ParticipantType,
 ): DiverChecklistItem[] {
   const byCategory = new Map<ChecklistCategory, ReadinessBlocker[]>();
   for (const blocker of readiness.blockers) {
@@ -212,7 +219,8 @@ export function buildDiverChecklist(
   // checklist honest instead of silently dropping a card they must bring.
   const gated = new Set<Exclude<ChecklistCategory, "setup">>();
   if (requirement.requiresWaiver) gated.add("waiver");
-  if (!requirementDemandsNothing(requirement)) gated.add("certification");
+  const cardAsked = isDiver(participantType) ? requirement : NO_REQUIREMENT;
+  if (!requirementDemandsNothing(cardAsked)) gated.add("certification");
   if (requirement.requiresPayment) gated.add("payment");
   for (const category of byCategory.keys()) {
     if (category !== "setup") gated.add(category);

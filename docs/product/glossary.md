@@ -170,6 +170,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Connected Stripe account
 - Counter hand-off
 - Counter self-registration
+- Counter window
 - Course catalog copy
 - Course form
 - Course page
@@ -324,6 +325,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Waiver / release
 - Waiver activity
 - Waiver completion
+- Walk-in
 - Weather day
 - Week totals
 - WhatsApp sender

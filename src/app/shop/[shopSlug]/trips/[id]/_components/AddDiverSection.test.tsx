@@ -286,6 +286,65 @@ describe("AddDiverSection name-match prompt", () => {
 });
 
 /**
+ * **The counter's mode rides every seating form.** With the walk-in door open,
+ * the picker, the name-match tap and "create a new diver anyway" are all the
+ * counter's, so each posts `walkIn=true` (the seat is told as a walk-in, an
+ * email is not asked for); closed, none does.
+ */
+describe("AddDiverSection walk-in mode", () => {
+  const candidate = {
+    person: { id: "person-2", fullName: "Avery Diver", email: "avery@example.com" },
+    rentalFit: null,
+  } as unknown as BookableDiver;
+  const similar: SimilarDiver = {
+    id: "person-1",
+    fullName: "Nadia Ruiz",
+    email: null,
+    phone: null,
+    dateOfBirth: null,
+    lastDiveDayAt: null,
+  };
+
+  const renderSeatForms = (walkInOpen: boolean) =>
+    render(
+      <AddDiverSection
+        context={{
+          shopSlug: "blue-mantis",
+          tripId: "trip-1",
+          full: false,
+          query: "Avery",
+          candidates: [candidate],
+          addBookingAction: action,
+          addToWaitlistAction: action,
+          addExistingDiverAction: action,
+          locale: "en-US",
+          timeZone: "America/Cancun",
+          walkInOpen,
+          confirmName: "Nadia Ruis",
+          confirmMatches: [similar],
+        }}
+      />,
+    );
+
+  it("tags the picker, the name-match tap and create-anyway as walk-ins when the door is open", () => {
+    const { container } = renderSeatForms(true);
+    const seatForms = [
+      screen.getByRole("button", { name: "Add Avery Diver to the trip" }).closest("form"),
+      screen.getByRole("button", { name: "Nadia Ruiz" }).closest("form"),
+      container.querySelector('input[name="force"]')?.closest("form"),
+    ];
+    for (const form of seatForms) {
+      expect(form?.querySelector('input[name="walkIn"]')).toHaveValue("true");
+    }
+  });
+
+  it("tags nothing when the door is closed", () => {
+    const { container } = renderSeatForms(false);
+    expect(container.querySelectorAll('input[name="walkIn"]')).toHaveLength(0);
+  });
+});
+
+/**
  * **One stack, one gap** (pixel-craft class 5, K-164). Each part brought its
  * own top margin — the status `mt-2`, the search row `mt-4`, the full
  * boat's line `mt-1` — so the space under the roster's "Add a diver" band was

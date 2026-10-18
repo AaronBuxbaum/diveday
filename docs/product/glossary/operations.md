@@ -81,6 +81,16 @@
   timezone" of a UTC column, so the scan over-fetches and the caller filters by shop-local date.
   Twenty-six hours is what a local day can span either side of any instant inside it, plus slack
   for a daylight-saving transition. Never a readiness lens.
+- **Walk-in** — a diver who turns up at the counter for a boat that has not left, seated from the
+  departure door in walk-in mode (`walkIn=true`, entry `walk_in`, activity `seat_added_walk_in`).
+  The mode is a claim from the client and holds only while the boat's **counter window** is open;
+  in it a name is enough (the email is optional) and the seat is told as a walk-in. Every gate is
+  the departure door's own: readiness, admission, waiver and capacity. The old
+  `/trips/[id]/walk-in` page is gone and redirects to the door.
+- **Counter window** — when the counter may still seat a walk-in on a departure
+  (`walkInDoorOpen`, `src/lib/operational-window.ts`): it starts inside the arrivals window and has
+  not sailed (the one departure buffer). The staffer's door and the seat action both ask it, so a
+  typed URL or a stale page cannot seat someone on a boat that has gone.
 - **Counter self-registration** — the shop's QR door at `/s/<slug>/register`: a walk-in puts
   themselves on file **before any booking exists** (issue #1236). The shop prints the QR from
   Settings (`/shop/<slug>/print/counter-card`) and stands it on the counter. The form writes a

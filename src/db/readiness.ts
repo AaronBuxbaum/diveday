@@ -1568,7 +1568,7 @@ export type BookingReadinessDetail = {
    * Carried beside `requirement` rather than pre-merged into it because the two
    * answer different questions: `requirement` is what the shop set on this
    * departure, and callers that state the rule to a diver want the stricter of
-   * the pair (`combineCertRequirements`). The readiness engine already composes
+   * the pair (`unionRequirements`). The readiness engine already composes
    * both; without this, a surface naming the required level off `requirement`
    * alone would understate a gate the site imposes and the engine enforces.
    */

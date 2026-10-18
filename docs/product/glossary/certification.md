@@ -7,7 +7,8 @@
   admission both fold through it, so they cannot disagree about what a trip asks. It is stored as
   `requirementColumns` (`src/db/schema/requirement.ts`) on `dive_sites` and `trip_requirements` and
   edited with one form (`RequirementFields`). A course session's requirement is frozen when the
-  session is created; the departure's waiver and payment gates are not part of it.
+  session is created. Not part of it: the departure's waiver and payment gates, dive counts and depth
+  limits.
 - **Agency** — organization that trains and certifies divers. Major ones: **PADI**, **SSI**,
   **NAUI**, **SDI/TDI**, **RAID**, **CMAS**, **GUE**, **BSAC**, the cave-diving bodies
   **NSS-CDS** and **NACD**, and the technical agency **IANTD**, common issuers of Florida Cavern

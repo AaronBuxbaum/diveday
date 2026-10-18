@@ -22,6 +22,29 @@ function requirement(overrides: Partial<TripRequirement> = {}): TripRequirement 
 const ready: ReadinessResult = { status: "ready", blockers: [] };
 
 describe("buildDiverChecklist", () => {
+  it("never tells a snorkeler or rider their card is verified, since no card is asked of them", () => {
+    for (const type of ["snorkeler", "rider"] as const) {
+      const items = buildDiverChecklist(requirement(), ready, type);
+      expect(items.map((item) => item.category)).toEqual(["waiver", "payment"]);
+    }
+    // A diver still gets the card line, and an unknown type reads as a diver.
+    expect(buildDiverChecklist(requirement(), ready, "diver").map((i) => i.category)).toContain(
+      "certification",
+    );
+    expect(buildDiverChecklist(requirement(), ready).map((i) => i.category)).toContain(
+      "certification",
+    );
+  });
+
+  it("keeps a certification blocker the engine raised, whoever it is raised for", () => {
+    const items = buildDiverChecklist(
+      requirement(),
+      { status: "blocked", blockers: [{ code: "certification_missing" }] },
+      "snorkeler",
+    );
+    expect(items.map((item) => item.category)).toContain("certification");
+  });
+
   it("shows only the categories this trip requires", () => {
     const items = buildDiverChecklist(
       requirement({ minimumCertificationLevel: null, requiresPayment: false }),

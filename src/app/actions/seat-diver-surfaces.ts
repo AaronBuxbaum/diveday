@@ -59,10 +59,11 @@ export type SeatSurface = {
   entry: SeatDiverEntry;
   refusals: SeatDiverRefusalDetail;
   /**
-   * Whether hand entry demands an email address. Optional is the counter's
-   * rule (`people.email` is nullable precisely for the diver who just walked
-   * up); the trip roster keeps asking for one, because a diver added there is
-   * usually being set up for a waiver and a confirmation.
+   * Whether hand entry demands an email address. A diver added from a
+   * departure is usually being set up for a waiver and a confirmation, so that
+   * door asks for one, except in walk-in mode: the counter's rule is that a
+   * name is enough (`people.email` is nullable precisely for the diver who
+   * just walked up). The diver's own record never asks.
    */
   email: "required" | "optional";
   /** Where a seated diver lands. */
@@ -191,7 +192,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
    * add-diver form and the signed `?gate=` sentence both live.
    *
    * The counter is a mode of this door: a name on its own is enough (so the
-   * email is optional everywhere on it, `people.email` being nullable for the
+   * email is optional in walk-in mode, `people.email` being nullable for the
    * diver who just walked up), and the seat is told as a walk-in. It used to
    * be a page of its own, and before that spoke a deliberately blunt three-code
    * vocabulary (`refusals: "coarse"`); naming the reason ("This boat is full")
@@ -200,7 +201,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
   departure: {
     entry: "roster",
     refusals: "specific",
-    email: "optional",
+    email: "required",
     seatedPath: tripPath,
     refusedPath: tripPath,
     gateScope: ({ tripId }) => (tripId ? { kind: "trip", id: tripId } : null),

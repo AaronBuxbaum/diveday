@@ -22,7 +22,6 @@ import {
   NO_REQUIREMENT,
   type Requirement,
   requirementOrNull,
-  serializeRequirement,
   unionRequirements,
 } from "./requirement";
 import { type ReleaseLapse, type WaiverStateFields, waiverState } from "./waivers";
@@ -110,22 +109,6 @@ export type CertRequirementSource = Requirement;
 
 /** A dive site's inherent cert gate, composed into every trip that visits it. */
 export type SiteCertRequirement = Requirement;
-
-/**
- * The gate a diver is actually held to on a trip: the stricter minimum level,
- * the union of specialties, and nitrox if either the trip or its dive site
- * demands it.
- */
-export function combineCertRequirements(
-  requirement: CertRequirementSource,
-  site: SiteCertRequirement | null | undefined,
-): {
-  minimumCertificationLevel: CertificationLevel | null;
-  requiredSpecialties: DiveSpecialty[];
-  requiresNitrox: boolean;
-} {
-  return serializeRequirement(unionRequirements(requirement, site));
-}
 
 /**
  * The single gate a trip's *whole* itinerary imposes: every site it visits

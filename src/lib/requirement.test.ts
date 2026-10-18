@@ -7,12 +7,7 @@ import type {
   TripRequirement,
 } from "@/db/schema";
 import { ranksBelow } from "./last-minute-list";
-import {
-  type CertificationLevel,
-  calculateReadiness,
-  combineCertRequirements,
-  combineSiteRequirements,
-} from "./readiness";
+import { type CertificationLevel, calculateReadiness, combineSiteRequirements } from "./readiness";
 import { buildDiverChecklist } from "./readiness-summary";
 import {
   NO_REQUIREMENT,
@@ -180,9 +175,6 @@ describe("unionRequirements", () => {
       for (const site of [null, ...ALL_REQUIREMENTS]) {
         const expected = oldCombine(trip, site);
         expect(unionRequirements(trip, site), JSON.stringify({ trip, site })).toEqual(expected);
-        expect(combineCertRequirements(trip, site), JSON.stringify({ trip, site })).toEqual(
-          expected,
-        );
       }
     }
   });

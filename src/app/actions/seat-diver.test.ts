@@ -241,6 +241,16 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     );
   });
 
+  it("still asks a roster hand entry for an email when it is not a walk-in", async () => {
+    const data = new FormData();
+    data.set("tripId", TRIP_ID);
+    data.set("fullName", "Dana Walker");
+    await expect(seatNewDiverAction("departure", "blue-mantis", data)).rejects.toThrow(
+      `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-seat-invalid`,
+    );
+    expect(seatDiver).not.toHaveBeenCalled();
+  });
+
   it("does not read the claim on a roster seat, which has no counter to close", async () => {
     vi.mocked(getTripWithBooked).mockResolvedValue(boatAt(-3));
     vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason: "trip_unavailable" } as never);

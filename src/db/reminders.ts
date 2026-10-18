@@ -576,7 +576,7 @@ export async function sendDueReminders(
     // first: the rhythm rule (issue #1177) decides on it whether this sends.
     const evidence = readinessByBooking.get(booking.id);
     const checklist = evidence
-      ? buildDiverChecklist(evidence.requirement, evidence.readiness)
+      ? buildDiverChecklist(evidence.requirement, evidence.readiness, booking.participantType)
       : null;
     // A course student's learning materials ride the week-out nudge until a
     // staffer marks them done (ADR 20261008-course-learning-materials). They

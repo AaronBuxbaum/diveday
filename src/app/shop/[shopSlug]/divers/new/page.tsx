@@ -301,7 +301,7 @@ export default async function NewDiverPage({
           // A wait-list entry is the one departure form that needs a way to
           // reach the diver when the seat opens.
           email={
-            isWaitlist || (surface && SEAT_SURFACES[surface].email === "required")
+            isWaitlist || (surface && !walkIn && SEAT_SURFACES[surface].email === "required")
               ? "required"
               : "optional"
           }

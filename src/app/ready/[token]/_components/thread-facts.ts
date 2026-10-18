@@ -7,6 +7,7 @@ import type { DiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatTime } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
+import { isDiver } from "@/lib/participant-types";
 import { buildDiverChecklist } from "@/lib/readiness-summary";
 import { nitroxCardWanted } from "@/lib/rentals";
 import { unionRequirements } from "@/lib/requirement";
@@ -62,7 +63,7 @@ export function readyThreadFacts(data: ReadyPageData, tripOnRecord: boolean, loc
   // 20261007-participant-types), as `getReadyPageData` read it.
   const fullPriceCents = tripOnRecord ? data.trip.seatPriceCents : null;
 
-  const items = buildDiverChecklist(detail.requirement, detail.readiness);
+  const items = buildDiverChecklist(detail.requirement, detail.readiness, data.participantType);
   /**
    * **A balance nobody named.** "There's a balance to settle" is the one step
    * on this spine whose whole subject is a number, and it carried none — the
@@ -85,7 +86,7 @@ export function readyThreadFacts(data: ReadyPageData, tripOnRecord: boolean, loc
   /**
    * The rung this departure actually demands — the stricter of what the shop
    * set on the trip and what the sites it visits impose
-   * (`combineCertRequirements`, the same fold the readiness engine gates on).
+   * (`unionRequirements`, the same fold the readiness engine gates on).
    *
    * Named on the certification step (issue 627) because "we still need your
    * certification card" never said *which* card, and a diver holding Open Water
@@ -93,9 +94,10 @@ export function readyThreadFacts(data: ReadyPageData, tripOnRecord: boolean, loc
    * the thing standing between them and the boat. Null when the departure gates
    * on specialties or nitrox but no level, which is a real shape.
    */
-  const requiredLevel = detail.requirement
-    ? unionRequirements(detail.requirement, detail.siteRequirement).minimumCertificationLevel
-    : null;
+  const requiredLevel =
+    detail.requirement && isDiver(data.participantType)
+      ? unionRequirements(detail.requirement, detail.siteRequirement).minimumCertificationLevel
+      : null;
   // A rental fit is on file — the diver has answered the gear question at least
   // once, whatever they answered. "Bringing my own" is a complete answer, so
   // this asks whether the question was answered, never whether anything was

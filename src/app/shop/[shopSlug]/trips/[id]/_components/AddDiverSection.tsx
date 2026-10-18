@@ -131,6 +131,7 @@ export function AddDiverSection({
                   <form action={addExistingDiverAction} className="inline">
                     <input type="hidden" name="tripId" value={tripId} />
                     <input type="hidden" name="personId" value={match.id} />
+                    {walkInOpen ? <input type="hidden" name="walkIn" value="true" /> : null}
                     {/* A tap here came off a name match, so the booking is
                         told the name it matched on: the prompt fires on an
                         exact spelling too, and only the comparison says whether
@@ -163,6 +164,7 @@ export function AddDiverSection({
               <input type="hidden" name="email" value={confirmEmail} />
               <input type="hidden" name="phone" value={confirmPhone} />
               <input type="hidden" name="force" value="true" />
+              {walkInOpen ? <input type="hidden" name="walkIn" value="true" /> : null}
               <SubmitButton
                 pendingLabel={t("seatDiver.adding")}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
@@ -211,6 +213,7 @@ export function AddDiverSection({
                     candidates,
                     tripId,
                     seatAction: addExistingDiverAction,
+                    walkIn: walkInOpen,
                     invite: inviteAction
                       ? {
                           action: inviteAction,

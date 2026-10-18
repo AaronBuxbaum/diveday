@@ -89,9 +89,9 @@ export type LastMinuteRecipientLevel = {
 
 /**
  * The departure's own gate: the trip's requirement folded with every dive site
- * it visits (`combineCertRequirements`), which is the same effective gate
- * admission and readiness enforce. Null when the trip has no requirements row
- * at all.
+ * it visits (`unionRequirements`), which is the same effective gate
+ * admission and readiness enforce. A trip with no requirements row has no bar
+ * here: callers pass null, and the type itself is never null.
  *
  * The whole shape rather than the minimum level alone, because one recipient —
  * the joiner who says they hold no card — can be below a *card* requirement
@@ -306,7 +306,7 @@ export function filterEligibleLastMinuteRecipients<T extends LastMinuteRecipient
  *
  * **Only the ladder is compared, for everybody who is on it.** `requirement` is
  * the departure's effective gate — its own bar folded with every dive site it
- * visits (`combineCertRequirements`). A required specialty or nitrox card does
+ * visits (`unionRequirements`). A required specialty or nitrox card does
  * not *order*, so it can never make one level "below" another, and the panel
  * says in words that it cannot speak to those cards.
  *
