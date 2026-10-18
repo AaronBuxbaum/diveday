@@ -42,6 +42,7 @@ import {
   hasVerifiedCertificationAtLeast,
 } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
+import type { TrainingDiveCourse } from "@/lib/training-mark";
 import {
   decideTripAdmission,
   type SelfDeclaration,
@@ -90,6 +91,7 @@ import {
 import { lockSeatDeparture } from "./seat-locks";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
+import { markableTrainingDives } from "./training-mark-resolve";
 import { dropTrainingMarkWithin } from "./training-marks";
 import { type SendRescheduleNoticesOptions, sendMissedRescheduleNotice } from "./trip-rescheduled";
 import { liveTrip } from "./trips-live";
@@ -639,6 +641,30 @@ export async function tripCourseCrewCounts(
 }
 
 /**
+ * **How many students this departure's course crew may seat**, the one measure
+ * the wait-list join and the roll read (issue #2679): null when the departure
+ * is no course session or its course carries no ratio, 0 when no instructor is
+ * rostered (the sale refuses `course_unstaffed`), otherwise
+ * `courseSeatCapacity` over the rostered crew. The sale reads the same parts
+ * inside its own lock in `createBookingRecord`, which needs the course row for
+ * its enrollment gates as well.
+ */
+export async function courseStudentSeatCap(
+  tx: DbExecutor,
+  trip: { id: string; shopId: string; courseId: string | null },
+): Promise<number | null> {
+  if (!trip.courseId) return null;
+  const [course] = await tx
+    .select()
+    .from(courses)
+    .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, trip.shopId)))
+    .limit(1);
+  const { instructorCount, assistantCount } = await tripCourseCrewCounts(tx, trip.id);
+  if (instructorCount === 0) return 0;
+  return courseSeatCapacity(course ?? null, instructorCount, assistantCount);
+}
+
+/**
  * The trip's *own* certification/specialty/nitrox gate, read for one diver
  * (DOM-M6). Composes the trip's requirement row with every dive site the
  * itinerary visits, exactly as readiness does, then asks
@@ -714,6 +740,7 @@ export async function tripAdmissionFor(
       ? {
           ...(await readCertificationEvidence(tx, shopId, person.id)),
           levelsInTraining: await levelsInTrainingBefore(tx, shopId, person.id, tripId),
+          trainingDives: await trainingDivesOn(tx, shopId, person.id, tripId),
         }
       : NO_EVIDENCE;
   // A declaration about a person whose identity did not match is not about
@@ -749,6 +776,26 @@ async function levelsInTrainingBefore(
     () => listCourseSeatsInTraining(tx, shopId, [personId]),
   ]);
   return trip ? inTrainingBefore(seats, trip, nowDate()).map((course) => course.level) : [];
+}
+
+/**
+ * The courses a staff training mark could make this departure answer to,
+ * with room for the seat under an instructor of the course aboard
+ * (`markableTrainingDives`, issue #2731). Admission sells on them; readiness
+ * waits for the mark.
+ */
+async function trainingDivesOn(
+  tx: DbExecutor,
+  shopId: string,
+  personId: string,
+  tripId: string,
+): Promise<TrainingDiveCourse[]> {
+  const [trip] = await tx
+    .select({ id: trips.id, startsAt: trips.startsAt })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  return trip ? markableTrainingDives(tx, shopId, personId, trip) : [];
 }
 
 /** What a diver this shop knows nothing about has on file — and what an unread evidence lookup stands in for. */
@@ -1073,6 +1120,9 @@ async function createBookingRecord(
   }
   const admissionAdvisory = admission.admitted ? undefined : admission.refusal;
 
+  // A seat with no email of its own inserts a fresh person (`noEmailPersonRow`),
+  // which this booking then stamps as its own (issue #2665).
+  const madeByThisSeat = !person && pendingInsert !== null && !pendingInsert.email;
   if (!person && pendingInsert) {
     ({ person, identityUnconfirmed, identityClaim } = await writeWalkIn(tx, req, pendingInsert));
   }
@@ -1080,7 +1130,7 @@ async function createBookingRecord(
   // the walk-in path always has a pendingInsert. Guards the non-null uses below.
   if (!person) return { ok: false, reason: "person_not_found" };
 
-  return writeSeat(tx, {
+  const outcome = await writeSeat(tx, {
     req,
     trip,
     person,
@@ -1090,6 +1140,19 @@ async function createBookingRecord(
     admissionAdvisory,
     pending,
   });
+  if (madeByThisSeat && outcome.ok) {
+    await tx
+      .update(people)
+      .set({ createdByBookingId: outcome.bookingId })
+      .where(
+        and(
+          eq(people.id, person.id),
+          eq(people.shopId, req.shopId),
+          isNull(people.createdByBookingId),
+        ),
+      );
+  }
+  return outcome;
 }
 
 /**

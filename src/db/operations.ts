@@ -534,6 +534,8 @@ type OtherTripActivityEntry =
         | "incident_draft_discarded"
         | "incident_legal_hold_set"
         | "incident_legal_hold_released"
+        | "missing_diver_alert_raised"
+        | "missing_diver_found"
         | "departure_note_sent";
     };
 

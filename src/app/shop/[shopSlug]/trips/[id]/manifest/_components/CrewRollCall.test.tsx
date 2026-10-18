@@ -71,7 +71,7 @@ function renderCrew({
       timezone="America/New_York"
       crewRollCallAction={vi.fn(async () => ({ ok: true }) as const)}
       crewRollCallButtonCopy={{ errorRefusal: "Try again", blockedMessage: "Blocked" }}
-      startMissingReport={startMissingReport}
+      missingDiver={{ startMissingDiverReport: startMissingReport }}
       buddyTeamLabel={() => null}
       t={t}
     />,

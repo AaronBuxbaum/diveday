@@ -889,7 +889,13 @@
   narrative beside it. Filing a report of kind **missing diver** is also an alarm: it emails every
   active owner and pushes the manifest's followers at once, naming no one (H-142,
   `sendMissingDiverAlerts`), and the filed report says when the owners were alerted or that they
-  were not reached yet. Kept seven years from the incident; erasing a diver removes their identity
+  were not reached yet. The roll-call row's **"Missing diver, alert owners now"** sends the same
+  alert before the report is written, raising its draft, which is then never deleted, and says
+  "Not reached yet. Call the owners now." unless the alert reached someone. **Found**, on the
+  report or on the row once the roll call has them back aboard (any of the departure's crew), is
+  refused while the roll call still says not back aboard; it sends the owners one all-clear by
+  email that counts, without names, anyone else on the departure still reported missing (issue
+  #2694). Marked not aboard again after Found, a raise opens a new report and alerts again. Kept seven years from the incident; erasing a diver removes their identity
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Legal hold** (on an **incident report**) — an owner-set flag that keeps a report past its
@@ -1330,7 +1336,16 @@
   Checked again at every read: a mark whose enrollment is canceled, held or moved is the
   `training_mark_invalid` blocker until staff clear it. Clearing one with forms still owed takes a
   manager or the enrollment's own instructor, and the manifest names who did. **A training mark is
-  not In training**: it changes boarding only, and buying a seat never reads it.
+  not In training**: it changes boarding only, and buying a seat never reads it. A mark that
+  stands lowers the departure's or site's level to the course's minimum, and only when the course
+  certifies that level: a course with no minimum (Open Water) asks no card for a level it
+  certifies; never past it, never for an intro session or a course that certifies none (issue
+  #2731). It needs the course's own instructor aboard, rostered by somebody else and not counted
+  off at the dock, and the seat within the course's ratio: marked seats are counted per instructor
+  across every session on the departure, a certified assistant raising the cap as on the session.
+  A course with no known ratio never lowers a level, so the departure's level stands and the row
+  warns. The sale, which cannot see a mark not yet made, sells on the same course seat under the
+  same rule.
 - **Counter hand-off** — signing several students' **Course forms** one at a time on one shop
   device, each on a single-use staff-issued link, with the page dead-ending after each signature
   (ADR 20261012-course-forms-on-charters-and-counter, decision 2). Designed, not built yet.

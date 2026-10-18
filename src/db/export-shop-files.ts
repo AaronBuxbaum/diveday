@@ -500,6 +500,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // system should read every other cell on the row — a name and a
       // level nobody has sighted — so it travels with them.
       "self_registered_at",
+      // The seat that made this record, when a name-only seat did (#2665):
+      // provenance, like the row above.
+      "created_by_booking_id",
       "deleted_at",
       // Erasure travels with the bundle (ADR 20260802-diver-data-erasure).
       // Every identifying column above is already blank for such a row, so
@@ -540,6 +543,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.drysuitExperienceSeenByPersonId,
         row.drysuitExperienceSeenNote,
         row.selfRegisteredAt,
+        row.createdByBookingId,
         row.deletedAt,
         row.anonymizedAt,
         row.anonymizedByPersonId,
@@ -1712,6 +1716,14 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "deleted_at",
       "deleted_by_person_id",
       "deleted_by_name",
+      "missing_alert_raised_at",
+      "missing_alert_raised_by_person_id",
+      "missing_alert_raised_by_name",
+      "missing_alert_sent_at",
+      "missing_found_at",
+      "missing_found_by_person_id",
+      "missing_found_by_name",
+      "missing_all_clear_sent_at",
     ],
     rows: ({ personName, tripTitle, tripStartsAt, incidentReportRows }) =>
       incidentReportRows.map((row) => [
@@ -1745,6 +1757,14 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.deletedAt,
         row.deletedByPersonId,
         row.deletedByPersonId ? personName.get(row.deletedByPersonId) : null,
+        row.missingAlertRaisedAt,
+        row.missingAlertRaisedByPersonId,
+        row.missingAlertRaisedByPersonId ? personName.get(row.missingAlertRaisedByPersonId) : null,
+        row.missingAlertSentAt,
+        row.missingFoundAt,
+        row.missingFoundByPersonId,
+        row.missingFoundByPersonId ? personName.get(row.missingFoundByPersonId) : null,
+        row.missingAllClearSentAt,
       ]),
     note: EXPORT_FILE_NOTES["incident_reports.csv"],
   },

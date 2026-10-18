@@ -1,13 +1,18 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
-import { bookings, people, shops, tripWaitlistEntries } from "./schema";
+import { createBooking } from "./bookings";
+import { bookings, courses, people, shops, tripWaitlistEntries } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
 import {
+  createTrip,
   getTripRoster,
   getTripWaitlist,
   getTripWithBooked,
   getWaitlistEntryForTrip,
+  listStaff,
+  setTripCrew,
   upcomingTripsWithCounts,
 } from "./trips";
 import { inviteWaitlistDiver, joinTripWaitlist, recordWaitlistInvite } from "./waitlist";
@@ -345,5 +350,98 @@ describe("getTripWaitlist / getWaitlistEntryForTrip cross-tenant isolation (CR-0
 
     // shop's own session still can, unaffected by the other shop existing.
     expect(await getWaitlistEntryForTrip(db, shop.id, fullTrip.id, joined.entryId)).not.toBeNull();
+  });
+});
+
+/**
+ * **A course session full at its instructor ratio takes the wait list**
+ * (issue #2679). The sale refuses a student beyond the ratio
+ * (`course_ratio_full`) while hull seats stand empty, so a join that measured
+ * hull seats alone answered "there is room, book it" and the diver was bounced
+ * between two doors. The join now measures a seat the way the sale and the
+ * roll's `invitableSeats` do.
+ *
+ * Discover Scuba is PADI's 2:1 intro ratio (HD-6); 180 days out keeps the
+ * seeded instructor's calendar clear, as in `bookings.test.ts`.
+ */
+describe("joinTripWaitlist on a ratio-full course session (issue #2679)", () => {
+  const OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
+
+  async function introSession() {
+    const { db, shop } = ctx;
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Discover Scuba Diving")));
+    if (!course) throw new Error("Discover Scuba Diving course missing");
+    const instructor = (await listStaff(db, shop.id)).find((entry) =>
+      entry.roles.includes("instructor"),
+    );
+    if (!instructor) throw new Error("seeded instructor missing");
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Discover Scuba — wait list",
+      startsAt: new Date(nowMs() + OFFSET_MS),
+      endsAt: new Date(nowMs() + OFFSET_MS + 4 * 60 * 60 * 1000),
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("intro session not created");
+    if (!(await setTripCrew(db, shop.id, trip.id, [instructor.person.id]))) {
+      throw new Error("instructor not assigned");
+    }
+    return trip;
+  }
+
+  async function student(tripId: string, name: string) {
+    const outcome = await createBooking(ctx.db, {
+      actor: "staff",
+      shopId: ctx.shop.id,
+      tripId,
+      fullName: name,
+      email: `${name.toLowerCase().replace(/\W+/g, "-")}@example.com`,
+    });
+    if (!outcome.ok) throw new Error(`setup booking refused: ${outcome.reason}`);
+  }
+
+  it("takes a join once the ratio is full, though hull seats stand empty", async () => {
+    const trip = await introSession();
+    await student(trip.id, "Ada First");
+    await student(trip.id, "Bea Second");
+    // The sale is closed on the ratio...
+    expect(
+      await createBooking(ctx.db, {
+        actor: "public",
+        shopId: ctx.shop.id,
+        tripId: trip.id,
+        ...visitor,
+      }),
+    ).toMatchObject({ ok: false, reason: "course_ratio_full" });
+    // ...so the wait list is open.
+    expect(
+      await joinTripWaitlist(ctx.db, { shopId: ctx.shop.id, tripId: trip.id, ...visitor }),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("takes a party of two that the ratio cannot seat beside the others", async () => {
+    const trip = await introSession();
+    await student(trip.id, "Ada First");
+    expect(
+      await joinTripWaitlist(ctx.db, {
+        shopId: ctx.shop.id,
+        tripId: trip.id,
+        ...visitor,
+        partySize: 2,
+      }),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("still sends a diver to book while the ratio has room", async () => {
+    const trip = await introSession();
+    await student(trip.id, "Ada First");
+    expect(
+      await joinTripWaitlist(ctx.db, { shopId: ctx.shop.id, tripId: trip.id, ...visitor }),
+    ).toEqual({ ok: false, reason: "trip_available" });
   });
 });

@@ -13,14 +13,14 @@ import { formatShortDate } from "@/lib/format";
  * forms. Only on a departure that is not a course session.
  *
  * Marked, the row says for which course, warns when the mark no longer fits
- * its course seat or no instructor is on the crew, and offers the clear. Not
+ * its course seat or the course's instructor is not on the crew (the seat then
+ * keeps the departure's own level, issue #2731), and offers the clear. Not
  * marked, it offers the diver's course seats the writer would accept. A mark
  * cleared while forms were owed stays named, as the manifest names it.
  */
 export function TrainingMarkControl({
   bookingId,
   training,
-  instructorRostered,
   markAction,
   clearAction,
   locale,
@@ -29,7 +29,6 @@ export function TrainingMarkControl({
 }: {
   bookingId: string;
   training: TrainingMarkRosterSeat;
-  instructorRostered: boolean;
   markAction: ((formData: FormData) => void) | undefined;
   clearAction: ((formData: FormData) => void) | undefined;
   locale: string;
@@ -59,7 +58,7 @@ export function TrainingMarkControl({
               {t("trips.roster.trainingMark.marked", { course: mark.courseTitle ?? "" })}
             </p>
           ) : null}
-          {mark.valid && !instructorRostered ? (
+          {mark.valid && !mark.courseInstructorAboard ? (
             <p className="flex items-baseline gap-2 text-sm text-warning-strong">
               <StatusMarkColumn variant="warning" />
               <span>{t("trips.roster.trainingMark.noInstructor")}</span>

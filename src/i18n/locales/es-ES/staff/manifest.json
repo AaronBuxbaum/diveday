@@ -131,7 +131,7 @@
   "trainingMarkCleared": "{hasName, select, yes {{name} quitó la marca de formación con formularios del curso sin firmar} other {Se quitó la marca de formación con formularios del curso sin firmar}}",
   "trainingMarkClearedInvalid": "{hasName, select, yes {{name} quitó la marca de formación cuando ya no correspondía a su plaza del curso} other {Se quitó la marca de formación cuando ya no correspondía a su plaza del curso}}",
   "trainingDive": "Inmersión de formación para {course}",
-  "trainingDiveNoInstructor": "No hay ningún instructor en la tripulación de este barco",
+  "trainingDiveNoInstructor": "Ningún instructor del curso a bordo para esta plaza",
   "medicalEarlierRefusalChip": "Rechazo médico previo",
   "medicalReferralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada",
   "medicalHoldNotClearedChip": "Sin autorización médica",

@@ -24,7 +24,7 @@ import {
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
-import type { TrainingMarkState } from "@/lib/training-mark";
+import { type TrainingMarkState, trainingDiveLevel } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
 import {
   effectiveReleaseForRiderSeat,
@@ -1661,6 +1661,7 @@ function markedSeatsOf(
     const trip = courseByTrip.get(booking.tripId);
     seats.push({
       bookingId: booking.id,
+      tripId: booking.tripId,
       enrollmentBookingId: booking.trainingEnrollmentBookingId,
       seat: {
         personId: person.id,
@@ -2063,6 +2064,9 @@ export async function listTripsReadiness(
           participantPriceCents(courseRow, row.booking.participantType) === 0,
         courseForms,
         trainingMarkInvalid: trainingMark !== undefined && !trainingMark.valid,
+        // A standing mark with the course's instructor aboard takes the
+        // course's own minimum level (issue #2731).
+        trainingDive: trainingDiveLevel(trainingMark),
         now,
       }),
     };

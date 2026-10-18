@@ -192,6 +192,12 @@ type ActivityParamShapes = {
   incident_draft_discarded: { actor: string };
   incident_legal_hold_set: { actor: string };
   incident_legal_hold_released: { actor: string };
+  /**
+   * "Missing diver, alert owners now" from the roll call, and the diver found
+   * (issue #2694). The actor only, as for the report itself.
+   */
+  missing_diver_alert_raised: { actor: string };
+  missing_diver_found: { actor: string };
   /** A staffer seated a diver. */
   seat_added: { actor: string; diver: string };
   /** …as a walk-in, which is the same act with a different story behind it. */
@@ -485,6 +491,8 @@ export const ACTIVITY_CODES = [
   "incident_draft_discarded",
   "incident_legal_hold_set",
   "incident_legal_hold_released",
+  "missing_diver_alert_raised",
+  "missing_diver_found",
   "seat_added",
   "seat_added_walk_in",
   "seat_added_from_trip_link",

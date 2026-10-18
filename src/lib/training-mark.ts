@@ -1,3 +1,6 @@
+import type { CertificationLevel } from "./certification-levels";
+import { type CourseRatioRule, courseRatioCapacity } from "./course-ratios";
+import { countInWaterCrew, inWaterCrewRole, type TripCrewAssignment } from "./crew-roles";
 import type { ParticipantType } from "./participant-types";
 import { isDiver } from "./participant-types";
 
@@ -96,5 +99,171 @@ export type TrainingMarkState =
       enrollmentMinorDeclared: boolean;
       /** The course the dive counts toward, as the manifest names it. */
       enrollmentCourseTitle: string;
+      /**
+       * What the course says about levels, or `undefined` when the course row
+       * could not be read: then the seat never takes the course's level
+       * (issue #2731), it keeps the charter's.
+       */
+      enrollmentCourse: TrainingDiveCourse | undefined;
+      /**
+       * An instructor of the enrollment's session is aboard this seat's
+       * departure for it (issue #2731; review 2026-10-17): rostered as the
+       * instructor on both by someone else, not counted off the boat at the
+       * crew count, and this seat within the course ratio of those aboard.
+       */
+      courseInstructorAboard: boolean;
     }
   | { valid: false; problem: TrainingMarkProblem };
+
+/** One person on a departure's crew, as `groupCrewAssignments` folds them. */
+export type CrewMember = TripCrewAssignment & { personId: string };
+
+/**
+ * **The course's instructors aboard** (issue #2731): the people who count as
+ * the instructor in the water on the enrollment's session and on this
+ * departure too, read the way the session's own ratio reads them
+ * (`inWaterCrewRole`). A captain, a deckhand or a divemaster slot does not
+ * count on either side, nor does an instructor of some other course. The
+ * caller hands in only crew it can trust (review 2026-10-17): rostered by
+ * someone else, and not counted off the boat at the departure's crew count.
+ */
+export function courseInstructorsAboard(
+  sessionCrew: readonly CrewMember[],
+  departureCrew: readonly CrewMember[],
+): number {
+  return courseInstructorIdsAboard(sessionCrew, departureCrew).length;
+}
+
+/** Who `courseInstructorsAboard` counts, by person. */
+export function courseInstructorIdsAboard(
+  sessionCrew: readonly CrewMember[],
+  departureCrew: readonly CrewMember[],
+): string[] {
+  const teaches = new Set(
+    sessionCrew
+      .filter((member) => inWaterCrewRole(member) === "instructor")
+      .map((member) => member.personId),
+  );
+  return departureCrew
+    .filter((member) => teaches.has(member.personId) && inWaterCrewRole(member) === "instructor")
+    .map((member) => member.personId);
+}
+
+/** A marked seat or a candidate for the room: its session, and the ratio of that course, if any. */
+export type TrainingRoomSeat = {
+  id: string;
+  sessionTripId: string;
+  /** Null when the course has no ratio we know: the seat is never seated (fail closed). */
+  rule: CourseRatioRule | null;
+};
+
+/**
+ * **Who a departure's instructors can supervise as training dives** (review
+ * 2026-10-17). The marked seats of every course session on one departure share
+ * the same instructors, so each instructor's load is counted across sessions,
+ * never per session. Seats are taken oldest mark first; each goes to an
+ * instructor aboard for its session who still has room under its course's
+ * ratio. A certified assistant aboard the departure raises the cap, as it does
+ * on the session itself (`countInWaterCrew`), shared out evenly and rounded
+ * down: it may seat fewer than the session would, never more. A seat whose
+ * course has no known ratio is never seated.
+ */
+function seatTrainingRoom(
+  seats: readonly TrainingRoomSeat[],
+  sessionCrew: ReadonlyMap<string, readonly CrewMember[]>,
+  departureCrew: readonly CrewMember[],
+): Set<string> {
+  const aboardFor = (sessionTripId: string) =>
+    courseInstructorIdsAboard(sessionCrew.get(sessionTripId) ?? [], departureCrew);
+  const instructors = new Set(seats.flatMap((seat) => aboardFor(seat.sessionTripId)));
+  const { assistantCount } = countInWaterCrew(departureCrew);
+  const load = new Map<string, number>();
+  const seated = new Set<string>();
+  for (const seat of seats) {
+    if (!seat.rule || instructors.size === 0) continue;
+    const cap = Math.floor(
+      courseRatioCapacity(seat.rule, instructors.size, assistantCount) / instructors.size,
+    );
+    const taker = aboardFor(seat.sessionTripId).find((personId) => (load.get(personId) ?? 0) < cap);
+    if (taker === undefined) continue;
+    load.set(taker, (load.get(taker) ?? 0) + 1);
+    seated.add(seat.id);
+  }
+  return seated;
+}
+
+/**
+ * The marked seats of one departure within the room its instructors have, and
+ * (with a `candidate`) whether one more seat of that course would fit without
+ * unseating a seat already marked.
+ */
+export function trainingRoom(input: {
+  marked: readonly TrainingRoomSeat[];
+  candidate?: TrainingRoomSeat;
+  sessionCrew: ReadonlyMap<string, readonly CrewMember[]>;
+  departureCrew: readonly CrewMember[];
+}): { seated: ReadonlySet<string>; spare: boolean } {
+  const { marked, candidate, sessionCrew, departureCrew } = input;
+  const seated = seatTrainingRoom(marked, sessionCrew, departureCrew);
+  if (!candidate) return { seated, spare: false };
+  const withCandidate = seatTrainingRoom([...marked, candidate], sessionCrew, departureCrew);
+  const spare =
+    withCandidate.has(candidate.id) &&
+    marked.every((seat) => withCandidate.has(seat.id) === seated.has(seat.id));
+  return { seated, spare };
+}
+
+/** The ladder's order, as `certificationRank` (./readiness.ts) reads it; kept here so this module imports no gate. */
+const RANK: Record<CertificationLevel, number> = {
+  open_water: 1,
+  advanced_open_water: 2,
+  rescue: 3,
+  divemaster: 4,
+  instructor: 5,
+};
+const certificationRank = (level: CertificationLevel) => RANK[level];
+
+/** What a course says about levels, for a marked training dive (issue #2731). */
+export type TrainingDiveCourse = {
+  /** `courses.minimum_certification_level`: what a student must hold to start it. */
+  minimumLevel: CertificationLevel | null;
+  /** `courses.certifies_level`: the card it trains toward; null for none. */
+  certifiesLevel: CertificationLevel | null;
+  /** `courses.is_intro_course`: a Discover Scuba taster. */
+  intro: boolean;
+};
+
+/**
+ * **The level a training dive on this course answers to** (issue #2731;
+ * domain review 2026-10-17). The departure's and its sites' level is lowered
+ * only as far as the course reaches: when that level is at or below the card
+ * the course certifies, the course's own minimum stands in its place, and a
+ * course with no minimum (an Open Water course) asks no card for a level it
+ * certifies. Otherwise, and always for an intro session or a course that
+ * certifies no level, the departure's level stands: the gate is lowered,
+ * never raised. Whether the course has a known ratio is not asked here; a seat
+ * of a course without one is never "within the room" (`trainingRoom`), so
+ * `trainingDiveLevel` never hands it in.
+ */
+export function trainingDiveRequiredLevel(
+  required: CertificationLevel | null,
+  course: TrainingDiveCourse,
+): CertificationLevel | null {
+  if (!required || course.intro || !course.certifiesLevel) return required;
+  if (certificationRank(required) > certificationRank(course.certifiesLevel)) return required;
+  if (!course.minimumLevel) return null;
+  return certificationRank(course.minimumLevel) < certificationRank(required)
+    ? course.minimumLevel
+    : required;
+}
+
+/**
+ * The course a marked training dive answers to (issue #2731, decided by
+ * Aaron 2026-10-17): with the mark standing, the course readable and its
+ * instructor aboard for this seat; otherwise null, and the departure's level
+ * stands. Only the level: a site's specialty or nitrox gate is unchanged.
+ */
+export function trainingDiveLevel(mark: TrainingMarkState | undefined): TrainingDiveCourse | null {
+  if (!mark?.valid || !mark.courseInstructorAboard) return null;
+  return mark.enrollmentCourse ?? null;
+}

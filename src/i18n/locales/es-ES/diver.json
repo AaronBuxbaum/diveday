@@ -5715,6 +5715,11 @@
       "open": "Abrir el reporte",
       "emergency": "Abrir la referencia de emergencia"
     },
+    "incidentMissingDiverFound": {
+      "subject": "{shopName}: encontrado el buceador desaparecido en {tripTitle}",
+      "body": "Se encontró al buceador reportado como desaparecido en {tripTitle}. Marcado como encontrado {when}.",
+      "stillMissing": "{count, plural, one {# persona más sigue reportada como desaparecida en esta salida.} other {# personas más siguen reportadas como desaparecidas en esta salida.}}"
+    },
     "shoreAlertStopped": {
       "subject": "{shopName}: el contacto en tierra dejó los avisos del pase de lista",
       "body": "Tu contacto en tierra usó el enlace de un aviso del pase de lista para dejar de recibirlos. DiveDay no volverá a escribirle salvo que guardes su dirección y la confirme de nuevo.",

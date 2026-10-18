@@ -315,6 +315,8 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "incident_reports.created_by_person_id": "who started the incident report",
   "incident_reports.filed_by_person_id": "who filed the incident report",
   "incident_reports.deleted_by_person_id": "who deleted the unfiled incident draft",
+  "incident_reports.missing_alert_raised_by_person_id": "who alerted the owners from the roll call",
+  "incident_reports.missing_found_by_person_id": "who marked the missing person found",
   "internal_notes.created_by_person_id": "who wrote the note",
   "marine_life_requests.requested_by_person_id": "which staffer asked for the species",
   "nitrox_certifications.deleted_by_person_id": "who removed the card",
@@ -1281,6 +1283,11 @@ export async function mergeDiverRecords(input: {
           emergencyContactName: contactFrom.emergencyContactName,
           emergencyContactPhone: contactFrom.emergencyContactPhone,
           dateOfBirth,
+          // A record that took in another is no longer one a single booking
+          // made, whichever way the merge went: the parent's door
+          // (`seatPersonIsThisBookings`) stays shut for it (security review
+          // 2026-10-17, issue #2665).
+          createdByBookingId: null,
           // A staffer's "18 or older" (H-100) travels as a pair with its author,
           // from whichever record has one, survivor first, and only while no
           // date answers the question instead.

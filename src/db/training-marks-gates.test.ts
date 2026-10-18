@@ -199,6 +199,11 @@ describe("training marks — the gates the build review closed (in-memory PGlite
 
   it("prints the course a marked dive counts toward on the manifest, and that no instructor is aboard", async () => {
     const ctx = await charterContext();
+    // A course with a known ratio (PADI, no minimum); one without has no room.
+    await ctx.db
+      .update(courses)
+      .set({ agency: "padi", minimumCertificationLevel: null, isIntroCourse: false })
+      .where(eq(courses.id, ctx.course.courseId));
     await markSeat(ctx);
     const row = async () =>
       (await getTripManifest(ctx.db, ctx.shop.id, ctx.charter.id))?.divers.find(
@@ -212,10 +217,17 @@ describe("training marks — the gates the build review closed (in-memory PGlite
       courseTitle: course?.title,
       instructorAboard: false,
     });
-    // Read from the crew at read time: rostering one clears the warning.
+    // Read from the crew at read time. An instructor who does not teach the
+    // session is not the course's (issue #2731); once they teach it, they are,
+    // rostered by somebody else (review 2026-10-17).
+    const rostered = { personId: ctx.instructor, tripRole: "instructor" as const };
     await ctx.db
       .insert(tripAssignments)
-      .values({ tripId: ctx.charter.id, personId: ctx.instructor, tripRole: "instructor" });
+      .values({ ...rostered, tripId: ctx.charter.id, assignedByPersonId: ctx.owner });
+    expect((await row())?.trainingDive?.instructorAboard).toBe(false);
+    await ctx.db
+      .insert(tripAssignments)
+      .values({ ...rostered, tripId: ctx.course.tripId, assignedByPersonId: ctx.owner });
     expect((await row())?.trainingDive?.instructorAboard).toBe(true);
     // A mark that no longer stands names no course.
     await cancelBooking(ctx.db, ctx.shop.id, ctx.course.bookingId);

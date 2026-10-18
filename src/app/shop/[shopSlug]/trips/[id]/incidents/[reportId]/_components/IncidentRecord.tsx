@@ -51,17 +51,6 @@ export function IncidentRecord({
   return (
     <SectionCard>
       <dl className="-my-3 divide-y divide-border">
-        {report.ownersAlert ? (
-          <Row label={t("incidents.read.ownersAlerted")}>
-            {report.ownersAlert.sentAt ? (
-              at(report.ownersAlert.sentAt)
-            ) : (
-              <span className="font-semibold text-warning-strong">
-                {t("incidents.read.ownersNotReached")}
-              </span>
-            )}
-          </Row>
-        ) : null}
         <Row label={t("incidents.read.when")}>
           {fields.occurredAt ? at(fields.occurredAt) : notWritten}
         </Row>

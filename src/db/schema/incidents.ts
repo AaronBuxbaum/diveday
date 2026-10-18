@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   index,
@@ -132,8 +133,8 @@ export const incidentReports = pgTable(
      * leaves it stamped, and once it is older than the lease the next pass
      * takes the report again. A send that did not reach every owner gives it
      * back at once. `missing_alert_sent_at` is what says the owners were told
-     * (`sendMissingDiverAlerts`). Null on every other kind, and on a report not
-     * yet filed.
+     * (`sendMissingDiverAlerts`). Null on every other kind, and on a report
+     * neither filed nor raised (issue #2694).
      */
     missingAlertedAt: timestamp("missing_alerted_at", { withTimezone: true }),
     /**
@@ -141,6 +142,43 @@ export const incidentReports = pgTable(
      * sent. Null until then; the report page says "Not reached yet" while it is.
      */
     missingAlertSentAt: timestamp("missing_alert_sent_at", { withTimezone: true }),
+    /**
+     * **"Missing diver, alert owners now"** from the roll-call row (issue
+     * #2694, decided by Aaron 2026-10-17): the one tap that tells the owners
+     * at once, before the report is filled in. The alert then goes as for a
+     * filed report (`sendMissingDiverAlerts`); the report stays a draft until
+     * someone files it. A raised report is never discarded (CHECK below): the
+     * owners were told about it.
+     */
+    missingAlertRaisedAt: timestamp("missing_alert_raised_at", { withTimezone: true }),
+    missingAlertRaisedByPersonId: uuid("missing_alert_raised_by_person_id").references(
+      () => people.id,
+    ),
+    /**
+     * The raised report's affected person, as its `incident_report_people`
+     * row (review 2026-10-17): the owners were told this person is missing,
+     * so the row cannot be removed while this points at it (the foreign key
+     * refuses), and a raised report always has one (CHECK below). Deleting the
+     * report itself still takes its rows with it.
+     */
+    missingSubjectRowId: uuid("missing_subject_row_id").references(
+      (): AnyPgColumn => incidentReportPeople.id,
+    ),
+    /**
+     * **The diver was found** (issue #2694): recorded once, on a report whose
+     * alert was raised or filed. It stops any alert not yet sent, and sends one
+     * quiet all-clear by email to the owners. Never undone: a diver missing
+     * again is a new disappearance, and a new report.
+     */
+    missingFoundAt: timestamp("missing_found_at", { withTimezone: true }),
+    missingFoundByPersonId: uuid("missing_found_by_person_id").references(() => people.id),
+    /**
+     * The all-clear's claim: stamped before any of its emails, so it goes at
+     * most once whatever happens after. Not proof of a send.
+     */
+    missingAllClearClaimedAt: timestamp("missing_all_clear_claimed_at", { withTimezone: true }),
+    /** When the all-clear's email went to every owner. Null while any did not (or none were sent). */
+    missingAllClearSentAt: timestamp("missing_all_clear_sent_at", { withTimezone: true }),
     /** Who discarded the draft, named beside it on the departure log. */
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
   },
@@ -157,9 +195,45 @@ export const incidentReports = pgTable(
       sql`(${table.deletedAt} is null) = (${table.deletedByPersonId} is null)`,
     ),
     index("incident_reports_shop_occurred_idx").on(table.shopId, table.occurredAt),
+    // The two people FKs a raise and a find add (issue #2694), which erasure
+    // and a merge check against every row.
+    index("incident_reports_raised_by_idx")
+      .on(table.missingAlertRaisedByPersonId)
+      .where(sql`${table.missingAlertRaisedByPersonId} is not null`),
+    index("incident_reports_found_by_idx")
+      .on(table.missingFoundByPersonId)
+      .where(sql`${table.missingFoundByPersonId} is not null`),
     check(
       "incident_reports_only_a_draft_is_discarded",
       sql`${table.deletedAt} is null or ${table.status} = 'draft'`,
+    ),
+    check(
+      "incident_reports_raised_by_whom",
+      sql`(${table.missingAlertRaisedAt} is null) = (${table.missingAlertRaisedByPersonId} is null)`,
+    ),
+    check(
+      "incident_reports_found_by_whom",
+      sql`(${table.missingFoundAt} is null) = (${table.missingFoundByPersonId} is null)`,
+    ),
+    // Only a missing-diver report raises an alert or records a find, and only
+    // a report whose alert was raised or filed is found.
+    check(
+      "incident_reports_missing_only",
+      sql`(${table.missingAlertRaisedAt} is null and ${table.missingFoundAt} is null)
+        or ${table.kind} = 'missing_diver'`,
+    ),
+    check(
+      "incident_reports_found_after_alert",
+      sql`${table.missingFoundAt} is null or ${table.missingAlertRaisedAt} is not null
+        or ${table.status} = 'filed'`,
+    ),
+    check(
+      "incident_reports_raised_names_its_subject",
+      sql`${table.missingAlertRaisedAt} is null or ${table.missingSubjectRowId} is not null`,
+    ),
+    check(
+      "incident_reports_a_raised_report_is_kept",
+      sql`${table.missingAlertRaisedAt} is null or ${table.deletedAt} is null`,
     ),
     check(
       "incident_reports_a_held_report_is_kept",

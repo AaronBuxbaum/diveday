@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
@@ -11,6 +12,9 @@ import {
   type IncidentSubject,
   type IncidentWriteRefusal,
   type MissingSubject,
+  markMissingDiverFound,
+  markMissingSubjectFound,
+  raiseMissingDiverAlert,
   removeIncidentPerson,
   saveIncidentDraft,
   setIncidentLegalHold,
@@ -56,6 +60,7 @@ const REFUSAL_NOTICE: Record<
   already_listed: "already-listed",
   blank: "blank-note",
   held: "held",
+  alerted: "alerted",
 };
 
 const FIELD_NOTICE: Record<IncidentFieldRefusal, string> = {
@@ -137,7 +142,7 @@ export async function startIncidentReportAction(shopSlug: string, tripId: string
 }
 
 /** What "Start a missing diver report" answers in place when it opens nothing. */
-export type MissingReportState = { message: string } | null;
+export type MissingReportState = { message: string; tone?: "success" } | null;
 
 /**
  * **"Start a missing diver report"** on a manifest row marked not back aboard,
@@ -198,6 +203,134 @@ export async function startMissingDiverReportAction(
     shopPath(shopSlug, "trips", tripId),
     `${reportPath(shopSlug, tripId, result.reportId)}?${back}`,
   );
+}
+
+/** A row's posted subject: a diver's seat or a crew member, or null when neither is a uuid. */
+function postedSubject(formData: FormData): MissingSubject | null {
+  const { bookingId, personId } = readForm(missingDiverForm, formData);
+  if (uuidParam(bookingId)) return { kind: "diver", bookingId };
+  if (uuidParam(personId)) return { kind: "crew", personId };
+  return null;
+}
+
+/**
+ * **"Missing diver, alert owners now"** on a manifest row marked not back
+ * aboard (issue #2694): tells the owners at once, apart from the report, and
+ * answers beside the button. It stays on the manifest, since the roll call is
+ * still going; "Start a missing diver report" beside it opens the report the
+ * tap started. It says the owners were alerted only when every owner's email
+ * went (review 2026-10-17); otherwise it says to call them, and the next tap
+ * sends again.
+ */
+export async function raiseMissingDiverAlertAction(
+  shopSlug: string,
+  tripId: string,
+  _previous: MissingReportState,
+  formData: FormData,
+): Promise<MissingReportState> {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const subject = postedSubject(formData);
+  if (!uuidParam(tripId) || !subject) return { message: t("incidents.missingDiver.notMissing") };
+  let result: Awaited<ReturnType<typeof raiseMissingDiverAlert>>;
+  try {
+    result = await raiseMissingDiverAlert(await getDb(), {
+      shopId: shop.id,
+      tripId,
+      subject,
+      actorPersonId: session.user.personId,
+    });
+  } catch {
+    return { message: t("incidents.missingDiver.alertFailed") };
+  }
+  if (!result.ok) {
+    if (result.reason === "not_missing") return { message: t("incidents.missingDiver.notMissing") };
+    return { message: t("incidents.missingDiver.notAllowed") };
+  }
+  revalidatePath(shopPath(shopSlug, "trips", tripId), "layout");
+  if (!result.told) return { message: t("incidents.missingDiver.notReached") };
+  return {
+    tone: "success",
+    message: result.alreadyRaised
+      ? t("incidents.missingDiver.alreadyAlerted")
+      : t("incidents.missingDiver.alerted"),
+  };
+}
+
+/**
+ * **Found from the roll-call row** (review 2026-10-17): for a diver or crew
+ * member marked back aboard whose owners were alerted, the same Found as the
+ * report's, beside the row's roll-call control. Any of the departure's crew.
+ */
+export async function markMissingSubjectFoundAction(
+  shopSlug: string,
+  tripId: string,
+  _previous: MissingReportState,
+  formData: FormData,
+): Promise<MissingReportState> {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  const t = staffTranslator(await requestLocale(shop.defaultLocale));
+  const subject = postedSubject(formData);
+  if (!uuidParam(tripId) || !subject) return { message: t("incidents.missingDiver.notAlerted") };
+  let result: Awaited<ReturnType<typeof markMissingSubjectFound>>;
+  try {
+    result = await markMissingSubjectFound(await getDb(), {
+      shopId: shop.id,
+      tripId,
+      subject,
+      actorPersonId: session.user.personId,
+    });
+  } catch {
+    return { message: t("incidents.missingDiver.foundFailed") };
+  }
+  if (!result.ok) {
+    if (result.reason === "still_missing") {
+      return { message: t("incidents.missingDiver.stillMissing") };
+    }
+    if (result.reason === "not_alerted") return { message: t("incidents.missingDiver.notAlerted") };
+    return { message: t("incidents.missingDiver.notAllowed") };
+  }
+  revalidatePath(shopPath(shopSlug, "trips", tripId), "layout");
+  const done = {
+    sent: "incidents.missingDiver.foundDone",
+    partial: "incidents.missingDiver.foundPartial",
+    skipped: "incidents.missingDiver.foundNoAllClear",
+  } as const;
+  if (result.allClear === null) {
+    return { tone: "success", message: t("incidents.missingDiver.foundAlready") };
+  }
+  return {
+    tone: result.allClear === "sent" ? "success" : undefined,
+    message: t(done[result.allClear]),
+  };
+}
+
+/**
+ * **Found**: on a missing-diver report whose owners were alerted, one quiet
+ * all-clear to the same owners (issue #2694). Refused while the roll call
+ * still has the person not back aboard. A second tap changes nothing.
+ */
+export async function markMissingDiverFoundAction(
+  shopSlug: string,
+  tripId: string,
+  reportId: string,
+) {
+  const { session, shop } = await requireShopSurface(shopSlug);
+  requireIds(tripId, reportId);
+  const back = reportPath(shopSlug, tripId, reportId);
+  const result = await markMissingDiverFound(await getDb(), {
+    shopId: shop.id,
+    reportId,
+    tripId,
+    actorPersonId: session.user.personId,
+  });
+  if (result.ok) settle(back, { ok: true }, "found", "page");
+  // A report never alerted has no "Found" to press: as for one this actor cannot see.
+  if (result.reason === "not_alerted") notFound();
+  if (result.reason === "still_missing") {
+    revalidateAndRedirect(back, noticeUrl(back, "still-missing", { form: "page" }));
+  }
+  settle(back, { ok: false, reason: result.reason }, "found", "page");
 }
 
 /** Save the draft's fields, read as wall-clock times in the shop's zone. */

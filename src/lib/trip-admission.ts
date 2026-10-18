@@ -13,6 +13,7 @@ import {
   combineCertRequirements,
   type SiteCertRequirement,
 } from "./readiness";
+import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-mark";
 
 /**
  * **Can this diver be sold a seat on this trip at all?**
@@ -99,6 +100,14 @@ export type TripAdmissionEvidence = {
    * for the card the instructor issues.
    */
   levelsInTraining?: readonly CertificationLevel[];
+  /**
+   * The courses of this diver's course seats that a staff training mark could
+   * name on this departure, with an instructor of the course aboard it for one
+   * more seat (issue #2731). Readiness lowers the level to such a course's
+   * minimum once staff mark the seat (`trainingDiveRequiredLevel`), so the
+   * sale must not refuse a level that would then clear.
+   */
+  trainingDives?: readonly TrainingDiveCourse[];
 };
 
 /**
@@ -356,11 +365,19 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
     (best, level) => highestOf(best, level),
     heldLevel,
   );
+  const reaches = (level: CertificationLevel | null) =>
+    !level ||
+    (reachedLevel !== null && certificationRank(reachedLevel) >= certificationRank(level));
+  // A course seat a staff mark could make this a training dive for, with the
+  // course's instructor aboard, is a level readiness would clear on (#2731).
+  const asked = effective.minimumCertificationLevel;
   const requiredLevel =
-    effective.minimumCertificationLevel &&
-    (!reachedLevel ||
-      certificationRank(reachedLevel) < certificationRank(effective.minimumCertificationLevel))
-      ? effective.minimumCertificationLevel
+    asked &&
+    !reaches(asked) &&
+    !(evidence.trainingDives ?? []).some((course) =>
+      reaches(trainingDiveRequiredLevel(asked, course)),
+    )
+      ? asked
       : null;
 
   // A card of the right specialty in *any* state clears admission — pending

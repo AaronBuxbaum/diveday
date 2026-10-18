@@ -18,6 +18,7 @@ import {
 } from "./course-forms";
 import { guardianSignatureMissing } from "./guardian";
 import { isDiver, isHeldToMedical, type ParticipantType } from "./participant-types";
+import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-mark";
 import { type ReleaseLapse, type WaiverStateFields, waiverState } from "./waivers";
 
 /**
@@ -598,6 +599,14 @@ export type ReadinessInput = {
    * `courseForms` above instead, keyed on the enrollment's booking.
    */
   trainingMarkInvalid?: boolean;
+  /**
+   * The seat's training mark stands and the course's instructor is aboard
+   * for it (`trainingDiveLevel`, issue #2731): the departure's and its sites'
+   * level is lowered to the course's own minimum only where it is at or below
+   * the card the course certifies (`trainingDiveRequiredLevel`). Absent, the
+   * departure's level stands. Specialty and nitrox gates are unchanged.
+   */
+  trainingDive?: TrainingDiveCourse | null;
   now?: Date;
 };
 
@@ -1153,9 +1162,22 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // A snorkeler or a rider is asked for no card: the trip's and its sites'
   // gates compose to nothing for a seat with no dive in it. Composed here, in
   // the one place every requirement is composed, rather than checked beside it.
-  const effective = isDiver(input.participantType)
+  const composed = isDiver(input.participantType)
     ? combineCertRequirements(input.requirement, input.siteRequirement)
     : combineCertRequirements(NO_CERT_REQUIREMENT, null);
+  // A marked training dive with its course's instructor aboard answers to the
+  // course's own minimum where the course reaches the level asked (issue
+  // #2731). Only ever for a diver; lowered, never removed.
+  const effective =
+    input.trainingDive && isDiver(input.participantType)
+      ? {
+          ...composed,
+          minimumCertificationLevel: trainingDiveRequiredLevel(
+            composed.minimumCertificationLevel,
+            input.trainingDive,
+          ),
+        }
+      : composed;
 
   if (effective.minimumCertificationLevel) {
     const certification = certificationBlocker(

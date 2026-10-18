@@ -23,8 +23,8 @@ own device, as the child's parent or guardian.**
    `openMinorSeatWaiver` (`src/db/seat-claims.ts`) re-reads that the seat is:
    - in this lead's party and shop, and not cancelled
    - unclaimed, declared a minor, and not held (#2125)
-   - a person this booking made: no email (or the lead's), no other booking, no release elsewhere.
-     The record decides, not the email: a merge can point the seat at a known walk-in
+   - a person this booking made (`people.created_by_booking_id`, #2665): no email (or the lead's),
+     no other booking, no release elsewhere. The record decides: a merge can point the seat at a known walk-in
    - neither the seat's person nor the lead removed or erased
    - one the page will ask a guardian for (a date of birth saying adult refuses)
    - still claimable

@@ -354,7 +354,12 @@ describe("filing a report of a missing diver", () => {
     // A draft has told nobody anything.
     expect((await read())?.ownersAlert).toBeNull();
     await fileIncidentReport(db, { ...target, provider: recorder("failed").provider });
-    expect((await read())?.ownersAlert).toEqual({ sentAt: null });
+    expect((await read())?.ownersAlert).toEqual({
+      sentAt: null,
+      foundAt: null,
+      foundByName: null,
+      allClear: null,
+    });
     await sendMissingDiverAlerts(db, { provider: recorder().provider });
     expect((await read())?.ownersAlert?.sentAt).toBeInstanceOf(Date);
   });

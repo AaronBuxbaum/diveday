@@ -3,9 +3,15 @@ import type { TripRequirement, WaiverRecord } from "@/db/schema";
 import { COURSE_FORMS_BLOCK_BOARDING, type RequiredCourseForm } from "./course-forms";
 import { aboardBlockerKind, BLOCKER_CATEGORY, calculateReadiness } from "./readiness";
 import {
+  courseInstructorsAboard,
+  type TrainingDiveCourse,
   type TrainingMarkEnrollment,
   type TrainingMarkSeat,
+  type TrainingMarkState,
+  trainingDiveLevel,
+  trainingDiveRequiredLevel,
   trainingMarkProblem,
+  trainingRoom,
 } from "./training-mark";
 
 const PERSON = "00000000-0000-4000-8000-0000000000a1";
@@ -156,5 +162,227 @@ describe("calculateReadiness — a seat carrying a training mark", () => {
   it("files training_mark_invalid as the desk's setup, and as unknown at the rail", () => {
     expect(BLOCKER_CATEGORY.training_mark_invalid).toBe("setup");
     expect(aboardBlockerKind([{ code: "training_mark_invalid" }])).toBe("unknown");
+  });
+});
+
+describe("courseInstructorsAboard — the course's instructor on this departure (issue #2731)", () => {
+  const teacher = { personId: "teacher", shopRoles: ["instructor"] };
+  const other = { personId: "other", shopRoles: ["instructor"] };
+
+  it("is the session's instructor rostered as an instructor on the departure", () => {
+    expect(
+      courseInstructorsAboard(
+        [{ ...teacher, tripRole: "instructor" }],
+        [{ ...teacher, tripRole: "instructor" }],
+      ),
+    ).toBe(1);
+    // No per-trip role reads the standing role, as the ratio does.
+    expect(courseInstructorsAboard([teacher], [teacher])).toBe(1);
+    // Two of the course's instructors aboard count two, for the ratio.
+    expect(courseInstructorsAboard([teacher, other], [teacher, other])).toBe(2);
+  });
+
+  it.each([
+    ["another course's instructor", [teacher], [other]],
+    [
+      "the teacher as the departure's captain",
+      [teacher],
+      [{ ...teacher, tripRole: "captain" as const }],
+    ],
+    [
+      "the teacher as the departure's divemaster",
+      [teacher],
+      [{ ...teacher, tripRole: "divemaster" as const }],
+    ],
+    [
+      "somebody who only drives the session's boat",
+      [{ ...teacher, tripRole: "captain" as const }],
+      [teacher],
+    ],
+    [
+      "a divemaster on both",
+      [{ personId: "dm", shopRoles: ["divemaster"] }],
+      [{ personId: "dm", shopRoles: ["divemaster"] }],
+    ],
+    ["nobody on the departure", [teacher], []],
+  ])("is not %s", (_name, sessionCrew, departureCrew) => {
+    expect(courseInstructorsAboard(sessionCrew, departureCrew)).toBe(0);
+  });
+});
+
+describe("trainingDiveLevel — the course a marked dive answers to (issue #2731)", () => {
+  const course: TrainingDiveCourse = {
+    minimumLevel: "open_water",
+    certifiesLevel: "advanced_open_water",
+    intro: false,
+  };
+  const standing: TrainingMarkState = {
+    valid: true,
+    enrollmentBookingId: ENROLLMENT,
+    enrollmentTripId: "session",
+    enrollmentMinorDeclared: false,
+    enrollmentCourseTitle: "Advanced Open Water",
+    enrollmentCourse: course,
+    courseInstructorAboard: true,
+  };
+
+  it("takes the course, with the mark standing and its instructor aboard", () => {
+    expect(trainingDiveLevel(standing)).toEqual(course);
+  });
+
+  it("keeps the departure's level with no mark, a mark that fell, no instructor, or no course row", () => {
+    expect(trainingDiveLevel(undefined)).toBeNull();
+    expect(trainingDiveLevel({ valid: false, problem: "enrollment_canceled" })).toBeNull();
+    expect(trainingDiveLevel({ ...standing, courseInstructorAboard: false })).toBeNull();
+    expect(trainingDiveLevel({ ...standing, enrollmentCourse: undefined })).toBeNull();
+  });
+});
+
+describe("trainingDiveRequiredLevel — lowers only as far as the course certifies (issue #2731)", () => {
+  const aow: TrainingDiveCourse = {
+    minimumLevel: "open_water",
+    certifiesLevel: "advanced_open_water",
+    intro: false,
+  };
+
+  it("lowers an AOW departure to the course's minimum", () => {
+    expect(trainingDiveRequiredLevel("advanced_open_water", aow)).toBe("open_water");
+  });
+
+  it("never lowers a level above what the course certifies", () => {
+    expect(trainingDiveRequiredLevel("rescue", aow)).toBe("rescue");
+    expect(trainingDiveRequiredLevel("divemaster", aow)).toBe("divemaster");
+  });
+
+  it("asks no card of a course with no minimum for a level it certifies, and no more", () => {
+    const ow: TrainingDiveCourse = {
+      minimumLevel: null,
+      certifiesLevel: "open_water",
+      intro: false,
+    };
+    expect(trainingDiveRequiredLevel("open_water", ow)).toBeNull();
+    // Past what it certifies the departure's level stands.
+    expect(trainingDiveRequiredLevel("advanced_open_water", ow)).toBe("advanced_open_water");
+    expect(trainingDiveRequiredLevel("rescue", ow)).toBe("rescue");
+  });
+
+  it("never lowers for an intro session or a course certifying nothing", () => {
+    const dsd: TrainingDiveCourse = { minimumLevel: null, certifiesLevel: null, intro: true };
+    expect(trainingDiveRequiredLevel("open_water", dsd)).toBe("open_water");
+    expect(
+      trainingDiveRequiredLevel("open_water", { ...dsd, minimumLevel: "open_water", intro: true }),
+    ).toBe("open_water");
+    expect(trainingDiveRequiredLevel("advanced_open_water", { ...aow, certifiesLevel: null })).toBe(
+      "advanced_open_water",
+    );
+    expect(
+      trainingDiveRequiredLevel("open_water", { ...aow, minimumLevel: null, intro: true }),
+    ).toBe("open_water");
+  });
+
+  it("never raises a level, and never invents one", () => {
+    const rescueCourse: TrainingDiveCourse = {
+      minimumLevel: "advanced_open_water",
+      certifiesLevel: "rescue",
+      intro: false,
+    };
+    expect(trainingDiveRequiredLevel("open_water", rescueCourse)).toBe("open_water");
+    expect(trainingDiveRequiredLevel(null, aow)).toBeNull();
+  });
+});
+
+describe("trainingRoom — the instructors' ratio is shared across sessions (review 2026-10-17)", () => {
+  const teacher = {
+    personId: "teacher",
+    shopRoles: ["instructor"],
+    tripRole: "instructor" as const,
+  };
+  const teacher2 = {
+    personId: "teacher2",
+    shopRoles: ["instructor"],
+    tripRole: "instructor" as const,
+  };
+  const dm = { personId: "dm", shopRoles: ["divemaster"], tripRole: "divemaster" as const };
+  const entry = {
+    baseStudentsPerInstructor: 8,
+    assistantBonusPerInstructor: 2,
+    maxStudentsPerInstructor: 12,
+  };
+  const seats = (session: string, count: number, from = 0) =>
+    Array.from({ length: count }, (_, i) => ({
+      id: `${session}-${from + i}`,
+      sessionTripId: session,
+      rule: entry,
+    }));
+  const crews = new Map([
+    ["s1", [teacher]],
+    ["s2", [teacher]],
+  ]);
+
+  it("counts one instructor's seats across two sessions, not per session", () => {
+    const room = trainingRoom({
+      marked: [...seats("s1", 5), ...seats("s2", 5)],
+      sessionCrew: crews,
+      departureCrew: [teacher],
+    });
+    expect(room.seated.size).toBe(8);
+    expect(room.seated.has("s2-2")).toBe(true);
+    expect(room.seated.has("s2-3")).toBe(false);
+  });
+
+  it("seats nobody whose course has no known ratio, or with no instructor aboard", () => {
+    const noRule = [{ id: "a", sessionTripId: "s1", rule: null }];
+    expect(
+      trainingRoom({ marked: noRule, sessionCrew: crews, departureCrew: [teacher] }).seated.size,
+    ).toBe(0);
+    expect(
+      trainingRoom({ marked: seats("s1", 1), sessionCrew: crews, departureCrew: [] }).seated.size,
+    ).toBe(0);
+  });
+
+  it("lets a certified assistant raise the cap, to the ceiling and no further", () => {
+    const withDm = trainingRoom({
+      marked: seats("s1", 12),
+      sessionCrew: crews,
+      departureCrew: [teacher, dm],
+    });
+    expect(withDm.seated.size).toBe(10);
+    const many = trainingRoom({
+      marked: seats("s1", 14),
+      sessionCrew: crews,
+      departureCrew: [teacher, dm, { ...dm, personId: "dm2" }, { ...dm, personId: "dm3" }],
+    });
+    expect(many.seated.size).toBe(12);
+  });
+
+  it("says whether one more seat fits, and never by unseating a marked one", () => {
+    const candidate = { id: "new", sessionTripId: "s2", rule: entry };
+    const full = trainingRoom({
+      marked: seats("s1", 8),
+      candidate,
+      sessionCrew: crews,
+      departureCrew: [teacher],
+    });
+    expect(full.spare).toBe(false);
+    const room = trainingRoom({
+      marked: seats("s1", 7),
+      candidate,
+      sessionCrew: crews,
+      departureCrew: [teacher],
+    });
+    expect(room.spare).toBe(true);
+    // A second instructor on the departure only counts for the session they teach.
+    const two = new Map([
+      ["s1", [teacher]],
+      ["s2", [teacher2]],
+    ]);
+    expect(
+      trainingRoom({
+        marked: seats("s1", 8),
+        candidate,
+        sessionCrew: two,
+        departureCrew: [teacher, teacher2],
+      }).spare,
+    ).toBe(true);
   });
 });

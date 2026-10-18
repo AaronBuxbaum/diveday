@@ -12,7 +12,7 @@ describe("a training dive's manifest lines (issue #2275)", () => {
       }),
     ).toEqual({
       fact: "Training dive for Advanced Open Water",
-      warnings: ["No instructor is on this boat’s crew"],
+      warnings: ["No instructor of the course aboard for this seat"],
     });
     expect(
       trainingDiveLines(t, {

@@ -1,11 +1,10 @@
 import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, notExists, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { courseSeatCapacity } from "@/lib/course-ratios";
 import { diverSeatLimit } from "@/lib/participant-types";
 import { DEPARTURE_BUFFER_MS, hasSailed } from "@/lib/trips";
-import { tripCourseCrewCounts } from "./bookings";
+import { courseStudentSeatCap } from "./bookings";
 import type { AppDb } from "./client";
-import { bookings, courses, shops, trips, tripWaitlistEntries } from "./schema";
+import { bookings, shops, trips, tripWaitlistEntries } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 import { inviteWaitlistDiver } from "./waitlist";
@@ -127,18 +126,9 @@ export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect)
   let room = (await sellableCapacity(db, trip)) - held.aboard;
   const diverLimit = diverSeatLimit(trip);
   if (diverLimit !== null) room = Math.min(room, diverLimit - held.divers);
-  if (trip.courseId) {
-    const [course] = await db
-      .select()
-      .from(courses)
-      .where(and(eq(courses.id, trip.courseId), eq(courses.shopId, trip.shopId)))
-      .limit(1);
-    const { instructorCount, assistantCount } = await tripCourseCrewCounts(db, trip.id);
-    if (instructorCount === 0) return 0;
-    const ratioCap = courseSeatCapacity(course ?? null, instructorCount, assistantCount);
-    // The students, its divers: a priced rider is a passenger (G5 of #2226).
-    if (ratioCap !== null) room = Math.min(room, ratioCap - held.divers);
-  }
+  // The students, its divers: a priced rider is a passenger (G5 of #2226).
+  const ratioCap = await courseStudentSeatCap(db, trip);
+  if (ratioCap !== null) room = Math.min(room, ratioCap - held.divers);
   const [outstanding] = await db
     .select({ invited: sql<number>`coalesce(sum(${tripWaitlistEntries.partySize}), 0)::int` })
     .from(tripWaitlistEntries)

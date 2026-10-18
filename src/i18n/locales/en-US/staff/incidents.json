@@ -14,7 +14,23 @@
     "notMissing": "No longer marked not back aboard.",
     "notAllowed": "Only this departure’s crew, owners and managers can start a report.",
     "failed": "The report did not open. Tap again.",
-    "backToManifest": "Back to manifest"
+    "backToManifest": "Back to manifest",
+    "alert": "Missing diver, alert owners now",
+    "alerting": "Alerting…",
+    "alerted": "Owners alerted. Keep searching; the report can wait.",
+    "alreadyAlerted": "The owners were already alerted.",
+    "alertFailed": "The alert did not go. Tap again, or call the owners.",
+    "notReached": "Not reached yet. Call the owners now.",
+    "notAlerted": "No alert stands for them here.",
+    "found": "Found",
+    "foundPending": "Saving…",
+    "foundDone": "Marked found. The owners have the all-clear.",
+    "foundPartial": "Marked found. The all-clear did not reach every owner. Call them.",
+    "foundNoAllClear": "Marked found. No all-clear was sent.",
+    "foundAlready": "Already marked found.",
+    "foundFailed": "Not saved. Tap again.",
+    "stillMissing": "Still marked not back aboard. Mark them back aboard first.",
+    "offline": "No signal: phone the owners or use VHF."
   },
   "status": {
     "draft": "Draft",
@@ -136,6 +152,16 @@
     "oxygenFor": "Yes, for {minutes, plural, one {# minute} other {# minutes}}",
     "handoverAt": "{who}, {when}"
   },
+  "found": {
+    "label": "Found",
+    "byAt": "{name}, {when}",
+    "help": "Sends the owners who were alerted one all-clear by email. Only once they are marked back aboard.",
+    "submit": "Found",
+    "pending": "Saving…",
+    "allClearSent": "All-clear sent {when}",
+    "allClearPartial": "The all-clear did not reach every owner. Call them.",
+    "allClearNone": "No all-clear was sent."
+  },
   "addenda": {
     "title": "Later notes",
     "description": "Each note carries who wrote it and when. A note cannot be changed.",
@@ -166,7 +192,10 @@
     "notYetFiled": "File the report before adding a later note.",
     "held": "A report on legal hold can’t be deleted. Release the hold first.",
     "holdSet": "Legal hold set.",
-    "holdReleased": "Legal hold released."
+    "holdReleased": "Legal hold released.",
+    "alerted": "The owners were alerted from this report, so it is kept. Mark the diver found instead.",
+    "found": "Marked found. The owners are sent an all-clear.",
+    "stillMissing": "Still marked not back aboard on the manifest. Mark them back aboard first."
   },
   "safety": {
     "intro": "What the shop recorded on departures that left this month and are home. Lapsed credentials are read as the records stand today. Nothing here changes a record.",

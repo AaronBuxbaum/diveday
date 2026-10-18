@@ -131,7 +131,7 @@
   "trainingMarkCleared": "{hasName, select, yes {Training mark cleared by {name} with course forms unsigned} other {Training mark cleared with course forms unsigned}}",
   "trainingMarkClearedInvalid": "{hasName, select, yes {Training mark cleared by {name} after it stopped fitting its course seat} other {Training mark cleared after it stopped fitting its course seat}}",
   "trainingDive": "Training dive for {course}",
-  "trainingDiveNoInstructor": "No instructor is on this boat’s crew",
+  "trainingDiveNoInstructor": "No instructor of the course aboard for this seat",
   "medicalEarlierRefusalChip": "Physician said no before",
   "medicalReferralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file",
   "medicalHoldNotClearedChip": "Not medically cleared",
