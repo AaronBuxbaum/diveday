@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne, or } from "drizzle-orm";
 import { DAY_MS } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { demoEmail } from "@/lib/simulator-email";
@@ -20,7 +20,9 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
+import { CAPTAIN_NAME } from "./seed-cast";
 import { at, nextCreatedAt, withinDeskHours } from "./seed-clock";
+import { paperRelease, signingNames } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
 import { getCurrentWaiverTemplate } from "./waivers";
 
@@ -750,14 +752,12 @@ export async function seedHistory(
     .filter((row): row is NonNullable<typeof row> => row !== null);
   if (payments.length > 0) await db.insert(bookingPayments).values(payments);
 
-  // Signed releases for the divers who actually boarded.
-  let waiverToken = 0;
+  // Signed releases for the divers who boarded, on paper at the desk (`withinDeskHours`).
+  const signedName = await signingNames(db, shopId);
   const waiverRows = plans
     .map((plan, i) => {
       const booking = bookingRows[i];
       if (!booking || !plan.waiver) return null;
-      waiverToken++;
-      // On paper at the desk, so while it was open (`withinDeskHours`).
       const signedAt = withinDeskHours(new Date(plan.createdAt.getTime() - 12 * 60 * 60 * 1000));
       return {
         shopId,
@@ -768,14 +768,9 @@ export async function seedHistory(
         templateVersion: template.version,
         templateGeneration: template.materialGeneration,
         templateBody: template.body,
-        status: "completed" as const,
-        tokenHash: `hist-waiver-${shopId}-${waiverToken}`,
+        tokenHash: `hist-waiver-${shopId}-${i + 1}`,
         expiresAt: at(365, 12),
-        signedName: "Signed on file",
-        signatureMethod: "in_person",
-        consentedAt: signedAt,
-        signedAt,
-        completedAt: signedAt,
+        ...paperRelease(signedAt, createdByPersonId, signedName(plan.personId)),
         createdAt: signedAt,
       };
     })
@@ -997,7 +992,13 @@ async function equipHistoryBoats(
     .select({ personId: personRoles.personId, role: personRoles.role })
     .from(personRoles)
     .innerJoin(people, eq(people.id, personRoles.personId))
-    .where(and(eq(people.shopId, shopId), inArray(personRoles.role, ["captain", "divemaster"])));
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        inArray(personRoles.role, ["captain", "divemaster"]),
+        or(ne(personRoles.role, "captain"), eq(people.fullName, CAPTAIN_NAME)),
+      ),
+    );
   const historyCrew = (["captain", "divemaster"] as const).flatMap((role) => {
     const holder = crewRoles.find((row) => row.role === role);
     return holder ? [{ personId: holder.personId, tripRole: role }] : [];

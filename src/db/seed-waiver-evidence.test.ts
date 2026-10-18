@@ -81,7 +81,9 @@ describe("seeded waiver evidence", () => {
       // Consent, signature and completion are one sitting; the record is
       // created no later than the signature it carries.
       expect(record.consentedAt?.getTime()).toBe(record.signedAt.getTime());
-      expect(record.completedAt?.getTime()).toBe(record.signedAt.getTime());
+      const lag = (record.completedAt?.getTime() ?? Number.NaN) - record.signedAt.getTime();
+      expect(lag).toBeGreaterThanOrEqual(0);
+      expect(lag).toBeLessThanOrEqual(10 * 60_000);
       expect(record.createdAt.getTime()).toBeLessThanOrEqual(record.signedAt.getTime());
     }
   });
@@ -111,8 +113,7 @@ describe("staff-recorded signatures", () => {
   it("fall in desk hours, not near midnight", async () => {
     const { records } = await evidence();
     const staffRecorded = records.filter(
-      (record) =>
-        record.signatureMethod === "in_person" || record.signatureMethod === "in_person_attested",
+      (record) => record.signatureMethod === "in_person_attested",
     );
     expect(staffRecorded.length).toBeGreaterThan(0);
     const outside = staffRecorded
@@ -123,5 +124,29 @@ describe("staff-recorded signatures", () => {
         return hour < 8 || hour >= 18;
       });
     expect(outside).toEqual([]);
+  });
+});
+
+describe("seeded signature methods", () => {
+  it("are only methods the product writes, and a paper release names who took it", async () => {
+    const { records } = await evidence();
+    const known = new Set([
+      "typed_consent",
+      "in_person_attested",
+      "imported",
+      "in_person_attested_namesake",
+    ]);
+    expect(records.filter((record) => !known.has(record.signatureMethod ?? ""))).toEqual([]);
+    const paper = records.filter((record) => record.signatureMethod === "in_person_attested");
+    expect(paper.length).toBeGreaterThan(0);
+    expect(paper.filter((record) => record.recordedByPersonId === null)).toEqual([]);
+    // The diver's own full name, never a constant, and a record never completes
+    // before it was signed.
+    expect(paper.filter((record) => record.signedName === "Signed on file")).toEqual([]);
+    expect(
+      paper.filter(
+        (record) => record.completedAt && record.signedAt && record.completedAt < record.signedAt,
+      ),
+    ).toEqual([]);
   });
 });

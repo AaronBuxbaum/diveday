@@ -5,11 +5,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { shopSearchAnchor } from "@/db/dive-sites";
+import { convertImportedSiteProseToUnit, shopSearchAnchor } from "@/db/dive-sites";
 import { sendNotification } from "@/db/notifications";
 import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
   getShopById,
+  lockShopDepthUnit,
   markShopUnitsConfirmed,
   setShopAddress,
   setShopContact,
@@ -133,7 +134,21 @@ export async function saveUnitsAction(formData: FormData) {
   }
 
   const db = await getDb();
-  await setShopDepthUnit(db, session.user.shopId, depthUnit.data);
+  // One transaction: the unit and the prose it carries land together or not
+  // at all, so a failed conversion leaves the shop on its old unit and a retry
+  // still has a switch to make (issue #2683).
+  const sites = await db.transaction(async (tx) => {
+    const before = await lockShopDepthUnit(tx, session.user.shopId);
+    await setShopDepthUnit(tx, session.user.shopId, depthUnit.data);
+    const from = before ?? depthUnit.data;
+    const result = await convertImportedSiteProseToUnit(
+      tx,
+      session.user.shopId,
+      from,
+      depthUnit.data,
+    );
+    return { ...result, from };
+  });
   await setShopTemperatureUnit(db, session.user.shopId, temperatureUnit.data);
   if (currency !== null) {
     await setShopCurrency(db, session.user.shopId, currency);
@@ -142,7 +157,18 @@ export async function saveUnitsAction(formData: FormData) {
   // when nothing changed — the step is "look at these", and a shop that opened
   // the row and agreed with the derived values has looked (issue #712).
   await markShopUnitsConfirmed(db, session.user.shopId);
-  revalidateAndRedirect(settings, noticeUrl(settings, "units-saved", { saved: "units" }));
+  revalidateAndRedirect(
+    settings,
+    sites.leftAlone > 0
+      ? noticeUrl(settings, "units-saved-sites-left", {
+          saved: "units",
+          count: sites.leftAlone,
+          from: sites.from,
+          // The first few by name; the rest are the count's "and more".
+          sites: sites.leftAloneNames.slice(0, 3).join(" · "),
+        })
+      : noticeUrl(settings, "units-saved", { saved: "units" }),
+  );
 }
 
 /**

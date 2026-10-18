@@ -37,14 +37,15 @@ describe("seeded crew — every shop role × trip role combination", () => {
     const lead = staff.find((row) => row.fullName === LEAD_INSTRUCTOR_NAME);
     if (!relief || !lead) throw new Error("expected both seeded instructors");
 
-    // She holds the instructor role shop-wide. If this ever narrows to
-    // "divemaster" the assignment below stops being the DOM-M7 case and becomes
-    // an ordinary divemaster on a boat.
+    // She holds the instructor role shop-wide (and captain, for the weekly boat's
+    // relief, issue #2685). If instructor ever narrows to "divemaster" the
+    // assignment below stops being the DOM-M7 case and becomes an ordinary
+    // divemaster on a boat.
     const reliefRoles = await db
       .select({ role: personRoles.role })
       .from(personRoles)
       .where(eq(personRoles.personId, relief.id));
-    expect(reliefRoles.map((row) => row.role)).toEqual(["instructor"]);
+    expect(reliefRoles.map((row) => row.role).sort()).toEqual(["captain", "instructor"]);
 
     const assignments = await db
       .select({ tripId: tripAssignments.tripId, tripRole: tripAssignments.tripRole })

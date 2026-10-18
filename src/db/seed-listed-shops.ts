@@ -24,7 +24,7 @@ import { createTrip } from "./trips";
  * shop's board and re-runs on reset; this runs once, beside the shop's own
  * stable half, in `seedDemo`.
  */
-const LISTED_SHOP_SLUGS = ["reef-line-divers", "keys-current-charters"] as const;
+export const LISTED_SHOP_SLUGS = ["reef-line-divers", "keys-current-charters"] as const;
 
 export async function seedListedShops(db: DbExecutor): Promise<void> {
   const address = {

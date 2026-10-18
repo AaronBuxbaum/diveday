@@ -101,6 +101,7 @@ them, and became rules too.
 | aparcamiento | estacionamiento |
 | (número de) móvil | (número de) celular |
 | añadir / añade / añadido | agregar / agrega / agregado |
+| botella (a dive cylinder; Spain) | tanque, the Latin American register chosen for "plaza" ("un tanque por buceador", "tanque lleno"); the bottlenose dolphin stays "delfín nariz de botella" |
 
 - **verificar vs. revisar.** *Verificar* is confirming a fact against evidence — a card, an age, a
   connection, readiness. *Revisar* is looking something over — a price list, an address, a browser
