@@ -42,8 +42,8 @@ import {
   hasVerifiedCertificationAtLeast,
 } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
-import type { TrainingDiveCourse } from "@/lib/training-mark";
 import { requirementDemandsNothing, unionRequirements } from "@/lib/requirement";
+import type { TrainingDiveCourse } from "@/lib/training-mark";
 import {
   decideTripAdmission,
   type SelfDeclaration,

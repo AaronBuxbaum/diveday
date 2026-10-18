@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, lt, lte, ne } from "drizzle-orm";
+import { and, eq, gt, inArray, lte } from "drizzle-orm";
 import type { TripRequirement } from "@/db/schema";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
