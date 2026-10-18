@@ -318,12 +318,14 @@ function checklistFor(
     requirement: TripRequirement | null;
     readiness: ReadinessResult;
     statedFree: boolean;
+    trainingNoCardAsked: boolean;
   },
   participantType: ParticipantType,
 ) {
   return buildDiverChecklist(evidence.requirement, evidence.readiness, {
     participantType,
     statedFree: evidence.statedFree,
+    trainingNoCardAsked: evidence.trainingNoCardAsked,
   });
 }
 

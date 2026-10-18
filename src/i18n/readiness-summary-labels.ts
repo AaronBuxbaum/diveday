@@ -51,6 +51,7 @@ export const CHECKLIST_DETAIL_KEYS: Record<ChecklistDetailCode, DiverMessageKey>
   payment_refunded: "ready.checklistDetail.paymentDue",
   waiver_done: "ready.checklistDetail.waiverDone",
   certification_done: "ready.checklistDetail.certificationDone",
+  certification_training_dive: "ready.checklistDetail.certificationTrainingDive",
   payment_done: "ready.checklistDetail.paymentDone",
   certification_multiple_needed: "ready.checklistDetail.certificationMultipleNeeded",
   setup_generic: "ready.checklistDetail.setupGeneric",

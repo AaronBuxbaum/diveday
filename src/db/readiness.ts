@@ -24,7 +24,11 @@ import {
   unreviewedCardState,
 } from "@/lib/readiness";
 import { parseRequirement, requirementDemandsNothing, unionRequirements } from "@/lib/requirement";
-import { type TrainingMarkState, trainingDiveLevel } from "@/lib/training-mark";
+import {
+  type TrainingMarkState,
+  trainingDiveAsksNoCard,
+  trainingDiveLevel,
+} from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
 import {
   effectiveReleaseForRiderSeat,
@@ -1575,6 +1579,8 @@ export type BookingReadinessDetail = {
   siteRequirement: SiteCertRequirement | null;
   /** This seat's kind is stated free on the departure, so it owes no payment. */
   statedFree: boolean;
+  /** A standing training mark lowered the card the departure asks to nothing: the checklist says so. */
+  trainingNoCardAsked: boolean;
   readiness: NonNullable<Awaited<ReturnType<typeof getBookingReadiness>>>;
   cancelled: boolean;
 };
@@ -1626,6 +1632,7 @@ export async function getBookingReadinessDetail(
     // to state either way.
     siteRequirement: match?.siteRequirement ?? null,
     statedFree: match?.statedFree ?? false,
+    trainingNoCardAsked: match?.trainingNoCardAsked ?? false,
     readiness,
     cancelled: row.status === "cancelled",
   };
@@ -1998,6 +2005,12 @@ export async function listTripsReadiness(
       requirement,
       siteRequirement,
       statedFree,
+      trainingNoCardAsked:
+        isDiver(row.booking.participantType) &&
+        trainingDiveAsksNoCard(
+          unionRequirements(requirement, siteRequirement).minimumCertificationLevel,
+          trainingDiveLevel(trainingMark),
+        ),
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
       nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
