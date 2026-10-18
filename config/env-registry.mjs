@@ -922,6 +922,28 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "Claude assists (ADR 20261018-claude-assists). Unset, assists offer nothing and",
+      "every feature works as it does without Claude. ANTHROPIC_API_KEY is an",
+      "Anthropic API key for DiveDay. DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD is the",
+      "optional monthly spend cap per shop (defaults to 15 USD).",
+    ],
+    keys: [
+      {
+        key: "ANTHROPIC_API_KEY",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "Claude assists are disabled; operations run without AI assists",
+      },
+      {
+        key: "DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "uses the default monthly cap of 15 USD per shop",
+      },
+    ],
+  },
+  {
+    doc: [
       "DiveDay's own scheduled logical export -- the platform recovery layer, not the",
       "per-shop one (ADR 20260812-platform-backup-runner,",
       "docs/engineering/backup-and-restore-runbook.md S2). GET /api/cron/platform-backup",
