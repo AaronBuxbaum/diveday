@@ -159,6 +159,27 @@ export function shopMonthBounds(month: MonthRef, timeZone: string): { from: Date
 }
 
 /**
+ * The exact UTC instants that bracket a run of the shop's own calendar days,
+ * `firstDay` through `lastDay` inclusive (both `YYYY-MM-DD`) — `from`
+ * inclusive, `to` exclusive. The season's sibling of {@link shopMonthBounds}
+ * (issue #2657), and a single past day's when the two are the same date.
+ */
+export function shopDaysBounds(
+  firstDay: string,
+  lastDay: string,
+  timeZone: string,
+): { from: Date; to: Date } {
+  const midnight = (date: string) => {
+    const [year, month, day] = date.split("-").map(Number);
+    return { year, month, day, hour: 0, minute: 0 };
+  };
+  return {
+    from: wallTimeToUtc(midnight(firstDay), timeZone),
+    to: wallTimeToUtc(addCalendarDays(midnight(lastDay), 1), timeZone),
+  };
+}
+
+/**
  * Shifts a UTC instant by `days` calendar days while preserving its
  * wall-clock time in `timeZone` — moving a multi-day trip by whole days
  * without drifting its published times across a DST transition, unlike

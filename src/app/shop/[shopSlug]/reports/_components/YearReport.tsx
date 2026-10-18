@@ -10,7 +10,7 @@ import { formatReportMoney, type MonthlyReport } from "@/lib/reporting";
 import type { ShopYearCell, ShopYearSummary } from "@/lib/shop-year";
 import { shopPath } from "@/lib/staff-notices";
 import { type MonthFigure, MonthFigures } from "./MonthFigures";
-import { YearStrip } from "./YearStrip";
+import { YearStrip, type YearStripCopy } from "./YearStrip";
 
 /**
  * **The shop's year** (ADR 20260908-one-hand, decision 6, lever T): the log
@@ -40,6 +40,8 @@ export type YearMoney = {
   report: Pick<MonthlyReport, "revenueCents" | "taxCents" | "tipsCents" | "tipCount">;
   currency: string;
   csvHref: string;
+  /** Counter money in the year with no tax split out (issue #2674); the line shows when above 0. */
+  counterTaxIncludedCents?: number;
 };
 
 export function YearReport({
@@ -178,19 +180,7 @@ export function YearReport({
           <YearStrip
             cells={year.strip}
             months={monthMarkers}
-            copy={{
-              monthsLabel: t("reports.chooseMonth"),
-              day: (cell: ShopYearCell) =>
-                cell.boats > 0
-                  ? t("reports.year.stripDay", {
-                      day: formatCalendarDate(cell.day ?? year.firstDay, locale),
-                      divers: cell.divers,
-                      boats: cell.boats,
-                    })
-                  : t("reports.year.stripQuietDay", {
-                      day: formatCalendarDate(cell.day ?? year.firstDay, locale),
-                    }),
-            }}
+            copy={stripCopy(t, locale, year.firstDay)}
           />
           <p className="mt-3 text-sm text-muted">{t("reports.year.stripLegend")}</p>
         </section>
@@ -222,6 +212,9 @@ export function YearReport({
                 },
               ]}
             />
+            {(money.counterTaxIncludedCents ?? 0) > 0 ? (
+              <p className="mt-1 text-end text-sm text-muted">{t("reports.counterTaxIncluded")}</p>
+            ) : null}
             <p className="mt-3 text-end text-sm">
               <a
                 href={money.csvHref}
@@ -257,6 +250,23 @@ export function YearReport({
       </div>
     </>
   );
+}
+
+/** The words on the strip's days, the year's and the month's alike (issue #2664). */
+export function stripCopy(t: StaffTranslator, locale: string, firstDay: string): YearStripCopy {
+  return {
+    monthsLabel: t("reports.chooseMonth"),
+    day: (cell: ShopYearCell) =>
+      cell.boats > 0
+        ? t("reports.year.stripDay", {
+            day: formatCalendarDate(cell.day ?? firstDay, locale),
+            divers: cell.divers,
+            boats: cell.boats,
+          })
+        : t("reports.year.stripQuietDay", {
+            day: formatCalendarDate(cell.day ?? firstDay, locale),
+          }),
+  };
 }
 
 /**

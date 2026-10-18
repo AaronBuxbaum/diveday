@@ -541,7 +541,7 @@
     "src/db/refunds.test.ts": 1154,
     "src/db/reminders.test.ts": 1078,
     "src/db/rental-fit.test.ts": 1227,
-    "src/db/reporting.test.ts": 1633,
+    "src/db/reporting.test.ts": 1379,
     "src/db/retention.test.ts": 1248,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,

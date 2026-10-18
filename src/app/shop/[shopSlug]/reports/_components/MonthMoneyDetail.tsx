@@ -232,12 +232,19 @@ export function QuietMonth({
  */
 export function MonthFootnotes({
   taxCents,
+  counterTaxIncludedCents = 0,
   csvHref,
   monthEnd,
   t,
   money,
 }: {
   taxCents: number;
+  /**
+   * Counter money in the month, tax included (issue #2674): a line under the
+   * tax figure says so while it is above zero, since DiveDay holds no tax rate
+   * to split it by.
+   */
+  counterTaxIncludedCents?: number;
   csvHref: string;
   /**
    * The month's other files (fifth loop, items 31 and 35): the crew sheet,
@@ -275,6 +282,9 @@ export function MonthFootnotes({
           </>
         ) : null}
       </p>
+      {counterTaxIncludedCents > 0 ? (
+        <p className="mt-1 text-end text-sm text-muted">{t("reports.counterTaxIncluded")}</p>
+      ) : null}
       {monthEnd ? (
         <Suspense fallback={null}>
           <MonthEndSection

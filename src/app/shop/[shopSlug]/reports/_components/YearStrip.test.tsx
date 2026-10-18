@@ -9,11 +9,15 @@ afterEach(cleanup);
 /** A short year whose last day is today, so today's square is in the strip. */
 const YEAR = summarizeShopYear({
   year: 2026,
+  startsOn: "2026-01-01",
+  endsOn: "2026-12-31",
   firstDay: "2026-01-01",
   lastDay: "2026-02-10",
   openedThisYear: false,
   today: "2026-02-10",
-  days: [{ day: "2026-02-10", boats: 1, divers: 8, seats: 10 }],
+  divers: 8,
+  monthDivers: [{ month: "2026-02", divers: 8 }],
+  days: [{ day: "2026-02-10", boats: 1, divers: 8, aboard: 8, seats: 10 }],
   boats: [{ name: "Manta", days: 1 }],
   sites: [],
 });
@@ -97,5 +101,36 @@ describe("YearStrip", () => {
     // width shows a 33px link next to a 44px one for the same month.
     expect(chips[0]?.closest("ul")).toHaveClass("sm:hidden");
     for (const link of links.filter(inStrip)) expect(link).toHaveClass("max-sm:hidden");
+  });
+  /**
+   * **The month is one row of its days** (issue #2664): no padding squares, no
+   * week rows and no month doors, and the row is as wide as the whole month so
+   * a month still running keeps its squares' size.
+   */
+  it("draws a month as one row as wide as the month, with no padding and no months", () => {
+    const month = summarizeShopYear({
+      year: 2026,
+      startsOn: "2026-04-01",
+      endsOn: "2026-04-30",
+      firstDay: "2026-04-01",
+      lastDay: "2026-04-10",
+      openedThisYear: false,
+      today: "2026-04-10",
+      divers: 8,
+      monthDivers: [{ month: "2026-04", divers: 8 }],
+      days: [{ day: "2026-04-10", boats: 1, divers: 8, aboard: 8, seats: 10 }],
+      boats: [],
+      sites: [],
+    });
+    const { container } = render(<YearStrip cells={month.strip} copy={COPY} row={{ days: 30 }} />);
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.style.gridTemplateColumns).toBe("repeat(30, minmax(0, 1fr))");
+    expect(grid).toHaveAttribute("aria-hidden", "true");
+    // April 1 (a Wednesday) to today, every one a day: padding is the weeks' shape only.
+    const squares = [...grid.querySelectorAll("span")];
+    expect(squares.map((square) => square.getAttribute("title"))).toEqual(
+      Array.from({ length: 10 }, (_, index) => `2026-04-${String(index + 1).padStart(2, "0")}`),
+    );
+    expect(screen.queryByRole("navigation")).toBeNull();
   });
 });

@@ -524,14 +524,25 @@ export type OpenRollCall = {
  *   mooring and the three are still findable. Waiting for `endsAt` costs three
  *   hours. Zero events while underway stays quiet — that checkpoint has not
  *   happened yet.
+ *
+ * **`historical`: the record of named boats, not Today's queue** (issue
+ * #2662; review dom-w4-dock B1). The thirty-day residue and the 48-hour dock
+ * chase are about what *Today* should still raise; a past day's page asks
+ * whether its boats' counts were ever closed, and must never read "All home"
+ * because a gap aged out of the queue. In this mode both windows are off,
+ * `home` is each trip's own `endsAt` against `now`, and `onlyTripIds` is
+ * required, so the scan stays bounded by the boats asked about.
  */
 export async function listRollCallGaps(
   db: AppDb,
   shopId: string,
   now: Date = nowDate(),
   onlyTripIds?: readonly string[],
+  options: { historical?: boolean } = {},
 ): Promise<OpenRollCall[]> {
   if (onlyTripIds?.length === 0) return [];
+  const historical = options.historical === true;
+  if (historical && !onlyTripIds) return [];
   const sailed = await db
     .select({
       id: trips.id,
@@ -553,7 +564,7 @@ export async function listRollCallGaps(
         eq(trips.status, "scheduled"),
         // Underway or home; a boat that has not left the dock has no count due.
         lte(trips.startsAt, now),
-        gte(trips.endsAt, new Date(now.getTime() - ROLL_CALL_RESIDUE_MS)),
+        ...(historical ? [] : [gte(trips.endsAt, new Date(now.getTime() - ROLL_CALL_RESIDUE_MS))]),
         ...(onlyTripIds ? [inArray(trips.id, [...onlyTripIds])] : []),
       ),
     )
@@ -667,7 +678,8 @@ export async function listRollCallGaps(
     const checkpoints = rollCallCheckpoints(trip.plannedDives);
     const home = hasReturned(trip.endsAt, now);
     const underway = !home;
-    const stale = home && trip.endsAt.getTime() < now.getTime() - RETURNED_ROLL_CALL_LOOKBACK_MS;
+    const stale =
+      !historical && home && trip.endsAt.getTime() < now.getTime() - RETURNED_ROLL_CALL_LOOKBACK_MS;
 
     // Per after-dive checkpoint index (index 0 is `departure` and stays 0):
     const population = checkpoints.map(() => 0);

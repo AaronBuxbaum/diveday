@@ -1,0 +1,56 @@
+import type { DbExecutor } from "@/db/client";
+import { getShopYear } from "@/db/reporting";
+import type { StaffTranslator } from "@/i18n/staff-messages";
+import { isoDate, type MonthRef } from "@/lib/calendar";
+import { summarizeShopYear } from "@/lib/shop-year";
+import { stripCopy } from "./YearReport";
+import { YearStrip } from "./YearStrip";
+
+/**
+ * **The month as a strip of days, above its figures** (issue #2664): the
+ * year's strip at the month's zoom, one row of 28 to 31 squares on the same
+ * fills, read through the same `getShopYear` and `summarizeShopYear` over the
+ * month's window. Only the strip: the figures and the ledger below it keep
+ * their own shape (Aaron, 2026-10-17: one visual change, no further folding).
+ *
+ * Nothing while no boat of the month has sailed, as the year says nothing
+ * before its first departure.
+ */
+export async function MonthDays({
+  db,
+  shopId,
+  timeZone,
+  month,
+  now,
+  locale,
+  t,
+}: {
+  db: DbExecutor;
+  shopId: string;
+  timeZone: string;
+  month: MonthRef;
+  now: Date;
+  locale: string;
+  t: StaffTranslator;
+}) {
+  const days = new Date(Date.UTC(month.year, month.month, 0)).getUTCDate();
+  const summary = summarizeShopYear(
+    await getShopYear(db, shopId, {
+      timeZone,
+      startsOn: isoDate(month.year, month.month, 1),
+      endsOn: isoDate(month.year, month.month, days),
+      now,
+    }),
+  );
+  if (!summary.hasActivity) return null;
+  return (
+    <section aria-label={t("reports.monthStripLabel")} className="mb-8">
+      <YearStrip
+        cells={summary.strip}
+        row={{ days }}
+        copy={stripCopy(t, locale, summary.firstDay)}
+      />
+      <p className="mt-3 text-sm text-muted">{t("reports.year.stripLegend")}</p>
+    </section>
+  );
+}

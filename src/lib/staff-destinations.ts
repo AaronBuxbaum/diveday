@@ -262,13 +262,14 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // 20260827-clearwater-surface-language, decision 4).
   { id: "today", suffix: "", section: "today", inPalette: true, badge: "blockers" },
   { id: "divers", suffix: "/divers", section: "divers", inPalette: true },
-  // A departure is the board's detail view, so `/trips/**` lights Schedule.
+  // A departure is the board's detail view, so `/trips/**` lights Schedule; so
+  // does a past day (`/schedule/day/<date>`, issue #2662).
   {
     id: "board",
     suffix: "/schedule/board",
     section: "schedule",
     inPalette: true,
-    alsoMatch: ["/trips"],
+    alsoMatch: ["/trips", "/schedule/day"],
   },
   // The global "seat a diver" door: an act, declared here because the
   // registry is the only place a destination may be declared.

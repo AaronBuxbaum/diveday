@@ -7,6 +7,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { cacheStamp, reportCacheRead } from "@/lib/observability/runtime-cache";
+import { currentShopSeason, type SeasonStart } from "@/lib/season";
 import { summarizeShopYear } from "@/lib/shop-year";
 
 /**
@@ -34,12 +35,19 @@ import { summarizeShopYear } from "@/lib/shop-year";
 async function publicShopYear(
   shopId: string,
   timeZone: string,
+  season: SeasonStart,
   // Read by nothing in the body: it is here to be part of the cache key.
   _shopDay: CalendarDate,
 ) {
   "use cache";
   cacheLife("hours");
-  const year = await getShopYear(await getDb(), shopId, { timeZone, now: nowDate() });
+  const now = nowDate();
+  // The shop's season, as on its own year page (issue #2657).
+  const year = await getShopYear(await getDb(), shopId, {
+    timeZone,
+    now,
+    ...currentShopSeason(now, timeZone, season),
+  });
   return { year, computedAtMs: cacheStamp() };
 }
 
@@ -58,13 +66,24 @@ export async function OurYearSection({
   t,
   className = "",
 }: {
-  shop: { id: string; name: string; timezone: string };
+  shop: {
+    id: string;
+    name: string;
+    timezone: string;
+    seasonStartMonth: number;
+    seasonStartDay: number;
+  };
   locale: string;
   t: DiverTranslator;
   className?: string;
 }) {
   const shopDay = calendarDateInTimezone(nowDate(), shop.timezone);
-  const cached = await publicShopYear(shop.id, shop.timezone, shopDay);
+  const cached = await publicShopYear(
+    shop.id,
+    shop.timezone,
+    { month: shop.seasonStartMonth, day: shop.seasonStartDay },
+    shopDay,
+  );
   reportCacheRead("our_year", cached.computedAtMs, { shopId: shop.id });
   const year = summarizeShopYear(cached.year);
   if (!year.hasActivity) return null;

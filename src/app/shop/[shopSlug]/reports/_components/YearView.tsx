@@ -3,6 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { weatherCallsInWindow } from "@/db/blowouts";
 import type { DbExecutor } from "@/db/client";
+import { counterTaxIncluded } from "@/db/report-lines";
 import {
   certifiedHere,
   earliestReportedTripStart,
@@ -12,12 +13,13 @@ import {
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
-import { formatTimeZoneName, joinFacts, monthNames } from "@/lib/format";
+import { formatMonthDay, formatTimeZoneName, joinFacts, monthNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { summarizeMonth } from "@/lib/reporting";
+import { currentShopSeason, type ShopSeason, shopSeasonLabel, shopSeasonOf } from "@/lib/season";
 import { summarizeShopYear } from "@/lib/shop-year";
 import { shopPath } from "@/lib/staff-notices";
-import { sameMomentYearBefore, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { sameMomentYearBefore, shopDaysBounds } from "@/lib/zoned";
 import { StaffSectionTabs } from "../../_components/StaffSectionTabs";
 import { ReportRangeTabs } from "./ReportRangeTabs";
 import { YearReport } from "./YearReport";
@@ -37,6 +39,10 @@ import { YearReport } from "./YearReport";
  * last year's to the same date ("291 by this date in 2025"). The weather days
  * (item 27) and the cards the shop issued (item 32) are two lines under the
  * figures.
+ *
+ * **The year is the shop's season** (issue #2657): every read here, the year
+ * switch and the header's range run from the shop's season start, so a May
+ * shop reads "2026–27" from May 1 and a January shop reads "2026" as before.
  */
 export async function YearView({
   db,
@@ -49,7 +55,13 @@ export async function YearView({
   t,
 }: {
   db: DbExecutor;
-  shop: { id: string; timezone: string; currency: string };
+  shop: {
+    id: string;
+    timezone: string;
+    currency: string;
+    seasonStartMonth: number;
+    seasonStartDay: number;
+  };
   shopSlug: string;
   roles: readonly Role[];
   locale: string;
@@ -60,34 +72,38 @@ export async function YearView({
 }) {
   const tz = shop.timezone;
   const currency = toShopCurrency(shop.currency);
-  const thisYear = utcToWallTime(now, tz).year;
+  const seasonStart = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
+  const thisYear = currentShopSeason(now, tz, seasonStart).year;
   const firstTrip = await earliestReportedTripStart(db, shop.id);
-  const firstYear = firstTrip ? Math.min(utcToWallTime(firstTrip, tz).year, thisYear) : thisYear;
+  const firstYear = firstTrip
+    ? Math.min(currentShopSeason(firstTrip, tz, seasonStart).year, thisYear)
+    : thisYear;
   const asked = requestedYear && /^\d{4}$/.test(requestedYear) ? Number(requestedYear) : thisYear;
   const yearNumber = asked >= firstYear && asked <= thisYear ? asked : thisYear;
   const isThisYear = yearNumber === thisYear;
+  const season = shopSeasonOf(yearNumber, seasonStart);
+  const lastSeason = shopSeasonOf(yearNumber - 1, seasonStart);
   // Last year "by this date" while this year runs; a past year against the
   // whole year before it.
   const lastYearNow = isThisYear ? sameMomentYearBefore(now, tz) : now;
-  const window = (year: number, until?: Date) => {
-    const end = wallTimeToUtc({ year: year + 1, month: 1, day: 1, hour: 0, minute: 0 }, tz);
-    return {
-      startUtc: wallTimeToUtc({ year, month: 1, day: 1, hour: 0, minute: 0 }, tz),
-      endUtc: until && until < end ? until : end,
-      timeZone: tz,
-    };
+  const window = (of: ShopSeason, until?: Date) => {
+    const { from, to } = shopDaysBounds(of.startsOn, of.endsOn, tz);
+    return { startUtc: from, endUtc: until && until < to ? until : to, timeZone: tz };
   };
   const hasLastYear = yearNumber - 1 >= firstYear;
-  const [yearInput, toDate, lastYearInput, weather, lastWeather, certified] = await Promise.all([
-    getShopYear(db, shop.id, { timeZone: tz, year: yearNumber, now }),
-    getYearToDate(db, shop.id, { timeZone: tz, currency, year: yearNumber, now }),
-    hasLastYear
-      ? getShopYear(db, shop.id, { timeZone: tz, year: yearNumber - 1, now: lastYearNow })
-      : null,
-    weatherCallsInWindow(db, shop.id, window(yearNumber, now)),
-    hasLastYear ? weatherCallsInWindow(db, shop.id, window(yearNumber - 1, lastYearNow)) : null,
-    certifiedHere(db, shop.id, window(yearNumber)),
-  ]);
+  const soFar = window(season, now);
+  const [yearInput, toDate, lastYearInput, weather, lastWeather, certified, counter] =
+    await Promise.all([
+      getShopYear(db, shop.id, { timeZone: tz, ...season, now }),
+      getYearToDate(db, shop.id, { timeZone: tz, currency, ...season, now }),
+      hasLastYear
+        ? getShopYear(db, shop.id, { timeZone: tz, ...lastSeason, now: lastYearNow })
+        : null,
+      weatherCallsInWindow(db, shop.id, soFar),
+      hasLastYear ? weatherCallsInWindow(db, shop.id, window(lastSeason, lastYearNow)) : null,
+      certifiedHere(db, shop.id, window(season)),
+      counterTaxIncluded(db, shop.id, soFar.startUtc, soFar.endUtc),
+    ]);
   const year = summarizeShopYear(yearInput);
   const lastYear = lastYearInput ? summarizeShopYear(lastYearInput) : null;
   const zone = formatTimeZoneName(locale, tz, now);
@@ -95,7 +111,7 @@ export async function YearView({
     lastYear?.hasActivity
       ? t(isThisYear ? "reports.year.lastYearToDate" : "reports.year.lastYearWhole", {
           value,
-          year: String(yearNumber - 1),
+          year: shopSeasonLabel(lastSeason),
         })
       : undefined;
   const lines = [
@@ -119,20 +135,31 @@ export async function YearView({
   ].filter((line): line is string => line !== null);
   const reports = shopPath(shopSlug, "reports");
   const years = Array.from({ length: thisYear - firstYear + 1 }, (_, index) => thisYear - index);
+  const monthDay = (day: string) =>
+    formatMonthDay(Number(day.slice(5, 7)), Number(day.slice(8, 10)), locale);
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         title={t("shared.shopSections.money")}
         description={
           !isThisYear
-            ? t("reports.year.rangeWhole", { year: String(year.year), zone })
+            ? t("reports.year.rangeWhole", {
+                year: year.label,
+                start: monthDay(year.startsOn),
+                end: monthDay(year.endsOn),
+                zone,
+              })
             : year.sinceMonth
               ? t("reports.year.rangeSince", {
-                  year: String(year.year),
+                  year: year.label,
                   month: monthNames(locale)[year.sinceMonth - 1] ?? "",
                   zone,
                 })
-              : t("reports.year.rangeSoFar", { year: String(year.year), zone })
+              : t("reports.year.rangeSoFar", {
+                  year: year.label,
+                  start: monthDay(year.startsOn),
+                  zone,
+                })
         }
         actions={
           year.hasActivity ? (
@@ -157,7 +184,7 @@ export async function YearView({
             scroll={false}
             items={years.map((option) => ({
               key: String(option),
-              label: String(option),
+              label: shopSeasonLabel(shopSeasonOf(option, seasonStart)),
               href:
                 option === thisYear
                   ? `${reports}?range=year`
@@ -177,6 +204,7 @@ export async function YearView({
         money={{
           report: summarizeMonth(toDate),
           currency,
+          counterTaxIncludedCents: counter,
           csvHref: `${shopPath(shopSlug, "reports", "download")}?year=${year.year}`,
         }}
         locale={locale}

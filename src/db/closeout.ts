@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   assembleDayCloseout,
@@ -12,7 +13,7 @@ import {
 import type { CrewRollCallSubject } from "@/lib/manifests";
 import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
 import { settleWithLimit } from "@/lib/settle-with-limit";
-import { shopDayBounds } from "@/lib/zoned";
+import { shopDayBounds, shopDaysBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listCrewRecapPhotosForTrips, listRecapPhotosForTrips } from "./recap";
@@ -30,7 +31,7 @@ import {
 } from "./schema";
 import { listRollCallGaps } from "./today";
 import { latestTripStagesByTrip } from "./trip-stages";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 import { getTripPrep, type TripPrepShop } from "./trips-prep";
 import { listShopDayDepartures } from "./trips-queries";
 
@@ -72,12 +73,17 @@ function crewSubjectsAtClose(
 }
 
 /**
- * Today's departures in the shop's own calendar day — backwards-looking on
- * purpose, like `listRollCallGaps`: the boats this surface reconciles have
- * mostly already fallen out of every forward-looking reader.
+ * One shop day's departures — today's, or a past day's (issue #2662) —
+ * backwards-looking on purpose, like `listRollCallGaps`: the boats this
+ * surface reconciles have mostly already fallen out of every forward-looking
+ * reader.
  */
-async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Date) {
-  const bounds = shopDayBounds(now, timeZone);
+async function dayTrips(
+  db: AppDb,
+  shopId: string,
+  bounds: { from: Date; to: Date },
+  options: { rehearsals?: boolean } = {},
+) {
   const rows = await db
     .select({
       id: trips.id,
@@ -98,6 +104,8 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
         eq(trips.shopId, shopId),
         // A cancelled trip never sailed; it has no end-state to confirm.
         eq(trips.status, "scheduled"),
+        // diveday:allow-rehearsal: Today keeps a rehearsal in the water on its spine; a past day does not.
+        ...(options.rehearsals === false ? [notRehearsal()] : []),
         gte(trips.startsAt, bounds.from),
         lt(trips.startsAt, bounds.to),
       ),
@@ -385,9 +393,16 @@ export async function getDayCloseout(
    * (fifth-loop ideas, item 2). Absent, tomorrow is never read.
    */
   loadOutShop?: TripPrepShop,
+  /**
+   * **A past shop day instead of today** (issue #2662), `YYYY-MM-DD` in the
+   * shop's zone: how that day's boats closed, read now. Never a load-out: a
+   * past day has no tomorrow to fill tanks for.
+   */
+  day?: CalendarDate,
 ): Promise<DayCloseoutState> {
+  if (day !== undefined) return pastDayCloseout(db, shopId, timeZone, now, day);
   const [tripsToday, gaps] = await Promise.all([
-    todaysTrips(db, shopId, timeZone, now),
+    dayTrips(db, shopId, shopDayBounds(now, timeZone)),
     listRollCallGaps(db, shopId, now),
   ]);
   const state = assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
@@ -398,6 +413,42 @@ export async function getDayCloseout(
     ...state,
     tomorrow: await readDayLoadOut(db, loadOutShop, tomorrowNoon(now, timeZone), now),
   };
+}
+
+/**
+ * **A past day, closed as it stands now** (issue #2662). The same assembly as
+ * today's, over that day's departures, and the same head-count reader: every
+ * roll-call mark ever written on those boats, so a count corrected on Monday
+ * reads corrected on Saturday's page.
+ *
+ * **Never "all home" by age** (review dom-w4-dock B1). Today's reader drops a
+ * dock count after 48 hours home and a boat after thirty days, because Today
+ * is a queue. This page is a record, so it asks `listRollCallGaps` in its
+ * `historical` mode: those boats only, no window, `home` from each boat's own
+ * `endsAt`. A rehearsal is left off (ADR 20261012-rehearsal-departures:
+ * counted nowhere); Today still shows one in the water.
+ */
+async function pastDayCloseout(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date,
+  day: CalendarDate,
+): Promise<DayCloseoutState> {
+  const departures = await dayTrips(db, shopId, shopDaysBounds(day, day, timeZone), {
+    rehearsals: false,
+  });
+  if (departures.length === 0) {
+    return assembleDayCloseout({ trips: [], gaps: [], timeZone, now, shopDay: day });
+  }
+  const gaps = await listRollCallGaps(
+    db,
+    shopId,
+    now,
+    departures.map((trip) => trip.tripId),
+    { historical: true },
+  );
+  return assembleDayCloseout({ trips: departures, gaps, timeZone, now, shopDay: day });
 }
 
 /**
@@ -524,6 +575,39 @@ export async function listHeadCountCloses(
     if (last) closes.set(tripId, { closedAt: last.occurredAt, closedBy: last.closedBy });
   }
   return closes;
+}
+
+/**
+ * **Was a diver ever recorded not back after a dive?** Per trip, the first
+ * dive with a `not_boarded` mark at its after-dive checkpoint, even when a
+ * later mark resolved it. A past day's station reads as it closed, so a
+ * resolved scare would otherwise vanish; the roll call log stays the record.
+ */
+export async function listNotBackAfterDive(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, number>> {
+  const firstDive = new Map<string, number>();
+  if (tripIds.length === 0) return firstDive;
+  const rows = await db
+    .select({ tripId: rollCallEvents.tripId, checkpoint: rollCallEvents.checkpoint })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        inArray(rollCallEvents.tripId, [...tripIds]),
+        eq(rollCallEvents.status, "not_boarded"),
+        ne(rollCallEvents.checkpoint, "departure"),
+      ),
+    );
+  for (const row of rows) {
+    const dive = Number(/^after_dive_(\d+)$/.exec(row.checkpoint)?.[1]);
+    if (!Number.isInteger(dive)) continue;
+    const seen = firstDive.get(row.tripId);
+    if (seen === undefined || dive < seen) firstDive.set(row.tripId, dive);
+  }
+  return firstDive;
 }
 
 /**

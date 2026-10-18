@@ -25,6 +25,11 @@ import type { ShopYearCell, ShopYearFill } from "@/lib/shop-year";
  * "2,907 divers" already told it. That is the same judgement the departure
  * ledger's meters make and for the same reason. The `title` on each day is for
  * a mouse, not for assistive technology.
+ *
+ * **Two shapes of one strip** (issue #2664). The year lays its days out in
+ * weeks, seven rows deep; the month is one row of its 28 to 31 days, the same
+ * squares on the same four fills, sized to the whole month so a month still
+ * running keeps its squares and leaves the days to come blank.
  */
 
 /** The lagoon at four strengths: no boat, a thin boat, a good boat, a full one. */
@@ -44,16 +49,35 @@ export type YearStripCopy = {
 
 export function YearStrip({
   cells,
-  months,
+  months = [],
   copy,
+  row,
   className = "",
 }: {
   cells: ShopYearCell[];
   /** The month markers above the strip: a label, the column it starts in (1-based), and its report. */
-  months: { key: string; label: string; column: number; href: string }[];
+  months?: { key: string; label: string; column: number; href: string }[];
   copy: YearStripCopy;
+  /**
+   * One row of days instead of weeks: the month's strip. `days` is how many
+   * days the row is wide, so a month still running keeps its squares' size.
+   */
+  row?: { days: number };
   className?: string;
 }) {
+  if (row) {
+    return (
+      <div
+        className={`grid gap-[3px] ${className}`.trim()}
+        style={{ gridTemplateColumns: `repeat(${row.days}, minmax(0, 1fr))` }}
+        aria-hidden="true"
+      >
+        {cells.map((cell) =>
+          cell.day === null ? null : <DaySquare key={cell.day} cell={cell} copy={copy} />,
+        )}
+      </div>
+    );
+  }
   const weeks = Math.ceil(cells.length / 7);
   const columns = { gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))` };
   return (
@@ -128,23 +152,30 @@ export function YearStrip({
             // biome-ignore lint/suspicious/noArrayIndexKey: padding squares have no identity but their position.
             <span key={`pad-${index}`} className="aspect-square" />
           ) : (
-            // **Today's outline is drawn inside its square** (a negative
-            // offset as wide as the outline). Outside it, a 2px ring at a 1px
-            // offset filled the whole 3px gutter, touched the square above and
-            // ran 2px past the grid's edge (K-572). Below `sm` a square is
-            // under 4px wide, so the ring thins to 1px and the fill still shows.
-            <span
-              key={cell.day}
-              title={copy.day(cell)}
-              className={`aspect-square rounded-[2px] ${FILL_CLASS[cell.fill]} ${
-                cell.isToday
-                  ? "outline-2 -outline-offset-2 outline-foreground max-sm:outline-1 max-sm:-outline-offset-1"
-                  : ""
-              }`.trim()}
-            />
+            <DaySquare key={cell.day} cell={cell} copy={copy} />
           ),
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * One day's square. **Today's outline is drawn inside its square** (a negative
+ * offset as wide as the outline). Outside it, a 2px ring at a 1px offset filled
+ * the whole 3px gutter, touched the square above and ran 2px past the grid's
+ * edge (K-572). Below `sm` a square is under 4px wide, so the ring thins to 1px
+ * and the fill still shows.
+ */
+function DaySquare({ cell, copy }: { cell: ShopYearCell; copy: YearStripCopy }) {
+  return (
+    <span
+      title={copy.day(cell)}
+      className={`aspect-square rounded-[2px] ${FILL_CLASS[cell.fill]} ${
+        cell.isToday
+          ? "outline-2 -outline-offset-2 outline-foreground max-sm:outline-1 max-sm:-outline-offset-1"
+          : ""
+      }`.trim()}
+    />
   );
 }

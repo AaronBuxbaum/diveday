@@ -22,10 +22,22 @@ test.describe("the year on Reports", () => {
     // The sentence the year says, then the four figures under the strip.
     await expect(page.getByText(/\d+ divers?, \d+ boats? out, \d+ sites?\./)).toBeVisible();
     const figures = page.getByRole("region", { name: "The year’s numbers" });
-    await expect(figures.getByText("Divers", { exact: true })).toBeVisible();
+    await expect(figures.getByText("Different divers", { exact: true })).toBeVisible();
     await expect(figures.getByText("Boats out", { exact: true })).toBeVisible();
     await expect(figures.getByText("Busiest day", { exact: true })).toBeVisible();
     await expect(figures.getByText("Quietest month", { exact: true })).toBeVisible();
+    // **Divers are people** (issue #2663): the Divers figure and the sentence
+    // read one count of different people, the count the home's season line uses.
+    const sentence = await page.getByText(/[\d,]+ divers?, \d+ boats? out/).textContent();
+    const sentenceDivers = (sentence?.match(/^([\d,]+) divers?/)?.[1] ?? "").replaceAll(",", "");
+    expect(sentenceDivers).not.toBe("");
+    const figure = await figures
+      .getByRole("definition")
+      .first()
+      .locator("span")
+      .first()
+      .textContent();
+    expect(figure?.replaceAll(",", "")).toBe(sentenceDivers);
 
     // **The year's money is its own row** (fourth UX review, item 25): net
     // revenue, tax and tips for the owner, apart from the four figures, which
@@ -42,6 +54,8 @@ test.describe("the year on Reports", () => {
     await page.getByRole("link", { name: "This month" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
     await expect(page.getByRole("region", { name: "This month’s numbers" })).toBeVisible();
+    // The month's days as one strip above its figures (issue #2664).
+    await expect(page.getByRole("region", { name: "The month’s days" })).toBeVisible();
   });
 
   test("the card is an image the year page hands over", { tag: READ_ONLY }, async ({

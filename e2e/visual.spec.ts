@@ -5490,6 +5490,14 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "blowout-confirm", scheme);
       });
 
+      // A past day, read-only (issue #2662): yesterday's boats as the evening
+      // closed them, under Schedule. Read-only by construction.
+      test(`a past day renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto(`/shop/blue-mantis/schedule/day/${daysFromNow(-1)}`);
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await capture(page, "past-day", scheme);
+      });
+
       // The day's weather call (ADR 20261009-day-weather-call), reached from
       // the single-trip confirm: every departure of the reef charter's day,
       // none selected, with who is booked on and crewing each; then its review,

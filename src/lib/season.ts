@@ -1,3 +1,4 @@
+import { type CalendarDate, shiftCalendarDate } from "./calendar-date";
 import { utcToWallTime, wallTimeToUtc } from "./zoned";
 
 /**
@@ -48,4 +49,46 @@ export function seasonStartInstant(now: Date, timeZone: string, season: SeasonSt
   const thisYear = wallTimeToUtc({ ...midnight, year: wall.year }, timeZone);
   if (thisYear.getTime() <= now.getTime()) return thisYear;
   return wallTimeToUtc({ ...midnight, year: wall.year - 1 }, timeZone);
+}
+
+/**
+ * **The shop's year is its season** (issue #2657): the twelve months from the
+ * shop's season start, as a window of shop-local days. The year page, its
+ * card, Reports' year money and the shopfront's "Our year" all read this one
+ * window, so the home's season count and the year page count over the same
+ * days. A January-start shop's window is the calendar year.
+ */
+export type ShopSeason = {
+  /** The calendar year the season starts in; what `?year=` names. */
+  year: number;
+  /** The season's first shop-local day. */
+  startsOn: CalendarDate;
+  /** Its last: the day before the next season starts. */
+  endsOn: CalendarDate;
+};
+
+/** The season that starts in `year`. */
+export function shopSeasonOf(year: number, season: SeasonStart): ShopSeason {
+  const start = (y: number) =>
+    `${String(y).padStart(4, "0")}-${String(season.month).padStart(2, "0")}-${String(season.day).padStart(2, "0")}`;
+  // February is capped at the 28th (the table's CHECK), so every year has this day.
+  return { year, startsOn: start(year), endsOn: shiftCalendarDate(start(year + 1), -1) };
+}
+
+/** The season `now` falls in, through {@link seasonStartInstant}. */
+export function currentShopSeason(now: Date, timeZone: string, season: SeasonStart): ShopSeason {
+  return shopSeasonOf(
+    utcToWallTime(seasonStartInstant(now, timeZone, season), timeZone).year,
+    season,
+  );
+}
+
+/**
+ * The season's name: "2026" when it is the calendar year, "2026–27" when it
+ * starts anywhere else. Digits only, so it is not copy; the sentence around
+ * it comes from the bundle.
+ */
+export function shopSeasonLabel(season: Pick<ShopSeason, "year" | "startsOn">): string {
+  if (season.startsOn.endsWith("-01-01")) return String(season.year);
+  return `${season.year}–${String((season.year + 1) % 100).padStart(2, "0")}`;
 }
