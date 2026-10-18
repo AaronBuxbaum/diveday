@@ -214,7 +214,8 @@ async function sendContactEmailConfirmation(shop: {
     email: shop.contactEmail,
   });
   const delivery = await sendNotification(db, {
-    kind: "contact_email_confirmation",
+    kind: "address_confirmation",
+    purpose: "shop_contact",
     shopId: shop.id,
     tokenId: issued.tokenId,
     to: shop.contactEmail,

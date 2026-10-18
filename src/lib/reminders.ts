@@ -112,8 +112,8 @@ export type ReminderRhythmRule = {
  * - The **7-day nudge** carries nothing but the diver's own to-do list. With an
  *   empty list it is a warm hello about a boat they already know they are on,
  *   and it costs a send on WhatsApp or SMS to say it.
- * - The **24-hour dock reminder** carries the *time* — the dock call, the
- *   conditions, who to text on the morning. A fully-ready diver needs that as
+ * - The **24-hour dock reminder** carries the *time* — the dock call time
+ *   (the conditions and who to text stay in the text and the thread). A fully-ready diver needs that as
  *   much as anybody, so its utility is never the task, and it always sends.
  */
 export const TRIP_REMINDER_RHYTHM: Record<ReminderKind, ReminderRhythmRule> = {
@@ -125,7 +125,7 @@ export const TRIP_REMINDER_RHYTHM: Record<ReminderKind, ReminderRhythmRule> = {
   trip_reminder_24h: {
     kind: "trip_reminder_24h",
     unconditional: true,
-    why: "the dock call, the conditions and who to text are new utility whatever is settled",
+    why: "the dock call time is new utility whatever is settled",
   },
 };
 

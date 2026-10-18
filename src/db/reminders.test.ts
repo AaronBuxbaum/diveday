@@ -191,11 +191,9 @@ describe("sendDueReminders", () => {
     expect(text.body).toMatch(/Your trip prep: https:\/\/diveday\.example\/ready\//);
     const [mail] = emailsFor(email, bookingId);
     if (mail.kind !== "trip_reminder_7d") throw new Error(`unexpected ${mail.kind}`);
-    expect(mail.meetingPoint).toMatchObject({
-      label: "North Pier",
-      address: "1 Dock St",
-      landmark: "Blue awning",
-    });
+    // The email is a sentence and the thread link (issue #2660): where to meet
+    // is on the thread, so no meeting point travels with it.
+    expect("meetingPoint" in mail).toBe(false);
     // One capability, the same link on both channels.
     expect(text.body).toContain(mail.readinessUrl);
   });
@@ -309,7 +307,7 @@ describe("sendDueReminders", () => {
     expect(rows[0]).toMatchObject({ status: "sent", providerMessageId: "SM_only" });
   });
 
-  it("carries the shop's dock call time and readiness fields into the reminder", async () => {
+  it("carries only what its sentence and its link are made of into the reminder email", async () => {
     const { db, shop, bookingId, inWeekBucket } = await reminderContext();
     await setShopDockDayRhythm(db, shop.id, { ...DEFAULT_DOCK_DAY_RHYTHM, dockCallMinutes: 45 });
     const email = fakeEmail();
@@ -322,9 +320,22 @@ describe("sendDueReminders", () => {
     const [reminder] = emailsFor(email, bookingId);
     expect(reminder.kind).toBe("trip_reminder_7d");
     if (reminder.kind !== "trip_reminder_7d") return;
-    expect(reminder.dockCallMinutes).toBe(45);
-    expect(Array.isArray(reminder.outstanding)).toBe(true);
-    expect(typeof reminder.medicalReview).toBe("boolean");
+    // The dock call, the checklist and the review answer live on the thread; the
+    // email holds a count of what is left and nothing it could drift from.
+    for (const gone of [
+      "brief",
+      "diverName",
+      "endsAt",
+      "hotelPickupLocation",
+      "learningMaterials",
+      "meetingPoint",
+      "outstanding",
+      "pickupTime",
+      "scheduleDays",
+    ]) {
+      expect(gone in reminder, gone).toBe(false);
+    }
+    expect(reminder.open).toBeGreaterThanOrEqual(0);
   });
 
   it("nudges an expired waiver link, and never sends the dead link back", async () => {
@@ -359,7 +370,7 @@ describe("sendDueReminders", () => {
     // one that never arrived, so it earns the same nudge (2026-08-03).
     // (This diver also has no cert card on file, so the list is not a
     // singleton — the point is that the expired waiver is now *in* it.)
-    expect(reminder.outstanding).toContain("waiver_expired");
+    expect(reminder.open).toBeGreaterThanOrEqual(1);
     // Never a dead link: the only URL either channel carries is a `readiness`
     // capability minted on this run, whose page mints a replacement signing
     // link on tap. The expired waiver token must appear in neither.
@@ -371,8 +382,9 @@ describe("sendDueReminders", () => {
     expect(text.body).not.toContain("/waivers/");
   });
 
-  it("enriches the night-before brief with conditions, packing, contact, and first-timer voice", async () => {
-    const { db, shop, reef, bookingId, inWeekBucket } = await reminderContext();
+  it("texts the night-before conditions and contact; the email leaves them to the thread", async () => {
+    const { db, shop, reef, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
     await updateTripConditions(db, shop.id, reef.id, {
       conditionsSummary: "Warm and glassy — a perfect first-dive day",
       waterTemperatureC: 27,
@@ -387,34 +399,33 @@ describe("sendDueReminders", () => {
       .where(eq(shops.id, shop.id));
     await db.update(shops).set({ contactPhone: "+13055551234" }).where(eq(shops.id, shop.id));
     const email = fakeEmail();
-    // 6h out lands in the 24-hour bucket, inside the send window, so the
-    // reminder is the full brief.
+    const sms = fakeSms();
+    // 6h out lands in the 24-hour bucket, inside the send window.
     const dayNow = new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000);
     expect(dayNow.getTime()).toBeGreaterThan(inWeekBucket.getTime());
 
     await sendDueReminders(db, {
       now: dayNow,
       emailProvider: email.provider,
-      smsProvider: fakeSms().provider,
+      smsProvider: sms.provider,
       appOrigin: null,
     });
 
     const [reminder] = emailsFor(email, bookingId);
     expect(reminder.kind).toBe("trip_reminder_24h");
-    if (reminder.kind !== "trip_reminder_24h") return;
-    expect(reminder.brief?.forecast).toContain("Warm and glassy");
-    expect(reminder.brief?.forecast).toContain("27°C");
-    expect(reminder.brief?.bring?.length).toBeGreaterThan(0);
-    expect(reminder.brief?.whoToText).toBe("+13055551234");
-    // Pat has never dived with the shop before — the softer voice applies.
-    expect(reminder.brief?.firstTimerNote).toContain("First boat dive");
+    expect("brief" in reminder).toBe(false);
+    const [text] = sms.sent.filter((m) => m.to === PHONE);
+    expect(text.body).toContain("Warm and glassy");
+    expect(text.body).toContain("27°C");
+    expect(text.body).toContain("+13055551234");
   });
 
-  it("writes the brief's conditions in the shop's own units", async () => {
+  it("writes the text's conditions in the shop's own units", async () => {
     // Same stored row as the test above (Celsius and metres on disk); only the
-    // shop's two display settings differ, and the diver's brief must follow
-    // them or it will disagree with the trip page it links to.
-    const { db, shop, reef, bookingId } = await reminderContext();
+    // shop's two display settings differ, and the text must follow them or it
+    // will disagree with the trip page it links to.
+    const { db, shop, reef, personId } = await reminderContext();
+    await db.update(people).set({ phone: PHONE }).where(eq(people.id, personId));
     await updateTripConditions(db, shop.id, reef.id, {
       waterTemperatureC: 27,
       visibilityMeters: 20,
@@ -423,35 +434,19 @@ describe("sendDueReminders", () => {
       .update(shops)
       .set({ temperatureUnit: "fahrenheit", depthUnit: "feet" })
       .where(eq(shops.id, shop.id));
-    const email = fakeEmail();
+    const sms = fakeSms();
 
     await sendDueReminders(db, {
       now: new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000),
-      emailProvider: email.provider,
-      smsProvider: fakeSms().provider,
+      emailProvider: fakeEmail().provider,
+      smsProvider: sms.provider,
       appOrigin: null,
     });
 
-    const [reminder] = emailsFor(email, bookingId);
-    if (reminder.kind !== "trip_reminder_24h") throw new Error("expected the night-before brief");
-    expect(reminder.brief?.forecast).toContain("81°F");
-    expect(reminder.brief?.forecast).toContain("66 ft");
-    expect(reminder.brief?.forecast).not.toContain("27°C");
-  });
-
-  it("keeps the 7-day reminder a light nudge with no brief", async () => {
-    const { db, bookingId, inWeekBucket } = await reminderContext();
-    const email = fakeEmail();
-    await sendDueReminders(db, {
-      now: inWeekBucket,
-      emailProvider: email.provider,
-      smsProvider: fakeSms().provider,
-      appOrigin: null,
-    });
-    const [reminder] = emailsFor(email, bookingId);
-    expect(reminder.kind).toBe("trip_reminder_7d");
-    if (reminder.kind !== "trip_reminder_7d") return;
-    expect("brief" in reminder).toBe(false);
+    const [text] = sms.sent.filter((m) => m.to === PHONE);
+    expect(text.body).toContain("81°F");
+    expect(text.body).toContain("66 ft");
+    expect(text.body).not.toContain("27°C");
   });
 
   it("records not_configured for a booking with no reachable channel", async () => {
@@ -1009,9 +1004,10 @@ describe("sendDueReminders and the reminder rhythm", () => {
 
       const [sent] = emailsFor(email, ctx.bookingId);
       expect(sent?.kind).toBe("trip_reminder_7d");
-      expect(sent && "learningMaterials" in sent ? sent.learningMaterials : null).toEqual([
-        { name: "Open Water eLearning", url: "https://www.padi.com/" },
-      ]);
+      // The materials are the thread's to list; the email counts them as the
+      // one thing left, so the sentence says so.
+      expect(sent && "open" in sent ? sent.open : null).toBe(1);
+      expect(sent && "learningMaterials" in sent).toBe(false);
     });
 
     it("stops nudging once a staffer ticks the materials done", async () => {
@@ -1034,7 +1030,7 @@ describe("sendDueReminders and the reminder rhythm", () => {
       expect(emailsFor(email, ctx.bookingId)).toHaveLength(0);
     });
 
-    it("tells the email it is a course session, so the week lead names no dock", async () => {
+    it("tells the email it is a course session, so the sentence says it starts", async () => {
       const ctx = await reminderContext();
       await asCourseSession(ctx);
       const email = fakeEmail();

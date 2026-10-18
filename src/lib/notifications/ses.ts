@@ -7,7 +7,7 @@ import type { Notification } from "./kinds";
 import type { NotificationProvider } from "./provider";
 import { reservedTestRecipientDelivery } from "./provider";
 import { messageFor } from "./render";
-import { SES_KIND_TAG, SES_SHOP_TAG } from "./ses-tags";
+import { SES_KIND_TAG, SES_PURPOSE_TAG, SES_SHOP_TAG } from "./ses-tags";
 import { fromAddressFor } from "./shop-voice";
 
 /**
@@ -182,11 +182,23 @@ function attachmentsOf(notification: Notification) {
   }));
 }
 
+/** The second tag of the two kinds that serve several readers (`SES_PURPOSE_TAG`). */
+function purposeTagOf(notification: Notification): { Name: string; Value: string }[] {
+  if (notification.kind === "address_confirmation") {
+    return [{ Name: SES_PURPOSE_TAG, Value: notification.purpose }];
+  }
+  if (notification.kind === "operator_alert") {
+    return [{ Name: SES_PURPOSE_TAG, Value: notification.event }];
+  }
+  return [];
+}
+
 /** See `ses-tags.ts` for why every send is tagged with its shop and kind. */
 function emailTagsOf(notification: Notification): { Name: string; Value: string }[] {
   return [
     { Name: SES_KIND_TAG, Value: notification.kind },
     ...("shopId" in notification ? [{ Name: SES_SHOP_TAG, Value: notification.shopId }] : []),
+    ...purposeTagOf(notification),
   ];
 }
 

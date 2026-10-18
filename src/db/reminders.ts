@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, lt, lte, ne } from "drizzle-orm";
+import { and, eq, gt, inArray, lte } from "drizzle-orm";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
@@ -7,7 +7,7 @@ import { HOUR_MS, nowDate } from "@/lib/clock";
 import { type CourseLearningMaterial, readLearningMaterials } from "@/lib/courses";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { type MeetingPoint, meetingPointForMessage, meetingPointOfRows } from "@/lib/meeting-point";
-import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
+import { forecastText } from "@/lib/night-before-brief";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import {
   type Notification,
@@ -47,43 +47,12 @@ import {
 } from "./notifications";
 import { listTripsReadiness } from "./readiness";
 import { type ReminderLink, ReminderLinks } from "./reminder-links";
-import {
-  bookings,
-  courses,
-  notificationDeliveries,
-  people,
-  shops,
-  tripScheduleDays,
-  trips,
-} from "./schema";
+import { bookings, courses, notificationDeliveries, people, shops, trips } from "./schema";
 import { optedOutPhones, stopListedSmsProvider } from "./sms-opt-outs";
 import { notRehearsal } from "./trips-live";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 const REMINDER_KINDS: ReminderKind[] = TRIP_REMINDER_CADENCES.map((c) => c.kind);
-
-/**
- * The subset of these people who have dived with the shop before — anyone with a
- * prior non-cancelled booking on a trip that has already departed. A diver NOT
- * in this set is a first-timer, and the night-before brief speaks to them in a
- * softer, what-happens-on-the-boat voice (brainstorm C's first-timer track).
- * Batched to a single query so the cron scan stays flat regardless of party size.
- */
-async function returningDiverIds(db: AppDb, personIds: string[], now: Date): Promise<Set<string>> {
-  if (personIds.length === 0) return new Set();
-  const rows = await db
-    .selectDistinct({ personId: bookings.personId })
-    .from(bookings)
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        inArray(bookings.personId, personIds),
-        ne(bookings.status, "cancelled"),
-        lt(trips.startsAt, now),
-      ),
-    );
-  return new Set(rows.map((r) => r.personId));
-}
 
 export type ReminderRunSummary = {
   /** Active bookings on trips inside the reminder horizon. */
@@ -274,34 +243,6 @@ function reminderSmsBody(
 }
 
 /**
- * Every meeting of each due trip, in day order — one read for the whole pass.
- * A multi-day course's reminder lists each day; one meeting (or none on file)
- * keeps the single date and time it always had.
- */
-async function readMeetingsByTrip(
-  db: AppDb,
-  tripIds: string[],
-): Promise<Map<string, { startsAt: Date; endsAt: Date }[]>> {
-  const meetingsByTrip = new Map<string, { startsAt: Date; endsAt: Date }[]>();
-  if (tripIds.length === 0) return meetingsByTrip;
-  const meetings = await db
-    .select({
-      tripId: tripScheduleDays.tripId,
-      startsAt: tripScheduleDays.startsAt,
-      endsAt: tripScheduleDays.endsAt,
-    })
-    .from(tripScheduleDays)
-    .where(inArray(tripScheduleDays.tripId, tripIds))
-    .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
-  for (const meeting of meetings) {
-    const list = meetingsByTrip.get(meeting.tripId) ?? [];
-    list.push({ startsAt: meeting.startsAt, endsAt: meeting.endsAt });
-    meetingsByTrip.set(meeting.tripId, list);
-  }
-  return meetingsByTrip;
-}
-
-/**
  * The trip-prep link each sending reminder carries, by booking id, carried by
  * both the email's button and the text (ux review 2026-10-11, item 6). Minted
  * in one insert per shop for exactly the reminders that earn their send and
@@ -473,10 +414,6 @@ export async function sendDueReminders(
     sentByBooking.set(row.bookingId, set);
   }
 
-  // Who has dived with the shop before — a night-before brief speaks to a
-  // first-timer (anyone NOT in this set) in a softer voice (brainstorm C).
-  const returning = await returningDiverIds(db, [...new Set(rows.map((r) => r.person.id))], now);
-
   const emailWork: Array<{
     bookingId: string;
     shopId: string;
@@ -561,10 +498,6 @@ export async function sendDueReminders(
     }),
   );
 
-  const meetingsByTrip = await readMeetingsByTrip(db, [
-    ...new Set(dueRows.map(({ row }) => row.trip.id)),
-  ]);
-
   // First which reminders send, then every link they carry, then the sends.
   const sending: Array<(typeof dueRows)[number] & ReminderContent> = [];
   for (const {
@@ -635,7 +568,6 @@ export async function sendDueReminders(
       checklist,
       materialsDue,
     } of sending) {
-      const meetings = meetingsByTrip.get(trip.id) ?? [];
       const student = Boolean(trip.courseId) && isDiver(booking.participantType);
       const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
       // No request to negotiate `Accept-Language` from at a cron fire: this reads
@@ -677,14 +609,6 @@ export async function sendDueReminders(
           )
         : null;
       const whoToText = isDay ? shop.contactPhone?.trim() || null : null;
-      const brief = isDay
-        ? {
-            forecast,
-            bring: shop.packingList,
-            whoToText,
-            firstTimerNote: firstTimerReassuranceText(t, !returning.has(person.id)),
-          }
-        : undefined;
 
       const reminderText = (replyKeywords: boolean) =>
         reminderSmsBody(t, locale, {
@@ -730,24 +654,18 @@ export async function sendDueReminders(
             shopId: shop.id,
             to: person.email,
             locale,
-            diverName: person.fullName,
             shopName: shop.name,
             tripTitle: trip.title,
             startsAt: trip.startsAt,
-            endsAt: trip.endsAt,
             timezone: shop.timezone,
+            // What the sentence says is left: the checklist and
+            // unfinished course materials; the medical review has its own sentence. The thread lists them.
+            open: outstanding.length + (materialsDue.length > 0 ? 1 : 0),
             dockCallMinutes: shop.dockCallMinutes,
-            pickupTime: booking.pickupTime,
-            hotelPickupLocation: booking.hotelPickupLocation,
-            outstanding,
-            medicalReview,
+            ...(medicalReview ? { medicalReview: true } : {}),
             readinessUrl,
             ...(inboundEmailOn ? { replyKeywords: true } : {}),
-            ...(brief ? { brief } : {}),
-            ...(materialsDue.length > 0 ? { learningMaterials: materialsDue } : {}),
-            ...(meetings.length > 1 ? { scheduleDays: meetings } : {}),
             ...(student ? { courseSession: true } : {}),
-            meetingPoint,
           },
         });
       } else if (phone) {

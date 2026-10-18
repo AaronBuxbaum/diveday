@@ -9,3 +9,10 @@
  */
 export const SES_SHOP_TAG = "diveday_shop";
 export const SES_KIND_TAG = "diveday_kind";
+
+/**
+ * What a kind that serves several readers is sending, so metrics split by
+ * `purpose` (an address confirmation) or `event` (an operator alert) as well as
+ * by kind. Absent for every kind with one reader.
+ */
+export const SES_PURPOSE_TAG = "diveday_purpose";

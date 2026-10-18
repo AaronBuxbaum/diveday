@@ -147,7 +147,8 @@ async function sendDigest(now: Date): Promise<DigestOutcome> {
     });
 
     const delivery = await notify({
-      kind: "founder_digest",
+      kind: "operator_alert",
+      event: "founder_digest",
       to,
       weekStart: week.startDate,
       weekEnd: week.endDate,

@@ -278,7 +278,8 @@ async function sendShoreAlertConfirmation(shop: {
     email: shop.shoreAlertEmail,
   });
   const delivery = await sendNotification(db, {
-    kind: "shore_alert_confirmation",
+    kind: "address_confirmation",
+    purpose: "shore_alert",
     shopId: shop.id,
     tokenId: issued.tokenId,
     to: shop.shoreAlertEmail,

@@ -2359,7 +2359,7 @@ async function scrubPiiBlob(
   // is not the person it is addressed to used to be out of reach entirely:
   // `course_inquiry` mails the shop's own front desk about a diver who used
   // the public composer and carries their name, address, phone and free-text
-  // message, and `new_account_alert` is the same shape about an owner. A
+  // message, and the `new_account` operator alert is the same shape about an owner. A
   // retryable failure plus an erasure before the retry drained left all of
   // that in a live row nothing here matched. `subject_email` is what
   // `queueRetry` now lifts out for them (issue #1298); one statement rather

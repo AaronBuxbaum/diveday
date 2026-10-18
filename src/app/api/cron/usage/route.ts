@@ -156,7 +156,8 @@ export async function GET(request: Request) {
       }
 
       const delivery = await notify({
-        kind: "usage_ceiling_alert",
+        kind: "operator_alert",
+        event: "usage_ceiling",
         to: alertRecipient(),
         ceilingId: evaluation.ceilingId,
         provider: evaluation.provider,

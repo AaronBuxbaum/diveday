@@ -81,7 +81,8 @@ export async function announceDemoEntry(input: {
     const shop = await getShopBySlug(db, slug);
     if (!shop) return;
     await sendNotification(db, {
-      kind: "demo_started_alert",
+      kind: "operator_alert",
+      event: "demo_started",
       shopId: shop.id,
       to: alertRecipient(),
       shopSlug: slug,

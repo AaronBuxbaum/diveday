@@ -43,7 +43,8 @@ export async function announceSetupRequest(request: SetupRequest): Promise<void>
 
   try {
     const delivery = await notify({
-      kind: "setup_request_alert",
+      kind: "operator_alert",
+      event: "setup_request",
       setupRequestId: request.id,
       to: ONBOARDING_EMAIL,
       shopName: request.shopName,

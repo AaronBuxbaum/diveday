@@ -217,7 +217,8 @@ export async function onboardAction(formData: FormData) {
     after(async () => {
       try {
         await sendNotification(await getDb(), {
-          kind: "new_account_alert",
+          kind: "operator_alert",
+          event: "new_account",
           userAccountId: accountId,
           shopId,
           to: alertRecipient(),
@@ -260,14 +261,15 @@ export async function onboardAction(formData: FormData) {
         }).catch(() => ({ status: "failed" as const }));
         if (issued) {
           await sendNotification(db, {
-            kind: "email_verification",
+            kind: "address_confirmation",
+            purpose: "account",
             userAccountId: accountId,
             tokenId: issued.tokenId,
             shopId,
             to: ownerEmail.toLowerCase(),
             locale,
             ownerName,
-            verifyUrl: new URL(verifyAccountLinkPath(issued.token), `${origin}/`).toString(),
+            confirmUrl: new URL(verifyAccountLinkPath(issued.token), `${origin}/`).toString(),
             expiresAt: issued.expiresAt,
             timezone,
           }).catch(() => ({ status: "failed" as const }));

@@ -251,14 +251,15 @@ describe("notificationIdempotencyKey", () => {
 
   it("keys email verification by the token row's id, not the raw token", () => {
     const key = notificationIdempotencyKey({
-      kind: "email_verification",
+      kind: "address_confirmation",
+      purpose: "account",
       userAccountId: "00000000-0000-4000-8000-000000000020",
       tokenId: "00000000-0000-4000-8000-000000000030",
       shopId: "00000000-0000-4000-8000-000000000010",
       to: "delivered+verification@dive.day",
       locale: "en-US",
       ownerName: "Pat Diver",
-      verifyUrl: "https://diveday.example/verify/raw-token-should-not-appear",
+      confirmUrl: "https://diveday.example/verify/raw-token-should-not-appear",
       expiresAt: new Date("2026-07-29T12:00:00.000Z"),
       timezone: "America/New_York",
     });
@@ -298,13 +299,12 @@ describe("notificationIdempotencyKey", () => {
   });
 
   it("keys a demo-try alert by the minted slug, which is the entry's identity", () => {
-    // Every demo entry mints its own shop under a freshly generated identity,
-    // so the slug already distinguishes one try from the next — no timestamp,
-    // and a double-submitted CTA that reached the same shop converges on one
-    // send instead of mailing the founder twice about one visitor.
+    // Every entry mints its own shop, so the slug already tells one try from the next: a
+    // double-submitted CTA that reached the same shop converges on one send.
     expect(
       notificationIdempotencyKey({
-        kind: "demo_started_alert",
+        kind: "operator_alert",
+        event: "demo_started",
         shopId: "00000000-0000-4000-8000-000000000010",
         to: "alerts@dive.day",
         shopSlug: "coral-cove-divers-a1b2c3",
@@ -317,7 +317,8 @@ describe("notificationIdempotencyKey", () => {
 
 describe("the demo-try alert's schema (docs ADR 20260805-demo-try-alerts)", () => {
   const alert = {
-    kind: "demo_started_alert" as const,
+    kind: "operator_alert",
+    event: "demo_started",
     shopId: "00000000-0000-4000-8000-000000000010",
     to: "alerts@dive.day",
     shopSlug: "coral-cove-divers-a1b2c3",
@@ -723,17 +724,16 @@ describe("notificationProviderFromEnvironment (ADR 20260803-ses-sole-email-provi
   });
 
   it("puts no operational alert on the wire with no credentials configured", async () => {
-    // How "no mail in unit tests and the e2e fleet" is actually guaranteed for
-    // the two founder alerts (docs ADR 20260805-demo-try-alerts): not a
-    // test-only branch in the alerting code, but the provider seam every send
-    // already goes through. `playwright.config.ts` blanks the SES_* keys
-    // fleet-wide for exactly this, and a local run has never had them.
+    // How "no mail in unit tests and the e2e fleet" is guaranteed for founder alerts (docs ADR
+    // 20260805-demo-try-alerts): the provider seam every send goes through, with the SES_* keys
+    // blanked fleet-wide by `playwright.config.ts`, not a test-only branch in the alerting code.
     const provider = notificationProviderFromEnvironment({});
 
     await expect(
       notify(
         {
-          kind: "demo_started_alert",
+          kind: "operator_alert",
+          event: "demo_started",
           shopId: "00000000-0000-4000-8000-000000000010",
           to: "alerts@dive.day",
           shopSlug: "coral-cove-divers-a1b2c3",

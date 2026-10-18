@@ -86,7 +86,7 @@ export const SETUP_PHONE_MAX = 30;
  * joiners) and the Unicode line and paragraph separators are refused in every
  * typed answer: each one lands in a mail (the shop name and region in its
  * subject), where they can break a header or disguise what the text says, and
- * none belongs in a one-line answer. Shared with the `setup_request_alert`
+ * none belongs in a one-line answer. Shared with the `operator_alert` (`setup_request`)
  * notification schema, so the mail refuses them even if a caller skipped this
  * parser.
  */

@@ -5,10 +5,12 @@ import {
   NOTIFICATION_TRIP_TITLE_MAX,
   type Notification,
   notificationIdempotencyKey,
+  notificationIsQueueable,
   notificationSchema,
   notificationSubjectEmail,
   notificationSubjectPhone,
 } from "./kinds";
+import { shopVoiceOf } from "./shop-voice";
 
 /** A zod type with its optional/nullable wrappers taken off. */
 function unwrap(type: ZodType): { type?: string; format?: string } {
@@ -41,9 +43,21 @@ function branches(): { kind: string; email: string[]; phone: string[] }[] {
   const union = (
     notificationSchema as unknown as { def: { left: { def: { options: ZodType[] } } } }
   ).def.left.def.options;
-  return union.map((option) => {
+  // `operator_alert` is a union of events inside the union of kinds, and
+  // `address_confirmation` a union of purposes; each branch is checked on its
+  // own, an alert event named `operator_alert_<event>`.
+  const flat = union.flatMap((option) => {
+    const nested = (option as unknown as { def: { options?: ZodType[] } }).def.options;
+    return nested ?? [option];
+  });
+  return flat.map((option) => {
     const shape = (option as ZodObject).def.shape as Record<string, ZodType>;
-    const kind = (shape.kind as unknown as { def: { values: string[] } }).def.values[0] ?? "";
+    const kindName = (shape.kind as unknown as { def: { values: string[] } }).def.values[0] ?? "";
+    const event =
+      kindName === "operator_alert"
+        ? (shape.event as unknown as { def: { values: string[] } }).def.values[0]
+        : undefined;
+    const kind = event ? `operator_alert_${event}` : kindName;
     const entries = Object.entries(shape);
     return {
       kind,
@@ -107,8 +121,9 @@ describe("every handle a notification carries is reachable by the erasure sweep"
       signedAt: new Date("2026-08-01T13:00:00.000Z"),
       timezone: "America/New_York",
     } as Notification,
-    new_account_alert: {
-      kind: "new_account_alert",
+    operator_alert_new_account: {
+      kind: "operator_alert",
+      event: "new_account",
       userAccountId: "00000000-0000-4000-8000-000000000003",
       shopId: "00000000-0000-4000-8000-000000000004",
       to: "founder@diveday.invalid",
@@ -119,8 +134,9 @@ describe("every handle a notification carries is reachable by the erasure sweep"
     } as Notification,
     // Never queued in practice — it rides `notify()` with no shop — but its
     // handles are reachable all the same, so a future queued path is covered.
-    setup_request_alert: {
-      kind: "setup_request_alert",
+    operator_alert_setup_request: {
+      kind: "operator_alert",
+      event: "setup_request",
       setupRequestId: "00000000-0000-4000-8000-000000000009",
       to: "onboarding@diveday.invalid",
       shopName: "Reef Line Divers",
@@ -241,9 +257,10 @@ describe("every handle a notification carries is reachable by the erasure sweep"
   });
 });
 
-describe("setup_request_alert", () => {
+describe("operator_alert setup_request", () => {
   const alert = {
-    kind: "setup_request_alert",
+    kind: "operator_alert",
+    event: "setup_request",
     setupRequestId: "00000000-0000-4000-8000-000000000009",
     to: "onboarding@diveday.invalid",
     shopName: "Reef Line Divers",
@@ -289,7 +306,9 @@ describe("every kind's tripTitle shortens a long title instead of rejecting it",
         if (element?.def?.shape) walk(`${where}.${name}[]`, element.def.shape);
       }
     };
-    for (const option of union) {
+    for (const option of union.flatMap(
+      (branch) => (branch as unknown as { def: { options?: ZodType[] } }).def.options ?? [branch],
+    )) {
       const shape = (option as ZodObject).def.shape as Record<string, ZodType>;
       const kind = (shape.kind as unknown as { def: { values: string[] } }).def.values[0] ?? "";
       walk(kind, shape);
@@ -369,5 +388,132 @@ describe("seat_already_held is keyed once per held seat per hour", () => {
   it("keeps two held seats apart in the same hour", () => {
     const at = new Date("2026-10-16T10:01:00Z");
     expect(keyAt(heldBookingId, at)).not.toBe(keyAt("00000000-0000-4000-8000-0000000000a3", at));
+  });
+});
+
+describe("operator_alert: one kind, five events, the keys the five kinds had", () => {
+  const base = { kind: "operator_alert", to: "founder@diveday.invalid" } as const;
+  const id = "00000000-0000-4000-8000-000000000003";
+
+  it("keeps each event's idempotency key, so a retried alert still collapses to one send", () => {
+    const keys = [
+      {
+        event: "new_account",
+        userAccountId: id,
+        shopId: id,
+        ownerName: "Dana",
+        ownerEmail: "d@x.invalid",
+        shopName: "Blue",
+        shopSlug: "blue",
+      },
+      { event: "demo_started", shopId: id, shopSlug: "demo-abc", role: "owner", source: "pricing" },
+      {
+        event: "usage_ceiling",
+        ceilingId: "vercel-bandwidth",
+        provider: "vercel",
+        metric: "bandwidth",
+        unit: "gib",
+        level: "warn",
+        periodKey: "2026-08",
+        value: 80,
+        ceiling: 100,
+        percent: 80,
+        overflow: "bills_overage",
+      },
+      {
+        event: "setup_request",
+        setupRequestId: id,
+        shopName: "Reef",
+        region: "Key Largo",
+        runsBoat: true,
+        currentSystem: "paper",
+        contactName: "Ana",
+        contactEmail: "a@x.invalid",
+        source: "pricing",
+        requestLocale: "en-US",
+      },
+      {
+        event: "founder_digest",
+        weekStart: "2026-10-12",
+        weekEnd: "2026-10-18",
+        diveDays: 0,
+        diveDayShops: 0,
+        demoEntries: [],
+        setupRequests: [],
+        unnotifiedSetupRequests: 0,
+        stalls: [],
+      },
+    ].map((alert) => notificationIdempotencyKey(notificationSchema.parse({ ...base, ...alert })));
+    expect(keys).toEqual([
+      `new-account-alert/${id}`,
+      "demo-started-alert/demo-abc",
+      "usage-ceiling/vercel-bandwidth/2026-08/warn",
+      `setup-request/${id}`,
+      "founder-digest/2026-10-12",
+    ]);
+  });
+
+  it("refuses an event carrying another event's payload", () => {
+    expect(
+      notificationSchema.safeParse({ ...base, event: "founder_digest", shopSlug: "x" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("address_confirmation: one kind, three readers, the keys the three kinds had", () => {
+  const ids = {
+    shopId: "00000000-0000-4000-8000-000000000010",
+    tokenId: "00000000-0000-4000-8000-000000000030",
+    userAccountId: "00000000-0000-4000-8000-000000000020",
+  };
+  const common = {
+    kind: "address_confirmation",
+    shopId: ids.shopId,
+    tokenId: ids.tokenId,
+    to: "desk@shop.invalid",
+    locale: "en-US",
+    confirmUrl: "https://diveday.invalid/confirm-contact/raw-token-should-not-appear",
+    expiresAt: new Date("2026-10-20T12:00:00.000Z"),
+    timezone: "America/New_York",
+  };
+  const account = {
+    ...common,
+    purpose: "account",
+    userAccountId: ids.userAccountId,
+    ownerName: "Dana Reyes",
+  };
+  const shopContact = { ...common, purpose: "shop_contact", shopName: "Blue Mantis" };
+  const shore = { ...common, purpose: "shore_alert", shopName: "Blue Mantis" };
+
+  it("keys each send by its token row's id under the old kind's prefix, never the raw token", () => {
+    const keys = [account, shopContact, shore].map((n) =>
+      notificationIdempotencyKey(notificationSchema.parse(n)),
+    );
+    expect(keys).toEqual([
+      `email-verification/${ids.tokenId}`,
+      `contact-email-confirmation/${ids.tokenId}`,
+      `shore-alert-confirmation/${ids.tokenId}`,
+    ]);
+    for (const key of keys) expect(key).not.toContain("raw-token");
+  });
+
+  it("queues the account and front-desk links and never the shore contact's", () => {
+    expect(notificationIsQueueable(notificationSchema.parse(account))).toBe(true);
+    expect(notificationIsQueueable(notificationSchema.parse(shopContact))).toBe(true);
+    expect(notificationIsQueueable(notificationSchema.parse(shore))).toBe(false);
+  });
+
+  it("is spoken by the shop only for the shore contact", () => {
+    expect(shopVoiceOf(notificationSchema.parse(account))).toBeNull();
+    expect(shopVoiceOf(notificationSchema.parse(shopContact))).toBeNull();
+    expect(shopVoiceOf(notificationSchema.parse(shore))).toBe("Blue Mantis");
+  });
+
+  it("holds each purpose to its own fields", () => {
+    const { ownerName: _ownerName, ...noOwner } = account;
+    const { shopName: _shopName, ...noShopName } = shore;
+    expect(notificationSchema.safeParse(noOwner).success).toBe(false);
+    expect(notificationSchema.safeParse(noShopName).success).toBe(false);
+    expect(notificationSchema.safeParse({ ...shore, purpose: "stop" }).success).toBe(false);
   });
 });
