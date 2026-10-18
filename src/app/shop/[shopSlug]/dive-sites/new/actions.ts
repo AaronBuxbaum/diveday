@@ -1,9 +1,8 @@
 "use server";
 
-import { z } from "zod";
 import { getDb } from "@/db/client";
 import { createDiveSiteForForm, SITE_NAME_TAKEN } from "@/db/dive-sites";
-import { diveSpecialty } from "@/db/schema";
+import { readRequiredSpecialties } from "@/db/requirement-form";
 import { getShopById } from "@/db/shops";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -12,8 +11,6 @@ import { shopPath } from "@/lib/staff-notices";
 import { uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import type { SiteFormState } from "../_components/SiteFormShell";
 import { siteFormExtras } from "../site-forms";
-
-const specialtySchema = z.enum(diveSpecialty.enumValues);
 
 /**
  * Create a dive site from the new-site form, in the session's own shop, and open
@@ -42,9 +39,9 @@ export async function createDiveSiteAction(
   const activeShop = await getShopById(await getDb(), activeSession.user.shopId);
   const parsed = parseDiveSiteForm(Object.fromEntries(formData), activeShop?.depthUnit ?? "meters");
   if (!parsed.ok) return refuse(parsed.error);
-  const specialties = z.array(specialtySchema).safeParse(formData.getAll("specialty").map(String));
+  const specialties = readRequiredSpecialties(formData);
   const extras = siteFormExtras(formData);
-  if (!specialties.success || !extras) return refuse("invalid");
+  if (!specialties || !extras) return refuse("invalid");
   // Uploaded from the staffer's own device straight into first-party
   // storage — there is no pasted URL for a public page to fetch (CR-020).
   const photos = await uploadDiveSitePhotos(formData);
@@ -73,7 +70,7 @@ export async function createDiveSiteAction(
     imageUrls: photos.photos.imageUrls,
     planningNote: { words: planningNoteWords, byPersonId: activeSession.user.personId },
     minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
-    requiredSpecialties: specialties.data,
+    requiredSpecialties: specialties,
     requiresNitrox: extras.requiresNitrox,
     difficultyLevel: parsed.difficultyLevel,
     snorkelSuitable: parsed.snorkelSuitable,

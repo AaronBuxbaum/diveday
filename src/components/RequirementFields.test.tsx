@@ -2,30 +2,31 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
-import type { DepthUnit } from "@/lib/depth-units";
-import type { TideStationEcho } from "@/lib/tide-stations";
-import { SiteCertificationFields } from "./SiteCertificationFields";
-import type { SiteFieldValues } from "./SiteFields";
-import { STORED } from "./site-fields-test-fixtures";
+import type { Requirement } from "@/lib/requirement";
+import { RequirementFields } from "./RequirementFields";
 
 afterEach(cleanup);
 
 const t = staffTranslator("en-US");
 
+const STORED: Requirement = {
+  minimumCertificationLevel: null,
+  requiredSpecialties: [],
+  requiresNitrox: false,
+};
+
 function renderFields(
-  _tideStation?: TideStationEcho | null,
-  _depthUnit: DepthUnit = "meters",
-  locale: "en-US" | "es-ES" = "en-US",
-  values?: SiteFieldValues,
+  values?: Requirement,
   /** The edit page's caption over the specialty boxes; the new-site form passes none. */
-  requiredSpecialtiesLabel?: string,
+  legend?: string,
 ) {
-  const translator = locale === "en-US" ? t : staffTranslator(locale);
   render(
-    <SiteCertificationFields
-      t={translator}
-      values={values}
-      requiredSpecialtiesLabel={requiredSpecialtiesLabel}
+    <RequirementFields
+      t={t}
+      requirement={values}
+      defaultLevel=""
+      labels={{ level: "Level", noLevel: "None", nitrox: "Nitrox" }}
+      legend={legend}
     />,
     // Inside a form, as both pages render it, so a test can read what the
     // form would submit.
@@ -44,12 +45,12 @@ function renderFields(
  * A site's requirements decide who may book it, so the boxes, their names and
  * what they hold are pinned here too: only where they sit moved.
  */
-describe("SiteCertificationFields — the required specialties (K-212)", () => {
+describe("RequirementFields — the required specialties (K-212)", () => {
   const specialtyBoxes = (scope: ParentNode = document) =>
     [...scope.querySelectorAll('input[type="checkbox"][name="specialty"]')] as HTMLInputElement[];
 
   it("captions the edit form's boxes as one group, its legend over them", () => {
-    renderFields(null, "meters", "en-US", STORED, "Required specialties");
+    renderFields(STORED, "Required specialties");
     const group = screen.getByRole("group", { name: "Required specialties" });
     expect(group.tagName).toBe("FIELDSET");
     expect(specialtyBoxes(group).map((box) => box.value)).toEqual([
@@ -66,7 +67,7 @@ describe("SiteCertificationFields — the required specialties (K-212)", () => {
   });
 
   it("starts the new form's uncaptioned boxes at the section's own gap", () => {
-    renderFields(null);
+    renderFields();
     const grid = specialtyBoxes()[0].closest("label")?.parentElement;
     expect(grid?.className).not.toMatch(/(^|\s)m[ty]-\d/);
     expect(screen.queryByRole("group", { name: "Required specialties" })).toBeNull();
@@ -74,9 +75,6 @@ describe("SiteCertificationFields — the required specialties (K-212)", () => {
 
   it("keeps what a stored site requires ticked, and nothing else", () => {
     renderFields(
-      null,
-      "meters",
-      "en-US",
       { ...STORED, requiredSpecialties: ["deep", "night"], requiresNitrox: true },
       "Required specialties",
     );
@@ -87,7 +85,7 @@ describe("SiteCertificationFields — the required specialties (K-212)", () => {
     ).toEqual(["deep", "night"]);
     expect(document.querySelector('input[name="requiresNitrox"]')).toBeChecked();
     cleanup();
-    renderFields(null, "meters", "en-US", STORED, "Required specialties");
+    renderFields(STORED, "Required specialties");
     expect(specialtyBoxes().some((box) => box.checked)).toBe(false);
     expect(document.querySelector('input[name="requiresNitrox"]')).not.toBeChecked();
   });
@@ -95,9 +93,6 @@ describe("SiteCertificationFields — the required specialties (K-212)", () => {
   it("submits what is ticked under the names both actions read, captioned or not", () => {
     for (const caption of [undefined, "Required specialties"]) {
       renderFields(
-        null,
-        "meters",
-        "en-US",
         { ...STORED, requiredSpecialties: ["deep", "drysuit"], requiresNitrox: true },
         caption,
       );

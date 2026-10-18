@@ -1,7 +1,6 @@
 "use server";
 
 import { notFound } from "next/navigation";
-import { z } from "zod";
 import { getDb } from "@/db/client";
 import { planDiveSitePhotoRelease } from "@/db/dive-site-photos";
 import {
@@ -14,7 +13,7 @@ import {
   updateDiveSiteForForm,
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
-import { diveSpecialty } from "@/db/schema";
+import { readRequiredSpecialties } from "@/db/requirement-form";
 import { getShopById } from "@/db/shops";
 import type { DiveSiteTemplateUpdateMode } from "@/lib/dive-site-template-sync";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
@@ -33,8 +32,6 @@ import { siteFormExtras, templatePullMode } from "../site-forms";
  * every read and write to the session's own shop, so a tampered id can only name another of
  * the staffer's own sites.
  */
-
-const specialtySchema = z.enum(diveSpecialty.enumValues);
 
 export async function saveDiveSiteAction(
   siteId: string,
@@ -57,8 +54,8 @@ export async function saveDiveSiteAction(
   const activeShop = await getShopById(await getDb(), activeSession.user.shopId);
   const parsed = parseDiveSiteForm(Object.fromEntries(formData), activeShop?.depthUnit ?? "meters");
   if (!parsed.ok) return refuse(parsed.error);
-  const specialties = z.array(specialtySchema).safeParse(formData.getAll("specialty").map(String));
-  if (!specialties.success) return refuse("invalid");
+  const specialties = readRequiredSpecialties(formData);
+  if (!specialties) return refuse("invalid");
   // The site as stored, re-read rather than closed over: this action runs
   // long after the page rendered, and it decides what a blank file input
   // means (keep what is there) and which objects this save orphans.
@@ -125,7 +122,7 @@ export async function saveDiveSiteAction(
         byPersonId: activeSession.user.personId,
       },
       minimumCertificationLevel: parsed.fields.minimumCertificationLevel,
-      requiredSpecialties: specialties.data,
+      requiredSpecialties: specialties,
       requiresNitrox: extras.requiresNitrox,
       difficultyLevel: parsed.difficultyLevel,
       snorkelSuitable: parsed.snorkelSuitable,

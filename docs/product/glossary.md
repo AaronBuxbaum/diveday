@@ -58,6 +58,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Readiness
 - Refresher / ReActivate
 - Requirable level
+- Requirement
 - Self-declared certification
 - Shop-issued certification
 - Site maximum depth

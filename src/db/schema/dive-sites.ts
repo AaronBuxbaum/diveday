@@ -16,7 +16,8 @@ import {
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
 import { appNowTimestamp } from "./columns";
-import { certificationLevel, type diveSpecialty, people, shops } from "./core";
+import { type certificationLevel, type diveSpecialty, people, shops } from "./core";
+import { requirementColumns } from "./requirement";
 
 /**
  * A shop's dive sites, the global site catalog it can copy from, field-guide
@@ -261,23 +262,8 @@ export const diveSites = pgTable(
     routeNote: text("route_note"),
     /** Google Maps zoom the route was drawn at, and must be rendered at. */
     routeZoom: integer("route_zoom").notNull().default(16),
-    /**
-     * The site's inherent cert gate, composed into every trip that visits it
-     * (readiness.ts takes the stricter of site and trip). Null means the site
-     * imposes no level of its own — never "unknown".
-     */
-    minimumCertificationLevel: certificationLevel("minimum_certification_level"),
-    /** Specialties the site itself demands; unioned with the trip's own list. */
-    requiredSpecialties: jsonb("required_specialties")
-      .$type<(typeof diveSpecialty.enumValues)[number][]>()
-      .notNull()
-      .default([]),
-    /**
-     * Whether the site demands a verified nitrox card to board. Evidence lives
-     * in nitrox_certifications (also the mix-request gate), so this is its own
-     * flag, not a member of required_specialties.
-     */
-    requiresNitrox: boolean("requires_nitrox").notNull().default(false),
+    /** The site's inherent gate, composed into every trip that visits it (readiness.ts). */
+    ...requirementColumns(),
     /** Archived briefings remain attached to historical trips but leave active pickers. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /**
