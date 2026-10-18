@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MAP_REACHABILITY_PROBE } from "@/lib/maps";
+import { MAP_REACHABILITY_PROBES } from "@/lib/maps";
 
 /**
- * **Has the map host answered?** One probe image per mount, asked only once
+ * **Has the map host answered?** One probe image per map host per mount, asked only once
  * `active` (a frame on screen), and with the radio off only once the signal
  * comes back, never in a loop. The frame's own `load` fires for the browser's
  * error page as well, so the probe decides. Shared by the drawn-route frame
@@ -32,7 +32,8 @@ export function useMapState(active: boolean, giveUpMs?: number): MapState {
   useEffect(() => {
     if (!active) return;
     let settled = false;
-    let probe: HTMLImageElement | null = null;
+    let probes: HTMLImageElement[] = [];
+    let loaded = 0;
     const giveUp =
       giveUpMs === undefined
         ? undefined
@@ -41,23 +42,28 @@ export function useMapState(active: boolean, giveUpMs?: number): MapState {
           }, giveUpMs);
     const ask = () => {
       window.removeEventListener("online", ask);
-      probe = new Image();
-      // Google learns that something asked, never which page.
-      probe.referrerPolicy = "no-referrer";
-      probe.onload = () => {
-        if (!settled) {
-          setReachable(true);
-          setGaveUp(false);
-        }
-      };
-      // Said, not left to a missing handler: the frame stays hidden.
-      probe.onerror = () => {
-        if (!settled) {
-          setReachable(false);
-          setGaveUp(true);
-        }
-      };
-      probe.src = MAP_REACHABILITY_PROBE;
+      // Every host the embed needs must answer (#2441); one refusal is enough.
+      probes = MAP_REACHABILITY_PROBES.map((url) => {
+        const probe = new Image();
+        // Google learns that something asked, never which page.
+        probe.referrerPolicy = "no-referrer";
+        probe.onload = () => {
+          loaded += 1;
+          if (!settled && loaded === MAP_REACHABILITY_PROBES.length) {
+            setReachable(true);
+            setGaveUp(false);
+          }
+        };
+        // Said, not left to a missing handler: the frame stays hidden.
+        probe.onerror = () => {
+          if (!settled) {
+            setReachable(false);
+            setGaveUp(true);
+          }
+        };
+        probe.src = url;
+        return probe;
+      });
     };
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       window.addEventListener("online", ask);
@@ -68,7 +74,7 @@ export function useMapState(active: boolean, giveUpMs?: number): MapState {
       settled = true;
       clearTimeout(giveUp);
       window.removeEventListener("online", ask);
-      if (probe) {
+      for (const probe of probes) {
         probe.onload = null;
         probe.onerror = null;
       }

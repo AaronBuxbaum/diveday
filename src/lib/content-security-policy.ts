@@ -1,4 +1,4 @@
-import { MAP_REACHABILITY_PROBE } from "./maps";
+import { MAP_REACHABILITY_PROBES } from "./maps";
 
 /**
  * The app's Content-Security-Policy.
@@ -179,11 +179,11 @@ function mediaRegionalImageHosts(region: string | null | undefined): string[] {
 const MAP_FRAME_HOSTS = ["https://maps.google.com", "https://www.google.com"];
 
 /**
- * The one image the route maps may read from a frame host: the probe URL
- * itself, path and all, so an injected `<img>` to any other path on that
- * origin is still a violation.
+ * The images the route maps may read from a frame host: each probe URL itself,
+ * path and all, so an injected `<img>` to any other path on those origins is
+ * still a violation (#2441: one per host the embed needs).
  */
-const MAP_PROBE_IMAGE_SOURCE = MAP_REACHABILITY_PROBE;
+const MAP_PROBE_IMAGE_SOURCES: readonly string[] = MAP_REACHABILITY_PROBES;
 
 /**
  * Sentry's ingest, as a belt to the tunnel's braces. `next.config.ts` sets
@@ -369,9 +369,9 @@ export function enforcedPolicy(options: CspOptions): string {
         ...MEDIA_IMAGE_HOSTS,
         ...mediaRegionalImageHosts(options.mediaRegion),
         ...mediaPublicImageHosts(options.mediaPublicUrlBase),
-        // The one-pixel read the route maps make before showing their frame
-        // (`MAP_REACHABILITY_PROBE`, src/lib/maps.ts): a frame host already.
-        MAP_PROBE_IMAGE_SOURCE,
+        // The one-pixel reads the route maps make before showing their frame
+        // (`MAP_REACHABILITY_PROBES`, src/lib/maps.ts): frame hosts already.
+        ...MAP_PROBE_IMAGE_SOURCES,
       ],
     ],
     ["font-src", ["'self'", GOOGLE_FONTS_FILE_HOST]],

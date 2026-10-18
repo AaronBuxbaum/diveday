@@ -4,7 +4,7 @@ import {
   enforcedPolicy,
   reportingEndpointsHeader,
 } from "./content-security-policy";
-import { MAP_REACHABILITY_PROBE } from "./maps";
+import { MAP_REACHABILITY_PROBES } from "./maps";
 
 const base = { denyFraming: true } as const;
 
@@ -231,10 +231,16 @@ describe("the policy", () => {
     expect(imgSrc).toContain("https://*.cloudfront.net");
     // The route maps' reachability read (UX review 2026-10-10, item 20), and
     // only a host the map frame already reaches.
-    expect(imgSrc).toContain(MAP_REACHABILITY_PROBE);
-    expect(directives(enforcedPolicy(base)).get("frame-src")).toContain(
-      new URL(MAP_REACHABILITY_PROBE).origin,
-    );
+    // One per host the embed needs (#2441): maps.google.com and www.google.com.
+    expect(MAP_REACHABILITY_PROBES.map((probe) => new URL(probe).origin).sort()).toEqual([
+      "https://maps.google.com",
+      "https://www.google.com",
+    ]);
+    const frameSrc = directives(enforcedPolicy(base)).get("frame-src");
+    for (const probe of MAP_REACHABILITY_PROBES) {
+      expect(imgSrc).toContain(probe);
+      expect(frameSrc).toContain(new URL(probe).origin);
+    }
   });
 });
 
