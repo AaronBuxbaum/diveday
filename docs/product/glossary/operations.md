@@ -270,6 +270,19 @@
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
+- **Days away** — a crew member's own range of calendar dates they told the shop they are away
+  (`crew_availability_blocks`, ADR 20260902-crew-requests-and-blackouts). Informs, never gates. Its
+  optional note is read only by the person and by owners and managers (issue #2673); everyone else
+  sees the dates. A rostered crew member away on a day a departure meets raises Today's `crew_away`
+  row and reads "to be confirmed" on the diver pages (`crewAwayByTrip`, `src/db/crew-away.ts`).
+- **Working it anyway** — a staffer saying an away crew member is working one departure all the
+  same (`crew_away_acknowledgements`, issue #2678), tapped on Today's `crew_away` row. Per crew
+  assignment, and only while the person is away on a day the departure meets; never said by the
+  person about themself. It clears that row and the diver-side mark for that departure only, never
+  edits the person's days away, does not cover a day away told after it, and goes when they come
+  off the crew, when the departure's dates move, or on "No longer working it" under the trip's
+  crew panel, which records who took it back. The departure log and
+  `crew_away_acknowledgements.csv` keep the trail.
 - **Boat clash** — one hull on two departures whose windows **overlap** (H-80: one hull, one
   departure at a time). Same half-open predicate as the **Crew clash** below
   (`src/db/trips-clashes.ts`), so a hull that ties up at 12:00 and takes the 12:00 out is the plan
@@ -999,6 +1012,13 @@
   case, and an MMSI as exactly nine digits, refused at the form and at the column. A departure on a
   hull the shop has since deleted still prints that hull, because the paper describes the boat that
   sailed.
+- **Working channel** — the VHF channel a **boat** works on besides 16, which every boat monitors
+  (`boats.working_channel`, issue #2672). One or a few VHF channels from 1 to 88 ("68", "68/72",
+  "72 or 69"); 16 and 70, the distress and calling channels, are refused. Printed as "Working
+  channel (VHF): 68" with the fixed line "Distress and calling: VHF 16, not this channel" on the
+  emergency card of each departure on that boat, and kept in the **boat at departure** snapshot.
+  It is not part of the **radio identity**: a boat with only a channel still prints the shop's
+  vessel line.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. **After a dive it may carry a
   short note** (up to `ROLL_CALL_NOTE_MAX`, 300 characters) when the mark raises a "not back

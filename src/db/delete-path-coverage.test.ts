@@ -230,6 +230,8 @@ const RESET_KEEPS: Record<string, string> = {
   // Crew news waiting to be told (ADR 20261009-crew-hear-about-their-boats):
   // it hangs off a departure, so the reset's trip delete clears it.
   crew_notices: "ON DELETE CASCADE from trips clears it",
+  // "Working it anyway" (issue #2678) hangs off a departure's crew.
+  crew_away_acknowledgements: "ON DELETE CASCADE from trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
@@ -274,6 +276,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   integration_sync_records: "ON DELETE CASCADE from shops clears it",
   weekly_digest_sends: "ON DELETE CASCADE from shops and people clears it",
   crew_notices: "ON DELETE CASCADE from shops, people and trips clears it",
+  crew_away_acknowledgements: "ON DELETE CASCADE from shops, people and trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",

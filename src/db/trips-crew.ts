@@ -7,6 +7,7 @@ import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import { DEPARTURE_BUFFER_MS, hasReturned } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
+import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewNotices } from "./crew-notices";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
 import { publishManifestEvent } from "./manifest-events";
@@ -445,13 +446,18 @@ export async function crewMoveConflicts(
     // `trip_schedule_days` comes back in no particular order and a course
     // whose legs are stored out of sequence would otherwise ask about an
     // inverted range and match nothing.
-    listCrewAvailabilityBlocks(db, shopId, {
-      from: shopDayOf(
-        new Date(Math.min(...proposed.map((day) => day.startsAt.getTime()))),
-        timeZone,
-      ),
-      to: shopDayOf(new Date(Math.max(...proposed.map((day) => day.endsAt.getTime()))), timeZone),
-    }),
+    listCrewAvailabilityBlocks(
+      db,
+      shopId,
+      {
+        from: shopDayOf(
+          new Date(Math.min(...proposed.map((day) => day.startsAt.getTime()))),
+          timeZone,
+        ),
+        to: shopDayOf(new Date(Math.max(...proposed.map((day) => day.endsAt.getTime()))), timeZone),
+      },
+      "dates_only",
+    ),
   ]);
 
   // **One line per person per other departure**, deduped on the pair and never
@@ -716,6 +722,8 @@ export async function setTripCrew(
     // edit that says nothing about roles preserves them instead of blanking
     // them.
     await tx.delete(tripAssignments).where(eq(tripAssignments.tripId, tripId));
+    // Whoever came off takes "working it anyway" with them (issue #2678).
+    await clearCrewAwayAcknowledgements(tx, { shopId, tripId, personIds: dropped });
     // The crew hear about it: everyone who came on, everyone who came off,
     // anyone who stayed in a different role — never the people whose place did
     // not change, and never the staffer who did it.
@@ -1214,6 +1222,7 @@ export async function changeTripCrewOutcome(
         )
         .returning({ personId: tripAssignments.personId });
       if (removed.length > 0) {
+        await clearCrewAwayAcknowledgements(tx, { shopId, tripId, personIds: [change.personId] });
         await recordCrewNotices(
           tx,
           [

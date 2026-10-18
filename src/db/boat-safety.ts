@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, lte } from "drizzle-orm";
 import {
   type BoatPaperRecord,
+  type BoatRadioRecord,
   type BoatSafetyNotice,
   boatPaperNotices,
   boatSafetyNotices,
@@ -390,7 +391,12 @@ async function captureInTransaction(
   if (!trip?.boatId) return "no_boat";
   if (hasSailed(trip.startsAt, asOf)) return "sailed";
   const [boat] = await db
-    .select(boatPaperColumns)
+    .select({
+      ...boatPaperColumns,
+      callSign: boats.callSign,
+      mmsi: boats.mmsi,
+      workingChannel: boats.workingChannel,
+    })
     .from(boats)
     .where(and(eq(boats.shopId, shopId), eq(boats.id, trip.boatId), isNull(boats.deletedAt)))
     .limit(1);
@@ -416,7 +422,21 @@ async function captureInTransaction(
     registrationExpiresOn: boat.registrationExpiresOn,
     insuranceExpiresOn: boat.insuranceExpiresOn,
   };
-  const row = { boatId: boat.id, boatName: boat.name, judgedOn, papers, notices, capturedAt: asOf };
+  // What the emergency card printed for this boat (records review S1, #2672).
+  const radio: BoatRadioRecord = {
+    callSign: boat.callSign,
+    mmsi: boat.mmsi,
+    workingChannel: boat.workingChannel,
+  };
+  const row = {
+    boatId: boat.id,
+    boatName: boat.name,
+    judgedOn,
+    papers,
+    radio,
+    notices,
+    capturedAt: asOf,
+  };
   const written = await db
     .insert(departureBoatSafetySnapshots)
     .values({ shopId, tripId, ...row })
@@ -438,6 +458,7 @@ export async function departureBoatSafetySnapshot(db: DbExecutor, shopId: string
       boatName: departureBoatSafetySnapshots.boatName,
       judgedOn: departureBoatSafetySnapshots.judgedOn,
       papers: departureBoatSafetySnapshots.papers,
+      radio: departureBoatSafetySnapshots.radio,
       notices: departureBoatSafetySnapshots.notices,
       capturedAt: departureBoatSafetySnapshots.capturedAt,
     })

@@ -26,7 +26,7 @@ import { LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
+import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
 import type { DayTakings as DayTakingsReading, EveningClose } from "@/lib/closeout";
 import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
@@ -37,14 +37,15 @@ import {
   type DaySpine as DaySpineData,
   type DayStation as DayStationData,
   type FactOfScale,
-  getSeasonalBriefing,
   type NeedsYouReading,
   readNeedsYou,
   sortStationRows,
   spineJobCount,
   type TodayAction,
+  weekCrewAway,
 } from "@/lib/today";
 import { ClosingStation } from "./ClosingStation";
+import { crewAwayRowControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
 import { NeedsYouGroups } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
@@ -127,6 +128,8 @@ type RowControls = {
   inviteCopy: WaitlistInviteCopy;
   paymentCopy: PaymentActionCopy;
   helpRequestAction?: SpineHelpRequestAction;
+  /** The signed-in staffer: the "working it" tap is never offered about them (#2678). */
+  readerPersonId?: string;
   t: StaffTranslator;
 };
 
@@ -135,7 +138,7 @@ type RowControls = {
  * the controls are Client Components, so a translator never crosses the boundary.
  */
 function rowControls(
-  base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "t">,
+  base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "readerPersonId" | "t">,
 ): RowControls {
   const { t } = base;
   return {
@@ -473,6 +476,9 @@ function StationRow({
       cards={action.agencyCheck.cards}
       align="end"
     />
+  ) : action.kind === "crew_away" ? (
+    // **"Working it anyway"** (issue #2678), never about the reader.
+    crewAwayRowControl(action, controls.t, controls.readerPersonId)
   ) : action.rentalFit ? (
     // **The one row whose fix is the tap itself** (issue #1174, D14): the size
     // is already known, so pointing at the diver's record to retype it would
@@ -638,29 +644,12 @@ function UnlessWindy({
  * The whole week is in order — the queue's own good-news moment, and the only
  * thing that stands where the work would be.
  */
-function QueueEmpty({
-  t,
-  now,
-  timeZone,
-  shopName,
-  shopSlug,
-}: {
-  t: StaffTranslator;
-  now: Date;
-  timeZone: string;
-  shopName: string;
-  shopSlug: string;
-}) {
+function QueueEmpty({ t, shopSlug }: { t: StaffTranslator; shopSlug: string }) {
   return (
     <EmptyState
       titleId="queue-heading"
       title={t("today.todayQueue.emptyHeading")}
-      body={
-        <>
-          {t("today.todayQueue.emptyBody")}{" "}
-          {seasonalBriefingText(t, getSeasonalBriefing(now, timeZone), shopName)}
-        </>
-      }
+      body={t("today.todayQueue.emptyBody")}
       action={
         <Link
           href={`/shop/${shopSlug}/schedule/board`}
@@ -799,7 +788,6 @@ function DeskPaymentsRow({ shopSlug, t }: { shopSlug: string; t: StaffTranslator
 export type DaySpineContext = {
   spine: DaySpineData;
   shopSlug: string;
-  shopName: string;
   mailShopName: string; // what a mail that leaves says: always `shop.name` (H-131)
   locale: string;
   timeZone: string;
@@ -894,7 +882,6 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
   const {
     spine,
     shopSlug,
-    shopName,
     locale,
     timeZone,
     currency,
@@ -915,7 +902,13 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     now,
   } = context;
   const t = staffTranslator(locale);
-  const controls = rowControls({ shopSlug, shopName: context.mailShopName, helpRequestAction, t });
+  const controls = rowControls({
+    shopSlug,
+    shopName: context.mailShopName,
+    helpRequestAction,
+    readerPersonId,
+    t,
+  });
   const crewed = new Set(crewedTripIds ?? []);
   const jobs = spineJobCount(spine);
   const tomorrowDate = spine.tomorrow.stations[0]?.startsAt ?? null;
@@ -1173,7 +1166,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
           about (issue #711), and its setup ledger leads the page. */}
       {jobs === 0 && !closing && !firstRun ? (
         <UnlessWindy wind={highWind} show={(wind) => wind.length === 0}>
-          <QueueEmpty t={t} now={now} timeZone={timeZone} shopName={shopName} shopSlug={shopSlug} />
+          <QueueEmpty t={t} shopSlug={shopSlug} />
         </UnlessWindy>
       ) : null}
 
@@ -1249,6 +1242,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
             <WeekHorizon
               panelClass={HORIZON_PANEL_CLASS}
               jobs={spine.week.jobs}
+              crewAway={weekCrewAway(spine.week.rows, timeZone)}
               shopSlug={shopSlug}
               t={t}
             >

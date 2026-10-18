@@ -1,15 +1,17 @@
 import { and, asc, eq, gte, inArray, isNull, lte, ne } from "drizzle-orm";
-
-import { STAFF_ROLES } from "@/lib/authz";
+import { canManageStaffAccounts, canReadCrewAwayNote, STAFF_ROLES } from "@/lib/authz";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
-import type {
-  AvailabilityBlock,
-  CrewAssignmentRequest,
-  CrewRequestState,
+import {
+  type AvailabilityBlock,
+  type AwayNoteReader,
+  awayNoteFor,
+  type CrewAssignmentRequest,
+  type CrewRequestState,
 } from "@/lib/crew-requests";
 import { inWaterCrewRole, lapsedRungs, lastDayOfDeparture } from "@/lib/crew-roles";
+import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
 import { recordCrewNotices } from "./crew-notices";
@@ -84,7 +86,9 @@ export async function listCrewAvailabilityBlocks(
   db: DbExecutor,
   shopId: string,
   range: { from: string; to: string },
-): Promise<AvailabilityBlock[]> {
+  /** Who is reading: the note leaves only for the person and owners and managers (#2673). */
+  reader: AwayNoteReader,
+): Promise<(AvailabilityBlock & { createdAt: Date })[]> {
   const rows = await db
     .select()
     .from(crewAvailabilityBlocks)
@@ -103,8 +107,31 @@ export async function listCrewAvailabilityBlocks(
     personId: row.personId,
     startsOn: row.startsOn,
     endsOn: row.endsOn,
-    note: row.note,
+    note: awayNoteFor(row, reader),
+    // When the shop was told: a "working it anyway" said before it does not
+    // cover it (#2678, `crewAwayByTrip`).
+    createdAt: row.createdAt,
   }));
+}
+
+/**
+ * The staffing week's days away for `personId`, each note only as they may
+ * read it (#2673, `canReadCrewAwayNote`), and whether they manage staff
+ * accounts, which the page's add-shift form asks too. One live role read,
+ * then the blocks.
+ */
+export async function readStaffingWeekAway(
+  db: AppDb,
+  shopId: string,
+  range: { from: string; to: string },
+  personId: string,
+): Promise<{ blocks: AvailabilityBlock[]; canManageStaffAccounts: boolean }> {
+  const roles = await loadActiveStaffRoles(db, shopId, personId);
+  const blocks = await listCrewAvailabilityBlocks(db, shopId, range, {
+    personId,
+    canReadCrewAwayNote: roles !== null && canReadCrewAwayNote(roles),
+  });
+  return { blocks, canManageStaffAccounts: roles !== null && canManageStaffAccounts(roles) };
 }
 
 /** A crew member says they are away for a range of days. */

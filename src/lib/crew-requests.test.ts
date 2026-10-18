@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   type AvailabilityBlock,
+  awayNoteFor,
   blockCoversDay,
   blockCoversMeetings,
   crewRequestRefusal,
@@ -146,5 +147,24 @@ describe("whether a crew member may ask for a departure", () => {
         blocks: [block({ startsOn: "2026-08-28", endsOn: "2026-08-28" })],
       }),
     ).toBe("already_crewing");
+  });
+});
+
+describe("who reads why somebody is away (#2673)", () => {
+  const noted = block({ personId: "keiko", note: "Hospital appointment" });
+
+  it("is the person themself and owners and managers", () => {
+    expect(awayNoteFor(noted, { personId: "keiko", canReadCrewAwayNote: false })).toBe(
+      "Hospital appointment",
+    );
+    expect(awayNoteFor(noted, { personId: "owner", canReadCrewAwayNote: true })).toBe(
+      "Hospital appointment",
+    );
+  });
+
+  it("is nobody else, a reader with no person, or a dates-only read", () => {
+    expect(awayNoteFor(noted, { personId: "marcus", canReadCrewAwayNote: false })).toBeNull();
+    expect(awayNoteFor(noted, { personId: undefined, canReadCrewAwayNote: false })).toBeNull();
+    expect(awayNoteFor(noted, "dates_only")).toBeNull();
   });
 });

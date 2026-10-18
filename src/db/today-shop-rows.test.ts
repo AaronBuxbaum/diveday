@@ -7,6 +7,7 @@ import type { TodayAction } from "@/lib/today";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
+import { setDateRequestOutcome } from "./course-inquiries";
 import { markInboundAnswered, recordInboundMessage } from "./inbound-messages";
 import { startIncidentReport } from "./incident-reports";
 import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
@@ -15,6 +16,7 @@ import { startPaymentOperation } from "./payment-operations";
 import { setBookingPayment } from "./payments";
 import { submitTripReview } from "./reviews";
 import {
+  courseInquiries,
   inboundMessages,
   incidentReports,
   orders,
@@ -32,6 +34,7 @@ const quiet = {
   opsAlerts: null,
   reviewsAwaiting: { count: 0, onlyId: null },
   unanswered: 0,
+  openDateRequests: 0,
   openOrders: new Map(),
   unfiledIncidentDrafts: [],
 };
@@ -117,6 +120,24 @@ describe("pushShopRows", () => {
     expect(inbox).toHaveLength(1);
     expect(inbox[0]).toMatchObject({
       kind: "unanswered_messages",
+      href: "/shop/blue-mantis/inbox",
+    });
+  });
+
+  // Issue #2658: one unanswered count on Today, date requests included.
+  it("counts open date requests into the same row, opening Requests when no message waits", () => {
+    const [onlyRequests] = rows({ openDateRequests: 2 });
+    expect(onlyRequests).toMatchObject({
+      kind: "unanswered_messages",
+      subject: "2 date requests are waiting on an answer.",
+      actionLabel: "Open requests",
+      href: "/shop/blue-mantis/requests",
+    });
+    const both = rows({ unanswered: 3, openDateRequests: 1 });
+    expect(both).toHaveLength(1);
+    expect(both[0]).toMatchObject({
+      subject: "3 messages and 1 date request are waiting on an answer.",
+      actionLabel: "Open inbox",
       href: "/shop/blue-mantis/inbox",
     });
   });
@@ -502,7 +523,8 @@ describe("unanswered messages", () => {
       dueAt: null,
       href: `/shop/${shop.slug}/inbox`,
     });
-    expect(rows[0]?.subject).toBe("3 messages are waiting on an answer.");
+    // The demo shop also holds seven open date requests (issue #2658).
+    expect(rows[0]?.subject).toBe("3 messages and 7 date requests are waiting on an answer.");
   });
 
   it("grows by one message and renders nothing once every one is answered", async () => {
@@ -517,13 +539,33 @@ describe("unanswered messages", () => {
       providerMessageId: "today-inbox-1",
     });
     if (recorded.status !== "recorded") throw new Error("message not recorded");
-    expect((await unansweredRow())[0]?.subject).toBe("4 messages are waiting on an answer.");
+    expect((await unansweredRow())[0]?.subject).toBe(
+      "4 messages and 7 date requests are waiting on an answer.",
+    );
 
     const live = await db
       .select({ id: inboundMessages.id })
       .from(inboundMessages)
       .where(and(eq(inboundMessages.shopId, shop.id), isNull(inboundMessages.deletedAt)));
     for (const row of live) await markInboundAnswered(db, shop.id, row.id);
+    // The date requests are what is left, and the row now opens Requests.
+    const [left] = await unansweredRow();
+    expect(left).toMatchObject({
+      subject: "7 date requests are waiting on an answer.",
+      href: `/shop/${shop.slug}/requests`,
+    });
+    const open = await db
+      .select({ id: courseInquiries.id })
+      .from(courseInquiries)
+      .where(and(eq(courseInquiries.shopId, shop.id), isNull(courseInquiries.handledAt)));
+    for (const row of open) {
+      await setDateRequestOutcome(db, {
+        shopId: shop.id,
+        requestId: row.id,
+        outcome: "done",
+        now: nowDate(),
+      });
+    }
 
     // Nothing waiting, no row — the queue never carries a zero.
     expect(await unansweredRow()).toHaveLength(0);

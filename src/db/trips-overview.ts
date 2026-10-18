@@ -17,6 +17,7 @@ import { canPersonConfigureTrips } from "./authz";
 import { tripBlowoutCause } from "./blowouts";
 import { type BoatWork, boatWorkFor, readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
+import { listCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { listDiveSites } from "./dive-sites";
 import { listDepartureBoardedByTrip } from "./manifests";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
@@ -145,6 +146,7 @@ export async function getTripOverview(
     offCadence,
     clashes,
     hullClashes,
+    crewAwayWorking,
   ] = await Promise.all([
     listStaff(db, shop.id),
     crewAssignmentsRead,
@@ -184,6 +186,9 @@ export async function getTripOverview(
     // and the hull's own clash — see the crew panel's note below.
     crewClashes(db, shop.id, trip.id),
     boatClashes(db, shop.id, trip.id),
+    // Who a staffer said is working it anyway (#2678), so the crew panel can
+    // take it back; only while the boat is still ahead.
+    pulseNeeded ? listCrewAwayAcknowledgements(db, shop.id, trip.id) : [],
   ]);
 
   // Where this departure goes, composed from the dives already loaded above — no
@@ -333,6 +338,7 @@ export async function getTripOverview(
       languageBriefings,
       onShiftIds: shiftCoverage === null ? null : [...shiftCoverage],
       clashes,
+      awayWorking: crewAwayWorking,
     },
   };
 }

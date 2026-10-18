@@ -7,7 +7,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
 import type { TemperatureUnit } from "@/lib/temperature-units";
-import type { RollCallGapReason, TodayActionKind, TodaySeason } from "@/lib/today";
+import type { RollCallGapReason, TodayActionKind } from "@/lib/today";
 import { awayDatesText } from "./away-labels";
 import { SPECIALTY_KEYS } from "./readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
@@ -790,8 +790,20 @@ export function openReviewsActionText(t: StaffTranslator): string {
  * for the same reason as the reviews row, the count is the whole row: the
  * second sentence named the surface the tap already opens.
  */
-export function unansweredMessagesSubjectText(t: StaffTranslator, count: number): string {
-  return t("today.unansweredMessages.subject", { count });
+/** What is waiting on an answer: messages, open date requests, or both (issue #2658). */
+export function unansweredMessagesSubjectText(
+  t: StaffTranslator,
+  { messages, dateRequests }: { messages: number; dateRequests: number },
+): string {
+  if (dateRequests === 0) return t("today.unansweredMessages.subject", { count: messages });
+  if (messages === 0) {
+    return t("today.unansweredMessages.subjectDateRequests", { count: dateRequests });
+  }
+  return t("today.unansweredMessages.subjectBoth", { messages, requests: dateRequests });
+}
+
+export function openDateRequestsActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.openRequests");
 }
 
 export function openInboxActionText(t: StaffTranslator): string {
@@ -1176,29 +1188,6 @@ export function daySpineSummaryText(
       })
     : t("shopHome.spine.summaryAfter", { count: summary.jobs });
   return `${boats} ${jobs}`;
-}
-
-const SEASONAL_BRIEFING_KEYS: Record<TodaySeason, StaffMessageKey> = {
-  summer: "today.seasonalBriefing.summer",
-  autumn: "today.seasonalBriefing.autumn",
-  winter: "today.seasonalBriefing.winter",
-  spring: "today.seasonalBriefing.spring",
-};
-
-/**
- * The seasonal briefing sentence for `season`, naming the shop when one is
- * given. `hasShop` drives the bundle's `select` so the "at {shopName}" clause
- * only appears when there is a name to put there.
- */
-export function seasonalBriefingText(
-  t: StaffTranslator,
-  season: TodaySeason,
-  shopName?: string,
-): string {
-  return t(SEASONAL_BRIEFING_KEYS[season], {
-    hasShop: shopName ? "true" : "false",
-    shopName: shopName ?? "",
-  });
 }
 
 /** Who the stale-roll-call alert reached, and when (the owners' time first), or null. */

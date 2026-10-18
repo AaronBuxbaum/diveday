@@ -5690,6 +5690,11 @@
       "open": "Abrir Mensajes",
       "turnOff": "Desactívalos en tus ajustes de correo"
     },
+    "moveAskSoon": {
+      "subject": "{shopName}: un buceador pidió cambiar de {tripTitle}",
+      "body": "Un buceador pidió cambiar su plaza en {tripTitle}, que sale el {when}.",
+      "open": "Abrir Mensajes"
+    },
     "stripeRestricted": {
       "subject": "{shopName}: Stripe desactivó los pagos con tarjeta",
       "body": "Stripe pausó los pagos con tarjeta en tu cuenta. Los buceadores pueden seguir reservando, pero por ahora pagan en el centro. El panel de Stripe indica qué necesita para volver a activarlos.",

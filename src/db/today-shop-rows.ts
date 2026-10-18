@@ -4,6 +4,7 @@ import {
   incidentReportUnfiledSubjectText,
   mediaDeletionKindText,
   openDataSettingsActionText,
+  openDateRequestsActionText,
   openInboxActionText,
   openIncidentReportActionText,
   openOrderActionText,
@@ -29,7 +30,14 @@ import type { TodayRowsContext } from "./today-rows-context";
  */
 export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): void {
   const { shopSlug, timeZone, locale, t, now } = ctx;
-  const { opsAlerts, reviewsAwaiting, unanswered, openOrders, unfiledIncidentDrafts } = ctx.wave;
+  const {
+    opsAlerts,
+    reviewsAwaiting,
+    unanswered,
+    openDateRequests,
+    openOrders,
+    unfiledIncidentDrafts,
+  } = ctx.wave;
   // A payment row only gets the inline "copy link"/"resend invoice" control
   // once we know the booking was actually invoiced through Stripe: a diver
   // who owes at the counter has no invoice to act on, and a shop with no
@@ -251,17 +259,23 @@ export function pushShopRows(actions: TodayAction[], ctx: TodayRowsContext): voi
   // and `dueAt: null` — the shape the reviews row above already has, and for
   // the same reason: nothing sails on an unanswered message, and a row per
   // message would be the inbox rendered twice. Nothing at all at zero.
-  if (unanswered > 0) {
+  // Open date requests count into the same row (issue #2658): one unanswered
+  // count on Today, while the requests keep their own page. It opens the inbox
+  // when a message is waiting (Requests is a tab beside it), else Requests.
+  if (unanswered + openDateRequests > 0) {
     actions.push({
       id: "inbox:unanswered",
       kind: "unanswered_messages",
       urgency: "later",
-      subject: unansweredMessagesSubjectText(t, unanswered),
+      subject: unansweredMessagesSubjectText(t, {
+        messages: unanswered,
+        dateRequests: openDateRequests,
+      }),
       context: null,
       // The count is the row (see `unansweredMessagesSubjectText`).
       detail: "",
-      actionLabel: openInboxActionText(t),
-      href: `/shop/${shopSlug}/inbox`,
+      actionLabel: unanswered > 0 ? openInboxActionText(t) : openDateRequestsActionText(t),
+      href: unanswered > 0 ? `/shop/${shopSlug}/inbox` : `/shop/${shopSlug}/requests`,
       dueAt: null,
     });
   }

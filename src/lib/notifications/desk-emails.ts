@@ -1,11 +1,12 @@
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { formatDateTimeTz } from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import { firstNameOf } from "@/lib/person-name";
 import { emailButton, type NotificationEmail } from "./email";
 
-// i18n-exempt-file: the terminal renderer for the after-hours desk ping and the
-// Stripe-restricted notice to owners, on the
+// i18n-exempt-file: the terminal renderer for the after-hours desk ping, the
+// Stripe-restricted notice to owners and the Ask-to-move alert, on the
 // same footing as `./email.ts` and `./crew-emails.ts` — no React component
 // picks words for a sent message, so this resolves its own text through
 // `diverTranslator` in the recipient's locale. Every dynamic value is escaped
@@ -68,5 +69,40 @@ export function stripePaymentsRestrictedEmail(
     subject: t("notifications.stripeRestricted.subject", { shopName: input.shopName }),
     text: `${greetingText}\n\n${body}\n\n${open}:\n${input.settingsUrl}\n`,
     html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.settingsUrl, open)}`,
+  };
+}
+
+export type MoveAskSoonEmailInput = {
+  locale: DiverLocale;
+  recipientName: string;
+  shopName: string;
+  tripTitle: string;
+  startsAt: Date;
+  timezone: string;
+  inboxUrl: string;
+};
+
+/**
+ * "A diver asked to move off Night Dive, leaving Tue, Jul 21, 7:30 PM EDT"
+ * (issue #2667): the departure and the Inbox, never who asked or what they
+ * wrote (`move_ask_soon` in `./kinds.ts`).
+ */
+export function moveAskSoonEmail(input: MoveAskSoonEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
+  const greetingText = t("notifications.common.greeting", { firstName });
+  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
+  const body = t("notifications.moveAskSoon.body", {
+    tripTitle: input.tripTitle,
+    when: formatDateTimeTz(input.startsAt, input.locale, input.timezone),
+  });
+  const open = t("notifications.moveAskSoon.open");
+  return {
+    subject: t("notifications.moveAskSoon.subject", {
+      shopName: input.shopName,
+      tripTitle: input.tripTitle,
+    }),
+    text: `${greetingText}\n\n${body}\n\n${open}:\n${input.inboxUrl}\n`,
+    html: `<p>${greetingHtml}</p><p>${escapeHtml(body)}</p>${emailButton(input.inboxUrl, open)}`,
   };
 }

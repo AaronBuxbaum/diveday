@@ -1,8 +1,10 @@
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { fileScopedShopContext } from "@/test/db";
+import { acknowledgeCrewAway } from "./crew-away-acknowledgements";
 import { diverCrewWithAway } from "./crew-away-diver";
-import { crewAvailabilityBlocks } from "./schema";
+import { crewAvailabilityBlocks, people, personRoles } from "./schema";
 import { tripPublicCrew, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -50,6 +52,35 @@ describe("diverCrewWithAway", () => {
     }
     // Never the note: it is the crew member's own business.
     expect(JSON.stringify(marked)).not.toContain("Family trip");
+  });
+
+  // Issue #2678: the desk asked, and they are working it anyway.
+  it("drops the mark once a staffer says they are working it anyway, and still only a boolean leaves", async () => {
+    const { db, shop, trip, crew } = await aCrewedDeparture();
+    const [first] = crew;
+    if (!first) throw new Error("expected a named crew member");
+    const day = calendarDateInTimezone(trip.startsAt, shop.timezone);
+    await away(first.personId, day, day);
+    // Said by someone else: never the person about themself (security review).
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!owner) throw new Error("seeded owner missing");
+    expect(
+      await acknowledgeCrewAway(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: first.personId,
+        actorPersonId: owner.id,
+      }),
+    ).toBe("saved");
+    const marked = await diverCrewWithAway(db, shop.id, trip, shop.timezone);
+    expect(marked.find((member) => member.personId === first.personId)?.away).toBe(false);
+    expect(JSON.stringify(marked)).not.toContain("Family trip");
+    expect(JSON.stringify(marked)).not.toContain("acknowledged");
   });
 
   it("marks nobody for days away that the departure does not meet on", async () => {

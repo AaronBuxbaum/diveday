@@ -183,6 +183,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Crew warning
 - DAN
 - Days at sea
+- Days away
 - Decompression card reminder
 - Default course page
 - Delivery receipt
@@ -326,6 +327,8 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Weather day
 - Week totals
 - WhatsApp sender
+- Working channel
+- Working it anyway
 - Working shift
 - Your days
 - Your week

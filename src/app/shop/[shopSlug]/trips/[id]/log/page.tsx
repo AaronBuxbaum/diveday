@@ -8,17 +8,16 @@ import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
-import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
+import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { staffJobWithRatings } from "@/i18n/staff-role-labels";
 import {
   formatDateTimeTz,
   formatShortDate,
   formatTimeRangeTz,
   formatTimeZoneName,
 } from "@/lib/format";
-import type { IncidentRollCallResult, IncidentWaiverStatus } from "@/lib/incident-export";
+import type { IncidentWaiverStatus } from "@/lib/incident-export";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import { requireShopSurface } from "@/lib/session";
@@ -26,6 +25,8 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { BoatAtDeparture } from "./_components/BoatAtDeparture";
 import { CertificationLine } from "./_components/CertificationLine";
+import { CrewAtDeparture, RollCallCell } from "./_components/CrewAtDeparture";
+import { CrewAwayWorkingLog } from "./_components/CrewAwayWorkingLog";
 import { ExecutedDivesTable } from "./_components/ExecutedDivesTable";
 import { IncidentReportsSection } from "./_components/IncidentReportsSection";
 import { incidentSummaryRows } from "./_components/incident-summary";
@@ -266,62 +267,15 @@ export default async function IncidentExportPage({
         </Table>
       </section>
 
-      <section aria-labelledby="incident-crew-heading">
-        <h2 id="incident-crew-heading" className={SECTION_TITLE_CLASS}>
-          {t("incidentExport.crewHeading")}
-        </h2>
-        {doc.crew.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">{t("incidentExport.crewNone")}</p>
-        ) : (
-          <Table
-            minWidth={rollCallTableMinWidth(doc.meta.checkpoints.length)}
-            shellClassName="mt-3"
-          >
-            <THead>
-              <Th>{t("incidentExport.colCrewMember")}</Th>
-              <Th>{t("incidentExport.colRoles")}</Th>
-              <Th>{t("incidentExport.colCrewTeams")}</Th>
-              {doc.meta.checkpoints.map((checkpoint) => (
-                <Th key={checkpoint} width="8rem" className={checkpointPrintClass}>
-                  {checkpointText(checkpoint)}
-                </Th>
-              ))}
-            </THead>
-            <TBody>
-              {doc.crew.map((member, index) => (
-                <tr
-                  // Two crew can share a full name, and the document carries
-                  // no person id on purpose (the hash covers printed facts
-                  // only). Static list, never reordered.
-                  // biome-ignore lint/suspicious/noArrayIndexKey: static, never reordered
-                  key={index}
-                >
-                  <Td className="font-semibold">{member.fullName}</Td>
-                  <Td muted>{staffJobWithRatings(t, member.roles, member.currentRatings)}</Td>
-                  {/* Plural on purpose: one divemaster commonly leads
-                      several groups on one boat, and this document must
-                      print all of them (ADR 20260804-buddy-teams). */}
-                  <Td muted>
-                    {member.buddyTeamNumbers.length === 0
-                      ? t("incidentExport.crewNoTeams")
-                      : member.buddyTeamNumbers
-                          .map((number) => t("incidentExport.buddyTeam", { number }))
-                          .join(", ")}
-                  </Td>
-                  {member.rollCall.map((result) => (
-                    <RollCallCell
-                      key={result.checkpoint}
-                      t={t}
-                      result={result}
-                      dateTime={dateTime}
-                    />
-                  ))}
-                </tr>
-              ))}
-            </TBody>
-          </Table>
-        )}
-      </section>
+      <CrewAtDeparture
+        doc={doc}
+        t={t}
+        dateTime={dateTime}
+        checkpointText={checkpointText}
+        checkpointPrintClass={checkpointPrintClass}
+      >
+        <CrewAwayWorkingLog db={db} shopId={shop.id} tripId={tripId} t={t} dateTime={dateTime} />
+      </CrewAtDeparture>
 
       {/* Absence is stated, never blank: a shop with no checklist defined says so, rather than the
           section simply not appearing; the two mean different things to an investigator. */}
@@ -465,41 +419,6 @@ export default async function IncidentExportPage({
         <p className="mt-2 max-w-prose text-muted">{t("incidentExport.footerHashExplainer")}</p>
       </footer>
     </div>
-  );
-}
-
-/** One roll-call result cell: the manifest's own word, plus when and by whom. */
-function RollCallCell({
-  t,
-  result,
-  dateTime,
-}: {
-  t: StaffTranslator;
-  result: IncidentRollCallResult;
-  dateTime: (isoString: string) => string;
-}) {
-  return (
-    <Td>
-      <span
-        className={
-          result.label === "not_back_aboard"
-            ? "font-bold text-danger"
-            : result.label === "awaiting"
-              ? "text-muted"
-              : "font-medium"
-        }
-      >
-        {rollCallLabelText(t, result.label)}
-      </span>
-      {result.occurredAt && result.recordedByName ? (
-        <span className="mt-0.5 block text-xs text-muted">
-          {t("incidentExport.resultRecordedBy", {
-            date: dateTime(result.occurredAt),
-            name: result.recordedByName,
-          })}
-        </span>
-      ) : null}
-    </Td>
   );
 }
 

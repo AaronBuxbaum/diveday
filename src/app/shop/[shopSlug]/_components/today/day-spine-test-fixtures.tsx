@@ -137,13 +137,13 @@ export function renderSpine({
   crew?: CrewReading;
   evening?: EveningReading;
   blocked?: number;
+  timeZone?: string;
 } = {}) {
   return render(
     <DaySpine
       context={{
         spine: assembleDaySpine({ departures, actions }, { departures: tomorrow, actions: [] }),
         shopSlug: "blue-mantis",
-        shopName: "Blue Mantis",
         mailShopName: "Blue Mantis",
         // The source locale: these tests read the English bundle.
         locale: DEFAULT_DIVER_LOCALE,

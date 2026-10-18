@@ -235,6 +235,9 @@
     "vesselLabel": "Embarcación:",
     "callSignLabel": "Indicativo:",
     "mmsiLabel": "MMSI:",
+    "workingChannelLabel": "Canal de trabajo (VHF):",
+    "workingChannelNotRecorded": "sin registrar",
+    "distressChannel": "Socorro y llamada: VHF 16, no este canal",
     "shoreContactLabel": "Contacto en tierra:",
     "planLabel": "Si algo sale mal"
   },

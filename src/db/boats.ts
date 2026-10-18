@@ -35,11 +35,13 @@ export type BoatPapersInput = {
    */
   callSign?: string | null;
   mmsi?: string | null;
+  /** The boat's working channel (issue #2672), normalized by the caller. */
+  workingChannel?: string | null;
 };
 
 /**
  * **The boat each departure sails on, as the emergency card names it** (fourth
- * review, item 11): name, call sign and MMSI, keyed by trip. A departure on no
+ * review, item 11): name, call sign, MMSI and working channel (#2672), keyed by trip. A departure on no
  * boat is absent, and the card falls back to the shop's own vessel line.
  *
  * History, not the live fleet: a departure that sailed on a hull the shop has
@@ -58,6 +60,7 @@ export async function departureVessels(
       name: boats.name,
       callSign: boats.callSign,
       mmsi: boats.mmsi,
+      workingChannel: boats.workingChannel,
     })
     .from(trips)
     .innerJoin(boats, and(eq(boats.id, trips.boatId), eq(boats.shopId, shopId)))
@@ -65,7 +68,12 @@ export async function departureVessels(
   return new Map(
     rows.map((row) => [
       row.tripId,
-      { name: row.name, callSign: row.callSign, mmsi: row.mmsi } satisfies VesselIdentity,
+      {
+        name: row.name,
+        callSign: row.callSign,
+        mmsi: row.mmsi,
+        workingChannel: row.workingChannel,
+      } satisfies VesselIdentity,
     ]),
   );
 }

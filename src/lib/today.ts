@@ -11,6 +11,7 @@ import {
   owedRefundGroupSubjectText,
   pointingLabelText,
 } from "@/i18n/today-labels";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
 import { formatMoneyCents } from "@/lib/format";
 import type { AgencyCheckableCard } from "./agency-check-queue";
@@ -23,7 +24,6 @@ import type { SeasonStart } from "./season";
 import type { TripStageReading } from "./trip-stages";
 import { hasReturned, hasSailed } from "./trips";
 import type { WelcomeCue } from "./welcome-cue";
-import { utcToWallTime } from "./zoned";
 
 /**
  * The Today page is a work queue, not a dashboard. Everything on it is either
@@ -963,6 +963,12 @@ export type TodayAction = {
    * lens can keep a reader's own row open rather than fold it with the desk's.
    */
   staffPersonId?: string;
+  /**
+   * Who a `crew_away` row names: the week line counts these people, once each
+   * however many departures they are away for (issue #2671), and the row
+   * offers each a "working it anyway" (issue #2678).
+   */
+  crewAway?: { people: readonly { personId: string; fullName: string }[] };
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };
@@ -1538,26 +1544,6 @@ export function roleLensFor(roles: readonly Role[]): RoleLens {
   return null;
 }
 
-/** Which seasonal-briefing sentence today's date falls into. */
-export type TodaySeason = "summer" | "autumn" | "winter" | "spring";
-
-/**
- * Which seasonal briefing variant the date falls into, based on its month
- * **in the shop's own timezone** — `getMonth()` on the raw Date read the
- * server's (or, in a Client Component, the browser's) local month, which
- * flips the season a day early or late around a month boundary for any shop
- * whose zone straddles the server's midnight. The sentence itself — kept
- * rationed like --accent, reading like a briefing, not filler — lives in
- * `src/i18n/today-labels.ts`'s `seasonalBriefingText`.
- */
-export function getSeasonalBriefing(date: Date, timezone: string): TodaySeason {
-  const month = utcToWallTime(date, timezone).month - 1; // 0-indexed (0 = Jan, 11 = Dec)
-  if (month >= 5 && month <= 7) return "summer"; // June, July, August
-  if (month >= 8 && month <= 10) return "autumn"; // September, October, November
-  if (month === 11 || month === 0 || month === 1) return "winter"; // December, January, February
-  return "spring"; // March, April, May
-}
-
 /**
  * **The day spine** — ADR 20260827-clearwater-surface-language, decision 4.
  *
@@ -1847,6 +1833,28 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
     },
     week: { jobs: weekRows.length, rows: sortStationRows(weekRows) },
   };
+}
+
+/**
+ * **Who is away this week, named on the week line** (issue #2671, decided by
+ * Aaron 2026-10-17): the rostered crew the week's `crew_away` rows name, each
+ * counted once, and the shop-local day of the soonest such departure, which
+ * the line's board link opens on. Null when nobody is. Every other later-day
+ * row stays a count: the page is about today.
+ */
+export function weekCrewAway(
+  rows: readonly TodayAction[],
+  timeZone: string,
+): { people: number; firstDay: CalendarDate } | null {
+  const people = new Set<string>();
+  let soonest: Date | null = null;
+  for (const row of rows) {
+    if (row.kind !== "crew_away" || !row.crewAway || row.crewAway.people.length === 0) continue;
+    for (const person of row.crewAway.people) people.add(person.personId);
+    if (row.dueAt && (soonest === null || row.dueAt < soonest)) soonest = row.dueAt;
+  }
+  if (people.size === 0 || soonest === null) return null;
+  return { people: people.size, firstDay: calendarDateInTimezone(soonest, timeZone) };
 }
 
 /** Every row the spine holds, wherever it filed. */

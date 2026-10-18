@@ -19,6 +19,10 @@
     "late": "Llega tarde"
   },
   "attachments": "{count, plural, one {# archivo adjunto, sigue con quien lo envió} other {# archivos adjuntos, siguen con quien los envió}}",
+  "moveRefusal": {
+    "leadsParty": "Grupo de {count}; se mueve plaza a plaza",
+    "onBuddyTeam": "En una pareja de buceo"
+  },
   "seat": "Reservó {trip}, {when}",
   "nearStamp": "{day}, {time}",
   "nearSeat": "{day} a las {time}",

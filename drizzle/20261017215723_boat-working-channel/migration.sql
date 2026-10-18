@@ -1,0 +1,2 @@
+ALTER TABLE "boats" ADD COLUMN "working_channel" text;--> statement-breakpoint
+ALTER TABLE "boats" ADD CONSTRAINT "boats_working_channel_short" CHECK ("working_channel" is null or char_length("working_channel") between 1 and 16);

@@ -18,8 +18,7 @@ import {
   FormStatus,
 } from "@/components/ui/form";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
-import { canPersonManageStaffAccounts } from "@/db/authz";
-import { listCrewAssignmentRequests, listCrewAvailabilityBlocks } from "@/db/crew-requests";
+import { listCrewAssignmentRequests, readStaffingWeekAway } from "@/db/crew-requests";
 import { getStaffingView } from "@/db/staffing";
 import { listStaff } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -173,7 +172,7 @@ export default async function StaffingPage({
   const fromWall = parseWallTime(weekStart, "00:00");
   const toWall = parseWallTime(shiftCalendarDate(weekStart, 7), "00:00");
   if (!fromWall || !toWall) redirect(shopPath(shopSlug, "staffing"));
-  const [view, staff, blocks] = await Promise.all([
+  const [view, staff, { blocks, canManageStaffAccounts: canManage }] = await Promise.all([
     getStaffingView(
       db,
       shop.id,
@@ -186,7 +185,8 @@ export default async function StaffingPage({
     listStaff(db, shop.id),
     // The whole week's blackouts, whoever's: a person's own draw as quiet
     // chips in their row, and everybody's are needed to warn on an assignment.
-    listCrewAvailabilityBlocks(db, shop.id, { from: weekStart, to: weekEnd }),
+    // Each note only as this reader may read it (#2673).
+    readStaffingWeekAway(db, shop.id, { from: weekStart, to: weekEnd }, session.user.personId),
   ]);
   // Requests hang off the gaps, so they are asked for after the view knows
   // which departures are short — one query, over the ids that can carry one.
@@ -195,7 +195,6 @@ export default async function StaffingPage({
     shop.id,
     view.gapTrips.map((trip) => trip.tripId),
   );
-  const canManage = await canPersonManageStaffAccounts(db, shop.id, session.user.personId);
   const notice = noticeFromParam(query.notice, notices);
   const onShiftForm =
     canManage && query.notice !== undefined && ADD_SHIFT_NOTICES.has(query.notice);

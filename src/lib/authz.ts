@@ -123,6 +123,18 @@ export function canManageStaffAccounts(roles: readonly Role[] | undefined): bool
 }
 
 /**
+ * Read why a crew member is away (issue #2673, decided by Aaron 2026-10-17):
+ * the note can be personal ("hospital appointment"), so past the person
+ * themself only owners and managers read it. Its own gate rather than a
+ * borrowed one, so a change to who manages staff accounts or who exports
+ * cannot quietly widen it; `authz.test.ts` pins that every exporter is also
+ * a reader, since the shop export hands every note over.
+ */
+export function canReadCrewAwayNote(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * See and change what the shop pays **DiveDay** — the card on file, the plan,
  * cancelling (ADR 20261007-subscription-billing). Owner only, stricter than
  * the shop's own payment settings: this is the business's contract with its

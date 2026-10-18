@@ -1020,6 +1020,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "boat_snags",
   "trip_sightings",
   "trip_assignments",
+  // "Working it anyway" on one crew assignment (issue #2678): current state of
+  // the departure's crew, read with it, and gone when the person comes off it.
+  "crew_away_acknowledgements",
   "trip_help_requests",
   "trip_waitlist_entries",
   "trip_invitations",

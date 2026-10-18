@@ -392,7 +392,7 @@ describe("the boat a departure sails on, for its emergency card (fourth review, 
     return trip;
   }
 
-  it("names each departure's own hull with its call sign and MMSI", async () => {
+  it("names each departure's own hull with its call sign, MMSI and working channel", async () => {
     const { db, shop } = ctx;
     const one = await createBoat(db, shop.id, "Mantis I", 12, null, {
       certifiedPassengers: null,
@@ -403,6 +403,7 @@ describe("the boat a departure sails on, for its emergency card (fourth review, 
       insuranceExpiresOn: null,
       callSign: "WDM2201",
       mmsi: "338055502",
+      workingChannel: "68",
     });
     const two = await createBoat(db, shop.id, "Mantis II", 14);
     const onOne = await departureOn(one.id);
@@ -414,8 +415,14 @@ describe("the boat a departure sails on, for its emergency card (fourth review, 
       name: "Mantis I",
       callSign: "WDM2201",
       mmsi: "338055502",
+      workingChannel: "68",
     });
-    expect(vessels.get(onTwo.id)).toEqual({ name: "Mantis II", callSign: null, mmsi: null });
+    expect(vessels.get(onTwo.id)).toEqual({
+      name: "Mantis II",
+      callSign: null,
+      mmsi: null,
+      workingChannel: null,
+    });
     // No boat: the card falls back to the shop's own vessel line.
     expect(vessels.has(onNone.id)).toBe(false);
   });

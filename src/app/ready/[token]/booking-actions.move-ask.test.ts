@@ -13,6 +13,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/db/bookings", () => ({ addPartySeat: vi.fn(), selfCancelBooking: vi.fn() }));
 vi.mock("@/db/inbound-messages", () => ({ recordMoveAsk: vi.fn() }));
+vi.mock("@/db/move-ask-alerts", () => ({ alertStaffToMoveAsk: vi.fn() }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/lib/navigation", () => ({
@@ -30,6 +31,7 @@ vi.mock("./action-helpers", async (importOriginal) => {
 });
 
 const { recordMoveAsk } = await import("@/db/inbound-messages");
+const { alertStaffToMoveAsk } = await import("@/db/move-ask-alerts");
 const { checkRateLimit } = await import("@/lib/rate-limit");
 const { contextFor } = await import("./action-helpers");
 const { askToMoveAction } = await import("./booking-actions");
@@ -80,6 +82,11 @@ describe("askToMoveAction", () => {
       {},
       expect.objectContaining({ shopId: "shop-1", bookingId: BOOKING_ID, note: "Any Saturday" }),
     );
+    // #2667: the filed ask is what may email owners and managers.
+    expect(alertStaffToMoveAsk).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ shopId: "shop-1", messageId: "m1" }),
+    );
   });
 
   it("files nothing for a seat the page offers no ask on", async () => {
@@ -99,6 +106,8 @@ describe("askToMoveAction", () => {
     withPage({ moveAsk: "open" });
     vi.mocked(recordMoveAsk).mockResolvedValue({ status: "already" });
     await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}#move-ask`);
+    // Nothing new filed, nobody emailed again.
+    expect(alertStaffToMoveAsk).not.toHaveBeenCalled();
   });
 
   it("refuses a held seat before anything else", async () => {

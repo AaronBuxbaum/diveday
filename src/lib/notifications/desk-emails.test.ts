@@ -120,3 +120,66 @@ describe("the stripe_payments_restricted kind", () => {
     );
   });
 });
+
+describe("the move_ask_soon kind", () => {
+  const notification = notificationSchema.parse({
+    kind: "move_ask_soon",
+    shopId: "11111111-1111-4111-8111-111111111111",
+    personId: "22222222-2222-4222-8222-222222222222",
+    messageId: "33333333-3333-4333-8333-333333333333",
+    to: "ana@example.com",
+    locale: "en-US",
+    recipientName: "Ana Ruiz",
+    shopName: "Blue <Mantis>",
+    tripTitle: "Two-tank <reef>",
+    startsAt: new Date("2026-10-18T14:00:00Z"),
+    timezone: "Pacific/Auckland",
+    inboxUrl: "https://diveday.example/shop/blue/inbox",
+    askedAt: new Date("2026-10-18T02:00:00Z"),
+  });
+
+  it("names the departure and its time in the shop's zone, and links the Inbox", () => {
+    const email = messageFor(notification);
+    expect(email.subject).toBe("Blue <Mantis>: a diver asked to move off Two-tank <reef>");
+    expect(email.text).toContain("Hi Ana");
+    expect(email.text).toContain("Two-tank <reef>");
+    // 14:00Z is 3:00 the next morning in Auckland.
+    expect(email.text).toMatch(/Oct(ober)?\s19,\s3:00\sAM/);
+    expect(email.html).toContain('href="https://diveday.example/shop/blue/inbox"');
+    expect(email.html).not.toContain("<reef>");
+  });
+
+  it("carries no field the diver or their words could ride in", () => {
+    expect(Object.keys(notification).sort()).toEqual(
+      [
+        "askedAt",
+        "inboxUrl",
+        "kind",
+        "locale",
+        "messageId",
+        "personId",
+        "recipientName",
+        "shopId",
+        "shopName",
+        "startsAt",
+        "timezone",
+        "to",
+        "tripTitle",
+      ].sort(),
+    );
+  });
+
+  it("is keyed per ask per staffer, and never queued", () => {
+    expect(notificationIdempotencyKey(notification)).toBe(
+      "move-ask-soon/33333333-3333-4333-8333-333333333333/22222222-2222-4222-8222-222222222222/2026-10-18T02:00:00.000Z",
+    );
+    expect(notificationIsQueueable(notification)).toBe(false);
+  });
+
+  it("speaks the staffer's language", () => {
+    const spanish = notificationSchema.parse({ ...notification, locale: "es-ES" });
+    expect(messageFor(spanish).subject).toBe(
+      "Blue <Mantis>: un buceador pidió cambiar de Two-tank <reef>",
+    );
+  });
+});

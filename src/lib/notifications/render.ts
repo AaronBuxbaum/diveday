@@ -9,7 +9,11 @@ import {
 import { courseCertifiedEmail } from "./course-certified";
 import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 import { crewScheduleChangeEmail } from "./crew-emails";
-import { deskAfterHoursEmail, stripePaymentsRestrictedEmail } from "./desk-emails";
+import {
+  deskAfterHoursEmail,
+  moveAskSoonEmail,
+  stripePaymentsRestrictedEmail,
+} from "./desk-emails";
 import { departureNoteEmail, lostItemEmail } from "./desk-notes";
 import {
   bookingCancelledEmail,
@@ -161,6 +165,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "stripe_payments_restricted") {
     return stripePaymentsRestrictedEmail(notification);
   }
+  if (notification.kind === "move_ask_soon") return moveAskSoonEmail(notification);
   if (notification.kind === "roll_call_stale") return rollCallStaleEmail(notification);
   if (notification.kind === "roll_call_stale_shore") return rollCallStaleShoreEmail(notification);
   if (notification.kind === "incident_missing_diver")

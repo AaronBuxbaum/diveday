@@ -494,6 +494,20 @@
         "files": {
           "src/i18n/label-maps.test.ts": "1351 -> 1366"
         }
+      },
+      {
+        "why": "list entries that cannot live in a sibling: the crew_away_acknowledgements table's classification in the erasure, export and retention schema guards (#2678)",
+        "files": {
+          "src/db/erasure-coverage.test.ts": "1165 -> 1167",
+          "src/db/export.test.ts": "1565 -> 1566",
+          "src/db/retention.test.ts": "1248 -> 1251"
+        }
+      },
+      {
+        "why": "crew_away_acknowledgements.csv is one new line in each of the export test's two registries (#2678 records review S2)",
+        "files": {
+          "src/db/export.test.ts": "1566 -> 1567"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -503,11 +517,11 @@
     "src/app/api/webhooks/stripe/route.ts": 923,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1129,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1296,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1290,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1065,
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 944,
-    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 1040,
+    "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 919,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1034,
     "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1181,
     "src/components/MarketingFeatureScreens.tsx": 1064,
@@ -526,9 +540,9 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1285,
     "src/db/divers.test.ts": 3077,
-    "src/db/erasure-coverage.test.ts": 1165,
+    "src/db/erasure-coverage.test.ts": 1167,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1565,
+    "src/db/export.test.ts": 1567,
     "src/db/import.test.ts": 1077,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3725,
@@ -542,7 +556,7 @@
     "src/db/reminders.test.ts": 1078,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1379,
-    "src/db/retention.test.ts": 1248,
+    "src/db/retention.test.ts": 1251,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,
     "src/db/self-declared-cards.test.ts": 1865,
@@ -554,7 +568,7 @@
     "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1366,
+    "src/i18n/label-maps.test.ts": 1348,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1983,
     "src/lib/import.test.ts": 1459,
@@ -566,7 +580,7 @@
     "src/lib/offline-manifests.test.ts": 2179,
     "src/lib/readiness.test.ts": 1575,
     "src/lib/staffing-week.test.ts": 1125,
-    "src/lib/today.test.ts": 1648,
+    "src/lib/today.test.ts": 1620,
     "src/lib/trip-admission.test.ts": 992,
     "src/lib/waivers.test.ts": 1402,
     "src/proxy.test.ts": 1221
@@ -659,16 +673,15 @@
     "src/app/shop/[shopSlug]/gear/rentals/new/_components/CounterRentalCart.tsx#CounterRentalCart": 309,
     "src/app/shop/[shopSlug]/gear/rentals/new/page.tsx#RentOutPage": 303,
     "src/app/shop/[shopSlug]/orders/page.tsx#OrdersIndexPage": 410,
-    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 308,
+    "src/app/shop/[shopSlug]/page.tsx#TodayBody": 307,
     "src/app/shop/[shopSlug]/promos/page.tsx#PromosPage": 374,
     "src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx#AddPanel": 310,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 329,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 310,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 315,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 368,
     "src/db/checkouts.ts#startBookingCheckout": 303,
-    "src/db/export.ts#loadShopExportContext": 331,
+    "src/db/export.ts#loadShopExportContext": 323,
     "src/db/reminders.ts#sendDueReminders": 335,
     "src/db/reporting.ts#getMonthlyReport": 333,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
@@ -769,14 +782,14 @@
     "src/app/shop/[shopSlug]/gear/page.tsx": 415,
     "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 401,
     "src/app/shop/[shopSlug]/orders/page.tsx": 728,
-    "src/app/shop/[shopSlug]/page.tsx": 677,
+    "src/app/shop/[shopSlug]/page.tsx": 675,
     "src/app/shop/[shopSlug]/promos/page.tsx": 594,
     "src/app/shop/[shopSlug]/reports/page.tsx": 499,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 457,
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 416,
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 714,
-    "src/app/shop/[shopSlug]/staffing/page.tsx": 593,
+    "src/app/shop/[shopSlug]/staffing/page.tsx": 592,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 618,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 496,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 519

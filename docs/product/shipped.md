@@ -178,7 +178,14 @@ answered by whoever is at the dock (issues #1505/#1518, an H-14 amendment; the t
 deleted, and the Today row widened with them). **The stranger's row gained a Delete** the same day
 (issue #1506): with no record it has no door and no composer, so it was the one row in the worklist
 nothing could finish, and it counted against the Today row for as long as it sat there. Soft, on
-that row alone, and no restore — a row that has a record is finished by answering it.
+that row alone, and no restore — a row that has a record is finished by answering it. **Open date
+requests count into the same row** (2026-10-17, issue #2658): Today shows one unanswered count,
+naming messages and date requests, and opens Requests when no message waits. `/requests` stays its
+own page and the `course_inquiry` email to a verified shop mailbox stays (#1288).
+**An Ask to move within a day of its boat emails owners and managers** (2026-10-17, issue
+#2667): one `move_ask_soon` email to each active owner or manager login, keyed to the filed ask, so
+a resubmit sends nothing; it names the departure and links the Inbox, never the diver or the note.
+Farther out, or from a demo shop, the Inbox row is enough.
 
 ## The counter survives a lost signal (delivered 2026-09-07)
 

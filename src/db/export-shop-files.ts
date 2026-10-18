@@ -1,4 +1,5 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { type AwayNoteReader, awayNoteFor } from "@/lib/crew-requests";
 import { EXPORT_FILE_NOTES } from "@/lib/export";
 import { WEEKDAY_EXPORT_CODES, weekdaysIn } from "@/lib/recurrence";
 import type { ShopExportContext } from "./export";
@@ -39,6 +40,13 @@ import {
 } from "./export-shared-files";
 import type { ExportFileSpec } from "./export-tables";
 import { certificationLevel } from "./schema";
+
+/**
+ * Who reads the away notes the shop export hands over (#2673): only someone
+ * `canExportShopData` admits downloads the bundle, and `authz.test.ts` pins
+ * every such role set as a `canReadCrewAwayNote` reader.
+ */
+const EXPORT_AWAY_NOTE_READER: AwayNoteReader = { personId: undefined, canReadCrewAwayNote: true };
 
 /**
  * **The shop bundle, file by file** (ADR 20260722-full-shop-export): every
@@ -305,6 +313,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "insurance_expires_on",
       "call_sign",
       "mmsi",
+      "working_channel",
       "created_at",
     ],
     rows: ({ boatRows }) =>
@@ -321,6 +330,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.insuranceExpiresOn,
         row.callSign,
         row.mmsi,
+        row.workingChannel,
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["boats.csv"],
@@ -948,12 +958,43 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         personName.get(row.personId),
         row.startsOn,
         row.endsOn,
-        row.note,
+        awayNoteFor(row, EXPORT_AWAY_NOTE_READER),
         row.createdByPersonId,
         personName.get(row.createdByPersonId),
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["crew_availability_blocks.csv"],
+  },
+  {
+    file: "crew_away_acknowledgements.csv",
+    header: [
+      "id",
+      "trip_id",
+      "trip_title",
+      "person_id",
+      "person_name",
+      "acknowledged_by_person_id",
+      "acknowledged_by_name",
+      "created_at",
+      "deleted_at",
+      "cleared_by_person_id",
+      "cleared_by_name",
+    ],
+    rows: ({ personName, tripTitle, crewAwayAcknowledgementRows }) =>
+      crewAwayAcknowledgementRows.map((row) => [
+        row.id,
+        row.tripId,
+        tripTitle.get(row.tripId),
+        row.personId,
+        personName.get(row.personId),
+        row.acknowledgedByPersonId,
+        row.acknowledgedByPersonId ? personName.get(row.acknowledgedByPersonId) : null,
+        row.createdAt,
+        row.deletedAt,
+        row.clearedByPersonId,
+        row.clearedByPersonId ? personName.get(row.clearedByPersonId) : null,
+      ]),
+    note: EXPORT_FILE_NOTES["crew_away_acknowledgements.csv"],
   },
   {
     file: "crew_assignment_requests.csv",
@@ -1640,6 +1681,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "boat_name",
       "judged_on",
       "papers",
+      "radio",
       "notices",
       "captured_at",
     ],
@@ -1651,6 +1693,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.boatName,
         row.judgedOn,
         JSON.stringify(row.papers),
+        JSON.stringify(row.radio),
         JSON.stringify(row.notices),
         row.capturedAt,
       ]),
