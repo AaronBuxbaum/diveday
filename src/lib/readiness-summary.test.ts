@@ -57,6 +57,25 @@ describe("buildDiverChecklist", () => {
     ).toContain("payment");
   });
 
+  it("never says a card is on file when a training mark lowered the card to nothing", () => {
+    const lowered = buildDiverChecklist(requirement(), ready, {
+      participantType: "diver",
+      trainingNoCardAsked: true,
+    });
+    const card = lowered.find((item) => item.category === "certification");
+    expect(card).toMatchObject({ state: "done", detailCode: "certification_training_dive" });
+    // Without the lowering the same ready seat still reads as verified, and a snorkeler has no line.
+    const plain = buildDiverChecklist(requirement(), ready, { participantType: "diver" });
+    expect(plain.find((item) => item.category === "certification")?.detailCode).toBe(
+      "certification_done",
+    );
+    const rider = buildDiverChecklist(requirement(), ready, {
+      participantType: "rider",
+      trainingNoCardAsked: true,
+    });
+    expect(rider.map((item) => item.category)).not.toContain("certification");
+  });
+
   it("keeps a certification blocker the engine raised, whoever it is raised for", () => {
     const items = buildDiverChecklist(
       requirement(),

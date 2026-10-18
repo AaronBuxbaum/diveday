@@ -216,6 +216,7 @@ describe("training marks — the gates the build review closed (in-memory PGlite
     expect((await row())?.trainingDive).toEqual({
       courseTitle: course?.title,
       instructorAboard: false,
+      overRatio: false,
     });
     // Read from the crew at read time. An instructor who does not teach the
     // session is not the course's (issue #2731); once they teach it, they are,

@@ -70,7 +70,7 @@ have was the thing standing between them and the boat.
     dropped; only an explicit null means note-only. The migration backfills from `updated_at`,
     which is accurate because every row predating this change was written by a fit save.
 - **The certification row names the rung**, folded from the trip's own requirement *and* the sites it
-  visits (`combineCertRequirements`) — the same fold the readiness engine gates on. Stating it off
+  visits (`unionRequirements`) — the same fold the readiness engine gates on. Stating it off
   `requirement` alone would understate a gate the itinerary imposes and the engine enforces, so
   `BookingReadinessDetail` now carries `siteRequirement` beside `requirement`.
 
@@ -126,7 +126,7 @@ figure that is structurally unreachable is worse than one row fewer in it.
 wrong: the dive sites a trip visits compose their own cert gate into the readiness result, so a
 departure whose trip requirement is blank can still block on a site's rule. Naming the trip's field
 alone would state a weaker gate than the one actually enforced — the worst kind of accurate-looking
-copy. Hence `siteRequirement` on the detail and the existing `combineCertRequirements` fold.
+copy. Hence `siteRequirement` on the detail and the existing `unionRequirements` fold.
 
 ## Consequences
 

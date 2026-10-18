@@ -66,6 +66,7 @@ export function readyThreadFacts(data: ReadyPageData, tripOnRecord: boolean, loc
   const items = buildDiverChecklist(detail.requirement, detail.readiness, {
     participantType: data.participantType,
     statedFree: detail.statedFree,
+    trainingNoCardAsked: detail.trainingNoCardAsked,
   });
   /**
    * **A balance nobody named.** "There's a balance to settle" is the one step

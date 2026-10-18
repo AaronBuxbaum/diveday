@@ -958,6 +958,7 @@
       "paymentDueAmount": "{amount} to settle. Your shop can take payment before the trip.",
       "waiverDone": "Signed and on file.",
       "certificationDone": "Verified and on file.",
+      "certificationTrainingDive": "Training dive with your instructor; no card asked.",
       "paymentDone": "Paid up. Thank you.",
       "certificationMultipleNeeded": "This dive needs more than one certification on file. Share the details for each one it calls for, and your shop will confirm you’re set.",
       "courseFormUnsigned": "Your course has forms for you to sign.",

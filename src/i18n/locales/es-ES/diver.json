@@ -958,6 +958,7 @@
       "paymentDueAmount": "Quedan {amount} por pagar. Tu centro puede cobrarlo antes de la salida.",
       "waiverDone": "Firmada y registrada.",
       "certificationDone": "Verificada y registrada.",
+      "certificationTrainingDive": "Inmersión de formación con tu instructor; no se pide tarjeta.",
       "paymentDone": "Pagado. Gracias.",
       "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada. Comparte los datos de cada una y tu centro confirmará que estás listo.",
       "courseFormUnsigned": "Tu curso tiene formularios para que firmes.",

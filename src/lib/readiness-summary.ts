@@ -33,6 +33,7 @@ export type ChecklistDetailCode =
   | ReadinessBlockerCode
   | "waiver_done"
   | "certification_done"
+  | "certification_training_dive"
   | "payment_done"
   | "certification_multiple_needed"
   | "setup_generic";
@@ -187,11 +188,17 @@ export function buildDiverChecklist(
    * trip's level is not theirs to be told "verified and on file" about; their
    * certification line appears only if the engine raised a blocker for it.
    * A seat the shop states as free owes no payment (`statedFree`, the engine's
-   * own waiver of the gate), so it is never told "Paid up".
+   * own waiver of the gate), so it is never told "Paid up". A seat whose
+   * standing training mark lowered the card to nothing (`trainingNoCardAsked`)
+   * is never told a card is "on file": none was asked.
    */
-  seat: { participantType?: ParticipantType; statedFree?: boolean } = {},
+  seat: {
+    participantType?: ParticipantType;
+    statedFree?: boolean;
+    trainingNoCardAsked?: boolean;
+  } = {},
 ): DiverChecklistItem[] {
-  const { participantType, statedFree = false } = seat;
+  const { participantType, statedFree = false, trainingNoCardAsked = false } = seat;
   const byCategory = new Map<ChecklistCategory, ReadinessBlocker[]>();
   for (const blocker of readiness.blockers) {
     const category = BLOCKER_CATEGORY[blocker.code];
@@ -245,7 +252,10 @@ export function buildDiverChecklist(
       items.push({
         category,
         state: "done",
-        detailCode: DONE_DETAIL_CODE[category],
+        detailCode:
+          category === "certification" && trainingNoCardAsked
+            ? "certification_training_dive"
+            : DONE_DETAIL_CODE[category],
         actionable: [],
       });
       continue;

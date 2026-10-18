@@ -227,6 +227,8 @@ function ratioRuleOf(course: TrainingEnrollmentRow["course"]) {
 export type TrainingRoom = {
   /** The departure's marked seats within the room its instructors have, across every session. */
   seated: ReadonlySet<string>;
+  /** Marked seats whose course has an instructor aboard but no room under the ratio. */
+  overRatio: ReadonlySet<string>;
   /** One more marked seat of this session's course would fit without unseating another. */
   spare: boolean;
 };
@@ -375,6 +377,8 @@ export async function resolveTrainingMarks(
               room.get(aboardKey(tripId, enrollment.tripId)),
               bookingId,
             ),
+            overRatio:
+              room.get(aboardKey(tripId, enrollment.tripId))?.overRatio.has(bookingId) ?? false,
           },
     );
   }

@@ -3,6 +3,7 @@ import { type CourseRatioRule, courseRatioCapacity } from "./course-ratios";
 import { countInWaterCrew, inWaterCrewRole, type TripCrewAssignment } from "./crew-roles";
 import type { ParticipantType } from "./participant-types";
 import { isDiver } from "./participant-types";
+import type { Requirement } from "./requirement";
 
 /**
  * **A training mark** (issue #2275, ADR
@@ -112,6 +113,12 @@ export type TrainingMarkState =
        * crew count, and this seat within the course ratio of those aboard.
        */
       courseInstructorAboard: boolean;
+      /**
+       * An instructor of the course is aboard but this seat does not fit under
+       * the tightest ratio on them: the seat keeps the departure's level and
+       * the manifest says so, not "no instructor aboard".
+       */
+      overRatio?: boolean;
     }
   | { valid: false; problem: TrainingMarkProblem };
 
@@ -163,7 +170,7 @@ export type TrainingRoomSeat = {
  * the same instructors, so each instructor's load is counted across sessions,
  * never per session. Seats are taken oldest mark first; each goes to an
  * instructor aboard for its session who still has room under its course's
- * ratio. A certified assistant aboard the departure raises the cap, as it does
+ * ratio, and an instructor's new load must also fit the tightest ratio of every seat already on them (a DSD seat caps later Open Water seats at the DSD ratio). A certified assistant aboard the departure raises the cap, as it does
  * on the session itself (`countInWaterCrew`), shared out evenly and rounded
  * down: it may seat fewer than the session would, never more. A seat whose
  * course has no known ratio is never seated.
@@ -172,24 +179,34 @@ function seatTrainingRoom(
   seats: readonly TrainingRoomSeat[],
   sessionCrew: ReadonlyMap<string, readonly CrewMember[]>,
   departureCrew: readonly CrewMember[],
-): Set<string> {
+): { seated: Set<string>; overRatio: Set<string> } {
   const aboardFor = (sessionTripId: string) =>
     courseInstructorIdsAboard(sessionCrew.get(sessionTripId) ?? [], departureCrew);
   const instructors = new Set(seats.flatMap((seat) => aboardFor(seat.sessionTripId)));
   const { assistantCount } = countInWaterCrew(departureCrew);
   const load = new Map<string, number>();
+  // The tightest cap among the seats already on each instructor: a taker's new load must fit it too.
+  const tightest = new Map<string, number>();
   const seated = new Set<string>();
+  const overRatio = new Set<string>();
   for (const seat of seats) {
     if (!seat.rule || instructors.size === 0) continue;
     const cap = Math.floor(
       courseRatioCapacity(seat.rule, instructors.size, assistantCount) / instructors.size,
     );
-    const taker = aboardFor(seat.sessionTripId).find((personId) => (load.get(personId) ?? 0) < cap);
-    if (taker === undefined) continue;
+    const taker = aboardFor(seat.sessionTripId).find((personId) => {
+      const newLoad = (load.get(personId) ?? 0) + 1;
+      return newLoad <= Math.min(cap, tightest.get(personId) ?? cap);
+    });
+    if (taker === undefined) {
+      if (aboardFor(seat.sessionTripId).length > 0) overRatio.add(seat.id);
+      continue;
+    }
     load.set(taker, (load.get(taker) ?? 0) + 1);
+    tightest.set(taker, Math.min(cap, tightest.get(taker) ?? cap));
     seated.add(seat.id);
   }
-  return seated;
+  return { seated, overRatio };
 }
 
 /**
@@ -202,15 +219,15 @@ export function trainingRoom(input: {
   candidate?: TrainingRoomSeat;
   sessionCrew: ReadonlyMap<string, readonly CrewMember[]>;
   departureCrew: readonly CrewMember[];
-}): { seated: ReadonlySet<string>; spare: boolean } {
+}): { seated: ReadonlySet<string>; overRatio: ReadonlySet<string>; spare: boolean } {
   const { marked, candidate, sessionCrew, departureCrew } = input;
-  const seated = seatTrainingRoom(marked, sessionCrew, departureCrew);
-  if (!candidate) return { seated, spare: false };
-  const withCandidate = seatTrainingRoom([...marked, candidate], sessionCrew, departureCrew);
+  const { seated, overRatio } = seatTrainingRoom(marked, sessionCrew, departureCrew);
+  if (!candidate) return { seated, overRatio, spare: false };
+  const withCandidate = seatTrainingRoom([...marked, candidate], sessionCrew, departureCrew).seated;
   const spare =
     withCandidate.has(candidate.id) &&
     marked.every((seat) => withCandidate.has(seat.id) === seated.has(seat.id));
-  return { seated, spare };
+  return { seated, overRatio, spare };
 }
 
 /** The ladder's order, as `certificationRank` (./readiness.ts) reads it; kept here so this module imports no gate. */
@@ -255,6 +272,21 @@ export function trainingDiveRequiredLevel(
   return certificationRank(course.minimumLevel) < certificationRank(required)
     ? course.minimumLevel
     : required;
+}
+
+/**
+ * Whether a marked training dive asks the diver for no card at all where the
+ * departure asks for `required`: the lowering reached nothing, so the card
+ * line must not say a card is "on file" (review 2026-10-18).
+ */
+export function trainingDiveAsksNoCard(
+  required: Requirement,
+  course: TrainingDiveCourse | null,
+): boolean {
+  // A nitrox or specialty card is still asked: only the level is ever lowered.
+  if (required.requiresNitrox || required.requiredSpecialties.length > 0) return false;
+  const level = required.minimumCertificationLevel;
+  return level !== null && course !== null && trainingDiveRequiredLevel(level, course) === null;
 }
 
 /**

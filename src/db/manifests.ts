@@ -1039,7 +1039,11 @@ function trainingDiveOf(
   // Aboard means the course's own instructor (issue #2731), the same answer
   // readiness reads to take the course's level.
   return mark?.valid
-    ? { courseTitle: mark.enrollmentCourseTitle, instructorAboard: mark.courseInstructorAboard }
+    ? {
+        courseTitle: mark.enrollmentCourseTitle,
+        instructorAboard: mark.courseInstructorAboard,
+        overRatio: mark.overRatio ?? false,
+      }
     : null;
 }
 

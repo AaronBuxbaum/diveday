@@ -118,7 +118,7 @@ export function ridingOnlyMedicalSentences(
 export function trainingDiveLines(
   t: StaffTranslator,
   diver: {
-    trainingDive?: { courseTitle: string; instructorAboard: boolean } | null;
+    trainingDive?: { courseTitle: string; instructorAboard: boolean; overRatio?: boolean } | null;
     trainingMarkCleared?: TrainingMarkCleared | null;
   },
 ): { fact: string | null; warnings: string[] } {
@@ -127,7 +127,11 @@ export function trainingDiveLines(
     fact: trainingDive ? t("manifest.trainingDive", { course: trainingDive.courseTitle }) : null,
     warnings: [
       trainingDive && !trainingDive.instructorAboard
-        ? t("manifest.trainingDiveNoInstructor")
+        ? t(
+            trainingDive.overRatio
+              ? "manifest.trainingDiveOverRatio"
+              : "manifest.trainingDiveNoInstructor",
+          )
         : null,
       trainingMarkCleared
         ? t(
