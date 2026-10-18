@@ -241,6 +241,9 @@ const RESET_KEEPS: Record<string, string> = {
   customer_gear_notices: "ON DELETE CASCADE from work orders and customer gear clears it",
   customer_gear_reminder_settings: "ON DELETE CASCADE from customer gear clears it",
   work_order_bills: "ON DELETE CASCADE from work orders clears it",
+  // People in an incident report hang off incident_reports by ON DELETE CASCADE.
+  // A raised report points at its subject's row, so incidentReports is deleted first.
+  incident_report_people: "ON DELETE CASCADE from incident_reports clears it",
   shop_milestones:
     "DiveDay's own activation bookkeeping, written only for real shops (never a demo), so a schedule reset has none to clear",
 };
@@ -280,6 +283,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
+  incident_report_people: "ON DELETE CASCADE from incident_reports clears it",
   shop_milestones: "ON DELETE CASCADE from shops clears it",
   customer_gear_notices: "ON DELETE CASCADE from work orders and customer gear clears it",
   customer_gear_reminder_settings: "ON DELETE CASCADE from customer gear clears it",

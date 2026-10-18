@@ -133,5 +133,7 @@ describe("what the assembly readers cost", () => {
  * on top of the desk layer's count of found items waiting to go home.
  * 61 → 62 (merging main, 2026-10-17): main's boat-on-two-departures read
  * (`boatClashesByTrip`, H-80) beside the crew clash, in the same wave.
+ * 62 → 64 (merging batch 3): countOpenDateRequests (#2658) and
+ * crewAwayAcknowledgedAt (#2678) in Today's wave.
  */
-const TODAY_QUERY_CEILING = 62;
+const TODAY_QUERY_CEILING = 64;

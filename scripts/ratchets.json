@@ -523,7 +523,7 @@
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 944,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": 919,
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": 1034,
-    "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1181,
+    "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": 1177,
     "src/components/MarketingFeatureScreens.tsx": 1064,
     "src/components/search/CommandPalette.tsx": 969,
     "src/components/ui/button.test.ts": 971,

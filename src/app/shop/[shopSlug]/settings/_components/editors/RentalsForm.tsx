@@ -131,7 +131,7 @@ export function RentalsForm({
       <FieldGrid columns={1} className="mt-6">
         <Field
           label={t("settings.main.rentals.terms.label")}
-          hint={t("settings.main.rentals.terms.hint")}
+          description={t("settings.main.rentals.terms.hint")}
         >
           <textarea
             name="rentalTerms"
@@ -143,7 +143,7 @@ export function RentalsForm({
         </Field>
         <Field
           label={t("settings.main.rentals.regulator.label")}
-          hint={t("settings.main.rentals.regulator.hint")}
+          description={t("settings.main.rentals.regulator.hint")}
         >
           <select
             name="regulatorServiceMonths"
