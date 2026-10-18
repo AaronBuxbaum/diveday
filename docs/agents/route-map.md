@@ -36,7 +36,7 @@ A row moves between here and AGENTS.md in one commit, never duplicated.
 | A dive site's briefing — what a diver reads, and which field writes it | `dive-sites/_components/SiteFields.tsx` writes it, `_components/TripDayPlan.tsx` reads it; the field guide is `src/lib/dive-site-field-guide.ts` + `src/i18n/marine-life-labels.ts` |
 | Starting content a shop copies, and species it picks | `src/content/dive-site-templates.ts`, `src/content/course-templates.ts` (copied, then the shop's); `src/db/marine-life-catalog.ts` (DiveDay's words); photos by `pnpm content:photos` |
 | Feature modules | `src/features/<feature>/` — `index.ts` is the whole public surface; `calendar-sync`, `backup-export`, `integrations` |
-| Outbound integrations a shop connects for itself (Shopify, QuickBooks, Xero, Zapier) | `src/features/integrations/`; rows in `src/db/integrations.ts` + `src/db/integration-events.ts`; staff at `src/app/shop/[shopSlug]/settings/integrations`; callbacks under `src/app/api/integrations/` |
+| Outbound integrations a shop connects for itself (Shopify, QuickBooks, Zapier) | `src/features/integrations/`; rows in `src/db/integrations.ts` + `src/db/integration-events.ts`; staff at `src/app/shop/[shopSlug]/settings/integrations`; callbacks under `src/app/api/integrations/` |
 | Staff calendar subscriptions (iCalendar feeds) | `src/features/calendar-sync/` + `src/app/calendar/[token]/route.ts`; staff UI at `src/app/shop/[shopSlug]/settings/calendar/` |
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |
 | Why a route paints instantly (or doesn't) | its `loading.tsx` and `export const instant = true` (ADR 20260804-instant-navigation; the **instant-navigation** skill) |

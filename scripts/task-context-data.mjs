@@ -731,7 +731,7 @@ export const areas = {
     ],
   },
   integrations: {
-    goal: "Add or change an outbound integration (Shopify, QuickBooks, Xero, Zapier, webhooks) without a provider's latency or failure reaching a staffer's button or another shop's data.",
+    goal: "Add or change an outbound integration (Shopify, QuickBooks, Zapier, webhooks) without a provider's latency or failure reaching a staffer's button or another shop's data.",
     docs: [
       "src/features/integrations/README.md",
       "docs/architecture/decisions/20260815-outbound-integration-webhooks-and-zapier.md",

@@ -94,28 +94,53 @@ export async function generateMetadata({
   };
 }
 
-export default async function MigrationGuidePage({
+export default function MigrationGuidePage({
   params,
 }: {
   params: Promise<{ competitor: string }>;
 }) {
-  // Resolved and checked here rather than inside a Suspense-wrapped child, and
-  // it is the *second* layer: under `cacheComponents` a slug outside
-  // `generateStaticParams` gets an optimistic 200 App Shell on the wire before
-  // this body runs, so no `notFound()` anywhere in the page can move the status
-  // line. `src/proxy.ts` decides it against this same list before anything
-  // streams (issue #1734, ADR
+  // **`params` is not read here.** Under Partial Prefetching (`next.config.ts`)
+  // the App Shell is one artifact shared by every guide, so anything that
+  // names a slug has to sit behind a `<Suspense>` boundary. A page that
+  // awaited `params` at its top answered 200 until its cached shell
+  // revalidated, then 500 (`NEXT_STATIC_GEN_BAILOUT`): the background
+  // re-prerender had no boundary to postpone at (issue #2546). The shell is
+  // the frame every guide shares, as bars; `GuideRoute` resolves the slug.
+  return (
+    <div className="flex flex-1 flex-col">
+      <Suspense fallback={<GuideShell />}>
+        <GuideRoute params={params} />
+      </Suspense>
+    </div>
+  );
+}
+
+/** The frame every guide shares, painted until the slug is known: no `guide` is in scope, so the bars are the longest registered guide's. */
+function GuideShell() {
+  return (
+    <>
+      <MarketingNavFallback />
+      <GuideBodySkeleton lines={GUIDE_SKELETON_LINES.eve} />
+      <MarketingFooterFallback />
+    </>
+  );
+}
+
+async function GuideRoute({ params }: { params: Promise<{ competitor: string }> }) {
+  // Resolved and checked here, and it is the *second* layer: under
+  // `cacheComponents` a slug outside `generateStaticParams` gets an optimistic
+  // 200 App Shell on the wire before this body runs, so no `notFound()`
+  // anywhere in the page can move the status line. `src/proxy.ts` decides it
+  // against this same list before anything streams (issue #1734, ADR
   // 20260912-the-public-namespace-refuses-at-the-edge), and
   // `e2e/marketing.spec.ts` asserts the status. This check stays because it is
-  // what renders the refusal, and it costs the route nothing: for a registered
-  // slug `generateStaticParams` still prerenders the shell, and the lookup is a
-  // synchronous in-memory match against `MIGRATION_GUIDE_SLUGS`, not a dynamic
-  // API call.
+  // what renders the refusal; the lookup is a synchronous in-memory match
+  // against `MIGRATION_GUIDE_SLUGS`.
   const { competitor } = await params;
   const guide = getMigrationGuide(competitor);
   if (!guide) notFound();
   return (
-    <div className="flex flex-1 flex-col">
+    <>
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
@@ -130,7 +155,7 @@ export default async function MigrationGuidePage({
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
       </Suspense>
-    </div>
+    </>
   );
 }
 

@@ -4099,7 +4099,7 @@
         "item8": "Un recordatorio al buceador que reservó una plaza y no terminó de pagar",
         "item9": "Propinas que el buceador inicia desde su página de recuerdo, cuando el centro las activa",
         "item10": "Un informe mensual: ingresos, reservas, ocupación, exenciones y propinas, por salida",
-        "item11": "Pedidos pagados y reembolsados enviados a QuickBooks o Xero como recibos"
+        "item11": "Pedidos pagados y reembolsados enviados a QuickBooks como recibos"
       },
       "divers": {
         "title": "Buceadores",
@@ -5207,7 +5207,7 @@
         "faq2Q": "¿Qué pasa cuando un buceador cancela?",
         "faq2A": "Dentro de la ventana de cancelación gratuita que definas, un pago con tarjeta en línea se reembolsa solo. Pasada la ventana, el reembolso queda a tu criterio.",
         "faq3Q": "¿Funciona con mi contabilidad?",
-        "faq3A": "Los pedidos pagados y reembolsados se envían a QuickBooks o Xero como recibos, y el informe se descarga como hoja de cálculo.",
+        "faq3A": "Los pedidos pagados y reembolsados se envían a QuickBooks como recibos, y el informe se descarga como hoja de cálculo.",
         "closeTitle": "Repasa un día de pedidos en la demo.",
         "demoPlace": "los pedidos del día, como propietario"
       }

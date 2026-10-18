@@ -344,7 +344,7 @@ script again.
 | 20260907-persona-bots-file-under-a-ceiling | A weekly persona walk may… |
 | 20260907-the-counter-survives-offline | Give arrival its own append-only… |
 | 20260907-two-way-inbox | A diver's reply lands on… |
-| 20260907-xero-beside-quickbooks | Xero is the fourth connector,… |
+| 20260907-xero-beside-quickbooks | ~~Xero is the fourth connector,…~~ → 20261017-xero-removed-before-launch |
 | 20260908-one-hand | Six jobs get one spelling… (proposed) |
 | 20260909-reply-keywords | A reminder can be answered… |
 | 20260910-one-region-in-us-east-2 | ~~The whole estate moves to…~~ → 20260924-one-region-in-us-east-1 |
@@ -402,5 +402,6 @@ script again.
 | 20261016-fresh-link-per-booking-row | A booking's page lists the… |
 | 20261016-incident-drafts | Reuse an incident draft only… |
 | 20261016-shared-boat-photos | A diver may share a… |
+| 20261017-xero-removed-before-launch | Xero is removed before launch,… |
 
 <!-- adr-index:end -->

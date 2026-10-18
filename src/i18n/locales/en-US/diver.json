@@ -4099,7 +4099,7 @@
         "item8": "A nudge to the diver who reserved a seat and never finished paying",
         "item9": "Crew tips a diver starts from their own recap page, when the shop turns them on",
         "item10": "A monthly report: revenue, bookings, seat fill, waivers and tips, per trip",
-        "item11": "Paid and refunded orders posted to QuickBooks or Xero as receipts"
+        "item11": "Paid and refunded orders posted to QuickBooks as receipts"
       },
       "divers": {
         "title": "Divers",
@@ -5207,7 +5207,7 @@
         "faq2Q": "What happens when a diver cancels?",
         "faq2A": "Inside the free-cancellation window you set, an online card payment is refunded by itself. Past the window, a refund is yours to decide.",
         "faq3Q": "Does it work with my accounting?",
-        "faq3A": "Paid and refunded orders post to QuickBooks or Xero as receipts, and the report downloads as a spreadsheet.",
+        "faq3A": "Paid and refunded orders post to QuickBooks as receipts, and the report downloads as a spreadsheet.",
         "closeTitle": "Look over a day of demo orders.",
         "demoPlace": "the day’s orders, as the owner"
       }

@@ -16,7 +16,7 @@ import { people, shops } from "./core";
 
 /**
  * What a shop connects outward: backup destinations and deliveries,
- * integrations (Shopify, QuickBooks, Xero, Zapier) and their outbox, and staff
+ * integrations (Shopify, QuickBooks, Zapier) and their outbox, and staff
  * calendar feeds.
  */
 
@@ -106,7 +106,6 @@ export const integrationProvider = pgEnum("integration_provider", [
   "shopify",
   "quickbooks",
   "zapier",
-  "xero",
 ]);
 
 export const integrationConnectionStatus = pgEnum("integration_connection_status", [
@@ -127,9 +126,6 @@ export type IntegrationSettings = {
   shopDomain?: string;
   environment?: "sandbox" | "production";
   incomeAccountId?: string;
-  /** Xero chart-of-accounts codes: where the sale lands, and which bank account took the money. */
-  salesAccountCode?: string;
-  bankAccountCode?: string;
 };
 
 /** The one encrypted credential envelope shared by OAuth and webhook providers. */

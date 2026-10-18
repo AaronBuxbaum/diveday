@@ -1,7 +1,7 @@
 import { parseWallTime, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 /** The providers that take sale events; Shopify takes a catalog and has nothing to backfill. */
-export const BACKFILL_PROVIDERS = ["quickbooks", "xero", "zapier"] as const;
+export const BACKFILL_PROVIDERS = ["quickbooks", "zapier"] as const;
 
 /**
  * A day typed into the date box, read as the start of that day in the shop's
