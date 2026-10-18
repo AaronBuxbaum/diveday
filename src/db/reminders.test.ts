@@ -324,12 +324,10 @@ describe("sendDueReminders", () => {
     // email holds a count of what is left and nothing it could drift from.
     for (const gone of [
       "brief",
-      "dockCallMinutes",
       "diverName",
       "endsAt",
       "hotelPickupLocation",
       "learningMaterials",
-      "medicalReview",
       "meetingPoint",
       "outstanding",
       "pickupTime",

@@ -539,7 +539,7 @@
     "src/db/readiness.test.ts": 1522,
     "src/db/recap.test.ts": 2138,
     "src/db/refunds.test.ts": 1154,
-    "src/db/reminders.test.ts": 1076,
+    "src/db/reminders.test.ts": 1074,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1633,
     "src/db/retention.test.ts": 1248,

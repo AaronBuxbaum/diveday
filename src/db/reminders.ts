@@ -658,9 +658,11 @@ export async function sendDueReminders(
             tripTitle: trip.title,
             startsAt: trip.startsAt,
             timezone: shop.timezone,
-            // What the sentence says is left: the checklist, the medical
-            // review and unfinished course materials. The thread lists them.
-            open: outstanding.length + (medicalReview ? 1 : 0) + (materialsDue.length > 0 ? 1 : 0),
+            // What the sentence says is left: the checklist and
+            // unfinished course materials; the medical review has its own sentence. The thread lists them.
+            open: outstanding.length + (materialsDue.length > 0 ? 1 : 0),
+            dockCallMinutes: shop.dockCallMinutes,
+            ...(medicalReview ? { medicalReview: true } : {}),
             readinessUrl,
             ...(inboundEmailOn ? { replyKeywords: true } : {}),
             ...(student ? { courseSession: true } : {}),

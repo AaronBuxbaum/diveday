@@ -2,8 +2,15 @@
 // resolves its words through diverTranslator against the recipient's locale.
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import { nowDate } from "@/lib/clock";
 import { type FlySafeResult, flySafeMessageKey } from "@/lib/fly-safe";
-import { formatDateTimeTz, formatShortDate, formatTimeTz, formatWeekdayTime } from "@/lib/format";
+import {
+  formatDateTimeTz,
+  formatShortDate,
+  formatTimeTz,
+  formatWeekdayTime,
+  isSameCalendarDay,
+} from "@/lib/format";
 import { escapeHtml } from "@/lib/html";
 import { emailButton, type NotificationEmail } from "./email";
 
@@ -38,6 +45,12 @@ export type DiverStateEmailInput = {
       readinessUrl?: string;
       /** How many things the diver still has to finish; the sentence says so when above zero. */
       open: number;
+      /** The shop's dock call; the night-before sentence names the dock time (departure minus this). */
+      dockCallMinutes?: number;
+      /** A medical answer waits on a doctor; the sentence says so instead of counting it. */
+      medicalReview?: boolean;
+      /** The instant the message is read as sent, for "today" or "tomorrow"; the clock when omitted. */
+      now?: Date;
       /** A course session says it starts, where a fun dive sails. */
       courseSession?: boolean;
       /** Whether the reply line is offered (ADR 20260909-reply-keywords): a fact about the channel. */
@@ -92,12 +105,26 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
   const course = input.courseSession === true;
   const key = tonight ? "day" : "week";
   const suffix = course ? "Course" : "";
+  // A message held until the morning of the trip says "today": the day word
+  // is the calendar day in the shop's zone, never a fixed "tomorrow".
+  const day = isSameCalendarDay(input.startsAt, input.now ?? nowDate(), input.timezone)
+    ? "today"
+    : "tomorrow";
+  // A fun dive names the dock time (the shop's dock call before departure,
+  // the glossary's "dock call time"); a course session names no dock and
+  // keeps its start.
+  const dockAt =
+    !course && input.dockCallMinutes !== undefined
+      ? new Date(input.startsAt.getTime() - input.dockCallMinutes * 60_000)
+      : input.startsAt;
   const values = {
     tripTitle: input.tripTitle,
     when: tonight
-      ? formatTimeTz(input.startsAt, input.locale, input.timezone)
+      ? formatTimeTz(dockAt, input.locale, input.timezone)
       : formatDateTimeTz(input.startsAt, input.locale, input.timezone),
     open: input.open,
+    medical: input.medicalReview ? "yes" : "no",
+    day,
   };
   const sentence = t(`notifications.tripReminder.${key}Body${suffix}`, values);
   const label = t("notifications.common.seeWhatsLeft");
@@ -109,6 +136,7 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
   return {
     subject: t(`notifications.tripReminder.${key}Subject${suffix}`, {
       tripTitle: input.tripTitle,
+      day,
     }),
     text: `${sentence}${link ? `\n\n${label}:\n${link}` : ""}\n\n${input.shopName}\n${keywordOffer ? `\n${keywordOffer}\n` : ""}`,
     html: `<p>${escapeHtml(sentence)}</p>${link ? emailButton(link, label) : ""}<p>${shop}</p>${keywordOffer ? `<p style="font-size: 13px; opacity: 0.8;">${escapeHtml(keywordOffer)}</p>` : ""}`,

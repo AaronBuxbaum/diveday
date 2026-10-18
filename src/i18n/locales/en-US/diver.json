@@ -5406,14 +5406,14 @@
     },
     "tripReminder": {
       "weekSubject": "You sail this week: {tripTitle}",
-      "weekBody": "{tripTitle} sails {when}{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}",
+      "weekBody": "{tripTitle} sails {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
       "weekSubjectCourse": "Your course starts this week: {tripTitle}",
-      "weekBodyCourse": "{tripTitle} starts {when}{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}",
+      "weekBodyCourse": "{tripTitle} starts {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
       "dockNote": "Please be at the dock {dock} early.",
-      "daySubject": "You sail tomorrow: {tripTitle}",
-      "dayBody": "{tripTitle} sails tomorrow at {when}{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}",
-      "daySubjectCourse": "Your course starts tomorrow: {tripTitle}",
-      "dayBodyCourse": "{tripTitle} starts tomorrow at {when}{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}"
+      "daySubject": "{day, select, today {You sail today} other {You sail tomorrow}}: {tripTitle}",
+      "dayBody": "{tripTitle} sails {day, select, today {today} other {tomorrow}}; be at the dock by {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
+      "daySubjectCourse": "{day, select, today {Your course starts today} other {Your course starts tomorrow}}: {tripTitle}",
+      "dayBodyCourse": "{tripTitle} starts {day, select, today {today} other {tomorrow}} at {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}"
     },
     "courseMaterials": {
       "heading": "Before your first day"

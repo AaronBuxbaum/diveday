@@ -5406,14 +5406,14 @@
     },
     "tripReminder": {
       "weekSubject": "Sales esta semana: {tripTitle}",
-      "weekBody": "{tripTitle} sale el {when}{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}",
+      "weekBody": "{tripTitle} sale el {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",
       "weekSubjectCourse": "Tu curso empieza esta semana: {tripTitle}",
-      "weekBodyCourse": "{tripTitle} empieza el {when}{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}",
+      "weekBodyCourse": "{tripTitle} empieza el {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",
       "dockNote": "Preséntate en el muelle {dock} antes.",
-      "daySubject": "Sales mañana: {tripTitle}",
-      "dayBody": "{tripTitle} sale mañana a las {when}{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}",
-      "daySubjectCourse": "Tu curso empieza mañana: {tripTitle}",
-      "dayBodyCourse": "{tripTitle} empieza mañana a las {when}{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}"
+      "daySubject": "{day, select, today {Sales hoy} other {Sales mañana}}: {tripTitle}",
+      "dayBody": "{tripTitle} sale {day, select, today {hoy} other {mañana}}; preséntate en el muelle a las {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",
+      "daySubjectCourse": "{day, select, today {Tu curso empieza hoy} other {Tu curso empieza mañana}}: {tripTitle}",
+      "dayBodyCourse": "{tripTitle} empieza {day, select, today {hoy} other {mañana}} a las {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}"
     },
     "courseMaterials": {
       "heading": "Antes de tu primer día"

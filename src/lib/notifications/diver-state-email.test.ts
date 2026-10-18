@@ -15,6 +15,8 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
     readinessUrl: "https://diveday.test/ready/abc.def",
   };
 
+  const night = new Date("2026-07-31T22:00:00.000Z");
+
   it("week_out is the state in the subject, one sentence, the link and the shop's line", () => {
     const email = diverStateEmail({ ...base, state: "week_out" });
     expect(email.subject).toBe("You sail this week: Two-Tank Reef");
@@ -32,11 +34,48 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
     expect(email.html).toContain('href="https://diveday.test/ready/abc.def"');
   });
 
+  it("tonight names the dock call time, not the departure", () => {
+    const email = diverStateEmail({ ...base, state: "tonight", now: night, dockCallMinutes: 45 });
+    expect(flat(email.text)).toContain("be at the dock by 8:15 AM EDT.");
+  });
+
+  it("says today, not tomorrow, once the send is held to the morning of the trip", () => {
+    const morning = new Date("2026-08-01T12:01:00.000Z");
+    const email = diverStateEmail({ ...base, state: "tonight", now: morning, dockCallMinutes: 30 });
+    expect(email.subject).toBe("You sail today: Two-Tank Reef");
+    expect(flat(email.text)).toContain("sails today; be at the dock by 8:30 AM EDT.");
+    expect(email.text).not.toContain("tomorrow");
+    // The shop's calendar day decides, not UTC: 01:00 UTC is still the night before in New York.
+    const late = diverStateEmail({
+      ...base,
+      state: "tonight",
+      now: new Date("2026-08-01T03:00:00.000Z"),
+    });
+    expect(late.subject).toBe("You sail tomorrow: Two-Tank Reef");
+  });
+
+  it("gives a medical review its own sentence instead of a count", () => {
+    const email = diverStateEmail({ ...base, state: "week_out", medicalReview: true, open: 2 });
+    expect(flat(email.text)).toContain(
+      "and a doctor must sign off your medical answers before you dive.",
+    );
+    expect(email.text).not.toContain("left to finish");
+    const es = diverStateEmail({
+      ...base,
+      locale: "es-ES",
+      state: "week_out",
+      medicalReview: true,
+    });
+    expect(es.text).toContain("un médico debe aprobar");
+  });
+
   it("tonight names the hour and carries none of the old brief", () => {
-    const email = diverStateEmail({ ...base, state: "tonight" });
+    const email = diverStateEmail({ ...base, state: "tonight", now: night });
     expect(email.subject).toBe("You sail tomorrow: Two-Tank Reef");
-    expect(flat(email.text)).toContain("Two-Tank Reef sails tomorrow at 9:00 AM EDT.");
-    for (const gone of ["Conditions", "What to bring", "Text us", "First boat dive", "dock"]) {
+    expect(flat(email.text)).toContain(
+      "Two-Tank Reef sails tomorrow; be at the dock by 9:00 AM EDT.",
+    );
+    for (const gone of ["Conditions", "What to bring", "Text us", "First boat dive"]) {
       expect(email.text).not.toContain(gone);
     }
   });
@@ -44,7 +83,7 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
   it("says what is left in the same sentence, singular and plural", () => {
     const one = diverStateEmail({ ...base, state: "week_out", open: 1 });
     expect(flat(one.text)).toContain("9:00 AM EDT, and 1 thing is left to finish.");
-    const two = diverStateEmail({ ...base, state: "tonight", open: 2 });
+    const two = diverStateEmail({ ...base, state: "tonight", open: 2, now: night });
     expect(two.text).toContain("and 2 things are left to finish.");
     expect(two.text.split(". ").length).toBe(1);
   });
@@ -54,7 +93,7 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
     expect(week.subject).toBe("Your course starts this week: Two-Tank Reef");
     expect(flat(week.text)).toContain("starts Aug 1");
     expect(week.text).not.toContain("sails");
-    const tonight = diverStateEmail({ ...base, state: "tonight", courseSession: true });
+    const tonight = diverStateEmail({ ...base, state: "tonight", courseSession: true, now: night });
     expect(tonight.subject).toBe("Your course starts tomorrow: Two-Tank Reef");
   });
 
@@ -80,9 +119,9 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
     const week = diverStateEmail({ ...base, state: "week_out", locale: "es-ES", open: 2 });
     expect(week.subject).toBe("Sales esta semana: Two-Tank Reef");
     expect(week.text).toContain("y te quedan 2 cosas por resolver.");
-    const tonight = diverStateEmail({ ...base, state: "tonight", locale: "es-ES" });
+    const tonight = diverStateEmail({ ...base, state: "tonight", locale: "es-ES", now: night });
     expect(tonight.subject).toBe("Sales mañana: Two-Tank Reef");
-    expect(tonight.text).toContain("sale mañana a las");
+    expect(tonight.text).toContain("sale mañana; preséntate en el muelle a las");
   });
 
   it("omits the link block when the thread link could not be minted", () => {

@@ -511,7 +511,12 @@ const tripReminderFields = {
   tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
+  /** What the diver still has to finish, not counting the medical review (its own flag). */
   open: z.number().int().min(0).max(40),
+  /** The shop's dock call: the 24-hour sentence names the time to be at the dock, not the departure. */
+  dockCallMinutes: z.number().int().min(5).max(180).optional(),
+  /** A medical answer waits on a doctor's sign-off; the sentence says so in place of the count. */
+  medicalReview: z.boolean().optional(),
   readinessUrl: z.url().max(2_000).optional(),
   /**
    * Whether this reminder may end with the reply line (ADR
@@ -798,7 +803,7 @@ const welcomeSchema = z.object({
  * login (plain DiveDay, greeted by name); `shop_contact` is the front desk
  * proving the address that becomes Reply-To on diver mail (issue #1288);
  * `shore_alert` is the shore contact agreeing to hear roll-call alerts (H-118).
- * The last two go to the shop, in the shop's language, branded as the shop.
+ * The last two go to the shop, in the shop's language, branded as the shop only for `shore_alert`; `shop_contact` goes out as plain DiveDay (`shop-voice.ts`).
  * The fields are the same across all three; only the name the copy uses
  * differs, and the schema holds each purpose to exactly its own.
  */

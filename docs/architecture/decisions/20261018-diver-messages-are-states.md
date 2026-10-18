@@ -24,6 +24,11 @@ One renderer (`src/lib/notifications/diver-state-email.ts`) and one bundle names
   has to finish (`open`), the departure's start, the course flag and the reply-line flag. The
   recap's sentence is the fly-safe sentence when one exists, the same words the after-state page
   uses, so the safety fact is never dropped and never worded twice.
+- The night-before sentence names the dock time, the departure minus the shop's dock call
+  (`dockCallMinutes`, the glossary's dock call time), and says "today" or "tomorrow" by the
+  calendar day in the shop's zone, so a send held to the morning of the trip never says "tomorrow".
+  A course session keeps its start and names no dock. A medical answer waiting on a doctor has its
+  own sentence in place of the count (`medicalReview`).
 - The text channels keep their own bodies. The night-before brief is now only the text.
 - Booking sends one message. The waiver link already rides in the confirmation, so there is no
   second booking-time email; the confirmation keeps its terms, materials and waiver link.
