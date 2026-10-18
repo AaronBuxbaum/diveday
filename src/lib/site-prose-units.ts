@@ -56,7 +56,7 @@ const NUMBER = String.raw`\d+(?:\.\d+)?`;
  * ("30 to 33 m", "17 and 19 m", "5-to-9 m"). Both numbers convert whichever it is.
  */
 const JOINER = String.raw`\s?[–-]\s?|-to-|\s(?:to|and|or)\s`;
-const RANGE = String.raw`(${NUMBER})(?:(${JOINER})(${NUMBER}))?`;
+const RANGE = `(${NUMBER})(?:(${JOINER})(${NUMBER}))?`;
 /** "18–40 m (60–130 ft)": both halves authored. */
 const PAIR = new RegExp(
   String.raw`(${NUMBER}(?:\s?[–-]\s?${NUMBER})?)\s?m\s?\((${NUMBER}(?:\s?[–-]\s?${NUMBER})?)\s?ft\)`,
