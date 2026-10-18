@@ -75,8 +75,8 @@ describe("ArrivalMap", () => {
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
-    expect(probes).toHaveLength(2);
-    act(() => probes[1]?.onload?.());
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length * 2);
+    act(() => answerAll());
     expect(container.querySelector("iframe")).not.toBeNull();
   });
 
@@ -87,24 +87,24 @@ describe("ArrivalMap", () => {
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(1);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
     visibility.mockReturnValue("visible");
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(2);
-    act(() => probes[1]?.onload?.());
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length * 2);
+    act(() => answerAll());
     expect(container.querySelector("iframe")).not.toBeNull();
   });
 
   it("asks nothing more after the host has answered", () => {
     mount();
-    act(() => probes[0]?.onload?.());
+    act(() => answerAll());
     act(() => {
       window.dispatchEvent(new Event("online"));
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(1);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
   });
 
   it("stops listening once the map is gone", () => {
@@ -115,6 +115,6 @@ describe("ArrivalMap", () => {
       window.dispatchEvent(new Event("online"));
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(1);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
   });
 });
