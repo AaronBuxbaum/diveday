@@ -10,16 +10,16 @@ import { formatTime } from "@/lib/format";
 import { saveDeskHoursAction, saveReviewUrlAction } from "../../messages-actions";
 import { resendContactConfirmationAction, saveContactAction } from "../../shop-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
-import { featureRow, REACH_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
+import { MESSAGES_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 
 /**
- * **How divers reach you** (fifth-loop ideas, item 58): the address divers
- * write to (and replies are routed to), the desk's hours, the reader's own
- * email page, then reviews, the review link and the shop's own WhatsApp
- * sender. They were two groups, Notifications and Messages, side by side, and
- * an owner looking for "how do divers get hold of us" read both.
+ * **Messages**: how divers reach the shop and how the shop answers. The address
+ * divers write to (and replies are routed to), the desk's hours, reviews, the
+ * review link and the shop's own WhatsApp sender. A staffer's own Monday email
+ * and after-hours ping are about the staffer, not the shop, so they live in the
+ * My account menu (issue #2813).
  */
-export function ReachGroup({
+export function MessagesGroup({
   view,
   canManageMessaging,
 }: {
@@ -51,7 +51,7 @@ export function ReachGroup({
     contactText
   );
   return (
-    <SettingsGroup group={REACH_GROUP} label={t(REACH_GROUP.labelKey)}>
+    <SettingsGroup group={MESSAGES_GROUP} label={t(MESSAGES_GROUP.labelKey)}>
       <InsetGroup>
         <SettingsRow
           heading={t("settings.main.contact.heading")}
@@ -149,13 +149,6 @@ export function ReachGroup({
             </FieldActions>
           </FieldGrid>
         </SettingsRow>
-
-        <SettingsDoorRow
-          href={`/shop/${shopSlug}/settings/email`}
-          heading={t("emailSettings.title")}
-        />
-
-        {featureRow(view, "reviews")}
 
         {/* One of the few rows another surface links straight to: the Reviews
           page's empty state names this box, so it opens itself on the

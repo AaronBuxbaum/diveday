@@ -2,13 +2,13 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { ChoiceRow } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { canAcceptPayments, type getShopStripeAccount } from "@/db/stripe-accounts";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
-import { disconnectAction, refreshAction, saveTaxAction } from "../../money-actions";
-import { SettingsRow } from "../SettingsRows";
-import { featureRow, MONEY_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
+import { disconnectAction, refreshAction } from "../../money-actions";
+import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
+import { MONEY_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
+import { passThroughRow } from "./money-rows";
 
 function StatusRow({
   label,
@@ -42,13 +42,15 @@ export function MoneyGroup({
   canPayments,
   account,
   connectConfigured,
+  canViewBilling,
 }: {
   view: SettingsView;
   canPayments: boolean;
   account: Awaited<ReturnType<typeof getShopStripeAccount>>;
   connectConfigured: boolean;
+  canViewBilling: boolean;
 }) {
-  const { shop, shopSlug, t, banner, activeSection } = view;
+  const { shopSlug, t, banner, activeSection } = view;
   const ready = canAcceptPayments(account);
   // The one exception the Online payments row states at rest, if it has one.
   const stripeWarning = !account
@@ -58,43 +60,12 @@ export function MoneyGroup({
       : ready
         ? null
         : t("settings.main.stripe.notReadyBadge");
-  const taxValue = t(
-    shop.taxEnabled ? "settings.main.tax.enabledValue" : "settings.main.tax.disabledValue",
-  );
   return (
     <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
       <InsetGroup>
         {canPayments ? (
           <>
-            <SettingsRow
-              heading={t("settings.main.tax.heading")}
-              value={taxValue}
-              description={t("settings.main.tax.description")}
-              detail={t("settings.main.tax.detail")}
-              sectionId="tax"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="tax" active={activeSection} />
-              <form action={saveTaxAction} className="mt-4">
-                <ChoiceRow
-                  name="taxEnabled"
-                  type="checkbox"
-                  value="on"
-                  defaultChecked={shop.taxEnabled}
-                  className="text-sm"
-                >
-                  {t("settings.main.tax.checkboxLabel")}
-                </ChoiceRow>
-                <SubmitButton
-                  pendingLabel={t("settings.main.tax.submitting")}
-                  className={buttonClass({ variant: "secondary", className: "mt-3" })}
-                >
-                  {t("settings.main.tax.submit")}
-                </SubmitButton>
-              </form>
-            </SettingsRow>
-
-            {featureRow(view, "tips")}
+            {passThroughRow(view)}
 
             {/* The one row that opens itself: an unconnected or half-onboarded
               Stripe account is the difference between taking bookings online
@@ -205,6 +176,18 @@ export function MoneyGroup({
               )}
             </SettingsRow>
           </>
+        ) : null}
+
+        {/* What DiveDay itself costs: the trial, a free term, the card on
+          file. Its own page, owner only (ADR 20261007-subscription-billing).
+          Purely informational: nothing locks when a trial or a payment lapses.
+          It sat in an Account group beside a staffer's own password; it is the
+          shop's subscription, so it lives with the shop's money. */}
+        {canViewBilling ? (
+          <SettingsDoorRow
+            href={`/shop/${shopSlug}/settings/billing`}
+            heading={t("billing.title")}
+          />
         ) : null}
       </InsetGroup>
 

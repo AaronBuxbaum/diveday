@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { canPersonManageShopSettings } from "@/db/authz";
+import { canPersonManageSafetyChecklist } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
   createChecklistItem,
@@ -12,15 +12,17 @@ import {
 } from "@/db/pre-departure-check";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { registerBlock } from "../register-block";
 
 function backTo(shopSlug: string): string {
-  return shopPath(shopSlug, "settings", "safety-checklist");
+  return shopPath(shopSlug, "safety-checklist");
 }
 
 const addSchema = z.object({ label: z.string().trim().min(1).max(200) });
 
 export async function addChecklistItemAction(shopSlug: string, formData: FormData): Promise<void> {
   const staff = (await requireShopSurface(shopSlug)).session;
+  await registerBlock(staff, canPersonManageSafetyChecklist);
   const back = backTo(shopSlug);
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "checklist-item-invalid"));
@@ -40,14 +42,16 @@ export async function deleteChecklistItemAction(
   formData: FormData,
 ): Promise<void> {
   const staff = (await requireShopSurface(shopSlug)).session;
+  await registerBlock(staff, canPersonManageSafetyChecklist);
   const back = backTo(shopSlug);
   const parsed = itemSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "checklist-item-invalid"));
-  await deleteChecklistItem(await getDb(), {
+  const outcome = await deleteChecklistItem(await getDb(), {
     shopId: staff.user.shopId,
     personId: staff.user.personId,
     itemId: parsed.data.itemId,
   });
+  if (!outcome.ok) redirect(noticeUrl(back, "checklist-item-not-authorized"));
   redirect(noticeUrl(back, "checklist-item-deleted"));
 }
 
@@ -63,11 +67,12 @@ const moveSchema = z.object({
  */
 export async function moveChecklistItemAction(shopSlug: string, formData: FormData): Promise<void> {
   const staff = (await requireShopSurface(shopSlug)).session;
+  await registerBlock(staff, canPersonManageSafetyChecklist);
   const back = backTo(shopSlug);
   const parsed = moveSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "checklist-item-invalid"));
   const db = await getDb();
-  if (!(await canPersonManageShopSettings(db, staff.user.shopId, staff.user.personId))) {
+  if (!(await canPersonManageSafetyChecklist(db, staff.user.shopId, staff.user.personId))) {
     redirect(noticeUrl(back, "checklist-item-not-authorized"));
   }
   const items = await listChecklistItems(db, staff.user.shopId);

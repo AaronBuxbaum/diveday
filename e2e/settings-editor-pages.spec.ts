@@ -40,7 +40,6 @@ test("the hub's list editors are doors, and each opens its own page", async ({
     ["Trip tags", "trip-tags"],
     // Forms of six to a dozen fields, pages of their own since #1854.
     ["Rentals", "rentals"],
-    ["Rental prices", "rental-prices"],
     ["Emergency reference", "emergency-reference"],
     ["Dock-day rhythm", "dock-day"],
     ["Shop profile & branding", "profile"],
@@ -54,13 +53,7 @@ test("the hub's list editors are doors, and each opens its own page", async ({
   // And the hub is a directory: none of the editors' controls is on it.
   await expect(main.getByRole("button", { name: "Add a boat" })).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Add package" })).toHaveCount(0);
-  for (const save of [
-    "Save rental catalog",
-    "Save rental prices",
-    "Save emergency reference",
-    "Save dock-day rhythm",
-    "Save profile",
-  ]) {
+  for (const save of ["Save emergency reference", "Save dock-day rhythm", "Save profile"]) {
     await expect(main.getByRole("button", { name: save })).toHaveCount(0);
   }
 });
@@ -123,7 +116,7 @@ test("a hull is added on its own page, and the save lands back on it", async ({
 }) => {
   test.setTimeout(60_000);
   const SHOP = privateShop.slug;
-  await page.goto(`/shop/${SHOP}/settings/boats`);
+  await page.goto(`/shop/${SHOP}/boats`);
   await expect(page.getByRole("heading", { level: 1, name: "Boats" })).toBeVisible();
   // The way back up is the eyebrow, never a "Back to settings" button.
   await expect(page.getByRole("main").getByRole("link", { name: "Settings" })).toHaveAttribute(
@@ -165,4 +158,15 @@ test("a package is added on its own page, and the save lands back on it", async 
   await expect(page.getByText("Package added.")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Dive packages" })).toBeVisible();
   await expect(page.getByText("Ten-dive card")).toBeVisible();
+});
+
+test("the old Settings addresses of the registers redirect to where they moved", async ({
+  page,
+  privateShop,
+}) => {
+  const SHOP = privateShop.slug;
+  for (const noun of ["boats", "trip-tags", "safety-checklist"]) {
+    await page.goto(`/shop/${SHOP}/settings/${noun}`);
+    await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/${noun}$`));
+  }
 });

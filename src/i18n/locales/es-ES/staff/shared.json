@@ -4,7 +4,7 @@
     "ownerOrManager": "Solo un propietario o gerente puede {act, select, whatsapp {cambiar los ajustes de WhatsApp} integrations {cambiar las integraciones} backup {cambiar los ajustes de respaldo} questionnaire {leer el cuestionario completo} invoice {enviar una factura} bill {enviar una factura} courseForm {quitar un formulario de un curso} other {hacer esto}}."
   },
   "operationalWindow": {},
-  "padiChecksOff": "La verificación con PADI está desactivada en este centro. Un propietario o un gerente puede activarla en Ajustes, Reservas y exenciones.",
+  "padiChecksOff": "La verificación con PADI está desactivada en este centro. Un propietario o un gerente puede activarla en Ajustes, Funciones.",
   "skipToContent": "Saltar al contenido principal",
   "notFound": {
     "heading": "No pudimos encontrar esa página",
@@ -253,6 +253,7 @@
     "signOut": "Cerrar sesión",
     "signOutConfirm": "¿Cerrar sesión? Confirmar",
     "signOutPending": "Cerrando sesión…",
+    "myAccount": "Mi cuenta",
     "tellUs": "Escríbenos",
     "tellUsSubject": "Nota a DiveDay desde {shop}",
     "tellUsBody": "Página: {path}\n\n"
@@ -266,6 +267,9 @@
     "staffing": "Turnos de la tripulación",
     "lostFound": "Objetos perdidos",
     "diveSites": "Sitios de buceo",
+    "boats": "Embarcaciones",
+    "tripTags": "Etiquetas de salida",
+    "safetyChecklist": "Lista de verificación previa a la salida",
     "gear": "Equipo",
     "registerTab": "Registro",
     "workOrders": "Órdenes de trabajo",
@@ -284,6 +288,7 @@
     "team": "Equipo",
     "calendarFeed": "Suscripción al calendario",
     "emailSettings": "Ajustes de correo",
+    "security": "Seguridad",
     "activity": "Actividad"
   },
   "shopSections": {

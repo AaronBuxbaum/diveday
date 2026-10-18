@@ -56,9 +56,9 @@ Needs nobody else and no sign-in. Aaron can run it today.
 
 1. Load the extension unpacked ([extension/README.md](../../extension/README.md), "Try it locally"),
    in a browser that is **not** signed in to the PADI Pros' Site.
-2. In DiveDay, open Settings, Bookings & waivers. The **Certification checks** row says "Added to
+2. In DiveDay, open Settings, Bookings. The **Card checks** row says "Added to
    this browser (1.5.0)" (or "Not added", or "Update the extension: this browser has …"). Open
-   **Try the checks** and press **Run the checks**. Its steps, **Extension**, **Sample lookups**,
+   **Try the checks** in that row and press **Run the checks**. Its steps, **Extension**, **Sample lookups**,
    **PADI Pros’ Site** and **Session report**, each say "Passed", "Failed" or "Not in this copy".
    The sample lookups fill the extension's own sample page for each agency with a made-up diver.
    Here, not signed in to PADI, the PADI Pros’ Site step says "Signed out" or "No PADI tab open".
@@ -82,7 +82,7 @@ diver with a card at that agency: the pilot shop's staff have those.
 
 - [ ] The extension the pilot installs is at or above DiveDay's minimum version (Settings shows
       it).
-- [ ] An owner or manager has turned on **PADI checks (beta)**: Settings, Bookings & waivers.
+- [ ] An owner or manager has turned on **PADI checks (beta)**: Settings, Features.
 - [ ] A consenting test subject: Aaron's own PADI card if he has one, or a volunteer's, with a
       pending PADI level card and a birth date on DiveDay. No other diver's record goes on a
       screen-share or into a report.
@@ -112,7 +112,7 @@ rows.
 
 What to send the pilot shop beforehand (one paragraph, to paste):
 
-Thanks for testing DiveDay’s PADI check with us. It takes about 30 minutes in your own browser, signed in to the PADI Pros’ Site as you normally are; nobody from DiveDay needs your PADI sign-in, ever. Please have one PADI diver who has agreed to be the test subject (a pending PADI card and their birth date on DiveDay), open Settings, Bookings & waivers, Certification checks, Try the checks, and press Run the checks. At the end press Copy report and send us what it copies, plus the text of the Pros’ Site terms page. Please do not send a browser network export (HAR): it holds your session and other divers’ details.
+Thanks for testing DiveDay’s PADI check with us. It takes about 30 minutes in your own browser, signed in to the PADI Pros’ Site as you normally are; nobody from DiveDay needs your PADI sign-in, ever. Please have one PADI diver who has agreed to be the test subject (a pending PADI card and their birth date on DiveDay), open Settings, Bookings, Certification checks, Try the checks, and press Run the checks. At the end press Copy report and send us what it copies, plus the text of the Pros’ Site terms page. Please do not send a browser network export (HAR): it holds your session and other divers’ details.
 
 ## Reading a report
 
@@ -191,7 +191,7 @@ up: no real diver may appear.
    script's matches (never published; the pack script refuses it), in a browser that is **not**
    signed in to PADI: the demo shop has PADI checks on.
 2. Set the window to 1280×800 (DevTools, device toolbar, Responsive, 1280 × 800, zoom 100%).
-3. Capture, with DevTools' "Capture screenshot": Settings, Bookings & waivers, saying the
+3. Capture, with DevTools' "Capture screenshot": Settings, Bookings, saying the
    extension is added; a diver record with a pending SSI card and its "Check with SSI" button; the
    same card after the check, "Marked certified" with its Undo; and the other cards the page lists,
    offered under it.

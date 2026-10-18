@@ -18,6 +18,7 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { secretKeyFromEnvironment } from "@/lib/secret-box";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
+import { DataTabs } from "../_components/DataTabs";
 import { settingsPaneClass } from "../_components/settings-pane";
 import {
   startQuickBooksConnectionAction,
@@ -106,7 +107,7 @@ export default async function IntegrationsSettingsPage({
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
-        title={t("integrations.title")}
+        title={t("settings.data.title")}
         meta={
           askOnce ? (
             <p className="text-sm text-muted">
@@ -115,6 +116,7 @@ export default async function IntegrationsSettingsPage({
           ) : undefined
         }
       />
+      <DataTabs t={t} shopSlug={session.user.shopSlug} current="integrations" />
       {syncBanner ? (
         <StaffNoticeBanner tone={syncBanner.tone}>{syncBanner.text}</StaffNoticeBanner>
       ) : null}

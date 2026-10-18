@@ -14,16 +14,11 @@
       "unitsSaved": "Units saved.",
       "unitsSavedSitesLeft": "Units saved. {count, plural, one {# dive site was} other {# dive sites were}} left alone, whole, and still {count, plural, one {reads} other {read}} in {from, select, feet {feet} other {meters}}: {sites}{more, plural, =0 {} other { and # more}}. Check {count, plural, one {it} other {them}} by hand in Dive sites.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
-      "taxSaved": "Tax setting saved.",
-      "taxInvalid": "Nothing changed: the tax switch sent a value this page didn’t expect. Reload Settings and turn it on or off again.",
       "passThroughSaved": "Pass-through fee saved.",
       "passThroughInvalid": "Enter both a fee name and a positive amount, or leave both blank to disable it.",
-      "rentalsSaved": "Rental catalog saved.",
-      "rentalPricesSaved": "Rental prices saved.",
+      "rentalsSaved": "Rentals saved.",
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
-      "rentalTermsSaved": "Rental terms saved. Every rental ticket prints them.",
       "rentalTermsInvalid": "Keep rental terms under 1,500 characters.",
-      "regulatorServiceSaved": "Regulator service interval saved.",
       "regulatorServiceInvalid": "Choose 12 or 24 months.",
       "contactSaved": "Contact details saved.",
       "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers’ replies reach it.",
@@ -304,11 +299,7 @@
       "heading": "Sales tax & VAT",
       "description": "Add sales tax, VAT, and similar taxes to new booking payments and staff invoices through Stripe.",
       "detail": "Tax is added on top of your listed prices and shown to divers at Stripe checkout. Tips after the trip are separate and unaffected. Turn this off if you handle tax yourself.",
-      "enabledValue": "On",
-      "disabledValue": "Off",
-      "checkboxLabel": "Use Stripe Tax for new booking and invoice payments",
-      "submit": "Save tax setting",
-      "submitting": "Saving…"
+      "checkboxLabel": "Use Stripe Tax for new booking and invoice payments"
     },
     "passThrough": {
       "heading": "Marine park or conservation fee",
@@ -328,39 +319,28 @@
     },
     "rentals": {
       "heading": "Rentals",
-      "detail": "Tick what you rent. Unticked gear leaves the kit form, and fits that already ask for it stay on the prep list, marked.",
-      "legend": "Rentable gear and services",
-      "submit": "Save rental catalog",
-      "submitting": "Saving…",
-      "droppedFits": "{count, plural, one {# diver’s rental fit still asks for gear you no longer rent.} other {# divers’ rental fits still ask for gear you no longer rent.}}"
-    },
-    "rentalPricing": {
-      "heading": "Rental prices",
-      "description": "What a diver is quoted for their rental fit.",
-      "detail": "Price the full set (usually cheaper) and each piece separately: five items quotes the set, fewer pays per piece. Leave a box blank to settle at the shop.",
+      "detail": "Tick what you rent and price it. Unticked gear leaves the kit form, and fits that already ask for it stay on the prep list, marked.",
+      "caption": "Rentable gear and prices",
+      "columns": {
+        "piece": "Gear",
+        "price": "Price"
+      },
+      "priceRule": "Price the full set (usually cheaper) and each piece separately. A diver is quoted the set when it costs less than the pieces they take, and the pieces otherwise. Leave a box blank to settle at the shop.",
       "fullSetLabel": "Full set",
       "fullSetHint": "(BCD, reg, wetsuit, mask & fins, weights, dive computer)",
-      "nitroxLabel": "Nitrox",
       "nitroxHint": "(per dive)",
-      "submit": "Save rental prices",
-      "submitting": "Saving…"
-    },
-    "rentalTerms": {
-      "heading": "Rental terms",
-      "description": "Printed on every rental ticket, above the line a diver signs for their gear.",
-      "detail": "Your own words, such as rinsing, lost gear, or late returns. Leave it empty to print none.",
-      "label": "Terms",
-      "submit": "Save rental terms",
+      "terms": {
+        "label": "Rental terms",
+        "hint": "Printed on every rental ticket, above the line a diver signs for their gear. Your own words, such as rinsing, lost gear, or late returns. Leave it empty to print none."
+      },
+      "regulator": {
+        "label": "Customer regulator service, every",
+        "hint": "When a customer’s regulator is due again after a service. Your own units keep their own clocks.",
+        "months": "{months} months"
+      },
+      "submit": "Save rentals",
       "submitting": "Saving…",
-      "value": "On every ticket"
-    },
-    "regulatorService": {
-      "heading": "Customer regulator service",
-      "description": "When a customer’s regulator is due again after a service. Your own units keep their own clocks.",
-      "label": "Service every",
-      "months": "{months} months",
-      "submit": "Save service interval",
-      "submitting": "Saving…"
+      "droppedFits": "{count, plural, one {# diver’s rental fit still asks for gear you no longer rent.} other {# divers’ rental fits still ask for gear you no longer rent.}}"
     },
     "stripe": {
       "notConnectedHeading": "No Stripe account connected",
@@ -387,24 +367,18 @@
     "embed": {
       "heading": "Website embed"
     },
-    "calendar": {
-      "heading": "Calendar subscriptions"
-    },
     "counterQr": {
       "heading": "The counter card",
       "description": "Print this and put it on the desk. A walk-in scans it, fills in their name, certification and sizes, and their release goes out, all before they reach the front of the queue."
     },
     "certCheck": {
-      "heading": "Certification checks",
-      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and, when the agency shows the certification, marks it certified in that staffer’s name, as Mark certified would. It checks SSI, NAUI, SDI, GUE and CMAS, and PADI once “PADI checks (beta)” in Bookings & waivers is on, in Chrome or Edge on a computer.",
+      "heading": "Card checks",
+      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and, when the agency shows the certification, marks it certified in that staffer’s name, as Mark certified would. It checks SSI, NAUI, SDI, GUE and CMAS, and PADI once “PADI checks (beta)” in Features is on, in Chrome or Edge on a computer.",
       "added": "Added to this browser ({version})",
       "notAdded": "Not added",
       "outdated": "Update the extension: this browser has {version}, DiveDay needs {minimum}.",
       "try": "Try the checks",
       "install": "Add to Chrome"
-    },
-    "integrations": {
-      "heading": "Shop integrations"
     },
     "support": {
       "description": "Write in any time: a bad morning at the counter, a feature you’re missing or a bug.",
@@ -413,24 +387,18 @@
     "groups": {
       "shop": "Shop",
       "team": "Team",
-      "boatsSites": "Boats & sites",
-      "bookingsWaivers": "Bookings & waivers",
-      "rentals": "Rentals",
+      "bookings": "Bookings",
       "money": "Money",
-      "reach": "How divers reach you",
+      "messages": "Messages",
       "website": "Website",
-      "data": "Data",
-      "account": "Account",
-      "rarelyChanged": "Rarely changed"
+      "features": "Features",
+      "data": "Your data"
     },
     "rail": {
       "ariaLabel": "Settings sections"
     },
     "whatsapp": {
       "heading": "WhatsApp"
-    },
-    "backup": {
-      "heading": "Backups"
     },
     "features": {
       "on": "On",
@@ -467,7 +435,8 @@
         "heading": "PADI checks (beta)",
         "label": "Check PADI certifications and eLearning with the extension",
         "description": "Beta: nobody has tried this on PADI’s real DiveChek page yet, and PADI hasn’t said yes or no to an extension filling it in. It runs in a browser where one of your PADI Pros is signed in to the Pros’ Site, under that Pro’s membership. Off, the link to the Pros’ Site stays. An owner or manager can turn it on."
-      }
+      },
+      "door": "Turn features on or off"
     },
     "crewSchedule": {
       "heading": "Crew schedule",
@@ -477,7 +446,8 @@
       "description": "Shifts, days away, and who works each departure. Course sessions name their instructor either way.",
       "save": "Save crew schedule",
       "saving": "Saving…",
-      "saved": "Crew schedule saved."
+      "saved": "Crew schedule saved.",
+      "turnOn": "Turn on in Features"
     },
     "team": {
       "heading": "Team"
@@ -490,9 +460,6 @@
     },
     "safetyChecklist": {
       "heading": "Pre-departure checklist"
-    },
-    "security": {
-      "heading": "Account security"
     },
     "dataJobs": {
       "mediaKind": {
@@ -586,6 +553,9 @@
       "delete": "Delete",
       "deleting": "Deleting…",
       "owed": "Dives owed on packages: {dives, number} ({value})"
+    },
+    "yourData": {
+      "heading": "Export, import, backups and integrations"
     }
   },
   "team": {
@@ -703,7 +673,6 @@
     }
   },
   "export": {
-    "title": "Data export",
     "downloadButton": {
       "idle": "Download export",
       "acknowledged": "On its way, check your downloads"
@@ -736,7 +705,6 @@
     "unassigned": "No crew recorded"
   },
   "import": {
-    "title": "Import",
     "tabs": {
       "label": "What to import",
       "divers": "Divers",
@@ -1132,7 +1100,6 @@
     "fromFareharbor": "Switching from FareHarbor? <link>See which embed replaces each of its widgets</link>."
   },
   "certChecks": {
-    "title": "Try the checks",
     "description": "Sample pages in this browser only: no agency is searched, and no diver’s details leave it.",
     "run": "Run the checks",
     "running": "Running…",
@@ -1152,5 +1119,20 @@
     "failedNext": "Send us the report below.",
     "reportHint": "Copy it, then paste it into an email to us.",
     "copy": "Copy report"
+  },
+  "data": {
+    "title": "Your data",
+    "tabs": {
+      "label": "Your data sections",
+      "export": "Export",
+      "backups": "Backups",
+      "import": "Import",
+      "integrations": "Integrations"
+    }
+  },
+  "features": {
+    "title": "Features",
+    "crewTarget": "Set the divemaster target",
+    "boats": "Your boats"
   }
 }

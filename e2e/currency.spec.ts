@@ -85,10 +85,10 @@ test.describe("shop currency", () => {
     privateShop,
   }) => {
     await setCurrency(page, privateShop.slug, "eur");
-    // Staff price entry first, on the rental prices page (#1854). An empty
+    // Staff price entry first, on the Rentals page. An empty
     // box shows the shop's own symbol as its placeholder (a filled one
     // settles to "€45"), never a literal `$`.
-    await page.goto(`/shop/${privateShop.slug}/settings/rental-prices`);
+    await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
     await expect(page.getByPlaceholder("€", { exact: true }).first()).toBeVisible();
     await expect(page.getByPlaceholder("$", { exact: true })).toHaveCount(0);
     await expect(page.getByText("$", { exact: true })).toHaveCount(0);
@@ -115,8 +115,8 @@ test.describe("shop currency", () => {
 
     await setCurrency(page, privateShop.slug, "jpy");
     // Whole-number entry: a ¥1,234.56 price does not exist, so the price box
-    // must not invite one. The box is on the rental prices page (#1854).
-    await page.goto(`/shop/${privateShop.slug}/settings/rental-prices`);
+    // must not invite one. The box is on the Rentals page.
+    await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
     // The box reads what it holds back in the shop's own figure (ADR
     // 20260906-before-you-ask, decision 3); in yen that is a whole number
     // with no decimals to invite.
@@ -137,7 +137,7 @@ test.describe("shop currency", () => {
   }) => {
     // Reads the seeded price rather than writing one — the claim is about what
     // a currency switch does to a number already on file, not about typing one.
-    await page.goto(`/shop/${privateShop.slug}/settings/rental-prices`);
+    await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
     const seeded = await page
       .getByLabel(/Full set/)
       .first()
@@ -148,7 +148,7 @@ test.describe("shop currency", () => {
     expect(digits).not.toBe("");
 
     await setCurrency(page, privateShop.slug, "eur");
-    await page.goto(`/shop/${privateShop.slug}/settings/rental-prices`);
+    await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
     // The euro figure in the reader's locale carries no space after its
     // symbol, so the expectation is the exact string rather than a pattern
     // built from the digits.

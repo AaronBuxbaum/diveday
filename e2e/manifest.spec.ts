@@ -945,7 +945,7 @@ test("resolving a blocker from the manifest lands on that diver, under the block
 test("an owner adds and removes a line on the shop's own pre-departure checklist", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/settings/safety-checklist");
+  await page.goto("/shop/blue-mantis/safety-checklist");
   // The seeded demo shop's own list (src/db/seed-pre-departure-checklist.ts).
   await expect(page.getByText("VHF radio checked")).toBeVisible();
   await page.getByLabel("New line").fill("Test kit checked");

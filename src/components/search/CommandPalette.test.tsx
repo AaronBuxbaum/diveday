@@ -68,7 +68,15 @@ function renderPalette(
   return render(
     <CommandPalette
       shopSlug="blue-mantis"
-      gates={{ waivers: true, reports: true, team: true, settings: true }}
+      gates={{
+        waivers: true,
+        reports: true,
+        team: true,
+        settings: true,
+        boats: true,
+        tripTags: true,
+        safetyChecklist: true,
+      }}
       locale="en-US"
       languages={[]}
       setLocaleAction={async () => {}}
@@ -330,7 +338,15 @@ describe("CommandPalette recents and today's boats", () => {
     return render(
       <CommandPalette
         shopSlug="blue-mantis"
-        gates={{ waivers: true, reports: true, team: true, settings: true }}
+        gates={{
+          waivers: true,
+          reports: true,
+          team: true,
+          settings: true,
+          boats: true,
+          tripTags: true,
+          safetyChecklist: true,
+        }}
         locale="en-US"
         languages={[]}
         setLocaleAction={async () => {}}

@@ -280,7 +280,7 @@ The complementary layer a shop controls end to end
 `/api/cron/backup-export` (Mondays 04:00 UTC, `vercel.json`) builds the same per-shop export
 bundle §2 describes — every CSV, the README, bundled photos — adds the shop-wide `trips.ics`
 calendar document, and PUTs it to the S3-compatible bucket the shop configured at
-`/shop/<slug>/settings/export` (the Backups half of the one data-out surface — ADR
+`/shop/<slug>/settings/export/backups` (the Backups tab of Your data — ADR
 20260806-one-data-out-surface; `/shop/<slug>/settings/backup` is a 308 to it). Implementation
 lives in `src/features/backup-export/`.
 

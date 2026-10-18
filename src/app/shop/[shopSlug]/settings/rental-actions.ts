@@ -33,20 +33,6 @@ import { paymentSettingsBlock, settingsBlock } from "./action-helpers";
  */
 const rentalFields = z.object({}).catchall(formValue());
 
-/** Which gear the shop rents. Unchecked kinds simply drop out of the catalog. */
-export async function saveRentalItemsAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "rentals");
-  await settingsBlock(session);
-  await paymentSettingsBlock(session);
-  const fields = readForm(rentalFields, formData);
-  const selected = SHOP_CATALOG_ITEMS.filter((item) => fields[item.name] === "on").map(
-    (item) => item.kind,
-  );
-  await setShopRentalItems(await getDb(), session.user.shopId, toRentableKinds(selected));
-  revalidateAndRedirect(page, noticeUrl(page, "rentals-saved"));
-}
-
 /**
  * A major-unit amount from a price box → stored minor units, or null for an
  * empty box (not priced online). Anything else — a negative, a non-number, an
@@ -69,10 +55,22 @@ function parsePriceAmount(
   return { ok: true, cents: majorToMinor(amount, currency) };
 }
 
-/** What the shop charges for rental gear: a set price, per-piece prices, and per-dive nitrox. */
-export async function saveRentalPricingAction(formData: FormData) {
+/**
+ * **The Rentals page's one save** (#2815): what the shop rents, what each piece
+ * costs, the terms every rental ticket prints (ADR 20260815-minimal-gear-register,
+ * amended 2026-10-08) and how often a customer's regulator is serviced (#2272).
+ * Two settings pages and four rail rows were one job; this is its one action.
+ *
+ * It asks both gates the rental catalog always asked, then validates the whole
+ * submission before it writes anything, so a bad price never leaves the terms
+ * half-saved. A price box belongs to a ticked piece: an unticked piece (and
+ * nitrox, unticked) keeps the price it had, so unticking and ticking again
+ * never loses it, and a hand-made post cannot rewrite the price of a piece the
+ * shop does not rent.
+ */
+export async function saveRentalsAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "rental-prices");
+  const page = shopPath(session.user.shopSlug, "settings", "rentals");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   const db = await getDb();
@@ -80,83 +78,49 @@ export async function saveRentalPricingAction(formData: FormData) {
   if (!shop) redirect(noticeUrl(page, "rental-prices-invalid"));
   const currency = toShopCurrency(shop.currency);
   const fields = readForm(rentalFields, formData);
+
+  const selected = SHOP_CATALOG_ITEMS.filter((item) => fields[item.name] === "on").map(
+    (item) => item.kind,
+  );
+  const rentalItems = toRentableKinds(selected);
+  const offered = new Set(rentalItems);
+
   const set = parsePriceAmount(fields.setPrice ?? null, currency);
-  let invalid = !set.ok;
-  const perItemCents: RentalPricing["perItemCents"] = {};
+  let pricesInvalid = !set.ok;
+  const perItemCents: RentalPricing["perItemCents"] = { ...shop.rentalPricing.perItemCents };
   for (const item of RENTABLE_ITEMS) {
+    if (!offered.has(item.kind)) continue;
     const parsed = parsePriceAmount(fields[`price_${item.name}`] ?? null, currency);
     if (!parsed.ok) {
-      invalid = true;
+      pricesInvalid = true;
       continue;
     }
-    if (parsed.cents !== null) perItemCents[item.kind] = parsed.cents;
+    if (parsed.cents === null) delete perItemCents[item.kind];
+    else perItemCents[item.kind] = parsed.cents;
   }
-  // The nitrox price field only renders when the catalog currently offers
-  // nitrox; when it doesn't, the field is absent from every submission, so
-  // reading it as "clear the price" would erase a price set while nitrox was
-  // still offered. Only interpret it when it could have been on the page.
   let nitroxCents = shop.rentalPricing.nitroxCents;
-  if (shopOffersNitrox(shop.rentalItems)) {
+  if (shopOffersNitrox(rentalItems)) {
     const nitrox = parsePriceAmount(fields.nitroxPrice ?? null, currency);
-    if (!nitrox.ok) invalid = true;
+    if (!nitrox.ok) pricesInvalid = true;
     else nitroxCents = nitrox.cents;
   }
-  if (invalid || !set.ok) {
-    redirect(noticeUrl(page, "rental-prices-invalid"));
+  if (pricesInvalid || !set.ok) redirect(noticeUrl(page, "rental-prices-invalid"));
+
+  const terms = parseRentalTerms(fields.rentalTerms ?? null);
+  if (!terms.ok) redirect(noticeUrl(page, "rental-terms-invalid"));
+
+  const months = Number(fields.regulatorServiceMonths);
+  if (!isCustomerRegulatorServiceMonths(months)) {
+    redirect(noticeUrl(page, "regulator-service-invalid"));
   }
+
+  await setShopRentalItems(db, session.user.shopId, rentalItems);
   await setShopRentalPricing(db, session.user.shopId, {
     setCents: set.cents,
     perItemCents,
     nitroxCents,
   });
-  revalidateAndRedirect(page, noticeUrl(page, "rental-prices-saved"));
-}
-
-/**
- * The shop's own rental terms, printed on every rental ticket above the
- * "Received by" line (ADR 20260815-minimal-gear-register, amended 2026-10-08).
- * It sits in the Rental gear group, which only a payments-settings reader
- * sees, so it asks the same two gates the rental prices do. An empty box
- * prints none.
- */
-export async function saveRentalTermsAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  await paymentSettingsBlock(session);
-  const parsed = parseRentalTerms(readForm(rentalFields, formData).rentalTerms ?? null);
-  if (!parsed.ok) {
-    redirect(noticeUrl(settings, "rental-terms-invalid", { saved: "rentalTerms" }));
-  }
-  const db = await getDb();
-  await setShopRentalTerms(db, session.user.shopId, parsed.terms);
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "rental-terms-saved", { saved: "rentalTerms" }),
-  );
-}
-
-/**
- * How often the shop services a customer's regulator, 12 or 24 months (#2272):
- * the interval a customer regulator's suggested next-due date, and so its
- * service reminder, counts from. A shop unit's own clock never reads it. It
- * sits in the Rental gear group beside the rental terms and asks the same two
- * gates.
- */
-const regulatorServiceForm = z.object({ regulatorServiceMonths: formValue() });
-
-export async function saveRegulatorServiceAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  await paymentSettingsBlock(session);
-  const months = Number(readForm(regulatorServiceForm, formData).regulatorServiceMonths);
-  if (!isCustomerRegulatorServiceMonths(months)) {
-    redirect(noticeUrl(settings, "regulator-service-invalid", { saved: "regulatorService" }));
-  }
-  await setShopCustomerRegulatorServiceMonths(await getDb(), session.user.shopId, months);
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "regulator-service-saved", { saved: "regulatorService" }),
-  );
+  await setShopRentalTerms(db, session.user.shopId, terms.terms);
+  await setShopCustomerRegulatorServiceMonths(db, session.user.shopId, months);
+  revalidateAndRedirect(page, noticeUrl(page, "rentals-saved"));
 }

@@ -62,13 +62,23 @@ discount that does not exist.
   signal rather than an exposure: the codes stay unguessable, and a refused code still reads the
   same whatever the reason.
 
-- **Amended 2026-10-15: the PADI checks.** `padi_checks_enabled`, **default false**, switches both PADI checks of [20261008-cert-check-extension](20261008-cert-check-extension.md) (DiveChek and eLearning). Its row sits in Bookings & waivers under the extension's own row. It defaults off for the same reason as "Our year": the check runs under the shop's own PADI membership, so the shop says yes. Off, `agencyCheckOffered` hides every PADI check and the actions refuse one.
+- **Amended 2026-10-15: the PADI checks.** `padi_checks_enabled`, **default false**, switches both PADI checks of [20261008-cert-check-extension](20261008-cert-check-extension.md) (DiveChek and eLearning). Its row is on the Features page (below). It defaults off for the same reason as "Our year": the check runs under the shop's own PADI membership, so the shop says yes. Off, `agencyCheckOffered` hides every PADI check and the actions refuse one.
+
+- **Amended 2026-10-17 (issue #2814, Aaron): one Features page.** The nine on/off switches (these
+  six, the crew schedule, Stripe Tax and which kinds of diving the shop runs) are rows of one page,
+  `/settings/features`, behind one door in Settings' Features group; they were nine rows in six
+  groups. Each row keeps the gate its switch had (shop settings, payment settings, or the team's),
+  its own sentence and its own Save, and a row with value settings of its own links to them once
+  it is on (the divemaster target, the boats). Only on/off moved: the target stays on the crew
+  row, the pass-through fee in Money. Schema, defaults and what Off hides are unchanged. ⌘K finds
+  each switch by name. This reverses the first alternative below.
 
 ## Alternatives considered
 
-- **One "Features" group in Settings listing every switch.** It is easier to scan as a list, but a
-  shop looking for tips looks under Money, not under a heading named for how the product is built.
-  The crew schedule already lives under Team for the same reason.
+- **One "Features" group in Settings listing every switch.** *Rejected at first, adopted
+  2026-10-17 (amendment above).* It is easier to scan as a list, but a shop looking for tips looked
+  under Money, not under a heading named for how the product is built; nine switches in six groups
+  proved harder to find than one list, and ⌘K now answers "where do I turn off tips?" by name.
 - **Default off, like the crew schedule.** Rejected. These features are how a shop earns ratings,
   repeat bookings and tips, and none of them is noise for a shop that leaves them alone. The crew
   schedule defaults off because, left on, it fills a new shop's screens with empty rows and

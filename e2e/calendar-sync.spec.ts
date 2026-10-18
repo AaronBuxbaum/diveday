@@ -64,21 +64,14 @@ async function mintLink(panel: Locator): Promise<string> {
 test.describe("staff calendar subscriptions", () => {
   signedInAsOwner();
 
-  test("the Settings row is a door, and says nothing about what is behind it", async ({ page }) => {
+  test("the door is in My account, not on the Settings hub, and says nothing about what is behind it", async ({
+    page,
+  }) => {
     await page.goto("/shop/blue-mantis/settings");
-    // **Neither sentence, now.** This used to assert the row carried a short
-    // teaser — "Put your departures on the calendar app you already use" —
-    // distinct from the destination's longer read-only explainer, and the
-    // distinction was the whole test. Slice 6g deleted all fourteen standing
-    // captions from this hub (decision 6): a door row is its label and the
-    // page it opens, and the explanation was always waiting on the other side
-    // of the tap. So the assertion that survives is the stronger half — the
-    // hub explains nothing — and it is checked against both sentences rather
-    // than one.
-    //
-    // Scoped to `main` so the settings rail's own "Calendar subscriptions"
-    // row cannot answer for the door.
+    // The feed is about the reader, not the shop (issue #2813), so Settings has
+    // no row for it, and the hub explains neither of its sentences.
     const main = page.getByRole("main");
+    await expect(main.getByRole("link", { name: /Calendar subscription/ })).toHaveCount(0);
     for (const caption of [
       "Put your departures on the calendar app you already use",
       "Subscribing is read-only: DiveDay never reads or changes anything in your calendar.",
@@ -86,8 +79,12 @@ test.describe("staff calendar subscriptions", () => {
       await expect(main.getByText(caption)).toHaveCount(0);
     }
 
-    // The door itself is untouched: same label, same destination, same h1.
-    await main.getByRole("link", { name: "Calendar subscriptions", exact: true }).click();
+    // The door: the identity menu's My account group, ungated.
+    await page.locator("header [data-identity-menu]").click();
+    await page
+      .getByRole("navigation", { name: "My account" })
+      .getByRole("link", { name: "Calendar subscription", exact: true })
+      .click();
     await expect(
       page.getByRole("heading", { level: 1, name: "Calendar subscriptions" }),
     ).toBeVisible();

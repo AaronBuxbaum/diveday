@@ -2,13 +2,13 @@ import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { settingsPaneClass } from "../_components/settings-pane";
 
-/** Header + editor-card skeleton at the page's own width, so the route never blocks blank. */
-export default function Loading() {
+/** Skeleton for the Features list: the title, then one card holding the rows. */
+export default function FeaturesLoading() {
   return (
     <main className={settingsPaneClass()}>
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
-        <div className={sectionCardClass({ padding: "lg", className: "h-80" })} />
+        <ShopPageHeaderSkeleton description={false} />
+        <div className={sectionCardClass({ padding: "none", className: "h-96" })} />
       </div>
     </main>
   );

@@ -11,7 +11,7 @@ import {
 } from "@/lib/storage/limits";
 import { saveShopPhotosAction } from "../../website-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
-import { featureRow, SectionNotice, SettingsGroup, type SettingsView, WEBSITE_GROUP } from "./kit";
+import { SectionNotice, SettingsGroup, type SettingsView, WEBSITE_GROUP } from "./kit";
 
 /** The Website group: the storefront's profile, photos, search listing and embed. */
 export function WebsiteGroup({ view }: { view: SettingsView }) {
@@ -95,12 +95,6 @@ export function WebsiteGroup({ view }: { view: SettingsView }) {
             </FieldActions>
           </FieldGrid>
         </SettingsRow>
-
-        {featureRow(view, "dateRequests")}
-
-        {featureRow(view, "lastMinuteList")}
-
-        {featureRow(view, "publicYear")}
 
         <SettingsDoorRow
           href={`/shop/${shopSlug}/settings/embed`}

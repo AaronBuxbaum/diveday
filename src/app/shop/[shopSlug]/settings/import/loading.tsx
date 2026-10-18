@@ -9,6 +9,7 @@ export default function Loading() {
     <main className={settingsPaneClass()}>
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton description={false} />
+        <SectionTabsSkeleton count={4} />
         <SectionTabsSkeleton count={3} />
         <div className={sectionCardClass({ padding: "lg" })}>
           <div className="h-5 w-44 rounded bg-surface-sunken" />

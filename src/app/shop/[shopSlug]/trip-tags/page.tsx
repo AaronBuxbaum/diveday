@@ -7,7 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { canPersonManageShopSettings } from "@/db/authz";
+import { canPersonManageTripTags } from "@/db/authz";
 import { countDeparturesByTripLens, listTripLenses } from "@/db/trip-lenses";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -15,13 +15,9 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { LENS_NAME_MAX } from "@/lib/trip-lenses";
 import { AddPanel } from "../_components/AddPanel";
-import { settingsPaneClass } from "../_components/settings-pane";
-import { lensNoticeMessages } from "../sub-page-notices";
-import {
-  createTripLensAction,
-  deleteTripLensAction,
-  updateTripLensAction,
-} from "../trip-tag-actions";
+import { registerPaneClass } from "../_components/register-pane";
+import { createTripLensAction, deleteTripLensAction, updateTripLensAction } from "./actions";
+import { lensNoticeMessages } from "./notices";
 
 // See the sibling settings sub-pages (ADR 20260804-instant-navigation).
 export const instant = true;
@@ -59,7 +55,7 @@ export default async function TripTagsSettingsPage({
   const { shopSlug } = await params;
   const { notice } = await searchParams;
   const { db, session, shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonManageShopSettings,
+    allow: canPersonManageTripTags,
     refusal: { notice: "settings-not-authorized" },
   });
   const locale = await requestLocale(shop.defaultLocale);
@@ -72,7 +68,7 @@ export default async function TripTagsSettingsPage({
   const banner = noticeFromParam(notice, lensNoticeMessages(t));
 
   return (
-    <main className={settingsPaneClass()}>
+    <main className={registerPaneClass()}>
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}

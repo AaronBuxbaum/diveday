@@ -29,7 +29,7 @@ test("a boat's call sign, MMSI and working channel reach the emergency card of t
 
   // A mistyped MMSI is refused with its own sentence, never the name-and-
   // capacity one that sent the owner looking at the two fields that were fine.
-  await page.goto(`${shop}/settings/boats`);
+  await page.goto(`${shop}/boats`);
   await boatRow(page, BOAT).getByLabel("MMSI").fill("33801");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
   await expect(page.getByText("Check the call sign")).toBeVisible();

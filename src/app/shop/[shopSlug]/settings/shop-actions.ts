@@ -16,7 +16,6 @@ import {
   setShopContact,
   setShopCurrency,
   setShopDepthUnit,
-  setShopFeature,
   setShopReopensOn,
   setShopSeasonStart,
   setShopTemperatureUnit,
@@ -31,7 +30,7 @@ import {
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
-import { checkbox, formValue, readForm, trimmedText } from "@/lib/form-parse";
+import { formValue, readForm, trimmedText } from "@/lib/form-parse";
 import { isValidTimeZone } from "@/lib/format";
 import { isShopCurrency, type ShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -41,7 +40,6 @@ import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { parseSeasonStart } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
-import { parseShopFeature } from "@/lib/shop-features";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
 import { paymentSettingsBlock, settingsBlock } from "./action-helpers";
@@ -80,8 +78,6 @@ const unitsForm = z.object({
 });
 const timezoneForm = z.object({ timezone: formValue() });
 const seasonStartForm = z.object({ seasonStartMonth: formValue(), seasonStartDay: formValue() });
-const shopFeatureForm = z.object({ feature: formValue(), enabled: checkbox() });
-
 /**
  * The three units a shop reads its own numbers in — depth, water temperature,
  * and money — saved together from one card.
@@ -471,26 +467,4 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
   // credentials never loads the AWS SDK at all.
   const { awsAddressLookupProvider } = await import("@/lib/address-lookup-aws");
   return awsAddressLookupProvider(config).suggest(query, { bias });
-}
-
-/**
- * Turns one optional feature on or off (ADR 20261005-optional-shop-features).
- * Every feature row on the hub posts here with its own `feature` field, so the
- * row that changed comes back open with the notice inside it.
- */
-export async function saveShopFeatureAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-
-  const featureForm = readForm(shopFeatureForm, formData);
-  const feature = parseShopFeature(featureForm.feature);
-  // Only a hand-built post names no feature; it gets the hub back unchanged.
-  if (!feature) {
-    revalidateAndRedirect(settings, settings);
-    return;
-  }
-  await setShopFeature(await getDb(), session.user.shopId, feature, featureForm.enabled);
-
-  revalidateAndRedirect(settings, noticeUrl(settings, "feature-saved", { saved: feature }));
 }

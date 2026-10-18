@@ -14,16 +14,11 @@
       "unitsSaved": "Unidades guardadas.",
       "unitsSavedSitesLeft": "Unidades guardadas. {count, plural, one {# sitio de buceo se dejó} other {# sitios de buceo se dejaron}} tal cual, y {count, plural, one {sigue} other {siguen}} en {from, select, feet {pies} other {metros}}: {sites}{more, plural, =0 {} other { y # más}}. Revisa{count, plural, one {lo} other {los}} a mano en Sitios de buceo.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
-      "taxSaved": "Configuración de impuestos guardada.",
-      "taxInvalid": "No cambió nada: el interruptor de impuestos envió un valor inesperado. Recarga Ajustes y vuelve a activarlo o desactivarlo.",
       "passThroughSaved": "Cuota repercutida guardada.",
       "passThroughInvalid": "Introduce el nombre y un importe positivo, o deja ambos vacíos para desactivarla.",
-      "rentalsSaved": "Catálogo de alquiler guardado.",
-      "rentalPricesSaved": "Precios de alquiler guardados.",
+      "rentalsSaved": "Alquiler guardado.",
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
-      "rentalTermsSaved": "Condiciones de alquiler guardadas. Todas las boletas de alquiler las imprimen.",
       "rentalTermsInvalid": "Las condiciones de alquiler no pueden pasar de 1500 caracteres.",
-      "regulatorServiceSaved": "Intervalo de revisión de reguladores guardado.",
       "regulatorServiceInvalid": "Elige 12 o 24 meses.",
       "contactSaved": "Datos de contacto guardados.",
       "contactConfirmationSent": "Datos de contacto guardados. Abre el correo de confirmación que enviamos a esa dirección para que lleguen allí las respuestas de los buceadores.",
@@ -304,11 +299,7 @@
       "heading": "Impuestos (IVA y ventas)",
       "description": "Agrega IVA, impuestos sobre las ventas y otros impuestos similares a los nuevos pagos de reservas y facturas del personal mediante Stripe.",
       "detail": "El impuesto se agrega al precio publicado y se muestra al buceador en el checkout de Stripe. Las propinas posteriores a la salida son independientes y este ajuste no las afecta. Desactívalo si gestionas los impuestos por tu cuenta.",
-      "enabledValue": "Activados",
-      "disabledValue": "Desactivados",
-      "checkboxLabel": "Usar Stripe Tax para nuevos pagos de reservas y facturas",
-      "submit": "Guardar configuración de impuestos",
-      "submitting": "Guardando…"
+      "checkboxLabel": "Usar Stripe Tax para nuevos pagos de reservas y facturas"
     },
     "passThrough": {
       "heading": "Cuota del parque marino o de conservación",
@@ -328,39 +319,28 @@
     },
     "rentals": {
       "heading": "Alquiler",
-      "detail": "Marca lo que alquilas. Lo que no marques sale del formulario de equipo, y los ajustes de alquiler que ya lo piden siguen en la lista de preparación, marcados.",
-      "legend": "Equipo y servicios de alquiler",
-      "submit": "Guardar catálogo de alquiler",
-      "submitting": "Guardando…",
-      "droppedFits": "{count, plural, one {El ajuste de alquiler de # buceador aún pide equipo que ya no alquilas.} other {Los ajustes de alquiler de # buceadores aún piden equipo que ya no alquilas.}}"
-    },
-    "rentalPricing": {
-      "heading": "Precios de alquiler",
-      "description": "Lo que se cotiza a un buceador por su equipo de alquiler.",
-      "detail": "Pon precio al equipo completo (suele salir más barato) y a cada pieza por separado: cinco piezas cotizan el conjunto, menos se pagan por pieza. Deja una casilla vacía para cobrarlo en el centro.",
+      "detail": "Marca lo que alquilas y ponle precio. Lo que no marques sale del formulario de equipo, y los ajustes de alquiler que ya lo piden siguen en la lista de preparación, marcados.",
+      "caption": "Equipo de alquiler y precios",
+      "columns": {
+        "piece": "Equipo",
+        "price": "Precio"
+      },
+      "priceRule": "Pon precio al equipo completo (suele salir más barato) y a cada pieza por separado. Al buceador se le cotiza el conjunto cuando cuesta menos que las piezas que toma, y las piezas en caso contrario. Deja una casilla vacía para cobrarlo en el centro.",
       "fullSetLabel": "Equipo completo",
       "fullSetHint": "(BCD, regulador, neopreno, máscara y aletas, lastre, computadora de buceo)",
-      "nitroxLabel": "Nitrox",
       "nitroxHint": "(por inmersión)",
-      "submit": "Guardar precios de alquiler",
-      "submitting": "Guardando…"
-    },
-    "rentalTerms": {
-      "heading": "Condiciones de alquiler",
-      "description": "Se imprimen en cada boleta de alquiler, encima de la línea que firma el buceador al recibir el equipo.",
-      "detail": "Tus propias palabras, como el enjuague, el equipo perdido o las devoluciones tardías. Déjalo vacío para no imprimir nada.",
-      "label": "Condiciones",
-      "submit": "Guardar condiciones de alquiler",
+      "terms": {
+        "label": "Condiciones de alquiler",
+        "hint": "Se imprimen en cada boleta de alquiler, encima de la línea que firma el buceador al recibir el equipo. Tus propias palabras, como el enjuague, el equipo perdido o las devoluciones tardías. Déjalo vacío para no imprimir nada."
+      },
+      "regulator": {
+        "label": "Revisión de reguladores de clientes, cada",
+        "hint": "Cuándo vuelve a tocar la revisión del regulador de un cliente. Tus propias unidades mantienen sus propios plazos.",
+        "months": "{months} meses"
+      },
+      "submit": "Guardar alquiler",
       "submitting": "Guardando…",
-      "value": "En cada boleta"
-    },
-    "regulatorService": {
-      "heading": "Revisión de reguladores de clientes",
-      "description": "Cuándo vuelve a tocar la revisión del regulador de un cliente. Tus propias unidades mantienen sus propios plazos.",
-      "label": "Revisar cada",
-      "months": "{months} meses",
-      "submit": "Guardar intervalo de revisión",
-      "submitting": "Guardando…"
+      "droppedFits": "{count, plural, one {El ajuste de alquiler de # buceador aún pide equipo que ya no alquilas.} other {Los ajustes de alquiler de # buceadores aún piden equipo que ya no alquilas.}}"
     },
     "stripe": {
       "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
@@ -387,24 +367,18 @@
     "embed": {
       "heading": "Widget para tu web"
     },
-    "calendar": {
-      "heading": "Suscripciones al calendario"
-    },
     "counterQr": {
       "heading": "La tarjeta del mostrador",
       "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía la exención, todo antes de llegar al frente de la cola."
     },
     "certCheck": {
-      "heading": "Verificación de certificaciones",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y, cuando la agencia muestra la certificación, la marca como certificada a nombre de ese miembro del equipo, como lo haría “Marcar certificado”. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Reservas y exenciones, en Chrome o Edge en una computadora.",
+      "heading": "Verificación de tarjetas",
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y, cuando la agencia muestra la certificación, la marca como certificada a nombre de ese miembro del equipo, como lo haría “Marcar certificado”. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Funciones, en Chrome o Edge en una computadora.",
       "added": "Agregada a este navegador ({version})",
       "notAdded": "Sin agregar",
       "outdated": "Actualiza la extensión: este navegador tiene la versión {version} y DiveDay necesita la {minimum}.",
       "try": "Prueba las verificaciones",
       "install": "Agregar a Chrome"
-    },
-    "integrations": {
-      "heading": "Integraciones del centro"
     },
     "support": {
       "description": "Escribe cuando quieras: una mala mañana en el mostrador, una función que te falta o un error.",
@@ -413,24 +387,18 @@
     "groups": {
       "shop": "Centro",
       "team": "Equipo",
-      "boatsSites": "Embarcaciones y sitios",
-      "bookingsWaivers": "Reservas y exenciones",
-      "rentals": "Alquiler",
+      "bookings": "Reservas",
       "money": "Dinero",
-      "reach": "Cómo te contactan los buceadores",
+      "messages": "Mensajes",
       "website": "Sitio web",
-      "data": "Datos",
-      "account": "Cuenta",
-      "rarelyChanged": "Se cambia poco"
+      "features": "Funciones",
+      "data": "Tus datos"
     },
     "rail": {
       "ariaLabel": "Secciones de configuración"
     },
     "whatsapp": {
       "heading": "WhatsApp"
-    },
-    "backup": {
-      "heading": "Respaldos"
     },
     "features": {
       "on": "Activado",
@@ -467,7 +435,8 @@
         "heading": "Verificación con PADI (beta)",
         "label": "Verificar certificaciones y eLearning de PADI",
         "description": "Beta: nadie lo ha probado todavía en la página real de DiveChek de PADI, y PADI no ha dicho si acepta que una extensión la rellene. Funciona en un navegador donde uno de tus profesionales PADI tiene la sesión iniciada en el PADI Pros’ Site, con la afiliación de ese profesional. Desactivado, el enlace al PADI Pros’ Site se mantiene. Un propietario o un gerente puede activarlo."
-      }
+      },
+      "door": "Activar o desactivar funciones"
     },
     "crewSchedule": {
       "heading": "Turnos de la tripulación",
@@ -477,7 +446,8 @@
       "description": "Turnos, días fuera y quién trabaja en cada salida. Las sesiones de curso nombran a su instructor en cualquier caso.",
       "save": "Guardar turnos",
       "saving": "Guardando…",
-      "saved": "Turnos de la tripulación guardados."
+      "saved": "Turnos de la tripulación guardados.",
+      "turnOn": "Activar en Funciones"
     },
     "team": {
       "heading": "Equipo"
@@ -490,9 +460,6 @@
     },
     "safetyChecklist": {
       "heading": "Lista de verificación previa a la salida"
-    },
-    "security": {
-      "heading": "Seguridad de la cuenta"
     },
     "dataJobs": {
       "mediaKind": {
@@ -586,6 +553,9 @@
       "delete": "Eliminar",
       "deleting": "Eliminando…",
       "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})"
+    },
+    "yourData": {
+      "heading": "Exportar, importar, respaldos e integraciones"
     }
   },
   "team": {
@@ -703,7 +673,6 @@
     }
   },
   "export": {
-    "title": "Exportar datos",
     "downloadButton": {
       "idle": "Descargar exportación",
       "acknowledged": "En camino, revisa tus descargas"
@@ -736,7 +705,6 @@
     "unassigned": "Sin tripulación registrada"
   },
   "import": {
-    "title": "Importar",
     "tabs": {
       "label": "Qué importar",
       "divers": "Buceadores",
@@ -1132,7 +1100,6 @@
     "fromFareharbor": "¿Te cambias desde FareHarbor? <link>Mira qué inserción sustituye a cada uno de sus widgets</link>."
   },
   "certChecks": {
-    "title": "Prueba las verificaciones",
     "description": "Solo páginas de muestra en este navegador: no se busca en ninguna agencia y ningún dato de un buceador sale de él.",
     "run": "Ejecutar las verificaciones",
     "running": "Ejecutando…",
@@ -1152,5 +1119,20 @@
     "failedNext": "Envíanos el informe de abajo.",
     "reportHint": "Cópialo y pégalo en un correo para nosotros.",
     "copy": "Copiar informe"
+  },
+  "data": {
+    "title": "Tus datos",
+    "tabs": {
+      "label": "Secciones de tus datos",
+      "export": "Exportar",
+      "backups": "Respaldos",
+      "import": "Importar",
+      "integrations": "Integraciones"
+    }
+  },
+  "features": {
+    "title": "Funciones",
+    "crewTarget": "Fijar el objetivo por divemaster",
+    "boats": "Tus barcos"
   }
 }

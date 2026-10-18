@@ -14,7 +14,7 @@ import {
   textareaClassFor,
 } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { canPersonManageShopSettings } from "@/db/authz";
+import { canPersonManageBoats } from "@/db/authz";
 import { countDeparturesByBoat, listBoats } from "@/db/boats";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -23,11 +23,11 @@ import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { AddPanel } from "../_components/AddPanel";
-import { settingsPaneClass } from "../_components/settings-pane";
-import { createBoatAction, deleteBoatAction, updateBoatAction } from "../boat-actions";
-import { boatNoticeMessages } from "../sub-page-notices";
+import { registerPaneClass } from "../_components/register-pane";
 import { BoatPaperFacts, BoatPaperFields } from "./_components/BoatPaperFields";
+import { createBoatAction, deleteBoatAction, updateBoatAction } from "./actions";
 import { boatCertificateError, boatRowId } from "./certificate-error";
+import { boatNoticeMessages } from "./notices";
 
 // See the sibling settings sub-pages (ADR 20260804-instant-navigation).
 export const instant = true;
@@ -71,7 +71,7 @@ export default async function BoatsSettingsPage({
   const query = await searchParams;
   const { notice } = query;
   const { db, session, shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonManageShopSettings,
+    allow: canPersonManageBoats,
     refusal: { notice: "settings-not-authorized" },
   });
   if (!shop.hasBoatDiving) notFound();
@@ -95,7 +95,7 @@ export default async function BoatsSettingsPage({
   const todayLocal = calendarDateInTimezone(nowDate(), shop.timezone);
 
   return (
-    <main className={settingsPaneClass()}>
+    <main className={registerPaneClass()}>
       <FlashParams
         params={["notice", "boat", "capacity", "passengers", "limit", "count", "dates"]}
       />

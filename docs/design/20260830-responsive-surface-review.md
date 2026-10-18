@@ -27,7 +27,7 @@ surfaces must keep.
 | Trip surfaces | /trips/[id], /manifest, /prep | Shared trip masthead; roster/list reflow; boat-mode manifest; pickup list at phone |
 | Daily operations | /schedule/board, /staffing, /reports | Board controls, skeletons, report facts, and actions remain readable without forced width |
 | Staff records | /divers, /courses, /dive-sites | Search/actions wrap; records stay grouped; editor fields and actions stack |
-| Settings | /settings/team, /settings/safety-checklist | Languages, emergency details, and list actions are collapsible or wrapped |
+| Settings | /settings/team, /safety-checklist | Languages, emergency details, and list actions are collapsible or wrapped |
 | Offline | /offline-manifest | Shared settings group and shell behavior; safety state remains visible |
 
 ## Covered states

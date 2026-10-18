@@ -1,6 +1,5 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { openSettingsRow } from "./helpers";
 
 /**
  * Per-shop Stripe Tax (issue #959, ADR
@@ -14,8 +13,8 @@ import { openSettingsRow } from "./helpers";
  * ## What only a browser can prove here
  *
  * The permission gate and the stored column are already pinned server-side
- * (`settings/actions.authz.test.ts` refuses a captain and round-trips an
- * owner), and the provider forms are pinned in `src/lib/payments/*.test.ts`.
+ * (`settings/features/actions.authz.test.ts` refuses a captain and round-trips
+ * an owner), and the provider forms are pinned in `src/lib/payments/*.test.ts`.
  * What none of those can see is the **consequence one surface has on
  * another**: turning the setting on in Settings is what makes the staff
  * invoice form grow a customer billing address, because Stripe Tax cannot
@@ -35,22 +34,19 @@ import { openSettingsRow } from "./helpers";
  * not survive the failure it is there for.
  */
 
-/** The tax row's own disclosure, so a bare "On"/"Off" is never read off a neighbour. */
+/** The tax switch: a row of the Features page (issue #2814), with its own Save. */
 function taxRow(page: Page) {
-  return page
-    .locator("details")
-    .filter({ has: page.getByRole("heading", { level: 3, name: "Sales tax & VAT", exact: true }) })
-    .first();
+  return page.locator("li#tax");
 }
 
-/** Tick or clear the opt-in and wait for the save to land. Leaves the page on settings. */
+const TAX_LABEL = "Use Stripe Tax for new booking and invoice payments";
+
+/** Tick or clear the opt-in and wait for the save to land. Leaves the page on Features. */
 async function setTax(page: Page, shopSlug: string, enabled: boolean) {
-  await page.goto(`/shop/${shopSlug}/settings`);
-  await openSettingsRow(page, "Sales tax & VAT");
-  const checkbox = page.getByLabel("Use Stripe Tax for new booking and invoice payments");
-  await checkbox.setChecked(enabled);
-  await page.getByRole("button", { name: "Save tax setting" }).click();
-  await expect(page.getByText("Tax setting saved.")).toBeVisible();
+  await page.goto(`/shop/${shopSlug}/settings/features`);
+  await taxRow(page).getByLabel(TAX_LABEL).setChecked(enabled);
+  await taxRow(page).getByRole("button", { name: "Save" }).click();
+  await expect(taxRow(page).getByText("Saved.")).toBeVisible();
 }
 
 test.describe("Stripe Tax opt-in", () => {
@@ -66,15 +62,10 @@ test.describe("Stripe Tax opt-in", () => {
    * box it has to go looking for. A shop that handles tax outside DiveDay must
    * never discover it was being charged because a default leaned the other way.
    */
-  test("a shop starts with tax off and says so on the row", async ({ page, privateShop }) => {
-    await page.goto(`/shop/${privateShop.slug}/settings`);
+  test("a shop starts with tax off, and the switch says so", async ({ page, privateShop }) => {
+    await page.goto(`/shop/${privateShop.slug}/settings/features`);
 
-    await expect(taxRow(page)).toContainText("Off");
-
-    await openSettingsRow(page, "Sales tax & VAT");
-    await expect(
-      page.getByLabel("Use Stripe Tax for new booking and invoice payments"),
-    ).not.toBeChecked();
+    await expect(taxRow(page).getByLabel(TAX_LABEL)).not.toBeChecked();
   });
 
   test("turning tax on survives a reload, and turning it back off does too", async ({
@@ -82,23 +73,18 @@ test.describe("Stripe Tax opt-in", () => {
     privateShop,
   }) => {
     await setTax(page, privateShop.slug, true);
-    await expect(taxRow(page)).toContainText("On");
 
     // Reload rather than trust the post-action render: the claim is that the
     // column was written, not that the form echoed the box back.
-    await page.goto(`/shop/${privateShop.slug}/settings`);
-    await expect(taxRow(page)).toContainText("On");
-    await openSettingsRow(page, "Sales tax & VAT");
-    await expect(
-      page.getByLabel("Use Stripe Tax for new booking and invoice payments"),
-    ).toBeChecked();
+    await page.goto(`/shop/${privateShop.slug}/settings/features`);
+    await expect(taxRow(page).getByLabel(TAX_LABEL)).toBeChecked();
 
     // The half a shop reaches for when it decides to handle tax itself. An
     // unchecked checkbox posts no field at all, so this is a genuinely
     // different code path from the one above, not its mirror image.
     await setTax(page, privateShop.slug, false);
-    await page.goto(`/shop/${privateShop.slug}/settings`);
-    await expect(taxRow(page)).toContainText("Off");
+    await page.goto(`/shop/${privateShop.slug}/settings/features`);
+    await expect(taxRow(page).getByLabel(TAX_LABEL)).not.toBeChecked();
   });
 
   /**

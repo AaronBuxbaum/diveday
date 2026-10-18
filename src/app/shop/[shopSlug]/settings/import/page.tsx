@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { FlashParams } from "@/components/FlashParams";
-import { SectionTabs } from "@/components/SectionTabs";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { proseLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -14,10 +13,12 @@ import {
   type ImportScopeRowId,
 } from "@/lib/import";
 import { requireShopSurface } from "@/lib/session";
+import { DataTabs } from "../_components/DataTabs";
 import { settingsPaneClass } from "../_components/settings-pane";
 import type { ImportActionErrorCode } from "./actions";
 import { DiveSiteImportPanel } from "./DiveSiteImportPanel";
 import { GearImportPanel } from "./GearImportPanel";
+import { ImportKindTabs } from "./ImportKindTabs";
 import { ImportWizard } from "./ImportWizard";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -372,22 +373,12 @@ export default async function ImportPage({
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
-        title={t("settings.import.title")}
+        title={t("settings.data.title")}
       />
 
-      <SectionTabs
-        label={t("settings.import.tabs.label")}
-        current={tab}
-        tabs={[
-          { id: "divers", href: base, label: t("settings.import.tabs.divers") },
-          { id: "gear", href: `${base}?what=gear`, label: t("settings.import.tabs.gear") },
-          {
-            id: "dive-sites",
-            href: `${base}?what=dive-sites`,
-            label: t("settings.import.tabs.diveSites"),
-          },
-        ]}
-      />
+      <DataTabs t={t} shopSlug={shopSlug} current="import" />
+
+      <ImportKindTabs t={t} base={base} current={tab} />
 
       {tab === "gear" ? (
         <div className="space-y-6">

@@ -7294,27 +7294,23 @@ for (const scheme of ["light", "dark"] as const) {
       // The settings hub, the directory every shop setting hangs off.
       test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Rental terms" }).waitFor();
+        await page.getByRole("heading", { name: "Trip packing checklist" }).waitFor();
         // One row open in the capture, so the baseline shows the disclosure's
-        // open-form treatment as well as the at-rest directory. Rental prices
-        // used to be the open one; it is a page of its own now (#1854).
-        await openSettingsRow(page, "Rental terms");
+        // open-form treatment as well as the at-rest directory.
+        await openSettingsRow(page, "Trip packing checklist");
         await capture(page, "settings-payments", scheme);
       });
 
       /**
-       * What the shop rents and what it charges for it, each on a page of its
-       * own since #1854: a grid of catalogue pills, and a price box per offered
-       * item. Hub rows until then, open in `settings-payments`.
+       * What the shop rents and what it charges for it: one table with a tick
+       * and a price box per piece, the terms and the service interval, one
+       * save (#2815).
        */
-      test(`the rental pages render true to the design (${scheme})`, async ({ page }) => {
+      test(`the rentals page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/rentals");
         await page.getByRole("heading", { level: 1, name: "Rentals" }).waitFor();
-        await page.getByRole("button", { name: "Save rental catalog" }).waitFor();
+        await page.getByRole("button", { name: "Save rentals" }).waitFor();
         await capture(page, "settings-rentals", scheme);
-        await page.goto("/shop/blue-mantis/settings/rental-prices");
-        await page.getByRole("heading", { level: 1, name: "Rental prices" }).waitFor();
-        await capture(page, "settings-rental-prices", scheme);
       });
 
       /**
@@ -7343,7 +7339,7 @@ for (const scheme of ["light", "dark"] as const) {
        * stopped fitting inside a disclosure.
        */
       test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/boats");
+        await page.goto("/shop/blue-mantis/boats");
         await page.getByRole("heading", { level: 1, name: "Boats" }).waitFor();
         // The submit on the add-a-boat row, which is what this page's own
         // editor ends in now that it is a page rather than a settings row.
@@ -7356,7 +7352,7 @@ for (const scheme of ["light", "dark"] as const) {
        * — the list a diver then filters the public schedule by.
        */
       test(`the trip-tags page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/trip-tags");
+        await page.goto("/shop/blue-mantis/trip-tags");
         await page.getByRole("heading", { level: 1, name: "Trip tags" }).waitFor();
         await capture(page, "settings-trip-tags", scheme);
       });
@@ -7409,14 +7405,15 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **Try the checks** (H-105): Settings' run of the cert-check
-       * extension against its own sample pages, after a run. The extension is
+       * **Try the checks** (H-105): the disclosure on the Card checks row
+       * (#2817), running the cert-check extension against its own sample
+       * pages, after a run. The extension is
        * stood in for at the page's one seam, as the agency-check captures do:
        * it says hello as 1.5.0, passes every sample but NAUI's, and finds a
        * signed-in PADI tab. The report's time is the frozen clock's, and its
        * browser line is pinned here, so a Chromium update moves no pixel.
        */
-      test(`the cert-check extension's try page renders true to the design (${scheme})`, async ({
+      test(`the cert-check extension's try-it disclosure renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await page.addInitScript(() => {
@@ -7463,9 +7460,10 @@ for (const scheme of ["light", "dark"] as const) {
             );
           });
         });
-        await page.goto("/shop/blue-mantis/settings/cert-checks");
-        await page.getByRole("heading", { level: 1, name: "Try the checks" }).waitFor();
-        await page.getByText("Added to this browser (1.5.0)").waitFor();
+        await page.goto("/shop/blue-mantis/settings");
+        await openSettingsRow(page, "Card checks");
+        await page.getByText("Try the checks", { exact: true }).click();
+        await page.getByText("Added to this browser (1.5.0)").first().waitFor();
         await page.getByRole("button", { name: "Run the checks" }).click();
         await page.getByText("Signed in", { exact: true }).waitFor();
         await page.getByRole("button", { name: "Copy report" }).waitFor();
@@ -7490,28 +7488,19 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The Stripe Tax opt-in (issue #959, ADR
-       * 20260826-stripe-tax-is-opt-in-and-provider-owned). Its own capture for
-       * the same reason as the rows above — it is closed in
-       * `settings-payments`, and this is the only place a shop decides whether
-       * DiveDay adds tax to what it charges at all.
-       *
-       * Captured **off**, which is both the default and what every shop meets
-       * first: the decision this row is asking for is legible only if the
-       * paragraph explaining what turning it on does is in the picture. Opening
-       * a disclosure writes nothing, so this capture leaves the shared fixture's
-       * `shops.tax_enabled` exactly as it found it — the flag is shop-wide
-       * configuration a reset does not restore, and a spec that drove it would
-       * hand a taxed shop to whatever ran next in the worker (ADR
-       * 20260815-per-test-private-shops). `e2e/tax.spec.ts` drives it, on a
-       * shop of its own.
+       * The Features page (issue #2814): every on/off switch a shop owns, once.
+       * It replaces the Stripe Tax card's own capture (`settings-tax`): the tax
+       * switch is a row here, with the sentence that says what turning it on
+       * does. Opening nothing and saving nothing, so the shared fixture's
+       * `shops` flags are exactly as the capture found them (ADR
+       * 20260815-per-test-private-shops); `e2e/tax.spec.ts` drives the switch
+       * on a shop of its own.
        */
-      test(`the tax card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Sales tax & VAT" }).waitFor();
-        await openSettingsRow(page, "Sales tax & VAT");
-        await page.getByRole("button", { name: "Save tax setting" }).waitFor();
-        await capture(page, "settings-tax", scheme);
+      test(`the features page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/features");
+        await page.getByRole("heading", { level: 1, name: "Features" }).waitFor();
+        await page.getByRole("button", { name: "Save" }).first().waitFor();
+        await capture(page, "settings-features", scheme);
       });
 
       // Where a shop connects its own WhatsApp Business number (ADR
@@ -7531,7 +7520,7 @@ for (const scheme of ["light", "dark"] as const) {
       // join the registry.
       test(`integrations settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/integrations");
-        await page.getByRole("heading", { level: 1, name: "Shop integrations" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
         await capture(page, "settings-integrations", scheme);
       });
 
@@ -7666,14 +7655,22 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the data-export page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/export");
-        await page.getByRole("heading", { name: "Data export" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
+        // The crew sheet (N-43) is the second thing that leaves this page.
+        await page.getByRole("heading", { name: "Crew sheet" }).waitFor();
+        await capture(page, "settings-export", scheme);
+      });
+
+      // The Backups tab of the same page set: the destination and the delivery
+      // history, which used to sit under the download on one long page.
+      test(`the backups tab renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/export/backups");
+        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
         await page.getByRole("heading", { name: "Delivery history" }).waitFor();
         // The history rows, not just the heading — the table is half the
         // surface, and a capture taken on the heading alone banks an empty one.
         await page.getByRole("cell", { name: "Failed" }).waitFor();
-        // The crew sheet (N-43) is the third thing that leaves this page.
-        await page.getByRole("heading", { name: "Crew sheet" }).waitFor();
-        await capture(page, "settings-export", scheme);
+        await capture(page, "settings-backups", scheme);
       });
 
       // The shop's activity log (D5): who did what, to what, when, across the
@@ -7773,7 +7770,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the pre-departure checklist settings render true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/settings/safety-checklist");
+        await page.goto("/shop/blue-mantis/safety-checklist");
         await page.getByRole("heading", { level: 1, name: "Pre-departure checklist" }).waitFor();
         await page.getByText("VHF radio checked").waitFor();
         await capture(page, "settings-safety-checklist", scheme);
@@ -10055,10 +10052,10 @@ for (const scheme of ["light", "dark"] as const) {
       test.setTimeout(FLOW_TIMEOUT_MS);
       await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
       await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
-      await page.getByRole("button", { name: "Save rental catalog" }).click();
+      await page.getByRole("button", { name: "Save rentals" }).click();
       // The page comes back with its saved notice — the destination's own
       // render, not a timing guess.
-      await page.getByText("Rental catalog saved.").waitFor();
+      await page.getByText("Rentals saved.").waitFor();
 
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);

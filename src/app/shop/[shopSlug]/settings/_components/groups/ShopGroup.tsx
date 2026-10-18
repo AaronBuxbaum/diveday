@@ -16,8 +16,9 @@ import {
 } from "@/lib/timezones";
 import { AddressSearch } from "../../AddressSearch";
 import { saveTimezoneAction, saveUnitsAction } from "../../shop-actions";
-import { SettingsRow } from "../SettingsRows";
+import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { SectionNotice, SettingsGroup, type SettingsView, SHOP_GROUP } from "./kit";
+import { searchListingRow, seasonRow } from "./shop-rows";
 
 /**
  * The words for the timezone picker's structure. `src/lib/timezones.ts` hands
@@ -70,8 +71,9 @@ const CURATED_TIMEZONE_KEYS: Record<CuratedTimeZone, StaffMessageKey> = {
 
 /**
  * The Shop group: the timezone every date is read through, the units a shop
- * reads its own numbers in, and where it is. The season start and the contact
- * row moved (to Rarely changed and Notifications).
+ * reads its own numbers in, and where it is, then the season, the diving
+ * options and the search listing (once "Rarely changed", issue #2813), and the
+ * doors to the shop's registers. The contact row is Messages'.
  */
 export function ShopGroup({
   view,
@@ -79,14 +81,17 @@ export function ShopGroup({
   hasPricedRecords,
   currencyMismatch,
   addressLookupEnabled,
+  boatsWithoutRadioIdentity,
 }: {
   view: SettingsView;
   canPayments: boolean;
   hasPricedRecords: boolean;
   currencyMismatch: ReturnType<typeof stripeCurrencyMismatch>;
   addressLookupEnabled: boolean;
+  /** Live boats with neither a call sign nor an MMSI (review B1), named on the fleet's door. */
+  boatsWithoutRadioIdentity: number;
 }) {
-  const { shop, t, locale, banner, activeSection, notSet } = view;
+  const { shop, shopSlug, t, locale, banner, activeSection, notSet } = view;
   const shopCurrency = toShopCurrency(shop.currency);
   const zoneId = shop.timezone || DEFAULT_TIMEZONE;
   const timezoneValue =
@@ -319,6 +324,49 @@ export function ShopGroup({
             }}
           />
         </SettingsRow>
+
+        {seasonRow(view)}
+
+        {searchListingRow(view)}
+
+        {/* **Not gated on boat diving.** A shore operation's crew needs a chamber number exactly as much as a
+            boat's does. Its own row rather than a line inside another
+            because it is the one thing on this page a crew reads when
+            something has gone wrong (issue #688). */}
+        <SettingsDoorRow
+          href={`/shop/${shopSlug}/settings/emergency-reference`}
+          heading={t("settings.main.emergency.heading")}
+        />
+
+        {/* **The registers are doors, not settings** (glossary "Register and
+            setting", issue #2659): each is a table of the shop's things that a
+            departure points at, at its own address beside gear, with a
+            permission of its own. Settings links to them and holds none. A
+            shore-and-pool shop has no hulls to name, so the fleet's door is
+            gone rather than empty. */}
+        <SettingsDoorRow
+          href={`/shop/${shopSlug}/dive-sites`}
+          heading={t("settings.main.diveSites.heading")}
+        />
+
+        {shop.hasBoatDiving ? (
+          <SettingsDoorRow
+            href={`/shop/${shopSlug}/boats`}
+            heading={t("boats.heading")}
+            note={
+              boatsWithoutRadioIdentity > 0
+                ? t("boats.radioIdentityMissing", { count: boatsWithoutRadioIdentity })
+                : undefined
+            }
+          />
+        ) : null}
+
+        <SettingsDoorRow href={`/shop/${shopSlug}/trip-tags`} heading={t("lenses.heading")} />
+
+        <SettingsDoorRow
+          href={`/shop/${shopSlug}/safety-checklist`}
+          heading={t("settings.main.safetyChecklist.heading")}
+        />
       </InsetGroup>
     </SettingsGroup>
   );

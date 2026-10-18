@@ -101,7 +101,7 @@ describe("the report", () => {
       capture: "settings-boats",
       width: 390,
       probed: true,
-      path: "/shop/x/settings/boats",
+      path: "/shop/x/boats",
       titlePath: TITLE,
       flags: [flag],
     },
@@ -115,7 +115,7 @@ describe("the report", () => {
   ];
   const ledger = {
     "/shop/[shopSlug]/settings/team": { visual: ["settings-team"] },
-    "/shop/[shopSlug]/settings/boats": { visual: ["settings-boats"] },
+    "/shop/[shopSlug]/boats": { visual: ["settings-boats"] },
   };
 
   it("makes one shared component's flaw one cluster across surfaces", () => {

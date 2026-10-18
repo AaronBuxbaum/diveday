@@ -7,7 +7,7 @@ import {
   PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED,
   type PreDepartureCheckStatus,
 } from "@/lib/pre-departure-check";
-import { canPersonManageShopSettings, loadActiveStaffRoles } from "./authz";
+import { canPersonManageSafetyChecklist, loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { violatesUniqueIndex } from "./query-helpers";
@@ -107,7 +107,7 @@ export async function createChecklistItem(
   input: { shopId: string; personId: string; label: string },
 ): Promise<CreateChecklistItemOutcome> {
   const label = input.label.trim();
-  if (!(await canPersonManageShopSettings(db, input.shopId, input.personId))) {
+  if (!(await canPersonManageSafetyChecklist(db, input.shopId, input.personId))) {
     return { ok: false, reason: "not_authorized" };
   }
   try {
@@ -148,7 +148,7 @@ export async function reorderChecklistItems(
   db: AppDb,
   input: { shopId: string; personId: string; orderedIds: string[] },
 ): Promise<{ ok: true } | { ok: false; reason: "not_authorized" }> {
-  if (!(await canPersonManageShopSettings(db, input.shopId, input.personId))) {
+  if (!(await canPersonManageSafetyChecklist(db, input.shopId, input.personId))) {
     return { ok: false, reason: "not_authorized" };
   }
   await db.transaction(async (tx) => {
@@ -171,7 +171,7 @@ export async function deleteChecklistItem(
   db: AppDb,
   input: { shopId: string; personId: string; itemId: string },
 ): Promise<{ ok: true } | { ok: false; reason: "not_authorized" }> {
-  if (!(await canPersonManageShopSettings(db, input.shopId, input.personId))) {
+  if (!(await canPersonManageSafetyChecklist(db, input.shopId, input.personId))) {
     return { ok: false, reason: "not_authorized" };
   }
   await db

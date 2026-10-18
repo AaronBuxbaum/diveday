@@ -38,7 +38,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
 
   // 1. Settings, Boats. H-107: a certificate under the fourteen seats the
   //    boat sells is refused on the row, and nothing is saved…
-  await page.goto(`${shop}/settings/boats`);
+  await page.goto(`${shop}/boats`);
   const row = boatRow(page, BOAT);
   await row.getByLabel("Passengers allowed on the certificate (not crew)").fill("10");
   await row.getByRole("button", { name: "Save boat" }).click();

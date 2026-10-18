@@ -672,7 +672,7 @@ export const areas = {
       "src/lib/boat-safety.ts",
       "src/db/boat-safety.ts",
       "src/i18n/boat-safety-labels.ts",
-      "src/app/shop/[shopSlug]/settings/boats",
+      "src/app/shop/[shopSlug]/boats",
     ],
     tests: [
       "src/lib/boats.test.ts",

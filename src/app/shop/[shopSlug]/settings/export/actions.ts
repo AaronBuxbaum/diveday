@@ -83,7 +83,7 @@ async function backupContext(): Promise<{
     shopId: session.user.shopId,
     personId: session.user.personId,
     shopSlug: session.user.shopSlug,
-    path: shopPath(session.user.shopSlug, "settings", "export"),
+    path: shopPath(session.user.shopSlug, "settings", "export", "backups"),
   };
 }
 

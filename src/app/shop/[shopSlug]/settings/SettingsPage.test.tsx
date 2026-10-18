@@ -8,7 +8,7 @@ import { type Fact, FactLine } from "@/components/ui/FactLine";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import { boats, mediaDeletionAttempts, processorErasureObligations, shops } from "@/db/schema";
-import { getShopBySlug, setShopDivingOptions } from "@/db/shops";
+import { getShopBySlug, setShopCrewScheduleEnabled, setShopDivingOptions } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
@@ -425,8 +425,8 @@ describe("the hub's summary values", () => {
     expect(facts.filter(Boolean).at(-1)).toBe(PHONE);
   });
 
-  it("keeps each of our own facts whole on the units, diving-options and crew rows", async () => {
-    for (const sectionId of ["units", "divingOptions", "crewSchedule"] as const) {
+  it("keeps each of our own facts whole on the units and crew rows", async () => {
+    for (const sectionId of ["units", "crewSchedule"] as const) {
       const facts = (await valueFacts(sectionId)).filter(Boolean);
       expect(facts.length, sectionId).toBeGreaterThan(1);
       for (const fact of facts) expect(typeof fact, `${sectionId}: ${fact}`).toBe("string");
@@ -498,16 +498,18 @@ describe("the data-compliance queues' drawing", () => {
 });
 
 describe("the diving options a shop runs", () => {
-  it("offers boat alongside shore and pool, and the door to the fleet with it", async () => {
+  it("keeps the switches off the hub and the door to the fleet on it", async () => {
     const element = await renderSettings("owner");
     const names = inputNamesIn(element);
-    expect(names).toContain("hasBoatDiving");
-    expect(names).toContain("hasShoreDiving");
-    expect(names).toContain("hasPoolDiving");
+    // Boat, shore and pool are switches now: rows of the Features page
+    // (issue #2814), where `features/page.test.tsx` reads them.
+    for (const name of ["hasBoatDiving", "hasShoreDiving", "hasPoolDiving"]) {
+      expect(names).not.toContain(name);
+    }
     // The seeded shop runs boats, so the fleet editor is reachable — as a door
-    // now, not a form in a row: a list of hulls each carrying a Save and a
-    // Delete is a page, and the hub is a directory.
-    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/settings/boats`);
+    // in the Shop group, not a form in a row: a list of hulls each carrying a
+    // Save and a Delete is a page, and the hub is a directory.
+    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/boats`);
   });
 
   it("names the boats still missing a call sign and MMSI on the fleet's door (review B1)", async () => {
@@ -515,7 +517,7 @@ describe("the diving options a shop runs", () => {
       findElements<{ href: string; note?: string }>(
         element,
         settingsRowsModule.SettingsDoorRow,
-      ).find((door) => door.props.href === `/shop/${SHOP_SLUG}/settings/boats`)?.props.note;
+      ).find((door) => door.props.href === `/shop/${SHOP_SLUG}/boats`)?.props.note;
     // The seeded fleet carries both facts, so the door states nothing extra.
     expect(doorNote(await renderSettings("owner"))).toBeUndefined();
     const element = await renderSettings("owner", async (db, session) => {
@@ -527,13 +529,21 @@ describe("the diving options a shop runs", () => {
     expect(doorNote(element)).toMatch(/^\d+ boats have no call sign or MMSI$/);
   });
 
-  it("asks for the divemaster target beside the crew schedule switch", async () => {
+  it("asks for the divemaster target on the crew row, and leaves the switch to Features", async () => {
     // The target is only ever read while the shop plans its crew here
-    // (`shopCrewTarget`), so it lives with the switch rather than with the
-    // kinds of diving.
+    // (`shopCrewTarget`), so it shows only while the switch is on; the switch
+    // is a row of the Features page (issue #2814).
     const names = inputNamesIn(await renderSettings("owner"));
-    expect(names).toContain("crewScheduleEnabled");
+    expect(names).not.toContain("crewScheduleEnabled");
     expect(names).toContain("diversPerDivemaster");
+  });
+
+  it("offers the crew row a way to the switch, not the target, while the schedule is off", async () => {
+    const element = await renderSettings("owner", async (db, session) => {
+      await setShopCrewScheduleEnabled(db, session.user.shopId, false);
+    });
+    expect(inputNamesIn(element)).not.toContain("diversPerDivemaster");
+    expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/settings/features#crewSchedule`);
   });
 
   it("takes the boat list away when the shop says it runs no boats", async () => {
@@ -544,14 +554,11 @@ describe("the diving options a shop runs", () => {
         hasPoolDiving: true,
       });
     });
-    const names = inputNamesIn(element);
     // No hull to name, so the whole Boats row is gone rather than sitting there
     // empty. (The page it opens refuses the same way, with `notFound()`.)
-    expect(hrefsIn(element)).not.toContain(`/shop/${SHOP_SLUG}/settings/boats`);
+    expect(hrefsIn(element)).not.toContain(`/shop/${SHOP_SLUG}/boats`);
     // The target survives losing the fleet — it never depended on one.
-    expect(names).toContain("diversPerDivemaster");
-    // The option itself stays on offer, so the shop can turn boats back on.
-    expect(names).toContain("hasBoatDiving");
+    expect(inputNamesIn(element)).toContain("diversPerDivemaster");
   });
 
   it("keeps the editors that outgrew a row as doors, not forms", async () => {
@@ -565,16 +572,13 @@ describe("the diving options a shop runs", () => {
     // The five whole-form rows that were pages wearing a disclosure (#1854)
     // are doors too; their editors are tested where they live now
     // (`_components/editors/editors.test.tsx`).
-    for (const segment of [
-      "boats",
-      "trip-tags",
-      "profile",
-      "dock-day",
-      "emergency-reference",
-      "rentals",
-      "rental-prices",
-    ]) {
+    for (const segment of ["profile", "dock-day", "emergency-reference", "rentals"]) {
       expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/${segment}`);
+    }
+    // The registers (glossary "Register and setting", #2659) sit beside dive
+    // sites at `/shop/<slug>/<noun>`; the hub links to them and holds none.
+    for (const noun of ["boats", "trip-tags", "safety-checklist", "dive-sites"]) {
+      expect(hrefs).toContain(`/shop/${SHOP_SLUG}/${noun}`);
     }
     const names = inputNamesIn(element);
     for (const name of [
