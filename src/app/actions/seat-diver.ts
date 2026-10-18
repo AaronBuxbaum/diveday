@@ -49,8 +49,9 @@ import {
  *
  * Both read `tripId` from the form, so a trip-first door (the roster, the
  * counter walk-in, the global Add booking) and a diver-first one (a diver's
- * record) submit the same shape. The counter says so with `walkIn=true`, which
- * is honoured only while the boat's walk-in door is open (`holdsWalkInOpen`).
+ * record) submit the same shape. The counter is the `"walk-in"` door, bound
+ * server-side and honoured only while the boat's walk-in door is open
+ * (`holdsWalkInOpen`).
  */
 
 const existingDiverSchema = z.object({
@@ -84,7 +85,6 @@ const landingFields = z.object({
   tripId: formValue(),
   personId: formValue(),
   force: formValue(),
-  walkIn: formValue(),
 });
 
 /**
@@ -104,30 +104,32 @@ const newDiverSchema = z.object({
 /** {@link landingFields}, which cannot refuse: every field is optional. */
 function rawLanding(formData: FormData): z.infer<typeof landingFields> {
   const parsed = parseForm(landingFields, formData);
-  return parsed.ok ? parsed.data : { tripId: null, personId: null, force: null, walkIn: null };
+  return parsed.ok ? parsed.data : { tripId: null, personId: null, force: null };
 }
 
-function surfaceFor(surfaceId: SeatSurfaceId): SeatSurface {
+/**
+ * The door a server action is bound to: a surface, or the departure door in
+ * its counter mode (`"walk-in"`). The mode rides the encrypted bound argument,
+ * like the surface itself, never a form field a client could add; it is still
+ * checked against the boat by {@link holdsWalkInOpen} before any seat is made.
+ */
+export type SeatDoorId = SeatSurfaceId | "walk-in";
+
+function doorFor(doorId: SeatDoorId): { surface: SeatSurface; walkIn: boolean } {
   // The id arrives as an encrypted bound argument, so it cannot be forged from
   // the client — checked anyway, because a bad lookup here would build a
   // redirect path out of `undefined`.
-  if (!Object.hasOwn(SEAT_SURFACES, surfaceId)) throw new Error("unknown seat surface");
-  return SEAT_SURFACES[surfaceId];
+  if (doorId === "walk-in") return { surface: SEAT_SURFACES.departure, walkIn: true };
+  if (!Object.hasOwn(SEAT_SURFACES, doorId)) throw new Error("unknown seat surface");
+  return { surface: SEAT_SURFACES[doorId], walkIn: false };
+}
+
+function surfaceFor(surfaceId: SeatSurfaceId): SeatSurface {
+  return doorFor(surfaceId).surface;
 }
 
 /**
- * Whether this submission asked for the departure door's counter mode. Read
- * raw, like the rest of the landing, so a refused submission still lands where
- * it came from; the claim is checked by {@link holdsWalkInOpen} before any seat
- * is made.
- */
-function walkInAsked(surface: SeatSurface, raw: z.infer<typeof landingFields>): boolean {
-  return surface.walkIn !== undefined && raw.walkIn === "true";
-}
-
-/**
- * **A walk-in is only for a boat the counter can still seat.** The form's
- * `walkIn=true` is a claim from the client, like every other field, so the
+ * **A walk-in is only for a boat the counter can still seat.** The counter door is a claim like any other, so the
  * boat is read again here: scheduled, inside the counter's window and not yet
  * sailed (`walkInDoorOpen`). A boat that has gone, or one a week away, cannot
  * be walk-in seated by a typed URL or a stale page; the staffer is told the
@@ -282,16 +284,38 @@ async function seat(
 }
 
 /**
+ * The counter's hold, asked on its own: a walk-in on a boat the counter can no
+ * longer seat lands back on the boat with the "cannot take divers" notice and
+ * nothing is looked up or written. The new-diver form asks it before its
+ * name-match lookup, so a closed boat is refused before anyone is searched for.
+ * Returns when the door is open.
+ */
+export async function refuseClosedWalkIn(shopSlug: string, formData: FormData) {
+  const { surface } = doorFor("walk-in");
+  const session = (await requireShopSurface(shopSlug)).session;
+  const raw = rawLanding(formData);
+  const landing: SeatLanding = {
+    shopSlug,
+    tripId: String(raw.tripId ?? ""),
+    personId: "",
+    walkIn: true,
+  };
+  if (!(await holdsWalkInOpen(landing, session.user.shopId))) {
+    refuse(surface, landing, surface.refusalNotice.trip_unavailable);
+  }
+}
+
+/**
  * Seat a diver already on file — the "enter once, reuse everywhere" path. No
  * name or email is re-typed: the existing person row carries their certs,
  * waivers, rental fit, and history straight onto the trip.
  */
 export async function seatExistingDiverAction(
-  surfaceId: SeatSurfaceId,
+  doorId: SeatDoorId,
   shopSlug: string,
   formData: FormData,
 ) {
-  const surface = surfaceFor(surfaceId);
+  const { surface, walkIn } = doorFor(doorId);
   const session = (await requireShopSurface(shopSlug)).session;
   const parsed = parseForm(existingDiverSchema, formData);
   const raw = rawLanding(formData);
@@ -299,7 +323,7 @@ export async function seatExistingDiverAction(
     shopSlug,
     tripId: parsed.ok ? parsed.data.tripId : String(raw.tripId ?? ""),
     personId: parsed.ok ? parsed.data.personId : String(raw.personId ?? ""),
-    walkIn: walkInAsked(surface, raw),
+    walkIn,
   };
   if (!parsed.ok) refuse(surface, landing, surface.invalidNotice);
   await seat(
@@ -328,12 +352,8 @@ export async function seatExistingDiverAction(
  * another system. Whether an email is required is the surface's call, and
  * walk-in mode waives it: the counter can add a diver on a name alone and collect the rest later.
  */
-export async function seatNewDiverAction(
-  surfaceId: SeatSurfaceId,
-  shopSlug: string,
-  formData: FormData,
-) {
-  const surface = surfaceFor(surfaceId);
+export async function seatNewDiverAction(doorId: SeatDoorId, shopSlug: string, formData: FormData) {
+  const { surface, walkIn } = doorFor(doorId);
   const session = (await requireShopSurface(shopSlug)).session;
   const parsed = parseForm(newDiverSchema, formData);
   const raw = rawLanding(formData);
@@ -342,7 +362,7 @@ export async function seatNewDiverAction(
     shopSlug,
     tripId: parsed.ok ? parsed.data.tripId : String(raw.tripId ?? ""),
     personId: "",
-    walkIn: walkInAsked(surface, raw),
+    walkIn,
   };
   if (!parsed.ok || (surface.email === "required" && !landing.walkIn && !email)) {
     refuse(surface, landing, surface.invalidNotice);

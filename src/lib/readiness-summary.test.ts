@@ -24,23 +24,44 @@ const ready: ReadinessResult = { status: "ready", blockers: [] };
 describe("buildDiverChecklist", () => {
   it("never tells a snorkeler or rider their card is verified, since no card is asked of them", () => {
     for (const type of ["snorkeler", "rider"] as const) {
-      const items = buildDiverChecklist(requirement(), ready, type);
+      const items = buildDiverChecklist(requirement(), ready, { participantType: type });
       expect(items.map((item) => item.category)).toEqual(["waiver", "payment"]);
     }
     // A diver still gets the card line, and an unknown type reads as a diver.
-    expect(buildDiverChecklist(requirement(), ready, "diver").map((i) => i.category)).toContain(
-      "certification",
-    );
+    expect(
+      buildDiverChecklist(requirement(), ready, { participantType: "diver" }).map(
+        (i) => i.category,
+      ),
+    ).toContain("certification");
     expect(buildDiverChecklist(requirement(), ready).map((i) => i.category)).toContain(
       "certification",
     );
+  });
+
+  it('never tells a free rider "paid up": a stated-free seat has no payment line', () => {
+    const free = buildDiverChecklist(requirement(), ready, {
+      participantType: "rider",
+      statedFree: true,
+    });
+    expect(free.map((item) => item.category)).toEqual(["waiver"]);
+    // A priced rider still owes, and a diver is never waived by the flag.
+    expect(
+      buildDiverChecklist(requirement(), ready, { participantType: "rider" }).map(
+        (i) => i.category,
+      ),
+    ).toContain("payment");
+    expect(
+      buildDiverChecklist(requirement(), ready, { participantType: "diver", statedFree: true }).map(
+        (i) => i.category,
+      ),
+    ).toContain("payment");
   });
 
   it("keeps a certification blocker the engine raised, whoever it is raised for", () => {
     const items = buildDiverChecklist(
       requirement(),
       { status: "blocked", blockers: [{ code: "certification_missing" }] },
-      "snorkeler",
+      { participantType: "snorkeler" },
     );
     expect(items.map((item) => item.category)).toContain("certification");
   });

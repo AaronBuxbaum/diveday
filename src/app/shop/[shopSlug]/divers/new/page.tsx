@@ -214,13 +214,16 @@ export default async function NewDiverPage({
                       action={
                         isWaitlist
                           ? addToWaitlistAction.bind(null, shopSlug, tripId)
-                          : seatExistingDiverAction.bind(null, surface, shopSlug)
+                          : seatExistingDiverAction.bind(
+                              null,
+                              walkIn ? "walk-in" : surface,
+                              shopSlug,
+                            )
                       }
                       className="inline"
                     >
                       <input type="hidden" name="tripId" value={tripId} />
                       <input type="hidden" name="personId" value={match.id} />
-                      {walkIn ? <input type="hidden" name="walkIn" value="true" /> : null}
                       {/* The *matched* diver's details, not the spelling the
                           staffer just typed: a tap here says "this is the same
                           person", and `addToWaitlistAction` ignores `personId`

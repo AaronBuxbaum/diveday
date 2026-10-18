@@ -7,6 +7,7 @@ import type {
   TripRequirement,
 } from "@/db/schema";
 import { ranksBelow } from "./last-minute-list";
+import { PARTICIPANT_TYPES, type ParticipantType } from "./participant-types";
 import { type CertificationLevel, calculateReadiness, combineSiteRequirements } from "./readiness";
 import { buildDiverChecklist } from "./readiness-summary";
 import {
@@ -326,11 +327,13 @@ function readinessBlocksOnCerts(
   trip: Requirement,
   site: Requirement | null,
   held: TripAdmissionEvidence,
+  participantType?: ParticipantType,
 ): boolean {
   const result = calculateReadiness({
     timezone: "UTC",
     requirement: { ...trip, requiresWaiver: false, requiresPayment: false } as TripRequirement,
     siteRequirement: site,
+    participantType,
     waiver: null,
     certifications: held.certifications,
     specialtyCertifications: held.specialtyCertifications,
@@ -474,6 +477,32 @@ describe("every gate still refuses and clears as it did, with a site in the sum"
     }
     // A guard on the guard: admitting everything would pass this vacuously.
     expect(refusals).toBeGreaterThan(100);
+  });
+
+  it("across seat kinds: a snorkeler or rider is asked for no card by either gate, and a diver by both", () => {
+    const held = [NOTHING, OPEN_WATER_ONLY, EVERYTHING];
+    for (const participantType of PARTICIPANT_TYPES) {
+      for (const trip of ALL_REQUIREMENTS) {
+        for (const site of sites) {
+          for (const evidence of held) {
+            const admitted = decideTripAdmission({
+              requirement: trip,
+              siteRequirement: site,
+              evidence,
+              participantType,
+            }).admitted;
+            const blocks = readinessBlocksOnCerts(trip, site, evidence, participantType);
+            const label = JSON.stringify({ participantType, trip, site });
+            if (participantType !== "diver") {
+              expect(admitted, label).toBe(true);
+              expect(blocks, label).toBe(false);
+            } else if (!admitted) {
+              expect(blocks, label).toBe(true);
+            }
+          }
+        }
+      }
+    }
   });
 
   it("a trip with no requirement row still inherits what its sites demand", () => {

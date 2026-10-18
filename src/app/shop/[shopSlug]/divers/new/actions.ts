@@ -2,7 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { seatNewDiverAction, seatWalkInPartyAction } from "@/app/actions/seat-diver";
+import {
+  refuseClosedWalkIn,
+  seatNewDiverAction,
+  seatWalkInPartyAction,
+} from "@/app/actions/seat-diver";
 import type { SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { getDb } from "@/db/client";
@@ -86,11 +90,18 @@ export async function createDiverFormAction(formData: FormData) {
   if (
     activeSurface === "departure" &&
     activeWalkIn &&
+    !activeWaitlist &&
     activeTripId &&
     (party.rows.length > 0 || party.first.minor || party.first.match !== undefined || party.invalid)
   ) {
     await seatWalkInPartyAction(staff.user.shopSlug, formData);
     return;
+  }
+
+  // A counter walk-in on a boat the counter can no longer seat is refused
+  // before any name lookup, by the door that owns the refusal.
+  if (activeSurface === "departure" && activeWalkIn && !activeWaitlist && activeTripId) {
+    await refuseClosedWalkIn(staff.user.shopSlug, formData);
   }
 
   if (!force) {
@@ -115,7 +126,11 @@ export async function createDiverFormAction(formData: FormData) {
   if (activeSurface === "departure" && activeWaitlist && activeTripId) {
     await addToWaitlistAction(staff.user.shopSlug, activeTripId, formData);
   } else if (activeSurface === "departure" && activeTripId) {
-    await seatNewDiverAction(activeSurface, staff.user.shopSlug, formData);
+    await seatNewDiverAction(
+      activeWalkIn ? "walk-in" : activeSurface,
+      staff.user.shopSlug,
+      formData,
+    );
   } else {
     const diver = await createDiver(activeDb, {
       shopId: staff.user.shopId,

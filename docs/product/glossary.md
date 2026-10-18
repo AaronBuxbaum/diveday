@@ -167,6 +167,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Certificate total-persons limit
 - Check-in
 - Close-out
+- Coming as
 - Connected Stripe account
 - Counter hand-off
 - Counter self-registration
@@ -319,6 +320,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Trip stage
 - Turned away
 - Unaccounted for
+- Under 18
 - Wait list
 - Wait-list party
 - Wait-list roll
@@ -326,6 +328,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Waiver activity
 - Waiver completion
 - Walk-in
+- Walk-in party
 - Weather day
 - Week totals
 - WhatsApp sender

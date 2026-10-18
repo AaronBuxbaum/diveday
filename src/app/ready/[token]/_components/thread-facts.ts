@@ -63,7 +63,10 @@ export function readyThreadFacts(data: ReadyPageData, tripOnRecord: boolean, loc
   // 20261007-participant-types), as `getReadyPageData` read it.
   const fullPriceCents = tripOnRecord ? data.trip.seatPriceCents : null;
 
-  const items = buildDiverChecklist(detail.requirement, detail.readiness, data.participantType);
+  const items = buildDiverChecklist(detail.requirement, detail.readiness, {
+    participantType: data.participantType,
+    statedFree: detail.statedFree,
+  });
   /**
    * **A balance nobody named.** "There's a balance to settle" is the one step
    * on this spine whose whole subject is a number, and it carried none — the

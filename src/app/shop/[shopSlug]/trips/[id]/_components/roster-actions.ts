@@ -58,6 +58,11 @@ export async function tripRosterActions({
   return {
     addBookingAction: seatNewDiverAction.bind(null, "departure", shopSlug),
     addExistingDiverAction: seatExistingDiverAction.bind(null, "departure", shopSlug),
+    // The same two seatings in the counter's mode, bound to the walk-in door
+    // rather than told by a form field; the roster hands these to the add-diver
+    // band while the boat's counter window is open.
+    walkInAddBookingAction: seatNewDiverAction.bind(null, "walk-in", shopSlug),
+    walkInAddExistingDiverAction: seatExistingDiverAction.bind(null, "walk-in", shopSlug),
     addToWaitlistAction: addToWaitlistAction.bind(null, shopSlug, tripId),
     createDirectTripInvitationAction: createDirectTripInvitationAction.bind(null, shopSlug, tripId),
     invitePastDiverAction: invitePastDiverAction.bind(null, shopSlug, tripId),

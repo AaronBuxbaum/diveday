@@ -1573,6 +1573,8 @@ export type BookingReadinessDetail = {
    * alone would understate a gate the site imposes and the engine enforces.
    */
   siteRequirement: SiteCertRequirement | null;
+  /** This seat's kind is stated free on the departure, so it owes no payment. */
+  statedFree: boolean;
   readiness: NonNullable<Awaited<ReturnType<typeof getBookingReadiness>>>;
   cancelled: boolean;
 };
@@ -1623,6 +1625,7 @@ export async function getBookingReadinessDetail(
     // already fallen through to `unavailableReadiness()`, so there is no gate
     // to state either way.
     siteRequirement: match?.siteRequirement ?? null,
+    statedFree: match?.statedFree ?? false,
     readiness,
     cancelled: row.status === "cancelled",
   };
@@ -1888,6 +1891,13 @@ export async function listTripsReadiness(
     const requirement = requirementsByTrip.get(tripId) ?? null;
     const siteRequirement = siteRequirementsByTrip.get(tripId) ?? null;
     const courseRow = courseByTrip.get(tripId);
+    // A kind of seat the shop states as free has no payment to clear. Read
+    // off the departure's own price for that kind, never inferred from a
+    // missing one (`paymentGateIsUnclearable`).
+    const statedFree =
+      !isDiver(row.booking.participantType) &&
+      courseRow !== undefined &&
+      participantPriceCents(courseRow, row.booking.participantType) === 0;
     const courseMinimumAge = courseRow?.minimumAge ?? null;
     const courseDate = courseRow?.startsAt
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
@@ -1986,6 +1996,7 @@ export async function listTripsReadiness(
         : riderMedicalHold(effectiveWaiver, signedWaiversByPerson.get(row.person.id) ?? []),
       requirement,
       siteRequirement,
+      statedFree,
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
       nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
@@ -2036,13 +2047,7 @@ export async function listTripsReadiness(
         // What this seat is doing aboard: a snorkeler or a rider is asked for
         // no card (ADR 20261007-participant-types).
         participantType: row.booking.participantType,
-        // A kind of seat the shop states as free has no payment to clear. Read
-        // off the departure's own price for that kind, never inferred from a
-        // missing one (`paymentGateIsUnclearable`).
-        statedFree:
-          !isDiver(row.booking.participantType) &&
-          courseRow !== undefined &&
-          participantPriceCents(courseRow, row.booking.participantType) === 0,
+        statedFree,
         courseForms,
         trainingMarkInvalid: trainingMark !== undefined && !trainingMark.valid,
         now,

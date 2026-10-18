@@ -48,6 +48,12 @@ export type WalkInPartyRow = WalkInMemberFacts & {
 };
 
 export type WalkInParty = {
+  /**
+   * The first person's own facts (row 0). Their "Coming as" is not read here:
+   * the form posts it as the plain `participantType` field the single walk-in
+   * already uses (`newDiverSchema`), and an absent one reads as a diver, the
+   * stricter default. A stray `member-0-type` is ignored.
+   */
   first: WalkInMemberFacts;
   rows: WalkInPartyRow[];
   /**

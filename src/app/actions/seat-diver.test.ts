@@ -41,7 +41,7 @@ function form(extra: Record<string, string> = {}): FormData {
 /** Where the action sent the staffer. */
 async function landing(
   data: FormData = form(),
-  door: "departure" | "diver" = "departure",
+  door: "departure" | "diver" | "walk-in" = "departure",
 ): Promise<string> {
   try {
     await seatExistingDiverAction(door, "blue-mantis", data);
@@ -115,7 +115,7 @@ describe("every refusal lands on the boat with its own words", () => {
 
   it.each(refusals)("%s answers the counter in the same words", async (reason, notice) => {
     vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason } as never);
-    expect(await landing(form({ walkIn: "true" }))).toBe(
+    expect(await landing(form(), "walk-in")).toBe(
       `/shop/blue-mantis/trips/${TRIP_ID}?notice=${notice}`,
     );
   });
@@ -132,7 +132,7 @@ describe("every refusal lands on the boat with its own words", () => {
       reason: "trip_prerequisite",
       refusal,
     } as never);
-    const to = new URL(await landing(form({ walkIn: "true" })), "http://x");
+    const to = new URL(await landing(form(), "walk-in"), "http://x");
     expect(to.pathname).toBe(`/shop/blue-mantis/trips/${TRIP_ID}`);
     expect(to.searchParams.get("notice")).toBe("diver-trip-prerequisite");
     const gate = to.searchParams.get("gate");
@@ -176,7 +176,7 @@ describe("a held seat is announced as held", () => {
 
   it.each([
     ["departure", {}, "diver-added-identity-unconfirmed"],
-    ["departure", { walkIn: "true" }, "walkin-added-identity-unconfirmed"],
+    ["walk-in", {}, "walkin-added-identity-unconfirmed"],
     ["diver", {}, "booked-identity-unconfirmed"],
   ] as const)("%s %j says %s", async (door, extra, notice) => {
     vi.mocked(seatDiver).mockResolvedValue(held);
@@ -201,7 +201,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
 
   it.each(closed)("%s", async (_name, trip) => {
     vi.mocked(getTripWithBooked).mockResolvedValue(trip as never);
-    expect(await landing(form({ walkIn: "true" }))).toBe(
+    expect(await landing(form(), "walk-in")).toBe(
       `/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable`,
     );
     expect(seatDiver).not.toHaveBeenCalled();
@@ -212,8 +212,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     const data = new FormData();
     data.set("tripId", TRIP_ID);
     data.set("fullName", "Dana Walker");
-    data.set("walkIn", "true");
-    await expect(seatNewDiverAction("departure", "blue-mantis", data)).rejects.toThrow(
+    await expect(seatNewDiverAction("walk-in", "blue-mantis", data)).rejects.toThrow(
       `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-unavailable`,
     );
     expect(seatDiver).not.toHaveBeenCalled();
@@ -231,8 +230,7 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
     const data = new FormData();
     data.set("tripId", TRIP_ID);
     data.set("fullName", "Dana Walker");
-    data.set("walkIn", "true");
-    await expect(seatNewDiverAction("departure", "blue-mantis", data)).rejects.toThrow(
+    await expect(seatNewDiverAction("walk-in", "blue-mantis", data)).rejects.toThrow(
       `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=walkin-added&bid=`,
     );
     expect(seatDiver).toHaveBeenCalledWith(
@@ -249,6 +247,17 @@ describe("a walk-in is refused on a boat the counter cannot seat", () => {
       `REDIRECT:/shop/blue-mantis/trips/${TRIP_ID}?notice=diver-seat-invalid`,
     );
     expect(seatDiver).not.toHaveBeenCalled();
+  });
+
+  it("does not read a posted walkIn field: the mode is the bound door's alone", async () => {
+    vi.mocked(getTripWithBooked).mockResolvedValue(boatAt(-3));
+    vi.mocked(seatDiver).mockResolvedValue({ ok: false, reason: "trip_unavailable" } as never);
+    await landing(form({ walkIn: "true" }));
+    expect(getTripWithBooked).not.toHaveBeenCalled();
+    expect(seatDiver).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ entry: "roster" }),
+    );
   });
 
   it("does not read the claim on a roster seat, which has no counter to close", async () => {

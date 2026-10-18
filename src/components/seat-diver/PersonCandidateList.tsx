@@ -17,8 +17,6 @@ export type PersonCandidateContext = {
    */
   tripId: string;
   seatAction?: (formData: FormData) => void;
-  /** The counter's walk-in door is open: the seat is told as a walk-in (`walkIn=true`). */
-  walkIn?: boolean;
   /**
    * The date request this seating answers, when the door was opened from one
    * (third UX review, item 13). Posted beside the seat so the request closes
@@ -80,7 +78,6 @@ export function PersonCandidateList({
     candidates,
     tripId,
     seatAction,
-    walkIn,
     requestId,
     invite,
     personHref,
@@ -122,7 +119,6 @@ export function PersonCandidateList({
                   <form action={seatAction}>
                     <input type="hidden" name="tripId" value={tripId} />
                     <input type="hidden" name="personId" value={person.id} />
-                    {walkIn ? <input type="hidden" name="walkIn" value="true" /> : null}
                     {requestId ? <input type="hidden" name="request" value={requestId} /> : null}
                     <SubmitButton
                       pendingLabel={pendingLabel}

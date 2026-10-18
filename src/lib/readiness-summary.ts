@@ -186,9 +186,12 @@ export function buildDiverChecklist(
    * Whose checklist it is. A snorkeler or rider is asked for no card, so the
    * trip's level is not theirs to be told "verified and on file" about; their
    * certification line appears only if the engine raised a blocker for it.
+   * A seat the shop states as free owes no payment (`statedFree`, the engine's
+   * own waiver of the gate), so it is never told "Paid up".
    */
-  participantType?: ParticipantType,
+  seat: { participantType?: ParticipantType; statedFree?: boolean } = {},
 ): DiverChecklistItem[] {
+  const { participantType, statedFree = false } = seat;
   const byCategory = new Map<ChecklistCategory, ReadinessBlocker[]>();
   for (const blocker of readiness.blockers) {
     const category = BLOCKER_CATEGORY[blocker.code];
@@ -221,7 +224,8 @@ export function buildDiverChecklist(
   if (requirement.requiresWaiver) gated.add("waiver");
   const cardAsked = isDiver(participantType) ? requirement : NO_REQUIREMENT;
   if (!requirementDemandsNothing(cardAsked)) gated.add("certification");
-  if (requirement.requiresPayment) gated.add("payment");
+  const paymentFree = statedFree && !isDiver(participantType);
+  if (requirement.requiresPayment && !paymentFree) gated.add("payment");
   for (const category of byCategory.keys()) {
     if (category !== "setup") gated.add(category);
   }
