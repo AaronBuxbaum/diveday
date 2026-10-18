@@ -371,8 +371,8 @@
       "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía la exención, todo antes de llegar al frente de la cola."
     },
     "certCheck": {
-      "heading": "Verificación de certificaciones",
-      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y, cuando la agencia muestra la certificación, la marca como certificada a nombre de ese miembro del equipo, como lo haría “Marcar certificado”. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Reservas y exenciones, en Chrome o Edge en una computadora.",
+      "heading": "Verificación de tarjetas",
+      "description": "Con la extensión de DiveDay para el navegador, “Verificar con SSI” en la ficha de un buceador lo busca en la página de la agencia y, cuando la agencia muestra la certificación, la marca como certificada a nombre de ese miembro del equipo, como lo haría “Marcar certificado”. Verifica SSI, NAUI, SDI, GUE y CMAS, y PADI cuando actives “Verificación con PADI (beta)” en Funciones, en Chrome o Edge en una computadora.",
       "added": "Agregada a este navegador ({version})",
       "notAdded": "Sin agregar",
       "outdated": "Actualiza la extensión: este navegador tiene la versión {version} y DiveDay necesita la {minimum}.",
@@ -1099,7 +1099,6 @@
     "fromFareharbor": "¿Te cambias desde FareHarbor? <link>Mira qué inserción sustituye a cada uno de sus widgets</link>."
   },
   "certChecks": {
-    "title": "Prueba las verificaciones",
     "description": "Solo páginas de muestra en este navegador: no se busca en ninguna agencia y ningún dato de un buceador sale de él.",
     "run": "Ejecutar las verificaciones",
     "running": "Ejecutando…",

@@ -56,9 +56,9 @@ Needs nobody else and no sign-in. Aaron can run it today.
 
 1. Load the extension unpacked ([extension/README.md](../../extension/README.md), "Try it locally"),
    in a browser that is **not** signed in to the PADI Pros' Site.
-2. In DiveDay, open Settings, Bookings. The **Certification checks** row says "Added to
+2. In DiveDay, open Settings, Bookings. The **Card checks** row says "Added to
    this browser (1.5.0)" (or "Not added", or "Update the extension: this browser has …"). Open
-   **Try the checks** and press **Run the checks**. Its steps, **Extension**, **Sample lookups**,
+   **Try the checks** in that row and press **Run the checks**. Its steps, **Extension**, **Sample lookups**,
    **PADI Pros’ Site** and **Session report**, each say "Passed", "Failed" or "Not in this copy".
    The sample lookups fill the extension's own sample page for each agency with a made-up diver.
    Here, not signed in to PADI, the PADI Pros’ Site step says "Signed out" or "No PADI tab open".

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { Field, FieldActions, FieldGrid, textareaClassFor } from "@/components/ui/form";
@@ -10,6 +9,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { savePackingAction } from "../../booking-actions";
 import { CounterQrCard } from "../../CounterQrCard";
 import { CertCheckExtensionStatus } from "../CertCheckExtensionStatus";
+import { CertCheckTryPanel } from "../CertCheckTryPanel";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { BOOKINGS_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 import { rentalRows } from "./rental-rows";
@@ -58,8 +58,8 @@ export function BookingsGroup({
         />
 
         {/* The DiveDay browser extension (H-105): whether this browser has
-            it, and where to get it once it is listed. Nothing to save, so the
-            open row is a sentence and, at most, a link. */}
+            it, where to get it once it is listed, and a try-it disclosure (#2817).
+            Nothing to save. PADI's own opt-in is a row on the Features page. */}
         <SettingsRow
           heading={t("settings.main.certCheck.heading")}
           value={
@@ -84,19 +84,21 @@ export function BookingsGroup({
                 {t("settings.main.certCheck.install")}
               </a>
             ) : null}
-            {/* The extension's own steps, sample pages only (no agency is
-                looked up), for a staffer to run alone and send back. */}
-            <Link
-              href={`/shop/${shopSlug}/settings/cert-checks`}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("settings.main.certCheck.try")}
-            </Link>
           </div>
+          {/* The extension's own steps, sample pages only (no agency is
+              looked up), for a staffer to run alone and send back (#2817:
+              a disclosure on this row, not a page of its own). */}
+          <details className="mt-4 rounded-lg border border-border px-4 py-3">
+            <summary className="cursor-pointer text-sm font-medium">
+              {t("settings.main.certCheck.try")}
+            </summary>
+            <p className="mt-3 text-sm text-muted">{t("settings.certChecks.description")}</p>
+            <div className="mt-3">
+              <CertCheckTryPanel t={t} padiOn={shop.padiChecksEnabled} />
+            </div>
+          </details>
         </SettingsRow>
 
-        {/* PADI's checks (H-121): the shop's own opt-in, under its own PADI
-            membership, beside the extension that runs them. */}
         <SettingsRow
           heading={t("settings.main.packing.heading")}
           value={packingValue}

@@ -163,6 +163,9 @@ describe("each settings group renders as its own component", () => {
     const noPayments = BookingsGroup({ view, canManageWaivers: false, canPayments: false });
     expect(hrefsIn(noPayments)).not.toContain(`${base}/settings/rentals`);
 
+    // Card checks is one row with its try-it inside (#2817): no page to link to.
+    expect(hrefsIn(noPayments).some((href) => href.includes("cert-checks"))).toBe(false);
+
     const messages = MessagesGroup({ view, canManageMessaging: false });
     expect(hrefsIn(messages)).not.toContain(`${base}/settings/whatsapp`);
   });

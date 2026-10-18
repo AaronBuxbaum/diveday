@@ -7319,14 +7319,15 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **Try the checks** (H-105): Settings' run of the cert-check
-       * extension against its own sample pages, after a run. The extension is
+       * **Try the checks** (H-105): the disclosure on the Card checks row
+       * (#2817), running the cert-check extension against its own sample
+       * pages, after a run. The extension is
        * stood in for at the page's one seam, as the agency-check captures do:
        * it says hello as 1.5.0, passes every sample but NAUI's, and finds a
        * signed-in PADI tab. The report's time is the frozen clock's, and its
        * browser line is pinned here, so a Chromium update moves no pixel.
        */
-      test(`the cert-check extension's try page renders true to the design (${scheme})`, async ({
+      test(`the cert-check extension's try-it disclosure renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await page.addInitScript(() => {
@@ -7373,9 +7374,10 @@ for (const scheme of ["light", "dark"] as const) {
             );
           });
         });
-        await page.goto("/shop/blue-mantis/settings/cert-checks");
-        await page.getByRole("heading", { level: 1, name: "Try the checks" }).waitFor();
-        await page.getByText("Added to this browser (1.5.0)").waitFor();
+        await page.goto("/shop/blue-mantis/settings");
+        await openSettingsRow(page, "Card checks");
+        await page.getByText("Try the checks", { exact: true }).click();
+        await page.getByText("Added to this browser (1.5.0)").first().waitFor();
         await page.getByRole("button", { name: "Run the checks" }).click();
         await page.getByText("Signed in", { exact: true }).waitFor();
         await page.getByRole("button", { name: "Copy report" }).waitFor();

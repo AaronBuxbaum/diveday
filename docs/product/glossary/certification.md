@@ -83,7 +83,7 @@
   (`MIN_EXTENSION_VERSION`). An older copy is treated as absent: the agency's link, never its
   button, and Settings says "Update the extension". The extension also answers **hello** with its
   version and the agencies it checks.
-- **Try the checks** — Settings' page (owners and managers) that runs the extension in this browser
+- **Try the checks** — Settings' disclosure (owners and managers), on the Card checks row, that runs the extension in this browser
   against nothing real: whether it is here and current, a **dry run** of each public agency's lookup
   on a sample page the extension carries, filled with a made-up diver by the real filler and never
   sent, whether Chrome lets the extension on each agency's own site, and whether an open PADI Pros'

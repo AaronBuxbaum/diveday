@@ -371,8 +371,8 @@
       "description": "Print this and put it on the desk. A walk-in scans it, fills in their name, certification and sizes, and their release goes out, all before they reach the front of the queue."
     },
     "certCheck": {
-      "heading": "Certification checks",
-      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and, when the agency shows the certification, marks it certified in that staffer’s name, as Mark certified would. It checks SSI, NAUI, SDI, GUE and CMAS, and PADI once “PADI checks (beta)” in Bookings & waivers is on, in Chrome or Edge on a computer.",
+      "heading": "Card checks",
+      "description": "With the DiveDay browser extension, “Check with SSI” on a diver’s record looks the diver up on the agency’s page and, when the agency shows the certification, marks it certified in that staffer’s name, as Mark certified would. It checks SSI, NAUI, SDI, GUE and CMAS, and PADI once “PADI checks (beta)” in Features is on, in Chrome or Edge on a computer.",
       "added": "Added to this browser ({version})",
       "notAdded": "Not added",
       "outdated": "Update the extension: this browser has {version}, DiveDay needs {minimum}.",
@@ -1099,7 +1099,6 @@
     "fromFareharbor": "Switching from FareHarbor? <link>See which embed replaces each of its widgets</link>."
   },
   "certChecks": {
-    "title": "Try the checks",
     "description": "Sample pages in this browser only: no agency is searched, and no diver’s details leave it.",
     "run": "Run the checks",
     "running": "Running…",
