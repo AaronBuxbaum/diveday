@@ -1,6 +1,6 @@
 # 20260816-trip-invitations-are-outreach — Invite a lead without silently claiming a seat
 
-- **Status:** Accepted
+- **Status:** Superseded by [20261017-one-lead-with-a-scope](20261017-one-lead-with-a-scope.md)
 - **Date:** 2026-08-16
 - **Amends:** [20260813-wait-list-is-a-lead-list](20260813-wait-list-is-a-lead-list.md) only by
   adding a separate outreach record; it does not change what the wait list promises.
