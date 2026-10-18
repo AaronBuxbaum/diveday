@@ -87,7 +87,7 @@ describe("each settings group renders as its own component", () => {
     expect(rendered[0]?.rows).toEqual(["timezone", "units", "address", "season", "searchListing"]);
     expect(rendered[1]?.rows).toEqual(["crewSchedule"]);
     // No on/off switch is a row any more: they are all on the Features page.
-    expect(rendered[2]?.rows).toEqual(["certCheck", "packing", "rentalTerms", "regulatorService"]);
+    expect(rendered[2]?.rows).toEqual(["certCheck", "packing"]);
     expect(rendered[3]?.rows).toEqual(["passThrough", "stripe"]);
     expect(rendered[4]?.rows).toEqual(["contact", "deskHours", "reviewLink"]);
     expect(rendered[5]?.rows).toEqual(["shopPhotos"]);
@@ -159,9 +159,8 @@ describe("each settings group renders as its own component", () => {
     expect(shape(team).rows).toEqual([]);
     expect(hrefsIn(team)).toEqual([`${base}/settings/activity`]);
 
-    // Rental prices and terms are payment-settings work.
+    // The Rentals door is payment-settings work.
     const noPayments = BookingsGroup({ view, canManageWaivers: false, canPayments: false });
-    expect(shape(noPayments).rows).not.toContain("rentalTerms");
     expect(hrefsIn(noPayments)).not.toContain(`${base}/settings/rentals`);
 
     const messages = MessagesGroup({ view, canManageMessaging: false });

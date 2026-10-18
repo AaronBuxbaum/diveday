@@ -7208,27 +7208,23 @@ for (const scheme of ["light", "dark"] as const) {
       // The settings hub, the directory every shop setting hangs off.
       test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Rental terms" }).waitFor();
+        await page.getByRole("heading", { name: "Trip packing checklist" }).waitFor();
         // One row open in the capture, so the baseline shows the disclosure's
-        // open-form treatment as well as the at-rest directory. Rental prices
-        // used to be the open one; it is a page of its own now (#1854).
-        await openSettingsRow(page, "Rental terms");
+        // open-form treatment as well as the at-rest directory.
+        await openSettingsRow(page, "Trip packing checklist");
         await capture(page, "settings-payments", scheme);
       });
 
       /**
-       * What the shop rents and what it charges for it, each on a page of its
-       * own since #1854: a grid of catalogue pills, and a price box per offered
-       * item. Hub rows until then, open in `settings-payments`.
+       * What the shop rents and what it charges for it: one table with a tick
+       * and a price box per piece, the terms and the service interval, one
+       * save (#2815).
        */
-      test(`the rental pages render true to the design (${scheme})`, async ({ page }) => {
+      test(`the rentals page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/rentals");
         await page.getByRole("heading", { level: 1, name: "Rentals" }).waitFor();
-        await page.getByRole("button", { name: "Save rental catalog" }).waitFor();
+        await page.getByRole("button", { name: "Save rentals" }).waitFor();
         await capture(page, "settings-rentals", scheme);
-        await page.goto("/shop/blue-mantis/settings/rental-prices");
-        await page.getByRole("heading", { level: 1, name: "Rental prices" }).waitFor();
-        await capture(page, "settings-rental-prices", scheme);
       });
 
       /**
@@ -9968,10 +9964,10 @@ for (const scheme of ["light", "dark"] as const) {
       test.setTimeout(FLOW_TIMEOUT_MS);
       await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
       await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
-      await page.getByRole("button", { name: "Save rental catalog" }).click();
+      await page.getByRole("button", { name: "Save rentals" }).click();
       // The page comes back with its saved notice — the destination's own
       // render, not a timing guess.
-      await page.getByText("Rental catalog saved.").waitFor();
+      await page.getByText("Rentals saved.").waitFor();
 
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);

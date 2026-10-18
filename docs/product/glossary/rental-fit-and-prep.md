@@ -77,7 +77,7 @@
   asks only about the scuba unit and the suit, quotes no price for the unit, and "We provide" reads
   the scuba unit and an instructor briefing. A yes/no rather than a set of included kinds; the public
   booking page still quotes rental prices for these courses until the rest of the slice lands.
-- **Rental prices** — the shop's optional price list for rental gear (`shops.rental_pricing`,
+- **Rental prices** — the shop's optional price list for rental gear, set beside the catalog on the Rentals page (`shops.rental_pricing`,
   `src/lib/rentals.ts`): a **set price** for the full core kit of five hard-goods pieces (usually
   cheaper than the pieces), a **per-piece** price for any item, and a **per-dive nitrox** surcharge —
   all in minor units, all optional. A diver renting every core item the shop offers is quoted the
@@ -211,7 +211,7 @@
   booked diver holds on one over its window. ADR 20260815-minimal-gear-register, amendment
   2026-10-08.
 - **Rental terms** — the shop's own plain-text conditions for rented gear (`shops.rental_terms`,
-  optional, set in Settings → Rental gear), printed on every rental ticket, the trip slip and the
+  optional, set on the Settings → Rentals page), printed on every rental ticket, the trip slip and the
   counter ticket alike, above a "Received by" line with a printed name and a date. The signature
   says the person took the units; it is a receipt for gear, never a liability release, and the one
   shop-wide waiver stays the only waiver (CR-015). No terms set prints none, and DiveDay supplies

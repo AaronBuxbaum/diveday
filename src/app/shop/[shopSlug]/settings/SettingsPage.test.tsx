@@ -572,13 +572,7 @@ describe("the diving options a shop runs", () => {
     // The five whole-form rows that were pages wearing a disclosure (#1854)
     // are doors too; their editors are tested where they live now
     // (`_components/editors/editors.test.tsx`).
-    for (const segment of [
-      "profile",
-      "dock-day",
-      "emergency-reference",
-      "rentals",
-      "rental-prices",
-    ]) {
+    for (const segment of ["profile", "dock-day", "emergency-reference", "rentals"]) {
       expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/${segment}`);
     }
     // The registers (glossary "Register and setting", #2659) sit beside dive

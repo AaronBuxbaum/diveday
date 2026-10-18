@@ -15,12 +15,9 @@
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
       "passThroughSaved": "Cuota repercutida guardada.",
       "passThroughInvalid": "Introduce el nombre y un importe positivo, o deja ambos vacíos para desactivarla.",
-      "rentalsSaved": "Catálogo de alquiler guardado.",
-      "rentalPricesSaved": "Precios de alquiler guardados.",
+      "rentalsSaved": "Alquiler guardado.",
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
-      "rentalTermsSaved": "Condiciones de alquiler guardadas. Todas las boletas de alquiler las imprimen.",
       "rentalTermsInvalid": "Las condiciones de alquiler no pueden pasar de 1500 caracteres.",
-      "regulatorServiceSaved": "Intervalo de revisión de reguladores guardado.",
       "regulatorServiceInvalid": "Elige 12 o 24 meses.",
       "contactSaved": "Datos de contacto guardados.",
       "contactConfirmationSent": "Datos de contacto guardados. Abre el correo de confirmación que enviamos a esa dirección para que lleguen allí las respuestas de los buceadores.",
@@ -321,39 +318,28 @@
     },
     "rentals": {
       "heading": "Alquiler",
-      "detail": "Marca lo que alquilas. Lo que no marques sale del formulario de equipo, y los ajustes de alquiler que ya lo piden siguen en la lista de preparación, marcados.",
-      "legend": "Equipo y servicios de alquiler",
-      "submit": "Guardar catálogo de alquiler",
-      "submitting": "Guardando…",
-      "droppedFits": "{count, plural, one {El ajuste de alquiler de # buceador aún pide equipo que ya no alquilas.} other {Los ajustes de alquiler de # buceadores aún piden equipo que ya no alquilas.}}"
-    },
-    "rentalPricing": {
-      "heading": "Precios de alquiler",
-      "description": "Lo que se cotiza a un buceador por su equipo de alquiler.",
-      "detail": "Pon precio al equipo completo (suele salir más barato) y a cada pieza por separado: cinco piezas cotizan el conjunto, menos se pagan por pieza. Deja una casilla vacía para cobrarlo en el centro.",
+      "detail": "Marca lo que alquilas y ponle precio. Lo que no marques sale del formulario de equipo, y los ajustes de alquiler que ya lo piden siguen en la lista de preparación, marcados.",
+      "caption": "Equipo de alquiler y precios",
+      "columns": {
+        "piece": "Equipo",
+        "price": "Precio"
+      },
+      "priceRule": "Pon precio al equipo completo (suele salir más barato) y a cada pieza por separado: cinco piezas cotizan el conjunto, menos se pagan por pieza. Deja una casilla vacía para cobrarlo en el centro.",
       "fullSetLabel": "Equipo completo",
       "fullSetHint": "(BCD, regulador, neopreno, máscara y aletas, lastre, computadora de buceo)",
-      "nitroxLabel": "Nitrox",
       "nitroxHint": "(por inmersión)",
-      "submit": "Guardar precios de alquiler",
-      "submitting": "Guardando…"
-    },
-    "rentalTerms": {
-      "heading": "Condiciones de alquiler",
-      "description": "Se imprimen en cada boleta de alquiler, encima de la línea que firma el buceador al recibir el equipo.",
-      "detail": "Tus propias palabras, como el enjuague, el equipo perdido o las devoluciones tardías. Déjalo vacío para no imprimir nada.",
-      "label": "Condiciones",
-      "submit": "Guardar condiciones de alquiler",
+      "terms": {
+        "label": "Condiciones de alquiler",
+        "hint": "Se imprimen en cada boleta de alquiler, encima de la línea que firma el buceador al recibir el equipo. Tus propias palabras, como el enjuague, el equipo perdido o las devoluciones tardías. Déjalo vacío para no imprimir nada."
+      },
+      "regulator": {
+        "label": "Revisión de reguladores de clientes, cada",
+        "hint": "Cuándo vuelve a tocar la revisión del regulador de un cliente. Tus propias unidades mantienen sus propios plazos.",
+        "months": "{months} meses"
+      },
+      "submit": "Guardar alquiler",
       "submitting": "Guardando…",
-      "value": "En cada boleta"
-    },
-    "regulatorService": {
-      "heading": "Revisión de reguladores de clientes",
-      "description": "Cuándo vuelve a tocar la revisión del regulador de un cliente. Tus propias unidades mantienen sus propios plazos.",
-      "label": "Revisar cada",
-      "months": "{months} meses",
-      "submit": "Guardar intervalo de revisión",
-      "submitting": "Guardando…"
+      "droppedFits": "{count, plural, one {El ajuste de alquiler de # buceador aún pide equipo que ya no alquilas.} other {Los ajustes de alquiler de # buceadores aún piden equipo que ya no alquilas.}}"
     },
     "stripe": {
       "notConnectedHeading": "Ninguna cuenta de Stripe conectada",

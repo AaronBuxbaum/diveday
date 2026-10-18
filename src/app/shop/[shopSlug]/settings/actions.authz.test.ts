@@ -64,9 +64,7 @@ const { savePackingAction } = await import("./booking-actions");
 const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
   await import("./data-actions");
 const { disconnectAction, refreshAction } = await import("./money-actions");
-const { saveRegulatorServiceAction, saveRentalItemsAction, saveRentalPricingAction } = await import(
-  "./rental-actions"
-);
+const { saveRentalsAction } = await import("./rental-actions");
 const { saveAddressAction, saveReopensOnAction, saveTimezoneAction, saveUnitsAction } =
   await import("./shop-actions");
 const { saveCrewScheduleAction } = await import("./team-actions");
@@ -326,7 +324,7 @@ describe("every settings mutation refuses the daily crew", () => {
    * is what proves it, not the notice — each setter writes whatever it is
    * handed.
    */
-  it("refuses a captain's emergency reference, rental catalog, rental prices and profile", async () => {
+  it("refuses a captain's emergency reference, rentals and profile", async () => {
     const { db, shop, captain, owner } = await context();
     signIn(shop, captain);
     const before = await getShopById(db, shop.id);
@@ -352,49 +350,97 @@ describe("every settings mutation refuses the daily crew", () => {
       await db.select().from(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shop.id)),
     ).toEqual([]);
 
-    const items = new FormData();
-    items.set("drysuit", "on");
-    expect(await redirectedTo(() => saveRentalItemsAction(items))).toBe(refused);
-
-    const prices = new FormData();
-    prices.set("setPrice", "1");
-    expect(await redirectedTo(() => saveRentalPricingAction(prices))).toBe(refused);
+    const rentals = new FormData();
+    rentals.set("drysuit", "on");
+    rentals.set("setPrice", "1");
+    rentals.set("rentalTerms", "Written by the captain");
+    rentals.set("regulatorServiceMonths", "24");
+    expect(await redirectedTo(() => saveRentalsAction(rentals))).toBe(refused);
 
     const profile = new FormData();
     profile.set("tagline", "Written by the captain");
     expect(await redirectedTo(() => saveProfileAction(profile))).toBe(refused);
 
-    const regulator = new FormData();
-    regulator.set("regulatorServiceMonths", "24");
-    expect(await redirectedTo(() => saveRegulatorServiceAction(regulator))).toBe(refused);
-
     const after = await getShopById(db, shop.id);
     expect(after?.emergencyReference).toEqual(before?.emergencyReference);
     expect(after?.rentalItems).toEqual(before?.rentalItems);
     expect(after?.rentalPricing).toEqual(before?.rentalPricing);
+    expect(after?.rentalTerms).toEqual(before?.rentalTerms);
     expect(after?.tagline).toEqual(before?.tagline);
     expect(after?.customerRegulatorServiceMonths).toBe(12);
   });
 
-  it("saves a shop's regulator service interval, and only 12 or 24 months", async () => {
+  /**
+   * Rentals is one save (#2815), validated whole before anything is written:
+   * a bad price, over-long terms or an interval other than 12 or 24 leaves the
+   * stored catalog, prices, terms and interval exactly as they were.
+   */
+  it("writes nothing when any part of the rentals form is invalid", async () => {
     const { db, shop, owner } = await context();
     signIn(shop, owner);
-    const settings = `/shop/${shop.slug}/settings?notice=`;
-    const form = (months: string) => {
+    const before = await getShopById(db, shop.id);
+    const page = `/shop/${shop.slug}/settings/rentals?notice=`;
+    const form = (overrides: Record<string, string>) => {
       const data = new FormData();
-      data.set("regulatorServiceMonths", months);
+      for (const [key, value] of Object.entries({
+        drysuit: "on",
+        price_drysuit: "40",
+        rentalTerms: "Rinse it.",
+        regulatorServiceMonths: "24",
+        ...overrides,
+      })) {
+        data.set(key, value);
+      }
       return data;
     };
 
-    expect(await redirectedTo(() => saveRegulatorServiceAction(form("18")))).toBe(
-      `${settings}regulator-service-invalid&saved=regulatorService`,
+    expect(await redirectedTo(() => saveRentalsAction(form({ price_drysuit: "-3" })))).toBe(
+      `${page}rental-prices-invalid`,
     );
-    expect((await getShopById(db, shop.id))?.customerRegulatorServiceMonths).toBe(12);
+    expect(
+      await redirectedTo(() => saveRentalsAction(form({ rentalTerms: "x".repeat(5000) }))),
+    ).toBe(`${page}rental-terms-invalid`);
+    expect(
+      await redirectedTo(() => saveRentalsAction(form({ regulatorServiceMonths: "18" }))),
+    ).toBe(`${page}regulator-service-invalid`);
+    const after = await getShopById(db, shop.id);
+    expect(after?.rentalItems).toEqual(before?.rentalItems);
+    expect(after?.rentalPricing).toEqual(before?.rentalPricing);
+    expect(after?.rentalTerms).toEqual(before?.rentalTerms);
+    expect(after?.customerRegulatorServiceMonths).toBe(12);
+  });
 
-    expect(await redirectedTo(() => saveRegulatorServiceAction(form("24")))).toBe(
-      `${settings}regulator-service-saved&saved=regulatorService`,
-    );
-    expect((await getShopById(db, shop.id))?.customerRegulatorServiceMonths).toBe(24);
+  it("saves the catalog, prices, terms and interval together, keeping an unticked piece's price", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const page = `/shop/${shop.slug}/settings/rentals?notice=`;
+    const first = new FormData();
+    first.set("drysuit", "on");
+    first.set("maskFins", "on");
+    first.set("price_drysuit", "40");
+    first.set("price_maskFins", "5");
+    first.set("setPrice", "60");
+    first.set("rentalTerms", "Rinse it.");
+    first.set("regulatorServiceMonths", "24");
+    expect(await redirectedTo(() => saveRentalsAction(first))).toBe(`${page}rentals-saved`);
+    const saved = await getShopById(db, shop.id);
+    expect(saved?.rentalPricing.setCents).toBe(6000);
+    expect(saved?.rentalPricing.perItemCents.drysuit).toBe(4000);
+    expect(saved?.rentalTerms).toBe("Rinse it.");
+    expect(saved?.customerRegulatorServiceMonths).toBe(24);
+
+    // The mask is unticked: its box still posts, but its stored price stays.
+    const second = new FormData();
+    second.set("drysuit", "on");
+    second.set("price_drysuit", "45");
+    second.set("price_maskFins", "999");
+    second.set("setPrice", "60");
+    second.set("regulatorServiceMonths", "24");
+    expect(await redirectedTo(() => saveRentalsAction(second))).toBe(`${page}rentals-saved`);
+    const after = await getShopById(db, shop.id);
+    expect(after?.rentalPricing.perItemCents.drysuit).toBe(4500);
+    expect(after?.rentalPricing.perItemCents.mask_fins).toBe(500);
+    expect(after?.rentalTerms).toBeNull();
   });
 
   it("still lets an owner through every one of them", async () => {
@@ -505,7 +551,7 @@ describe("every settings mutation refuses the daily crew", () => {
   });
 
   /**
-   * The five editors that left the hub for pages of their own (#1854) answer
+   * The four editors that left the hub for pages of their own (#1854) answer
    * on those pages, with a plain `?notice=` and no `saved=` row to reopen:
    * a notice that sent the owner back to the hub would land them on a door,
    * not on what they just saved.
@@ -520,11 +566,10 @@ describe("every settings mutation refuses the daily crew", () => {
     expect(await redirectedTo(() => saveEmergencyReferenceAction(emergency))).toBe(
       `${page("emergency-reference")}emergency-saved`,
     );
-    expect(await redirectedTo(() => saveRentalItemsAction(new FormData()))).toBe(
+    const rentals = new FormData();
+    rentals.set("regulatorServiceMonths", "12");
+    expect(await redirectedTo(() => saveRentalsAction(rentals))).toBe(
       `${page("rentals")}rentals-saved`,
-    );
-    expect(await redirectedTo(() => saveRentalPricingAction(new FormData()))).toBe(
-      `${page("rental-prices")}rental-prices-saved`,
     );
     const profile = new FormData();
     profile.set("brandColor", "not a colour");

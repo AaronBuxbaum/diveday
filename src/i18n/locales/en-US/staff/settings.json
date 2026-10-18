@@ -15,12 +15,9 @@
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "passThroughSaved": "Pass-through fee saved.",
       "passThroughInvalid": "Enter both a fee name and a positive amount, or leave both blank to disable it.",
-      "rentalsSaved": "Rental catalog saved.",
-      "rentalPricesSaved": "Rental prices saved.",
+      "rentalsSaved": "Rentals saved.",
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
-      "rentalTermsSaved": "Rental terms saved. Every rental ticket prints them.",
       "rentalTermsInvalid": "Keep rental terms under 1,500 characters.",
-      "regulatorServiceSaved": "Regulator service interval saved.",
       "regulatorServiceInvalid": "Choose 12 or 24 months.",
       "contactSaved": "Contact details saved.",
       "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers’ replies reach it.",
@@ -321,39 +318,28 @@
     },
     "rentals": {
       "heading": "Rentals",
-      "detail": "Tick what you rent. Unticked gear leaves the kit form, and fits that already ask for it stay on the prep list, marked.",
-      "legend": "Rentable gear and services",
-      "submit": "Save rental catalog",
-      "submitting": "Saving…",
-      "droppedFits": "{count, plural, one {# diver’s rental fit still asks for gear you no longer rent.} other {# divers’ rental fits still ask for gear you no longer rent.}}"
-    },
-    "rentalPricing": {
-      "heading": "Rental prices",
-      "description": "What a diver is quoted for their rental fit.",
-      "detail": "Price the full set (usually cheaper) and each piece separately: five items quotes the set, fewer pays per piece. Leave a box blank to settle at the shop.",
+      "detail": "Tick what you rent and price it. Unticked gear leaves the kit form, and fits that already ask for it stay on the prep list, marked.",
+      "caption": "Rentable gear and prices",
+      "columns": {
+        "piece": "Gear",
+        "price": "Price"
+      },
+      "priceRule": "Price the full set (usually cheaper) and each piece separately: five items quotes the set, fewer pays per piece. Leave a box blank to settle at the shop.",
       "fullSetLabel": "Full set",
       "fullSetHint": "(BCD, reg, wetsuit, mask & fins, weights, dive computer)",
-      "nitroxLabel": "Nitrox",
       "nitroxHint": "(per dive)",
-      "submit": "Save rental prices",
-      "submitting": "Saving…"
-    },
-    "rentalTerms": {
-      "heading": "Rental terms",
-      "description": "Printed on every rental ticket, above the line a diver signs for their gear.",
-      "detail": "Your own words, such as rinsing, lost gear, or late returns. Leave it empty to print none.",
-      "label": "Terms",
-      "submit": "Save rental terms",
+      "terms": {
+        "label": "Rental terms",
+        "hint": "Printed on every rental ticket, above the line a diver signs for their gear. Your own words, such as rinsing, lost gear, or late returns. Leave it empty to print none."
+      },
+      "regulator": {
+        "label": "Customer regulator service, every",
+        "hint": "When a customer’s regulator is due again after a service. Your own units keep their own clocks.",
+        "months": "{months} months"
+      },
+      "submit": "Save rentals",
       "submitting": "Saving…",
-      "value": "On every ticket"
-    },
-    "regulatorService": {
-      "heading": "Customer regulator service",
-      "description": "When a customer’s regulator is due again after a service. Your own units keep their own clocks.",
-      "label": "Service every",
-      "months": "{months} months",
-      "submit": "Save service interval",
-      "submitting": "Saving…"
+      "droppedFits": "{count, plural, one {# diver’s rental fit still asks for gear you no longer rent.} other {# divers’ rental fits still ask for gear you no longer rent.}}"
     },
     "stripe": {
       "notConnectedHeading": "No Stripe account connected",

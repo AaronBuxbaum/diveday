@@ -19,20 +19,18 @@ import type { BillingNotice } from "./billing/actions";
  * negotiated locale rather than freezing to whichever locale first imported this
  * file.
  */
-/** `/settings/rentals` — `saveRentalItemsAction`. */
-export function rentalItemsNoticeMessages(t: StaffTranslator): NoticeMessages {
+/** `/settings/rentals` — `saveRentalsAction`. */
+export function rentalsNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "rentals-saved": { tone: "success", text: t("settings.main.notice.rentalsSaved") },
-  };
-}
-
-/** `/settings/rental-prices` — `saveRentalPricingAction`. */
-export function rentalPricingNoticeMessages(t: StaffTranslator): NoticeMessages {
-  return {
-    "rental-prices-saved": { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
     "rental-prices-invalid": {
       tone: "danger",
       text: t("settings.main.notice.rentalPricesInvalid"),
+    },
+    "rental-terms-invalid": { tone: "danger", text: t("settings.main.notice.rentalTermsInvalid") },
+    "regulator-service-invalid": {
+      tone: "danger",
+      text: t("settings.main.notice.regulatorServiceInvalid"),
     },
   };
 }

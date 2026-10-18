@@ -96,7 +96,7 @@ test.describe("H-14 role permissions", () => {
       // page's forms exist for them at all.
       await page.goto(`/shop/${SHOP}/settings`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
-      await expect(page.getByRole("button", { name: "Save rental catalog" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Save rentals" })).toHaveCount(0);
       // The address card has no Save button any more — picking a place is the
       // save — so its search box is what must not be here.
       await expect(page.getByRole("combobox", { name: "Find your shop" })).toHaveCount(0);
@@ -273,7 +273,7 @@ test.describe("H-14 role permissions", () => {
       // An instructor runs courses, not the shop's configuration.
       await page.goto(`/shop/${SHOP}/settings`);
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}(\\?|$)`));
-      await expect(page.getByRole("button", { name: "Save rental catalog" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Save rentals" })).toHaveCount(0);
     });
 
     /**
@@ -324,7 +324,7 @@ test.describe("H-14 role permissions", () => {
 
       // The catalog form is a page of its own off the settings hub (#1854).
       await page.goto(`/shop/${SHOP}/settings/rentals`);
-      await expect(page.getByRole("button", { name: "Save rental catalog" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Save rentals" })).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/schedule/board?add=full`);
       await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();

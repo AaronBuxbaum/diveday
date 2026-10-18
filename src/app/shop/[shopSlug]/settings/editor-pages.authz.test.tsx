@@ -62,7 +62,6 @@ const PAGES: Record<string, EditorPage> = {
   "dock-day": (await import("./dock-day/page")).default,
   "emergency-reference": (await import("./emergency-reference/page")).default,
   rentals: (await import("./rentals/page")).default,
-  "rental-prices": (await import("./rental-prices/page")).default,
 };
 
 afterEach(() => {
@@ -115,10 +114,10 @@ describe("the settings editor pages' gates", () => {
     });
   }
 
-  it("refuses the two rental pages, and only them, without payment settings", async () => {
+  it("refuses the rentals page, and only it, without payment settings", async () => {
     await signedIn(SEEDED_OWNER_EMAIL);
     paymentGate.open = false;
-    for (const route of ["rentals", "rental-prices"]) {
+    for (const route of ["rentals"]) {
       expect(await outcome(PAGES[route] as EditorPage), route).toBe(
         "REDIRECT:/shop/blue-mantis?notice=settings-not-authorized",
       );

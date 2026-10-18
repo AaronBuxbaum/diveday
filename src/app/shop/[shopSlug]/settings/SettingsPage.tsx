@@ -64,19 +64,6 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
     "pass-through-saved": { tone: "success", text: t("settings.main.notice.passThroughSaved") },
     "pass-through-invalid": { tone: "danger", text: t("settings.main.notice.passThroughInvalid") },
-    "rental-terms-saved": { tone: "success", text: t("settings.main.notice.rentalTermsSaved") },
-    "regulator-service-saved": {
-      tone: "success",
-      text: t("settings.main.notice.regulatorServiceSaved"),
-    },
-    "regulator-service-invalid": {
-      tone: "danger",
-      text: t("settings.main.notice.regulatorServiceInvalid"),
-    },
-    "rental-terms-invalid": {
-      tone: "danger",
-      text: t("settings.main.notice.rentalTermsInvalid"),
-    },
     "contact-saved": { tone: "success", text: t("settings.main.notice.contactSaved") },
     "contact-confirmation-sent": {
       tone: "success",

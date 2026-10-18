@@ -40,7 +40,6 @@ test("the hub's list editors are doors, and each opens its own page", async ({
     ["Trip tags", "trip-tags"],
     // Forms of six to a dozen fields, pages of their own since #1854.
     ["Rentals", "rentals"],
-    ["Rental prices", "rental-prices"],
     ["Emergency reference", "emergency-reference"],
     ["Dock-day rhythm", "dock-day"],
     ["Shop profile & branding", "profile"],
@@ -54,13 +53,7 @@ test("the hub's list editors are doors, and each opens its own page", async ({
   // And the hub is a directory: none of the editors' controls is on it.
   await expect(main.getByRole("button", { name: "Add a boat" })).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Add package" })).toHaveCount(0);
-  for (const save of [
-    "Save rental catalog",
-    "Save rental prices",
-    "Save emergency reference",
-    "Save dock-day rhythm",
-    "Save profile",
-  ]) {
+  for (const save of ["Save emergency reference", "Save dock-day rhythm", "Save profile"]) {
     await expect(main.getByRole("button", { name: save })).toHaveCount(0);
   }
 });
