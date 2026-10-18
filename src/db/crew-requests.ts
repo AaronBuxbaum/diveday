@@ -88,7 +88,7 @@ export async function listCrewAvailabilityBlocks(
   range: { from: string; to: string },
   /** Who is reading: the note leaves only for the person and owners and managers (#2673). */
   reader: AwayNoteReader,
-): Promise<AvailabilityBlock[]> {
+): Promise<(AvailabilityBlock & { createdAt: Date })[]> {
   const rows = await db
     .select()
     .from(crewAvailabilityBlocks)
@@ -108,6 +108,9 @@ export async function listCrewAvailabilityBlocks(
     startsOn: row.startsOn,
     endsOn: row.endsOn,
     note: awayNoteFor(row, reader),
+    // When the shop was told: a "working it anyway" said before it does not
+    // cover it (#2678, `crewAwayByTrip`).
+    createdAt: row.createdAt,
   }));
 }
 

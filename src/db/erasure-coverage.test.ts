@@ -302,7 +302,7 @@ const ERASURE_KEEPS: Record<string, string> = {
   work_order_bills:
     "which order billed which ticket — two ids. The order keeps its own erasure answer, and the ticket's words are redacted",
   crew_away_acknowledgements:
-    "that a staffer said an away crew member is working a departure anyway — three ids and two dates. Only crew are its subject, and the erasure refuses anyone holding a staff role",
+    "that a staffer said an away crew member is working a departure anyway, and who took it back — four ids and two dates. Only crew are its subject, and the erasure refuses anyone holding a staff role",
   crew_notices:
     "that a crew member was put on, taken off, or answered about a departure — a change code, two ids and two dates. Only crew are its subject, and the erasure refuses anyone holding a staff role",
   weekly_digest_sends:

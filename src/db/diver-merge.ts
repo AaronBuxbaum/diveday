@@ -305,6 +305,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "crew_assignment_requests.decided_by_person_id": "who answered the ask",
   "crew_away_acknowledgements.acknowledged_by_person_id":
     "who said the crew member is working it anyway",
+  "crew_away_acknowledgements.cleared_by_person_id": "who said they are no longer working it",
   "crew_notices.actor_person_id": "who made the crew change",
   "crew_availability_blocks.created_by_person_id": "who blocked the days",
   "dive_packages.created_by_person_id": "who wrote the package",

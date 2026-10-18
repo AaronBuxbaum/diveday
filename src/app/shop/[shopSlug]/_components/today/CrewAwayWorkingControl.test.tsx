@@ -86,4 +86,25 @@ describe("CrewAwayWorkingControl", () => {
         ),
     ).toBe(true);
   });
+
+  it("never offers the tap about the reader themself (security review)", () => {
+    renderSpine({
+      readerPersonId: "marcus",
+      actions: [
+        action({
+          id: "crew-away:t9",
+          kind: "crew_away",
+          subject: "Scuba Refresher",
+          detail: "Marcus Webb is away Sat, Aug 29.",
+          departure: boat("t9"),
+          crewAway: { people: [people[0] as (typeof people)[number]] },
+          staffPersonId: "marcus",
+          href: "/shop/blue-mantis/trips/t9?view=details#crew",
+          dueAt: hoursFromNow(48),
+        }),
+      ],
+    });
+    expect(screen.queryByRole("button", { name: "Marcus Webb is working it" })).toBeNull();
+    expect(screen.getByText("Marcus Webb is away Sat, Aug 29.")).toBeTruthy();
+  });
 });

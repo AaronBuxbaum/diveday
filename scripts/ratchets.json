@@ -502,6 +502,12 @@
           "src/db/export.test.ts": "1565 -> 1566",
           "src/db/retention.test.ts": "1248 -> 1251"
         }
+      },
+      {
+        "why": "crew_away_acknowledgements.csv is one new line in each of the export test's two registries (#2678 records review S2)",
+        "files": {
+          "src/db/export.test.ts": "1566 -> 1567"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
@@ -536,7 +542,7 @@
     "src/db/divers.test.ts": 3077,
     "src/db/erasure-coverage.test.ts": 1167,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1566,
+    "src/db/export.test.ts": 1567,
     "src/db/import.test.ts": 1077,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3725,
@@ -674,10 +680,9 @@
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 310,
     "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": 310,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": 315,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 368,
     "src/db/checkouts.ts#startBookingCheckout": 303,
-    "src/db/export.ts#loadShopExportContext": 326,
+    "src/db/export.ts#loadShopExportContext": 323,
     "src/db/reminders.ts#sendDueReminders": 335,
     "src/db/reporting.ts#getMonthlyReport": 334,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
@@ -786,7 +791,7 @@
     "src/app/shop/[shopSlug]/settings/import/page.tsx": 508,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 714,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 592,
-    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 624,
+    "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 543,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 496,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 519
   },

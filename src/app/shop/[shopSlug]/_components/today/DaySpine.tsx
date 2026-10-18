@@ -45,7 +45,7 @@ import {
   weekCrewAway,
 } from "@/lib/today";
 import { ClosingStation } from "./ClosingStation";
-import { CrewAwayWorkingControl } from "./CrewAwayWorkingControl";
+import { crewAwayRowControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
 import { NeedsYouGroups } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
@@ -128,6 +128,8 @@ type RowControls = {
   inviteCopy: WaitlistInviteCopy;
   paymentCopy: PaymentActionCopy;
   helpRequestAction?: SpineHelpRequestAction;
+  /** The signed-in staffer: the "working it" tap is never offered about them (#2678). */
+  readerPersonId?: string;
   t: StaffTranslator;
 };
 
@@ -136,7 +138,7 @@ type RowControls = {
  * the controls are Client Components, so a translator never crosses the boundary.
  */
 function rowControls(
-  base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "t">,
+  base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "readerPersonId" | "t">,
 ): RowControls {
   const { t } = base;
   return {
@@ -474,17 +476,9 @@ function StationRow({
       cards={action.agencyCheck.cards}
       align="end"
     />
-  ) : action.kind === "crew_away" && action.crewAway && action.departure ? (
-    // **"Working it anyway"** (issue #2678): the row keeps its door to the
-    // crew editor, and the tap beside it says the shop already asked.
-    <CrewAwayWorkingControl
-      tripId={action.departure.tripId}
-      people={action.crewAway.people.map((person) => ({
-        personId: person.personId,
-        label: t("today.crewAway.working", { name: person.fullName }),
-      }))}
-      pendingLabel={t("today.crewAway.saving")}
-    />
+  ) : action.kind === "crew_away" ? (
+    // **"Working it anyway"** (issue #2678), never about the reader.
+    crewAwayRowControl(action, controls.t, controls.readerPersonId)
   ) : action.rentalFit ? (
     // **The one row whose fix is the tap itself** (issue #1174, D14): the size
     // is already known, so pointing at the diver's record to retype it would
@@ -908,7 +902,13 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     now,
   } = context;
   const t = staffTranslator(locale);
-  const controls = rowControls({ shopSlug, shopName: context.mailShopName, helpRequestAction, t });
+  const controls = rowControls({
+    shopSlug,
+    shopName: context.mailShopName,
+    helpRequestAction,
+    readerPersonId,
+    t,
+  });
   const crewed = new Set(crewedTripIds ?? []);
   const jobs = spineJobCount(spine);
   const tomorrowDate = spine.tomorrow.stations[0]?.startsAt ?? null;

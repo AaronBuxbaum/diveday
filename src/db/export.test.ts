@@ -48,6 +48,7 @@ const EXPECTED_FILES = [
   "trip_assignments.csv",
   "staff_shifts.csv",
   "crew_availability_blocks.csv",
+  "crew_away_acknowledgements.csv",
   "crew_assignment_requests.csv",
   "staff_credentials.csv",
   "bookings.csv",
@@ -138,6 +139,7 @@ const EXPORTED_TABLES = [
   "trip_assignments",
   "staff_shifts",
   "crew_availability_blocks",
+  "crew_away_acknowledgements",
   "crew_assignment_requests",
   "staff_credentials",
   "bookings",
@@ -206,7 +208,6 @@ const EXPORTED_TABLES = [
 /** Tables whose data rides inside another file rather than its own CSV. */
 const FOLDED_TABLES = [
   "person_roles", // people.csv / trip_assignments.csv `roles`
-  "crew_away_acknowledgements", // trip_assignments.csv `away_acknowledged_*` (issue #2678)
   "booking_payments", // bookings.csv payment_* columns
   "booking_referrals", // bookings.csv `referred_by_booking_id`
   "review_replies", // trip_reviews.csv `shop_reply`, the one live reply per review

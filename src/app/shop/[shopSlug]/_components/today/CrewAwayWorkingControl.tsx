@@ -1,6 +1,8 @@
 import { acknowledgeCrewAwayAction } from "@/app/shop/[shopSlug]/actions";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { TodayAction } from "@/lib/today";
 
 /**
  * **"Working it anyway"** on Today's `crew_away` row (issue #2678, decided by
@@ -38,5 +40,32 @@ export function CrewAwayWorkingControl({
         </form>
       ))}
     </div>
+  );
+}
+
+/**
+ * The control on a `crew_away` row of Today: one tap per person it names,
+ * the reader left out (security review of #2678: the row warns the shop about
+ * them, and the write refuses it too). Null when nobody is left to tap for;
+ * the row keeps its door to the crew editor either way.
+ */
+export function crewAwayRowControl(
+  action: TodayAction,
+  t: StaffTranslator,
+  readerPersonId: string | undefined,
+) {
+  const people = (action.crewAway?.people ?? []).filter(
+    (person) => person.personId !== readerPersonId,
+  );
+  if (!action.departure || people.length === 0) return null;
+  return (
+    <CrewAwayWorkingControl
+      tripId={action.departure.tripId}
+      people={people.map((person) => ({
+        personId: person.personId,
+        label: t("today.crewAway.working", { name: person.fullName }),
+      }))}
+      pendingLabel={t("today.crewAway.saving")}
+    />
   );
 }

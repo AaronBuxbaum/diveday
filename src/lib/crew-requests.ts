@@ -132,12 +132,12 @@ export function blockCoversMeetings(
  * Returned as the blocks themselves rather than a boolean, because the surface
  * says *which* days: "away Sep 12–14" is actionable and "conflict" is not.
  */
-export function overlappingBlocks(
-  blocks: readonly AvailabilityBlock[],
+export function overlappingBlocks<Block extends AvailabilityBlock>(
+  blocks: readonly Block[],
   personId: string,
   meetings: readonly { startsAt: Date; endsAt: Date }[],
   timeZone: string,
-): AvailabilityBlock[] {
+): Block[] {
   return blocks.filter(
     (block) => block.personId === personId && blockCoversMeetings(block, meetings, timeZone),
   );

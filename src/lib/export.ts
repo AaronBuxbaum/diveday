@@ -65,6 +65,8 @@ export const EXPORT_FILE_NOTES = {
     "Dated staff availability windows; trip assignments remain the authoritative crew list.",
   "crew_availability_blocks.csv":
     "Days each crew member told the shop they were away. Informs, never gates: it refuses that person's own request for a departure it covers and warns on an assignment that overlaps it, and it never removed anybody from a boat.",
+  "crew_away_acknowledgements.csv":
+    "Each time a staffer said a crew member who was away was working a departure anyway, and when it was taken back: deleted_at with no cleared_by is the person coming off the crew or the departure's dates moving. Informs, never gates.",
   "crew_assignment_requests.csv":
     "Which crew member asked to work which departure, and what the shop answered. An approval is a decision, not an assignment; trip_assignments.csv remains the authoritative crew list.",
   "staff_credentials.csv":

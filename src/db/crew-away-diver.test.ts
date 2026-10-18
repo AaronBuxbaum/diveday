@@ -1,9 +1,10 @@
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { fileScopedShopContext } from "@/test/db";
 import { acknowledgeCrewAway } from "./crew-away-acknowledgements";
 import { diverCrewWithAway } from "./crew-away-diver";
-import { crewAvailabilityBlocks } from "./schema";
+import { crewAvailabilityBlocks, people, personRoles } from "./schema";
 import { tripPublicCrew, upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -60,12 +61,20 @@ describe("diverCrewWithAway", () => {
     if (!first) throw new Error("expected a named crew member");
     const day = calendarDateInTimezone(trip.startsAt, shop.timezone);
     await away(first.personId, day, day);
+    // Said by someone else: never the person about themself (security review).
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    if (!owner) throw new Error("seeded owner missing");
     expect(
       await acknowledgeCrewAway(db, {
         shopId: shop.id,
         tripId: trip.id,
         personId: first.personId,
-        actorPersonId: first.personId,
+        actorPersonId: owner.id,
       }),
     ).toBe("saved");
     const marked = await diverCrewWithAway(db, shop.id, trip, shop.timezone);

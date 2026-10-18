@@ -60,7 +60,6 @@ import {
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
-  crewAwayAcknowledgements,
   divePackages,
   gearItems,
   gearReservations,
@@ -235,30 +234,33 @@ async function readReviewRowsWithReplies(tx: AppTransaction, shopId: string) {
     .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
 }
 
-/**
- * Every crew assignment of the shop's departures, with its live "working it
- * anyway" (issue #2678) riding along: trip_assignments.csv carries both.
- */
+/** Every crew assignment of the shop's departures (trip_assignments.csv). */
 async function readTripAssignmentRows(tx: AppTransaction, shopId: string) {
   return tx
-    .select({
-      ...getTableColumns(tripAssignments),
-      awayAcknowledgedAt: crewAwayAcknowledgements.createdAt,
-      awayAcknowledgedByPersonId: crewAwayAcknowledgements.acknowledgedByPersonId,
-    })
+    .select(getTableColumns(tripAssignments))
     .from(tripAssignments)
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-    .leftJoin(
-      crewAwayAcknowledgements,
-      and(
-        eq(crewAwayAcknowledgements.tripId, tripAssignments.tripId),
-        eq(crewAwayAcknowledgements.personId, tripAssignments.personId),
-        eq(crewAwayAcknowledgements.shopId, shopId),
-        isNull(crewAwayAcknowledgements.deletedAt),
-      ),
-    )
     .where(eq(trips.shopId, shopId))
     .orderBy(asc(tripAssignments.tripId), asc(tripAssignments.personId));
+}
+
+/**
+ * The days each crew member said they were away (issue #1235; live rows only,
+ * a deleted holiday is not the shop's roster) and every "working it anyway"
+ * said about them, live or taken back (#2678, records review S2).
+ */
+async function readCrewAwayRows(tx: AppTransaction, scope: ShopExportScope) {
+  const { shopId } = scope;
+  return {
+    crewAwayRows: await tx
+      .select()
+      .from(crewAvailabilityBlocks)
+      .where(
+        and(eq(crewAvailabilityBlocks.shopId, shopId), isNull(crewAvailabilityBlocks.deletedAt)),
+      )
+      .orderBy(asc(crewAvailabilityBlocks.startsOn), asc(crewAvailabilityBlocks.id)),
+    crewAwayAcknowledgementRows: await readScoped(tx, "crewAwayAcknowledgements", scope),
+  };
 }
 
 /**
@@ -429,13 +431,8 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     .where(eq(staffShifts.shopId, shopId))
     .orderBy(asc(staffShifts.startsAt), asc(staffShifts.id));
 
-  // The crew's own two tables (issue #1235). Live rows only: a withdrawn
-  // ask and a deleted holiday are not the shop's roster.
-  const crewAwayRows = await tx
-    .select()
-    .from(crewAvailabilityBlocks)
-    .where(and(eq(crewAvailabilityBlocks.shopId, shopId), isNull(crewAvailabilityBlocks.deletedAt)))
-    .orderBy(asc(crewAvailabilityBlocks.startsOn), asc(crewAvailabilityBlocks.id));
+  // The crew's own two tables (issue #1235), and every "working it anyway".
+  const { crewAwayRows, crewAwayAcknowledgementRows } = await readCrewAwayRows(tx, scope);
 
   const crewRequestRows = await tx
     .select()
@@ -691,6 +688,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     assignmentRows,
     staffShiftRows,
     crewAwayRows,
+    crewAwayAcknowledgementRows,
     crewRequestRows,
     ...safetyRecordRows,
     bookingRows,
@@ -1241,6 +1239,7 @@ export async function loadShopExportCounts(
           and(eq(crewAvailabilityBlocks.shopId, shopId), isNull(crewAvailabilityBlocks.deletedAt)),
         ),
     ),
+    "crew_away_acknowledgements.csv": await countShopScoped(db, "crewAwayAcknowledgements", shopId),
     "crew_assignment_requests.csv": await countOf(
       db
         .select({ n: count() })

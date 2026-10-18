@@ -624,7 +624,10 @@ const TODAY_CEILING = 74;
 // 66 → 67 (dive-domain second pass, X3): the same pass also asks which
 // candidates' releases wait on a physician's referral (`physicianReferrals`),
 // one statement in the cards' wave, so no new phase.
-const TRIP_CEILING = 67;
+// 67 → 68 (#2678 dock review S2): who is said to be working it anyway, for the
+// crew panel's "No longer working it" (`listCrewAwayAcknowledgements`), one
+// statement in the overview's wave, only while the boat is ahead.
+const TRIP_CEILING = 68;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never

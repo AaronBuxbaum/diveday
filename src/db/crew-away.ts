@@ -3,7 +3,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { type AvailabilityBlock, overlappingBlocks } from "@/lib/crew-requests";
 import type { TripMeeting } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
-import { acknowledgedKey, crewAwayAcknowledgedKeys } from "./crew-away-acknowledgements";
+import { acknowledgedKey, crewAwayAcknowledgedAt } from "./crew-away-acknowledgements";
 import { listCrewAvailabilityBlocks } from "./crew-requests";
 import { people, tripAssignments, trips } from "./schema";
 import { tripMeetings } from "./staffing";
@@ -107,7 +107,7 @@ export async function crewAwayByTrip(
     rosterRead,
     meetingsRead,
     blocksRead,
-    crewAwayAcknowledgedKeys(db, shopId, tripIds),
+    crewAwayAcknowledgedAt(db, shopId, tripIds),
   ]);
   if (rows.length === 0 || blocks.length === 0) return byTrip;
 
@@ -118,11 +118,16 @@ export async function crewAwayByTrip(
     const away = overlappingBlocks(blocks, row.personId, meetings, timeZone);
     if (away.length === 0) continue;
     const list = byTrip.get(row.tripId) ?? [];
+    // An acknowledgement covers the days away it was said about: one told
+    // after it raises the row again (security and dock reviews of #2678).
+    const saidAt = acknowledged.get(acknowledgedKey(row.tripId, row.personId));
     list.push({
       personId: row.personId,
       fullName: row.fullName,
-      blocks: away,
-      acknowledged: acknowledged.has(acknowledgedKey(row.tripId, row.personId)),
+      blocks: away.map(({ createdAt: _createdAt, ...block }) => block),
+      acknowledged:
+        saidAt !== undefined &&
+        away.every((block) => block.createdAt.getTime() <= saidAt.getTime()),
     });
     byTrip.set(row.tripId, list);
   }

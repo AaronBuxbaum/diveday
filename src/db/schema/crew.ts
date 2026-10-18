@@ -267,8 +267,12 @@ export const crewAvailabilityBlocks = pgTable(
  * all the same ("we asked Marcus, he is teaching Sunday anyway"). Per crew
  * assignment: it clears the diver-side "to be confirmed" mark and Today's
  * `crew_away` row for this departure only, and never touches the person's own
- * block or its note. Taking the person off the departure soft-deletes it
- * (`clearCrewAwayAcknowledgements`), so a later re-assignment starts unconfirmed.
+ * block or its note. Taking the person off the departure, moving the
+ * departure's dates, or a staffer saying "no longer working it" soft-deletes
+ * it (`clearCrewAwayAcknowledgements`, `withdrawCrewAwayAcknowledgement`), so
+ * a later re-assignment starts unconfirmed; and a day away added after it is
+ * not covered by it (`crewAwayByTrip` compares `created_at`). The person
+ * cannot say it about themself (security review of #2678).
  */
 export const crewAwayAcknowledgements = pgTable(
   "crew_away_acknowledgements",
@@ -290,6 +294,14 @@ export const crewAwayAcknowledgements = pgTable(
     }),
     createdAt: appNowTimestamp("created_at").notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /**
+     * The staffer who said "no longer working it" (records review S2). Null on
+     * a live row, and on one cleared by a crew or date change, which the
+     * writer of that change already records.
+     */
+    clearedByPersonId: uuid("cleared_by_person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     uniqueIndex("crew_away_acknowledgements_live_uidx")
@@ -300,6 +312,7 @@ export const crewAwayAcknowledgements = pgTable(
       .where(sql`deleted_at is null`),
     index("crew_away_acknowledgements_person_idx").on(table.personId),
     index("crew_away_acknowledgements_acknowledged_by_idx").on(table.acknowledgedByPersonId),
+    index("crew_away_acknowledgements_cleared_by_idx").on(table.clearedByPersonId),
   ],
 );
 

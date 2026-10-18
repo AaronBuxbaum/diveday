@@ -1,0 +1,3 @@
+ALTER TABLE "crew_away_acknowledgements" ADD COLUMN "cleared_by_person_id" uuid;--> statement-breakpoint
+CREATE INDEX "crew_away_acknowledgements_cleared_by_idx" ON "crew_away_acknowledgements" ("cleared_by_person_id");--> statement-breakpoint
+ALTER TABLE "crew_away_acknowledgements" ADD CONSTRAINT "crew_away_acknowledgements_cleared_by_person_id_people_id_fkey" FOREIGN KEY ("cleared_by_person_id") REFERENCES "people"("id") ON DELETE SET NULL;

@@ -277,8 +277,12 @@
   row and reads "to be confirmed" on the diver pages (`crewAwayByTrip`, `src/db/crew-away.ts`).
 - **Working it anyway** — a staffer saying an away crew member is working one departure all the
   same (`crew_away_acknowledgements`, issue #2678), tapped on Today's `crew_away` row. Per crew
-  assignment: it clears that row and the diver-side mark for that departure only, never edits the
-  person's days away, and goes when they come off the crew.
+  assignment, and only while the person is away on a day the departure meets; never said by the
+  person about themself. It clears that row and the diver-side mark for that departure only, never
+  edits the person's days away, does not cover a day away told after it, and goes when they come
+  off the crew, when the departure's dates move, or on "No longer working it" under the trip's
+  crew panel, which records who took it back. The departure log and
+  `crew_away_acknowledgements.csv` keep the trail.
 - **Boat clash** — one hull on two departures whose windows **overlap** (H-80: one hull, one
   departure at a time). Same half-open predicate as the **Crew clash** below
   (`src/db/trips-clashes.ts`), so a hull that ties up at 12:00 and takes the 12:00 out is the plan
