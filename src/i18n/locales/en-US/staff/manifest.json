@@ -132,6 +132,7 @@
   "trainingMarkClearedInvalid": "{hasName, select, yes {Training mark cleared by {name} after it stopped fitting its course seat} other {Training mark cleared after it stopped fitting its course seat}}",
   "trainingDive": "Training dive for {course}",
   "trainingDiveNoInstructor": "No instructor of the course aboard for this seat",
+  "trainingDiveOverRatio": "Over the instructor’s ratio for this course; move a student",
   "medicalEarlierRefusalChip": "Physician said no before",
   "medicalReferralUnresolved": "Referred to a physician on {date}; re-signed with no physician clearance on file",
   "medicalHoldNotClearedChip": "Not medically cleared",

@@ -132,6 +132,7 @@
   "trainingMarkClearedInvalid": "{hasName, select, yes {{name} quitó la marca de formación cuando ya no correspondía a su plaza del curso} other {Se quitó la marca de formación cuando ya no correspondía a su plaza del curso}}",
   "trainingDive": "Inmersión de formación para {course}",
   "trainingDiveNoInstructor": "Ningún instructor del curso a bordo para esta plaza",
+  "trainingDiveOverRatio": "Supera la proporción del instructor para este curso; pasa a un alumno a otro grupo",
   "medicalEarlierRefusalChip": "Rechazo médico previo",
   "medicalReferralUnresolved": "Derivación médica del {date}; firmada de nuevo sin autorización de un médico registrada",
   "medicalHoldNotClearedChip": "Sin autorización médica",

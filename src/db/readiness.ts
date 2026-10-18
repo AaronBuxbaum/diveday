@@ -2008,7 +2008,7 @@ export async function listTripsReadiness(
       trainingNoCardAsked:
         isDiver(row.booking.participantType) &&
         trainingDiveAsksNoCard(
-          unionRequirements(requirement, siteRequirement).minimumCertificationLevel,
+          unionRequirements(requirement, siteRequirement),
           trainingDiveLevel(trainingMark),
         ),
       certifications: certificationsByPerson.get(row.person.id) ?? [],

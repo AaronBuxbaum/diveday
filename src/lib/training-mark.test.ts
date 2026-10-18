@@ -252,11 +252,34 @@ describe("trainingDiveRequiredLevel — lowers only as far as the course certifi
       certifiesLevel: "open_water",
       intro: false,
     };
-    expect(trainingDiveAsksNoCard("open_water", ow)).toBe(true);
-    expect(trainingDiveAsksNoCard("advanced_open_water", ow)).toBe(false);
-    expect(trainingDiveAsksNoCard("advanced_open_water", aow)).toBe(false);
-    expect(trainingDiveAsksNoCard(null, ow)).toBe(false);
-    expect(trainingDiveAsksNoCard("open_water", null)).toBe(false);
+    const level = (minimumCertificationLevel: "open_water" | "advanced_open_water" | null) => ({
+      minimumCertificationLevel,
+      requiredSpecialties: [],
+      requiresNitrox: false,
+    });
+    expect(trainingDiveAsksNoCard(level("open_water"), ow)).toBe(true);
+    expect(trainingDiveAsksNoCard(level("advanced_open_water"), ow)).toBe(false);
+    expect(trainingDiveAsksNoCard(level("advanced_open_water"), aow)).toBe(false);
+    expect(trainingDiveAsksNoCard(level(null), ow)).toBe(false);
+    expect(trainingDiveAsksNoCard(level("open_water"), null)).toBe(false);
+  });
+
+  it("still asks a card when the departure also asks nitrox or a specialty", () => {
+    const ow: TrainingDiveCourse = {
+      minimumLevel: null,
+      certifiesLevel: "open_water",
+      intro: false,
+    };
+    const base = { minimumCertificationLevel: "open_water" as const };
+    expect(
+      trainingDiveAsksNoCard({ ...base, requiredSpecialties: [], requiresNitrox: true }, ow),
+    ).toBe(false);
+    expect(
+      trainingDiveAsksNoCard(
+        { ...base, requiredSpecialties: ["wreck"], requiresNitrox: false },
+        ow,
+      ),
+    ).toBe(false);
   });
 
   it("lowers an AOW departure to the course's minimum", () => {
@@ -428,5 +451,24 @@ describe("trainingRoom — the instructors' ratio is shared across sessions (rev
     });
     expect(reversed.seated.has("A")).toBe(false);
     expect(reversed.seated.size).toBe(7);
+  });
+
+  it("tells a seat over the ratio from one with no instructor aboard", () => {
+    const room = trainingRoom({
+      marked: seats("s1", 9),
+      sessionCrew: new Map([
+        ["s1", [teacher]],
+        ["s3", []],
+      ]),
+      departureCrew: [teacher],
+    });
+    expect(room.seated.size).toBe(8);
+    expect([...room.overRatio]).toEqual(["s1-8"]);
+    const none = trainingRoom({
+      marked: [{ id: "x", sessionTripId: "s3", rule: entry }],
+      sessionCrew: new Map([["s3", []]]),
+      departureCrew: [teacher],
+    });
+    expect(none.overRatio.size).toBe(0);
   });
 });

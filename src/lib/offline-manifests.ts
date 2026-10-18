@@ -466,7 +466,7 @@ export type OfflineManifestPayload = {
            * warning, never a blocker. Optional and additive, no version bump;
            * absent on every other seat.
            */
-          trainingDive?: { courseTitle: string; instructorAboard: boolean };
+          trainingDive?: { courseTitle: string; instructorAboard: boolean; overRatio?: boolean };
           /**
            * A staffer cleared this seat's training mark with its course forms
            * unsigned, by name when the shop still has one: the crew boarding

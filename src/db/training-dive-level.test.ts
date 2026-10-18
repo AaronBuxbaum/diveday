@@ -264,8 +264,12 @@ describe("a marked training dive's level (issue #2731, in-memory PGlite)", () =>
     expect(await spare(pair({ minimumLevel: "open_water" }))).toBe(false);
     expect(await spare(pair({ agency: "NAUI" }))).toBe(false);
     expect(seatWithinRoom(undefined, "a")).toBe(false);
-    expect(seatWithinRoom({ seated: new Set(["a"]), spare: false }, "a")).toBe(true);
-    expect(seatWithinRoom({ seated: new Set(["a"]), spare: false }, "b")).toBe(false);
+    expect(
+      seatWithinRoom({ seated: new Set(["a"]), overRatio: new Set(), spare: false }, "a"),
+    ).toBe(true);
+    expect(
+      seatWithinRoom({ seated: new Set(["a"]), overRatio: new Set(), spare: false }, "b"),
+    ).toBe(false);
   });
 
   it("stops seating marks once the instructor's ratio is used up, even with a second mark on another seat", async () => {
