@@ -69,6 +69,8 @@ export default async function NewDiverPage({
     email?: string;
     phone?: string;
     surface?: string;
+    /** `true`: the departure door's counter mode (a walk-in on a boat that has not left). */
+    walkIn?: string;
     tripId?: string;
     waitlist?: string;
     request?: string;
@@ -87,6 +89,7 @@ export default async function NewDiverPage({
     email,
     phone,
     surface: surfaceParam,
+    walkIn: walkInParam,
     tripId: tripIdParam,
     waitlist: waitlistParam,
     request: requestParam,
@@ -125,42 +128,31 @@ export default async function NewDiverPage({
       : null;
   const isWaitlist = waitlistParam === "true";
   const tripId = tripIdParam?.trim() || null;
+  const walkIn = walkInParam === "true" && surface === "departure" && tripId !== null;
   const backLink =
-    surface === "trip-guests" && tripId
+    surface === "departure" && tripId
       ? {
           href: `${shopPath(shopSlug, "trips", tripId)}#add-diver`,
           label: t("divers.page.backToTripGuests"),
         }
-      : surface === "walk-in" && tripId
-        ? {
-            href: shopPath(shopSlug, "trips", tripId, "walk-in"),
-            label: t("divers.page.backToWalkIn"),
-          }
-        : surface === "new-booking" && tripId
-          ? {
-              href: shopPath(shopSlug, "bookings", "new", tripId),
-              label: t("divers.page.backToNewBooking"),
-            }
-          : {
-              href: shopPath(shopSlug, "divers"),
-              label: t("divers.page.backToRoster"),
-            };
+      : {
+          href: shopPath(shopSlug, "divers"),
+          label: t("divers.page.backToRoster"),
+        };
 
   const submitLabel =
-    surface === "trip-guests" && isWaitlist
+    surface === "departure" && isWaitlist
       ? t("divers.page.addToWaitlistButton")
-      : surface === "trip-guests"
-        ? t("divers.page.addToTripButton")
-        : surface === "walk-in"
-          ? t("divers.page.addToBoatButton")
-          : surface === "new-booking"
-            ? t("divers.page.addToTripButton")
-            : t("divers.page.addDiver");
+      : walkIn
+        ? t("divers.page.addToBoatButton")
+        : surface === "departure"
+          ? t("divers.page.addToTripButton")
+          : t("divers.page.addDiver");
 
   const banner = noticeFromParam(notice, NOTICES);
   const noticeText = banner ? t(banner.key) : null;
   const noticeIsError = banner?.tone === "danger";
-  const walkInParty = surface === "walk-in" && tripId !== null;
+  const walkInParty = walkIn;
   // Each party row the on-file check stopped on, with who it reads like.
   const onFileRows: PartyOnFileRow[] =
     walkInParty && notice === "party-on-file"
@@ -222,7 +214,11 @@ export default async function NewDiverPage({
                       action={
                         isWaitlist
                           ? addToWaitlistAction.bind(null, shopSlug, tripId)
-                          : seatExistingDiverAction.bind(null, surface, shopSlug)
+                          : seatExistingDiverAction.bind(
+                              null,
+                              walkIn ? "walk-in" : surface,
+                              shopSlug,
+                            )
                       }
                       className="inline"
                     >
@@ -284,6 +280,7 @@ export default async function NewDiverPage({
               <input type="hidden" name="email" value={confirmEmail ?? ""} />
               <input type="hidden" name="phone" value={confirmPhone ?? ""} />
               <input type="hidden" name="surface" value={surfaceParam ?? ""} />
+              <input type="hidden" name="walkIn" value={walkInParam ?? ""} />
               <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
               <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
               <input type="hidden" name="request" value={requestParam ?? ""} />
@@ -304,7 +301,13 @@ export default async function NewDiverPage({
           as="form"
           action={createDiverFormAction}
           name={surface ? "required" : "optional"}
-          email={surface && SEAT_SURFACES[surface].email === "required" ? "required" : "optional"}
+          // A wait-list entry is the one departure form that needs a way to
+          // reach the diver when the seat opens.
+          email={
+            isWaitlist || (surface && !walkIn && SEAT_SURFACES[surface].email === "required")
+              ? "required"
+              : "optional"
+          }
           nameLabel={t("divers.page.fullNameLabel")}
           emailLabel={t("divers.page.emailLabel")}
           phoneLabel={t("divers.page.phoneLabel")}
@@ -324,6 +327,7 @@ export default async function NewDiverPage({
             copy={formDraftCopy(t)}
           />
           <input type="hidden" name="surface" value={surfaceParam ?? ""} />
+          <input type="hidden" name="walkIn" value={walkInParam ?? ""} />
           <input type="hidden" name="tripId" value={tripIdParam ?? ""} />
           <input type="hidden" name="waitlist" value={waitlistParam ?? ""} />
           <input type="hidden" name="request" value={requestParam ?? ""} />

@@ -58,6 +58,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Readiness
 - Refresher / ReActivate
 - Requirable level
+- Requirement
 - Self-declared certification
 - Shop-issued certification
 - Site maximum depth
@@ -166,9 +167,11 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Certificate total-persons limit
 - Check-in
 - Close-out
+- Coming as
 - Connected Stripe account
 - Counter hand-off
 - Counter self-registration
+- Counter window
 - Course catalog copy
 - Course form
 - Course page
@@ -318,12 +321,15 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Trip stage
 - Turned away
 - Unaccounted for
+- Under 18
 - Wait list
 - Wait-list party
 - Wait-list roll
 - Waiver / release
 - Waiver activity
 - Waiver completion
+- Walk-in
+- Walk-in party
 - Weather day
 - Week totals
 - WhatsApp sender

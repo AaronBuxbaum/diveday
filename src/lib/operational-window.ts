@@ -41,6 +41,7 @@
  */
 
 import { DAY_MS, HOUR_MS } from "@/lib/clock";
+import { hasSailed } from "@/lib/trips";
 
 /**
  * How far ahead every readiness surface looks. A working week: long enough that
@@ -111,6 +112,17 @@ export function arrivalsWindow(now: Date): OperationalWindow {
     from: new Date(now.getTime() - ARRIVALS_LOOKBACK_HOURS * HOUR_MS),
     to: new Date(now.getTime() + ARRIVALS_AHEAD_HOURS * HOUR_MS),
   };
+}
+
+/**
+ * Whether the counter may still seat a walk-in on a departure: it is inside
+ * {@link arrivalsWindow} and has not sailed (`hasSailed`, the one departure
+ * buffer). The staffer's door and the seat action both ask this, so a typed
+ * URL or a stale page cannot seat someone on a boat that has gone.
+ */
+export function walkInDoorOpen(startsAt: Date, now: Date): boolean {
+  const window = arrivalsWindow(now);
+  return startsAt >= window.from && startsAt <= window.to && !hasSailed(startsAt, now);
 }
 
 /**

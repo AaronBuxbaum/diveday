@@ -6,13 +6,8 @@ import type {
   SpecialtyCertification,
 } from "@/db/schema";
 import { isDiver, type ParticipantType } from "./participant-types";
-import {
-  type CertificationLevel,
-  type CertRequirementSource,
-  certificationRank,
-  combineCertRequirements,
-  type SiteCertRequirement,
-} from "./readiness";
+import { type CertificationLevel, certificationRank } from "./readiness";
+import { type Requirement, requirementDemandsNothing, unionRequirements } from "./requirement";
 import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-mark";
 
 /**
@@ -143,13 +138,6 @@ export type TripAdmission = { admitted: true } | { admitted: false; refusal: Tri
 
 const ADMITTED: TripAdmission = { admitted: true };
 
-/** Demands nothing of anybody — the stand-in for a trip with no requirement row of its own. */
-const NO_TRIP_REQUIREMENT: CertRequirementSource = {
-  minimumCertificationLevel: null,
-  requiredSpecialties: [],
-  requiresNitrox: false,
-};
-
 /**
  * The highest rung any certification on file reaches, ignoring status
  * entirely: a pending capture is still evidence of what this diver was trained
@@ -222,9 +210,9 @@ function highestOf(
 
 export type TripAdmissionInput = {
   /** The trip's own requirement row, or null when the shop hasn't configured one. */
-  requirement: CertRequirementSource | null;
+  requirement: Requirement | null;
   /** Every dive site the trip visits, already folded into one gate (`combineSiteRequirements`). */
-  siteRequirement: SiteCertRequirement | null;
+  siteRequirement: Requirement | null;
   evidence: TripAdmissionEvidence;
   /**
    * The booking reused an existing person by email under a name that didn't
@@ -302,17 +290,8 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // strictest level, the union of specialties, nitrox if either wants it. A
   // missing requirement row is not "no gate": a trip with no row of its own
   // still inherits whatever its dive sites demand.
-  const effective = combineCertRequirements(
-    input.requirement ?? NO_TRIP_REQUIREMENT,
-    input.siteRequirement,
-  );
-  if (
-    !effective.minimumCertificationLevel &&
-    effective.requiredSpecialties.length === 0 &&
-    !effective.requiresNitrox
-  ) {
-    return ADMITTED;
-  }
+  const effective = unionRequirements(input.requirement, input.siteRequirement);
+  if (requirementDemandsNothing(effective)) return ADMITTED;
 
   // Deliberate, and not the inversion it looks like (security review
   // 2026-09-11 read this as "the weaker door skips the stricter gate"). The

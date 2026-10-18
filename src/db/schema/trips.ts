@@ -16,9 +16,10 @@ import {
 } from "drizzle-orm/pg-core";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import { appNowTimestamp } from "./columns";
-import { certificationLevel, type diveSpecialty, people, shops } from "./core";
+import { people, shops } from "./core";
 import { courses } from "./courses";
 import { diveSites } from "./dive-sites";
+import { requirementColumns } from "./requirement";
 
 /**
  * The departure board: recurring series, boats, trip tags, `trips` and their
@@ -933,18 +934,7 @@ export const tripRequirements = pgTable(
       .notNull()
       .references(() => shops.id),
     requiresWaiver: boolean("requires_waiver").notNull().default(true),
-    /** Null deliberately means no existing C-card is required, never unknown. */
-    minimumCertificationLevel: certificationLevel("minimum_certification_level"),
-    /**
-     * Trip-specific specialty gates on top of whatever the dive site demands.
-     * The readiness service unions this with the site's requiredSpecialties.
-     */
-    requiredSpecialties: jsonb("required_specialties")
-      .$type<(typeof diveSpecialty.enumValues)[number][]>()
-      .notNull()
-      .default([]),
-    /** Trip-level nitrox gate; OR'd with the site's requiresNitrox. */
-    requiresNitrox: boolean("requires_nitrox").notNull().default(false),
+    ...requirementColumns(),
     /** Whether a diver must have paid (or a deposit/waiver) to board. */
     requiresPayment: boolean("requires_payment").notNull().default(false),
     createdAt: appNowTimestamp("created_at").notNull(),

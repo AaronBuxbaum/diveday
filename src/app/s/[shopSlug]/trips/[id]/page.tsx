@@ -23,7 +23,7 @@ import { toShopCurrency } from "@/lib/money";
 import { connectionForRoute } from "@/lib/observability/render-connection";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicTripPath } from "@/lib/public-routes";
-import { combineCertRequirements } from "@/lib/readiness";
+import { unionRequirements } from "@/lib/requirement";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
@@ -272,16 +272,7 @@ export default async function TripDetailPage({
   // rule on its own page, and its itinerary's gate is deliberately *not* a
   // booking gate (src/lib/trip-admission.ts) — repeating the site's demand here
   // would read as a bar on the very students the course exists to create.
-  const combinedRequirement = trip.course
-    ? null
-    : combineCertRequirements(
-        requirement ?? {
-          minimumCertificationLevel: null,
-          requiredSpecialties: [],
-          requiresNitrox: false,
-        },
-        siteRequirement,
-      );
+  const combinedRequirement = trip.course ? null : unionRequirements(requirement, siteRequirement);
   const requirementSentence = requirementSentenceFor(combinedRequirement, t, locale, knownDiver);
 
   const inPast = hasSailed(trip.startsAt, now);

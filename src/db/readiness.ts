@@ -16,7 +16,6 @@ import {
   BLOCKER_CATEGORY,
   calculateReadiness,
   cardUndoRefusal,
-  combineCertRequirements,
   combineSiteRequirements,
   isUnsightedSelfDeclaration,
   needsCardSighting,
@@ -24,6 +23,7 @@ import {
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
+import { parseRequirement, requirementDemandsNothing, unionRequirements } from "@/lib/requirement";
 import { type TrainingMarkState, trainingDiveLevel } from "@/lib/training-mark";
 import { isUuid } from "@/lib/uuid";
 import {
@@ -240,31 +240,13 @@ export async function tripRequirementSummaries(
   ]);
 
   const byTrip = new Map<string, SiteCertRequirement>();
-  const fold = (tripId: string, part: SiteCertRequirement) => {
-    const soFar = byTrip.get(tripId) ?? {
-      minimumCertificationLevel: null,
-      requiredSpecialties: [],
-      requiresNitrox: false,
-    };
-    byTrip.set(tripId, combineCertRequirements(soFar, part));
-  };
   for (const row of [...ownRows, ...siteRows]) {
-    fold(row.tripId, {
-      minimumCertificationLevel: row.minimumCertificationLevel,
-      requiredSpecialties: row.requiredSpecialties ?? [],
-      requiresNitrox: Boolean(row.requiresNitrox),
-    });
+    byTrip.set(row.tripId, unionRequirements(byTrip.get(row.tripId), parseRequirement(row)));
   }
 
   const demanding = new Map<string, SiteCertRequirement>();
   for (const [tripId, requirement] of byTrip) {
-    if (
-      requirement.minimumCertificationLevel ||
-      requirement.requiredSpecialties.length > 0 ||
-      requirement.requiresNitrox
-    ) {
-      demanding.set(tripId, requirement);
-    }
+    if (!requirementDemandsNothing(requirement)) demanding.set(tripId, requirement);
   }
   return demanding;
 }
@@ -1586,11 +1568,13 @@ export type BookingReadinessDetail = {
    * Carried beside `requirement` rather than pre-merged into it because the two
    * answer different questions: `requirement` is what the shop set on this
    * departure, and callers that state the rule to a diver want the stricter of
-   * the pair (`combineCertRequirements`). The readiness engine already composes
+   * the pair (`unionRequirements`). The readiness engine already composes
    * both; without this, a surface naming the required level off `requirement`
    * alone would understate a gate the site imposes and the engine enforces.
    */
   siteRequirement: SiteCertRequirement | null;
+  /** This seat's kind is stated free on the departure, so it owes no payment. */
+  statedFree: boolean;
   readiness: NonNullable<Awaited<ReturnType<typeof getBookingReadiness>>>;
   cancelled: boolean;
 };
@@ -1641,6 +1625,7 @@ export async function getBookingReadinessDetail(
     // already fallen through to `unavailableReadiness()`, so there is no gate
     // to state either way.
     siteRequirement: match?.siteRequirement ?? null,
+    statedFree: match?.statedFree ?? false,
     readiness,
     cancelled: row.status === "cancelled",
   };
@@ -1907,6 +1892,13 @@ export async function listTripsReadiness(
     const requirement = requirementsByTrip.get(tripId) ?? null;
     const siteRequirement = siteRequirementsByTrip.get(tripId) ?? null;
     const courseRow = courseByTrip.get(tripId);
+    // A kind of seat the shop states as free has no payment to clear. Read
+    // off the departure's own price for that kind, never inferred from a
+    // missing one (`paymentGateIsUnclearable`).
+    const statedFree =
+      !isDiver(row.booking.participantType) &&
+      courseRow !== undefined &&
+      participantPriceCents(courseRow, row.booking.participantType) === 0;
     const courseMinimumAge = courseRow?.minimumAge ?? null;
     const courseDate = courseRow?.startsAt
       ? calendarDateInTimezone(courseRow.startsAt, timezone)
@@ -2005,6 +1997,7 @@ export async function listTripsReadiness(
         : riderMedicalHold(effectiveWaiver, signedWaiversByPerson.get(row.person.id) ?? []),
       requirement,
       siteRequirement,
+      statedFree,
       certifications: certificationsByPerson.get(row.person.id) ?? [],
       specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
       nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
@@ -2055,13 +2048,7 @@ export async function listTripsReadiness(
         // What this seat is doing aboard: a snorkeler or a rider is asked for
         // no card (ADR 20261007-participant-types).
         participantType: row.booking.participantType,
-        // A kind of seat the shop states as free has no payment to clear. Read
-        // off the departure's own price for that kind, never inferred from a
-        // missing one (`paymentGateIsUnclearable`).
-        statedFree:
-          !isDiver(row.booking.participantType) &&
-          courseRow !== undefined &&
-          participantPriceCents(courseRow, row.booking.participantType) === 0,
+        statedFree,
         courseForms,
         trainingMarkInvalid: trainingMark !== undefined && !trainingMark.valid,
         // A standing mark with the course's instructor aboard takes the

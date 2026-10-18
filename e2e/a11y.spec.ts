@@ -256,10 +256,8 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     // needs a seeded boat still inside the arrivals window; its <h1> is the
     // trip's title.
     const counterBoat = "Two-Tank Reef — Molasses & French";
-    const counter = counterPath(
-      "blue-mantis",
-      await seededTripId(page, "blue-mantis", counterBoat),
-    );
+    const counterId = await seededTripId(page, "blue-mantis", counterBoat);
+    const counter = counterPath("blue-mantis", counterId);
     await scanStaticRoutes(page, [
       // Today, which is now one composition rather than two views of one
       // (ADR 20260827-clearwater-surface-language, decision 4) — so the second
@@ -268,7 +266,10 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       // `day-spine.spec.ts` holds it to a single hop.
       { path: "/shop/blue-mantis", heading: STAFF_DAY_HEADING },
       { path: counter, heading: counterBoat },
-      { path: `${counter}/walk-in`, heading: "Walk-in" },
+      {
+        path: `/shop/blue-mantis/divers/new?surface=departure&walkIn=true&tripId=${counterId}`,
+        heading: "Add a diver",
+      },
       { path: "/shop/blue-mantis/schedule/board", heading: "Schedule" },
       // Creating a trip is the board's own add panel now (ADR
       // 20260806-one-trip-create-form), and `?add=full` is the deep end of it

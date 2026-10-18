@@ -120,12 +120,7 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   const tripId = tripHref?.split("#")[0]?.split("/").at(-1);
   expect(tripId).toMatch(/^[0-9a-f-]{36}$/i);
 
-  for (const suffix of [
-    ...STAFF_PATHS,
-    `/trips/${tripId}`,
-    `/trips/${tripId}/manifest`,
-    `/trips/${tripId}/walk-in`,
-  ]) {
+  for (const suffix of [...STAFF_PATHS, `/trips/${tripId}`, `/trips/${tripId}/manifest`]) {
     const path = `/shop/blue-mantis${suffix}`;
     await page.goto(path);
     // The rendered refusal, not the HTTP status: `cacheComponents` streams a
@@ -215,7 +210,6 @@ test("a mistyped id in a staff path segment is a 404, never a 500", async ({ pag
     "/shop/blue-mantis/divers/nope",
     "/shop/blue-mantis/dive-sites/nope",
     "/shop/blue-mantis/bookings/new/nope",
-    "/shop/blue-mantis/trips/nope/walk-in",
     "/shop/blue-mantis/schedule/blowout/nope",
   ]) {
     const response = await page.goto(path);

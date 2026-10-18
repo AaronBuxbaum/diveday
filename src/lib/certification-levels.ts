@@ -68,3 +68,26 @@ export const REQUIRABLE_CERTIFICATION_LEVELS = [
 
 /** A level a site or trip is allowed to demand — see the list above. */
 export type RequirableCertificationLevel = (typeof REQUIRABLE_CERTIFICATION_LEVELS)[number];
+
+const levelRank: Record<CertificationLevel, number> = {
+  open_water: 1,
+  advanced_open_water: 2,
+  rescue: 3,
+  divemaster: 4,
+  instructor: 5,
+};
+
+/** A level's place on the ladder, for ordering rather than comparison. Open Water is 1. */
+export function certificationRank(level: CertificationLevel): number {
+  return levelRank[level];
+}
+
+/** The stricter of two levels; null means "no level demanded" and never wins. */
+export function higherCertificationLevel(
+  a: CertificationLevel | null | undefined,
+  b: CertificationLevel | null | undefined,
+): CertificationLevel | null {
+  if (!a) return b ?? null;
+  if (!b) return a;
+  return levelRank[a] >= levelRank[b] ? a : b;
+}

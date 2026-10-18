@@ -119,7 +119,7 @@ export function buildDiverStatus(
   Removed-state banner and merge panel keep their conditions, restyled flat.
 - **Book a departure** (the header's one primary) discloses the existing `BookActivity` trip
   picker in place beneath the masthead — unchanged action (`seatExistingDiverAction`, still
-  surface `"diver-record"` in `src/app/actions/seat-diver-surfaces.ts`); the picker appears
+  surface `"diver"` in `src/app/actions/seat-diver-surfaces.ts`); the picker appears
   nowhere else on the page.
 - Status-row targets: `verify` scrolls to and focuses the pending card's Verify control in the
   Certifications group; `send_waiver` opens the Waiver row's "Send options" disclosure; `collect`

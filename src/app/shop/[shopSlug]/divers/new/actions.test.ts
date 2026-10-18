@@ -12,7 +12,11 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
-vi.mock("@/app/actions/seat-diver", () => ({ seatNewDiverAction: vi.fn() }));
+vi.mock("@/app/actions/seat-diver", () => ({
+  refuseClosedWalkIn: vi.fn(),
+  seatNewDiverAction: vi.fn(),
+  seatWalkInPartyAction: vi.fn(),
+}));
 vi.mock("@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions", () => ({
   addToWaitlistAction: vi.fn(),
 }));
@@ -26,7 +30,9 @@ vi.mock("@/lib/navigation", () => ({
 }));
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
-const { seatNewDiverAction } = await import("@/app/actions/seat-diver");
+const { refuseClosedWalkIn, seatNewDiverAction, seatWalkInPartyAction } = await import(
+  "@/app/actions/seat-diver"
+);
 const { addToWaitlistAction } = await import(
   "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions"
 );
@@ -108,7 +114,8 @@ describe("createDiverFormAction", () => {
       fullName: "Nadia Ruiz",
       email: "nadia@example.com",
       phone: "",
-      surface: "walk-in",
+      surface: "departure",
+      walkIn: "true",
       tripId: TRIP_ID,
     });
     const url = new URL(to ?? "", "https://diveday.test");
@@ -116,11 +123,44 @@ describe("createDiverFormAction", () => {
     expect(Object.fromEntries(url.searchParams)).toEqual({
       confirmName: "Nadia Ruiz",
       confirmEmail: "nadia@example.com",
-      surface: "walk-in",
+      surface: "departure",
+      walkIn: "true",
       tripId: TRIP_ID,
     });
     expect(findSimilarDivers).toHaveBeenCalledWith({ db: "handle" }, SHOP_ID, "Nadia Ruiz");
     expect(createDiver).not.toHaveBeenCalled();
+  });
+
+  it("refuses a closed boat's walk-in before any name lookup", async () => {
+    vi.mocked(refuseClosedWalkIn).mockRejectedValueOnce(new Error("REDIRECT:/closed"));
+    expect(
+      await landing({
+        fullName: "Nadia Ruiz",
+        email: "",
+        phone: "",
+        surface: "departure",
+        walkIn: "true",
+        tripId: TRIP_ID,
+      }),
+    ).toBe("/closed");
+    expect(findSimilarDivers).not.toHaveBeenCalled();
+  });
+
+  it("keeps a wait-list walk-in out of the party seating", async () => {
+    expect(
+      await landing({
+        fullName: "Nadia Ruiz",
+        email: "nadia@example.com",
+        phone: "",
+        surface: "departure",
+        walkIn: "true",
+        waitlist: "true",
+        tripId: TRIP_ID,
+        "member-0-minor": "true",
+      }),
+    ).toBeNull();
+    expect(seatWalkInPartyAction).not.toHaveBeenCalled();
+    expect(addToWaitlistAction).toHaveBeenCalled();
   });
 
   it("creates anyway once the staffer has said it is someone new", async () => {
@@ -135,7 +175,7 @@ describe("createDiverFormAction", () => {
       fullName: "Nadia Ruiz",
       email: "",
       phone: "",
-      surface: "trip-guests",
+      surface: "departure",
       tripId: TRIP_ID,
       waitlist: "true",
     };
@@ -145,14 +185,34 @@ describe("createDiverFormAction", () => {
   });
 
   it("hands a seat door's form to the one seating path", async () => {
-    for (const surface of ["trip-guests", "walk-in", "new-booking"]) {
+    for (const [extra, door] of [
+      [{}, "departure"],
+      [{ walkIn: "true" }, "walk-in"],
+    ] as Array<[Record<string, string>, string]>) {
       vi.mocked(seatNewDiverAction).mockClear();
       expect(
-        await landing({ fullName: "Nadia Ruiz", email: "", phone: "", surface, tripId: TRIP_ID }),
+        await landing({
+          fullName: "Nadia Ruiz",
+          email: "",
+          phone: "",
+          surface: "departure",
+          tripId: TRIP_ID,
+          ...extra,
+        }),
       ).toBeNull();
-      expect(seatNewDiverAction).toHaveBeenCalledWith(surface, "blue-mantis", expect.any(FormData));
+      expect(seatNewDiverAction).toHaveBeenCalledWith(door, "blue-mantis", expect.any(FormData));
     }
     expect(createDiver).not.toHaveBeenCalled();
+    // A diver's own record seats through its own form, not this one.
+    expect(
+      await landing({
+        fullName: "Nadia Ruiz",
+        email: "",
+        phone: "",
+        surface: "diver",
+        tripId: TRIP_ID,
+      }),
+    ).not.toBeNull();
   });
 
   it("treats a door it does not know as no door at all", async () => {

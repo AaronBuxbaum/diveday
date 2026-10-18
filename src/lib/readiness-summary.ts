@@ -1,4 +1,5 @@
 import type { TripRequirement } from "@/db/schema";
+import { isDiver, type ParticipantType } from "./participant-types";
 import {
   BLOCKER_CATEGORY,
   type BlockerCategory,
@@ -6,6 +7,7 @@ import {
   type ReadinessBlockerCode,
   type ReadinessResult,
 } from "./readiness";
+import { NO_REQUIREMENT, requirementDemandsNothing } from "./requirement";
 
 /**
  * The diver-facing half of the readiness engine. `readiness.ts` decides in
@@ -180,7 +182,16 @@ function worstBlocker(blockers: readonly ReadinessBlocker[]): ReadinessBlocker |
 export function buildDiverChecklist(
   requirement: TripRequirement | null,
   readiness: ReadinessResult,
+  /**
+   * Whose checklist it is. A snorkeler or rider is asked for no card, so the
+   * trip's level is not theirs to be told "verified and on file" about; their
+   * certification line appears only if the engine raised a blocker for it.
+   * A seat the shop states as free owes no payment (`statedFree`, the engine's
+   * own waiver of the gate), so it is never told "Paid up".
+   */
+  seat: { participantType?: ParticipantType; statedFree?: boolean } = {},
 ): DiverChecklistItem[] {
+  const { participantType, statedFree = false } = seat;
   const byCategory = new Map<ChecklistCategory, ReadinessBlocker[]>();
   for (const blocker of readiness.blockers) {
     const category = BLOCKER_CATEGORY[blocker.code];
@@ -211,14 +222,10 @@ export function buildDiverChecklist(
   // checklist honest instead of silently dropping a card they must bring.
   const gated = new Set<Exclude<ChecklistCategory, "setup">>();
   if (requirement.requiresWaiver) gated.add("waiver");
-  if (
-    requirement.minimumCertificationLevel ||
-    (requirement.requiredSpecialties?.length ?? 0) > 0 ||
-    requirement.requiresNitrox
-  ) {
-    gated.add("certification");
-  }
-  if (requirement.requiresPayment) gated.add("payment");
+  const cardAsked = isDiver(participantType) ? requirement : NO_REQUIREMENT;
+  if (!requirementDemandsNothing(cardAsked)) gated.add("certification");
+  const paymentFree = statedFree && !isDiver(participantType);
+  if (requirement.requiresPayment && !paymentFree) gated.add("payment");
   for (const category of byCategory.keys()) {
     if (category !== "setup") gated.add(category);
   }

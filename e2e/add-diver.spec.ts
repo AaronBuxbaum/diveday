@@ -467,7 +467,7 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   ).toBeVisible();
 });
 
-test("a refusal from the global door stays on the form, boat still chosen", async ({ page }) => {
+test("a refusal from the global door lands on the boat's Divers tab", async ({ page }) => {
   test.setTimeout(30_000);
   const title = `Global Door Full ${e2eNow().getTime()}`;
   const tripId = await scheduleTrip(page, title, 9, 1);
@@ -481,15 +481,15 @@ test("a refusal from the global door stays on the form, boat still chosen", asyn
     "Diver added to the trip, but their waiver wasn’t emailed.",
   );
 
-  // The boat is full now. The refusal comes back to the door that produced it,
-  // still pointed at the same departure, so the next diver is one field away.
+  // The boat is full now. The refusal lands on that departure's Divers tab,
+  // the one place that says why and offers the wait list.
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Too Late Theo");
   await page.getByRole("button", { name: "Add to trip" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/bookings/new/${tripId}\\?notice=diver-full`));
+  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}\\?notice=diver-full`));
   // Next's own route announcer is also `role="alert"`, so target the banner.
   await expect(page.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
   await expect(page.getByText(title).first()).toBeVisible();

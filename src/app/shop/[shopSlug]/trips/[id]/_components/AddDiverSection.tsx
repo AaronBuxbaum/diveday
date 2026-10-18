@@ -106,8 +106,13 @@ export function AddDiverSection({
   // A candidate with no dive day says so only when a sibling has one; the rule
   // and the bias it corrects are in `noDiveDayNeedsSaying`.
   const sayNoDiveDay = noDiveDayNeedsSaying(confirmMatches ?? []);
-  const bookNewDiver = newDiverHref(shopSlug, { query, surface: "trip-guests", tripId });
-  const walkInNewDiver = newDiverHref(shopSlug, { query, surface: "walk-in", tripId });
+  const bookNewDiver = newDiverHref(shopSlug, { query, surface: "departure", tripId });
+  const walkInNewDiver = newDiverHref(shopSlug, {
+    query,
+    surface: "departure",
+    walkIn: true,
+    tripId,
+  });
   const bookLabel = t("trips.addDiver.addNewDiverAction", { query });
   const walkInLabel = t("trips.addDiver.addAsWalkIn");
   return (
@@ -176,7 +181,7 @@ export function AddDiverSection({
           <div>
             <Link
               href={newDiverHref(shopSlug, {
-                surface: "trip-guests",
+                surface: "departure",
                 tripId,
                 waitlist: true,
               })}

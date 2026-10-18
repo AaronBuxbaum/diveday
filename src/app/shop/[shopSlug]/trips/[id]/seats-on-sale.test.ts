@@ -11,11 +11,7 @@ import { describe, expect, it } from "vitest";
  * then refused the seat. The details form still edits the stated number; that
  * one is not here.
  */
-const SURFACES = [
-  "page.tsx",
-  join("_components", "TripRosterContent.tsx"),
-  join("walk-in", "page.tsx"),
-] as const;
+const SURFACES = ["page.tsx", join("_components", "TripRosterContent.tsx")] as const;
 
 describe("staff seats-left on a departure", () => {
   for (const file of SURFACES) {

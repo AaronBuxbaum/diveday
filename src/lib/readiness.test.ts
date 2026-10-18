@@ -14,7 +14,6 @@ import {
   BLOCKER_CATEGORY,
   calculateReadiness,
   certificationRank,
-  combineCertRequirements,
   combineSiteRequirements,
   hasVerifiedCertificationAtLeast,
   higherCertificationLevel,
@@ -23,6 +22,7 @@ import {
   REQUIRABLE_CERTIFICATION_LEVELS,
   unreviewedCardState,
 } from "./readiness";
+import { unionRequirements } from "./requirement";
 
 const now = new Date("2026-07-18T12:00:00.000Z");
 const requirement = {
@@ -860,9 +860,9 @@ describe("higherCertificationLevel", () => {
   });
 });
 
-describe("combineCertRequirements", () => {
+describe("unionRequirements — a trip with its site", () => {
   it("takes the stricter level, union of specialties, and OR of nitrox", () => {
-    const combined = combineCertRequirements(
+    const combined = unionRequirements(
       {
         minimumCertificationLevel: "open_water",
         requiredSpecialties: ["deep"],

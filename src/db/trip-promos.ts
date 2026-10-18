@@ -16,7 +16,7 @@ import {
   promoDiscountColumns,
 } from "@/lib/promo-codes";
 import { publicTripPath } from "@/lib/public-routes";
-import { combineCertRequirements } from "@/lib/readiness";
+import { unionRequirements } from "@/lib/requirement";
 import { spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
@@ -142,14 +142,7 @@ export async function sendLastMinuteDealBlast(
     certification: certSummaries.get(m.person.id) ?? null,
   }));
 
-  const dealRequirement = combineCertRequirements(
-    tripRequirement ?? {
-      minimumCertificationLevel: null,
-      requiredSpecialties: [],
-      requiresNitrox: false,
-    },
-    siteRequirement,
-  );
+  const dealRequirement = unionRequirements(tripRequirement, siteRequirement);
 
   let eligibleMatches = filterEligibleLastMinuteRecipients(
     matchesWithCert,

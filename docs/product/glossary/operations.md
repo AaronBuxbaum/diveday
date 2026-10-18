@@ -81,6 +81,25 @@
   timezone" of a UTC column, so the scan over-fetches and the caller filters by shop-local date.
   Twenty-six hours is what a local day can span either side of any instant inside it, plus slack
   for a daylight-saving transition. Never a readiness lens.
+- **Walk-in** — a person who turns up at the counter for a boat that has not left, seated from the
+  departure door in walk-in mode (`walkIn=true`, entry `walk_in`, activity `seat_added_walk_in`).
+  The mode is a claim from the client and holds only while the boat's **counter window** is open;
+  in it a name is enough (the email is optional) and the seat is told as a walk-in. Every gate is
+  the departure door's own: readiness, admission, waiver and capacity. The old
+  `/trips/[id]/walk-in` page is gone and redirects to the door.
+- **Counter window** — when the counter may still seat a walk-in on a departure
+  (`walkInDoorOpen`, `src/lib/operational-window.ts`): it starts inside the arrivals window and has
+  not sailed (the one departure buffer). The staffer's door and the seat action both ask it, so a
+  typed URL or a stale page cannot seat someone on a boat that has gone.
+- **Walk-in party** — several people seated in one counter submission: the first person's own
+  fields plus further rows (`member-<n>-…`, `src/lib/walk-in-party.ts`), each seated by the
+  walk-in door with every gate its own. A name that reads like someone on file is settled row by
+  row (the record, or a new person) before anyone is seated.
+- **Coming as** — a walk-in's participant type (diver, snorkeler or rider) on its row. The first
+  person's posts as `participantType`; a blank reads as a diver, the stricter default.
+- **Under 18** — the booker's tick on a walk-in row that this person is a minor. It asks for a
+  date of birth beside it and feeds the guardian rule alone; a ticked row routes the whole form
+  to the party seating.
 - **Counter self-registration** — the shop's QR door at `/s/<slug>/register`: a walk-in puts
   themselves on file **before any booking exists** (issue #1236). The shop prints the QR from
   Settings (`/shop/<slug>/print/counter-card`) and stands it on the counter. The form writes a

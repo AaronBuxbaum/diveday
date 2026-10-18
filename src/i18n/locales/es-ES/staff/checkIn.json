@@ -95,15 +95,6 @@
     "walkinAddedConfirmed": "Agregado a la lista de este barco, y su confirmación va en camino.",
     "walkinAddedWaiverUndelivered": "Agregado a la lista de este barco, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
     "walkinAddedIdentityUnconfirmed": "Agregado a la lista de este barco, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila, aquí abajo, antes de que embarque.",
-    "walkinFull": "Ese barco está completo. Añádelo a la lista de espera.",
-    "walkinAlready": "Ese buceador ya está en este barco.",
-    "walkinCourseUnstaffed": "Esa es una sesión de curso sin instructor asignado. Asigna uno primero en la pestaña Detalles.",
-    "walkinCoursePrerequisite": "Ese curso exige una titulación previa verificada que este buceador no tiene registrada.",
-    "walkinCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno. Agrega otro instructor o usa la lista de espera.",
-    "walkinCourseMinAge": "Ese buceador está por debajo de la edad mínima del curso el día que se imparte, según la fecha de nacimiento registrada.",
-    "walkinTripPrerequisite": "Las titulaciones de ese buceador no alcanzan lo que exigen este barco y sus sitios de buceo.",
-    "walkinUnavailable": "Ese buceador no puede tomar una plaza en este barco ahora mismo.",
-    "walkinInvalid": "Escribe un nombre antes de agregar un walk-in.",
     "noShowAlreadyBoarded": "La tripulación embarcó a ese buceador, así que no se puede marcar que no buceó. Abre el manifiesto de la salida.",
     "noShowAlreadyMissingAfterDive": "La tripulación registró que ese buceador no volvió a bordo después de una inmersión. Llama al barco y abre el manifiesto de la salida.",
     "noShowAlreadyMarked": "Ese buceador ya está marcado como que no vino.",
@@ -123,11 +114,5 @@
     "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero.",
     "walkinPartyAdded": "Todo el grupo está en la lista de este barco. Regístralos en sus filas.",
     "walkinPartyAddedWaiverUndelivered": "Todo el grupo está en la lista de este barco, pero no se enviaron sus exenciones por correo. Envíalas o comparte los enlaces desde sus filas de abajo. Un padre, madre o tutor firma con cada menor de 18 años."
-  },
-  "walkIn": {
-    "title": "Walk-in",
-    "tripLabel": "Barco",
-    "addToBoat": "Agregar al barco",
-    "addPersonAriaLabel": "Agregar a {name} a este barco"
   }
 }

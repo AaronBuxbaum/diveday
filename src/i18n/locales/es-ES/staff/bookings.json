@@ -18,7 +18,6 @@
     "addToTrip": "Agregar a la salida",
     "addPersonAriaLabel": "Agregar a {name} a esta salida",
     "handEntryDescription": "El correo es opcional. Con el nombre basta para guardar la plaza y el resto puede llegar después.",
-    "noticeInvalid": "Introduce un nombre para agregar a un buceador. El correo y el teléfono son opcionales aquí.",
     "fromRequest": "Reserva desde una petición",
     "viewRequests": "Ver todas las peticiones",
     "relevantRequests": "Peticiones relevantes",

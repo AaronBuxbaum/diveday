@@ -1,4 +1,5 @@
-import { and, eq, gt, inArray, lte } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lt, lte, ne } from "drizzle-orm";
+import type { TripRequirement } from "@/db/schema";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
@@ -22,7 +23,8 @@ import {
   smsProviderFromEnvironment,
   smsRecipient,
 } from "@/lib/notifications/sms";
-import { isDiver } from "@/lib/participant-types";
+import { isDiver, type ParticipantType } from "@/lib/participant-types";
+import type { ReadinessResult } from "@/lib/readiness";
 import {
   buildDiverChecklist,
   type ReminderActionCode,
@@ -310,6 +312,21 @@ function emptyReminderSummary(scanned: number): ReminderRunSummary {
   return { scanned, sent: 0, skipped: 0, held: 0, identityHeld: 0, settled: 0, failed: 0 };
 }
 
+/** The diver's checklist for one seat: its kind and whether the shop states it free shape what it owes. */
+function checklistFor(
+  evidence: {
+    requirement: TripRequirement | null;
+    readiness: ReadinessResult;
+    statedFree: boolean;
+  },
+  participantType: ParticipantType,
+) {
+  return buildDiverChecklist(evidence.requirement, evidence.readiness, {
+    participantType,
+    statedFree: evidence.statedFree,
+  });
+}
+
 /**
  * Send every pre-trip reminder that has come due since the last run, across all
  * shops. Idempotent by construction: a booking's reminder is deduped by a
@@ -508,9 +525,7 @@ export async function sendDueReminders(
     // The diver's own checklist, from their readiness page's engine, built
     // first: the rhythm rule (issue #1177) decides on it whether this sends.
     const evidence = readinessByBooking.get(booking.id);
-    const checklist = evidence
-      ? buildDiverChecklist(evidence.requirement, evidence.readiness)
-      : null;
+    const checklist = evidence ? checklistFor(evidence, booking.participantType) : null;
     // A course student's learning materials ride the week-out nudge until a
     // staffer marks them done (ADR 20261008-course-learning-materials). They
     // are a to-do of their own, so they also keep that nudge from being

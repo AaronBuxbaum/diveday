@@ -439,10 +439,6 @@ describe("currentStaffDestination and the section it lights", () => {
     expect(current(`${root}/settings/export`)).toBe("settings");
   });
 
-  it("files a boat's walk-in door under the boat's own section", () => {
-    expect(section(`${root}/trips/42/walk-in`)).toBe("schedule");
-  });
-
   it("lights a borrowed claim for a page with no destination of its own", () => {
     // Trip details are the board's detail views (`alsoMatch`).
     expect(current(`${root}/trips/42`)).toBe("board");

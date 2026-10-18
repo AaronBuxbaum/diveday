@@ -47,11 +47,13 @@ import {
   STAFF_DAY_HEADING,
   saveDiveIntent,
   scheduleCrewedOpenWaterSession,
+  seatFromRoster,
   seededTripId,
   threadStatus,
   tripPathByTitle,
   waiverLinkFromResult,
   waiverLinkFromToast,
+  walkInFormPath,
   writeCourseForm,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
@@ -4745,14 +4747,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Odile Marchand is seeded carded and booked on nothing
         // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
         // baseline and arrives blocked on the release alone.
-        await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
-        const findDiver = page.getByRole("searchbox", {
-          name: "Search by name, email, or phone",
-        });
-        await findDiver.fill("Odile Marchand");
-        await findDiver.press("Enter");
-        await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
-        await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+        await seatFromRoster(page, tripId, "Odile Marchand");
 
         // **The boat goes without her**, ten minutes ago: past the departure,
         // inside the hour a late boat is allowed, which is the seat half of
@@ -4837,14 +4832,7 @@ for (const scheme of ["light", "dark"] as const) {
           capacity: 1,
         });
         const tripId = await seededTripId(page, "blue-mantis", title);
-        await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
-        const findDiver = page.getByRole("searchbox", {
-          name: "Search by name, email, or phone",
-        });
-        await findDiver.fill("Odile Marchand");
-        await findDiver.press("Enter");
-        await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
-        await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+        await seatFromRoster(page, tripId, "Odile Marchand");
 
         await page.goto(counterPath("blue-mantis", tripId));
         await expect(page.locator("[data-check-in-queue]")).toHaveAttribute(
@@ -5017,22 +5005,15 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staffing-week-crew-clash", scheme);
       });
 
-      // The walk-in door under "Add a diver" on a boat's Divers tab, both
-      // halves: search for a returning diver or hand-enter one — no required
-      // email at the desk. The boat is the path's own, so there is no picker. Two
-      // captures and two tests, for the same reason the Add-booking door below
-      // has two: the walk-in form and the diver form never share a screen, so
-      // one shot would leave half the surface with no baseline at all.
-      const openWalkIn = async (page: Page, query = "") => {
+      // The counter's mode of the departure door: the new-diver form for a walk-in
+      // on a boat's Divers tab, no required email at the desk. The boat is the
+      // form's own `tripId`, so there is no picker. The boat's Divers tab (its
+      // search and "Add as a walk-in") is the departure capture's.
+      const openWalkInForm = async (page: Page) => {
         const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
-        await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in${query}`);
-        await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
+        await page.goto(walkInFormPath("blue-mantis", tripId));
+        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
       };
-
-      test(`the walk-in counter renders true to the design (${scheme})`, async ({ page }) => {
-        await openWalkIn(page);
-        await capture(page, "trip-walk-in", scheme);
-      });
 
       /**
        * **"Took a call"** (N-22), folded into Add a booking as its last
@@ -5050,19 +5031,8 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "took-a-call", scheme);
       });
 
-      test(`the walk-in form explains an invalid submission (${scheme})`, async ({ page }) => {
-        await openWalkIn(page, "?notice=walkin-invalid");
-        await expect(
-          page.getByRole("alert").filter({ hasText: "Enter a name before adding a walk-in." }),
-        ).toBeVisible();
-        await capture(page, "trip-walk-in-notice", scheme);
-      });
-
       test(`the walk-in diver step renders true to the design (${scheme})`, async ({ page }) => {
-        await openWalkIn(page);
-        await page.getByRole("link", { name: "Add diver", exact: true }).click();
-        await page.waitForURL(/\/divers\/new/);
-        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
+        await openWalkInForm(page);
         await capture(page, "trip-walk-in-diver", scheme);
       });
 
@@ -5070,10 +5040,7 @@ for (const scheme of ["light", "dark"] as const) {
       // step with two more people added, one of them ticked "Under 18". Pinned
       // words so the picture is the same on every run.
       test(`the walk-in party rows render true to the design (${scheme})`, async ({ page }) => {
-        await openWalkIn(page);
-        await page.getByRole("link", { name: "Add diver", exact: true }).click();
-        await page.waitForURL(/\/divers\/new/);
-        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
+        await openWalkInForm(page);
         await page.getByLabel("Full name").first().fill("Ana Brightwater");
         await page.getByRole("button", { name: "Add another person" }).click();
         const second = page.getByRole("group", { name: "Person 2" });
@@ -6757,14 +6724,7 @@ for (const scheme of ["light", "dark"] as const) {
         // (`src/db/seed-cert-gates.ts`, `src/db/seed-cast.ts`), so seating
         // them here flips no other departure's manifest, readiness or queue.
         const seat = async (name: string) => {
-          await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
-          const findDiver = page.getByRole("searchbox", {
-            name: "Search by name, email, or phone",
-          });
-          await findDiver.fill(name);
-          await findDiver.press("Enter");
-          await page.getByRole("button", { name: `Add ${name} to this boat` }).click();
-          await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+          await seatFromRoster(page, tripId, name);
         };
         await seat("Odile Marchand");
         await seat("Hana Kobayashi");

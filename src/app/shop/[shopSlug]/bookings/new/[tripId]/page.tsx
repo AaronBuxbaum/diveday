@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import {
   type BookingRequestCardItem,
   BookingRequestContext,
@@ -15,16 +15,14 @@ import {
 } from "@/db/course-inquiries";
 import { findSimilarDivers, getBookableDiver, listBookableDivers } from "@/db/divers";
 import { getTripWithBooked } from "@/db/trips";
-import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
-import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { SeatDiverPanel } from "../../../_components/SeatDiverPanel";
 
@@ -44,43 +42,18 @@ export const metadata: Metadata = {
 };
 
 /**
- * Refusals, in the trip page's vocabulary — the same codes and mostly the same
- * words the Guests tab uses, because this door is that tab's add-a-diver
- * section with the departure chosen a step earlier. Success never lands here:
- * a seated diver goes to the trip's Guests tab with the roster's own toast
- * (`SEAT_SURFACES["new-booking"]`, src/app/actions/seat-diver-surfaces.ts).
- */
-const NOTICE_KEYS: Record<string, { tone: "danger"; key: StaffMessageKey }> = {
-  // Its own words, not the Guests tab's: that one asks for "a name and a valid
-  // email", which is true there and false here — this door takes the no-email
-  // diver the counter always could.
-  "diver-invalid": { tone: "danger", key: "bookings.new.noticeInvalid" },
-  "seat-busy": { tone: "danger", key: "seatDiver.busy" },
-  "diver-full": { tone: "danger", key: "trips.notices.diverFull" },
-  "diver-divers-full": { tone: "danger", key: "participants.notices.diversFull" },
-  "diver-type-unavailable": { tone: "danger", key: "participants.notices.typeUnavailable" },
-  "diver-already": { tone: "danger", key: "trips.notices.diverAlready" },
-  "diver-course-unstaffed": { tone: "danger", key: "trips.notices.diverCourseUnstaffed" },
-  "diver-course-prerequisite": { tone: "danger", key: "trips.notices.diverCoursePrerequisite" },
-  "diver-course-ratio-full": { tone: "danger", key: "trips.notices.diverCourseRatioFull" },
-  "diver-course-min-age": { tone: "danger", key: "trips.notices.diverCourseMinAge" },
-  "diver-trip-prerequisite": { tone: "danger", key: "trips.notices.diverTripPrerequisite" },
-  "diver-unavailable": { tone: "danger", key: "trips.notices.diverUnavailable" },
-};
-
-/**
  * The global "Add a booking" door, step two: who is taking the seat?
  *
- * Same two halves as the counter walk-in — pick a returning diver, or hand-enter
- * a new one with the email optional — submitting through the shared seat-a-diver
- * actions (src/app/actions/seat-diver.ts), so a diver seated here owes exactly
- * the consequences a diver seated at any other door does.
+ * The departure door with the boat chosen a step earlier: pick a returning
+ * diver, or hand-enter a new one with the email optional, submitting through
+ * the shared seat-a-diver actions (src/app/actions/seat-diver.ts), so a diver
+ * seated here owes exactly the consequences a diver seated at any other door
+ * does. Seated or refused, the staffer lands on the boat's Divers tab
+ * (`SEAT_SURFACES.departure`), which holds the add-diver form and says why a
+ * refusal happened; nothing here speaks refusals of its own.
  *
- * The departure lives in the path rather than a `?tripId=`, which is what lets
- * a refusal bounce back here by adding only its own `?notice=` to a URL that
- * had no query. Appending a second param to an already-queried URL is the one
- * shape a server-action redirect could not land on: the client router held the
- * page it already had and the submit button span forever.
+ * The departure lives in the path rather than a `?tripId=`: it is a place the
+ * staffer is standing, bookmarkable and shareable.
  */
 export default async function NewBookingDiverPage({
   params,
@@ -89,10 +62,7 @@ export default async function NewBookingDiverPage({
   params: Promise<{ shopSlug: string; tripId: string }>;
   searchParams: Promise<{
     diverq?: string;
-    notice?: string;
     request?: string;
-    /** Signed, verified against this route's own `tripId` — src/lib/trip-admission-gate.ts. */
-    gate?: string | string[];
     confirmName?: string;
     confirmEmail?: string;
     confirmPhone?: string;
@@ -104,8 +74,7 @@ export default async function NewBookingDiverPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
-  const { diverq, notice, gate, request, confirmName, confirmEmail, confirmPhone } =
-    await searchParams;
+  const { diverq, request, confirmName, confirmEmail, confirmPhone } = await searchParams;
   const { db, shop } = await requireShopSurface(shopSlug);
   const confirmMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
   const locale = await requestLocale(shop.defaultLocale);
@@ -160,15 +129,6 @@ export default async function NewBookingDiverPage({
     ? [requestCandidate]
     : await listBookableDivers(db, shop.id, trip.id, { query: searchQuery });
   const requestQuery = requestContext ? `?request=${encodeURIComponent(requestContext.id)}` : "";
-  const banner = noticeFromParam(notice, NOTICE_KEYS);
-  // The trip's own cert gate refused this diver: say *which* requirement failed
-  // and what they hold, rather than the one static sentence every refusal used
-  // to share (src/lib/trip-admission.ts).
-  const gateRefusal =
-    notice === "diver-trip-prerequisite"
-      ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
-      : null;
-
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       {/* R9 put a second link under this header pointing back one step, to the
@@ -182,12 +142,6 @@ export default async function NewBookingDiverPage({
         eyebrowHref={shopPath(shopSlug, "schedule", "board")}
         title={t("bookings.new.title")}
       />
-
-      {banner ? (
-        <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)} className="mt-6">
-          {gateRefusal ? tripAdmissionRefusalText(t, gateRefusal, locale) : t(banner.key)}
-        </ShopNotice>
-      ) : null}
 
       {requestContext ? (
         <BookingRequestContext
@@ -228,12 +182,10 @@ export default async function NewBookingDiverPage({
         changeLabel={t("bookings.new.changeTrip")}
       />
 
-      {/* The same panel the counter walk-in stands on — this door is that one
-          with the departure chosen a step earlier. The email rule the two
-          differ on comes from `SEAT_SURFACES["new-booking"]`, not from a
-          `required` attribute hand-copied between two files. */}
+      {/* The panel the roster's add-diver band is the other half of: one door,
+          `SEAT_SURFACES.departure`, whichever page the staffer started on. */}
       <SeatDiverPanel
-        surface="new-booking"
+        surface="departure"
         shopSlug={shopSlug}
         tripId={trip.id}
         query={searchQuery}
