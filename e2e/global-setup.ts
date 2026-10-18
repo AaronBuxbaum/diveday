@@ -70,7 +70,15 @@ async function warmBrowser() {
  * absorb it. Each per-test reset lives in e2e/fixtures.ts.
  */
 export default async function globalSetup() {
-  await Promise.all([warmServers(), warmBrowser()]);
+  // In order, not in parallel. The browser's warm-up navigates to worker 0's
+  // server, and that server is single-threaded: while it is still running the
+  // first reset (migrate + seed, about 30s of CPU in a cloud container) the
+  // navigation queues behind it. Run alongside it, the "first page +
+  // navigation" line below read 22,262ms and 27,202ms against a 30s timeout,
+  // all of it the server's seed and none of it the browser's; run after it,
+  // the same line measures the browser (issue #2624).
+  await warmServers();
+  await warmBrowser();
 }
 
 async function warmServers() {
@@ -85,9 +93,15 @@ async function warmServers() {
       });
       try {
         // This first reset pays the one-time migrate + seed, the heaviest
-        // single request in the run; 30s is ample and still fails fast if the
-        // server never came up.
-        await context.post("/api/test/reset", { timeout: 30_000 });
+        // single request in the run. It is untimed setup, not a test: no
+        // test's clock is running, so this bound only has to tell a slow
+        // server from one that never came up. Measured in a cloud container
+        // (issue #2624) it costs about 30s of server CPU on its own and 28 to
+        // 47s of wall time once other processes share the cores, so the old
+        // 30s failed the whole run here ("Timeout 30000ms exceeded" at this
+        // line) before a single test started. The per-test reset after it is
+        // about 5.5s of CPU and is not governed by this number.
+        await context.post("/api/test/reset", { timeout: 120_000 });
         // Warm the routes every test hits first so the first test's clock
         // doesn't absorb their one-time render cost. Best-effort.
         for (const route of ["/", "/sign-in", "/s/blue-mantis"]) {
