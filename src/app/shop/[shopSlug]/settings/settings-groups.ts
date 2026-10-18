@@ -11,7 +11,7 @@ import {
 import { FEATURE_ROWS, type FeatureRowGate } from "./features/feature-rows";
 
 /**
- * The settings hub's one list of groups, in render order: **seven**, split by
+ * The settings hub's one list of groups, in render order: **eight**, split by
  * who the setting is about (issue #2813, Aaron 2026-10-17). It was twelve,
  * with rows filed by where they were built (a staffer's own email under
  * Notifications, a login's password beside the shop's subscription, "Rarely

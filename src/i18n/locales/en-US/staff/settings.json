@@ -324,7 +324,7 @@
         "piece": "Gear",
         "price": "Price"
       },
-      "priceRule": "Price the full set (usually cheaper) and each piece separately: five items quotes the set, fewer pays per piece. Leave a box blank to settle at the shop.",
+      "priceRule": "Price the full set (usually cheaper) and each piece separately. A diver is quoted the set when it costs less than the pieces they take, and the pieces otherwise. Leave a box blank to settle at the shop.",
       "fullSetLabel": "Full set",
       "fullSetHint": "(BCD, reg, wetsuit, mask & fins, weights, dive computer)",
       "nitroxHint": "(per dive)",

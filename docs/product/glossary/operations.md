@@ -700,7 +700,7 @@
 - **Pre-departure checklist** — a shop-authored, ordered list of lines a crew confirms once before
   a boat leaves the dock (emergency oxygen, life jackets, a fire extinguisher — whatever the shop's
   own flag state and vessel class require). DiveDay writes none of the content; a shop types its
-  own list in Settings. Distinct from **roll call** in every way that matters: it happens once per
+  own list on the `/safety-checklist` register. Distinct from **roll call** in every way that matters: it happens once per
   departure rather than once per dive, it is never a per-*person* record, and it **informs, never
   gates** — an unchecked item cannot refuse a departure from sailing or a page from rendering,
   matching the stance the gear register's service clocks already take (whether it *should* gate is

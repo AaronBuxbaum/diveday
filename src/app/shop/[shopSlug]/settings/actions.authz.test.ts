@@ -443,6 +443,33 @@ describe("every settings mutation refuses the daily crew", () => {
     expect(after?.rentalTerms).toBeNull();
   });
 
+  /**
+   * Nitrox is priced per dive and only while the shop fills it (#2815): the
+   * price box is live when ticked; unticked, a posted figure is ignored and
+   * the stored price stays; ticked and blank, the price is cleared.
+   */
+  it("keeps, ignores and clears the nitrox price as the tick says", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const form = (fields: Record<string, string>) => {
+      const data = new FormData();
+      data.set("regulatorServiceMonths", "12");
+      for (const [key, value] of Object.entries(fields)) data.set(key, value);
+      return data;
+    };
+
+    await redirectedTo(() => saveRentalsAction(form({ nitrox: "on", nitroxPrice: "12" })));
+    expect((await getShopById(db, shop.id))?.rentalPricing.nitroxCents).toBe(1200);
+
+    await redirectedTo(() => saveRentalsAction(form({ nitroxPrice: "999" })));
+    const unticked = await getShopById(db, shop.id);
+    expect(unticked?.rentalPricing.nitroxCents).toBe(1200);
+    expect(unticked?.rentalItems).not.toContain("nitrox");
+
+    await redirectedTo(() => saveRentalsAction(form({ nitrox: "on", nitroxPrice: "" })));
+    expect((await getShopById(db, shop.id))?.rentalPricing.nitroxCents).toBeNull();
+  });
+
   it("still lets an owner through every one of them", async () => {
     const { db, shop, owner } = await context();
     signIn(shop, owner);

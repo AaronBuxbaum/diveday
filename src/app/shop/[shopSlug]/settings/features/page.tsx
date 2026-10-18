@@ -6,10 +6,13 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ChoiceRow, FieldActions, FieldGrid } from "@/components/ui/form";
-import { canPersonManagePaymentSettings, canPersonManageShopSettings } from "@/db/authz";
+import {
+  canPersonManagePaymentSettings,
+  canPersonManageShopSettings,
+  canPersonManageStaffAccounts,
+} from "@/db/authz";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { canManageStaffAccounts } from "@/lib/authz";
 import { requireShopSurface } from "@/lib/session";
 import { shopOffers } from "@/lib/shop-features";
 import { type NoticeMessages, noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -135,7 +138,9 @@ export default async function FeaturesPage({
   if (await canPersonManagePaymentSettings(db, session.user.shopId, session.user.personId)) {
     gates.add("payments");
   }
-  if (canManageStaffAccounts(session.user.roles)) gates.add("team");
+  if (await canPersonManageStaffAccounts(db, session.user.shopId, session.user.personId)) {
+    gates.add("team");
+  }
   const banner = noticeFromParam(notice, noticeMessages(t));
   const base = `/shop/${session.user.shopSlug}`;
 

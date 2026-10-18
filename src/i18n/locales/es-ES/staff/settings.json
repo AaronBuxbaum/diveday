@@ -324,7 +324,7 @@
         "piece": "Equipo",
         "price": "Precio"
       },
-      "priceRule": "Pon precio al equipo completo (suele salir más barato) y a cada pieza por separado: cinco piezas cotizan el conjunto, menos se pagan por pieza. Deja una casilla vacía para cobrarlo en el centro.",
+      "priceRule": "Pon precio al equipo completo (suele salir más barato) y a cada pieza por separado. Al buceador se le cotiza el conjunto cuando cuesta menos que las piezas que toma, y las piezas en caso contrario. Deja una casilla vacía para cobrarlo en el centro.",
       "fullSetLabel": "Equipo completo",
       "fullSetHint": "(BCD, regulador, neopreno, máscara y aletas, lastre, computadora de buceo)",
       "nitroxHint": "(por inmersión)",

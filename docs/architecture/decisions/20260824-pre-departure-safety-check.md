@@ -121,7 +121,7 @@ agree on what an absent field means.
   here changes if that decision goes either way: the writer, the events table, and the UI's tap
   targets are unaffected: only whether a refusal is *possible* upstream of them would change.
 - The next feature that wants a shop-authored ordered list (checklist or otherwise) has a template
-  to copy — `pre_departure_checklist_items`'s shape, `canPersonManageShopSettings`-gated CRUD, and
+  to copy — `pre_departure_checklist_items`'s shape, `canPersonManageSafetyChecklist`-gated CRUD (the `/safety-checklist` register), and
   the swap-and-rewrite reorder pattern — without inheriting anything checklist-specific.
 
 ## Amendment, 2026-10-13: one default line, oxygen (owner decision, issue 2301)
