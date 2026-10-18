@@ -42,19 +42,12 @@ const SAMPLES: Notification[] = [
     shopId: dummyUuid,
     to: "diver@example.com",
     locale: DEFAULT_DIVER_LOCALE,
-    diverName: "Sam Diver",
     shopName: "Blue Mantis Scuba",
     tripTitle: "Two-Tank Coral Reef Departure",
     startsAt: new Date("2026-09-01T13:00:00Z"),
-    endsAt: new Date("2026-09-01T17:00:00Z"),
     timezone: "America/New_York",
+    open: 1,
     readinessUrl: "https://diveday.example/ready/sample-token",
-    brief: {
-      forecast: "Calm 1ft seas, 82°F water temperature",
-      bring: ["Towel", "Certification card", "Sunglasses"],
-      whoToText: "+1 305 555 0199",
-    },
-    meetingPoint: SAMPLE_MEETING_POINT,
   },
   {
     kind: "trip_rescheduled",
@@ -80,12 +73,10 @@ const SAMPLES: Notification[] = [
     shopId: dummyUuid,
     to: "diver@example.com",
     locale: DEFAULT_DIVER_LOCALE,
-    diverName: "Sam Diver",
     shopName: "Blue Mantis Scuba",
     tripTitle: "Two-Tank Coral Reef Departure",
     startsAt: new Date("2026-09-01T13:00:00Z"),
     timezone: "America/New_York",
-    sites: ["Molasses Reef", "French Reef"],
     // Two dives, the last one out at 11:40 local, the shop's default 24 hours.
     flySafe: {
       from: new Date("2026-09-02T15:40:00Z"),

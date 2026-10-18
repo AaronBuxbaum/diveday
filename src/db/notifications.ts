@@ -289,7 +289,7 @@ function openQueuedPayload(sealed: string, key: SecretKey): Notification | null 
  *
  * `notification_send_queue.shop_id` is a non-null FK, so this queue is
  * structurally tenant-scoped and a notification with no shop cannot be stored
- * in it. `usage_ceiling_alert` — a platform-level cost warning about the
+ * in it. `operator_alert` (`usage_ceiling`) — a platform-level cost warning about the
  * deployment's own Vercel/Neon bill — is the one such kind
  * (ADR 20260806-provider-usage-guardrails), and it deliberately reaches the
  * provider through `notify()` rather than `sendNotification`, so it should

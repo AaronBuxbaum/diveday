@@ -543,6 +543,7 @@ describe("what the retry queue is allowed to hold", () => {
   function linkBearing(shopId: string, kind: string): Notification {
     const account = {
       userAccountId: "00000000-0000-4000-8000-00000000a001",
+      ownerName: "Ola",
       tokenId: "00000000-0000-4000-8000-00000000a002",
       shopId,
       to: "front-desk@example.invalid",
@@ -553,9 +554,9 @@ describe("what the retry queue is allowed to hold", () => {
     const url = `https://diveday.test/verify/${TOKEN}`;
     switch (kind) {
       case "email_verification":
-        return { ...account, kind: "email_verification", ownerName: "Ola Roe", verifyUrl: url };
+        return { ...account, kind: "address_confirmation", purpose: "account", confirmUrl: url };
       case "password_reset_request":
-        return { ...account, kind: "password_reset_request", ownerName: "Ola Roe", resetUrl: url };
+        return { ...account, kind: "password_reset_request", resetUrl: url };
       default:
         return {
           ...account,
@@ -712,9 +713,8 @@ describe("what the retry queue is allowed to hold", () => {
         },
       }),
     ).resolves.toMatchObject({ sent: 1 });
-    // Sealing is not redaction: what comes back out is the same message, token
-    // and all, or the retry would deliver a link that opens nothing.
-    expect(sent[0]).toMatchObject({ kind: "email_verification", verifyUrl: expect.any(String) });
+    // Sealing is not redaction: the same message comes back, token and all, or the retry opens nothing.
+    expect(sent[0]).toMatchObject({ kind: "address_confirmation", confirmUrl: expect.any(String) });
     expect(JSON.stringify(sent[0])).toContain(TOKEN);
   });
 
@@ -1314,7 +1314,7 @@ describe("what the retry queue is allowed to hold", () => {
           expect.objectContaining({
             level: "error",
             reason: "retries_exhausted",
-            kind,
+            kind: kind === "email_verification" ? "address_confirmation" : kind,
             shopId: shop.id,
             errorCode: "temporary_failure",
             attempts: 3,
@@ -1464,7 +1464,7 @@ describe("what the retry queue is allowed to hold", () => {
       expect(linesFor("notification.send_abandoned")).toEqual([
         expect.objectContaining({
           reason: "queue_seal_unavailable",
-          kind: "email_verification",
+          kind: "address_confirmation",
           shopId: shop.id,
           errorCode: "temporary_failure",
         }),

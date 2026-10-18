@@ -5271,10 +5271,7 @@
       "waterTemp": "agua alrededor de {value}",
       "visibility": "visibilidad cercana a {value}",
       "expect": "Prevé {list}.",
-      "firstTimer": "¿Tu primera inmersión en barco? El equipo te explica todo el material y el plan antes de entrar al agua, así que nunca te dejarán con el equipo sin más indicaciones. Ven con tus preguntas.",
-      "conditionsLabel": "Condiciones:",
-      "bringLabel": "Qué traer:",
-      "whoToText": "¿Preguntas para el día? Escríbenos al {phone}."
+      "conditionsLabel": "Condiciones:"
     },
     "reminderAction": {
       "waiverPending": "Firma tu exención",
@@ -5313,7 +5310,6 @@
       "trackWhatsLeft": "Sigue lo que te falta antes de salir",
       "seeWhatsLeft": "Consulta lo que te falta antes de salir",
       "outstandingHeading": "Aún por resolver antes de embarcar:",
-      "medicalReviewNote": "Revisa si una respuesta médica necesita el visto bueno de un médico antes de viajar",
       "courtesyUnsubscribe": "Dejar de recibir correos opcionales de {shopName}"
     },
     "tripConditionsHold": {
@@ -5410,35 +5406,27 @@
     },
     "tripReminder": {
       "weekSubject": "Sales esta semana: {tripTitle}",
-      "weekBody": "Un recordatorio rápido de que {tripTitle} sale esta semana.",
+      "weekBody": "{tripTitle} sale el {when}{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}",
       "weekSubjectCourse": "Tu curso empieza esta semana: {tripTitle}",
-      "weekBodyCourse": "Un recordatorio rápido de que {tripTitle} empieza esta semana.",
+      "weekBodyCourse": "{tripTitle} empieza el {when}{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}",
       "dockNote": "Preséntate en el muelle {dock} antes.",
       "daySubject": "Sales mañana: {tripTitle}",
-      "dayOpenerFirstTimer": "Mañana buceas con nosotros. Abajo tienes todo lo que necesitas para el día.",
-      "dayOpenerReturning": "Un recordatorio rápido de que {tripTitle} sale mañana.",
-      "arrival": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
-      "hotelPickupArrival": "Tu recogida es a las {time} en {location}.",
-      "hotelNotSet": "tu hotel"
+      "dayBody": "{tripTitle} sale mañana a las {when}{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}",
+      "daySubjectCourse": "Tu curso empieza mañana: {tripTitle}",
+      "dayBodyCourse": "{tripTitle} empieza mañana a las {when}{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}"
     },
     "courseMaterials": {
       "heading": "Antes de tu primer día"
     },
-    "courseDays": {
-      "heading": "Los días de tu curso",
-      "day": "Día {number}: {date}, {time}"
-    },
     "tripRecap": {
       "subject": "Tu inmersión con {shopName}: {tripTitle}",
       "thanks": "Gracias por bucear {tripTitle} con nosotros el {date}.",
-      "dived": "Buceaste en {sites}.",
       "flySafeAfterDive": "Te pedimos esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
       "flySafeAfterDiveEarlierDay": "Te pedimos esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
       "flySafeAfterReturn": "Te pedimos esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
       "flySafeAfterReturnDivesPlanned": "Te pedimos esperar al menos hasta el {when} antes de volar: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
       "flySafeAfterReturnEarlierDay": "Te pedimos esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
-      "seeRecap": "Ver el resumen de tu día",
-      "footer": "Si te encantó, lo mejor que puedes hacer es traer a un compañero la próxima vez. Nos vemos en el agua."
+      "seeRecap": "Ver el resumen de tu día"
     },
     "welcome": {
       "subject": "Bienvenido a DiveDay, {shopName}",

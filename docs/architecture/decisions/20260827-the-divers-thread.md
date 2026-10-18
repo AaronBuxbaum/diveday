@@ -96,7 +96,8 @@ stops being a page of its own: existing recap links keep working by rendering th
 after-state (same data, one surface), and recap emails keep their `/recap` URLs, which render the
 thread's after-state. This closes the
 concept-model row's open half ("folding recap into the same link"); the row's *other* open half —
-whether the second booking-time email survives — stays an owner call and is not settled here.
+whether the second booking-time email survives — was an owner call, settled 2026-10-17 by
+[20261018-diver-messages-are-states](20261018-diver-messages-are-states.md): booking sends one message.
 
 **Amended 2026-08-28, by review of the shipped slice.** Two sentences above were wrong in the
 water, and the code now says otherwise; the decision itself stands.

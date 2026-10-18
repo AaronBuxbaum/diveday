@@ -57,8 +57,8 @@ type CueInput = {
   /**
    * The start of this diver's most recent *departed* booking before this one,
    * or null when they have never been on a boat with this shop — the same
-   * predicate `returningDiverIds` uses, so "first-timer" means one thing across
-   * the app.
+   * predicate the reminder sweep once used, so "first-timer" keeps one meaning
+   * across the app.
    */
   lastDivedAt: Date | null;
   /** This seat is a snorkeler's or a rider's, so its first time is not a first dive. */

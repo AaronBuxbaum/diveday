@@ -385,7 +385,7 @@ export const notificationSendQueue = pgTable(
      * the two are the same, which is almost every kind. Two are not:
      * `course_inquiry` mails the shop's own front desk about a diver who used
      * the public composer and carries their name, address, phone and free-text
-     * message; and `new_account_alert` mails DiveDay about a shop owner.
+     * message; and the `new_account` operator alert mails DiveDay about a shop owner.
      * Before these a live row for either survived an erasure until it drained,
      * because neither handle could see it and no `->>` probe can be added to a
      * sealed payload (issue #1298).

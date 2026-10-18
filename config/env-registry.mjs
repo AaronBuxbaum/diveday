@@ -212,8 +212,8 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "Where the two operational alerts land -- a trial started (new_account_alert)",
-      "and someone tried the live demo (demo_started_alert), ADR",
+      "Where the two operational alerts land -- a trial started (operator_alert new_account)",
+      "and someone tried the live demo (operator_alert demo_started), ADR",
       "20260805-demo-try-alerts. Not a secret: an address, not a credential.",
     ],
     keys: [

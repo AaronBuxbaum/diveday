@@ -11,6 +11,7 @@ import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 import { crewScheduleChangeEmail } from "./crew-emails";
 import { deskAfterHoursEmail, stripePaymentsRestrictedEmail } from "./desk-emails";
 import { departureNoteEmail, lostItemEmail } from "./desk-notes";
+import { diverStateEmail } from "./diver-state-email";
 import {
   bookingCancelledEmail,
   bookingConfirmationEmail,
@@ -35,8 +36,6 @@ import {
   tripConditionsHoldEmail,
   tripInvitationEmail,
   tripMinimumNotMetEmail,
-  tripRecapEmail,
-  tripReminderEmail,
   tripRescheduledEmail,
   usageCeilingAlertEmail,
   verifyAccountEmail,
@@ -116,19 +115,52 @@ function withPostalFooter(
   };
 }
 
+/** One kind, five events: the event picks the words, never the reader. */
+function operatorAlertEmail(
+  notification: Extract<Notification, { kind: "operator_alert" }>,
+): NotificationEmail {
+  switch (notification.event) {
+    case "new_account":
+      return newAccountAlertEmail(notification);
+    case "demo_started":
+      return demoStartedAlertEmail(notification);
+    case "usage_ceiling":
+      return usageCeilingAlertEmail(notification);
+    case "setup_request":
+      return setupRequestAlertEmail(notification);
+    case "founder_digest":
+      return founderDigestEmail(notification);
+  }
+}
+
+/** One kind, three readers: the purpose picks whose address is being vouched for. */
+function addressConfirmationEmail(
+  notification: Extract<Notification, { kind: "address_confirmation" }>,
+): NotificationEmail {
+  switch (notification.purpose) {
+    case "account":
+      return verifyAccountEmail({ ...notification, verifyUrl: notification.confirmUrl });
+    case "shop_contact":
+      return contactEmailConfirmationEmail(notification);
+    case "shore_alert":
+      return shoreAlertConfirmationEmail(notification);
+  }
+}
+
 function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
   if (notification.kind === "waitlist_invite") return waitlistInviteEmail(notification);
   if (notification.kind === "trip_invitation") return tripInvitationEmail(notification);
   if (notification.kind === "direct_trip_invitation") return tripInvitationEmail(notification);
   if (notification.kind === "trip_reminder_7d") {
-    return tripReminderEmail({ ...notification, lead: "week" });
+    return diverStateEmail({ ...notification, state: "week_out" });
   }
   if (notification.kind === "trip_reminder_24h") {
-    return tripReminderEmail({ ...notification, lead: "day" });
+    return diverStateEmail({ ...notification, state: "tonight" });
   }
   if (notification.kind === "trip_rescheduled") return tripRescheduledEmail(notification);
-  if (notification.kind === "trip_recap") return tripRecapEmail(notification);
+  if (notification.kind === "trip_recap")
+    return diverStateEmail({ ...notification, state: "home" });
   if (notification.kind === "trip_conditions_hold") return tripConditionsHoldEmail(notification);
   if (notification.kind === "trip_blowout") return tripBlowoutEmail(notification);
   if (notification.kind === "trip_minimum_not_met") return tripMinimumNotMetEmail(notification);
@@ -138,19 +170,12 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "readiness_link") return readinessLinkEmail(notification);
   if (notification.kind === "booking_handoff") return bookingHandoffEmail(notification);
   if (notification.kind === "welcome") return welcomeEmail(notification);
-  if (notification.kind === "email_verification") return verifyAccountEmail(notification);
-  if (notification.kind === "contact_email_confirmation") {
-    return contactEmailConfirmationEmail(notification);
-  }
+  if (notification.kind === "address_confirmation") return addressConfirmationEmail(notification);
   if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
   if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
-  if (notification.kind === "new_account_alert") return newAccountAlertEmail(notification);
-  if (notification.kind === "demo_started_alert") return demoStartedAlertEmail(notification);
-  if (notification.kind === "usage_ceiling_alert") return usageCeilingAlertEmail(notification);
-  if (notification.kind === "setup_request_alert") return setupRequestAlertEmail(notification);
-  if (notification.kind === "founder_digest") return founderDigestEmail(notification);
+  if (notification.kind === "operator_alert") return operatorAlertEmail(notification);
   if (notification.kind === "course_inquiry") return courseInquiryEmail(notification);
   if (notification.kind === "staff_reply") return staffReplyEmail(notification);
   if (notification.kind === "weekly_digest") return weeklyDigestEmail(notification);
@@ -166,9 +191,6 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "incident_missing_diver")
     return incidentMissingDiverEmail(notification);
   if (notification.kind === "shore_alert_stopped") return shoreAlertStoppedEmail(notification);
-  if (notification.kind === "shore_alert_confirmation") {
-    return shoreAlertConfirmationEmail(notification);
-  }
   if (notification.kind === "departure_note") return departureNoteEmail(notification);
   if (notification.kind === "lost_item_found") return lostItemEmail(notification);
   if (notification.kind === "seat_already_held") return seatAlreadyHeldEmail(notification);

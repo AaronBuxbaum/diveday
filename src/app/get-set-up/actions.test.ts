@@ -113,7 +113,8 @@ describe("submitSetupRequestAction", () => {
 
     expect(trackEvent).toHaveBeenCalledWith({ name: "setup_requested", source: "pricing-close" });
     expect(vi.mocked(notify).mock.calls[0]?.[0]).toMatchObject({
-      kind: "setup_request_alert",
+      kind: "operator_alert",
+      event: "setup_request",
       setupRequestId: row?.id,
       to: ONBOARDING_EMAIL,
       contactEmail: "ana@reefline.example",
@@ -131,7 +132,8 @@ describe("submitSetupRequestAction", () => {
     const { openSetupLink, spendSetupLink } = await import("@/db/setup-links");
     expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
     const sent = vi.mocked(notify).mock.calls[0]?.[0];
-    if (sent?.kind !== "setup_request_alert") throw new Error("expected the onboarding mail");
+    if (sent?.kind !== "operator_alert" || sent.event !== "setup_request")
+      throw new Error("expected the onboarding mail");
     const url = new URL(sent.setupUrl ?? "");
     expect(url.pathname).toBe("/onboard");
     expect(sent.setupUrlExpiresAt).toBeInstanceOf(Date);

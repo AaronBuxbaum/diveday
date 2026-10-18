@@ -251,7 +251,7 @@ Beyond the body, three things a receiving mailbox and a reviewer both read
 | `Auto-Submitted: auto-generated` (RFC 3834) on every message | Always | Never — a diver's out-of-office or ticketing auto-responder stays quiet instead of answering a booking confirmation |
 | A closing line `Shop name · street, town, region postcode, country` on every **commercial** message (the kinds carrying an unsubscribe link: wait-list invite, last-minute deal, checkout recovery, recap) | `shops.address_*` | The shop has no street on file; nothing is guessed and no blank line is rendered |
 | `List-Unsubscribe` + `List-Unsubscribe-Post` (RFC 8058 one-click) on those same kinds | The notification's own `unsubscribeUrl` | Never absent on a commercial kind — `kinds.ts` makes the URL required there |
-| SES message tags `diveday_shop` and `diveday_kind` | The notification | Never — every send is tagged, and every event SES publishes echoes them back |
+| SES message tags `diveday_shop` and `diveday_kind`, plus `diveday_purpose` on the two kinds that serve several readers | The notification (`purpose` of an `address_confirmation`: `account`, `shop_contact`, `shore_alert`; `event` of an `operator_alert`) | Never — every send is tagged, and every event SES publishes echoes them back; `diveday_purpose` is absent on every other kind |
 
 Both shop-sourced values are resolved once per send in `src/db/notifications.ts` (`shopSenderFor`),
 never by the composer, so a new kind gets them for free. Transactional mail (a confirmation, a waiver

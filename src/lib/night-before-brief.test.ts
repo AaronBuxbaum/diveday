@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diverTranslator } from "@/i18n/messages";
-import { type BriefUnits, firstTimerReassuranceText, forecastText } from "./night-before-brief";
+import { type BriefUnits, forecastText } from "./night-before-brief";
 
 const t = diverTranslator("en-US");
 
@@ -95,15 +95,5 @@ describe("forecastText", () => {
     expect(forecastText(es, "es-ES", { ...NONE, waterTemperatureC: 27 }, IMPERIAL)).toBe(
       "Prevé agua alrededor de 81 °F.",
     );
-  });
-});
-
-describe("firstTimerReassuranceText", () => {
-  it("is null for an experienced diver", () => {
-    expect(firstTimerReassuranceText(t, false)).toBeNull();
-  });
-
-  it("offers a what-happens-on-the-boat line to a first-timer", () => {
-    expect(firstTimerReassuranceText(t, true)).toContain("The crew walks everyone through");
   });
 });
