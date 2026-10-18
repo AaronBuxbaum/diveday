@@ -6,16 +6,13 @@ import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
 /**
- * Where a browser posts what the Content-Security-Policy would have blocked
- * (issue #718). One line per violation, and the metric filter in
- * `infra/lib/observability.ts` counts them.
+ * Where a browser posts what the Content-Security-Policy blocked (issue #718).
+ * One line per violation, and the metric filter in `infra/lib/observability.ts`
+ * counts and alarms on them.
  *
- * The app's full policy ships as `Content-Security-Policy-Report-Only`, so
- * everything arriving here today is a thing that still works and would stop
- * working if the policy were promoted. That is the whole point: the enumeration
- * has to come from real traffic across the surfaces that differ most — the
- * public schedule, the embed, `/ready` and its map, the staff shell, a Stripe
- * redirect round trip — before anything is actually blocked.
+ * The policy is enforced, so everything arriving here is a load the browser
+ * refused: a page the policy broke, or someone else's script (an extension, a
+ * bot) tripping it. The `source` field tells the two apart.
  *
  * Shaped like `api/vitals`, for the same reasons: public and unauthenticated by
  * necessity (the report comes from a stranger's browser), answering 204 to

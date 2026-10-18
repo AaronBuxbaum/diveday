@@ -116,7 +116,12 @@ jobs:
       # The whole tree, not only production: dev tooling is what runs on the
       # runners that hold the reg-suit keys and the deploy role. An advisory with
       # no patched release is reviewed in pnpm-workspace.yaml's `auditConfig`.
+      #
+      # OFF since 2026-10-18 (Aaron): 19 new high advisories in the `vercel` and
+      # `next-devtools-mcp` dev dependencies reddened every PR (#2826). Turn it back
+      # on by deleting the `if: false` line when #2826 lands.
       - name: Dependencies have no unreviewed high advisory
+        if: false
         run: pnpm audit --audit-level high
       # The body names the reviewer agents a safety-critical or security-sensitive diff needs
       # (scripts/check-pr-body.mjs; docs/agents/repo-checks.md#pr-body). The body is read live

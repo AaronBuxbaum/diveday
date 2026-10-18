@@ -468,7 +468,7 @@ describe("the public namespace's edge refusal", () => {
       `/s/blue-mantis/trips/${TRIP_ID}`,
     );
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
-    expect(res.headers.get("Content-Security-Policy-Report-Only")).toBeTruthy();
+    expect(res.headers.get("Content-Security-Policy")).toContain("default-src 'self'");
   });
 
   it("leaves a URL that names something completely alone", async () => {
@@ -1039,26 +1039,6 @@ describe("a hidden course at the edge", () => {
     // And the parameter buys nothing anywhere else: a published course was
     // never going to be refused, so nothing about it depends on the token.
     expect(existence.asked).toEqual([{ kind: "course", shopSlug: SHOP, courseSlug: COURSE }]);
-  });
-});
-
-describe("proxy CSP handling", () => {
-  it("allows unsafe-eval in report-only policy during e2e runs", async () => {
-    vi.stubEnv("DIVEDAY_E2E", "1");
-    vi.stubEnv("NODE_ENV", "production");
-    const res = await run(request("/shop/blue-mantis/divers"));
-    const reportOnly = res.headers.get("Content-Security-Policy-Report-Only") ?? "";
-    expect(reportOnly).toContain("'unsafe-eval'");
-    vi.unstubAllEnvs();
-  });
-
-  it("keeps unsafe-eval out of report-only policy in production when not in e2e", async () => {
-    vi.stubEnv("DIVEDAY_E2E", "");
-    vi.stubEnv("NODE_ENV", "production");
-    const res = await run(request("/shop/blue-mantis/divers"));
-    const reportOnly = res.headers.get("Content-Security-Policy-Report-Only") ?? "";
-    expect(reportOnly).not.toContain("'unsafe-eval'");
-    vi.unstubAllEnvs();
   });
 });
 

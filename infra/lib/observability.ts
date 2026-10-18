@@ -356,20 +356,19 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
   },
   {
     metricName: "CspViolations",
-    title: "Content-Security-Policy would have blocked something",
+    title: "Content-Security-Policy blocked something",
     why:
-      "The full policy ships as report-only (issue #718), so every one of these is a thing that works " +
-      "today and would stop working the day the policy is enforced. This count IS the enumeration the " +
-      "promotion waits on -- a steady zero across a real week of traffic is the signal to enforce, and a " +
-      "line naming a host nobody expected is the reason not to.",
+      "The full policy is enforced (issue #718, promoted 2026-10-17), so every one of these is a load the " +
+      "browser refused. Production traffic was thin when it was promoted, so this count is how a page the " +
+      "policy breaks becomes audible -- a line naming a host nobody expected is a broken page until proven " +
+      "otherwise.",
     events: ["security.csp_violation"],
     threshold: 1,
     periodMinutes: 1_440,
-    // Collected for evidence, not paged on. While the policy is report-only a
-    // violation is information rather than an incident, and the promotion
-    // decision is made by reading the daily counts rather than by being woken.
-    // Flip this to true in the same change that enforces the policy: from then
-    // on a report means the enforced policy blocked something real.
+    // Collected, not paged on. /api/csp-report is public, so anyone can post a
+    // well-formed report, and a crawler's injected `eval` (Chrome 118, source
+    // unknown) arrives most days. Read the daily count after a deploy; page on
+    // it only once the metric can tell a broken page from that noise.
     alarm: false,
     response:
       "Read the directive, blocked origin and source origin off the lines, decide whether the host belongs in the policy, then either add it or fix what is loading it. A source that is not this app's origin is someone else's script; a report raised by a browser extension's own script is already dropped.",

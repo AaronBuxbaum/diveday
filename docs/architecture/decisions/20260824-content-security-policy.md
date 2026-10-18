@@ -1,6 +1,7 @@
 # 20260824-content-security-policy — The CSP ships report-only first, and `script-src` keeps `'unsafe-inline'` because a nonce would cost every route its static shell
 
-- **Status:** Accepted
+- **Status:** Accepted; the full policy is enforced since 2026-10-17 (see
+  [Promoted to enforced](#promoted-to-enforced-2026-10-17))
 - **Date:** 2026-08-24
 - **Issue:** [718](https://github.com/AaronBuxbaum/diveday/issues/718)
 
@@ -193,8 +194,8 @@ header.
   public schedule, the `?embed=1` widget, `/ready` and its Google Maps frame, the staff shell, the
   offline manifest and its service worker, a full Stripe checkout round trip, and the
   `opengraph-image` routes. Until that has run, `CspViolations` collects and does not page.
-- When it does get promoted, `alarm` on that signal flips to `true` in the same change: from then on
-  a report means the enforced policy blocked something real.
+- Promoting was meant to flip `alarm` on that signal to `true`; it stayed `false` (see the 2026-10-17
+  section below), because a public endpoint and a crawler make a daily page meaningless.
 - *Added 2026-10-07:* the measuring phase has a review date. `REPORT_ONLY_SINCE` and
   `REPORT_ONLY_REVIEW_BY` in `src/lib/content-security-policy.ts` record it, and a unit test fails
   on the wall clock once the review date passes, telling the reader to read the `CspViolations`
@@ -206,3 +207,38 @@ header.
   `frame-ancestors 'none'` and the *absence* of any CSP on an embed request. Both were correct while
   `frame-ancestors` was the whole policy; both now assert the framing behaviour rather than the
   header's whole value.
+
+## Promoted to enforced (2026-10-17)
+
+Aaron promoted the full policy to `Content-Security-Policy` on 2026-10-17, two weeks ahead of the
+2026-11-01 review date. `Content-Security-Policy-Report-Only` is no longer sent; `enforcedPolicy` in
+`src/lib/content-security-policy.ts` is the whole policy, with `frame-ancestors` still dropped for a
+genuine embed request and `'unsafe-eval'` still only under `development` (`NODE_ENV=development` or
+`DIVEDAY_E2E=1`). `REPORT_ONLY_SINCE`, `REPORT_ONLY_REVIEW_BY` and the review-date test are gone.
+
+**The evidence.** Across two weeks of production `security.csp_violation` lines, the only
+violations were `script-src` `eval` reports, all from one client announcing itself as Chrome 118,
+with `source: "unknown"`. None came from the app's own code:
+
+- no client chunk and no server-emitted inline script contains an eval construct (the first pass
+  above), and Zod's `new Function` probe is switched off in the browser
+  (`configureZod({ jitless: true })` in `src/instrumentation-client.ts`);
+- a report raised by the app's own bundle would normally carry this origin as its `source` and
+  arrive from every browser on the same pages; these came from one user agent three years out of
+  date, which is consistent with a crawler injecting its own script into the page it loads.
+
+**The caveat.** The only production shop is the demo, so that traffic was thin, and several of the
+surfaces the Consequences list names (a full Stripe round trip, a shop's own embed host, a boat's
+offline manifest) may not have been exercised by a real visitor. That is why the enforced policy
+keeps `report-uri` and `report-to`. `CspViolations` still collects and does not page
+(`alarm: false` in `infra/lib/observability.ts`): `/api/csp-report` is public, so anyone can post a
+forged report, and the bot's `eval` reports arrive most days. Read the daily count after a deploy; a
+report whose source is this origin, or whose directive is anything but `script-src` `eval`, is a
+broken page. Page on it once the metric can tell the two apart.
+
+One directive changed on the way in: `frame-src` gained `'self'`. The staff embed generator
+(`src/app/shop/[shopSlug]/settings/embed/EmbedGenerator.tsx`) previews the widget by framing the
+app's own `?embed=1` page, and `frame-src` does not fall back to `default-src` once it is set, so the
+report-only policy would have reported that preview. No production report showed it, presumably
+because no staff member opened the page during the pass, which is the thin-traffic caveat in one
+example.
