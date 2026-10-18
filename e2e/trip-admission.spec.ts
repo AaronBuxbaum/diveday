@@ -268,10 +268,10 @@ test.describe("as owner", () => {
     // The counter is a mode of the departure door: the diver is typed on the
     // walk-in form, and the refusal speaks the boat's one vocabulary.
     await page.goto(walkInFormPath("blue-mantis", tripId));
-    // A name nobody on file reads like, so no "same diver?" prompt comes first,
-    // and no card on file to reach an Advanced Open Water boat.
-    await page.getByLabel("Full name").fill(`Gate Walker ${e2eNow().getTime()}`);
+    // Diego Alvarez is carded at Open Water, so he fails an Advanced Open Water gate.
+    await page.getByLabel("Full name").fill("Diego Alvarez");
     await page.getByRole("button", { name: "Add to boat" }).click();
+    await page.getByRole("button", { name: "Diego Alvarez" }).click();
 
     // The structured detail rides a signed `?gate=` bound to the departure in
     // the Divers tab's own path, so the banner can say which card is missing

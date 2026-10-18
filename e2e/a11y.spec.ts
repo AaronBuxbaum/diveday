@@ -363,8 +363,8 @@ test.describe("automated accessibility scans of the static staff routes", () => 
         path: "/shop/blue-mantis/safety-checklist",
         heading: "Pre-departure checklist",
       },
-      { path: "/shop/blue-mantis/settings/import?what=gear", heading: "Import" },
-      { path: "/shop/blue-mantis/settings/import?what=dive-sites", heading: "Import" },
+      { path: "/shop/blue-mantis/settings/import?what=gear", heading: "Your data" },
+      { path: "/shop/blue-mantis/settings/import?what=dive-sites", heading: "Your data" },
     ]);
   });
 });

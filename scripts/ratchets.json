@@ -213,7 +213,7 @@
         }
       }
     ],
-    "e2e/add-diver.spec.ts": 8,
+    "e2e/add-diver.spec.ts": 6,
     "e2e/agency-check-extension.spec.ts": 8,
     "e2e/agency-check-padi.spec.ts": 7,
     "e2e/agency-check-roster.spec.ts": 3,

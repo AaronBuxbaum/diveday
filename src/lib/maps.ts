@@ -72,8 +72,8 @@ export function googleMapsUrl(query: string): string {
  * **Both hosts, because the embed needs both (#2441).** The embed lives on
  * `maps.google.com`, 301s to `www.google.com/maps/embed`, and takes its tiles
  * from `www.google.com/maps/vt`. Measured 2026-10-17: with only `maps.google.com`
- * blocked the iframe is the browser's error page while `www.google.com/favicon.ico`
- * still loads, so a single favicon probe said "reachable" over a blank frame.
+ * blocked the iframe is the browser's error page while `www.google.com/images/cleardot.gif`
+ * still loads, so a single probe said "reachable" over a blank frame.
  * The frame therefore shows the map only when **every** probe below loads: a
  * static image on each host, both listed under `img-src`
  * (`src/lib/content-security-policy.ts`). The iframe's own `load` is no
@@ -81,5 +81,5 @@ export function googleMapsUrl(query: string): string {
  */
 export const MAP_REACHABILITY_PROBES = [
   "https://maps.google.com/mapfiles/transparent.png",
-  "https://www.google.com/favicon.ico",
+  "https://www.google.com/images/cleardot.gif",
 ] as const;

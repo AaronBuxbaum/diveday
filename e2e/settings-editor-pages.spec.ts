@@ -35,19 +35,16 @@ test("the hub's list editors are doors, and each opens its own page", async ({
   await page.goto(`/shop/${SHOP}/settings`);
 
   const main = page.getByRole("main");
-  for (const [name, segment] of [
-    ["Boats", "boats"],
-    ["Trip tags", "trip-tags"],
+  for (const [name, href] of [
+    ["Boats", `/shop/${SHOP}/boats`],
+    ["Trip tags", `/shop/${SHOP}/trip-tags`],
     // Forms of six to a dozen fields, pages of their own since #1854.
-    ["Rentals", "rentals"],
-    ["Emergency reference", "emergency-reference"],
-    ["Dock-day rhythm", "dock-day"],
-    ["Shop profile & branding", "profile"],
+    ["Rentals", `/shop/${SHOP}/settings/rentals`],
+    ["Emergency reference", `/shop/${SHOP}/settings/emergency-reference`],
+    ["Dock-day rhythm", `/shop/${SHOP}/settings/dock-day`],
+    ["Shop profile & branding", `/shop/${SHOP}/settings/profile`],
   ] as const) {
-    await expect(main.getByRole("link", { name, exact: true })).toHaveAttribute(
-      "href",
-      `/shop/${SHOP}/settings/${segment}`,
-    );
+    await expect(main.getByRole("link", { name, exact: true })).toHaveAttribute("href", href);
   }
 
   // And the hub is a directory: none of the editors' controls is on it.

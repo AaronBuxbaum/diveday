@@ -137,7 +137,7 @@ test("the site page publishes the place as structured data and points at itself"
  * **The map shows only when both hosts the embed needs answer** (#2441). The
  * embed lives on `maps.google.com` and redirects to `www.google.com`; measured
  * with only `maps.google.com` blocked, the frame is the browser's error page
- * while `www.google.com/favicon.ico` still loads. The fleet refuses both probes
+ * while `www.google.com/images/cleardot.gif` still loads. The fleet refuses both probes
  * (e2e/fixtures.ts), so each case answers them on its own page.
  */
 const [MAPS_HOST_PROBE, WWW_HOST_PROBE] = MAP_REACHABILITY_PROBES;
