@@ -1,6 +1,5 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { FactLine } from "@/components/ui/FactLine";
 import {
   ChoiceRow,
   controlClass,
@@ -10,7 +9,6 @@ import {
   FieldGrid,
 } from "@/components/ui/form";
 import { formatMonthDay, monthNames } from "@/lib/format";
-import { saveDivingOptionsAction } from "../../boat-actions";
 import { saveReopensOnAction, saveSeasonStartAction } from "../../shop-actions";
 import { saveSearchListingAction } from "../../website-actions";
 import { SettingsRow } from "../SettingsRows";
@@ -18,8 +16,8 @@ import { SectionNotice, type SettingsView } from "./kit";
 
 /**
  * **The facts of the shop a shop sets once and rarely opens again**, as rows of
- * the Shop group: when its season starts, which kinds of diving it runs, and
- * whether search engines list it. They sat in a "Rarely changed" group, defined
+ * the Shop group: when its season starts and whether search engines list it.
+ * (Which kinds of diving it runs is a switch now, on the Features page.) They sat in a "Rarely changed" group, defined
  * by how often it was opened rather than by what it held; each is a fact about
  * the shop, so each lives with the other facts of the shop. Functions rather
  * than components, so the rows are part of their group's own element tree (the
@@ -102,74 +100,6 @@ export function seasonRow(view: SettingsView) {
             className={buttonClass({ variant: "secondary" })}
           >
             {t("settings.main.season.reopensSubmit")}
-          </SubmitButton>
-        </FieldActions>
-      </FieldGrid>
-    </SettingsRow>
-  );
-}
-
-/** Which of boat, shore and pool diving the shop runs. */
-export function divingOptionsRow(view: SettingsView) {
-  const { shop, t, banner, activeSection } = view;
-  const value = (
-    <FactLine
-      facts={[
-        shop.hasBoatDiving ? t("boats.boatEnabled") : t("boats.boatDisabled"),
-        shop.hasShoreDiving ? t("boats.shoreEnabled") : t("boats.shoreDisabled"),
-        shop.hasPoolDiving ? t("boats.poolEnabled") : t("boats.poolDisabled"),
-      ]}
-    />
-  );
-  return (
-    <SettingsRow
-      heading={t("boats.divingOptionsHeading")}
-      value={value}
-      sectionId="divingOptions"
-      activeSection={activeSection}
-    >
-      <SectionNotice banner={banner} section="divingOptions" active={activeSection} />
-      <FieldGrid as="form" action={saveDivingOptionsAction} columns={1} className="mt-4">
-        {/* Boat first, and on by default: it is what the product assumed
-                before this row existed, and what `trips.dive_mode` still
-                defaults to. Turning it off is what hides the Boats row
-                in Boats & sites and takes the hull out of the Requests planner.
-
-                Each box sits on its name's line, not between the name and
-                the sentence under it, which `items-center` did (K-13). */}
-        <ChoiceRow
-          name="hasBoatDiving"
-          type="checkbox"
-          defaultChecked={shop.hasBoatDiving}
-          className="text-sm"
-        >
-          <span className="block font-medium">{t("boats.boatDivingLabel")}</span>
-          <span className="block text-xs text-muted">{t("boats.boatDivingDescription")}</span>
-        </ChoiceRow>
-        <ChoiceRow
-          name="hasShoreDiving"
-          type="checkbox"
-          defaultChecked={shop.hasShoreDiving}
-          className="mt-2 text-sm"
-        >
-          <span className="block font-medium">{t("boats.shoreDivingLabel")}</span>
-          <span className="block text-xs text-muted">{t("boats.shoreDivingDescription")}</span>
-        </ChoiceRow>
-        <ChoiceRow
-          name="hasPoolDiving"
-          type="checkbox"
-          defaultChecked={shop.hasPoolDiving}
-          className="mt-2 text-sm"
-        >
-          <span className="block font-medium">{t("boats.poolDivingLabel")}</span>
-          <span className="block text-xs text-muted">{t("boats.poolDivingDescription")}</span>
-        </ChoiceRow>
-        <FieldActions>
-          <SubmitButton
-            pendingLabel={t("boats.divingOptionsSubmitting")}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("boats.divingOptionsSubmit")}
           </SubmitButton>
         </FieldActions>
       </FieldGrid>

@@ -7,7 +7,6 @@ import { sendNotification } from "@/db/notifications";
 import { recordShopActivity } from "@/db/shop-activity";
 import {
   getShopById,
-  setShopDivingOptions,
   setShopDockDayRhythm,
   setShopEmergencyReference,
   setShopMinTurnaround,
@@ -56,12 +55,6 @@ const emergencyForm = z
     shoreAlertConsentFor: text(),
   })
   .catchall(text());
-
-const divingOptionsForm = z.object({
-  hasBoatDiving: checkbox(),
-  hasShoreDiving: checkbox(),
-  hasPoolDiving: checkbox(),
-});
 
 /**
  * The shop's whole dock-day rhythm: the arrival call plus the five minute
@@ -255,37 +248,4 @@ async function sendShoreAlertConfirmation(shop: {
     timezone: shop.timezone,
   });
   return delivery.status === "sent";
-}
-
-/** Saves which of boat, shore and pool diving the shop runs. */
-export async function saveDivingOptionsAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-
-  const { hasBoatDiving, hasShoreDiving, hasPoolDiving } = readForm(divingOptionsForm, formData);
-
-  // Unticking all three would leave the builder with no mode to offer and trip
-  // creation still defaulting to `boat` — a shop disowning the only kind of
-  // departure it can make. The DB check refuses it too; this is the half that
-  // says so in words instead of raising.
-  if (!hasBoatDiving && !hasShoreDiving && !hasPoolDiving) {
-    revalidateAndRedirect(
-      settings,
-      noticeUrl(settings, "diving-options-none", { form: "divingOptions" }),
-    );
-    return;
-  }
-
-  const db = await getDb();
-  await setShopDivingOptions(db, session.user.shopId, {
-    hasBoatDiving,
-    hasShoreDiving,
-    hasPoolDiving,
-  });
-
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "diving-options-saved", { saved: "divingOptions" }),
-  );
 }

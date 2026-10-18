@@ -10,7 +10,7 @@ import { formatTime } from "@/lib/format";
 import { saveDeskHoursAction, saveReviewUrlAction } from "../../messages-actions";
 import { resendContactConfirmationAction, saveContactAction } from "../../shop-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
-import { featureRow, MESSAGES_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
+import { MESSAGES_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 
 /**
  * **Messages**: how divers reach the shop and how the shop answers. The address
@@ -149,8 +149,6 @@ export function MessagesGroup({
             </FieldActions>
           </FieldGrid>
         </SettingsRow>
-
-        {featureRow(view, "reviews")}
 
         {/* One of the few rows another surface links straight to: the Reviews
           page's empty state names this box, so it opens itself on the

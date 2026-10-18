@@ -4,7 +4,7 @@
     "ownerOrManager": "Solo un propietario o gerente puede {act, select, whatsapp {cambiar los ajustes de WhatsApp} integrations {cambiar las integraciones} backup {cambiar los ajustes de respaldo} questionnaire {leer el cuestionario completo} invoice {enviar una factura} bill {enviar una factura} courseForm {quitar un formulario de un curso} other {hacer esto}}."
   },
   "operationalWindow": {},
-  "padiChecksOff": "La verificación con PADI está desactivada en este centro. Un propietario o un gerente puede activarla en Ajustes, Reservas.",
+  "padiChecksOff": "La verificación con PADI está desactivada en este centro. Un propietario o un gerente puede activarla en Ajustes, Funciones.",
   "skipToContent": "Saltar al contenido principal",
   "notFound": {
     "heading": "No pudimos encontrar esa página",

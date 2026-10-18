@@ -10,6 +10,7 @@ import { SettingsRow } from "../SettingsRows";
 import {
   BookingsGroup,
   DataGroup,
+  FeaturesGroup,
   MessagesGroup,
   MoneyGroup,
   ShopGroup,
@@ -75,40 +76,24 @@ describe("each settings group renders as its own component", () => {
       }),
       MessagesGroup({ view, canManageMessaging: true }),
       WebsiteGroup({ view }),
+      FeaturesGroup({ view }),
       await DataGroup({ view, db, personId, canExport: true, canImport: true }),
     ].map(shape);
 
-    // Seven groups (issue #2813), in the registry's order.
+    // Seven groups (issue #2813) and Features (#2814), in the registry's order.
     expect(rendered.map((group) => group.id)).toEqual(SETTINGS_GROUPS.map((group) => group.id));
-    expect(SETTINGS_GROUPS).toHaveLength(7);
-    // The set-once rows (season, diving options, listing) live with the shop.
-    expect(rendered[0]?.rows).toEqual([
-      "timezone",
-      "units",
-      "address",
-      "season",
-      "divingOptions",
-      "searchListing",
-    ]);
+    expect(SETTINGS_GROUPS).toHaveLength(8);
+    // The set-once rows (season, listing) live with the shop.
+    expect(rendered[0]?.rows).toEqual(["timezone", "units", "address", "season", "searchListing"]);
     expect(rendered[1]?.rows).toEqual(["crewSchedule"]);
-    // PADI checks sit under the extension's own row, where a shop meets the checks;
-    // the rental terms and regulator interval close the group.
-    expect(rendered[2]?.rows).toEqual([
-      "certCheck",
-      "padiChecks",
-      "packing",
-      "rentalTerms",
-      "regulatorService",
-    ]);
-    expect(rendered[3]?.rows).toEqual(["tax", "passThrough", "tips", "stripe"]);
-    expect(rendered[4]?.rows).toEqual(["contact", "deskHours", "reviews", "reviewLink"]);
-    expect(rendered[5]?.rows).toEqual([
-      "shopPhotos",
-      "dateRequests",
-      "lastMinuteList",
-      "publicYear",
-    ]);
+    // No on/off switch is a row any more: they are all on the Features page.
+    expect(rendered[2]?.rows).toEqual(["certCheck", "packing", "rentalTerms", "regulatorService"]);
+    expect(rendered[3]?.rows).toEqual(["passThrough", "stripe"]);
+    expect(rendered[4]?.rows).toEqual(["contact", "deskHours", "reviewLink"]);
+    expect(rendered[5]?.rows).toEqual(["shopPhotos"]);
     expect(rendered[6]?.rows).toEqual([]);
+    expect(hrefsIn(FeaturesGroup({ view }))).toEqual([`/shop/${view.shopSlug}/settings/features`]);
+    expect(rendered[7]?.rows).toEqual([]);
   });
 
   it("keeps the registers beside the shop, and the shop's own mail out of Messages", async () => {

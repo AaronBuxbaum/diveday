@@ -1,27 +1,24 @@
 "use server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { setShopCrewSchedule } from "@/db/shops";
+import { setShopDiversPerDivemaster } from "@/db/shops";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
   MAX_DIVERS_PER_DIVEMASTER,
   MIN_DIVERS_PER_DIVEMASTER,
 } from "@/lib/divemaster-ratio";
-import { checkbox, formValue, readForm } from "@/lib/form-parse";
+import { formValue, readForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { settingsBlock } from "./action-helpers";
 
-const crewScheduleForm = z.object({
-  crewScheduleEnabled: checkbox(),
-  diversPerDivemaster: formValue(),
-});
+const crewScheduleForm = z.object({ diversPerDivemaster: formValue() });
 
 /**
- * Turns the crew schedule on or off, with the divemaster target its nudges
- * read (`src/lib/crew-schedule.ts`). The target travels with the switch
- * because it is only ever read while the switch is on.
+ * Saves the divemaster target the crew schedule's nudges read
+ * (`src/lib/crew-schedule.ts`). The switch itself is a row of the Features page
+ * (issue #2814); only a shop that plans its crew is measured against this.
  */
 export async function saveCrewScheduleAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -29,7 +26,6 @@ export async function saveCrewScheduleAction(formData: FormData) {
   await settingsBlock(session);
 
   const form = readForm(crewScheduleForm, formData);
-  const crewScheduleEnabled = form.crewScheduleEnabled;
   const diversPerDivemaster = parseDiversPerDivemaster(form.diversPerDivemaster);
   if (diversPerDivemaster === "invalid") {
     revalidateAndRedirect(
@@ -39,10 +35,7 @@ export async function saveCrewScheduleAction(formData: FormData) {
     return;
   }
 
-  await setShopCrewSchedule(await getDb(), session.user.shopId, {
-    crewScheduleEnabled,
-    diversPerDivemaster,
-  });
+  await setShopDiversPerDivemaster(await getDb(), session.user.shopId, diversPerDivemaster);
 
   revalidateAndRedirect(
     settings,

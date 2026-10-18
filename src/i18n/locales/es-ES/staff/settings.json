@@ -13,8 +13,6 @@
       "turnaroundInvalid": "Introduce un margen de entre 0 y 240 minutos.",
       "unitsSaved": "Unidades guardadas.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
-      "taxSaved": "Configuración de impuestos guardada.",
-      "taxInvalid": "No cambió nada: el interruptor de impuestos envió un valor inesperado. Recarga Ajustes y vuelve a activarlo o desactivarlo.",
       "passThroughSaved": "Cuota repercutida guardada.",
       "passThroughInvalid": "Introduce el nombre y un importe positivo, o deja ambos vacíos para desactivarla.",
       "rentalsSaved": "Catálogo de alquiler guardado.",
@@ -303,11 +301,7 @@
       "heading": "Impuestos (IVA y ventas)",
       "description": "Agrega IVA, impuestos sobre las ventas y otros impuestos similares a los nuevos pagos de reservas y facturas del personal mediante Stripe.",
       "detail": "El impuesto se agrega al precio publicado y se muestra al buceador en el checkout de Stripe. Las propinas posteriores a la salida son independientes y este ajuste no las afecta. Desactívalo si gestionas los impuestos por tu cuenta.",
-      "enabledValue": "Activados",
-      "disabledValue": "Desactivados",
-      "checkboxLabel": "Usar Stripe Tax para nuevos pagos de reservas y facturas",
-      "submit": "Guardar configuración de impuestos",
-      "submitting": "Guardando…"
+      "checkboxLabel": "Usar Stripe Tax para nuevos pagos de reservas y facturas"
     },
     "passThrough": {
       "heading": "Cuota del parque marino o de conservación",
@@ -410,6 +404,7 @@
       "money": "Dinero",
       "messages": "Mensajes",
       "website": "Sitio web",
+      "features": "Funciones",
       "data": "Tus datos"
     },
     "rail": {
@@ -453,7 +448,8 @@
         "heading": "Verificación con PADI (beta)",
         "label": "Verificar certificaciones y eLearning de PADI",
         "description": "Beta: nadie lo ha probado todavía en la página real de DiveChek de PADI, y PADI no ha dicho si acepta que una extensión la rellene. Funciona en un navegador donde uno de tus profesionales PADI tiene la sesión iniciada en el PADI Pros’ Site, con la afiliación de ese profesional. Desactivado, el enlace al PADI Pros’ Site se mantiene. Un propietario o un gerente puede activarlo."
-      }
+      },
+      "door": "Activar o desactivar funciones"
     },
     "crewSchedule": {
       "heading": "Turnos de la tripulación",
@@ -463,7 +459,8 @@
       "description": "Turnos, días fuera y quién trabaja en cada salida. Las sesiones de curso nombran a su instructor en cualquier caso.",
       "save": "Guardar turnos",
       "saving": "Guardando…",
-      "saved": "Turnos de la tripulación guardados."
+      "saved": "Turnos de la tripulación guardados.",
+      "turnOn": "Activar en Funciones"
     },
     "team": {
       "heading": "Equipo"
@@ -1146,5 +1143,10 @@
       "import": "Importar",
       "integrations": "Integraciones"
     }
+  },
+  "features": {
+    "title": "Funciones",
+    "crewTarget": "Fijar el objetivo por divemaster",
+    "boats": "Tus barcos"
   }
 }

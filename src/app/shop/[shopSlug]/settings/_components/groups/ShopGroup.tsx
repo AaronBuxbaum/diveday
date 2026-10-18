@@ -18,7 +18,7 @@ import { AddressSearch } from "../../AddressSearch";
 import { saveTimezoneAction, saveUnitsAction } from "../../shop-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
 import { SectionNotice, SettingsGroup, type SettingsView, SHOP_GROUP } from "./kit";
-import { divingOptionsRow, searchListingRow, seasonRow } from "./shop-rows";
+import { searchListingRow, seasonRow } from "./shop-rows";
 
 /**
  * The words for the timezone picker's structure. `src/lib/timezones.ts` hands
@@ -326,8 +326,6 @@ export function ShopGroup({
         </SettingsRow>
 
         {seasonRow(view)}
-
-        {divingOptionsRow(view)}
 
         {searchListingRow(view)}
 

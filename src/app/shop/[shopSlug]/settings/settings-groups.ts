@@ -8,6 +8,7 @@ import {
   canManageWaiverTemplates,
   type Role,
 } from "@/lib/authz";
+import { FEATURE_ROWS, type FeatureRowGate } from "./features/feature-rows";
 
 /**
  * The settings hub's one list of groups, in render order: **seven**, split by
@@ -37,6 +38,7 @@ export const SETTINGS_GROUPS = [
   { id: "money", labelKey: "settings.main.groups.money" },
   { id: "messages", labelKey: "settings.main.groups.messages" },
   { id: "website", labelKey: "settings.main.groups.website" },
+  { id: "features", labelKey: "settings.main.groups.features" },
   { id: "data", labelKey: "settings.main.groups.data" },
 ] as const satisfies readonly { id: string; labelKey: StaffMessageKey }[];
 
@@ -77,19 +79,11 @@ export const SECTION_IDS = [
   "packing",
   "counterCard",
   "certCheck",
-  "padiChecks",
   "units",
   "crewSchedule",
-  "divingOptions",
   "rentalTerms",
   "regulatorService",
-  "tax",
   "passThrough",
-  "tips",
-  "reviews",
-  "dateRequests",
-  "lastMinuteList",
-  "publicYear",
   "stripe",
 ] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
@@ -106,17 +100,12 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   reviewLink: "review-link",
   deskHours: "desk-hours",
   searchListing: "search-listing",
-  divingOptions: "diving-options",
   crewSchedule: "crew-schedule",
   rentalTerms: "rental-terms",
   regulatorService: "regulator-service",
   passThrough: "pass-through",
-  dateRequests: "date-requests",
-  lastMinuteList: "last-minute-list",
-  publicYear: "public-year",
   counterCard: "counter-card",
   certCheck: "cert-check",
-  padiChecks: "padi-checks",
 };
 
 /** The `#fragment` that opens and scrolls to a hub section. */
@@ -201,12 +190,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "season" },
   },
   {
-    id: "divingOptions",
-    labelKey: "boats.divingOptionsHeading",
-    group: "shop",
-    target: { kind: "section", id: "divingOptions" },
-  },
-  {
     id: "searchListing",
     labelKey: "settings.main.searchListing.heading",
     group: "shop",
@@ -283,12 +266,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "certCheck" },
   },
   {
-    id: "padiChecks",
-    labelKey: "settings.main.features.padiChecks.heading",
-    group: "bookings",
-    target: { kind: "section", id: "padiChecks" },
-  },
-  {
     id: "packing",
     labelKey: "settings.main.packing.heading",
     group: "bookings",
@@ -329,24 +306,10 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     gate: "payments",
   },
   {
-    id: "tax",
-    labelKey: "settings.main.tax.heading",
-    group: "money",
-    target: { kind: "section", id: "tax" },
-    gate: "payments",
-  },
-  {
     id: "passThrough",
     labelKey: "settings.main.passThrough.heading",
     group: "money",
     target: { kind: "section", id: "passThrough" },
-    gate: "payments",
-  },
-  {
-    id: "tips",
-    labelKey: "settings.main.features.tips.heading",
-    group: "money",
-    target: { kind: "section", id: "tips" },
     gate: "payments",
   },
   {
@@ -377,12 +340,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "deskHours" },
   },
   {
-    id: "reviews",
-    labelKey: "settings.main.features.reviews.heading",
-    group: "messages",
-    target: { kind: "section", id: "reviews" },
-  },
-  {
     id: "reviewLink",
     labelKey: "settings.main.reviewLink.heading",
     group: "messages",
@@ -408,28 +365,16 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "shopPhotos" },
   },
   {
-    id: "dateRequests",
-    labelKey: "settings.main.features.dateRequests.heading",
-    group: "website",
-    target: { kind: "section", id: "dateRequests" },
-  },
-  {
-    id: "lastMinuteList",
-    labelKey: "settings.main.features.lastMinuteList.heading",
-    group: "website",
-    target: { kind: "section", id: "lastMinuteList" },
-  },
-  {
-    id: "publicYear",
-    labelKey: "settings.main.features.publicYear.heading",
-    group: "website",
-    target: { kind: "section", id: "publicYear" },
-  },
-  {
     id: "embed",
     labelKey: "settings.main.embed.heading",
     group: "website",
     target: { kind: "route", path: "/settings/embed" },
+  },
+  {
+    id: "features",
+    labelKey: "settings.main.features.door",
+    group: "features",
+    target: { kind: "route", path: "/settings/features" },
   },
   {
     id: "yourData",
@@ -508,12 +453,25 @@ export function settingsShortcutsFor(
     }),
   );
   const groupLabels = new Map(SETTINGS_GROUPS.map((group) => [group.id, t(group.labelKey)]));
-  return rows.map((row) => ({
-    id: row.id,
-    label: t(row.labelKey),
-    group: groupLabels.get(row.group) ?? "",
-    href: settingsRailRowHref(`/shop/${shopSlug}`, row),
-  }));
+  const featureGates = new Set<FeatureRowGate>(["settings"]);
+  if (canManagePaymentSettings(roles)) featureGates.add("payments");
+  if (canManageStaffAccounts(roles)) featureGates.add("team");
+  return [
+    ...rows.map((row) => ({
+      id: row.id,
+      label: t(row.labelKey),
+      group: groupLabels.get(row.group) ?? "",
+      href: settingsRailRowHref(`/shop/${shopSlug}`, row),
+    })),
+    // The switches are rows of the Features page, not of the rail, and ⌘K is
+    // where "where do I turn off tips?" is typed: each is found by name.
+    ...FEATURE_ROWS.filter((row) => featureGates.has(row.gate)).map((row) => ({
+      id: row.id,
+      label: t(row.headingKey),
+      group: groupLabels.get("features") ?? "",
+      href: `/shop/${shopSlug}/settings/features#${row.id}`,
+    })),
+  ];
 }
 
 /** Every path a route row answers to, any `#fragment` stripped. */

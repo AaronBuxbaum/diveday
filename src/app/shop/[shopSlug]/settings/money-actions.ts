@@ -3,13 +3,13 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { getShopById, setShopPassThroughFee, setShopTaxEnabled } from "@/db/shops";
+import { getShopById, setShopPassThroughFee } from "@/db/shops";
 import {
   disconnectShopStripeAccount,
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
-import { formValue, readForm, trimmedText } from "@/lib/form-parse";
+import { readForm, trimmedText } from "@/lib/form-parse";
 import { majorToMinor, maxPriceMajor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
@@ -18,24 +18,10 @@ import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { paymentSettingsBlock, settingsBlock } from "./action-helpers";
 
-const taxForm = z.object({ taxEnabled: formValue() });
 const passThroughForm = z.object({
   passThroughName: trimmedText(),
   passThroughAmount: trimmedText(),
 });
-
-/** Saves the owner/manager's opt-in for Stripe Tax on future payments. */
-export async function saveTaxAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await paymentSettingsBlock(session);
-  const value = readForm(taxForm, formData).taxEnabled;
-  if (value !== null && value !== "on") {
-    redirect(noticeUrl(settings, "tax-invalid", { saved: "tax" }));
-  }
-  await setShopTaxEnabled(await getDb(), session.user.shopId, value === "on");
-  revalidateAndRedirect(settings, noticeUrl(settings, "tax-saved", { saved: "tax" }));
-}
 
 /** Saves the optional per-diver marine-park or conservation pass-through fee. */
 export async function savePassThroughFeeAction(formData: FormData) {

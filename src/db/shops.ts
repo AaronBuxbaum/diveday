@@ -715,16 +715,31 @@ export async function setShopDivingOptions(
   return shop ?? null;
 }
 
-/**
- * Turns the shop's crew schedule on or off (`shops.crew_schedule_enabled`),
- * with the divemaster target its nudges are measured against.
- */
-export async function setShopCrewSchedule(
+/** Turns the shop's crew schedule on or off (`shops.crew_schedule_enabled`). */
+export async function setShopCrewScheduleEnabled(
   db: AppDb,
   shopId: string,
-  options: { crewScheduleEnabled: boolean; diversPerDivemaster: number },
+  crewScheduleEnabled: boolean,
 ) {
-  const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
+  const [shop] = await db
+    .update(shops)
+    .set({ crewScheduleEnabled })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/** Sets the divemaster target the crew schedule's nudges are measured against. */
+export async function setShopDiversPerDivemaster(
+  db: AppDb,
+  shopId: string,
+  diversPerDivemaster: number,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ diversPerDivemaster })
+    .where(eq(shops.id, shopId))
+    .returning();
   return shop ?? null;
 }
 

@@ -12,8 +12,8 @@ describe("settingsShortcutsFor", () => {
     expect(rows.find((row) => row.id === "tips")).toEqual({
       id: "tips",
       label: t("settings.main.features.tips.heading"),
-      group: t("settings.main.groups.money"),
-      href: "/shop/blue-mantis/settings#tips",
+      group: t("settings.main.groups.features"),
+      href: "/shop/blue-mantis/settings/features#tips",
     });
     expect(rows.find((row) => row.id === "deskHours")?.href).toBe(
       "/shop/blue-mantis/settings#desk-hours",
@@ -35,6 +35,7 @@ describe("settingsShortcutsFor", () => {
     const manager = settingsShortcutsFor(shop, ["manager"], "blue-mantis", t).map((row) => row.id);
     expect(manager).not.toContain("billing");
     expect(manager).toContain("tips");
+    expect(manager).toContain("divingOptions");
     const demo = settingsShortcutsFor({ ...shop, isDemo: true }, ["owner"], "x", t);
     expect(demo.map((row) => row.id)).not.toContain("billing");
     const shore = settingsShortcutsFor({ ...shop, hasBoatDiving: false }, ["owner"], "x", t);

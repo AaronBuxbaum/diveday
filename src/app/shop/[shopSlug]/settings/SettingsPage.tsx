@@ -30,6 +30,7 @@ import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_SHOPFRONT_PHOTOS } from "@/lib/storage/limits";
 import { BookingsGroup } from "./_components/groups/BookingsGroup";
 import { DataGroup } from "./_components/groups/DataGroup";
+import { FeaturesGroup } from "./_components/groups/FeaturesGroup";
 import { DATA_GROUP, SettingsGroup, type SettingsView } from "./_components/groups/kit";
 import { MessagesGroup } from "./_components/groups/MessagesGroup";
 import { MoneyGroup } from "./_components/groups/MoneyGroup";
@@ -61,8 +62,6 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     "package-invalid": { tone: "danger", text: t("settings.main.notice.packageInvalid") },
     "units-saved": { tone: "success", text: t("settings.main.notice.unitsSaved") },
     "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
-    "tax-saved": { tone: "success", text: t("settings.main.notice.taxSaved") },
-    "tax-invalid": { tone: "danger", text: t("settings.main.notice.taxInvalid") },
     "pass-through-saved": { tone: "success", text: t("settings.main.notice.passThroughSaved") },
     "pass-through-invalid": { tone: "danger", text: t("settings.main.notice.passThroughInvalid") },
     "rental-terms-saved": { tone: "success", text: t("settings.main.notice.rentalTermsSaved") },
@@ -130,11 +129,7 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     // receives the whole shop, medical evidence included — and the same
     // bounce-with-an-explanation rule as every gate above.
     "backup-not-authorized": { tone: "danger", text: sayWords(t, ownerOrManagerWords("backup")) },
-    "diving-options-saved": { tone: "success", text: t("boats.divingOptionsSaved") },
-    "diving-options-invalid": { tone: "danger", text: t("boats.divingOptionsInvalid") },
-    "diving-options-none": { tone: "danger", text: t("boats.divingOptionsNone") },
     "crew-schedule-saved": { tone: "success", text: t("settings.main.crewSchedule.saved") },
-    "feature-saved": { tone: "success", text: t("settings.main.features.saved") },
     "crew-schedule-ratio-invalid": {
       tone: "danger",
       text: t("boats.divingOptionsRatioInvalid"),
@@ -279,6 +274,8 @@ export default async function SettingsPage({
         <MessagesGroup view={view} canManageMessaging={canManageMessaging} />
 
         <WebsiteGroup view={view} />
+
+        <FeaturesGroup view={view} />
 
         <Suspense fallback={<GroupFallback group={DATA_GROUP} label={t(DATA_GROUP.labelKey)} />}>
           <DataGroup

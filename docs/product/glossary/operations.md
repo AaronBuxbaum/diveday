@@ -242,7 +242,7 @@
   editor either way, because who is aboard is manifest data (the crew roll call, the souls-on-board
   count) and a course session's agency ratio gates enrolment from it (`src/lib/crew-schedule.ts`,
   ADR 20261005-crew-schedule-is-a-setting).
-- **Optional feature** — a feature a shop can switch off in Settings: diver reviews, date
+- **Optional feature** — a feature a shop can switch off on the **Features** page of Settings (`/settings/features`, which also holds the crew schedule, Stripe Tax and the kinds of diving a shop runs): diver reviews, date
   requests, the last-minute list, tips, "Our year" and the **PADI checks**
   (`src/lib/shop-features.ts`, one `shops.*_enabled` column each, on for a new shop except "Our
   year" and the PADI checks, which wait for the shop's own yes). Off hides the feature on every surface that offers it and

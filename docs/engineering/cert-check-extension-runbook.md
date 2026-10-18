@@ -82,7 +82,7 @@ diver with a card at that agency: the pilot shop's staff have those.
 
 - [ ] The extension the pilot installs is at or above DiveDay's minimum version (Settings shows
       it).
-- [ ] An owner or manager has turned on **PADI checks (beta)**: Settings, Bookings.
+- [ ] An owner or manager has turned on **PADI checks (beta)**: Settings, Features.
 - [ ] A consenting test subject: Aaron's own PADI card if he has one, or a volunteer's, with a
       pending PADI level card and a birth date on DiveDay. No other diver's record goes on a
       screen-share or into a report.

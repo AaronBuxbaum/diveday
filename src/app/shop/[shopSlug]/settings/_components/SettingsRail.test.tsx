@@ -116,9 +116,9 @@ describe("the selection model", () => {
       currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
         pathname: `${BASE}/settings`,
         basePath: BASE,
-        sectionId: "tax",
+        sectionId: "stripe",
       }),
-    ).toBe("tax");
+    ).toBe("stripe");
   });
 
   it("selects nothing when the scroll-spy has not answered yet", () => {
@@ -182,7 +182,7 @@ describe("the rail as it renders", () => {
 
   it("links a hub section by fragment and a sub-route by path", () => {
     renderRail();
-    expect(screen.getByRole("link", { name: "tax" }).getAttribute("href")).toBe("#tax");
+    expect(screen.getByRole("link", { name: "stripe" }).getAttribute("href")).toBe("#stripe");
     expect(screen.getByRole("link", { name: "team" }).getAttribute("href")).toBe(
       `${BASE}/settings/team`,
     );
@@ -197,15 +197,15 @@ describe("the rail as it renders", () => {
       screen.getByRole("link", { name }).querySelector("svg[aria-hidden='true']");
     expect(chevron("team")).not.toBeNull();
     expect(chevron("boats")).not.toBeNull();
-    expect(chevron("tax")).toBeNull();
+    expect(chevron("stripe")).toBeNull();
     expect(chevron("timezone")).toBeNull();
   });
 
   it("points a section link back at the hub from a sub-route", () => {
     pathname = `${BASE}/settings/team`;
     renderRail();
-    expect(screen.getByRole("link", { name: "tax" }).getAttribute("href")).toBe(
-      `${BASE}/settings#tax`,
+    expect(screen.getByRole("link", { name: "stripe" }).getAttribute("href")).toBe(
+      `${BASE}/settings#stripe`,
     );
   });
 
@@ -490,7 +490,6 @@ describe("what the rail hides", () => {
     whatsapp: "messaging",
     boats: "boats",
     stripe: "payments",
-    tax: "payments",
     billing: "billing",
   };
 
@@ -527,7 +526,11 @@ describe("the rows the pane is made of", () => {
 
   it("still explains inside an opened setting", () => {
     render(
-      <SettingsRow sectionId="tax" heading="Sales tax & VAT" description="What we charge on top.">
+      <SettingsRow
+        sectionId="stripe"
+        heading="Sales tax & VAT"
+        description="What we charge on top."
+      >
         <span>form</span>
       </SettingsRow>,
     );
@@ -537,10 +540,10 @@ describe("the rows the pane is made of", () => {
   it("reopens the row `?saved=` named, and leaves the others shut", () => {
     const { container } = render(
       <>
-        <SettingsRow sectionId="tax" activeSection="tax" heading="Sales tax & VAT">
+        <SettingsRow sectionId="stripe" activeSection="stripe" heading="Sales tax & VAT">
           <span>tax form</span>
         </SettingsRow>
-        <SettingsRow sectionId="units" activeSection="tax" heading="Units">
+        <SettingsRow sectionId="units" activeSection="stripe" heading="Units">
           <span>units form</span>
         </SettingsRow>
       </>,

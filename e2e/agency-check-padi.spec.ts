@@ -9,7 +9,7 @@ const DEPARTURE = /Two-Tank Reef — French Reef/;
 
 type Mode = "match" | "several" | "signed_out";
 const PADI_CHECKS_OFF =
-  "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings.";
+  "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Features.";
 
 /**
  * **"Check with PADI", on PADI's DiveChek** (layer 2 of the cert-check
@@ -262,20 +262,17 @@ test("a shop that has not turned PADI checks on keeps the link and offers no che
   ).toHaveCount(0);
   expect(await padiLookups(page)).toBe(0);
 
-  // Settings > Bookings: the switch, off, and turned on.
-  await page.goto(`/shop/${privateShop.slug}/settings`);
-  const row = page
-    .locator("details")
-    .filter({ has: page.getByRole("heading", { name: "PADI checks (beta)", exact: true }) });
-  await expect(row.locator("summary")).toContainText("Off");
-  await row.locator("summary").click();
+  // Settings > Features: the switch, off, and turned on.
+  await page.goto(`/shop/${privateShop.slug}/settings/features`);
+  const row = page.locator("li#padiChecks");
+  await expect(row.getByRole("checkbox")).not.toBeChecked();
   await expect(
     row.getByText(/^Beta: nobody has tried this on PADI’s real DiveChek page yet/),
   ).toBeVisible();
   await row.getByRole("checkbox").check();
   await row.getByRole("button", { name: "Save" }).click();
   await page.waitForURL(/notice=feature-saved/);
-  await expect(row.locator("summary")).toContainText("On");
+  await expect(row.getByRole("checkbox")).toBeChecked();
 
   await page.goto(record);
   const after = await openDiverFileGroup(page, "Certification records");

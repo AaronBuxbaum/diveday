@@ -63,17 +63,12 @@ const { saveDeskPaymentAction } = await import("./dock-day/desk-payment-actions"
 const { savePackingAction } = await import("./booking-actions");
 const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
   await import("./data-actions");
-const { disconnectAction, refreshAction, saveTaxAction } = await import("./money-actions");
+const { disconnectAction, refreshAction } = await import("./money-actions");
 const { saveRegulatorServiceAction, saveRentalItemsAction, saveRentalPricingAction } = await import(
   "./rental-actions"
 );
-const {
-  saveAddressAction,
-  saveReopensOnAction,
-  saveShopFeatureAction,
-  saveTimezoneAction,
-  saveUnitsAction,
-} = await import("./shop-actions");
+const { saveAddressAction, saveReopensOnAction, saveTimezoneAction, saveUnitsAction } =
+  await import("./shop-actions");
 const { saveCrewScheduleAction } = await import("./team-actions");
 const { saveProfileAction } = await import("./website-actions");
 
@@ -181,126 +176,33 @@ describe("saving the shop's units", () => {
   });
 });
 
-describe("saving the shop's Stripe Tax setting", () => {
-  it("refuses a captain's tax change", async () => {
-    const { db, shop, captain } = await context();
-    signIn(shop, captain);
-    const taxBefore = (await getShopById(db, shop.id))?.taxEnabled;
-    const form = new FormData();
-    form.set("taxEnabled", "on");
-
-    const to = await redirectedTo(() => saveTaxAction(form));
-
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
-    // Unchanged, rather than literally `false`: the canonical demo ships with
-    // Stripe Tax **on** (src/db/seed.ts), so a hard-coded `false` here was
-    // asserting the fixture's default rather than that the captain's write was
-    // refused. Read before and after and compare.
-    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(taxBefore);
-  });
-
-  it("lets an owner enable and disable Stripe Tax", async () => {
-    const { db, shop, owner } = await context();
-    signIn(shop, owner);
-    const enabled = new FormData();
-    enabled.set("taxEnabled", "on");
-
-    expect(await redirectedTo(() => saveTaxAction(enabled))).toBe(
-      `/shop/${shop.slug}/settings?notice=tax-saved&saved=tax`,
-    );
-    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(true);
-
-    expect(await redirectedTo(() => saveTaxAction(new FormData()))).toBe(
-      `/shop/${shop.slug}/settings?notice=tax-saved&saved=tax`,
-    );
-    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(false);
-  });
-});
-
-describe("saving an optional feature switch", () => {
-  function featureForm(feature: string, enabled: boolean) {
-    const form = new FormData();
-    form.set("feature", feature);
-    if (enabled) form.set("enabled", "on");
-    return form;
-  }
-
+describe("saving the crew schedule's divemaster target", () => {
   it("refuses a captain's change", async () => {
     const { db, shop, captain } = await context();
     signIn(shop, captain);
+    const before = (await getShopById(db, shop.id))?.diversPerDivemaster;
+    const form = new FormData();
+    form.set("diversPerDivemaster", "4");
 
-    const to = await redirectedTo(() => saveShopFeatureAction(featureForm("tips", false)));
-
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
-    expect((await getShopById(db, shop.id))?.tipsEnabled).toBe(true);
-  });
-
-  it("lets an owner turn each one off and back on, touching no other", async () => {
-    const { db, shop, owner } = await context();
-    signIn(shop, owner);
-
-    expect(await redirectedTo(() => saveShopFeatureAction(featureForm("reviews", false)))).toBe(
-      `/shop/${shop.slug}/settings?notice=feature-saved&saved=reviews`,
-    );
-    expect(await getShopById(db, shop.id)).toMatchObject({
-      reviewsEnabled: false,
-      dateRequestsEnabled: true,
-      lastMinuteListEnabled: true,
-      tipsEnabled: true,
-      // The seeded demo runs the PADI checks; turning reviews off leaves them on.
-      padiChecksEnabled: true,
-    });
-
-    await redirectedTo(() => saveShopFeatureAction(featureForm("reviews", true)));
-    expect((await getShopById(db, shop.id))?.reviewsEnabled).toBe(true);
-  });
-
-  it("ignores a feature it does not know, including the crew schedule's own column", async () => {
-    const { db, shop, owner } = await context();
-    signIn(shop, owner);
-    const before = await getShopById(db, shop.id);
-
-    const to = await redirectedTo(() =>
-      saveShopFeatureAction(featureForm("crewScheduleEnabled", false)),
-    );
-
-    expect(to).toBe(`/shop/${shop.slug}/settings`);
-    expect(await getShopById(db, shop.id)).toEqual(before);
-  });
-});
-
-describe("saving the crew schedule switch", () => {
-  it("refuses a captain's change", async () => {
-    const { db, shop, captain } = await context();
-    signIn(shop, captain);
-    const before = (await getShopById(db, shop.id))?.crewScheduleEnabled;
-
-    const to = await redirectedTo(() => saveCrewScheduleAction(new FormData()));
+    const to = await redirectedTo(() => saveCrewScheduleAction(form));
 
     expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
-    expect((await getShopById(db, shop.id))?.crewScheduleEnabled).toBe(before);
+    expect((await getShopById(db, shop.id))?.diversPerDivemaster).toBe(before);
   });
 
-  it("lets an owner turn it off and on, with its divemaster target", async () => {
+  it("lets an owner set the target and leaves the switch where the Features page put it", async () => {
     const { db, shop, owner } = await context();
     signIn(shop, owner);
-    const saved = `/shop/${shop.slug}/settings?notice=crew-schedule-saved&saved=crewSchedule`;
+    const switchBefore = (await getShopById(db, shop.id))?.crewScheduleEnabled;
+    const form = new FormData();
+    form.set("diversPerDivemaster", "4");
 
-    const off = new FormData();
-    off.set("diversPerDivemaster", "4");
-    expect(await redirectedTo(() => saveCrewScheduleAction(off))).toBe(saved);
+    expect(await redirectedTo(() => saveCrewScheduleAction(form))).toBe(
+      `/shop/${shop.slug}/settings?notice=crew-schedule-saved&saved=crewSchedule`,
+    );
     expect(await getShopById(db, shop.id)).toMatchObject({
-      crewScheduleEnabled: false,
+      crewScheduleEnabled: switchBefore,
       diversPerDivemaster: 4,
-    });
-
-    const on = new FormData();
-    on.set("crewScheduleEnabled", "on");
-    on.set("diversPerDivemaster", "8");
-    expect(await redirectedTo(() => saveCrewScheduleAction(on))).toBe(saved);
-    expect(await getShopById(db, shop.id)).toMatchObject({
-      crewScheduleEnabled: true,
-      diversPerDivemaster: 8,
     });
   });
 

@@ -13,8 +13,6 @@
       "turnaroundInvalid": "Enter a turnaround between 0 and 240 minutes.",
       "unitsSaved": "Units saved.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
-      "taxSaved": "Tax setting saved.",
-      "taxInvalid": "Nothing changed: the tax switch sent a value this page didn’t expect. Reload Settings and turn it on or off again.",
       "passThroughSaved": "Pass-through fee saved.",
       "passThroughInvalid": "Enter both a fee name and a positive amount, or leave both blank to disable it.",
       "rentalsSaved": "Rental catalog saved.",
@@ -303,11 +301,7 @@
       "heading": "Sales tax & VAT",
       "description": "Add sales tax, VAT, and similar taxes to new booking payments and staff invoices through Stripe.",
       "detail": "Tax is added on top of your listed prices and shown to divers at Stripe checkout. Tips after the trip are separate and unaffected. Turn this off if you handle tax yourself.",
-      "enabledValue": "On",
-      "disabledValue": "Off",
-      "checkboxLabel": "Use Stripe Tax for new booking and invoice payments",
-      "submit": "Save tax setting",
-      "submitting": "Saving…"
+      "checkboxLabel": "Use Stripe Tax for new booking and invoice payments"
     },
     "passThrough": {
       "heading": "Marine park or conservation fee",
@@ -410,6 +404,7 @@
       "money": "Money",
       "messages": "Messages",
       "website": "Website",
+      "features": "Features",
       "data": "Your data"
     },
     "rail": {
@@ -453,7 +448,8 @@
         "heading": "PADI checks (beta)",
         "label": "Check PADI certifications and eLearning with the extension",
         "description": "Beta: nobody has tried this on PADI’s real DiveChek page yet, and PADI hasn’t said yes or no to an extension filling it in. It runs in a browser where one of your PADI Pros is signed in to the Pros’ Site, under that Pro’s membership. Off, the link to the Pros’ Site stays. An owner or manager can turn it on."
-      }
+      },
+      "door": "Turn features on or off"
     },
     "crewSchedule": {
       "heading": "Crew schedule",
@@ -463,7 +459,8 @@
       "description": "Shifts, days away, and who works each departure. Course sessions name their instructor either way.",
       "save": "Save crew schedule",
       "saving": "Saving…",
-      "saved": "Crew schedule saved."
+      "saved": "Crew schedule saved.",
+      "turnOn": "Turn on in Features"
     },
     "team": {
       "heading": "Team"
@@ -1146,5 +1143,10 @@
       "import": "Import",
       "integrations": "Integrations"
     }
+  },
+  "features": {
+    "title": "Features",
+    "crewTarget": "Set the divemaster target",
+    "boats": "Your boats"
   }
 }

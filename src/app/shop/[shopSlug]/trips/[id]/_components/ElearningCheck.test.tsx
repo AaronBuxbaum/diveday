@@ -110,7 +110,7 @@ describe("ElearningCheck", () => {
   /** Domain review R4-5: with the extension here and PADI's checks off, say who can turn them on. */
   it("says the shop's PADI checks are off, with the extension here and nothing to check", () => {
     const off =
-      "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings.";
+      "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Features.";
     renderCheck({ query: null, offNote: off });
     expect(screen.queryByText(off)).toBeNull();
     cleanup();

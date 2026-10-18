@@ -2,13 +2,12 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { ChoiceRow } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { canAcceptPayments, type getShopStripeAccount } from "@/db/stripe-accounts";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
-import { disconnectAction, refreshAction, saveTaxAction } from "../../money-actions";
+import { disconnectAction, refreshAction } from "../../money-actions";
 import { SettingsDoorRow, SettingsRow } from "../SettingsRows";
-import { featureRow, MONEY_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
+import { MONEY_GROUP, SectionNotice, SettingsGroup, type SettingsView } from "./kit";
 import { passThroughRow } from "./money-rows";
 
 function StatusRow({
@@ -51,7 +50,7 @@ export function MoneyGroup({
   connectConfigured: boolean;
   canViewBilling: boolean;
 }) {
-  const { shop, shopSlug, t, banner, activeSection } = view;
+  const { shopSlug, t, banner, activeSection } = view;
   const ready = canAcceptPayments(account);
   // The one exception the Online payments row states at rest, if it has one.
   const stripeWarning = !account
@@ -61,45 +60,12 @@ export function MoneyGroup({
       : ready
         ? null
         : t("settings.main.stripe.notReadyBadge");
-  const taxValue = t(
-    shop.taxEnabled ? "settings.main.tax.enabledValue" : "settings.main.tax.disabledValue",
-  );
   return (
     <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
       <InsetGroup>
         {canPayments ? (
           <>
-            <SettingsRow
-              heading={t("settings.main.tax.heading")}
-              value={taxValue}
-              description={t("settings.main.tax.description")}
-              detail={t("settings.main.tax.detail")}
-              sectionId="tax"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="tax" active={activeSection} />
-              <form action={saveTaxAction} className="mt-4">
-                <ChoiceRow
-                  name="taxEnabled"
-                  type="checkbox"
-                  value="on"
-                  defaultChecked={shop.taxEnabled}
-                  className="text-sm"
-                >
-                  {t("settings.main.tax.checkboxLabel")}
-                </ChoiceRow>
-                <SubmitButton
-                  pendingLabel={t("settings.main.tax.submitting")}
-                  className={buttonClass({ variant: "secondary", className: "mt-3" })}
-                >
-                  {t("settings.main.tax.submit")}
-                </SubmitButton>
-              </form>
-            </SettingsRow>
-
             {passThroughRow(view)}
-
-            {featureRow(view, "tips")}
 
             {/* The one row that opens itself: an unconnected or half-onboarded
               Stripe account is the difference between taking bookings online
