@@ -19,11 +19,9 @@ This dependency carried privacy, operational, and security costs:
 
 ## Decision
 
-1. **Provider-Neutral OpenStreetMap Linkouts (`openMapsUrl` / `directionsUrl`):**
-   - Replace `googleMapsUrl` with `openMapsUrl(query: string)` in `src/lib/maps.ts`.
-   - Queries formatted as decimal coordinates (`lat,lng`) link directly to OpenStreetMap with a center pin: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`.
-   - Text addresses or place queries link to OpenStreetMap search: `https://www.openstreetmap.org/search?query=${encodeURIComponent(query)}`.
-   - Update `TripArrivalCard`, `DiveSiteMap`, `PublicShopChrome`, and notification email templates to consume this helper.
+1. **External Navigation Linkouts (`googleMapsUrl` / `directionsUrl` / `appleMapsUrl`):**
+   - Retain Google Maps (`googleMapsUrl`) and Apple Maps (`appleMapsUrl`) for external user navigation and directions linkouts (`TripArrivalCard`, `DiveSiteMap`, `PublicShopChrome`, and notification email templates). Standard directions linking defaults to Google Maps (or Apple Maps if requested/preferred by the user) without embedding Google Maps on-page.
+   - Provide `openStreetMapUrl` and `directionsUrl(query, provider)` in `src/lib/maps.ts` for provider selection.
 
 2. **OpenStreetMap Embeds (`osmMapEmbedUrl`):**
    - Replace Google's classic `output=embed` roadmap and terrain frames with OpenStreetMap export embeds: `https://www.openstreetmap.org/export/embed.html?bbox=...&layer=mapnik&marker=...`.

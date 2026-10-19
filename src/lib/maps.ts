@@ -63,12 +63,29 @@ export function osmMapEmbedUrl(query: string): string {
 }
 
 /**
+ * A link out to Google Maps for directions or map inspection.
+ *
+ * For giving directions and linking locations, Google Maps is standard and widely supported.
+ */
+export function googleMapsUrl(query: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query.trim())}`;
+}
+
+/**
+ * A link out to Apple Maps for directions or map inspection.
+ * Supported on iOS/macOS devices or web fallback.
+ */
+export function appleMapsUrl(query: string): string {
+  return `https://maps.apple.com/?q=${encodeURIComponent(query.trim())}`;
+}
+
+/**
  * A link out to OpenStreetMap for directions or map inspection.
  *
  * If coordinates are provided ("lat,lng"), deep-links directly with marker (`mlat`, `mlon`).
  * If text address is provided, deep-links to OpenStreetMap's search.
  */
-export function openMapsUrl(query: string): string {
+export function openStreetMapUrl(query: string): string {
   const trimmed = query.trim();
   const parts = trimmed.split(",").map((p) => Number.parseFloat(p.trim()));
   if (parts.length === 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
@@ -80,12 +97,32 @@ export function openMapsUrl(query: string): string {
 }
 
 /**
+ * URL for opening map locations or directions externally.
+ *
+ * Defaults to Google Maps for standard external navigation and directions linking,
+ * while allowing caller customization or platform-specific linking (e.g. Apple Maps).
+ */
+export function directionsUrl(query: string, provider: "google" | "apple" | "osm" = "google"): string {
+  if (provider === "apple") {
+    return appleMapsUrl(query);
+  }
+  if (provider === "osm") {
+    return openStreetMapUrl(query);
+  }
+  return googleMapsUrl(query);
+}
+
+/**
+ * Default external map linkout function: uses Google Maps for directions/location viewing.
+ */
+export const openMapsUrl = googleMapsUrl;
+
+/**
  * Backward-compatible aliases for existing callers during migration.
  */
 export const googleMapEmbedUrl = osmMapEmbedUrl;
 export const googleTerrainEmbedUrl = (coords: string, zoom = 15) =>
   osmCoordsEmbedUrl(coords, zoom, false);
-export const googleMapsUrl = openMapsUrl;
 
 /**
  * **What the map frames ask before showing the frame.**
