@@ -56,6 +56,8 @@ export function SiteLibraryLedger({
   depthUnit,
   currentTemplateVersion,
   catalog,
+  selectedSiteId,
+  onSelectSite,
 }: {
   groups: readonly SiteLibraryGroup[];
   shopSlug: string;
@@ -68,6 +70,10 @@ export function SiteLibraryLedger({
   currentTemplateVersion: ReadonlyMap<string, number>;
   /** The tail door, or null when DiveDay publishes nothing to browse. */
   catalog: { href: string; count: number } | null;
+  /** Selected site id synchronized with map pins. */
+  selectedSiteId?: string | null;
+  /** Callback when a site row is interacted with or clicked. */
+  onSelectSite?: (id: string) => void;
 }) {
   // A ledger with no rows is not a ledger, and the door is its *tail*: with an
   // empty library the page's own two-door empty state owns the write-one-or-
@@ -96,6 +102,8 @@ export function SiteLibraryLedger({
                     t={t}
                     depthUnit={depthUnit}
                     currentTemplateVersion={currentTemplateVersion}
+                    isSelected={site.id === selectedSiteId}
+                    onSelectSite={onSelectSite}
                   />
                 ))}
               </ul>
@@ -133,6 +141,8 @@ function SiteRow({
   t,
   depthUnit,
   currentTemplateVersion,
+  isSelected,
+  onSelectSite,
 }: {
   site: SiteLibraryGroup["sites"][number];
   group: SiteLibraryGroupLabel;
@@ -140,6 +150,8 @@ function SiteRow({
   t: StaffTranslator;
   depthUnit: DepthUnit;
   currentTemplateVersion: ReadonlyMap<string, number>;
+  isSelected?: boolean;
+  onSelectSite?: (id: string) => void;
 }) {
   const fit = siteFit({
     difficultyLevel: site.difficultyLevel,
@@ -169,65 +181,52 @@ function SiteRow({
   const updateReady = adopted !== null && published > adopted;
 
   return (
-    <LedgerRow
-      href={`/shop/${shopSlug}/dive-sites/${site.id}`}
-      // The site's own name, and nothing appended: the roster, the visual
-      // captures and the depth spec all address a site by exactly this, and a
-      // stretched link's accessible name is the only name it has.
-      linkLabel={site.name}
-      // At 390px a name, a location, a depth and "Advanced Open Water · Deep ·
-      // Nitrox" on one line leave the name about 90px to wrap in. `stacked` is
-      // the primitive's own answer (ADR 20260827-clearwater-surface-language):
-      // the name and its meta lead, the requirement words drop to a line of
-      // their own beneath, and from `sm` up the row is byte-for-byte the row
-      // the artboard draws.
-      stacked
-      // **No slot for a row with nothing to trail.** A site that asks only for
-      // Open Water, at the published version, has neither words nor badge, and
-      // `LedgerRow` draws whatever it is handed: a stacked row with no kind
-      // drops its trailing slot to a full-width line of its own on a phone, so
-      // an empty wrapper there was an empty line, 12px of row gap below the
-      // site's name (the pixel probe: 24px where the lines sit 12px apart,
-      // and the name 6px above the row's centre).
-      trailing={
-        updateReady || requirementWords.length > 0 ? (
-          // Nothing in here is interactive, and `LedgerRow` lifts its trailing
-          // slot above the row-wide link overlay — so without this a tap
-          // landing on the requirement words or the badge would do nothing at
-          // all. The door's chevron is the row's own.
-          <div className="pointer-events-none flex items-center gap-3">
-            {updateReady ? (
-              <Badge tone="primary" size="sm">
-                {t("diveSites.list.templateUpdateReady", { version: published })}
-              </Badge>
-            ) : null}
-            {requirementWords.length > 0 ? (
-              <span
-                className={
-                  requirement.emphasised
-                    ? "text-end text-sm font-medium text-warning-strong"
-                    : "text-end text-sm text-muted"
-                }
-              >
-                {requirementWords.join(" · ")}
-              </span>
-            ) : null}
-          </div>
-        ) : undefined
-      }
+    <div
+      onMouseEnter={() => onSelectSite?.(site.id)}
+      onFocus={() => onSelectSite?.(site.id)}
     >
-      <div className="min-w-0">
-        <p className="font-medium break-words">{site.name}</p>
-        <p className="mt-0.5 text-sm break-words text-muted">{meta.join(" · ")}</p>
-        {/* What the shop wants to remember about running this site, while it
-            is still recent enough to plan against (issue #1204). A site with
-            no note, or one that has aged past the window, shows nothing —
-            the note is still on the row and still on its own editor. */}
-        {planningNoteIsFresh(site.planningNoteAt) && site.planningNote ? (
-          <p className="mt-0.5 text-sm break-words text-muted">{site.planningNote}</p>
-        ) : null}
-      </div>
-    </LedgerRow>
+      <LedgerRow
+        id={`site-row-${site.id}`}
+        href={`/shop/${shopSlug}/dive-sites/${site.id}`}
+        linkLabel={site.name}
+        stacked
+        className={isSelected ? "bg-surface-sunken/80 ring-1 ring-primary/40 rounded-lg" : ""}
+        trailing={
+          updateReady || requirementWords.length > 0 ? (
+            <div className="pointer-events-none flex items-center gap-3">
+              {updateReady ? (
+                <Badge tone="primary" size="sm">
+                  {t("diveSites.list.templateUpdateReady", { version: published })}
+                </Badge>
+              ) : null}
+              {requirementWords.length > 0 ? (
+                <span
+                  className={
+                    requirement.emphasised
+                      ? "text-end text-sm font-medium text-warning-strong"
+                      : "text-end text-sm text-muted"
+                  }
+                >
+                  {requirementWords.join(" · ")}
+                </span>
+              ) : null}
+            </div>
+          ) : undefined
+        }
+      >
+        <div className="min-w-0">
+          <p className="font-medium break-words">{site.name}</p>
+          <p className="mt-0.5 text-sm break-words text-muted">{meta.join(" · ")}</p>
+          {/* What the shop wants to remember about running this site, while it
+              is still recent enough to plan against (issue #1204). A site with
+              no note, or one that has aged past the window, shows nothing —
+              the note is still on the row and still on its own editor. */}
+          {planningNoteIsFresh(site.planningNoteAt) && site.planningNote ? (
+            <p className="mt-0.5 text-sm break-words text-muted">{site.planningNote}</p>
+          ) : null}
+        </div>
+      </LedgerRow>
+    </div>
   );
 }
 

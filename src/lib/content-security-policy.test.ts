@@ -236,6 +236,8 @@ describe("the policy", () => {
       "https://maps.google.com",
       "https://www.google.com",
     ]);
+    expect(imgSrc).toContain("https://*.basemaps.cartocdn.com");
+    expect(imgSrc).toContain("https://*.tile.openstreetmap.org");
     const frameSrc = directives(enforcedPolicy(base)).get("frame-src");
     for (const probe of MAP_REACHABILITY_PROBES) {
       expect(imgSrc).toContain(probe);

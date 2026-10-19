@@ -16,22 +16,20 @@ import {
   countGlobalDiveSiteTemplates,
   currentGlobalDiveSiteVersions,
   diveSiteLibrarySize,
-  getGlobalDiveSiteTemplate,
   groupSiteLibrary,
   listDiveSitesPage,
-  listGlobalDiveSiteTemplates,
+  shopSearchAnchor,
 } from "@/db/dive-sites";
-import { getShopById } from "@/db/shops";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { joinFacts } from "@/lib/format";
-import { requireShopSurface, requireStaffSession } from "@/lib/session";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { timeZoneAnchor } from "@/lib/timezones";
+import type { MapPin, ShopAnchor } from "@/components/map/SiteMap";
+import { CatalogView } from "./_components/CatalogView";
+import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
-import { TemplatePreview } from "./_components/TemplatePreview";
-import { importDiveSiteTemplateAction } from "./actions";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
@@ -85,7 +83,7 @@ export default async function DiveSitesPage({
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
   const requestedPage = Number.parseInt(page ?? "", 10);
   const query = q?.trim() ?? "";
-  const [sitePage, librarySize, catalogSize] = await Promise.all([
+  const [sitePage, librarySize, catalogSize, rawAnchor] = await Promise.all([
     listDiveSitesPage(
       db,
       shop.id,
@@ -99,6 +97,7 @@ export default async function DiveSitesPage({
     // The tail door's number, over the whole published catalog — never the
     // `total` of a page nobody has fetched yet (ADR 20260827-the-shops-shelves).
     countGlobalDiveSiteTemplates(db),
+    shopSearchAnchor(db, shop.id),
   ]);
   const sites = sitePage.rows;
   const banner = noticeFromParam(notice, NOTICES);
@@ -110,6 +109,35 @@ export default async function DiveSitesPage({
     db,
     sites.map((site) => site.sourceTemplateId).filter((id): id is string => Boolean(id)),
   );
+
+  const anchorCoords = rawAnchor ?? timeZoneAnchor(shop.timezone);
+  const shopAnchor: ShopAnchor | null = anchorCoords
+    ? {
+        latitude: anchorCoords.latitude,
+        longitude: anchorCoords.longitude,
+        name: shop.name,
+      }
+    : null;
+
+  const pins: MapPin[] = sites
+    .filter(
+      (site): site is typeof site & { forecastLatitude: number; forecastLongitude: number } =>
+        site.forecastLatitude != null && site.forecastLongitude != null,
+    )
+    .map((site) => ({
+      id: site.id,
+      name: site.name,
+      latitude: site.forecastLatitude,
+      longitude: site.forecastLongitude,
+      subtitle: site.locationName,
+      href: `/shop/${shopSlug}/dive-sites/${site.id}`,
+      tone:
+        site.difficultyLevel === "advanced"
+          ? "warning"
+          : site.difficultyLevel === "beginner"
+            ? "primary"
+            : "default",
+    }));
 
   /** This page's URL with the search kept and only `page` swapped. */
   const pageHref = (target: number) => {
@@ -221,180 +249,34 @@ export default async function DiveSitesPage({
           className="mt-4"
         />
       ) : (
-        <SiteLibraryLedger
-          groups={groupSiteLibrary(sites)}
-          shopSlug={shopSlug}
-          t={t}
-          diverT={diverT}
-          depthUnit={shop.depthUnit}
-          currentTemplateVersion={currentTemplateVersion}
-          // The tail door renders only when there is something behind it. A
-          // catalog DiveDay has not published into yet would otherwise offer a
-          // shop a page of nothing at the foot of its own library.
-          catalog={catalogSize > 0 ? { href: catalogHref, count: catalogSize } : null}
-        />
+        <SiteLibraryLayout
+          shopAnchor={shopAnchor}
+          pins={pins}
+          empty={sites.length === 0}
+        >
+          <SiteLibraryLedger
+            groups={groupSiteLibrary(sites)}
+            shopSlug={shopSlug}
+            t={t}
+            diverT={diverT}
+            depthUnit={shop.depthUnit}
+            currentTemplateVersion={currentTemplateVersion}
+            // The tail door renders only when there is something behind it. A
+            // catalog DiveDay has not published into yet would otherwise offer a
+            // shop a page of nothing at the foot of its own library.
+            catalog={catalogSize > 0 ? { href: catalogHref, count: catalogSize } : null}
+          />
+
+          <Pager
+            page={sitePage.page}
+            pageCount={sitePage.pageCount}
+            href={pageHref}
+            total={t("diveSites.list.pagination.total", { count: sitePage.total })}
+            words={staffPagerWords(t)}
+          />
+        </SiteLibraryLayout>
       )}
-
-      <Pager
-        page={sitePage.page}
-        pageCount={sitePage.pageCount}
-        href={pageHref}
-        total={t("diveSites.list.pagination.total", { count: sitePage.total })}
-        words={staffPagerWords(t)}
-      />
     </main>
   );
 }
 
-/**
- * DiveDay's published site catalog, folded in from its own former route
- * (ADR 20260806-dive-site-catalog-is-a-view). Reachable only from the
- * library's own "Browse templates" doors, so it renders as this page's
- * `?view=catalog` rather than a peer destination — the same move
- * 20260803-not-ready-is-a-view made for the by-departure queue.
- */
-async function CatalogView({
-  shopSlug,
-  t,
-  diverT,
-  page,
-  slug,
-}: {
-  shopSlug: string;
-  t: StaffTranslator;
-  diverT: DiverTranslator;
-  page?: string;
-  /** A template to open in full before deciding — `?view=catalog&template=<slug>`. */
-  slug?: string;
-}) {
-  const back = shopPath(shopSlug, "dive-sites");
-  const catalogHref = `${back}?view=catalog`;
-  const activeSession = await requireStaffSession();
-  const db = await getDb();
-  const shop = await getShopById(db, activeSession.user.shopId);
-  const locationIsProvided = !!(shop.addressStreet && shop.addressLocality);
-
-  if (!locationIsProvided) {
-    // The catalog's own header over the shared empty state, the one the
-    // library draws a click away (K-419). This was a bare "Back to library"
-    // link over a hand-rolled dashed box: a second empty panel, squarer and
-    // fainter than the first, filled with a card colour no token defines.
-    return (
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <ShopPageHeader
-          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
-          eyebrowHref={back}
-          title={t("diveSites.catalog.title")}
-        />
-        <EmptyState
-          title={t("diveSites.catalog.locationRequiredTitle")}
-          body={t("diveSites.catalog.locationRequiredDescription")}
-          action={
-            <Link
-              href={`${shopPath(shopSlug, "settings")}?section=address`}
-              className={buttonClass()}
-            >
-              {t("diveSites.catalog.goToSettings")}
-            </Link>
-          }
-        />
-      </main>
-    );
-  }
-
-  // A non-numeric or missing `?page=` reads as page 1; the query clamps it
-  // into range so a bookmarked page past the end lands on the last real one.
-  const catalog = await listGlobalDiveSiteTemplates(db, {
-    page: Number.parseInt(page ?? "", 10),
-    shop,
-  });
-  const pageHref = (target: number) => (target > 1 ? `${catalogHref}&page=${target}` : catalogHref);
-  // Reading a template before taking it. Importing was a one-tap commitment
-  // against a name and one sentence — so a shop found out what it had adopted
-  // by opening the site it now owned and deleting it again. The whole briefing
-  // is public DiveDay content; there was never a reason to withhold it.
-  const previewSlug = slug?.trim();
-  const preview = previewSlug ? await getGlobalDiveSiteTemplate(db, previewSlug, shop) : null;
-  if (previewSlug && preview) {
-    return (
-      <TemplatePreview
-        template={preview}
-        backHref={catalogHref}
-        importAction={importDiveSiteTemplateAction}
-        t={t}
-        diverT={diverT}
-        depthUnit={shop.depthUnit}
-      />
-    );
-  }
-
-  return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <div>
-        <ShopPageHeader
-          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
-          eyebrowHref={back}
-          title={t("diveSites.catalog.title")}
-          description={t("diveSites.catalog.description")}
-          descriptionIsCaption
-        />
-      </div>
-      {/* The same ledger grammar as the library this feeds (ADR
-          20260827-the-shops-shelves): the catalog is not a second surface
-          style. The row **is** the preview door — a template's whole briefing
-          is public DiveDay content and reading it before taking it is the
-          ordinary path — so the separate "Read it first" button retired with
-          the card it sat in, and Import stays as the row's one act. */}
-      <ul className="mt-8">
-        {catalog.templates.map(({ template, version }) => (
-          <LedgerRow
-            key={template.id}
-            href={`${catalogHref}&template=${encodeURIComponent(template.slug)}`}
-            linkLabel={version.briefing.name}
-            // On a phone "Import to my library" beside a name and a paragraph
-            // leaves the paragraph a column two words wide; `stacked` gives the
-            // act the first line and the briefing the full width beneath.
-            stacked
-            // 12px, as it always stood: a name, a line of facts and a
-            // paragraph to choose on.
-            pad="lg"
-            trailing={
-              <form action={importDiveSiteTemplateAction}>
-                <input type="hidden" name="templateId" value={template.id} />
-                <SubmitButton
-                  pendingLabel={t("diveSites.catalog.importing")}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
-                >
-                  {t("diveSites.catalog.importToLibrary")}
-                </SubmitButton>
-              </form>
-            }
-          >
-            <div className="min-w-0">
-              <p className="font-medium">{version.briefing.name}</p>
-              <p className="mt-0.5 text-sm text-muted">
-                {joinFacts([
-                  version.briefing.locationName,
-                  t("diveSites.catalog.templateVersion", { version: version.version }),
-                ])}
-              </p>
-              {/* The one paragraph that earns a row of its own: a shop choosing
-                  among thirty-four reefs it has never dived has nothing else to
-                  choose on, which is the opposite of its own library. */}
-              {version.briefing.description ? (
-                <p className="mt-1 text-sm text-muted">{version.briefing.description}</p>
-              ) : null}
-            </div>
-          </LedgerRow>
-        ))}
-      </ul>
-      <Pager
-        page={catalog.page}
-        pageCount={catalog.pageCount}
-        href={pageHref}
-        total={t("diveSites.catalog.pagination.total", { count: catalog.total })}
-        words={staffPagerWords(t)}
-      />
-    </main>
-  );
-}
