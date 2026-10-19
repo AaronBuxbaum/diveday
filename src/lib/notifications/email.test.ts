@@ -987,7 +987,7 @@ describe("where to go (ux review 2026-10-11, items 4 and 27)", () => {
   it("puts the meeting point, its notes and a maps link on the confirmation", () => {
     const email = bookingConfirmationEmail({ ...base, meetingPoint });
     expect(email.text).toContain(
-      "Where to go\nNorth Pier\n1 Dock St, Key Largo, FL\nLandmark: Blue awning beside the fuel dock\nParking: Free lot behind the bait shop\nOpen in maps: https://www.openstreetmap.org/search?query=North%20Pier%2C%201%20Dock%20St%2C%20Key%20Largo%2C%20FL",
+      "Where to go\nNorth Pier\n1 Dock St, Key Largo, FL\nLandmark: Blue awning beside the fuel dock\nParking: Free lot behind the bait shop\nOpen in maps: https://www.google.com/maps/search/?api=1&query=North%20Pier%2C%201%20Dock%20St%2C%20Key%20Largo%2C%20FL",
     );
     expect(email.html).toContain("<strong>Where to go</strong>");
     expect(email.html).toContain('class="dd-panel"');

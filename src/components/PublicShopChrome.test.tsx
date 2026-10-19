@@ -38,7 +38,7 @@ describe("the public shop footer", () => {
     expect(link).toHaveAttribute("target", "_blank");
     // A link out, never an embedded map: a third-party frame on an anonymous
     // marketing page costs Core Web Vitals and adds a tracker.
-    expect(link.getAttribute("href")).toContain("openstreetmap.org/search");
+    expect(link.getAttribute("href")).toContain("google.com/maps/search");
     expect(link.getAttribute("href")).toContain(encodeURIComponent("Blue Mantis Divers"));
     expect(document.querySelector("iframe")).toBeNull();
   });
