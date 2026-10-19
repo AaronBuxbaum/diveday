@@ -1665,11 +1665,7 @@ async function sendRecaps(
     );
   const alreadySent = new Set(delivered.map((d) => d.bookingId));
 
-  // The sites dived, per trip, so each recap email can name the day. Fetched
-  // once per distinct trip in the run rather than per booking, and all trips
-  // resolved together rather than one round trip at a time.
-  const siteNamesByTrip = new Map<string, string[]>();
-  // And when each diver may fly (`src/lib/fly-safe.ts`), from the same
+  // When each diver may fly (`src/lib/fly-safe.ts`), from the same
   // `executed_dives` the after-state reads.
   //
   // **Keyed by booking, not by trip.** The reads are still once per departure
@@ -1686,8 +1682,7 @@ async function sendRecaps(
       const first = tripRows[0];
       if (!first) return;
       const shopId = first.shop.id;
-      const [dives, lived, divedRecentlyIds] = await Promise.all([
-        listTripDives(db, shopId, tripId),
+      const [lived, divedRecentlyIds] = await Promise.all([
         listExecutedDives(db, shopId, tripId),
         diveDaysBefore(
           db,
@@ -1697,11 +1692,6 @@ async function sendRecaps(
           first.shop.timezone,
         ),
       ]);
-      const names: string[] = [];
-      for (const { diveSite } of dives) {
-        if (diveSite && !names.includes(diveSite.name)) names.push(diveSite.name);
-      }
-      siteNamesByTrip.set(tripId, names);
       const executed = lived.map(({ executed: dive }) => ({
         diveNumber: dive.diveNumber,
         exitedAt: dive.exitedAt,
@@ -1763,7 +1753,6 @@ async function sendRecaps(
 
     const recapUrl = origin ? new URL(recapLinkPath(booking.id), `${origin}/`).toString() : null;
     const phone = smsRecipient(person.phone);
-    const sites = siteNamesByTrip.get(trip.id) ?? [];
     // No request to negotiate Accept-Language from at a cron fire — but this
     // diver may have told us first-hand on a request of their own, and that
     // outranks the shop's default (docs ADR
@@ -1791,12 +1780,10 @@ async function sendRecaps(
           shopId: shop.id,
           to: person.email,
           locale,
-          diverName: person.fullName,
           shopName: shop.name,
           tripTitle: trip.title,
           startsAt: trip.startsAt,
           timezone: shop.timezone,
-          sites,
           flySafe: flySafeByBooking.get(booking.id) ?? undefined,
           recapUrl,
           unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),

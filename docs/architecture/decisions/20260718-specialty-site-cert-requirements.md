@@ -29,7 +29,7 @@ evidence produces `ready`, and no new source may become an implicit pass.
   (`minimum_certification_level`, `required_specialties`, `requires_nitrox`); `trip_requirements`
   gains the same two. The readiness service **composes** them: the effective gate is the stricter
   minimum level, the union of specialties, and nitrox if either side demands it
-  (`combineCertRequirements`). A trip with no configured `trip_requirements` row is still "not
+  (`unionRequirements`). A trip with no configured `trip_requirements` row is still "not
   configured" (blocked) — a site gate never substitutes for the explicit per-trip requirement.
 
 ## Alternatives considered

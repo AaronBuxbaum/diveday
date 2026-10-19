@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MAP_REACHABILITY_PROBE } from "@/lib/maps";
+import { MAP_REACHABILITY_PROBES } from "@/lib/maps";
 import { MAP_GIVE_UP_MS, MapFrame } from "./MapFrame";
 
 /**
@@ -30,6 +30,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const answerAll = () => {
+  for (const probe of probes) probe.onload?.();
+};
+
 const frame = () =>
   render(
     <MapFrame
@@ -45,11 +49,33 @@ describe("MapFrame", () => {
     const iframe = frame();
     expect(iframe).toHaveClass("invisible");
     expect(iframe).toHaveAttribute("aria-hidden", "true");
-    expect(probes).toHaveLength(1);
-    expect(probes[0]?.src).toBe(MAP_REACHABILITY_PROBE);
-    act(() => probes[0]?.onload?.());
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
+    expect(probes.map((probe) => probe.src)).toEqual([...MAP_REACHABILITY_PROBES]);
+    act(() => answerAll());
     expect(iframe).not.toHaveClass("invisible");
     expect(iframe).not.toHaveAttribute("aria-hidden");
+  });
+
+  // #2441: the embed needs maps.google.com and www.google.com. With only one of
+  // them reachable the iframe is the browser's error page, so one answer is
+  // not enough and either refusal fails the frame.
+  it("stays invisible until every host the embed needs has answered", () => {
+    const iframe = frame();
+    act(() => probes[0]?.onload?.());
+    expect(iframe).toHaveClass("invisible");
+    expect(iframe).toHaveAttribute("data-map-state", "waiting");
+    act(() => probes[1]?.onload?.());
+    expect(iframe).not.toHaveClass("invisible");
+    expect(iframe).toHaveAttribute("data-map-state", "reachable");
+  });
+
+  it.each([0, 1])("is failed when only probe %i is refused", (refused) => {
+    const iframe = frame();
+    for (const [index, probe] of probes.entries()) {
+      act(() => (index === refused ? probe.onerror?.() : probe.onload?.()));
+    }
+    expect(iframe).toHaveClass("invisible");
+    expect(iframe).toHaveAttribute("data-map-state", "failed");
   });
 
   it("stays invisible when the provider cannot be reached", () => {
@@ -72,14 +98,14 @@ describe("MapFrame", () => {
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
-    expect(probes).toHaveLength(1);
-    act(() => probes[0]?.onload?.());
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
+    act(() => answerAll());
     expect(iframe).not.toHaveClass("invisible");
     // Once is enough: a second `online` does not ask again.
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
-    expect(probes).toHaveLength(1);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
   });
 
   it("stops listening for the signal once it is gone from the page", () => {
@@ -125,9 +151,9 @@ describe("MapFrame", () => {
     seen(false);
     expect(probes).toHaveLength(0);
     seen(true);
-    expect(probes).toHaveLength(1);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
     expect(observers[0]?.disconnected).toBe(true);
-    act(() => probes[0]?.onload?.());
+    act(() => answerAll());
     expect(iframe).not.toHaveClass("invisible");
   });
 
@@ -138,7 +164,7 @@ describe("MapFrame", () => {
     it("is waiting, then reachable once the provider answers", () => {
       const iframe = frame();
       expect(iframe).toHaveAttribute("data-map-state", "waiting");
-      act(() => probes[0]?.onload?.());
+      act(() => answerAll());
       expect(iframe).toHaveAttribute("data-map-state", "reachable");
     });
 
@@ -160,7 +186,7 @@ describe("MapFrame", () => {
           vi.advanceTimersByTime(1);
         });
         expect(iframe).toHaveAttribute("data-map-state", "failed");
-        act(() => probes[0]?.onload?.());
+        act(() => answerAll());
         expect(iframe).toHaveAttribute("data-map-state", "reachable");
       } finally {
         vi.useRealTimers();

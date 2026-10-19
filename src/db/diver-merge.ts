@@ -226,6 +226,9 @@ export const STAFF_HISTORY_TABLES = [
   // merge is refused, exactly as a seeded shift refuses it.
   "crew_availability_blocks",
   "crew_assignment_requests",
+  // "Working it anyway" on a departure (issue #2678): its subject is somebody
+  // on a crew, so a record holding one is a staff record and the merge is refused.
+  "crew_away_acknowledgements",
   // Where a *staffer* had read up to in a departure's shift catch-up (issues
   // #1202, #1187). Same shape as `push_subscriptions` above it: written by, and
   // about, somebody who works the boats, so either side of a merge holding one
@@ -300,6 +303,9 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "certifications.processed_by_person_id": "who told the agency about the card",
   "certifications.reviewed_by_person_id": "who confirmed the card",
   "crew_assignment_requests.decided_by_person_id": "who answered the ask",
+  "crew_away_acknowledgements.acknowledged_by_person_id":
+    "who said the crew member is working it anyway",
+  "crew_away_acknowledgements.cleared_by_person_id": "who said they are no longer working it",
   "crew_notices.actor_person_id": "who made the crew change",
   "crew_availability_blocks.created_by_person_id": "who blocked the days",
   "dive_packages.created_by_person_id": "who wrote the package",
@@ -315,6 +321,8 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "incident_reports.created_by_person_id": "who started the incident report",
   "incident_reports.filed_by_person_id": "who filed the incident report",
   "incident_reports.deleted_by_person_id": "who deleted the unfiled incident draft",
+  "incident_reports.missing_alert_raised_by_person_id": "who alerted the owners from the roll call",
+  "incident_reports.missing_found_by_person_id": "who marked the missing person found",
   "internal_notes.created_by_person_id": "who wrote the note",
   "marine_life_requests.requested_by_person_id": "which staffer asked for the species",
   "nitrox_certifications.deleted_by_person_id": "who removed the card",
@@ -1281,6 +1289,11 @@ export async function mergeDiverRecords(input: {
           emergencyContactName: contactFrom.emergencyContactName,
           emergencyContactPhone: contactFrom.emergencyContactPhone,
           dateOfBirth,
+          // A record that took in another is no longer one a single booking
+          // made, whichever way the merge went: the parent's door
+          // (`seatPersonIsThisBookings`) stays shut for it (security review
+          // 2026-10-17, issue #2665).
+          createdByBookingId: null,
           // A staffer's "18 or older" (H-100) travels as a pair with its author,
           // from whichever record has one, survivor first, and only while no
           // date answers the question instead.

@@ -20,7 +20,7 @@ test.describe("full-shop data export", () => {
     request,
   }) => {
     await page.goto("/shop/blue-mantis/settings/export");
-    await expect(page.getByRole("heading", { name: "Data export" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Your data" })).toBeVisible();
 
     // The file list is the page's reference, not its work, so it waits behind
     // a closed disclosure — 44 cards of it used to push Backups off the bottom

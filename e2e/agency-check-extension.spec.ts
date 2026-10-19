@@ -449,7 +449,7 @@ test("DiveDay sees the installed extension, and settings says this browser has i
   await expect(page.locator("html")).toHaveAttribute("data-diveday-cert-check", extensionVersion);
   const row = page
     .locator("details")
-    .filter({ has: page.getByRole("heading", { name: "Certification checks", exact: true }) });
+    .filter({ has: page.getByRole("heading", { name: "Card checks", exact: true }) });
   await expect(
     row.getByText(`Added to this browser (${extensionVersion})`, { exact: true }),
   ).toBeVisible();
@@ -712,12 +712,15 @@ test("Try the checks runs every sample lookup in the extension, reads PADI's tab
   await page.goto(`/shop/${SHOP}/settings`);
   const row = page
     .locator("details")
-    .filter({ has: page.getByRole("heading", { name: "Certification checks", exact: true }) });
-  await row.getByRole("heading", { name: "Certification checks", exact: true }).click();
-  await row.getByRole("link", { name: "Try the checks" }).click();
-  await expect(page).toHaveURL(`/shop/${SHOP}/settings/cert-checks`);
-  await page.getByRole("heading", { level: 1, name: "Try the checks" }).waitFor();
-  await expect(page.getByText(`Added to this browser (${extensionVersion})`)).toBeVisible();
+    .filter({ has: page.getByRole("heading", { name: "Card checks", exact: true }) });
+  await row.getByRole("heading", { name: "Card checks", exact: true }).click();
+  // A disclosure on the row, not a page of its own (#2817).
+  await row.getByText("Try the checks", { exact: true }).click();
+  await expect(page).toHaveURL(`/shop/${SHOP}/settings`);
+  await expect(row.getByRole("button", { name: "Run the checks" })).toBeVisible();
+  await expect(
+    row.getByText(`Added to this browser (${extensionVersion})`, { exact: true }).first(),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Run the checks" }).click();
 

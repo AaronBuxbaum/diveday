@@ -358,6 +358,11 @@ function calendarDayMs(date: Date, timeZone: string): number {
   return Date.UTC(year, (month ?? 1) - 1, day ?? 1);
 }
 
+/** Whether two instants fall on the same calendar day in `timeZone`. */
+export function isSameCalendarDay(a: Date, b: Date, timeZone: string): boolean {
+  return calendarDayMs(a, timeZone) === calendarDayMs(b, timeZone);
+}
+
 /**
  * "today" / "tomorrow" / "in 3 days" (or the past-tense equivalents), from
  * the calendar day `date` falls on in `timeZone` relative to the calendar day

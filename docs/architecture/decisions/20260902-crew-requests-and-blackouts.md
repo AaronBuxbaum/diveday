@@ -37,6 +37,13 @@ gate. An approval assigns nobody; it runs the ordinary assignment mutation.**
 and moment). Both carry `deleted_at`, like every table holding something a user can delete (ADR
 20260820-every-delete-is-soft).
 
+**Amended 2026-10-17 (Aaron, issue #2673): the note is read by its person and by owners and
+managers only.** A reason for being away ("hospital appointment") is personal. The one reader,
+`listCrewAvailabilityBlocks`, takes who is reading and sends the note only to the person themself
+or to staff for whom `canManageStaffAccounts` holds (`awayNoteFor`, `src/lib/crew-requests.ts`);
+everyone else is sent the dates. Today, the board, crew chips and the diver pages read dates only
+(`"dates_only"`). The full-shop export carries the note, and it is owner and manager only.
+
 Two shapes are load-bearing:
 
 - **A blackout is calendar dates, not instants.** "I am away the week of the 14th" has no clock in

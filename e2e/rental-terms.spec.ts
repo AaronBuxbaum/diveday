@@ -1,6 +1,5 @@
 import type { Locator } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { openSettingsRow } from "./helpers";
 
 /**
  * **A shop's rental terms on both rental tickets** (Aaron, 2026-10-08; ADR
@@ -19,14 +18,13 @@ test("rental terms written in Settings print on the trip slip and the counter ti
 }) => {
   // The mint and the sign-in are inside the test's budget (see `privateShop`).
   test.setTimeout(60_000);
-  await page.goto(`/shop/${privateShop.slug}/settings`);
-  await openSettingsRow(page, "Rental terms");
-  await page.getByLabel("Terms", { exact: true }).fill(`${TERMS}\n${SECOND_LINE}`);
-  await page.getByRole("button", { name: "Save rental terms" }).click();
+  await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
+  await page.getByRole("textbox", { name: /^Rental terms/ }).fill(`${TERMS}\n${SECOND_LINE}`);
+  await page.getByRole("button", { name: "Save rentals" }).click();
   // The outcome beside the form is the wait. Not the URL: the hub's
   // `FlashParams` strips `?notice=` as soon as it hydrates, so the redirect's
   // query is only on screen for an instant, and CI missed it (PR #2269).
-  await expect(page.getByRole("status").filter({ hasText: "Rental terms saved." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Rentals saved." })).toBeVisible();
 
   // Both tickets open from the register's Rentals view, one per kind of rental.
   await page.goto(`/shop/${privateShop.slug}/gear?view=rentals`);

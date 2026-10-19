@@ -29,7 +29,7 @@ Market audit item 7, N-59. Settings > Billing (`/shop/[slug]/settings/billing`, 
 
 ## A set-up request form, and the founder's numbers (delivered 2026-10-07)
 
-Every public "Get set up" door, which used to be a mail to `onboarding@dive.day`, now opens `/get-set-up?from=<tag>`. The form asks for shop name, town or region, whether the shop runs a boat, what it uses today, name, email and an optional phone. It checks a per-IP and a global rate limit and a honeypot, stores a `setup_requests` row with the funnel tag, mails onboarding@ (`setup_request_alert`), fires `setup_requested`, and lands on a thank-you page with the demo door. `trial_started` is deleted ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)).
+Every public "Get set up" door, which used to be a mail to `onboarding@dive.day`, now opens `/get-set-up?from=<tag>`. The form asks for shop name, town or region, whether the shop runs a boat, what it uses today, name, email and an optional phone. It checks a per-IP and a global rate limit and a honeypot, stores a `setup_requests` row with the funnel tag, mails onboarding@ (an `operator_alert` of event `setup_request`), fires `setup_requested`, and lands on a thank-you page with the demo door. `trial_started` is deleted ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)).
 
 A nightly cron (`/api/cron/founder-metrics`) records each real shop's activation milestones in `shop_milestones` (first departure, first public booking, first self-signed waiver, first roll call, and the first paid month, which the billing webhook records) and logs the north star, dive days run end to end per week. On Mondays it mails `FOUNDER_DIGEST_EMAIL` last week's north star, demo entries and set-up requests by source, and each shop stalled 7 or more days, reported once ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)).
 
@@ -146,7 +146,10 @@ trains everyone to ignore it. It runs Mondays at 07:00 UTC in
 is already above a persona finding in the inbox. ADR
 [20260907-persona-bots-file-under-a-ceiling](../architecture/decisions/20260907-persona-bots-file-under-a-ceiling.md).
 
-## Xero beside QuickBooks (delivered 2026-09-07)
+## Xero beside QuickBooks (delivered 2026-09-07, removed 2026-10-17)
+
+Removed before launch in one commit; reverting it restores everything below. ADR
+[20261017-xero-removed-before-launch](../architecture/decisions/20261017-xero-removed-before-launch.md).
 
 N-52 from the 2026-09-07 improvement-ideas sheet (issue #1490). A shop on Xero connects it from
 Settings -> Integrations exactly as it connects QuickBooks, and its paid orders and refunds land in
@@ -178,7 +181,14 @@ answered by whoever is at the dock (issues #1505/#1518, an H-14 amendment; the t
 deleted, and the Today row widened with them). **The stranger's row gained a Delete** the same day
 (issue #1506): with no record it has no door and no composer, so it was the one row in the worklist
 nothing could finish, and it counted against the Today row for as long as it sat there. Soft, on
-that row alone, and no restore — a row that has a record is finished by answering it.
+that row alone, and no restore — a row that has a record is finished by answering it. **Open date
+requests count into the same row** (2026-10-17, issue #2658): Today shows one unanswered count,
+naming messages and date requests, and opens Requests when no message waits. `/requests` stays its
+own page and the `course_inquiry` email to a verified shop mailbox stays (#1288).
+**An Ask to move within a day of its boat emails owners and managers** (2026-10-17, issue
+#2667): one `move_ask_soon` email to each active owner or manager login, keyed to the filed ask, so
+a resubmit sends nothing; it names the departure and links the Inbox, never the diver or the note.
+Farther out, or from a demo shop, the Inbox row is enough.
 
 ## The counter survives a lost signal (delivered 2026-09-07)
 

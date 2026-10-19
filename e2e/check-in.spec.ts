@@ -12,7 +12,9 @@ import {
   openRosterDetails,
   openTripFromBoard,
   publicTripUrl,
+  seatFromRoster,
   seededTripId,
+  walkInFormPath,
 } from "./helpers";
 
 test.describe.configure({ timeout: 45_000 });
@@ -226,7 +228,7 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   await expect(page.getByText(/No returning diver matches/)).toBeVisible();
 
   await page.getByRole("link", { name: "Add as a walk-in" }).click();
-  await page.waitForURL(/\/divers\/new\?.*surface=walk-in/);
+  await page.waitForURL(/\/divers\/new\?.*walkIn=true/);
   await page.getByLabel("Full name").fill("Walk-in Test Diver");
   // Email and phone are left blank on purpose — the whole point of this flow.
   await page.getByRole("button", { name: "Add to boat" }).click();
@@ -257,7 +259,7 @@ test("a counter walk-in family is seated together from one form", async ({ page 
   await find.fill("Zzyzx No Such Diver");
   await find.press("Enter");
   await page.getByRole("link", { name: "Add as a walk-in" }).click();
-  await page.waitForURL(/\/divers\/new\?.*surface=walk-in/);
+  await page.waitForURL(/\/divers\/new\?.*walkIn=true/);
 
   await page.getByLabel("Full name").first().fill("Quillon Brightwater");
   await page.getByRole("button", { name: "Add another person" }).click();
@@ -296,9 +298,7 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
 }) => {
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
   const counter = counterPath("blue-mantis", tripId);
-  await page.goto(`${counter}/walk-in`);
-  await page.getByRole("link", { name: "Add diver" }).click();
-  await page.waitForURL(/\/divers\/new\?/);
+  await page.goto(walkInFormPath("blue-mantis", tripId));
 
   // One letter off a diver already on file. `personNamesMatch` compares token
   // sets exactly, so this is the disagreement that raises the flag — the prompt
@@ -354,11 +354,13 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   await expect(page.getByRole("button", { name: "Check in Zoe Bennett" })).toHaveCount(0);
 });
 
-test("the walk-in form explains an invalid submission", async ({ page }) => {
+test("the departure door explains an invalid submission on the boat it came from", async ({
+  page,
+}) => {
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
-  await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in?notice=walkin-invalid`);
+  await page.goto(`${counterPath("blue-mantis", tripId)}?notice=diver-seat-invalid`);
   await expect(page.getByRole("alert").filter({ hasText: "Enter a name" })).toContainText(
-    "Enter a name before adding a walk-in.",
+    "Enter a name to add a diver.",
   );
 });
 
@@ -410,23 +412,21 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
 
   // The boat is now full — a counter walk-in onto it is refused, not silently
   // dropped, and points the crew at the wait list instead.
-  await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
-  await page.getByRole("link", { name: "Add diver" }).click();
-  await page.waitForURL(/\/divers\/new\?/);
+  await page.goto(walkInFormPath("blue-mantis", tripId));
   await page.getByLabel("Full name").fill("Turned Away Tara");
   await page.getByRole("button", { name: "Add to boat" }).click();
 
-  // A refusal lands back on the walk-in form with the boat still chosen — the
-  // staffer's next move is another diver or another boat, not a trip page.
+  // A refusal lands on the boat's Divers tab, where the add-diver form says
+  // why and the wait list is one tap away.
   await expect(page).toHaveURL(
-    new RegExp(`/shop/blue-mantis/trips/${tripId}/walk-in\\?notice=walkin-full$`),
+    new RegExp(`/shop/blue-mantis/trips/${tripId}(?:\\?notice=diver-full)?$`),
   );
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered
   // because Next's route announcer is also role="alert".
-  await expect(page.getByRole("alert").filter({ hasText: "That boat is full" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
   await expect(
-    page.getByText("That boat is full. Add them to the wait list instead."),
+    page.getByText("That trip is full. Add them to the wait list instead."),
   ).toBeVisible();
 });
 
@@ -603,19 +603,11 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   });
   const tripId = await seededTripId(page, "blue-mantis", title);
   const counter = counterPath("blue-mantis", tripId);
-  const walkIn = `${counter}/walk-in`;
-  // Seating a walk-in lands back on the Divers tab with its notice.
-  const seated = new RegExp(`/trips/${tripId}\\?notice=walkin-added`);
 
   // Odile Marchand is seeded carded and deliberately booked on nothing
   // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
   // baseline and is the only diver on this boat.
-  await page.goto(walkIn);
-  const findDiver = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
-  await findDiver.fill("Odile Marchand");
-  await findDiver.press("Enter");
-  await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
-  await page.waitForURL(seated);
+  await seatFromRoster(page, tripId, "Odile Marchand");
 
   // The diver who wants the seat Odile is about to give up. A signed-out
   // context, because the wait list is a diver-facing form and a staff session
@@ -724,17 +716,13 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
     page.getByText("Nobody is waiting, and no similar departure has room for them."),
   ).toBeVisible();
 
-  // **And the seat is genuinely sellable.** The walk-in door reads the boat as
+  // **And the seat is genuinely sellable.** The add-diver search reads the boat as
   // having room again — `getTripWithBooked` counts on the same `seatHeld`
   // predicate the booking transaction enforces — and the sale itself runs
   // through `createBooking`, not through anything this ticket added.
-  await page.goto(walkIn);
-  await expect(page.getByText(/0 of 1 booked/)).toBeVisible();
-  const findSecond = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
-  await findSecond.fill("Diego Alvarez");
-  await findSecond.press("Enter");
-  await page.getByRole("button", { name: "Add Diego Alvarez to this boat" }).click();
-  await page.waitForURL(seated);
+  await page.goto(counter);
+  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
+  await seatFromRoster(page, tripId, "Diego Alvarez");
 
   await expect(deskRow(page, "Diego Alvarez")).toHaveCount(1);
   // Odile's row is still here, and still hers: a released seat sold on is not
@@ -765,12 +753,7 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
 
   // Odile Marchand is carded and booked on nothing (`src/db/seed-cert-gates.ts`),
   // so on this boat she is blocked on the release alone.
-  await page.goto(`${counter}/walk-in`);
-  const findDiver = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
-  await findDiver.fill("Odile Marchand");
-  await findDiver.press("Enter");
-  await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
-  await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+  await seatFromRoster(page, tripId, "Odile Marchand");
 
   await page.goto(counter);
   const odile = deskRow(page, "Odile Marchand");
@@ -799,9 +782,9 @@ test("the desk turns a blocked diver away before the boat leaves, says why, and 
     released.getByRole("button", { name: "Put Odile Marchand back on this boat’s list" }),
   ).toBeVisible();
 
-  // The seat is free at once.
-  await page.goto(`${counter}/walk-in`);
-  await expect(page.getByText(/0 of 1 booked/)).toBeVisible();
+  // The seat is free at once: a full boat draws no search, this one does.
+  await page.goto(counter);
+  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
 });
 
 /**

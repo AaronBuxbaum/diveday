@@ -22,6 +22,7 @@ vi.mock("@/app/actions/held-sends", () => ({
 // the database. Same reason as the three above.
 vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   keepRentalFitAction: vi.fn(),
+  acknowledgeCrewAwayAction: vi.fn(),
 }));
 // The agency check's host (H-105) wraps the spine and repaints through the
 // router when a "Check all" ends; no app router is mounted here.
@@ -82,7 +83,6 @@ describe("the good-news moments, beside a forecast still arriving", () => {
           ),
           highWind,
           shopSlug: "blue-mantis",
-          shopName: "Blue Mantis",
           mailShopName: "Blue Mantis",
           locale: "en-US",
           timeZone: "America/New_York",
@@ -445,6 +445,30 @@ describe("the two horizon rows", () => {
     expect(
       within(week as HTMLElement).getByRole("link", { name: "Open the board" }),
     ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board");
+  });
+
+  // Issue #2671: a rostered crew member away later this week is counted on the
+  // line, and the board opens on that departure's week.
+  it("counts the week's away crew on its line and opens the board on their week", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "today", departure: boat("t1") }),
+        action({
+          id: "crew-away:t9",
+          kind: "crew_away",
+          departure: boat("t9"),
+          crewAway: { people: [{ personId: "marcus", fullName: "Marcus Webb" }] },
+          dueAt: hoursFromNow(72),
+        }),
+        action({ id: "friday", departure: boat("t8") }),
+      ],
+    });
+    const week = container.querySelector("details") as HTMLElement;
+    expect(within(week).getByText("2 things, 1 crew member away")).toBeInTheDocument();
+    expect(within(week).getByRole("link", { name: "Open the board" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/schedule/board?week=2026-08-30",
+    );
   });
 
   it("renders no 'This week' row when the rest of the week is clear", () => {

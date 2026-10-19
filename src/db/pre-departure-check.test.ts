@@ -89,7 +89,7 @@ describe("pre-departure checklist items (in-memory PGlite)", () => {
 
   it("reorders the shop's own list", async () => {
     // A real reorder rewrites the *whole* order, the way moveChecklistItemAction
-    // (settings/safety-checklist/actions.ts) does — reading the current list and
+    // (safety-checklist/actions.ts) does — reading the current list and
     // writing the whole id sequence back, not just the two rows that moved.
     const { db, shop, owner } = await checklistContext();
     const a = await createChecklistItem(db, {

@@ -40,6 +40,8 @@ type FormAction = (formData: FormData) => void | Promise<void>;
 export type TripRosterActions = {
   addBookingAction: FormAction;
   addExistingDiverAction: FormAction;
+  walkInAddBookingAction: FormAction;
+  walkInAddExistingDiverAction: FormAction;
   addToWaitlistAction: FormAction;
   createDirectTripInvitationAction: FormAction;
   invitePastDiverAction: FormAction;
@@ -418,9 +420,13 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                 query: diverQuery,
                 candidates: diverCandidates,
                 tripId: trip.id,
-                addBookingAction: actions.addBookingAction,
+                addBookingAction: walkInOpen
+                  ? actions.walkInAddBookingAction
+                  : actions.addBookingAction,
                 addToWaitlistAction: actions.addToWaitlistAction,
-                addExistingDiverAction: actions.addExistingDiverAction,
+                addExistingDiverAction: walkInOpen
+                  ? actions.walkInAddExistingDiverAction
+                  : actions.addExistingDiverAction,
                 inviteAction: actions.createDirectTripInvitationAction,
                 status: noticeForForm(tripNotice, "add-diver"),
                 locale,

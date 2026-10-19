@@ -8,7 +8,6 @@
 Course forms (ADR 20261008-course-forms) are asked only on a course session. Two cases miss them
 (issue #2275): an adventure dive done on an ordinary charter boards with none of the course's
 forms checked, and a group at the counter with one tablet cannot sign one student after another.
-A `dive-domain-expert` review's changes are folded in below.
 
 ## Decision
 
@@ -27,8 +26,10 @@ A `dive-domain-expert` review's changes are folded in below.
   mark and clear pushes the manifest, which refreshes the offline copy.
 - Clearing a mark with forms owed, or one that no longer holds, takes `canManageWaiverTemplates`
   or the enrollment's instructor, rostered by another; the manifest names who did.
-- "In training" is unchanged: the mark answers "which forms", not "may this diver dive past their
-  card". The row warns when no instructor is on the charter's crew.
+- **Amended 2026-10-17 (#2731, Aaron):** a standing mark lowers the level to the course's minimum
+  when the course certifies it (no minimum: no card); never for an intro session. It needs the
+  course's instructor aboard and the seat within the
+  course's ratio, counted per instructor across the departure. No known ratio, no lowering.
 
 **2. Counter hand-off (Proposed, not built).** A single-use, ten-minute `course_forms_counter`
 capability per booking, never the emailed link. The device shows that student's forms, then "Hand
@@ -47,5 +48,4 @@ or the staffer's own device). Records name the staffer who handed over.
 ## Consequences
 
 - Five booking columns and one resolver; no new dependency.
-- Not built: a marked dive taking the course's minimum level when its instructor is rostered.
-  Revisit if shops need several courses on one dive.
+- Revisit if shops need several courses on one dive.

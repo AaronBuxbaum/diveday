@@ -594,7 +594,11 @@ const CHROME_CEILING = 20;
 // 71 → 72 (fifth loop, ideas item 1): the open snags the crew wrote against a
 // boat's checklist (`openSnagsForShop`), one statement in the wave, so the
 // phase count does not move.
-const TODAY_CEILING = 72;
+// 72 → 73 (issue #2658): the unanswered row counts the open date requests
+// (`countOpenDateRequests`), one statement in the wave.
+// 73 → 74 (issue #2678): `crewAwayByTrip` reads who is working it anyway
+// beside the roster, one statement in the same phase.
+const TODAY_CEILING = 74;
 // 49 → 50: the roster reads each diver's unspent package dives for the payment
 // control (`spendableDivesForTrip`, H-79, issue #1697). The held seat's
 // last-dive-day read beside it (`lastDiveDaysHere`, #1789) skips itself when no
@@ -620,7 +624,10 @@ const TODAY_CEILING = 72;
 // 66 → 67 (dive-domain second pass, X3): the same pass also asks which
 // candidates' releases wait on a physician's referral (`physicianReferrals`),
 // one statement in the cards' wave, so no new phase.
-const TRIP_CEILING = 67;
+// 67 → 68 (#2678 dock review S2): who is said to be working it anyway, for the
+// crew panel's "No longer working it" (`listCrewAwayAcknowledgements`), one
+// statement in the overview's wave, only while the boat is ahead.
+const TRIP_CEILING = 68;
 
 /**
  * Serial phases, the same way: lower one when a change removes a wait, never
@@ -667,7 +674,8 @@ const TRIP_WIDE_PHASE_CEILING = 6;
 // 18 → 20 (fourth review, item 12; r4-4 reviews N2/N5): both diver doors mark
 // an away crew member "to be confirmed", which reads the departure's schedule
 // days and the crew's days away beside the crew, in the same round trip.
-const PUBLIC_TRIP_CEILING = 20;
+// 20 → 21 (issue #2678): and who a staffer said is working it anyway, beside them.
+const PUBLIC_TRIP_CEILING = 21;
 // 36 → 38 (fourth review, item 12): the thread names the crew with who is
 // away on the departure's days (`diverCrewWithAway`), which reads the
 // schedule days and the days away beside the crew. Measured 38; the phases
@@ -680,7 +688,11 @@ const PUBLIC_TRIP_CEILING = 20;
 // 39 → 40: the dive-package line reads what this seat itself spends beside
 // what the diver has left (`packageDivesForBooking`, one `queryAll` wave), one
 // statement more than the count it replaced, in the same round trip.
-const READY_CEILING = 40;
+// 40 → 41 (issue #2676): the away mark reads through `crewAwayByTrip`, the one
+// place the rule lives, which reads the departure's roster beside its public
+// crew; still one round trip, since the window is passed in.
+// 41 → 42 (issue #2678): and who a staffer said is working it anyway, beside them.
+const READY_CEILING = 42;
 // 10 → 3: the shop, then `readTripPage`'s one wave (issue #2353; code review
 // 2026-10-11, item 2), whose chained reads — the briefings off the dives, the
 // Stripe account and the other boats off the trip — are its third round trip.

@@ -28,6 +28,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { at, DEMO_DAWN_BOAT, nextCreatedAt } from "./seed-clock";
+import { paperRelease, signingNames } from "./seed-paper-release";
 
 /** The returned demo departure that gives Close-Out a finished local-day dive. */
 export const DEMO_COMPLETED_TRIP_TITLE = "Dawn Two-Tank — Molasses Reef";
@@ -688,14 +689,11 @@ export async function seedMoreTrips(
   // 7 here, the same "most people sign" norm as today's reef trip — leaving
   // a steady trickle of stragglers so a Guests tab or a diver's profile still
   // shows the occasional unsigned card.
-  let extraWaiverToken = 0;
-  const extraWaiverRows = insertedBookings.map((booking) => {
-    extraWaiverToken++;
+  const signedName = await signingNames(db, shopId);
+  const extraWaiverRows = insertedBookings.map((booking, index) => {
     const createdAt = nextCreatedAt();
-    // A boarded/completed demo booking must never carry the contradictory
-    // state "everyone came home, but the waiver is still unsigned". Keep the
-    // unsigned examples on future trips where they are useful roster work.
-    const signed = completedBookingIds.has(booking.id) || extraWaiverToken % 7 !== 0;
+    // Boarded bookings are signed; the unsigned examples stay on future trips.
+    const signed = completedBookingIds.has(booking.id) || (index + 1) % 7 !== 0;
     return {
       shopId,
       bookingId: booking.id,
@@ -705,20 +703,11 @@ export async function seedMoreTrips(
       templateVersion: ctx.waiverTemplate.version,
       templateGeneration: ctx.waiverTemplate.materialGeneration,
       templateBody: ctx.waiverTemplate.body,
-      tokenHash: `seed-extra-waiver-${shopId}-${extraWaiverToken}`,
+      tokenHash: `seed-extra-waiver-${shopId}-${index + 1}`,
       // Comfortably past the furthest trip seeded here (day 56).
       expiresAt: at(75, 12),
       createdAt,
-      ...(signed
-        ? {
-            status: "completed" as const,
-            signedName: "Signed on file",
-            signatureMethod: "in_person" as const,
-            consentedAt: createdAt,
-            signedAt: createdAt,
-            completedAt: createdAt,
-          }
-        : {}),
+      ...(signed ? paperRelease(createdAt, instructorId, signedName(booking.personId)) : {}),
     };
   });
   if (extraWaiverRows.length > 0) await db.insert(waiverRecords).values(extraWaiverRows);
@@ -767,6 +756,7 @@ export async function seedMoreTrips(
       shopId,
       tripId: picklesTrip.id,
       personId: waitlistCandidate.id,
+      partySize: 2, // the roster's "Party of 2" line (issue #2677)
       createdAt: nextCreatedAt(),
     });
   }

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { EditorSection } from "@/components/editor/EditorSection";
+import { RequirementFields } from "@/components/RequirementFields";
 import { controlClass, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import type { DiveSiteFitTone, DiveSpecialty } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -20,7 +21,6 @@ import {
 } from "./FieldGuideEditor";
 import { LandmarkEditor, type LandmarkEditorCopy } from "./LandmarkEditor";
 import { RouteEditor, type RouteEditorCopy } from "./RouteEditor";
-import { SiteCertificationFields } from "./SiteCertificationFields";
 import { SiteDiveFields } from "./SiteDiveFields";
 import { SiteForecastFields } from "./SiteForecastFields";
 import { SitePhotoFields } from "./SitePhotoFields";
@@ -369,10 +369,16 @@ export function SiteFields({
       grouped: true,
       description: certificationDescription,
       body: (
-        <SiteCertificationFields
+        <RequirementFields
           t={t}
-          values={values}
-          requiredSpecialtiesLabel={requiredSpecialtiesLabel}
+          requirement={values}
+          defaultLevel=""
+          labels={{
+            level: t("diveSites.form.minimumCertificationLabel"),
+            noLevel: t("diveSites.form.noLevelRequired"),
+            nitrox: t("diveSites.form.nitroxCheckbox"),
+          }}
+          legend={requiredSpecialtiesLabel}
         />
       ),
     },

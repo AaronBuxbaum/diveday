@@ -23,7 +23,14 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
  * destination is *absent* for anyone who fails the gate — never present and
  * disabled, never explained (ADR 20260724-role-gated-surfaces-hide-not-explain).
  */
-export type StaffDestinationGate = "waivers" | "reports" | "team" | "settings";
+export type StaffDestinationGate =
+  | "waivers"
+  | "reports"
+  | "team"
+  | "settings"
+  | "boats"
+  | "tripTags"
+  | "safetyChecklist";
 
 /** Which gates the current viewer passes. */
 export type StaffDestinationGates = Record<StaffDestinationGate, boolean>;
@@ -128,6 +135,9 @@ export type StaffDestinationId =
   | "staffing"
   | "lostFound"
   | "diveSites"
+  | "boats"
+  | "tripTags"
+  | "safetyChecklist"
   | "gear"
   | "workOrders"
   | "newWorkOrder"
@@ -145,6 +155,7 @@ export type StaffDestinationId =
   | "team"
   | "calendarFeed"
   | "emailSettings"
+  | "security"
   | "activity";
 
 /**
@@ -190,6 +201,9 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   staffing: "shared.shopNavLinks.staffing",
   lostFound: "shared.shopNavLinks.lostFound",
   diveSites: "shared.shopNavLinks.diveSites",
+  boats: "shared.shopNavLinks.boats",
+  tripTags: "shared.shopNavLinks.tripTags",
+  safetyChecklist: "shared.shopNavLinks.safetyChecklist",
   gear: "shared.shopNavLinks.gear",
   workOrders: "shared.shopNavLinks.workOrders",
   newWorkOrder: "shared.shopNavLinks.newWorkOrder",
@@ -207,6 +221,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   team: "shared.shopNavLinks.team",
   calendarFeed: "shared.shopNavLinks.calendarFeed",
   emailSettings: "shared.shopNavLinks.emailSettings",
+  security: "shared.shopNavLinks.security",
   activity: "shared.shopNavLinks.activity",
 };
 
@@ -262,13 +277,14 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // 20260827-clearwater-surface-language, decision 4).
   { id: "today", suffix: "", section: "today", inPalette: true, badge: "blockers" },
   { id: "divers", suffix: "/divers", section: "divers", inPalette: true },
-  // A departure is the board's detail view, so `/trips/**` lights Schedule.
+  // A departure is the board's detail view, so `/trips/**` lights Schedule; so
+  // does a past day (`/schedule/day/<date>`, issue #2662).
   {
     id: "board",
     suffix: "/schedule/board",
     section: "schedule",
     inPalette: true,
-    alsoMatch: ["/trips"],
+    alsoMatch: ["/trips", "/schedule/day"],
   },
   // The global "seat a diver" door: an act, declared here because the
   // registry is the only place a destination may be declared.
@@ -312,6 +328,20 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   { id: "rentOut", suffix: "/gear/rentals/new", section: "gear", inPalette: true },
   // What a shop sets up rather than works.
   { id: "diveSites", suffix: "/dive-sites", section: "settings", inPalette: true },
+  // The shop's other registers sit beside the dive sites (issue #2659, glossary
+  // "Register and setting"): a table of the shop's things that a departure
+  // points at, each at `/shop/<slug>/<noun>` with a gate of its own. The boats
+  // gate is also false for a shop that does not dive from a boat, because the
+  // fleet page does not exist for it (`staffDestinationGates`).
+  { id: "boats", suffix: "/boats", section: "settings", inPalette: true, gate: "boats" },
+  { id: "tripTags", suffix: "/trip-tags", section: "settings", inPalette: true, gate: "tripTags" },
+  {
+    id: "safetyChecklist",
+    suffix: "/safety-checklist",
+    section: "settings",
+    inPalette: true,
+    gate: "safetyChecklist",
+  },
   { id: "waivers", suffix: "/waivers", section: "settings", inPalette: true, gate: "waivers" },
   { id: "team", suffix: "/settings/team", section: "settings", inPalette: true, gate: "team" },
   // A staffer's own calendar subscription, filed under `/settings` by URL
@@ -321,6 +351,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // The staffer's own email (the Monday email, `src/lib/weekly-digest.ts`).
   // Ungated for the calendar feed's reason: any staffer may ask for it.
   { id: "emailSettings", suffix: "/settings/email", section: "settings", inPalette: true },
+  // A login's own password and sign-in (`/settings/security`). Ungated for the
+  // same reason: it is about the reader, not the shop.
+  { id: "security", suffix: "/settings/security", section: "settings", inPalette: true },
   // The shop's activity log (D5): who refunded, who wrote a seat past a
   // missing card, who changed a departure. Owner/manager reading, the
   // settings gate's own set (`canViewShopActivity`); filed under Settings'
@@ -561,3 +594,12 @@ export function isStaffDestinationPage(
 ): boolean {
   return pathname === staffDestinationHref(root, destination);
 }
+
+/**
+ * **My account** (issue #2813): the three destinations about the reader rather
+ * than the shop, in menu order. They are filed under `settings` by URL, but a
+ * staffer opens them from the identity menu, ungated, so a role without the
+ * Settings gate keeps its door. Settings' hub deliberately has no row for them
+ * (`settings-doors.test.ts` pins both halves).
+ */
+export const MY_ACCOUNT_DESTINATION_IDS = ["security", "calendarFeed", "emailSettings"] as const;

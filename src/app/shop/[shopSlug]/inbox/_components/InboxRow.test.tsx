@@ -539,4 +539,35 @@ describe("an Ask to move from the booking page (H-126)", () => {
     );
     expect(screen.queryByRole("button", { name: /running late/ })).toBeNull();
   });
+
+  /**
+   * **What the roster's Move will refuse, said first** (issue #2668): a party
+   * lead's seat and a buddy-teamed seat are refused by Move, so the row says so
+   * before the desk opens the roster.
+   */
+  it("says the seat leads a party, and that Move is per seat", () => {
+    renderRow(ASK, "Diego Alvarez", [
+      { ...SEAT, moveRefusal: { kind: "leads_party", partySize: 3 } },
+    ]);
+    expect(screen.getByText(/Party of 3; Move is per seat/)).toBeInTheDocument();
+  });
+
+  it("says the seat is on a buddy team", () => {
+    renderRow(ASK, "Diego Alvarez", [{ ...SEAT, moveRefusal: { kind: "on_buddy_team" } }]);
+    expect(screen.getByText(/On a buddy team/)).toBeInTheDocument();
+  });
+
+  it("says neither on a seat Move takes as it stands", () => {
+    renderRow(ASK, "Diego Alvarez", [SEAT]);
+    expect(screen.queryByText(/Party of/)).toBeNull();
+    expect(screen.queryByText(/buddy team/)).toBeNull();
+  });
+
+  it("has both lines in Spanish", () => {
+    const es = staffTranslator("es-ES");
+    expect(es("inbox.moveRefusal.leadsParty", { count: 3 })).toBe(
+      "Grupo de 3; se mueve plaza a plaza",
+    );
+    expect(es("inbox.moveRefusal.onBuddyTeam")).toBe("En una pareja de buceo");
+  });
 });

@@ -672,7 +672,7 @@ export const areas = {
       "src/lib/boat-safety.ts",
       "src/db/boat-safety.ts",
       "src/i18n/boat-safety-labels.ts",
-      "src/app/shop/[shopSlug]/settings/boats",
+      "src/app/shop/[shopSlug]/boats",
     ],
     tests: [
       "src/lib/boats.test.ts",
@@ -731,7 +731,7 @@ export const areas = {
     ],
   },
   integrations: {
-    goal: "Add or change an outbound integration (Shopify, QuickBooks, Xero, Zapier, webhooks) without a provider's latency or failure reaching a staffer's button or another shop's data.",
+    goal: "Add or change an outbound integration (Shopify, QuickBooks, Zapier, webhooks) without a provider's latency or failure reaching a staffer's button or another shop's data.",
     docs: [
       "src/features/integrations/README.md",
       "docs/architecture/decisions/20260815-outbound-integration-webhooks-and-zapier.md",

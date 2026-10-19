@@ -23,6 +23,10 @@ import type { Notification } from "./kinds";
  */
 export function shopVoiceOf(notification: Notification): string | null {
   switch (notification.kind) {
+    // The shore contact is asked by the shop it agrees to hear from (H-118);
+    // the owner's own address and the front desk's are DiveDay asking.
+    case "address_confirmation":
+      return notification.purpose === "shore_alert" ? notification.shopName : null;
     case "booking_confirmation":
     case "waiver_request":
     case "guardian_release_copy":
@@ -54,28 +58,23 @@ export function shopVoiceOf(notification: Notification): string | null {
     // The shore contact is asked, and later told, by the shop it agreed to
     // hear from (H-118).
     case "roll_call_stale_shore":
-    case "shore_alert_confirmation":
     // The bookkeeper hears from the shop that set their address (item 35).
     case "bookkeeper_month_end":
     case "bookkeeper_confirmation":
       return notification.shopName;
     case "welcome":
-    case "email_verification":
-    case "contact_email_confirmation":
     case "password_reset_request":
     case "password_changed":
     case "staff_invite":
-    case "new_account_alert":
-    case "demo_started_alert":
-    case "usage_ceiling_alert":
-    case "setup_request_alert":
-    case "founder_digest":
+    case "operator_alert":
     case "course_inquiry":
     case "weekly_digest":
     case "desk_after_hours":
     case "stripe_payments_restricted":
+    case "move_ask_soon":
     case "roll_call_stale":
     case "incident_missing_diver":
+    case "incident_missing_diver_found":
     case "shore_alert_stopped":
     case "bookkeeper_notice":
       return null;

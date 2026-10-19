@@ -121,9 +121,13 @@ describe("saving the shore contact's alert address", () => {
     expect(saved.consentAt).toBeInstanceOf(Date);
     expect(saved.confirmedAt).toBeNull();
     expect(sent.list).toHaveLength(1);
-    expect(sent.list[0]).toMatchObject({ kind: "shore_alert_confirmation", to: SHORE });
+    expect(sent.list[0]).toMatchObject({
+      kind: "address_confirmation",
+      purpose: "shore_alert",
+      to: SHORE,
+    });
     const [confirmation] = sent.list;
-    if (confirmation?.kind !== "shore_alert_confirmation") throw new Error("expected the link");
+    if (confirmation?.kind !== "address_confirmation") throw new Error("expected the link");
     expect(confirmation.confirmUrl.startsWith("https://diveday.example/confirm-contact/")).toBe(
       true,
     );
@@ -215,9 +219,7 @@ describe("saving the shore contact's alert address", () => {
     expect(await redirectedTo(() => resendShoreAlertConfirmationAction())).toBe(
       `${page}shore-alert-confirmation-sent`,
     );
-    expect(sent.list.map((notification) => notification.kind)).toEqual([
-      "shore_alert_confirmation",
-    ]);
+    expect(sent.list.map((notification) => notification.kind)).toEqual(["address_confirmation"]);
 
     await db.update(shops).set({ shoreAlertConfirmedAt: new Date() }).where(eq(shops.id, shop.id));
     sent.list.length = 0;

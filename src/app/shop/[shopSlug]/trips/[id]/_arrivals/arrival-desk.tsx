@@ -25,9 +25,8 @@ import {
 } from "@/lib/check-in";
 import { formatTime, formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
-import { arrivalsWindow } from "@/lib/operational-window";
+import { arrivalsWindow, walkInDoorOpen } from "@/lib/operational-window";
 import { paperPassPath } from "@/lib/print-sheets";
-import { hasSailed } from "@/lib/trips";
 import { turnAwayOffer } from "@/lib/turn-away";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import type { RosterArrival } from "../_components/RosterSection";
@@ -469,9 +468,9 @@ export async function buildArrivalDesk({
 
   const boarded = new Set(rows.filter((row) => row.boarded).map((row) => row.bookingId));
 
-  // A walk-in can only be seated on a boat that has not left: the seat action
-  // refuses one that is underway, so the door is not offered there.
-  const walkInOpen = !hasSailed(trip.startsAt, now);
+  // The seat action asks the same question again, so a boat that has left (or
+  // is out of the counter's reach) is not offered the door.
+  const walkInOpen = walkInDoorOpen(trip.startsAt, now);
 
   return { arrival: { instrument, controls, below, boarded }, walkInOpen };
 }

@@ -25,12 +25,18 @@ const owner: StaffDestinationGates = {
   reports: true,
   team: true,
   settings: true,
+  boats: true,
+  tripTags: true,
+  safetyChecklist: true,
 };
 const crew: StaffDestinationGates = {
   waivers: false,
   reports: false,
   team: false,
   settings: false,
+  boats: false,
+  tripTags: false,
+  safetyChecklist: false,
 };
 const everything: StaffNavOffers = { courses: true, gear: true, crew: true };
 const nothing: StaffNavOffers = { courses: false, gear: false, crew: false };
@@ -168,6 +174,9 @@ describe("permission gating", () => {
       "reports",
       "promoCodes",
       "safety",
+      "boats",
+      "tripTags",
+      "safetyChecklist",
       "waivers",
       "team",
       "activity",
@@ -196,6 +205,9 @@ describe("permission gating", () => {
       reports: true,
       team: false,
       settings: false,
+      boats: false,
+      tripTags: false,
+      safetyChecklist: false,
     };
     const ids = visibleStaffDestinations(reportsOnly).map((destination) => destination.id);
     expect(ids).toContain("reports");
@@ -276,10 +288,14 @@ describe("what each consumer derives", () => {
     expect(bySection("gear")).toEqual(["gear", "workOrders", "newWorkOrder", "rentOut"]);
     expect(bySection("settings")).toEqual([
       "diveSites",
+      "boats",
+      "tripTags",
+      "safetyChecklist",
       "waivers",
       "team",
       "calendarFeed",
       "emailSettings",
+      "security",
       "activity",
       "settings",
     ]);
@@ -368,9 +384,9 @@ describe("what each consumer derives", () => {
   it("keeps a trip's detail page lit on Schedule, where the board is", () => {
     const board = STAFF_DESTINATIONS.find((destination) => destination.id === "board");
     expect(board?.suffix).toBe("/schedule/board");
-    // `/trips` only: Staffing is its own destination, and a page with a
-    // destination of its own lights that, never a borrowed claim.
-    expect(board?.alsoMatch).toEqual(["/trips"]);
+    // `/trips` and a past day only: Staffing is its own destination, and a
+    // page with a destination of its own lights that, never a borrowed claim.
+    expect(board?.alsoMatch).toEqual(["/trips", "/schedule/day"]);
   });
 
   it("badges only the blocked count, on Today", () => {
@@ -439,14 +455,12 @@ describe("currentStaffDestination and the section it lights", () => {
     expect(current(`${root}/settings/export`)).toBe("settings");
   });
 
-  it("files a boat's walk-in door under the boat's own section", () => {
-    expect(section(`${root}/trips/42/walk-in`)).toBe("schedule");
-  });
-
   it("lights a borrowed claim for a page with no destination of its own", () => {
     // Trip details are the board's detail views (`alsoMatch`).
     expect(current(`${root}/trips/42`)).toBe("board");
     expect(section(`${root}/trips/42`)).toBe("schedule");
+    // A past day sits beside the board (issue #2662).
+    expect(section(`${root}/schedule/day/2026-10-10`)).toBe("schedule");
   });
 
   it("never lights a destination the viewer cannot see", () => {
@@ -532,6 +546,9 @@ describe("whether a destination's own link opens the page being read", () => {
     reports: true,
     team: true,
     settings: true,
+    boats: true,
+    tripTags: true,
+    safetyChecklist: true,
   };
 
   it("says yes on the destination's own href, for a root and a suffix alike", () => {

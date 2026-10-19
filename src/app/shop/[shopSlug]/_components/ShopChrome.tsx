@@ -206,8 +206,16 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   }));
 
   const navGates = session?.user
-    ? staffDestinationGates(session.user.roles)
-    : { waivers: false, reports: false, team: false, settings: false };
+    ? staffDestinationGates(session.user.roles, { hasBoatDiving: shop?.hasBoatDiving ?? true })
+    : {
+        waivers: false,
+        reports: false,
+        team: false,
+        settings: false,
+        boats: false,
+        tripTags: false,
+        safetyChecklist: false,
+      };
 
   return {
     shop,

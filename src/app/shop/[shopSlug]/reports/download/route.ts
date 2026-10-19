@@ -8,6 +8,7 @@ import { nowDate } from "@/lib/clock";
 import { exportDateStamp } from "@/lib/export";
 import { toShopCurrency } from "@/lib/money";
 import { formatReportMoney, summarizeMonth } from "@/lib/reporting";
+import { currentShopSeason, shopSeasonOf } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
 import { utcToWallTime } from "@/lib/zoned";
 import { monthReportFile } from "./month-report-file";
@@ -28,16 +29,18 @@ import { yearReportCsv } from "./year-report-csv";
  * the shop's own earliest month the way the page's picker is: a hand-edited
  * out-of-range month downloads an honest, empty report rather than a page
  * that needs a floor to stay usable. `?year=` cuts the year instead, as
- * twelve month rows (`yearReportCsv`).
+ * twelve month rows (`yearReportCsv`). A slug that is not the session's shop
+ * is a 404 rather than this shop's file under that shop's name.
  */
-export async function GET(request: Request) {
+export async function GET(request: Request, { params }: { params: Promise<{ shopSlug: string }> }) {
+  const { shopSlug } = await params;
   const session = await requireStaffSession();
   const db = await getDb();
-  if (!(await canPersonViewShopReports(db, session.user.shopId, session.user.personId))) {
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop || shop.slug !== shopSlug) return new Response("Not found", { status: 404 });
+  if (!(await canPersonViewShopReports(db, shop.id, session.user.personId))) {
     return new Response("Reports are limited to the shop's owner or manager.", { status: 403 });
   }
-  const shop = await getShopById(db, session.user.shopId);
-  if (!shop) return new Response("Shop not found", { status: 404 });
   const currency = toShopCurrency(shop.currency);
 
   const now = nowDate();
@@ -46,15 +49,17 @@ export async function GET(request: Request) {
   const yearParam = search.get("year");
   if (yearParam !== null) {
     // The year as twelve month rows (fourth UX review, item 25). Parsed, never
-    // trusted: four digits, no later than this year.
+    // trusted: four digits, no later than this year. The year is the shop's
+    // season, as on the page (issue #2657).
+    const seasonStart = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
     const year = /^\d{4}$/.test(yearParam) ? Number(yearParam) : null;
-    if (year === null || year > todayWall.year) {
+    if (year === null || year > currentShopSeason(now, shop.timezone, seasonStart).year) {
       return new Response("Expected year=YYYY", { status: 400 });
     }
     const months = await getYearMonthInputs(db, shop.id, {
       timeZone: shop.timezone,
       currency,
-      year,
+      ...shopSeasonOf(year, seasonStart),
       now,
     });
     const money = (cents: number) => formatReportMoney(cents, currency, shop.defaultLocale);

@@ -1035,9 +1035,16 @@ export async function listDepartureBoardedBookingIds(
 /** A standing training mark as the manifest prints it; null for none, or one that no longer stands. */
 function trainingDiveOf(
   mark: TrainingMarkState | undefined,
-  instructorAboard: boolean,
 ): TripManifest["divers"][number]["trainingDive"] {
-  return mark?.valid ? { courseTitle: mark.enrollmentCourseTitle, instructorAboard } : null;
+  // Aboard means the course's own instructor (issue #2731), the same answer
+  // readiness reads to take the course's level.
+  return mark?.valid
+    ? {
+        courseTitle: mark.enrollmentCourseTitle,
+        instructorAboard: mark.courseInstructorAboard,
+        overRatio: mark.overRatio ?? false,
+      }
+    : null;
 }
 
 export async function getTripManifests(
@@ -1143,9 +1150,9 @@ export async function getTripManifests(
         ).map((row) => [row.id, row.name] as const),
   );
   // The training marks that stand on this departure (issue #2275), through the
-  // one resolver every reader shares, and whether an instructor is on its crew
-  // now: the manifest names the course a dive counts toward and warns when
-  // nobody aboard teaches it. Read only when a marked seat is aboard.
+  // one resolver every reader shares, and whether the course's instructor is on
+  // its crew now: the manifest names the course a dive counts toward and warns
+  // when nobody aboard teaches it. Read only when a marked seat is aboard.
   const trainingMarks = await resolveTrainingMarks(
     db,
     shopId,
@@ -1155,6 +1162,7 @@ export async function getTripManifests(
         : [
             {
               bookingId: booking.id,
+              tripId: trip.id,
               enrollmentBookingId: booking.trainingEnrollmentBookingId,
               seat: {
                 personId: person.id,
@@ -1166,7 +1174,6 @@ export async function getTripManifests(
           ],
     ),
   );
-  const instructorAboard = crew.some((member) => member.roles.includes("instructor"));
   // Buddy teams, reduced to the members who are actually aboard. A member
   // whose seat was since cancelled stays listed (and dissolvable) on the teams
   // panel, but is dropped here: a cancelled seat is nobody (ADR
@@ -1283,7 +1290,7 @@ export async function getTripManifests(
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
       riderMedicalHold: riderHoldByBooking.get(booking.id) ?? null,
-      trainingDive: trainingDiveOf(trainingMarks.get(booking.id), instructorAboard),
+      trainingDive: trainingDiveOf(trainingMarks.get(booking.id)),
       trainingMarkCleared: booking.trainingClearedAt
         ? {
             reason: booking.trainingClearedReason ?? "forms_owed",

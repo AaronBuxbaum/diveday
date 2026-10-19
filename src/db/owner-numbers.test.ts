@@ -198,7 +198,12 @@ describe("the staff year's sites (section 6)", () => {
     await db.insert(tripDives).values({ tripId: planned, diveNumber: 1, diveSiteId: duane.id });
 
     const year = summarizeShopYear(
-      await getShopYear(db, shopId, { timeZone: TZ, now: new Date("2026-08-27T16:00:00Z") }),
+      await getShopYear(db, shopId, {
+        timeZone: TZ,
+        now: new Date("2026-08-27T16:00:00Z"),
+        startsOn: "2026-01-01",
+        endsOn: "2026-12-31",
+      }),
     );
 
     expect(year.sites.map((site) => [site.name, site.times])).toEqual([

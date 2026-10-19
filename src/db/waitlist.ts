@@ -1,10 +1,12 @@
 import { and, eq, ne } from "drizzle-orm";
+import { courseRatioRefusal } from "@/lib/booking-gates";
 import { nowDate } from "@/lib/clock";
 import type { DiveDeclaration } from "@/lib/dive-declaration";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { seatRefusal } from "@/lib/participant-types";
 import { publicTripPath } from "@/lib/public-routes";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
+import { courseStudentSeatCap } from "./bookings";
 import type { AppDb } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { sendNotification } from "./notifications";
@@ -215,7 +217,13 @@ export async function joinTripWaitlist(db: AppDb, req: WaitlistRequest): Promise
     const capacity = await sellableCapacity(tx, trip);
     const held = await heldSeatCounts(tx, req.shopId, trip.id);
     const withParty = { aboard: held.aboard + partySize - 1, divers: held.divers + partySize - 1 };
-    if (seatRefusal("diver", { ...trip, capacity }, withParty) === null) {
+    // A course session also seats its students at the crew's ratio, as the
+    // sale and the roll measure it (issue #2679): full at the ratio is full.
+    const ratioCap = await courseStudentSeatCap(tx, trip);
+    if (
+      seatRefusal("diver", { ...trip, capacity }, withParty) === null &&
+      courseRatioRefusal(withParty.divers, ratioCap) === null
+    ) {
       return { ok: false, reason: "trip_available" };
     }
 

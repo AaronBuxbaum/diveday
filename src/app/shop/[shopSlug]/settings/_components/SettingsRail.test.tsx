@@ -116,9 +116,9 @@ describe("the selection model", () => {
       currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
         pathname: `${BASE}/settings`,
         basePath: BASE,
-        sectionId: "tax",
+        sectionId: "stripe",
       }),
-    ).toBe("tax");
+    ).toBe("stripe");
   });
 
   it("selects nothing when the scroll-spy has not answered yet", () => {
@@ -133,16 +133,23 @@ describe("the selection model", () => {
     ).toBeNull();
   });
 
-  it("gives the bare route the tie when two rows share a path", () => {
-    // Backups and the download are one surface behind two doors
-    // (`/settings/export#backups` and `/settings/export`). Standing on the
-    // page is the bare row's fact.
-    expect(
-      currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
-        pathname: `${BASE}/settings/export`,
-        basePath: BASE,
-      }),
-    ).toBe("dataExport");
+  it("lights Your data on any of its four tabs", () => {
+    // Export, Backups, Import and Integrations are one rail row (issue #2813):
+    // standing on any of the four pages is standing on it.
+    for (const path of [
+      "/settings/export",
+      "/settings/export/backups",
+      "/settings/import",
+      "/settings/integrations",
+    ]) {
+      expect(
+        currentSettingsRailRowId(SETTINGS_RAIL_ROWS, {
+          pathname: `${BASE}${path}`,
+          basePath: BASE,
+        }),
+        path,
+      ).toBe("yourData");
+    }
   });
 });
 
@@ -175,7 +182,7 @@ describe("the rail as it renders", () => {
 
   it("links a hub section by fragment and a sub-route by path", () => {
     renderRail();
-    expect(screen.getByRole("link", { name: "tax" }).getAttribute("href")).toBe("#tax");
+    expect(screen.getByRole("link", { name: "stripe" }).getAttribute("href")).toBe("#stripe");
     expect(screen.getByRole("link", { name: "team" }).getAttribute("href")).toBe(
       `${BASE}/settings/team`,
     );
@@ -190,15 +197,15 @@ describe("the rail as it renders", () => {
       screen.getByRole("link", { name }).querySelector("svg[aria-hidden='true']");
     expect(chevron("team")).not.toBeNull();
     expect(chevron("boats")).not.toBeNull();
-    expect(chevron("tax")).toBeNull();
+    expect(chevron("stripe")).toBeNull();
     expect(chevron("timezone")).toBeNull();
   });
 
   it("points a section link back at the hub from a sub-route", () => {
     pathname = `${BASE}/settings/team`;
     renderRail();
-    expect(screen.getByRole("link", { name: "tax" }).getAttribute("href")).toBe(
-      `${BASE}/settings#tax`,
+    expect(screen.getByRole("link", { name: "stripe" }).getAttribute("href")).toBe(
+      `${BASE}/settings#stripe`,
     );
   });
 
@@ -347,7 +354,7 @@ describe("the rail keeps the current row in view", () => {
     scroller.scrollTop = 600;
 
     // ⌘K "Go to" Boats: its row is under the stuck label at the box's top.
-    pathname = `${BASE}/settings/boats`;
+    pathname = `${BASE}/boats`;
     boxes.row = { top: 60, height: 44 };
     boxes.label = { top: 56, height: 24 };
     rerender(rail());
@@ -481,12 +488,8 @@ describe("what the rail hides", () => {
     team: "team",
     waivers: "waivers",
     whatsapp: "messaging",
-    dataImport: "import",
-    backup: "export",
-    dataExport: "export",
     boats: "boats",
     stripe: "payments",
-    tax: "payments",
     billing: "billing",
   };
 
@@ -497,7 +500,7 @@ describe("what the rail hides", () => {
     // And keeps the ones nobody is gated out of, so an empty gate set is not
     // simply an empty rail.
     expect(ids.has("diveSites")).toBe(true);
-    expect(ids.has("security")).toBe(true);
+    expect(ids.has("yourData")).toBe(true);
   });
 
   it("carries the gate the hub carries, row by row", () => {
@@ -523,7 +526,11 @@ describe("the rows the pane is made of", () => {
 
   it("still explains inside an opened setting", () => {
     render(
-      <SettingsRow sectionId="tax" heading="Sales tax & VAT" description="What we charge on top.">
+      <SettingsRow
+        sectionId="stripe"
+        heading="Sales tax & VAT"
+        description="What we charge on top."
+      >
         <span>form</span>
       </SettingsRow>,
     );
@@ -533,10 +540,10 @@ describe("the rows the pane is made of", () => {
   it("reopens the row `?saved=` named, and leaves the others shut", () => {
     const { container } = render(
       <>
-        <SettingsRow sectionId="tax" activeSection="tax" heading="Sales tax & VAT">
+        <SettingsRow sectionId="stripe" activeSection="stripe" heading="Sales tax & VAT">
           <span>tax form</span>
         </SettingsRow>
-        <SettingsRow sectionId="units" activeSection="tax" heading="Units">
+        <SettingsRow sectionId="units" activeSection="stripe" heading="Units">
           <span>units form</span>
         </SettingsRow>
       </>,

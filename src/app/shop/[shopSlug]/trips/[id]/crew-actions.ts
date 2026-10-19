@@ -3,11 +3,14 @@
 /** Who crews a departure: day-of operating work, open to every staffer. */
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
+import { withdrawCrewAwayAcknowledgement } from "@/db/crew-away-acknowledgements";
 import { recordTripActivity } from "@/db/operations";
 import { getShopPersonName } from "@/db/people";
 import { changeTripCrewOutcome, type TripCrewChange } from "@/db/trips";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
+import { uuidParam } from "@/lib/uuid";
 
 export async function updateTripCrewAction(
   shopSlug: string,
@@ -47,4 +50,28 @@ export async function updateTripCrewAction(
     return { ok: true };
   }
   return { ok: false, refusal: outcome.refusal };
+}
+
+/**
+ * **"No longer working it"** (issue #2678, dock review S2): takes back a
+ * staffer's "working it anyway", so Today's row and the diver-side mark
+ * return. Open to every staffer, like the crew itself; the write is scoped to
+ * the session's shop and records who took it back.
+ */
+export async function withdrawCrewAwayAcknowledgementAction(
+  shopSlug: string,
+  tripId: string,
+  personId: string,
+): Promise<void> {
+  const s = (await requireShopSurface(shopSlug)).session;
+  const page = shopPath(shopSlug, "trips", tripId);
+  if (!uuidParam(tripId) || !uuidParam(personId)) revalidateAndRedirect(page);
+  await withdrawCrewAwayAcknowledgement(await getDb(), {
+    shopId: s.user.shopId,
+    tripId,
+    personId,
+    actorPersonId: s.user.personId,
+  });
+  revalidatePath(shopPath(shopSlug));
+  revalidateAndRedirect(page, `${page}?view=details#crew`);
 }

@@ -452,6 +452,36 @@ describe("seatDiver confirmation (fourth UX review, item 3)", () => {
     expect(send).toHaveBeenCalledOnce();
   });
 
+  it("seats a returning diver picked at the counter as a walk-in: trail code and no confirmation owed", async () => {
+    const { db, shop, open, actorPersonId } = await context();
+    const send = deliverableEmailEnv();
+    const startsAt = new Date(nowDate().getTime() + 2 * 60 * 60 * 1000);
+    await db
+      .update(tripsTable)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000) })
+      .where(eq(tripsTable.id, open.id));
+    const diver = await bookableDiver(db, shop.id, open.id);
+
+    const result = await seatDiver(db, {
+      shopId: shop.id,
+      tripId: open.id,
+      actorPersonId,
+      diver: { personId: diver.id },
+      entry: "walk_in",
+      refusals: "specific",
+    });
+
+    expect(result).toMatchObject({ ok: true, confirmation: "not_needed" });
+    expect(await activityLines(db, open.id)).toContainEqual({
+      code: "seat_added_walk_in",
+      params: expect.objectContaining({ diver: diver.fullName }),
+    });
+    // The booking confirmation is the one email a walk-in is not owed.
+    for (const call of send.mock.calls) {
+      expect(JSON.stringify(call)).not.toMatch(/confirm/i);
+    }
+  });
+
   /**
    * Dive-domain review F2 of layer r4-1: "Can you get me on the 1:30?" at
    * 9 AM is the commonest phone booking a shop takes. Only the walk-in counter

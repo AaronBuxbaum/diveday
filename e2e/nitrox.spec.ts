@@ -152,8 +152,8 @@ test.describe("a shop that stops filling nitrox", () => {
 
     await page.goto(`/shop/${SHOP}/settings/rentals`);
     await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
-    await page.getByRole("button", { name: "Save rental catalog" }).click();
-    await expect(page.getByText("Rental catalog saved.")).toBeVisible();
+    await page.getByRole("button", { name: "Save rentals" }).click();
+    await expect(page.getByText("Rentals saved.")).toBeVisible();
 
     // The diver comes back and resaves their gear for any reason at all. The
     // nitrox fieldset is gone (the shop doesn't fill it any more), but saving
@@ -196,8 +196,8 @@ test.describe("a shop that stops filling nitrox", () => {
     const SHOP = privateShop.slug;
     await page.goto(`/shop/${SHOP}/settings/rentals`);
     await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
-    await page.getByRole("button", { name: "Save rental catalog" }).click();
-    await expect(page.getByText("Rental catalog saved.")).toBeVisible();
+    await page.getByRole("button", { name: "Save rentals" }).click();
+    await expect(page.getByText("Rentals saved.")).toBeVisible();
 
     // Two-Tank Reef never had a nitrox request seeded onto it (unlike the
     // wreck charter above), so with the catalog off there is no live data
@@ -248,21 +248,17 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${slug}`));
 
-  // Most shops don't fill nitrox: no price field to fill in until it's ticked.
-  // The box a person types in carries `data-draft-for`; the `name` is on the
-  // hidden control that submits the figure (ADR 20260906-before-you-ask). The
-  // catalogue and the prices are two pages of their own (#1854).
-  await page.goto(`/shop/${slug}/settings/rental-prices`);
-  await expect(page.getByRole("heading", { level: 1, name: "Rental prices" })).toBeVisible();
-  await expect(page.locator('input[data-draft-for="nitroxPrice"]')).toHaveCount(0);
-
+  // Most shops don't fill nitrox: the row is there, unticked, with its price
+  // box greyed. The box a person types in carries `data-draft-for`; the `name`
+  // is on the hidden control that submits the figure (ADR 20260906-before-you-ask).
   await page.goto(`/shop/${slug}/settings/rentals`);
+  await expect(page.getByRole("heading", { level: 1, name: "Rentals" })).toBeVisible();
   const nitroxCheckbox = page.getByRole("checkbox", { name: "Nitrox fills" });
   await expect(nitroxCheckbox).not.toBeChecked();
   await nitroxCheckbox.check();
-  await page.getByRole("button", { name: "Save rental catalog" }).click();
-  await expect(page.getByText("Rental catalog saved.")).toBeVisible();
-  await page.goto(`/shop/${slug}/settings/rental-prices`);
+  await page.getByRole("button", { name: "Save rentals" }).click();
+  await expect(page.getByText("Rentals saved.")).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Nitrox fills" })).toBeChecked();
   await expect(page.locator('input[data-draft-for="nitroxPrice"]')).toHaveCount(1);
 });
 

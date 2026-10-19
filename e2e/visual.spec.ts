@@ -3,6 +3,8 @@ import type { Browser, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { LISTED_SHOP_SLUGS } from "../src/db/seed-listed-shops";
+import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
@@ -10,6 +12,7 @@ import {
   OFFLINE_MANIFEST_AGING_MS,
   OFFLINE_MANIFEST_RECORD_VERSION,
 } from "../src/lib/offline-manifests";
+import { publicFindMyBookingPath } from "../src/lib/public-routes";
 import { signRecapToken } from "../src/lib/recap-links";
 import { weekStartOf } from "../src/lib/week-board";
 import { clearCourseForms } from "./course-form-only";
@@ -44,17 +47,20 @@ import {
   STAFF_DAY_HEADING,
   saveDiveIntent,
   scheduleCrewedOpenWaterSession,
+  seatFromRoster,
   seededTripId,
   threadStatus,
   tripPathByTitle,
   waiverLinkFromResult,
   waiverLinkFromToast,
+  walkInFormPath,
   writeCourseForm,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 
 const staffCopy = staffTranslator("en-US");
+const diverCopy = diverTranslator("en-US");
 
 /**
  * Visual regression coverage: one `capture()` call per surface, each shot in
@@ -2338,6 +2344,22 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the diver's shop picker renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/find-your-booking");
         await page.locator("h1").first().waitFor();
+        // The picker lists every public shop in the shared database, so a shop
+        // another capture made first (the Bookable Moment shop) would change
+        // this picture with test order (#2690). Only the seeded listed shops
+        // stay in the frame; the page is otherwise exactly as it rendered.
+        await page.getByRole("list", { name: diverCopy("findYourBooking.listLabel") }).waitFor();
+        await page.evaluate((kept) => {
+          for (const item of document.querySelectorAll("main ul > li")) {
+            const href = item.querySelector("a")?.getAttribute("href") ?? "";
+            if (!kept.includes(href)) item.remove();
+          }
+        }, LISTED_SHOP_SLUGS.map(publicFindMyBookingPath));
+        await expect(
+          page
+            .getByRole("list", { name: diverCopy("findYourBooking.listLabel") })
+            .getByRole("listitem"),
+        ).toHaveCount(LISTED_SHOP_SLUGS.length);
         await capture(page, "find-your-booking", scheme);
       });
 
@@ -3577,6 +3599,128 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "expired-link-claim", scheme);
       });
 
+      /**
+       * **Ask to move, before and after it is sent** (H-126; #2666). Past the
+       * free-cancellation window a paid diver's page offers a request ahead of
+       * the cancel that forfeits what they paid: the form, then the page
+       * saying it was asked. The same flow as `e2e/ask-to-move.spec.ts`.
+       */
+      test(`the diver's ask-to-move form and its asked state render true to the design (${scheme})`, async ({
+        page,
+        browser,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const title = "Ask To Move Two-Tank";
+        const staffContext = await browser.newContext({
+          storageState: await staffStorageState("owner"),
+          colorScheme: scheme,
+        });
+        let tripId: string;
+        try {
+          const staff = makeActivitySafe(await staffContext.newPage());
+          await createTrip(staff, {
+            title,
+            date: daysFromNow(5),
+            departsAt: "08:00",
+            returnsAt: "11:30",
+            capacity: 6,
+            price: 120,
+            // Thirty days: five days out is long past it.
+            cancellationWindowHours: 720,
+          });
+          tripId = await seededTripId(staff, "blue-mantis", title);
+          await staff.goto(`/shop/blue-mantis/trips/${tripId}`);
+          await openTripAbout(staff);
+          await staff.getByText("Edit requirements", { exact: true }).click();
+          await staff.getByLabel("Require payment to board").check();
+          await staff.getByRole("button", { name: "Save requirements" }).click();
+          await expect(staff.getByRole("status")).toContainText("requirements updated");
+        } finally {
+          await staffContext.close();
+        }
+
+        await page.goto(publicTripUrl(`/shop/blue-mantis/trips/${tripId}`));
+        await bookASeatAndOpenThread(page, "Rafa Ortiz", `rafa-ask-${scheme}@example.com`);
+        const readyUrl = page.url().split("?")[0] ?? "";
+
+        const staffPayContext = await browser.newContext({
+          storageState: await staffStorageState("owner"),
+          colorScheme: scheme,
+        });
+        try {
+          const staffPay = makeActivitySafe(await staffPayContext.newPage());
+          await staffPay.goto(`/shop/blue-mantis/trips/${tripId}`);
+          const row = staffPay
+            .locator("li")
+            .filter({ hasText: "Rafa Ortiz" })
+            .filter({ visible: true });
+          await openRosterDetails(row);
+          await row.getByRole("combobox").selectOption("paid");
+          await row.getByRole("radio", { name: "Cash" }).check();
+          await row.getByRole("button", { name: "Update" }).click();
+          await expect(row.getByText("Payment: Paid")).toBeVisible();
+        } finally {
+          await staffPayContext.close();
+        }
+
+        await page.goto(readyUrl);
+        await page.getByRole("button", { name: "Ask to move" }).waitFor();
+        await page.getByLabel("Dates that would work (optional)").fill("Any Saturday in August");
+        await capture(page, "ready-ask-to-move", scheme);
+
+        await page.getByRole("button", { name: "Ask to move" }).click();
+        await expect(page.getByText(diverCopy("ready.moveAsk.sent"))).toBeVisible();
+        await expect(page.getByRole("button", { name: "Ask to move" })).toHaveCount(0);
+        await capture(page, "ready-asked-to-move", scheme);
+      });
+
+      /**
+       * **A parent signs a child's release** (H-124; #2666): a lead books a
+       * party with one seat "Under 18", the panel offers "Sign {name}'s
+       * waiver" on that seat, and the child's own claim link says a parent
+       * signs with them. The flow of the last test in
+       * `e2e/guardian-co-signature.spec.ts`.
+       */
+      test(`the party panel's minor seat and the claim page's minor note render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const child = "Mia Byrne";
+        await page.goto("/s/blue-mantis");
+        await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
+        await choosePartySize(page, 2);
+        await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");
+        await page
+          .getByLabel("Email", { exact: true })
+          .fill(`organizer-minor-${scheme}@example.com`);
+        await page.getByLabel("Diver 2 name").fill(child);
+        await page.getByLabel("Use the main contact’s email for this diver").check();
+        await page
+          .getByRole("checkbox", { name: /^Under 18/ })
+          .nth(1)
+          .check();
+        await page.getByRole("button", { name: /^Book/ }).click();
+        await expect(page).toHaveURL(/\/ready\//);
+        const seatRow = page.locator("#party-seats li").filter({ hasText: child });
+        await expect(
+          seatRow.getByText(diverCopy("seatClaim.minorSignBody", { name: child })),
+        ).toBeVisible();
+        await expect(seatRow.getByRole("button", { name: `Sign ${child}’s waiver` })).toBeVisible();
+        await capture(page, "party-panel-minor-seat", scheme);
+
+        await seatRow.getByText("Show link").click();
+        const claimPath = ((await seatRow.locator("p.font-mono").textContent()) ?? "").match(
+          /\/claim\/[^\s/?#]+/,
+        )?.[0];
+        expect(claimPath).toBeTruthy();
+        await page.goto(claimPath ?? "/");
+        await expect(
+          page.getByText(diverCopy("seatClaim.minorNote", { seatName: child }), { exact: false }),
+        ).toBeVisible();
+        await capture(page, "seat-claim-minor-note", scheme);
+      });
+
       // Its own test rather than another stop on a public tour: a trust page
       // whose baseline is skipped because a long test ran out of budget is the
       // one baseline you'd most want.
@@ -3960,9 +4104,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: /Two-Tank Morning Reef/ }).click();
         await page.getByRole("link", { name: "Add diver" }).click();
         await page.waitForURL(/\/divers\/new\?/);
-        // Name only — this door takes the no-email diver, which also keeps the
-        // seat from queuing a notification whose delivery state would vary.
         await page.getByLabel("Full name").fill("Marisol Vega");
+        await page.getByLabel("Email", { exact: true }).fill(`marisol-${scheme}@example.com`);
         await page.getByRole("button", { name: "Add to trip" }).click();
         await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
@@ -4627,14 +4770,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Odile Marchand is seeded carded and booked on nothing
         // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
         // baseline and arrives blocked on the release alone.
-        await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
-        const findDiver = page.getByRole("searchbox", {
-          name: "Search by name, email, or phone",
-        });
-        await findDiver.fill("Odile Marchand");
-        await findDiver.press("Enter");
-        await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
-        await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+        await seatFromRoster(page, tripId, "Odile Marchand");
 
         // **The boat goes without her**, ten minutes ago: past the departure,
         // inside the hour a late boat is allowed, which is the seat half of
@@ -4719,14 +4855,7 @@ for (const scheme of ["light", "dark"] as const) {
           capacity: 1,
         });
         const tripId = await seededTripId(page, "blue-mantis", title);
-        await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
-        const findDiver = page.getByRole("searchbox", {
-          name: "Search by name, email, or phone",
-        });
-        await findDiver.fill("Odile Marchand");
-        await findDiver.press("Enter");
-        await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
-        await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+        await seatFromRoster(page, tripId, "Odile Marchand");
 
         await page.goto(counterPath("blue-mantis", tripId));
         await expect(page.locator("[data-check-in-queue]")).toHaveAttribute(
@@ -4899,22 +5028,15 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staffing-week-crew-clash", scheme);
       });
 
-      // The walk-in door under "Add a diver" on a boat's Divers tab, both
-      // halves: search for a returning diver or hand-enter one — no required
-      // email at the desk. The boat is the path's own, so there is no picker. Two
-      // captures and two tests, for the same reason the Add-booking door below
-      // has two: the walk-in form and the diver form never share a screen, so
-      // one shot would leave half the surface with no baseline at all.
-      const openWalkIn = async (page: Page, query = "") => {
+      // The counter's mode of the departure door: the new-diver form for a walk-in
+      // on a boat's Divers tab, no required email at the desk. The boat is the
+      // form's own `tripId`, so there is no picker. The boat's Divers tab (its
+      // search and "Add as a walk-in") is the departure capture's.
+      const openWalkInForm = async (page: Page) => {
         const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
-        await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in${query}`);
-        await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
+        await page.goto(walkInFormPath("blue-mantis", tripId));
+        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
       };
-
-      test(`the walk-in counter renders true to the design (${scheme})`, async ({ page }) => {
-        await openWalkIn(page);
-        await capture(page, "trip-walk-in", scheme);
-      });
 
       /**
        * **"Took a call"** (N-22), folded into Add a booking as its last
@@ -4932,19 +5054,8 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "took-a-call", scheme);
       });
 
-      test(`the walk-in form explains an invalid submission (${scheme})`, async ({ page }) => {
-        await openWalkIn(page, "?notice=walkin-invalid");
-        await expect(
-          page.getByRole("alert").filter({ hasText: "Enter a name before adding a walk-in." }),
-        ).toBeVisible();
-        await capture(page, "trip-walk-in-notice", scheme);
-      });
-
       test(`the walk-in diver step renders true to the design (${scheme})`, async ({ page }) => {
-        await openWalkIn(page);
-        await page.getByRole("link", { name: "Add diver", exact: true }).click();
-        await page.waitForURL(/\/divers\/new/);
-        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
+        await openWalkInForm(page);
         await capture(page, "trip-walk-in-diver", scheme);
       });
 
@@ -4952,10 +5063,7 @@ for (const scheme of ["light", "dark"] as const) {
       // step with two more people added, one of them ticked "Under 18". Pinned
       // words so the picture is the same on every run.
       test(`the walk-in party rows render true to the design (${scheme})`, async ({ page }) => {
-        await openWalkIn(page);
-        await page.getByRole("link", { name: "Add diver", exact: true }).click();
-        await page.waitForURL(/\/divers\/new/);
-        await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
+        await openWalkInForm(page);
         await page.getByLabel("Full name").first().fill("Ana Brightwater");
         await page.getByRole("button", { name: "Add another person" }).click();
         const second = page.getByRole("group", { name: "Person 2" });
@@ -5488,6 +5596,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
         await page.getByRole("heading", { level: 1, name: "Call a blow-out?" }).waitFor();
         await capture(page, "blowout-confirm", scheme);
+      });
+
+      // A past day, read-only (issue #2662): yesterday's boats as the evening
+      // closed them, under Schedule. Read-only by construction.
+      test(`a past day renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto(`/shop/blue-mantis/schedule/day/${daysFromNow(-1)}`);
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await capture(page, "past-day", scheme);
       });
 
       // The day's weather call (ADR 20261009-day-weather-call), reached from
@@ -6631,14 +6747,7 @@ for (const scheme of ["light", "dark"] as const) {
         // (`src/db/seed-cert-gates.ts`, `src/db/seed-cast.ts`), so seating
         // them here flips no other departure's manifest, readiness or queue.
         const seat = async (name: string) => {
-          await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
-          const findDiver = page.getByRole("searchbox", {
-            name: "Search by name, email, or phone",
-          });
-          await findDiver.fill(name);
-          await findDiver.press("Enter");
-          await page.getByRole("button", { name: `Add ${name} to this boat` }).click();
-          await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
+          await seatFromRoster(page, tripId, name);
         };
         await seat("Odile Marchand");
         await seat("Hana Kobayashi");
@@ -7208,27 +7317,23 @@ for (const scheme of ["light", "dark"] as const) {
       // The settings hub, the directory every shop setting hangs off.
       test(`shop settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Rental terms" }).waitFor();
+        await page.getByRole("heading", { name: "Trip packing checklist" }).waitFor();
         // One row open in the capture, so the baseline shows the disclosure's
-        // open-form treatment as well as the at-rest directory. Rental prices
-        // used to be the open one; it is a page of its own now (#1854).
-        await openSettingsRow(page, "Rental terms");
+        // open-form treatment as well as the at-rest directory.
+        await openSettingsRow(page, "Trip packing checklist");
         await capture(page, "settings-payments", scheme);
       });
 
       /**
-       * What the shop rents and what it charges for it, each on a page of its
-       * own since #1854: a grid of catalogue pills, and a price box per offered
-       * item. Hub rows until then, open in `settings-payments`.
+       * What the shop rents and what it charges for it: one table with a tick
+       * and a price box per piece, the terms and the service interval, one
+       * save (#2815).
        */
-      test(`the rental pages render true to the design (${scheme})`, async ({ page }) => {
+      test(`the rentals page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/rentals");
         await page.getByRole("heading", { level: 1, name: "Rentals" }).waitFor();
-        await page.getByRole("button", { name: "Save rental catalog" }).waitFor();
+        await page.getByRole("button", { name: "Save rentals" }).waitFor();
         await capture(page, "settings-rentals", scheme);
-        await page.goto("/shop/blue-mantis/settings/rental-prices");
-        await page.getByRole("heading", { level: 1, name: "Rental prices" }).waitFor();
-        await capture(page, "settings-rental-prices", scheme);
       });
 
       /**
@@ -7257,7 +7362,7 @@ for (const scheme of ["light", "dark"] as const) {
        * stopped fitting inside a disclosure.
        */
       test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/boats");
+        await page.goto("/shop/blue-mantis/boats");
         await page.getByRole("heading", { level: 1, name: "Boats" }).waitFor();
         // The submit on the add-a-boat row, which is what this page's own
         // editor ends in now that it is a page rather than a settings row.
@@ -7270,7 +7375,7 @@ for (const scheme of ["light", "dark"] as const) {
        * — the list a diver then filters the public schedule by.
        */
       test(`the trip-tags page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/trip-tags");
+        await page.goto("/shop/blue-mantis/trip-tags");
         await page.getByRole("heading", { level: 1, name: "Trip tags" }).waitFor();
         await capture(page, "settings-trip-tags", scheme);
       });
@@ -7323,14 +7428,15 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **Try the checks** (H-105): Settings' run of the cert-check
-       * extension against its own sample pages, after a run. The extension is
+       * **Try the checks** (H-105): the disclosure on the Card checks row
+       * (#2817), running the cert-check extension against its own sample
+       * pages, after a run. The extension is
        * stood in for at the page's one seam, as the agency-check captures do:
        * it says hello as 1.5.0, passes every sample but NAUI's, and finds a
        * signed-in PADI tab. The report's time is the frozen clock's, and its
        * browser line is pinned here, so a Chromium update moves no pixel.
        */
-      test(`the cert-check extension's try page renders true to the design (${scheme})`, async ({
+      test(`the cert-check extension's try-it disclosure renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await page.addInitScript(() => {
@@ -7377,9 +7483,10 @@ for (const scheme of ["light", "dark"] as const) {
             );
           });
         });
-        await page.goto("/shop/blue-mantis/settings/cert-checks");
-        await page.getByRole("heading", { level: 1, name: "Try the checks" }).waitFor();
-        await page.getByText("Added to this browser (1.5.0)").waitFor();
+        await page.goto("/shop/blue-mantis/settings");
+        await openSettingsRow(page, "Card checks");
+        await page.getByText("Try the checks", { exact: true }).click();
+        await page.getByText("Added to this browser (1.5.0)").first().waitFor();
         await page.getByRole("button", { name: "Run the checks" }).click();
         await page.getByText("Signed in", { exact: true }).waitFor();
         await page.getByRole("button", { name: "Copy report" }).waitFor();
@@ -7404,28 +7511,19 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The Stripe Tax opt-in (issue #959, ADR
-       * 20260826-stripe-tax-is-opt-in-and-provider-owned). Its own capture for
-       * the same reason as the rows above — it is closed in
-       * `settings-payments`, and this is the only place a shop decides whether
-       * DiveDay adds tax to what it charges at all.
-       *
-       * Captured **off**, which is both the default and what every shop meets
-       * first: the decision this row is asking for is legible only if the
-       * paragraph explaining what turning it on does is in the picture. Opening
-       * a disclosure writes nothing, so this capture leaves the shared fixture's
-       * `shops.tax_enabled` exactly as it found it — the flag is shop-wide
-       * configuration a reset does not restore, and a spec that drove it would
-       * hand a taxed shop to whatever ran next in the worker (ADR
-       * 20260815-per-test-private-shops). `e2e/tax.spec.ts` drives it, on a
-       * shop of its own.
+       * The Features page (issue #2814): every on/off switch a shop owns, once.
+       * It replaces the Stripe Tax card's own capture (`settings-tax`): the tax
+       * switch is a row here, with the sentence that says what turning it on
+       * does. Opening nothing and saving nothing, so the shared fixture's
+       * `shops` flags are exactly as the capture found them (ADR
+       * 20260815-per-test-private-shops); `e2e/tax.spec.ts` drives the switch
+       * on a shop of its own.
        */
-      test(`the tax card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Sales tax & VAT" }).waitFor();
-        await openSettingsRow(page, "Sales tax & VAT");
-        await page.getByRole("button", { name: "Save tax setting" }).waitFor();
-        await capture(page, "settings-tax", scheme);
+      test(`the features page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/features");
+        await page.getByRole("heading", { level: 1, name: "Features" }).waitFor();
+        await page.getByRole("button", { name: "Save" }).first().waitFor();
+        await capture(page, "settings-features", scheme);
       });
 
       // Where a shop connects its own WhatsApp Business number (ADR
@@ -7445,7 +7543,7 @@ for (const scheme of ["light", "dark"] as const) {
       // join the registry.
       test(`integrations settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/integrations");
-        await page.getByRole("heading", { level: 1, name: "Shop integrations" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
         await capture(page, "settings-integrations", scheme);
       });
 
@@ -7580,14 +7678,22 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the data-export page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/export");
-        await page.getByRole("heading", { name: "Data export" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
+        // The crew sheet (N-43) is the second thing that leaves this page.
+        await page.getByRole("heading", { name: "Crew sheet" }).waitFor();
+        await capture(page, "settings-export", scheme);
+      });
+
+      // The Backups tab of the same page set: the destination and the delivery
+      // history, which used to sit under the download on one long page.
+      test(`the backups tab renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/export/backups");
+        await page.getByRole("heading", { level: 1, name: "Your data" }).waitFor();
         await page.getByRole("heading", { name: "Delivery history" }).waitFor();
         // The history rows, not just the heading — the table is half the
         // surface, and a capture taken on the heading alone banks an empty one.
         await page.getByRole("cell", { name: "Failed" }).waitFor();
-        // The crew sheet (N-43) is the third thing that leaves this page.
-        await page.getByRole("heading", { name: "Crew sheet" }).waitFor();
-        await capture(page, "settings-export", scheme);
+        await capture(page, "settings-backups", scheme);
       });
 
       // The shop's activity log (D5): who did what, to what, when, across the
@@ -7687,7 +7793,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the pre-departure checklist settings render true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/settings/safety-checklist");
+        await page.goto("/shop/blue-mantis/safety-checklist");
         await page.getByRole("heading", { level: 1, name: "Pre-departure checklist" }).waitFor();
         await page.getByText("VHF radio checked").waitFor();
         await capture(page, "settings-safety-checklist", scheme);
@@ -9969,10 +10075,10 @@ for (const scheme of ["light", "dark"] as const) {
       test.setTimeout(FLOW_TIMEOUT_MS);
       await page.goto(`/shop/${privateShop.slug}/settings/rentals`);
       await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
-      await page.getByRole("button", { name: "Save rental catalog" }).click();
+      await page.getByRole("button", { name: "Save rentals" }).click();
       // The page comes back with its saved notice — the destination's own
       // render, not a timing guess.
-      await page.getByText("Rental catalog saved.").waitFor();
+      await page.getByText("Rentals saved.").waitFor();
 
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);

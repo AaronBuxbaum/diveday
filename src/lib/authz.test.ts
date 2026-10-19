@@ -14,13 +14,17 @@ import {
   canExportShopData,
   canImportShopData,
   canManageBilling,
+  canManageBoats,
   canManageMessagingSettings,
   canManageOrders,
   canManagePaymentSettings,
+  canManageSafetyChecklist,
   canManageStaffAccounts,
+  canManageTripTags,
   canManageWaiverTemplates,
   canOverrideCertBlock,
   canOverrideGearRequest,
+  canReadCrewAwayNote,
   canReadEveryIncidentReport,
   canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
@@ -31,6 +35,7 @@ import {
   canViewShopReports,
   isStaff,
   type Role,
+  staffDestinationGates,
 } from "./authz";
 
 describe("isStaff", () => {
@@ -80,6 +85,13 @@ describe("accountable-role gates (export/import/reports)", () => {
     ["canReplyToReviews", canReplyToReviews],
     // D5: the activity log names each staffer's own work across the team.
     ["canViewShopActivity", canViewShopActivity],
+    // #2673: why a crew member is away is personal; owners and managers read it.
+    ["canReadCrewAwayNote", canReadCrewAwayNote],
+    // #2659: each register carries its own gate; owner and manager today, the
+    // same people the Settings gate admitted before they moved out of Settings.
+    ["canManageBoats", canManageBoats],
+    ["canManageTripTags", canManageTripTags],
+    ["canManageSafetyChecklist", canManageSafetyChecklist],
   ] as const;
 
   for (const [name, gate] of gates) {
@@ -354,5 +366,50 @@ describe("canAddDiver (every staff role)", () => {
     expect(canAddDiver(["diver"])).toBe(false);
     expect(canAddDiver([])).toBe(false);
     expect(canAddDiver(undefined)).toBe(false);
+  });
+});
+
+/**
+ * #2673, security review: the away note has two readers past the person
+ * themself — the staffing week (`canReadCrewAwayNote`) and the shop export,
+ * which hands every note over under `canExportShopData`. Whoever may export
+ * must be someone who may read the note, for every role set.
+ */
+describe("the crew away note's two readers", () => {
+  it("never lets the export hand a note to someone the staffing week would not show it", () => {
+    const sets: Role[][] = [[]];
+    for (const role of ALL_ROLES) {
+      for (const set of [...sets]) sets.push([...set, role]);
+    }
+    for (const roles of sets) {
+      if (canExportShopData(roles)) expect(canReadCrewAwayNote(roles)).toBe(true);
+    }
+  });
+});
+
+describe("staffDestinationGates (the registers, #2659)", () => {
+  it("opens boats, trip tags and the checklist to owner and manager only", () => {
+    for (const role of ["owner", "manager"] as const) {
+      expect(staffDestinationGates([role])).toMatchObject({
+        boats: true,
+        tripTags: true,
+        safetyChecklist: true,
+      });
+    }
+    for (const role of ["instructor", "divemaster", "captain", "crew"] as const) {
+      expect(staffDestinationGates([role])).toMatchObject({
+        boats: false,
+        tripTags: false,
+        safetyChecklist: false,
+      });
+    }
+  });
+
+  it("hides the fleet from a shop that does not dive from a boat, and nothing else", () => {
+    expect(staffDestinationGates(["owner"], { hasBoatDiving: false })).toMatchObject({
+      boats: false,
+      tripTags: true,
+      safetyChecklist: true,
+    });
   });
 });

@@ -269,41 +269,14 @@ export async function DataGroup({
         </section>
       ) : null}
 
+      {/* One door: Export, Backups, Import and Integrations are the tabs of
+          one "Your data" page set (`DataTabs`, issue #2813). The door opens the
+          first tab this reader may use; each page re-checks its own gate. */}
       <InsetGroup>
         <SettingsDoorRow
-          href={`/shop/${shopSlug}/settings/integrations`}
-          heading={t("settings.main.integrations.heading")}
+          href={`/shop/${shopSlug}/settings/${canExport ? "export" : canImport ? "import" : "integrations"}`}
+          heading={t("settings.main.yourData.heading")}
         />
-
-        {/* Owner/manager only, like the export row it feeds: the
-          destination it configures receives the whole shop every week.
-
-          Two rows, one surface. Backups and the download are the same
-          bundle behind the same gate and share a route now (ADR
-          20260806-one-data-out-surface), but a shop arrives at Settings
-          asking one of two different questions — "let me take a copy" and
-          "make sure a copy keeps happening" — so both doors stay, and this
-          one deep-links to the half it names. */}
-        {canExport ? (
-          <SettingsDoorRow
-            href={`/shop/${shopSlug}/settings/export#backups`}
-            heading={t("settings.main.backup.heading")}
-          />
-        ) : null}
-
-        {canImport ? (
-          <SettingsDoorRow
-            href={`/shop/${shopSlug}/settings/import`}
-            heading={t("settings.import.title")}
-          />
-        ) : null}
-
-        {canExport ? (
-          <SettingsDoorRow
-            href={`/shop/${shopSlug}/settings/export`}
-            heading={t("settings.export.title")}
-          />
-        ) : null}
       </InsetGroup>
     </SettingsGroup>
   );

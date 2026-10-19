@@ -694,7 +694,7 @@ sent the visitor:
 Both fire **after the outcome they name**, deferred with `after()` — a rate-limited demo attempt or a
 refused sign-up is not an entry, and counting one would inflate the numerator of every ratio read off
 the pair. Both also email someone as they fire, so neither half needs a dashboard to be noticed:
-`setup_request_alert` to `onboarding@dive.day` for a set-up request, `demo_started_alert` to `alertRecipient()`
+an `operator_alert` (`setup_request`) to `onboarding@dive.day` for a set-up request, an `operator_alert` (`demo_started`) to `alertRecipient()`
 (overridable with `OPS_ALERT_EMAIL`) for a demo try. The Monday founder digest counts both by tag ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)). The demo alert is anonymous by construction — the shop slug,
 the role, and the tag below, and nothing about the visitor, who never identified themselves. See
 [ADR 20260805-demo-try-alerts](../architecture/decisions/20260805-demo-try-alerts.md).

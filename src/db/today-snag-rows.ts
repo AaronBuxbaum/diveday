@@ -31,7 +31,7 @@ export function pushBoatSnagRows(actions: TodayAction[], ctx: TodayRowsContext):
       actionLabel: openBoatCheckActionText(t),
       href: tripId
         ? `/shop/${shopSlug}/trips/${tripId}/manifest`
-        : `${shopPath(shopSlug, "settings", "boats")}#boat-${snag.boatId}`,
+        : `${shopPath(shopSlug, "boats")}#boat-${snag.boatId}`,
       dueAt,
     });
   }

@@ -81,6 +81,25 @@
   timezone" of a UTC column, so the scan over-fetches and the caller filters by shop-local date.
   Twenty-six hours is what a local day can span either side of any instant inside it, plus slack
   for a daylight-saving transition. Never a readiness lens.
+- **Walk-in** — a person who turns up at the counter for a boat that has not left, seated from the
+  departure door in walk-in mode (`walkIn=true`, entry `walk_in`, activity `seat_added_walk_in`).
+  The mode is a claim from the client and holds only while the boat's **counter window** is open;
+  in it a name is enough (the email is optional) and the seat is told as a walk-in. Every gate is
+  the departure door's own: readiness, admission, waiver and capacity. The old
+  `/trips/[id]/walk-in` page is gone and redirects to the door.
+- **Counter window** — when the counter may still seat a walk-in on a departure
+  (`walkInDoorOpen`, `src/lib/operational-window.ts`): it starts inside the arrivals window and has
+  not sailed (the one departure buffer). The staffer's door and the seat action both ask it, so a
+  typed URL or a stale page cannot seat someone on a boat that has gone.
+- **Walk-in party** — several people seated in one counter submission: the first person's own
+  fields plus further rows (`member-<n>-…`, `src/lib/walk-in-party.ts`), each seated by the
+  walk-in door with every gate its own. A name that reads like someone on file is settled row by
+  row (the record, or a new person) before anyone is seated.
+- **Coming as** — a walk-in's participant type (diver, snorkeler or rider) on its row. The first
+  person's posts as `participantType`; a blank reads as a diver, the stricter default.
+- **Under 18** — the booker's tick on a walk-in row that this person is a minor. It asks for a
+  date of birth beside it and feeds the guardian rule alone; a ticked row routes the whole form
+  to the party seating.
 - **Counter self-registration** — the shop's QR door at `/s/<slug>/register`: a walk-in puts
   themselves on file **before any booking exists** (issue #1236). The shop prints the QR from
   Settings (`/shop/<slug>/print/counter-card`) and stands it on the counter. The form writes a
@@ -242,7 +261,7 @@
   editor either way, because who is aboard is manifest data (the crew roll call, the souls-on-board
   count) and a course session's agency ratio gates enrolment from it (`src/lib/crew-schedule.ts`,
   ADR 20261005-crew-schedule-is-a-setting).
-- **Optional feature** — a feature a shop can switch off in Settings: diver reviews, date
+- **Optional feature** — a feature a shop can switch off on the **Features** page of Settings (`/settings/features`, which also holds the crew schedule, Stripe Tax and the kinds of diving a shop runs): diver reviews, date
   requests, the last-minute list, tips, "Our year" and the **PADI checks**
   (`src/lib/shop-features.ts`, one `shops.*_enabled` column each, on for a new shop except "Our
   year" and the PADI checks, which wait for the shop's own yes). Off hides the feature on every surface that offers it and
@@ -270,6 +289,19 @@
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
+- **Days away** — a crew member's own range of calendar dates they told the shop they are away
+  (`crew_availability_blocks`, ADR 20260902-crew-requests-and-blackouts). Informs, never gates. Its
+  optional note is read only by the person and by owners and managers (issue #2673); everyone else
+  sees the dates. A rostered crew member away on a day a departure meets raises Today's `crew_away`
+  row and reads "to be confirmed" on the diver pages (`crewAwayByTrip`, `src/db/crew-away.ts`).
+- **Working it anyway** — a staffer saying an away crew member is working one departure all the
+  same (`crew_away_acknowledgements`, issue #2678), tapped on Today's `crew_away` row. Per crew
+  assignment, and only while the person is away on a day the departure meets; never said by the
+  person about themself. It clears that row and the diver-side mark for that departure only, never
+  edits the person's days away, does not cover a day away told after it, and goes when they come
+  off the crew, when the departure's dates move, or on "No longer working it" under the trip's
+  crew panel, which records who took it back. The departure log and
+  `crew_away_acknowledgements.csv` keep the trail.
 - **Boat clash** — one hull on two departures whose windows **overlap** (H-80: one hull, one
   departure at a time). Same half-open predicate as the **Crew clash** below
   (`src/db/trips-clashes.ts`), so a hull that ties up at 12:00 and takes the 12:00 out is the plan
@@ -700,7 +732,7 @@
 - **Pre-departure checklist** — a shop-authored, ordered list of lines a crew confirms once before
   a boat leaves the dock (emergency oxygen, life jackets, a fire extinguisher — whatever the shop's
   own flag state and vessel class require). DiveDay writes none of the content; a shop types its
-  own list in Settings. Distinct from **roll call** in every way that matters: it happens once per
+  own list on the `/safety-checklist` register. Distinct from **roll call** in every way that matters: it happens once per
   departure rather than once per dive, it is never a per-*person* record, and it **informs, never
   gates** — an unchecked item cannot refuse a departure from sailing or a page from rendering,
   matching the stance the gear register's service clocks already take (whether it *should* gate is
@@ -889,7 +921,13 @@
   narrative beside it. Filing a report of kind **missing diver** is also an alarm: it emails every
   active owner and pushes the manifest's followers at once, naming no one (H-142,
   `sendMissingDiverAlerts`), and the filed report says when the owners were alerted or that they
-  were not reached yet. Kept seven years from the incident; erasing a diver removes their identity
+  were not reached yet. The roll-call row's **"Missing diver, alert owners now"** sends the same
+  alert before the report is written, raising its draft, which is then never deleted, and says
+  "Not reached yet. Call the owners now." unless the alert reached someone. **Found**, on the
+  report or on the row once the roll call has them back aboard (any of the departure's crew), is
+  refused while the roll call still says not back aboard; it sends the owners one all-clear by
+  email that counts, without names, anyone else on the departure still reported missing (issue
+  #2694). Marked not aboard again after Found, a raise opens a new report and alerts again. Kept seven years from the incident; erasing a diver removes their identity
   from it and keeps the report
   ([20261012-incident-reports](../../architecture/decisions/20261012-incident-reports.md)).
 - **Legal hold** (on an **incident report**) — an owner-set flag that keeps a report past its
@@ -993,6 +1031,13 @@
   case, and an MMSI as exactly nine digits, refused at the form and at the column. A departure on a
   hull the shop has since deleted still prints that hull, because the paper describes the boat that
   sailed.
+- **Working channel** — the VHF channel a **boat** works on besides 16, which every boat monitors
+  (`boats.working_channel`, issue #2672). One or a few VHF channels from 1 to 88 ("68", "68/72",
+  "72 or 69"); 16 and 70, the distress and calling channels, are refused. Printed as "Working
+  channel (VHF): 68" with the fixed line "Distress and calling: VHF 16, not this channel" on the
+  emergency card of each departure on that boat, and kept in the **boat at departure** snapshot.
+  It is not part of the **radio identity**: a boat with only a channel still prints the shop's
+  vessel line.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. **After a dive it may carry a
   short note** (up to `ROLL_CALL_NOTE_MAX`, 300 characters) when the mark raises a "not back
@@ -1330,7 +1375,21 @@
   Checked again at every read: a mark whose enrollment is canceled, held or moved is the
   `training_mark_invalid` blocker until staff clear it. Clearing one with forms still owed takes a
   manager or the enrollment's own instructor, and the manifest names who did. **A training mark is
-  not In training**: it changes boarding only, and buying a seat never reads it.
+  not In training**: it changes boarding only, and buying a seat never reads it. A mark that
+  stands lowers the departure's or site's level to the course's minimum, and only when the course
+  certifies that level: a course with no minimum (Open Water) asks no card for a level it
+  certifies; never past it, never for an intro session or a course that certifies none (issue
+  #2731). It needs the course's own instructor aboard, rostered by somebody else and not counted
+  off at the dock, and the seat within the course's ratio: marked seats are counted per instructor
+  across every session on the departure, a certified assistant raising the cap as on the session.
+  Today that lowers exactly one case: a PADI Open Water student on a charter that asks Open
+  Water, because continuing-education courses have no ratio rule yet and so never lower a level.
+  An instructor's load is also held to the tightest ratio of every seat already on them: an
+  Open Water seat marked after a Discover Scuba seat cannot take the instructor past the intro
+  ratio.
+  A course with no known ratio never lowers a level, so the departure's level stands and the row
+  warns. The sale, which cannot see a mark not yet made, sells on the same course seat under the
+  same rule.
 - **Counter hand-off** — signing several students' **Course forms** one at a time on one shop
   device, each on a single-use staff-issued link, with the page dead-ending after each signature
   (ADR 20261012-course-forms-on-charters-and-counter, decision 2). Designed, not built yet.
@@ -1573,15 +1632,22 @@
 - **Reschedule notice** — the message every booked seat gets when a staffer moves its departure: on the board (Move) or by changing the start on the trip page. Notification kind `trip_rescheduled`: the new date and time, the old one under it, the meeting point only when it moved in the same save, and the diver's own trip-prep link; a save that moves only the meeting point holds the same notice about the place alone, with no old time (#2443), by the diver's usual channel (email with a courtesy text, or the text alone for a phone-only diver). The move *holds* it as a **held send** (`held_sends`, the eight seconds and Undo every staff send takes, ADR 20260906-before-you-ask); a second move inside the hold folds into the first, and a move back to the time the divers were told sends nothing unless the meeting point moved. A move also re-arms the seat's trip reminders for the new date (#2444). Addressed only to each seat's own person record (`booked` or `checked_in`, never a seat whose identity is still held), read off the trip when the hold drains. Rule in `src/lib/held-sends.ts`, the send in `src/db/trip-rescheduled.ts`.
 - **Seat move** — a staffer moving one booked seat to another departure from its roster row ("Move to another departure"). The same booking row changes trip, so its order, payment, waiver, `/ready` link and notes go with it; nothing is charged or refunded, and a paid seat that now lists higher is said back as owed. What was said about the old day (the conditions briefing, the "Anything changed?" answer, a pickup time, running late) is cleared, and a standing **Ask to move** is answered, so the new date's page may be asked about afresh. The new seat is measured as a new staff seat (capacity, divers-only limit, course ratio, a course's card and age on the new session's date, and the certification gate, which refuses), only between departures of the same kind, and never for a seat at roll call, on a buddy team or leading a party. The diver gets a **reschedule notice** worded for a seat ("we moved your seat to…"), sent at once rather than held. `moveBooking` in `src/db/bookings.ts`, consequences in `moveSeat` (`src/db/seat-diver.ts`); see [20261013-staff-move-a-seat](../../architecture/decisions/20261013-staff-move-a-seat.md).
 - **Inbox seat** (the seat an Inbox message is about) — the open seats a staff Inbox row names for a diver's message. Inside the **running late** window it is the one seat about to sail, and only there may the row offer "Mark running late". Outside it, every seat the sender held when they wrote (booked, on a scheduled departure that has not sailed), soonest first; with more than one, each is named and each gets its own "Move" naming its departure, because only the desk can tell which seat the words are about. A seat booked after the message, a canceled seat and a stranger's message name nothing. Naming a seat opens its roster row; nothing on the Inbox moves a seat (**seat move** does). `inboxSeats` in `src/db/inbox-seats.ts`.
-- **Night-before brief** — the 24-hour reminder cadence enriched into a full pre-departure brief:
-  the crew's plain-language conditions read, what to bring (the shop's packing list), a concrete
-  dock-arrival time, and who to text on the day. It is the same `trip_reminder_24h` send, not a new
-  kind — the cheapest cancellation-prevention tool a shop has, since most day-of no-shows are anxiety
-  plus logistics confusion. Copy in `src/lib/night-before-brief.ts`; the 7-day reminder stays a light
-  nudge.
-- **First-timer track** — the night-before brief in a softer, what-happens-on-the-boat voice for a
-  diver with no prior non-cancelled booking on a departed trip with the shop. Same data, extra
-  reassurance; the signal is derived at send time, not stored.
+- **Night-before brief** — the 24-hour reminder's text: the crew's plain-language conditions, a
+  concrete dock-arrival time and who to text on the day, read from `src/lib/night-before-brief.ts`
+  and sent by SMS or WhatsApp. The 24-hour *email* is not the brief: since issue #2660 it is the
+  `tonight` **diver state message**, one sentence and the thread link, and the thread holds the
+  forecast, what to bring, who to text and the first-timer note. The 7-day text stays a light nudge.
+- **Diver state message** — every reminder email takes one shape: a subject that names the state,
+  one sentence, the one link and the shop's name as its line (issue #2660, decided by Aaron
+  2026-10-17). A state is a notification kind, so the once-per-booking dedup rows stay exact:
+  `trip_reminder_7d` is `week_out`, `trip_reminder_24h` is `tonight` and `trip_recap` is `home`.
+  Booking sends one message, `booking_confirmation`, the `booked` state: the waiver link rides in it
+  (UX review 2026-10-11, item 7), so there is no second booking-time email. The sentence says how many things the diver still has to finish
+  when there are any, and the recap's sentence is the fly-safe sentence when one exists. The 7-day
+  and 24-hour cadences and the recap's four-hour floor are unchanged. Renderer in
+  `src/lib/notifications/diver-state-email.ts`. The booked message still carries the waiver link,
+  the course's materials and the terms the diver agreed to, which no thread page has to repeat
+  before the diver has opened it, so it keeps its own renderer.
 - **Desk hours** and the **after-hours ping** — when somebody is at the shop's desk: one window every day in the shop's own zone (`shops.desk_opens_minute`, `shops.desk_closes_minute`, 08:00–18:00 until the shop changes it under Settings → Messages; once saved, `shops.desk_hours_confirmed_at` lets the public footer print them). A diver message filed by the inbound email or WhatsApp webhook while the desk is closed sends a `desk_after_hours` email to each staffer who wants it: on by default for an owner or a manager, off for everyone else, and each staffer's own answer (`user_accounts.after_hours_ping`) wins, from their Email settings. At most one per person per half hour (`user_accounts.after_hours_pinged_at`, claimed by one conditional update), naming how many divers (distinct senders) wrote in since the desk closed and are still unanswered, with a link to the Inbox. Only a message whose sender the channel vouched for (`inbound_messages.sender_authenticated`) and that SES did not flag as spam (`inbound_messages.spam_flagged`) pings or is counted. A message batched behind a ping gets one trailing catch-up from the hourly `/api/cron/desk-pings` sweep once that staffer's half hour has run out, if it is still unanswered and the desk is still closed. The webhooks run the ping after they have answered (`after()`). Never the sender, the subject or a word of the message. Staff operational mail under H-09: no unsubscribe, no postal footer, not queued for retry, and never from a demo shop. Rule in `src/lib/desk-hours.ts`, reads and the send in `src/db/desk-pings.ts`.
 - **Monday email** (weekly digest) — the owner's service email about their own shop's week, sent once per person per shop-local week on Monday between 08:00 and 20:00 shop time (`/api/cron/weekly-digest`, hourly). Sections, each a count and a link into the staff app, appear only when they have something to say: last week's bookings made and seats filled against capacity (Reports' own query), this week's departures and seat fill and the divers still owing a waiver (the shared readiness horizon), reviews received and waiting on moderation, date requests still waiting, and Today rows that are past due. A week with none of these sends nothing. Last week's figures and Today's money and platform chores go only to someone Reports' gate admits (`canViewShopReports`, read from live roles); anyone else who opts in gets the rest. On by default for an owner, off for everyone else, and each staffer's own answer (`user_accounts.weekly_digest`) wins; it is turned off from the staffer's Email settings or the email's own one-click link. Transactional under H-09 (staff, about their own operation), so it carries no commercial postal footer. Demo shops never send; any staffer can preview this week's at `/shop/<slug>/settings/email/preview`. Logic in `src/lib/weekly-digest.ts`, reads and the send claim (`weekly_digest_sends`) in `src/db/weekly-digest.ts`.
 - **Post-trip recap** — the per-diver-per-trip reading of the day, delivered once per booking as the

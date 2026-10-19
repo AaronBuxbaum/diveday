@@ -14,7 +14,15 @@ const location = vi.hoisted(() => ({ pathname: "" }));
 vi.mock("next/navigation", () => ({ usePathname: () => location.pathname }));
 
 const root = staffShopRoot("blue-mantis");
-const gates: StaffDestinationGates = { waivers: true, reports: true, team: true, settings: true };
+const gates: StaffDestinationGates = {
+  waivers: true,
+  reports: true,
+  team: true,
+  settings: true,
+  boats: true,
+  tripTags: true,
+  safetyChecklist: true,
+};
 const props = {
   root,
   gates,

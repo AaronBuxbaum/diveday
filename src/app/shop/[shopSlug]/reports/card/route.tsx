@@ -7,9 +7,9 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { allowSvgRasterization } from "@/lib/og-rasterizer";
+import { currentShopSeason, shopSeasonOf } from "@/lib/season";
 import { requireShopSurface } from "@/lib/session";
 import { summarizeShopYear } from "@/lib/shop-year";
-import { utcToWallTime } from "@/lib/zoned";
 
 /**
  * **Print the card** (ADR 20260908-one-hand, decision 6, lever T) — the shop's
@@ -31,15 +31,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ shop
   });
   const now = nowDate();
   // `?year=` prints a past year the page's year switch opened (fifth loop,
-  // item 25); four digits and no later than this year, or this year.
+  // item 25); four digits and no later than this year, or this year. The year
+  // is the shop's season, as on the page (issue #2657).
   const asked = new URL(request.url).searchParams.get("year");
-  const thisYear = utcToWallTime(now, shop.timezone).year;
+  const seasonStart = { month: shop.seasonStartMonth, day: shop.seasonStartDay };
+  const thisYear = currentShopSeason(now, shop.timezone, seasonStart).year;
   const requested = asked && /^\d{4}$/.test(asked) ? Number(asked) : thisYear;
   const year = summarizeShopYear(
     await getShopYear(db, shop.id, {
       timeZone: shop.timezone,
       now,
-      year: requested <= thisYear ? requested : thisYear,
+      ...shopSeasonOf(requested <= thisYear ? requested : thisYear, seasonStart),
     }),
   );
   if (!year.hasActivity) {

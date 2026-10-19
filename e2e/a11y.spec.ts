@@ -256,10 +256,8 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     // needs a seeded boat still inside the arrivals window; its <h1> is the
     // trip's title.
     const counterBoat = "Two-Tank Reef — Molasses & French";
-    const counter = counterPath(
-      "blue-mantis",
-      await seededTripId(page, "blue-mantis", counterBoat),
-    );
+    const counterId = await seededTripId(page, "blue-mantis", counterBoat);
+    const counter = counterPath("blue-mantis", counterId);
     await scanStaticRoutes(page, [
       // Today, which is now one composition rather than two views of one
       // (ADR 20260827-clearwater-surface-language, decision 4) — so the second
@@ -268,7 +266,10 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       // `day-spine.spec.ts` holds it to a single hop.
       { path: "/shop/blue-mantis", heading: STAFF_DAY_HEADING },
       { path: counter, heading: counterBoat },
-      { path: `${counter}/walk-in`, heading: "Walk-in" },
+      {
+        path: `/shop/blue-mantis/divers/new?surface=departure&walkIn=true&tripId=${counterId}`,
+        heading: "Add a diver",
+      },
       { path: "/shop/blue-mantis/schedule/board", heading: "Schedule" },
       // Creating a trip is the board's own add panel now (ADR
       // 20260806-one-trip-create-form), and `?add=full` is the deep end of it
@@ -313,14 +314,13 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     await scanStaticRoutes(page, [
       { path: "/shop/blue-mantis/settings", heading: "Settings" },
       { path: "/shop/blue-mantis/settings/team", heading: "Team" },
-      { path: "/shop/blue-mantis/settings/import", heading: "Import" },
-      // One page, both halves: the download manifest and — since ADR
-      // 20260806-one-data-out-surface folded `/settings/backup` into it — the
-      // scheduled-backup credential form. That form is the reason this route
+      { path: "/shop/blue-mantis/settings/import", heading: "Your data" },
+      // The Backups tab of Your data: the scheduled-backup credential form
+      // (ADR 20260806-one-data-out-surface). That form is the reason this route
       // is scanned at all: a field nobody can label is a field a shop fills
       // wrong, on the surface that decides whether their data survives
       // losing us.
-      { path: "/shop/blue-mantis/settings/export", heading: "Data export" },
+      { path: "/shop/blue-mantis/settings/export/backups", heading: "Your data" },
       { path: "/shop/blue-mantis/settings/calendar", heading: "Calendar subscriptions" },
       // The app-wide `notFound()` backstop (src/app/not-found.tsx). Scanned
       // under a staff session because that is the session a mistyped `/shop`
@@ -357,14 +357,14 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/requests", heading: "Inbox" },
       { path: "/shop/blue-mantis/divers/new", heading: "Add a diver" },
       { path: "/shop/blue-mantis/settings/security", heading: "Account security" },
-      { path: "/shop/blue-mantis/settings/integrations", heading: "Shop integrations" },
+      { path: "/shop/blue-mantis/settings/integrations", heading: "Your data" },
       { path: "/shop/blue-mantis/settings/activity", heading: "Activity" },
       {
-        path: "/shop/blue-mantis/settings/safety-checklist",
+        path: "/shop/blue-mantis/safety-checklist",
         heading: "Pre-departure checklist",
       },
-      { path: "/shop/blue-mantis/settings/import?what=gear", heading: "Import" },
-      { path: "/shop/blue-mantis/settings/import?what=dive-sites", heading: "Import" },
+      { path: "/shop/blue-mantis/settings/import?what=gear", heading: "Your data" },
+      { path: "/shop/blue-mantis/settings/import?what=dive-sites", heading: "Your data" },
     ]);
   });
 });

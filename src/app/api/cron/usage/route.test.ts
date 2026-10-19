@@ -129,7 +129,8 @@ describe("GET /api/cron/usage — alerting", () => {
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({
-        kind: "usage_ceiling_alert",
+        kind: "operator_alert",
+        event: "usage_ceiling",
         ceilingId: "vercel_spend",
         level: "warn",
         value: 45,

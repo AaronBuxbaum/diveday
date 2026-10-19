@@ -1,7 +1,11 @@
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { boatSafetyNoticeText } from "@/i18n/boat-safety-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import type { BoatPaperRecord } from "@/lib/boat-safety";
+import {
+  type BoatPaperRecord,
+  type BoatRadioRecord,
+  EMPTY_BOAT_RADIO_RECORD,
+} from "@/lib/boat-safety";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import type { IncidentExportDocument } from "@/lib/incident-export";
 
@@ -17,6 +21,13 @@ const PAPER_ROWS: readonly {
   { key: "inspectionDueOn", label: "boats.inspectionDueLabel", kind: "date" },
   { key: "registrationExpiresOn", label: "boats.registrationExpiresLabel", kind: "date" },
   { key: "insuranceExpiresOn", label: "boats.insuranceExpiresLabel", kind: "date" },
+];
+
+/** The radio identity the emergency card printed, under the fleet row's own labels (#2672). */
+const RADIO_ROWS: readonly { key: keyof BoatRadioRecord; label: StaffMessageKey }[] = [
+  { key: "callSign", label: "boats.callSignLabel" },
+  { key: "mmsi", label: "boats.mmsiLabel" },
+  { key: "workingChannel", label: "boats.workingChannelLabel" },
 ];
 
 /**
@@ -68,6 +79,17 @@ export function BoatAtDeparture({
                       : row.kind === "date"
                         ? formatCalendarDate(value as CalendarDate, locale)
                         : value}
+                  </dd>
+                </div>
+              );
+            })}
+            {RADIO_ROWS.map((row) => {
+              const value = (boatSafety.radio ?? EMPTY_BOAT_RADIO_RECORD)[row.key];
+              return (
+                <div key={row.key} className="flex flex-wrap gap-x-2">
+                  <dt className="text-muted">{t(row.label)}</dt>
+                  <dd className={value ? "font-mono" : undefined}>
+                    {value ?? t("incidentExport.boatNotRecorded")}
                   </dd>
                 </div>
               );

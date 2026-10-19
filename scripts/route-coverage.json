@@ -140,10 +140,6 @@
   "/shop/[shopSlug]/trips/[id]/print": {
     "visual": ["trip-packet"]
   },
-  "/shop/[shopSlug]/trips/[id]/walk-in": {
-    "visual": ["trip-walk-in", "trip-walk-in-diver", "trip-walk-in-notice"],
-    "a11y": ["a11y.spec.ts"]
-  },
   "/waivers/[token]/doctor": {
     "e2e": ["waivers.spec.ts"],
     "visual": ["waiver-doctor"]

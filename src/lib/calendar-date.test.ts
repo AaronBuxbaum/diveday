@@ -6,6 +6,7 @@ import {
   formatCalendarDate,
   groupByLocalDay,
   isCalendarDateExpired,
+  isShopDayParam,
   isValidCalendarDate,
   shiftCalendarDate,
 } from "./calendar-date";
@@ -38,6 +39,24 @@ describe("isValidCalendarDate", () => {
     expect(isValidCalendarDate("07-18-2026")).toBe(false);
     expect(isValidCalendarDate("")).toBe(false);
     expect(isValidCalendarDate("not-a-date")).toBe(false);
+  });
+});
+
+describe("isShopDayParam", () => {
+  it("takes a real date from 2000 on as a shop day in a URL", () => {
+    expect(isShopDayParam("2000-01-01")).toBe(true);
+    expect(isShopDayParam("2026-07-18")).toBe(true);
+  });
+
+  it("refuses a year before 2000 and anything isValidCalendarDate refuses", () => {
+    expect(isShopDayParam("1999-12-31")).toBe(false);
+    expect(isShopDayParam("0001-01-01")).toBe(false);
+    expect(isShopDayParam("2026-02-31")).toBe(false);
+    expect(isShopDayParam("not-a-date")).toBe(false);
+  });
+
+  it("leaves isValidCalendarDate itself taking a date of birth", () => {
+    expect(isValidCalendarDate("1985-03-04")).toBe(true);
   });
 });
 

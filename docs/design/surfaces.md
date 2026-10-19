@@ -234,6 +234,10 @@ below `xl` (1280px) until 2026-09-20; see the entry above.
 - **Composition:** a week grid at desktop because the content is a calendar; the phone keeps the
   stream because a seven-column grid has no honest 390px form.
 
+### A past day — `/shop/[shopSlug]/schedule/day/[date]`
+
+**Shipped 2026-10-17, read-only** (issue #2662; [ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md)'s noun navigation, so it sits under Schedule beside the board). "How did Saturday go": that day's departures as the home's evening closed them, the same `getDayCloseout` over the date and the same `ClosingStation`s, with nothing to do on them (no recap editor, no takings, no tomorrow). Today's date goes to the shop home; a day still to come has no page. A head count still open reads open however old the day is: the gaps are read for exactly that day's boats, with no lookback window and no stale gate (`listRollCallGaps` in historical mode, `src/db/closeout.ts`, `pastDayCloseout`). A station adds what the evening could leave unsaid (`src/lib/past-day-notes.ts`): crew not counted, a count closed on a later day by its date, and a diver once recorded not back after a dive and later found. These lines point at the record; they are not it. **The departure log is the record** of that day, and the roll call behind it. Rehearsals are left out. The first slice only: no door to it yet, no week of days.
+
 ### Settings — `/shop/[shopSlug]/settings`
 
 **Harbor, 2026-09-02:** the brand fields end in a preview of the brand as it reads by day and at
@@ -242,10 +246,11 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 **Shipped 2026-08-28** (slice 6g) — same ADR and canvas. The phone keeps grouped lists.
 
 - **One idea:** every switch in the shop, findable in one look.
-- **The question it arrives with:** "where do I change X?" — answered by the rail: all twelve groups
-  (Shop, Team, Boats & sites, Bookings & waivers, Rentals, Money, Messages, Notifications, Website,
-  Data, Account, Rarely changed; the ten of ADR 20261001-logbook plus the mail rows gathered and the
-  set-once rows kept last) in the pane's own order, with the group being read named at the top of the column (its label is
+- **The question it arrives with:** "where do I change X?" — answered by the rail: all seven groups
+  (Shop, Team, Bookings, Money, Messages, Website, Your data; **amended 2026-10-17, issue #2813**:
+  it was twelve, filed by where a row was built. A group is now who the setting is about, and what
+  is about the reader (security, calendar feed, email) is **My account** in the identity menu,
+  ungated) in the pane's own order, with the group being read named at the top of the column (its label is
   sticky inside the rail's scroll area) and the group holding the current row tinted. Forty rows
   do not fit beside the bar on any viewport at a legible row height, so the rail scrolls in its own
   right; what it must never do is let a reader believe the groups below the first are not there.
@@ -273,7 +278,7 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 
 ### The counter — the Divers tab, `/shop/[shopSlug]/trips/[id]`, inside the arrivals window
 
-**Moved again 2026-10-05** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3, second amendment): the Check-in tab listed the same divers as the Divers tab with the same blockers and fixes, so it is gone and arrival is a state of the roster. Inside the arrivals window the Divers tab draws the count above the roster, a Check in tap on each ready row (Checked in, with the paper pass, once tapped), "Not here?" under a ready row once the boat is due, and two more groups, Checked in and Not here. A blocked row carries no tap; its fixes are the roster row's own. The walk-in form is `trips/[id]/walk-in`, reached from the foot of Add a diver. Everything below describes the counter's grammar, which the roster now wears.
+**Moved again 2026-10-05** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3, second amendment): the Check-in tab listed the same divers as the Divers tab with the same blockers and fixes, so it is gone and arrival is a state of the roster. Inside the arrivals window the Divers tab draws the count above the roster, a Check in tap on each ready row (Checked in, with the paper pass, once tapped), "Not here?" under a ready row once the boat is due, and two more groups, Checked in and Not here. A blocked row carries no tap; its fixes are the roster row's own. There is no walk-in page: the Divers tab's own search offers "Add as a walk-in" for someone new, which opens the new-diver form in the departure door's counter mode (`divers/new?surface=departure&walkIn=true&tripId=`), open only while the boat has not left (`walkInDoorOpen`). Seating a diver has two doors, from a departure and from a diver (`SEAT_SURFACES`). Everything below describes the counter's grammar, which the roster now wears.
 
 **Moved 2026-10-03** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3): the counter is each departure's own Check-in tab rather than a page of its own. The departure chips and the search left with the page: the boat is the tab's, and "which boat is this diver on?" is answered by the arrival lookup on Today, whose matches open the boat's tab. The walk-in form is the tab's foot (`check-in/walk-in`, no boat picker), and the tab's header carries Print, which opens the trip packet. The "Remove first" line below is history.
 

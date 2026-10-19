@@ -32,6 +32,10 @@
       "rateLimited": "Has reenviado mucho en esta hora. Vuelve a intentarlo en un rato."
     }
   },
+  "crewAway": {
+    "working": "{name} trabaja igualmente",
+    "saving": "Guardando…"
+  },
   "helpRequest": {
     "kind": {
       "carryGear": "cargar el equipo",
@@ -226,6 +230,7 @@
     "openPaymentSettings": "Abrir la configuración de pagos",
     "openReviews": "Ver reseñas",
     "openInbox": "Ver mensajes",
+    "openRequests": "Ver peticiones",
     "openGearRegister": "Abrir registro de equipo",
     "openRentals": "Abrir alquileres",
     "openGearUnit": "Abrir ficha de la unidad",
@@ -234,12 +239,6 @@
     "openStaffing": "Abrir personal",
     "openUnits": "Abrir unidades",
     "openDiver": "Abrir ficha del buceador"
-  },
-  "seasonalBriefing": {
-    "summer": "Aprovecha el intervalo de superficie. Busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el próximo barco.",
-    "autumn": "Aprovecha el intervalo de superficie. Toma una toalla calentita{hasShop, select, true { en {shopName}} other {}}, revisa la brisa y nos vemos en el próximo barco.",
-    "winter": "Aprovecha el intervalo de superficie. Abrígate con un chubasquero seco{hasShop, select, true { en {shopName}} other {}} y nos vemos en el próximo barco.",
-    "spring": "Aprovecha el intervalo de superficie. Disfruta del sol{hasShop, select, true { en {shopName}} other {}}, revisa tu equipo y nos vemos en el próximo barco."
   },
   "opsAlert": {
     "operationKind": {
@@ -278,7 +277,9 @@
     "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión."
   },
   "unansweredMessages": {
-    "subject": "{count, plural, one {# mensaje espera} other {# mensajes esperan}} respuesta."
+    "subject": "{count, plural, one {# mensaje espera} other {# mensajes esperan}} respuesta.",
+    "subjectDateRequests": "{count, plural, one {# petición de fecha espera} other {# peticiones de fecha esperan}} respuesta.",
+    "subjectBoth": "{messages, plural, one {# mensaje} other {# mensajes}} y {requests, plural, one {# petición de fecha} other {# peticiones de fecha}} esperan respuesta."
   },
   "unitsUnconfirmed": {
     "subject": "{currency}, {depth} y {temperature}, elegidos según dónde estás",

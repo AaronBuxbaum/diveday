@@ -1,19 +1,9 @@
+import { RequirementFields } from "@/components/RequirementFields";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_CLASS } from "@/components/ui/card";
-import {
-  ChoiceFieldset,
-  ChoiceRow,
-  controlClass,
-  Field,
-  FieldGrid,
-  FormStatus,
-} from "@/components/ui/form";
-import {
-  CERTIFICATION_LEVEL_KEYS,
-  REQUIRABLE_CERTIFICATION_LEVEL_KEYS,
-  SPECIALTY_KEYS,
-} from "@/i18n/readiness-labels";
+import { ChoiceRow, FormStatus } from "@/components/ui/form";
+import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { FormNotice } from "@/lib/staff-notices";
@@ -135,70 +125,38 @@ export function RequirementsSection({
           ) : null}
           {hasSiteRequirement ? siteNote("trip") : null}
           <form action={action}>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-end">
-              <ChoiceRow
-                name="requiresWaiver"
-                type="checkbox"
-                defaultChecked={requirement?.requiresWaiver ?? true}
-                className="text-sm font-medium"
-              >
-                {t("trips.requirements.requireWaiver")}
-              </ChoiceRow>
-              <ChoiceRow
-                name="requiresPayment"
-                type="checkbox"
-                defaultChecked={requirement?.requiresPayment ?? false}
-                className="text-sm font-medium"
-              >
-                {t("trips.requirements.requirePayment")}
-              </ChoiceRow>
-              <FieldGrid columns={1}>
-                <Field label={t("trips.requirements.minimumCertificationLabel")}>
-                  <select
-                    name="minimumCertificationLevel"
-                    defaultValue={requirement?.minimumCertificationLevel ?? "open_water"}
-                    className={controlClass}
-                  >
-                    <option value="">{t("trips.requirements.noCardRequired")}</option>
-                    {/* Recreational rungs only — a departure may not demand a
-                          working rating of a paying diver (issue #630). */}
-                    {REQUIRABLE_CERTIFICATION_LEVEL_KEYS.map(([value, key]) => (
-                      <option key={value} value={value}>
-                        {t(key)}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </FieldGrid>
-            </div>
-            <ChoiceFieldset
+            <RequirementFields
+              t={t}
+              requirement={requirement}
+              defaultLevel="open_water"
+              labels={{
+                level: t("trips.requirements.minimumCertificationLabel"),
+                noLevel: t("trips.requirements.noCardRequired"),
+                nitrox: t("trips.requirements.nitrox"),
+              }}
               legend={t("trips.requirements.requiredSpecialtiesLegend")}
-              className="mt-5"
-              bodyClassName="grid grid-cols-2 gap-3 sm:grid-cols-3"
-            >
-              {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                <ChoiceRow
-                  key={value}
-                  name="specialty"
-                  type="checkbox"
-                  value={value}
-                  defaultChecked={requirement?.requiredSpecialties?.includes(
-                    value as keyof typeof SPECIALTY_KEYS,
-                  )}
-                  className="text-sm font-medium"
-                >
-                  {t(key)}
-                </ChoiceRow>
-              ))}
-              <ChoiceRow
-                name="requiresNitrox"
-                type="checkbox"
-                defaultChecked={requirement?.requiresNitrox ?? false}
-                className="text-sm font-medium"
-              >
-                {t("trips.requirements.nitrox")}
-              </ChoiceRow>
-            </ChoiceFieldset>
+              legendClassName="mt-5"
+              leading={
+                <>
+                  <ChoiceRow
+                    name="requiresWaiver"
+                    type="checkbox"
+                    defaultChecked={requirement?.requiresWaiver ?? true}
+                    className="text-sm font-medium"
+                  >
+                    {t("trips.requirements.requireWaiver")}
+                  </ChoiceRow>
+                  <ChoiceRow
+                    name="requiresPayment"
+                    type="checkbox"
+                    defaultChecked={requirement?.requiresPayment ?? false}
+                    className="text-sm font-medium"
+                  >
+                    {t("trips.requirements.requirePayment")}
+                  </ChoiceRow>
+                </>
+              }
+            />
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {/* One weight for a section's Save — the default primary the
                     other Overview forms share (DetailsSection's comment states

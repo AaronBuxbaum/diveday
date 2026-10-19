@@ -12,6 +12,7 @@ import {
   wallTimeToUtc,
 } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
+import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewTimeMoved } from "./crew-notices";
 import { rewindowTripGearReservations } from "./gear";
 import { publishManifestEvent } from "./manifest-events";
@@ -235,6 +236,8 @@ export async function moveTrip(
     });
     // The divers' reminders fire again for the new date (#2444).
     await rearmTripReminders(tx, { shopId, tripId });
+    // "Working it anyway" was said about the old dates (#2678 reviews).
+    await clearCrewAwayAcknowledgements(tx, { shopId, tripId });
     await recordCrewTimeMoved(tx, {
       shopId,
       tripId,

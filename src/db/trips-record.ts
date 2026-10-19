@@ -28,6 +28,7 @@ import {
 import type { TripDiveMode } from "@/lib/trip-details";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import type { AppDb, DbExecutor } from "./client";
+import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
 import { recordDeskEvent } from "./desk-events";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
@@ -741,7 +742,21 @@ export async function updateTrip(
       .returning();
     if (!trip) return { ok: false, reason: "not_found" };
     if (drafts) await replaceTripDives(tx, tripId, drafts);
+    let scheduleDaysMoved = false;
     if (patch.scheduleDays) {
+      const before = await tx
+        .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+        .from(tripScheduleDays)
+        .where(eq(tripScheduleDays.tripId, tripId))
+        .orderBy(asc(tripScheduleDays.dayNumber));
+      const after = patch.scheduleDays;
+      scheduleDaysMoved =
+        before.length !== after.length ||
+        before.some(
+          (day, index) =>
+            day.startsAt.getTime() !== after[index]?.startsAt.getTime() ||
+            day.endsAt.getTime() !== after[index]?.endsAt.getTime(),
+        );
       await tx.delete(tripScheduleDays).where(eq(tripScheduleDays.tripId, tripId));
       await tx
         .insert(tripScheduleDays)
@@ -794,6 +809,10 @@ export async function updateTrip(
       existing.startsAt.getTime() !== patch.startsAt.getTime() ||
       existing.endsAt.getTime() !== patch.endsAt.getTime();
     timesChanged = timesMoved;
+    // "Working it anyway" was said about the old days (#2678 reviews).
+    if (timesMoved || scheduleDaysMoved) {
+      await clearCrewAwayAcknowledgements(tx, { shopId, tripId });
+    }
     if (timesMoved && patch.changeActorPersonId) {
       await recordShopActivityWithin(tx, {
         shopId,

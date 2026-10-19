@@ -18,6 +18,13 @@ import {
 } from "./course-forms";
 import { guardianSignatureMissing } from "./guardian";
 import { isDiver, isHeldToMedical, type ParticipantType } from "./participant-types";
+import {
+  NO_REQUIREMENT,
+  type Requirement,
+  requirementOrNull,
+  unionRequirements,
+} from "./requirement";
+import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-mark";
 import { type ReleaseLapse, type WaiverStateFields, waiverState } from "./waivers";
 
 /**
@@ -79,83 +86,30 @@ export function paymentGateIsUnclearable(
  * message bundles, never here: this file states facts about ordering and gates,
  * `src/app` chooses words.
  */
-import type { CertificationLevel } from "./certification-levels";
+import { type CertificationLevel, certificationRank } from "./certification-levels";
 
 export type {
   CertificationLevel,
   RequirableCertificationLevel,
 } from "./certification-levels";
 
-export { REQUIRABLE_CERTIFICATION_LEVELS } from "./certification-levels";
-
-const levelRank: Record<CertificationLevel, number> = {
-  open_water: 1,
-  advanced_open_water: 2,
-  rescue: 3,
-  divemaster: 4,
-  instructor: 5,
-};
-
-/** A level's place on the ladder, for ordering rather than comparison. Open Water is 1. */
-export function certificationRank(level: CertificationLevel): number {
-  return levelRank[level];
-}
-
-/** The stricter of two levels; null means "no level demanded" and never wins. */
-export function higherCertificationLevel(
-  a: CertificationLevel | null | undefined,
-  b: CertificationLevel | null | undefined,
-): CertificationLevel | null {
-  if (!a) return b ?? null;
-  if (!b) return a;
-  return levelRank[a] >= levelRank[b] ? a : b;
-}
+export {
+  certificationRank,
+  higherCertificationLevel,
+  REQUIRABLE_CERTIFICATION_LEVELS,
+} from "./certification-levels";
 
 /**
  * Anything that can demand cards of a diver: a trip's own requirement row, a
  * dive site's inherent gate, or the running total of several of them folded
- * together. One shape is what lets a single fold compose them all.
+ * together. One shape — {@link Requirement}, `./requirement.ts` — is what lets
+ * a single fold compose them all; these are the readiness engine's names for
+ * it, so its callers say which role a requirement plays.
  */
-export type CertRequirementSource = {
-  minimumCertificationLevel: CertificationLevel | null;
-  requiredSpecialties: readonly DiveSpecialty[];
-  requiresNitrox: boolean;
-};
+export type CertRequirementSource = Requirement;
 
 /** A dive site's inherent cert gate, composed into every trip that visits it. */
-export type SiteCertRequirement = CertRequirementSource;
-
-/** The identity element of the fold: demands nothing of anybody. */
-const NO_CERT_REQUIREMENT: CertRequirementSource = {
-  minimumCertificationLevel: null,
-  requiredSpecialties: [],
-  requiresNitrox: false,
-};
-
-/**
- * The gate a diver is actually held to on a trip: the stricter minimum level,
- * the union of specialties, and nitrox if either the trip or its dive site
- * demands it.
- */
-export function combineCertRequirements(
-  requirement: CertRequirementSource,
-  site: SiteCertRequirement | null | undefined,
-): {
-  minimumCertificationLevel: CertificationLevel | null;
-  requiredSpecialties: DiveSpecialty[];
-  requiresNitrox: boolean;
-} {
-  const specialties = new Set<DiveSpecialty>(requirement.requiredSpecialties ?? []);
-  for (const specialty of site?.requiredSpecialties ?? []) specialties.add(specialty);
-  return {
-    minimumCertificationLevel: higherCertificationLevel(
-      requirement.minimumCertificationLevel,
-      site?.minimumCertificationLevel,
-    ),
-    requiredSpecialties: [...specialties],
-    requiresNitrox: Boolean(requirement.requiresNitrox) || Boolean(site?.requiresNitrox),
-  };
-}
+export type SiteCertRequirement = Requirement;
 
 /**
  * The single gate a trip's *whole* itinerary imposes: every site it visits
@@ -171,16 +125,7 @@ export function combineCertRequirements(
 export function combineSiteRequirements(
   sites: readonly SiteCertRequirement[],
 ): SiteCertRequirement | null {
-  let combined: CertRequirementSource = NO_CERT_REQUIREMENT;
-  for (const site of sites) combined = combineCertRequirements(combined, site);
-  if (
-    !combined.minimumCertificationLevel &&
-    combined.requiredSpecialties.length === 0 &&
-    !combined.requiresNitrox
-  ) {
-    return null;
-  }
-  return combined;
+  return requirementOrNull(unionRequirements(...sites));
 }
 
 export type ReadinessBlockerCode =
@@ -598,6 +543,14 @@ export type ReadinessInput = {
    * `courseForms` above instead, keyed on the enrollment's booking.
    */
   trainingMarkInvalid?: boolean;
+  /**
+   * The seat's training mark stands and the course's instructor is aboard
+   * for it (`trainingDiveLevel`, issue #2731): the departure's and its sites'
+   * level is lowered to the course's own minimum only where it is at or below
+   * the card the course certifies (`trainingDiveRequiredLevel`). Absent, the
+   * departure's level stands. Specialty and nitrox gates are unchanged.
+   */
+  trainingDive?: TrainingDiveCourse | null;
   now?: Date;
 };
 
@@ -805,7 +758,7 @@ export function hasVerifiedCertificationAtLeast(
   return certifications.some(
     (certification) =>
       validVerifiedCertification(certification) &&
-      levelRank[certification.level] >= levelRank[minimumLevel],
+      certificationRank(certification.level) >= certificationRank(minimumLevel),
   );
 }
 
@@ -844,7 +797,7 @@ function withEndedCourse(
 ): ReadinessBlocker {
   if (!ENDED_COURSE_CODES.has(blocker.code)) return blocker;
   const ended = (coursesEnded ?? [])
-    .filter((course) => levelRank[course.level] >= levelRank[minimumLevel])
+    .filter((course) => certificationRank(course.level) >= certificationRank(minimumLevel))
     .reduce<(CertificationInTraining & { tripId: string }) | null>(
       (latest, course) =>
         !latest || course.finishesAt.getTime() > latest.finishesAt.getTime() ? course : latest,
@@ -890,7 +843,7 @@ function certificationBlocker(
       (certification) =>
         certification.status === "pending" &&
         heldForReview(certification) &&
-        levelRank[certification.level] >= levelRank[minimumLevel],
+        certificationRank(certification.level) >= certificationRank(minimumLevel),
     )
   ) {
     return { code: "certification_pending" };
@@ -905,7 +858,7 @@ function certificationBlocker(
     inTraining.some(
       (course) =>
         course.finishesAt.getTime() > now.getTime() &&
-        levelRank[course.level] >= levelRank[minimumLevel],
+        certificationRank(course.level) >= certificationRank(minimumLevel),
     )
   ) {
     return { code: "certification_in_training", params: { requiredLevel: minimumLevel } };
@@ -913,7 +866,7 @@ function certificationBlocker(
   if (verified.length > 0) {
     const heldLevel = verified
       .map((certification) => certification.level)
-      .reduce((best, level) => (levelRank[level] > levelRank[best] ? level : best));
+      .reduce((best, level) => (certificationRank(level) > certificationRank(best) ? level : best));
     return {
       code: "certification_insufficient",
       params: { requiredLevel: minimumLevel, heldLevel },
@@ -1153,9 +1106,22 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // A snorkeler or a rider is asked for no card: the trip's and its sites'
   // gates compose to nothing for a seat with no dive in it. Composed here, in
   // the one place every requirement is composed, rather than checked beside it.
-  const effective = isDiver(input.participantType)
-    ? combineCertRequirements(input.requirement, input.siteRequirement)
-    : combineCertRequirements(NO_CERT_REQUIREMENT, null);
+  const composed = isDiver(input.participantType)
+    ? unionRequirements(input.requirement, input.siteRequirement)
+    : NO_REQUIREMENT;
+  // A marked training dive with its course's instructor aboard answers to the
+  // course's own minimum where the course reaches the level asked (issue
+  // #2731). Only ever for a diver; lowered, never removed.
+  const effective =
+    input.trainingDive && isDiver(input.participantType)
+      ? {
+          ...composed,
+          minimumCertificationLevel: trainingDiveRequiredLevel(
+            composed.minimumCertificationLevel,
+            input.trainingDive,
+          ),
+        }
+      : composed;
 
   if (effective.minimumCertificationLevel) {
     const certification = certificationBlocker(

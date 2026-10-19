@@ -286,7 +286,8 @@ describe("the shore_alert_confirmation kind", () => {
 
   it("goes once per link, and is never queued", () => {
     const notification = notificationSchema.parse({
-      kind: "shore_alert_confirmation",
+      kind: "address_confirmation",
+      purpose: "shore_alert",
       shopId: "11111111-1111-4111-8111-111111111111",
       tokenId: "44444444-4444-4444-8444-444444444444",
       to: "shore@example.com",

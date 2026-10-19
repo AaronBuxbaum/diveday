@@ -48,6 +48,7 @@ const EXPECTED_FILES = [
   "trip_assignments.csv",
   "staff_shifts.csv",
   "crew_availability_blocks.csv",
+  "crew_away_acknowledgements.csv",
   "crew_assignment_requests.csv",
   "staff_credentials.csv",
   "bookings.csv",
@@ -138,6 +139,7 @@ const EXPORTED_TABLES = [
   "trip_assignments",
   "staff_shifts",
   "crew_availability_blocks",
+  "crew_away_acknowledgements",
   "crew_assignment_requests",
   "staff_credentials",
   "bookings",
@@ -222,8 +224,6 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
-  // Retired (#2330): declared until a later release drops it; nothing writes it.
-  "dive_site_moments",
   // Card disputes (ADR 20261009-stripe-reversals-reach-diveday). Stripe's own
   // record, mirrored here only so an owner sees an open one on Today and on
   // the order; every field is Stripe's, kept current from Stripe's events, and
@@ -552,10 +552,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   booking_checkout_bookings: ["shop_id", "id"],
   incident_reports: [
     "shop_id",
-    // H-142: when this installation told the owners of a filed missing-diver
-    // report; once-per-report send state, like `roll_call_alerted_at`.
+    // H-142, #2694: send leases and the alert's subject row id, like `roll_call_alerted_at`.
     "missing_alerted_at",
-    "missing_alert_sent_at",
+    "missing_all_clear_claimed_at",
+    "missing_subject_row_id",
   ],
   rental_fit_profiles: [
     "shop_id",

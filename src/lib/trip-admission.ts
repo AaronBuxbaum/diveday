@@ -6,13 +6,9 @@ import type {
   SpecialtyCertification,
 } from "@/db/schema";
 import { isDiver, type ParticipantType } from "./participant-types";
-import {
-  type CertificationLevel,
-  type CertRequirementSource,
-  certificationRank,
-  combineCertRequirements,
-  type SiteCertRequirement,
-} from "./readiness";
+import { type CertificationLevel, certificationRank } from "./readiness";
+import { type Requirement, requirementDemandsNothing, unionRequirements } from "./requirement";
+import { type TrainingDiveCourse, trainingDiveRequiredLevel } from "./training-mark";
 
 /**
  * **Can this diver be sold a seat on this trip at all?**
@@ -99,6 +95,14 @@ export type TripAdmissionEvidence = {
    * for the card the instructor issues.
    */
   levelsInTraining?: readonly CertificationLevel[];
+  /**
+   * The courses of this diver's course seats that a staff training mark could
+   * name on this departure, with an instructor of the course aboard it for one
+   * more seat (issue #2731). Readiness lowers the level to such a course's
+   * minimum once staff mark the seat (`trainingDiveRequiredLevel`), so the
+   * sale must not refuse a level that would then clear.
+   */
+  trainingDives?: readonly TrainingDiveCourse[];
 };
 
 /**
@@ -133,13 +137,6 @@ export type TripAdmissionRefusal = {
 export type TripAdmission = { admitted: true } | { admitted: false; refusal: TripAdmissionRefusal };
 
 const ADMITTED: TripAdmission = { admitted: true };
-
-/** Demands nothing of anybody — the stand-in for a trip with no requirement row of its own. */
-const NO_TRIP_REQUIREMENT: CertRequirementSource = {
-  minimumCertificationLevel: null,
-  requiredSpecialties: [],
-  requiresNitrox: false,
-};
 
 /**
  * The highest rung any certification on file reaches, ignoring status
@@ -213,9 +210,9 @@ function highestOf(
 
 export type TripAdmissionInput = {
   /** The trip's own requirement row, or null when the shop hasn't configured one. */
-  requirement: CertRequirementSource | null;
+  requirement: Requirement | null;
   /** Every dive site the trip visits, already folded into one gate (`combineSiteRequirements`). */
-  siteRequirement: SiteCertRequirement | null;
+  siteRequirement: Requirement | null;
   evidence: TripAdmissionEvidence;
   /**
    * The booking reused an existing person by email under a name that didn't
@@ -293,17 +290,8 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // strictest level, the union of specialties, nitrox if either wants it. A
   // missing requirement row is not "no gate": a trip with no row of its own
   // still inherits whatever its dive sites demand.
-  const effective = combineCertRequirements(
-    input.requirement ?? NO_TRIP_REQUIREMENT,
-    input.siteRequirement,
-  );
-  if (
-    !effective.minimumCertificationLevel &&
-    effective.requiredSpecialties.length === 0 &&
-    !effective.requiresNitrox
-  ) {
-    return ADMITTED;
-  }
+  const effective = unionRequirements(input.requirement, input.siteRequirement);
+  if (requirementDemandsNothing(effective)) return ADMITTED;
 
   // Deliberate, and not the inversion it looks like (security review
   // 2026-09-11 read this as "the weaker door skips the stricter gate"). The
@@ -356,11 +344,19 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
     (best, level) => highestOf(best, level),
     heldLevel,
   );
+  const reaches = (level: CertificationLevel | null) =>
+    !level ||
+    (reachedLevel !== null && certificationRank(reachedLevel) >= certificationRank(level));
+  // A course seat a staff mark could make this a training dive for, with the
+  // course's instructor aboard, is a level readiness would clear on (#2731).
+  const asked = effective.minimumCertificationLevel;
   const requiredLevel =
-    effective.minimumCertificationLevel &&
-    (!reachedLevel ||
-      certificationRank(reachedLevel) < certificationRank(effective.minimumCertificationLevel))
-      ? effective.minimumCertificationLevel
+    asked &&
+    !reaches(asked) &&
+    !(evidence.trainingDives ?? []).some((course) =>
+      reaches(trainingDiveRequiredLevel(asked, course)),
+    )
+      ? asked
       : null;
 
   // A card of the right specialty in *any* state clears admission — pending

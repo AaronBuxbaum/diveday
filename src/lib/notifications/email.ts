@@ -1,7 +1,6 @@
 import { deskPaymentSentence } from "@/i18n/desk-payment-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
-import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
 import { deriveBrandTheme, deriveDarkBrandTheme } from "@/lib/brand";
 import { type CalendarDate, calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
@@ -9,21 +8,17 @@ import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/
 import { type CourseLearningMaterial, isLearningMaterialLink } from "@/lib/courses";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import type { DeskPayment } from "@/lib/desk-payment";
-import { type FlySafeResult, flySafeMessageKey } from "@/lib/fly-safe";
 import {
   formatDateTimeTz,
   formatMoneyCents,
   formatMoneyScanned,
   formatShortDate,
-  formatTime,
   formatTimeRangeTz,
-  formatWeekdayTime,
 } from "@/lib/format";
 import type { ShopMilestone } from "@/lib/founder-metrics";
 import { escapeHtml } from "@/lib/html";
 import { googleMapsUrl } from "@/lib/maps";
 import { firstNameOf } from "@/lib/person-name";
-import type { ReminderActionCode } from "@/lib/readiness-summary";
 import type { SetupCurrentSystem } from "@/lib/setup-requests";
 import { cachedListFormat } from "../intl-cache";
 
@@ -201,73 +196,6 @@ type CheckoutRecoveryEmailInput = {
    * (ADR 20260814-checkout-recovery-is-commercial).
    */
   unsubscribeUrl: string;
-};
-
-/**
- * The night-before brief's extra sections. Carried only on the day-lead
- * reminder — the single cheapest cancellation-prevention tool a shop has, since
- * most day-of no-shows are anxiety plus logistics confusion, not lost interest
- * (docs first-principles brainstorm C). The 7-day reminder stays light.
- */
-type NightBeforeBriefInput = {
-  /** Plain-language conditions from the crew, or null when none published. */
-  forecast?: string | null;
-  /** What to bring — the shop's packing list. */
-  bring?: string[];
-  /** The shop's number for day-of questions, already E.164-validated. */
-  whoToText?: string | null;
-  /** Extra "what happens on the boat" reassurance for a first-timer, pre-resolved by the caller. */
-  firstTimerNote?: string | null;
-};
-
-type TripReminderEmailInput = {
-  locale: DiverLocale;
-  diverName: string;
-  shopName: string;
-  tripTitle: string;
-  startsAt: Date;
-  endsAt: Date;
-  timezone: string;
-  /** How the reminder reads: "in a week" vs "tomorrow". */
-  lead: "week" | "day";
-  /** Minutes before departure to be at the dock; the shop's call, default 30. */
-  dockCallMinutes?: number;
-  /** Optional hotel pickup time set by staff (e.g. "07:15"). */
-  pickupTime?: string | null;
-  /** Optional hotel name / lodging location provided by diver. */
-  hotelPickupLocation?: string | null;
-  /** The diver's own outstanding items, as codes — resolved via `reminderActionText`. */
-  outstanding?: ReminderActionCode[];
-  /** True when a medical answer may need a doctor's sign-off before boarding. */
-  medicalReview?: boolean;
-  /** The diver's readiness page, so they can finish what's outstanding. */
-  readinessUrl?: string;
-  /** Present on the night-before (day) lead only; enriches it into a full brief. */
-  brief?: NightBeforeBriefInput;
-  /**
-   * A course session's learning materials, carried by the week-out reminder
-   * only while nobody has marked this student's done (ADR
-   * 20261008-course-learning-materials).
-   */
-  learningMaterials?: CourseLearningMaterial[];
-  /**
-   * Every meeting of a multi-day course session, in day order. Drawn in place
-   * of the single date and time once there is more than one, so a student
-   * knows when day 2 is without opening anything.
-   */
-  scheduleDays?: { startsAt: Date; endsAt: Date }[];
-  /** A course session: the week-out note says it starts, and names no dock. */
-  courseSession?: boolean;
-  /** Where to go (`meetingPointOf`), drawn as its own panel. */
-  meetingPoint?: MeetingPoint;
-  /**
-   * Whether this message can be replied to with a keyword (ADR
-   * 20260909-reply-keywords). Decided by the sender, because it is a fact
-   * about the *channel* rather than the booking: inbound mail only reaches
-   * DiveDay on a deployment that configured a receiving domain, and a line
-   * offering a reply nobody reads is worse than no line.
-   */
-  replyKeywords?: boolean;
 };
 
 export type TripConditionsHoldEmailInput = {
@@ -783,23 +711,6 @@ function withDeskPayment(t: DiverTranslator, line: string, money: ConfirmationMo
   return desk ? `${line} ${desk}` : line;
 }
 
-/** The diver's outstanding items as one bullet list, or empty when nothing's left. */
-function outstandingLines(
-  t: DiverTranslator,
-  outstanding: ReminderActionCode[] | undefined,
-  medicalReview: boolean | undefined,
-) {
-  const todo = (outstanding ?? []).map((code) => reminderActionText(t, code));
-  if (medicalReview) todo.push(t("notifications.common.medicalReviewNote"));
-  const heading = t("notifications.common.outstandingHeading");
-  return {
-    text: todo.length ? `\n\n${heading}\n${todo.map((item) => `- ${item}`).join("\n")}\n` : "",
-    html: todo.length
-      ? `<p>${heading}</p><ul>${todo.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
-      : "",
-  };
-}
-
 /**
  * A course's learning materials under one heading (ADR
  * 20261008-course-learning-materials): each name, its link when there is one,
@@ -839,93 +750,13 @@ function materialsSection(t: DiverTranslator, materials: CourseLearningMaterial[
   };
 }
 
-/**
- * When a session meets: one date and time, or — for a multi-day course — every
- * day it meets, each with its own date and hours in the shop's zone. A single
- * meeting (or none on file) is the ordinary line, so a one-day course and a
- * fun dive read exactly as they always have.
- */
-function whenLines(
-  t: DiverTranslator,
-  input: {
-    locale: DiverLocale;
-    timezone: string;
-    startsAt: Date;
-    endsAt: Date;
-    scheduleDays?: { startsAt: Date; endsAt: Date }[];
-  },
-) {
-  const days = [...(input.scheduleDays ?? [])].sort(
-    (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
-  );
-  if (days.length < 2) {
-    const date = formatShortDate(input.startsAt, input.locale, input.timezone);
-    const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
-    return {
-      text: `${date}\n${time}`,
-      html: `<p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>`,
-    };
-  }
-  const heading = t("notifications.courseDays.heading");
-  const lines = days.map((day, index) =>
-    t("notifications.courseDays.day", {
-      number: index + 1,
-      date: formatShortDate(day.startsAt, input.locale, input.timezone),
-      time: formatTimeRangeTz(day.startsAt, day.endsAt, input.locale, input.timezone),
-    }),
-  );
+/** When a departure meets: its date and its hours in the shop's zone. */
+function whenLines(input: { locale: DiverLocale; timezone: string; startsAt: Date; endsAt: Date }) {
+  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+  const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
   return {
-    text: `${heading}\n${lines.map((line) => `- ${line}`).join("\n")}`,
-    html: `<p><strong>${escapeHtml(heading)}</strong></p><ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`,
-  };
-}
-
-/**
- * The night-before brief's body — conditions, what to bring, and who to text —
- * rendered as text + html fragments slotted between the dock-time line and the
- * outstanding-items list. Empty strings when the brief carries nothing, so the
- * reminder degrades to the plain "you sail tomorrow" note.
- */
-function briefSections(
-  t: DiverTranslator,
-  brief: NightBeforeBriefInput | undefined,
-  arrivalLine: string,
-) {
-  const forecast = brief?.forecast?.trim();
-  const bring = (brief?.bring ?? []).map((item) => item.trim()).filter(Boolean);
-  const whoToText = brief?.whoToText?.trim();
-  const firstTimer = brief?.firstTimerNote?.trim();
-
-  const textParts: string[] = [];
-  const htmlParts: string[] = [];
-  if (firstTimer) {
-    textParts.push(firstTimer);
-    htmlParts.push(`<p>${escapeHtml(firstTimer)}</p>`);
-  }
-  if (forecast) {
-    const label = t("notifications.brief.conditionsLabel");
-    textParts.push(`${label} ${forecast}`);
-    htmlParts.push(`<p><strong>${label}</strong> ${escapeHtml(forecast)}</p>`);
-  }
-  if (bring.length) {
-    const label = t("notifications.brief.bringLabel");
-    textParts.push(`${label}\n${bring.map((item) => `- ${item}`).join("\n")}`);
-    htmlParts.push(
-      `<p>${label}</p><ul>${bring.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`,
-    );
-  }
-  // Arrival always renders on the brief — the concrete clock time is the
-  // logistics half of the confidence arc.
-  textParts.push(arrivalLine);
-  htmlParts.push(`<p>${escapeHtml(arrivalLine)}</p>`);
-  if (whoToText) {
-    const line = t("notifications.brief.whoToText", { phone: whoToText });
-    textParts.push(line);
-    htmlParts.push(`<p>${escapeHtml(line)}</p>`);
-  }
-  return {
-    text: textParts.length ? `\n\n${textParts.join("\n\n")}` : "",
-    html: htmlParts.join(""),
+    text: `${date}\n${time}`,
+    html: `<p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>`,
   };
 }
 
@@ -1209,89 +1040,6 @@ export function checkoutRecoveryEmail(input: CheckoutRecoveryEmailInput): Notifi
   };
 }
 
-export function tripReminderEmail(input: TripReminderEmailInput): NotificationEmail {
-  const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
-  // One date and time, or every day a multi-day course meets.
-  const when = whenLines(t, input);
-  const title = escapeHtml(input.tripTitle);
-  const shop = escapeHtml(input.shopName);
-  const seeWhatsLeft = t("notifications.common.seeWhatsLeft");
-  const readyText = input.readinessUrl ? `\n\n${seeWhatsLeft}:\n${input.readinessUrl}\n` : "\n";
-  const readyHtml = input.readinessUrl ? emailButton(input.readinessUrl, seeWhatsLeft) : "";
-  // Name the diver's own outstanding items — the last automated chance to clear
-  // a waiver or medical that would keep them off the boat (dive-domain review).
-  const todo = outstandingLines(t, input.outstanding, input.medicalReview);
-  const dock = dockCallPhrase(t, input.dockCallMinutes);
-  // Last, under everything else and under the readiness button: it is the
-  // smallest thing on the page and the one a diver only looks for when their
-  // plans have changed.
-  const keywordOffer = input.replyKeywords ? t("notifications.replyKeyword.offer") : null;
-  const keywordText = keywordOffer ? `\n${keywordOffer}\n` : "";
-  const keywordHtml = keywordOffer
-    ? `<p style="font-size: 13px; opacity: 0.8;">${escapeHtml(keywordOffer)}</p>`
-    : "";
-  // Where to go, on both leads (ux review 2026-10-11, item 4): the week-out
-  // note is the one a diver books a taxi from.
-  const where = meetingPointSection(t, input.meetingPoint);
-
-  // The 7-day reminder stays a light nudge. The night-before (day) lead becomes
-  // the full brief: conditions, what to bring, a concrete arrival time, and who
-  // to text — the confidence arc that keeps an anxious diver from no-showing.
-  if (input.lead === "day") {
-    const dockMinutes = input.dockCallMinutes ?? 30;
-    const arriveBy = new Date(input.startsAt.getTime() - dockMinutes * 60_000);
-    const arrivalClock = formatTime(arriveBy, input.locale, input.timezone);
-    const arrivalLine = input.pickupTime
-      ? t("notifications.tripReminder.hotelPickupArrival", {
-          time: input.pickupTime,
-          location: input.hotelPickupLocation ?? t("notifications.tripReminder.hotelNotSet"),
-        })
-      : t("notifications.tripReminder.arrival", { time: arrivalClock, dock });
-    const brief = briefSections(t, input.brief, arrivalLine);
-    const opener = input.brief?.firstTimerNote
-      ? t("notifications.tripReminder.dayOpenerFirstTimer", { shopName: input.shopName })
-      : t("notifications.tripReminder.dayOpenerReturning", {
-          tripTitle: input.tripTitle,
-          shopName: input.shopName,
-        });
-    const openerHtml = input.brief?.firstTimerNote
-      ? t("notifications.tripReminder.dayOpenerFirstTimer", { shopName: shop })
-      : t("notifications.tripReminder.dayOpenerReturning", {
-          tripTitle: `<strong>${title}</strong>`,
-          shopName: shop,
-        });
-    return {
-      subject: t("notifications.tripReminder.daySubject", { tripTitle: input.tripTitle }),
-      text: `${t("notifications.common.greeting", { firstName })}\n\n${opener}\n\n${when.text}${brief.text}${where.text}${todo.text}${readyText}${keywordText}`,
-      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${openerHtml}</p>${when.html}${brief.html}${where.html}${todo.html}${readyHtml}${keywordHtml}`,
-    };
-  }
-
-  // A course starts rather than sails, and its first day may be the pool or a
-  // classroom, so its week-out note names no dock.
-  const weekBodyKey = input.courseSession
-    ? "notifications.tripReminder.weekBodyCourse"
-    : "notifications.tripReminder.weekBody";
-  const weekBody = t(weekBodyKey, { tripTitle: input.tripTitle, shopName: input.shopName });
-  const weekBodyHtml = t(weekBodyKey, { tripTitle: `<strong>${title}</strong>`, shopName: shop });
-  const dockNote = input.courseSession ? null : t("notifications.tripReminder.dockNote", { dock });
-  // The week-out nudge is the to-do list, and unfinished course materials are
-  // on it. The sender stops passing them once a staffer marks them done.
-  const materials = materialsSection(t, input.learningMaterials);
-
-  return {
-    subject: t(
-      input.courseSession
-        ? "notifications.tripReminder.weekSubjectCourse"
-        : "notifications.tripReminder.weekSubject",
-      { tripTitle: input.tripTitle },
-    ),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${when.text}${dockNote ? `\n\n${dockNote}` : ""}${where.text}${todo.text}${materials.text}${readyText}${keywordText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p>${when.html}${dockNote ? `<p>${dockNote}</p>` : ""}${where.html}${todo.html}${materials.html}${readyHtml}${keywordHtml}`,
-  };
-}
-
 type TripRescheduledEmailInput = {
   locale: DiverLocale;
   diverName: string;
@@ -1319,7 +1067,7 @@ export function tripRescheduledEmail(input: TripRescheduledEmailInput): Notifica
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
   const title = escapeHtml(input.tripTitle);
-  const when = whenLines(t, input);
+  const when = whenLines(input);
   // Only the meeting point moved (#2443): the same message without the old
   // time, led by the place.
   // A seat moved to another departure is never a place-only notice.
@@ -1356,80 +1104,6 @@ export function tripRescheduledEmail(input: TripRescheduledEmailInput): Notifica
     ),
     text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${when.text}${was ? `\n${was}` : ""}${dockNote ? `\n\n${dockNote}` : ""}${movedToo ? `\n\n${movedToo}` : ""}${where.text}${cantMakeIt ? `\n\n${cantMakeIt}` : ""}${readyText}`,
     html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${when.html}${was ? `<p style="opacity: 0.8;">${escapeHtml(was)}</p>` : ""}${dockNote ? `<p>${escapeHtml(dockNote)}</p>` : ""}${movedToo ? `<p>${escapeHtml(movedToo)}</p>` : ""}${where.html}${cantMakeIt ? `<p>${escapeHtml(cantMakeIt)}</p>` : ""}${readyHtml}`,
-  };
-}
-
-type TripRecapEmailInput = {
-  locale: DiverLocale;
-  diverName: string;
-  shopName: string;
-  tripTitle: string;
-  startsAt: Date;
-  timezone: string;
-  /** The names of the sites dived, in order, for the recap's opening line. */
-  sites?: string[];
-  /**
-   * When the diver may fly (`src/lib/fly-safe.ts`), worded here in the
-   * shop's zone. Absent means the record could not say, and the email keeps
-   * quiet rather than guess.
-   */
-  flySafe?: Pick<FlySafeResult, "from" | "hours" | "anchor" | "reason">;
-  /** The diver's shareable recap page. */
-  recapUrl: string;
-  /** Self-serve opt-out of `waitlist_invite`/`trip_recap` courtesy email. */
-  unsubscribeUrl: string;
-};
-
-export function tripRecapEmail(input: TripRecapEmailInput): NotificationEmail {
-  const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
-  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
-  const title = escapeHtml(input.tripTitle);
-  const shop = escapeHtml(input.shopName);
-  const sites = (input.sites ?? []).map((site) => site.trim()).filter(Boolean);
-  // Name the sites they dived when we know them — the recap is warmer when it
-  // remembers the day rather than nudging generically.
-  const siteList = sites.length
-    ? cachedListFormat(input.locale, { style: "long", type: "conjunction" }).format(sites)
-    : "";
-  const where = sites.length ? ` ${t("notifications.tripRecap.dived", { sites: siteList })}` : "";
-  const whereHtml = sites.length
-    ? ` ${t("notifications.tripRecap.dived", { sites: escapeHtml(siteList) })}`
-    : "";
-
-  const thanks = t("notifications.tripRecap.thanks", {
-    tripTitle: input.tripTitle,
-    shopName: input.shopName,
-    date,
-  });
-  const thanksHtml = t("notifications.tripRecap.thanks", {
-    tripTitle: `<strong>${title}</strong>`,
-    shopName: shop,
-    date: escapeHtml(date),
-  });
-  const seeRecap = t("notifications.tripRecap.seeRecap");
-  const footer = t("notifications.tripRecap.footer");
-  const unsubscribe = t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName });
-  const unsubscribeUrl = escapeHtml(input.unsubscribeUrl);
-  // The same sentence the after-state carries, in the same words: one fact,
-  // read the same way on the page and in the inbox.
-  const flySafe = input.flySafe
-    ? t(`notifications.tripRecap.${flySafeMessageKey(input.flySafe)}`, {
-        when: formatWeekdayTime(input.flySafe.from, input.locale, input.timezone),
-        count: input.flySafe.hours,
-        shopName: input.shopName,
-      })
-    : null;
-  const flySafeText = flySafe ? `\n\n${flySafe}` : "";
-  const flySafeHtml = flySafe ? `<p>${escapeHtml(flySafe)}</p>` : "";
-
-  return {
-    subject: t("notifications.tripRecap.subject", {
-      shopName: input.shopName,
-      tripTitle: input.tripTitle,
-    }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${thanks}${where}${flySafeText}\n\n${seeRecap}:\n${input.recapUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${thanksHtml}${whereHtml}</p>${flySafeHtml}${emailButton(input.recapUrl, seeRecap)}<p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
   };
 }
 
@@ -2149,7 +1823,7 @@ type CourseInquiryEmailInput = {
  * counterpart to the `mailto:` composer a diver can still use directly
  * (CourseInquiry.tsx). Uses the shop's locale like every other shop-facing
  * send (staffInviteEmail), not English-only like the founder-only
- * new_account_alert.
+ * the new_account operator alert.
  */
 export function courseInquiryEmail(input: CourseInquiryEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);

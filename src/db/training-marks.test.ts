@@ -425,8 +425,8 @@ describe("training marks — a training dive on a charter (in-memory PGlite)", (
     expect(after.bySeat.get(ctx.seat.id)?.mark).toMatchObject({
       enrollmentBookingId: ctx.course.bookingId,
       valid: true,
+      courseInstructorAboard: false,
     });
     expect(after.bySeat.get(ctx.seat.id)?.options).toEqual([]);
-    expect(after.instructorRostered).toBe(false);
   });
 });

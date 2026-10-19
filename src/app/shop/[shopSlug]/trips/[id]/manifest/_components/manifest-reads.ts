@@ -7,7 +7,7 @@ import { listDeskEventsSince } from "@/db/desk-events";
 import { diveIntentTallyForTrip } from "@/db/dive-intent";
 import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
-import { mayStartTripIncidentReport } from "@/db/incident-reports";
+import { mayStartTripIncidentReport, openMissingAlerts } from "@/db/incident-reports";
 import { getTripManifests, rollCallOpenOnTrip } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
@@ -55,6 +55,7 @@ export async function readManifestPage(
     snags,
     partyPlan,
     rollCallOpen,
+    missingAlerts,
   ] = await Promise.all([
     getTripManifests(db, shopId, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -104,6 +105,8 @@ export async function readManifestPage(
     // The roll-call writers' own gate (#2285): a cancelled departure nobody
     // counted on draws no control that could only be refused.
     rollCallOpenOnTrip(db, shopId, tripId),
+    // Who the owners were alerted about and are not found yet: their rows offer Found.
+    openMissingAlerts(db, shopId, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -153,7 +156,13 @@ export async function readManifestPage(
     // The crew's latest word and the run's windows, read together (`stageStripProps`).
     stageStrip: { stage, meetingWindows },
     meetingPoint,
-    mayStartIncidentReport,
+    // Who may start a report here, and whose owners were alerted (issue #2694).
+    missingDiverReader: {
+      mayStartIncidentReport,
+      alerted: new Set(
+        missingAlerts.flatMap((row) => [row.bookingId, row.personId]).filter((id) => id !== null),
+      ),
+    },
     vessel: vessels.get(tripId) ?? null,
     kitRecord,
     siteHistory,

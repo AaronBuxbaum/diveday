@@ -46,6 +46,7 @@ import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, departureLedgerRows } from "./_components/DepartureLedger";
 import { DepartureMoney } from "./_components/DepartureMoney";
 import { EmptySeats } from "./_components/EmptySeats";
+import { MonthDays } from "./_components/MonthDays";
 import { MonthFigures } from "./_components/MonthFigures";
 import {
   BuddyReferrerLines,
@@ -170,7 +171,6 @@ export default async function ReportsPage({
   // real rather than querying the year 1. An imported payment/refund is a
   // genuine financial fact even without a DiveDay departure, so its earliest
   // eligible source day also moves this floor.
-  //
   const earliestTripStart = await earliestReportedTripStart(db, shop.id);
   const earliestImportedFinancialDate = await earliestImportedFinancialHistoryDate(
     db,
@@ -238,12 +238,11 @@ export default async function ReportsPage({
         end: toDate ? sameMomentYearBefore(now, tz) : shopMonthBounds(baselineMonth, tz).to,
       }
     : null;
-  // Both months ride one Promise.all, so the cost is the slower call, not the sum. The month
-  // under way also reads its sailed half, departures before now (item 22).
+  // Both months ride one Promise.all; the month under way also reads its sailed half (item 22).
   const shopMoney = { currency, timeZone: tz };
   const [input, tripPage, baselineInput, moneyDetail, emptySeats, sailedInput, owner] =
     await Promise.all([
-      getMonthlyReport(db, shop.id, monthStart, monthEnd, { currency, timeZone: tz }),
+      getMonthlyReport(db, shop.id, monthStart, monthEnd, shopMoney),
       // A non-numeric or missing `?page=` reads as page 1; the query clamps it
       // into range, so switching to a shorter month never strands the reader on
       // a page that month does not have.
@@ -424,14 +423,15 @@ export default async function ReportsPage({
         />
       ) : (
         <>
+          <MonthDays {...{ db, now, locale, t }} shopId={shop.id} timeZone={tz} month={current} />
           <MonthFigures label={t("reports.numbersLabel")} figures={figures} />
 
           <MonthFootnotes
             taxCents={report.taxCents}
+            counterTaxIncludedCents={moneyDetail.counterTaxIncludedCents}
             csvHref={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
             monthEnd={{ shopSlug, month: monthKey(current), locale, timeZone: tz }}
-            t={t}
-            money={money}
+            {...{ t, money }}
           />
           <WeatherLine weather={owner.weather} t={t} money={money} />
 

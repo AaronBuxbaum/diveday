@@ -295,4 +295,32 @@ describe("ShopIdentityMenu — Tell us", () => {
     await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
     expect(screen.queryByRole("link", { name: "Tell us" })).toBeNull();
   });
+
+  it("lists My account's links, each a plain link that closes the menu", async () => {
+    render(
+      <ShopIdentityMenu
+        shopName="Blue Mantis Divers"
+        signOutAction={vi.fn()}
+        locale="en-US"
+        languages={[{ locale: "en-US", label: "English (US)" }]}
+        setLocaleAction={vi.fn()}
+        account={{
+          label: "My account",
+          links: [
+            { href: "/shop/blue-mantis/settings/security", label: "Security" },
+            { href: "/shop/blue-mantis/settings/calendar", label: "Calendar subscription" },
+          ],
+        }}
+        copy={COPY}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
+    const nav = screen.getByRole("navigation", { name: "My account" });
+    expect(nav).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Security" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/settings/security",
+    );
+    expect(screen.getByRole("link", { name: "Calendar subscription" })).toBeInTheDocument();
+  });
 });

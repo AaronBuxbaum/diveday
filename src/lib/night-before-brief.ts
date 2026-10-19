@@ -1,5 +1,5 @@
 // i18n-exempt-file: shared text layout for the terminal email/SMS renderers
-// (src/lib/notifications/email.ts, src/db/reminders.ts) — resolves its own
+// (src/db/reminders.ts) — resolves its own
 // words via diverTranslator rather than handing back a code (docs ADR
 // 20260731-notification-locale).
 import type { DiverTranslator } from "@/i18n/messages";
@@ -95,17 +95,4 @@ export function forecastText(
   if (summary && stats) return `${ensureStop(summary)} ${stats}`;
   if (summary) return ensureStop(summary);
   return stats || null;
-}
-
-/**
- * The reassurance a first-timer needs and a seasoned diver doesn't. A diver
- * whose only certification is fresh is boarding a boat for the first time; the
- * same brief in a softer voice converts that anxiety into confidence. Returns
- * the extra "what happens on the boat" line, or null for an experienced diver.
- */
-export function firstTimerReassuranceText(
-  t: DiverTranslator,
-  isFirstTimer: boolean,
-): string | null {
-  return isFirstTimer ? t("notifications.brief.firstTimer") : null;
 }

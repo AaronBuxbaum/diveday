@@ -178,11 +178,15 @@ describe("onboardAction instrumentation", () => {
     // owner-facing mail above it went out.
     const alerts = vi
       .mocked(sendNotification)
-      .mock.calls.filter(([, notification]) => notification.kind === "new_account_alert");
+      .mock.calls.filter(
+        ([, notification]) =>
+          notification.kind === "operator_alert" && notification.event === "new_account",
+      );
     expect(alerts).toHaveLength(1);
     const [, notification] = alerts[0];
     expect(notification).toMatchObject({
-      kind: "new_account_alert",
+      kind: "operator_alert",
+      event: "new_account",
       to: ALERT_EMAIL,
       ownerName: "Marisol Vega",
       ownerEmail: "marisol@reefrunners.example",

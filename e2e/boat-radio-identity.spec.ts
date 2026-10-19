@@ -20,7 +20,7 @@ function boatRow(page: Page, name: string) {
  * On a private shop, because this writes a boat's settings; no
  * `signedInAsOwner()`, since the fixture signs in as the minted shop's owner.
  */
-test("a boat's call sign and MMSI reach the emergency card of the departure on it", async ({
+test("a boat's call sign, MMSI and working channel reach the emergency card of the departure on it", async ({
   page,
   privateShop,
 }) => {
@@ -29,18 +29,26 @@ test("a boat's call sign and MMSI reach the emergency card of the departure on i
 
   // A mistyped MMSI is refused with its own sentence, never the name-and-
   // capacity one that sent the owner looking at the two fields that were fine.
-  await page.goto(`${shop}/settings/boats`);
+  await page.goto(`${shop}/boats`);
   await boatRow(page, BOAT).getByLabel("MMSI").fill("33801");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
   await expect(page.getByText("Check the call sign")).toBeVisible();
 
+  // 16 is every boat's distress channel, never its working one (dock review S4).
+  await boatRow(page, BOAT).getByLabel("Working channel").fill("16");
+  await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
+  await expect(page.getByText("Channels 16 and 70")).toBeVisible();
+
   // Typed the way it is read over the radio; stored the way it is printed.
   await boatRow(page, BOAT).getByLabel("Call sign").fill("wdm 3301");
   await boatRow(page, BOAT).getByLabel("MMSI").fill("338 012 345");
+  // The channel the boat works on (issue #2672), kept as the shop says it.
+  await boatRow(page, BOAT).getByLabel("Working channel").fill(" 68 ");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toBeVisible();
   await expect(boatRow(page, BOAT).getByLabel("Call sign")).toHaveValue("WDM 3301");
   await expect(boatRow(page, BOAT).getByLabel("MMSI")).toHaveValue("338012345");
+  await expect(boatRow(page, BOAT).getByLabel("Working channel")).toHaveValue("68");
 
   await page.goto(`${await tripPathByTitle(page, privateShop.slug, REEF)}/manifest`);
   await page
@@ -51,4 +59,5 @@ test("a boat's call sign and MMSI reach the emergency card of the departure on i
   await expect(card.getByText(`Vessel: ${BOAT}`)).toBeVisible();
   await expect(card.getByText("Call sign: WDM 3301")).toBeVisible();
   await expect(card.getByText("MMSI: 338012345")).toBeVisible();
+  await expect(card.getByText("Working channel (VHF): 68")).toBeVisible();
 });

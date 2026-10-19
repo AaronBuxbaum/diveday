@@ -7,6 +7,7 @@ import {
   normalizeCallSign,
   normalizeEmergencyReference,
   normalizeMmsi,
+  normalizeWorkingChannel,
 } from "./emergency-reference";
 
 describe("normalizing what a shop typed", () => {
@@ -138,6 +139,18 @@ describe("the departure's own boat (fourth review, item 11)", () => {
     ).toBe("");
   });
 
+  it("carries the boat's working channel to the card (issue #2672)", () => {
+    const withChannel = { ...mantisOne, workingChannel: "68" };
+    expect(emergencyReferenceForDeparture(shop, withChannel).boat).toEqual(withChannel);
+  });
+
+  it("keeps the shop line under a boat that holds only a working channel", () => {
+    // A channel is not the boat's identity: the MMSI the shop typed in its
+    // own line is still the only one there is.
+    const channelOnly = { name: "Mantis I", callSign: null, mmsi: null, workingChannel: "68" };
+    expect(emergencyReferenceForDeparture(shop, channelOnly).vessel).toBe(shop.vessel);
+  });
+
   it("keeps the shop line for a departure on no boat", () => {
     const reference = emergencyReferenceForDeparture(shop, null);
     expect(reference.boat).toBeNull();
@@ -175,5 +188,31 @@ describe("a boat's radio identity as typed", () => {
     expect(normalizeCallSign("   ")).toBeNull();
     expect(normalizeCallSign("WDM/2201")).toBe("invalid");
     expect(normalizeCallSign("A".repeat(13))).toBe("invalid");
+  });
+
+  it("reads a working channel as VHF channels (issue #2672)", () => {
+    expect(normalizeWorkingChannel("  68 ")).toBe("68");
+    expect(normalizeWorkingChannel("72  OR   69")).toBe("72 or 69");
+    expect(normalizeWorkingChannel("68 / 72")).toBe("68/72");
+    expect(normalizeWorkingChannel("22a")).toBe("22A");
+    expect(normalizeWorkingChannel("1")).toBe("1");
+    expect(normalizeWorkingChannel("88")).toBe("88");
+    expect(normalizeWorkingChannel("   ")).toBeNull();
+  });
+
+  it("refuses a phone number, free text or a channel past 88 (dock review S4)", () => {
+    expect(normalizeWorkingChannel("+1 305 555 0177")).toBe("invalid");
+    expect(normalizeWorkingChannel("3055550177")).toBe("invalid");
+    expect(normalizeWorkingChannel("we work 68")).toBe("invalid");
+    expect(normalizeWorkingChannel("0")).toBe("invalid");
+    expect(normalizeWorkingChannel("89")).toBe("invalid");
+    expect(normalizeWorkingChannel("68/99")).toBe("invalid");
+  });
+
+  it("refuses 16 and 70, which are for distress and calling, never a working channel", () => {
+    expect(normalizeWorkingChannel("16")).toBe("distress");
+    expect(normalizeWorkingChannel("70")).toBe("distress");
+    expect(normalizeWorkingChannel("16/68")).toBe("distress");
+    expect(normalizeWorkingChannel("68 or 70")).toBe("distress");
   });
 });

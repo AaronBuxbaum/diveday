@@ -226,7 +226,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/desk.json lostFound.channels.whatsapp", "brand"],
   ["staff/integrations.json quickbooks.name", "brand"],
   ["staff/integrations.json shopify.name", "brand"],
-  ["staff/integrations.json xero.name", "brand"],
   ["staff/integrations.json zapier.name", "brand"],
   ["staff/orders.json index.paymentOps.stripeId", "brand"],
   ["staff/settings.json embed.platforms.squarespace.name", "brand"],
@@ -295,10 +294,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
   [
     "diver.json marketing.featurePages.checkIn.name",
     "settled loanword (es-ES README, “Check-in is el check-in”)",
-  ],
-  [
-    "staff/checkIn.json walkIn.title",
-    "loanword this file already uses (its Spanish reads “Modo mostrador”, “Volver al check-in”)",
   ],
   [
     "staff/shared.json shopNavLinks.walkIn",

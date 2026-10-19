@@ -24,6 +24,7 @@ import {
   addIncidentPersonAction,
   discardIncidentDraftAction,
   fileIncidentReportAction,
+  markMissingDiverFoundAction,
   removeIncidentPersonAction,
   saveIncidentDraftAction,
   setIncidentLegalHoldAction,
@@ -32,6 +33,7 @@ import { IncidentDiscard, IncidentLegalHold } from "./_components/IncidentDecisi
 import { IncidentDraftForm } from "./_components/IncidentDraftForm";
 import { IncidentPeople } from "./_components/IncidentPeople";
 import { IncidentAddenda, IncidentFiling, IncidentRecord } from "./_components/IncidentRecord";
+import { MissingDiverAlert } from "./_components/MissingDiverAlert";
 import { manifestReturnHref } from "./_components/manifest-return";
 import { INCIDENT_NOTICES } from "./_components/notices";
 
@@ -133,6 +135,16 @@ export default async function IncidentReportPage({
       {/* Filing turns the form into a record, so its answer has no form left
           to stand in: it is the page's. */}
       <FormStatus tone={pageNotice?.tone}>{pageNotice?.text}</FormStatus>
+      {report.ownersAlert ? (
+        <MissingDiverAlert
+          alert={report.ownersAlert}
+          mayWrite={report.mayWrite}
+          action={markMissingDiverFoundAction.bind(null, shopSlug, tripId, reportId)}
+          locale={locale}
+          timeZone={tz}
+          t={t}
+        />
+      ) : null}
 
       {editing ? (
         <IncidentDraftForm

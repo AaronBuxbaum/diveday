@@ -23,7 +23,7 @@ const { reportAgencyCheckPageAction } = await import("@/app/actions/agency-check
  */
 const t = staffTranslator("en-US");
 const OFF =
-  "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Bookings & waivers.";
+  "PADI checks are off for this shop. An owner or manager can turn them on in Settings, Features.";
 
 afterEach(() => {
   cleanup();

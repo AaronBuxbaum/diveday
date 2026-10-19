@@ -230,8 +230,8 @@
       "boots": "Botines"
     },
     "providedItems": {
-      "scubaUnit": "Equipo de buceo (chaleco, regulador, botella, plomos)",
-      "tanksAndWeights": "Botellas y plomos",
+      "scubaUnit": "Equipo de buceo (chaleco, regulador, tanque, plomos)",
+      "tanksAndWeights": "Tanques y plomos",
       "crewBriefing": "Briefing de la tripulación",
       "instructorBriefing": "Briefing del instructor"
     },
@@ -958,6 +958,7 @@
       "paymentDueAmount": "Quedan {amount} por pagar. Tu centro puede cobrarlo antes de la salida.",
       "waiverDone": "Firmada y registrada.",
       "certificationDone": "Verificada y registrada.",
+      "certificationTrainingDive": "Inmersión de formación con tu instructor; no se pide tarjeta.",
       "paymentDone": "Pagado. Gracias.",
       "certificationMultipleNeeded": "Esta inmersión necesita más de una certificación registrada. Comparte los datos de cada una y tu centro confirmará que estás listo.",
       "courseFormUnsigned": "Tu curso tiene formularios para que firmes.",
@@ -1301,7 +1302,7 @@
       "rents_drysuit": "Alquilar traje seco"
     },
     "askWhatsIncluded": "Pregunta al centro qué incluye el precio de la salida.",
-    "courseGearIncluded": "Tu equipo de buceo (chaleco, regulador, botella, plomos) va incluido en el curso. Dinos tus tallas para tenerlo listo.",
+    "courseGearIncluded": "Tu equipo de buceo (chaleco, regulador, tanque, plomos) va incluido en el curso. Dinos tus tallas para tenerlo listo.",
     "notSure": "No lo tengo claro: ayúdame a elegir",
     "sizeOnFile": "{size}: registrada por el centro",
     "wetsuitSize": "Talla de neopreno",
@@ -1349,8 +1350,8 @@
     },
     "jargonHintLabel": "Acerca de {item}",
     "jargonHints": {
-      "bcd": "El chaleco inflable que llevas puesto, sujeta tu botella y te permite controlar si flotas o te hundes.",
-      "regulator": "La boquilla y la manguera que te dejan respirar aire de tu botella bajo el agua.",
+      "bcd": "El chaleco inflable que llevas puesto, sujeta tu tanque y te permite controlar si flotas o te hundes.",
+      "regulator": "La boquilla y la manguera que te dejan respirar aire de tu tanque bajo el agua.",
       "drysuit": "Un traje estanco que te mantiene seco en agua fría. En la mayoría de los de alquiler los escarpines van integrados en el traje, así que no te darán un par aparte.",
       "nitrox": "Una mezcla respirable con más oxígeno que permite a buceadores con formación específica pasar algo más de tiempo bajo el agua en algunas inmersiones."
     }
@@ -4099,7 +4100,7 @@
         "item8": "Un recordatorio al buceador que reservó una plaza y no terminó de pagar",
         "item9": "Propinas que el buceador inicia desde su página de recuerdo, cuando el centro las activa",
         "item10": "Un informe mensual: ingresos, reservas, ocupación, exenciones y propinas, por salida",
-        "item11": "Pedidos pagados y reembolsados enviados a QuickBooks o Xero como recibos"
+        "item11": "Pedidos pagados y reembolsados enviados a QuickBooks como recibos"
       },
       "divers": {
         "title": "Buceadores",
@@ -4180,7 +4181,7 @@
           },
           "item5": {
             "title": "Tallas de alquiler y la lista de carga de la salida",
-            "detail": "Las tallas de cada buceador se convierten en la lista de equipo del barco, con una botella por buceador y por inmersión repartida entre aire y nitrox. {competitor} no sabe la talla de neopreno de un buceador."
+            "detail": "Las tallas de cada buceador se convierten en la lista de equipo del barco, con un tanque por buceador y por inmersión repartida entre aire y nitrox. {competitor} no sabe la talla de neopreno de un buceador."
           },
           "item6": {
             "title": "El aviso de la noche antes y un recuerdo que comparten",
@@ -5207,7 +5208,7 @@
         "faq2Q": "¿Qué pasa cuando un buceador cancela?",
         "faq2A": "Dentro de la ventana de cancelación gratuita que definas, un pago con tarjeta en línea se reembolsa solo. Pasada la ventana, el reembolso queda a tu criterio.",
         "faq3Q": "¿Funciona con mi contabilidad?",
-        "faq3A": "Los pedidos pagados y reembolsados se envían a QuickBooks o Xero como recibos, y el informe se descarga como hoja de cálculo.",
+        "faq3A": "Los pedidos pagados y reembolsados se envían a QuickBooks como recibos, y el informe se descarga como hoja de cálculo.",
         "closeTitle": "Repasa un día de pedidos en la demo.",
         "demoPlace": "los pedidos del día, como propietario"
       }
@@ -5271,10 +5272,7 @@
       "waterTemp": "agua alrededor de {value}",
       "visibility": "visibilidad cercana a {value}",
       "expect": "Prevé {list}.",
-      "firstTimer": "¿Tu primera inmersión en barco? El equipo te explica todo el material y el plan antes de entrar al agua, así que nunca te dejarán con el equipo sin más indicaciones. Ven con tus preguntas.",
-      "conditionsLabel": "Condiciones:",
-      "bringLabel": "Qué traer:",
-      "whoToText": "¿Preguntas para el día? Escríbenos al {phone}."
+      "conditionsLabel": "Condiciones:"
     },
     "reminderAction": {
       "waiverPending": "Firma tu exención",
@@ -5313,7 +5311,6 @@
       "trackWhatsLeft": "Sigue lo que te falta antes de salir",
       "seeWhatsLeft": "Consulta lo que te falta antes de salir",
       "outstandingHeading": "Aún por resolver antes de embarcar:",
-      "medicalReviewNote": "Revisa si una respuesta médica necesita el visto bueno de un médico antes de viajar",
       "courtesyUnsubscribe": "Dejar de recibir correos opcionales de {shopName}"
     },
     "tripConditionsHold": {
@@ -5410,35 +5407,27 @@
     },
     "tripReminder": {
       "weekSubject": "Sales esta semana: {tripTitle}",
-      "weekBody": "Un recordatorio rápido de que {tripTitle} sale esta semana.",
+      "weekBody": "{tripTitle} sale el {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",
       "weekSubjectCourse": "Tu curso empieza esta semana: {tripTitle}",
-      "weekBodyCourse": "Un recordatorio rápido de que {tripTitle} empieza esta semana.",
+      "weekBodyCourse": "{tripTitle} empieza el {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",
       "dockNote": "Preséntate en el muelle {dock} antes.",
-      "daySubject": "Sales mañana: {tripTitle}",
-      "dayOpenerFirstTimer": "Mañana buceas con nosotros. Abajo tienes todo lo que necesitas para el día.",
-      "dayOpenerReturning": "Un recordatorio rápido de que {tripTitle} sale mañana.",
-      "arrival": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
-      "hotelPickupArrival": "Tu recogida es a las {time} en {location}.",
-      "hotelNotSet": "tu hotel"
+      "daySubject": "{day, select, today {Sales hoy} other {Sales mañana}}: {tripTitle}",
+      "dayBody": "{tripTitle} sale {day, select, today {hoy} other {mañana}}; preséntate en el muelle a las {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}",
+      "daySubjectCourse": "{day, select, today {Tu curso empieza hoy} other {Tu curso empieza mañana}}: {tripTitle}",
+      "dayBodyCourse": "{tripTitle} empieza {day, select, today {hoy} other {mañana}} a las {when}{medical, select, yes {, y un médico debe aprobar tus respuestas médicas antes de que bucees.} other {{open, plural, =0 {.} one {, y te queda # cosa por resolver.} other {, y te quedan # cosas por resolver.}}}}"
     },
     "courseMaterials": {
       "heading": "Antes de tu primer día"
     },
-    "courseDays": {
-      "heading": "Los días de tu curso",
-      "day": "Día {number}: {date}, {time}"
-    },
     "tripRecap": {
       "subject": "Tu inmersión con {shopName}: {tripTitle}",
       "thanks": "Gracias por bucear {tripTitle} con nosotros el {date}.",
-      "dived": "Buceaste en {sites}.",
       "flySafeAfterDive": "Te pedimos esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
       "flySafeAfterDiveEarlierDay": "Te pedimos esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después de tu última inmersión con nosotros, siguiendo las recomendaciones de DAN.",
       "flySafeAfterReturn": "Te pedimos esperar al menos hasta el {when} antes de volar: {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
       "flySafeAfterReturnDivesPlanned": "Te pedimos esperar al menos hasta el {when} antes de volar: planificamos más de una inmersión, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
       "flySafeAfterReturnEarlierDay": "Te pedimos esperar al menos hasta el {when} antes de volar: nuestros registros muestran otro día de buceo en los últimos dos días, así que {count, plural, one {# hora} other {# horas}} después del final previsto del día, siguiendo las recomendaciones de DAN.",
-      "seeRecap": "Ver el resumen de tu día",
-      "footer": "Si te encantó, lo mejor que puedes hacer es traer a un compañero la próxima vez. Nos vemos en el agua."
+      "seeRecap": "Ver el resumen de tu día"
     },
     "welcome": {
       "subject": "Bienvenido a DiveDay, {shopName}",
@@ -5690,6 +5679,11 @@
       "open": "Abrir Mensajes",
       "turnOff": "Desactívalos en tus ajustes de correo"
     },
+    "moveAskSoon": {
+      "subject": "{shopName}: un buceador pidió cambiar de {tripTitle}",
+      "body": "Un buceador pidió cambiar su plaza en {tripTitle}, que sale el {when}.",
+      "open": "Abrir Mensajes"
+    },
     "stripeRestricted": {
       "subject": "{shopName}: Stripe desactivó los pagos con tarjeta",
       "body": "Stripe pausó los pagos con tarjeta en tu cuenta. Los buceadores pueden seguir reservando, pero por ahora pagan en el centro. El panel de Stripe indica qué necesita para volver a activarlos.",
@@ -5714,6 +5708,11 @@
       "body": "Buceador desaparecido en {tripTitle}. Reportado {when}. Llama primero al barco.",
       "open": "Abrir el reporte",
       "emergency": "Abrir la referencia de emergencia"
+    },
+    "incidentMissingDiverFound": {
+      "subject": "{shopName}: encontrado el buceador desaparecido en {tripTitle}",
+      "body": "Se encontró al buceador reportado como desaparecido en {tripTitle}. Marcado como encontrado {when}.",
+      "stillMissing": "{count, plural, one {# persona más sigue reportada como desaparecida en esta salida.} other {# personas más siguen reportadas como desaparecidas en esta salida.}}"
     },
     "shoreAlertStopped": {
       "subject": "{shopName}: el contacto en tierra dejó los avisos del pase de lista",

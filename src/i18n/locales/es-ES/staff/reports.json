@@ -5,6 +5,7 @@
   "nextMonth": "Mes siguiente",
   "currentMonthTitle": "Estás viendo el mes actual",
   "earliestMonthTitle": "Este es tu primer mes con salidas",
+  "monthStripLabel": "Los días del mes",
   "numbersLabel": "Los números de este mes",
   "comparison": {
     "yearAgo": "{trend}frente a {baseline} en {month}",
@@ -13,6 +14,7 @@
   },
   "downloadCsv": "Descargar CSV",
   "taxLine": "Impuestos cobrados {amount}",
+  "counterTaxIncluded": "Las ventas en el mostrador no separan el impuesto, así que Impuestos cobrados las deja fuera.",
   "metrics": {
     "revenueLabel": "Ingresos netos",
     "revenueBasis": "De las salidas de este mes",
@@ -56,7 +58,7 @@
     "rangeLabel": "Elegir un periodo",
     "thisMonth": "Este mes",
     "thisYear": "Este año",
-    "rangeSoFar": "{year} hasta ahora · del 1 de enero a hoy · {zone}",
+    "rangeSoFar": "{year} hasta ahora · del {start} a hoy · {zone}",
     "rangeSince": "{year} hasta ahora · desde {month} · {zone}",
     "printCard": "Imprimir la tarjeta",
     "sentence": "{divers, plural, one {# buceador} other {# buceadores}}, {boats, plural, one {# salida} other {# salidas}}, {sites, plural, one {# sitio} other {# sitios}}.",
@@ -68,7 +70,7 @@
     "stripQuietDay": "{day} · sin salidas",
     "numbersLabel": "Los números del año",
     "figures": {
-      "diversLabel": "Buceadores",
+      "diversLabel": "Buceadores distintos",
       "diversDetail": "{count, plural, one {# día en el mar} other {# días en el mar}}",
       "boatsLabel": "Salidas",
       "boatDays": "{name} {count, plural, one {# día} other {# días}}",
@@ -90,7 +92,7 @@
       "tipsDetail": "{count, plural, =0 {Aún sin propinas este año} one {# propina, para la tripulación} other {# propinas, para la tripulación}}"
     },
     "chooseYear": "Elegir un año",
-    "rangeWhole": "{year} · del 1 de enero al 31 de diciembre · {zone}",
+    "rangeWhole": "{year} · del {start} al {end} · {zone}",
     "lastYearToDate": "{value, number} a esta fecha en {year}",
     "lastYearWhole": "{value, number} en {year}",
     "weatherDays": "{days, plural, one {# día con una cancelación por clima} other {# días con una cancelación por clima}}, {departures, plural, one {# salida cancelada} other {# salidas canceladas}}",

@@ -23,6 +23,7 @@ function detail(over: Partial<Detail> = {}): Detail {
     },
     payouts: [],
     buddyReferrers: [],
+    counterTaxIncludedCents: 0,
     ...over,
   };
 }
@@ -109,6 +110,43 @@ describe("the money-out lines", () => {
     render(<MonthFootnotes taxCents={500} csvHref="/x.csv" t={t} money={money} />);
     expect(screen.queryByText(/Refunded/)).toBeNull();
     expect(screen.queryByText(/Stripe fees/)).toBeNull();
+  });
+});
+
+/**
+ * **Counter money is counted tax included** (issue #2674): DiveDay holds no
+ * tax rate for a shop, so the tax figure says so, and only in a month that
+ * took money at the counter.
+ */
+describe("the counter's tax line", () => {
+  const line = t("reports.counterTaxIncluded");
+
+  it("says counter money is tax included when the month took some", () => {
+    render(
+      <MonthFootnotes
+        taxCents={500}
+        counterTaxIncludedCents={10_700}
+        csvHref="/x.csv"
+        t={t}
+        money={money}
+      />,
+    );
+    expect(screen.getByText(line)).toBeTruthy();
+    expect(screen.getByText(/Tax collected \$5\.00/)).toBeTruthy();
+  });
+
+  it("says nothing in a month with no counter money", () => {
+    render(
+      <MonthFootnotes
+        taxCents={500}
+        counterTaxIncludedCents={0}
+        csvHref="/x.csv"
+        t={t}
+        money={money}
+      />,
+    );
+    expect(screen.getByText(/Tax collected \$5\.00/)).toBeTruthy();
+    expect(screen.queryByText(line)).toBeNull();
   });
 });
 

@@ -219,6 +219,18 @@ async function withRosterLinks(
 export const DATE_REQUESTS_PAGE_SIZE = PAGE_SIZE.list;
 
 /**
+ * How many of this shop's date requests nobody has handled yet: the page's own
+ * total, and what Today adds to its one unanswered count (issue #2658).
+ */
+export async function countOpenDateRequests(db: DbExecutor, shopId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(courseInquiries)
+    .where(and(eq(courseInquiries.shopId, shopId), isNull(courseInquiries.handledAt)));
+  return row?.n ?? 0;
+}
+
+/**
  * One page of this shop's date requests, ordered by the date they are asking
  * for — soonest first, and the ones that named no date at all last, which is
  * the order the page groups them in.
@@ -238,13 +250,7 @@ export async function listDateRequestsForStaff(
   return offsetPage<DateRequestRow>({
     page: options.page,
     pageSize: DATE_REQUESTS_PAGE_SIZE,
-    countRows: async () => {
-      const [row] = await db
-        .select({ n: count() })
-        .from(courseInquiries)
-        .where(and(eq(courseInquiries.shopId, shopId), isNull(courseInquiries.handledAt)));
-      return row?.n ?? 0;
-    },
+    countRows: () => countOpenDateRequests(db, shopId),
     fetchRows: async (offset, limit) =>
       withRosterLinks(
         db,

@@ -40,18 +40,23 @@ export function siteProseInUnit(text: string, unit: DepthUnit): string {
   return unit === "feet"
     ? paired.replace(
         METRIC,
-        (_match, from: string, to: string | undefined) =>
-          `${feet(from)}${to ? `–${feet(to)}` : ""} ft`,
+        (_match, from: string, joiner: string | undefined, to: string | undefined) =>
+          `${feet(from)}${to ? `${joined(joiner)}${feet(to)}` : ""} ft`,
       )
     : paired.replace(
         IMPERIAL,
-        (_match, from: string, to: string | undefined) =>
-          `${meters(from)}${to ? `–${meters(to)}` : ""} m`,
+        (_match, from: string, joiner: string | undefined, to: string | undefined) =>
+          `${meters(from)}${to ? `${joined(joiner)}${meters(to)}` : ""} m`,
       );
 }
 
 const NUMBER = String.raw`\d+(?:\.\d+)?`;
-const RANGE = String.raw`(${NUMBER})(?:\s?[–-]\s?(${NUMBER}))?`;
+/**
+ * What joins the two ends of a range: a dash, or the words a crew writes
+ * ("30 to 33 m", "17 and 19 m", "5-to-9 m"). Both numbers convert whichever it is.
+ */
+const JOINER = String.raw`\s?[–-]\s?|-to-|\s(?:to|and|or)\s`;
+const RANGE = `(${NUMBER})(?:(${JOINER})(${NUMBER}))?`;
 /** "18–40 m (60–130 ft)": both halves authored. */
 const PAIR = new RegExp(
   String.raw`(${NUMBER}(?:\s?[–-]\s?${NUMBER})?)\s?m\s?\((${NUMBER}(?:\s?[–-]\s?${NUMBER})?)\s?ft\)`,
@@ -78,6 +83,11 @@ const SMALL_METERS = 5;
  */
 const LENGTH_METERS = 50;
 
+/** A dash range keeps the en dash; a worded one keeps its words. */
+function joined(joiner: string | undefined): string {
+  return joiner && /[a-z]/i.test(joiner) ? joiner : "–";
+}
+
 function feet(metric: string): number {
   const meters = Number(metric);
   const agency = AGENCY_FEET.get(meters);
@@ -85,15 +95,30 @@ function feet(metric: string): number {
   const exact = metersToFeet(meters);
   if (meters < SMALL_METERS) return Math.max(1, Math.round(exact));
   const step = meters < LENGTH_METERS ? 5 : 10;
-  return Math.round(exact / step) * step;
+  const rounded = Math.round(exact / step) * step;
+  // A depth deeper than an agency limit never reads at or under that limit's
+  // feet: 19 m is not "60 ft". Past the limit the whole foot above it is said.
+  for (const limit of COURSE_DEPTHS) {
+    if (meters > limit.meters && rounded <= limit.feet) {
+      return Math.max(Math.ceil(exact), limit.feet + 1);
+    }
+  }
+  return rounded;
 }
 
 function meters(imperial: string): number {
-  return Math.max(1, Math.round(depthToMeters(Number(imperial), "feet")));
+  const exact = Number(imperial);
+  const rounded = Math.max(1, Math.round(depthToMeters(exact, "feet")));
+  // The same rule the other way: deeper than an agency's feet never reads at
+  // or under its metres.
+  for (const limit of COURSE_DEPTHS) {
+    if (exact > limit.feet && rounded <= limit.meters) return limit.meters + 1;
+  }
+  return rounded;
 }
 
 /** The briefing's prose fields: everything a diver reads that can name a measure. */
-const PROSE_FIELDS = [
+export const SITE_PROSE_FIELDS = [
   "description",
   "marineLifeDescription",
   "conservationNote",
@@ -113,7 +138,7 @@ export function briefingInUnit(
   unit: DepthUnit,
 ): GlobalDiveSiteBriefing {
   const resolved: GlobalDiveSiteBriefing = { ...briefing };
-  for (const field of PROSE_FIELDS) {
+  for (const field of SITE_PROSE_FIELDS) {
     const text = briefing[field];
     if (typeof text === "string") resolved[field] = siteProseInUnit(text, unit);
   }

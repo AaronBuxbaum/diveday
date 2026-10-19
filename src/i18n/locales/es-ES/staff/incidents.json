@@ -14,7 +14,23 @@
     "notMissing": "Ya no figura como sin regresar a bordo.",
     "notAllowed": "Solo la tripulación de esta salida, los propietarios y los gerentes pueden empezar un informe.",
     "failed": "El informe no se abrió. Toca de nuevo.",
-    "backToManifest": "Volver al manifiesto"
+    "backToManifest": "Volver al manifiesto",
+    "alert": "Buceador desaparecido: avisar ya a los propietarios",
+    "alerting": "Avisando…",
+    "alerted": "Propietarios avisados. Sigue buscando; el informe puede esperar.",
+    "alreadyAlerted": "Ya se avisó a los propietarios.",
+    "alertFailed": "El aviso no salió. Toca de nuevo o llama a los propietarios.",
+    "notReached": "Aún sin aviso. Llama ya a los propietarios.",
+    "notAlerted": "Aquí no hay ningún aviso abierto para esta persona.",
+    "found": "Encontrado",
+    "foundPending": "Guardando…",
+    "foundDone": "Marcado como encontrado. Los propietarios ya tienen el fin de la alerta.",
+    "foundPartial": "Marcado como encontrado. El fin de la alerta no llegó a todos los propietarios. Llámalos.",
+    "foundNoAllClear": "Marcado como encontrado. No se envió el fin de la alerta.",
+    "foundAlready": "Ya estaba marcado como encontrado.",
+    "foundFailed": "No se guardó. Toca de nuevo.",
+    "stillMissing": "Sigue sin regresar a bordo. Márcalo antes como de vuelta a bordo.",
+    "offline": "Sin señal: llama a los propietarios o usa el VHF."
   },
   "status": {
     "draft": "Borrador",
@@ -136,6 +152,16 @@
     "oxygenFor": "Sí, durante {minutes, plural, one {# minuto} other {# minutos}}",
     "handoverAt": "{who}, {when}"
   },
+  "found": {
+    "label": "Encontrado",
+    "byAt": "{name}, {when}",
+    "help": "Envía por correo un único fin de la alerta a los propietarios avisados. Solo cuando ya figure de vuelta a bordo.",
+    "submit": "Encontrado",
+    "pending": "Guardando…",
+    "allClearSent": "Fin de la alerta enviado {when}",
+    "allClearPartial": "El fin de la alerta no llegó a todos los propietarios. Llámalos.",
+    "allClearNone": "No se envió el fin de la alerta."
+  },
   "addenda": {
     "title": "Notas posteriores",
     "description": "Cada nota lleva quién la escribió y cuándo. Una nota no se puede cambiar.",
@@ -166,7 +192,10 @@
     "notYetFiled": "Presenta el informe antes de agregar una nota posterior.",
     "held": "Un informe con retención legal no se puede eliminar. Levanta antes la retención.",
     "holdSet": "Retención legal puesta.",
-    "holdReleased": "Retención legal levantada."
+    "holdReleased": "Retención legal levantada.",
+    "alerted": "Desde este informe se avisó a los propietarios, así que se conserva. Marca al buceador como encontrado.",
+    "found": "Marcado como encontrado. Se envía a los propietarios el fin de la alerta.",
+    "stillMissing": "En el manifiesto sigue sin regresar a bordo. Márcalo antes como de vuelta a bordo."
   },
   "safety": {
     "intro": "Lo que el centro registró en las salidas que zarparon este mes y ya han vuelto. Las acreditaciones caducadas se leen según los registros de hoy. Nada de esta página cambia un registro.",

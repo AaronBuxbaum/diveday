@@ -20,7 +20,7 @@ export const WRITE_PATH_DISPATCH_LIMIT = 10;
  * Drain the integration outbox after this response is sent.
  *
  * **Why this exists.** The outbox used to be drained only by
- * `/api/cron/integrations`, so a shop's Shopify/QuickBooks/Xero/Zapier event
+ * `/api/cron/integrations`, so a shop's Shopify/QuickBooks/Zapier event
  * waited for the next tick however idle the system was — up to half an hour for
  * something that was ready the instant the order was written (ADR
  * 20260919-integration-delivery-is-write-driven, issue #1900). Calling this
@@ -50,7 +50,7 @@ export const WRITE_PATH_DISPATCH_LIMIT = 10;
  * amendment.)
  *
  * **Never throws into its caller.** An order that was written is written; a
- * failure to tell Xero about it must not surface as a failed action, and the
+ * failure to tell a provider about it must not surface as a failed action, and the
  * delivery row is durable, so the next pass picks it up regardless. Both the
  * scheduling and the drain are guarded.
  */

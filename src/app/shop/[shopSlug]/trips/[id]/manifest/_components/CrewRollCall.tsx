@@ -21,7 +21,7 @@ import {
   rollCallLabel,
   type TripManifest,
 } from "@/lib/manifests";
-import { type MissingReportAction, MissingReportButton } from "./MissingReportButton";
+import { MissingDiverControls, type MissingDiverRowActions } from "./missing-diver-controls";
 import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import { personTrailWithCurrentRecord } from "./person-trail";
@@ -105,7 +105,7 @@ export function CrewRollCall({
   todayTrailBySubject,
   crewRollCallAction,
   crewRollCallButtonCopy,
-  startMissingReport = null,
+  missingDiver,
   rollCallClosed = false,
   buddyTeamLabel,
   t,
@@ -126,10 +126,11 @@ export function CrewRollCall({
   crewRollCallAction: RollCallAction;
   crewRollCallButtonCopy: RollCallButtonCopy;
   /**
-   * "Start a missing diver report" for a crew member marked not back aboard,
-   * bound to the departure; null for a reader who may not start a report.
+   * "Start a missing diver report" and "Missing diver, alert owners now"
+   * (issue #2694) for a crew member marked not back aboard, bound to the
+   * departure; each null for a reader who may not start a report.
    */
-  startMissingReport?: MissingReportAction | null;
+  missingDiver?: MissingDiverRowActions;
   /**
    * A cancelled departure nobody counted on (#2285): every roll-call write is
    * refused, so no row or sheet draws a roll-call control.
@@ -394,17 +395,14 @@ export function CrewRollCall({
                         {/* The report, from the row that raised it, on the
                             same terms as a diver's (domain review 2026-10-16):
                             the staffer is named in it as affected. */}
-                        {rowState.notBackAboard && startMissingReport ? (
-                          <MissingReportButton
-                            key={checkpoint}
-                            action={startMissingReport}
-                            subject={{ field: "personId", id: member.id }}
-                            checkpoint={checkpoint}
-                            label={t("incidents.missingDiver.start")}
-                            pendingLabel={t("incidents.trip.starting")}
-                            ariaLabel={`${t("incidents.missingDiver.start")} — ${member.fullName}`}
-                          />
-                        ) : null}
+                        <MissingDiverControls
+                          actions={missingDiver}
+                          notBackAboard={rowState.notBackAboard}
+                          subject={{ field: "personId", id: member.id }}
+                          name={member.fullName}
+                          checkpoint={checkpoint}
+                          t={t}
+                        />
                         {/* The deliberate second step, on the same terms as a
                             diver's. */}
                         {rollCallClosed ? null : (

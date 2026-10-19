@@ -1,10 +1,11 @@
-import { and, eq, gte, isNull, lte, or } from "drizzle-orm";
+import { and, eq, gte, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { notificationTripTitle } from "@/lib/notifications/kinds";
 import { shopPath } from "@/lib/staff-notices";
 import type { AppDb } from "./client";
+import { affectedSubjects, rollCallHasThemBack } from "./missing-subject";
 import { sendNotification } from "./notifications";
 import { ownerLogins } from "./owner-logins";
 import { pushTripAlert } from "./push-subscriptions";
@@ -41,6 +42,12 @@ import { liveTrip, notRehearsal } from "./trips-live";
  * calls this for that report; the hourly crew-notices pass calls it for every
  * filed report of the last few hours, which is the retry, and says so to the
  * cron monitor when one stays unalerted (`overdue`).
+ *
+ * **Raised from the roll call, or filed** (issue #2694): "Missing diver, alert
+ * owners now" stamps a draft `missing_alert_raised_at`, and it is told exactly
+ * as a filed report is, from the raise; filing it afterwards sends nothing
+ * new. A report marked found (`missing_found_at`) is never told: a found diver
+ * must not wake anybody. Its all-clear is `sendMissingDiverAllClear` below.
  *
  * A report of something that happened long before it was filed
  * (`MISSING_DIVER_PUSH_STALE_MS`), or filed a while ago, goes by email only: a
@@ -101,6 +108,7 @@ export async function sendMissingDiverAlerts(
     isNull(incidentReports.missingAlertedAt),
     lte(incidentReports.missingAlertedAt, leaseEnds),
   );
+  const lookbackFrom = new Date(now.getTime() - MISSING_DIVER_ALERT_LOOKBACK_MS);
   const due = await db
     .select({
       id: incidentReports.id,
@@ -108,6 +116,7 @@ export async function sendMissingDiverAlerts(
       tripId: incidentReports.tripId,
       tripTitle: trips.title,
       filedAt: incidentReports.filedAt,
+      raisedAt: incidentReports.missingAlertRaisedAt,
       occurredAt: incidentReports.occurredAt,
       slug: shops.slug,
       shopName: shops.name,
@@ -123,12 +132,13 @@ export async function sendMissingDiverAlerts(
     .where(
       and(
         input.reportId ? eq(incidentReports.id, input.reportId) : undefined,
-        eq(incidentReports.status, "filed"),
-        eq(incidentReports.kind, "missing_diver"),
-        isNull(incidentReports.deletedAt),
+        alertStands,
         isNull(incidentReports.missingAlertSentAt),
         notLeased,
-        gte(incidentReports.filedAt, new Date(now.getTime() - MISSING_DIVER_ALERT_LOOKBACK_MS)),
+        or(
+          gte(incidentReports.filedAt, lookbackFrom),
+          gte(incidentReports.missingAlertRaisedAt, lookbackFrom),
+        ),
         liveTrip(),
         // A cancelled departure never pages (as the stale roll-call alert).
         eq(trips.status, "scheduled"),
@@ -140,18 +150,24 @@ export async function sendMissingDiverAlerts(
     );
   summary.checked = due.length;
   const overdueBefore = new Date(now.getTime() - MISSING_DIVER_OVERDUE_MS);
-  const isOverdue = (filedAt: Date | null) => filedAt !== null && filedAt <= overdueBefore;
+  const isOverdue = (startedAt: Date | null) => startedAt !== null && startedAt <= overdueBefore;
   if (!origin) {
     // Nothing can be linked, so nothing is sent: said loudly, because a filed
     // report is waiting on it. Counts only, never a name.
     if (due.length > 0)
       log("incident.missing_diver_alert_no_origin", "error", { reports: due.length });
-    summary.overdue = due.filter((report) => isOverdue(report.filedAt)).length;
+    summary.overdue = due.filter((report) => isOverdue(alertStartedAt(report))).length;
     return summary;
   }
   let failure: unknown;
 
   for (const report of due) {
+    // Raised from the roll call, and the roll call has them back since
+    // (review 2026-10-17): nobody is paged for a diver already aboard.
+    if (report.raisedAt) {
+      const subjects = await affectedSubjects(db, report.shopId, report.id);
+      if (await rollCallHasThemBack(db, { ...report, subjects })) continue;
+    }
     const claimed = await db
       .update(incidentReports)
       .set({ missingAlertedAt: now })
@@ -159,8 +175,7 @@ export async function sendMissingDiverAlerts(
         and(
           eq(incidentReports.id, report.id),
           eq(incidentReports.shopId, report.shopId),
-          eq(incidentReports.status, "filed"),
-          eq(incidentReports.kind, "missing_diver"),
+          alertStands,
           isNull(incidentReports.missingAlertSentAt),
           notLeased,
         ),
@@ -177,6 +192,8 @@ export async function sendMissingDiverAlerts(
       const owners = await ownerLogins(db, report.shopId);
       let sent = 0;
       for (const owner of owners) {
+        // Found meanwhile: no owner gets the alarm after the all-clear.
+        if (await foundSince(db, report)) break;
         const delivery = await sendNotification(
           db,
           {
@@ -190,7 +207,7 @@ export async function sendMissingDiverAlerts(
             recipientName: owner.fullName,
             shopName: report.shopName,
             tripTitle,
-            reportedAt: report.occurredAt ?? report.filedAt ?? now,
+            reportedAt: report.occurredAt ?? alertStartedAt(report) ?? now,
             timezone: report.timezone,
             reportUrl: `${origin}${reportPath}`,
             emergencyUrl: `${origin}${emergencyPath}`,
@@ -203,7 +220,8 @@ export async function sendMissingDiverAlerts(
         }
       }
       ownersTold = owners.length > 0 && sent === owners.length;
-      if (withinPushWindow(report, now)) {
+      // Found meanwhile: the boat's followers are not woken for a diver already found.
+      if (withinPushWindow(report, now) && !(await foundSince(db, report))) {
         const pushes = await pushTripAlert(db, report.shopId, report.tripId, {
           url: reportPath,
           words: (t) => ({
@@ -230,7 +248,7 @@ export async function sendMissingDiverAlerts(
           .set({ missingAlertedAt: null })
           .where(and(eq(incidentReports.id, report.id), eq(incidentReports.missingAlertedAt, now)));
         summary.released += 1;
-        if (isOverdue(report.filedAt)) summary.overdue += 1;
+        if (isOverdue(alertStartedAt(report))) summary.overdue += 1;
       }
     }
   }
@@ -240,12 +258,176 @@ export async function sendMissingDiverAlerts(
   return summary;
 }
 
-/** A push is for a diver who may be missing now: a recent filing of a recent incident. */
+/**
+ * A report whose owners are owed the alert: a missing-diver report, filed or
+ * raised from the roll call, not discarded, not found.
+ */
+const alertStands = and(
+  eq(incidentReports.kind, "missing_diver"),
+  or(eq(incidentReports.status, "filed"), isNotNull(incidentReports.missingAlertRaisedAt)),
+  isNull(incidentReports.deletedAt),
+  isNull(incidentReports.missingFoundAt),
+);
+
+/** Whether the report was marked found since this pass took it. */
+async function foundSince(db: AppDb, report: { id: string; shopId: string }): Promise<boolean> {
+  const [row] = await db
+    .select({ foundAt: incidentReports.missingFoundAt })
+    .from(incidentReports)
+    .where(and(eq(incidentReports.id, report.id), eq(incidentReports.shopId, report.shopId)))
+    .limit(1);
+  return row?.foundAt != null;
+}
+
+/** When the alert was first asked for: the raise from the roll call, or else the filing. */
+function alertStartedAt(report: { filedAt: Date | null; raisedAt: Date | null }): Date | null {
+  return report.raisedAt ?? report.filedAt;
+}
+
+/** A push is for a diver who may be missing now: a recent raise or filing of a recent incident. */
 function withinPushWindow(
-  report: { filedAt: Date | null; occurredAt: Date | null },
+  report: { filedAt: Date | null; raisedAt: Date | null; occurredAt: Date | null },
   now: Date,
 ): boolean {
-  if (!report.filedAt || !report.occurredAt) return false;
-  if (now.getTime() - report.filedAt.getTime() > MISSING_DIVER_PUSH_WINDOW_MS) return false;
-  return report.filedAt.getTime() - report.occurredAt.getTime() <= MISSING_DIVER_PUSH_STALE_MS;
+  const startedAt = alertStartedAt(report);
+  if (!startedAt || !report.occurredAt) return false;
+  if (now.getTime() - startedAt.getTime() > MISSING_DIVER_PUSH_WINDOW_MS) return false;
+  return startedAt.getTime() - report.occurredAt.getTime() <= MISSING_DIVER_PUSH_STALE_MS;
+}
+
+export type MissingDiverAllClearOutcome = "sent" | "partial" | "skipped";
+
+/**
+ * **One quiet all-clear** (issue #2694, decided by Aaron 2026-10-17): when a
+ * missing diver is marked found, each active owner gets one email saying the
+ * diver reported missing on this departure was found, and when, and how many
+ * are still reported missing on it (a count, never a name). Email only: no
+ * push wakes the boat's followers, who are the ones who found them.
+ *
+ * The recipients are the alert's (`ownerLogins`, re-read live), on a report
+ * of this shop whose alert was raised or filed. **At most once**: the report
+ * is claimed (`missing_all_clear_claimed_at`) before any send, so two taps or
+ * a retry never send a second all-clear; `missing_all_clear_sent_at` is
+ * written only once every owner's email went, so the report page can say
+ * when it did not. A failed send is logged, not retried: the found stands on
+ * the report either way, and the owner's first instruction was to call the
+ * boat. Only after an alarm that went (`missing_alert_sent_at`): owners who
+ * were never told have nothing to be cleared of. Never for a rehearsal or a demo shop, which are never alerted; a
+ * departure cancelled or removed since the alert still gets it.
+ */
+export async function sendMissingDiverAllClear(
+  db: AppDb,
+  input: {
+    shopId: string;
+    reportId: string;
+    now?: Date;
+    origin?: string | null;
+    provider?: NotificationProvider;
+  },
+): Promise<MissingDiverAllClearOutcome> {
+  const now = input.now ?? nowDate();
+  const origin = input.origin === undefined ? publicAppUrl() : input.origin;
+  const [report] = await db
+    .update(incidentReports)
+    .set({ missingAllClearClaimedAt: now })
+    .where(
+      and(
+        eq(incidentReports.id, input.reportId),
+        eq(incidentReports.shopId, input.shopId),
+        eq(incidentReports.kind, "missing_diver"),
+        or(eq(incidentReports.status, "filed"), isNotNull(incidentReports.missingAlertRaisedAt)),
+        isNotNull(incidentReports.missingFoundAt),
+        // An alarm that never went has no all-clear to follow it (review 2026-10-17).
+        isNotNull(incidentReports.missingAlertSentAt),
+        isNull(incidentReports.missingAllClearClaimedAt),
+        isNull(incidentReports.deletedAt),
+      ),
+    )
+    .returning({
+      id: incidentReports.id,
+      shopId: incidentReports.shopId,
+      tripId: incidentReports.tripId,
+      foundAt: incidentReports.missingFoundAt,
+    });
+  if (!report?.foundAt) return "skipped";
+  const [context] = await db
+    .select({
+      tripTitle: trips.title,
+      slug: shops.slug,
+      shopName: shops.name,
+      defaultLocale: shops.defaultLocale,
+      timezone: shops.timezone,
+    })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(
+      and(
+        eq(trips.id, report.tripId),
+        eq(trips.shopId, report.shopId),
+        // diveday:allow-deleted-trips: an owner told of a missing diver is told they were found, whatever became of the departure since.
+        notRehearsal(),
+        eq(shops.isDemo, false),
+      ),
+    )
+    .limit(1);
+  if (!context || !origin) {
+    if (context && !origin) log("incident.missing_diver_all_clear_no_origin", "error", {});
+    return "skipped";
+  }
+  const stillMissing = await stillReportedMissing(db, report);
+  const reportPath = shopPath(context.slug, "trips", report.tripId, "incidents", report.id);
+  const owners = await ownerLogins(db, report.shopId);
+  let sent = 0;
+  for (const owner of owners) {
+    const delivery = await sendNotification(
+      db,
+      {
+        kind: "incident_missing_diver_found",
+        shopId: report.shopId,
+        personId: owner.personId,
+        tripId: report.tripId,
+        incidentReportId: report.id,
+        to: owner.email,
+        locale: recipientLocale(owner.locale, context.defaultLocale),
+        recipientName: owner.fullName,
+        shopName: context.shopName,
+        tripTitle: notificationTripTitle(context.tripTitle),
+        foundAt: report.foundAt,
+        stillMissing,
+        timezone: context.timezone,
+        reportUrl: `${origin}${reportPath}`,
+      },
+      input.provider,
+    ).catch(() => ({ status: "failed" as const }));
+    if (delivery.status === "sent") sent += 1;
+  }
+  const everyOwner = owners.length > 0 && sent === owners.length;
+  if (everyOwner) {
+    await db
+      .update(incidentReports)
+      .set({ missingAllClearSentAt: nowDate() })
+      .where(and(eq(incidentReports.id, report.id), eq(incidentReports.shopId, report.shopId)));
+  }
+  // Ids and counts only.
+  log("incident.missing_diver_all_clear", "info", { owners: owners.length, sent });
+  return everyOwner ? "sent" : "partial";
+}
+
+/** Other alerted reports on the departure whose person is not found yet: a count for the all-clear. */
+async function stillReportedMissing(
+  db: AppDb,
+  report: { id: string; shopId: string; tripId: string },
+): Promise<number> {
+  const rows = await db
+    .select({ id: incidentReports.id })
+    .from(incidentReports)
+    .where(
+      and(
+        eq(incidentReports.shopId, report.shopId),
+        eq(incidentReports.tripId, report.tripId),
+        ne(incidentReports.id, report.id),
+        alertStands,
+      ),
+    );
+  return rows.length;
 }

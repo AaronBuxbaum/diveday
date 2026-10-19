@@ -106,7 +106,7 @@ describe("backup settings authorization", () => {
     signIn(shop, owner);
 
     const to = await redirectedTo(() => saveBackupDestinationAction(destinationForm()));
-    expect(to).toBe(`/shop/${shop.slug}/settings/export?notice=saved`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/export/backups?notice=saved`);
     expect(to).not.toContain(SECRET);
 
     const row = await getShopBackupDestination(db, shop.id);
@@ -123,7 +123,7 @@ describe("backup settings authorization", () => {
     const form = destinationForm();
     form.set("endpoint", "https://169.254.169.254");
     const to = await redirectedTo(() => saveBackupDestinationAction(form));
-    expect(to).toBe(`/shop/${shop.slug}/settings/export?notice=endpoint-private-host`);
+    expect(to).toBe(`/shop/${shop.slug}/settings/export/backups?notice=endpoint-private-host`);
     expect((await getShopBackupDestination(db, shop.id))?.endpoint).toBe(before);
   });
 });

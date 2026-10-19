@@ -80,7 +80,8 @@ describe("messageFor", () => {
 
   it("falls back to English chrome for the internal alert that has no locale", () => {
     const email = messageFor({
-      kind: "new_account_alert",
+      kind: "operator_alert",
+      event: "new_account",
       ...ids,
       to: "founder@diveday.app",
       ownerName: "Marisol Vega",
@@ -99,15 +100,11 @@ describe("messageFor", () => {
   });
 
   it("renders the week-out and night-before reminders as two different mails", () => {
-    const weekOut = messageFor({ kind: "trip_reminder_7d", ...trip });
-    const nightBefore = messageFor({
-      kind: "trip_reminder_24h",
-      ...trip,
-      brief: { forecast: "Light chop, 2 ft seas, 80 ft viz." },
-    });
-    expect(weekOut.html).not.toBe(nightBefore.html);
-    expect(nightBefore.text).toContain("Light chop, 2 ft seas, 80 ft viz.");
-    expect(weekOut.text).not.toContain("Light chop");
+    const weekOut = messageFor({ kind: "trip_reminder_7d", ...trip, open: 0 });
+    const nightBefore = messageFor({ kind: "trip_reminder_24h", ...trip, open: 0 });
+    expect(weekOut.subject).not.toBe(nightBefore.subject);
+    expect(weekOut.text).toContain("sails");
+    expect(nightBefore.text).toContain("sails tomorrow");
   });
 
   it("renders the same body whatever channel asks for it", () => {

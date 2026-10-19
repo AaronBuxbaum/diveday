@@ -1,4 +1,5 @@
 import { type CalendarDate, calendarDateWeekday, shiftCalendarDate } from "./calendar-date";
+import { shopSeasonLabel } from "./season";
 
 /**
  * **The shop's year, read from the days it already has** (ADR
@@ -11,6 +12,15 @@ import { type CalendarDate, calendarDateWeekday, shiftCalendarDate } from "./cal
  * over ("since May" for a shop that opened mid-year, and a month still running
  * is never called the quietest). The reading itself is
  * `getShopYear` in `src/db/reporting.ts`; the words are the surface's.
+ *
+ * **A window of days, not a calendar year** (issues #2657 and #2664). The year
+ * is the shop's season (`ShopSeason`, `src/lib/season.ts`), January 1 for a
+ * shop that never moved it; the Money page's month reads the same summary
+ * over its own 28 to 31 days.
+ *
+ * **A diver is a person** (issue #2663): every "divers" here counts distinct
+ * people, as the home's season count does (`seasonScale`), so a regular who
+ * dives every Saturday is one diver of the year and one of the month.
  *
  * **Money is not in this file.** The year page and the card both render from
  * `ShopYear`, and the card leaves the shop, so the
@@ -25,8 +35,10 @@ export type ShopYearDay = {
   day: CalendarDate;
   /** Departures that sailed that day. */
   boats: number;
-  /** Divers aboard them. */
+  /** Different people aboard them: a diver on the morning and the night boat is one. */
   divers: number;
+  /** Seats taken on them — the strip's numerator, so a second boat's seat still fills it. */
+  aboard: number;
   /** Seats those departures offered — the strip's denominator. */
   seats: number;
 };
@@ -43,18 +55,27 @@ export type ShopYearSite = { siteId: string; name: string; times: number; live: 
 
 /** Everything the read hands the summary. */
 export type ShopYearInput = {
+  /** The calendar year the window starts in. */
   year: number;
+  /** The window's first day: the season's start, or a month's first. */
+  startsOn: CalendarDate;
+  /** The window's last day. */
+  endsOn: CalendarDate;
   /**
-   * The first shop-local day the year draws — January 1 of `year`, or the
-   * shop's first day at sea when that falls later inside it.
+   * The first shop-local day the window draws — `startsOn`, or the shop's
+   * first day at sea when that falls later inside it.
    */
   firstDay: CalendarDate;
-  /** The last day drawn: today for the current year, December 31 for a past one. */
+  /** The last day drawn: today for the current window, `endsOn` for a past one. */
   lastDay: CalendarDate;
-  /** True when `firstDay` is the shop's first day at sea rather than January 1. */
+  /** True when `firstDay` is the shop's first day at sea rather than `startsOn`. */
   openedThisYear: boolean;
   /** Today in the shop's zone, so the strip can outline it and draw nothing after it. */
   today: CalendarDate;
+  /** Different people who sailed in the window. Not the days' sum: one regular is one diver. */
+  divers: number;
+  /** Different people who sailed in each month of the window, keyed `YYYY-MM`. */
+  monthDivers: { month: string; divers: number }[];
   days: ShopYearDay[];
   boats: ShopYearBoat[];
   sites: ShopYearSite[];
@@ -85,11 +106,16 @@ export type ShopYearCell = {
 
 export type ShopYearSummary = {
   year: number;
+  /** "2026", or "2026–27" for a season that does not start on January 1. */
+  label: string;
+  startsOn: CalendarDate;
+  endsOn: CalendarDate;
   firstDay: CalendarDate;
   lastDay: CalendarDate;
   /**
    * The month the year starts in when the shop opened inside it, 1-12 — the
-   * "since May" rule. Null for a shop that was already sailing on January 1.
+   * "since May" rule. Null for a shop that was already sailing in the
+   * window's first month.
    */
   sinceMonth: number | null;
   divers: number;
@@ -113,7 +139,7 @@ export type ShopYearSummary = {
 function fillFor(day: ShopYearDay): ShopYearFill {
   if (day.boats === 0) return 0;
   if (day.seats <= 0) return 1;
-  const ratio = day.divers / day.seats;
+  const ratio = day.aboard / day.seats;
   if (ratio < HALF_FULL) return 1;
   if (ratio < MOSTLY_FULL) return 2;
   return 3;
@@ -125,15 +151,17 @@ function monthOf(day: CalendarDate): number {
 }
 
 /**
- * Whether `month` has run its full course inside the window. A month still
- * running has fewer days in it than it will have, so calling it the quietest
- * would be a fact about the calendar rather than about the shop — every year
- * page would name the current month for the first week of it.
+ * Whether the month `key` (`YYYY-MM`) has run its full course inside the
+ * window. A month still running has fewer days in it than it will have, so
+ * calling it the quietest would be a fact about the calendar rather than about
+ * the shop — every year page would name the current month for the first week
+ * of it. A season that starts on the 15th cuts its first month the same way.
  */
-function monthIsComplete(year: number, month: number, lastDay: CalendarDate): boolean {
+function monthIsComplete(key: string, input: ShopYearInput): boolean {
+  const year = Number(key.slice(0, 4));
+  const month = Number(key.slice(5, 7));
   const lastOfMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const end = `${year}-${String(month).padStart(2, "0")}-${String(lastOfMonth).padStart(2, "0")}`;
-  return lastDay >= end;
+  return input.startsOn <= `${key}-01` && input.lastDay >= `${key}-${String(lastOfMonth)}`;
 }
 
 /**
@@ -173,7 +201,6 @@ function buildStrip(input: ShopYearInput, byDay: Map<CalendarDate, ShopYearDay>)
  */
 export function summarizeShopYear(input: ShopYearInput): ShopYearSummary {
   const byDay = new Map(input.days.map((day) => [day.day, day]));
-  const divers = input.days.reduce((total, day) => total + day.divers, 0);
   const boatsOut = input.days.reduce((total, day) => total + day.boats, 0);
 
   let busiestDay: ShopYearDay | null = null;
@@ -182,18 +209,20 @@ export function summarizeShopYear(input: ShopYearInput): ShopYearSummary {
     if (!busiestDay || day.divers > busiestDay.divers) busiestDay = day;
   }
 
-  const months = new Map<number, { divers: number; boats: number }>();
+  // Boats add up across days; divers do not, so each month's comes from the read.
+  const monthDivers = new Map(input.monthDivers.map((row) => [row.month, row.divers]));
+  const monthBoats = new Map<string, number>();
   for (const day of input.days) {
     if (day.boats === 0) continue;
-    const month = monthOf(day.day);
-    const running = months.get(month) ?? { divers: 0, boats: 0 };
-    months.set(month, { divers: running.divers + day.divers, boats: running.boats + day.boats });
+    const key = day.day.slice(0, 7);
+    monthBoats.set(key, (monthBoats.get(key) ?? 0) + day.boats);
   }
   let quietestMonth: { month: number; divers: number; boats: number } | null = null;
-  for (const [month, totals] of [...months].sort((a, b) => a[0] - b[0])) {
-    if (!monthIsComplete(input.year, month, input.lastDay)) continue;
-    if (!quietestMonth || totals.divers < quietestMonth.divers) {
-      quietestMonth = { month, divers: totals.divers, boats: totals.boats };
+  for (const [key, boats] of [...monthBoats].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
+    if (!monthIsComplete(key, input)) continue;
+    const divers = monthDivers.get(key) ?? 0;
+    if (!quietestMonth || divers < quietestMonth.divers) {
+      quietestMonth = { month: Number(key.slice(5, 7)), divers, boats };
     }
   }
 
@@ -201,11 +230,16 @@ export function summarizeShopYear(input: ShopYearInput): ShopYearSummary {
 
   return {
     year: input.year,
+    label: shopSeasonLabel(input),
+    startsOn: input.startsOn,
+    endsOn: input.endsOn,
     firstDay: input.firstDay,
     lastDay: input.lastDay,
     sinceMonth:
-      input.openedThisYear && monthOf(input.firstDay) > 1 ? monthOf(input.firstDay) : null,
-    divers,
+      input.openedThisYear && input.firstDay.slice(0, 7) !== input.startsOn.slice(0, 7)
+        ? monthOf(input.firstDay)
+        : null,
+    divers: input.divers,
     boatsOut,
     daysAtSea: input.days.filter((day) => day.boats > 0).length,
     siteCount: input.sites.length,

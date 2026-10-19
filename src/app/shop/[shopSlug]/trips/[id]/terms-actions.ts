@@ -9,7 +9,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { listTripReadiness, upsertTripRequirements } from "@/db/readiness";
-import { diveSpecialty } from "@/db/schema";
+import { readRequiredSpecialties } from "@/db/requirement-form";
 import { getShopCurrency } from "@/db/stripe-accounts";
 import { getTripWithBooked, setTripParticipantTerms } from "@/db/trips";
 import { checkbox, formValue, readForm } from "@/lib/form-parse";
@@ -19,8 +19,6 @@ import { paymentGateIsUnclearable, REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib
 import { noticeUrl } from "@/lib/staff-notices";
 import { tripPath } from "./roster-booking";
 import { requireTripConfig } from "./trip-config";
-
-const specialtySchema = z.enum(diveSpecialty.enumValues);
 
 const requirementsSchema = z.object({
   requiresWaiver: z.string().optional(),
@@ -89,8 +87,8 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
   const parsed = requirementsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   const switches = readForm(requirementSwitchesForm, formData);
-  const specialties = z.array(specialtySchema).safeParse(formData.getAll("specialty").map(String));
-  if (!specialties.success) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
+  const specialties = readRequiredSpecialties(formData);
+  if (!specialties) redirect(noticeUrl(back, "invalid", { form: "requirements" }));
   // A payment gate on an unpriced departure blocks every diver who books it,
   // forever, and nothing ever asks them for money — so this one combination is
   // refused rather than saved and explained afterwards (issue #692).
@@ -108,7 +106,7 @@ export async function saveRequirementsAction(shopSlug: string, tripId: string, f
     tripId,
     requiresWaiver: parsed.data.requiresWaiver === "on",
     minimumCertificationLevel: parsed.data.minimumCertificationLevel,
-    requiredSpecialties: specialties.data,
+    requiredSpecialties: specialties,
     requiresNitrox: switches.requiresNitrox,
     requiresPayment: switches.requiresPayment,
   });

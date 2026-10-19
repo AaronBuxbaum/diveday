@@ -12,6 +12,11 @@ const copy = {
   vesselLabel: "Vessel:",
   callSignLabel: "Call sign:",
   mmsiLabel: "MMSI:",
+  // The shipped words (`manifest.emergency.*`): a working channel is never
+  // printed as a bare "Channel", or a captain could call Mayday on it.
+  workingChannelLabel: "Working channel (VHF):",
+  workingChannelNotRecorded: "not recorded",
+  distressChannel: "Distress and calling: VHF 16, not this channel",
   shoreContactLabel: "Shore contact:",
   planLabel: "First moves",
 };
@@ -38,6 +43,55 @@ describe("EmergencyReferenceCard", () => {
     expect(container.textContent).toContain("MMSI: 338055502");
     expect(container.textContent).not.toContain("Mantis II");
     expect(screen.queryByText(copy.empty)).toBeNull();
+  });
+
+  it("prints the boat's working channel as a working channel, with 16 named for distress (issue #2672)", () => {
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          boat: { name: "Mantis I", callSign: "WDM2201", mmsi: "338055502", workingChannel: "68" },
+        }}
+      />,
+    );
+    expect(screen.getByText("68").closest("p")?.textContent).toBe("Working channel (VHF): 68");
+    expect(container.textContent).toContain(copy.distressChannel);
+    expect(container.textContent).toContain("MMSI: 338055502");
+  });
+
+  it("never prints the channel without the word working (dock review B1)", () => {
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          boat: { name: "Mantis I", callSign: null, mmsi: null, workingChannel: "72 or 69" },
+        }}
+      />,
+    );
+    const lines = [...container.querySelectorAll("p")].filter((line) =>
+      line.textContent?.includes("72 or 69"),
+    );
+    expect(lines).toHaveLength(1);
+    for (const line of lines) expect(line.textContent).toMatch(/^Working channel \(VHF\):/);
+  });
+
+  it.each([
+    ["null", null],
+    ["absent, as an older offline snapshot", undefined],
+  ])("says a channel that is %s is not recorded", (_label, workingChannel) => {
+    const { container } = render(
+      <EmergencyReferenceCard
+        copy={copy}
+        reference={{
+          ...EMPTY_EMERGENCY_REFERENCE,
+          boat: { name: "Mantis I", callSign: null, mmsi: null, workingChannel },
+        }}
+      />,
+    );
+    expect(container.textContent).toContain("Working channel (VHF): not recorded");
+    expect(container.textContent).toContain(copy.distressChannel);
   });
 
   it("leaves out a radio fact the boat's row does not hold", () => {

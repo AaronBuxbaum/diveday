@@ -27,6 +27,8 @@
     "incident_draft_discarded": "{actor} deleted an incident report draft",
     "incident_legal_hold_set": "{actor} put a legal hold on an incident report",
     "incident_legal_hold_released": "{actor} released the legal hold on an incident report",
+    "missing_diver_alert_raised": "{actor} alerted the owners to a missing diver",
+    "missing_diver_found": "{actor} marked a missing diver found",
     "seat_added": "{actor} added {diver} to the trip",
     "seat_added_walk_in": "{actor} added {diver} to the trip as a walk-in",
     "seat_added_from_trip_link": "{actor} added a seat for {diver} from their trip link",

@@ -14,7 +14,7 @@ import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
 import type { ShoreAlertContact } from "@/lib/shore-alert-contact";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { CustomerRegulatorServiceMonths } from "@/lib/work-orders";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { courses, divePackages, orders, people, shops, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -499,12 +499,22 @@ export async function setShopCurrency(db: AppDb, shopId: string, currency: ShopC
   return shop ?? null;
 }
 
+/** Locks the shop row and reads its depth unit, for a switch that must not race another. */
+export async function lockShopDepthUnit(tx: DbExecutor, shopId: string) {
+  const [shop] = await tx
+    .select({ depthUnit: shops.depthUnit })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .for("no key update");
+  return shop?.depthUnit ?? null;
+}
+
 /**
  * Sets whether the shop reads depth in metres or feet. Presentation only —
  * `dive_sites.max_depth_meters` stays canonical metres, so flipping this never
  * changes a stored depth or what a certification ceiling compares against.
  */
-export async function setShopDepthUnit(db: AppDb, shopId: string, unit: DepthUnit) {
+export async function setShopDepthUnit(db: DbExecutor, shopId: string, unit: DepthUnit) {
   const [shop] = await db
     .update(shops)
     .set({ depthUnit: unit })
@@ -715,16 +725,31 @@ export async function setShopDivingOptions(
   return shop ?? null;
 }
 
-/**
- * Turns the shop's crew schedule on or off (`shops.crew_schedule_enabled`),
- * with the divemaster target its nudges are measured against.
- */
-export async function setShopCrewSchedule(
+/** Turns the shop's crew schedule on or off (`shops.crew_schedule_enabled`). */
+export async function setShopCrewScheduleEnabled(
   db: AppDb,
   shopId: string,
-  options: { crewScheduleEnabled: boolean; diversPerDivemaster: number },
+  crewScheduleEnabled: boolean,
 ) {
-  const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
+  const [shop] = await db
+    .update(shops)
+    .set({ crewScheduleEnabled })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/** Sets the divemaster target the crew schedule's nudges are measured against. */
+export async function setShopDiversPerDivemaster(
+  db: AppDb,
+  shopId: string,
+  diversPerDivemaster: number,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ diversPerDivemaster })
+    .where(eq(shops.id, shopId))
+    .returning();
   return shop ?? null;
 }
 

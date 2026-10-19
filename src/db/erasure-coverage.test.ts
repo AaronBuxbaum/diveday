@@ -301,6 +301,8 @@ const ERASURE_KEEPS: Record<string, string> = {
     "whether a piece's service reminders are off — a timestamp on a piece whose note and serial the erasure clears",
   work_order_bills:
     "which order billed which ticket — two ids. The order keeps its own erasure answer, and the ticket's words are redacted",
+  crew_away_acknowledgements:
+    "that a staffer said an away crew member is working a departure anyway, and who took it back — four ids and two dates. Only crew are its subject, and the erasure refuses anyone holding a staff role",
   crew_notices:
     "that a crew member was put on, taken off, or answered about a departure — a change code, two ids and two dates. Only crew are its subject, and the erasure refuses anyone holding a staff role",
   weekly_digest_sends:
@@ -315,7 +317,6 @@ const ERASURE_KEEPS: Record<string, string> = {
     "the shop’s photographs of a departure, uploaded by a staff member and attached to the trip rather than to anyone on it. A photo *of* a diver is `recap_photos`, which the erasure deletes and queues for blob deletion",
   dive_sites: "a place, its briefing and its conditions",
   dive_site_creatures: "which catalog species a site lists",
-  dive_site_moments: "retired (#2330): the shop’s own site photographs, dropped later",
   dive_packages: "the shop’s price list of multi-dive packages",
   pre_departure_checklist_items: "the shop’s own checklist lines",
   departure_boat_safety_snapshots:
@@ -692,7 +693,7 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
   "waiver_records.delivery_provider_message_id": { held: "elsewhere", why: "as above" },
   "integration_sync_records.external_id": {
     held: "elsewhere",
-    why: "the QuickBooks or Xero object a diver was synced to: the map from a DiveDay row to the provider's own object. The row copies no details, but the Customer it names holds the diver's name and contact details at the provider, and erasure does not reach it. Kept so a second Customer is not created for someone already synced (`OUTSIDE_CLOSURE_REASONS` above, issue #1015). The books are the shop's to keep, and deleting a Customer may not be possible while its invoices reference it. Nothing is owed (ADR)",
+    why: "the QuickBooks object a diver was synced to: the map from a DiveDay row to the provider's own object. The row copies no details, but the Customer it names holds the diver's name and contact details at the provider, and erasure does not reach it. Kept so a second Customer is not created for someone already synced (`OUTSIDE_CLOSURE_REASONS` above, issue #1015). The books are the shop's to keep, and deleting a Customer may not be possible while its invoices reference it. Nothing is owed (ADR)",
   },
   "imported_payment_history.stripe_reference": {
     held: "elsewhere",
@@ -785,7 +786,6 @@ const OUTSIDE_PARTY_SEGMENTS = new Set([
   "razorpay",
   "klarna",
   "quickbooks",
-  "xero",
   "shopify",
   "twilio",
   "external",

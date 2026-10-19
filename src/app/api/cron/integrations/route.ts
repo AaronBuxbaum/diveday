@@ -18,7 +18,7 @@ export const maxDuration = 300;
  * exceptions, so a pass that *ran and threw* was visible, and a pass that never
  * ran was not. That is the wrong half to cover. The outbox is drained only
  * here, so a cron Vercel silently stopped invoking means deliveries to a shop's
- * Shopify, QuickBooks, Xero or Zapier stop retrying and nothing anywhere says
+ * Shopify, QuickBooks or Zapier stop retrying and nothing anywhere says
  * so — the integration simply goes quiet, which is indistinguishable from
  * having nothing to send.
  *

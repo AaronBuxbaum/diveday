@@ -16,6 +16,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { inTrainingBefore } from "@/lib/in-training";
 import { INVITE_SUGGESTIONS_SHOWN, inviteCooldownStart } from "@/lib/invite-suggestions";
+import { requirementDemandsNothing, unionRequirements } from "@/lib/requirement";
 import { decideTripAdmission, type TripAdmissionEvidence } from "@/lib/trip-admission";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { readCertificationEvidenceFor } from "./certification-evidence";
@@ -323,11 +324,8 @@ async function admittedUnderGate<T extends { personId: string }>(
 ): Promise<T[]> {
   if (candidates.length === 0) return [];
   const { requirement, siteRequirement } = gate;
-  const demandsSomething = Boolean(
-    requirement?.minimumCertificationLevel ||
-      requirement?.requiredSpecialties.length ||
-      requirement?.requiresNitrox ||
-      siteRequirement,
+  const demandsSomething = !requirementDemandsNothing(
+    unionRequirements(requirement, siteRequirement),
   );
   const personIds = candidates.map((candidate) => candidate.personId);
   // The referral read goes out with the cards, in the same wave: a boat that

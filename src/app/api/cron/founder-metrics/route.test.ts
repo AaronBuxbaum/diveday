@@ -163,7 +163,8 @@ describe("Monday's digest", () => {
     );
     expect(notify).toHaveBeenCalledTimes(1);
     expect(vi.mocked(notify).mock.calls[0]?.[0]).toEqual({
-      kind: "founder_digest",
+      kind: "operator_alert",
+      event: "founder_digest",
       to: "founder@example.com",
       weekStart: "2026-10-05",
       weekEnd: "2026-10-11",

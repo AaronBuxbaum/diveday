@@ -39,7 +39,7 @@ import {
   waiverRecords,
   waiverTemplates,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { livePerson, liveTrip } from "./trips-live";
 import { issueWaiverOnJoin } from "./waiver-issue";
 import { WAIVER_STATE_COLUMNS } from "./waiver-record-columns";
 import { issueWaiverRequest } from "./waivers-requests";
@@ -980,17 +980,33 @@ async function leadSigningContext(
 
 /**
  * Whether the seat's person is one this booking made, read from the record:
- * no other booking under any status, and no release filed anywhere but this
- * seat. A name-only seat always inserts a fresh person, so this holds for
- * every seat the door is meant for; a diver the shop knew before (a walk-in
- * with no address, a record a staff merge pointed the seat at) has history,
- * and the lead never signs for them (security review F2 of H-124).
+ * stamped at creation with this booking (`people.created_by_booking_id`,
+ * issue #2665), no other booking under any status, and no release filed
+ * anywhere but this seat. A name-only seat always inserts a fresh person
+ * stamped with its booking, so this holds for every seat the door is meant
+ * for; a diver the shop knew before (a walk-in with no address, a record a
+ * staff merge pointed the seat at) has history or another stamp, and the lead
+ * never signs for them (security review F2 of H-124). A merge keeps the
+ * survivor's stamp, so an imported record with no history never matches.
  */
 async function seatPersonIsThisBookings(
   db: AppDb,
   shopId: string,
   booking: Pick<typeof bookings.$inferSelect, "id" | "personId">,
 ): Promise<boolean> {
+  const [stamped] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      and(
+        eq(people.id, booking.personId),
+        eq(people.shopId, shopId),
+        eq(people.createdByBookingId, booking.id),
+        livePerson(),
+      ),
+    )
+    .limit(1);
+  if (!stamped) return false;
   const [otherBooking] = await db
     .select({ id: bookings.id })
     .from(bookings)

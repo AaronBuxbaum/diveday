@@ -19,7 +19,7 @@
 
 What the build took from the answer, each a one-line change if Aaron wants another:
 
-- **When:** at filing, not at draft. A draft that already says "missing diver" sends nothing; filing is the act that says the crew means it (`fileIncidentReport`, `src/db/incident-reports.ts`).
+- **When:** at filing, not at draft. A draft that already says "missing diver" sends nothing; filing is the act that says the crew means it (`fileIncidentReport`, `src/db/incident-reports.ts`). Amended 2026-10-17 below: the roll-call row's own tap also sends, before the report is written.
 - **Recipients: the stale alert's, re-read live.** Active owners with a login (`ownerLogins`) and the manifest's followers who are still live staff (`pushTripAlert`). A demoted owner, a disabled login or a follower who left hears nothing.
 - **The shore contact is not included.** Their consent and confirmation were given for the stale roll-call alert (H-118), and this is a different message; adding them is a decision of its own.
 - **Counts nothing, names nobody.** The mail says "Missing diver on {trip}. Reported {time}. Call the boat first." with the time the incident happened, a link to the report behind the staff sign-in and one to the emergency reference. The push says that a missing diver was reported on this departure. No name, severity or word of what happened: the report is personal and medical data.
@@ -30,6 +30,13 @@ What the build took from the answer, each a one-line change if Aaron wants anoth
 - **Retry cadence stays hourly.** A tighter cron for one kind would wake the database on its own schedule, which `src/lib/cron-schedule.test.ts` keeps all hourly passes from doing; the send at filing is the fast path, and the screen and the monitor cover the rest.
 - **Never for a rehearsal, a cancelled departure, a demo shop, a discarded report or any other kind.** The stale alert itself is unchanged.
 - **Not a new channel.** Email and the existing manifest push, no SMS.
+
+## Amendment 2026-10-17 (issue #2694, decided by Aaron)
+
+- **"Missing diver, alert owners now"** on a roll-call row marked not back aboard, a diver's or a crew member's, apart from the report. The tap starts the one report for that disappearance (as "Start a missing diver report" does), stamps it raised (`missing_alert_raised_at`, by whom) and sends the alert above at once; the report stays a draft until filed. A double tap, a second crew member's tap and a later filing are the same one alert. Same people as the report button; a raised report is never discarded and stays of kind missing diver (database checks too) (`raiseMissingDiverAlert`).
+- **"Found"** on a report that was raised or filed: refused while the roll call still has the person not back aboard, so one wrong tap cannot silence a live disappearance. Any of the departure's crew may tap it, on the report or on the row beside "Mark back aboard". Recorded once with who and when, it stops an alert not yet sent and emails each active owner one quiet all-clear, no push, at most once (`missing_all_clear_claimed_at` is claimed before any send and a failed send is not retried; `missing_all_clear_sent_at` only when every owner was sent, and the report says when it was partial). Found also needs the roll call's latest mark to be "boarded" (a `cleared` undo is not back aboard), sends no all-clear for an alarm that never went (`missing_alert_sent_at` unset), wakes no push once found, and replies with what the all-clear really did. The all-clear counts, naming nobody, anyone else on the departure still reported missing (`markMissingDiverFound`, `sendMissingDiverAllClear`, domain and security reviews 2026-10-17).
+- **Never "owners alerted" unless the send reached someone**: otherwise the row says "Not reached yet. Call the owners now.", and a re-tap sends again. The hourly pass skips a raised report once the roll call has the person back, and stops between owners once Found. Marked not aboard again after Found, a raise opens a new report and alerts again. Offline, the button says to phone the owners or use VHF.
+- The shore contact as a recipient (option 3 on the issue) waits until a pilot shop asks.
 
 ## Minimum outcome to record
 

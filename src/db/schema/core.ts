@@ -1007,6 +1007,19 @@ export const people = pgTable(
     mergedIntoPersonId: uuid("merged_into_person_id").references((): AnyPgColumn => people.id),
     mergedAt: timestamp("merged_at", { withTimezone: true }),
     mergedByPersonId: uuid("merged_by_person_id").references((): AnyPgColumn => people.id),
+    /**
+     * **The booking whose seat made this person** (issue #2665): a name-only
+     * seat with no email of its own inserts a fresh person, stamped here with
+     * that seat's booking. Null for every other person — a contact import, a
+     * staff-typed diver, anyone found by email. The parent's door (ADR
+     * 20261014-parent-signs-minor-release) opens only where this equals the
+     * seat's booking, so a merge onto an imported record with no history
+     * never passes for "a person this booking made": a merge keeps the
+     * survivor's stamp. Never rewritten. No foreign key: `bookings` is
+     * declared in a module that imports this one, and a booking is never
+     * hard-deleted.
+     */
+    createdByBookingId: uuid("created_by_booking_id"),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [

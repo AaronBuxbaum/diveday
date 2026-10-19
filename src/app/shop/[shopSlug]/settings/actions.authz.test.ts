@@ -63,17 +63,10 @@ const { saveDeskPaymentAction } = await import("./dock-day/desk-payment-actions"
 const { savePackingAction } = await import("./booking-actions");
 const { dischargeProcessorErasureAction, retryMediaDeletionAction, retryProcessorErasureAction } =
   await import("./data-actions");
-const { disconnectAction, refreshAction, saveTaxAction } = await import("./money-actions");
-const { saveRegulatorServiceAction, saveRentalItemsAction, saveRentalPricingAction } = await import(
-  "./rental-actions"
-);
-const {
-  saveAddressAction,
-  saveReopensOnAction,
-  saveShopFeatureAction,
-  saveTimezoneAction,
-  saveUnitsAction,
-} = await import("./shop-actions");
+const { disconnectAction, refreshAction } = await import("./money-actions");
+const { saveRentalsAction } = await import("./rental-actions");
+const { saveAddressAction, saveReopensOnAction, saveTimezoneAction, saveUnitsAction } =
+  await import("./shop-actions");
 const { saveCrewScheduleAction } = await import("./team-actions");
 const { saveProfileAction } = await import("./website-actions");
 
@@ -181,126 +174,33 @@ describe("saving the shop's units", () => {
   });
 });
 
-describe("saving the shop's Stripe Tax setting", () => {
-  it("refuses a captain's tax change", async () => {
-    const { db, shop, captain } = await context();
-    signIn(shop, captain);
-    const taxBefore = (await getShopById(db, shop.id))?.taxEnabled;
-    const form = new FormData();
-    form.set("taxEnabled", "on");
-
-    const to = await redirectedTo(() => saveTaxAction(form));
-
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
-    // Unchanged, rather than literally `false`: the canonical demo ships with
-    // Stripe Tax **on** (src/db/seed.ts), so a hard-coded `false` here was
-    // asserting the fixture's default rather than that the captain's write was
-    // refused. Read before and after and compare.
-    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(taxBefore);
-  });
-
-  it("lets an owner enable and disable Stripe Tax", async () => {
-    const { db, shop, owner } = await context();
-    signIn(shop, owner);
-    const enabled = new FormData();
-    enabled.set("taxEnabled", "on");
-
-    expect(await redirectedTo(() => saveTaxAction(enabled))).toBe(
-      `/shop/${shop.slug}/settings?notice=tax-saved&saved=tax`,
-    );
-    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(true);
-
-    expect(await redirectedTo(() => saveTaxAction(new FormData()))).toBe(
-      `/shop/${shop.slug}/settings?notice=tax-saved&saved=tax`,
-    );
-    expect((await getShopById(db, shop.id))?.taxEnabled).toBe(false);
-  });
-});
-
-describe("saving an optional feature switch", () => {
-  function featureForm(feature: string, enabled: boolean) {
-    const form = new FormData();
-    form.set("feature", feature);
-    if (enabled) form.set("enabled", "on");
-    return form;
-  }
-
+describe("saving the crew schedule's divemaster target", () => {
   it("refuses a captain's change", async () => {
     const { db, shop, captain } = await context();
     signIn(shop, captain);
+    const before = (await getShopById(db, shop.id))?.diversPerDivemaster;
+    const form = new FormData();
+    form.set("diversPerDivemaster", "4");
 
-    const to = await redirectedTo(() => saveShopFeatureAction(featureForm("tips", false)));
-
-    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
-    expect((await getShopById(db, shop.id))?.tipsEnabled).toBe(true);
-  });
-
-  it("lets an owner turn each one off and back on, touching no other", async () => {
-    const { db, shop, owner } = await context();
-    signIn(shop, owner);
-
-    expect(await redirectedTo(() => saveShopFeatureAction(featureForm("reviews", false)))).toBe(
-      `/shop/${shop.slug}/settings?notice=feature-saved&saved=reviews`,
-    );
-    expect(await getShopById(db, shop.id)).toMatchObject({
-      reviewsEnabled: false,
-      dateRequestsEnabled: true,
-      lastMinuteListEnabled: true,
-      tipsEnabled: true,
-      // The seeded demo runs the PADI checks; turning reviews off leaves them on.
-      padiChecksEnabled: true,
-    });
-
-    await redirectedTo(() => saveShopFeatureAction(featureForm("reviews", true)));
-    expect((await getShopById(db, shop.id))?.reviewsEnabled).toBe(true);
-  });
-
-  it("ignores a feature it does not know, including the crew schedule's own column", async () => {
-    const { db, shop, owner } = await context();
-    signIn(shop, owner);
-    const before = await getShopById(db, shop.id);
-
-    const to = await redirectedTo(() =>
-      saveShopFeatureAction(featureForm("crewScheduleEnabled", false)),
-    );
-
-    expect(to).toBe(`/shop/${shop.slug}/settings`);
-    expect(await getShopById(db, shop.id)).toEqual(before);
-  });
-});
-
-describe("saving the crew schedule switch", () => {
-  it("refuses a captain's change", async () => {
-    const { db, shop, captain } = await context();
-    signIn(shop, captain);
-    const before = (await getShopById(db, shop.id))?.crewScheduleEnabled;
-
-    const to = await redirectedTo(() => saveCrewScheduleAction(new FormData()));
+    const to = await redirectedTo(() => saveCrewScheduleAction(form));
 
     expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
-    expect((await getShopById(db, shop.id))?.crewScheduleEnabled).toBe(before);
+    expect((await getShopById(db, shop.id))?.diversPerDivemaster).toBe(before);
   });
 
-  it("lets an owner turn it off and on, with its divemaster target", async () => {
+  it("lets an owner set the target and leaves the switch where the Features page put it", async () => {
     const { db, shop, owner } = await context();
     signIn(shop, owner);
-    const saved = `/shop/${shop.slug}/settings?notice=crew-schedule-saved&saved=crewSchedule`;
+    const switchBefore = (await getShopById(db, shop.id))?.crewScheduleEnabled;
+    const form = new FormData();
+    form.set("diversPerDivemaster", "4");
 
-    const off = new FormData();
-    off.set("diversPerDivemaster", "4");
-    expect(await redirectedTo(() => saveCrewScheduleAction(off))).toBe(saved);
+    expect(await redirectedTo(() => saveCrewScheduleAction(form))).toBe(
+      `/shop/${shop.slug}/settings?notice=crew-schedule-saved&saved=crewSchedule`,
+    );
     expect(await getShopById(db, shop.id)).toMatchObject({
-      crewScheduleEnabled: false,
+      crewScheduleEnabled: switchBefore,
       diversPerDivemaster: 4,
-    });
-
-    const on = new FormData();
-    on.set("crewScheduleEnabled", "on");
-    on.set("diversPerDivemaster", "8");
-    expect(await redirectedTo(() => saveCrewScheduleAction(on))).toBe(saved);
-    expect(await getShopById(db, shop.id)).toMatchObject({
-      crewScheduleEnabled: true,
-      diversPerDivemaster: 8,
     });
   });
 
@@ -424,7 +324,7 @@ describe("every settings mutation refuses the daily crew", () => {
    * is what proves it, not the notice — each setter writes whatever it is
    * handed.
    */
-  it("refuses a captain's emergency reference, rental catalog, rental prices and profile", async () => {
+  it("refuses a captain's emergency reference, rentals and profile", async () => {
     const { db, shop, captain, owner } = await context();
     signIn(shop, captain);
     const before = await getShopById(db, shop.id);
@@ -450,49 +350,124 @@ describe("every settings mutation refuses the daily crew", () => {
       await db.select().from(shopShoreAlertTokens).where(eq(shopShoreAlertTokens.shopId, shop.id)),
     ).toEqual([]);
 
-    const items = new FormData();
-    items.set("drysuit", "on");
-    expect(await redirectedTo(() => saveRentalItemsAction(items))).toBe(refused);
-
-    const prices = new FormData();
-    prices.set("setPrice", "1");
-    expect(await redirectedTo(() => saveRentalPricingAction(prices))).toBe(refused);
+    const rentals = new FormData();
+    rentals.set("drysuit", "on");
+    rentals.set("setPrice", "1");
+    rentals.set("rentalTerms", "Written by the captain");
+    rentals.set("regulatorServiceMonths", "24");
+    expect(await redirectedTo(() => saveRentalsAction(rentals))).toBe(refused);
 
     const profile = new FormData();
     profile.set("tagline", "Written by the captain");
     expect(await redirectedTo(() => saveProfileAction(profile))).toBe(refused);
 
-    const regulator = new FormData();
-    regulator.set("regulatorServiceMonths", "24");
-    expect(await redirectedTo(() => saveRegulatorServiceAction(regulator))).toBe(refused);
-
     const after = await getShopById(db, shop.id);
     expect(after?.emergencyReference).toEqual(before?.emergencyReference);
     expect(after?.rentalItems).toEqual(before?.rentalItems);
     expect(after?.rentalPricing).toEqual(before?.rentalPricing);
+    expect(after?.rentalTerms).toEqual(before?.rentalTerms);
     expect(after?.tagline).toEqual(before?.tagline);
     expect(after?.customerRegulatorServiceMonths).toBe(12);
   });
 
-  it("saves a shop's regulator service interval, and only 12 or 24 months", async () => {
+  /**
+   * Rentals is one save (#2815), validated whole before anything is written:
+   * a bad price, over-long terms or an interval other than 12 or 24 leaves the
+   * stored catalog, prices, terms and interval exactly as they were.
+   */
+  it("writes nothing when any part of the rentals form is invalid", async () => {
     const { db, shop, owner } = await context();
     signIn(shop, owner);
-    const settings = `/shop/${shop.slug}/settings?notice=`;
-    const form = (months: string) => {
+    const before = await getShopById(db, shop.id);
+    const page = `/shop/${shop.slug}/settings/rentals?notice=`;
+    const form = (overrides: Record<string, string>) => {
       const data = new FormData();
-      data.set("regulatorServiceMonths", months);
+      for (const [key, value] of Object.entries({
+        drysuit: "on",
+        price_drysuit: "40",
+        rentalTerms: "Rinse it.",
+        regulatorServiceMonths: "24",
+        ...overrides,
+      })) {
+        data.set(key, value);
+      }
       return data;
     };
 
-    expect(await redirectedTo(() => saveRegulatorServiceAction(form("18")))).toBe(
-      `${settings}regulator-service-invalid&saved=regulatorService`,
+    expect(await redirectedTo(() => saveRentalsAction(form({ price_drysuit: "-3" })))).toBe(
+      `${page}rental-prices-invalid`,
     );
-    expect((await getShopById(db, shop.id))?.customerRegulatorServiceMonths).toBe(12);
+    expect(
+      await redirectedTo(() => saveRentalsAction(form({ rentalTerms: "x".repeat(5000) }))),
+    ).toBe(`${page}rental-terms-invalid`);
+    expect(
+      await redirectedTo(() => saveRentalsAction(form({ regulatorServiceMonths: "18" }))),
+    ).toBe(`${page}regulator-service-invalid`);
+    const after = await getShopById(db, shop.id);
+    expect(after?.rentalItems).toEqual(before?.rentalItems);
+    expect(after?.rentalPricing).toEqual(before?.rentalPricing);
+    expect(after?.rentalTerms).toEqual(before?.rentalTerms);
+    expect(after?.customerRegulatorServiceMonths).toBe(12);
+  });
 
-    expect(await redirectedTo(() => saveRegulatorServiceAction(form("24")))).toBe(
-      `${settings}regulator-service-saved&saved=regulatorService`,
-    );
-    expect((await getShopById(db, shop.id))?.customerRegulatorServiceMonths).toBe(24);
+  it("saves the catalog, prices, terms and interval together, keeping an unticked piece's price", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const page = `/shop/${shop.slug}/settings/rentals?notice=`;
+    const first = new FormData();
+    first.set("drysuit", "on");
+    first.set("maskFins", "on");
+    first.set("price_drysuit", "40");
+    first.set("price_maskFins", "5");
+    first.set("setPrice", "60");
+    first.set("rentalTerms", "Rinse it.");
+    first.set("regulatorServiceMonths", "24");
+    expect(await redirectedTo(() => saveRentalsAction(first))).toBe(`${page}rentals-saved`);
+    const saved = await getShopById(db, shop.id);
+    expect(saved?.rentalPricing.setCents).toBe(6000);
+    expect(saved?.rentalPricing.perItemCents.drysuit).toBe(4000);
+    expect(saved?.rentalTerms).toBe("Rinse it.");
+    expect(saved?.customerRegulatorServiceMonths).toBe(24);
+
+    // The mask is unticked: its box still posts, but its stored price stays.
+    const second = new FormData();
+    second.set("drysuit", "on");
+    second.set("price_drysuit", "45");
+    second.set("price_maskFins", "999");
+    second.set("setPrice", "60");
+    second.set("regulatorServiceMonths", "24");
+    expect(await redirectedTo(() => saveRentalsAction(second))).toBe(`${page}rentals-saved`);
+    const after = await getShopById(db, shop.id);
+    expect(after?.rentalPricing.perItemCents.drysuit).toBe(4500);
+    expect(after?.rentalPricing.perItemCents.mask_fins).toBe(500);
+    expect(after?.rentalTerms).toBeNull();
+  });
+
+  /**
+   * Nitrox is priced per dive and only while the shop fills it (#2815): the
+   * price box is live when ticked; unticked, a posted figure is ignored and
+   * the stored price stays; ticked and blank, the price is cleared.
+   */
+  it("keeps, ignores and clears the nitrox price as the tick says", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const form = (fields: Record<string, string>) => {
+      const data = new FormData();
+      data.set("regulatorServiceMonths", "12");
+      for (const [key, value] of Object.entries(fields)) data.set(key, value);
+      return data;
+    };
+
+    await redirectedTo(() => saveRentalsAction(form({ nitrox: "on", nitroxPrice: "12" })));
+    expect((await getShopById(db, shop.id))?.rentalPricing.nitroxCents).toBe(1200);
+
+    await redirectedTo(() => saveRentalsAction(form({ nitroxPrice: "999" })));
+    const unticked = await getShopById(db, shop.id);
+    expect(unticked?.rentalPricing.nitroxCents).toBe(1200);
+    expect(unticked?.rentalItems).not.toContain("nitrox");
+
+    await redirectedTo(() => saveRentalsAction(form({ nitrox: "on", nitroxPrice: "" })));
+    expect((await getShopById(db, shop.id))?.rentalPricing.nitroxCents).toBeNull();
   });
 
   it("still lets an owner through every one of them", async () => {
@@ -603,7 +578,7 @@ describe("every settings mutation refuses the daily crew", () => {
   });
 
   /**
-   * The five editors that left the hub for pages of their own (#1854) answer
+   * The four editors that left the hub for pages of their own (#1854) answer
    * on those pages, with a plain `?notice=` and no `saved=` row to reopen:
    * a notice that sent the owner back to the hub would land them on a door,
    * not on what they just saved.
@@ -618,11 +593,10 @@ describe("every settings mutation refuses the daily crew", () => {
     expect(await redirectedTo(() => saveEmergencyReferenceAction(emergency))).toBe(
       `${page("emergency-reference")}emergency-saved`,
     );
-    expect(await redirectedTo(() => saveRentalItemsAction(new FormData()))).toBe(
+    const rentals = new FormData();
+    rentals.set("regulatorServiceMonths", "12");
+    expect(await redirectedTo(() => saveRentalsAction(rentals))).toBe(
       `${page("rentals")}rentals-saved`,
-    );
-    expect(await redirectedTo(() => saveRentalPricingAction(new FormData()))).toBe(
-      `${page("rental-prices")}rental-prices-saved`,
     );
     const profile = new FormData();
     profile.set("brandColor", "not a colour");

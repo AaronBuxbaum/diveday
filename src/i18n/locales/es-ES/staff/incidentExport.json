@@ -38,6 +38,8 @@
   "colRoles": "Funciones",
   "crewHeading": "Tripulación",
   "crewNoTeams": "Ninguno registrado",
+  "crewAwayAcknowledged": "{name} estaba ausente; lo confirmó {by} el {time}.",
+  "crewAwayAcknowledgedNoActor": "{name} estaba ausente; se confirmó el {time}.",
   "crewNone": "No se asignó tripulación a esta salida.",
   "crewTag": "tripulación",
   "description": "Lo registrado en esta salida, redactado como un solo documento: embarque, cronología del recuento, evidencia de titulaciones y estado de exenciones. Listo para imprimir si alguna vez lo piden las autoridades o las aseguradoras.",

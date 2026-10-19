@@ -6,6 +6,7 @@ import { addPartySeat, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { recordMoveAsk } from "@/db/inbound-messages";
+import { alertStaffToMoveAsk } from "@/db/move-ask-alerts";
 import { startPartySeatCheckout } from "@/db/party-seat-checkout";
 import {
   planReadinessLinkRescue,
@@ -99,6 +100,13 @@ export async function askToMoveAction(token: string, formData: FormData) {
   });
   if (outcome.status === "not_found") redirect(`${base(token)}?error=move-ask`);
   if (outcome.status === "already") revalidateAndRedirect(base(token), `${base(token)}#move-ask`);
+  // Within a day of the boat, owners and managers are emailed too (#2667);
+  // farther out the Inbox row is enough. Never throws.
+  await alertStaffToMoveAsk(ctx.db, {
+    shopId: ctx.data.shop.id,
+    messageId: outcome.id,
+    now: nowDate(),
+  });
   revalidateAndRedirect(base(token), `${base(token)}?saved=move-ask#move-ask`);
 }
 

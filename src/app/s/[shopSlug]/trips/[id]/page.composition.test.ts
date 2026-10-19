@@ -32,7 +32,7 @@ describe("the trip page's gates", () => {
     // itinerary's gate is deliberately not a booking gate — repeating the
     // site's demand here would read as a bar on the very students the course
     // exists to create.
-    expect(SOURCE).toContain("const combinedRequirement = trip.course\n    ? null");
+    expect(SOURCE).toContain("const combinedRequirement = trip.course ? null : unionRequirements(");
   });
 
   it("leaves the embed contract exactly where it was", () => {

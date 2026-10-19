@@ -13,12 +13,11 @@ const BOOKING = "00000000-0000-4000-8000-0000000000c1";
 const ENROLLMENT = "00000000-0000-4000-8000-0000000000e1";
 const at = new Date("2026-10-20T13:00:00.000Z");
 
-function draw(training: TrainingMarkRosterSeat, instructorRostered = true) {
+function draw(training: TrainingMarkRosterSeat) {
   render(
     <TrainingMarkControl
       bookingId={BOOKING}
       training={training}
-      instructorRostered={instructorRostered}
       markAction={vi.fn()}
       clearAction={vi.fn()}
       locale="en-US"
@@ -33,6 +32,7 @@ const mark = {
   courseTitle: "Advanced Open Water",
   sessionStartsAt: at,
   valid: true,
+  courseInstructorAboard: true,
   markedAt: at,
   markedByName: "Dana",
 };
@@ -57,17 +57,29 @@ describe("a training mark on a charter seat's row (issue #2275)", () => {
   });
 
   it("names the course once marked, offers the clear, and warns with no instructor aboard", () => {
-    draw({ mark, options: [], clearedWithFormsOwed: null }, false);
+    draw({
+      mark: { ...mark, courseInstructorAboard: false },
+      options: [],
+      clearedWithFormsOwed: null,
+    });
     expect(screen.getByText(/Training dive for Advanced Open Water/)).toBeTruthy();
-    expect(screen.getByText("No instructor is on this departure’s crew yet.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "No instructor of the course is aboard for this seat (rostered by someone else, counted aboard, within the course ratio), so the departure’s own level applies.",
+      ),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Clear training mark" })).toBeTruthy();
     expect(screen.queryByRole("combobox")).toBeNull();
   });
 
   it("says nothing of a course on a mark that no longer stands: the blocker line speaks", () => {
-    draw({ mark: { ...mark, valid: false }, options: [], clearedWithFormsOwed: null }, false);
+    draw({
+      mark: { ...mark, valid: false, courseInstructorAboard: false },
+      options: [],
+      clearedWithFormsOwed: null,
+    });
     expect(screen.queryByText(/Training dive for/)).toBeNull();
-    expect(screen.queryByText(/No instructor/)).toBeNull();
+    expect(screen.queryByText(/No instructor of the course/)).toBeNull();
     expect(screen.getByRole("button", { name: "Clear training mark" })).toBeTruthy();
   });
 

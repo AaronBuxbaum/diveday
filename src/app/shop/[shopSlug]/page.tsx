@@ -58,7 +58,6 @@ import {
 } from "@/lib/today";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
-import { staffShopName } from "./_components/staff-shop-name";
 import { updateHelpRequestAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -568,7 +567,6 @@ async function TodayBody({
             spine,
             highWind: work.highWind,
             shopSlug,
-            shopName: await staffShopName(shop),
             mailShopName: shop.name,
             locale,
             timeZone: shop.timezone,

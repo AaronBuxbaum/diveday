@@ -12,13 +12,29 @@ describe("a training dive's manifest lines (issue #2275)", () => {
       }),
     ).toEqual({
       fact: "Training dive for Advanced Open Water",
-      warnings: ["No instructor is on this boat’s crew"],
+      warnings: ["No instructor of the course aboard for this seat"],
     });
     expect(
       trainingDiveLines(t, {
         trainingDive: { courseTitle: "Advanced Open Water", instructorAboard: true },
       }).warnings,
     ).toEqual([]);
+  });
+
+  it("says over the ratio when the instructor is aboard but the seat does not fit", () => {
+    expect(
+      trainingDiveLines(t, {
+        trainingDive: {
+          courseTitle: "Open Water Diver",
+          instructorAboard: false,
+          overRatio: true,
+        },
+      }).warnings,
+    ).toEqual(["Over the instructor’s ratio for this course; move a student"]);
+    const es = trainingDiveLines(staffTranslator("es-ES"), {
+      trainingDive: { courseTitle: "X", instructorAboard: false, overRatio: true },
+    });
+    expect(es.warnings[0]).toMatch(/proporción/);
   });
 
   it("names who cleared a mark with forms unsigned, or says it without a name", () => {

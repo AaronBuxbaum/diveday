@@ -60,7 +60,6 @@ import {
 } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
-import { type CertRequirementSource, combineCertRequirements } from "@/lib/readiness";
 import { partnerFromReferralCookie, REFERRAL_COOKIE } from "@/lib/referrals";
 import {
   hasAnyRentalPricing,
@@ -72,15 +71,9 @@ import {
   withOneSuit,
 } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
+import { unionRequirements } from "@/lib/requirement";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
-
-/** Stands in for a trip with no requirement row of its own, so its dive sites' gates still compose. */
-const NO_CERT_REQUIREMENT: CertRequirementSource = {
-  minimumCertificationLevel: null,
-  requiredSpecialties: [],
-  requiresNitrox: false,
-};
 
 /**
  * Absolute readiness link, for the confirmation email — and for the redirect a
@@ -438,7 +431,7 @@ export async function bookSpot(
       ]);
       const list = tripRequirementList(
         t,
-        combineCertRequirements(tripRequirement ?? NO_CERT_REQUIREMENT, siteRequirement),
+        unionRequirements(tripRequirement, siteRequirement),
         locale,
       );
       if (list) {

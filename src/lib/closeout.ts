@@ -430,9 +430,11 @@ export function assembleDayCloseout(input: {
   gaps: readonly CloseoutRollCallGap[];
   timeZone: string;
   now?: Date;
+  /** The day the trips are from, when it is not today's (a past day, issue #2662). */
+  shopDay?: string;
 }): DayCloseoutState {
   const now = input.now ?? nowDate();
-  const shopDay = shopDayOf(now, input.timeZone);
+  const shopDay = input.shopDay ?? shopDayOf(now, input.timeZone);
 
   const worstGapByTrip = new Map<string, CloseoutRollCallGap>();
   for (const gap of input.gaps) {

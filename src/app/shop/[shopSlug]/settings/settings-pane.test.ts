@@ -40,11 +40,9 @@ describe("the settings pane", () => {
     for (const file of [
       "SettingsPage.tsx",
       "loading.tsx",
-      "safety-checklist/page.tsx",
-      "safety-checklist/loading.tsx",
       "team/page.tsx",
       "embed/page.tsx",
-      "trip-tags/loading.tsx",
+      "dock-day/loading.tsx",
     ]) {
       expect(files).toContain(file);
     }

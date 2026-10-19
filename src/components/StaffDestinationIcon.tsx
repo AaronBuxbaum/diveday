@@ -292,6 +292,30 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <circle cx="12" cy="10" r="2.5" />
     </>
   ),
+  // Boats: a hull on the waterline, mast and sail.
+  boats: (
+    <>
+      <path d="M3 17h18l-2.5 4h-13L3 17Z" />
+      <path d="M12 3v14" />
+      <path d="M12 4c3 2 5 6 5 11h-5" />
+    </>
+  ),
+  // Trip tags: the same eyelet tag the discount codes draw, turned over.
+  tripTags: (
+    <>
+      <path d="M3 12V4h8l10 10-8 8L3 12Z" />
+      <circle cx="7.5" cy="8.5" r="1.25" />
+    </>
+  ),
+  // The pre-departure checklist: a clipboard with ticked lines.
+  safetyChecklist: (
+    <>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 4V2.5h6V4" />
+      <path d="m8.5 11 1.5 1.5 3-3" />
+      <path d="M8.5 17h7" />
+    </>
+  ),
   // Gear: a cylinder standing with its valve.
   gear: (
     <>
@@ -407,6 +431,13 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
     <>
       <rect x="3" y="5" width="18" height="14" rx="2" />
       <path d="m3 7 9 6 9-6" />
+    </>
+  ),
+  // The login's own security: a padlock.
+  security: (
+    <>
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </>
   ),
   // The activity log: a clock face, for "who did what, when".

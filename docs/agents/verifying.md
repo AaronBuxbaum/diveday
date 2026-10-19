@@ -175,6 +175,22 @@ So a local timeout in a spec that pays a reset and a long walk, with no other er
 timeout is not raised. Check the trace's `Before Hooks` step before debugging the body: past
 6 s, it is this. A cheaper reset is the fix that would move it.
 
+Measured again on 2026-10-18 for #2624, at load averages of 10 to 14 from other sessions:
+
+- **Server CPU per test, from `/proc` rather than wall time:** about 11 s for `readiness.spec.ts:131`
+  (the reset 5.5 s, the body 5.5 s), over a first reset of about 30 s. Three repeats on one server ran
+  16 to 38 s with the 15 s ceiling lifted for the measurement, so a warm server is not faster than a
+  cold one and the warm-up list is not the lever.
+- **The reset is WASM Postgres.** A CPU profile of one server puts 30 s of 72 in the Postgres
+  WASM, 14 s in PGlite's JavaScript file system, 4.7 s in garbage collection. `--max-semi-space-size=64`,
+  `--no-wasm-dynamic-tiering` and `--wasm-tiering-budget=1000000` left the reset at 5.1 to 6.0 s,
+  inside the noise of the 5.4 to 6.6 s without a flag, so the server command carries none.
+- **The first reset can outlast its old 30 s bound.** It failed the run at the global setup here,
+  before any test started; the bound is now 120 s (untimed setup, not a test). The browser warm-up
+  now runs after the servers instead of beside them: its first navigation read 22.3 and 27.2 s
+  queued behind worker 0's seed, and reads 1.3 s after it.
+- A cheaper reset stays the fix, and it is #2729's (`src/db/seed.ts`).
+
 ### A red base
 
 The gate as first built had one hole, and on 2026-10-14 it was the whole of what went red. Main

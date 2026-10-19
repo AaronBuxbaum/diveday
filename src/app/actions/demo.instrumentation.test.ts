@@ -199,7 +199,8 @@ describe("enterDemoAction instrumentation", () => {
     expect(sendNotification).toHaveBeenCalledTimes(1);
     const [, notification] = vi.mocked(sendNotification).mock.calls[0];
     expect(notification).toMatchObject({
-      kind: "demo_started_alert",
+      kind: "operator_alert",
+      event: "demo_started",
       to: ALERT_EMAIL,
       role: "diver",
       source: "home-hero",
@@ -214,6 +215,7 @@ describe("enterDemoAction instrumentation", () => {
     // entry, and there is nothing a fresh mint would tell us that this one
     // doesn't.
     expect(Object.keys(notification).sort()).toEqual([
+      "event",
       "kind",
       "role",
       "shopId",

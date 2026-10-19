@@ -10,11 +10,14 @@ import {
   canExportDisputeSheet,
   canExportIncidentRecord,
   canManageBilling,
+  canManageBoats,
   canManageMessagingSettings,
   canManageOrders,
   canManagePaymentSettings,
+  canManageSafetyChecklist,
   canManageShopSettings,
   canManageStaffAccounts,
+  canManageTripTags,
   canManageWaiverTemplates,
   canMergeDiver,
   canOverrideCertBlock,
@@ -197,6 +200,16 @@ export const canPersonManageWaiverTemplates = (db: DbExecutor, shopId: string, p
  */
 export const canPersonManageShopSettings = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManageShopSettings);
+
+/** Live DB-checked companions of the three register gates (src/lib/authz.ts, issue #2659). */
+export const canPersonManageBoats = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canManageBoats);
+
+export const canPersonManageTripTags = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canManageTripTags);
+
+export const canPersonManageSafetyChecklist = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canManageSafetyChecklist);
 
 /**
  * The rental editors' gate (#1854): shop settings *and* payment settings, the

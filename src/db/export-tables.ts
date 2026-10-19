@@ -19,6 +19,7 @@ import {
   courseFormVersions,
   courseInquiries,
   courses,
+  crewAwayAcknowledgements,
   customerGearItems,
   customerGearReminderSettings,
   departureBoatSafetySnapshots,
@@ -552,6 +553,12 @@ export const EXPORT_TABLES = {
     table: boatSnags,
     order: [asc(boatSnags.notedAt), asc(boatSnags.id)],
     scope: { shopColumn: boatSnags.shopId },
+  },
+  // Every "working it anyway", live or taken back (#2678, records review S2).
+  crewAwayAcknowledgements: {
+    table: crewAwayAcknowledgements,
+    order: [asc(crewAwayAcknowledgements.createdAt), asc(crewAwayAcknowledgements.id)],
+    scope: { shopColumn: crewAwayAcknowledgements.shopId },
   },
   departureBoatSafetySnapshots: {
     table: departureBoatSafetySnapshots,

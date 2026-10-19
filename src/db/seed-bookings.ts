@@ -12,6 +12,7 @@ import {
 } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt, sailsAfterDayBoats } from "./seed-clock";
 import { commonsImage } from "./seed-images";
+import { paperRelease, signingNames } from "./seed-paper-release";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 /**
@@ -74,9 +75,11 @@ export async function seedBookings(
     customers: (typeof people.$inferSelect)[];
     tripRows: (typeof trips.$inferSelect)[];
     pinRecapBooking: boolean;
+    /** The staffer who took the paper releases at the counter. */
+    recordedById: string;
   },
 ) {
-  const { customers, tripRows, pinRecapBooking } = ctx;
+  const { customers, tripRows, pinRecapBooking, recordedById } = ctx;
   // Booking spread: busy reef trip, quiet night dive, sold-out wreck, fresh listing.
   const [reef, night, wreck] = tripRows;
   if (!reef || !night || !wreck) throw new Error("seed: failed to insert demo trips");
@@ -354,6 +357,7 @@ export async function seedBookings(
     };
   };
 
+  const signedName = await signingNames(db, shopId);
   let upcomingWaiverToken = 0;
   const upcomingWaiverRows = bookingRows_
     .filter((booking) => booking.id !== recapBookingId)
@@ -380,12 +384,7 @@ export async function seedBookings(
         createdAt,
         ...(signed
           ? {
-              status: "completed" as const,
-              signedName: "Signed on file",
-              signatureMethod: "in_person" as const,
-              consentedAt: createdAt,
-              signedAt: createdAt,
-              completedAt: createdAt,
+              ...paperRelease(createdAt, recordedById, signedName(booking.personId)),
               ...guardianColumns(booking.personId, createdAt),
             }
           : {}),

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
+import { acknowledgeCrewAway } from "@/db/crew-away-acknowledgements";
 import { fitAdjustedReturnTeaching } from "@/db/gear";
 import { updateHelpRequestStatus } from "@/db/help-requests";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
@@ -255,6 +256,26 @@ export async function keepRentalFitAction(reservationId: string) {
   // No notice on the way back. The row leaving the leftovers group is the
   // answer, and a banner reading "Fit saved." over three of those rows told a
   // staffer who tapped two in a row nothing about which one landed (#1400).
+  revalidateAndRedirect(home);
+}
+
+/**
+ * "Working it anyway" on Today's `crew_away` row (issue #2678): the staffer
+ * says an away crew member is working this departure all the same. Any live
+ * staffer may, as any may change the crew; the db re-proves the person is on
+ * this live departure's crew in the session's shop. No notice: the row
+ * leaving Today is the answer.
+ */
+export async function acknowledgeCrewAwayAction(tripId: string, personId: string) {
+  const { staff, home } = await shopHome();
+  if (!uuidParam(tripId) || !uuidParam(personId)) redirect(home);
+  const outcome = await acknowledgeCrewAway(await getDb(), {
+    shopId: staff.user.shopId,
+    tripId,
+    personId,
+    actorPersonId: staff.user.personId,
+  });
+  if (outcome !== "saved") revalidateAndRedirect(home, noticeUrl(home, "invalid"));
   revalidateAndRedirect(home);
 }
 

@@ -8,7 +8,6 @@ import {
   isLearningMaterialLink,
   LEARNING_MATERIAL_LIMITS,
   MAX_LEARNING_MATERIALS,
-  MAX_SCHEDULE_DAYS,
 } from "@/lib/courses";
 import { CREW_NOTICE_CHANGES, CREW_TRIP_ROLES } from "@/lib/crew-notices";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
@@ -20,7 +19,6 @@ import { GEAR_KIND_ORDER, GEAR_SERVICE_KINDS } from "@/lib/gear";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
 import { MEETING_POINT_LIMITS } from "@/lib/meeting-point";
 import { DIVER_EMAIL_MAX } from "@/lib/person-fields";
-import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
 import {
   isSingleLineText,
   SETUP_CURRENT_SYSTEMS,
@@ -62,7 +60,7 @@ const calendarDateSchema = z.string().refine(isValidCalendarDate);
  * when DiveDay has one, otherwise the shop's `default_locale` (docs ADR
  * 20260731-per-person-notification-locale, superseding
  * 20260731-notification-locale). Every `Notification` kind carries one except
- * `new_account_alert`, which lands in the founder's own inbox rather than a
+ * an `operator_alert`, which lands in the founder's own inbox rather than a
  * shop's or diver's. Callers pick the value with {@link recipientLocale}.
  */
 const localeSchema = z.enum(DIVER_LOCALES);
@@ -88,8 +86,6 @@ export function recipientLocale(
 ): DiverLocale {
   return isDiverLocale(personLocale) ? personLocale : toDiverLocale(shopDefaultLocale);
 }
-
-const reminderActionCodeSchema = z.enum(REMINDER_ACTION_CODES);
 
 /**
  * A course's learning materials as a message carries them (ADR
@@ -498,21 +494,28 @@ const checkoutRecoverySchema = z.object({
   unsubscribeUrl: z.url().max(2_000),
 });
 
+/**
+ * **A reminder is a state, one sentence and a link** (issue #2660): the
+ * thread page holds everything else, so nothing but the facts that sentence
+ * and that link are made of travels here. `open` is how many things the diver
+ * still has to finish (their checklist, the medical review, a course's
+ * unfinished materials), counted by the sender from the same engine the
+ * thread reads.
+ */
 const tripReminderFields = {
   bookingId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
-  diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: tripTitleSchema,
   startsAt: z.date(),
-  endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
+  /** What the diver still has to finish, not counting the medical review (its own flag). */
+  open: z.number().int().min(0).max(40),
+  /** The shop's dock call: the 24-hour sentence names the time to be at the dock, not the departure. */
   dockCallMinutes: z.number().int().min(5).max(180).optional(),
-  pickupTime: z.string().trim().max(40).nullish(),
-  hotelPickupLocation: z.string().trim().max(300).nullish(),
-  outstanding: z.array(reminderActionCodeSchema).max(8).optional(),
+  /** A medical answer waits on a doctor's sign-off; the sentence says so in place of the count. */
   medicalReview: z.boolean().optional(),
   readinessUrl: z.url().max(2_000).optional(),
   /**
@@ -522,27 +525,9 @@ const tripReminderFields = {
    * only obeys.
    */
   replyKeywords: z.boolean().optional(),
-  /** Carried only while nobody has marked this student's materials done. */
-  learningMaterials: learningMaterialsSchema,
-  /** Every meeting of a multi-day course session, so the email can list each day. */
-  scheduleDays: z
-    .array(z.object({ startsAt: z.date(), endsAt: z.date() }))
-    .max(MAX_SCHEDULE_DAYS)
-    .optional(),
-  /** A course session: the week-out note says it starts, and names no dock. */
+  /** A course session: the sentence says it starts, where a fun dive sails. */
   courseSession: z.boolean().optional(),
-  meetingPoint: meetingPointSchema.optional(),
 };
-
-// The night-before brief's extra sections, carried only on the 24h cadence
-// (docs first-principles brainstorm C). Every field optional so the reminder
-// degrades to the plain nudge when the shop has published nothing.
-const nightBeforeBriefSchema = z.object({
-  forecast: z.string().trim().min(1).max(600).nullish(),
-  bring: z.array(z.string().trim().min(1).max(120)).max(20).optional(),
-  whoToText: z.string().trim().min(1).max(40).nullish(),
-  firstTimerNote: z.string().trim().min(1).max(600).nullish(),
-});
 
 // One literal per cadence so the delivery row's `kind` is the cadence itself,
 // which is what dedups a reminder to once-per-booking (src/lib/reminders.ts).
@@ -553,7 +538,6 @@ const tripReminder7dSchema = z.object({
 const tripReminder24hSchema = z.object({
   kind: z.literal("trip_reminder_24h"),
   ...tripReminderFields,
-  brief: nightBeforeBriefSchema.optional(),
 });
 
 /**
@@ -604,12 +588,10 @@ const tripRecapSchema = z.object({
   shopId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
-  diverName: z.string().trim().min(1).max(120),
   shopName: z.string().trim().min(1).max(120),
   tripTitle: tripTitleSchema,
   startsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
-  sites: z.array(z.string().trim().min(1).max(120)).max(10).optional(),
   /**
    * When the diver may fly (`src/lib/fly-safe.ts`, issue #1425): the instant,
    * the hours that produced it, and whether the clock started at the last
@@ -815,36 +797,40 @@ const welcomeSchema = z.object({
   signInUrl: z.url().max(2_000),
 });
 
-const emailVerificationSchema = z.object({
-  kind: z.literal("email_verification"),
-  userAccountId: z.uuid(),
-  tokenId: z.uuid(),
-  shopId: z.uuid(),
-  to: emailAddressSchema,
-  locale: localeSchema,
-  ownerName: z.string().trim().min(1).max(120),
-  verifyUrl: z.url().max(2_000),
-  expiresAt: z.date(),
-  timezone: z.string().trim().min(1).max(100),
-});
-
 /**
- * The link that proves a shop controls the front-desk address it typed into
- * settings, before that address becomes Reply-To on diver mail (issue #1288).
- * Goes to the shop, in the shop's own language, branded as the shop -- it is
- * the shop's own address being vouched for.
+ * **One kind for "confirm this address"**, whoever the address belongs to.
+ * `purpose` says whose: `account` is an owner proving the address on their
+ * login (plain DiveDay, greeted by name); `shop_contact` is the front desk
+ * proving the address that becomes Reply-To on diver mail (issue #1288);
+ * `shore_alert` is the shore contact agreeing to hear roll-call alerts (H-118).
+ * The last two go to the shop, in the shop's language, branded as the shop only for `shore_alert`; `shop_contact` goes out as plain DiveDay (`shop-voice.ts`).
+ * The fields are the same across all three; only the name the copy uses
+ * differs, and the schema holds each purpose to exactly its own.
  */
-const contactEmailConfirmationSchema = z.object({
-  kind: z.literal("contact_email_confirmation"),
+const addressConfirmationBase = {
+  kind: z.literal("address_confirmation"),
   shopId: z.uuid(),
   tokenId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
-  shopName: z.string().trim().min(1).max(120),
   confirmUrl: z.url().max(2_000),
   expiresAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
-});
+};
+
+const addressConfirmationSchema = z.discriminatedUnion("purpose", [
+  z.object({
+    ...addressConfirmationBase,
+    purpose: z.literal("account"),
+    userAccountId: z.uuid(),
+    ownerName: z.string().trim().min(1).max(120),
+  }),
+  z.object({
+    ...addressConfirmationBase,
+    purpose: z.enum(["shop_contact", "shore_alert"]),
+    shopName: z.string().trim().min(1).max(120),
+  }),
+]);
 
 const passwordResetRequestSchema = z.object({
   kind: z.literal("password_reset_request"),
@@ -860,7 +846,7 @@ const passwordResetRequestSchema = z.object({
 });
 
 // A staff invite (20260726-staff-invite-accounts): no bookingId, account-scoped
-// like welcome/email_verification/password_reset_request above.
+// like welcome/address_confirmation/password_reset_request above.
 const staffInviteSchema = z.object({
   kind: z.literal("staff_invite"),
   userAccountId: z.uuid(),
@@ -881,7 +867,8 @@ const staffInviteSchema = z.object({
 // per new shop so the founder learns about signups without watching a dashboard. No bookingId,
 // structurally excluded from TrackedNotification exactly like welcome/staff_invite above.
 const newAccountAlertSchema = z.object({
-  kind: z.literal("new_account_alert"),
+  kind: z.literal("operator_alert"),
+  event: z.literal("new_account"),
   userAccountId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
@@ -894,7 +881,7 @@ const newAccountAlertSchema = z.object({
 });
 
 /**
- * The other half of the funnel `new_account_alert` closes: somebody tried the
+ * The other half of the funnel the `new_account` operator alert closes: somebody tried the
  * live demo (docs ADR 20260805-demo-try-alerts). Internal, English, founder-only
  * — same shape of signal, same mailbox, no locale.
  *
@@ -907,7 +894,8 @@ const newAccountAlertSchema = z.object({
  * alongside every other `notification_send_queue` row it owns.
  */
 const demoStartedAlertSchema = z.object({
-  kind: z.literal("demo_started_alert"),
+  kind: z.literal("operator_alert"),
+  event: z.literal("demo_started"),
   shopId: z.uuid(),
   to: emailAddressSchema,
   /** The minted demo shop's slug — unique per entry, which is what keys the send. */
@@ -937,7 +925,8 @@ const demoStartedAlertSchema = z.object({
  * `./email.ts`, and every value is escaped there anyway.
  */
 const usageCeilingAlertSchema = z.object({
-  kind: z.literal("usage_ceiling_alert"),
+  kind: z.literal("operator_alert"),
+  event: z.literal("usage_ceiling"),
   to: emailAddressSchema,
   /** `CostCeiling.id` from `@/lib/cost-guardrails` — also what keys the alert. */
   ceilingId: z.string().trim().min(1).max(60),
@@ -975,7 +964,8 @@ const setupAnswerSchema = (max: number) =>
   z.string().trim().min(1).max(max).refine(isSingleLineText, "unsafe character");
 
 const setupRequestAlertSchema = z.object({
-  kind: z.literal("setup_request_alert"),
+  kind: z.literal("operator_alert"),
+  event: z.literal("setup_request"),
   setupRequestId: z.uuid(),
   to: emailAddressSchema,
   shopName: setupAnswerSchema(SETUP_TEXT_MAX),
@@ -1007,11 +997,12 @@ const sourceCountSchema = z.object({
  * The founder's Monday digest (ADR 20261007-founder-metrics): last week's north
  * star, the funnel by source, and the shops that have stalled between
  * activation steps. Founder-only and English, with no shop to queue against,
- * so it rides `notify()` like `usage_ceiling_alert`. Counts, funnel tags and
+ * so it rides `notify()` like the `usage_ceiling` operator alert. Counts, funnel tags and
  * shop names — no diver and no requester appears in it.
  */
 const founderDigestSchema = z.object({
-  kind: z.literal("founder_digest"),
+  kind: z.literal("operator_alert"),
+  event: z.literal("founder_digest"),
   to: emailAddressSchema,
   weekStart: calendarDateSchema,
   weekEnd: calendarDateSchema,
@@ -1623,6 +1614,38 @@ const stripePaymentsRestrictedSchema = z.object({
 });
 
 /**
+ * **A diver asked to move a seat on a departure leaving within a day** (issue
+ * #2667, decided by Aaron 2026-10-17; `alertStaffToMoveAsk`,
+ * src/db/move-ask-alerts.ts). One email to each owner and manager login, only
+ * when the departure is within 24 hours; farther out the Inbox is enough.
+ * Staff operational mail: no unsubscribe, no postal footer, the same footing
+ * as `stripe_payments_restricted`.
+ *
+ * **The departure and a link, never the diver or their words**, the desk
+ * ping's rule: the mail lands in a personal inbox that may sit on a shared
+ * phone, and who asked and what they wrote stay behind the Inbox's sign-in.
+ *
+ * `askedAt` is the ask's own filing time, so an ask filed anew after it was
+ * answered is a different message. Not queued: after the boat leaves it says
+ * nothing a staffer can act on.
+ */
+const moveAskSoonSchema = z.object({
+  kind: z.literal("move_ask_soon"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  messageId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  startsAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+  inboxUrl: z.url().max(2_000),
+  askedAt: z.date(),
+});
+
+/**
  * **A roll call still open after the boat should be home** (batch 6, item 6;
  * `sendStaleRollCallAlerts`, src/db/roll-call-alerts.ts). Staff safety mail
  * to the shop's owners, once per departure.
@@ -1698,6 +1721,32 @@ const incidentMissingDiverSchema = z.object({
 });
 
 /**
+ * **The all-clear after a missing-diver alert** (issue #2694, decided by Aaron
+ * 2026-10-17; `sendMissingDiverAllClear`, src/db/missing-diver-alerts.ts): the
+ * diver reported missing on this departure was found. One quiet email to each
+ * owner, at most once per report, and no push. The fact, when, and the
+ * report's link behind the staff sign-in; nobody named.
+ */
+const incidentMissingDiverFoundSchema = z.object({
+  kind: z.literal("incident_missing_diver_found"),
+  shopId: z.uuid(),
+  personId: z.uuid(),
+  tripId: z.uuid(),
+  incidentReportId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  tripTitle: tripTitleSchema,
+  /** When the crew marked the diver found: said in the shop's zone. */
+  foundAt: z.date(),
+  /** Others on this departure still reported missing: a count, never a name. */
+  stillMissing: z.number().int().min(0).max(500),
+  timezone: z.string().trim().min(1).max(100),
+  reportUrl: z.url().max(2_000),
+});
+
+/**
  * **The same alert, to the shop's shore contact** (H-118, decided 2026-10-15).
  * Addressed to somebody outside the shop's accounts, so it carries less than
  * the owners' copy: no person, no link behind a staff sign-in, and no name of
@@ -1729,24 +1778,6 @@ const rollCallStaleShoreSchema = z.object({
   /** When this pass ran: the email says when it was true. */
   alertedAt: z.date(),
   stopUrl: z.url().max(2_000),
-});
-
-/**
- * **The link a saved shore address receives before any alert goes to it**
- * (H-118 review; the front desk's `contact_email_confirmation` is the model).
- * From the shop, in the shop's language; it says what agreeing means and that
- * ignoring it sends nothing.
- */
-const shoreAlertConfirmationSchema = z.object({
-  kind: z.literal("shore_alert_confirmation"),
-  shopId: z.uuid(),
-  tokenId: z.uuid(),
-  to: emailAddressSchema,
-  locale: localeSchema,
-  shopName: z.string().trim().min(1).max(120),
-  confirmUrl: z.url().max(2_000),
-  expiresAt: z.date(),
-  timezone: z.string().trim().min(1).max(100),
 });
 
 /**
@@ -1857,6 +1888,24 @@ export const notificationSenderSchema = z.object({
 
 export type NotificationSender = z.infer<typeof notificationSenderSchema>;
 
+/**
+ * **Every internal mail to DiveDay's own inbox is one kind.** The five
+ * founder alerts differ in what they say, not in who reads them: English, no
+ * locale, nobody to address. `event` picks the payload, the subject and the
+ * idempotency key; the kind is the one thing a queue row, an SES tag and a
+ * reader of `render.ts` have to know. A nested union keeps each event's fields
+ * exact, so an alert cannot be sent with another's payload.
+ */
+const operatorAlertSchema = z.discriminatedUnion("event", [
+  newAccountAlertSchema,
+  demoStartedAlertSchema,
+  usageCeilingAlertSchema,
+  setupRequestAlertSchema,
+  founderDigestSchema,
+]);
+
+export type OperatorAlertEvent = z.infer<typeof operatorAlertSchema>["event"];
+
 export const notificationSchema = z
   .discriminatedUnion("kind", [
     bookingConfirmationSchema,
@@ -1878,18 +1927,13 @@ export const notificationSchema = z
     partyPaymentReceiptSchema,
     seatAlreadyHeldSchema,
     welcomeSchema,
-    emailVerificationSchema,
-    contactEmailConfirmationSchema,
+    addressConfirmationSchema,
     passwordResetRequestSchema,
     passwordChangedSchema,
     staffInviteSchema,
     checkoutRecoverySchema,
     lastMinuteDealSchema,
-    newAccountAlertSchema,
-    demoStartedAlertSchema,
-    usageCeilingAlertSchema,
-    setupRequestAlertSchema,
-    founderDigestSchema,
+    operatorAlertSchema,
     courseInquirySchema,
     staffReplySchema,
     weeklyDigestSchema,
@@ -1898,10 +1942,11 @@ export const notificationSchema = z
     crewScheduleChangeSchema,
     deskAfterHoursSchema,
     stripePaymentsRestrictedSchema,
+    moveAskSoonSchema,
     rollCallStaleSchema,
     rollCallStaleShoreSchema,
     incidentMissingDiverSchema,
-    shoreAlertConfirmationSchema,
+    incidentMissingDiverFoundSchema,
     shoreAlertStoppedSchema,
     departureNoteSchema,
     lostItemFoundSchema,
@@ -1929,7 +1974,7 @@ export type Notification = z.infer<typeof notificationSchema>;
  * - `course_inquiry` mails the shop's own front desk about a diver who used
  *   the public composer, and carries their name, address, phone and free-text
  *   message;
- * - `new_account_alert` mails DiveDay about a shop owner who just signed up.
+ * - an `operator_alert` for `new_account` mails DiveDay about a shop owner who just signed up.
  *
  * A diver who submits a date request, whose notification then fails
  * retryably, and who asks to be erased before the retry drains kept all of
@@ -1945,10 +1990,10 @@ export function notificationSubjectEmail(notification: Notification): string | n
   switch (notification.kind) {
     case "course_inquiry":
       return notification.inquirerEmail ?? null;
-    case "new_account_alert":
-      return notification.ownerEmail;
-    case "setup_request_alert":
-      return notification.contactEmail;
+    case "operator_alert":
+      if (notification.event === "new_account") return notification.ownerEmail;
+      if (notification.event === "setup_request") return notification.contactEmail;
+      return null;
     // The bookkeeper's address in an owner's notice. Never queued, so no row
     // holds it; named here so a future queued path is covered all the same.
     case "bookkeeper_notice":
@@ -1986,8 +2031,8 @@ export function notificationSubjectPhone(notification: Notification): string | n
   switch (notification.kind) {
     case "course_inquiry":
       return notification.inquirerPhone ?? null;
-    case "setup_request_alert":
-      return notification.contactPhone ?? null;
+    case "operator_alert":
+      return notification.event === "setup_request" ? (notification.contactPhone ?? null) : null;
     default:
       return null;
   }
@@ -2019,15 +2064,21 @@ export function notificationSubjectPhone(notification: Notification): string | n
  */
 export function notificationIsQueueable(notification: Notification): boolean {
   switch (notification.kind) {
+    // The shore contact's link is a live consent: a courtesy that missed its
+    // moment is not owed a row holding it. The account and front-desk links
+    // are queued, sealed, as they always were.
+    case "address_confirmation":
+      return notification.purpose !== "shore_alert";
     case "guardian_release_copy":
     case "work_order_ready":
     case "gear_service_due":
     case "crew_schedule_change":
     case "desk_after_hours":
+    case "move_ask_soon":
     case "roll_call_stale":
     case "roll_call_stale_shore":
     case "incident_missing_diver":
-    case "shore_alert_confirmation":
+    case "incident_missing_diver_found":
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
@@ -2040,6 +2091,27 @@ export function notificationIsQueueable(notification: Notification): boolean {
       return false;
     default:
       return true;
+  }
+}
+
+const ADDRESS_CONFIRMATION_KEY_PREFIX = {
+  account: "email-verification",
+  shop_contact: "contact-email-confirmation",
+  shore_alert: "shore-alert-confirmation",
+} as const;
+
+function operatorAlertKey(notification: Extract<Notification, { kind: "operator_alert" }>): string {
+  switch (notification.event) {
+    case "new_account":
+      return `new-account-alert/${notification.userAccountId}`;
+    case "demo_started":
+      return `demo-started-alert/${notification.shopSlug}`;
+    case "usage_ceiling":
+      return `usage-ceiling/${notification.ceilingId}/${notification.periodKey}/${notification.level}`;
+    case "setup_request":
+      return `setup-request/${notification.setupRequestId}`;
+    case "founder_digest":
+      return `founder-digest/${notification.weekStart}`;
   }
 }
 
@@ -2125,11 +2197,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // Keyed by the token row's own id, not the raw token, so a retried send
     // never doubles up without this idempotency key ever carrying the bearer
     // secret itself.
-    case "email_verification":
-      return `email-verification/${notification.tokenId}`;
-    // One send per minted link; a resend mints a fresh token and is its own send.
-    case "contact_email_confirmation":
-      return `contact-email-confirmation/${notification.tokenId}`;
+    // One send per minted link; a resend mints a fresh token and is its own
+    // send. The purpose prefix is the old kind's key, unchanged.
+    case "address_confirmation":
+      return `${ADDRESS_CONFIRMATION_KEY_PREFIX[notification.purpose]}/${notification.tokenId}`;
     case "password_reset_request":
       return `password-reset-request/${notification.tokenId}`;
     case "staff_invite":
@@ -2148,27 +2219,15 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // the same trip is always its own send.
     case "last_minute_deal":
       return `last-minute-deal/${notification.code}/${notification.to}`;
-    // One alert per account, ever — same key shape as welcome above.
-    case "new_account_alert":
-      return `new-account-alert/${notification.userAccountId}`;
-    // One alert per demo entry, ever. Every entry mints its own shop under a
-    // freshly-generated identity (`createDemoShop`), so the slug *is* the
-    // entry's identity — no timestamp needed, and a double-submitted CTA that
-    // somehow reached the same shop converges on one send rather than two.
-    case "demo_started_alert":
-      return `demo-started-alert/${notification.shopSlug}`;
-    // One alert per ceiling per period per level — the same key
-    // `ceilingAlertKey` computes, so whatever suppresses a repeat send and
-    // whatever would dedup a queued retry agree on what "the same alert" means.
-    // Level is in the key deliberately: crossing from warn to over is news.
-    case "usage_ceiling_alert":
-      return `usage-ceiling/${notification.ceilingId}/${notification.periodKey}/${notification.level}`;
-    // One mail per stored request row; the row exists before the send does.
-    case "setup_request_alert":
-      return `setup-request/${notification.setupRequestId}`;
-    // One digest per week, ever — the same key the claim takes.
-    case "founder_digest":
-      return `founder-digest/${notification.weekStart}`;
+    // The event is the kind a founder alert used to be, and its key is
+    // unchanged: one alert per account, ever (as welcome); one per demo entry
+    // (every entry mints its own shop under a freshly-generated identity, so the
+    // slug is the entry's identity); one per ceiling per period per level (the
+    // key `ceilingAlertKey` computes, level in it deliberately: crossing from
+    // warn to over is news); one per stored setup request (the row exists before
+    // the send does); one digest per week, ever (the key the claim takes).
+    case "operator_alert":
+      return operatorAlertKey(notification);
     // One notification per submitted inquiry row.
     case "course_inquiry":
       return `course-inquiry/${notification.courseInquiryId}`;
@@ -2221,6 +2280,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per claim of the person's batching clock.
     case "desk_after_hours":
       return `desk-after-hours/${notification.personId}/${notification.pingedAt.toISOString()}`;
+    // One send per owner or manager per filing of the ask.
+    case "move_ask_soon":
+      return `move-ask-soon/${notification.messageId}/${notification.personId}/${notification.askedAt.toISOString()}`;
     // One send per owner per restriction claim.
     case "stripe_payments_restricted":
       return `stripe-payments-restricted/${notification.personId}/${notification.restrictedAt.toISOString()}`;
@@ -2230,11 +2292,12 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One alert per report per owner; the report's claim comes first.
     case "incident_missing_diver":
       return `incident-missing-diver/${notification.incidentReportId}/${notification.personId}`;
+    // One all-clear per report per owner, claimed before the send.
+    case "incident_missing_diver_found":
+      return `incident-missing-diver-found/${notification.incidentReportId}/${notification.personId}`;
     // One alert per departure to the shore contact, under the same claim.
     case "roll_call_stale_shore":
       return `roll-call-stale-shore/${notification.tripId}`;
-    case "shore_alert_confirmation":
-      return `shore-alert-confirmation/${notification.tokenId}`;
     case "shore_alert_stopped":
       return `shore-alert-stopped/${notification.personId}/${notification.stoppedAt.toISOString()}`;
   }

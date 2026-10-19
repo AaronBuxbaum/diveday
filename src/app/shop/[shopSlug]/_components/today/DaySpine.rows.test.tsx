@@ -21,6 +21,7 @@ vi.mock("@/app/actions/held-sends", () => ({
 // the database. Same reason as the three above.
 vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   keepRentalFitAction: vi.fn(),
+  acknowledgeCrewAwayAction: vi.fn(),
 }));
 // The agency check's host (H-105) wraps the spine and repaints through the
 // router when a "Check all" ends; no app router is mounted here.
@@ -184,7 +185,6 @@ describe("a row that performs keeps its place", () => {
             { departures: [], actions: [] },
           ),
           shopSlug: "blue-mantis",
-          shopName: "Blue Mantis",
           mailShopName: "Blue Mantis",
           locale: "en-US",
           timeZone: "America/New_York",

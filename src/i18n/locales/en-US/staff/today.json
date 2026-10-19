@@ -32,6 +32,10 @@
       "rateLimited": "You have resent a lot this hour. Try again in a little while."
     }
   },
+  "crewAway": {
+    "working": "{name} is working it",
+    "saving": "Saving…"
+  },
   "helpRequest": {
     "kind": {
       "carryGear": "carry gear",
@@ -226,6 +230,7 @@
     "openPaymentSettings": "Open payment settings",
     "openReviews": "Open reviews",
     "openInbox": "Open inbox",
+    "openRequests": "Open requests",
     "openGearRegister": "Open gear register",
     "openRentals": "Open rentals",
     "openGearUnit": "Open unit record",
@@ -234,12 +239,6 @@
     "openStaffing": "Open staffing",
     "openUnits": "Open units",
     "openDiver": "Open diver record"
-  },
-  "seasonalBriefing": {
-    "summer": "Enjoy the surface interval. Grab some shade{hasShop, select, true { at {shopName}} other {}}, drink some water, and we’ll see you on the next boat.",
-    "autumn": "Enjoy the surface interval. Grab a warm towel{hasShop, select, true { at {shopName}} other {}}, check the breeze, and we’ll see you on the next boat.",
-    "winter": "Enjoy the surface interval. Warm up with a dry coat{hasShop, select, true { at {shopName}} other {}}, and we’ll see you on the next boat.",
-    "spring": "Enjoy the surface interval. Catch some sun{hasShop, select, true { at {shopName}} other {}}, check your gear, and we’ll see you on the next boat."
   },
   "opsAlert": {
     "operationKind": {
@@ -278,7 +277,9 @@
     "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you."
   },
   "unansweredMessages": {
-    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer."
+    "subject": "{count, plural, one {# message is} other {# messages are}} waiting on an answer.",
+    "subjectDateRequests": "{count, plural, one {# date request is} other {# date requests are}} waiting on an answer.",
+    "subjectBoth": "{messages, plural, one {# message} other {# messages}} and {requests, plural, one {# date request} other {# date requests}} are waiting on an answer."
   },
   "unitsUnconfirmed": {
     "subject": "{currency}, {depth} and {temperature}, picked for where you are",

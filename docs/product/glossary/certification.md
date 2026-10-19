@@ -1,5 +1,14 @@
 # Certification
 
+- **Requirement** — what a dive site, a departure or the running total of several of them asks of
+  a diver, as one shape (`Requirement`, `src/lib/requirement.ts`): a minimum level, specialty cards
+  and a nitrox card. Nothing set means it asks nothing, never unknown. Folding two is the strictest
+  level, the union of specialties and the OR of nitrox (`unionRequirements`); readiness and trip
+  admission both fold through it, so they cannot disagree about what a trip asks. It is stored as
+  `requirementColumns` (`src/db/schema/requirement.ts`) on `dive_sites` and `trip_requirements` and
+  edited with one form (`RequirementFields`). A course session's requirement is frozen when the
+  session is created. Not part of it: the departure's waiver and payment gates, dive counts and depth
+  limits.
 - **Agency** — organization that trains and certifies divers. Major ones: **PADI**, **SSI**,
   **NAUI**, **SDI/TDI**, **RAID**, **CMAS**, **GUE**, **BSAC**, the cave-diving bodies
   **NSS-CDS** and **NACD**, and the technical agency **IANTD**, common issuers of Florida Cavern
@@ -83,7 +92,7 @@
   (`MIN_EXTENSION_VERSION`). An older copy is treated as absent: the agency's link, never its
   button, and Settings says "Update the extension". The extension also answers **hello** with its
   version and the agencies it checks.
-- **Try the checks** — Settings' page (owners and managers) that runs the extension in this browser
+- **Try the checks** — Settings' disclosure (owners and managers), on the Card checks row, that runs the extension in this browser
   against nothing real: whether it is here and current, a **dry run** of each public agency's lookup
   on a sample page the extension carries, filled with a made-up diver by the real filler and never
   sent, whether Chrome lets the extension on each agency's own site, and whether an open PADI Pros'

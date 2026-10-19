@@ -260,7 +260,7 @@ describe("the missing diver report starts from the row that raised it", () => {
           divers: [row],
           checkpoint,
           isDeparture: checkpoint === "departure",
-          startMissingDiverReport,
+          missingDiver: { startMissingDiverReport },
         })}
         diver={row}
         state={diverRowState(row, checkpoint, checkpoint === "departure", "America/New_York")}

@@ -2,7 +2,7 @@
  * What an accounting entry calls the DiveDay sale it records: a staff order,
  * a diver's online booking checkout or a post-dive tip (ADR
  * 20261014-checkouts-reach-integrations). Ledger text an accountant reads in
- * QuickBooks or Xero, beside the provider's own English, so it is written
+ * QuickBooks, beside the provider's own English, so it is written
  * once here rather than per adapter.
  */
 export type SaleSource = "order" | "checkout" | "tip";

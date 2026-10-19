@@ -6,6 +6,7 @@ import {
   openTripAbout,
   openTripTab,
   seededTripId,
+  walkInFormPath,
 } from "./helpers";
 
 /**
@@ -230,18 +231,17 @@ test.describe("as owner", () => {
     await page.goto(`/shop/blue-mantis/bookings/new/${tripId}?diverq=Odile+Marchand`);
     await page.getByRole("button", { name: "Add Odile Marchand to this departure" }).click();
 
-    // The global door's refusal stays on the form that produced it, boat still
-    // chosen, so the staffer can pick someone else.
-    await expect(page).toHaveURL(new RegExp(`/bookings/new/${tripId}\\?notice=`));
+    // The global door is the departure door with the boat chosen a step
+    // earlier: its refusal lands on that boat's Divers tab, where the add-diver
+    // form says why.
+    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}(?:\\?|$)`));
     const banner = page.getByText("This charter requires a Deep certification.");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText("none on this diver");
     await expect(banner).not.toContainText("highest certification on file");
   });
 
-  test("the counter collapses the same refusal to one blunt line and carries no gate detail", async ({
-    page,
-  }) => {
+  test("the counter names the same refusal, with the signed gate detail", async ({ page }) => {
     // A same-day departure, so the counter's own case is a boat inside its
     // arrivals window — the shape check-in.spec.ts's full-boat refusal
     // already uses.
@@ -265,16 +265,18 @@ test.describe("as owner", () => {
     await page.getByRole("button", { name: "Save requirements" }).click();
     await expect(page.getByRole("status")).toContainText("Trip readiness requirements updated.");
 
-    await page.goto(`/shop/blue-mantis/trips/${tripId}/walk-in?diverq=Diego+Alvarez`);
-    await page.getByRole("button", { name: "Add Diego Alvarez to this boat" }).click();
+    // The counter is a mode of the departure door: the diver is typed on the
+    // walk-in form, and the refusal speaks the boat's one vocabulary.
+    await page.goto(walkInFormPath("blue-mantis", tripId));
+    // Diego Alvarez is carded at Open Water, so he fails an Advanced Open Water gate.
+    await page.getByLabel("Full name").fill("Diego Alvarez");
+    await page.getByRole("button", { name: "Add to boat" }).click();
+    await page.getByRole("button", { name: "Diego Alvarez" }).click();
 
-    // The counter names the gate now, on the form that produced the refusal,
-    // with the boat still chosen. It used to collapse every gate into "open its
-    // trip page for the reason", which sent the staffer to a different page at
-    // the moment they had least time to go there. The structured detail rides a
-    // signed `?gate=` bound to the departure in this route's own path, so the
-    // banner can say which card is missing and what the diver holds.
-    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}/walk-in\\?`));
+    // The structured detail rides a signed `?gate=` bound to the departure in
+    // the Divers tab's own path, so the banner can say which card is missing
+    // and what the diver holds.
+    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}\\?`));
     await expect(
       page.getByText(/Advanced Open Water|certifications on file|certifications don’t reach/),
     ).toBeVisible();

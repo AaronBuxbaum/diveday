@@ -1,6 +1,7 @@
 import { nowDate } from "@/lib/clock";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
-import { certificationRank, type SiteCertRequirement } from "@/lib/readiness";
+import type { SiteCertRequirement } from "@/lib/readiness";
+import { requirementWithin } from "@/lib/requirement";
 import { hasSailed } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 
@@ -114,13 +115,7 @@ export function asksNoMoreThan(
   candidate: SiteCertRequirement | null | undefined,
   ceiling: SiteCertRequirement | null | undefined,
 ): boolean {
-  if (!candidate) return true;
-  const wanted = candidate.minimumCertificationLevel;
-  const held = ceiling?.minimumCertificationLevel ?? null;
-  if (wanted && (!held || certificationRank(wanted) > certificationRank(held))) return false;
-  if (candidate.requiresNitrox && !ceiling?.requiresNitrox) return false;
-  const allowed = new Set(ceiling?.requiredSpecialties ?? []);
-  return candidate.requiredSpecialties.every((specialty) => allowed.has(specialty));
+  return requirementWithin(candidate, ceiling);
 }
 
 /**

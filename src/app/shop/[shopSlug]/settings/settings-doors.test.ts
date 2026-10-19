@@ -1,15 +1,17 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { STAFF_DESTINATIONS } from "@/lib/staff-destinations";
+import { MY_ACCOUNT_DESTINATION_IDS, STAFF_DESTINATIONS } from "@/lib/staff-destinations";
 
 /**
  * **Settings is the door to everything in its nav section.**
  *
  * The sidebar has one row for Settings (ADR 20261001-logbook), so a
  * destination filed under the `settings` section — the site library, the
- * waiver template, the team, a staffer's calendar feed — is reached through a
- * row on this page or not at all, other than the search. The gear register
+ * waiver template, the team — is reached through a row on this page or not at
+ * all, other than the search. The exception is **My account** (sign-in
+ * security, calendar feed, email): about the reader rather than the shop, so
+ * its door is the identity menu and this page has none (issue #2813). The gear register
  * once had no door anywhere a staffer looked (#1937); this test is why that
  * cannot happen to a settings destination.
  *
@@ -47,7 +49,8 @@ describe("Settings is the door to everything in its section", () => {
       // Settings is the page, not a row on itself.
       if (destination.id === "settings") continue;
       expect(doors.has(destination.suffix), `${destination.id} (${destination.suffix})`).toBe(
-        destination.section === "settings",
+        destination.section === "settings" &&
+          !(MY_ACCOUNT_DESTINATION_IDS as readonly string[]).includes(destination.id),
       );
     }
 
@@ -57,7 +60,7 @@ describe("Settings is the door to everything in its section", () => {
     // which is the hole `sourcery-ai` found on #1939.
     //
     // Settings' own sub-pages are the deliberate exception, and the reason the
-    // fix is not a plain set equality: `/settings/boats`, `/settings/trip-tags`,
+    // fix is not a plain set equality: `/boats`, `/trip-tags`,
     // `/settings/security` and a dozen more are surfaces *under* this page
     // rather than destinations, so the registry does not know them and should
     // not. Anything else — a door to a top-level `/shop/<slug>/<something>`

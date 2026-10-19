@@ -19,6 +19,10 @@
     "late": "Running late"
   },
   "attachments": "{count, plural, one {# attachment, still with the sender} other {# attachments, still with the sender}}",
+  "moveRefusal": {
+    "leadsParty": "Party of {count}; Move is per seat",
+    "onBuddyTeam": "On a buddy team"
+  },
   "seat": "Booked on {trip}, {when}",
   "nearStamp": "{day}, {time}",
   "nearSeat": "{day} {time}",

@@ -41,8 +41,7 @@ import {
  * carries the id of the *route segment the landing page owns*, and the reader
  * re-supplies it from its own `params` rather than from the query:
  *
- * - the trip surfaces (`/trips/[id]`, `/trips/[id]/walk-in`,
- *   `/bookings/new/[tripId]`) bind to the **trip id**;
+ * - the trip surfaces (`/trips/[id]` and `/bookings/new/[tripId]`) bind to the **trip id**;
  * - the diver record (`/divers/[personId]`), which has no departure in its URL
  *   at all, binds to the **person id**.
  *

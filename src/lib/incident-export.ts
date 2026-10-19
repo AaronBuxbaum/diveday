@@ -1,7 +1,12 @@
 import { createHash } from "node:crypto";
 import type { Certification, NitroxCertification, SpecialtyCertification } from "@/db/schema";
 import { type ActivityCode, activityParams } from "./activity";
-import type { BoatPaperRecord, BoatSafetyNotice } from "./boat-safety";
+import {
+  type BoatPaperRecord,
+  type BoatRadioRecord,
+  type BoatSafetyNotice,
+  boatRadioRecorded,
+} from "./boat-safety";
 import type { DepthUnit } from "./depth-units";
 import { withholdHeldSeatParticulars } from "./held-seat";
 import type { IncidentKind, IncidentSeverity } from "./incident-reports";
@@ -98,8 +103,8 @@ export type IncidentWaiverStatus = {
   templateTitle: string | null;
   templateVersion: number | null;
   /**
-   * How the signature was recorded, verbatim (`in_person`,
-   * `in_person_attested`, `imported`, null for the diver's own digital
+   * How the signature was recorded, verbatim (`in_person_attested`,
+   * `in_person_attested_namesake`, `imported`, null for the diver's own digital
    * completion). Imported acceptances must render distinctly (ADR
    * 20260724-import-waiver-acceptance).
    */
@@ -315,6 +320,12 @@ export type IncidentBoatSafety = {
   judgedOn: string;
   capturedAt: string;
   papers: BoatPaperRecord;
+  /**
+   * The radio identity the emergency card printed (records review S1,
+   * #2672). Present only when the snapshot kept a fact, so a log sealed
+   * before it existed keeps its code; absent reads as not recorded.
+   */
+  radio?: BoatRadioRecord;
   notices: BoatSafetyNotice[];
 };
 
@@ -672,6 +683,7 @@ export type IncidentExportInput = {
     judgedOn: string;
     capturedAt: Date;
     papers: BoatPaperRecord;
+    radio?: BoatRadioRecord;
     notices: readonly BoatSafetyNotice[];
   } | null;
   /** The boat the departure names now, for the swap and absence wording. */
@@ -1115,6 +1127,9 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
           judgedOn: input.boatSafety.judgedOn,
           capturedAt: input.boatSafety.capturedAt.toISOString(),
           papers: input.boatSafety.papers,
+          ...(boatRadioRecorded(input.boatSafety.radio) && input.boatSafety.radio
+            ? { radio: input.boatSafety.radio }
+            : {}),
           notices: [...input.boatSafety.notices],
         }
       : null,

@@ -212,8 +212,8 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "Where the two operational alerts land -- a trial started (new_account_alert)",
-      "and someone tried the live demo (demo_started_alert), ADR",
+      "Where the two operational alerts land -- a trial started (operator_alert new_account)",
+      "and someone tried the live demo (operator_alert demo_started), ADR",
       "20260805-demo-try-alerts. Not a secret: an address, not a credential.",
     ],
     keys: [
@@ -918,17 +918,27 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_VERCEL,
         absent: "defaults to sandbox, so nothing reaches a real company file",
       },
+    ],
+  },
+  {
+    doc: [
+      "Claude assists (ADR 20261018-claude-assists). Unset, assists offer nothing and",
+      "every feature works as it does without Claude. ANTHROPIC_API_KEY is an",
+      "Anthropic API key for DiveDay. DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD is the",
+      "optional monthly spend cap per shop (defaults to 15 USD).",
+    ],
+    keys: [
       {
-        key: "XERO_CLIENT_ID",
+        key: "ANTHROPIC_API_KEY",
         from: "manual",
         targets: LOCAL_AND_VERCEL,
-        absent: "Xero cannot be connected; the card reads not configured",
+        absent: "Claude assists are disabled; operations run without AI assists",
       },
       {
-        key: "XERO_CLIENT_SECRET",
+        key: "DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD",
         from: "manual",
         targets: LOCAL_AND_VERCEL,
-        absent: "as XERO_CLIENT_ID",
+        absent: "uses the default monthly cap of 15 USD per shop",
       },
     ],
   },

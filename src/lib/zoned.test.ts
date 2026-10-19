@@ -5,6 +5,7 @@ import {
   sameMomentYearBefore,
   shiftInstantByCalendarDays,
   shiftInstantByWallTimeDelta,
+  shopDaysBounds,
   utcToWallTime,
   wallTimeDeltaMs,
   wallTimeToUtc,
@@ -260,5 +261,21 @@ describe("sameMomentYearBefore", () => {
   it("steps February 29 back to the 28th", () => {
     const leap = new Date("2028-02-29T17:00:00Z");
     expect(sameMomentYearBefore(leap, "UTC").toISOString()).toBe("2027-02-28T17:00:00.000Z");
+  });
+});
+
+describe("shopDaysBounds", () => {
+  it("brackets a run of shop days from its first midnight to the one after its last", () => {
+    expect(shopDaysBounds("2026-05-01", "2027-04-30", "America/New_York")).toEqual({
+      from: new Date("2026-05-01T04:00:00.000Z"),
+      to: new Date("2027-05-01T04:00:00.000Z"),
+    });
+  });
+
+  it("is one day, across a clock change, when both ends are the same date", () => {
+    // 2026-11-01 is 25 hours long in New York.
+    const { from, to } = shopDaysBounds("2026-11-01", "2026-11-01", "America/New_York");
+    expect(from).toEqual(new Date("2026-11-01T04:00:00.000Z"));
+    expect(to.getTime() - from.getTime()).toBe(25 * 60 * 60 * 1000);
   });
 });

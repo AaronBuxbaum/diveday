@@ -38,6 +38,8 @@
   "colRoles": "Roles",
   "crewHeading": "Crew",
   "crewNoTeams": "None recorded",
+  "crewAwayAcknowledged": "{name} was away; acknowledged by {by} at {time}.",
+  "crewAwayAcknowledgedNoActor": "{name} was away; acknowledged at {time}.",
   "crewNone": "No crew was assigned to this departure.",
   "crewTag": "crew",
   "description": "What was recorded for this departure, written up as one document: boarding, roll-call timeline, certification evidence, and waiver status. Ready to print if authorities or insurers ever ask.",

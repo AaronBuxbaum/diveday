@@ -68,7 +68,7 @@ type DiverNoticeDefinition = {
  *
  * **The other vocabularies that reach this map are deliberately not here.** The
  * seating codes (`trip-full`, `course-min-age`, the rest of the "Book an
- * activity" block) come from `SEAT_SURFACES["diver-record"].refusalNotice`,
+ * activity" block) come from `SEAT_SURFACES.diver.refusalNotice`,
  * which is already `Record<SeatDiverRefusal, string>` — exhaustive by type at
  * the table that owns it, which is where that guarantee belongs rather than
  * copied one page over. `CertificationReviewRefusal` cannot produce an

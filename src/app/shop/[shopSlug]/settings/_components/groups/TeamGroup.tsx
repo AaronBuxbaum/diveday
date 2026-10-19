@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FactLine } from "@/components/ui/FactLine";
-import { ChoiceRow, controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { MAX_DIVERS_PER_DIVEMASTER, MIN_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import { saveCrewScheduleAction } from "../../team-actions";
@@ -40,36 +41,24 @@ export function TeamGroup({ view, canManageTeam }: { view: SettingsView; canMana
           />
         ) : null}
         {canManageTeam ? (
-          <>
-            {/* **Off for a new shop** (ADR 20261005-crew-schedule-is-a-setting):
-            a shop where the owner skippers every boat keeps no roster,
-            and the Crew view, the crew line on the week and every "No
-            crew" nudge would be noise to it. */}
-            <SettingsRow
-              heading={t("settings.main.crewSchedule.heading")}
-              value={crewScheduleValue}
-              sectionId="crewSchedule"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="crewSchedule" active={activeSection} />
+          /* **Off for a new shop** (ADR 20261005-crew-schedule-is-a-setting):
+             a shop where the owner skippers every boat keeps no roster, and the
+             Crew view, the crew line on the week and every "No crew" nudge would
+             be noise to it. The switch is a row of the Features page (issue
+             #2814); what stays here is the target it is measured against, and
+             only a shop that plans its crew is. */
+          <SettingsRow
+            heading={t("settings.main.crewSchedule.heading")}
+            value={crewScheduleValue}
+            sectionId="crewSchedule"
+            activeSection={activeSection}
+          >
+            <SectionNotice banner={banner} section="crewSchedule" active={activeSection} />
+            {shop.crewScheduleEnabled ? (
               <FieldGrid as="form" action={saveCrewScheduleAction} columns={1} className="mt-4">
-                <ChoiceRow
-                  name="crewScheduleEnabled"
-                  type="checkbox"
-                  defaultChecked={shop.crewScheduleEnabled}
-                  className="text-sm"
-                >
-                  <span className="block font-medium">{t("settings.main.crewSchedule.label")}</span>
-                  <span className="block text-xs text-muted">
-                    {t("settings.main.crewSchedule.description")}
-                  </span>
-                </ChoiceRow>
-                {/* Beside the switch, because only a shop that plans its crew
-              is ever measured against it (`shopCrewTarget`). */}
                 <Field
                   label={t("boats.diversPerDivemasterLabel")}
                   hint={t("boats.diversPerDivemasterHint")}
-                  className="mt-2"
                 >
                   <input
                     name="diversPerDivemaster"
@@ -90,8 +79,17 @@ export function TeamGroup({ view, canManageTeam }: { view: SettingsView; canMana
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>
-            </SettingsRow>
-          </>
+            ) : (
+              <p className="mt-4 text-sm">
+                <Link
+                  href={`/shop/${shopSlug}/settings/features#crewSchedule`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {t("settings.main.crewSchedule.turnOn")}
+                </Link>
+              </p>
+            )}
+          </SettingsRow>
         ) : null}
 
         {/* Who did what, across the team (D5). The hub is already owner and

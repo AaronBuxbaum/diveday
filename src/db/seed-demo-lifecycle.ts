@@ -37,7 +37,6 @@ import {
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
-  diveSiteMoments,
   diveSites,
   executedDives,
   formDrafts,
@@ -48,7 +47,6 @@ import {
   inboundMessages,
   inboxSavedAnswers,
   incidentReportAddenda,
-  incidentReportPeople,
   incidentReports,
   integrationDeliveries,
   integrationEvents,
@@ -217,7 +215,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
   // Incident reports name bookings, people and the departure, so they go first.
   await db.delete(incidentReportAddenda).where(eq(incidentReportAddenda.shopId, shopId));
-  await db.delete(incidentReportPeople).where(eq(incidentReportPeople.shopId, shopId));
+  // Each report takes its people rows with it (cascade): a raised report
+  // points at its subject's row, so that row cannot go first.
   await db.delete(incidentReports).where(eq(incidentReports.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
@@ -330,8 +329,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
-  // Retired (#2330) but still declared: an old row would hold its site's FK.
-  await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));
   await db.delete(diveSiteCreatures).where(eq(diveSiteCreatures.shopId, shopId));
   // A species request points at the site the staffer was writing when they hit
   // the wall, so it goes before the sites — the FK is `ON DELETE SET NULL`, but

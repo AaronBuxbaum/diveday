@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { parseSeasonStart, SEASON_START_DEFAULT, seasonStartInstant } from "./season";
+import {
+  currentShopSeason,
+  parseSeasonStart,
+  SEASON_START_DEFAULT,
+  seasonStartInstant,
+  shopSeasonLabel,
+  shopSeasonOf,
+} from "./season";
 
 describe("parseSeasonStart", () => {
   it("takes a month and a day a calendar has", () => {
@@ -84,5 +91,34 @@ describe("seasonStartInstant", () => {
       SEASON_START_DEFAULT,
     );
     expect(start.toISOString()).toBe("2025-12-31T19:00:00.000Z");
+  });
+});
+
+describe("the shop's year as a season (issue #2657)", () => {
+  const NY = "America/New_York";
+
+  it("is the calendar year for a January start, named by its year", () => {
+    const season = shopSeasonOf(2026, { month: 1, day: 1 });
+    expect(season).toEqual({ year: 2026, startsOn: "2026-01-01", endsOn: "2026-12-31" });
+    expect(shopSeasonLabel(season)).toBe("2026");
+  });
+
+  it("runs twelve months from any other start, named across both years", () => {
+    const season = shopSeasonOf(2026, { month: 5, day: 15 });
+    expect(season).toEqual({ year: 2026, startsOn: "2026-05-15", endsOn: "2027-05-14" });
+    expect(shopSeasonLabel(season)).toBe("2026–27");
+    expect(shopSeasonLabel(shopSeasonOf(2099, { month: 5, day: 1 }))).toBe("2099–00");
+  });
+
+  it("ends a March season on the last day of February, leap year or not", () => {
+    expect(shopSeasonOf(2027, { month: 3, day: 1 }).endsOn).toBe("2028-02-29");
+    expect(shopSeasonOf(2026, { month: 3, day: 1 }).endsOn).toBe("2027-02-28");
+  });
+
+  it("finds the season now is in, on the shop's own midnight", () => {
+    const may = { month: 5, day: 1 };
+    // 23:30 on April 30 in New York is May 1 in UTC: still last season.
+    expect(currentShopSeason(new Date("2026-05-01T03:30:00Z"), NY, may).year).toBe(2025);
+    expect(currentShopSeason(new Date("2026-05-01T04:00:00Z"), NY, may).year).toBe(2026);
   });
 });

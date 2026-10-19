@@ -120,7 +120,7 @@ test("a copy of the extension older than DiveDay needs is told to update, and ch
   await page.goto(`/shop/${SHOP}/settings`);
   const row = page
     .locator("details")
-    .filter({ has: page.getByRole("heading", { name: "Certification checks", exact: true }) });
+    .filter({ has: page.getByRole("heading", { name: "Card checks", exact: true }) });
   await expect(
     row.getByText("Update the extension: this browser has 1.4.0, DiveDay needs 1.5.0."),
   ).toBeVisible();

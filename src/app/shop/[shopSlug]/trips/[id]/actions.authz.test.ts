@@ -619,13 +619,9 @@ describe("who may run each action on the trip page", () => {
     // took it, and `recordPaperCourseForm` refuses anyone not active staff.
     "recordPaperCourseFormAction",
     "saveRosterEmergencyContactAction",
-    // **Who is running the boat is the crew's own answer.** H-14's record
-    // already said so — "day-of crew assignment (manifest accuracy)" is named
-    // there among the actions that stay open — but `canConfigureTrips`'s
-    // docstring claimed the opposite, and this roster wrote down the docstring.
-    // Re-confirmed with Aaron on 2026-08-22 before correcting it (issue #788):
-    // a captain swapping a divemaster at the dock does not wait for an owner.
+    // Day-of crew assignment (H-14, #788; #2678 away ack withdrawal) stays open.
     "updateTripCrewAction",
+    "withdrawCrewAwayAcknowledgementAction",
     // Same H-48 trust boundary as reviewCertification (any active staff
     // role, not instructor-only) — scoped to the surface rather than the
     // role: the tap only ever lands beside a name on that session's own

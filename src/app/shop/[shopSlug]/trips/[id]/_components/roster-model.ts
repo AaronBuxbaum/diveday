@@ -136,7 +136,6 @@ export type RosterRows = {
    */
   trainingMarks?: {
     bySeat: ReadonlyMap<string, TrainingMarkRosterSeat>;
-    instructorRostered: boolean;
   };
   /** What the browser extension searches PADI's eLearning for, per seat (H-106). */
   elearningQueryByBooking?: Map<string, ElearningQuery>;

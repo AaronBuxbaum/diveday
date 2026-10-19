@@ -4,7 +4,7 @@ import { HOUR_MS, MINUTE_MS } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { inboxSeats } from "./inbox-seats";
-import { bookings, people } from "./schema";
+import { bookings, buddyPairMembers, people } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -190,5 +190,74 @@ describe("inboxSeats", () => {
     const now = new Date(trip.startsAt.getTime() - 3 * 24 * HOUR_MS);
     const seats = await inboxSeats(db, shop.id, [{ id: MESSAGE_ID, personId, receivedAt }], now);
     expect(seats.size).toBe(0);
+  });
+
+  /**
+   * **What the roster's Move will refuse** (issue #2668): an Ask to move on a
+   * party lead's seat names the party's live seats, and one on a buddy team says
+   * so, by `moveBooking`'s own predicates. Only an Ask to move carries it.
+   */
+  describe("an Ask to move's refusal", () => {
+    async function asked() {
+      const c = await context();
+      const receivedAt = new Date(c.bookedAt.getTime() + MINUTE_MS);
+      const now = new Date(c.trip.startsAt.getTime() - 3 * 24 * HOUR_MS);
+      const read = async (bookingId?: string) =>
+        (
+          await inboxSeats(
+            c.db,
+            c.shop.id,
+            [{ id: MESSAGE_ID, personId: c.personId, receivedAt, bookingId }],
+            now,
+          )
+        ).get(MESSAGE_ID);
+      return { ...c, read };
+    }
+
+    async function follower(c: Awaited<ReturnType<typeof asked>>, email: string) {
+      const seat = await createBooking(c.db, {
+        actor: "staff",
+        shopId: c.shop.id,
+        tripId: c.trip.id,
+        fullName: "Party Follower",
+        email,
+      });
+      if (!seat.ok) throw new Error(`follower booking failed: ${seat.reason}`);
+      await c.db
+        .update(bookings)
+        .set({ partyLeadBookingId: c.bookingId })
+        .where(eq(bookings.id, seat.bookingId));
+      return seat.bookingId;
+    }
+
+    it("names the party a lead's seat leads, counting live seats only", async () => {
+      const c = await asked();
+      await follower(c, "follower.one@example.com");
+      const canceled = await follower(c, "follower.two@example.com");
+      await c.db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, canceled));
+      expect((await c.read(c.bookingId))?.[0]?.moveRefusal).toEqual({
+        kind: "leads_party",
+        partySize: 2,
+      });
+      // A message that names no booking is not an Ask to move, and says nothing.
+      expect((await c.read())?.[0]?.moveRefusal).toBeUndefined();
+    });
+
+    it("says the seat is on a buddy team on its departure", async () => {
+      const c = await asked();
+      await c.db.insert(buddyPairMembers).values({
+        shopId: c.shop.id,
+        tripId: c.trip.id,
+        pairId: crypto.randomUUID(),
+        bookingId: c.bookingId,
+        pairedByPersonId: c.personId,
+      });
+      expect((await c.read(c.bookingId))?.[0]?.moveRefusal).toEqual({ kind: "on_buddy_team" });
+    });
+
+    it("says nothing for a seat Move takes as it stands", async () => {
+      const c = await asked();
+      expect((await c.read(c.bookingId))?.[0]?.moveRefusal).toBeUndefined();
+    });
   });
 });

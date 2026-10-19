@@ -2,7 +2,7 @@ import { expect, test } from "./fixtures";
 
 /**
  * **The crew schedule is a shop setting** (ADR
- * 20261005-crew-schedule-is-a-setting). Off, the Crew view of Schedule is
+ * 20261005-crew-schedule-is-a-setting), a switch on the Features page. Off, the Crew view of Schedule is
  * gone — no tab beside Week, and an old `/staffing` link lands on the week —
  * and on brings it back exactly as it was.
  *
@@ -11,7 +11,8 @@ import { expect, test } from "./fixtures";
  */
 test("an owner turns the crew schedule off and on again", async ({ page, privateShop }) => {
   test.setTimeout(60_000);
-  const settings = `/shop/${privateShop.slug}/settings#crew-schedule`;
+  const features = `/shop/${privateShop.slug}/settings/features`;
+  const crewRow = page.locator("li#crewSchedule");
   const board = `/shop/${privateShop.slug}/schedule/board`;
   const crewTab = page.getByRole("link", { name: "Crew", exact: true });
 
@@ -19,10 +20,10 @@ test("an owner turns the crew schedule off and on again", async ({ page, private
   await page.goto(board);
   await expect(crewTab).toBeVisible();
 
-  await page.goto(settings);
-  await page.getByLabel("Plan crew in DiveDay").uncheck();
-  await page.getByRole("button", { name: "Save crew schedule" }).click();
-  await expect(page.getByText("Crew schedule saved.")).toBeVisible();
+  await page.goto(features);
+  await crewRow.getByLabel("Plan crew in DiveDay").uncheck();
+  await crewRow.getByRole("button", { name: "Save" }).click();
+  await expect(crewRow.getByText("Saved.")).toBeVisible();
 
   await page.goto(board);
   await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
@@ -32,10 +33,10 @@ test("an owner turns the crew schedule off and on again", async ({ page, private
   await page.goto(`/shop/${privateShop.slug}/staffing`);
   await expect(page).toHaveURL(new RegExp(`${board}$`));
 
-  await page.goto(settings);
-  await page.getByLabel("Plan crew in DiveDay").check();
-  await page.getByRole("button", { name: "Save crew schedule" }).click();
-  await expect(page.getByText("Crew schedule saved.")).toBeVisible();
+  await page.goto(features);
+  await crewRow.getByLabel("Plan crew in DiveDay").check();
+  await crewRow.getByRole("button", { name: "Save" }).click();
+  await expect(crewRow.getByText("Saved.")).toBeVisible();
 
   await page.goto(board);
   await crewTab.click();

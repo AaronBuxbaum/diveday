@@ -5,17 +5,17 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { shopSearchAnchor } from "@/db/dive-sites";
+import { convertImportedSiteProseToUnit, shopSearchAnchor } from "@/db/dive-sites";
 import { sendNotification } from "@/db/notifications";
 import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
   getShopById,
+  lockShopDepthUnit,
   markShopUnitsConfirmed,
   setShopAddress,
   setShopContact,
   setShopCurrency,
   setShopDepthUnit,
-  setShopFeature,
   setShopReopensOn,
   setShopSeasonStart,
   setShopTemperatureUnit,
@@ -30,7 +30,7 @@ import {
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
-import { checkbox, formValue, readForm, trimmedText } from "@/lib/form-parse";
+import { formValue, readForm, trimmedText } from "@/lib/form-parse";
 import { isValidTimeZone } from "@/lib/format";
 import { isShopCurrency, type ShopCurrency } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -40,7 +40,6 @@ import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { parseSeasonStart } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
-import { parseShopFeature } from "@/lib/shop-features";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
 import { paymentSettingsBlock, settingsBlock } from "./action-helpers";
@@ -79,8 +78,6 @@ const unitsForm = z.object({
 });
 const timezoneForm = z.object({ timezone: formValue() });
 const seasonStartForm = z.object({ seasonStartMonth: formValue(), seasonStartDay: formValue() });
-const shopFeatureForm = z.object({ feature: formValue(), enabled: checkbox() });
-
 /**
  * The three units a shop reads its own numbers in — depth, water temperature,
  * and money — saved together from one card.
@@ -133,7 +130,21 @@ export async function saveUnitsAction(formData: FormData) {
   }
 
   const db = await getDb();
-  await setShopDepthUnit(db, session.user.shopId, depthUnit.data);
+  // One transaction: the unit and the prose it carries land together or not
+  // at all, so a failed conversion leaves the shop on its old unit and a retry
+  // still has a switch to make (issue #2683).
+  const sites = await db.transaction(async (tx) => {
+    const before = await lockShopDepthUnit(tx, session.user.shopId);
+    await setShopDepthUnit(tx, session.user.shopId, depthUnit.data);
+    const from = before ?? depthUnit.data;
+    const result = await convertImportedSiteProseToUnit(
+      tx,
+      session.user.shopId,
+      from,
+      depthUnit.data,
+    );
+    return { ...result, from };
+  });
   await setShopTemperatureUnit(db, session.user.shopId, temperatureUnit.data);
   if (currency !== null) {
     await setShopCurrency(db, session.user.shopId, currency);
@@ -142,7 +153,18 @@ export async function saveUnitsAction(formData: FormData) {
   // when nothing changed — the step is "look at these", and a shop that opened
   // the row and agreed with the derived values has looked (issue #712).
   await markShopUnitsConfirmed(db, session.user.shopId);
-  revalidateAndRedirect(settings, noticeUrl(settings, "units-saved", { saved: "units" }));
+  revalidateAndRedirect(
+    settings,
+    sites.leftAlone > 0
+      ? noticeUrl(settings, "units-saved-sites-left", {
+          saved: "units",
+          count: sites.leftAlone,
+          from: sites.from,
+          // The first few by name; the rest are the count's "and more".
+          sites: sites.leftAloneNames.slice(0, 3).join(" · "),
+        })
+      : noticeUrl(settings, "units-saved", { saved: "units" }),
+  );
 }
 
 /**
@@ -188,7 +210,8 @@ async function sendContactEmailConfirmation(shop: {
     email: shop.contactEmail,
   });
   const delivery = await sendNotification(db, {
-    kind: "contact_email_confirmation",
+    kind: "address_confirmation",
+    purpose: "shop_contact",
     shopId: shop.id,
     tokenId: issued.tokenId,
     to: shop.contactEmail,
@@ -444,26 +467,4 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
   // credentials never loads the AWS SDK at all.
   const { awsAddressLookupProvider } = await import("@/lib/address-lookup-aws");
   return awsAddressLookupProvider(config).suggest(query, { bias });
-}
-
-/**
- * Turns one optional feature on or off (ADR 20261005-optional-shop-features).
- * Every feature row on the hub posts here with its own `feature` field, so the
- * row that changed comes back open with the notice inside it.
- */
-export async function saveShopFeatureAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-
-  const featureForm = readForm(shopFeatureForm, formData);
-  const feature = parseShopFeature(featureForm.feature);
-  // Only a hand-built post names no feature; it gets the hub back unchanged.
-  if (!feature) {
-    revalidateAndRedirect(settings, settings);
-    return;
-  }
-  await setShopFeature(await getDb(), session.user.shopId, feature, featureForm.enabled);
-
-  revalidateAndRedirect(settings, noticeUrl(settings, "feature-saved", { saved: feature }));
 }

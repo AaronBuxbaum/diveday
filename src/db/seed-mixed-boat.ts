@@ -11,6 +11,7 @@ import {
   type waiverTemplates,
 } from "./schema";
 import { at, nextCreatedAt } from "./seed-clock";
+import { paperRelease } from "./seed-paper-release";
 
 /**
  * **A snorkeler and a rider on today's reef boat** (ADR
@@ -54,9 +55,14 @@ export const DEMO_RIDER_PRICE_CENTS = 2500;
 export async function seedMixedBoat(
   db: DbExecutor,
   shopId: string,
-  ctx: { reef: typeof trips.$inferSelect; waiverTemplate: typeof waiverTemplates.$inferSelect },
+  ctx: {
+    reef: typeof trips.$inferSelect;
+    waiverTemplate: typeof waiverTemplates.$inferSelect;
+    /** The staffer who took the paper releases at the counter. */
+    recordedById: string;
+  },
 ): Promise<void> {
-  const { reef, waiverTemplate } = ctx;
+  const { reef, waiverTemplate, recordedById } = ctx;
   await db
     .update(trips)
     .set({
@@ -107,12 +113,7 @@ export async function seedMixedBoat(
       tokenHash: `seed-waiver-mixed-boat-${shopId}-${index}`,
       expiresAt: at(30, 12),
       createdAt: signedAt,
-      status: "completed" as const,
-      signedName: "Signed on file",
-      signatureMethod: "in_person" as const,
-      consentedAt: signedAt,
-      signedAt,
-      completedAt: signedAt,
+      ...paperRelease(signedAt, recordedById, guest.fullName),
     });
 
     if (guest.maskFins) {

@@ -377,6 +377,7 @@
   "src/app/shop/[shopSlug]/_components/today/recap-status.test.ts": 231,
   "src/app/shop/[shopSlug]/_components/today/spine-reading.test.ts": 78,
   "src/app/shop/[shopSlug]/actions.test.ts": 1866,
+  "src/app/shop/[shopSlug]/boats/certificate-error.test.ts": 249,
   "src/app/shop/[shopSlug]/bookings/new/_components/DepartureDayNav.test.tsx": 276,
   "src/app/shop/[shopSlug]/bookings/new/_components/DeparturePicker.test.tsx": 517,
   "src/app/shop/[shopSlug]/bookings/new/_components/TookACallFields.test.tsx": 325,

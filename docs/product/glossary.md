@@ -58,6 +58,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Readiness
 - Refresher / ReActivate
 - Requirable level
+- Requirement
 - Self-declared certification
 - Shop-issued certification
 - Site maximum depth
@@ -166,9 +167,11 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Certificate total-persons limit
 - Check-in
 - Close-out
+- Coming as
 - Connected Stripe account
 - Counter hand-off
 - Counter self-registration
+- Counter window
 - Course catalog copy
 - Course form
 - Course page
@@ -183,6 +186,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Crew warning
 - DAN
 - Days at sea
+- Days away
 - Decompression card reminder
 - Default course page
 - Delivery receipt
@@ -199,13 +203,13 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Dive record
 - Dive site
 - Diver seats
+- Diver state message
 - Dock call time
 - Doctor's page
 - Emergency contact
 - Emergency reference
 - Export bundle
 - Fill rate
-- First-timer track
 - Held
 - Horizon
 - Hotel pickup
@@ -317,15 +321,20 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Trip stage
 - Turned away
 - Unaccounted for
+- Under 18
 - Wait list
 - Wait-list party
 - Wait-list roll
 - Waiver / release
 - Waiver activity
 - Waiver completion
+- Walk-in
+- Walk-in party
 - Weather day
 - Week totals
 - WhatsApp sender
+- Working channel
+- Working it anyway
 - Working shift
 - Your days
 - Your week
@@ -415,3 +424,6 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Lens
 - Our year
 - Published desk hours
+- Register
+- Setting
+- The shop's year

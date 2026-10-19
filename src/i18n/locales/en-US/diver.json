@@ -958,6 +958,7 @@
       "paymentDueAmount": "{amount} to settle. Your shop can take payment before the trip.",
       "waiverDone": "Signed and on file.",
       "certificationDone": "Verified and on file.",
+      "certificationTrainingDive": "Training dive with your instructor; no card asked.",
       "paymentDone": "Paid up. Thank you.",
       "certificationMultipleNeeded": "This dive needs more than one certification on file. Share the details for each one it calls for, and your shop will confirm you’re set.",
       "courseFormUnsigned": "Your course has forms for you to sign.",
@@ -4099,7 +4100,7 @@
         "item8": "A nudge to the diver who reserved a seat and never finished paying",
         "item9": "Crew tips a diver starts from their own recap page, when the shop turns them on",
         "item10": "A monthly report: revenue, bookings, seat fill, waivers and tips, per trip",
-        "item11": "Paid and refunded orders posted to QuickBooks or Xero as receipts"
+        "item11": "Paid and refunded orders posted to QuickBooks as receipts"
       },
       "divers": {
         "title": "Divers",
@@ -5207,7 +5208,7 @@
         "faq2Q": "What happens when a diver cancels?",
         "faq2A": "Inside the free-cancellation window you set, an online card payment is refunded by itself. Past the window, a refund is yours to decide.",
         "faq3Q": "Does it work with my accounting?",
-        "faq3A": "Paid and refunded orders post to QuickBooks or Xero as receipts, and the report downloads as a spreadsheet.",
+        "faq3A": "Paid and refunded orders post to QuickBooks as receipts, and the report downloads as a spreadsheet.",
         "closeTitle": "Look over a day of demo orders.",
         "demoPlace": "the day’s orders, as the owner"
       }
@@ -5271,10 +5272,7 @@
       "waterTemp": "water around {value}",
       "visibility": "visibility near {value}",
       "expect": "Expect {list}.",
-      "firstTimer": "First boat dive? The crew walks everyone through the gear and the plan before you get in, so you’ll never be handed kit and left to figure it out. Come with questions.",
-      "conditionsLabel": "Conditions:",
-      "bringLabel": "What to bring:",
-      "whoToText": "Questions on the day? Text us at {phone}."
+      "conditionsLabel": "Conditions:"
     },
     "reminderAction": {
       "waiverPending": "Sign your waiver",
@@ -5313,7 +5311,6 @@
       "trackWhatsLeft": "Track what’s left before you sail",
       "seeWhatsLeft": "See what’s left before you sail",
       "outstandingHeading": "Still to sort before you board:",
-      "medicalReviewNote": "Check whether a medical answer needs a doctor’s sign-off before you travel",
       "courtesyUnsubscribe": "Stop optional emails from {shopName}"
     },
     "tripConditionsHold": {
@@ -5410,35 +5407,27 @@
     },
     "tripReminder": {
       "weekSubject": "You sail this week: {tripTitle}",
-      "weekBody": "A quick reminder that {tripTitle} sails this week.",
+      "weekBody": "{tripTitle} sails {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
       "weekSubjectCourse": "Your course starts this week: {tripTitle}",
-      "weekBodyCourse": "A quick reminder that {tripTitle} starts this week.",
+      "weekBodyCourse": "{tripTitle} starts {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
       "dockNote": "Please be at the dock {dock} early.",
-      "daySubject": "You sail tomorrow: {tripTitle}",
-      "dayOpenerFirstTimer": "You dive with us tomorrow. Everything you need for the day is below.",
-      "dayOpenerReturning": "A quick reminder that {tripTitle} sails tomorrow.",
-      "arrival": "Aim to be at the dock by {time}, {dock} before we sail.",
-      "hotelPickupArrival": "Your pickup is at {time} from {location}.",
-      "hotelNotSet": "your hotel"
+      "daySubject": "{day, select, today {You sail today} other {You sail tomorrow}}: {tripTitle}",
+      "dayBody": "{tripTitle} sails {day, select, today {today} other {tomorrow}}; be at the dock by {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
+      "daySubjectCourse": "{day, select, today {Your course starts today} other {Your course starts tomorrow}}: {tripTitle}",
+      "dayBodyCourse": "{tripTitle} starts {day, select, today {today} other {tomorrow}} at {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}"
     },
     "courseMaterials": {
       "heading": "Before your first day"
     },
-    "courseDays": {
-      "heading": "Your course days",
-      "day": "Day {number}: {date}, {time}"
-    },
     "tripRecap": {
       "subject": "Your dive with {shopName}: {tripTitle}",
       "thanks": "Thanks for diving {tripTitle} with us on {date}.",
-      "dived": "You dived {sites}.",
       "flySafeAfterDive": "We ask you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
       "flySafeAfterDiveEarlierDay": "We ask you to wait at least until {when} before flying: our records show another dive day in the last two days, so {count, plural, one {# hour} other {# hours}} after your last dive with us, following DAN’s guidance.",
       "flySafeAfterReturn": "We ask you to wait at least until {when} before flying: {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
       "flySafeAfterReturnDivesPlanned": "We ask you to wait at least until {when} before flying: we planned more than one dive, so {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
       "flySafeAfterReturnEarlierDay": "We ask you to wait at least until {when} before flying: our records show another dive day in the last two days, so {count, plural, one {# hour} other {# hours}} after the day was due to end, following DAN’s guidance.",
-      "seeRecap": "See the recap of your day",
-      "footer": "If you loved it, the best thing you can do is bring a buddy next time. See you in the water."
+      "seeRecap": "See the recap of your day"
     },
     "welcome": {
       "subject": "Welcome to DiveDay, {shopName}",
@@ -5690,6 +5679,11 @@
       "open": "Open the Inbox",
       "turnOff": "Turn these off in your email settings"
     },
+    "moveAskSoon": {
+      "subject": "{shopName}: a diver asked to move off {tripTitle}",
+      "body": "A diver asked to move their seat on {tripTitle}, leaving {when}.",
+      "open": "Open the Inbox"
+    },
     "stripeRestricted": {
       "subject": "{shopName}: Stripe has turned off card payments",
       "body": "Stripe has paused card payments on your account, so divers can still book but pay at the shop for now. Stripe’s dashboard says what it needs to turn them back on.",
@@ -5714,6 +5708,11 @@
       "body": "Missing diver on {tripTitle}. Reported {when}. Call the boat first.",
       "open": "Open the report",
       "emergency": "Open the emergency reference"
+    },
+    "incidentMissingDiverFound": {
+      "subject": "{shopName}: the missing diver on {tripTitle} was found",
+      "body": "The diver reported missing on {tripTitle} was found. Marked found {when}.",
+      "stillMissing": "{count, plural, one {# other person is still reported missing on this departure.} other {# others are still reported missing on this departure.}}"
     },
     "shoreAlertStopped": {
       "subject": "{shopName}: the shore contact stopped roll-call alerts",

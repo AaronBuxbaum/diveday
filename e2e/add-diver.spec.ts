@@ -453,21 +453,19 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   // The diver form is a dedicated step shared by all seating doors.
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/new/);
-  // Name only: this door takes the no-email diver the counter always could.
   await page.getByLabel("Full name").fill("Phoned In Pat");
+  await page.getByLabel("Email").fill("pat@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
 
   // Lands on the trip's Trip surface with the roster's usual success affordance.
   await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
-  await expect(page.getByRole("status")).toContainText(
-    "Diver added to the trip, but their waiver wasn’t emailed.",
-  );
+  await expect(page.getByRole("status")).toContainText("Diver added to the trip");
   await expect(
     rosterRow(page, "Phoned In Pat").getByRole("link", { name: "Phoned In Pat" }),
   ).toBeVisible();
 });
 
-test("a refusal from the global door stays on the form, boat still chosen", async ({ page }) => {
+test("a refusal from the global door lands on the boat's Divers tab", async ({ page }) => {
   test.setTimeout(30_000);
   const title = `Global Door Full ${e2eNow().getTime()}`;
   const tripId = await scheduleTrip(page, title, 9, 1);
@@ -476,20 +474,20 @@ test("a refusal from the global door stays on the form, boat still chosen", asyn
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("First Aboard Fay");
+  await page.getByLabel("Email").fill("fay@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "Diver added to the trip, but their waiver wasn’t emailed.",
-  );
+  await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
-  // The boat is full now. The refusal comes back to the door that produced it,
-  // still pointed at the same departure, so the next diver is one field away.
+  // The boat is full now. The refusal lands on that departure's Divers tab,
+  // the one place that says why and offers the wait list.
   await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
   await page.getByRole("link", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Too Late Theo");
+  await page.getByLabel("Email").fill("theo@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/bookings/new/${tripId}\\?notice=diver-full`));
+  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
   // Next's own route announcer is also `role="alert"`, so target the banner.
   await expect(page.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
   await expect(page.getByText(title).first()).toBeVisible();

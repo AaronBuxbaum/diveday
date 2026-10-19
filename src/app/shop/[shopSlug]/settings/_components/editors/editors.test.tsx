@@ -18,7 +18,7 @@ import { BrandColorField } from "../BrandColorField";
 import type { SettingsShop } from "../groups/kit";
 import { DockDayForm, EmergencyReferenceForm } from "./BoatsSitesEditors";
 import { ProfileForm } from "./ProfileForm";
-import { RentalItemsForm } from "./RentalEditors";
+import { RentalsForm } from "./RentalsForm";
 
 const ctx = fileScopedShopContext();
 
@@ -333,18 +333,37 @@ describe("the emergency reference editor", () => {
  * still ask for a piece the shop dropped, said where the catalog is edited and
  * silent at zero. The form offers no way to clear them.
  */
-describe("the rental catalog editor", () => {
+describe("the Rentals form", () => {
   it("says how many fits still ask for a dropped piece", async () => {
     const { shop } = await demoShop();
-    const html = renderToStaticMarkup(<RentalItemsForm shop={shop} t={t} droppedFits={3} />);
+    const html = renderToStaticMarkup(
+      <RentalsForm shop={shop} t={t} locale="en-US" droppedFits={3} />,
+    );
     expect(html).toContain("3 divers’ rental fits still ask for gear you no longer rent.");
-    const one = renderToStaticMarkup(<RentalItemsForm shop={shop} t={t} droppedFits={1} />);
+    const one = renderToStaticMarkup(
+      <RentalsForm shop={shop} t={t} locale="en-US" droppedFits={1} />,
+    );
     expect(one).toContain("1 diver’s rental fit still asks for gear you no longer rent.");
+  });
+
+  it("is one table: a tick and a price per piece, the full set, the terms and the interval", async () => {
+    const { shop } = await demoShop();
+    const html = renderToStaticMarkup(<RentalsForm shop={shop} t={t} locale="en-US" />);
+    expect(html).toContain('name="setPrice"');
+    expect(html).toContain('name="nitroxPrice"');
+    expect(html).toContain('name="price_maskFins"');
+    expect(html).toContain('name="rentalTerms"');
+    expect(html).toContain('name="regulatorServiceMonths"');
+    // One form, one save.
+    expect(html.match(/<form/g)).toHaveLength(1);
+    expect(html.match(/type="submit"/g)).toHaveLength(1);
   });
 
   it("says nothing when no fit asks for a dropped piece", async () => {
     const { shop } = await demoShop();
-    const html = renderToStaticMarkup(<RentalItemsForm shop={shop} t={t} droppedFits={0} />);
+    const html = renderToStaticMarkup(
+      <RentalsForm shop={shop} t={t} locale="en-US" droppedFits={0} />,
+    );
     expect(html).not.toContain("no longer rent");
   });
 });

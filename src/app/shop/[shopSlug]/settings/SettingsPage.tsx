@@ -28,15 +28,12 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB, MAX_SHOPFRONT_PHOTOS } from "@/lib/storage/limits";
-import { AccountGroup } from "./_components/groups/AccountGroup";
-import { BoatsSitesGroup } from "./_components/groups/BoatsSitesGroup";
 import { BookingsGroup } from "./_components/groups/BookingsGroup";
 import { DataGroup } from "./_components/groups/DataGroup";
+import { FeaturesGroup } from "./_components/groups/FeaturesGroup";
 import { DATA_GROUP, SettingsGroup, type SettingsView } from "./_components/groups/kit";
+import { MessagesGroup } from "./_components/groups/MessagesGroup";
 import { MoneyGroup } from "./_components/groups/MoneyGroup";
-import { RarelyChangedGroup } from "./_components/groups/RarelyChangedGroup";
-import { ReachGroup } from "./_components/groups/ReachGroup";
-import { RentalsGroup } from "./_components/groups/RentalsGroup";
 import { ShopGroup } from "./_components/groups/ShopGroup";
 import { TeamGroup } from "./_components/groups/TeamGroup";
 import { WebsiteGroup } from "./_components/groups/WebsiteGroup";
@@ -50,7 +47,10 @@ export const metadata: Metadata = { title: "Shop settings — DiveDay" };
  * translated against the negotiated locale — a module-level constant would
  * freeze it to whichever locale first imported this file.
  */
-function noticeMessages(t: StaffTranslator): NoticeMessages {
+function noticeMessages(
+  t: StaffTranslator,
+  left: { count: number; from: string; sites: string },
+): NoticeMessages {
   return {
     "packing-saved": { tone: "success", text: t("settings.main.notice.packingSaved") },
     "packing-invalid": { tone: "danger", text: t("settings.main.notice.packingInvalid") },
@@ -64,24 +64,18 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },
     "package-invalid": { tone: "danger", text: t("settings.main.notice.packageInvalid") },
     "units-saved": { tone: "success", text: t("settings.main.notice.unitsSaved") },
+    "units-saved-sites-left": {
+      tone: "warning",
+      text: t("settings.main.notice.unitsSavedSitesLeft", {
+        count: left.count,
+        from: left.from === "feet" ? "feet" : "meters",
+        sites: left.sites,
+        more: Math.max(0, left.count - left.sites.split(" · ").filter(Boolean).length),
+      }),
+    },
     "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
-    "tax-saved": { tone: "success", text: t("settings.main.notice.taxSaved") },
-    "tax-invalid": { tone: "danger", text: t("settings.main.notice.taxInvalid") },
     "pass-through-saved": { tone: "success", text: t("settings.main.notice.passThroughSaved") },
     "pass-through-invalid": { tone: "danger", text: t("settings.main.notice.passThroughInvalid") },
-    "rental-terms-saved": { tone: "success", text: t("settings.main.notice.rentalTermsSaved") },
-    "regulator-service-saved": {
-      tone: "success",
-      text: t("settings.main.notice.regulatorServiceSaved"),
-    },
-    "regulator-service-invalid": {
-      tone: "danger",
-      text: t("settings.main.notice.regulatorServiceInvalid"),
-    },
-    "rental-terms-invalid": {
-      tone: "danger",
-      text: t("settings.main.notice.rentalTermsInvalid"),
-    },
     "contact-saved": { tone: "success", text: t("settings.main.notice.contactSaved") },
     "contact-confirmation-sent": {
       tone: "success",
@@ -134,24 +128,11 @@ function noticeMessages(t: StaffTranslator): NoticeMessages {
     // receives the whole shop, medical evidence included — and the same
     // bounce-with-an-explanation rule as every gate above.
     "backup-not-authorized": { tone: "danger", text: sayWords(t, ownerOrManagerWords("backup")) },
-    "diving-options-saved": { tone: "success", text: t("boats.divingOptionsSaved") },
-    "diving-options-invalid": { tone: "danger", text: t("boats.divingOptionsInvalid") },
-    "diving-options-none": { tone: "danger", text: t("boats.divingOptionsNone") },
     "crew-schedule-saved": { tone: "success", text: t("settings.main.crewSchedule.saved") },
-    "feature-saved": { tone: "success", text: t("settings.main.features.saved") },
     "crew-schedule-ratio-invalid": {
       tone: "danger",
       text: t("boats.divingOptionsRatioInvalid"),
     },
-    "boat-created": { tone: "success", text: t("boats.boatCreated") },
-    "boat-updated": { tone: "success", text: t("boats.boatUpdated") },
-    "boat-deleted": { tone: "success", text: t("boats.boatDeleted") },
-    "boat-invalid": { tone: "danger", text: t("boats.boatInvalid") },
-    "boat-radio-invalid": { tone: "danger", text: t("boats.boatRadioInvalid") },
-    "lens-created": { tone: "success", text: t("lenses.created") },
-    "lens-updated": { tone: "success", text: t("lenses.updated") },
-    "lens-deleted": { tone: "success", text: t("lenses.deleted") },
-    "lens-invalid": { tone: "danger", text: t("lenses.invalid") },
   };
 }
 
@@ -182,10 +163,16 @@ export default async function SettingsPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string; saved?: string }>;
+  searchParams: Promise<{
+    notice?: string;
+    saved?: string;
+    count?: string;
+    from?: string;
+    sites?: string;
+  }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, saved } = await searchParams;
+  const { notice, saved, count, from, sites } = await searchParams;
   // Every row on this page changes the shop rather than the day, so the page
   // itself is owner/manager work (src/lib/authz.ts — canManageShopSettings),
   // checked against live roles. Bounced to Today with an explanatory notice
@@ -238,7 +225,10 @@ export default async function SettingsPage({
   const canViewBilling = !shop.isDemo && canManageBilling(session.user.roles);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const banner = noticeFromParam(notice, noticeMessages(t));
+  const banner = noticeFromParam(
+    notice,
+    noticeMessages(t, { count: Number(count) || 0, from: from ?? "", sites: sites ?? "" }),
+  );
   // A recognized section opens its own row and renders the notice inside it;
   // anything else (chiefly `not-authorized`, which spans several sections
   // rather than owning one) keeps the old top-of-page banner.
@@ -274,26 +264,26 @@ export default async function SettingsPage({
           hasPricedRecords={hasPricedRecords}
           currencyMismatch={stripeCurrencyMismatch(toShopCurrency(shop.currency), account)}
           addressLookupEnabled={isAddressLookupConfigured()}
+          boatsWithoutRadioIdentity={boatsWithoutRadioIdentity}
         />
 
         <TeamGroup view={view} canManageTeam={canManageTeam} />
 
-        <BoatsSitesGroup view={view} boatsWithoutRadioIdentity={boatsWithoutRadioIdentity} />
-
-        <BookingsGroup view={view} canManageWaivers={canManageWaivers} />
-
-        {canPayments ? <RentalsGroup view={view} /> : null}
+        <BookingsGroup view={view} canManageWaivers={canManageWaivers} canPayments={canPayments} />
 
         <MoneyGroup
           view={view}
           canPayments={canPayments}
+          canViewBilling={canViewBilling}
           account={account}
           connectConfigured={connectConfigured}
         />
 
-        <ReachGroup view={view} canManageMessaging={canManageMessaging} />
+        <MessagesGroup view={view} canManageMessaging={canManageMessaging} />
 
         <WebsiteGroup view={view} />
+
+        <FeaturesGroup view={view} />
 
         <Suspense fallback={<GroupFallback group={DATA_GROUP} label={t(DATA_GROUP.labelKey)} />}>
           <DataGroup
@@ -304,10 +294,6 @@ export default async function SettingsPage({
             canImport={canImport}
           />
         </Suspense>
-
-        <AccountGroup view={view} canViewBilling={canViewBilling} />
-
-        <RarelyChangedGroup view={view} canPayments={canPayments} />
 
         {/* The stack's last child, so it sits a section's 40px under the last
             card like every section above it; on its own `mt-12` it sat 48px

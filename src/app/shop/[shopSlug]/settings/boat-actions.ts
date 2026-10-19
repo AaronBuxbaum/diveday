@@ -2,18 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import {
-  type BoatPapersInput,
-  createBoat,
-  deleteBoat,
-  updateBoatWithinCertificate,
-} from "@/db/boats";
 import { getDb } from "@/db/client";
 import { sendNotification } from "@/db/notifications";
 import { recordShopActivity } from "@/db/shop-activity";
 import {
   getShopById,
-  setShopDivingOptions,
   setShopDockDayRhythm,
   setShopEmergencyReference,
   setShopMinTurnaround,
@@ -21,18 +14,11 @@ import {
 } from "@/db/shops";
 import { issueShoreAlertConfirmation } from "@/db/shore-alert-tokens";
 import { toDiverLocale } from "@/i18n/settings";
-import { type BoatSeatsRefusal, boatSeatsRefusal } from "@/lib/boat-safety";
-import { isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
-import {
-  MAX_EMERGENCY_LINES,
-  normalizeCallSign,
-  normalizeEmergencyReference,
-  normalizeMmsi,
-} from "@/lib/emergency-reference";
-import { checkbox, formValue, readForm, text, trimmedText } from "@/lib/form-parse";
+import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
+import { checkbox, formValue, readForm, text } from "@/lib/form-parse";
 import { parseMinTurnaroundMinutes } from "@/lib/move-preflight";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -40,9 +26,7 @@ import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { requireStaffSession } from "@/lib/session";
 import { nextShoreAlertContact } from "@/lib/shore-alert-contact";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { uuidParam } from "@/lib/uuid";
 import { settingsBlock } from "./action-helpers";
-import { boatRowId } from "./boats/certificate-error";
 
 /** Each dock-day amount as posted, `null` when absent; `parseDockDayRhythm` holds the bounds. */
 const dockDayForm = z.object(
@@ -71,29 +55,6 @@ const emergencyForm = z
     shoreAlertConsentFor: text(),
   })
   .catchall(text());
-
-const divingOptionsForm = z.object({
-  hasBoatDiving: checkbox(),
-  hasShoreDiving: checkbox(),
-  hasPoolDiving: checkbox(),
-});
-
-/** A fleet row as posted; the boat's papers are narrowed by `boatPapers`. */
-const boatForm = z.object({
-  boatId: formValue(),
-  name: trimmedText(),
-  capacity: formValue(),
-  description: trimmedText(),
-  certifiedPassengers: trimmedText(),
-  certifiedTotalPersons: trimmedText(),
-  coiExpiresOn: trimmedText(),
-  inspectionDueOn: trimmedText(),
-  registrationExpiresOn: trimmedText(),
-  insuranceExpiresOn: trimmedText(),
-  callSign: trimmedText(),
-  mmsi: trimmedText(),
-});
-type BoatForm = z.infer<typeof boatForm>;
 
 /**
  * The shop's whole dock-day rhythm: the arrival call plus the five minute
@@ -276,7 +237,8 @@ async function sendShoreAlertConfirmation(shop: {
     email: shop.shoreAlertEmail,
   });
   const delivery = await sendNotification(db, {
-    kind: "shore_alert_confirmation",
+    kind: "address_confirmation",
+    purpose: "shore_alert",
     shopId: shop.id,
     tokenId: issued.tokenId,
     to: shop.shoreAlertEmail,
@@ -287,234 +249,4 @@ async function sendShoreAlertConfirmation(shop: {
     timezone: shop.timezone,
   });
   return delivery.status === "sent";
-}
-
-/** Saves which of boat, shore and pool diving the shop runs. */
-export async function saveDivingOptionsAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-
-  const { hasBoatDiving, hasShoreDiving, hasPoolDiving } = readForm(divingOptionsForm, formData);
-
-  // Unticking all three would leave the builder with no mode to offer and trip
-  // creation still defaulting to `boat` — a shop disowning the only kind of
-  // departure it can make. The DB check refuses it too; this is the half that
-  // says so in words instead of raising.
-  if (!hasBoatDiving && !hasShoreDiving && !hasPoolDiving) {
-    revalidateAndRedirect(
-      settings,
-      noticeUrl(settings, "diving-options-none", { form: "divingOptions" }),
-    );
-    return;
-  }
-
-  const db = await getDb();
-  await setShopDivingOptions(db, session.user.shopId, {
-    hasBoatDiving,
-    hasShoreDiving,
-    hasPoolDiving,
-  });
-
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "diving-options-saved", { saved: "divingOptions" }),
-  );
-}
-
-/** The storefront's one line about a hull: trimmed, bounded, and null when empty. */
-function boatDescription(form: BoatForm): string | null {
-  const text = form.description.slice(0, 200);
-  return text.length > 0 ? text : null;
-}
-
-/**
- * The certificate's two limits (passengers, and total persons with the crew,
- * #2302) and the boat's four paper dates, as the fleet row posts them. Every
- * one optional, and an empty box is a cleared value; anything that is not a
- * whole number of people or a real calendar day refuses the save rather than
- * being dropped, so a typo is never stored as "nothing said" (roadmap N-10).
- * The radio identity rides with them (fourth review, item 11): an MMSI that is
- * not nine digits refuses the save the same way.
- */
-function boatPapers(form: BoatForm): BoatPapersInput | "invalid" | "radio-invalid" {
-  const day = (
-    name: "coiExpiresOn" | "inspectionDueOn" | "registrationExpiresOn" | "insuranceExpiresOn",
-  ): string | null | "invalid" => {
-    const value = form[name];
-    if (!value) return null;
-    return isValidCalendarDate(value) ? value : "invalid";
-  };
-  const people = (name: "certifiedPassengers" | "certifiedTotalPersons") => {
-    const value = form[name];
-    if (!value) return null;
-    const number = Number(value);
-    return Number.isInteger(number) && number >= 1 && number <= 999 ? number : "invalid";
-  };
-  const certifiedPassengers = people("certifiedPassengers");
-  const certifiedTotalPersons = people("certifiedTotalPersons");
-  const coiExpiresOn = day("coiExpiresOn");
-  const inspectionDueOn = day("inspectionDueOn");
-  const registrationExpiresOn = day("registrationExpiresOn");
-  const insuranceExpiresOn = day("insuranceExpiresOn");
-  if (
-    certifiedPassengers === "invalid" ||
-    certifiedTotalPersons === "invalid" ||
-    coiExpiresOn === "invalid" ||
-    inspectionDueOn === "invalid" ||
-    registrationExpiresOn === "invalid" ||
-    insuranceExpiresOn === "invalid"
-  ) {
-    return "invalid";
-  }
-  const callSign = normalizeCallSign(form.callSign ?? "");
-  const mmsi = normalizeMmsi(form.mmsi ?? "");
-  // Its own refusal: "Provide a boat name and capacity." over a mistyped
-  // MMSI sent the owner looking at the two fields that were fine.
-  if (callSign === "invalid" || mmsi === "invalid") return "radio-invalid";
-  return {
-    certifiedPassengers,
-    certifiedTotalPersons,
-    coiExpiresOn,
-    inspectionDueOn,
-    registrationExpiresOn,
-    insuranceExpiresOn,
-    callSign,
-    mmsi,
-  };
-}
-
-/**
- * Redirects with the fleet row's field error when the boat's numbers break
- * the certificate (H-107). `boat` names the row the error belongs on ("new"
- * for the add form), and the numbers ride along so the sentence can say them.
- */
-function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusal | null) {
-  if (!refusal) return;
-  // The fragment scrolls to the row the error is on (`boatRowId`).
-  const row = `${page}#${boatRowId(boat)}`;
-  if (refusal.code === "seats_above_total_persons") {
-    redirect(
-      noticeUrl(row, "boat-seats-above-persons", {
-        boat,
-        capacity: refusal.capacity,
-        limit: refusal.limit,
-      }),
-    );
-  }
-  if (refusal.code === "passengers_above_total_persons") {
-    redirect(
-      noticeUrl(row, "boat-passengers-above-persons", {
-        boat,
-        passengers: refusal.passengers,
-        limit: refusal.limit,
-      }),
-    );
-  }
-  redirect(
-    refusal.code === "seats_above_certificate"
-      ? noticeUrl(row, "boat-above-certificate", {
-          boat,
-          capacity: refusal.capacity,
-          limit: refusal.limit,
-        })
-      : noticeUrl(row, "boat-departures-above-certificate", {
-          boat,
-          count: refusal.departures,
-          limit: refusal.limit,
-          dates: refusal.firstDates.join(","),
-        }),
-  );
-}
-
-/** Creates a new boat for the shop. */
-export async function createBoatAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "boats");
-  await settingsBlock(session);
-  const form = readForm(boatForm, formData);
-
-  const name = form.name;
-  const capacity = Number(form.capacity ?? 0);
-  const description = boatDescription(form);
-  const papers = boatPapers(form);
-
-  if (papers === "radio-invalid") redirect(noticeUrl(page, "boat-radio-invalid"));
-  if (!name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
-    redirect(noticeUrl(page, "boat-invalid"));
-  }
-
-  // H-107: no seat above the certificate is sold, so none is put on sale.
-  certificateRefusal(page, "new", boatSeatsRefusal({ capacity, ...papers }));
-
-  const db = await getDb();
-  await createBoat(
-    db,
-    session.user.shopId,
-    name,
-    capacity,
-    description,
-    papers,
-    session.user.personId,
-  );
-
-  revalidateAndRedirect(page, noticeUrl(page, "boat-created"));
-}
-
-/** Updates an existing boat: its name, seats, line, certificate and papers. */
-export async function updateBoatAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "boats");
-  await settingsBlock(session);
-  const form = readForm(boatForm, formData);
-
-  const rawBoatId = form.boatId;
-  const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
-  const name = form.name;
-  const capacity = Number(form.capacity ?? 0);
-  const description = boatDescription(form);
-  const papers = boatPapers(form);
-
-  if (papers === "radio-invalid") redirect(noticeUrl(page, "boat-radio-invalid"));
-  if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
-    redirect(noticeUrl(page, "boat-invalid"));
-  }
-
-  const db = await getDb();
-  // H-107, on every save of the row: a hull already over its certificate
-  // keeps sailing, but this is the save that has to put it right. Upcoming
-  // departures are read too, so a certificate cannot be lowered under seats
-  // a departure is still selling — checked and written in one transaction.
-  const saved = await updateBoatWithinCertificate(db, {
-    shopId: session.user.shopId,
-    boatId,
-    name,
-    capacity,
-    description,
-    papers,
-    timeZone: (await getShopById(db, session.user.shopId))?.timezone ?? "UTC",
-    actorPersonId: session.user.personId,
-  });
-  if (!saved.ok && saved.reason === "certificate") certificateRefusal(page, boatId, saved.refusal);
-
-  revalidateAndRedirect(page, noticeUrl(page, "boat-updated"));
-}
-
-/** Deletes a boat from the shop. */
-export async function deleteBoatAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "boats");
-  await settingsBlock(session);
-  const form = readForm(boatForm, formData);
-
-  const rawBoatId = form.boatId;
-  const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
-  if (!boatId) {
-    redirect(noticeUrl(page, "boat-invalid"));
-  }
-
-  const db = await getDb();
-  await deleteBoat(db, session.user.shopId, boatId);
-
-  revalidateAndRedirect(page, noticeUrl(page, "boat-deleted"));
 }
