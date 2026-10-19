@@ -25,14 +25,14 @@ export default function DiveSitesLoading() {
         <ShopPageHeaderSkeleton titleWidth="w-56" description={false} actions />
         {/* The search box, in the `mb-6` toolbar the page draws it in. */}
         <div className="mb-6 h-12 w-full rounded-lg bg-surface-sunken sm:w-80" />
-        <div className="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
+        <div className="mt-6 flex flex-col gap-6 xl:grid xl:grid-cols-12 xl:items-start xl:gap-8">
           {/* The map skeleton on the left/top */}
-          <div className="lg:col-span-7 xl:col-span-8">
-            <div className="h-[360px] w-full rounded-xl bg-surface-sunken sm:h-[460px] lg:h-[620px]" />
+          <div className="xl:col-span-7">
+            <div className="h-[360px] w-full rounded-xl bg-surface-sunken sm:h-[460px] xl:h-[620px]" />
           </div>
 
           {/* The ledger skeleton on the right/bottom */}
-          <div className="min-w-0 lg:col-span-5 xl:col-span-4">
+          <div className="min-w-0 xl:col-span-5">
             <div className="space-y-8">
               {[3, 2].map((rows, group) => (
                 <div key={rows}>

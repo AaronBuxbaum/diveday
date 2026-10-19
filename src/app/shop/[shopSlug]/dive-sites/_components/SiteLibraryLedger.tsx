@@ -170,12 +170,31 @@ function SiteRow({
 
   return (
     <LedgerRow
-      id={`site-row-${site.id}`}
       href={`/shop/${shopSlug}/dive-sites/${site.id}`}
+      // The site's own name, and nothing appended: the roster, the visual
+      // captures and the depth spec all address a site by exactly this, and a
+      // stretched link's accessible name is the only name it has.
       linkLabel={site.name}
+      // At 390px a name, a location, a depth and "Advanced Open Water · Deep ·
+      // Nitrox" on one line leave the name about 90px to wrap in. `stacked` is
+      // the primitive's own answer (ADR 20260827-clearwater-surface-language):
+      // the name and its meta lead, the requirement words drop to a line of
+      // their own beneath, and from `sm` up the row is byte-for-byte the row
+      // the artboard draws.
       stacked
+      // **No slot for a row with nothing to trail.** A site that asks only for
+      // Open Water, at the published version, has neither words nor badge, and
+      // `LedgerRow` draws whatever it is handed: a stacked row with no kind
+      // drops its trailing slot to a full-width line of its own on a phone, so
+      // an empty wrapper there was an empty line, 12px of row gap below the
+      // site's name (the pixel probe: 24px where the lines sit 12px apart,
+      // and the name 6px above the row's centre).
       trailing={
         updateReady || requirementWords.length > 0 ? (
+          // Nothing in here is interactive, and `LedgerRow` lifts its trailing
+          // slot above the row-wide link overlay — so without this a tap
+          // landing on the requirement words or the badge would do nothing at
+          // all. The door's chevron is the row's own.
           <div className="pointer-events-none flex items-center gap-3">
             {updateReady ? (
               <Badge tone="primary" size="sm">

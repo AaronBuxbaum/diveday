@@ -6,17 +6,16 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import { getDb } from "@/db/client";
+import type { AppDb } from "@/db/client";
 import {
   getGlobalDiveSiteTemplate,
   listGlobalDiveSiteTemplates,
   shopSearchAnchor,
 } from "@/db/dive-sites";
-import { getShopById } from "@/db/shops";
+import type { Shop } from "@/db/schema";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { joinFacts } from "@/lib/format";
-import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
@@ -32,12 +31,16 @@ import { TemplatePreview } from "./TemplatePreview";
  */
 export async function CatalogView({
   shopSlug,
+  shop,
+  db,
   t,
   diverT,
   page,
   slug,
 }: {
   shopSlug: string;
+  shop: Shop;
+  db: AppDb;
   t: StaffTranslator;
   diverT: DiverTranslator;
   page?: string;
@@ -46,9 +49,6 @@ export async function CatalogView({
 }) {
   const back = shopPath(shopSlug, "dive-sites");
   const catalogHref = `${back}?view=catalog`;
-  const activeSession = await requireStaffSession();
-  const db = await getDb();
-  const shop = await getShopById(db, activeSession.user.shopId);
   const locationIsProvided = !!(shop.addressStreet && shop.addressLocality);
 
   if (!locationIsProvided) {
@@ -138,38 +138,41 @@ export async function CatalogView({
       <CatalogMapLayout shopAnchor={shopAnchor} pins={catalogPins}>
         <ul className="space-y-1">
           {catalog.templates.map(({ template, version }) => (
-            <li id={`template-row-${template.id}`} key={template.id}>
-              <LedgerRow
-                href={`${catalogHref}&template=${encodeURIComponent(template.slug)}`}
-                linkLabel={version.briefing.name}
-                stacked
-                pad="lg"
-                trailing={
-                  <form action={importDiveSiteTemplateAction}>
-                    <input type="hidden" name="templateId" value={template.id} />
-                    <SubmitButton
-                      pendingLabel={t("diveSites.catalog.importing")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("diveSites.catalog.importToLibrary")}
-                    </SubmitButton>
-                  </form>
-                }
-              >
-                <div className="min-w-0">
-                  <p className="font-medium">{version.briefing.name}</p>
-                  <p className="mt-0.5 text-sm text-muted">
-                    {joinFacts([
-                      version.briefing.locationName,
-                      t("diveSites.catalog.templateVersion", { version: version.version }),
-                    ])}
-                  </p>
-                  {version.briefing.description ? (
-                    <p className="mt-1 text-sm text-muted">{version.briefing.description}</p>
-                  ) : null}
-                </div>
-              </LedgerRow>
-            </li>
+            <LedgerRow
+              key={template.id}
+              id={`template-row-${template.id}`}
+              href={`${catalogHref}&template=${encodeURIComponent(template.slug)}`}
+              linkLabel={version.briefing.name}
+              stacked
+              pad="lg"
+              trailing={
+                <form action={importDiveSiteTemplateAction}>
+                  <input type="hidden" name="templateId" value={template.id} />
+                  <SubmitButton
+                    pendingLabel={t("diveSites.catalog.importing")}
+                    className={buttonClass({ variant: "secondary", size: "sm" })}
+                  >
+                    {t("diveSites.catalog.importToLibrary")}
+                  </SubmitButton>
+                </form>
+              }
+            >
+              <div className="min-w-0">
+                <p className="font-medium">{version.briefing.name}</p>
+                <p className="mt-0.5 text-sm text-muted">
+                  {joinFacts([
+                    version.briefing.locationName,
+                    t("diveSites.catalog.templateVersion", { version: version.version }),
+                  ])}
+                </p>
+                {/* The one paragraph that earns a row of its own: a shop choosing
+                    among thirty-four reefs it has never dived has nothing else to
+                    choose on, which is the opposite of its own library. */}
+                {version.briefing.description ? (
+                  <p className="mt-1 text-sm text-muted">{version.briefing.description}</p>
+                ) : null}
+              </div>
+            </LedgerRow>
           ))}
         </ul>
         <Pager

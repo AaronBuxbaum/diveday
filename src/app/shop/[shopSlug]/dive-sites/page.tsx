@@ -74,7 +74,17 @@ export default async function DiveSitesPage({
   // Not ready (ADR 20260803-not-ready-is-a-view / 20260806-dive-site-catalog-is-a-view):
   // one route, a `?view=` switch, and a 308 from the URL it used to own.
   if (view === "catalog") {
-    return <CatalogView shopSlug={shopSlug} t={t} diverT={diverT} page={page} slug={template} />;
+    return (
+      <CatalogView
+        shopSlug={shopSlug}
+        shop={shop}
+        db={db}
+        t={t}
+        diverT={diverT}
+        page={page}
+        slug={template}
+      />
+    );
   }
 
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
