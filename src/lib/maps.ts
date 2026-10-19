@@ -18,7 +18,7 @@
 function zoomToDegreesDelta(zoom: number): number {
   // Zoom 15 ~= ~0.015 degrees bbox width, zoom 16 ~= ~0.008, etc.
   // Standard zoom level formula: 360 / (2^zoom)
-  return 360 / Math.pow(2, zoom);
+  return 360 / 2 ** zoom;
 }
 
 /**
@@ -102,7 +102,10 @@ export function openStreetMapUrl(query: string): string {
  * Defaults to Google Maps for standard external navigation and directions linking,
  * while allowing caller customization or platform-specific linking (e.g. Apple Maps).
  */
-export function directionsUrl(query: string, provider: "google" | "apple" | "osm" = "google"): string {
+export function directionsUrl(
+  query: string,
+  provider: "google" | "apple" | "osm" = "google",
+): string {
   if (provider === "apple") {
     return appleMapsUrl(query);
   }
