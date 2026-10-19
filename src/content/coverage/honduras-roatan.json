@@ -20,7 +20,7 @@
     "https://bluereefexplorers.com/diving/dive-sites"
   ],
   "counted": "2026-10-14",
-  "promised": false,
+  "promised": true,
   "sites": [
     {
       "name": "Pablo's Place",
@@ -81,7 +81,7 @@
     },
     {
       "name": "Sandra's Grotto",
-      "template": null,
+      "template": "sandras-grotto-roatan",
       "position": [16.2673, -86.59904],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -138,7 +138,7 @@
     },
     {
       "name": "Seaquest Shallow",
-      "template": null,
+      "template": "seaquest-shallow-roatan",
       "position": [16.29075, -86.60259],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -164,7 +164,7 @@
     },
     {
       "name": "Chris Fisher",
-      "template": null,
+      "template": "chris-fisher-roatan",
       "position": [16.29978, -86.6002],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -173,7 +173,7 @@
     },
     {
       "name": "Bikini Bottom",
-      "template": null,
+      "template": "bikini-bottom-roatan",
       "position": [16.29783, -86.60091],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -195,7 +195,7 @@
     },
     {
       "name": "El Aquario",
-      "template": null,
+      "template": "el-aquario-roatan",
       "position": [16.3022, -86.59823],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -261,7 +261,7 @@
     },
     {
       "name": "Vern's Dropoff (Werns' Dropoff)",
-      "template": null,
+      "template": "verns-dropoff-roatan",
       "position": [16.30919, -86.59612],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -270,7 +270,7 @@
     },
     {
       "name": "The Wife",
-      "template": null,
+      "template": "the-wife-roatan",
       "position": [16.31235, -86.59393],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -321,7 +321,7 @@
     },
     {
       "name": "Dennis' Dropoff",
-      "template": null,
+      "template": "dennis-dropoff-roatan",
       "position": [16.31975, -86.58655],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -341,7 +341,7 @@
     },
     {
       "name": "Scuba Mermaids (Mermaid)",
-      "template": null,
+      "template": "scuba-mermaids-roatan",
       "position": [16.32404, -86.58245],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -350,7 +350,7 @@
     },
     {
       "name": "Diane's Delight",
-      "template": null,
+      "template": "dianes-delight-roatan",
       "position": [16.32468, -86.58294],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -435,7 +435,7 @@
     },
     {
       "name": "Conrad Cave",
-      "template": null,
+      "template": "conrad-cave-roatan",
       "position": [16.33205, -86.57424],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -444,7 +444,7 @@
     },
     {
       "name": "Green Pearl",
-      "template": null,
+      "template": "green-pearl-roatan",
       "position": [16.33491, -86.57138],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -453,7 +453,7 @@
     },
     {
       "name": "Zack's Patch",
-      "template": null,
+      "template": "zacks-patch-roatan",
       "position": [16.33409, -86.57166],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -463,7 +463,7 @@
     },
     {
       "name": "Nelson's Nest",
-      "template": null,
+      "template": "nelsons-nest-roatan",
       "position": [16.3325, -86.57226],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -472,7 +472,7 @@
     },
     {
       "name": "Baby Stan",
-      "template": null,
+      "template": "baby-stan-roatan",
       "position": [16.33564, -86.57026],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -494,7 +494,7 @@
     },
     {
       "name": "CJ's Place",
-      "template": null,
+      "template": "cjs-place-roatan",
       "position": [16.33739, -86.56801],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -529,7 +529,7 @@
     },
     {
       "name": "Wrasse Hole",
-      "template": null,
+      "template": "wrasse-hole-roatan",
       "position": [16.34053, -86.56186],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -538,7 +538,7 @@
     },
     {
       "name": "Barry's Reef",
-      "template": null,
+      "template": "barrys-reef-roatan",
       "position": [16.34179, -86.56135],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -547,7 +547,7 @@
     },
     {
       "name": "Mora Channel",
-      "template": null,
+      "template": "mora-channel-roatan",
       "position": [16.34901, -86.55142],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -582,7 +582,7 @@
     },
     {
       "name": "Big Surprise",
-      "template": null,
+      "template": "big-surprise-roatan",
       "position": [16.36485, -86.51595],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -645,7 +645,7 @@
     },
     {
       "name": "Lita's Hole (Dirty Dog)",
-      "template": null,
+      "template": "litas-hole-roatan",
       "position": [16.31933, -86.49464],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -654,7 +654,7 @@
     },
     {
       "name": "D2T",
-      "template": null,
+      "template": "d2t-roatan",
       "position": [16.32034, -86.49279],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -663,7 +663,7 @@
     },
     {
       "name": "Shark Bait Deep",
-      "template": null,
+      "template": "shark-bait-deep-roatan",
       "position": [16.32184, -86.48538],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -672,7 +672,7 @@
     },
     {
       "name": "Marilyn's Front Porch",
-      "template": null,
+      "template": "marilyns-front-porch-roatan",
       "position": [16.32582, -86.48238],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -682,7 +682,7 @@
     },
     {
       "name": "Connie's Dream",
-      "template": null,
+      "template": "connies-dream-roatan",
       "position": [16.32366, -86.48381],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -691,7 +691,7 @@
     },
     {
       "name": "MacCallum Girls",
-      "template": null,
+      "template": "maccallum-girls-roatan",
       "position": [16.32843, -86.48215],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -700,7 +700,7 @@
     },
     {
       "name": "Brick Bay Wall",
-      "template": null,
+      "template": "brick-bay-wall-roatan",
       "position": [16.32976, -86.48082],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -736,7 +736,7 @@
     },
     {
       "name": "Doc's Retreat (Doc's Treat)",
-      "template": null,
+      "template": "docs-retreat-roatan",
       "position": [16.33724, -86.47],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -760,7 +760,7 @@
     },
     {
       "name": "Osman's Reef",
-      "template": null,
+      "template": "osmans-reef-roatan",
       "position": [16.34854, -86.44871],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -781,7 +781,7 @@
     },
     {
       "name": "French Cay Cut",
-      "template": null,
+      "template": "french-cay-cut-roatan",
       "position": [16.3502, -86.44604],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
@@ -813,7 +813,7 @@
     },
     {
       "name": "Valley of the Kings",
-      "template": null,
+      "template": "valley-of-the-kings-roatan",
       "position": [16.35095, -86.43782],
       "listedBy": [
         "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
