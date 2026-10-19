@@ -3607,38 +3607,62 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the diver's ask-to-move form and its asked state render true to the design (${scheme})`, async ({
         page,
+        browser,
+        staffStorageState,
       }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const title = "Ask To Move Two-Tank";
-        await createTrip(page, {
-          title,
-          date: daysFromNow(5),
-          departsAt: "08:00",
-          returnsAt: "11:30",
-          capacity: 6,
-          price: 120,
-          // Thirty days: five days out is long past it.
-          cancellationWindowHours: 720,
+        const staffContext = await browser.newContext({
+          storageState: await staffStorageState("owner"),
+          colorScheme: scheme,
         });
-        const tripId = await seededTripId(page, "blue-mantis", title);
-        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-        await openTripAbout(page);
-        await page.getByText("Edit requirements", { exact: true }).click();
-        await page.getByLabel("Require payment to board").check();
-        await page.getByRole("button", { name: "Save requirements" }).click();
-        await expect(page.getByRole("status")).toContainText("requirements updated");
+        let tripId: string;
+        try {
+          const staff = makeActivitySafe(await staffContext.newPage());
+          await createTrip(staff, {
+            title,
+            date: daysFromNow(5),
+            departsAt: "08:00",
+            returnsAt: "11:30",
+            capacity: 6,
+            price: 120,
+            // Thirty days: five days out is long past it.
+            cancellationWindowHours: 720,
+          });
+          tripId = await seededTripId(staff, "blue-mantis", title);
+          await staff.goto(`/shop/blue-mantis/trips/${tripId}`);
+          await openTripAbout(staff);
+          await staff.getByText("Edit requirements", { exact: true }).click();
+          await staff.getByLabel("Require payment to board").check();
+          await staff.getByRole("button", { name: "Save requirements" }).click();
+          await expect(staff.getByRole("status")).toContainText("requirements updated");
+        } finally {
+          await staffContext.close();
+        }
 
         await page.goto(publicTripUrl(`/shop/blue-mantis/trips/${tripId}`));
         await bookASeatAndOpenThread(page, "Rafa Ortiz", `rafa-ask-${scheme}@example.com`);
         const readyUrl = page.url().split("?")[0] ?? "";
 
-        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-        const row = page.locator("li").filter({ hasText: "Rafa Ortiz" }).filter({ visible: true });
-        await openRosterDetails(row);
-        await row.getByRole("combobox").selectOption("paid");
-        await row.getByRole("radio", { name: "Cash" }).check();
-        await row.getByRole("button", { name: "Update" }).click();
-        await expect(row.getByText("Payment: Paid")).toBeVisible();
+        const staffPayContext = await browser.newContext({
+          storageState: await staffStorageState("owner"),
+          colorScheme: scheme,
+        });
+        try {
+          const staffPay = makeActivitySafe(await staffPayContext.newPage());
+          await staffPay.goto(`/shop/blue-mantis/trips/${tripId}`);
+          const row = staffPay
+            .locator("li")
+            .filter({ hasText: "Rafa Ortiz" })
+            .filter({ visible: true });
+          await openRosterDetails(row);
+          await row.getByRole("combobox").selectOption("paid");
+          await row.getByRole("radio", { name: "Cash" }).check();
+          await row.getByRole("button", { name: "Update" }).click();
+          await expect(row.getByText("Payment: Paid")).toBeVisible();
+        } finally {
+          await staffPayContext.close();
+        }
 
         await page.goto(readyUrl);
         await page.getByRole("button", { name: "Ask to move" }).waitFor();
@@ -4080,9 +4104,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: /Two-Tank Morning Reef/ }).click();
         await page.getByRole("link", { name: "Add diver" }).click();
         await page.waitForURL(/\/divers\/new\?/);
-        // Name only — this door takes the no-email diver, which also keeps the
-        // seat from queuing a notification whose delivery state would vary.
         await page.getByLabel("Full name").fill("Marisol Vega");
+        await page.getByLabel("Email", { exact: true }).fill(`marisol-${scheme}@example.com`);
         await page.getByRole("button", { name: "Add to trip" }).click();
         await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
