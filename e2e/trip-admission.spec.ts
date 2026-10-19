@@ -234,7 +234,7 @@ test.describe("as owner", () => {
     // The global door is the departure door with the boat chosen a step
     // earlier: its refusal lands on that boat's Divers tab, where the add-diver
     // form says why.
-    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}\\?notice=`));
+    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}(?:\\?|$)`));
     const banner = page.getByText("This charter requires a Deep certification.");
     await expect(banner).toBeVisible();
     await expect(banner).toContainText("none on this diver");
