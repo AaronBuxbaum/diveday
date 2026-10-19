@@ -2521,7 +2521,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 }
 .leaflet-popup-close-button {
   position: absolute;
-  top: 4px;
+  inset-block-start: 4px;
   right: 6px;
   padding: 2px;
   border: none;

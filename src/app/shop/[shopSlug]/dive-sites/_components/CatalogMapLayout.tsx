@@ -35,7 +35,7 @@ export function CatalogMapLayout({
     <div className="mt-8 flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:items-start lg:gap-8">
       {/* Primary Map View */}
       <div className="lg:col-span-7 xl:col-span-8">
-        <div className="sticky top-20 overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+        <div className="sticky top-(--chrome-h) overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
           <div className="h-[360px] w-full sm:h-[460px] lg:h-[620px]">
             <LazySiteMap
               center={defaultCenter}
