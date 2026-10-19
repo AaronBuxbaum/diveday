@@ -199,6 +199,7 @@ test.describe("staffing", () => {
     await page.getByRole("link", { name: "Add diver", exact: true }).click();
     await page.waitForURL(/\/divers\/new/);
     await page.getByLabel("Full name").fill("Waiting On Crew");
+    await page.getByLabel("Email").fill("waiting-on-crew@example.com");
     await page.getByRole("button", { name: "Add to trip" }).click();
     await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
 

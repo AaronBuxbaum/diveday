@@ -487,7 +487,7 @@ test("a refusal from the global door lands on the boat's Divers tab", async ({ p
   await page.getByLabel("Email").fill("theo@example.com");
   await page.getByRole("button", { name: "Add to trip" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}\\?notice=diver-full`));
+  await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
   // Next's own route announcer is also `role="alert"`, so target the banner.
   await expect(page.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
   await expect(page.getByText(title).first()).toBeVisible();

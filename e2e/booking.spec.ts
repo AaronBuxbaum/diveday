@@ -510,12 +510,14 @@ test.describe("as owner", () => {
     // Scoped to the trip list itself, the page's one stable anchor for
     // departures — day rules and other lists on the page never carry a
     // trip's title.
-    await page
+    const tripBItem = page
       .getByRole("list", { name: "Upcoming trips" })
       .locator("li")
-      .filter({ hasText: tripB })
-      .getByRole("link")
-      .click();
+      .filter({ hasText: tripB });
+    if ((await tripBItem.count()) === 0) {
+      await page.getByRole("link", { name: "Show later departures" }).click();
+    }
+    await tripBItem.getByRole("link").click();
     await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Name", { exact: true }).fill("Ben Quinn");
     await page.getByLabel("Email", { exact: true }).fill(email);

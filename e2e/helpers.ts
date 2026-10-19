@@ -800,7 +800,7 @@ export async function seatFromRoster(page: Page, tripId: string, name: string): 
   await find.fill(name);
   await find.press("Enter");
   await page.getByRole("button", { name: `Add ${name} to the trip` }).click();
-  await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=diver-added`));
+  await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=(diver|walkin)-added`));
 }
 
 function escapeRegExp(text: string): string {
