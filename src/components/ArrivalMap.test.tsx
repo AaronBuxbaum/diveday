@@ -34,7 +34,9 @@ const answerAll = () => {
   for (const probe of probes) probe.onload?.();
 };
 
-const mount = () => render(<ArrivalMap title="Map" src="https://maps.google.com/x" />).container;
+const mount = () =>
+  render(<ArrivalMap title="Map" src="https://www.openstreetmap.org/export/embed.html" />)
+    .container;
 
 describe("ArrivalMap", () => {
   it("draws nothing while online until the map host answers, then the map", () => {
@@ -108,7 +110,9 @@ describe("ArrivalMap", () => {
   });
 
   it("stops listening once the map is gone", () => {
-    const { unmount } = render(<ArrivalMap title="Map" src="https://maps.google.com/x" />);
+    const { unmount } = render(
+      <ArrivalMap title="Map" src="https://www.openstreetmap.org/export/embed.html" />,
+    );
     act(() => probes[0]?.onerror?.());
     unmount();
     act(() => {

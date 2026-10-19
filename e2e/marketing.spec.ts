@@ -1669,7 +1669,7 @@ test("the legal pages are published, honest about what is unsettled, and reachab
   // vendors. Naming each here means adding a fourth third party to the app
   // without adding it to this page fails a test rather than shipping a
   // published falsehood.
-  for (const processor of ["Stripe", "AWS", "Meta", "Vercel", "Neon", "Sentry", "Google"]) {
+  for (const processor of ["Stripe", "AWS", "Meta", "Vercel", "Neon", "Sentry"]) {
     await expect(page.getByRole("term").filter({ hasText: processor }).first()).toBeVisible();
   }
 

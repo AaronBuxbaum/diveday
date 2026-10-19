@@ -17,7 +17,7 @@ import {
 } from "@/lib/format";
 import type { ShopMilestone } from "@/lib/founder-metrics";
 import { escapeHtml } from "@/lib/html";
-import { googleMapsUrl } from "@/lib/maps";
+import { openMapsUrl } from "@/lib/maps";
 import { firstNameOf } from "@/lib/person-name";
 import type { SetupCurrentSystem } from "@/lib/setup-requests";
 import { cachedListFormat } from "../intl-cache";
@@ -644,7 +644,7 @@ function meetingPointSection(t: DiverTranslator, point: MeetingPoint | undefined
     point.landmark ? t("notifications.meetingPoint.landmark", { landmark: point.landmark }) : null,
     point.parking ? t("notifications.meetingPoint.parking", { parking: point.parking }) : null,
   ].filter((line): line is string => Boolean(line));
-  const mapUrl = point.mapQuery ? googleMapsUrl(point.mapQuery) : null;
+  const mapUrl = point.mapQuery ? openMapsUrl(point.mapQuery) : null;
   const openMap = t("trip.openArrivalMap");
   return {
     text: `\n\n${heading}\n${lines.join("\n")}${mapUrl ? `\n${openMap}: ${mapUrl}` : ""}`,

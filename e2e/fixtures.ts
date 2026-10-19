@@ -683,7 +683,7 @@ export const test = base.extend<
     // frame: wait for something the destination page renders (`pnpm
     // check:e2e-hygiene` refuses the alternative), never for the network to go
     // quiet.
-    await context.route("https://maps.google.com/**", (route) =>
+    await context.route("https://www.openstreetmap.org/export/embed.html*", (route) =>
       route.fulfill({
         status: 200,
         contentType: "text/html",

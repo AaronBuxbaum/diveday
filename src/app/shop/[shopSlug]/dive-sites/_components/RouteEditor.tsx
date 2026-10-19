@@ -15,7 +15,7 @@ import {
   type RoutePoint,
   routePathD,
 } from "@/lib/dive-site-route";
-import { googleTerrainEmbedUrl } from "@/lib/maps";
+import { osmCoordsEmbedUrl } from "@/lib/maps";
 
 export type RouteEditorCopy = {
   /** Shown instead of the map when the site has no coordinates yet. */
@@ -160,7 +160,7 @@ export function RouteEditor({
                 measured against. */}
             <MapEmbed
               title={copy.mapAriaLabel}
-              src={googleTerrainEmbedUrl(query, zoom)}
+              src={osmCoordsEmbedUrl(query, zoom)}
               className="h-[calc(18rem+4rem)]"
               showAttribution
             >

@@ -6,7 +6,7 @@ import {
   routeMapQuery,
   routePathD,
 } from "@/lib/dive-site-route";
-import { googleMapsUrl, googleTerrainEmbedUrl } from "@/lib/maps";
+import { openMapsUrl, osmCoordsEmbedUrl } from "@/lib/maps";
 import { MapEmbed } from "./MapEmbed";
 import { RouteWaypoint } from "./RouteWaypoint";
 
@@ -96,7 +96,7 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
               from the reader. */}
           <MapEmbed
             title={t("site.terrainMapTitle", { site: site.name })}
-            src={googleTerrainEmbedUrl(query, site.routeZoom)}
+            src={osmCoordsEmbedUrl(query, site.routeZoom)}
             className="h-full w-full"
             showAttribution
           >
@@ -147,7 +147,7 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
           {site.routeNote ? <p className="mt-0.5 text-muted">{site.routeNote}</p> : null}
         </div>
         <a
-          href={googleMapsUrl(query)}
+          href={openMapsUrl(query)}
           target="_blank"
           rel="noreferrer"
           className="min-h-11 shrink-0 content-center text-sm font-medium text-primary hover:underline"
