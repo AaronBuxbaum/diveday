@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
-import { LazySiteMap } from "@/components/map/LazySiteMap";
 import type { MapPin, ShopAnchor } from "@/components/map/SiteMap";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -21,9 +20,9 @@ import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
+import { importDiveSiteTemplateAction } from "../actions";
 import { CatalogMapLayout } from "./CatalogMapLayout";
 import { TemplatePreview } from "./TemplatePreview";
-import { importDiveSiteTemplateAction } from "../actions";
 
 /**
  * DiveDay's published site catalog, folded in from its own former route

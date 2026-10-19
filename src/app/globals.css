@@ -2296,7 +2296,6 @@ details[open]::details-content {
 }
 .leaflet-container.leaflet-touch-drag {
   -ms-touch-action: pinch-zoom;
-  touch-action: none;
   touch-action: pinch-zoom;
 }
 .leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
@@ -2343,7 +2342,6 @@ details[open]::details-content {
 .leaflet-control {
   position: relative;
   z-index: 800;
-  pointer-events: visiblePainted;
   pointer-events: auto;
 }
 .leaflet-top,
@@ -2408,7 +2406,6 @@ svg.leaflet-zoom-animated {
 }
 .leaflet-interactive {
   cursor: pointer;
-  pointer-events: visiblePainted;
   pointer-events: auto;
 }
 .leaflet-grab {
@@ -2438,7 +2435,6 @@ svg.leaflet-zoom-animated {
 .leaflet-image-layer.leaflet-interactive,
 .leaflet-pane > svg path.leaflet-interactive,
 svg.leaflet-image-layer.leaflet-interactive path {
-  pointer-events: visiblePainted;
   pointer-events: auto;
 }
 .leaflet-bar {

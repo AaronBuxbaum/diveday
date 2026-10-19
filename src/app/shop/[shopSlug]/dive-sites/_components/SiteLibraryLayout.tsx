@@ -57,9 +57,7 @@ export function SiteLibraryLayout({
       </div>
 
       {/* Companion Ledger */}
-      <div className="min-w-0 lg:col-span-5 xl:col-span-4">
-        {children}
-      </div>
+      <div className="min-w-0 lg:col-span-5 xl:col-span-4">{children}</div>
     </div>
   );
 }

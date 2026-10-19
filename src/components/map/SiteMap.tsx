@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
+import { useEffect, useRef } from "react";
 
 export type MapPin = {
   id: string;
@@ -89,7 +89,9 @@ export default function SiteMap({
       if (isCancelled || !mapRef.current) return;
 
       // Clear previous markers
-      markersRef.current.forEach((marker) => marker.remove());
+      markersRef.current.forEach((marker) => {
+        marker.remove();
+      });
       markersRef.current.clear();
 
       // Plot shop anchor if provided

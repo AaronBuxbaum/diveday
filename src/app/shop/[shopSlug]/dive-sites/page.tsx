@@ -2,16 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
+import type { MapPin, ShopAnchor } from "@/components/map/SiteMap";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SearchField } from "@/components/ui/form";
-import { LedgerRow } from "@/components/ui/ledger";
 import { QueryForm } from "@/components/ui/QueryForm";
-import { getDb } from "@/db/client";
 import {
   countGlobalDiveSiteTemplates,
   currentGlobalDiveSiteVersions,
@@ -20,13 +18,12 @@ import {
   listDiveSitesPage,
   shopSearchAnchor,
 } from "@/db/dive-sites";
-import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { timeZoneAnchor } from "@/lib/timezones";
-import type { MapPin, ShopAnchor } from "@/components/map/SiteMap";
 import { CatalogView } from "./_components/CatalogView";
 import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
@@ -249,11 +246,7 @@ export default async function DiveSitesPage({
           className="mt-4"
         />
       ) : (
-        <SiteLibraryLayout
-          shopAnchor={shopAnchor}
-          pins={pins}
-          empty={sites.length === 0}
-        >
+        <SiteLibraryLayout shopAnchor={shopAnchor} pins={pins} empty={sites.length === 0}>
           <SiteLibraryLedger
             groups={groupSiteLibrary(sites)}
             shopSlug={shopSlug}
@@ -279,4 +272,3 @@ export default async function DiveSitesPage({
     </main>
   );
 }
-

@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { SiteMapProps } from "./SiteMap";
 
 /**
  * Dynamic client-only wrapper for Leaflet SiteMap.

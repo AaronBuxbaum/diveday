@@ -181,10 +181,7 @@ function SiteRow({
   const updateReady = adopted !== null && published > adopted;
 
   return (
-    <div
-      onMouseEnter={() => onSelectSite?.(site.id)}
-      onFocus={() => onSelectSite?.(site.id)}
-    >
+    <div onPointerEnter={() => onSelectSite?.(site.id)}>
       <LedgerRow
         id={`site-row-${site.id}`}
         href={`/shop/${shopSlug}/dive-sites/${site.id}`}
