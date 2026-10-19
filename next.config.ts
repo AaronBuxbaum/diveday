@@ -239,6 +239,7 @@ const nextConfig: NextConfig = {
     ],
   },
   cacheComponents: true,
+  partialPrefetching: true,
   images: {
     // The e2e build serves every photo's original bytes instead of running
     // them through the optimizer. Sharp's lossy re-encodes are not

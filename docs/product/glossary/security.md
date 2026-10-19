@@ -10,3 +10,9 @@
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.
+- **Address confirmation token** — a purpose-bound bearer credential verifying control of an email
+  address for user accounts, shop front-desk contacts, or shore alert contacts (ADR
+  [20261019-single-address-token-table](../../architecture/decisions/20261019-single-address-token-table.md)).
+  Stored as a SHA-256 hash at rest, expiring and single-use upon consumption. A token issued for one
+  purpose cannot be resolved or redeemed under another.
+

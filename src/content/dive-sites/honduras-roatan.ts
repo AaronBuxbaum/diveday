@@ -1844,4 +1844,1301 @@ export const HONDURAS_ROATAN: DiveSiteTemplate[] = [
       ],
     },
   },
+  // Denominator row: Sandra's Grotto
+  {
+    slug: "sandras-grotto-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Sandra's Grotto",
+      locationName: "West Bay, Roatán",
+      forecastLatitude: 16.2673,
+      forecastLongitude: -86.599,
+      description:
+        "A steep coral wall cut with small overhangs and sandy pockets near West Bay Point. Sea plumes and tube sponges crowd the lip of the wall, where schools of blue chromis feed in the current.",
+      marineLife: "Blue chromis · brown tube sponges · hawksbill turtles · creole wrasse",
+      marineLifeDescription:
+        "Hawksbill turtles graze along the sponge-lined overhangs, while creole wrasse stream past in open water.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 10,
+      maxDepthMeters: 24,
+      currentNote:
+        "Currents pick up near the point. Carry an SMB and listen for boat traffic overhead during ascent.",
+      divePlan:
+        "Descend the mooring line to 10 m (33 ft), follow the wall crest eastward to a maximum depth of 24 m (80 ft), and ascend to the reef top for the safety stop.",
+      fitTone: "welcoming",
+      fitNote:
+        "A classic wall profile with mild to moderate drift, well suited for divers comfortable managing neutral buoyancy along an open drop-off.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Grotto Overhangs",
+          kind: "reefFormation",
+          note: "Shallow recesses in the reef face between 12 and 18 m (40 to 60 ft) sheltering cleaner shrimp and resting nurse sharks.",
+        },
+      ],
+      creatureSlugs: [
+        "blue-chromis",
+        "brown-tube-sponge",
+        "hawksbill-turtle",
+        "creole-wrasse",
+        "nurse-shark",
+      ],
+    },
+  },
+  // Denominator row: Seaquest Shallow
+  {
+    slug: "seaquest-shallow-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://www.roatandivecenter.com/west-end-roatan-dive-sites",
+    ],
+    briefing: {
+      name: "Seaquest Shallow",
+      locationName: "West End, Roatán",
+      forecastLatitude: 16.2908,
+      forecastLongitude: -86.6026,
+      description:
+        "A sunlit spur-and-groove plateau just inshore from Seaquest Deep. Broad sand channels separate rolling mounds of brain coral and sea plumes in calm, sheltered water.",
+      marineLife: "Yellowhead jawfish · peacock flounder · sergeant majors · southern stingrays",
+      marineLifeDescription:
+        "Jawfish hover over their burrows in the white sand channels, while juvenile reef fish flutter through staghorn thickets.",
+      difficultyLevel: "beginner",
+      depthMinMeters: 6,
+      maxDepthMeters: 15,
+      currentNote:
+        "Water is usually calm with light surge near the shallowest coral heads. Watch for boat traffic when surfacing.",
+      divePlan:
+        "Descend to the sandy channel at 8 m (26 ft), explore the coral ridges up to 15 m (50 ft), and loop back toward the mooring in shallow water.",
+      fitTone: "welcoming",
+      fitNote:
+        "Easy navigation, excellent natural light, and very mild water movement make this an ideal refresher or relaxed second dive.",
+      minimumCertificationLevel: "open_water",
+      landmarks: [
+        {
+          name: "Jawfish Flats",
+          kind: "pointOfInterest",
+          note: "A wide white sand clearing dotted with yellowhead jawfish burrows and resting stingrays.",
+        },
+      ],
+      creatureSlugs: [
+        "yellowhead-jawfish",
+        "peacock-flounder",
+        "sergeant-major",
+        "southern-stingray",
+      ],
+    },
+  },
+  // Denominator row: Chris Fisher
+  {
+    slug: "chris-fisher-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+    ],
+    briefing: {
+      name: "Chris Fisher",
+      locationName: "West End, Roatán",
+      forecastLatitude: 16.2998,
+      forecastLongitude: -86.6002,
+      description:
+        "A sloping spur reef running out toward the West End drop-off. Tall pillar corals and azure vase sponges rise along the ridge lines, with sandy gullies cutting through the reef toward blue water.",
+      marineLife: "Spotted eagle rays · pillar coral · green morays · trumpetfish",
+      marineLifeDescription:
+        "Spotted eagle rays often glide off the outer drop-off, while green morays tuck into limestone fissures.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 10,
+      maxDepthMeters: 22,
+      currentNote:
+        "Light to moderate longshore current is common. Deploy an SMB when ascending away from the mooring line.",
+      divePlan:
+        "Drop down the pin to 10 m (33 ft), follow the spur out toward the blue up to 22 m (72 ft), and zig-zag back across the shallower crest.",
+      fitTone: "welcoming",
+      fitNote:
+        "Straightforward spur navigation with clear visibility and rewarding reef structure.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Pillar Ridge",
+          kind: "reefFormation",
+          note: "A prominent coral spine hosting healthy pillar coral spires and schools of blue tang.",
+        },
+      ],
+      creatureSlugs: [
+        "spotted-eagle-ray",
+        "pillar-coral",
+        "green-moray",
+        "trumpetfish",
+        "blue-tang",
+      ],
+    },
+  },
+  // Denominator row: Bikini Bottom
+  {
+    slug: "bikini-bottom-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Bikini Bottom",
+      locationName: "West End, Roatán",
+      forecastLatitude: 16.2978,
+      forecastLongitude: -86.6009,
+      description:
+        "A gently sloping reef with wide sandy channels and expansive fields of sea whips and fans. Sheltered by the bend of the coast, this site offers gentle conditions and bright ambient sunlight.",
+      marineLife: "Caribbean reef squid · French grunts · balloonfish · cushion sea stars",
+      marineLifeDescription:
+        "Squid hover in small squads just beneath the surface, while balloonfish rest among the gorgonian branches.",
+      difficultyLevel: "beginner",
+      depthMinMeters: 8,
+      maxDepthMeters: 18,
+      currentNote: "Currents are generally slight. Keep an eye on boat traffic when surfacing.",
+      divePlan:
+        "Descend to the reef crest at 8 m (26 ft), tour the sand grooves down to 18 m (60 ft), and work your way back along the top of the coral heads.",
+      fitTone: "welcoming",
+      fitNote:
+        "Calm, colorful, and shallow enough for generous bottom times and stress-free buoyancy practice.",
+      minimumCertificationLevel: "open_water",
+      landmarks: [
+        {
+          name: "Squid Shallows",
+          kind: "pointOfInterest",
+          note: "A sunlit sand channel where reef squid reliably gather near the mooring line.",
+        },
+      ],
+      creatureSlugs: ["caribbean-reef-squid", "french-grunt", "balloonfish", "cushion-sea-star"],
+    },
+  },
+  // Denominator row: El Aquario
+  {
+    slug: "el-aquario-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+    ],
+    briefing: {
+      name: "El Aquario",
+      locationName: "West End, Roatán",
+      forecastLatitude: 16.3022,
+      forecastLongitude: -86.5982,
+      description:
+        "Living up to its name, this section of the West End reef bursts with concentrated schools of snappers, grunts, and parrotfish milling over dense coral heads.",
+      marineLife: "Stoplight parrotfish · yellowtail snapper · black durgon · queen triggerfish",
+      marineLifeDescription:
+        "Thick schools of yellowtail snapper follow divers around the reef top, and queen triggerfish browse the sand channels.",
+      difficultyLevel: "beginner",
+      depthMinMeters: 9,
+      maxDepthMeters: 18,
+      currentNote:
+        "Generally calm with gentle water movement. Listen for engines before surfacing.",
+      divePlan:
+        "Descend to the main coral cluster at 10 m (33 ft), meander along the reef wall to 18 m (60 ft), and spend the end of the dive circling the shallow bommies.",
+      fitTone: "welcoming",
+      fitNote:
+        "Dense fish life and moderate depths make this an engaging dive for all experience levels.",
+      minimumCertificationLevel: "open_water",
+      landmarks: [
+        {
+          name: "The Aquarium Bommies",
+          kind: "reefFormation",
+          note: "A tight grouping of star coral heads bustling with juvenile reef fish and cleaner stations.",
+        },
+      ],
+      creatureSlugs: [
+        "stoplight-parrotfish",
+        "yellowtail-snapper",
+        "black-durgon",
+        "queen-triggerfish",
+      ],
+    },
+  },
+  // Denominator row: Vern's Dropoff
+  {
+    slug: "verns-dropoff-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+    ],
+    briefing: {
+      name: "Vern's Dropoff",
+      locationName: "West End, Roatán",
+      forecastLatitude: 16.3092,
+      forecastLongitude: -86.5961,
+      description:
+        "A dramatic vertical drop-off starting near Half Moon Bay. The reef terrace abruptly plunges into deep blue water, adorned with gigantic barrel sponges and bushy black coral trees.",
+      marineLife: "Giant barrel sponge · black coral · great barracuda · horse-eye jack",
+      marineLifeDescription:
+        "Jacks and barracudas patrol the open wall face, while cleaner shrimp occupy sponges along the rim.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 12,
+      maxDepthMeters: 28,
+      currentNote:
+        "Longshore currents can run parallel to the wall. Drift with the current and ascend with an SMB.",
+      divePlan:
+        "Descend to the reef rim at 12 m (40 ft), glide along the vertical face down to 28 m (92 ft), and ascend to the terrace to finish your dive in the shallows.",
+      fitTone: "demanding",
+      fitNote:
+        "True wall diving with deep blue below. Divers should maintain strict depth and air monitoring.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Deep Face",
+          kind: "reefFormation",
+          note: "A shear limestone wall covered in large barrel sponges and wiry black coral colonies.",
+        },
+      ],
+      creatureSlugs: ["giant-barrel-sponge", "black-coral", "great-barracuda", "horse-eye-jack"],
+    },
+  },
+  // Denominator row: The Wife
+  {
+    slug: "the-wife-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "The Wife",
+      locationName: "West End, Roatán",
+      forecastLatitude: 16.3124,
+      forecastLongitude: -86.5939,
+      description:
+        "A stepped reef structure stepping down in two distinct tiers toward the drop-off. Healthy brain and lettuce corals blanket each terrace, cut by narrow sand chutes.",
+      marineLife: "Hawksbill turtle · lettuce coral · hogfish · bluehead wrasse",
+      marineLifeDescription:
+        "Hawksbill turtles are regular visitors here, nibbling sponges on the lower step while schools of wrasse swarm the upper reef.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 10,
+      maxDepthMeters: 22,
+      currentNote: "Usually mild currents, but water can push across the tiers on incoming tides.",
+      divePlan:
+        "Follow the mooring line down to 10 m (33 ft), cross the first terrace to the second drop at 22 m (72 ft), and return along the upper ledge.",
+      fitTone: "welcoming",
+      fitNote: "Terraced architecture makes multilevel diving intuitive and easy to manage.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Lower Terrace Ledge",
+          kind: "reefFormation",
+          note: "A pronounced coral step at 20 m (65 ft) with small crevices hiding spiny lobsters.",
+        },
+      ],
+      creatureSlugs: [
+        "hawksbill-turtle",
+        "lettuce-coral",
+        "hogfish",
+        "bluehead-wrasse",
+        "spiny-lobster",
+      ],
+    },
+  },
+  // Denominator row: Dennis' Dropoff
+  {
+    slug: "dennis-dropoff-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+    ],
+    briefing: {
+      name: "Dennis' Dropoff",
+      locationName: "West End, Roatán",
+      forecastLatitude: 16.3198,
+      forecastLongitude: -86.5866,
+      description:
+        "A steep drop-off punctuated by deep fissures and undercut ledges. The lip begins around 12 m (40 ft) before plunging toward the depths of the Cayman Trench.",
+      marineLife: "Caribbean reef shark · giant barrel sponge · black grouper · horse-eye jack",
+      marineLifeDescription:
+        "Reef sharks occasionally patrol along the deep wall, and large black groupers lurk beneath the overhangs.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 12,
+      maxDepthMeters: 30,
+      currentNote:
+        "Can experience brisk drift. Maintain buddy contact and watch no-decompression limits carefully.",
+      divePlan:
+        "Descend to the reef rim at 12 m (40 ft), drift along the wall between 20 and 30 m (65 to 100 ft), and ascend to the shallow plateau before deploying an SMB.",
+      fitTone: "demanding",
+      fitNote: "Deep wall profile intended for advanced divers with good buoyancy and gas control.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Fissure Notch",
+          kind: "reefFormation",
+          note: "A deep vertical fracture cutting into the wall face, sheltering groupers and glassy sweepers.",
+        },
+      ],
+      creatureSlugs: [
+        "caribbean-reef-shark",
+        "giant-barrel-sponge",
+        "black-grouper",
+        "horse-eye-jack",
+      ],
+    },
+  },
+  // Denominator row: Scuba Mermaids
+  {
+    slug: "scuba-mermaids-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Scuba Mermaids",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.324,
+      forecastLongitude: -86.5825,
+      description:
+        "A lovely sandy plateau edged by rolling coral spurs near the entrance to Sandy Bay. Gentle topography and wide clear sand patches make navigation effortless.",
+      marineLife: "Spotted drum · southern stingray · flamingo tongue · trumpetfish",
+      marineLifeDescription:
+        "Juvenile spotted drums flutter beneath coral overhangs, and flamingo tongues feed on purple sea fans.",
+      difficultyLevel: "beginner",
+      depthMinMeters: 8,
+      maxDepthMeters: 18,
+      currentNote:
+        "Currents are typically mild. Watch for surface watercraft when returning to the boat.",
+      divePlan:
+        "Descend onto the shallow sand clearing at 8 m (26 ft), follow the reef spur down to 18 m (60 ft), and return along the coral heads.",
+      fitTone: "welcoming",
+      fitNote: "Gentle slopes, bright sand, and abundant macro life offer a relaxed, easy dive.",
+      minimumCertificationLevel: "open_water",
+      landmarks: [
+        {
+          name: "Mermaid Coral Head",
+          kind: "reefFormation",
+          note: "A distinct, tall coral head in 12 m (40 ft) hosting multiple cleaner stations and sea fans.",
+        },
+      ],
+      creatureSlugs: [
+        "spotted-drum",
+        "southern-stingray",
+        "flamingo-tongue",
+        "trumpetfish",
+        "common-sea-fan",
+      ],
+    },
+  },
+  // Denominator row: Diane's Delight
+  {
+    slug: "dianes-delight-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Diane's Delight",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.3247,
+      forecastLongitude: -86.5829,
+      description:
+        "A picturesque reef garden featuring sprawling mounds of hard coral and clusters of azure vase sponges. The reef slopes steadily from the mooring down to a defined wall edge.",
+      marineLife: "Hawksbill turtle · French angelfish · red rope sponge · creole wrasse",
+      marineLifeDescription:
+        "Curious French angelfish frequently accompany divers, while hawksbills forage among the sponges.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 10,
+      maxDepthMeters: 20,
+      currentNote:
+        "Mild to moderate current can develop along the north shore; monitor your drift relative to the boat.",
+      divePlan:
+        "Drop to 10 m (33 ft) at the mooring, explore the reef crest and slope down to 20 m (65 ft), and ascend to the shallow garden for the safety stop.",
+      fitTone: "welcoming",
+      fitNote: "Vibrant marine life and manageable depth make this an engaging reef exploration.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Vase Sponge Garden",
+          kind: "pointOfInterest",
+          note: "A dense cluster of colorful tube and vase sponges lining the 15 m (50 ft) contour.",
+        },
+      ],
+      creatureSlugs: ["hawksbill-turtle", "red-rope-sponge", "creole-wrasse", "blue-tang"],
+    },
+  },
+  // Denominator row: Conrad Cave
+  {
+    slug: "conrad-cave-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Conrad Cave",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.3321,
+      forecastLongitude: -86.5742,
+      description:
+        "A cavernous swim-through feature cut through a high coral wall off Sandy Bay. The open pocket opens at 15 m (50 ft) with ample ambient light streaming into the wide entrance. Divers stay in daylight outside deep overheads.",
+      marineLife: "Glassy sweepers · green moray · spiny lobster · black grouper",
+      marineLifeDescription:
+        "Schools of glassy sweepers shimmer in the cave mouth, while large spiny lobsters pack the surrounding crevices.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 12,
+      maxDepthMeters: 26,
+      currentNote:
+        "Surge can occasionally be felt near the cave entrance in rough surface conditions. Stay clear of the rock walls.",
+      divePlan:
+        "Descend to the wall top at 12 m (40 ft), peer into the cavern mouth at 18 m (60 ft) staying strictly in natural light, and drift along the wall up to 26 m (85 ft).",
+      fitTone: "demanding",
+      fitNote:
+        "Dramatic overhead architecture that requires excellent buoyancy control to avoid silt or coral contact.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Conrad Cave Arch",
+          kind: "reefFormation",
+          note: "A wide limestone archway opening onto the outer wall face at 18 m (60 ft).",
+        },
+      ],
+      creatureSlugs: ["glassy-sweeper", "green-moray", "spiny-lobster", "black-grouper"],
+    },
+  },
+  // Denominator row: Green Pearl
+  {
+    slug: "green-pearl-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+    ],
+    briefing: {
+      name: "Green Pearl",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.3349,
+      forecastLongitude: -86.5714,
+      description:
+        "A pristine spur-and-groove reef system on the Sandy Bay marine reserve boundary. The coral ridges are densely cloaked in lettuce coral, brain coral, and waving gorgonians.",
+      marineLife: "Lettuce-leaf sea slug · nurse shark · Bermuda chub · blue chromis",
+      marineLifeDescription:
+        "Nurse sharks frequently snooze under the undercut ledges of the spurs, while Bermuda chubs shadow divers along the surface.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 10,
+      maxDepthMeters: 22,
+      currentNote:
+        "Variable current depending on offshore trade winds; SMB recommended for blue water ascents.",
+      divePlan:
+        "Descend the mooring to 10 m (33 ft), navigate seaward along the spur ridge to 22 m (72 ft), and return along an adjacent sand channel.",
+      fitTone: "welcoming",
+      fitNote:
+        "Vibrant coral health and moderate depths make for an easygoing, visually rich reef profile.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Pearl Ledge",
+          kind: "reefFormation",
+          note: "An undercut coral spur at 16 m (52 ft) where nurse sharks and stingrays regularly rest.",
+        },
+      ],
+      creatureSlugs: ["lettuce-sea-slug", "nurse-shark", "bermuda-chub", "blue-chromis"],
+    },
+  },
+  // Denominator row: Zack's Patch
+  {
+    slug: "zacks-patch-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://roatandivers.com/blog/the-best-dive-sites-in-roatan",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Zack's Patch",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.3341,
+      forecastLongitude: -86.5717,
+      description:
+        "An isolated cluster of vibrant coral mounds surrounded by sparkling white sand flats. The patch structure concentrates marine life into an active biological hub.",
+      marineLife: "Spotted eagle ray · yellowtail snapper · trumpetfish · queen triggerfish",
+      marineLifeDescription:
+        "Eagle rays often feed in the surrounding sand, unearthing mollusks while snappers school around the patch.",
+      difficultyLevel: "beginner",
+      depthMinMeters: 8,
+      maxDepthMeters: 18,
+      currentNote:
+        "Current is generally light. Surface with care as Sandy Bay boat traffic passes nearby.",
+      divePlan:
+        "Drop to 8 m (26 ft), circumnavigate the main patch reef out to 18 m (60 ft), and spend your remaining bottom time exploring the shallower coral outcroppings.",
+      fitTone: "welcoming",
+      fitNote:
+        "Compact site with simple navigation and plentiful marine life, great for photography and easy diving.",
+      minimumCertificationLevel: "open_water",
+      landmarks: [
+        {
+          name: "Central Patch Reef",
+          kind: "reefFormation",
+          note: "A large isolated coral mound standing 5 m proud of the surrounding sand floor.",
+        },
+      ],
+      creatureSlugs: [
+        "spotted-eagle-ray",
+        "yellowtail-snapper",
+        "trumpetfish",
+        "queen-triggerfish",
+      ],
+    },
+  },
+  // Denominator row: Nelson's Nest
+  {
+    slug: "nelsons-nest-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Nelson's Nest",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.3325,
+      forecastLongitude: -86.5723,
+      description:
+        "A steep coral buttress stepping down into deep water. Intersecting sand channels create natural pathways through the reef, dotted with large orange elephant ear sponges.",
+      marineLife: "Orange elephant ear sponge · green moray · Caribbean reef shark · French grunt",
+      marineLifeDescription:
+        "Reef sharks often cruise along the outer drop, while green morays poke their snouts out from the buttress base.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 11,
+      maxDepthMeters: 25,
+      currentNote:
+        "Can experience brisk north shore tidal currents. Watch your depth gauge along the wall.",
+      divePlan:
+        "Descend to the buttress crest at 11 m (36 ft), track along the wall face to 25 m (82 ft), and ascend through the sand chute back to the mooring.",
+      fitTone: "welcoming",
+      fitNote:
+        "Rewarding wall dive featuring dramatic sponge formations and frequent pelagic sightings.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Elephant Ear Wall",
+          kind: "reefFormation",
+          note: "A sheer section of the buttress adorned with massive orange elephant ear sponges.",
+        },
+      ],
+      creatureSlugs: [
+        "orange-elephant-ear-sponge",
+        "green-moray",
+        "caribbean-reef-shark",
+        "french-grunt",
+      ],
+    },
+  },
+  // Denominator row: Baby Stan
+  {
+    slug: "baby-stan-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Baby Stan",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.3356,
+      forecastLongitude: -86.5703,
+      description:
+        "A gentle coral ridge fronting Sandy Bay with an easy profile and clear, calm conditions. The top of the reef is a bustling nursery for young reef fish.",
+      marineLife: "Bluehead wrasse · sergeant major · hawksbill turtle · stoplight parrotfish",
+      marineLifeDescription:
+        "Thick clouds of juvenile wrasses and damselfish feed above the coral heads, accompanied by grazing parrotfish.",
+      difficultyLevel: "beginner",
+      depthMinMeters: 7,
+      maxDepthMeters: 16,
+      currentNote: "Current is typically slight to none. Listen for boat motors before ascending.",
+      divePlan:
+        "Descend to 7 m (23 ft) at the mooring pin, swim along the upper ridge to 16 m (52 ft), and finish with a long, relaxed safety stop over the coral top.",
+      fitTone: "welcoming",
+      fitNote:
+        "Calm, shallow, and full of color. Ideal for novice divers, families, and long relaxing dives.",
+      minimumCertificationLevel: "open_water",
+      landmarks: [
+        {
+          name: "Nursery Ridge",
+          kind: "reefFormation",
+          note: "A shallow, sunny crest of staghorn and fire coral alive with juvenile fish.",
+        },
+      ],
+      creatureSlugs: [
+        "bluehead-wrasse",
+        "sergeant-major",
+        "hawksbill-turtle",
+        "stoplight-parrotfish",
+      ],
+    },
+  },
+  // Denominator row: CJ's Place
+  {
+    slug: "cjs-place-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "CJ's Place",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.3374,
+      forecastLongitude: -86.568,
+      description:
+        "A defined coral wall marked by deep vertical crevices and undercut ledges. Giant barrel sponges jut out into the blue, creating ideal photo vantage points.",
+      marineLife: "Giant barrel sponge · black coral · horse-eye jack · great barracuda",
+      marineLifeDescription:
+        "Horse-eye jacks often circle in the blue water off the wall, and barracudas linger near the surface mooring.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 12,
+      maxDepthMeters: 28,
+      currentNote:
+        "Longshore drift can pick up without warning. Deploy an SMB when surfacing off the mooring line.",
+      divePlan:
+        "Drop down the pin to 12 m (40 ft), explore the wall face between 18 and 28 m (60 to 92 ft), and ascend to the reef crest to bleed off nitrogen.",
+      fitTone: "demanding",
+      fitNote: "Deep wall diving requiring disciplined depth awareness and good buoyancy control.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The CJ Crevice",
+          kind: "reefFormation",
+          note: "A wide fracture running vertically down the wall face from 14 to 26 m (46 to 85 ft).",
+        },
+      ],
+      creatureSlugs: ["giant-barrel-sponge", "black-coral", "horse-eye-jack", "great-barracuda"],
+    },
+  },
+  // Denominator row: Wrasse Hole
+  {
+    slug: "wrasse-hole-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Wrasse Hole",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.3405,
+      forecastLongitude: -86.5619,
+      description:
+        "A circular sand bowl framed by towering coral ridges near Sandy Bay. Swarms of wrasses and cleaner gobies maintain busy cleaning stations along the bowl's perimeter.",
+      marineLife: "Creole wrasse · bluehead wrasse · southern stingray · gray snapper",
+      marineLifeDescription:
+        "Bands of creole wrasse swirl in dynamic feeding ribbons while stingrays rest partially buried in the sand bowl.",
+      difficultyLevel: "beginner",
+      depthMinMeters: 8,
+      maxDepthMeters: 17,
+      currentNote: "Well sheltered from prevailing swell; currents are usually negligible.",
+      divePlan:
+        "Descend to the lip of the bowl at 8 m (26 ft), explore the sandy floor down to 17 m (56 ft), and complete your safety stop over the coral rim.",
+      fitTone: "welcoming",
+      fitNote:
+        "Protected bowl topography makes navigation foolproof and marine life observation effortless.",
+      minimumCertificationLevel: "open_water",
+      landmarks: [
+        {
+          name: "The Wrasse Bowl",
+          kind: "reefFormation",
+          note: "A distinct circular amphitheater of sand surrounded by coral bommies and cleaning stations.",
+        },
+      ],
+      creatureSlugs: ["creole-wrasse", "bluehead-wrasse", "southern-stingray", "gray-snapper"],
+    },
+  },
+  // Denominator row: Barry's Reef
+  {
+    slug: "barrys-reef-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Barry's Reef",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.3418,
+      forecastLongitude: -86.5614,
+      description:
+        "A continuous coral barrier with prominent finger spurs extending toward the outer drop-off. Elkhorn coral skeletons provide intricate habitat for macro critters and reef fish.",
+      marineLife: "Spiny lobster · channel clinging crab · French grunt · stoplight parrotfish",
+      marineLifeDescription:
+        "Channel clinging crabs and spiny lobsters shelter under the thick coral overhangs during daylight hours.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 9,
+      maxDepthMeters: 20,
+      currentNote: "Light to moderate drift along the reef line. Carry an SMB.",
+      divePlan:
+        "Descend to 9 m (30 ft) at the mooring, track outward along the coral finger to 20 m (65 ft), and return along the upper reef crest.",
+      fitTone: "welcoming",
+      fitNote:
+        "Classic Roatán north shore spur-and-groove diving with rewarding structure and crustacean life.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Barry's Finger",
+          kind: "reefFormation",
+          note: "A long, pronounced coral spur reaching out into blue water at 18 m (60 ft).",
+        },
+      ],
+      creatureSlugs: [
+        "spiny-lobster",
+        "channel-clinging-crab",
+        "french-grunt",
+        "stoplight-parrotfish",
+      ],
+    },
+  },
+  // Denominator row: Mora Channel
+  {
+    slug: "mora-channel-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Mora Channel",
+      locationName: "Sandy Bay, Roatán",
+      forecastLatitude: 16.349,
+      forecastLongitude: -86.5514,
+      description:
+        "A broad oceanic cut cutting through the barrier reef system. The channel funnels nutrient-rich water, attracting pelagic fish, rays, and passing sea turtles.",
+      marineLife: "Spotted eagle ray · great barracuda · hawksbill turtle · horse-eye jack",
+      marineLifeDescription:
+        "Eagle rays often cruise through the channel center against the tide, while schools of jacks hold station along the channel walls.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 10,
+      maxDepthMeters: 24,
+      currentNote:
+        "Tidal flow can create noticeable currents through the channel; time your swim with the flow.",
+      divePlan:
+        "Drop into the channel rim at 10 m (33 ft), cross along the channel slope to 24 m (80 ft), and ascend to the channel shoulder for your safety stop.",
+      fitTone: "welcoming",
+      fitNote:
+        "Engaging topography and higher chances of seeing passing pelagic animals in open water.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Channel Mouth",
+          kind: "reefFormation",
+          note: "Where the sandy channel floor drops away toward the deep outer shelf.",
+        },
+      ],
+      creatureSlugs: ["spotted-eagle-ray", "great-barracuda", "hawksbill-turtle", "horse-eye-jack"],
+    },
+  },
+  // Denominator row: Big Surprise
+  {
+    slug: "big-surprise-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Big Surprise",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3649,
+      forecastLongitude: -86.516,
+      description:
+        "An unexpected offshore pinnacle rising from the south shore shelf. Covered in delicate soft corals, black coral, and deep-water gorgonians, the pinnacle draws ocean wanderers.",
+      marineLife: "Caribbean reef shark · black coral · horse-eye jack · ocean triggerfish",
+      marineLifeDescription:
+        "Reef sharks and jacks frequently circle the pinnacle crest, with ocean triggerfish cruising the blue edge.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 15,
+      maxDepthMeters: 30,
+      currentNote:
+        "Strong currents can sweep across the open pinnacle. Divers must be able to complete a blue water negative descent.",
+      divePlan:
+        "Descend quickly to the pinnacle crest at 15 m (50 ft), circle the structure down to 30 m (100 ft), and ascend up the mooring line.",
+      fitTone: "demanding",
+      fitNote:
+        "Exposed offshore structure subject to current and open-ocean conditions, reserved for experienced divers.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Pinnacle Summit",
+          kind: "reefFormation",
+          note: "The top of the coral spire at 15 m (50 ft), crowded with sea fans and schooling jacks.",
+        },
+      ],
+      creatureSlugs: ["caribbean-reef-shark", "black-coral", "horse-eye-jack", "ocean-triggerfish"],
+    },
+  },
+  // Denominator row: Lita's Hole
+  {
+    slug: "litas-hole-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://www.roatandivecenter.com/roatan-dive-sites",
+    ],
+    briefing: {
+      name: "Lita's Hole",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3193,
+      forecastLongitude: -86.4946,
+      description:
+        "A steep, winding crevice on Roatán's south shore cut deep into the reef wall. The chasm floor is lined with coarse white sand, while the vertical rock faces carry giant barrel sponges.",
+      marineLife: "Giant barrel sponge · green moray · spiny lobster · glassy sweeper",
+      marineLifeDescription:
+        "Glassy sweepers cluster inside shaded undercut notches, and large green morays wind between coral boulders.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 12,
+      maxDepthMeters: 28,
+      currentNote:
+        "South shore chop and swell can be present at the surface; currents along the wall are generally manageable.",
+      divePlan:
+        "Descend to 12 m (40 ft) at the mooring, navigate into the wide open cleft down to 28 m (92 ft), and ascend along the outer wall.",
+      fitTone: "demanding",
+      fitNote:
+        "Dramatic relief and sheer vertical rock faces require disciplined buoyancy and depth management.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Crevice Floor",
+          kind: "reefFormation",
+          note: "A sandy chute at 24 m (80 ft) flanked by towering limestone walls.",
+        },
+      ],
+      creatureSlugs: ["giant-barrel-sponge", "green-moray", "spiny-lobster", "glassy-sweeper"],
+    },
+  },
+  // Denominator row: D2T
+  {
+    slug: "d2t-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://www.roatandivecenter.com/roatan-dive-sites",
+    ],
+    briefing: {
+      name: "D2T",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3203,
+      forecastLongitude: -86.4928,
+      description:
+        "A dramatic south shore wall dive featuring deep vertical fissures and overhangs draped in black coral and rope sponges. The wall plunges into oceanic depths.",
+      marineLife: "Black coral · red rope sponge · great barracuda · horse-eye jack",
+      marineLifeDescription:
+        "Jacks and barracudas hunt in the blue water along the wall, while rope sponges cascade down the vertical faces.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 14,
+      maxDepthMeters: 30,
+      currentNote:
+        "Currents can run swiftly along this exposed south wall; drift diving protocol applies.",
+      divePlan:
+        "Drop down the pin to 14 m (46 ft), drift along the wall between 20 and 30 m (65 to 100 ft), and ascend to the shallow reef top for your safety stop.",
+      fitTone: "demanding",
+      fitNote:
+        "Deep wall diving along an exposed coastline, suited for divers experienced with drift and depth discipline.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Vertical Cut",
+          kind: "reefFormation",
+          note: "A narrow vertical fault slicing through the wall face from 16 to 30 m (52 to 100 ft).",
+        },
+      ],
+      creatureSlugs: ["black-coral", "red-rope-sponge", "great-barracuda", "horse-eye-jack"],
+    },
+  },
+  // Denominator row: Shark Bait Deep
+  {
+    slug: "shark-bait-deep-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://www.roatandivecenter.com/roatan-dive-sites",
+    ],
+    briefing: {
+      name: "Shark Bait Deep",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3218,
+      forecastLongitude: -86.4854,
+      description:
+        "An impressive drop-off along the outer south reef known for pelagic encounters. The wall starts around 14 m (46 ft) and drops vertically, with large barrel sponges clinging to the rock face.",
+      marineLife: "Caribbean reef shark · spotted eagle ray · giant barrel sponge · dog snapper",
+      marineLifeDescription:
+        "Reef sharks routinely patrol the depths below the wall rim, accompanied by eagle rays cruising the blue.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 14,
+      maxDepthMeters: 30,
+      currentNote:
+        "South coast currents can be brisk. Maintain close buddy contact and deploy an SMB upon ascent.",
+      divePlan:
+        "Descend to the reef rim at 14 m (46 ft), cruise the wall face down to 30 m (100 ft) keeping watch into open water, and ascend to the reef crest.",
+      fitTone: "demanding",
+      fitNote:
+        "Deep wall dive with open-ocean exposure, best for confident divers comfortable monitoring air and depth.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Shark Ledge",
+          kind: "reefFormation",
+          note: "A wide limestone shelf at 25 m (82 ft) overlooking the deep oceanic drop.",
+        },
+      ],
+      creatureSlugs: [
+        "caribbean-reef-shark",
+        "spotted-eagle-ray",
+        "giant-barrel-sponge",
+        "dog-snapper",
+      ],
+    },
+  },
+  // Denominator row: Marilyn's Front Porch
+  {
+    slug: "marilyns-front-porch-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://www.roatandivecenter.com/roatan-dive-sites",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Marilyn's Front Porch",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3258,
+      forecastLongitude: -86.4824,
+      description:
+        "A wide coral shelf extending from the south shore reef like a veranda before dropping off into deep water. Dense clusters of sea fans, plumes, and sponges blanket the plateau.",
+      marineLife: "Hawksbill turtle · common sea fan · French grunt · stoplight parrotfish",
+      marineLifeDescription:
+        "Turtles are frequently seen resting on the porch shelf, surrounded by schools of grunts and parrotfish.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 10,
+      maxDepthMeters: 22,
+      currentNote:
+        "Currents are moderate along the shelf edge; stay on the sheltered side of the reef if current builds.",
+      divePlan:
+        "Descend to the shelf at 10 m (33 ft), explore the outer rim to 22 m (72 ft), and return across the vibrant plateau to safety stop depth.",
+      fitTone: "welcoming",
+      fitNote:
+        "Terraced structure and gentle current make for an enjoyable, scenic drift across the reef.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Front Porch",
+          kind: "reefFormation",
+          note: "A wide, flat coral terrace extending outward at 14 m (46 ft).",
+        },
+      ],
+      creatureSlugs: ["hawksbill-turtle", "common-sea-fan", "french-grunt", "stoplight-parrotfish"],
+    },
+  },
+  // Denominator row: Connie's Dream
+  {
+    slug: "connies-dream-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Connie's Dream",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3237,
+      forecastLongitude: -86.4838,
+      description:
+        "A sloping south shore reef rich with dramatic coral heads and winding sand gullies. High biodiversity and excellent coral cover make this a favorite site for underwater photographers.",
+      marineLife: "Spotted drum · flamingo tongue · southern stingray · queen triggerfish",
+      marineLifeDescription:
+        "Flamingo tongues graze sea fans along the slope, while spotted drums flit among the low limestone caverns.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 10,
+      maxDepthMeters: 20,
+      currentNote:
+        "Surface swell can develop on breezy days; underwater currents are typically gentle.",
+      divePlan:
+        "Drop down to 10 m (33 ft), meander through the coral gullies to 20 m (65 ft), and ascend gradually along the reef slope.",
+      fitTone: "welcoming",
+      fitNote: "Engaging topography and rich macro life suitable for all intermediate divers.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Connie's Coral Spire",
+          kind: "reefFormation",
+          note: "A large isolated coral pinnacle rising from 18 m to 11 m (60 to 36 ft).",
+        },
+      ],
+      creatureSlugs: ["spotted-drum", "flamingo-tongue", "southern-stingray", "queen-triggerfish"],
+    },
+  },
+  // Denominator row: MacCallum Girls
+  {
+    slug: "maccallum-girls-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://www.roatandivecenter.com/roatan-dive-sites",
+    ],
+    briefing: {
+      name: "MacCallum Girls",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3284,
+      forecastLongitude: -86.4822,
+      description:
+        "A series of high coral mounds rising from a sand plain near Brick Bay. Dense soft corals and sponges cover the tops, while the sand channels harbor rays and jawfish.",
+      marineLife: "Yellowhead jawfish · peacock flounder · hawksbill turtle · French grunt",
+      marineLifeDescription:
+        "Jawfish pop up and down in the sandy alleys, while hawksbills graze the sponge-encrusted mounds.",
+      difficultyLevel: "beginner",
+      depthMinMeters: 8,
+      maxDepthMeters: 18,
+      currentNote: "Usually calm with minimal current. Listen for boat traffic before ascending.",
+      divePlan:
+        "Descend to the sand at 8 m (26 ft), circle the coral mounds out to 18 m (60 ft), and return to the mooring across the shallow reef crest.",
+      fitTone: "welcoming",
+      fitNote: "Relaxed, shallow diving with generous bottom times and excellent natural lighting.",
+      minimumCertificationLevel: "open_water",
+      landmarks: [
+        {
+          name: "Twin Coral Mounds",
+          kind: "reefFormation",
+          note: "Two prominent adjacent coral formations rising 6 m proud of the seabed.",
+        },
+      ],
+      creatureSlugs: ["yellowhead-jawfish", "peacock-flounder", "hawksbill-turtle", "french-grunt"],
+    },
+  },
+  // Denominator row: Brick Bay Wall
+  {
+    slug: "brick-bay-wall-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://www.roatandivecenter.com/roatan-dive-sites",
+    ],
+    briefing: {
+      name: "Brick Bay Wall",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3298,
+      forecastLongitude: -86.4808,
+      description:
+        "A sheer wall off Brick Bay dropping into the abyss. Deep crevices cut into the face, hosting yellow tube sponges, black coral, and sheltering groupers.",
+      marineLife: "Black grouper · giant barrel sponge · black coral · horse-eye jack",
+      marineLifeDescription:
+        "Groupers watch from deep recesses while schools of jacks flash past in the open blue.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 12,
+      maxDepthMeters: 28,
+      currentNote:
+        "Currents can run parallel to the coast; drift diving skills and an SMB are recommended.",
+      divePlan:
+        "Descend to the wall crest at 12 m (40 ft), cruise along the face between 18 and 28 m (60 to 92 ft), and ascend to the reef flat to end your dive.",
+      fitTone: "demanding",
+      fitNote: "A true wall experience with significant vertical relief and deep water below.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Brick Bay Buttress",
+          kind: "reefFormation",
+          note: "A projecting coral buttress offering wide panoramic views into the deep channel.",
+        },
+      ],
+      creatureSlugs: ["black-grouper", "giant-barrel-sponge", "black-coral", "horse-eye-jack"],
+    },
+  },
+  // Denominator row: Doc's Retreat
+  {
+    slug: "docs-retreat-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://cocoviewresort.com/?p=500",
+      "https://www.roatandivecenter.com/roatan-dive-sites",
+    ],
+    briefing: {
+      name: "Doc's Retreat",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3372,
+      forecastLongitude: -86.47,
+      description:
+        "A favorite south shore dive site near French Harbor characterized by rolling coral ridges and clear sandy troughs. Coral cover is thick and healthy, teeming with macro life.",
+      marineLife: "Spiny lobster · green moray · stoplight parrotfish · blue tang",
+      marineLifeDescription:
+        "Morays and lobsters share deep holes in the reef, while blue tang schools graze the algae-rich crests.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 10,
+      maxDepthMeters: 22,
+      currentNote: "Currents are typically mild. Watch for south shore chop during boarding.",
+      divePlan:
+        "Descend to 10 m (33 ft) at the mooring, follow the main ridge line to 22 m (72 ft), and zig-zag back through the sand gullies.",
+      fitTone: "welcoming",
+      fitNote:
+        "Pleasant topography with gentle slopes and abundant fish life, suitable for all skill levels.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Doc's Ridge",
+          kind: "reefFormation",
+          note: "A coral ridge covered in sea plumes running perpendicular to the shoreline.",
+        },
+      ],
+      creatureSlugs: ["spiny-lobster", "green-moray", "stoplight-parrotfish", "blue-tang"],
+    },
+  },
+  // Denominator row: Osman's Reef
+  {
+    slug: "osmans-reef-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://www.roatandivecenter.com/roatan-dive-sites",
+    ],
+    briefing: {
+      name: "Osman's Reef",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3485,
+      forecastLongitude: -86.4487,
+      description:
+        "A rich coral terrace on the south coast sloping toward French Cay Cut. Expansive beds of leaf and plate corals provide shelter for schools of grunts and snappers.",
+      marineLife: "Schoolmaster snapper · French grunt · southern stingray · trumpetfish",
+      marineLifeDescription:
+        "Thick schools of snappers hover over the plate corals, while stingrays feed along the sand borders.",
+      difficultyLevel: "intermediate",
+      depthMinMeters: 10,
+      maxDepthMeters: 20,
+      currentNote:
+        "Current can sweep toward French Cay Cut on tidal changes; monitor your position relative to the boat.",
+      divePlan:
+        "Drop down to 10 m (33 ft), explore the coral slope down to 20 m (65 ft), and ascend to the shallow terrace to finish your dive.",
+      fitTone: "welcoming",
+      fitNote: "Vibrant coral garden with gentle slopes and great ambient light.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "Plate Coral Terrace",
+          kind: "reefFormation",
+          note: "A wide reef flat covered in overlapping layers of plate and lettuce corals.",
+        },
+      ],
+      creatureSlugs: ["schoolmaster-snapper", "french-grunt", "southern-stingray", "trumpetfish"],
+    },
+  },
+  // Denominator row: French Cay Cut
+  {
+    slug: "french-cay-cut-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://cocoviewresort.com/?p=500",
+      "https://www.roatandivecenter.com/roatan-dive-sites",
+    ],
+    briefing: {
+      name: "French Cay Cut",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.3502,
+      forecastLongitude: -86.446,
+      description:
+        "A prominent pass through the south barrier reef where ocean swells meet the sheltered lagoon. The current-swept walls host large sponges and schooling jacks.",
+      marineLife: "Spotted eagle ray · Caribbean reef shark · great barracuda · horse-eye jack",
+      marineLifeDescription:
+        "Eagle rays glide effortlessly against the tidal flow while reef sharks cruise the channel entrance.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 12,
+      maxDepthMeters: 28,
+      currentNote: "Strong tidal currents regularly flow through this cut. Run as a drift dive.",
+      divePlan:
+        "Drop into the cut entrance at 12 m (40 ft), drift along the channel wall to 28 m (92 ft), and ascend with a surface marker buoy in open water.",
+      fitTone: "demanding",
+      fitNote:
+        "Current-rich pass dive requiring comfortable drift diving skills and rapid descent capability.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Cut Wall",
+          kind: "reefFormation",
+          note: "A sheer channel wall scoured clean by tidal currents and lined with rope sponges.",
+        },
+      ],
+      creatureSlugs: [
+        "spotted-eagle-ray",
+        "caribbean-reef-shark",
+        "great-barracuda",
+        "horse-eye-jack",
+      ],
+    },
+  },
+  // Denominator row: Valley of the Kings
+  {
+    slug: "valley-of-the-kings-roatan",
+    version: 1,
+    area: "honduras-roatan",
+    sources: [
+      "https://www.google.com/maps/d/viewer?mid=1VAAlEKHNYaqEzG1-mQVxQSmVTYVjdyfA",
+      "https://www.roatandivecenter.com/roatan-dive-sites",
+      "https://anthonyskey.com/daily-dive-sites-log/",
+    ],
+    briefing: {
+      name: "Valley of the Kings",
+      locationName: "South Shore, Roatán",
+      forecastLatitude: 16.351,
+      forecastLongitude: -86.4378,
+      description:
+        "A monumental reef landscape of towering coral buttresses separated by majestic sandy canyons near French Harbor. Giant barrel sponges crown each massive coral structure.",
+      marineLife: "Giant barrel sponge · black coral · Caribbean reef shark · dog snapper",
+      marineLifeDescription:
+        "Reef sharks navigate the sandy canyons between buttresses, while dog snappers hover beneath deep overhangs.",
+      difficultyLevel: "advanced",
+      depthMinMeters: 12,
+      maxDepthMeters: 30,
+      currentNote:
+        "Can experience brisk currents along the buttress flanks. Keep track of your navigation reference.",
+      divePlan:
+        "Descend to the buttress top at 12 m (40 ft), glide down through the central canyon to 30 m (100 ft), and weave through the shallower monoliths on your ascent.",
+      fitTone: "demanding",
+      fitNote:
+        "Grand underwater architecture with significant vertical relief, suited for experienced divers.",
+      minimumCertificationLevel: "advanced_open_water",
+      landmarks: [
+        {
+          name: "The Royal Canyon",
+          kind: "reefFormation",
+          note: "A wide sandy valley at 26 m (85 ft) flanked by towering 10-meter-tall coral buttresses.",
+        },
+      ],
+      creatureSlugs: ["giant-barrel-sponge", "black-coral", "caribbean-reef-shark", "dog-snapper"],
+    },
+  },
 ];
