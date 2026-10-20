@@ -38,6 +38,7 @@ const copy: ReviewRowCopy = {
   hiddenToast: "Hidden.",
   undo: "Undo",
   undoPending: "Undoing",
+  dismiss: "Dismiss",
   published: "Published.",
   standout: "Featured.",
   standoutRemoved: "No longer featured.",

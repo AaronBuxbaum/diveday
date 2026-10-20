@@ -426,10 +426,11 @@ Three ways to say what a tap did, cheapest first:
    outcome, nothing else should say it too; the diver record's three waiver-delivery buttons wear
    a ring and a mark for exactly this reason; a bordered box repeating "sent"/"failed" underneath
    them was a caption on a photograph of itself (copy-restraint).
-2. **`Toast`** (`src/components/Toast.tsx`) — the shared immediate success confirmation. It
-   disappears after four seconds, so completed actions do not leave permanent messages in the
-   page. `FormStatus` and `ShopNotice` use it automatically for success. A reversible action
-   offering Undo continues to use `UndoToast`.
+2. **`Toast`** (`src/components/Toast.tsx`) — the shared immediate success confirmation. Plain
+   success toasts disappear after four seconds, so completed actions do not leave permanent
+   messages in the page. `FormStatus` and `ShopNotice` use it automatically for success. Reversible
+   actions use `UndoToast`, which stays actionable until the person uses Undo, dismisses the toast,
+   or navigates away.
 3. **`FormStatus`**, inline beside the form — for refusals and warnings that need attention.
    These remain visible until resolved. A successful submission uses the toast above.
 

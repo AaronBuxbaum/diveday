@@ -427,6 +427,7 @@ export function AgencyCheckHost({
           fields={{}}
           pendingLabel={toastCopy.undoPending}
           undoLabel={toastCopy.undo}
+          dismissLabel={toastCopy.dismiss}
         />
       ) : null}
     </HostContext.Provider>

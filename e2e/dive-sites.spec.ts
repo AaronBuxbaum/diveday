@@ -862,7 +862,12 @@ test.describe("an owner's own library", () => {
     // unseen: a cert gate, and a field guide. The row **is** the preview door
     // now, so it is the row's own link that opens it rather than a button beside
     // an Import the shop had not decided on yet.
-    await page.getByRole("link", { name: "Eagle Wreck", exact: true }).click();
+    // The row's stretched link sits behind the separate Import button. In the
+    // narrower catalog column, the link's geometric midpoint falls inside
+    // that button, so click the title end of its own link target.
+    await page.getByRole("link", { name: "Eagle Wreck", exact: true }).click({
+      position: { x: 24, y: 20 },
+    });
     await page.waitForURL(/template=eagle-wreck/);
 
     await expect(page.getByRole("heading", { name: "Eagle Wreck", level: 1 })).toBeVisible();

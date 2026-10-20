@@ -23,6 +23,7 @@ export type MarkCertifiedCopy = {
   confirmedToast: string;
   undo: string;
   undoPending: string;
+  dismiss: string;
   /** The refusals `markCertifiedAction` can answer with. */
   sightingRequired: string;
   duplicateCard: string;
@@ -121,6 +122,7 @@ export function MarkCertifiedControl({
           }}
           pendingLabel={copy.undoPending}
           undoLabel={copy.undo}
+          dismissLabel={copy.dismiss}
         />
       ) : null}
     </>

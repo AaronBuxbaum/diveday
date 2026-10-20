@@ -213,6 +213,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
           fields={noteDeleted}
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
+          dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : (
         <TripNoticeBanner

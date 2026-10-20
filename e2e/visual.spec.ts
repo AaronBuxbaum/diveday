@@ -6021,11 +6021,9 @@ for (const scheme of ["light", "dark"] as const) {
             );
           });
         });
-        // The match lands with its Undo toast, pinned over the foot of the
-        // screen where the offer's Add button sits, and gone only after its
-        // 12s countdown (`UndoToast`). This capture is the offer, so the clock
-        // is installed (it still runs in real time) and then jumped past the
-        // countdown, rather than the shot racing a timer.
+        // The actionable Undo stays available after the acknowledgement
+        // interval; the capture checks its Dismiss control at phone and desktop
+        // widths while the offer's Add button remains visible behind it.
         await page.clock.install();
         await openDiverProfile(page, "Mateo", "Mateo Duarte");
         const group = await openDiverFileGroup(page, "Certification records");
@@ -6039,7 +6037,8 @@ for (const scheme of ["light", "dark"] as const) {
         await toast.waitFor();
         await page.mouse.move(0, 0);
         await page.clock.fastForward(13_000);
-        await toast.waitFor({ state: "detached" });
+        await expect(toast.getByRole("button", { name: "Undo" })).toBeVisible();
+        await expect(toast.getByRole("button", { name: "Dismiss" })).toBeVisible();
         await capture(page, "diver-profile-agency-listed", scheme);
       });
 
@@ -6869,7 +6868,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the Safety year renders true to the design (${scheme})`, async ({ page }) => {
         // Reached by its own link, so the year is the server clock's, not the runner's.
         await page.goto("/shop/blue-mantis/safety");
-        await page.getByRole("link", { name: "The year" }).click();
+        await page.getByRole("link", { name: "Year view", exact: true }).click();
         await page.waitForURL(/\?year=\d{4}$/);
         await page.getByRole("button", { name: "Print the year" }).waitFor();
         await capture(page, "reports-safety-year", scheme);

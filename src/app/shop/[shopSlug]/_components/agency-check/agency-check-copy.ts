@@ -67,6 +67,7 @@ export type AgencyCheckCopy = {
   invalid: string;
   undo: string;
   undoPending: string;
+  dismiss: string;
   undoFailed: string;
   /** "PADI also shows these certifications. Add them?": the page's other cards, after a match. */
   listedLead: string;
@@ -195,6 +196,7 @@ export function agencyCheckCopy(
     invalid: t("divers.notices.invalid"),
     undo: t("shared.undoToast.undo"),
     undoPending: t("shared.undoToast.pendingLabel"),
+    dismiss: t("shared.undoToast.dismiss"),
     undoFailed: t("divers.notices.cardUndoFailed"),
     listedLead: t("divers.certifications.agencyCheck.listed.lead", { agency: name }),
     listedLeadFor: fill(t.raw("divers.certifications.agencyCheck.listed.leadFor"), {

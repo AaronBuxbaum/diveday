@@ -309,6 +309,7 @@
     "message": "Roll call complete"
   },
   "undoToast": {
+    "dismiss": "Dismiss",
     "pendingLabel": "Undoing…",
     "undo": "Undo"
   },

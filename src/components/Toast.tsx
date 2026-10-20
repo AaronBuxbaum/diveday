@@ -11,15 +11,12 @@ const EXIT_DURATION_MS = motionMs("base");
 
 /**
  * **The one toast**: pinned above the foot of the screen (and the phone's tab
- * bar), rising in, dismissing itself after a beat, and leaving through the
- * same exit animation. `Toast` and `UndoToast` are both this with different
- * contents, so the two can never land or leave differently.
+ * bar), rising in and leaving through the shared exit animation. A null
+ * `autoDismissMs` keeps an action-bearing toast available until dismissal or
+ * navigation.
  *
- * `pausable`: the countdown stops while a reader's mouse or keyboard focus is
- * anywhere in the toast, and resumes from wherever it left off — not a reset
- * to the full duration — once they leave, so tabbing in and out repeatedly
- * can't keep it alive forever. A toast with something to press needs this; one
- * that only says something does not.
+ * `pausable`: on a timed toast, the countdown stops while a reader's mouse or
+ * keyboard focus is anywhere in it, then resumes with the remaining time.
  */
 export function ToastShell({
   autoDismissMs,
@@ -27,7 +24,7 @@ export function ToastShell({
   className,
   children,
 }: {
-  autoDismissMs: number;
+  autoDismissMs: number | null;
   pausable?: boolean;
   /** The box's own layout and inset; the frame, fill and shadow are shared. */
   className: string;
@@ -41,10 +38,11 @@ export function ToastShell({
   // elapsed-time bookkeeping that lets a pause stop the clock and a resume
   // pick up from where it left off instead of restarting at full duration.
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const remainingMsRef = useRef(autoDismissMs);
+  const remainingMsRef = useRef(autoDismissMs ?? 0);
   const startedAtMsRef = useRef(0);
 
   useEffect(() => {
+    if (autoDismissMs === null) return;
     remainingMsRef.current = autoDismissMs;
     startedAtMsRef.current = Date.now();
     timerRef.current = setTimeout(() => setDismissing(true), autoDismissMs);

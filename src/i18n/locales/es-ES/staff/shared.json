@@ -309,6 +309,7 @@
     "message": "Pase de lista completo"
   },
   "undoToast": {
+    "dismiss": "Cerrar",
     "pendingLabel": "Deshaciendo…",
     "undo": "Deshacer"
   },
