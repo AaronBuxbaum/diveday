@@ -7,6 +7,7 @@ import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNa
 import { tapTargetLinkClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
 import { mailtoHref, telHref } from "@/lib/contact-links";
+import { openMapsUrl } from "@/lib/maps";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 
@@ -168,7 +169,7 @@ export function PublicShopFooter({
   const addressNode =
     addressLines.length === 0 ? null : mapQuery ? (
       <a
-        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`}
+        href={openMapsUrl(mapQuery)}
         target="_blank"
         rel="noopener noreferrer"
         className={`${tapTargetLinkClass} hover:text-foreground hover:underline`}

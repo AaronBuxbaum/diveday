@@ -1,39 +1,83 @@
 import { describe, expect, it } from "vitest";
-import { googleMapEmbedUrl, googleMapsUrl, googleTerrainEmbedUrl } from "./maps";
+import {
+  appleMapsUrl,
+  directionsUrl,
+  googleMapEmbedUrl,
+  googleMapsUrl,
+  googleTerrainEmbedUrl,
+  openMapsUrl,
+  openStreetMapUrl,
+  osmCoordsEmbedUrl,
+  osmMapEmbedUrl,
+} from "./maps";
 
-describe("googleTerrainEmbedUrl", () => {
-  it("centers on the coordinates instead of searching for them", () => {
-    // `ll=` is load-bearing rather than stylistic: `q=` makes the embed a
-    // *search*, and Google answers a search by dropping its pin dead centre of
-    // the frame — which is exactly where the shop's route is drawn. This test
-    // is here because reverting to `q=` looks harmless and silently puts the
-    // pin back on top of every route.
-    const url = googleTerrainEmbedUrl("25.0106,-80.3756", 16);
-    expect(url).toContain("ll=25.0106%2C-80.3756");
-    expect(url).not.toContain("q=");
+describe("osmCoordsEmbedUrl", () => {
+  it("centers on the coordinates with an OSM bounding box and no marker by default", () => {
+    const url = osmCoordsEmbedUrl("25.0106,-80.3756", 16);
+    expect(url).toContain("https://www.openstreetmap.org/export/embed.html");
+    expect(url).toContain("bbox=");
+    expect(url).not.toContain("&marker=");
   });
 
-  it("asks for the base map rather than imagery, and carries the zoom it was given", () => {
-    // `t=p` resolves to "not satellite" (see the note in maps.ts), and the zoom
-    // has to survive into the URL: a route is percentages of a frame at a
-    // stored zoom, so a dropped `z` draws the line over the wrong water.
-    const url = googleTerrainEmbedUrl("25.0106,-80.3756", 18);
-    expect(url).toContain("t=p");
-    expect(url).toContain("z=18");
-  });
-});
-
-describe("googleMapEmbedUrl", () => {
-  it("keeps its pin, because a shop's address is the answer to a search", () => {
-    const url = googleMapEmbedUrl("12 Dock Road, Key Largo FL");
-    expect(url).toContain("q=12%20Dock%20Road%2C%20Key%20Largo%20FL");
+  it("adds a marker when requested", () => {
+    const url = osmCoordsEmbedUrl("25.0106,-80.3756", 15, true);
+    expect(url).toContain("marker=25.0106%2C-80.3756");
   });
 });
 
-describe("googleMapsUrl", () => {
-  it("hands the reader's own maps app the same query", () => {
+describe("osmMapEmbedUrl", () => {
+  it("renders a framed embed with a marker for coordinate pairs", () => {
+    const url = osmMapEmbedUrl("25.0106,-80.3756");
+    expect(url).toContain("marker=25.0106%2C-80.3756");
+  });
+
+  it("handles free text fallback gracefully", () => {
+    const url = osmMapEmbedUrl("12 Dock Road, Key Largo FL");
+    expect(url).toContain("https://www.openstreetmap.org/export/embed.html?layer=mapnik");
+  });
+});
+
+describe("googleMapsUrl and directions linkouts", () => {
+  it("creates Google Maps search URL for coordinates or text", () => {
     expect(googleMapsUrl("25.0106,-80.3756")).toBe(
       "https://www.google.com/maps/search/?api=1&query=25.0106%2C-80.3756",
     );
+    expect(googleMapsUrl("12 Dock Road, Key Largo FL")).toBe(
+      "https://www.google.com/maps/search/?api=1&query=12%20Dock%20Road%2C%20Key%20Largo%20FL",
+    );
+  });
+
+  it("creates Apple Maps search URL", () => {
+    expect(appleMapsUrl("12 Dock Road, Key Largo FL")).toBe(
+      "https://maps.apple.com/?q=12%20Dock%20Road%2C%20Key%20Largo%20FL",
+    );
+  });
+
+  it("creates OpenStreetMap URL", () => {
+    expect(openStreetMapUrl("25.0106,-80.3756")).toBe(
+      "https://www.openstreetmap.org/?mlat=25.0106&mlon=-80.3756#map=16/25.0106/-80.3756",
+    );
+  });
+
+  it("directionsUrl routes to chosen provider with google as default", () => {
+    expect(directionsUrl("25.0106,-80.3756")).toBe(googleMapsUrl("25.0106,-80.3756"));
+    expect(directionsUrl("25.0106,-80.3756", "apple")).toBe(appleMapsUrl("25.0106,-80.3756"));
+    expect(directionsUrl("25.0106,-80.3756", "osm")).toBe(openStreetMapUrl("25.0106,-80.3756"));
+  });
+
+  it("openMapsUrl defaults to googleMapsUrl", () => {
+    expect(openMapsUrl("25.0106,-80.3756")).toBe(googleMapsUrl("25.0106,-80.3756"));
+  });
+});
+
+describe("backward-compatibility aliases", () => {
+  it("googleTerrainEmbedUrl proxies to osmCoordsEmbedUrl without marker", () => {
+    expect(googleTerrainEmbedUrl("25.0106,-80.3756", 16)).toBe(
+      osmCoordsEmbedUrl("25.0106,-80.3756", 16, false),
+    );
+  });
+
+  it("googleMapEmbedUrl proxies to osmMapEmbedUrl", () => {
+    expect(googleMapEmbedUrl("25.0106,-80.3756")).toBe(osmMapEmbedUrl("25.0106,-80.3756"));
   });
 });
