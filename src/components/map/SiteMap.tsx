@@ -2,6 +2,7 @@
 
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import { useEffect, useRef } from "react";
+import { cartoTileUrl } from "@/lib/carto";
 
 export type MapPin = {
   id: string;
@@ -62,15 +63,12 @@ export default function SiteMap({
 
       L.control.attribution({ prefix: false }).addTo(map);
 
-      L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?api_key=cb1_4pez_1_a61b51cdbcf74b5ff561231e",
-        {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
-          subdomains: "abcd",
-          maxZoom: 19,
-        },
-      ).addTo(map);
+      L.tileLayer(cartoTileUrl("light_all"), {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 19,
+      }).addTo(map);
 
       mapRef.current = map;
     });
