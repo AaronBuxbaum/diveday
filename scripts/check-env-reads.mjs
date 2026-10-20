@@ -41,7 +41,6 @@ const NOT_REGISTERED = {
   SES_FROM_EMAIL: "compiled-in sender; the variable is a fork's override",
   STRIPE_CONNECT_CLIENT_ID: "compiled-in CONNECT_CLIENT_ID; the variable is a fork's override",
   NEXT_PUBLIC_SENTRY_DSN: "compiled-in DSN; set empty by `pnpm e2e:build` to switch reporting off",
-  NEXT_PUBLIC_CARTO_API_KEY: "optional CARTO basemaps API key for client-rendered map tiles",
   // The test and dev harness.
   DIVEDAY_CLOCK: "the e2e harness's frozen clock; src/lib/clock.ts refuses it in production",
   DIVEDAY_DISABLE_EXTERNAL_HTTP: "the e2e harness switches outbound calls off",
