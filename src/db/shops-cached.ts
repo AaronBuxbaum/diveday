@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { cache } from "react";
 import { getDb } from "./client";
 import { getShopBySlug } from "./shops";
@@ -48,4 +49,9 @@ import { getShopBySlug } from "./shops";
  * become two, and no `cache()` will make them one. Doing that needs the
  * layout's read hoisted into the page's pass, which is a different change.
  */
-export const shopBySlugCached = cache(async (slug: string) => getShopBySlug(await getDb(), slug));
+export const shopBySlugCached = cache(async (slug: string) => {
+  // PGlite executes synchronously inside its wasm adapter. Keep this render
+  // read out of the static shell before opening or querying the database.
+  await connection();
+  return getShopBySlug(await getDb(), slug);
+});
