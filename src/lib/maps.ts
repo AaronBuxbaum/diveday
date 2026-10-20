@@ -134,9 +134,9 @@ export const googleTerrainEmbedUrl = (coords: string, zoom = 15) =>
  * broken-document glyph in the middle of the frame, which is where routes or meeting
  * points sit. A one-pixel read of an open mapping host verifies network availability.
  *
- * We probe OpenStreetMap's host asset (favicon.ico) and CARTO tile infrastructure.
+ * We probe OpenStreetMap's tile server and CARTO tile infrastructure.
  */
 export const MAP_REACHABILITY_PROBES = [
-  "https://www.openstreetmap.org/favicon.ico",
+  "https://tile.openstreetmap.org/0/0/0.png",
   "https://a.basemaps.cartocdn.com/rastertiles/voyager/0/0/0.png",
 ] as const;

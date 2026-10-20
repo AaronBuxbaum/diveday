@@ -228,7 +228,7 @@ describe("the policy", () => {
     // The route maps' reachability read (UX review 2026-10-10, item 20).
     expect(MAP_REACHABILITY_PROBES.map((probe) => new URL(probe).origin).sort()).toEqual([
       "https://a.basemaps.cartocdn.com",
-      "https://www.openstreetmap.org",
+      "https://tile.openstreetmap.org",
     ]);
     expect(imgSrc).toContain("https://*.basemaps.cartocdn.com");
     expect(imgSrc).toContain("https://*.tile.openstreetmap.org");
