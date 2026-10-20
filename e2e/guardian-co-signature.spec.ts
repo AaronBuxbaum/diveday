@@ -37,6 +37,13 @@ signedInAsOwner();
 test("a minor's release asks for a parent, refuses without one, and names who co-signed", async ({
   page,
 }) => {
+  // End-to-end minor onboarding and waiver execution: creates a diver, edits
+  // their DOB to 13, retrieves their signed waiver link, completes the full
+  // questionnaire, exercises two separate guardian refusals (empty required
+  // fields and self-guardian), submits the co-signature, and verifies the
+  // record in the staff view. Measured at 16.2s under runner load against
+  // the 15s default (run #39457126701; 14.0s on green shard run #39450503597).
+  test.setTimeout(30_000);
   const stamp = Date.now();
   const diver = `Minor E2E Diver ${stamp}`;
 
