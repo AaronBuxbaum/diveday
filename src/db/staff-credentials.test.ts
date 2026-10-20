@@ -133,10 +133,16 @@ describe("createStaffCredential", () => {
     // and the list read after it would fail for that reason alone
     // (src/test/db.ts, "When NOT to use this").
     const { db, shop, staff } = await context(await seededShopContext());
-    expect(await createStaffCredential(db, card(staff, shop.id, "padi-123456"))).not.toBeNull();
+    const before = await listStaffCredentials(db, shop.id);
+    const created = await createStaffCredential(db, card(staff, shop.id, "padi-123456"));
+    expect(created).not.toBeNull();
     expect(await createStaffCredential(db, card(staff, shop.id, "PADI-123456"))).toBeNull();
     // The refusal is a null, never a thrown 500 — and the list is unchanged.
-    expect(await listStaffCredentials(db, shop.id)).toHaveLength(1);
+    const after = await listStaffCredentials(db, shop.id);
+    const beforeIds = new Set(before.map((row) => row.credential.id));
+    expect(
+      after.filter((row) => !beforeIds.has(row.credential.id)).map((row) => row.credential.id),
+    ).toEqual([created?.id]);
   });
 
   // Issue #2295: the refusal runs in a savepoint, so a caller's transaction
