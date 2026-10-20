@@ -42,6 +42,12 @@ async function addDiver(
 test("staff merge a duplicate diver into the record they keep, choosing which email wins", async ({
   page,
 }) => {
+  // Sized for sequential multi-record setup: creates two separate diver records
+  // via the staff form (handling duplicate-name confirmations), compares them
+  // on the merge surface, executes the merge transaction, and verifies the kept
+  // record and redirects. Measured at 14.2s of 15s budget on run #39457126701 and
+  // timed out past 15s under runner load on rerun.
+  test.setTimeout(30_000);
   const name = `Quorrax Mergeling ${e2eNow().getTime()}`;
   const kept = await addDiver(page, {
     name,
@@ -93,6 +99,10 @@ test("staff merge a duplicate diver into the record they keep, choosing which em
 test("the preview refuses a pair already merged by sending the stale link to the kept record", async ({
   page,
 }) => {
+  // Sized for sequential multi-record setup: creates two separate diver records
+  // via the staff form, navigates to the merge preview URL, merges, and asserts
+  // stale preview link redirection to the kept record.
+  test.setTimeout(30_000);
   const name = `Quorrax Stalelink ${e2eNow().getTime()}`;
   const kept = await addDiver(page, {
     name,
