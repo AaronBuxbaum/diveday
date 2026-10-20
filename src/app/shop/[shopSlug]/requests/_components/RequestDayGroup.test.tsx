@@ -36,10 +36,7 @@ function party(...sizes: number[]) {
  * somewhere, and the loss is silent — the link still works, it just lands on
  * an empty form.
  *
- * **Only the first day on the page wears it filled.** Every group offers the
- * same act, and a column of `secondary` buttons down a page is the reader doing
- * triage the design should have done (principle 8), so the page passes
- * `prominent` to its first group and nothing else.
+ * Every date offers the same secondary action, so its styling stays consistent.
  */
 describe("the add-a-departure link", () => {
   it("carries the day, the disclosed form and every lead in the group", () => {
@@ -69,14 +66,15 @@ describe("the add-a-departure link", () => {
     expect(links[0]?.getAttribute("href")).toContain("date=2027-03-06");
   });
 
-  it("is filled only where the page says so, and link weight everywhere else", () => {
+  it("uses the same secondary action on every date", () => {
     const add = { href: addDepartureHref("blue-mantis", "2027-03-06", ["r1"]), label: "Add" };
     const { rerender } = render(
-      <RequestDayGroup id="d1" label="Mar 6" add={{ ...add, prominent: true }}>
+      <RequestDayGroup id="d1" label="Mar 6" add={add}>
         <li>a request</li>
       </RequestDayGroup>,
     );
-    expect(screen.getByRole("link", { name: "Add" }).className).toContain("bg-surface");
+    const initial = screen.getByRole("link", { name: "Add" }).className;
+    expect(initial).toContain("bg-surface");
 
     rerender(
       <RequestDayGroup id="d1" label="Mar 6" add={add}>
@@ -84,8 +82,8 @@ describe("the add-a-departure link", () => {
       </RequestDayGroup>,
     );
     const quiet = screen.getByRole("link", { name: "Add" }).className;
-    expect(quiet).not.toContain("bg-surface");
-    expect(quiet).toContain("text-primary");
+    expect(quiet).toContain("bg-surface");
+    expect(quiet).toBe(initial);
   });
 
   it("does not render on the undated tail — there is no day to put a boat on", () => {

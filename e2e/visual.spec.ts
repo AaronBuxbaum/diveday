@@ -7952,6 +7952,26 @@ for (const scheme of ["light", "dark"] as const) {
       // revenue question (slice 9f of ADR 20260827-the-shops-shelves; the
       // baseline moved with it, from six bordered tiles over a five-column
       // table).
+      test(`Safety month and year keep their view and print controls (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/safety");
+        await page.getByRole("button", { name: "Print month" }).waitFor();
+        await capture(page, "safety-month", scheme);
+        await page.getByRole("link", { name: "Year view", exact: true }).click();
+        await expect(page).toHaveURL(/\/safety\?year=\d{4}/);
+        await page.getByRole("link", { name: "Month view", exact: true }).waitFor();
+        await capture(page, "safety-year", scheme);
+      });
+
+      test(`bookkeeper settings keep the settings rail (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/bookkeeper");
+        await page
+          .getByRole("heading", { level: 1, name: staffCopy("reports.bookkeeper.label") })
+          .waitFor();
+        await capture(page, "settings-bookkeeper", scheme);
+      });
+
       test(`owner reports render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
@@ -8213,6 +8233,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByRole("link", { name: "Add a departure" }).first().waitFor();
         await capture(page, "staff-date-requests", scheme);
+        await page
+          .getByRole("button", { name: /^Actions for/ })
+          .first()
+          .click();
+        await page.getByRole("button", { name: "Mark done" }).first().waitFor();
+        await capture(page, "staff-date-requests-row-menu", scheme);
       });
 
       // A request staff closed (third UX review, item 13): off the open list
@@ -8222,6 +8248,10 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a request marked done sits under the open list (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/requests");
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
+        await page
+          .getByRole("button", { name: /^Actions for/ })
+          .first()
+          .click();
         await page.getByRole("button", { name: "Mark done" }).first().click();
         await page.getByRole("region", { name: /^Done:/i }).waitFor();
         await capture(page, "staff-date-requests-done", scheme);
@@ -8877,7 +8907,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: /Breathes wet at depth/ })
           .first()
           .click();
-        await page.getByRole("link", { name: "Claim tag" }).click();
+        await page.getByRole("link", { name: "Print claim tag" }).click();
         await page.getByRole("heading", { level: 2, name: "What we have" }).waitFor();
         await capture(page, "work-order-claim-tag", scheme);
       });

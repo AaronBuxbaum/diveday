@@ -18,7 +18,8 @@ const profileSchema = z.object({
   regulator: z.string().optional(),
   // One suit choice rather than two checkboxes (H-78); see `suitFlagsFromPost`.
   suit: z.string().optional(),
-  maskFins: z.string().optional(),
+  mask: z.string().optional(),
+  fins: z.string().optional(),
   weights: z.string().optional(),
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
@@ -40,6 +41,7 @@ const profileSchema = z.object({
   drysuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   hoodSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   gloveSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  bootSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   weightPreference: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.weightPreference).optional(),
 });
@@ -76,7 +78,8 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     rentsBcd: parsed.data.bcd === "on",
     rentsRegulator: parsed.data.regulator === "on",
     ...suitFlagsFromPost(parsed.data.suit),
-    rentsMaskFins: parsed.data.maskFins === "on",
+    rentsMask: parsed.data.mask === "on",
+    rentsFins: parsed.data.fins === "on",
     rentsWeights: parsed.data.weights === "on",
     rentsDiveComputer: parsed.data.diveComputer === "on",
     rentsGopro: parsed.data.gopro === "on",
@@ -89,8 +92,8 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     drysuitSize: parsed.data.drysuitSize,
     hoodSize: parsed.data.hoodSize,
     gloveSize: parsed.data.gloveSize,
-    // One shoe-size answer, written to both columns — see RentalFit.tsx.
-    bootSize: parsed.data.finSize,
+    // Fins and wetsuit boots are independent questions.
+    bootSize: parsed.data.bootSize,
     finSize: parsed.data.finSize,
     weightPreference: parsed.data.weightPreference,
   });

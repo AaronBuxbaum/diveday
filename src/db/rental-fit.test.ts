@@ -32,7 +32,6 @@ async function context() {
   if (!open) throw new Error("open trip missing");
   return { db, shop, shopId: shop.id, tripId: open.id };
 }
-
 async function bookVisitor(db: AppDb, shopId: string, tripId: string, fullName: string) {
   const email = `${fullName.toLowerCase().replace(/\s+/g, ".")}@example.com`;
   const outcome = await createBooking(db, { actor: "staff", shopId, tripId, fullName, email });
@@ -53,7 +52,8 @@ function baseFitInput(shopId: string, personId: string) {
     rentsBcd: true,
     rentsRegulator: false,
     rentsWetsuit: true,
-    rentsMaskFins: true,
+    rentsMask: false,
+    rentsFins: true,
     rentsWeights: true,
     rentsDiveComputer: false,
     rentsGopro: false,
@@ -70,7 +70,6 @@ function baseFitInput(shopId: string, personId: string) {
   };
 }
 
-// One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
 
@@ -336,7 +335,7 @@ describe("saveRentalFit / getRentalFit", () => {
       expect(fetched?.rentsWetsuit).toBe(true);
       expect(fetched?.rentsBcd).toBe(false);
       expect(fetched?.rentsRegulator).toBe(false);
-      expect(fetched?.rentsMaskFins).toBe(false);
+      expect(fetched?.rentsFins).toBe(false);
       expect(fetched?.rentsWeights).toBe(false);
     });
 
@@ -1000,7 +999,8 @@ describe("rental fit completeness over a stored profile", () => {
       rentsBcd: true,
       rentsRegulator: false,
       rentsWetsuit: false,
-      rentsMaskFins: false,
+      rentsMask: false,
+      rentsFins: false,
       rentsWeights: false,
       rentsDiveComputer: false,
       rentsGopro: false,

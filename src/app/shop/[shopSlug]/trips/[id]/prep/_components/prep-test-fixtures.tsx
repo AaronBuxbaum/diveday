@@ -101,7 +101,8 @@ export function statedFit(overrides: Partial<RentalFit> = {}): RentalFit {
     rentsBcd: false,
     rentsRegulator: false,
     rentsWetsuit: false,
-    rentsMaskFins: false,
+    rentsMask: false,
+    rentsFins: false,
     rentsWeights: false,
     rentsDiveComputer: false,
     rentsGopro: false,
@@ -258,7 +259,7 @@ export function renderPrep(
       locale={DEFAULT_DIVER_LOCALE}
       shopSlug="blue-mantis"
       tripId="t1"
-      rentalItems={["bcd", "wetsuit", "boots", "weights", "regulator", "mask_fins"]}
+      rentalItems={["bcd", "wetsuit", "boots", "weights", "regulator", "fins"]}
       notice={notice}
       noticeCount={noticeCount}
       grouping={grouping}

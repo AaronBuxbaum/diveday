@@ -63,9 +63,9 @@ export async function saveBookkeeperAction(
     allow: canPersonExportShopData,
     refusal: { notice: "reports-not-authorized" },
   });
-  const reports = shopPath(shop.slug, "reports");
+  const reports = shopPath(shop.slug, "settings", "bookkeeper");
   if (!(await hasRequiredStepUp(db, session, "export"))) {
-    redirect(stepUpChallengeUrl(shop.slug, "export", `${reports}#bookkeeper`));
+    redirect(stepUpChallengeUrl(shop.slug, "export", reports));
   }
   const raw = String(formData.get("email") ?? "");
   const email = raw.trim() === "" ? null : bookkeeperAddress(raw);

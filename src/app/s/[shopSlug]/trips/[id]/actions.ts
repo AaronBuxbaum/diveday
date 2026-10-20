@@ -67,7 +67,7 @@ import {
   offeredRentableItems,
   quoteRentalFit,
   type RentableItemKind,
-  type RentalFitField,
+  rentalFlagsFromKinds,
   withOneSuit,
 } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
@@ -186,7 +186,6 @@ export async function bookSpot(
   const t = diverTranslator(locale);
   const ip = await clientIp();
   const fields = readForm(bookingForm, formData);
-
   // Bounded, and the bound is measured — see MAX_PUBLIC_PARTY_SIZE for the
   // numbers and for why the lock, not the row count, is what decides it.
   const partySize = z.coerce
@@ -196,7 +195,6 @@ export async function bookSpot(
     .max(MAX_PUBLIC_PARTY_SIZE)
     .safeParse(fields.partySize);
   if (!partySize.success) return { error: t(ERROR_MESSAGE_KEYS.invalid) };
-
   // Validate per field so the form can point at the exact box that is wrong,
   // and keep everything else the diver typed.
   const fieldErrors: Record<string, string> = {};
@@ -539,28 +537,7 @@ export async function bookSpot(
       outcome.bookings.map(async ({ bookingId, personId, identityUnconfirmed }, index) => {
         const selection = gearSelections[index];
         if (!selection) return;
-        const rentedSet = new Set(selection.rentedKinds);
-        // **Every one of the twelve, checked by the compiler.** The writer's
-        // flags went optional so a caller with nothing to say about a piece can
-        // stay quiet (issue #1755) — but this caller is the checkout, where a
-        // tick is a paid line item, and a flag dropped here would take a gear
-        // line the diver has been charged for off the packing list with nothing
-        // failing. `satisfies` makes that omission a type error instead
-        // (`security-reviewer`, issue #1754).
-        const rents = {
-          rentsBcd: rentedSet.has("bcd"),
-          rentsRegulator: rentedSet.has("regulator"),
-          rentsWetsuit: rentedSet.has("wetsuit"),
-          rentsMaskFins: rentedSet.has("mask_fins"),
-          rentsWeights: rentedSet.has("weights"),
-          rentsDiveComputer: rentedSet.has("dive_computer"),
-          rentsGopro: rentedSet.has("gopro"),
-          rentsDrysuit: rentedSet.has("drysuit"),
-          rentsHood: rentedSet.has("hood"),
-          rentsGloves: rentedSet.has("gloves"),
-          rentsTorch: rentedSet.has("torch"),
-          rentsSmb: rentedSet.has("smb"),
-        } satisfies Record<RentalFitField, boolean>;
+        const rents = rentalFlagsFromKinds(selection.rentedKinds);
         try {
           // **A held seat writes nothing to the person it matched.** The row
           // is an existing diver's, reached by an email whose name on file

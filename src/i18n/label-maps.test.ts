@@ -360,7 +360,8 @@ const RENTAL_ITEM_KINDS = everyCodeOf<RentalItemKind>({
   regulator: true,
   wetsuit: true,
   boots: true,
-  mask_fins: true,
+  mask: true,
+  fins: true,
   weights: true,
   dive_computer: true,
   gopro: true,
@@ -469,7 +470,6 @@ const CASES: readonly LabelMapCase[] = [
   {
     module: "boat-safety-labels.ts",
     map: "KIT_KEYS",
-    // Both tenses of each clock, through the one door the manifest uses.
     rows: codeRows(GEAR_SERVICE_KINDS, (locale, clock) =>
       [false, true]
         .map((expired) =>

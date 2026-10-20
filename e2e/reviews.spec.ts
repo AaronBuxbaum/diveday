@@ -164,6 +164,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   await standout.click();
   await expect(page.getByText("Review marked as standout.")).toBeVisible();
   expect(await page.evaluate(() => window.scrollY)).toBe(scrolledToStandout);
+  await expect(page.getByText("Review marked as standout.")).toBeHidden();
 
   // Signed out again, the diver-facing schedule now carries it.
   await page.context().clearCookies();
@@ -295,6 +296,7 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
   });
   await clearAll.click();
 
+  await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
   const outcome = page.getByText(staff("reviews.notice.publishedManyOther", { count }));
   await expect(outcome).toBeVisible();
   // Nothing is waiting any more, so the group and the act it carried are both
@@ -307,42 +309,14 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
       .filter({ hasText: comment }),
   ).toHaveCount(1);
 
-  // The confirmation is on the list it changed, not in a banner at the top of
-  // the page: below the title, above the first group. Asserted on where it
-  // actually renders, because the bug this replaced was purely one of position —
-  // the sentence was correct and nobody could see it.
-  //
-  // The three rects are read inside one `evaluate` so nothing can scroll or
-  // re-render between them; an earlier version took three separate
-  // `boundingBox()` calls that straddled a re-render and compared coordinates
-  // from two different pages. Document-relative, so a scroll before the
-  // measurement cannot skew it either. The waits above are the deterministic
-  // gate (`pnpm check:e2e-hygiene` refuses the timing guess).
-  const titleEl = await page.getByRole("heading", { level: 1, name: "Inbox" }).elementHandle();
-  const outcomeEl = await outcome.elementHandle();
-  // A known review row, not "the first `<li>` on the page" — the staff nav is
-  // a list too, and its items sit above everything here.
-  const reviewRowEl = await page
-    .locator("li")
-    .filter({ hasText: comment })
-    .filter({ visible: true })
-    .first()
-    .elementHandle();
-  const layout = await page.evaluate(
-    (nodes) => {
-      const [titleNode, outcomeNode, rowNode] = nodes;
-      const top = (node: Element) => node.getBoundingClientRect().top + window.scrollY;
-      const bottom = (node: Element) => node.getBoundingClientRect().bottom + window.scrollY;
-      return {
-        titleBottom: bottom(titleNode),
-        outcomeTop: top(outcomeNode),
-        rowTop: top(rowNode),
-      };
-    },
-    [titleEl, outcomeEl, reviewRowEl],
-  );
-  expect(layout.outcomeTop).toBeGreaterThan(layout.titleBottom);
-  expect(layout.outcomeTop).toBeLessThan(layout.rowTop);
+  // The success confirmation is ephemeral. Its disappearance leaves the
+  // published result in the list as the durable record of the action.
+  await expect(outcome).toBeHidden({ timeout: 6000 });
+  await expect(
+    group(page, /^Published/)
+      .locator("li")
+      .filter({ hasText: comment }),
+  ).toHaveCount(1);
 
   await page.context().clearCookies();
   await page.goto("/s/blue-mantis");

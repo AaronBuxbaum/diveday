@@ -235,24 +235,11 @@ export type GearAssignmentNeed = {
   sizeIsAStart?: true;
 };
 
-/**
- * Bridges the fit's combined mask-and-fins answer to the register's physical
- * units. The diver still answers one rental-fit question and the public
- * packing list still says "mask & fins", but staff must be able to reserve the
- * two tagged things independently (issue #953).
- */
+/** Each requested piece reserves only its matching physical unit. */
 export function gearAssignmentNeeds(
   piece: Pick<{ kind: RentalItemKind; size: string | null }, "kind" | "size">,
 ): GearAssignmentNeed[] {
-  if (piece.kind === "mask_fins") {
-    return [
-      { kind: "mask", size: null },
-      { kind: "fins", size: piece.size },
-    ];
-  }
-  // A hood and gloves are two kinds in the fit as in the register (H-102), so
-  // each meets its own tagged units with its own size, like every other piece.
-  return [{ kind: piece.kind as Exclude<RentalItemKind, "mask_fins">, size: piece.size }];
+  return [{ kind: piece.kind, size: piece.size }];
 }
 
 /**
@@ -264,7 +251,8 @@ const RENTAL_FIT_PIECES: Record<RentalItemKind, true> = {
   regulator: true,
   wetsuit: true,
   boots: true,
-  mask_fins: true,
+  mask: true,
+  fins: true,
   weights: true,
   dive_computer: true,
   gopro: true,

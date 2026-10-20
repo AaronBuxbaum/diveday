@@ -29,7 +29,8 @@ export type RentalFitInput = {
   rentsBcd?: boolean;
   rentsRegulator?: boolean;
   rentsWetsuit?: boolean;
-  rentsMaskFins?: boolean;
+  rentsMask?: boolean;
+  rentsFins?: boolean;
   rentsWeights?: boolean;
   rentsDiveComputer?: boolean;
   rentsGopro?: boolean;
@@ -476,7 +477,8 @@ export type DiverRentalFit = {
   rentsBcd: boolean;
   rentsRegulator: boolean;
   rentsWetsuit: boolean;
-  rentsMaskFins: boolean;
+  rentsMask: boolean;
+  rentsFins: boolean;
   rentsWeights: boolean;
   rentsDiveComputer: boolean;
   rentsGopro: boolean;
@@ -520,7 +522,8 @@ export function toDiverRentalFit(
     rentsBcd: profile.rentsBcd,
     rentsRegulator: profile.rentsRegulator,
     rentsWetsuit: profile.rentsWetsuit,
-    rentsMaskFins: profile.rentsMaskFins,
+    rentsMask: profile.rentsMask,
+    rentsFins: profile.rentsFins,
     rentsWeights: profile.rentsWeights,
     rentsDiveComputer: profile.rentsDiveComputer,
     rentsGopro: profile.rentsGopro,

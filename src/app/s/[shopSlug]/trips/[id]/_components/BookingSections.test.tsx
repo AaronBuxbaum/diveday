@@ -339,7 +339,7 @@ describe("BookSpotSection — no box inside the box", () => {
           currency: "usd",
           locale: "en-US",
           timeZone: "America/New_York",
-          rentalItems: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+          rentalItems: ["bcd", "regulator", "wetsuit", "fins", "weights"],
           rentalPricing: pricedRentals,
         }}
       />,
@@ -354,7 +354,7 @@ describe("BookSpotSection — no box inside the box", () => {
 // Diver-selectable checkout upsells (docs ADR 20260801-checkout-upsells-rental-gear).
 const pricedRentals: RentalPricing = {
   setCents: 4500,
-  perItemCents: { bcd: 1500, regulator: 1500, wetsuit: 1200, mask_fins: 800, weights: 500 },
+  perItemCents: { bcd: 1500, regulator: 1500, wetsuit: 1200, fins: 800, weights: 500 },
   nitroxCents: null,
 };
 
@@ -403,7 +403,7 @@ describe("BookSpotSection rental gear at checkout", () => {
           currency: "usd",
           locale: "en-US",
           timeZone: "America/New_York",
-          rentalItems: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+          rentalItems: ["bcd", "regulator", "wetsuit", "fins", "weights"],
           rentalPricing: pricedRentals,
         }}
       />,
@@ -435,7 +435,7 @@ describe("BookSpotSection rental gear at checkout", () => {
           currency: "usd",
           locale: "en-US",
           timeZone: "America/New_York",
-          rentalItems: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+          rentalItems: ["bcd", "regulator", "wetsuit", "fins", "weights"],
           rentalPricing: EMPTY_RENTAL_PRICING,
         }}
       />,
@@ -456,7 +456,7 @@ describe("BookSpotSection rental gear at checkout", () => {
           currency: "usd",
           locale: "en-US",
           timeZone: "America/New_York",
-          rentalItems: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+          rentalItems: ["bcd", "regulator", "wetsuit", "fins", "weights"],
           rentalPricing: pricedRentals,
         }}
       />,

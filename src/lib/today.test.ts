@@ -175,8 +175,7 @@ describe("diverBlockerAction", () => {
     expect(result?.detail).toBe("Medical answer needs a doctor’s sign-off.");
   });
 
-  // Issue #2124: a held seat gets no readiness reminder until staff confirm who
-  // it is (`sendDueReminders`), so the row says so — the desk can phone ahead.
+  // Issue #2124: held seats get no readiness reminder until staff confirm who it is.
   it("says a held seat's reminders wait on the confirm", () => {
     const result = diverBlockerAction(
       { ...input, blockers: [blocker("identity_unconfirmed")] },
@@ -1378,6 +1377,7 @@ describe("collapseEmailDeliveries", () => {
   ) => ({
     deliveryId: `d-${name}`,
     bookingId: `b-${name}`,
+    personId: `p-${name}`,
     fullName: name,
     isWaiver: false,
     status: "failed" as const,
@@ -1392,7 +1392,7 @@ describe("collapseEmailDeliveries", () => {
     expect(row?.detail).toBe("Confirmation email didn’t send.");
     expect(row?.actionLabel).toBe("Resend confirmation");
     expect(row?.resend).toEqual({ bookingIds: ["b-Ana Ruiz"] });
-    expect(row?.href).toBe("/shop/blue-reef/trips/t1#booking-b-Ana Ruiz");
+    expect(row?.href).toBe("/shop/blue-reef/divers/p-Ana Ruiz");
   });
 
   it("points a batch over two same-minute boats at the same one, whatever order they arrive in (issue #2176)", () => {

@@ -188,6 +188,9 @@ test("a staffer saves an answer, uses it as a chip, and deletes it softly", asyn
   await page.goto("/shop/blue-mantis/inbox#saved-answers");
   const saved = page.getByRole("region", { name: "Saved answers" });
   await expect(saved.getByText(/^Hi \{name\}, the gate opens at 7:10/)).toBeVisible();
+  await expect(
+    saved.getByRole("link", { name: "Choose a diver to save an answer" }),
+  ).toHaveAttribute("href", "/shop/blue-mantis/divers");
   await saved
     .getByRole("button", { name: "Delete Hi, the gate opens at 7:10 on dive days." })
     .click();

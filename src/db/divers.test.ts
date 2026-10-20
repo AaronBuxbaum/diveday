@@ -77,13 +77,11 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
  * what it just wrote — so nothing here needs its rows committed.
  */
 const ctx = fileScopedShopContext();
-
 /** The saved row, or a failure naming the refusal. */
 function saved(result: Awaited<ReturnType<typeof updateDiver>>) {
   if (!result.ok) throw new Error(`updateDiver refused: ${result.reason}`);
   return result.person;
 }
-
 describe("person-first diver records", () => {
   it("uses contact information as the temporary name for contact-first intake", async () => {
     const { db, shop } = ctx;
@@ -98,7 +96,6 @@ describe("person-first diver records", () => {
       phone: "+1 305 555 0188",
     });
     expect(byPhone?.fullName).toBe("+1 305 555 0188");
-    // The *name* keeps the typed spacing; the phone column does not (below).
     expect(byPhone?.phone).toBe("+13055550188");
   });
 
@@ -273,7 +270,8 @@ describe("person-first diver records", () => {
       rentsBcd: true,
       rentsRegulator: false,
       rentsWetsuit: true,
-      rentsMaskFins: true,
+      rentsMask: false,
+      rentsFins: true,
       rentsWeights: true,
       rentsDiveComputer: false,
       rentsGopro: false,
@@ -990,7 +988,8 @@ describe("listBookableDivers (returning-diver picker)", () => {
       rentsBcd: true,
       rentsRegulator: true,
       rentsWetsuit: true,
-      rentsMaskFins: true,
+      rentsMask: false,
+      rentsFins: true,
       rentsWeights: true,
       rentsDiveComputer: false,
       rentsGopro: false,
@@ -1230,7 +1229,8 @@ describe("diver erasure", () => {
       rentsBcd: true,
       rentsRegulator: true,
       rentsWetsuit: true,
-      rentsMaskFins: true,
+      rentsMask: false,
+      rentsFins: true,
       rentsWeights: true,
       rentsDiveComputer: false,
       rentsGopro: false,

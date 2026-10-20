@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { menuRowClass } from "@/components/ui/menu";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
@@ -194,7 +195,7 @@ export function InboxRow({
             // Above the row's stretched door (`z-0`), so it takes its own tap.
             <Link
               href={`${seatHref(seat)}#booking-${seat.bookingId}`}
-              className="relative z-10 font-medium text-primary hover:underline"
+              className={`${tapTargetLinkClass} relative z-10 font-medium text-primary hover:underline`}
             >
               {t("inbox.seat", { trip: seat.title, when: when(seat) })}
             </Link>
@@ -246,7 +247,7 @@ export function InboxRow({
           <span className="text-sm text-muted tabular-nums">
             {receivedWhen(message.receivedAt, { now, locale, timezone, t })}
           </span>
-          <RowMenu label={t("inbox.menu.label", { name })}>
+          <RowMenu label={t("inbox.menu.label", { name })} panelClassName="w-max min-w-60">
             {/* An "Ask to move" (H-126) is about another date, never this
                 boat's lateness: its seat carries no late window. */}
             {lateAction && message.channel !== "page"

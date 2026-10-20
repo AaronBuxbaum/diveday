@@ -675,8 +675,7 @@ export type ImportIssueCode =
   | "no_name"
   | "merged_duplicate"
   | "no_email_new_record"
-  | "size_too_long"
-  | "shoe_size_collapsed";
+  | "size_too_long";
 
 /**
  * The data a translated message needs to fill in its placeholders. Which
@@ -1893,35 +1892,16 @@ export function prepareContactImport(text: string): PreparedImport {
       }
       return held;
     };
-    // **One shoe size, from either column.** The file may carry `boot_size` and
-    // `fin_size` separately, and DiveDay keeps one answer: the staff diver
-    // record and the readiness gear form each render a single "Fin & boot size"
-    // box and write it to both columns, so two imported values survived exactly
-    // until the next save of either form and then silently became one (issue
-    // #1802). The importer promises what the product keeps.
-    //
-    // The fin size wins where both are given, because it is the one every
-    // surface pre-fills from — and a row whose two cells disagree says so,
-    // rather than discarding an answer without a word.
-    // Read in column order, so the per-cell warnings above keep arriving in the
-    // order the file lists them.
+    // Each size describes its own piece; importing never substitutes one for another.
     const bcdCell = sizeCell("bcd_size", "bcd");
     const wetsuitCell = sizeCell("wetsuit_size", "wetsuit");
     const bootCell = sizeCell("boot_size", "boots");
-    const finCell = sizeCell("fin_size", "mask_fins");
-    const shoeSize = finCell ?? bootCell;
-    if (bootCell && finCell && bootCell !== finCell) {
-      issues.push({
-        level: "warning",
-        code: "shoe_size_collapsed",
-        params: { value: shoeSize ?? "" },
-      });
-    }
+    const finCell = sizeCell("fin_size", "fins");
     const sizes = {
       bcdSize: bcdCell,
       wetsuitSize: wetsuitCell,
-      bootSize: shoeSize,
-      finSize: shoeSize,
+      bootSize: bootCell,
+      finSize: finCell,
     };
 
     // Trusted per row (ADR 20260724-import-waiver-acceptance): a truthy

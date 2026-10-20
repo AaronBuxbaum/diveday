@@ -61,12 +61,8 @@ export function checkCounterRentalWindow(input: {
 /**
  * The price-list entry a register unit is billed under, where there is one.
  *
- * The price list speaks rental-fit words (`RentableItemKind`), the register
- * speaks inventory words, and the two only partly overlap. **Fins carry the
- * mask-and-fins price and a mask carries none**: the list prices the pair as
- * one line, the same convention `sizedRentalKindOfGearKind` keeps, so a pair
- * handed over together is billed once. Every kind with no entry (a tank, a
- * reel, boots) is left for the staffer to price.
+ * Masks and fins each carry their own configured price. Register kinds without
+ * a catalog entry (a tank, a reel, boots) are left for the staffer to price.
  */
 function priceListKind(kind: GearItemKind): RentableItemKind | null {
   switch (kind) {
@@ -82,8 +78,9 @@ function priceListKind(kind: GearItemKind): RentableItemKind | null {
     case "torch":
     case "smb":
       return kind;
+    case "mask":
     case "fins":
-      return "mask_fins";
+      return kind;
     default:
       return null;
   }
@@ -258,8 +255,8 @@ export function counterRentalCardSummary(cards: {
 /**
  * The register kinds that make up the shop's core rental set, as the price
  * list names it (`CORE_RENTAL_KINDS`, restricted to what the shop offers):
- * each core price-list entry and the register kind that carries it. A mask
- * carries no price of its own (fins carry the pair), so it is not a set piece.
+ * each core price-list entry and the register kind that carries it. Masks
+ * and fins are independent set pieces.
  */
 export function counterRentalCoreKinds(rentalItems: readonly string[]): GearItemKind[] {
   const offered = new Set(offeredRentableItems(rentalItems).map((item) => item.kind));
@@ -267,7 +264,8 @@ export function counterRentalCoreKinds(rentalItems: readonly string[]): GearItem
     bcd: "bcd",
     regulator: "regulator",
     wetsuit: "wetsuit",
-    mask_fins: "fins",
+    mask: "mask",
+    fins: "fins",
     weights: "weights",
     dive_computer: "dive_computer",
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type Key, type ReactNode, useEffect, useRef, useState } from "react";
 import { motionMs } from "@/lib/motion";
 
 // Matches the `.toast-dismiss` keyframe duration in globals.css. Kept as a
@@ -97,19 +97,33 @@ export function ToastShell({
 }
 
 /**
- * A brief, auto-dismissing acknowledgement for an action that leaves no other
- * trace on screen — the diver record's "Copy link" tap is the first case: the
- * clipboard write already happened, and this is the only place that can say
- * so. Not for anything reversible or that offers a next step (`UndoToast`),
- * and not a substitute for a state a control already carries on its own face
- * (a button's ring/mark, a field's error) — see `docs/design/forms-and-controls.md`.
+ * The shared immediate success confirmation. `FormStatus` and `ShopNotice`
+ * route successful action outcomes here, so acknowledgements leave after a
+ * beat instead of becoming permanent page content. Refusals remain beside
+ * their form, and reversible actions offering Undo use `UndoToast`.
  *
  * Mount it fresh (`key`) per occurrence — an identical message twice in a row
  * still needs to visibly land twice.
  */
-export function Toast({ message, durationMs = 4000 }: { message: string; durationMs?: number }) {
+export function Toast({
+  message,
+  durationMs = 4000,
+  pausable = false,
+  occurrenceKey,
+}: {
+  message: ReactNode;
+  durationMs?: number;
+  pausable?: boolean;
+  /** Action/result identity; changes even when consecutive confirmations say the same thing. */
+  occurrenceKey?: Key;
+}) {
   return (
-    <ToastShell autoDismissMs={durationMs} className="px-4 py-3 text-sm font-medium">
+    <ToastShell
+      key={occurrenceKey}
+      autoDismissMs={durationMs}
+      pausable={pausable}
+      className="px-4 py-3 text-sm font-medium"
+    >
       {message}
     </ToastShell>
   );

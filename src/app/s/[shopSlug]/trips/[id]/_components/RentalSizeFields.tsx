@@ -10,7 +10,7 @@ const SIZED_KINDS: readonly RentableItemKind[] = [
   "drysuit",
   "hood",
   "gloves",
-  "mask_fins",
+  "fins",
   "weights",
 ];
 
@@ -85,7 +85,13 @@ function optionsWithStored(grid: readonly string[], stored: string | null | unde
  */
 const isStoredOffGrid = (grid: readonly string[], option: string) => !grid.includes(option);
 
-export type RentalSizeValues = { bcd: string; wetsuit: string; drysuit: string; fin: string };
+export type RentalSizeValues = {
+  bcd: string;
+  wetsuit: string;
+  drysuit: string;
+  fin: string;
+  boot: string;
+};
 
 /**
  * The size fields of the rental fit: the three sized selects, then the free-text
@@ -208,13 +214,25 @@ export function RentalSizeFields({
               />
             </Field>
           ) : null}
-          {offers.has("mask_fins") || offers.has("wetsuit") ? (
+          {offers.has("fins") ? (
             <Field label={t("rental.finSize")} hint={t("common.optional")}>
               <input
                 name="finSize"
                 maxLength={RENTAL_FIT_TEXT_LIMITS.size}
                 value={finSize}
                 onChange={(e) => setFinSize(e.target.value)}
+                placeholder={t("rental.finSizePlaceholder")}
+                className={controlClass}
+              />
+            </Field>
+          ) : null}
+          {offers.has("wetsuit") ? (
+            <Field label={t("rental.bootSize")} hint={t("common.optional")}>
+              <input
+                name="bootSize"
+                maxLength={RENTAL_FIT_TEXT_LIMITS.size}
+                value={sizes.boot}
+                onChange={(event) => onSize("boot", event.target.value)}
                 placeholder={t("rental.finSizePlaceholder")}
                 className={controlClass}
               />

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { InsetGroup, LedgerRow } from "@/components/ui/ledger";
+import { LedgerRow } from "@/components/ui/ledger";
 import type { CustomerGearItem } from "@/db/schema";
 import type { ServiceReminderState } from "@/db/work-order-follow-up";
 import type { DiverWorkOrderRow } from "@/db/work-orders";
@@ -77,104 +77,114 @@ export function WorkOrdersGroup({
       {/* Unlabelled shells: the group's row label is its one heading. The
           pieces come first and the tickets under them, each ticket led by its
           number, which is what tells the two lists apart. */}
-      <InsetGroup bodyAs="ul">
-        {pieces.length === 0 ? (
-          <LedgerRow as="li">
-            <span className="text-muted">{t("workOrders.diver.gearEmpty")}</span>
-          </LedgerRow>
-        ) : (
-          pieces.map((piece) => (
-            <LedgerRow
-              as="li"
-              key={piece.id}
-              trailing={
-                <form action={deleteCustomerGearItemAction}>
-                  <input type="hidden" name="customerGearItemId" value={piece.id} />
-                  <input type="hidden" name="personId" value={personId} />
-                  <input type="hidden" name="returnTo" value="diver" />
-                  <SubmitButton
-                    pendingLabel={t("workOrders.diver.deletingPiece")}
-                    className={buttonClass({ variant: "ghost", size: "sm" })}
-                    ariaLabel={t("workOrders.diver.deletePiece", {
-                      label: gearItemKindLabel(t, piece.kind),
-                    })}
-                  >
-                    {t("workOrders.diver.deletePieceShort")}
-                  </SubmitButton>
-                </form>
-              }
-            >
-              <span className="flex min-w-0 flex-col gap-1">
-                <span className="font-medium">{gearItemKindLabel(t, piece.kind)}</span>
-                <span className="text-muted text-xs">
-                  {[piece.brandModel, piece.serialNumber, ...pieceDueLine(piece, locale, t)]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </span>
-                {reminders.has(piece.id) ? (
-                  <ServiceReminderToggle
-                    customerGearItemId={piece.id}
-                    personId={personId}
-                    pieceLabel={gearItemKindLabel(t, piece.kind)}
-                    state={reminders.get(piece.id) ?? { off: false, lastSentAt: null }}
-                    locale={locale}
-                    timezone={timezone}
-                    t={t}
-                  />
-                ) : null}
-              </span>
+      <section aria-labelledby="owned-gear-heading" className="space-y-3">
+        <h3 id="owned-gear-heading" className="font-medium text-sm text-muted">
+          {t("workOrders.diver.gearHeading")}
+        </h3>
+        <ul className="grid gap-x-8 sm:grid-cols-2">
+          {pieces.length === 0 ? (
+            <LedgerRow as="li">
+              <span className="text-muted">{t("workOrders.diver.gearEmpty")}</span>
             </LedgerRow>
-          ))
-        )}
-      </InsetGroup>
-
-      <InsetGroup bodyAs="ul" className="mt-6">
-        {orders.length === 0 ? (
-          <LedgerRow as="li">
-            <span className="text-muted">{t("workOrders.diver.ordersEmpty")}</span>
-          </LedgerRow>
-        ) : (
-          orders.map((order) => (
-            <LedgerRow
-              as="li"
-              key={order.id}
-              href={shopPath(shopSlug, "gear", "work-orders", order.id)}
-              linkLabel={t("workOrders.diver.orderLink", {
-                number: order.number,
-                problem: order.reportedProblem,
-              })}
-              trailing={
-                <Badge tone={workOrderStatusTone(order.status)}>
-                  {workOrderStatusLabel(t, order.status)}
-                </Badge>
-              }
-            >
-              <span className="flex min-w-0 flex-col gap-1">
-                <span className="font-medium">
-                  <span className="text-muted tabular-nums">
-                    {t("workOrders.number", { number: order.number })}
-                  </span>{" "}
-                  {order.reportedProblem}
-                </span>
-                {order.promisedOn ? (
+          ) : (
+            pieces.map((piece) => (
+              <LedgerRow
+                as="li"
+                key={piece.id}
+                trailing={
+                  <form action={deleteCustomerGearItemAction}>
+                    <input type="hidden" name="customerGearItemId" value={piece.id} />
+                    <input type="hidden" name="personId" value={personId} />
+                    <input type="hidden" name="returnTo" value="diver" />
+                    <SubmitButton
+                      pendingLabel={t("workOrders.diver.deletingPiece")}
+                      className={buttonClass({ variant: "ghost", size: "sm" })}
+                      ariaLabel={t("workOrders.diver.deletePiece", {
+                        label: gearItemKindLabel(t, piece.kind),
+                      })}
+                    >
+                      {t("workOrders.diver.deletePieceShort")}
+                    </SubmitButton>
+                  </form>
+                }
+              >
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span className="font-medium">{gearItemKindLabel(t, piece.kind)}</span>
                   <span className="text-muted text-xs">
-                    {t("workOrders.board.promised", {
-                      date: formatCalendarDate(order.promisedOn, locale),
-                    })}
+                    {[piece.brandModel, piece.serialNumber, ...pieceDueLine(piece, locale, t)]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
-                ) : null}
-              </span>
+                  {reminders.has(piece.id) ? (
+                    <ServiceReminderToggle
+                      customerGearItemId={piece.id}
+                      personId={personId}
+                      pieceLabel={gearItemKindLabel(t, piece.kind)}
+                      state={reminders.get(piece.id) ?? { off: false, lastSentAt: null }}
+                      locale={locale}
+                      timezone={timezone}
+                      t={t}
+                    />
+                  ) : null}
+                </span>
+              </LedgerRow>
+            ))
+          )}
+        </ul>
+      </section>
+
+      <section aria-labelledby="gear-service-heading" className="mt-8 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 id="gear-service-heading" className="font-medium text-sm text-muted">
+            {t("workOrders.diver.ordersHeading")}
+          </h3>
+          <Link href={newOrderHref} className={buttonClass({ variant: "secondary", size: "sm" })}>
+            {t("workOrders.diver.newOrder")}
+          </Link>
+        </div>
+        <ul>
+          {orders.length === 0 ? (
+            <LedgerRow as="li">
+              <span className="text-muted">{t("workOrders.diver.ordersEmpty")}</span>
             </LedgerRow>
-          ))
-        )}
-      </InsetGroup>
+          ) : (
+            orders.map((order) => (
+              <LedgerRow
+                as="li"
+                key={order.id}
+                href={shopPath(shopSlug, "gear", "work-orders", order.id)}
+                linkLabel={t("workOrders.diver.orderLink", {
+                  number: order.number,
+                  problem: order.reportedProblem,
+                })}
+                trailing={
+                  <Badge tone={workOrderStatusTone(order.status)}>
+                    {workOrderStatusLabel(t, order.status)}
+                  </Badge>
+                }
+              >
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span className="font-medium">
+                    <span className="text-muted tabular-nums">
+                      {t("workOrders.number", { number: order.number })}
+                    </span>{" "}
+                    {order.reportedProblem}
+                  </span>
+                  {order.promisedOn ? (
+                    <span className="text-muted text-xs">
+                      {t("workOrders.board.promised", {
+                        date: formatCalendarDate(order.promisedOn, locale),
+                      })}
+                    </span>
+                  ) : null}
+                </span>
+              </LedgerRow>
+            ))
+          )}
+        </ul>
+      </section>
 
       <DiverFormStatus status={status} className="mt-4" />
-      <p className="mt-4">
-        <Link href={newOrderHref} className={buttonClass({ variant: "secondary", size: "sm" })}>
-          {t("workOrders.diver.newOrder")}
-        </Link>
-      </p>
     </DiverFileGroupDisclosure>
   );
 }

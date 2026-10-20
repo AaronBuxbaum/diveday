@@ -55,6 +55,27 @@
       "pointer": "src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.tsx, the comment on the link's min-w-0 wrapper; docs/design/settled-questions.md"
     },
     {
+      "check": "truncated",
+      "signature": "p.truncate",
+      "container": "li.border-border border-t flex gap-3 has-[a:focus-visible]:bg-surface-sunken/60 hover:bg-surface-sunken/60 items-center last:border-b max-sm:flex-wrap max-sm:gap-y-1 max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-5 min-h-13 pressable-row px-2 py-3 relative sm:items-baseline sm:py-4",
+      "reason": "An inbox row's one-line excerpt previews the diver's message; the full message is on their record one tap away.",
+      "pointer": "src/app/shop/[shopSlug]/inbox/_components/InboxRow.tsx, the wordsCut comment; docs/design/settled-questions.md"
+    },
+    {
+      "check": "truncated",
+      "signature": "p.text-muted text-sm truncate",
+      "container": "li.border-border border-t flex gap-3 has-[a:focus-visible]:bg-surface-sunken/60 hover:bg-surface-sunken/60 items-center last:border-b max-sm:flex-wrap max-sm:gap-y-1 max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-5 min-h-13 pressable-row px-2 py-3 relative sm:items-baseline sm:py-4",
+      "reason": "An inbox row's one-line excerpt previews the diver's message; the full message is on their record one tap away.",
+      "pointer": "src/app/shop/[shopSlug]/inbox/_components/InboxRow.tsx, the wordsCut comment; docs/design/settled-questions.md"
+    },
+    {
+      "check": "ragged-edges",
+      "signature": "div.space-y-10",
+      "container": "main.px-4 py-8 sm:px-6 sm:py-10",
+      "reason": "The disclosure rule bleeds into the ledger's 8px room while its content is inset back to the shared column edge.",
+      "pointer": "src/app/shop/[shopSlug]/divers/[personId]/_components/DiverFileGroupDisclosure.tsx, the -mx-2 px-2 rule comment; docs/design/settled-questions.md"
+    },
+    {
       "check": "focus-ring-clipped",
       "container": "div.chip-scroller flex gap-2 items-center max-sm:[scrollbar-width:none] max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:scroll-px-6 sm:flex-wrap",
       "reason": "A filter chip that ends within the ring's 5px of the phone row's scrolling edge (\"Wrecks\", 3.6px from it at 390) loses the ring's edge to the row's clip only while the probe forces :focus-visible without focusing. A real focus scrolls the chip into the row's scroll padding (max-sm:scroll-px-6, the edge fade plus the ring's reach), clear of the edge. The ring's room above and below is padding FilterChips.test.tsx pins.",

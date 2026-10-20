@@ -111,7 +111,7 @@ test.describe("staff", () => {
       .getByRole("link", { name: /free-flows/ })
       .first()
       .click();
-    await page.getByRole("link", { name: "Claim tag" }).click();
+    await page.getByRole("link", { name: "Print claim tag" }).click();
 
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "What we have" })).toBeVisible();
@@ -142,6 +142,8 @@ test.describe("staff", () => {
     // A file group like the others on the record, opened the way the rest of
     // the diver specs open one.
     await openDiverFileGroup(page, "Their own gear");
+    await expect(page.getByRole("heading", { name: "Gear on file" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Service history" })).toBeVisible();
     await expect(page.getByRole("link", { name: /Inflator sticks open/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "New work order" })).toBeVisible();
   });

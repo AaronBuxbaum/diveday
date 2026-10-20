@@ -416,9 +416,9 @@ describe("every settings mutation refuses the daily crew", () => {
     const page = `/shop/${shop.slug}/settings/rentals?notice=`;
     const first = new FormData();
     first.set("drysuit", "on");
-    first.set("maskFins", "on");
+    first.set("fins", "on");
     first.set("price_drysuit", "40");
-    first.set("price_maskFins", "5");
+    first.set("price_fins", "5");
     first.set("setPrice", "60");
     first.set("rentalTerms", "Rinse it.");
     first.set("regulatorServiceMonths", "24");
@@ -433,13 +433,13 @@ describe("every settings mutation refuses the daily crew", () => {
     const second = new FormData();
     second.set("drysuit", "on");
     second.set("price_drysuit", "45");
-    second.set("price_maskFins", "999");
+    second.set("price_fins", "999");
     second.set("setPrice", "60");
     second.set("regulatorServiceMonths", "24");
     expect(await redirectedTo(() => saveRentalsAction(second))).toBe(`${page}rentals-saved`);
     const after = await getShopById(db, shop.id);
     expect(after?.rentalPricing.perItemCents.drysuit).toBe(4500);
-    expect(after?.rentalPricing.perItemCents.mask_fins).toBe(500);
+    expect(after?.rentalPricing.perItemCents.fins).toBe(500);
     expect(after?.rentalTerms).toBeNull();
   });
 

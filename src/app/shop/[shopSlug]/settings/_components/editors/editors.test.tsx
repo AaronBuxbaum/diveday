@@ -198,9 +198,13 @@ describe("the emergency reference editor", () => {
     return EmergencyReferenceForm({ shop, t, locale: "en-US" });
   }
 
-  it("leaves what it is for to the page's description", async () => {
+  it("omits the removed emergency-reference explanation", async () => {
     const paragraphs = findElements<{ children?: unknown }>(await emergencyForm(), "p");
-    expect(paragraphs.filter((p) => p.props.children === EMERGENCY.intro)).toHaveLength(0);
+    expect(
+      paragraphs.filter((p) =>
+        String(p.props.children).includes("These ride on the boat manifest"),
+      ),
+    ).toHaveLength(0);
   });
 
   /** One Save at the default 48px with 16px, in `FieldActions` (K-308). */
@@ -351,7 +355,7 @@ describe("the Rentals form", () => {
     const html = renderToStaticMarkup(<RentalsForm shop={shop} t={t} locale="en-US" />);
     expect(html).toContain('name="setPrice"');
     expect(html).toContain('name="nitroxPrice"');
-    expect(html).toContain('name="price_maskFins"');
+    expect(html).toContain('name="price_fins"');
     expect(html).toContain('name="rentalTerms"');
     expect(html).toContain('name="regulatorServiceMonths"');
     // One form, one save.

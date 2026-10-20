@@ -99,6 +99,7 @@
     "answerGone": "That saved answer is no longer there."
   },
   "savedAnswers": {
+    "openDiver": "Choose a diver to save an answer",
     "heading": "Saved answers",
     "empty": "Send a reply from a diver’s record and choose Save this answer. It shows up here, and above every reply box.",
     "markersHint": "'{name}' becomes the diver’s first name, and '{trip}' the departure they are booked on next.",
