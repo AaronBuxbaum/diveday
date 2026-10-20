@@ -1381,7 +1381,11 @@
     "page": {
       "departuresHeading": "Próximas salidas aquí",
       "jumpToDepartures": "Ver las fechas",
-      "noDepartures": "No hay salidas a este sitio en el calendario por ahora"
+      "noDepartures": "No hay salidas a este sitio en el calendario por ahora",
+      "snorkelSuitable": "Apto para snorkel",
+      "snorkelNotSuitable": "No apto para snorkel",
+      "expectedBottomTime": "{minutes, plural, one {# minuto} other {# minutos}} de tiempo de fondo",
+      "requirements": "Requisitos: {list}."
     },
     "terrainMapTitle": "Mapa del terreno de {site}",
     "mapUnavailable": "El mapa de {site} no se está cargando.",

@@ -38,11 +38,11 @@ export function SiteLibraryLayout({
   }
 
   return (
-    <div className="mt-6 flex flex-col gap-6 xl:grid xl:grid-cols-12 xl:items-start xl:gap-8">
+    <div className="mt-6 flex flex-col gap-8">
       {/* Primary Map View */}
-      <div className="xl:col-span-7">
-        <div className="sticky top-(--chrome-h) overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-          <div className="h-[360px] w-full sm:h-[460px] xl:h-[620px]">
+      <div className="w-full">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+          <div className="h-[440px] w-full sm:h-[540px] lg:h-[620px]">
             <LazySiteMap
               center={defaultCenter}
               zoom={11}
@@ -57,7 +57,7 @@ export function SiteLibraryLayout({
       </div>
 
       {/* Companion Ledger */}
-      <div className="min-w-0 xl:col-span-5">{children}</div>
+      <div className="min-w-0 w-full">{children}</div>
     </div>
   );
 }
