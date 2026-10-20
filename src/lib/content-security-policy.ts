@@ -179,6 +179,15 @@ function mediaRegionalImageHosts(region: string | null | undefined): string[] {
 const MAP_FRAME_HOSTS = ["https://maps.google.com", "https://www.google.com"];
 
 /**
+ * Public tile servers used by client map views (ADR 20261019-map-centric-dive-sites).
+ * CARTO Positron / Voyager raster basemap tiles, plus OpenStreetMap fallbacks.
+ */
+const MAP_TILE_IMAGE_HOSTS = [
+  "https://*.basemaps.cartocdn.com",
+  "https://*.tile.openstreetmap.org",
+];
+
+/**
  * The images the route maps may read from a frame host: each probe URL itself,
  * path and all, so an injected `<img>` to any other path on those origins is
  * still a violation (#2441: one per host the embed needs).
@@ -372,6 +381,7 @@ export function enforcedPolicy(options: CspOptions): string {
         // The one-pixel reads the route maps make before showing their frame
         // (`MAP_REACHABILITY_PROBES`, src/lib/maps.ts): frame hosts already.
         ...MAP_PROBE_IMAGE_SOURCES,
+        ...MAP_TILE_IMAGE_HOSTS,
       ],
     ],
     ["font-src", ["'self'", GOOGLE_FONTS_FILE_HOST]],
