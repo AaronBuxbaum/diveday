@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ToastShell } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
@@ -74,9 +75,7 @@ export function UndoToast({
           className: "focus-visible:focus-ring-inset",
         })}
       >
-        <span aria-hidden="true" className="text-xl leading-none">
-          ×
-        </span>
+        <DiveDayIcon name="close" />
       </button>
     </ToastShell>
   );
