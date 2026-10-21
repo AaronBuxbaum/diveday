@@ -64,8 +64,39 @@ test.describe("ask to move", () => {
     await row.getByRole("combobox").selectOption("paid");
     // The Paid mark asks how the money came in (batch 6 item 1, H-119).
     await row.getByRole("radio", { name: "Cash" }).check();
-    await row.getByRole("button", { name: "Update" }).click();
-    await expect(row.getByText("Payment: Paid")).toBeVisible();
+    const paymentPath = new URL(tripUrl).pathname;
+    const paymentStarted = Promise.withResolvers<void>();
+    const releasePayment = Promise.withResolvers<void>();
+    const matchesPaymentPath = (url: URL) => url.pathname === paymentPath;
+    let pendingPayment: Promise<void> | undefined;
+    await page.route(matchesPaymentPath, async (route) => {
+      const request = route.request();
+      if (request.method() === "POST" && request.headers()["next-action"]) {
+        pendingPayment = releasePayment.promise.then(() => route.continue());
+        paymentStarted.resolve();
+        await pendingPayment;
+        return;
+      }
+      await route.continue();
+    });
+    try {
+      await row.getByRole("button", { name: "Update" }).click();
+      await paymentStarted.promise;
+      // The real request is still held: this label is optimistic, not a receipt.
+      await expect(row.getByText("Payment: Paid")).toBeVisible();
+      const paymentSaved = page.waitForURL(
+        (url) => url.pathname === paymentPath && url.searchParams.get("notice") === "payment",
+      );
+      releasePayment.resolve();
+      await paymentSaved;
+    } finally {
+      releasePayment.resolve();
+      try {
+        await pendingPayment;
+      } finally {
+        await page.unroute(matchesPaymentPath);
+      }
+    }
 
     await page.goto(readyUrl);
     await expect(page.getByText(/Can’t make this date\? Ask .+ to move you/)).toBeVisible();

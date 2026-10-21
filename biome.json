@@ -22,49 +22,39 @@
         "noUnusedVariables": "error",
         "noUnusedImports": "error"
       },
+      "complexity": {
+        "useMathMinMax": "off"
+      },
+      "performance": {
+        "useDomNodeTextContent": "off"
+      },
       "a11y": {
         "useButtonType": "error"
       }
     },
     "domains": {
       "next": "recommended",
-      "playwright": "recommended",
       "react": "recommended",
-      "test": "recommended"
+      "test": "recommended",
+      "playwright": "none"
     }
   },
   "overrides": [
     {
       "includes": [
-        "**",
-        "!e2e/**",
-        "!scripts/persona-bots/**",
-        "!scripts/simulate-day/**",
-        "!scripts/capture-session.mjs",
-        "!scripts/contact-sheet.mjs",
-        "!scripts/screenshot.mjs",
-        "!scripts/pixel-probe/collect.mjs",
-        "!scripts/pixel-probe/probe.mjs",
-        "!scripts/pixel-probe/states.mjs"
+        "e2e/**",
+        "scripts/simulate-day/**",
+        "scripts/persona-bots/**",
+        "scripts/capture-session.mjs",
+        "scripts/contact-sheet.mjs",
+        "scripts/screenshot.mjs",
+        "scripts/pixel-probe/collect.mjs",
+        "scripts/pixel-probe/probe.mjs",
+        "scripts/pixel-probe/states.mjs"
       ],
       "linter": {
         "domains": {
-          "playwright": "none"
-        }
-      }
-    },
-    {
-      "includes": [
-        "**/*.test.ts",
-        "**/*.test.tsx",
-        "**/*.test.mjs",
-        "src/db/request-cache-scope.probe.mjs"
-      ],
-      "linter": {
-        "rules": {
-          "correctness": {
-            "noComponentHookFactories": "off"
-          }
+          "playwright": "recommended"
         }
       }
     },
@@ -82,11 +72,20 @@
       }
     },
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.mjs", ".agents/**"],
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test.mjs",
+        ".agents/**",
+        "**/*.probe.mjs"
+      ],
       "linter": {
         "rules": {
           "suspicious": {
             "noTemplateCurlyInString": "off"
+          },
+          "correctness": {
+            "noComponentHookFactories": "off"
           }
         }
       }

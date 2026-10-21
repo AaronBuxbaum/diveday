@@ -45,6 +45,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Specs this selector never picks: the capture run is `visual-affected.mjs --grep`'s. */
 const NEVER = new Set(["e2e/visual.spec.ts"]);
+const MOBILE_SPEC = /(?:^|\/)mobile[^/]*\.spec\.ts$/;
 
 /**
  * Specs that test a tool rather than a page, run only when what they test changed (ci.yml's
@@ -96,7 +97,7 @@ const SOURCE_EXT = /\.(?:ts|tsx|mts|mjs|js|jsx)$/;
 const TEST_FILE = /\.test\.(?:ts|tsx|mjs)$/;
 
 /**
- * The branch this one is stacked on: the remote `claude/*` ref HEAD contains that is furthest
+ * The branch this one is stacked on: the remote branch HEAD contains that is furthest
  * from `origin/main` (the nearest layer below), excluding this branch's own remote. A layer that
  * merges the one below holds it through a second parent, so "contains", not first-parent.
  * Falls back to `origin/main`; null only when git cannot answer at all.
@@ -107,16 +108,12 @@ export function stackBase(git) {
   const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
   const own = branch && branch !== "HEAD" ? `origin/${branch}` : null;
   const listed =
-    git([
-      "for-each-ref",
-      "--format=%(refname:short)",
-      "--merged",
-      "HEAD",
-      "refs/remotes/origin/claude",
-    ]) ?? "";
+    git(["for-each-ref", "--format=%(refname:short)", "--merged", "HEAD", "refs/remotes/origin"]) ??
+    "";
   let best = null;
   for (const ref of listed.split("\n").filter(Boolean)) {
-    if (ref === own) continue;
+    if (ref === own || ref === "origin/main" || ref === "origin/HEAD") continue;
+    if (git(["rev-parse", ref]) === head) continue;
     const ahead = Number(git(["rev-list", "--count", `origin/main..${ref}`]));
     if (!Number.isFinite(ahead) || ahead === 0) continue;
     if (!best || ahead > best.ahead) best = { ref, ahead };
@@ -295,7 +292,7 @@ export function readSpecs(root = ROOT) {
     for (const entry of readdirSync(path.join(root, dir), { withFileTypes: true })) {
       const rel = `${dir}/${entry.name}`;
       if (entry.isDirectory()) walk(rel);
-      else if (rel.endsWith(".spec.ts") && !NEVER.has(rel)) {
+      else if (rel.endsWith(".spec.ts") && !NEVER.has(rel) && !MOBILE_SPEC.test(rel)) {
         specs.set(rel, readFileSync(path.join(root, rel), "utf8"));
       }
     }
@@ -390,7 +387,7 @@ export function selectSpecs({ changed, diff, specs, graph, modules, lines }) {
   const reach = new Map();
   const rank = new Map();
   const note = (map, spec, why) => {
-    if (NEVER.has(spec) || !specs.has(spec)) return;
+    if (NEVER.has(spec) || MOBILE_SPEC.test(spec) || !specs.has(spec)) return;
     if (!map.has(spec)) map.set(spec, new Set());
     map.get(spec).add(why);
   };
@@ -618,7 +615,13 @@ const APP_CHANGE = /^src\/(?!.*\.test\.[^/]+$)|^e2e\/(?:fixtures|helpers|servers
  *
  * A diff that changes the app also runs the {@link SMOKE} tests, as strong `file:line` picks.
  */
-export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root) } = {}) {
+export function changedDiff({
+  root = ROOT,
+  base,
+  commit,
+  workingTree = false,
+  git = gitReader(root),
+} = {}) {
   let from;
   let to = "HEAD";
   let label;
@@ -633,7 +636,18 @@ export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root)
     label = ref;
   }
   if (!from) return null;
-  const names = (git(["diff", "--name-only", from, to]) ?? "").split("\n").filter(Boolean);
+  const listed = git(["diff", "--name-only", from, ...(workingTree ? [] : [to])]);
+  if (listed === null) return null;
+  const untracked = workingTree ? git(["ls-files", "--others", "--exclude-standard"]) : "";
+  if (untracked === null) return null;
+  const names = [...new Set(`${listed}\n${untracked}`.split("\n").filter(Boolean))];
+  return { base: label, changed: names, from, to };
+}
+
+export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root) } = {}) {
+  const diff = changedDiff({ root, base, commit, git });
+  if (!diff) return null;
+  const { from, to, base: label, changed: names } = diff;
   const diffText = git(["diff", "-U0", "--no-color", from, to, "--", "src", "e2e"]) ?? "";
   const specs = readSpecs(root);
   const selection = selectSpecs({

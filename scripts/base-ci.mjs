@@ -151,6 +151,15 @@ export function readBaseVerdict(sha, { repo, gh = ghJson } = {}) {
  * files and specs are added to the run either way, so a stamp means they passed here.
  */
 export function baseDecision(verdict, { base, extra = [] }) {
+  const unsupported = extra.filter((file) => !UNIT_FILE.test(file) && !SPEC_FILE.test(file));
+  if (unsupported.length > 0) {
+    return {
+      refuse: `unsupported --base-red input: ${unsupported.map((file) => JSON.stringify(file)).join(" ")}. Name whole unit test files or e2e/*.spec.ts files; line selectors are not supported.`,
+      files: [],
+      specs: [],
+      lines: [],
+    };
+  }
   if (verdict.unknown) {
     return {
       refuse: null,
@@ -201,5 +210,7 @@ export function baseRedArgs(argv = process.argv.slice(2)) {
   if (at === -1) return [];
   const rest = argv.slice(at + 1);
   const end = rest.findIndex((arg) => arg.startsWith("--"));
-  return end === -1 ? rest : rest.slice(0, end);
+  const files = end === -1 ? rest : rest.slice(0, end);
+  if (files.length === 0) throw new Error("--base-red requires at least one whole test-file path");
+  return files;
 }

@@ -6,7 +6,7 @@ import { nowDate, nowMs } from "@/lib/clock";
 import { openSecret, secretKeyFingerprint, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { hasRequiredStepUp } from "@/lib/security-step-up";
 import { recoveryCodeHashes, TOTP_STEP_SECONDS, totpCode } from "@/lib/totp";
-import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   beginTotpEnrollment,
   enableTotp,
@@ -19,9 +19,8 @@ import {
 import { accountSecurity, accountSessions, userAccounts } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test
-// (src/test/db.ts, `fileScopedShopContext`). The one race below hydrates its
-// own, so the two racing calls are not interleaved savepoints of one
-// transaction.
+// (src/test/db.ts, `fileScopedShopContext`). Sequential contracts live here;
+// independent-session contention is proven by account-security.postgres.test.ts.
 const ctx = fileScopedShopContext();
 
 function sealingKey() {
@@ -45,8 +44,8 @@ async function enrolledEarlier(db: Awaited<ReturnType<typeof seededAccount>>["db
   return started;
 }
 
-async function seededAccount({ fresh = false } = {}) {
-  const { db, shop } = fresh ? await seededShopContext() : ctx;
+async function seededAccount() {
+  const { db, shop } = ctx;
   const [account] = await db
     .select({ id: userAccounts.id, personId: userAccounts.personId })
     .from(userAccounts)
@@ -57,7 +56,7 @@ async function seededAccount({ fresh = false } = {}) {
 
 describe("account-security recovery codes", () => {
   it("allows a recovery code to be consumed only once", async () => {
-    const { db, account } = await seededAccount({ fresh: true });
+    const { db, account } = await seededAccount();
     const code = "ABCD234567";
     await db.insert(accountSecurity).values({
       userAccountId: account.id,
@@ -65,12 +64,8 @@ describe("account-security recovery codes", () => {
       recoveryCodeHashes: recoveryCodeHashes([code], sealingKey(), account.id),
     });
 
-    const results = await Promise.all([
-      verifyAccountSecondFactor(db, account.id, code),
-      verifyAccountSecondFactor(db, account.id, code),
-    ]);
-
-    expect(results.filter(Boolean)).toHaveLength(1);
+    expect(await verifyAccountSecondFactor(db, account.id, code)).toBe(true);
+    expect(await verifyAccountSecondFactor(db, account.id, code)).toBe(false);
     expect((await getAccountSecurity(db, account.id))?.recoveryCodeHashes).toEqual([]);
     expect(
       await db

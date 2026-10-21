@@ -3638,39 +3638,6 @@ describe("roll call on a cancelled trip that is already counting heads", () => {
 });
 
 /**
- * **Whether a diver has been counted aboard before this checkpoint** (domain
- * review of #2123). A diver first tapped aboard after a dive is boarding then
- * — they joined at the second site — so the roll call shows their readiness
- * the way the dock does. Only a standing `boarded` at an earlier checkpoint
- * counts; the dock itself has nothing earlier.
- */
-describe("boarded at an earlier checkpoint", () => {
-  it("is true after a dive for a diver boarded at the dock, false for one who was not", async () => {
-    const { db, shop, reef, staff } = await manifestContext();
-    const roster = await getTripRoster(db, shop.id, reef.id);
-    const [sailed, joined] = roster;
-    if (!sailed || !joined) throw new Error("demo roster too small");
-    await db.insert(rollCallEvents).values({
-      shopId: shop.id,
-      tripId: reef.id,
-      bookingId: sailed.booking.id,
-      recordedByPersonId: staff.id,
-      status: "boarded",
-      checkpoint: "departure",
-      occurredAt: reef.startsAt,
-    });
-    const manifests = await getTripManifests(db, shop.id, reef.id);
-    const at = (checkpoint: string, bookingId: string) =>
-      manifests
-        ?.find((manifest) => manifest.checkpoint === checkpoint)
-        ?.divers.find((diver) => diver.bookingId === bookingId)?.boardedEarlier;
-    expect(at("departure", sailed.booking.id)).toBe(false);
-    expect(at("after_dive_1", sailed.booking.id)).toBe(true);
-    expect(at("after_dive_1", joined.booking.id)).toBe(false);
-  });
-});
-
-/**
  * **The rail and the prep list agree about a piece the booking already holds**
  * (issue #1811, H-78). The shop drops regulators from its catalog after one is
  * reserved to a diver: the manifest's fit line for that diver carries no

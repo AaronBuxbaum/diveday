@@ -477,14 +477,17 @@ jobs:
           if [ "$status" -eq 0 ]; then
             exit 0
           fi
-          if ! grep -q "wedged, not slow" shard.log; then
+          cp e2e-durations/results.json e2e-durations/first-attempt.json
+          if ! node scripts/e2e-retry-policy.mjs e2e-durations/first-attempt.json; then
             exit 1
           fi
-          echo "::warning title=Renderer wedge detected::A failed test's browser activity carries the renderer probe's 'wedged, not slow' verdict (the known unattributed Chromium hang). Rerunning only this shard's failed tests once; any other failure stays red. The wedge is logged above."
-          cp e2e-durations/results.json e2e-durations/first-attempt.json
+          echo "::warning title=Renderer wedge detected::Every first-attempt failure has structured wedge evidence; rerunning failed tests once. Mixed or unknown failures remain red."
+          if [ -d test-results ]; then cp -R test-results e2e-durations/first-attempt-results; fi
           rerun=0
           pnpm exec playwright test --last-failed || rerun=$?
-          mv e2e-durations/first-attempt.json e2e-durations/results.json
+          cp e2e-durations/results.json e2e-durations/retry-attempt.json
+          if [ -d test-results ]; then cp -R test-results e2e-durations/retry-attempt-results; fi
+          cp e2e-durations/first-attempt.json e2e-durations/results.json
           exit "$rerun"
         # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
         # cores) was pinned to E2E_WORKERS=1 with double the shards
@@ -548,6 +551,13 @@ jobs:
         # not the 7.5 min estimated above: the recorded durations undercount
         # the specs added since they were seeded. Refresh them from this run
         # before dealing a seventh bin.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: playwright-attempts-${{ matrix.shard }}
+          path: e2e-durations/*attempt*
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
@@ -741,12 +751,18 @@ jobs:
           if [ "$status" -eq 0 ]; then
             exit 0
           fi
-          if grep -q "wedged, not slow" capture.log; then
-            echo "::warning title=Renderer wedge detected::The capture failure carries the renderer probe's 'wedged, not slow' verdict (the known unattributed Chromium hang) — rerunning only the failed captures once. If the rerun is green, the run is honest: every surface was captured; the wedge is logged above."
-            pnpm exec playwright test e2e/visual.spec.ts --last-failed
-          else
+          cp e2e-durations/results.json e2e-durations/first-attempt.json
+          if ! node scripts/e2e-retry-policy.mjs e2e-durations/first-attempt.json; then
             exit 1
           fi
+          echo "::warning title=Renderer wedge detected::Every first-attempt failure has structured wedge evidence; rerunning failed captures once."
+          if [ -d test-results ]; then cp -R test-results e2e-durations/first-attempt-results; fi
+          rerun=0
+          pnpm exec playwright test e2e/visual.spec.ts --last-failed || rerun=$?
+          cp e2e-durations/results.json e2e-durations/retry-attempt.json
+          if [ -d test-results ]; then cp -R test-results e2e-durations/retry-attempt-results; fi
+          cp e2e-durations/first-attempt.json e2e-durations/results.json
+          exit "$rerun"
         env:
           # Each shard is its own runner, and pinning to 1 worker keeps that
           # shard's one browser+server pair from competing with a second for
@@ -761,6 +777,13 @@ jobs:
           # that test's sequential captures, not something this env var
           # addresses.
           E2E_WORKERS: "1"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: visual-attempts-${{ matrix.shard }}
+          path: e2e-durations/*attempt*
+          if-no-files-found: ignore
+          retention-days: 7
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
