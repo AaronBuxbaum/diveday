@@ -534,7 +534,11 @@
       "shoreAlertDemo": "Demo shops send nothing: no link and no alerts.",
       "planLabel": "If something goes wrong",
       "submit": "Save emergency reference",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "addContact": "Add contact",
+      "responseHeading": "Response plan",
+      "alertHeading": "Roll-call alerts",
+      "noContacts": "No emergency numbers yet."
     },
     "divePackages": {
       "heading": "Dive packages",
@@ -551,7 +555,9 @@
       "submitting": "Adding…",
       "delete": "Delete",
       "deleting": "Deleting…",
-      "owed": "Dives owed on packages: {dives, number} ({value})"
+      "owed": "Dives owed on packages: {dives, number} ({value})",
+      "createTitle": "Add package",
+      "empty": "No packages for sale yet."
     },
     "yourData": {
       "heading": "Export, import, backups and integrations"
@@ -669,7 +675,8 @@
       "duplicateLabel": "That line is already on the list.",
       "notAuthorized": "You don’t have permission to change this.",
       "moveRefused": "That didn’t move. Try it again."
-    }
+    },
+    "addTitle": "Add a line"
   },
   "export": {
     "downloadButton": {

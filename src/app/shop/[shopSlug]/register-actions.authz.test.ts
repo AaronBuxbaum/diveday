@@ -37,7 +37,7 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { createBoatAction, deleteBoatAction } = await import("./boats/actions");
+const { createBoatAction, deleteBoatAction, updateBoatAction } = await import("./boats/actions");
 const { createTripLensAction } = await import("./trip-tags/actions");
 
 async function signedInAs(email: string) {
@@ -58,6 +58,49 @@ function boatForm(name: string) {
 }
 
 describe("the boats register's gate", () => {
+  it.each([
+    { field: "workingChannel", value: "16", notice: "boat-channel-distress" },
+    { field: "mmsi", value: "123", notice: "boat-radio-invalid" },
+    { field: "capacity", value: "0", notice: "boat-invalid" },
+  ])(
+    "returns a refused $field creation to the new boat editor",
+    async ({ field, value, notice }) => {
+      const { db, shop } = await signedInAs(SEEDED_OWNER_EMAIL);
+      const before = await listBoats(db, shop.id);
+      const form = boatForm("Second Wind");
+      form.set(field, value);
+
+      const to = new URL(
+        await redirectedTo(() => createBoatAction(form)),
+        "https://diveday.example",
+      );
+      expect(to.searchParams.get("notice")).toBe(notice);
+      expect(to.searchParams.get("boat")).toBe("new");
+      expect(to.hash).toBe("#boat-new");
+      expect(await listBoats(db, shop.id)).toEqual(before);
+    },
+  );
+
+  it.each([
+    { field: "workingChannel", value: "16", notice: "boat-channel-distress" },
+    { field: "mmsi", value: "123", notice: "boat-radio-invalid" },
+    { field: "capacity", value: "0", notice: "boat-invalid" },
+  ])("returns a refused $field edit to its own boat editor", async ({ field, value, notice }) => {
+    const { db, shop } = await signedInAs(SEEDED_OWNER_EMAIL);
+    const before = await listBoats(db, shop.id);
+    const boat = before[0];
+    if (!boat) throw new Error("seed boat missing");
+    const form = boatForm(boat.name);
+    form.set("boatId", boat.id);
+    form.set(field, value);
+
+    const to = new URL(await redirectedTo(() => updateBoatAction(form)), "https://diveday.example");
+    expect(to.searchParams.get("notice")).toBe(notice);
+    expect(to.searchParams.get("boat")).toBe(boat.id);
+    expect(to.hash).toBe(`#boat-${boat.id}`);
+    expect(await listBoats(db, shop.id)).toEqual(before);
+  });
+
   it("refuses a captain's hand-made post and leaves the fleet as it was", async () => {
     const { db, shop } = await signedInAs(SEEDED_CAPTAIN_EMAIL);
     const before = await listBoats(db, shop.id);

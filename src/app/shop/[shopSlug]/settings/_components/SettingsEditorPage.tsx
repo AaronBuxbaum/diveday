@@ -12,8 +12,8 @@ import { settingsPaneClass } from "./settings-pane";
  * `/settings/boats` set and the five editors #1854 moved out of hub rows
  * follow: the eyebrow back to the hub, the page's title, what the setting is
  * for under it, the action's `?notice=` as a banner, and the editor in one
- * card at the hub's width. Each page reads its own shop and words and hands
- * them here; nothing about an editor changes by moving.
+ * card at the hub's width. A collection passes `unframed` and owns its row
+ * groups instead, so their list shells are never nested inside another card.
  */
 export function SettingsEditorPage({
   shopSlug,
@@ -21,6 +21,7 @@ export function SettingsEditorPage({
   title,
   description,
   banner,
+  unframed = false,
   children,
 }: {
   shopSlug: string;
@@ -29,6 +30,8 @@ export function SettingsEditorPage({
   /** What the setting is for, which the hub row showed once it was opened. */
   description?: string;
   banner: { tone: NoticeTone; text: string } | undefined;
+  /** A collection owns its list shells; singleton editors use the default card. */
+  unframed?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -42,7 +45,7 @@ export function SettingsEditorPage({
         descriptionIsCaption
       />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
-      <SectionCard padding="lg">{children}</SectionCard>
+      {unframed ? children : <SectionCard padding="lg">{children}</SectionCard>}
     </main>
   );
 }

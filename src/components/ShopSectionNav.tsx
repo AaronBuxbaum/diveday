@@ -159,7 +159,7 @@ export function ShopSidebar({ root, gates, items, blocked, copy }: NavProps) {
 }
 
 const tabClass =
-  "flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-xs transition-colors";
+  "flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-xs transition-colors focus-visible:focus-ring-inset";
 
 /**
  * The phone's tab bar, below `lg`: Today, Schedule, Divers and Inbox, then
