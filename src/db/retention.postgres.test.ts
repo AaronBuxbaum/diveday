@@ -24,12 +24,22 @@ describePostgres("durable retention reservations", () => {
       initializeRetentionPruneState(pg.connect()),
       initializeRetentionPruneState(pg.connect()),
     ];
-    await waitForLockWaiters(pg.db, 2);
-    await gate.release();
-    await Promise.all(initializers);
-    expect(await pg.db.select().from(retentionPruneState)).toEqual([
-      { id: "weekly", nextTable: TABLES[0] },
-    ]);
+    // Observe rejection immediately, even while the concurrency barrier waits.
+    const settled = Promise.allSettled(initializers);
+    try {
+      await waitForLockWaiters(pg.db, 2);
+      await gate.release();
+      await Promise.all(initializers);
+      expect(await pg.db.select().from(retentionPruneState)).toEqual([
+        { id: "weekly", nextTable: TABLES[0] },
+      ]);
+    } finally {
+      try {
+        await gate.release();
+      } finally {
+        await settled;
+      }
+    }
   });
 
   it("overlapping locked reservations choose successive tables without a lost update", async () => {
@@ -44,12 +54,21 @@ describePostgres("durable retention reservations", () => {
     // alone would pass if the reservation lost its SELECT FOR UPDATE.
     const one = reserveRetentionPruneTable(pg.connect(), pending);
     const two = reserveRetentionPruneTable(pg.connect(), pending);
-    await waitForLockWaiters(pg.db, 2);
-    await gate.release();
-    expect((await Promise.all([one, two])).sort()).toEqual([TABLES[0], TABLES[1]].sort());
-    expect(await pg.db.select().from(retentionPruneState)).toEqual([
-      { id: "weekly", nextTable: TABLES[2] },
-    ]);
+    const settled = Promise.allSettled([one, two]);
+    try {
+      await waitForLockWaiters(pg.db, 2);
+      await gate.release();
+      expect((await Promise.all([one, two])).sort()).toEqual([TABLES[0], TABLES[1]].sort());
+      expect(await pg.db.select().from(retentionPruneState)).toEqual([
+        { id: "weekly", nextTable: TABLES[2] },
+      ]);
+    } finally {
+      try {
+        await gate.release();
+      } finally {
+        await settled;
+      }
+    }
   });
 
   it("wraps and skips arms outside the pending subset", async () => {
@@ -82,19 +101,29 @@ describePostgres("durable retention reservations", () => {
       budgetMs: 10,
       batchLimit: 1,
     });
-    await waitForLockWaiters(pg.db, 1);
-    clock.mockReturnValue(10);
-    // NOWAIT would throw while the state lock was held by the blocked batch.
-    await pg.db.transaction(async (tx) => {
-      const state = await tx.select().from(retentionPruneState).for("update", { noWait: true });
-      expect(state).toEqual([{ id: "weekly", nextTable: TABLES[1] }]);
-    });
-    expect(await reserveRetentionPruneTable(pg.connect(), new Set(TABLES))).toBe(TABLES[1]);
-    await gate.release();
-    expect((await run).totalDeleted).toBe(1);
-    expect(await pg.db.select().from(retentionPruneState)).toEqual([
-      { id: "weekly", nextTable: TABLES[2] },
-    ]);
+    const settled = Promise.allSettled([run]);
+    try {
+      await waitForLockWaiters(pg.db, 1);
+      clock.mockReturnValue(10);
+      // NOWAIT would throw while the state lock was held by the blocked batch.
+      await pg.db.transaction(async (tx) => {
+        const state = await tx.select().from(retentionPruneState).for("update", { noWait: true });
+        expect(state).toEqual([{ id: "weekly", nextTable: TABLES[1] }]);
+      });
+      expect(await reserveRetentionPruneTable(pg.connect(), new Set(TABLES))).toBe(TABLES[1]);
+      await gate.release();
+      expect((await run).totalDeleted).toBe(1);
+      expect(await pg.db.select().from(retentionPruneState)).toEqual([
+        { id: "weekly", nextTable: TABLES[2] },
+      ]);
+    } finally {
+      clock.mockReturnValue(10);
+      try {
+        await gate.release();
+      } finally {
+        await settled;
+      }
+    }
   });
 
   it("a stuck cursor lock fails within the existing bound and admits no deletion", async () => {
