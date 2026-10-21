@@ -160,7 +160,7 @@ export default async function RequestsPage({
         // One rhythm between groups, the page-section spacing every staff
         // surface uses — never a per-section `mt-*` that drifts.
         <div className="space-y-10">
-          {groups.map((group, index) => {
+          {groups.map((group) => {
             const advice = adviseRequests(
               group.entries.map(({ request }) => ({
                 id: request.id,
@@ -209,7 +209,6 @@ export default async function RequestsPage({
                         // One visible act on the page, at the first day a
                         // staffer meets; every day after it offers the same
                         // act at link weight.
-                        prominent: index === 0,
                       }
                     : undefined
                 }

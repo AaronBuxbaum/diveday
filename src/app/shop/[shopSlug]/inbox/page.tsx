@@ -195,6 +195,7 @@ export default async function InboxPage({
       />
 
       <SavedAnswersSection
+        shopSlug={shopSlug}
         answers={savedAnswers}
         deleted={deletedAnswers}
         t={t}

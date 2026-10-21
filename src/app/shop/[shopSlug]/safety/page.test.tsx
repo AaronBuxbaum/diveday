@@ -31,9 +31,19 @@ const SafetyReportPage = (await import("./page")).default;
 function textIn(node: unknown, found: string[] = []): string[] {
   if (typeof node === "string") found.push(node);
   else if (Array.isArray(node)) for (const child of node) textIn(child, found);
-  else if (isValidElement<{ children?: unknown; title?: unknown; "aria-label"?: unknown }>(node)) {
+  else if (
+    isValidElement<{
+      children?: unknown;
+      actions?: unknown;
+      label?: unknown;
+      title?: unknown;
+      "aria-label"?: unknown;
+    }>(node)
+  ) {
     if (typeof node.props.title === "string") found.push(node.props.title);
     if (typeof node.props["aria-label"] === "string") found.push(node.props["aria-label"]);
+    if (typeof node.props.label === "string") found.push(node.props.label);
+    textIn(node.props.actions, found);
     textIn(node.props.children, found);
   }
   return found;
@@ -87,6 +97,8 @@ describe("the Safety page", () => {
     const text = await renderAs([role]);
     expect(text).toContain("Safety");
     expect(text).not.toContain("Money");
+    expect(text).toContain("Print month");
+    expect(text).toContain("Year view");
     expect(text).toContain("What the shop recorded on departures that left this month");
   });
 
@@ -105,6 +117,7 @@ describe("the Safety year", () => {
     const text = await renderAs(["owner"], { year });
     expect(text).toContain("What the shop recorded on the year’s departures that are home.");
     expect(text).toContain(year);
+    expect(text).toContain("Month view");
     expect(text).not.toContain("What the shop recorded on departures that left this month");
     // The year shows the figures alone, so no figure may point at a list below it.
     expect(text).not.toContain("listed below");

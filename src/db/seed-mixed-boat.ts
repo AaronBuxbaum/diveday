@@ -37,14 +37,14 @@ const NOT_DIVING = [
     label: "mara.quint",
     phone: "+13055550198",
     participantType: "snorkeler" as const,
-    maskFins: { fin: "M", boot: "8" },
+    fins: { fin: "M", boot: "8" },
   },
   {
     fullName: "Owen Quint",
     label: "owen.quint",
     phone: "+13055550199",
     participantType: "rider" as const,
-    maskFins: null,
+    fins: null,
   },
 ];
 
@@ -116,17 +116,18 @@ export async function seedMixedBoat(
       ...paperRelease(signedAt, recordedById, guest.fullName),
     });
 
-    if (guest.maskFins) {
+    if (guest.fins) {
       await db.insert(rentalFitProfiles).values({
         shopId,
         personId: person.id,
         rentsBcd: false,
         rentsRegulator: false,
         rentsWetsuit: false,
-        rentsMaskFins: true,
+        rentsMask: true,
+        rentsFins: true,
         rentsWeights: false,
-        finSize: guest.maskFins.fin,
-        bootSize: guest.maskFins.boot,
+        finSize: guest.fins.fin,
+        bootSize: guest.fins.boot,
         fitStatedAt: signedAt,
       });
     }

@@ -597,7 +597,7 @@ describe("getTripPrep", () => {
         .update(gearReservations)
         .set({ releasedAt: nowDate() })
         .where(eq(gearReservations.id, held.reservationId));
-      const kind = held.kind === "mask" || held.kind === "fins" ? "mask_fins" : held.kind;
+      const kind = held.kind === "mask" || held.kind === "fins" ? "fins" : held.kind;
       const prep = await getTripPrep(
         ctx.db,
         { ...ctx.shop, rentalItems: ctx.shop.rentalItems.filter((item) => item !== kind) },

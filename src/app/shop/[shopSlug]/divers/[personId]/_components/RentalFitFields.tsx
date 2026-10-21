@@ -46,8 +46,8 @@ export type RentalFitSize = {
   drysuitPlaceholder?: string;
   defaultValue: string;
   /**
-   * Checkbox names that put this size on the packing list. More than one for
-   * fin & boot size, which rides along with a wetsuit as well as with fins.
+   * Checkbox names that put this size on the packing list. Fin and boot sizes
+   * follow their respective rental choices.
    */
   requires: readonly string[];
   /**

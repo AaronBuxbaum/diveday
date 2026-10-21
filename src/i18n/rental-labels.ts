@@ -22,7 +22,8 @@ const RENTAL_ITEM_LABEL_KEYS: Record<RentalItemKind, StaffMessageKey> = {
   regulator: "shared.rentalFit.itemLabels.regulator",
   wetsuit: "shared.rentalFit.itemLabels.wetsuit",
   boots: "shared.rentalFit.itemLabels.boots",
-  mask_fins: "shared.rentalFit.itemLabels.maskFins",
+  mask: "shared.rentalFit.itemLabels.mask",
+  fins: "shared.rentalFit.itemLabels.fins",
   weights: "shared.rentalFit.itemLabels.weights",
   dive_computer: "shared.rentalFit.itemLabels.diveComputer",
   gopro: "shared.rentalFit.itemLabels.gopro",
@@ -84,7 +85,7 @@ function sizeText(size: string): string {
 /**
  * **One rental piece: an item and its size, as the line may break them.**
  *
- * The words the bundle wrote — the item ("Mask & fins") and the template around
+ * The words the bundle wrote — the item ("Fins") and the template around
  * it — are one unit, and that unit holds on to the size's first word, so an
  * item never ends a line with its size on the next. The size keeps whatever
  * breaks `sizeText` leaves it. A list of pieces then breaks at its own
@@ -140,9 +141,8 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
     case "rents": {
       const parts = line.items.map((item) => {
         const label = rentalItemLabel(t, item.kind);
-        // A drysuit diver's fins, rented suit or their own. The stated size is
-        // the shoe size the fit forms ask for, and the pair has to clear a
-        // drysuit boot two to three sizes bigger, so the rail reads the job
+        // A drysuit diver's fin size is the bare-foot size; the pair has to
+        // clear a drysuit boot two to three sizes bigger, so the rail reads the job
         // rather than a number to hand over (src/lib/dive-prep.ts's
         // `rentedItems`). A sentence, so the words around the size can still
         // wrap.

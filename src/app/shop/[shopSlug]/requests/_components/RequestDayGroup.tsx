@@ -84,13 +84,8 @@ export function RequestDayGroup({
   /** The date and the counts, as one line — the group owns them, not the rows. */
   label: string;
   advice?: readonly RequestAdviceLine[];
-  /**
-   * The day's one act. Omitted for the undated tail. `prominent` is the first
-   * group's, and only the first group's: every day on the page offers the same
-   * act, and a column of filled buttons is the reader doing triage the design
-   * should have done (principle 8). The rest are link weight.
-   */
-  add?: { href: string; label: string; prominent?: boolean };
+  /** The same departure action on every dated group. */
+  add?: { href: string; label: string };
   children: ReactNode;
 }) {
   return (
@@ -109,14 +104,7 @@ export function RequestDayGroup({
           // control (`schedule.builder.addDeparture`): one act, one name,
           // wherever a staffer meets it. The `+` is aria-hidden decoration —
           // it never enters a translated string.
-          <Link
-            href={add.href}
-            className={buttonClass(
-              add.prominent
-                ? { variant: "secondary", size: "sm" }
-                : { variant: "link", size: "sm", flush: true },
-            )}
-          >
+          <Link href={add.href} className={buttonClass({ variant: "secondary", size: "sm" })}>
             {add.label}
           </Link>
         ) : null}

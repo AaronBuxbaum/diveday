@@ -17,7 +17,8 @@ const emptyFit: DiverRentalFit = {
   hoodSize: null,
   gloveSize: null,
   bootSize: null,
-  rentsMaskFins: false,
+  rentsMask: false,
+  rentsFins: false,
   finSize: null,
   rentsWeights: false,
   weightPreference: null,
@@ -32,14 +33,13 @@ const emptyFit: DiverRentalFit = {
   note: null,
   fitStatedAt: new Date("2026-07-21T13:30:00.000Z"),
 };
-
 const defaultPricing: RentalPricing = {
   setCents: 5000,
   perItemCents: {
     bcd: 1500,
     regulator: 1500,
     wetsuit: 1500,
-    mask_fins: 1000,
+    fins: 1000,
     weights: 500,
     dive_computer: 1000,
     gopro: 2000,
@@ -67,7 +67,7 @@ describe("RentalFitForm defaults", () => {
       <RentalFitForm
         action={mockAction}
         rentalFit={null}
-        rentalItems={["bcd", "mask_fins", "gopro"]}
+        rentalItems={["bcd", "mask", "fins", "gopro"]}
         course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
@@ -78,9 +78,9 @@ describe("RentalFitForm defaults", () => {
       />,
     );
 
-    // By role, not label text: "BCD" also prefixes the "BCD size" select.
     expect(screen.getByRole("checkbox", { name: /^BCD/ })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: /^Mask & fins/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^Fins/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^Mask/ })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: /^GoPro/ })).not.toBeChecked();
   });
 
@@ -89,7 +89,7 @@ describe("RentalFitForm defaults", () => {
       <RentalFitForm
         action={mockAction}
         rentalFit={emptyFit}
-        rentalItems={["bcd", "mask_fins"]}
+        rentalItems={["bcd", "fins"]}
         course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
@@ -101,7 +101,7 @@ describe("RentalFitForm defaults", () => {
     );
 
     expect(screen.getByRole("checkbox", { name: /^BCD/ })).not.toBeChecked();
-    expect(screen.getByRole("checkbox", { name: /^Mask & fins/ })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /^Fins/ })).not.toBeChecked();
   });
 });
 
@@ -111,7 +111,7 @@ describe("RentalFitForm geometry", () => {
       <RentalFitForm
         action={mockAction}
         rentalFit={null}
-        rentalItems={["bcd", "wetsuit", "mask_fins"]}
+        rentalItems={["bcd", "wetsuit", "fins"]}
         course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
@@ -362,7 +362,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
       <RentalFitForm
         action={mockAction}
         rentalFit={emptyFit}
-        rentalItems={["bcd", "mask_fins"]}
+        rentalItems={["bcd", "fins"]}
         course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
@@ -383,7 +383,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
       <RentalFitForm
         action={mockAction}
         rentalFit={fitWithRentals}
-        rentalItems={["bcd", "mask_fins"]}
+        rentalItems={["bcd", "fins"]}
         course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
@@ -485,12 +485,12 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
   });
 
   it("renders the recorded-size message for mask/fins because fin size is optional", () => {
-    const finsFit = { ...emptyFit, rentsMaskFins: true };
+    const finsFit = { ...emptyFit, rentsFins: true };
     renderDiver(
       <RentalFitForm
         action={mockAction}
         rentalFit={finsFit}
-        rentalItems={["mask_fins"]}
+        rentalItems={["fins"]}
         course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
@@ -506,12 +506,12 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
   });
 
   it("confirms gear match when BCD size is provided even if optional fin size is empty", () => {
-    const mixedFit = { ...emptyFit, rentsBcd: true, rentsMaskFins: true };
+    const mixedFit = { ...emptyFit, rentsBcd: true, rentsFins: true };
     const { container } = renderDiver(
       <RentalFitForm
         action={mockAction}
         rentalFit={mixedFit}
-        rentalItems={["bcd", "mask_fins"]}
+        rentalItems={["bcd", "fins"]}
         course={null}
         pricing={defaultPricing}
         wantsNitrox={false}
@@ -875,7 +875,7 @@ describe("RentalFitForm currency (task 35)", () => {
       <RentalFitForm
         action={mockAction}
         rentalFit={emptyFit}
-        rentalItems={["bcd", "mask_fins"]}
+        rentalItems={["bcd", "fins"]}
         course={null}
         pricing={defaultPricing}
         wantsNitrox={false}

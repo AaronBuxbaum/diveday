@@ -229,7 +229,7 @@
     "unrecordedSailings": "{count, plural, one {# salida} other {# salidas}} este mes",
     "noDepartures": "Ninguna salida volvió este mes.",
     "year": {
-      "open": "El año",
+      "open": "Vista anual",
       "print": "Imprimir el año",
       "intro": "Lo que el centro registró en las salidas del año que ya han vuelto. Las acreditaciones caducadas se leen según los registros de hoy.",
       "figuresLabel": "Registro de seguridad del año",
@@ -248,7 +248,9 @@
       "earliestTitle": "Este es tu primer año con salidas",
       "currentTitle": "Estás viendo el año actual"
     },
-    "incidentsValue": "{filed, plural, one {# presentado} other {# presentados}}{drafts, plural, =0 {} one { · # borrador} other { · # borradores}}"
+    "incidentsValue": "{filed, plural, one {# presentado} other {# presentados}}{drafts, plural, =0 {} one { · # borrador} other { · # borradores}}",
+    "monthView": "Vista mensual",
+    "printMonth": "Imprimir mes"
   },
   "discard": {
     "title": "Eliminar este borrador",

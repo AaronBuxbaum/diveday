@@ -18,7 +18,8 @@ function makeRentalFit(overrides: Partial<RentalFit> = {}): RentalFit {
     rentsBcd: false,
     rentsRegulator: false,
     rentsWetsuit: false,
-    rentsMaskFins: false,
+    rentsMask: false,
+    rentsFins: false,
     rentsWeights: false,
     rentsDiveComputer: false,
     rentsGopro: false,
@@ -124,6 +125,27 @@ describe("GearAndSizes", () => {
     renderGear(null);
     expect(screen.queryByRole("link", { name: "Rent gear" })).not.toBeInTheDocument();
     expect(screen.queryByText("Rented")).not.toBeInTheDocument();
+  });
+
+  it("asks fin sizing only for fins, while keeping the wetsuit boot size visible", () => {
+    renderGear(
+      makeRentalFit({
+        rentsWetsuit: true,
+        rentsMask: true,
+        rentsFins: true,
+        finSize: "M",
+        bootSize: "9",
+      }),
+      ["mask", "fins", "wetsuit"],
+    );
+    expect(screen.getByLabelText("Fin size")).toBeInTheDocument();
+    expect(screen.getByLabelText("Boot size")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Fins"));
+    expect(screen.queryByLabelText("Fin size")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Boot size")).toHaveValue("9");
+    expect(screen.getByLabelText("Mask")).toBeChecked();
+    fireEvent.click(screen.getByLabelText("Fins"));
+    expect(screen.getByLabelText("Fin size")).toHaveValue("M");
   });
 
   it.each([

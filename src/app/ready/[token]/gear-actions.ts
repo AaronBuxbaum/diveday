@@ -16,7 +16,8 @@ const fitSchema = z.object({
   // The suit is one choice, not two checkboxes (H-78): `RentalFitForm` posts
   // `suit`, and `suitFlagsFromPost` turns it into the three suit columns.
   suit: z.string().optional(),
-  maskFins: z.string().optional(),
+  mask: z.string().optional(),
+  fins: z.string().optional(),
   weights: z.string().optional(),
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
@@ -41,6 +42,7 @@ const fitSchema = z.object({
   drysuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   hoodSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   gloveSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  bootSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   weightPreference: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.weightPreference).optional(),
 });
@@ -67,7 +69,8 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     // Wetsuit, drysuit and "I dive dry" as one answer, so a diver can say they
     // are in their own drysuit and can never be packed two suits (H-78).
     ...suitFlagsFromPost(parsed.data.suit),
-    rentsMaskFins: said("mask_fins", parsed.data.maskFins),
+    rentsMask: said("mask", parsed.data.mask),
+    rentsFins: said("fins", parsed.data.fins),
     rentsWeights: said("weights", parsed.data.weights),
     rentsDiveComputer: said("dive_computer", parsed.data.diveComputer),
     rentsGopro: said("gopro", parsed.data.gopro),
@@ -84,10 +87,8 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     drysuitSize: parsed.data.drysuitSize,
     hoodSize: parsed.data.hoodSize,
     gloveSize: parsed.data.gloveSize,
-    // Fins and boots are one shoe-size answer on the diver's form now, written
-    // to both columns so the packing list, the manifest and the CSV export all
-    // keep reading the field they already read.
-    bootSize: parsed.data.finSize,
+    // Preserve independent boot and fin answers from the diver’s form.
+    bootSize: parsed.data.bootSize,
     finSize: parsed.data.finSize,
     weightPreference: parsed.data.weightPreference,
     // Deliberately absent, and `saveRentalFit` reads that absence as "leave the

@@ -19,7 +19,8 @@ export type RentableItemKind =
   | "bcd"
   | "regulator"
   | "wetsuit"
-  | "mask_fins"
+  | "mask"
+  | "fins"
   | "weights"
   | "dive_computer"
   | "gopro"
@@ -36,6 +37,28 @@ export type RentableItemKind =
  */
 export type LastGear = { nitrox: boolean; rentedKinds: RentableItemKind[] };
 
+/** Every checkout pick has an explicit flag, including independent mask and fins. */
+export function rentalFlagsFromKinds(
+  kinds: readonly RentableItemKind[],
+): Record<RentalFitField, boolean> {
+  const rented = new Set(kinds);
+  return {
+    rentsBcd: rented.has("bcd"),
+    rentsRegulator: rented.has("regulator"),
+    rentsWetsuit: rented.has("wetsuit"),
+    rentsMask: rented.has("mask"),
+    rentsFins: rented.has("fins"),
+    rentsWeights: rented.has("weights"),
+    rentsDiveComputer: rented.has("dive_computer"),
+    rentsGopro: rented.has("gopro"),
+    rentsDrysuit: rented.has("drysuit"),
+    rentsHood: rented.has("hood"),
+    rentsGloves: rented.has("gloves"),
+    rentsTorch: rented.has("torch"),
+    rentsSmb: rented.has("smb"),
+  };
+}
+
 /** Everything a shop's catalog can hold: the rental-fit gear plus nitrox fills. */
 export type ShopCatalogKind = RentableItemKind | "nitrox";
 
@@ -43,7 +66,8 @@ export type RentalFitField =
   | "rentsBcd"
   | "rentsRegulator"
   | "rentsWetsuit"
-  | "rentsMaskFins"
+  | "rentsMask"
+  | "rentsFins"
   | "rentsWeights"
   | "rentsDiveComputer"
   | "rentsGopro"
@@ -98,10 +122,11 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
     name: "wetsuit",
     defaultRented: true,
   },
+  { kind: "mask", field: "rentsMask", name: "mask", defaultRented: true },
   {
-    kind: "mask_fins",
-    field: "rentsMaskFins",
-    name: "maskFins",
+    kind: "fins",
+    field: "rentsFins",
+    name: "fins",
     defaultRented: true,
   },
   {
@@ -468,7 +493,7 @@ export const SIZED_RENTAL_KINDS = [
   "bcd",
   "wetsuit",
   "boots",
-  "mask_fins",
+  "fins",
   "weights",
   "drysuit",
   "hood",
@@ -521,7 +546,7 @@ export const SIZED_RENTAL_FIT_COLUMN = {
   bcd: "bcdSize",
   wetsuit: "wetsuitSize",
   boots: "bootSize",
-  mask_fins: "finSize",
+  fins: "finSize",
   weights: "weightPreference",
   drysuit: "drysuitSize",
   hood: "hoodSize",
@@ -533,9 +558,8 @@ export const SIZED_RENTAL_FIT_COLUMN = {
  * has no size to learn from.
  *
  * Most of the register is the second case and stays that way: a torch, a tank
- * and a reel have no fit, and a **mask** has no size column of its own — the
- * one shoe size answers for boots and fins, which is the rule
- * {@link rentalFitCompleteness} already keeps. A unit whose kind is not here
+ * and a reel have no fit, and a **mask** has no size column of its own.
+ * Boots and fins each use their own recorded size. A unit whose kind is not here
  * simply never produces an evening question.
  *
  * The **drysuit** is here since issue #1724, and the question that held it out
@@ -564,7 +588,7 @@ export function sizedRentalKindOfGearKind(gearKind: string): SizedRentalKind | n
     case "boots":
       return "boots";
     case "fins":
-      return "mask_fins";
+      return "fins";
     case "weights":
       return "weights";
     case "drysuit":
@@ -587,7 +611,8 @@ export function sizedRentalKindOfGearKind(gearKind: string): SizedRentalKind | n
 export type RentalFitSizes = {
   rentsBcd: boolean;
   rentsWetsuit: boolean;
-  rentsMaskFins: boolean;
+  rentsMask: boolean;
+  rentsFins: boolean;
   rentsWeights: boolean;
   rentsDrysuit: boolean;
   rentsHood: boolean;
@@ -636,9 +661,7 @@ function recorded(value: string | null | undefined): boolean {
  * dock had no size against them. A fit is a size record (glossary — **Rental
  * fit**), so the question it answers is per item, not per row.
  *
- * The shoe size counts once: `bootSize` and `finSize` are one answer in every
- * capture form (one field, written to both columns — see `RentalFit.tsx`), so
- * either one satisfies both the wetsuit's boots and the mask/fins.
+ * Boots and fins each require their own answer; neither can fill the other’s gap.
  *
  * `offeredKinds` is the shop's own catalog. A fit predating a shop dropping an
  * item from what it rents must not nag forever about a size nobody can be
@@ -672,16 +695,11 @@ export function rentalFitCompleteness(
   const offers = (kind: RentableItemKind) =>
     (offered === null || offered.has(kind)) &&
     (participantType === undefined || rentsKind(participantType, kind));
-  // One shoe size answers for both boots and fins, whichever column holds it.
-  // `recorded`, not `??`: an in-memory fit can carry `""` where a stored row
-  // would carry null, and `?? ` would take the empty string as an answer and
-  // never look at the other column.
-  const shoeSize = recorded(fit.finSize) ? fit.finSize : fit.bootSize;
   const required: { kind: SizedRentalKind; rented: boolean; value: string | null }[] = [
     { kind: "bcd", rented: fit.rentsBcd && offers("bcd"), value: fit.bcdSize },
     { kind: "wetsuit", rented: fit.rentsWetsuit && offers("wetsuit"), value: fit.wetsuitSize },
-    { kind: "boots", rented: fit.rentsWetsuit && offers("wetsuit"), value: shoeSize },
-    { kind: "mask_fins", rented: fit.rentsMaskFins && offers("mask_fins"), value: shoeSize },
+    { kind: "boots", rented: fit.rentsWetsuit && offers("wetsuit"), value: fit.bootSize },
+    { kind: "fins", rented: fit.rentsFins && offers("fins"), value: fit.finSize },
     { kind: "weights", rented: fit.rentsWeights && offers("weights"), value: fit.weightPreference },
     // No `boots` row beside it, unlike the wetsuit: a drysuit's boots are part
     // of the suit, so this one size is the whole answer (issue 1414).
@@ -706,21 +724,18 @@ export function rentalFitCompleteness(
  * a value the page composed. A blank column therefore renders nothing rather
  * than a claim.
  *
- * `mask_fins` and `boots` are the same shoe-size answer in every capture form,
- * written to both columns, so either column satisfies either item — the same
- * rule {@link rentalFitCompleteness} already reads them by.
+ * Fins and boots read their own size columns, matching the packing list.
  */
 export function sizeForRentalItem(
   fit: RentalFitSizes | null | undefined,
-  kind: SizedRentalKind,
+  kind: SizedRentalKind | "mask_fins",
 ): string | null {
-  if (!fit) return null;
-  const shoeSize = recorded(fit.finSize) ? fit.finSize : fit.bootSize;
+  if (!fit || kind === "mask_fins") return null;
   const value = {
     bcd: fit.bcdSize,
     wetsuit: fit.wetsuitSize,
-    boots: shoeSize,
-    mask_fins: shoeSize,
+    boots: fit.bootSize,
+    fins: fit.finSize,
     weights: fit.weightPreference,
     drysuit: fit.drysuitSize,
     hood: fit.hoodSize,
@@ -740,10 +755,11 @@ export function sizeForRentalItem(
  * always priced on their own, never folded into the set.
  */
 export const CORE_RENTAL_KINDS = [
+  "mask",
   "bcd",
   "regulator",
   "wetsuit",
-  "mask_fins",
+  "fins",
   "weights",
   "dive_computer",
 ] as const satisfies readonly RentableItemKind[];

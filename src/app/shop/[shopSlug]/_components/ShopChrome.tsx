@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { after } from "next/server";
+import { after, connection } from "next/server";
 import { cache } from "react";
 import { switchDemoRoleAction } from "@/app/actions/demo";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
@@ -81,6 +81,9 @@ import { staffShopName } from "./staff-shop-name";
  * `cache` is what keeps them one set of queries and one tenant gate.
  */
 const loadShopChrome = cache(async (shopSlug: string) => {
+  // This chrome owns the first shop query on the staff shell. It runs beside
+  // the page, so the page's request boundary cannot protect this read.
+  await connection();
   const db = await getDb();
   // The shop row and the session don't depend on one another — resolve them
   // together instead of serially, and nothing else is read until the two

@@ -23,7 +23,7 @@ describe("rental item labels", () => {
   it("resolves a dive-prep packing-list item's word, including boots", () => {
     expect(rentalItemLabel(t, "bcd")).toBe("BCD");
     expect(rentalItemLabel(t, "boots")).toBe("Boots");
-    expect(rentalItemLabel(t, "mask_fins")).toBe("Mask & fins");
+    expect(rentalItemLabel(t, "fins")).toBe("Fins");
   });
 
   it("resolves a shop catalog gear item's word", () => {
@@ -71,11 +71,11 @@ describe("rentalFitLineText", () => {
       rentalFitLineText(t, "en-US", {
         state: "rents",
         items: [
-          { kind: "mask_fins", size: "M" },
+          { kind: "fins", size: "M" },
           { kind: "weights", size: null },
         ],
       }),
-    ).toMatch(/^Mask\s&\sfins\sM, Weights\s\(size\smissing\)$/);
+    ).toMatch(/^Fins\sM, Weights\s\(size\smissing\)$/);
   });
 
   it("wraps only between pieces, never inside one", () => {
@@ -86,11 +86,11 @@ describe("rentalFitLineText", () => {
       state: "rents",
       items: [
         { kind: "weights", size: "6 kg" },
-        { kind: "mask_fins", size: "L" },
+        { kind: "fins", size: "L" },
         { kind: "bcd", size: "M" },
       ],
     });
-    expect(text).toBe(`Weights${NBSP}6${NBSP}kg, Mask${NBSP}&${NBSP}fins${NBSP}L, BCD${NBSP}M`);
+    expect(text).toBe(`Weights${NBSP}6${NBSP}kg, Fins${NBSP}L, BCD${NBSP}M`);
     expect(text.split(", ").every((piece) => !piece.includes(" "))).toBe(true);
   });
 
@@ -130,9 +130,9 @@ describe("rentalFitLineText", () => {
     expect(
       rentalFitLineText(t, "en-US", {
         state: "rents",
-        items: [{ kind: "mask_fins", size: "US 9 / EU 42" }],
+        items: [{ kind: "fins", size: "US 9 / EU 42" }],
       }),
-    ).toBe(`Mask${NBSP}&${NBSP}fins${NBSP}US${NBSP}9 / EU${NBSP}42`);
+    ).toBe(`Fins${NBSP}US${NBSP}9 / EU${NBSP}42`);
   });
 
   it("keeps a no-longer-rented piece whole, while its explanation can still wrap", () => {
@@ -151,17 +151,17 @@ describe("rentalFitLineText", () => {
       rentalFitLineText(t, "en-US", {
         state: "rents",
         items: [
-          { kind: "mask_fins", size: "US 9", drysuitFinFit: true },
+          { kind: "fins", size: "US 9", drysuitFinFit: true },
           { kind: "drysuit", size: "ML" },
         ],
       }),
-    ).toBe(`Mask & fins over a drysuit boot, shoe US${NBSP}9, Drysuit${NBSP}ML`);
+    ).toBe(`Fins over a drysuit boot, shoe US${NBSP}9, Drysuit${NBSP}ML`);
     expect(
       rentalFitLineText(t, "en-US", {
         state: "rents",
-        items: [{ kind: "mask_fins", size: null, drysuitFinFit: true }],
+        items: [{ kind: "fins", size: null, drysuitFinFit: true }],
       }),
-    ).toBe("Mask & fins over a drysuit boot");
+    ).toBe("Fins over a drysuit boot");
   });
 
   it("asks wet or dry for a drysuit diver's gloves, with and without a size (H-102)", () => {

@@ -64,25 +64,31 @@ describe("adding a staff credential", () => {
   for (const kind of ["instructor_rating", "divemaster_rating"]) {
     it(`refuses an undated ${kind}, and writes nothing`, async () => {
       const { shop, captain } = await setup();
+      const before = await savedFor(captain);
       const to = await redirectedTo(() =>
         saveStaffCredentialAction(credentialForm(captain, kind, "")),
       );
       expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=credential-renewal-required`);
-      expect(await savedFor(captain)).toEqual([]);
+      expect(await savedFor(captain)).toEqual(before);
     });
 
     it(`saves a dated ${kind}`, async () => {
       const { shop, captain } = await setup();
+      const before = await savedFor(captain);
       const to = await redirectedTo(() =>
         saveStaffCredentialAction(credentialForm(captain, kind, "2031-03-01")),
       );
       expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=credential-saved`);
-      expect(await savedFor(captain)).toHaveLength(1);
+      const beforeIds = new Set(before.map((row) => row.id));
+      const added = (await savedFor(captain)).filter((row) => !beforeIds.has(row.id));
+      expect(added).toHaveLength(1);
+      expect(added[0]).toMatchObject({ kind, renewsAt: "2031-03-01" });
     });
   }
 
   it("still saves the other kinds without a renewal date", async () => {
     const { shop, captain } = await setup();
+    const before = await savedFor(captain);
     for (const kind of [
       "assistant_instructor_rating",
       "first_aid_cpr",
@@ -94,6 +100,10 @@ describe("adding a staff credential", () => {
       );
       expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=credential-saved`);
     }
-    expect(await savedFor(captain)).toHaveLength(4);
+    const beforeIds = new Set(before.map((row) => row.id));
+    const added = (await savedFor(captain)).filter((row) => !beforeIds.has(row.id));
+    expect(added.map((row) => row.kind).sort()).toEqual(
+      ["assistant_instructor_rating", "first_aid_cpr", "captains_licence", "other"].sort(),
+    );
   });
 });

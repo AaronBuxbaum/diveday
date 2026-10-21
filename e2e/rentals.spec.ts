@@ -44,6 +44,11 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // diver skipping one piece is never charged more than the full set (H-06, HD-9).
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
   await expect(fit.getByText("Full-set price. You save $5.00.")).toBeVisible();
+  // Each piece is independently selectable, and boot sizing stays separate.
+  await fit.getByRole("checkbox", { name: /^Mask/ }).uncheck();
+  await expect(fit.getByRole("checkbox", { name: /^Fins/ })).toBeChecked();
+  await expect(fit.getByLabel(/Fin size/)).toBeVisible();
+  await expect(fit.getByLabel(/Boot size/)).toBeVisible();
   // Nitrox is *not* here, and its absence is the assertion. Rin has no nitrox
   // card, and since ADR 20260821-the-ready-page-asks-once the section does not
   // exist until the card that makes it real does — asking a diver whether they

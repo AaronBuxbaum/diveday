@@ -58,8 +58,6 @@
     "rangeLabel": "Elegir un periodo",
     "thisMonth": "Este mes",
     "thisYear": "Este año",
-    "rangeSoFar": "{year} hasta ahora · del {start} a hoy · {zone}",
-    "rangeSince": "{year} hasta ahora · desde {month} · {zone}",
     "printCard": "Imprimir la tarjeta",
     "sentence": "{divers, plural, one {# buceador} other {# buceadores}}, {boats, plural, one {# salida} other {# salidas}}, {sites, plural, one {# sitio} other {# sitios}}.",
     "busiest": "El día más movido fue el {day}.",
@@ -92,7 +90,6 @@
       "tipsDetail": "{count, plural, =0 {Aún sin propinas este año} one {# propina, para la tripulación} other {# propinas, para la tripulación}}"
     },
     "chooseYear": "Elegir un año",
-    "rangeWhole": "{year} · del {start} al {end} · {zone}",
     "lastYearToDate": "{value, number} a esta fecha en {year}",
     "lastYearWhole": "{value, number} en {year}",
     "weatherDays": "{days, plural, one {# día con una cancelación por clima} other {# días con una cancelación por clima}}, {departures, plural, one {# salida cancelada} other {# salidas canceladas}}",

@@ -168,6 +168,7 @@ import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
+import { seedSafeCrew } from "./seed-safe-crew";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSightings } from "./seed-sightings";
 import { seedTides } from "./seed-tides";
@@ -509,7 +510,8 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         "bcd",
         "regulator",
         "wetsuit",
-        "mask_fins",
+        "mask",
+        "fins",
         "weights",
         "dive_computer",
         "gopro",
@@ -523,7 +525,8 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
           bcd: 1500,
           regulator: 1500,
           wetsuit: 1200,
-          mask_fins: 800,
+          mask: 400,
+          fins: 400,
           weights: 500,
           dive_computer: 1000,
           gopro: 2000,
@@ -741,7 +744,8 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
             "bcd",
             "regulator",
             "wetsuit",
-            "mask_fins",
+            "mask",
+            "fins",
             "weights",
             "dive_computer",
             "gopro",
@@ -753,7 +757,8 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
               bcd: 1500,
               regulator: 1500,
               wetsuit: 1200,
-              mask_fins: 800,
+              mask: 400,
+              fins: 400,
               weights: 500,
               dive_computer: 1000,
               gopro: 2000,
@@ -1002,6 +1007,7 @@ export async function seedDemoSchedule(
     benwood,
     french,
   });
+  await seedSafeCrew(db, shopId);
   const { bookingRows, wreck, waiverTemplate, promoRedemptionBooking } = await seedBookings(
     db,
     shopId,

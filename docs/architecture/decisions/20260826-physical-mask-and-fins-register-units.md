@@ -4,6 +4,11 @@
 - **Date:** 2026-08-26
 - **Issue:** [#953](https://github.com/aaronwittman/diveday/issues/953)
 
+**Scope update (2026-10-19):** [ADR 20261019-independent-mask-and-fins](20261019-independent-mask-and-fins.md)
+supersedes only the commitment below to keep `rental_fit_profiles.mask_fins` and the public
+rental-fit copy unchanged. This ADR's separate register-unit decision and migration rationale
+remain accepted.
+
 ## Context
 
 Rental fit intentionally asks one question for a diver's mask and fins. The gear register tracks

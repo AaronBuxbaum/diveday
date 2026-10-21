@@ -309,6 +309,7 @@
     "message": "Pase de lista completo"
   },
   "undoToast": {
+    "dismiss": "Cerrar",
     "pendingLabel": "Deshaciendo…",
     "undo": "Deshacer"
   },
@@ -470,7 +471,8 @@
       "regulator": "Regulador",
       "wetsuit": "Neopreno",
       "boots": "Escarpines",
-      "maskFins": "Máscara y aletas",
+      "mask": "Máscara",
+      "fins": "Aletas",
       "weights": "Lastre",
       "diveComputer": "Computadora de buceo",
       "gopro": "GoPro",

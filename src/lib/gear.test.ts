@@ -58,10 +58,10 @@ describe("gear kind coverage", () => {
     expect(GEAR_SERVICE_KINDS_FOR.flares).toEqual(["expiry", "note"]);
   });
 
-  it("splits a combined rental-fit answer into independently reservable units", () => {
-    expect(gearAssignmentNeeds({ kind: "mask_fins", size: "M" })).toEqual([
+  it("reserves only the independently selected mask or fins", () => {
+    expect(gearAssignmentNeeds({ kind: "fins", size: "M" })).toEqual([{ kind: "fins", size: "M" }]);
+    expect(gearAssignmentNeeds({ kind: "mask", size: null })).toEqual([
       { kind: "mask", size: null },
-      { kind: "fins", size: "M" },
     ]);
   });
 });

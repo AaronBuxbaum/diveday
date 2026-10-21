@@ -33,6 +33,7 @@ export type ReviewRowCopy = {
   hiddenToast: string;
   undo: string;
   undoPending: string;
+  dismiss: string;
   /** The outcome sentences, by the code the action answers with. */
   published: string;
   standout: string;
@@ -145,6 +146,7 @@ export function ReviewRowProvider({
           fields={{ reviewId: undoReviewId, publish: "true" }}
           pendingLabel={copy.undoPending}
           undoLabel={copy.undo}
+          dismissLabel={copy.dismiss}
         />
       ) : null}
       {children}

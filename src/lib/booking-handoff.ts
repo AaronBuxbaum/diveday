@@ -68,7 +68,8 @@ export type KnownDiverSources = {
     rentsBcd: boolean;
     rentsRegulator: boolean;
     rentsWetsuit: boolean;
-    rentsMaskFins: boolean;
+    rentsMask: boolean;
+    rentsFins: boolean;
     rentsWeights: boolean;
     bcdSize: string | null;
     wetsuitSize: string | null;
@@ -116,7 +117,7 @@ export function foldKnownDiverFacts(sources: KnownDiverSources): KnownDiverFact[
   if (fit) {
     const keptAt = fit.fitStatedAt ?? fit.updatedAt;
     const rentsNothing =
-      !fit.rentsBcd && !fit.rentsRegulator && !fit.rentsWetsuit && !fit.rentsMaskFins;
+      !fit.rentsBcd && !fit.rentsRegulator && !fit.rentsWetsuit && !fit.rentsMask && !fit.rentsFins;
     const hasSizes = Boolean(fit.bcdSize || fit.wetsuitSize || fit.bootSize || fit.finSize);
     if (rentsNothing) facts.push({ kind: "own_gear", keptAt });
     else if (hasSizes) facts.push({ kind: "sizes", keptAt });

@@ -71,7 +71,6 @@ async function bookVisitor(db: AppDb, shopId: string, tripId: string) {
   return createBooking(db, { actor: "staff", shopId, tripId, ...visitor });
 }
 
-// One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
 
@@ -562,7 +561,8 @@ describe("createBooking stamps its own clock (D15's comparison)", () => {
       rentsBcd: true,
       rentsRegulator: false,
       rentsWetsuit: false,
-      rentsMaskFins: false,
+      rentsMask: false,
+      rentsFins: false,
       rentsWeights: false,
       rentsDiveComputer: false,
       rentsGopro: false,

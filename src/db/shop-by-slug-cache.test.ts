@@ -44,7 +44,10 @@ const SHOPS = [
  * moved.
  */
 const READER_LINES = SHOPS.split("\n")
-  .filter((line) => /getShopBySlug|shopBySlugCached|"react"/.test(line) && !line.startsWith(" *"))
+  .filter(
+    (line) =>
+      /getShopBySlug|shopBySlugCached|connection|"react"/.test(line) && !line.startsWith(" *"),
+  )
   .join("\n");
 
 function cacheScope(): Record<string, number> {
@@ -86,8 +89,9 @@ describe("React's cache() across the public shell's boundaries", () => {
 describe("the shipped reader has the shape the measurement covers", () => {
   it("is memoized with React's cache and takes only the slug", () => {
     expect(READER_LINES).toContain('import { cache } from "react";');
+    expect(READER_LINES).toContain('import { connection } from "next/server";');
     expect(READER_LINES).toMatch(
-      /export const shopBySlugCached = cache\(async \(slug: string\) =>\s*getShopBySlug\(await getDb\(\), slug\),?\s*\);/,
+      /export const shopBySlugCached = cache\(async \(slug: string\) => \{\s*await connection\(\);[\s\S]*?return getShopBySlug\(await getDb\(\), slug\);/,
     );
   });
 

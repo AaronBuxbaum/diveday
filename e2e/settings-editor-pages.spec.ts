@@ -38,6 +38,7 @@ test("the hub's list editors are doors, and each opens its own page", async ({
   for (const [name, href] of [
     ["Boats", `/shop/${SHOP}/boats`],
     ["Trip tags", `/shop/${SHOP}/trip-tags`],
+    [staff("reports.bookkeeper.label"), `/shop/${SHOP}/settings/bookkeeper`],
     // Forms of six to a dozen fields, pages of their own since #1854.
     ["Rentals", `/shop/${SHOP}/settings/rentals`],
     ["Emergency reference", `/shop/${SHOP}/settings/emergency-reference`],
@@ -166,4 +167,27 @@ test("the old Settings addresses of the registers redirect to where they moved",
     await page.goto(`/shop/${SHOP}/settings/${noun}`);
     await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/${noun}$`));
   }
+});
+
+test("bookkeeper settings and registers retain the settings rail", async ({
+  page,
+  privateShop,
+}) => {
+  const SHOP = privateShop.slug;
+  for (const destination of [
+    "boats",
+    "dive-sites",
+    "trip-tags",
+    "safety-checklist",
+    "waivers",
+    "settings/bookkeeper",
+  ]) {
+    await page.goto(`/shop/${SHOP}/${destination}`);
+    await expect(
+      page.getByRole("navigation", { name: staff("settings.main.rail.ariaLabel") }),
+    ).toBeVisible();
+  }
+  await expect(
+    page.getByRole("textbox", { name: staff("reports.bookkeeper.label") }),
+  ).toBeVisible();
 });

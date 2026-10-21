@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { resolveTripNotice, TripNoticeBanner, type TripNoticeInput } from "./TripNoticeBanner";
 
 afterEach(cleanup);
+afterEach(() => vi.useRealTimers());
 
 const TRIP = "11111111-1111-4111-8111-111111111111";
 const OTHER_TRIP = "22222222-2222-4222-8222-222222222222";
@@ -36,6 +37,41 @@ describe("TripNoticeBanner", () => {
   it("renders nothing without a notice", () => {
     const { container } = renderBanner(undefined);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("keeps a booking removal's undo available after the transient toast interval", () => {
+    vi.useFakeTimers();
+    render(
+      <TripNoticeBanner
+        notice={resolve("booking-removed")}
+        locale="en-US"
+        undoBookingId="booking-1"
+        undoAction={() => undefined}
+      />,
+    );
+
+    act(() => vi.advanceTimersByTime(60_000));
+
+    const status = screen.getByRole("status");
+    expect(status).not.toHaveClass("toast-dismiss");
+    expect(status).toContainElement(screen.getByRole("button", { name: "Undo" }));
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeVisible();
+  });
+
+  it("keeps a refund failure and its undo beside the roster", () => {
+    render(
+      <TripNoticeBanner
+        notice={resolve("booking-removed-refund-manual")}
+        locale="en-US"
+        undoBookingId="booking-1"
+        undoAction={() => undefined}
+      />,
+    );
+
+    const refusal = screen.getByRole("alert");
+    expect(refusal).toContainElement(screen.getByRole("button", { name: "Undo" }));
+    expect(refusal.querySelector('input[name="bookingId"]')).toHaveValue("booking-1");
+    expect(screen.queryByRole("button", { name: "Dismiss" })).not.toBeInTheDocument();
   });
 
   /**

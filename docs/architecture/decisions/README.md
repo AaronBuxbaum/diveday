@@ -404,6 +404,7 @@ script again.
 | 20261016-shared-boat-photos | A diver may share a… |
 | 20261017-xero-removed-before-launch | Xero is removed before launch,… |
 | 20261018-diver-messages-are-states | Every diver reminder is a… |
+| 20261019-independent-mask-and-fins | Rent masks and fins independently |
 | 20261019-map-centric-dive-sites | Map-centric dive sites library and… (proposed) |
 | 20261019-replace-google-maps | Eliminate Google Maps runtime dependencies… (proposed) |
 | 20261019-single-address-token-table | Address confirmations and alerts use… |

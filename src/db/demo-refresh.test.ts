@@ -14,6 +14,7 @@ import {
   people,
   personRoles,
   shops,
+  staffCredentials,
   staffShifts,
   tripAssignments,
   tripSeries,
@@ -176,6 +177,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // never heard of her.
     await db.delete(tripAssignments).where(eq(tripAssignments.personId, relief[0].id));
     await db.delete(staffShifts).where(eq(staffShifts.personId, relief[0].id));
+    await db.delete(staffCredentials).where(eq(staffCredentials.personId, relief[0].id));
     await db.delete(personRoles).where(eq(personRoles.personId, relief[0].id));
     await db.delete(people).where(eq(people.id, relief[0].id));
     await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 2);

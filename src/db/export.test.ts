@@ -115,7 +115,6 @@ const EXPECTED_FILES = [
   "courses.csv",
   "course_inquiries.csv",
 ];
-
 /** Schema tables that get their own CSV in the bundle. */
 const EXPORTED_TABLES = [
   "dive_packages",
@@ -224,7 +223,6 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
-  // Card disputes (ADR 20261009-stripe-reversals-reach-diveday). Stripe's own
   // record, mirrored here only so an owner sees an open one on Today and on
   // the order; every field is Stripe's, kept current from Stripe's events, and
   // the shop's Stripe dashboard is where a dispute is answered and exported.
@@ -559,6 +557,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   ],
   rental_fit_profiles: [
     "shop_id",
+    // Storage-only compatibility for the previous serving release.
+    "rents_mask_fins",
     // A DiveDay-side discriminator, not a fact about the diver: it separates a
     // row that states a fit from one holding only their note (schema.ts,
     // `fit_stated_at`). The import rebuilds it correctly on its own — a row

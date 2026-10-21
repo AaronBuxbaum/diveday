@@ -36,7 +36,8 @@ export type RentalItemKind =
   | "regulator"
   | "wetsuit"
   | "boots"
-  | "mask_fins"
+  | "mask"
+  | "fins"
   | "weights"
   | "dive_computer"
   | "gopro"
@@ -47,20 +48,14 @@ export type RentalItemKind =
   | "smb";
 
 /** The kinds a flagged diver's stated sizes are listed under (`statedSizeItems`). */
-export type StatedSizeKind =
-  | "bcd"
-  | "wetsuit"
-  | "boots"
-  | "mask_fins"
-  | "drysuit"
-  | "hood"
-  | "gloves";
+export type StatedSizeKind = "bcd" | "wetsuit" | "boots" | "fins" | "drysuit" | "hood" | "gloves";
 
 export type RentalFit = {
   rentsBcd: boolean;
   rentsRegulator: boolean;
   rentsWetsuit: boolean;
-  rentsMaskFins: boolean;
+  rentsMask: boolean;
+  rentsFins: boolean;
   rentsWeights: boolean;
   rentsDiveComputer: boolean;
   rentsGopro: boolean;
@@ -452,7 +447,8 @@ const KIND_ORDER = [
   "wetsuit",
   "boots",
   "drysuit",
-  "mask_fins",
+  "mask",
+  "fins",
   "weights",
   "dive_computer",
   "hood",
@@ -574,11 +570,7 @@ const NOTHING_HELD: HeldPieces = new Set();
 function heldPieces(heldGearKinds: readonly GearItemKind[] | undefined): HeldPieces {
   if (!heldGearKinds || heldGearKinds.length === 0) return NOTHING_HELD;
   const units = new Set<string>(heldGearKinds);
-  return new Set(
-    KIND_ORDER.filter((kind) =>
-      kind === "mask_fins" ? units.has("mask") && units.has("fins") : units.has(kind),
-    ),
-  );
+  return new Set(KIND_ORDER.filter((kind) => units.has(kind)));
 }
 
 /**
@@ -732,10 +724,7 @@ function rentedItems(
   };
 
   /**
-   * Mask & fins. The fit forms ask **one shoe size** for them — "Fin & boot
-   * size", placeholder "US 9 / EU 42" in staff/divers.json and diver.json
-   * alike, and the actions behind both write that one answer to `boot_size`
-   * *and* `fin_size` (divers/[personId]/fit-actions.ts, ready/[token]/gear-actions.ts).
+   * Fins retain their own stated size, independently of boots.
    * A drysuit's vulcanised boot is two to three fin sizes bigger than the bare
    * foot inside it. Packed to the stated number, the fin does not go on: the
    * diver sits on the bench, the boat waits, and the fix is somebody's spare
@@ -748,8 +737,8 @@ function rentedItems(
    * signal): every drysuit has a boot, and the stated shoe size is the foot,
    * not the boot.
    */
-  const maskFins = (): PrepPiece => ({
-    ...sized("mask_fins", fit.finSize),
+  const fins = (): PrepPiece => ({
+    ...sized("fins", fit.finSize),
     drysuitFinFit: inDrysuit && !flagged,
   });
 
@@ -760,7 +749,8 @@ function rentedItems(
     items.push(sized("wetsuit", fit.wetsuitSize));
     items.push(sized("boots", fit.bootSize));
   }
-  if (fit.rentsMaskFins) items.push(maskFins());
+  if (fit.rentsMask) items.push(unsized("mask"));
+  if (fit.rentsFins) items.push(fins());
   if (fit.rentsWeights) items.push(weights(fit.weightPreference));
   if (fit.rentsDiveComputer) items.push(unsized("dive_computer"));
   if (fit.rentsGopro) items.push(unsized("gopro"));
@@ -768,7 +758,7 @@ function rentedItems(
   // have their boots vulcanised on: they come off the wall with the suit, the
   // shop cannot be out of them separately, and there is nothing extra to pack.
   // Deliberately a different shape from `rentsWetsuit` above, which pushes two
-  // pieces from one shoe-size answer — do not "fix" this to match it.
+  // separate pieces with their own sizes — do not "fix" this to match it.
   //
   // **Most, not all.** A neoprene-sock suit worn with separate rock boots is
   // real, and it is stocked by exactly the cold-water and tech-leaning fleets
@@ -779,7 +769,7 @@ function rentedItems(
   // boots the shop does not own, which is the failure issue 1414 named.
   //
   // The fins that go over that boot are a size the shop cannot read off the
-  // shoe size either, which is what `maskFins` above marks rather than what
+  // shoe size either, which is what `fins` above marks rather than what
   // this line handles.
   if (fit.rentsDrysuit) items.push(sized("drysuit", fit.drysuitSize));
   // Two kinds with a free-text size each (H-102, issue #1816).
@@ -829,7 +819,7 @@ function statedSizeItems(fit: RentalFit): { kind: StatedSizeKind; size: string }
   const gloveSize = size(fit.gloveSize);
   if (fit.rentsGloves && gloveSize) items.push({ kind: "gloves", size: gloveSize });
   const finSize = size(fit.finSize);
-  if (fit.rentsMaskFins && finSize) items.push({ kind: "mask_fins", size: finSize });
+  if (fit.rentsFins && finSize) items.push({ kind: "fins", size: finSize });
   return items;
 }
 

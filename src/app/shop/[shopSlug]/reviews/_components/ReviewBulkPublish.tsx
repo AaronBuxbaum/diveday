@@ -1,7 +1,7 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
-import { createContext, useActionState, useContext } from "react";
+import { createContext, useActionState, useContext, useRef } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { FormStatus } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
@@ -32,13 +32,22 @@ import { type BulkPublishResult, publishReviewsAction } from "../actions";
  */
 const PublishAllContext = createContext<{
   result: BulkPublishResult;
+  occurrence: number;
   publish: (formData: FormData) => void;
 } | null>(null);
 
 export function PublishAllProvider({ children }: { children: React.ReactNode }) {
   const [result, publish] = useActionState(publishReviewsAction, null);
+  const lastResult = useRef<BulkPublishResult>(null);
+  const occurrence = useRef(0);
+  if (result !== lastResult.current) {
+    lastResult.current = result;
+    occurrence.current += 1;
+  }
   return (
-    <PublishAllContext.Provider value={{ result, publish }}>{children}</PublishAllContext.Provider>
+    <PublishAllContext.Provider value={{ result, occurrence: occurrence.current, publish }}>
+      {children}
+    </PublishAllContext.Provider>
   );
 }
 
@@ -101,11 +110,11 @@ export function PublishAllStatus({
   copy: BulkPublishCopy;
   className?: string;
 }) {
-  const { result } = usePublishAll();
+  const { result, occurrence } = usePublishAll();
   if (!result) return <FormStatus className={className} />;
   if (result.ok) {
     return (
-      <FormStatus tone="success" className={className}>
+      <FormStatus tone="success" className={className} occurrenceKey={occurrence}>
         {fill(
           pluralForm(result.published, {
             one: copy.publishedManyOne,

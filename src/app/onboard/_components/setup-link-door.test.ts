@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/headers", async () => (await import("@/test/next-headers")).nextHeadersStub());
+vi.mock("next/server", () => ({ connection: vi.fn(async () => undefined) }));
 vi.mock("@/db/client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/client")>();
   return { ...actual, getDb: vi.fn() };

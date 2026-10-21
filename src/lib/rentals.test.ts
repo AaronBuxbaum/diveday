@@ -30,7 +30,7 @@ const PRICING: RentalPricing = {
     bcd: 1500,
     regulator: 1500,
     wetsuit: 1200,
-    mask_fins: 800,
+    fins: 800,
     weights: 500,
     dive_computer: 1000,
     gopro: 2000,
@@ -44,7 +44,7 @@ const ALL_OFFERED = [
   "bcd",
   "regulator",
   "wetsuit",
-  "mask_fins",
+  "fins",
   "weights",
   "dive_computer",
   "gopro",
@@ -56,7 +56,8 @@ describe("rentable items", () => {
       "bcd",
       "regulator",
       "wetsuit",
-      "mask_fins",
+      "mask",
+      "fins",
       "weights",
       "dive_computer",
     ]);
@@ -64,6 +65,30 @@ describe("rentable items", () => {
     expect(DEFAULT_SHOP_RENTAL_ITEMS).toContain("dive_computer");
     expect(RENTABLE_ITEMS.map((item) => item.kind)).toContain("gopro");
     expect(DEFAULT_SHOP_RENTAL_ITEMS).not.toContain("gopro");
+  });
+
+  it("quotes a mask and fins independently without selling the other piece", () => {
+    const pricing: RentalPricing = {
+      setCents: null,
+      perItemCents: { mask: 400, fins: 600 },
+      nitroxCents: null,
+    };
+    expect(
+      quoteRentalFit(pricing, {
+        rentedKinds: ["mask"],
+        offeredKinds: ["mask", "fins"],
+        wantsNitrox: false,
+        plannedDives: 1,
+      }).subtotalCents,
+    ).toBe(400);
+    expect(
+      quoteRentalFit(pricing, {
+        rentedKinds: ["fins"],
+        offeredKinds: ["mask", "fins"],
+        wantsNitrox: false,
+        plannedDives: 1,
+      }).subtotalCents,
+    ).toBe(600);
   });
 
   it("narrows stored/form values to known kinds, dropping junk and dupes", () => {
@@ -167,7 +192,7 @@ describe("rental pricing", () => {
 
   it("bills all six core items, including the dive computer, at the set price", () => {
     const quote = quoteRentalFit(PRICING, {
-      rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
+      rentedKinds: ["bcd", "regulator", "wetsuit", "fins", "weights", "dive_computer"],
       offeredKinds: ALL_OFFERED,
       wantsNitrox: false,
       plannedDives: 2,
@@ -180,7 +205,7 @@ describe("rental pricing", () => {
 
   it("keeps the set discount when the diver skips the offered computer, since it's cheaper", () => {
     const quote = quoteRentalFit(PRICING, {
-      rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+      rentedKinds: ["bcd", "regulator", "wetsuit", "fins", "weights"],
       offeredKinds: ALL_OFFERED,
       wantsNitrox: false,
       plannedDives: 2,
@@ -194,7 +219,7 @@ describe("rental pricing", () => {
 
   it("reports the piece-by-piece price the set beat, so a surface can strike it through", () => {
     const quote = quoteRentalFit(PRICING, {
-      rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
+      rentedKinds: ["bcd", "regulator", "wetsuit", "fins", "weights", "dive_computer"],
       offeredKinds: ALL_OFFERED,
       wantsNitrox: true,
       plannedDives: 2,
@@ -221,7 +246,7 @@ describe("rental pricing", () => {
     const quote = quoteRentalFit(
       { ...PRICING, perItemCents: { ...PRICING.perItemCents, weights: undefined } },
       {
-        rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
+        rentedKinds: ["bcd", "regulator", "wetsuit", "fins", "weights", "dive_computer"],
         offeredKinds: ALL_OFFERED,
         wantsNitrox: false,
         plannedDives: 2,
@@ -248,9 +273,9 @@ describe("rental pricing", () => {
 
   it("still reaches the set with five core items when the shop doesn't stock a computer", () => {
     const quote = quoteRentalFit(PRICING, {
-      rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+      rentedKinds: ["bcd", "regulator", "wetsuit", "fins", "weights"],
       // Catalog without a dive computer: the set is the core this shop offers.
-      offeredKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "gopro"],
+      offeredKinds: ["bcd", "regulator", "wetsuit", "fins", "weights", "gopro"],
       wantsNitrox: false,
       plannedDives: 2,
     });
@@ -260,15 +285,7 @@ describe("rental pricing", () => {
 
   it("adds add-ons and per-dive nitrox on top of the set", () => {
     const quote = quoteRentalFit(PRICING, {
-      rentedKinds: [
-        "bcd",
-        "regulator",
-        "wetsuit",
-        "mask_fins",
-        "weights",
-        "dive_computer",
-        "gopro",
-      ],
+      rentedKinds: ["bcd", "regulator", "wetsuit", "fins", "weights", "dive_computer", "gopro"],
       offeredKinds: ALL_OFFERED,
       wantsNitrox: true,
       plannedDives: 3,
@@ -283,7 +300,7 @@ describe("rental pricing", () => {
     const quote = quoteRentalFit(
       { ...PRICING, setCents: null },
       {
-        rentedKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights", "dive_computer"],
+        rentedKinds: ["bcd", "regulator", "wetsuit", "fins", "weights", "dive_computer"],
         offeredKinds: ALL_OFFERED,
         wantsNitrox: false,
         plannedDives: 1,
@@ -293,7 +310,7 @@ describe("rental pricing", () => {
       "bcd",
       "regulator",
       "wetsuit",
-      "mask_fins",
+      "fins",
       "weights",
       "dive_computer",
     ]);
@@ -328,7 +345,8 @@ describe("rentalFitCompleteness", () => {
   const OWN_KIT: RentalFitSizes = {
     rentsBcd: false,
     rentsWetsuit: false,
-    rentsMaskFins: false,
+    rentsMask: false,
+    rentsFins: false,
     rentsWeights: false,
     rentsDrysuit: false,
     rentsHood: false,
@@ -381,7 +399,7 @@ describe("rentalFitCompleteness", () => {
     const scuba = { ...OWN_KIT, rentsBcd: true, rentsWeights: true, finSize: "M" };
     expect(rentalFitCompleteness(scuba, undefined, "snorkeler")).toEqual({ state: "complete" });
     expect(rentalFitCompleteness({ ...scuba, rentsWetsuit: true }, undefined, "snorkeler")).toEqual(
-      { state: "incomplete", missing: ["wetsuit"] },
+      { state: "incomplete", missing: ["wetsuit", "boots"] },
     );
     expect(rentalFitCompleteness(scuba, undefined, "diver")).toEqual({
       state: "incomplete",
@@ -409,12 +427,13 @@ describe("rentalFitCompleteness", () => {
         ...OWN_KIT,
         rentsBcd: true,
         rentsWetsuit: true,
-        rentsMaskFins: true,
+        rentsMask: false,
+        rentsFins: true,
         rentsWeights: true,
       }),
     ).toEqual({
       state: "incomplete",
-      missing: ["bcd", "wetsuit", "boots", "mask_fins", "weights"],
+      missing: ["bcd", "wetsuit", "boots", "fins", "weights"],
     });
   });
 
@@ -424,30 +443,37 @@ describe("rentalFitCompleteness", () => {
         ...OWN_KIT,
         rentsBcd: true,
         rentsWetsuit: true,
-        rentsMaskFins: true,
+        rentsMask: false,
+        rentsFins: true,
         rentsWeights: true,
         bcdSize: "M",
         wetsuitSize: "3 mm / M",
         finSize: "9",
+        bootSize: "9",
         weightPreference: "12 lbs",
       }),
     ).toEqual({ state: "complete" });
   });
 
-  it("takes one shoe size for both the suit's boots and the fins, from either column", () => {
-    const suitAndFins = { ...OWN_KIT, rentsWetsuit: true, rentsMaskFins: true, wetsuitSize: "M" };
-    expect(rentalFitCompleteness({ ...suitAndFins, finSize: "9" })).toEqual({ state: "complete" });
-    // Imports carry a boot size of their own and no fin size — same answer.
-    expect(rentalFitCompleteness({ ...suitAndFins, bootSize: "9" })).toEqual({ state: "complete" });
-    // A blank fin size is not an answer, so the boot column still gets asked.
-    expect(rentalFitCompleteness({ ...suitAndFins, finSize: "", bootSize: "9" })).toEqual({
-      state: "complete",
-    });
-    // Neither column holds one: both pieces are loose ends, because both are
-    // separate lines on the packing list.
-    expect(rentalFitCompleteness(suitAndFins)).toEqual({
+  it("requires the size for each rented piece and recalls them independently", () => {
+    const fit = {
+      ...OWN_KIT,
+      rentsWetsuit: true,
+      rentsFins: true,
+      wetsuitSize: "M",
+      bootSize: "EU 39",
+      finSize: "XL",
+    };
+    expect(rentalFitCompleteness(fit)).toEqual({ state: "complete" });
+    expect(sizeForRentalItem(fit, "boots")).toBe("EU 39");
+    expect(sizeForRentalItem(fit, "fins")).toBe("XL");
+    expect(rentalFitCompleteness({ ...fit, finSize: null })).toEqual({
       state: "incomplete",
-      missing: ["boots", "mask_fins"],
+      missing: ["fins"],
+    });
+    expect(rentalFitCompleteness({ ...fit, bootSize: null })).toEqual({
+      state: "incomplete",
+      missing: ["boots"],
     });
   });
 
@@ -524,7 +550,8 @@ describe("offeredRentalFitFields / NOTHING_RENTED", () => {
       rentsBcd: true,
       rentsRegulator: true,
       rentsWetsuit: true,
-      rentsMaskFins: true,
+      rentsMask: true,
+      rentsFins: true,
       rentsWeights: true,
       rentsDiveComputer: true,
       rentsGopro: true,
@@ -574,7 +601,7 @@ describe("sizedRentalKindOfGearKind", () => {
     expect(sizedRentalKindOfGearKind("weights")).toBe("weights");
     // The register splits mask and fins into separate physical units; the fit
     // has one `finSize` for the pair, and the shoe size is the fins' half.
-    expect(sizedRentalKindOfGearKind("fins")).toBe("mask_fins");
+    expect(sizedRentalKindOfGearKind("fins")).toBe("fins");
   });
 
   it("maps a drysuit unit to the drysuit fit column (issue #1724)", () => {

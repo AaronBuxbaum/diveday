@@ -251,6 +251,7 @@ export default async function DiversPage({
           fields={{ personId: undoRemoval }}
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
+          dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : noticeText ? (
         <ShopNotice tone={noticeIsError ? "danger" : "success"} className="mt-6">

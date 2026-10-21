@@ -260,7 +260,6 @@ export default async function GearRegisterPage({
       label: t("gear.deleted.filter", { count: deletedPage.total }),
     });
   }
-
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "undoId"]} />
@@ -287,6 +286,7 @@ export default async function GearRegisterPage({
           fields={{ gearItemId: search.undoId }}
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
+          dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : pageBanner ? (
         <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>

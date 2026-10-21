@@ -23,7 +23,8 @@ function storedFit(overrides: Partial<DiverRentalFit> = {}): DiverRentalFit {
     rentsBcd: true,
     rentsRegulator: true,
     rentsWetsuit: true,
-    rentsMaskFins: true,
+    rentsMask: false,
+    rentsFins: true,
     rentsWeights: true,
     rentsDiveComputer: false,
     rentsGopro: false,
@@ -149,10 +150,10 @@ describe("a fact's value keeps its units whole", () => {
     const items = Array.from(sizes.querySelectorAll(".whitespace-nowrap")).map(
       (item) => item.textContent,
     );
-    expect(items).toEqual(["BCD M", "Wetsuit M", "Boots 9", "Mask & fins 9", "Weights 16 lb"]);
+    expect(items).toEqual(["BCD M", "Wetsuit M", "Boots 9", "Fins 9", "Weights 16 lb"]);
     // The list's own punctuation is `Intl.ListFormat`'s (a unit list), outside
     // the items, where the line may break.
-    expect(sizes.textContent).toBe("BCD M, Wetsuit M, Boots 9, Mask & fins 9, Weights 16 lb");
+    expect(sizes.textContent).toBe("BCD M, Wetsuit M, Boots 9, Fins 9, Weights 16 lb");
   });
 
   it("sets the phone whole and keeps the dot with the name before it", () => {
