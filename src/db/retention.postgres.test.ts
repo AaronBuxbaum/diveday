@@ -239,6 +239,9 @@ describePostgres("retention eligibility at mutation time", () => {
       actorPersonId: owner.id,
       held: true,
     });
+    // Observe early rejection while a lock barrier is still waiting. Original
+    // promises remain the source of the success assertions below.
+    const settled: Promise<unknown>[] = [Promise.allSettled([hold])];
     let prune: ReturnType<typeof pruneExpiredRecords> | undefined;
     try {
       // The owner has updated the hold but cannot commit its required activity INSERT.
@@ -248,12 +251,17 @@ describePostgres("retention eligibility at mutation time", () => {
         budgetMs: 10,
         batchLimit: 1,
       });
+      settled.push(Promise.allSettled([prune]));
       // The plain candidate SELECT saw the old version; DELETE waits on the owner's row lock.
       await waitForLockWaiters(pg.db, 2);
       clock.mockReturnValue(10);
     } finally {
-      await gate.release();
-      await Promise.allSettled([hold, ...(prune ? [prune] : [])]);
+      clock.mockReturnValue(10);
+      try {
+        await gate.release();
+      } finally {
+        await Promise.all(settled);
+      }
     }
     expect(await hold).toEqual({ ok: true });
     if (!prune) throw new Error("prune never started");
@@ -293,6 +301,7 @@ describePostgres("retention eligibility at mutation time", () => {
       budgetMs: 10,
       batchLimit: 1,
     });
+    const settled: Promise<unknown>[] = [Promise.allSettled([first])];
     let second: ReturnType<typeof pruneExpiredRecords> | undefined;
     try {
       await waitForLockWaiters(pg.db, 1);
@@ -303,11 +312,16 @@ describePostgres("retention eligibility at mutation time", () => {
         budgetMs: 10,
         batchLimit: 1,
       });
+      settled.push(Promise.allSettled([second]));
       await waitForLockWaiters(pg.db, 2);
       clock.mockReturnValue(10);
     } finally {
-      await gate.release();
-      await Promise.allSettled([first, ...(second ? [second] : [])]);
+      clock.mockReturnValue(10);
+      try {
+        await gate.release();
+      } finally {
+        await Promise.all(settled);
+      }
     }
     if (!second) throw new Error("second sweep never started");
     const summaries = await Promise.all([first, second]);
