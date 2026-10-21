@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 import { e2eNow } from "./helpers";
 
@@ -243,4 +244,73 @@ test("the staff 404 carries the search, so a dead link is a door", {
   await box.fill("Priya Sharma");
   await page.getByRole("option", { name: "Priya Sharma", exact: true }).click();
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\/[a-f0-9-]+$/);
+});
+
+const searchCopy = staffTranslator("en-US");
+
+test("the palette cannot activate a previous record while the next query is pending", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.goto("/shop/blue-mantis");
+  await page.getByRole("button", { name: "Search" }).click();
+  const box = page.getByRole("combobox", { name: /Search divers/ });
+  const dialog = page.getByRole("dialog");
+  await box.fill("Priya Sharma");
+  await expect(dialog.getByRole("option", { name: "Priya Sharma", exact: true })).toBeVisible();
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/search?q=zz-pending", async (route) => {
+    await blocked;
+    await route.fulfill({
+      json: { divers: [], trips: [], diveSites: [], courses: [], orders: [], gear: [] },
+    });
+  });
+  try {
+    await box.fill("zz-pending");
+    await expect(
+      dialog.getByText(searchCopy("shared.commandPalette.searching"), { exact: true }).last(),
+    ).toBeVisible();
+    await expect(dialog.getByRole("option", { name: "Priya Sharma", exact: true })).toHaveCount(0);
+    await expect(
+      dialog.getByRole("option", { name: searchCopy("shared.commandPalette.addDiver") }),
+    ).toHaveCount(0);
+    await box.press("Enter");
+    await expect(box).toBeVisible();
+    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+  } finally {
+    release();
+    await page.unrouteAll({ behavior: "wait" });
+  }
+});
+
+test("a failed palette search offers retry and only successful lookup offers Add diver", {
+  tag: READ_ONLY,
+}, async ({ page }) => {
+  await page.goto("/shop/blue-mantis");
+  await page.route("**/api/search?q=zz-retry", (route) => route.fulfill({ status: 503, body: "" }));
+  await page.getByRole("button", { name: "Search" }).click();
+  const box = page.getByRole("combobox", { name: /Search divers/ });
+  const dialog = page.getByRole("dialog");
+  await box.fill("zz-retry");
+  await expect(
+    dialog.getByText(searchCopy("shared.commandPalette.searchFailed"), { exact: true }).last(),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("option", { name: searchCopy("shared.commandPalette.addDiver") }),
+  ).toHaveCount(0);
+  await expect(
+    dialog.getByText(searchCopy("shared.commandPalette.emptyNoMatches"), { exact: true }),
+  ).toHaveCount(0);
+  await page.unroute("**/api/search?q=zz-retry");
+  await dialog
+    .getByRole("button", { name: searchCopy("shared.commandPalette.retry"), exact: true })
+    .click();
+  await expect(
+    dialog.getByRole("option", { name: searchCopy("shared.commandPalette.addDiver") }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText(searchCopy("shared.commandPalette.emptyNoMatches"), { exact: true }).last(),
+  ).toBeVisible();
 });

@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SearchResults } from "@/db/search";
 import { recentParam } from "@/lib/recent-refs";
 import { keepRecents, readRecents } from "./palette-recents";
 import { NO_RECENTS, type PaletteRecents } from "./palette-start-rows";
 
-/** No results: the palette before a query, and after one the server refused. */
+/** No records before the current request succeeds. */
 export const EMPTY: SearchResults = {
   divers: [],
   trips: [],
@@ -41,33 +41,75 @@ export function useCommandKey(setOpen: (update: (current: boolean) => boolean) =
  * in-flight mutation action, and so a stale request can be `AbortController`
  * cancelled instead of merely ignored.
  */
-export function useShopSearch(query: string, setResults: (results: SearchResults) => void) {
+export type SearchStatus = "idle" | "pending" | "success" | "error" | "unauthorized";
+
+export function useShopSearch(query: string, open: boolean) {
+  const [attempt, setAttempt] = useState(0);
+  const [authorizationLost, setAuthorizationLost] = useState(false);
+  const authorizationRevoked = useRef(false);
+  // Object identity distinguishes repeats of the same text and a reopened dialog.
+  // Results are hidden during render, before the debounce effect can run.
+  const request = useMemo(() => ({ query: query.trim(), open, attempt }), [query, open, attempt]);
+  const [completed, setCompleted] = useState<{
+    request: typeof request;
+    status: SearchStatus;
+    results: SearchResults;
+  }>();
+  const onUnauthorized = useCallback(() => {
+    // Revoke synchronously: another response may settle before effect cleanup.
+    // Only signing in through the recovery link starts a fresh session.
+    authorizationRevoked.current = true;
+    setAuthorizationLost(true);
+  }, []);
+  const retry = useCallback(() => setAttempt((current) => current + 1), []);
+  const searchable = open && request.query.length >= 2 && !authorizationLost;
+
   useEffect(() => {
-    const trimmed = query.trim();
-    if (trimmed.length < 2) {
-      setResults(EMPTY);
-      return;
-    }
+    if (!searchable) return;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(request.query)}`, {
           signal: controller.signal,
+          cache: "no-store",
         });
+        if (controller.signal.aborted || authorizationRevoked.current) return;
         if (!response.ok) {
-          setResults(EMPTY);
+          const denied = response.status === 401 || response.status === 403;
+          if (denied) onUnauthorized();
+          setCompleted({ request, status: denied ? "unauthorized" : "error", results: EMPTY });
           return;
         }
-        setResults((await response.json()) as SearchResults);
-      } catch (error) {
-        if ((error as { name?: string }).name !== "AbortError") setResults(EMPTY);
+        const results = (await response.json()) as SearchResults;
+        if (controller.signal.aborted || authorizationRevoked.current) return;
+        setCompleted({ request, status: "success", results });
+      } catch {
+        // Superseded and closed requests are cancellation, never a failed search.
+        if (!controller.signal.aborted && !authorizationRevoked.current) {
+          setCompleted({ request, status: "error", results: EMPTY });
+        }
       }
     }, 150);
     return () => {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [query, setResults]);
+  }, [request, searchable, onUnauthorized]);
+
+  const status: SearchStatus = authorizationLost
+    ? "unauthorized"
+    : !searchable
+      ? "idle"
+      : completed?.request === request
+        ? completed.status
+        : "pending";
+  return {
+    status,
+    results: status === "success" && completed?.request === request ? completed.results : EMPTY,
+    authorizationLost,
+    retry,
+    onUnauthorized,
+  };
 }
 
 /**
@@ -77,11 +119,18 @@ export function useShopSearch(query: string, setResults: (results: SearchResults
  * record that does not come back is forgotten here too. A failed read shows no
  * recents rather than stale ones.
  */
-export function usePaletteRecents(open: boolean, storageKey: string): PaletteRecents {
-  const [recents, setRecents] = useState<PaletteRecents>(NO_RECENTS);
+export function usePaletteRecents(
+  open: boolean,
+  storageKey: string,
+  onUnauthorized: () => void,
+): PaletteRecents {
+  const request = useMemo(() => ({ open, storageKey }), [open, storageKey]);
+  const [completed, setCompleted] = useState<{
+    request: typeof request;
+    recents: PaletteRecents;
+  }>();
   useEffect(() => {
     if (!open) {
-      setRecents(NO_RECENTS);
       return;
     }
     const stored = readRecents(storageKey);
@@ -93,10 +142,16 @@ export function usePaletteRecents(open: boolean, storageKey: string): PaletteRec
           `/api/search?recent=${encodeURIComponent(recentParam(stored))}`,
           {
             signal: controller.signal,
+            cache: "no-store",
           },
         );
-        if (!response.ok) return;
+        if (controller.signal.aborted) return;
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) onUnauthorized();
+          return;
+        }
         const hits = (await response.json()) as SearchResults;
+        if (controller.signal.aborted) return;
         const found = new Set([
           ...hits.divers.map((hit) => `diver:${hit.id}`),
           ...hits.trips.map((hit) => `trip:${hit.id}`),
@@ -104,12 +159,15 @@ export function usePaletteRecents(open: boolean, storageKey: string): PaletteRec
           ...hits.gear.map((hit) => `gear:${hit.id}`),
         ]);
         keepRecents(storageKey, found);
-        setRecents({ stored: stored.filter((row) => found.has(row.key)), hits });
+        setCompleted({
+          request,
+          recents: { stored: stored.filter((row) => found.has(row.key)), hits },
+        });
       } catch {
         // Offline or aborted: no recents this time.
       }
     })();
     return () => controller.abort();
-  }, [open, storageKey]);
-  return recents;
+  }, [open, storageKey, request, onUnauthorized]);
+  return open && completed?.request === request ? completed.recents : NO_RECENTS;
 }
