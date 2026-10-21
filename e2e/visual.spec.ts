@@ -1,7 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
-import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { LISTED_SHOP_SLUGS } from "../src/db/seed-listed-shops";
 import { staffTranslator } from "../src/i18n/staff-messages";
@@ -57,6 +56,7 @@ import {
   AGING_SAVED_AT,
   AOW_COURSE,
   bookAVisualRegressionSeat,
+  CATALOG_MAP_SITE_COUNT,
   capture,
   captureFolded,
   capturePrint,
@@ -65,6 +65,8 @@ import {
   deepDiverLogPath,
   diverCopy,
   EASING_BACK_TRIP,
+  expectOverviewMapSites,
+  expectPopupInMap,
   FLOW_TIMEOUT_MS,
   IDENTITY_ROUTE,
   installVisualBuildGuard,
@@ -6716,7 +6718,9 @@ for (const scheme of ["light", "dark"] as const) {
         // Leaflet measures pan progress with Date; let its animation clock
         // advance from the harness instant while this case changes map sizes.
         await page.clock.install({ time: E2E_FROZEN_CLOCK });
-        await capture(page, "dive-sites-library", scheme);
+        await capture(page, "dive-sites-library", scheme, {
+          beforeShot: () => expectOverviewMapSites(page, 8),
+        });
 
         // Use a real standalone pin from this viewport; a cluster's count
         // does not identify which named sites it contains.
@@ -6754,12 +6758,15 @@ for (const scheme of ["light", "dark"] as const) {
           .last();
         await expect(selectedPopup).toBeVisible();
         expect(await page.evaluate(() => window.scrollY)).toBe(scrollBeforePinSelection);
+        let footerFocusedAtPreviousWidth = false;
         await capture(page, "dive-sites-library-pin-selected", scheme, {
           beforeShot: async () => {
+            await expectPopupInMap(page, selectedPopup);
             const footer = selectedPopup.locator(".leaflet-site-card__link");
             await expect
               .poll(async () => (await footer.boundingBox())?.height ?? 0)
               .toBeGreaterThanOrEqual(44);
+            if (footerFocusedAtPreviousWidth) await expect(footer).toBeFocused();
             await selectedPopup.locator(".leaflet-popup-close-button").focus();
             await page.keyboard.press("Shift+Tab");
             await expect(footer).toBeFocused();
@@ -6769,21 +6776,11 @@ for (const scheme of ["light", "dark"] as const) {
                 return link.matches(":focus-visible") && Number.parseFloat(style.outlineWidth) > 0;
               }),
             ).toBe(true);
-            await expect
-              .poll(async () => {
-                const card = await selectedPopup.boundingBox();
-                const map = await page.locator(".leaflet-container").boundingBox();
-                if (!card || !map) return Number.NEGATIVE_INFINITY;
-                return Math.min(
-                  card.x - map.x,
-                  card.y - map.y,
-                  map.x + map.width - card.x - card.width,
-                  map.y + map.height - card.y - card.height,
-                );
-              })
-              .toBeGreaterThanOrEqual(0);
+            footerFocusedAtPreviousWidth = true;
+            await expectPopupInMap(page, selectedPopup);
           },
         });
+        await expect(selectedPopup.locator(".leaflet-site-card__link")).toBeFocused();
       });
 
       // The gear register on a calm morning (ADR 20260827-the-shops-shelves,
@@ -7147,7 +7144,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/dive-sites/catalog");
         await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
         await waitForSiteMap(page);
-        await capture(page, "dive-sites-catalog", scheme);
+        await capture(page, "dive-sites-catalog", scheme, {
+          beforeShot: () => expectOverviewMapSites(page, CATALOG_MAP_SITE_COUNT),
+        });
       });
 
       /**
@@ -7404,9 +7403,7 @@ test.describe("capture harness", () => {
         name: "catalog",
         path: "/shop/blue-mantis/dive-sites?view=catalog",
         heading: "DiveDay common dive sites",
-        pins: DIVE_SITE_TEMPLATES.filter(
-          ({ briefing }) => briefing.forecastLatitude != null && briefing.forecastLongitude != null,
-        ).length,
+        pins: CATALOG_MAP_SITE_COUNT,
         ready: waitForSiteMap,
       },
       {
@@ -7417,6 +7414,25 @@ test.describe("capture harness", () => {
         ready: waitForSiteLibrary,
       },
     ]) {
+      test(`${surface.name} overview keeps every site visible after resizing`, async ({ page }) => {
+        await test.step("fresh phone overview", async () => {
+          await page.setViewportSize(PHONE_VIEWPORT);
+          await page.goto(surface.path);
+          await surface.ready(page);
+          await expectOverviewMapSites(page, surface.pins);
+        });
+        await test.step("fresh desktop overview", async () => {
+          await page.setViewportSize(VIEWPORTS[1]);
+          await page.reload();
+          await surface.ready(page);
+          await expectOverviewMapSites(page, surface.pins);
+        });
+        await test.step("desktop overview resized to phone", async () => {
+          await page.setViewportSize(PHONE_VIEWPORT);
+          await expectOverviewMapSites(page, surface.pins);
+        });
+      });
+
       test(`${surface.name} capture waits for Leaflet after its content is visible`, async ({
         page,
       }) => {
@@ -7892,7 +7908,10 @@ for (const scheme of ["light", "dark"] as const) {
       await page.waitForURL(/[?&]notice=saved/);
       await page.goto(`/shop/${privateShop.slug}/dive-sites`);
       await page.getByText("The entry silted up after the storm").waitFor();
-      await capture(page, "dive-site-planning-note", scheme);
+      await waitForSiteLibrary(page);
+      await capture(page, "dive-site-planning-note", scheme, {
+        beforeShot: () => expectOverviewMapSites(page, 8),
+      });
     });
 
     /**

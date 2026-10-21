@@ -36,6 +36,13 @@ export type SiteMapProps = {
   clusterLabel: string;
 };
 
+type FittedOverview = {
+  map: LeafletMap;
+  coordinates: string;
+  center: ReturnType<LeafletMap["getCenter"]>;
+  zoom: number;
+};
+
 const pinPath =
   "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z";
 
@@ -54,7 +61,7 @@ export default function SiteMap({
   const mapRef = useRef<LeafletMap | null>(null);
   const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
   const markersRef = useRef<Map<string, LeafletMarker>>(new Map());
-  const lastFitRef = useRef<{ map: LeafletMap; coordinates: string } | null>(null);
+  const lastFitRef = useRef<FittedOverview | null>(null);
   const allCoordinates = useMemo(() => {
     const coordinates: [number, number][] = [];
     if (shopAnchor) coordinates.push([shopAnchor.latitude, shopAnchor.longitude]);
@@ -104,29 +111,10 @@ export default function SiteMap({
     };
   }, [center.latitude, center.longitude, zoom]);
 
-  // Fit the complete data set once, then let map gestures control the viewport.
+  // Keep the untouched overview fitted as its container changes size.
   useEffect(() => {
     if (!mapInstance || allCoordinates.length === 0) return;
-
-    const coordinateKey = allCoordinates
-      .map(([latitude, longitude]) => `${String(latitude)},${String(longitude)}`)
-      .join(";");
-    if (
-      lastFitRef.current?.map === mapInstance &&
-      lastFitRef.current.coordinates === coordinateKey
-    ) {
-      return;
-    }
-
-    lastFitRef.current = { map: mapInstance, coordinates: coordinateKey };
-    if (allCoordinates.length === 1) {
-      mapInstance.setView(allCoordinates[0], Math.min(mapInstance.getZoom(), zoom), {
-        animate: false,
-      });
-      return;
-    }
-
-    mapInstance.fitBounds(allCoordinates, { padding: [68, 68], maxZoom: 11 });
+    return keepOverviewFitted(mapInstance, allCoordinates, zoom, lastFitRef, markersRef.current);
   }, [allCoordinates, mapInstance, zoom]);
 
   // Render only pins near the viewport and cluster close points to keep marker
@@ -320,9 +308,7 @@ export default function SiteMap({
       if (!popupOpen) scheduleRender();
     };
     const handleResize = () => {
-      markersRef.current.forEach((marker) => {
-        if (marker.isPopupOpen()) marker.getPopup()?.update();
-      });
+      markersRef.current.forEach(updateOpenPopup);
     };
     const handlePopupOpen = () => {
       popupOpen = true;
@@ -366,6 +352,60 @@ export default function SiteMap({
   }, [mapInstance, pins, selectedPinId]);
 
   return <div ref={containerRef} className={className} />;
+}
+
+function updateOpenPopup(marker: LeafletMarker) {
+  if (!marker.isPopupOpen()) return;
+  const popup = marker.getPopup();
+  if (!popup) return;
+  const focused = document.activeElement;
+  const restoreFocus = focused instanceof HTMLElement && popup.getElement()?.contains(focused);
+  // Public update reattaches DOM content while measuring its resized layout.
+  // Keep the same keyboard target, without scrolling or taking outside focus.
+  popup.update();
+  if (restoreFocus && focused.isConnected) focused.focus({ preventScroll: true });
+}
+
+function keepOverviewFitted(
+  map: LeafletMap,
+  coordinates: [number, number][],
+  zoom: number,
+  lastFit: { current: FittedOverview | null },
+  markers: ReadonlyMap<string, LeafletMarker>,
+) {
+  const coordinateKey = coordinates
+    .map(([latitude, longitude]) => `${String(latitude)},${String(longitude)}`)
+    .join(";");
+  const fitOverview = () => {
+    if (coordinates.length === 1) {
+      map.setView(coordinates[0], Math.min(map.getZoom(), zoom), { animate: false });
+    } else {
+      map.fitBounds(coordinates, { padding: [68, 68], maxZoom: 11, animate: false });
+    }
+    lastFit.current = {
+      map,
+      coordinates: coordinateKey,
+      center: map.getCenter(),
+      zoom: map.getZoom(),
+    };
+  };
+  if (lastFit.current?.map !== map || lastFit.current.coordinates !== coordinateKey) fitOverview();
+
+  const resize = () => {
+    const overview = lastFit.current;
+    if (!overview || overview.map !== map || map.getZoom() !== overview.zoom) return;
+    // Leaflet rounds container centers to pixels during invalidateSize.
+    // Preserve a user's pan/zoom, and let the open popup's own update pan it.
+    const drift = map
+      .project(map.getCenter(), overview.zoom)
+      .distanceTo(map.project(overview.center, overview.zoom));
+    if (drift > 1 || Array.from(markers.values()).some((marker) => marker.isPopupOpen())) return;
+    fitOverview();
+  };
+  map.on("resize", resize);
+  return () => {
+    map.off("resize", resize);
+  };
 }
 
 function mapControlRectangles(container: HTMLElement) {

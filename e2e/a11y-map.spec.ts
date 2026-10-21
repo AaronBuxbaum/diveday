@@ -1,6 +1,24 @@
 import AxeBuilder from "@axe-core/playwright";
+import type { Page } from "@playwright/test";
+import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { expectNoA11yViolations } from "./a11y-scan";
 import { expect, test } from "./fixtures";
+import { E2E_FROZEN_CLOCK } from "./servers";
+
+async function expectMapSiteCount(page: Page, count: number) {
+  await expect
+    .poll(() =>
+      page.locator(".leaflet-marker-pane").evaluate((pane) => {
+        const pins = pane.querySelectorAll(".leaflet-site-marker button").length;
+        const clustered = [...pane.querySelectorAll("button.leaflet-site-cluster")].reduce(
+          (sum, cluster) => sum + Number(cluster.textContent),
+          0,
+        );
+        return pins + clustered;
+      }),
+    )
+    .toBe(count);
+}
 
 test.beforeEach(async ({ page, privateShop }) => {
   // A known isolated pin: the catalog now fits every site and clusters them.
@@ -20,7 +38,7 @@ test.beforeEach(async ({ page, privateShop }) => {
 });
 
 /** Deliberately inject spacing failures; clustering correctly removes them in normal UI. */
-async function overlapPin(page: import("@playwright/test").Page) {
+async function overlapPin(page: Page) {
   await page
     .locator(".leaflet-site-marker")
     .getByRole("button", { name: "Accessibility reef", exact: true })
@@ -34,10 +52,22 @@ async function overlapPin(page: import("@playwright/test").Page) {
     });
 }
 
-test("essential geographic pin spacing keeps every other accessibility check", async ({ page }) => {
+test("essential geographic pin spacing keeps every other accessibility check", async ({
+  page,
+  privateShop,
+}) => {
   await overlapPin(page);
+  await page.getByRole("button", { name: "Accessibility reef", exact: true }).evaluate((pin) => {
+    pin.id = "essential-spacing-pin";
+  });
   const raw = await new AxeBuilder({ page }).withRules(["target-size"]).analyze();
-  expect(raw.violations.some((violation) => violation.id === "target-size")).toBe(true);
+  expect(
+    raw.violations.some(
+      (violation) =>
+        violation.id === "target-size" &&
+        violation.nodes.some((node) => node.target.includes("#essential-spacing-pin")),
+    ),
+  ).toBe(true);
   await expectNoA11yViolations(page);
   const details = page.getByRole("link", { name: "Accessibility reef", exact: true });
   await expect(details).toBeVisible();
@@ -49,6 +79,27 @@ test("essential geographic pin spacing keeps every other accessibility check", a
   await expect(
     page.getByRole("heading", { name: "Accessibility reef", exact: true }),
   ).toBeVisible();
+  {
+    await page.goto(`/shop/${privateShop.slug}/dive-sites/catalog`);
+    await expect(page.locator("button.leaflet-site-cluster").first()).toBeVisible();
+    await expectMapSiteCount(
+      page,
+      DIVE_SITE_TEMPLATES.filter(
+        ({ briefing }) => briefing.forecastLatitude != null && briefing.forecastLongitude != null,
+      ).length,
+    );
+    await expectNoA11yViolations(page);
+    const details = page
+      .locator('[id^="template-row-"]')
+      .getByRole("link", { name: "Molasses Reef", exact: true });
+    await expect(details).toBeVisible();
+    const bounds = await details.boundingBox();
+    expect(bounds?.width).toBeGreaterThanOrEqual(44);
+    expect(bounds?.height).toBeGreaterThanOrEqual(44);
+    await details.click({ position: { x: 24, y: 20 } });
+    await page.waitForURL(/template=molasses-reef/);
+    await expect(page.getByRole("heading", { name: "Molasses Reef", exact: true })).toBeVisible();
+  }
 });
 
 test("an ordinary undersized button still fails target-size", async ({ page }) => {
@@ -90,12 +141,30 @@ test("an undersized map zoom control still fails target-size", async ({ page }) 
 });
 
 test("an undersized popup control still fails target-size", async ({ page }) => {
+  // Leaflet auto-pan measures elapsed Date time.
+  await page.clock.install({ time: E2E_FROZEN_CLOCK });
   await page
     .locator(".leaflet-site-marker")
     .getByRole("button", { name: "Accessibility reef", exact: true })
     .press("Enter");
   await expect(page.locator(".leaflet-site-marker button.ring-4")).toHaveCount(1);
   await expect(page.locator(".leaflet-popup-content")).toHaveCount(1);
+  await expect
+    .poll(() =>
+      page.locator(".leaflet-site-popup").evaluate((popup) => {
+        const map = popup.closest(".leaflet-container");
+        if (!map) return Number.NEGATIVE_INFINITY;
+        const card = popup.getBoundingClientRect();
+        const bounds = map.getBoundingClientRect();
+        return Math.min(
+          card.left - bounds.left,
+          card.top - bounds.top,
+          bounds.right - card.right,
+          bounds.bottom - card.bottom,
+        );
+      }),
+    )
+    .toBeGreaterThanOrEqual(0);
   const close = page.getByRole("button", { name: "Close popup" });
   await close.evaluate((control) => {
     control.id = "popup-small-target";

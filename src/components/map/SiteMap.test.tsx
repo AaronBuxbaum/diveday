@@ -37,7 +37,72 @@ function popup(container: HTMLElement) {
   return content;
 }
 
+async function sizedOverview(dimensions: { width: number; height: number }) {
+  const L = await import("leaflet");
+  const getContainer = vi.spyOn(L.Map.prototype, "getContainer");
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.classList.contains("leaflet-container") ? dimensions.width : 0;
+  });
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.classList.contains("leaflet-container") ? dimensions.height : 0;
+  });
+  const view = render(
+    <SiteMap
+      center={{ latitude: 0, longitude: 0 }}
+      pins={[-120, 120].map((longitude) => ({
+        ...PIN,
+        id: String(longitude),
+        latitude: 0,
+        longitude,
+      }))}
+      clusterLabel="dive sites"
+    />,
+  );
+  await waitFor(() =>
+    expect(view.container.querySelectorAll(".leaflet-site-marker button")).toHaveLength(2),
+  );
+  const map = getContainer.mock.contexts[0];
+  if (!(map instanceof L.Map)) throw new Error("Leaflet map did not mount");
+  return { ...view, map };
+}
+
 describe("SiteMap labels through Leaflet", () => {
+  it("refits the untouched overview on resize so both edge sites remain visible", async () => {
+    const dimensions = { width: 640, height: 440 };
+    const { container, map } = await sizedOverview(dimensions);
+    const overviewZoom = map.getZoom();
+    dimensions.width = 320;
+    map.invalidateSize({ animate: false });
+    await Promise.resolve();
+    expect(map.getZoom()).toBeLessThan(overviewZoom);
+    await waitFor(() =>
+      expect(container.querySelectorAll(".leaflet-site-marker button")).toHaveLength(2),
+    );
+  });
+
+  it.each(["pan", "zoom"] as const)(
+    "preserves a manually changed %s when resized",
+    async (gesture) => {
+      const dimensions = { width: 640, height: 440 };
+      const { map } = await sizedOverview(dimensions);
+      if (gesture === "pan") map.panBy([80, 40], { animate: false });
+      else map.setZoom(map.getZoom() + 1, { animate: false });
+      const manualCenter = map.getCenter();
+      const manualZoom = map.getZoom();
+      dimensions.width = 320;
+      map.invalidateSize({ animate: false });
+      await Promise.resolve();
+      expect(map.getZoom()).toBe(manualZoom);
+      expect(
+        map.project(map.getCenter()).distanceTo(map.project(manualCenter)),
+      ).toBeLessThanOrEqual(1);
+    },
+  );
+
   it("gives each marker one named native button without an interactive wrapper", async () => {
     const { container } = render(
       <SiteMap
@@ -269,7 +334,12 @@ describe("SiteMap labels through Leaflet", () => {
     });
     const events = vi.spyOn(L.Map.prototype, "fire");
     const { container } = render(
-      <SiteMap center={CENTER} pins={[PIN]} selectedPinId={PIN.id} clusterLabel="dive sites" />,
+      <>
+        <button type="button" data-outside-map>
+          Outside the map
+        </button>
+        <SiteMap center={CENTER} pins={[PIN]} selectedPinId={PIN.id} clusterLabel="dive sites" />
+      </>,
     );
     await markerButton(container);
     await waitFor(() => expect(popup(container).querySelector("h2")).toHaveTextContent(PIN.name));
@@ -287,7 +357,18 @@ describe("SiteMap labels through Leaflet", () => {
     const popupElement = container.querySelector(".leaflet-site-popup");
     if (!(popupElement instanceof HTMLElement)) throw new Error("Popup did not mount");
     const selectedButton = container.querySelector(".leaflet-site-marker button");
+    const outside = container.querySelector("[data-outside-map]");
+    if (!(outside instanceof HTMLButtonElement)) throw new Error("Outside control did not mount");
+    outside.focus();
+    dimensions.width = 600;
+    map.invalidateSize({ animate: false });
+    await Promise.resolve();
+    expect(outside).toHaveFocus();
     map.panBy([-120, 0], { animate: false });
+    const focusedLink = popup(container).querySelector("a");
+    if (!(focusedLink instanceof HTMLAnchorElement)) throw new Error("Popup details did not mount");
+    focusedLink.focus();
+    expect(focusedLink).toHaveFocus();
     dimensions.width = 320;
     map.invalidateSize({ animate: false });
     await Promise.resolve();
@@ -297,6 +378,7 @@ describe("SiteMap labels through Leaflet", () => {
     expect(left + popupElement.offsetWidth).toBeLessThanOrEqual(dimensions.width);
     expect(container.querySelector(".leaflet-site-popup")).toBe(popupElement);
     expect(container.querySelector(".leaflet-site-marker button")).toBe(selectedButton);
+    expect(focusedLink).toHaveFocus();
 
     const close = container.querySelector(".leaflet-popup-close-button");
     if (!(close instanceof HTMLElement)) throw new Error("Popup close button did not mount");

@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import type { Browser, Page } from "@playwright/test";
+import type { Browser, Locator, Page } from "@playwright/test";
 import { requireFreshBuild } from "../scripts/e2e-build-evidence.mjs";
 import {
   captureBuildBoundary,
@@ -7,6 +7,7 @@ import {
   writeCaptureEvidence,
 } from "../scripts/visual-evidence.mjs";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
+import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
@@ -20,6 +21,57 @@ import { E2E_FROZEN_CLOCK } from "./servers";
 
 export const staffCopy = staffTranslator("en-US");
 export const diverCopy = diverTranslator("en-US");
+
+export const CATALOG_MAP_SITE_COUNT = DIVE_SITE_TEMPLATES.filter(
+  ({ briefing }) => briefing.forecastLatitude != null && briefing.forecastLongitude != null,
+).length;
+
+export async function expectOverviewMapSites(page: Page, count: number) {
+  await expect
+    .poll(() =>
+      page.locator(".leaflet-container").evaluate((map) => {
+        const bounds = map.getBoundingClientRect();
+        const targets = [
+          ...map.querySelectorAll(".leaflet-site-marker button, button.leaflet-site-cluster"),
+        ];
+        return {
+          sites: targets.reduce(
+            (sum, target) =>
+              sum + (target.matches(".leaflet-site-cluster") ? Number(target.textContent) : 1),
+            0,
+          ),
+          clipped: targets.flatMap((target) => {
+            const rect = target.getBoundingClientRect();
+            return rect.width > 0 &&
+              rect.height > 0 &&
+              rect.left >= bounds.left &&
+              rect.top >= bounds.top &&
+              rect.right <= bounds.right &&
+              rect.bottom <= bounds.bottom
+              ? []
+              : [target.getAttribute("aria-label")];
+          }),
+        };
+      }),
+    )
+    .toEqual({ sites: count, clipped: [] });
+}
+
+export async function expectPopupInMap(page: Page, popup: Locator) {
+  await expect
+    .poll(async () => {
+      const card = await popup.boundingBox();
+      const map = await page.locator(".leaflet-container").boundingBox();
+      if (!card || !map) return Number.NEGATIVE_INFINITY;
+      return Math.min(
+        card.x - map.x,
+        card.y - map.y,
+        map.x + map.width - card.x - card.width,
+        map.y + map.height - card.y - card.height,
+      );
+    })
+    .toBeGreaterThanOrEqual(0);
+}
 
 export async function waitForSiteMap(page: Page) {
   // The server heading can precede both lazy imports. Pins or clusters prove
