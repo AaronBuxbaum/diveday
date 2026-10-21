@@ -2604,7 +2604,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 }
 .leaflet-site-popup .leaflet-popup-close-button {
   z-index: 1;
-  top: 10px;
+  inset-block-start: 10px;
   right: 10px;
   width: 22px;
   height: 22px;
