@@ -105,9 +105,12 @@ test("an old form cannot put its input into a replacement account's draft", asyn
     await staffContext.clearCookies();
     await signInAs(replacementPage, DEV_STAFF_LOGINS.captain);
     const name = "Old account private draft input";
+    // Cookie replacement can send this stale POST through a sign-in redirect.
+    // Assert its terminal response before checking the replacement draft.
     const staleSave = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
+        ![301, 302, 303, 307, 308].includes(response.status()) &&
         Boolean(response.request().headers()["next-action"]) &&
         Boolean(response.request().postData()?.includes(name)),
     );
