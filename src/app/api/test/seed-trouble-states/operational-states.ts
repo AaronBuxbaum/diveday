@@ -151,7 +151,7 @@ export async function seedOperationalTrust(
         personId: person.id,
         agency: "padi",
         level: "open_water",
-        identifier: `OPERATIONAL-${index}`,
+        identifier: `OPERATIONAL-${state}-${index}`,
         status: "verified",
         reviewedByPersonId: actor.id,
         reviewedAt: now,

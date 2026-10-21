@@ -75,6 +75,17 @@ describe("operational trust trouble states", () => {
     expect(trip?.boatId).toBe(state.replacementBoatId);
   });
 
+  it("keeps two operational variants independent in the same private shop", async () => {
+    const { db, shop } = ctx;
+    const intro = await seedOperationalTrust(db, shop, "intro", nowDate());
+    const ashore = await seedOperationalTrust(db, shop, "ashore", nowDate());
+    expect(ashore.tripId).not.toBe(intro.tripId);
+    const manifest = await getTripManifest(db, shop.id, ashore.tripId);
+    expect(manifest?.divers.find((seat) => seat.fullName === "Bea Quill")?.buddyAlert).toBe(
+      "teammate_ashore",
+    );
+  });
+
   it("accepts a test demo's chosen slug and rejects real shops, bad tokens, and real databases", async () => {
     const { db, shop } = ctx;
     await db.update(shops).set({ slug: "operational-private-demo" }).where(eq(shops.id, shop.id));

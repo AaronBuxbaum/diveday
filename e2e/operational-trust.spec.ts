@@ -8,6 +8,7 @@ import { expect, test } from "./fixtures";
 import {
   manifestRow,
   offlineCopySaved,
+  openIfClosed,
   openManifestPerson,
   openOnThisPhone,
   openTripAboutRow,
@@ -103,7 +104,9 @@ test("an unsailed boat change refreshes the log while a historical hull mismatch
     .getByLabel(copy("boats.boatSelectLabel"), { exact: false })
     .selectOption(state.replacementBoatId);
   await plan.getByRole("button", { name: copy("trips.details.saveChanges"), exact: true }).click();
-  await expect(page).toHaveURL(/notice=saved/);
+  await expect(
+    page.getByRole("status").filter({ hasText: copy("trips.notices.saved") }),
+  ).toBeVisible();
   await page.goto(`${trip}/log`);
   await expect(section.getByText("TRUST2", { exact: true })).toBeVisible();
   await expect(section.getByText("TRUST1", { exact: true })).toHaveCount(0);
@@ -125,7 +128,9 @@ test("a manual junior team retains blocked readiness and ashore advice clears wh
   const state = await seed(request, privateShop.slug, "buddy");
   await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
   await page.getByRole("heading", { name: copy("manifest.buddyHeading") }).click();
-  await page.getByText(copy("manifest.buddyNewTeamHeading"), { exact: true }).click();
+  await openIfClosed(
+    page.getByRole("group", { name: copy("manifest.buddyNewTeamHeading"), exact: true }),
+  );
   await page.getByRole("checkbox", { name: "Ari Vale", exact: true }).check();
   await page.getByRole("checkbox", { name: "Bea Quill", exact: true }).check();
   await page.getByRole("button", { name: copy("manifest.buddyFormSubmit"), exact: true }).click();
@@ -167,7 +172,9 @@ test("a manual junior team retains blocked readiness and ashore advice clears wh
   await page.getByRole("dialog").getByRole("button", { name: "Close person details" }).click();
   await page.getByRole("button", { name: copy("manifest.buddyDissolve"), exact: true }).click();
   await expect(page.getByText(ashore, { exact: true })).toHaveCount(0);
-  await page.getByText(copy("manifest.buddyNewTeamHeading"), { exact: true }).click();
+  await openIfClosed(
+    page.getByRole("group", { name: copy("manifest.buddyNewTeamHeading"), exact: true }),
+  );
   await page.getByRole("checkbox", { name: "Bea Quill", exact: true }).check();
   await page.getByRole("checkbox", { name: state.crewName, exact: false }).check();
   await page.getByRole("button", { name: copy("manifest.buddyFormSubmit"), exact: true }).click();
