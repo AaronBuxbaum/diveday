@@ -39,6 +39,7 @@ const copy: ReviewRowCopy = {
   hiddenToast: "Review hidden.",
   undo: "Undo",
   undoPending: "Putting it back…",
+  dismiss: "Dismiss",
   published: "Review published to your schedule page.",
   standout: "Review marked as standout.",
   standoutRemoved: "Review removed from standouts.",

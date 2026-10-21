@@ -20,7 +20,7 @@ import type { RentalPricing } from "./rentals";
 
 const PRICING: RentalPricing = {
   setCents: 6000,
-  perItemCents: { bcd: 1500, regulator: 1800, mask_fins: 800, wetsuit: 1200 },
+  perItemCents: { bcd: 1500, regulator: 1800, fins: 800, wetsuit: 1200 },
   nitroxCents: 1000,
 };
 
@@ -202,7 +202,7 @@ describe("counterRentalCardSummary", () => {
 });
 
 describe("the set price", () => {
-  const core = counterRentalCoreKinds(["bcd", "regulator", "wetsuit", "mask_fins"]);
+  const core = counterRentalCoreKinds(["bcd", "regulator", "wetsuit", "fins"]);
 
   it("reads the core set from what the shop offers, fins carrying the pair", () => {
     expect(core).toEqual(["bcd", "regulator", "wetsuit", "fins"]);

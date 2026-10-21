@@ -13,7 +13,7 @@ import {
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
-import { formatMonthDay, formatTimeZoneName, joinFacts, monthNames } from "@/lib/format";
+import { joinFacts } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { summarizeMonth } from "@/lib/reporting";
 import { currentShopSeason, type ShopSeason, shopSeasonLabel, shopSeasonOf } from "@/lib/season";
@@ -106,7 +106,6 @@ export async function YearView({
     ]);
   const year = summarizeShopYear(yearInput);
   const lastYear = lastYearInput ? summarizeShopYear(lastYearInput) : null;
-  const zone = formatTimeZoneName(locale, tz, now);
   const lastYearLine = (value: number) =>
     lastYear?.hasActivity
       ? t(isThisYear ? "reports.year.lastYearToDate" : "reports.year.lastYearWhole", {
@@ -135,32 +134,10 @@ export async function YearView({
   ].filter((line): line is string => line !== null);
   const reports = shopPath(shopSlug, "reports");
   const years = Array.from({ length: thisYear - firstYear + 1 }, (_, index) => thisYear - index);
-  const monthDay = (day: string) =>
-    formatMonthDay(Number(day.slice(5, 7)), Number(day.slice(8, 10)), locale);
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
         title={t("shared.shopSections.money")}
-        description={
-          !isThisYear
-            ? t("reports.year.rangeWhole", {
-                year: year.label,
-                start: monthDay(year.startsOn),
-                end: monthDay(year.endsOn),
-                zone,
-              })
-            : year.sinceMonth
-              ? t("reports.year.rangeSince", {
-                  year: year.label,
-                  month: monthNames(locale)[year.sinceMonth - 1] ?? "",
-                  zone,
-                })
-              : t("reports.year.rangeSoFar", {
-                  year: year.label,
-                  start: monthDay(year.startsOn),
-                  zone,
-                })
-        }
         actions={
           year.hasActivity ? (
             <a

@@ -203,6 +203,7 @@ export default async function ReviewsPage({
     hiddenToast: t("reviews.notice.hiddenToast"),
     undo: t("shared.undoToast.undo"),
     undoPending: t("shared.undoToast.pendingLabel"),
+    dismiss: t("shared.undoToast.dismiss"),
     published: t("reviews.notice.published"),
     standout: t("reviews.notice.standout"),
     standoutRemoved: t("reviews.notice.standoutRemoved"),
@@ -212,7 +213,6 @@ export default async function ReviewsPage({
     error: t("reviews.notice.error"),
   };
   const reply = await reviewReplyContext(db, shop, session.user.personId, t);
-
   /** The reason list, worded once for every row's picker. */
   const hideReasons = REVIEW_MODERATION_REASONS.map((reason) => ({
     value: reason,

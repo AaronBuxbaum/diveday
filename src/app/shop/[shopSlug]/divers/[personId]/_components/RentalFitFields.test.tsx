@@ -9,7 +9,7 @@ afterEach(cleanup);
 const TOGGLES: RentalFitToggle[] = [
   { name: "bcd", label: "BCD", defaultChecked: true },
   { name: "wetsuit", label: "Wetsuit", defaultChecked: true },
-  { name: "maskFins", label: "Mask & fins", defaultChecked: false },
+  { name: "fins", label: "Fins", defaultChecked: false },
 ];
 
 const SIZES: RentalFitSize[] = [
@@ -25,7 +25,7 @@ const SIZES: RentalFitSize[] = [
     label: "Fin & boot size",
     placeholder: "US 9",
     defaultValue: "US 11",
-    requires: ["maskFins", "wetsuit"],
+    requires: ["fins", "wetsuit"],
   },
 ];
 
@@ -83,7 +83,7 @@ describe("RentalFitFields", () => {
     expect(screen.getByLabelText("Fin & boot size")).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText("Wetsuit"));
     expect(screen.queryByLabelText("Fin & boot size")).toBeNull();
-    await userEvent.click(screen.getByLabelText("Mask & fins"));
+    await userEvent.click(screen.getByLabelText("Fins"));
     expect(screen.getByLabelText("Fin & boot size")).toBeInTheDocument();
   });
 });

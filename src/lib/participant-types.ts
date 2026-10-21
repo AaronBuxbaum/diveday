@@ -204,8 +204,7 @@ export function joinedDiving(seat: {
 
 /**
  * The register's own kinds a snorkeler may hold, expanded from
- * {@link SNORKELER_RENTABLE_KINDS} the way `gearAssignmentNeeds` splits a
- * mask-and-fins or hood-and-gloves answer into tagged units.
+ * {@link SNORKELER_RENTABLE_KINDS}; each piece maps to its matching tagged unit.
  */
 export const SNORKELER_REGISTER_KINDS: readonly string[] = [
   "mask",
@@ -256,7 +255,8 @@ export function hasNonDivers(counts: ParticipantCounts): boolean {
  * stays import-free; the caller's `RentableItemKind` narrows them.
  */
 export const SNORKELER_RENTABLE_KINDS: readonly string[] = [
-  "mask_fins",
+  "mask",
+  "fins",
   "wetsuit",
   // Rides along with a wetsuit on the prep list (src/lib/dive-prep.ts), and
   // a snorkeler on a rocky entry wants them as much as a diver does.

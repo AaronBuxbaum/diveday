@@ -107,7 +107,7 @@
     "deleting": "Eliminando…",
     "restore": "Restaurar",
     "restoring": "Restaurando…",
-    "claimTag": "Etiqueta de entrega",
+    "claimTag": "Imprimir etiqueta de retiro",
     "jobHeading": "El trabajo",
     "inspectionDue": "Inspección visual el {date}",
     "hydroDue": "Prueba hidrostática el {date}",
@@ -151,6 +151,8 @@
   },
   "diver": {
     "heading": "Su propio equipo",
+    "gearHeading": "Equipo registrado",
+    "ordersHeading": "Historial de servicio",
     "gearEmpty": "Nada en ficha.",
     "ordersEmpty": "Ninguna todavía.",
     "onTheBench": "{count, plural, one {# en el taller} other {# en el taller}}",

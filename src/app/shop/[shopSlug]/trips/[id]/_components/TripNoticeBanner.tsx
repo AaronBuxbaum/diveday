@@ -1,5 +1,6 @@
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -827,8 +828,7 @@ export function resolveTripNotice({
 
 /**
  * The page-level banner, now only for what has no form to sit beside: a
- * permission refusal, and the roster's per-diver outcomes, whose undo control
- * this still carries.
+ * permission refusal and any roster removal that still has an undo action.
  */
 export function TripNoticeBanner({
   notice,
@@ -845,6 +845,19 @@ export function TripNoticeBanner({
 }) {
   if (!notice) return null;
   const t = staffTranslator(locale);
+  if (notice.tone === "success" && undoBookingId && undoAction) {
+    return (
+      <UndoToast
+        message={notice.text}
+        action={undoAction}
+        fields={{ bookingId: undoBookingId }}
+        pendingLabel={t("trips.notices.undoing")}
+        undoLabel={t("trips.notices.undo")}
+        dismissLabel={t("shared.undoToast.dismiss")}
+      />
+    );
+  }
+
   return (
     <div className="mt-6">
       <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
@@ -853,16 +866,6 @@ export function TripNoticeBanner({
           {undoBookingId && undoAction ? (
             <form action={undoAction}>
               <input type="hidden" name="bookingId" value={undoBookingId} />
-              {/* The `link` variant is exactly what this hand-rolled string was
-                  reaching for — reads as inline text, still claims a full 44px
-                  target — so it goes through `buttonClass` like every other
-                  button-shaped thing (docs/design/forms-and-controls.md).
-                  `busy`, because a `SubmitButton` disables itself only while its
-                  own submit is in flight, and the default not-allowed cursor
-                  reads as a refusal at the moment the undo was accepted. The one
-                  thing that changes on screen: the label now takes the link
-                  colour rather than inheriting the notice's tone, which is how
-                  every other undo/inline action in the app already reads. */}
               <SubmitButton
                 pendingLabel={t("trips.notices.undoing")}
                 className={buttonClass({

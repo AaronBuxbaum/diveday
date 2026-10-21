@@ -144,14 +144,19 @@ export function GearAndSizes({
       defaultValue: profile?.gloveSize ?? "",
       requires: ["gloves"],
     },
-    // One shoe-size answer covers fins and boots — the two fields asked the
-    // same question, and the save writes it to both columns.
-    (offers.has("mask_fins") || offers.has("wetsuit")) && {
+    offers.has("fins") && {
       name: "finSize",
       label: t("divers.rentalFit.finSizeLabel"),
       placeholder: t("divers.rentalFit.finSizePlaceholder"),
       defaultValue: profile?.finSize ?? profile?.bootSize ?? "",
-      requires: ["maskFins", "wetsuit"],
+      requires: ["fins"],
+    },
+    offers.has("wetsuit") && {
+      name: "bootSize",
+      label: t("divers.rentalFit.bootSizeLabel"),
+      placeholder: t("divers.rentalFit.finSizePlaceholder"),
+      defaultValue: profile?.bootSize ?? profile?.finSize ?? "",
+      requires: ["wetsuit"],
     },
     offers.has("weights") && {
       name: "weightPreference",

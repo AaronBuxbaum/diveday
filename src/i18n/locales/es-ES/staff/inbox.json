@@ -99,6 +99,7 @@
     "answerGone": "Esa respuesta guardada ya no está."
   },
   "savedAnswers": {
+    "openDiver": "Elige un buceador para guardar una respuesta",
     "heading": "Respuestas guardadas",
     "empty": "Envía una respuesta desde la ficha de un buceador y elige Guardar esta respuesta. Aparecerá aquí y sobre cada cuadro de respuesta.",
     "markersHint": "'{name}' se convierte en el nombre del buceador, y '{trip}' en su próxima salida reservada.",

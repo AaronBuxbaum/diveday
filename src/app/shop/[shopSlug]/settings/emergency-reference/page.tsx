@@ -48,7 +48,6 @@ export default async function EmergencyReferenceSettingsPage({
       shopSlug={shopSlug}
       t={t}
       title={t("settings.main.emergency.heading")}
-      description={t("settings.main.emergency.intro")}
       banner={noticeFromParam(notice, emergencyReferenceNoticeMessages(t))}
     >
       <EmergencyReferenceForm shop={shop} t={t} locale={locale} consentByName={consentByName} />

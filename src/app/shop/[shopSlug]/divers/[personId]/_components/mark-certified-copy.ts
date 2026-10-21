@@ -19,6 +19,7 @@ export function markCertifiedCopy(t: StaffTranslator): MarkCertifiedCopy {
     confirmedToast: t("divers.notices.cardConfirmedToast"),
     undo: t("shared.undoToast.undo"),
     undoPending: t("shared.undoToast.pendingLabel"),
+    dismiss: t("shared.undoToast.dismiss"),
     sightingRequired: t("divers.notices.cardSightingRequired"),
     duplicateCard: t("divers.notices.duplicateCard"),
     invalid: t("divers.notices.invalid"),

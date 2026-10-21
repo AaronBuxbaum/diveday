@@ -42,6 +42,7 @@ const COPY = {
   invalid: "invalid",
   undo: "Undo",
   undoPending: "Undoing…",
+  dismiss: "Dismiss",
   undoFailed: "undoFailed",
   listedLead: "listedLead",
   listedLeadFor: "listedLeadFor {name}",

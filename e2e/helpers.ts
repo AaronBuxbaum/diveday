@@ -37,7 +37,9 @@ export async function signInAsOwner(page: Page) {
  * hook; its accessible name is the shop's own (variable) name.
  */
 export async function signOut(page: Page) {
-  await page.locator("[data-identity-menu]").click();
+  const identityMenu = page.locator("[data-identity-menu]");
+  await expect(identityMenu).toHaveAttribute("data-hydrated", "true");
+  await identityMenu.click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.getByRole("button", { name: "Sign out? Confirm" }).click();
   await expect(page).toHaveURL(/\/$/);

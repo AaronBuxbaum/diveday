@@ -22,6 +22,7 @@ export type ElearningCheckCopy = {
   failed: string;
   undo: string;
   undoPending: string;
+  dismiss: string;
 };
 
 /**
@@ -142,6 +143,7 @@ export function ElearningCheck({
           fields={{ bookingId: undo.bookingId, intent: "undo" }}
           pendingLabel={copy.undoPending}
           undoLabel={copy.undo}
+          dismissLabel={copy.dismiss}
         />
       ) : null}
     </>

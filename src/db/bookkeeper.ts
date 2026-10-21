@@ -528,7 +528,7 @@ export async function tellOwnersAboutBookkeeper(
           locale: recipientLocale(recipient.locale, shop.defaultLocale),
           recipientName: recipient.fullName,
           shopName: shop.name,
-          reportsUrl: `${origin}${shopPath(shop.slug, "reports")}#bookkeeper`,
+          reportsUrl: `${origin}${shopPath(shop.slug, "settings", "bookkeeper")}`,
           at: input.at,
           ...input.what,
         },

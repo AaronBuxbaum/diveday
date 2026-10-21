@@ -37,7 +37,7 @@ function renderBody(cancelled: boolean) {
       locale="en-US"
       shopSlug="blue-mantis"
       tripId="t1"
-      rentalItems={["bcd", "wetsuit", "boots", "weights", "regulator", "mask_fins"]}
+      rentalItems={["bcd", "wetsuit", "boots", "weights", "regulator", "fins"]}
       notice={undefined}
       grouping="item"
       groupPath="/shop/blue-mantis/trips/t1"

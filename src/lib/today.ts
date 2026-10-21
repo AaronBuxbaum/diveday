@@ -1342,6 +1342,7 @@ export function collapseDiverActions(
 export type EmailDeliveryIssueInput = {
   deliveryId: string;
   bookingId: string;
+  personId?: string;
   fullName: string;
   isWaiver: boolean;
   status: "sent" | "failed" | "not_configured";
@@ -1416,7 +1417,9 @@ export function collapseEmailDeliveries(
       ...(isWaiver ? { waiver: { bookingIds } } : { resend: { bookingIds } }),
       href: grouped
         ? `/shop/${shopSlug}/trips/${first.trip.id}`
-        : `/shop/${shopSlug}/trips/${first.trip.id}#booking-${first.bookingId}`,
+        : first.personId
+          ? `/shop/${shopSlug}/divers/${first.personId}`
+          : `/shop/${shopSlug}/trips/${first.trip.id}#booking-${first.bookingId}`,
       dueAt: first.trip.startsAt,
     });
   }

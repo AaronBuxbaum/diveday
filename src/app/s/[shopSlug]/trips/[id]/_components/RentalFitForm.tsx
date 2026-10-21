@@ -38,7 +38,8 @@ export const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey>
   bcd: "rental.itemLabels.bcd",
   regulator: "rental.itemLabels.regulator",
   wetsuit: "rental.itemLabels.wetsuit",
-  mask_fins: "rental.itemLabels.maskFins",
+  mask: "rental.itemLabels.mask",
+  fins: "rental.itemLabels.fins",
   weights: "rental.itemLabels.weights",
   dive_computer: "rental.itemLabels.diveComputer",
   gopro: "rental.itemLabels.gopro",
@@ -243,11 +244,8 @@ export function RentalFitForm({
   const [bcdSize, setBcdSize] = useState((rentalFit?.bcdSize ?? "").trim());
   const [wetsuitSize, setWetsuitSize] = useState((rentalFit?.wetsuitSize ?? "").trim());
   const [drysuitSize, setDrysuitSize] = useState((rentalFit?.drysuitSize ?? "").trim());
-  // One shoe-size figure for fins and boots alike: they were two fields asking
-  // the same question, and a diver who answered one and not the other left the
-  // crew guessing. `bootSize` is still its own column (imports carry one), and
-  // the save action writes this value to both.
-  const [finSize, setFinSize] = useState(rentalFit?.finSize ?? rentalFit?.bootSize ?? "");
+  const [finSize, setFinSize] = useState(rentalFit?.finSize ?? "");
+  const [bootSize, setBootSize] = useState(rentalFit?.bootSize ?? "");
 
   const bcdOk = !rentedKinds.has("bcd") || !!bcdSize;
   const wetsuitOk = !rentedKinds.has("wetsuit") || !!wetsuitSize;
@@ -508,11 +506,18 @@ export function RentalFitForm({
           offers={offers}
           rentalFit={rentalFit}
           suit={suit}
-          sizes={{ bcd: bcdSize, wetsuit: wetsuitSize, drysuit: drysuitSize, fin: finSize }}
+          sizes={{
+            bcd: bcdSize,
+            wetsuit: wetsuitSize,
+            drysuit: drysuitSize,
+            fin: finSize,
+            boot: bootSize,
+          }}
           onSize={(field, value) => {
             if (field === "bcd") setBcdSize(value);
             else if (field === "wetsuit") setWetsuitSize(value);
             else if (field === "drysuit") setDrysuitSize(value);
+            else if (field === "boot") setBootSize(value);
             else setFinSize(value);
           }}
         />

@@ -99,15 +99,12 @@ test("a repeating trip is scheduled on two weekdays, stopped, and canceled as on
   // run. It lives in the About panel's "More for this departure" list now,
   // with the other series-wide acts — and it is the one of the three that
   // needs no confirm, because the control opposite it puts the run back.
-  await page.goto(tripUrl);
   const more = await openTripMore(page);
   await more.getByRole("button", { name: "Stop repeating" }).click();
   await expect(page.getByRole("status")).toContainText("Stopped repeating");
 
-  // Reload to clear the notice, then cancel every upcoming date at once —
-  // through its confirm, which is where the sentence about what it takes off
-  // the board now lives.
-  await page.goto(tripUrl);
+  // Cancel every upcoming date at once through its confirm on the same fresh
+  // Details page; the stop action has returned its updated state there.
   const moreAgain = await openTripMore(page);
   await moreAgain.getByRole("button", { name: "Cancel every upcoming date" }).click();
   // The confirm says who it reaches before anybody taps it: every date goes

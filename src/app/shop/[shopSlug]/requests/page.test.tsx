@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -145,6 +145,10 @@ describe("closed requests", () => {
   it("gives an open request Mark done and a reply door", async () => {
     vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
     await renderPage();
+
+    expect(screen.queryByRole("button", { name: "Mark done" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Reply" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /^Actions for Priya Sharma$/ }));
 
     expect(screen.getByRole("button", { name: "Mark done" })).toBeInTheDocument();
     const reply = screen.getByRole("link", { name: "Reply" });

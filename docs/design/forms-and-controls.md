@@ -358,9 +358,9 @@ the page away from the button that earned it. The rule has three steps, in order
 1. **Field-level** — the refusal names one box, so it renders on that box. Pass `Field`'s `error`
    prop; it renders the message under the control in a `role="alert"` region and wires the control's
    own `aria-invalid` and `aria-describedby` automatically. Never hand-roll that triple.
-2. **Form-level** — the refusal (or the confirmation) is about the submission as a whole, so it
-   renders in the form's action row, beside the submit control. Use `FormStatus`, which follows the
-   shared tone→role rule (`noticeRole`): a refusal is an `alert`, a confirmation is a `status`.
+2. **Form-level** — a refusal renders beside the submit control through `FormStatus` as an
+   `alert`. Immediate success confirmations use the shared `Toast` and disappear after four
+   seconds. `FormStatus` and `ShopNotice` route their success tone through that same toast.
 3. **Page-level** — only for what is genuinely about the page rather than one form on it. A
    permission refusal that bounced someone here from elsewhere is the honest example; "your save
    worked" is not.
@@ -426,16 +426,14 @@ Three ways to say what a tap did, cheapest first:
    outcome, nothing else should say it too; the diver record's three waiver-delivery buttons wear
    a ring and a mark for exactly this reason; a bordered box repeating "sent"/"failed" underneath
    them was a caption on a photograph of itself (copy-restraint).
-2. **`Toast`** (`src/components/Toast.tsx`) — a brief, auto-dismissing line for an action that
-   leaves no other trace: a clipboard write is the case it exists for. Not for anything reversible
-   or that offers a next step (that's `UndoToast`), and never a substitute for state a control
-   already shows on its own face — reach for it only once you've confirmed step 1 has nothing to
-   say.
-3. **`FormStatus`**, inline beside the form — for an outcome nothing else on screen carries: a
-   genuine refusal, a batch result naming several people. This is still "beside the form, never a
-   banner the length of the page away" from the section above; the difference from `Toast` is
-   permanence — `FormStatus` sits in the form's resting layout and reappears on every render of
-   that state, where `Toast` fires once and is gone.
+2. **`Toast`** (`src/components/Toast.tsx`) — the shared immediate success confirmation. Plain
+   success toasts disappear after four seconds, so completed actions do not leave permanent
+   messages in the page. `FormStatus` and `ShopNotice` use it automatically for success. Reversible
+   actions use `UndoToast`, which stays actionable until the person uses Undo, dismisses the toast,
+   or navigates away.
+3. **`FormStatus`**, inline beside the form — for refusals and warnings that need attention.
+   These remain visible until resolved. A successful submission uses the toast above.
+
 
 Never reach for a box or a banner to restate what a fresh row, a badge, or a ring elsewhere on the
 page already shows the instant the action lands — see copy-restraint's deletion #1 for the general

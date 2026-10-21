@@ -20,7 +20,7 @@ export function ImportResult({
 }) {
   return (
     <div className="mt-6">
-      <ShopNotice tone="success">
+      <ShopNotice tone="success" persistent>
         <p className="font-medium">
           {/* Two counts, so two pairs and a template holding only their
                   order — see the same shape on the departure board's boarding

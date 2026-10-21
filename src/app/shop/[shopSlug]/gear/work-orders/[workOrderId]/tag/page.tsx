@@ -61,7 +61,10 @@ export default async function ClaimTagPage({
   const subject = detail.personName ?? detail.gearItemLabel ?? t("workOrders.tag.eyebrow");
 
   return (
-    <div id="work-order-tag">
+    <div
+      id="work-order-tag"
+      className="mx-4 my-6 max-w-3xl rounded-panel border border-border bg-surface p-6 sm:mx-auto sm:my-10 sm:p-10 print:m-0 print:max-w-none print:rounded-none print:border-0 print:p-8"
+    >
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
         <div>
           {/* On screen the eyebrow is the way back to the ticket the counter

@@ -162,6 +162,12 @@ export type SettingsRailRow = {
  */
 export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
   {
+    id: "bookkeeper",
+    labelKey: "reports.bookkeeper.label",
+    group: "money",
+    target: { kind: "route", path: "/settings/bookkeeper" },
+  },
+  {
     id: "timezone",
     labelKey: "settings.main.timezone.heading",
     group: "shop",

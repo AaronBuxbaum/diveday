@@ -386,6 +386,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Gear-included course
 - Gear-request override
 - Late (work order)
+- Mask and fins rental
 - Needs staff fit
 - Nitrox / EANx
 - Nitrox request

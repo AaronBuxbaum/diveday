@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { RecapWaitingCard } from "@/components/RecapWaitingCard";
@@ -34,6 +35,7 @@ export async function generateMetadata({
   const { token } = await params;
   const t = diverTranslator(await requestLocale());
   const bookingId = verifyRecapToken(token);
+  if (bookingId) await connection();
   const state = bookingId ? await recapPageStateCached(bookingId) : null;
   const data = state?.kind === "recap" ? state.data : null;
   if (!data) {

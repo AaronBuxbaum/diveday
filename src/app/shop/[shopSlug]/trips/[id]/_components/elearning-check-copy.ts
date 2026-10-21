@@ -14,5 +14,6 @@ export function elearningCheckCopy(t: StaffTranslator): ElearningCheckCopy {
     failed: t("trips.roster.elearningCheck.failed"),
     undo: t("shared.undoToast.undo"),
     undoPending: t("shared.undoToast.pendingLabel"),
+    dismiss: t("shared.undoToast.dismiss"),
   };
 }

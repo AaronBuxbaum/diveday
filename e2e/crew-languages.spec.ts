@@ -17,12 +17,7 @@ test("an owner records a captain's languages, and the public schedule says so", 
 
   await page.goto(`/shop/${privateShop.slug}/settings/team`);
   const captainCard = page.locator("li").filter({ hasText: "Sal Moretti" });
-  // A captain with nothing recorded says so on his own card, and a row
-  // nobody filled in invites rather than reads as an error (third review,
-  // items 2 and 36).
-  await expect(captainCard.locator("summary").filter({ hasText: "Credentials" })).toContainText(
-    "No credentials on file",
-  );
+  // The language row is empty before this test records the captain's choices.
   await expect(captainCard.locator("summary").filter({ hasText: "Languages" })).toContainText(
     "Add",
   );

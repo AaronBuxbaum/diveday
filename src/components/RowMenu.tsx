@@ -75,11 +75,16 @@ export function RowMenu({
       setUpward(false);
       return;
     }
-    const trigger = triggerRef.current?.getBoundingClientRect();
-    const height = panel.getBoundingClientRect().height;
-    if (!trigger || height === 0) return;
-    const floor = window.innerHeight - tabBarHeight(panel);
-    setUpward(trigger.bottom + height + 8 > floor && trigger.top - height - 8 >= 0);
+    const positionPanel = () => {
+      const trigger = triggerRef.current?.getBoundingClientRect();
+      const height = panel.getBoundingClientRect().height;
+      if (!trigger || height === 0) return;
+      const floor = window.innerHeight - tabBarHeight(panel);
+      setUpward(trigger.bottom + height + 8 > floor && trigger.top - height - 8 >= 0);
+    };
+    positionPanel();
+    window.addEventListener("resize", positionPanel);
+    return () => window.removeEventListener("resize", positionPanel);
   }, [open, children]);
 
   // The first act takes focus as the list opens, so a keyboard reader lands in

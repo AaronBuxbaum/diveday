@@ -505,6 +505,7 @@ export function LedgerRow({
   kind,
   children,
   trailing,
+  trailingPassthrough = false,
   href,
   linkLabel,
   reserveDoorSlot = false,
@@ -527,6 +528,8 @@ export function LedgerRow({
   children: ReactNode;
   /** The one fix (a link or ghost button), a fact, or a chevron. */
   trailing?: ReactNode;
+  /** Let taps on a decorative trailing fact reach the row's door underneath. */
+  trailingPassthrough?: boolean;
   /**
    * `md` is 52px, Reef's floor for a row ("rows never tighter than 52 tall" —
    * the system sheet's spacing rung between 32 and 84); `lg` (56px) for the
@@ -612,13 +615,19 @@ export function LedgerRow({
         // so the list floats over the rows below instead of under their fixes.
         <div
           data-ledger-fix=""
-          className={
+          className={`${
             stacked
               ? kind
                 ? "relative z-10 -my-2 min-w-0 has-[[data-row-menu-open]]:z-20 max-w-full shrink-0 max-sm:order-2 max-sm:-my-1 max-sm:ms-auto"
-                : "relative z-10 -my-2 min-w-0 has-[[data-row-menu-open]]:z-20 max-w-full shrink-0 max-sm:order-3 max-sm:my-0 max-sm:flex max-sm:basis-full max-sm:justify-end max-sm:pointer-events-none max-sm:*:pointer-events-auto"
+                : "relative z-10 -my-2 min-w-0 has-[[data-row-menu-open]]:z-20 max-w-full shrink-0 max-sm:order-3 max-sm:my-0 max-sm:flex max-sm:basis-full max-sm:justify-end"
               : "relative z-10 -my-2 min-w-0 has-[[data-row-menu-open]]:z-20 max-w-full shrink-0"
-          }
+          } ${
+            trailingPassthrough
+              ? "pointer-events-none"
+              : stacked && !kind
+                ? "max-sm:pointer-events-none max-sm:*:pointer-events-auto"
+                : ""
+          }`}
         >
           {trailing}
         </div>

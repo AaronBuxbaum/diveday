@@ -42,7 +42,6 @@ async function personByEmail(
     .limit(1);
   return row ?? null;
 }
-
 async function accountPersonId(
   db: Awaited<ReturnType<typeof seededShopContext>>["db"],
   email: string,
@@ -55,8 +54,6 @@ async function accountPersonId(
   if (!account) throw new Error(`no account for ${email}`);
   return account.personId;
 }
-
-// One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
 
@@ -193,7 +190,8 @@ describe("commitContactImport", () => {
       rentsBcd: false,
       rentsRegulator: false,
       rentsWetsuit: false,
-      rentsMaskFins: false,
+      rentsMask: false,
+      rentsFins: false,
       rentsWeights: false,
       rentsDiveComputer: false,
     });
@@ -215,7 +213,8 @@ describe("commitContactImport", () => {
       shopId: shop.id,
       personId: person.id,
       rentsWetsuit: true,
-      rentsMaskFins: true,
+      rentsMask: false,
+      rentsFins: true,
       wetsuitSize: "3mm/M",
     });
 
@@ -235,7 +234,8 @@ describe("commitContactImport", () => {
       .where(eq(rentalFitProfiles.personId, person.id));
     expect(profile).toMatchObject({
       rentsWetsuit: true,
-      rentsMaskFins: true,
+      rentsMask: false,
+      rentsFins: true,
       wetsuitSize: "3mm/M",
       bcdSize: "M",
     });
@@ -286,11 +286,8 @@ describe("commitContactImport", () => {
     // The readable size on the same row still lands, so one unusable cell
     // never costs the diver the sizes their old shop did record.
     expect(profile?.wetsuitSize).toBeNull();
-    // Both shoe columns carry the one answer DiveDay keeps (issue #1802). The
-    // over-long boot cell is still declined — it never becomes the answer — and
-    // the readable fin size fills both, which is what the staff record and the
-    // readiness gear form write on every save anyway.
-    expect(profile?.bootSize).toBe("L");
+    // An unusable boot size stays absent; the independent fin size survives.
+    expect(profile?.bootSize).toBeNull();
     expect(profile?.finSize).toBe("L");
   });
 

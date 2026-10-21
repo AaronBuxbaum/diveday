@@ -123,10 +123,10 @@ describe("participant types", () => {
 
   it("packs a snorkeler surface kit only, and a rider nothing", () => {
     expect(rentsKind("diver", "bcd")).toBe(true);
-    expect(rentsKind("snorkeler", "mask_fins")).toBe(true);
+    expect(rentsKind("snorkeler", "fins")).toBe(true);
     expect(rentsKind("snorkeler", "bcd")).toBe(false);
     expect(rentsKind("snorkeler", "regulator")).toBe(false);
-    expect(rentsKind("rider", "mask_fins")).toBe(false);
+    expect(rentsKind("rider", "fins")).toBe(false);
     // Boots ride with a wetsuit on the prep list, for a snorkeler too.
     expect(rentsKind("snorkeler", "boots")).toBe(true);
     expect(rentsKind("rider", "boots")).toBe(false);
@@ -223,10 +223,10 @@ describe("seatRentalAnswer", () => {
     // Regression (dive-domain review, PR #2224): a snorkeler's fit form hides
     // the BCD, and its silence must not be stored as "does not rent a BCD".
     expect(seatRentalAnswer("snorkeler", "bcd", undefined)).toBeUndefined();
-    expect(seatRentalAnswer("snorkeler", "mask_fins", undefined)).toBe(false);
-    expect(seatRentalAnswer("snorkeler", "mask_fins", "on")).toBe(true);
+    expect(seatRentalAnswer("snorkeler", "fins", undefined)).toBe(false);
+    expect(seatRentalAnswer("snorkeler", "fins", "on")).toBe(true);
     expect(seatRentalAnswer("diver", "bcd", undefined)).toBe(false);
-    expect(seatRentalAnswer("rider", "mask_fins", "on")).toBeUndefined();
+    expect(seatRentalAnswer("rider", "fins", "on")).toBeUndefined();
   });
 });
 
@@ -234,9 +234,9 @@ describe("seatRentalItems", () => {
   it("offers a snorkeler surface kit only, never nitrox or a BCD, and a rider nothing", () => {
     // Regression (dive-domain review, PR #2224): trip prep showed a snorkeler
     // the whole dive catalog, nitrox and tanks included.
-    const catalog = ["bcd", "regulator", "wetsuit", "mask_fins", "nitrox", "gopro"];
+    const catalog = ["bcd", "regulator", "wetsuit", "fins", "nitrox", "gopro"];
     expect(seatRentalItems("diver", catalog)).toEqual(catalog);
-    expect(seatRentalItems("snorkeler", catalog)).toEqual(["wetsuit", "mask_fins", "gopro"]);
+    expect(seatRentalItems("snorkeler", catalog)).toEqual(["wetsuit", "fins", "gopro"]);
     expect(seatRentalItems("rider", catalog)).toEqual([]);
   });
 });

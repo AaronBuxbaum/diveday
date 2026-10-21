@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthEndpoint } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import { nextCookies } from "better-auth/next-js";
+import { io } from "next/cache";
 import { headers as nextHeaders } from "next/headers";
 import { cache } from "react";
 import { z } from "zod";
@@ -424,6 +425,9 @@ export async function readSessionFrom(
  * (a better-auth session row, not a JWT).
  */
 async function readSession(): Promise<DiveDaySession | null> {
+  // Headers can resolve during staged prerendering; suspend before the session
+  // clock is read, without connection()'s unconditional prefetch barrier.
+  await io();
   return readSessionFrom(await getAuth(), new Headers(await nextHeaders()));
 }
 

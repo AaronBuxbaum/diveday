@@ -591,7 +591,8 @@ primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 - **Remove first:** the merge panel's standing card — it earns its place only while candidates
   exist, and the redesign keeps it conditional.
 - **Composition:** status, story, file — a person is a readiness question, a history, and a set of
-  facts, in that order; ten co-equal sections answered no question first.
+  facts, in that order; ten co-equal sections answered no question first. Their own gear and any
+  open service order stay together in the file; shop rentals remain under Gear and sizes.
 
 **Amended 2026-09-17, the file is one door grammar.** The 8b build shipped two: "legacy" groups
 (certification records, waiver, gear and sizes, diver notes, conversation) hid their summary above

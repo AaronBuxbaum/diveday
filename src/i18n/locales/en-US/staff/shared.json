@@ -309,6 +309,7 @@
     "message": "Roll call complete"
   },
   "undoToast": {
+    "dismiss": "Dismiss",
     "pendingLabel": "Undoing…",
     "undo": "Undo"
   },
@@ -470,7 +471,8 @@
       "regulator": "Regulator",
       "wetsuit": "Wetsuit",
       "boots": "Boots",
-      "maskFins": "Mask & fins",
+      "mask": "Mask",
+      "fins": "Fins",
       "weights": "Weights",
       "diveComputer": "Dive computer",
       "gopro": "GoPro",
