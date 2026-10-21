@@ -47,6 +47,7 @@ export function BuddyTeamsPanel({
   buddyErrorText,
   buddyErrorForm,
   partyLines = null,
+  teamWarnings = {},
   teamUpPartiesAction,
   formBuddyTeamAction,
   addBuddyTeamMemberAction,
@@ -99,6 +100,8 @@ export function BuddyTeamsPanel({
     left: string[];
     teamable: number;
   } | null;
+  /** Informational course, age and readiness cautions, already localized. */
+  teamWarnings?: Readonly<Record<string, readonly string[]>>;
   teamUpPartiesAction?: (formData: FormData) => Promise<void>;
   formBuddyTeamAction: (formData: FormData) => Promise<void>;
   addBuddyTeamMemberAction: (formData: FormData) => Promise<void>;
@@ -123,7 +126,14 @@ export function BuddyTeamsPanel({
           one line: how many teams, and who is not on one. It arrives open
           when a refusal needs reading — a submit's answer must never hide
           behind the fold it came from. */}
-      <details className="group/buddypanel" open={buddyErrorText || defaultOpen ? true : undefined}>
+      <details
+        className="group/buddypanel"
+        open={
+          buddyErrorText || defaultOpen || Object.values(teamWarnings).some((lines) => lines.length)
+            ? true
+            : undefined
+        }
+      >
         {/* Two alignments, not one: the caret centres on the heading's *first
             line* (`SummaryCaret`, a box one title line tall, in a row that
             starts at the top), while the heading and its count share a
@@ -221,6 +231,11 @@ export function BuddyTeamsPanel({
                   <p className={groupLabelClass()}>
                     {t("manifest.buddyTeamLabel", { number: index + 1 })}
                   </p>
+                  {(teamWarnings[team.teamId] ?? []).map((warning) => (
+                    <p key={warning} className="mt-1.5 text-sm text-warning-strong">
+                      {warning}
+                    </p>
+                  ))}
                   {/* **"Dissolve team" is the chip row's last item, at the
                       row's size** (pixel-craft class 1). Beside the whole
                       label-and-chips block, a 48px `md` button topped against

@@ -58,7 +58,7 @@ work_order_events.csv 15 rows 79407b4eb6304a70 [id,seq,work_order_id,kind,from_s
 pre_departure_checklist_items.csv 5 rows 9ebc19091895953a [id,label,sort_order,deleted_at,created_at,updated_at]
 pre_departure_check_events.csv 5 rows b3a1c1197f764b5d [id,trip_id,checklist_item_id,checklist_item_label,status,source,client_event_id,note,recorded_by_person_id,recorded_by_name,occurred_at,created_at]
 boat_snags.csv 0 rows 06ec9548988823e4 [id,boat_id,boat_name,checklist_item_id,checklist_item_label,note,noted_on_trip_id,noted_by_person_id,noted_by_name,noted_at,still_there_on_trip_id,still_there_by_person_id,still_there_by_name,still_there_at,fixed_on_trip_id,fixed_by_person_id,fixed_by_name,fixed_at,created_at,updated_at]
-departure_boat_safety_snapshots.csv 0 rows f5f8e5bcbce989a5 [id,trip_id,boat_id,boat_name,judged_on,papers,radio,notices,captured_at]
+departure_boat_safety_snapshots.csv 0 rows bacdbd6789cecb44 [id,trip_id,boat_id,boat_name,judged_on,departure_starts_at,papers,radio,notices,captured_at]
 prior_visits.csv 3 rows 2b5449b25f88920f [id,person_id,person_name,visited_on,title,status_label,amount_label,source_label,source_reference,imported_at]
 imported_payment_history.csv 2 rows 0822811603094a89 [id,person_id,person_name,occurred_on,direction,title,status_label,amount_label,amount_cents,currency,payment_reference,receipt_reference,receipt_document_url,source_label,source_reference,stripe_reference,imported_at]
 internal_notes.csv 3 rows bdd9eff6262c7b59 [id,person_id,person_name,booking_id,body,created_by_person_id,created_by_name,created_at]

@@ -69,6 +69,7 @@
     "departure_added": "{actor} put the departure on the board",
     "series_added": "{actor} put a repeating departure on the board",
     "departure_moved": "{actor} moved the departure",
+    "departure_boat_changed": "{actor} changed the departure’s boat from {hasFromBoat, select, yes {{fromBoat}} other {no boat}} to {hasToBoat, select, yes {{toBoat}} other {no boat}}.{snapshot, select, refreshed { Saved boat record updated.} kept { Saved boat record unchanged.} other {}}",
     "departure_copied": "{actor} copied a departure to this one",
     "departure_deleted": "{actor} deleted the departure",
     "departure_retitled_by_erasure": "{actor} renamed the departure while erasing a diver’s data",

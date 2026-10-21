@@ -784,6 +784,13 @@ export const departureBoatSafetySnapshots = pgTable(
     boatName: text("boat_name").notNull(),
     /** The departure's own local day the notices were judged on. */
     judgedOn: date("judged_on").notNull(),
+    /**
+     * The scheduled departure instant this record belongs to. Rebound only
+     * by an unsailed reschedule; kept sailed evidence never follows a later
+     * schedule edit. Null means the safety provenance is unknown, so the
+     * existing record cannot safely be rewritten.
+     */
+    departureStartsAt: timestamp("departure_starts_at", { withTimezone: true }),
     papers: jsonb("papers").$type<BoatPaperRecord>().notNull(),
     /**
      * The radio identity the emergency card printed for this departure (call

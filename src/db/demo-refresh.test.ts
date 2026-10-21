@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
 import { fileScopedShopContext, unseededTestDb } from "@/test/db";
+import { captureDepartureBoatSafety } from "./boat-safety";
+import { createBoat } from "./boats";
 import type { AppDb } from "./client";
 import {
   DEMO_SCHEDULE_MIN_RUNWAY_DAYS,
@@ -11,6 +13,7 @@ import {
 } from "./demo-refresh";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
+  departureBoatSafetySnapshots,
   people,
   personRoles,
   shops,
@@ -30,6 +33,37 @@ import { upcomingScheduleRange, upcomingTripsWithCounts } from "./trips";
 // (src/test/db.ts, `fileScopedShopContext`).
 const ctx = fileScopedShopContext();
 const historyCtx = fileScopedShopContext({ history: true });
+
+it("rebinds known-unsailed safety provenance atomically when the demo moves a future departure", async () => {
+  const { db } = ctx;
+  const [shop] = await db
+    .insert(shops)
+    .values({ name: "Provenance Demo", slug: "provenance-demo", timezone: "UTC" })
+    .returning();
+  if (!shop) throw new Error("shop missing");
+  const boat = await createBoat(db, shop.id, "Demo Provenance Hull", 12);
+  const startsAt = new Date(nowDate().getTime() + 24 * 3_600_000);
+  const [trip] = await db
+    .insert(trips)
+    .values({
+      shopId: shop.id,
+      title: "Future demo",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+      capacity: 10,
+      boatId: boat.id,
+    })
+    .returning();
+  if (!trip) throw new Error("trip missing");
+  expect(await captureDepartureBoatSafety(db, shop.id, trip.id)).toBe("captured");
+  expect(await ensureDemoSailsToday(db, shop.id, "UTC")).toBe("moved");
+  const [moved] = await db.select().from(trips).where(eq(trips.id, trip.id));
+  const [snapshot] = await db
+    .select()
+    .from(departureBoatSafetySnapshots)
+    .where(eq(departureBoatSafetySnapshots.tripId, trip.id));
+  expect(snapshot?.departureStartsAt).toEqual(moved?.startsAt);
+});
 
 /**
  * Age a shop's board by `days`, which is what a real deployment does to itself:
