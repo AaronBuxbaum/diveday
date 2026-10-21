@@ -232,7 +232,7 @@ export function BuddyTeamsPanel({
                     {t("manifest.buddyTeamLabel", { number: index + 1 })}
                   </p>
                   {(teamWarnings[team.teamId] ?? []).map((warning) => (
-                    <p key={warning} className="mt-1.5 text-sm text-warning-strong">
+                    <p key={warning} className="mt-1.5 text-base text-warning-strong">
                       {warning}
                     </p>
                   ))}

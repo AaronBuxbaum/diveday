@@ -128,9 +128,8 @@ test("a manual junior team retains blocked readiness and ashore advice clears wh
   const state = await seed(request, privateShop.slug, "buddy");
   await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
   await page.getByRole("heading", { name: copy("manifest.buddyHeading") }).click();
-  await openIfClosed(
-    page.getByRole("group", { name: copy("manifest.buddyNewTeamHeading"), exact: true }),
-  );
+  const builder = page.locator('details:has(> form input[name="members"])');
+  await openIfClosed(builder);
   await page.getByRole("checkbox", { name: "Ari Vale", exact: true }).check();
   await page.getByRole("checkbox", { name: "Bea Quill", exact: true }).check();
   await page.getByRole("button", { name: copy("manifest.buddyFormSubmit"), exact: true }).click();
@@ -156,29 +155,27 @@ test("a manual junior team retains blocked readiness and ashore advice clears wh
     .getByRole("button", { name: copy("manifest.markNotBoarded"), exact: true })
     .click();
   const ashore = copy("shared.buddyTeam.ashoreNamed", { name: "Ari" });
+  await page.getByRole("dialog").getByRole("button", { name: "Close person details" }).click();
+  await expect(adult.getByText(ashore, { exact: true })).toBeVisible();
   await openManifestPerson(adult);
-  await expect(page.getByRole("dialog").getByText(ashore, { exact: true })).toBeVisible();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: copy("manifest.markNotBoarded"), exact: true })
     .click();
-  await expect(page.getByText(ashore, { exact: true })).toHaveCount(0);
-  await openManifestPerson(adult);
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: copy("manifest.markBoarded"), exact: true })
-    .click();
-  await expect(page.getByRole("dialog").getByText(ashore, { exact: true })).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Close person details" }).click();
+  await expect(page.getByText(ashore, { exact: true })).toHaveCount(0);
+  await adult.getByRole("button", { name: copy("manifest.markBoarded"), exact: true }).click();
+  await expect(adult.getByText(ashore, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: copy("manifest.buddyDissolve"), exact: true }).click();
   await expect(page.getByText(ashore, { exact: true })).toHaveCount(0);
-  await openIfClosed(
-    page.getByRole("group", { name: copy("manifest.buddyNewTeamHeading"), exact: true }),
-  );
+  await openIfClosed(builder);
   await page.getByRole("checkbox", { name: "Bea Quill", exact: true }).check();
   await page.getByRole("checkbox", { name: state.crewName, exact: false }).check();
   await page.getByRole("button", { name: copy("manifest.buddyFormSubmit"), exact: true }).click();
   await expect(page).toHaveURL(/buddies=open/);
+  await expect(
+    page.locator("li[data-buddy-member]").filter({ hasText: state.crewName }),
+  ).toBeVisible();
   await expect(page.getByText(ashore, { exact: true })).toHaveCount(0);
 });
 
@@ -210,9 +207,8 @@ test("an intro team's caution informs and a recorded nonreturn outranks a carrie
   await expect(
     adult.getByRole("button", { name: copy("manifest.boardedCheckAriaLabel") }),
   ).toBeVisible();
-  await openManifestPerson(adult);
   const ashore = copy("shared.buddyTeam.ashoreNamed", { name: "Ari" });
-  await expect(page.getByRole("dialog").getByText(ashore, { exact: true })).toBeVisible();
+  await expect(adult.getByText(ashore, { exact: true })).toBeVisible();
   await openManifestPerson(manifestRow(page, "Ari Vale"));
   await page
     .getByRole("dialog")
@@ -221,9 +217,7 @@ test("an intro team's caution informs and a recorded nonreturn outranks a carrie
   await expect(
     page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
   ).toBeVisible();
-  await openManifestPerson(adult);
-  await expect(
-    page.getByRole("dialog").getByText("Ari not back aboard", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("dialog").getByText(ashore, { exact: true })).toHaveCount(0);
+  await page.getByRole("dialog").getByRole("button", { name: "Close person details" }).click();
+  await expect(adult.getByText("Ari not back aboard", { exact: true })).toBeVisible();
+  await expect(adult.getByText(ashore, { exact: true })).toHaveCount(0);
 });

@@ -10327,9 +10327,9 @@ for (const scheme of ["light", "dark"] as const) {
     });
 
     test.describe("Spanish historical hull warning", () => {
-      test.use({ locale: SPANISH });
       test(`a historic hull warning fits in Spanish (${scheme})`, async ({
-        page,
+        browser,
+        context,
         request,
         privateShop,
       }) => {
@@ -10339,14 +10339,28 @@ for (const scheme of ["light", "dark"] as const) {
         );
         expect(response.ok()).toBe(true);
         const { operationalTrust: state } = await response.json();
-        await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/log`);
-        const spanish = staffTranslator(SPANISH);
-        await expect(
-          page
-            .getByRole("status")
-            .filter({ hasText: spanish("incidentExport.boatChanged", { boatName: "Trust I" }) }),
-        ).toBeVisible();
-        await capture(page, "departure-log-historic-hull-warning", scheme, { locale: SPANISH });
+        // privateShop signs in through the English form. Carry that real
+        // session to a Spanish reader after authentication, including its
+        // navigator.language, which capture() checks against the baseline.
+        const spanishContext = await browser.newContext({
+          baseURL: new URL(context.pages()[0].url()).origin,
+          colorScheme: scheme,
+          locale: SPANISH,
+          storageState: await context.storageState(),
+        });
+        try {
+          const page = makeActivitySafe(await spanishContext.newPage());
+          await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/log`);
+          const spanish = staffTranslator(SPANISH);
+          await expect(
+            page
+              .getByRole("status")
+              .filter({ hasText: spanish("incidentExport.boatChanged", { boatName: "Trust I" }) }),
+          ).toBeVisible();
+          await capture(page, "departure-log-historic-hull-warning", scheme, { locale: SPANISH });
+        } finally {
+          await spanishContext.close();
+        }
       });
     });
   });
