@@ -292,6 +292,41 @@ export async function listDiveSitesPage(
   });
 }
 
+/**
+ * Small, shop-scoped map records for every live site with coordinates. This
+ * intentionally ignores the library's search and page: the map is a view of
+ * the shop's locations, not a second rendering of the current ledger slice.
+ * Long free-text copy is capped so a large library does not ship every full
+ * briefing just to draw pins.
+ */
+export async function listDiveSiteMapRows(db: AppDb, shopId: string) {
+  return db
+    .select({
+      id: diveSites.id,
+      name: diveSites.name,
+      locationName: diveSites.locationName,
+      latitude: diveSites.forecastLatitude,
+      longitude: diveSites.forecastLongitude,
+      description: sql<
+        string | null
+      >`substring(coalesce(nullif(${diveSites.description}, ''), ${diveSites.currentNote}) from 1 for 360)`,
+      difficultyLevel: diveSites.difficultyLevel,
+      depthMinMeters: diveSites.depthMinMeters,
+      maxDepthMeters: diveSites.maxDepthMeters,
+      depthRange: diveSites.depthRange,
+    })
+    .from(diveSites)
+    .where(
+      and(
+        eq(diveSites.shopId, shopId),
+        isNull(diveSites.deletedAt),
+        isNotNull(diveSites.forecastLatitude),
+        isNotNull(diveSites.forecastLongitude),
+      ),
+    )
+    .orderBy(asc(diveSites.name), asc(diveSites.id));
+}
+
 export type SiteLibraryGroup = {
   label: SiteLibraryGroupLabel;
   sites: (typeof diveSites.$inferSelect)[];
@@ -940,6 +975,43 @@ export async function listGlobalDiveSiteTemplates(
     pageSize: paged.pageSize,
     total: paged.total,
   };
+}
+
+/** Every current published template with coordinates, projected to map fields. */
+export async function listGlobalDiveSiteMapRows(db: AppDb) {
+  const briefing = globalDiveSiteVersions.briefing;
+  return db
+    .select({
+      templateId: globalDiveSites.id,
+      slug: globalDiveSites.slug,
+      name: sql<string>`${briefing}->>'name'`,
+      locationName: sql<string | null>`${briefing}->>'locationName'`,
+      latitude: sql<number>`(${briefing}->>'forecastLatitude')::double precision`,
+      longitude: sql<number>`(${briefing}->>'forecastLongitude')::double precision`,
+      description: sql<
+        string | null
+      >`substring(coalesce(nullif(${briefing}->>'description', ''), ${briefing}->>'currentNote') from 1 for 360)`,
+      difficultyLevel: sql<DiveSiteDifficulty | null>`${briefing}->>'difficultyLevel'`,
+      difficulty: sql<string | null>`${briefing}->>'difficulty'`,
+      depthMinMeters: sql<number | null>`(${briefing}->>'depthMinMeters')::double precision`,
+      maxDepthMeters: sql<number | null>`(${briefing}->>'maxDepthMeters')::double precision`,
+      depthRange: sql<string | null>`${briefing}->>'depthRange'`,
+    })
+    .from(globalDiveSites)
+    .innerJoin(
+      globalDiveSiteVersions,
+      and(
+        eq(globalDiveSiteVersions.globalDiveSiteId, globalDiveSites.id),
+        eq(globalDiveSiteVersions.version, globalDiveSites.currentVersion),
+      ),
+    )
+    .where(
+      and(
+        isNotNull(sql`${briefing}->>'forecastLatitude'`),
+        isNotNull(sql`${briefing}->>'forecastLongitude'`),
+      ),
+    )
+    .orderBy(asc(globalDiveSites.slug));
 }
 
 /**

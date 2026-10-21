@@ -178,10 +178,7 @@ const MAP_FRAME_HOSTS = ["https://www.openstreetmap.org"];
  * Public tile servers used by client map views (ADR 20261019-map-centric-dive-sites).
  * CARTO Positron / Voyager raster basemap tiles, plus OpenStreetMap fallbacks.
  */
-const MAP_TILE_IMAGE_HOSTS = [
-  "https://*.basemaps.cartocdn.com",
-  "https://*.tile.openstreetmap.org",
-];
+const MAP_TILE_IMAGE_HOSTS = ["https://*.basemaps.cartocdn.com", "https://tile.openstreetmap.org"];
 
 /**
  * The images the route maps may read from a frame host: each probe URL itself,

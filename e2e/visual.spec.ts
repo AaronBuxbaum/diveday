@@ -8868,7 +8868,29 @@ for (const scheme of ["light", "dark"] as const) {
         // The tail door, which is the last thing the page paints — it carries a
         // count read from the published catalog rather than from this page.
         await page.getByRole("link", { name: "Browse the DiveDay catalog" }).waitFor();
+        await expect(
+          page.locator(".leaflet-site-marker, .leaflet-site-cluster-marker").first(),
+        ).toBeVisible();
         await capture(page, "dive-sites-library", scheme);
+
+        const mapPin = page.locator('.leaflet-site-marker button[aria-label="Molasses Reef"]');
+        if ((await mapPin.count()) === 0) {
+          await page.locator("button.leaflet-site-cluster").filter({ hasText: "3" }).click();
+        }
+        await expect(mapPin).toBeVisible();
+        await mapPin.hover();
+        await expect(page.locator(".leaflet-site-tooltip")).toContainText("Molasses Reef");
+        await mapPin.scrollIntoViewIfNeeded();
+        const scrollBeforePinSelection = await page.evaluate(() => window.scrollY);
+        await mapPin.click();
+        await expect(mapPin).toHaveClass(/ring-4/);
+        const selectedPopup = page
+          .locator(".leaflet-site-popup")
+          .filter({ hasText: "Molasses Reef" })
+          .last();
+        await expect(selectedPopup).toBeVisible();
+        expect(await page.evaluate(() => window.scrollY)).toBe(scrollBeforePinSelection);
+        await capture(page, "dive-sites-library-pin-selected", scheme);
       });
 
       // The gear register on a calm morning (ADR 20260827-the-shops-shelves,

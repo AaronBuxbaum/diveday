@@ -14,6 +14,7 @@ const PIN: MapPin = {
   name: "Molasses & French Reef",
   subtitle: "Outer bank",
   href: "/shop/blue-mantis/dive-sites/reef?tab=details&from=map",
+  hrefLabel: "Open site",
   ...CENTER,
 };
 
@@ -35,7 +36,12 @@ function popup(container: HTMLElement) {
 describe("SiteMap labels through Leaflet", () => {
   it("gives each marker one named native button without an interactive wrapper", async () => {
     const { container } = render(
-      <SiteMap center={CENTER} pins={[PIN]} shopAnchor={{ ...CENTER, name: "Blue Mantis" }} />,
+      <SiteMap
+        center={CENTER}
+        pins={[PIN]}
+        shopAnchor={{ ...CENTER, name: "Blue Mantis" }}
+        clusterLabel="dive sites"
+      />,
     );
     const siteButton = await markerButton(container);
     const shopMarker = container.querySelector(".leaflet-shop-marker");
@@ -51,7 +57,12 @@ describe("SiteMap labels through Leaflet", () => {
 
   it("opens the shop popup once for the native Enter activation sequence", async () => {
     const { container } = render(
-      <SiteMap center={CENTER} pins={[]} shopAnchor={{ ...CENTER, name: "Blue Mantis" }} />,
+      <SiteMap
+        center={CENTER}
+        pins={[]}
+        shopAnchor={{ ...CENTER, name: "Blue Mantis" }}
+        clusterLabel="dive sites"
+      />,
     );
     await waitFor(() =>
       expect(container.querySelector(".leaflet-shop-marker button")).not.toBeNull(),
@@ -65,7 +76,9 @@ describe("SiteMap labels through Leaflet", () => {
 
   it("keeps a hostile-shaped site name inside its marker label", async () => {
     const name = '"><img src=x onerror="alert(1)"><span data-injected="yes">';
-    const { container } = render(<SiteMap center={CENTER} pins={[{ ...PIN, name }]} />);
+    const { container } = render(
+      <SiteMap center={CENTER} pins={[{ ...PIN, name }]} clusterLabel="dive sites" />,
+    );
     const button = await markerButton(container);
     expect(button).toHaveAttribute("aria-label", name);
     expect(container.querySelector("[data-injected], img[onerror]")).toBeNull();
@@ -74,11 +87,13 @@ describe("SiteMap labels through Leaflet", () => {
   it("renders site names and subtitles literally in the popup", async () => {
     const name = '<img src=x onerror="alert(1)"> Reef & <b>Friends</b>';
     const subtitle = '<svg onload="alert(2)"></svg> <a href="javascript:alert(3)">Bank</a>'; // diveday:allow-scroll-preservation: hostile test input.
-    const { container } = render(<SiteMap center={CENTER} pins={[{ ...PIN, name, subtitle }]} />);
+    const { container } = render(
+      <SiteMap center={CENTER} pins={[{ ...PIN, name, subtitle }]} clusterLabel="dive sites" />,
+    );
     fireEvent.click(await markerButton(container));
     const content = popup(container);
-    expect(content.querySelector("p")?.textContent).toBe(name);
-    expect(content.querySelectorAll("p")[1]?.textContent).toBe(subtitle);
+    expect(content.querySelector("h2")?.textContent).toBe(name);
+    expect(content.querySelector("p")?.textContent).toBe(subtitle);
     expect(content.querySelector("img, svg, b, [onerror], [onload]")).toBeNull();
     expect(content.querySelectorAll("a")).toHaveLength(1);
   });
@@ -91,6 +106,7 @@ describe("SiteMap labels through Leaflet", () => {
         pins={[]}
         shopAnchor={{ ...CENTER, name: source === "name" ? label : undefined }}
         shopLabel={label}
+        clusterLabel="dive sites"
       />,
     );
     await waitFor(() => expect(container.querySelector(".leaflet-shop-marker")).not.toBeNull());
@@ -112,10 +128,12 @@ describe("SiteMap labels through Leaflet", () => {
     "data:text/html,<script>alert(1)</script>",
     "vbscript:msgbox(1)",
   ])("omits an unsafe details link: %s", async (href) => {
-    const { container } = render(<SiteMap center={CENTER} pins={[{ ...PIN, href }]} />);
+    const { container } = render(
+      <SiteMap center={CENTER} pins={[{ ...PIN, href }]} clusterLabel="dive sites" />,
+    );
     fireEvent.click(await markerButton(container));
     const content = popup(container);
-    expect(content.querySelector("p")?.textContent).toBe(PIN.name);
+    expect(content.querySelector("h2")?.textContent).toBe(PIN.name);
     expect(content.querySelector("a")).toBeNull();
   });
 
@@ -127,7 +145,12 @@ describe("SiteMap labels through Leaflet", () => {
   ])("preserves a normal details link and map selection: %s", async (href) => {
     const onSelectPin = vi.fn();
     const { container, rerender } = render(
-      <SiteMap center={CENTER} pins={[{ ...PIN, href }]} onSelectPin={onSelectPin} />,
+      <SiteMap
+        center={CENTER}
+        pins={[{ ...PIN, href }]}
+        onSelectPin={onSelectPin}
+        clusterLabel="dive sites"
+      />,
     );
     const button = await markerButton(container);
     expect(button).toHaveAttribute("aria-label", PIN.name);
@@ -137,7 +160,7 @@ describe("SiteMap labels through Leaflet", () => {
     expect(onSelectPin).toHaveBeenCalledWith(PIN.id);
     const link = popup(container).querySelector("a");
     expect(link).toHaveAttribute("href", href ?? "");
-    expect(link).toHaveTextContent("View details →");
+    expect(link).toHaveTextContent("Open site →");
     expect(link).not.toHaveAttribute("onclick");
     rerender(
       <SiteMap
@@ -145,11 +168,24 @@ describe("SiteMap labels through Leaflet", () => {
         pins={[{ ...PIN, href }]}
         selectedPinId={PIN.id}
         onSelectPin={onSelectPin}
+        clusterLabel="dive sites"
       />,
     );
     await waitFor(() =>
       expect(container.querySelector(".leaflet-site-marker button")).toHaveClass("ring-4"),
     );
-    expect(popup(container).querySelector("p")?.textContent).toBe(PIN.name);
+    expect(popup(container).querySelector("h2")?.textContent).toBe(PIN.name);
+    await waitFor(() => expect(container.querySelectorAll(".leaflet-site-popup")).toHaveLength(1));
+  });
+
+  it("shows the site name and location on hover", async () => {
+    const { container } = render(
+      <SiteMap center={CENTER} pins={[PIN]} clusterLabel="dive sites" />,
+    );
+    fireEvent.mouseOver(await markerButton(container));
+    await waitFor(() => {
+      expect(container.querySelector(".leaflet-tooltip")?.textContent).toContain(PIN.name);
+      expect(container.querySelector(".leaflet-tooltip")?.textContent).toContain(PIN.subtitle);
+    });
   });
 });
