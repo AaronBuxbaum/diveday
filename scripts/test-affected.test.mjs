@@ -8,6 +8,12 @@ const reader = "src/features/contracts.test.ts";
 const options = { readers: [reader], existing: () => true, isSharedTest: () => false };
 
 describe("local unit selection", () => {
+  it("selects no reader contracts when nothing changed", () => {
+    expect(testPlan({ ...options, changed: [] })).toMatchObject({ mode: "direct", files: [] });
+    expect(
+      testPlan({ ...options, changed: [], readers: null, extra: ["src/db/red.test.ts"] }),
+    ).toMatchObject({ mode: "direct", files: ["src/db/red.test.ts"] });
+  });
   it("runs changed tests directly without related discovery", () => {
     const plan = testPlan({ ...options, changed: ["src/lib/a.test.ts"] });
     expect(plan.mode).toBe("direct");

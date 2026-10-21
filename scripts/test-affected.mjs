@@ -67,6 +67,13 @@ export function testPlan({
 }) {
   const reasons = [];
   const all = (reason) => ({ mode: "all", files: [], reasons: [reason] });
+  if (changed.length === 0) {
+    return {
+      mode: "direct",
+      files: [...new Set(extra.filter(existing))].sort(),
+      reasons: [extra.length ? "base CI failures; no changed inputs" : "no changed inputs"],
+    };
+  }
   if (changed.some((file) => GLOBAL.test(file)))
     return all("global test, schema, migration or dependency input changed");
   if (changed.some((file) => !KNOWN.test(file))) return all("unknown dependency input changed");

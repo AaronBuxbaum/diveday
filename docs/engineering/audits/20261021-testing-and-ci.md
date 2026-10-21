@@ -54,8 +54,14 @@ test-only changes run edited tests directly; production changes retain native Vi
 selection and conservative source-reader coverage. Global harness, dependency, schema and migration
 changes or unknown inputs widen selection to the full unit suite; so does unavailable source-reader
 discovery when dependency selection needs it. Guards still run. Full CI selection remains unchanged.
-The E2E selector reuses one source inventory rather than reading the tree twice, and avoids graph
-construction for changes that cannot reach production pages.
+Quick verification uses the cheap changed-path reader and skips browser-test discovery and its
+dependency graphs. Full verification still uses the existing affected-E2E selector; its duplicate
+source-tree reads were not optimized in this change.
+
+In the measured selection replay, local selection retained 253 of 1,878 non-guard test files,
+including 16 database-backed files as a conservative safety margin. Quick-plan generation fell
+from 1,957 ms to 99 ms. These measurements describe that replay and planning cost, not guaranteed
+suite duration or a reduction to full CI coverage.
 
 The shared source lexer now scans regular-expression literals explicitly instead of using the
 backtracking expression flagged by CodeQL. Pathological slash-heavy and unterminated inputs have
