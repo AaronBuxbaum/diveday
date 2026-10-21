@@ -28,8 +28,8 @@
 //   pnpm verify:push                      run it
 //   pnpm verify:push --plan               print the base, the steps and the selected specs, run nothing
 //   pnpm verify:push --base-red <file…>   also run these, when the base is red on a job that names none
-//   pnpm verify:push --quick              the static checks and the unit tests the diff reaches; no
-//                                         full suite, no e2e build, no browser specs
+//   pnpm verify:push --quick              static checks and selected units; browser replay only
+//                                         for named failures on the base
 //
 // `--quick` is the default way to push (Aaron, 2026-10-16: "stop the pattern of waiting for the
 // full validations on these, just batch up work into single large PRs and stack them, adapting
@@ -66,6 +66,7 @@ import {
   affectedSpecs,
   captureGrep,
   captureMs,
+  changedDiff,
   durations,
   estimateMs,
   stackBase,
@@ -74,6 +75,7 @@ import {
 import { verifiedFile } from "./guard-push.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { sourceReaders, testArgs, testPlan } from "./test-affected.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -171,28 +173,39 @@ function staticSteps(changed) {
 }
 
 /**
- * `--quick`: the static steps, then the unit tests that import what changed (`vitest related`,
- * which also runs a changed test file itself) plus any the base is red on. `related` is the
- * changed files that still exist, so a deletion does not name a missing path.
+ * `--quick`: static checks plus native dependency/source-reader selection, direct
+ * changed leaf tests, or a full fallback for global/unknown/deleted inputs.
  */
-export function quickPlan({ changed, related = [] }) {
+export function quickPlan({ changed, selection, specs = [] }) {
   const steps = staticSteps(changed);
-  if (docsOnlyDiff(changed) || related.length === 0) return steps;
-  steps.push({
-    name: "related unit tests",
-    command: "pnpm",
-    args: [
-      "exec",
-      "vitest",
-      "related",
-      "--run",
-      "--project",
-      "!guards",
-      "--reporter=dot",
-      ...related,
-    ],
-  });
+  const selected = selection ?? testPlan({ changed, readers: [] });
+  if (selected.mode === "all" || selected.files.length > 0)
+    steps.push({ name: "related unit tests", command: "pnpm", args: testArgs(selected) });
+  steps.push(...browserSteps({ specs }));
   return steps;
+}
+
+/** A named base failure must run or stop the gate; deletion is not verification. */
+export function baseReplayFiles({ files, existing }) {
+  const missing = files.filter((file) => !existing(file));
+  if (missing.length > 0)
+    throw new Error(
+      `named base test files are missing; cannot verify their failures: ${missing.join(" ")}`,
+    );
+  return [...new Set(files)];
+}
+
+/** Coverage in a stamp follows the actual browser plan in either verification mode. */
+export function stampCoverage({ specs, verdict, decision }) {
+  return {
+    specs,
+    baseCi: verdict.unknown
+      ? { unknown: verdict.unknown }
+      : {
+          red: verdict.red,
+          ran: [...decision.files, ...decision.specs.filter((spec) => specs.includes(spec))],
+        },
+  };
 }
 
 /**
@@ -221,6 +234,13 @@ export function plan({ changed, specs, captures = [] }) {
       ],
     });
   }
+  steps.push(...browserSteps({ specs, captures }));
+  return steps;
+}
+
+/** Shared build reuse, chunk bounds and worker policy for both verification modes. */
+function browserSteps({ specs, captures = [] }) {
+  const steps = [];
   if (specs.length > 0 || captures.length > 0) {
     steps.push({ name: "e2e build", command: "pnpm", args: ["e2e:build"], build: true });
     // Chunked so a hub-route change, which selects most of the suite, stays inside each step's
@@ -273,9 +293,15 @@ export function browserSpecs({ changed, strong, reach, rank, record }) {
  */
 export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = [], quick = false }) {
   if (quick) {
+    const ran = new Set(specs.map((spec) => spec.replace(/:\d+$/, "")));
+    const skipped = allSpecs.filter(
+      (spec) => !/(?:^|\/)visual[^/]*\.spec\.ts$/.test(spec) && !ran.has(spec),
+    );
     return [
-      "the unit tests the diff does not import, including those that read source from disk (quick run)",
-      `all ${allSpecs.filter((spec) => !/(?:^|\/)visual[^/]*\.spec\.ts$/.test(spec)).length} Playwright specs (quick run)`,
+      "unit tests outside native dependency selection and conservative source-reader contracts (quick run)",
+      ...(skipped.length > 0
+        ? [`${ran.size === 0 ? "all " : ""}${skipped.length} Playwright specs (quick run)`]
+        : []),
       "visual captures (reg-suit): CI only, and a difference never fails the build",
     ];
   }
@@ -420,7 +446,9 @@ function main() {
   }
 
   const base = stackBase(git);
-  const selection = affectedSpecs({ root: ROOT, base, git });
+  const selection = quick
+    ? changedDiff({ root: ROOT, base, git })
+    : affectedSpecs({ root: ROOT, base, git });
   if (!selection) {
     console.error("verify:push: could not diff against a base (is origin/main fetched?).");
     process.exit(1);
@@ -432,9 +460,9 @@ function main() {
     testsOnly,
   } = browserSpecs({
     changed: selection.changed,
-    strong: selection.strong,
-    reach: selection.reach,
-    rank: selection.rank,
+    strong: selection.strong ?? new Map(),
+    reach: selection.reach ?? new Map(),
+    rank: selection.rank ?? new Map(),
     record,
   });
   const strong = specs.filter((spec) => !reachRun.includes(spec));
@@ -449,24 +477,36 @@ function main() {
     if (!args.includes("--plan")) process.exit(1);
   }
   const existing = (file) => existsSync(path.join(ROOT, file));
-  const baseSpecs = docsOnly
-    ? []
-    : decision.specs.filter((spec) => existing(spec) && !specs.includes(spec));
-  specs.push(...baseSpecs);
-  const captures = docsOnly || testsOnly ? [] : [...selection.captures.keys()].sort();
-  const related = [
-    ...selection.changed.filter((file) => !DOCS_ONLY.test(file) && existing(file)),
-    ...decision.files.filter(existing),
-  ];
+  let baseSpecs;
+  try {
+    baseReplayFiles({ files: [...decision.files, ...decision.specs], existing });
+    baseSpecs = docsOnly ? [] : [...new Set(decision.specs)];
+  } catch (error) {
+    console.error(`verify:push: ${error.message}`);
+    process.exit(1);
+  }
+  if (quick) specs.splice(0, specs.length, ...baseSpecs);
+  else specs.push(...baseSpecs.filter((spec) => !specs.includes(spec)));
+  const captures = quick || docsOnly || testsOnly ? [] : [...selection.captures.keys()].sort();
+  const unitSelection = quick
+    ? testPlan({
+        changed: selection.changed,
+        readers: sourceReaders(ROOT),
+        extra: decision.files.filter(existing),
+      })
+    : null;
   const steps = quick
-    ? quickPlan({ changed: selection.changed, related: [...new Set(related)] })
+    ? quickPlan({ changed: selection.changed, selection: unitSelection, specs })
     : plan({ changed: selection.changed, specs, captures });
 
   if (quick) {
+    for (const reason of unitSelection.reasons) console.log(`  unit selection: ${reason}`);
     console.log(
       `verify:push --quick: ${selection.changed.length} file(s) against ${selection.base}; ` +
         "static checks and the unit tests they reach. CI runs the rest; fix forward if it goes red.",
     );
+    if (baseSpecs.length > 0)
+      console.log(`  replaying red browser specs on the base: ${baseSpecs.join(" ")}`);
   } else {
     console.log(
       `verify:push: ${selection.changed.length} file(s) against ${selection.base}; ` +
@@ -575,14 +615,11 @@ function main() {
     base: selection.base,
     at: new Date().toISOString(),
     steps: ran,
-    specs: quick ? [] : specs,
+    ...stampCoverage({ specs, verdict, decision }),
     captures: !quick && captures.length > 0 ? captures : undefined,
     e2eWorkers: workerCounts.length > 0 ? workerCounts : undefined,
     browser: browserNote ?? undefined,
     notRunHere: skipped,
-    baseCi: verdict.unknown
-      ? { unknown: verdict.unknown }
-      : { red: verdict.red, ran: quick ? decision.files : [...decision.files, ...decision.specs] },
   };
   writeStamps(stamp, { git });
   console.log(`verify:push${quick ? " --quick" : ""}: green. ${head.slice(0, 9)} may be pushed.`);

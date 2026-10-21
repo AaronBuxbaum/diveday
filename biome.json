@@ -41,6 +41,14 @@
   },
   "overrides": [
     {
+      "includes": ["e2e/**", "scripts/simulate-day/**", "scripts/persona-bots/**"],
+      "linter": {
+        "domains": {
+          "playwright": "recommended"
+        }
+      }
+    },
+    {
       "includes": ["src/app/globals.css"],
       "linter": {
         "rules": {
