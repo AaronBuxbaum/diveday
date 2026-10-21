@@ -1051,3 +1051,34 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
   await expect(page.getByText("Lantern Wall")).toBeVisible();
   await expect(page.getByText("Somewhere Else")).toHaveCount(0);
 });
+
+test("map labels keep saved site text literal and details navigation works", async ({
+  page,
+  privateShop,
+}) => {
+  const name = "Z Reef <img src=x onerror=alert(1)>";
+  const subtitle = "<b onmouseover=alert(2)>Bank</b>";
+  await page.goto(`/shop/${privateShop.slug}/dive-sites/new`);
+  await page.getByLabel("Name").fill(name);
+  await page.getByRole("textbox", { name: "Location" }).fill(subtitle);
+  await page.getByLabel("Latitude").fill("25.05");
+  await page.getByLabel("Longitude").fill("-80.37");
+  await page.getByRole("button", { name: "Save dive site" }).click();
+  await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  const detailsUrl = page.url();
+
+  await page.goto(`/shop/${privateShop.slug}/dive-sites`);
+  const marker = page.locator(".leaflet-site-marker").getByRole("button", { name, exact: true });
+  await expect(marker).toBeVisible();
+  await marker.click();
+  await expect(marker).toHaveClass(/ring-4/);
+  const popup = page.locator(".leaflet-popup-content");
+  await expect(popup).toHaveCount(1);
+  await expect(popup.getByText(name, { exact: true })).toBeVisible();
+  await expect(popup.getByText(subtitle, { exact: true })).toBeVisible();
+  await expect(popup.locator("img, b, [onerror], [onmouseover]")).toHaveCount(0);
+  await popup.getByRole("link", { name: "View details" }).click();
+  await page.waitForURL(detailsUrl);
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+});
