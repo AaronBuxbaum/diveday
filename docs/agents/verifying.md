@@ -137,8 +137,8 @@ check the tree is clean, lint, typecheck, `check:repo`, the whole `guards` proje
 uses native `vitest related` for production imports and aliases, augmented conservatively with
 source-reading tests and their filesystem-reading helpers. This includes mixed behavior/source
 contracts and documentation inputs. Database snapshot loaders are operational fixture I/O;
-schema, migrations and test infrastructure changes instead run all unit tests. Deletions, global
-configuration and unknown inputs also fall back to the whole unit suite. A test-only diff runs
+schema, migrations and test infrastructure changes instead run all unit tests. Source/test deletions,
+global configuration and unknown inputs also fall back to the whole unit suite. A test-only diff runs
 edited tests directly when they neither export fixtures nor appear in other tests; otherwise it
 keeps native dependency selection. Base CI's named failures are included in either mode.
 

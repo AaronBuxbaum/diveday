@@ -77,8 +77,8 @@ export function testPlan({
   if (changed.some((file) => GLOBAL.test(file)))
     return all("global test, schema, migration or dependency input changed");
   if (changed.some((file) => !KNOWN.test(file))) return all("unknown dependency input changed");
-  if (changed.some((file) => !TEST.test(file) && !DOC.test(file) && !existing(file)))
-    return all("production input deleted or renamed");
+  if (changed.some((file) => !DOC.test(file) && !existing(file)))
+    return all("source or test input deleted or renamed; previous importers are unknown");
   const testsOnly =
     changed.length > 0 &&
     changed.some((file) => TEST.test(file)) &&

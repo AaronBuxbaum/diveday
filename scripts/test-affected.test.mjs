@@ -49,6 +49,11 @@ describe("local unit selection", () => {
       testPlan({ ...options, changed: ["src/lib/gone.test.ts"], existing: () => false }).files,
     ).toEqual([]);
   });
+  it("widens deleted test fixtures because their importers may still run", () => {
+    expect(
+      testPlan({ ...options, changed: ["src/lib/shared.test.ts"], existing: () => false }),
+    ).toMatchObject({ mode: "all", files: [] });
+  });
   it("keeps native discovery for a changed test exporting a shared fixture", () => {
     expect(
       testPlan({ ...options, changed: ["src/lib/shared.test.ts"], isSharedTest: () => true }).mode,
