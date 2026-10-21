@@ -30,6 +30,9 @@ const SHARDS = 4;
  * contiguous groups and the expensive specs cluster.
  */
 describe("dealing the real e2e tree", () => {
+  it("leaves touch mobile specs to their dedicated engine lane", async () => {
+    expect(await listSpecs()).not.toContain("e2e/mobile-behavior.spec.ts");
+  });
   it("puts every spec in exactly one shard", async () => {
     const bins = await dealSpecs(SHARDS);
     const dealt = bins.flatMap((bin) => bin.items);
