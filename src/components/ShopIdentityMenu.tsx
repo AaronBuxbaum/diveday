@@ -107,8 +107,13 @@ export function ShopIdentityMenu({
   copy: ShopIdentityMenuCopy;
 }) {
   const [open, setOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // This client boundary hydrates separately from Search and the section nav.
+  // The sign-out helper waits on the trigger before its first click.
+  useEffect(() => setHydrated(true), []);
 
   // A disclosed menu dismisses like any other — outside tap, Escape with
   // focus back on the trigger, close on navigation — via the one shared
@@ -133,6 +138,7 @@ export function ShopIdentityMenu({
         // The stable hook the e2e helpers open the menu by — the accessible
         // name is the shop's own (variable) name, deliberately.
         data-identity-menu
+        data-hydrated={hydrated ? "true" : undefined}
         // **Drawn like the bar's other controls**: `rounded-lg`, so the global
         // ring follows a 12px corner rather than a square one, and a hover
         // fill with 8px of room round the mark and the name. The room is

@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MENU_PANEL, MENU_TICK, MENU_TICK_GUTTER } from "@/components/ui/menu";
 import { SEGMENT_CORNER } from "@/components/ui/segmented";
@@ -214,6 +216,36 @@ describe("ShopIdentityMenu — the open panel", () => {
  * title landed 1px from the mark and the menu's door was under a target.
  */
 describe("the identity trigger", () => {
+  it("marks the trigger hydrated only after React takes ownership", async () => {
+    const props = {
+      shopName: "Blue Mantis Divers",
+      signOutAction: vi.fn(),
+      locale: "en-US",
+      languages: [{ locale: "en-US", label: "English (US)" }],
+      setLocaleAction: vi.fn(),
+      copy: COPY,
+    };
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<ShopIdentityMenu {...props} />);
+    document.body.append(container);
+    const identityTrigger = () => container.querySelector("[data-identity-menu]");
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    try {
+      expect(identityTrigger()).not.toHaveAttribute("data-hydrated");
+
+      await act(async () => {
+        root = hydrateRoot(container, <ShopIdentityMenu {...props} />);
+      });
+
+      expect(identityTrigger()).toHaveAttribute("data-hydrated", "true");
+    } finally {
+      if (root) {
+        await act(async () => root?.unmount());
+      }
+      container.remove();
+    }
+  });
+
   function trigger() {
     const { container } = render(
       <ShopIdentityMenu
