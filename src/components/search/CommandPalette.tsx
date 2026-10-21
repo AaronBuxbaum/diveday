@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
-import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
+import { StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/group-label";
 import { useDialogBehaviour } from "@/components/ui/useDialogBehaviour";
 import type { SearchResults } from "@/db/search";
@@ -19,7 +19,9 @@ import {
 } from "@/lib/staff-destinations";
 import { forgetThisDevice } from "../forget-device";
 import { PaletteGlyph } from "./PaletteGlyph";
-import { EMPTY, useCommandKey, usePaletteRecents, useShopSearch } from "./palette-hooks";
+import { hintKeyClass, PaletteLegend } from "./PaletteLegend";
+import { PaletteSearchStatus, paletteSearchPresentation } from "./PaletteSearchStatus";
+import { useCommandKey, usePaletteRecents, useShopSearch } from "./palette-hooks";
 import { recentsStorageKey, rememberRecent, type StoredRecent } from "./palette-recents";
 import {
   diverItem,
@@ -90,17 +92,6 @@ export type SettingsShortcut = { id: string; label: string; group: string; href:
 const MAX_SETTINGS_SHORTCUTS = 6;
 const NO_SETTINGS_SHORTCUTS: readonly SettingsShortcut[] = [];
 
-/**
- * The palette's own key cap — smaller than the header button's ⌘K badge.
- *
- * A fixed 16px box that centres what it holds, because the caps hold two
- * kinds of thing: a word or a glyph (↵, esc) and a 12px drawn arrow. Sized by
- * their content, the arrow caps' line box made them 18px beside the text caps'
- * 16 in the same legend (the pixel audit, command-palette).
- */
-const hintKeyClass =
-  "inline-flex h-4 items-center rounded border border-border bg-surface-sunken px-1.5 font-sans text-[0.65rem] leading-none font-semibold";
-
 export type CommandPaletteCopy = {
   search: string;
   dialogAriaLabel: string;
@@ -108,6 +99,11 @@ export type CommandPaletteCopy = {
   placeholder: string;
   emptyShort: string;
   emptyNoMatches: string;
+  searching: string;
+  searchFailed: string;
+  searchUnauthorized: string;
+  retry: string;
+  signInAgain: string;
   groupDivers: string;
   addDiver: string;
   groupTrips: string;
@@ -161,6 +157,7 @@ export type CommandPaletteCopy = {
  */
 function paletteGroups({
   results,
+  searchSucceeded,
   recents = NO_RECENTS,
   todayBoats = NO_TODAY_BOATS,
   query,
@@ -178,6 +175,7 @@ function paletteGroups({
   startTransition,
 }: {
   results: SearchResults;
+  searchSucceeded: boolean;
   /** This staffer's recents on this device, as read back on opening (`palette-hooks.ts`). */
   recents?: PaletteRecents;
   todayBoats?: readonly PaletteTodayBoat[];
@@ -244,7 +242,7 @@ function paletteGroups({
   // thing an arrow key reaches and never what Enter takes on a query that
   // matched something real.
   const addDiver: PaletteItem | null =
-    q.length >= 2
+    q.length >= 2 && searchSucceeded
       ? (() => {
           const formData = new FormData();
           formData.set("query", rawQuery);
@@ -536,7 +534,6 @@ export function CommandPalette({
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResults>(EMPTY);
   const [active, setActive] = useState(0);
   const recentsKey = recentsStorageKey(shopSlug, readerId);
   // A shared desk's next staffer does not inherit these.
@@ -566,20 +563,21 @@ export function CommandPalette({
       inputRef.current?.focus();
     } else {
       setQuery("");
-      setResults(EMPTY);
       setActive(0);
     }
   }, [open]);
 
-  useShopSearch(query, setResults);
-  const recents = usePaletteRecents(open, recentsKey);
+  const { results, status, authorizationLost, retry, onUnauthorized } = useShopSearch(query, open);
+  const recents = usePaletteRecents(open && !authorizationLost, recentsKey, onUnauthorized);
+  const visibleBoats = authorizationLost ? NO_TODAY_BOATS : todayBoats;
 
   const groups = useMemo(
     () =>
       paletteGroups({
         results,
+        searchSucceeded: status === "success",
         recents,
-        todayBoats,
+        todayBoats: visibleBoats,
         query,
         boatBoardingHref,
         root,
@@ -596,8 +594,9 @@ export function CommandPalette({
       }),
     [
       results,
+      status,
       recents,
-      todayBoats,
+      visibleBoats,
       query,
       boatBoardingHref,
       root,
@@ -615,19 +614,12 @@ export function CommandPalette({
 
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
-  // "3 divers, 2 trips" — composed from each group's own (already-translated)
-  // heading and count rather than a new pluralized template, so this needs no
-  // copy beyond what the palette already has.
-  const resultsAnnouncement = useMemo(() => {
-    if (query.trim().length < 2) return copy.emptyShort;
-    if (flat.length === 0) return copy.emptyNoMatches;
-    return groups
-      .map((group) =>
-        group.heading ? `${group.heading} (${group.items.length})` : group.items[0]?.label,
-      )
-      .filter(Boolean)
-      .join(", ");
-  }, [query, flat.length, groups, copy.emptyShort, copy.emptyNoMatches]);
+  const { searchMessage, resultsAnnouncement } = paletteSearchPresentation({
+    status,
+    query,
+    groups,
+    copy,
+  });
 
   // Keep the active row in range as results change.
   useEffect(() => {
@@ -651,7 +643,7 @@ export function CommandPalette({
   function onKeyDown(event: React.KeyboardEvent) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActive((current) => Math.min(current + 1, flat.length - 1));
+      setActive((current) => Math.max(0, Math.min(current + 1, flat.length - 1)));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       setActive((current) => Math.max(current - 1, 0));
@@ -709,6 +701,7 @@ export function CommandPalette({
                   type="text"
                   role="combobox"
                   aria-expanded="true"
+                  aria-busy={status === "pending"}
                   aria-controls={listId}
                   aria-activedescendant={activeKey ? `${listId}-${activeKey}` : undefined}
                   aria-label={copy.comboboxAriaLabel}
@@ -733,6 +726,12 @@ export function CommandPalette({
                   // and nothing else.
                   className="w-full rounded-t-panel border-b border-border bg-transparent px-5 py-4 text-base focus-visible:focus-ring-inset"
                 />
+                <PaletteSearchStatus
+                  message={searchMessage}
+                  status={status}
+                  retry={retry}
+                  copy={copy}
+                />
                 {/* `pb-2` inside the scroll box, not on the panel: the last
                     row now ends on its own padding rather than being sliced
                     through its text by the scroll edge (issue #773). */}
@@ -741,7 +740,7 @@ export function CommandPalette({
                   role="listbox"
                   className="max-h-[58vh] overflow-y-auto py-2 [mask-image:linear-gradient(to_bottom,black_calc(100%-1.25rem),transparent)]"
                 >
-                  {flat.length === 0 ? (
+                  {flat.length === 0 && !searchMessage ? (
                     <p className="px-5 py-6 text-center text-sm text-muted">
                       {query.trim().length < 2 ? copy.emptyShort : copy.emptyNoMatches}
                     </p>
@@ -830,38 +829,7 @@ export function CommandPalette({
                     ))
                   )}
                 </div>
-                {/* **What the palette has always done, said out loud.** It
-                    opens on ⌘K, moves on arrows, commits on Enter and closes
-                    on Escape, and said none of it — so a staffer who reached
-                    it by clicking "Search ⌘K" in the header reached back for
-                    the mouse, which is the whole advantage gone. Muted and
-                    small: a legend, never a row you could mistake for a
-                    result. `aria-hidden` because every key it names is already
-                    announced by the combobox pattern, and a screen-reader
-                    user hearing "arrow keys to move" inside a listbox is
-                    being told what they are already doing. */}
-                <p
-                  aria-hidden="true"
-                  className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-5 py-2.5 text-xs text-muted"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <kbd className={hintKeyClass}>
-                      <DiveDayIcon name="arrow-up" className="size-3" />
-                    </kbd>
-                    <kbd className={hintKeyClass}>
-                      <DiveDayIcon name="arrow-down" className="size-3" />
-                    </kbd>
-                    {copy.hintMove}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <kbd className={hintKeyClass}>↵</kbd>
-                    {copy.hintOpen}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <kbd className={hintKeyClass}>esc</kbd>
-                    {copy.hintClose}
-                  </span>
-                </p>
+                <PaletteLegend copy={copy} />
               </div>
             </div>,
             document.body,

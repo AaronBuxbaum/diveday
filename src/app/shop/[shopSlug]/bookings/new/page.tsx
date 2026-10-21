@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { discardFormDraftAction, saveFormDraftAction } from "@/app/actions/form-drafts";
+import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FormDraft } from "@/components/FormDraft";
 import { formDraftCopy } from "@/components/form-draft-copy";
@@ -131,6 +131,7 @@ export default async function NewBookingPage({
   const { shopSlug } = await params;
   const { page, request, notice, outcome, from } = await searchParams;
   const { db, shop, session } = await requireShopSurface(shopSlug);
+  const draftBinding = bindFormDraft(session.user);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const requestId = request ? uuidParam(request) : null;
@@ -349,20 +350,14 @@ export default async function NewBookingPage({
           />
         </summary>
         <form
+          key={draftBinding.scope}
           action={tookACallAction.bind(null, shopSlug)}
           className="border-t border-border p-5 sm:p-6"
         >
           <FormDraft
             form="took_a_call"
-            draft={
-              callDraft
-                ? {
-                    fields: callDraft.fields,
-                    savedAtLabel: formatTime(callDraft.savedAt, locale, shop.timezone),
-                  }
-                : null
-            }
-            actions={{ save: saveFormDraftAction, discard: discardFormDraftAction }}
+            draft={draftForForm(callDraft, locale, shop.timezone)}
+            actions={draftBinding.actions}
             copy={formDraftCopy(t)}
           />
           <PersonFieldTrio

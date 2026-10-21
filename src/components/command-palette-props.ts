@@ -69,6 +69,12 @@ function commandPaletteCopy(t: ReturnType<typeof staffTranslator>): CommandPalet
     placeholder: t("shared.commandPalette.placeholder"),
     emptyShort: t("shared.commandPalette.emptyShort"),
     emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
+    searching: t("shared.commandPalette.searching"),
+    searchFailed: t("shared.commandPalette.searchFailed"),
+    searchUnauthorized: t("shared.commandPalette.searchUnauthorized"),
+    retry: t("shared.commandPalette.retry"),
+    signInAgain: t("shared.commandPalette.signInAgain"),
+
     groupDivers: t("shared.commandPalette.groupDivers"),
     addDiver: t("shared.commandPalette.addDiver"),
     groupTrips: t("shared.commandPalette.groupTrips"),
