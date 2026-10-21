@@ -25,7 +25,7 @@ const lensIdForm = z.object({ lensId: formValue() });
  *
  * The same three actions the fleet has, for the same reason: this is
  * a shop-owned vocabulary with a soft delete, and its notice codes ride the
- * same `?saved=` section so the row that changed comes back open.
+ * validation redirect names only a validated row so its own editor opens.
  */
 export async function createTripLensAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -34,7 +34,7 @@ export async function createTripLensAction(formData: FormData) {
 
   const { name } = readForm(createLensForm, formData);
   if (!name) {
-    redirect(noticeUrl(page, "lens-invalid"));
+    redirect(noticeUrl(`${page}#tag-new`, "lens-invalid", { lens: "new" }));
   }
 
   const db = await getDb();
@@ -50,9 +50,10 @@ export async function updateTripLensAction(formData: FormData) {
   await registerBlock(session, canPersonManageTripTags);
 
   const { lensId: rawLensId, name } = readForm(renameLensForm, formData);
-  const lensId = typeof rawLensId === "string" ? uuidParam(rawLensId) : null;
-  if (!lensId || !name) {
-    redirect(noticeUrl(page, "lens-invalid"));
+  const lensId = typeof rawLensId === "string" ? uuidParam(rawLensId)?.toLowerCase() : null;
+  if (!lensId) redirect(noticeUrl(page, "lens-invalid"));
+  if (!name) {
+    redirect(noticeUrl(`${page}#tag-${lensId}`, "lens-invalid", { lens: lensId }));
   }
 
   const db = await getDb();

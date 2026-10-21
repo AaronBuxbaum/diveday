@@ -1761,6 +1761,13 @@ describe("clusters, the settled list and the census", () => {
       "header.backdrop-blur-xl bg-background border-b border-border h-(--chrome-h) print:hidden sticky supports-[backdrop-filter]:bg-background/85";
     const ledgerRow =
       "li.border-border border-t flex gap-3 items-center last:border-b min-h-13 px-2 relative";
+    const packageRadio = {
+      check: "focus-invisible",
+      sig: "input[radio].focus-visible:outline-none size-4",
+      csig: "div.bg-surface border border-border flex gap-2 has-[input:checked]:bg-primary-tint has-[input:checked]:border-primary has-[input:checked]:font-semibold has-[input:focus-visible]:focus-ring items-center min-h-11 not-has-[input:checked]:hover:bg-surface-sunken pe-4 rounded-lg text-base transition-colors",
+      cls: "size-4 shrink-0 focus-visible:outline-none",
+      label: "",
+    };
     const right = [
       {
         check: "text-spill",
@@ -1784,6 +1791,7 @@ describe("clusters, the settled list and the census", () => {
         cls: "mt-1 max-w-full truncate font-mono text-xs text-muted",
         label: "https://e2e.diveday.example/s/",
       },
+      packageRadio,
     ];
     const register = fs.readFileSync(
       new URL("../../docs/design/settled-questions.md", import.meta.url),
@@ -1801,6 +1809,13 @@ describe("clusters, the settled list and the census", () => {
       { check: "truncated", sig: "span.truncate", csig: "li.row", cls: "truncate", label: "" },
       { ...right[3], csig: "li.other" },
       { ...right[0], check: "hard-clip" },
+      { ...packageRadio, csig: "label.unringed-row" },
+      {
+        ...packageRadio,
+        csig: packageRadio.csig.replace(" has-[input:focus-visible]:focus-ring", ""),
+      },
+      { ...packageRadio, sig: "input[checkbox].focus-visible:outline-none size-4" },
+      { ...packageRadio, cls: "size-4 focus-visible:outline-none" },
     ];
     for (const found of elsewhere) expect(settledEntryFor(found, settled)).toBeNull();
   });

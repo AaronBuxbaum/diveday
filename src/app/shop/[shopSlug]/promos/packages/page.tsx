@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
 import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { LedgerRow } from "@/components/ui/ledger";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { listDivePackages } from "@/db/dive-packages";
 import { packageDivesOwedAt } from "@/db/report-lines";
@@ -32,7 +34,7 @@ export const metadata: Metadata = { title: "Dive packages — DiveDay" };
  * Its own page rather than a hub row, because the "form" behind that row was a
  * list of packages with a Delete on each and a five-field add form beneath
  * them. Opt-in by presence: a shop that has never defined one sees an empty
- * list and the add form, and nothing anywhere else in the app changes until the
+ * list and a disclosed add form, and nothing anywhere else in the app changes until the
  * first package exists.
  *
  * Tucked under Money's Discounts tab (ADR 20261001-logbook): a package is a
@@ -85,17 +87,28 @@ export default async function DivePackagesSettingsPage({
         </p>
       ) : null}
 
-      <SectionCard padding="lg">
+      <div className="space-y-10">
         {shopPackages.length > 0 ? (
-          <ul className="flex flex-col gap-2">
+          <ul>
             {shopPackages.map((pkg) => (
-              <li
+              <LedgerRow
                 key={pkg.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-inset border border-border bg-surface p-3"
+                stacked
+                trailing={
+                  <form action={deleteDivePackageAction}>
+                    <input type="hidden" name="packageId" value={pkg.id} />
+                    <SubmitButton
+                      pendingLabel={t("settings.main.divePackages.deleting")}
+                      className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                    >
+                      {t("settings.main.divePackages.delete")}
+                    </SubmitButton>
+                  </form>
+                }
               >
-                <span className="min-w-0">
+                <span className="block min-w-0">
                   <span className="font-medium">{pkg.name}</span>{" "}
-                  <span className="text-sm text-muted">
+                  <span className="text-base text-muted">
                     {t("settings.main.divePackages.summary", {
                       dives: pkg.diveCount,
                       price: formatMoneyScanned(pkg.priceCents, shop.currency, locale),
@@ -107,78 +120,68 @@ export default async function DivePackagesSettingsPage({
                     })}
                   </span>
                 </span>
-                {/* Says "Delete", and is soft underneath (ADR
-                    20260820-every-delete-is-soft). No sentence explains that
-                    the dives somebody already bought survive: reversibility is
-                    a promise we keep, not a concept the reader holds — and here
-                    the softness is load-bearing rather than conventional,
-                    because the entitlements reference this row. */}
-                <form action={deleteDivePackageAction}>
-                  <input type="hidden" name="packageId" value={pkg.id} />
-                  <SubmitButton
-                    pendingLabel={t("settings.main.divePackages.deleting")}
-                    className={buttonClass({ variant: "danger-ghost", size: "sm" })}
-                  >
-                    {t("settings.main.divePackages.delete")}
-                  </SubmitButton>
-                </form>
-              </li>
+              </LedgerRow>
             ))}
           </ul>
-        ) : null}
-        <FieldGrid
-          as="form"
-          action={createDivePackageAction}
-          columns={2}
-          className={shopPackages.length > 0 ? "mt-6" : undefined}
-        >
-          <Field label={t("settings.main.divePackages.nameLabel")}>
-            <input name="name" required maxLength={80} className={controlClass} />
-          </Field>
-          <Field label={t("settings.main.divePackages.diveCountLabel")}>
-            <input
-              name="diveCount"
-              type="number"
-              inputMode="numeric"
-              required
-              min={1}
-              max={MAX_PACKAGE_DIVE_COUNT}
-              className={`${controlClass} tabular-nums`}
-            />
-          </Field>
-          <Field label={t("settings.main.divePackages.priceLabel")}>
-            <input
-              name="priceDollars"
-              type="number"
-              inputMode="decimal"
-              required
-              min={1}
-              step="0.01"
-              className={`${controlClass} tabular-nums`}
-            />
-          </Field>
-          <Field
-            label={t("settings.main.divePackages.validityLabel")}
-            description={t("settings.main.divePackages.validityDescription")}
+        ) : (
+          <EmptyState title={t("settings.main.divePackages.empty")} />
+        )}
+        <DisclosureRowList>
+          <DisclosureRow
+            id="package-new"
+            heading={t("settings.main.divePackages.createTitle")}
+            open={notice === "package-invalid"}
           >
-            <DateField name="validUntil" className="tabular-nums" />
-          </Field>
-          <Field label={t("settings.main.divePackages.scopeLabel")}>
-            <select name="scope" defaultValue="fun_dives" className={controlClass}>
-              <option value="all">{t("settings.main.divePackages.scopeAll")}</option>
-              <option value="fun_dives">{t("settings.main.divePackages.scopeFunDives")}</option>
-            </select>
-          </Field>
-          <FieldActions>
-            <SubmitButton
-              pendingLabel={t("settings.main.divePackages.submitting")}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("settings.main.divePackages.submit")}
-            </SubmitButton>
-          </FieldActions>
-        </FieldGrid>
-      </SectionCard>
+            <FieldGrid as="form" action={createDivePackageAction} columns={2}>
+              <Field label={t("settings.main.divePackages.nameLabel")}>
+                <input name="name" required maxLength={80} className={controlClass} />
+              </Field>
+              <Field label={t("settings.main.divePackages.diveCountLabel")}>
+                <input
+                  name="diveCount"
+                  type="number"
+                  inputMode="numeric"
+                  required
+                  min={1}
+                  max={MAX_PACKAGE_DIVE_COUNT}
+                  className={`${controlClass} tabular-nums`}
+                />
+              </Field>
+              <Field label={t("settings.main.divePackages.priceLabel")}>
+                <input
+                  name="priceDollars"
+                  type="number"
+                  inputMode="decimal"
+                  required
+                  min={1}
+                  step="0.01"
+                  className={`${controlClass} tabular-nums`}
+                />
+              </Field>
+              <Field
+                label={t("settings.main.divePackages.validityLabel")}
+                description={t("settings.main.divePackages.validityDescription")}
+              >
+                <DateField name="validUntil" className="tabular-nums" />
+              </Field>
+              <Field label={t("settings.main.divePackages.scopeLabel")}>
+                <select name="scope" defaultValue="fun_dives" className={controlClass}>
+                  <option value="all">{t("settings.main.divePackages.scopeAll")}</option>
+                  <option value="fun_dives">{t("settings.main.divePackages.scopeFunDives")}</option>
+                </select>
+              </Field>
+              <FieldActions>
+                <SubmitButton
+                  pendingLabel={t("settings.main.divePackages.submitting")}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  {t("settings.main.divePackages.submit")}
+                </SubmitButton>
+              </FieldActions>
+            </FieldGrid>
+          </DisclosureRow>
+        </DisclosureRowList>
+      </div>
     </main>
   );
 }

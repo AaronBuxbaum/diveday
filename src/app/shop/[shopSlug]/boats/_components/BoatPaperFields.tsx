@@ -26,6 +26,8 @@ export function BoatPaperFields({
   t,
   className = "",
   invalid = false,
+  radioInvalid = false,
+  channelInvalid = false,
   describedBy,
 }: {
   boat?: Boat;
@@ -33,6 +35,10 @@ export function BoatPaperFields({
   className?: string;
   /** The row's certificate error (H-107): the limit box is half of it. */
   invalid?: boolean;
+  /** The radio identity failed validation, rather than a certificate limit. */
+  radioInvalid?: boolean;
+  /** A working channel reserved for distress/calling was refused. */
+  channelInvalid?: boolean;
   describedBy?: string;
 }) {
   return (
@@ -48,7 +54,7 @@ export function BoatPaperFields({
           inputMode="numeric"
           defaultValue={boat?.certifiedPassengers ?? ""}
           aria-invalid={invalid || undefined}
-          aria-describedby={describedBy}
+          aria-describedby={invalid ? describedBy : undefined}
           className={`${controlClass} tabular-nums`}
         />
       </Field>
@@ -61,7 +67,7 @@ export function BoatPaperFields({
           inputMode="numeric"
           defaultValue={boat?.certifiedTotalPersons ?? ""}
           aria-invalid={invalid || undefined}
-          aria-describedby={describedBy}
+          aria-describedby={invalid ? describedBy : undefined}
           className={`${controlClass} tabular-nums`}
         />
       </Field>
@@ -86,6 +92,8 @@ export function BoatPaperFields({
           autoComplete="off"
           spellCheck={false}
           defaultValue={boat?.callSign ?? ""}
+          aria-invalid={radioInvalid || undefined}
+          aria-describedby={radioInvalid ? describedBy : undefined}
           className={`${controlClass} font-mono uppercase`}
         />
       </Field>
@@ -97,6 +105,8 @@ export function BoatPaperFields({
           maxLength={11}
           autoComplete="off"
           defaultValue={boat?.mmsi ?? ""}
+          aria-invalid={radioInvalid || undefined}
+          aria-describedby={radioInvalid ? describedBy : undefined}
           className={`${controlClass} font-mono tabular-nums`}
         />
       </Field>
@@ -108,6 +118,8 @@ export function BoatPaperFields({
           autoComplete="off"
           spellCheck={false}
           defaultValue={boat?.workingChannel ?? ""}
+          aria-invalid={radioInvalid || channelInvalid || undefined}
+          aria-describedby={radioInvalid || channelInvalid ? describedBy : undefined}
           className={`${controlClass} font-mono tabular-nums`}
         />
       </Field>
@@ -147,7 +159,7 @@ export function BoatPaperFacts({
   const overSold = passengersAboveCertificate(boat.capacity, boat.certifiedPassengers);
   if (papers.length === 0 && !overSold) return null;
   return (
-    <ul className="w-full space-y-1 text-sm sm:basis-full">
+    <ul className="w-full space-y-1 text-base sm:basis-full">
       {overSold ? (
         <li className="font-medium text-danger">
           {t("boats.seatsAboveCertificate", {

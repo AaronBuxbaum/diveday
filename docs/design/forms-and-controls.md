@@ -181,6 +181,29 @@ props that were asked for and refused.
 
 New code uses `SectionCard` from the start; a migrated route never goes back.
 
+## Small collection editors: readable rows, forms on intent
+
+A collection states its saved values at rest. `DisclosureRowList` and `DisclosureRow` draw the
+settings collection grammar: a full-width summary opens the item's form in place, and the last
+row opens the add form. Use the row's `value` for facts a reader needs before editing; it wraps
+at the full available width. An error can pass `open` to reveal the form that needs attention.
+Do not put interactive controls inside a summary.
+
+Boats and trip tags use this shared grammar for their editable records. Emergency reference
+keeps every populated contact's inputs mounted inside its closed row, so its one form submits
+all unchanged contacts alongside the edited one. It offers only the next available contact slot,
+up to the domain's five-contact limit. Response plan and roll-call alerts are separate disclosed
+groups in that same save; closing a group does not omit its fields or record consent.
+
+A collection without an update operation keeps its supported actions. Dive packages and the
+pre-departure checklist use `LedgerRow` for readable records and the same add disclosure; package
+delete and checklist reorder/delete stay on their records. A visual consistency pass does not
+create a rename operation or change purchased package entitlements.
+
+Long document editors, temporary repeating fields inside a single save, photo grids, operational
+queues and task-specific person sheets keep their established compositions. The collection
+pattern does not replace the context those workflows carry.
+
 ## Fields: `FieldGrid` + `Field`
 
 Multi-column forms used to give every field its own `flex flex-col` stack. That looks fine until a
@@ -719,10 +742,10 @@ passed through `className` loses to the rung by stylesheet order, so `button.tes
 Pass one-off adjustments through `className`; do not rebuild the base. If you find yourself
 cancelling a variant's own styles, the variant is wrong — add one.
 
-**`primary` is the one thing in the app that carries a `shadow-sm` at rest**, and it is an
-exception stated at the rule rather than a second rule: ADR
-[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
-decision 1 says why, and why no other variant may follow it. Do not sweep it away.
+**`primary` is flat at rest**, like the current Logbook panels. Its fill and foreground carry
+its importance; `buttonClass()` adds no resting shadow. This is the current spelling under
+[20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 5, and replaces the older
+Clearwater button-shadow exception.
 
 **The size follows the surface, never the button's importance.** Importance is the variant's job.
 A page header, a form's action row, a card body and a dialog take `md`; a ledger row, a table cell
