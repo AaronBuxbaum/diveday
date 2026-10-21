@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   appTreeKey,
+  baseReplayFiles,
   browserSpecs,
   CORES_PER_E2E_WORKER,
   E2E_CHUNK,
@@ -15,6 +16,7 @@ import {
   plan,
   quickPlan,
   runStep,
+  stampCoverage,
   UNIT_SHARDS,
   writeStamps,
 } from "./verify-push.mjs";
@@ -99,6 +101,74 @@ describe("the pre-push plan", () => {
 });
 
 describe("the quick pre-push plan", () => {
+  it("replays only known base failures after selected units, using bounded browser steps", () => {
+    const specs = Array.from({ length: E2E_CHUNK + 1 }, (_, i) => `e2e/red${i}.spec.ts`);
+    const steps = quickPlan({
+      changed: ["scripts/example.mjs"],
+      selection: { mode: "direct", files: ["scripts/example.test.mjs"] },
+      specs,
+    });
+    expect(names(steps).slice(-4)).toEqual([
+      "related unit tests",
+      "e2e build",
+      "e2e specs 1/2",
+      "e2e specs 2/2",
+    ]);
+    const runs = steps.filter((step) => step.workers);
+    expect(runs.flatMap((step) => step.args.filter((arg) => arg.endsWith(".spec.ts")))).toEqual(
+      specs,
+    );
+    expect(steps.find((step) => step.build)?.name).toBe("e2e build");
+    expect(
+      names(
+        quickPlan({
+          changed: ["scripts/example.mjs"],
+          selection: { mode: "direct", files: [] },
+          specs: [specs[0]],
+        }),
+      ).slice(-2),
+    ).toEqual(["e2e build", "e2e specs"]);
+  });
+
+  it.each(["e2e/gone.spec.ts", "src/lib/gone.test.ts"])(
+    "refuses a missing named base failure %s instead of silently dropping its replay",
+    (missing) => {
+      expect(() =>
+        baseReplayFiles({
+          files: ["src/lib/present.test.ts", missing],
+          existing: (file) => file !== missing,
+        }),
+      ).toThrow(missing);
+      expect(
+        baseReplayFiles({
+          files: ["src/lib/present.test.ts", "e2e/red.spec.ts"],
+          existing: () => true,
+        }),
+      ).toEqual(["src/lib/present.test.ts", "e2e/red.spec.ts"]);
+    },
+  );
+
+  it("records replayed base specs and excludes them from the quick skipped count", () => {
+    const specs = ["e2e/red.spec.ts"];
+    const verdict = { red: ["browser"] };
+    const decision = { files: ["src/lib/red.test.ts"], specs };
+    expect(stampCoverage({ specs, verdict, decision })).toEqual({
+      specs,
+      baseCi: { red: ["browser"], ran: ["src/lib/red.test.ts", ...specs] },
+    });
+    expect(
+      notRunHere({
+        quick: true,
+        specs,
+        allSpecs: [...specs, "e2e/other.spec.ts", "e2e/visual.spec.ts"],
+      }).join("\n"),
+    ).toContain("1 Playwright specs (quick run)");
+    expect(stampCoverage({ specs: [], verdict, decision }).baseCi.ran).toEqual(decision.files);
+    expect(stampCoverage({ specs: [], verdict: { unknown: "offline" }, decision }).baseCi).toEqual({
+      unknown: "offline",
+    });
+  });
+
   it("runs the static checks and the unit tests the diff reaches, and no browser", () => {
     const steps = quickPlan({
       changed: ["src/lib/x.ts", "docs/a.md"],

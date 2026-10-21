@@ -89,6 +89,50 @@ The integration timings are validation evidence, not a controlled performance co
 original focused DB run reported 28.68 seconds inside Vitest but did not record process wall time;
 that number cannot establish a before/after improvement. No timeout was widened for these changes.
 
+### Biome upgrade compatibility
+
+The inherited Biome 2.6.2 upgrade expanded language and test-rule discovery. Markdown/YAML
+formatting accounted for most of the 643-error CI failure, including proposed changes to skill
+frontmatter. Upstream commit `b06347461e` disables Markdown/YAML formatting and scopes the newly
+enabled rules to their intended code. This follow-up adopts that compatibility fix; dedicated
+documentation and workflow guards continue checking those files.
+
+The remaining 24 errors were rule-scope mismatches. Playwright rules now apply to the browser
+suites, avoiding false async-matcher warnings on synchronous jest-dom assertions and false
+`describe` warnings on ordinary application helpers. The additional browser-suite override restores
+recommended Playwright checks there, which upstream's global disable alone did not preserve. The
+React component-factory rule remains enabled in production, retaining upstream's exceptions for
+unit-test fixtures, agent files and probe scripts. No dependency version was reverted or runtime
+file changed.
+
+Full lint passed after this configuration adjustment, with 57 warnings still reported. Temporary
+invalid-file probes confirmed that a missing browser assertion `await` and a production nested
+component are still rejected, while the unit-fixture exception is accepted. The probes were removed.
+
+### Quick verification replays failed base specs
+
+The follow-up for [#2888](https://github.com/AaronBuxbaum/diveday/issues/2888) found that quick
+verification could promise to rerun a browser failure on the base, then schedule only static
+checks and units. It now replays those named failing specs after selected units, using the full
+gate's existing build reuse, bounded chunks and worker policy. Missing named unit tests or specs stop
+verification. The stamp records replayed specs, and the skipped-browser count excludes them;
+ordinary quick runs still schedule no browser tests.
+
+A pure regression assertion failed before the fix and passed afterward. All 30 focused tests in
+`scripts/verify-push.test.mjs` passed, including replay ordering, chunking, missing-spec refusal and
+stamp/report coverage. Targeted Biome checks and internal documentation links also passed. These
+results establish the local planning and reporting behavior; they do not establish a successful
+browser replay, a green verification gate, green CI or deployment success.
+
+The same assurance follow-up rejected unsupported `--base-red` arguments: a line-suffixed spec
+was previously accepted as a nonempty override, then discarded by file classification, clearing
+an unnamed-failure refusal without scheduling a replay. Unsupported values now refuse even when
+mixed with valid paths, and an explicit flag with no paths errors clearly. Five regression tests
+failed before the parser fix; the combined base-CI and push-plan suites then passed all 50 tests,
+including refusal when either a named unit test or browser spec is missing from disk.
+Whole-file unit and E2E paths remain supported. This is parser and plan validation, not evidence
+that the named browser failures or the full gate passed.
+
 ## Inventory: what already exists
 
 | Layer | Observed inventory | What it establishes |

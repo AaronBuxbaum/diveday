@@ -146,14 +146,19 @@ keeps native dependency selection. Base CI's named failures are included in eith
 branch below HEAD; `--base <ref>` selects an explicit base. Without `--plan`, it runs the whole
 guards project and selected units. This developer command includes working changes and untracked
 files; the push gate measures committed HEAD. Quick mode discovers only the diff, without
-building browser dependency graphs. It runs no browser or e2e build. Its stamp names what it
-left to CI; CI continues to run the whole unit and browser suites. Conservative reader selection
+building browser dependency graphs. It builds and runs browser specs only when the base CI
+names failed specs or `--base-red` identifies them. Those targeted replays run after selected
+units, using the same build reuse, bounded chunks and worker policy as the full gate. A missing
+named unit test or browser spec stops verification instead of silently dropping that failure.
+Its stamp names what it left to CI; CI continues to run the whole unit and browser suites.
+Conservative reader selection
 is deliberately broader than exact runtime impact.
 
 The trade is explicit: CI is now the first to run the browser for most pushes, and a red job is
 the next commit on the same layer, worked as soon as it comes back. The base-CI read below runs
-in both modes, so a quick run on a red base still refuses until the base's named unit files pass
-here or `--base-red` names them; a red Playwright job on the base is CI's to confirm. The full
+in both modes, so a quick run on a red base still refuses until the base's named unit files and
+browser specs pass here; a job naming no file requires `--base-red` to identify its failing files.
+The stamp records replayed specs and excludes them from the browser tests left to CI. The full
 run is still there for a change where the browser's answer is worth the hour before CI's.
 
 ### Why a spec times out here and not on CI

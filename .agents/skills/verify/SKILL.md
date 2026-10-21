@@ -30,7 +30,7 @@ Before every push:
 6. **`pnpm verify:push --quick`**, the default before a push (Aaron, 2026-10-16: batch work into
    large stacked PRs, don't wait on the full validation, fix forward when CI fails): `pnpm regen`
    and a clean tree, lint, typecheck, `check:repo`, the `guards` project and change-based units (native imports plus source-reading contracts;
-   direct changed tests for a test-only diff; full fallback for global inputs or deletions). Minutes, no browser. Push when it is green, open or update the PR, and work CI's
+   direct changed tests for a test-only diff; full fallback for global inputs or deletions). No browser unless base CI names failed specs or --base-red identifies them; those targeted replays run after selected units and must pass before stamping. Push when it is green, open or update the PR, and work CI's
    answer: a red job is the next commit on the same layer, not a reason to have waited.
    **`pnpm verify:push`** (no flag) is the full run, worth its hour only when you want the
    browser's answer before CI's: the whole unit suite in CI's four shards and every Playwright
