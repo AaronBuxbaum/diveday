@@ -1,6 +1,6 @@
-import { Fragment } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
 import {
   ChoiceRow,
   controlClass,
@@ -103,6 +103,7 @@ export function EmergencyReferenceForm({
   t,
   locale,
   consentByName = null,
+  alertOpen = false,
   className = "",
 }: {
   shop: SettingsShop;
@@ -111,6 +112,8 @@ export function EmergencyReferenceForm({
   locale: string;
   /** Who recorded the consent on file, as the people row names them today. */
   consentByName?: string | null;
+  /** A refused alert-address save must reveal the editor that needs attention. */
+  alertOpen?: boolean;
   className?: string;
 }) {
   const consentAt = shop.shoreAlertConsentAt;
@@ -130,129 +133,199 @@ export function EmergencyReferenceForm({
   ]
     .filter(Boolean)
     .join(" ");
+  const reference = shop.emergencyReference;
+  const contactFields = (index: number, examples = false) => (
+    <FieldGrid columns={2}>
+      <Field
+        label={t("settings.main.emergency.lineLabel", { n: index + 1 })}
+        description={examples ? t("settings.main.emergency.lineExamples") : undefined}
+      >
+        <input
+          name={`emergencyLabel-${index}`}
+          type="text"
+          maxLength={80}
+          defaultValue={reference.lines[index]?.label ?? ""}
+          className={controlClass}
+        />
+      </Field>
+      <Field label={t("settings.main.emergency.phoneLabel", { n: index + 1 })}>
+        <input
+          name={`emergencyPhone-${index}`}
+          type="tel"
+          maxLength={40}
+          defaultValue={reference.lines[index]?.phone ?? ""}
+          className={controlClass}
+        />
+      </Field>
+    </FieldGrid>
+  );
   return (
     <>
-      <form
-        action={saveEmergencyReferenceAction}
-        className={`flex flex-col gap-4 ${className}`.trim()}
-      >
-        <FieldGrid columns={2}>
-          {EMERGENCY_LINE_SLOTS.map((slot, index) => (
-            <Fragment key={slot}>
-              {/* The examples are the first line's description, which
-                  wraps: as every label box's placeholder they were cut
-                  mid-word in a half-width box (K-583). */}
-              <Field
-                label={t("settings.main.emergency.lineLabel", { n: index + 1 })}
-                description={index === 0 ? t("settings.main.emergency.lineExamples") : undefined}
-              >
-                <input
-                  name={`emergencyLabel-${index}`}
-                  type="text"
-                  maxLength={80}
-                  defaultValue={shop.emergencyReference.lines[index]?.label ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-              <Field label={t("settings.main.emergency.phoneLabel", { n: index + 1 })}>
-                <input
-                  name={`emergencyPhone-${index}`}
-                  type="tel"
-                  maxLength={40}
-                  defaultValue={shop.emergencyReference.lines[index]?.phone ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-            </Fragment>
-          ))}
-          <Field
-            label={t("settings.main.emergency.vesselLabel")}
-            description={t("settings.main.emergency.vesselHint")}
-          >
-            <input
-              name="emergencyVessel"
-              type="text"
-              maxLength={120}
-              defaultValue={shop.emergencyReference.vessel}
-              className={controlClass}
-            />
-          </Field>
-          {/* Free text for a person to read; nothing is ever sent to it
-              (owner review #4 on H-118). */}
-          <Field
-            label={t("settings.main.emergency.shoreContactLabel")}
-            description={t("settings.main.emergency.shoreContactDescription")}
-          >
-            <input
-              name="emergencyShoreContact"
-              type="text"
-              maxLength={160}
-              defaultValue={shop.emergencyReference.shoreContact}
-              className={controlClass}
-            />
-          </Field>
-        </FieldGrid>
-        {/* An address DiveDay sends to, unlike the line above it: it saves
-            only with the box ticked for that address (`nextShoreAlertContact`),
-            and nothing goes to it until it confirms. */}
-        <FieldGrid columns={1}>
-          <Field
-            label={t("settings.main.emergency.shoreAlertEmailLabel")}
-            description={shoreAlertDescription}
-          >
-            <input
-              name="shoreAlertEmail"
-              type="email"
-              autoComplete="off"
-              maxLength={320}
-              defaultValue={shop.shoreAlertEmail ?? ""}
-              className={controlClass}
-            />
-          </Field>
-          <input
-            type="hidden"
-            name="shoreAlertConsentFor"
-            value={onFile ? (shop.shoreAlertEmail ?? "") : ""}
-          />
-          <ChoiceRow
-            name="shoreAlertConsent"
-            type="checkbox"
-            defaultChecked={onFile}
-            className="text-sm"
-          >
-            <span className="block">{t("settings.main.emergency.shoreAlertConsent")}</span>
-            {onFile && consentAt ? (
-              <span className="block text-xs text-muted">
-                {consentByName
-                  ? t("settings.main.emergency.shoreAlertConsentRecorded", {
-                      when: when(consentAt),
-                      name: consentByName,
-                    })
-                  : t("settings.main.emergency.shoreAlertConsentRecordedNoName", {
-                      when: when(consentAt),
-                    })}
-              </span>
-            ) : null}
-          </ChoiceRow>
-          {onFile && confirmedAt ? (
-            <p className="text-sm text-muted">
-              {t("settings.main.emergency.shoreAlertConfirmed", { when: when(confirmedAt) })}
+      <form action={saveEmergencyReferenceAction} className={`space-y-6 ${className}`.trim()}>
+        {/* Every existing editor remains in this one form even when closed:
+            saving one contact must not erase the others or their alert consent. */}
+        <DisclosureRowList>
+          {reference.lines.length === 0 ? (
+            <p className="px-4 py-4 text-sm text-muted sm:px-5">
+              {t("settings.main.emergency.noContacts")}
             </p>
           ) : null}
-          {waiting ? (
-            <p className="text-sm text-muted">{t("settings.main.emergency.shoreAlertWaiting")}</p>
+          {reference.lines.map((line, index) => (
+            <DisclosureRow
+              key={EMERGENCY_LINE_SLOTS[index]}
+              id={`emergency-contact-${index}`}
+              heading={line.label || t("settings.main.emergency.lineLabel", { n: index + 1 })}
+              value={line.phone}
+            >
+              {contactFields(index)}
+            </DisclosureRow>
+          ))}
+          {reference.lines.length < EMERGENCY_LINE_SLOTS.length ? (
+            <DisclosureRow
+              id="emergency-contact-new"
+              heading={t("settings.main.emergency.addContact")}
+            >
+              {contactFields(reference.lines.length, true)}
+            </DisclosureRow>
           ) : null}
-          <ShoreAlertTickReset />
-        </FieldGrid>
-        <Field label={t("settings.main.emergency.planLabel")}>
-          <textarea
-            name="emergencyPlan"
-            rows={4}
-            maxLength={2000}
-            defaultValue={shop.emergencyReference.plan}
-            className={textareaClassFor(4)}
-          />
-        </Field>
+        </DisclosureRowList>
+        <DisclosureRowList>
+          <DisclosureRow
+            id="emergency-response"
+            heading={t("settings.main.emergency.responseHeading")}
+            value={
+              reference.vessel || reference.shoreContact || reference.plan ? (
+                <div className="space-y-2">
+                  {reference.vessel ? (
+                    <p>
+                      {t("settings.main.emergency.vesselLabel")}: {reference.vessel}
+                    </p>
+                  ) : null}
+                  {reference.shoreContact ? (
+                    <p>
+                      {t("settings.main.emergency.shoreContactLabel")}: {reference.shoreContact}
+                    </p>
+                  ) : null}
+                  {reference.plan ? <p className="whitespace-pre-wrap">{reference.plan}</p> : null}
+                </div>
+              ) : undefined
+            }
+          >
+            <FieldGrid columns={2}>
+              <Field
+                label={t("settings.main.emergency.vesselLabel")}
+                description={t("settings.main.emergency.vesselHint")}
+              >
+                <input
+                  name="emergencyVessel"
+                  type="text"
+                  maxLength={120}
+                  defaultValue={shop.emergencyReference.vessel}
+                  className={controlClass}
+                />
+              </Field>
+              {/* Free text for a person to read; nothing is ever sent to it
+              (owner review #4 on H-118). */}
+              <Field
+                label={t("settings.main.emergency.shoreContactLabel")}
+                description={t("settings.main.emergency.shoreContactDescription")}
+              >
+                <input
+                  name="emergencyShoreContact"
+                  type="text"
+                  maxLength={160}
+                  defaultValue={shop.emergencyReference.shoreContact}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("settings.main.emergency.planLabel")} className="sm:col-span-2">
+                <textarea
+                  name="emergencyPlan"
+                  rows={4}
+                  maxLength={2000}
+                  defaultValue={reference.plan}
+                  className={textareaClassFor(4)}
+                />
+              </Field>
+            </FieldGrid>
+          </DisclosureRow>
+          <DisclosureRow
+            id="emergency-alerts"
+            heading={t("settings.main.emergency.alertHeading")}
+            open={alertOpen}
+            value={
+              shop.shoreAlertEmail ? (
+                <div className="space-y-1">
+                  <p>{shop.shoreAlertEmail}</p>
+                  {onFile && confirmedAt ? (
+                    <p>
+                      {t("settings.main.emergency.shoreAlertConfirmed", {
+                        when: when(confirmedAt),
+                      })}
+                    </p>
+                  ) : waiting ? (
+                    <p>{t("settings.main.emergency.shoreAlertWaiting")}</p>
+                  ) : null}
+                </div>
+              ) : undefined
+            }
+          >
+            {/* An address DiveDay sends to, unlike the line above it: it saves
+            only with the box ticked for that address (`nextShoreAlertContact`),
+            and nothing goes to it until it confirms. */}
+            <FieldGrid columns={1}>
+              <Field
+                label={t("settings.main.emergency.shoreAlertEmailLabel")}
+                description={shoreAlertDescription}
+              >
+                <input
+                  name="shoreAlertEmail"
+                  type="email"
+                  autoComplete="off"
+                  maxLength={320}
+                  defaultValue={shop.shoreAlertEmail ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <input
+                type="hidden"
+                name="shoreAlertConsentFor"
+                value={onFile ? (shop.shoreAlertEmail ?? "") : ""}
+              />
+              <ChoiceRow
+                name="shoreAlertConsent"
+                type="checkbox"
+                defaultChecked={onFile}
+                className="text-sm"
+              >
+                <span className="block">{t("settings.main.emergency.shoreAlertConsent")}</span>
+                {onFile && consentAt ? (
+                  <span className="block text-xs text-muted">
+                    {consentByName
+                      ? t("settings.main.emergency.shoreAlertConsentRecorded", {
+                          when: when(consentAt),
+                          name: consentByName,
+                        })
+                      : t("settings.main.emergency.shoreAlertConsentRecordedNoName", {
+                          when: when(consentAt),
+                        })}
+                  </span>
+                ) : null}
+              </ChoiceRow>
+              {onFile && confirmedAt ? (
+                <p className="text-sm text-muted">
+                  {t("settings.main.emergency.shoreAlertConfirmed", { when: when(confirmedAt) })}
+                </p>
+              ) : null}
+              {waiting ? (
+                <p className="text-sm text-muted">
+                  {t("settings.main.emergency.shoreAlertWaiting")}
+                </p>
+              ) : null}
+              <ShoreAlertTickReset />
+            </FieldGrid>
+          </DisclosureRow>
+        </DisclosureRowList>
         {/* The hub's one Save: `md` in `FieldActions`. It was `sm` in
             a bare div, 44px beside every other row's 48px (K-308). */}
         <FieldActions>

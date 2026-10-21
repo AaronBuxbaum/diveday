@@ -534,7 +534,11 @@
       "shoreAlertDemo": "Los centros de demostración no envían nada: ni enlace ni avisos.",
       "planLabel": "Si algo sale mal",
       "submit": "Guardar referencia de emergencia",
-      "saving": "Guardando…"
+      "saving": "Guardando…",
+      "addContact": "Agregar contacto",
+      "responseHeading": "Plan de respuesta",
+      "alertHeading": "Avisos del pase de lista",
+      "noContacts": "Todavía no hay números de emergencia."
     },
     "divePackages": {
       "heading": "Paquetes de inmersiones",
@@ -551,7 +555,9 @@
       "submitting": "Agregando…",
       "delete": "Eliminar",
       "deleting": "Eliminando…",
-      "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})"
+      "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})",
+      "createTitle": "Agregar paquete",
+      "empty": "Todavía no hay paquetes a la venta."
     },
     "yourData": {
       "heading": "Exportar, importar, respaldos e integraciones"
@@ -669,7 +675,8 @@
       "duplicateLabel": "Esa línea ya está en la lista.",
       "notAuthorized": "No tienes permiso para cambiar esto.",
       "moveRefused": "Eso no se movió. Inténtalo de nuevo."
-    }
+    },
+    "addTitle": "Agregar una línea"
   },
   "export": {
     "downloadButton": {

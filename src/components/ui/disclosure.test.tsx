@@ -19,6 +19,25 @@ const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 afterEach(cleanup);
 
 describe("DisclosureRow's focus ring", () => {
+  it("states the saved value before a reader opens its editor", () => {
+    const { container, getByText } = render(
+      <DisclosureRow id="boat-one" heading="Mantis I" value="14 seats">
+        <input aria-label="Capacity" defaultValue="14" />
+      </DisclosureRow>,
+    );
+    expect(container.querySelector("summary")).toContainElement(getByText("14 seats"));
+    expect(container.querySelector("details")).not.toHaveAttribute("open");
+  });
+
+  it("opens the row when its editor has an answer to show", () => {
+    const { container } = render(
+      <DisclosureRow id="boat-one" heading="Mantis I" open>
+        <p role="alert">Capacity exceeds the certificate.</p>
+      </DisclosureRow>,
+    );
+    expect(container.querySelector("details")).toHaveAttribute("open");
+  });
+
   /**
    * The row sits flush inside `DisclosureRowList`'s `overflow-hidden` card, so
    * the global ring — 5px outside the summary — was cut on both sides of every
