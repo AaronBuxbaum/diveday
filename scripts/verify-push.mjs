@@ -66,6 +66,7 @@ import {
   affectedSpecs,
   captureGrep,
   captureMs,
+  changedDiff,
   durations,
   estimateMs,
   stackBase,
@@ -74,6 +75,7 @@ import {
 import { verifiedFile } from "./guard-push.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { sourceReaders, testArgs, testPlan } from "./test-affected.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -171,27 +173,14 @@ function staticSteps(changed) {
 }
 
 /**
- * `--quick`: the static steps, then the unit tests that import what changed (`vitest related`,
- * which also runs a changed test file itself) plus any the base is red on. `related` is the
- * changed files that still exist, so a deletion does not name a missing path.
+ * `--quick`: static checks plus native dependency/source-reader selection, direct
+ * changed leaf tests, or a full fallback for global/unknown/deleted inputs.
  */
-export function quickPlan({ changed, related = [] }) {
+export function quickPlan({ changed, selection }) {
   const steps = staticSteps(changed);
-  if (docsOnlyDiff(changed) || related.length === 0) return steps;
-  steps.push({
-    name: "related unit tests",
-    command: "pnpm",
-    args: [
-      "exec",
-      "vitest",
-      "related",
-      "--run",
-      "--project",
-      "!guards",
-      "--reporter=dot",
-      ...related,
-    ],
-  });
+  const selected = selection ?? testPlan({ changed, readers: [] });
+  if (selected.mode !== "all" && selected.files.length === 0) return steps;
+  steps.push({ name: "related unit tests", command: "pnpm", args: testArgs(selected) });
   return steps;
 }
 
@@ -274,7 +263,7 @@ export function browserSpecs({ changed, strong, reach, rank, record }) {
 export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = [], quick = false }) {
   if (quick) {
     return [
-      "the unit tests the diff does not import, including those that read source from disk (quick run)",
+      "unit tests outside native dependency selection and conservative source-reader contracts (quick run)",
       `all ${allSpecs.filter((spec) => !/(?:^|\/)visual[^/]*\.spec\.ts$/.test(spec)).length} Playwright specs (quick run)`,
       "visual captures (reg-suit): CI only, and a difference never fails the build",
     ];
@@ -420,7 +409,9 @@ function main() {
   }
 
   const base = stackBase(git);
-  const selection = affectedSpecs({ root: ROOT, base, git });
+  const selection = quick
+    ? changedDiff({ root: ROOT, base, git })
+    : affectedSpecs({ root: ROOT, base, git });
   if (!selection) {
     console.error("verify:push: could not diff against a base (is origin/main fetched?).");
     process.exit(1);
@@ -432,9 +423,9 @@ function main() {
     testsOnly,
   } = browserSpecs({
     changed: selection.changed,
-    strong: selection.strong,
-    reach: selection.reach,
-    rank: selection.rank,
+    strong: selection.strong ?? new Map(),
+    reach: selection.reach ?? new Map(),
+    rank: selection.rank ?? new Map(),
     record,
   });
   const strong = specs.filter((spec) => !reachRun.includes(spec));
@@ -453,16 +444,20 @@ function main() {
     ? []
     : decision.specs.filter((spec) => existing(spec) && !specs.includes(spec));
   specs.push(...baseSpecs);
-  const captures = docsOnly || testsOnly ? [] : [...selection.captures.keys()].sort();
-  const related = [
-    ...selection.changed.filter((file) => !DOCS_ONLY.test(file) && existing(file)),
-    ...decision.files.filter(existing),
-  ];
+  const captures = quick || docsOnly || testsOnly ? [] : [...selection.captures.keys()].sort();
+  const unitSelection = quick
+    ? testPlan({
+        changed: selection.changed,
+        readers: sourceReaders(ROOT),
+        extra: decision.files.filter(existing),
+      })
+    : null;
   const steps = quick
-    ? quickPlan({ changed: selection.changed, related: [...new Set(related)] })
+    ? quickPlan({ changed: selection.changed, selection: unitSelection })
     : plan({ changed: selection.changed, specs, captures });
 
   if (quick) {
+    for (const reason of unitSelection.reasons) console.log(`  unit selection: ${reason}`);
     console.log(
       `verify:push --quick: ${selection.changed.length} file(s) against ${selection.base}; ` +
         "static checks and the unit tests they reach. CI runs the rest; fix forward if it goes red.",

@@ -102,7 +102,7 @@ describe("the quick pre-push plan", () => {
   it("runs the static checks and the unit tests the diff reaches, and no browser", () => {
     const steps = quickPlan({
       changed: ["src/lib/x.ts", "docs/a.md"],
-      related: ["src/lib/x.ts", "src/lib/y.test.ts"],
+      selection: { mode: "related", files: ["src/lib/x.ts", "src/lib/y.test.ts"] },
     });
     expect(names(steps)).toEqual([
       "regen",
@@ -125,10 +125,17 @@ describe("the quick pre-push plan", () => {
     ]);
   });
 
-  it("stops at the static checks for a docs-only diff or nothing to relate", () => {
+  it("stops at the static checks for documents without reader tests; deletions run all units", () => {
     const statics = ["regen", "lint", "typecheck", "check:repo", "guards"];
     expect(names(quickPlan({ changed: ["AGENTS.md"], related: [] }))).toEqual(statics);
-    expect(names(quickPlan({ changed: ["src/lib/gone.ts"], related: [] }))).toEqual(statics);
+    expect(quickPlan({ changed: ["src/lib/gone.ts"] }).at(-1).args).toEqual([
+      "exec",
+      "vitest",
+      "run",
+      "--project",
+      "!guards",
+      "--reporter=dot",
+    ]);
   });
 
   it("says it left every spec and the unimported unit tests to CI", () => {
@@ -138,7 +145,7 @@ describe("the quick pre-push plan", () => {
       allSpecs: ["e2e/a.spec.ts", "e2e/b.spec.ts", "e2e/visual.spec.ts"],
     });
     expect(lines.join("\n")).toMatch(/all 2 Playwright specs \(quick run\)/);
-    expect(lines.join("\n")).toMatch(/unit tests the diff does not import/);
+    expect(lines.join("\n")).toMatch(/conservative source-reader contracts/);
   });
 });
 

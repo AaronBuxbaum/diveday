@@ -3,11 +3,79 @@
 // keep nested callback/suite bodies separate without depending on compiler APIs.
 export function tokens(source) {
   const result = [];
-  const pattern =
-    /\/\/[^\n]*|\/\*[\s\S]*?\*\/|(["'`])(?:\\[\s\S]|(?!\1)[^\\])*?\1|\/(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\n\\])+\/[dgimsuvy]*|[A-Za-z_$][\w$]*|[^\s]/g;
-  for (const match of source.matchAll(pattern)) {
-    if (match[0].startsWith("//") || match[0].startsWith("/*")) continue;
-    result.push({ text: match[0], index: match.index });
+  // Failed suffixes are memoized by regex state. A malformed class containing
+  // many slashes must not make each later slash rescan the same suffix.
+  const failedRegex = [new Set(), new Set()];
+  function regexEnd(start) {
+    let cursor = start + 1;
+    let inClass = 0;
+    const visited = [];
+    while (cursor < source.length) {
+      if (failedRegex[inClass].has(cursor)) break;
+      visited.push([cursor, inClass]);
+      const char = source[cursor];
+      if (char === "\\") {
+        if (cursor + 1 === source.length || source[cursor + 1] === "\n") break;
+        cursor += 2;
+      } else if (inClass) {
+        if (char === "]") inClass = 0;
+        cursor++;
+      } else if (char === "[") {
+        inClass = 1;
+        cursor++;
+      } else if (char === "/") {
+        if (cursor === start + 1) break;
+        cursor++;
+        while (cursor < source.length && /[dgimsuvy]/.test(source[cursor])) cursor++;
+        return cursor;
+      } else if (char === "\n") break;
+      else cursor++;
+    }
+    for (const [index, state] of visited) failedRegex[state].add(index);
+    return start + 1;
+  }
+  const failedQuotes = new Map(['"', "'", "`"].map((quote) => [quote, new Set()]));
+  let noBlockCommentEnd = false;
+  for (let cursor = 0; cursor < source.length; ) {
+    const start = cursor;
+    const char = source[cursor];
+    if (/\s/.test(char)) {
+      cursor++;
+      continue;
+    }
+    if (source.startsWith("//", cursor)) {
+      const end = source.indexOf("\n", cursor + 2);
+      cursor = end === -1 ? source.length : end;
+      continue;
+    }
+    if (!noBlockCommentEnd && source.startsWith("/*", cursor)) {
+      const end = source.indexOf("*/", cursor + 2);
+      if (end !== -1) {
+        cursor = end + 2;
+        continue;
+      }
+      noBlockCommentEnd = true;
+    }
+    if (char === '"' || char === "'" || char === "`") {
+      const failed = failedQuotes.get(char);
+      const visited = [];
+      cursor++;
+      while (cursor < source.length && source[cursor] !== char && !failed.has(cursor)) {
+        visited.push(cursor);
+        cursor += source[cursor] === "\\" ? 2 : 1;
+      }
+      // An unterminated quote remains punctuation, as in the original reader.
+      if (cursor < source.length && source[cursor] === char) cursor++;
+      else {
+        for (const index of visited) failed.add(index);
+        cursor = start + 1;
+      }
+    } else if (char === "/") cursor = regexEnd(start);
+    else if (/[A-Za-z_$]/.test(char)) {
+      cursor++;
+      while (cursor < source.length && /[\w$]/.test(source[cursor])) cursor++;
+    } else cursor++;
+    result.push({ text: source.slice(start, cursor), index: start });
   }
   return result;
 }

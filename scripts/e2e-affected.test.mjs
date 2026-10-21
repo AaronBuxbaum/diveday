@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   captureGrep,
   captureMs,
+  changedDiff,
   HUB_SPECS,
   importersOf,
   overlapScores,
@@ -331,7 +332,7 @@ describe("the base a layer is measured from", () => {
     const git = fake({
       "rev-parse HEAD": "abc",
       "rev-parse --abbrev-ref HEAD": "claude/top",
-      "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin/claude":
+      "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin":
         "origin/claude/low\norigin/claude/mid\norigin/claude/top",
       "rev-list --count origin/main..origin/claude/low": "4",
       "rev-list --count origin/main..origin/claude/mid": "9",
@@ -344,7 +345,7 @@ describe("the base a layer is measured from", () => {
     const git = fake({
       "rev-parse HEAD": "abc",
       "rev-parse --abbrev-ref HEAD": "claude/solo",
-      "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin/claude": "",
+      "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin": "",
       "rev-parse --verify --quiet origin/main": "def",
     });
     expect(stackBase(git)).toBe("origin/main");
@@ -434,4 +435,51 @@ describe("picking captures out of the visual spec", () => {
     );
     expect(captureMs(["a title no record has met"])).toBe(0);
   });
+});
+
+describe("cheap diff discovery", () => {
+  it("needs no source tree or browser specs", () => {
+    const answers = {
+      "merge-base origin/main HEAD": "base",
+      "diff --name-only base HEAD": "scripts/tool.test.mjs",
+    };
+    expect(
+      changedDiff({
+        root: "/missing/tree",
+        base: "origin/main",
+        git: (args) => answers[args.join(" ")] ?? null,
+      }),
+    ).toMatchObject({ changed: ["scripts/tool.test.mjs"] });
+  });
+  it("excludes aliases at HEAD and includes provider-neutral contained layers", () => {
+    const answers = {
+      "rev-parse HEAD": "top",
+      "rev-parse --abbrev-ref HEAD": "codex/top",
+      "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin":
+        "origin/main\norigin/HEAD\norigin/codex/top\norigin/snapshot\norigin/codex/base\norigin/feature/old",
+      "rev-parse origin/snapshot": "top",
+      "rev-parse origin/codex/base": "middle",
+      "rev-parse origin/feature/old": "old",
+      "rev-list --count origin/main..origin/codex/base": "8",
+      "rev-list --count origin/main..origin/feature/old": "3",
+    };
+    expect(stackBase((args) => answers[args.join(" ")] ?? null)).toBe("origin/codex/base");
+  });
+});
+
+it("includes untracked working files and refuses an unreadable diff", () => {
+  const answers = {
+    "merge-base origin/main HEAD": "base",
+    "diff --name-only base": "src/a.ts",
+    "ls-files --others --exclude-standard": "src/new.test.ts",
+  };
+  const result = changedDiff({
+    base: "origin/main",
+    workingTree: true,
+    git: (args) => answers[args.join(" ")] ?? null,
+  });
+  expect(result.changed).toEqual(["src/a.ts", "src/new.test.ts"]);
+  expect(
+    changedDiff({ base: "origin/main", git: (args) => (args[0] === "merge-base" ? "base" : null) }),
+  ).toBeNull();
 });

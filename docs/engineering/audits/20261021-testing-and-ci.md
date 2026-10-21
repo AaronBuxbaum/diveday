@@ -14,8 +14,9 @@ on every PR, and wholesale fixture rewrites would be poor first moves.
 
 This report contains **24 prioritized findings**, a current-run diagnosis, a test inventory, cleanup
 opportunities, and an implementation sequence. Recommendations are proposals, not approved product
-or architecture decisions. No application code, CI configuration, repository settings, deployments,
-or existing issues were changed.
+or architecture decisions. The initial audit changed no application code, CI configuration,
+repository settings, deployments, or existing issues. The implementation follow-up below records
+subsequent local harness work separately.
 
 ## Scope and evidence limits
 
@@ -41,6 +42,46 @@ or existing issues were changed.
 - **Not verified:** live Vercel deployment protection/settings, current production SHA or behavior,
   live Neon version/data, AWS policies as deployed, billing, or off-repository restore records.
   Repository configuration and successful GitHub jobs are not proof of deployment.
+
+## Implementation follow-up: local test cost
+
+Subsequent work in the installed desktop checkout improved local selection and startup without
+changing the full CI suites. The inventory and findings below remain the original audit snapshot;
+this follow-up does not claim that every finding was fixed or the whole suite passed locally.
+
+The local selector reads the changed paths before building expensive dependency graphs. Leaf
+test-only changes run edited tests directly; production changes retain native Vitest import/alias
+selection and conservative source-reader coverage. Global harness, dependency, schema and migration
+changes or unknown inputs widen selection to the full unit suite; so does unavailable source-reader
+discovery when dependency selection needs it. Guards still run. Full CI selection remains unchanged.
+The E2E selector reuses one source inventory rather than reading the tree twice, and avoids graph
+construction for changes that cannot reach production pages.
+
+The shared source lexer now scans regular-expression literals explicitly instead of using the
+backtracking expression flagged by CodeQL. Pathological slash-heavy and unterminated inputs have
+regression coverage; this addresses scanner cost without weakening test discovery.
+
+Database snapshot setup now imports PGlite, Drizzle and the seed graph only when its fingerprint
+cache misses. The extracted builder participates in the fingerprint. Frozen-clock setup, the
+three snapshot variants and atomic publication remain intact.
+
+The follow-up also reused an existing targeted fixture fix for the readiness recap-photo action
+unit tests: their data operations were already mocked, so an opaque mocked database handle avoids
+an unrelated real-database bootstrap. This preserves the existing unit-test boundary; it does not
+add database-integration assurance.
+
+| Local follow-up evidence | Result and limit |
+| --- | --- |
+| Direct snapshot-wrapper import | 10,333 ms before; 156 ms after; a repeated import probe took 51 ms. This measures module loading, not total verification time. |
+| Template regressions | Seven focused tests passed; cache hits avoid builder/seed imports, and builder changes invalidate the cache and publish all three variants. |
+| Real isolated snapshot build and DB test | All three snapshots built and the focused integration passed in 132.30 seconds of process wall time. |
+| Cached integration repeat | Passed in 145.19 seconds with unchanged snapshot modification times. Shared-host contention prevents an end-to-end speedup claim. |
+| Static validation for snapshot extraction | Targeted Biome and full TypeScript checking passed. These checks do not establish browser, full-suite, CI or deployment success. |
+| Reused recap-photo fixture fix | All five tests in `src/app/ready/[token]/recap-photo-actions.test.ts` passed in 9.30 seconds of process wall time. This is a targeted result, not a whole-suite timing claim. |
+
+The integration timings are validation evidence, not a controlled performance comparison. The
+original focused DB run reported 28.68 seconds inside Vitest but did not record process wall time;
+that number cannot establish a before/after improvement. No timeout was widened for these changes.
 
 ## Inventory: what already exists
 

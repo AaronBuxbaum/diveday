@@ -133,13 +133,22 @@ when CI fails". On a four-core cloud container the full run took most of an hour
 that reached many routes, and every thread behind it in the stack queue waited too.
 
 So `pnpm verify:push --quick` is the run a push expects. It keeps steps 1 and 2 above (regen and
-a clean tree, lint, typecheck, `check:repo`, the `guards` project: the typecheck-after-a-merge
-and safeguards rows, in minutes) and replaces 3 and 4 with `vitest related` over the changed
-files, which also runs a changed test file itself, plus the unit files the base is red on. No
-e2e build, no browser. Its stamp says `"mode": "quick"` and its `notRunHere` names what it left
-to CI: the unit tests the diff does not import (the source-reading scans among them) and every
-Playwright spec. The guard accepts either stamp and still refuses a commit with none, an
-override whose reason blames the base, and a push that forks the stack.
+check the tree is clean, lint, typecheck, `check:repo`, the whole `guards` project). Unit selection
+uses native `vitest related` for production imports and aliases, augmented conservatively with
+source-reading tests and their filesystem-reading helpers. This includes mixed behavior/source
+contracts and documentation inputs. Database snapshot loaders are operational fixture I/O;
+schema, migrations and test infrastructure changes instead run all unit tests. Deletions, global
+configuration and unknown inputs also fall back to the whole unit suite. A test-only diff runs
+edited tests directly when they neither export fixtures nor appear in other tests; otherwise it
+keeps native dependency selection. Base CI's named failures are included in either mode.
+
+`pnpm test:affected --plan` shows this local selection against the nearest contained remote
+branch below HEAD; `--base <ref>` selects an explicit base. Without `--plan`, it runs the whole
+guards project and selected units. This developer command includes working changes and untracked
+files; the push gate measures committed HEAD. Quick mode discovers only the diff, without
+building browser dependency graphs. It runs no browser or e2e build. Its stamp names what it
+left to CI; CI continues to run the whole unit and browser suites. Conservative reader selection
+is deliberately broader than exact runtime impact.
 
 The trade is explicit: CI is now the first to run the browser for most pushes, and a red job is
 the next commit on the same layer, worked as soon as it comes back. The base-CI read below runs
