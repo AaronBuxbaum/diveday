@@ -42,13 +42,14 @@ async function overlapNativePinPair(page: Page) {
   });
 }
 
-test.beforeEach(async ({ page }) => {
+async function openLibraryMap(page: Page) {
   await page.goto("/shop/blue-mantis/dive-sites");
   await expect(page.locator(".leaflet-site-marker button").first()).toBeVisible();
   await expectMapSiteCount(page, 8);
-});
+}
 
 test("essential geographic pin spacing keeps every other accessibility check", async ({ page }) => {
+  await openLibraryMap(page);
   await overlapNativePinPair(page);
   await page
     .locator(".leaflet-site-marker button")
@@ -65,6 +66,9 @@ test("essential geographic pin spacing keeps every other accessibility check", a
     ),
   ).toBe(true);
   await expectNoA11yViolations(page);
+});
+
+test("catalog accessibility keeps detail navigation usable", async ({ page }) => {
   await page.goto("/shop/blue-mantis/dive-sites/catalog");
   await expect(page.locator("button.leaflet-site-cluster").first()).toBeVisible();
   await expectMapSiteCount(
@@ -87,6 +91,7 @@ test("essential geographic pin spacing keeps every other accessibility check", a
 });
 
 test("an ordinary undersized button still fails target-size", async ({ page }) => {
+  await openLibraryMap(page);
   await page.evaluate(() => {
     const group = document.createElement("div");
     group.style.cssText = "position:fixed;left:0;top:0;z-index:10000;display:flex";
@@ -105,6 +110,7 @@ test("an ordinary undersized button still fails target-size", async ({ page }) =
 });
 
 test("an undersized map zoom control still fails target-size", async ({ page }) => {
+  await openLibraryMap(page);
   const zoom = page.locator(".leaflet-control-zoom-in");
   await zoom.evaluate((control) => {
     control.id = "zoom-small-target";
@@ -125,6 +131,7 @@ test("an undersized map zoom control still fails target-size", async ({ page }) 
 });
 
 test("an undersized popup control still fails target-size", async ({ page }) => {
+  await openLibraryMap(page);
   // Leaflet's native auto-pan measures elapsed Date time.
   await page.clock.install({ time: E2E_FROZEN_CLOCK });
   await page.locator(".leaflet-site-marker button").first().press("Enter");
@@ -162,6 +169,7 @@ test("an undersized popup control still fails target-size", async ({ page }) => 
 });
 
 test("a map pin with no accessible name still fails button-name", async ({ page }) => {
+  await openLibraryMap(page);
   await page
     .locator(".leaflet-site-marker button")
     .first()
@@ -172,6 +180,7 @@ test("a map pin with no accessible name still fails button-name", async ({ page 
 });
 
 test("an intrinsically undersized geographic pin still fails target-size", async ({ page }) => {
+  await openLibraryMap(page);
   await overlapNativePinPair(page);
   const pin = page.locator(".leaflet-site-marker button").first();
   await pin.evaluate((button) => {
