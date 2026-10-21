@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { auth } from "./auth";
 
 const request = vi.hoisted(() => ({
-  connection: vi.fn<() => Promise<void>>(),
+  io: vi.fn<() => Promise<void>>(),
+  connection: vi.fn(async () => {}),
   headers: vi.fn(async () => new Headers()),
   getDb: vi.fn(async () => ({})),
   getSession: vi.fn(async () => null),
@@ -10,6 +11,7 @@ const request = vi.hoisted(() => ({
 }));
 
 vi.mock("next/server", () => ({ connection: request.connection }));
+vi.mock("next/cache", () => ({ io: request.io }));
 vi.mock("next/headers", () => ({ headers: request.headers }));
 vi.mock("@/db/client", () => ({ getDb: request.getDb }));
 vi.mock("better-auth", async (importOriginal) => ({
@@ -23,11 +25,11 @@ vi.mock("./clock", async (importOriginal) => ({
 
 afterEach(() => vi.clearAllMocks());
 
-describe("session request boundary (#2852)", () => {
-  it("waits for a request before initializing auth or reading the session clock, even when auth is warm", async () => {
+describe("session prerender boundary (#2852, #2854)", () => {
+  it("suspends auth initialization and the session clock without blocking prefetches, even when auth is warm", async () => {
     for (let read = 0; read < 2; read++) {
       const boundary = Promise.withResolvers<void>();
-      request.connection.mockReturnValueOnce(boundary.promise);
+      request.io.mockReturnValueOnce(boundary.promise);
       const result = auth();
       // Let pre-boundary async work settle so an accidental early read is visible.
       await new Promise<void>((resolve) => setImmediate(resolve));
@@ -36,7 +38,8 @@ describe("session request boundary (#2852)", () => {
       expect(request.getDb).toHaveBeenCalledTimes(read === 0 ? 0 : 1);
       expect(request.headers).toHaveBeenCalledTimes(read);
       expect(request.getSession).toHaveBeenCalledTimes(read);
-      expect(request.connection).toHaveBeenCalledTimes(read + 1);
+      expect(request.io).toHaveBeenCalledTimes(read + 1);
+      expect(request.connection).not.toHaveBeenCalled();
 
       boundary.resolve();
       await expect(result).resolves.toBeNull();
