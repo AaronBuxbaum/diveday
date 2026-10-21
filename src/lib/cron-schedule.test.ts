@@ -13,6 +13,7 @@ import { DESK_PING_CRON_CRONTAB } from "./desk-hours";
 import { MINIMUM_SEATS_CRON_CRONTAB } from "./minimum-seats";
 import { RECAP_CRON_CRONTAB } from "./recap-schedule";
 import { TRIP_REMINDER_CRON_CRONTAB } from "./reminders";
+import { DIETARY_RETENTION_CRONTAB } from "./retention";
 import { WEEKLY_DIGEST_CRON_CRONTAB } from "./weekly-digest";
 
 /**
@@ -28,6 +29,14 @@ function vercelCrons(): Array<{ path: string; schedule: string }> {
 }
 
 describe("the daily tick", () => {
+  it("matches the daily dietary sweep and preserves weekly table retention", () => {
+    expect(
+      vercelCrons().find((cron) => cron.path === "/api/cron/dietary-retention")?.schedule,
+    ).toBe(DIETARY_RETENTION_CRONTAB);
+    expect(vercelCrons().find((cron) => cron.path === "/api/cron/retention")?.schedule).toBe(
+      "8 3 * * 0",
+    );
+  });
   it("matches the deployed vercel.json schedule for /api/cron/reminders", () => {
     const reminders = vercelCrons().find((cron) => cron.path === "/api/cron/reminders");
     expect(reminders?.schedule).toBe(DAILY_TICK_CRONTAB);

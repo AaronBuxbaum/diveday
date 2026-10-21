@@ -93,6 +93,16 @@ async function emittedEventCodes(): Promise<Set<string>> {
 }
 
 describe("the log-signal registry", () => {
+  it("alarms failed and capped dietary sweeps through the existing cron signal", () => {
+    const signal = LOG_SIGNALS.find((row) => row.metricName === "CronPassFailures");
+    expect(signal?.events).toEqual(
+      expect.arrayContaining([
+        "cron_dietary_retention.clear_failed",
+        "cron_dietary_retention.clear_capped",
+      ]),
+    );
+    expect(signal?.threshold).toBe(1);
+  });
   it("gives every signal exactly one way to match", () => {
     for (const signal of LOG_SIGNALS) {
       const hasEvents = (signal.events?.length ?? 0) > 0;

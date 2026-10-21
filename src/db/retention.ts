@@ -86,8 +86,6 @@ export type PruneSummary = {
   outcomes: PruneOutcome[];
   totalDeleted: number;
   failedTables: RetainedTable[];
-  /** Lunch notes cleared from seats whose boat sailed long enough ago (security review N5). */
-  dietaryNotesCleared: number;
 };
 
 /**
@@ -101,24 +99,58 @@ export async function clearExpiredDietaryNotes(
   now: Date,
   batchLimit: number = PRUNE_BATCH_LIMIT,
 ): Promise<number> {
-  const rows = await db
+  // Eligibility is read at this statement's snapshot, avoiding a separate
+  // select/update gap; this does not serialize with later departure moves.
+  // The outer null check and RETURNING count only this statement's mutations,
+  // including when a concurrent sweep already cleared some selected seats.
+  const eligible = db
     .select({ id: bookings.id })
     .from(bookings)
-    // diveday:allow-deleted-trips: a deleted departure's seats are cleared too; nothing reads the note after it sails.
+    // diveday:allow-deleted-trips: a deleted departure's food notes expire too.
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(isNotNull(bookings.dietaryNote), lt(trips.startsAt, dietaryNoteCutoff(now))))
     .limit(batchLimit);
-  if (rows.length === 0) return 0;
-  await db
+  const cleared = await db
     .update(bookings)
     .set({ dietaryNote: null })
-    .where(
-      inArray(
-        bookings.id,
-        rows.map((row) => row.id),
-      ),
-    );
-  return rows.length;
+    .where(and(isNotNull(bookings.dietaryNote), inArray(bookings.id, eligible)))
+    .returning({ id: bookings.id });
+  return cleared.length;
+}
+
+export type DietaryRetentionSummary = { cleared: number; capped: boolean; failed: boolean };
+
+/** The daily sweep's own admission budget, independent of weekly table backlogs. */
+export const DIETARY_RETENTION_TIME_BUDGET_MS = 45_000;
+
+/**
+ * Drain eligible food notes under one cutoff and a monotonic admission budget.
+ * The budget bounds batch admission, not statement duration: one admitted batch
+ * may still be in flight after the deadline. A full last batch is conservatively
+ * capped; no query is started after the deadline just to prove the backlog empty.
+ * Errors return a failed outcome without sending database error text to telemetry.
+ */
+export async function drainExpiredDietaryNotes(
+  db: AppDb,
+  opts: { now?: Date; budgetMs?: number; batchLimit?: number } = {},
+): Promise<DietaryRetentionSummary> {
+  const now = opts.now ?? nowDate();
+  const budgetMs = opts.budgetMs ?? DIETARY_RETENTION_TIME_BUDGET_MS;
+  const batchLimit = opts.batchLimit ?? PRUNE_BATCH_LIMIT;
+  const started = performance.now();
+  let cleared = 0;
+  while (performance.now() - started < budgetMs) {
+    try {
+      const batch = await clearExpiredDietaryNotes(db, now, batchLimit);
+      cleared += batch;
+      if (batch < batchLimit) return { cleared, capped: false, failed: false };
+    } catch {
+      // The route reports this code/count outcome to Sentry and CloudWatch.
+      // A driver error may quote the note or its identity-bearing parameters.
+      return { cleared, capped: false, failed: true };
+    }
+  }
+  return { cleared, capped: true, failed: false };
 }
 
 /**
@@ -455,16 +487,9 @@ export async function pruneExpiredRecords(
     pending = pending.filter(([table]) => byTable.get(table)?.capped);
   }
   const outcomes = arms.map(([table]) => byTable.get(table) as PruneOutcome);
-  let dietaryNotesCleared = 0;
-  try {
-    dietaryNotesCleared = await clearExpiredDietaryNotes(db, now, batchLimit);
-  } catch {
-    log("retention.dietary_note_clear_failed", "error", {});
-  }
   return {
     outcomes,
     totalDeleted: outcomes.reduce((sum, outcome) => sum + outcome.deleted, 0),
     failedTables: outcomes.filter((outcome) => outcome.failed).map((outcome) => outcome.table),
-    dietaryNotesCleared,
   };
 }

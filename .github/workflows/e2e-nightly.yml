@@ -44,6 +44,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/playwright-shell
+      - name: Install Chromium for real extension checks
+        run: pnpm exec playwright install chromium
       - run: pnpm e2e:build
       - name: Quarantined tests
         run: pnpm exec playwright test --grep @quarantine --pass-with-no-tests
