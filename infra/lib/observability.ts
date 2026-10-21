@@ -178,6 +178,8 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // span two; and after 45 seconds of batches one capped run is already a
       // backlog growing faster than the prune.
       "cron_retention.prune_capped",
+      "cron_dietary_retention.clear_failed",
+      "cron_dietary_retention.clear_capped",
       "cron_usage.scan_failed",
       "cron_backup_export.pass_failed",
       // Added to this signal rather than given its own: a new counted signal is

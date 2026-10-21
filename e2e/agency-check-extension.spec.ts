@@ -578,7 +578,8 @@ test("signed out of PADI between the form and its answer, the check says to sign
   await expect(cards.getByText(/^Checked with PADI by /)).toHaveCount(0);
 });
 
-test("Check all on a departure settles its rows one at a time through the extension", async ({
+// diveday:quarantine #2878 until 2026-10-28: CI can stall on the first SSI lookup before filling its form; nightly retains the exact check.
+test("Check all on a departure settles its rows one at a time through the extension @quarantine", async ({
   page,
   extensionId,
   agencyPages,
