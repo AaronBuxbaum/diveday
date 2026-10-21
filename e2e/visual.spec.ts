@@ -8913,6 +8913,19 @@ for (const scheme of ["light", "dark"] as const) {
         expect(await page.evaluate(() => window.scrollY)).toBe(scrollBeforePinSelection);
         await capture(page, "dive-sites-library-pin-selected", scheme, {
           beforeShot: async () => {
+            const footer = selectedPopup.locator(".leaflet-site-card__link");
+            await expect
+              .poll(async () => (await footer.boundingBox())?.height ?? 0)
+              .toBeGreaterThanOrEqual(44);
+            await selectedPopup.locator(".leaflet-popup-close-button").focus();
+            await page.keyboard.press("Shift+Tab");
+            await expect(footer).toBeFocused();
+            expect(
+              await footer.evaluate((link) => {
+                const style = getComputedStyle(link);
+                return link.matches(":focus-visible") && Number.parseFloat(style.outlineWidth) > 0;
+              }),
+            ).toBe(true);
             await expect
               .poll(async () => {
                 const card = await selectedPopup.boundingBox();

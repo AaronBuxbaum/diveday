@@ -2665,10 +2665,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 }
 .leaflet-site-card__link {
   display: flex;
+  min-height: 44px;
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
   border-top: 1px solid var(--border);
+  border-radius: 0 0 calc(var(--radius-panel) - 1px) calc(var(--radius-panel) - 1px);
   background: var(--surface-sunken);
   color: var(--primary);
   font-size: 12px;
@@ -2678,6 +2680,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .leaflet-site-card__link:hover {
   background: var(--surface);
   text-decoration: underline;
+}
+@layer components {
+  .leaflet-site-card__link:focus-visible {
+    @apply focus-ring-inset;
+  }
 }
 .leaflet-site-cluster-popup .leaflet-popup-content-wrapper {
   overflow: hidden;
