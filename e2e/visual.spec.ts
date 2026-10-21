@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
-import type { Browser, Page } from "@playwright/test";
+import { readdirSync, readFileSync } from "node:fs";
+import type { Browser, Locator, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
+import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { LISTED_SHOP_SLUGS } from "../src/db/seed-listed-shops";
 import { diverTranslator } from "../src/i18n/messages";
@@ -61,12 +62,62 @@ import { mintOnboardFormPath } from "./setup-link";
 
 const staffCopy = staffTranslator("en-US");
 const diverCopy = diverTranslator("en-US");
+const CATALOG_MAP_SITE_COUNT = DIVE_SITE_TEMPLATES.filter(
+  ({ briefing }) => briefing.forecastLatitude != null && briefing.forecastLongitude != null,
+).length;
+
+async function expectOverviewMapSites(page: Page, count: number) {
+  await expect
+    .poll(() =>
+      page.locator(".leaflet-container").evaluate((map) => {
+        const bounds = map.getBoundingClientRect();
+        const targets = [
+          ...map.querySelectorAll(".leaflet-site-marker button, button.leaflet-site-cluster"),
+        ];
+        return {
+          sites: targets.reduce(
+            (sum, target) =>
+              sum + (target.matches(".leaflet-site-cluster") ? Number(target.textContent) : 1),
+            0,
+          ),
+          clipped: targets.flatMap((target) => {
+            const rect = target.getBoundingClientRect();
+            return rect.width > 0 &&
+              rect.height > 0 &&
+              rect.left >= bounds.left &&
+              rect.top >= bounds.top &&
+              rect.right <= bounds.right &&
+              rect.bottom <= bounds.bottom
+              ? []
+              : [target.getAttribute("aria-label")];
+          }),
+        };
+      }),
+    )
+    .toEqual({ sites: count, clipped: [] });
+}
+
+async function expectPopupInMap(page: Page, popup: Locator) {
+  await expect
+    .poll(async () => {
+      const card = await popup.boundingBox();
+      const map = await page.locator(".leaflet-container").boundingBox();
+      if (!card || !map) return Number.NEGATIVE_INFINITY;
+      return Math.min(
+        card.x - map.x,
+        card.y - map.y,
+        map.x + map.width - card.x - card.width,
+        map.y + map.height - card.y - card.height,
+      );
+    })
+    .toBeGreaterThanOrEqual(0);
+}
 
 async function waitForSiteMap(page: Page) {
-  // The server heading can precede both lazy imports. Pins prove the map's
-  // data effect has run; controls and attribution prove Leaflet initialized.
+  // The server heading can precede both lazy imports. Pins or clusters prove
+  // the data effect ran; controls and attribution prove Leaflet initialized.
   const map = page.locator(".leaflet-container");
-  await map.locator(".leaflet-site-marker button").first().waitFor();
+  await map.locator(".leaflet-site-marker button, button.leaflet-site-cluster").first().waitFor();
   await map.locator(".leaflet-control-zoom-in").waitFor();
   await map.locator(".leaflet-control-attribution").waitFor();
 }
@@ -8889,7 +8940,72 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the dive-site library renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/dive-sites");
         await waitForSiteLibrary(page);
-        await capture(page, "dive-sites-library", scheme);
+        // Leaflet measures pan progress with Date; let its animation clock
+        // advance from the harness instant while this case changes map sizes.
+        await page.clock.install({ time: E2E_FROZEN_CLOCK });
+        await capture(page, "dive-sites-library", scheme, {
+          beforeShot: () => expectOverviewMapSites(page, 8),
+        });
+
+        // Use a real standalone pin from this viewport; a cluster's count
+        // does not identify which named sites it contains.
+        await page.locator(".leaflet-container").scrollIntoViewIfNeeded();
+        const firstPin = page.locator(".leaflet-site-marker button").first();
+        await expect(firstPin).toBeVisible();
+        const pinName = await firstPin.getAttribute("aria-label");
+        if (!pinName) throw new Error("Site marker has no accessible name");
+        const mapPin = page
+          .locator(".leaflet-site-marker")
+          .getByRole("button", { name: pinName, exact: true });
+        await expect(mapPin).toBeVisible();
+        await mapPin.hover();
+        await expect(page.locator(".leaflet-site-tooltip")).toContainText(pinName);
+        const pinBox = await mapPin.boundingBox();
+        const mapBox = await page.locator(".leaflet-container").boundingBox();
+        const viewport = page.viewportSize();
+        if (!pinBox || !mapBox || !viewport) throw new Error("Map target has no viewport bounds");
+        expect(pinBox.x).toBeGreaterThanOrEqual(Math.max(0, mapBox.x));
+        expect(pinBox.y).toBeGreaterThanOrEqual(Math.max(0, mapBox.y));
+        expect(pinBox.x + pinBox.width).toBeLessThanOrEqual(
+          Math.min(viewport.width, mapBox.x + mapBox.width),
+        );
+        expect(pinBox.y + pinBox.height).toBeLessThanOrEqual(
+          Math.min(viewport.height, mapBox.y + mapBox.height),
+        );
+        const scrollBeforePinSelection = await page.evaluate(() => window.scrollY);
+        // The target is fully visible; use physical input so this assertion
+        // measures selection without the driver's ancestor-scroll preparation.
+        await page.mouse.click(pinBox.x + pinBox.width / 2, pinBox.y + pinBox.height / 2);
+        await expect(mapPin).toHaveClass(/ring-4/);
+        const selectedPopup = page
+          .locator(".leaflet-site-popup")
+          .filter({ has: page.getByRole("heading", { name: pinName, exact: true }) })
+          .last();
+        await expect(selectedPopup).toBeVisible();
+        expect(await page.evaluate(() => window.scrollY)).toBe(scrollBeforePinSelection);
+        let footerFocusedAtPreviousWidth = false;
+        await capture(page, "dive-sites-library-pin-selected", scheme, {
+          beforeShot: async () => {
+            await expectPopupInMap(page, selectedPopup);
+            const footer = selectedPopup.locator(".leaflet-site-card__link");
+            await expect
+              .poll(async () => (await footer.boundingBox())?.height ?? 0)
+              .toBeGreaterThanOrEqual(44);
+            if (footerFocusedAtPreviousWidth) await expect(footer).toBeFocused();
+            await selectedPopup.locator(".leaflet-popup-close-button").focus();
+            await page.keyboard.press("Shift+Tab");
+            await expect(footer).toBeFocused();
+            expect(
+              await footer.evaluate((link) => {
+                const style = getComputedStyle(link);
+                return link.matches(":focus-visible") && Number.parseFloat(style.outlineWidth) > 0;
+              }),
+            ).toBe(true);
+            footerFocusedAtPreviousWidth = true;
+            await expectPopupInMap(page, selectedPopup);
+          },
+        });
+        await expect(selectedPopup.locator(".leaflet-site-card__link")).toBeFocused();
       });
 
       // The gear register on a calm morning (ADR 20260827-the-shops-shelves,
@@ -9360,7 +9476,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/dive-sites/catalog");
         await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
         await waitForSiteMap(page);
-        await capture(page, "dive-sites-catalog", scheme);
+        await capture(page, "dive-sites-catalog", scheme, {
+          beforeShot: () => expectOverviewMapSites(page, CATALOG_MAP_SITE_COUNT),
+        });
       });
 
       /**
@@ -9609,13 +9727,15 @@ for (const scheme of ["light", "dark"] as const) {
 test.describe("capture harness", () => {
   test.describe("lazy site maps", () => {
     signedInAsOwner();
+    // The actual lazy-library request must reach Playwright's route handler.
+    test.use({ serviceWorkers: "block" });
 
     for (const surface of [
       {
         name: "catalog",
-        path: "/shop/blue-mantis/dive-sites/catalog",
+        path: "/shop/blue-mantis/dive-sites?view=catalog",
         heading: "DiveDay common dive sites",
-        pins: 20,
+        pins: CATALOG_MAP_SITE_COUNT,
         ready: waitForSiteMap,
       },
       {
@@ -9626,6 +9746,25 @@ test.describe("capture harness", () => {
         ready: waitForSiteLibrary,
       },
     ]) {
+      test(`${surface.name} overview keeps every site visible after resizing`, async ({ page }) => {
+        await test.step("fresh phone overview", async () => {
+          await page.setViewportSize(PHONE_VIEWPORT);
+          await page.goto(surface.path);
+          await surface.ready(page);
+          await expectOverviewMapSites(page, surface.pins);
+        });
+        await test.step("fresh desktop overview", async () => {
+          await page.setViewportSize(VIEWPORTS[1]);
+          await page.reload();
+          await surface.ready(page);
+          await expectOverviewMapSites(page, surface.pins);
+        });
+        await test.step("desktop overview resized to phone", async () => {
+          await page.setViewportSize(PHONE_VIEWPORT);
+          await expectOverviewMapSites(page, surface.pins);
+        });
+      });
+
       test(`${surface.name} capture waits for Leaflet after its content is visible`, async ({
         page,
       }) => {
@@ -9635,16 +9774,31 @@ test.describe("capture harness", () => {
         const release = new Promise<void>((resolve) => {
           releaseLeaflet = resolve;
         });
-        await page.route("**/_next/static/chunks/*.js", async (route) => {
-          const response = await route.fetch();
-          // Hold the real lazy library: the heading and ledger remain usable
-          // while the map implementation is in flight.
-          if ((await response.text()).includes("leaflet-control-zoom")) {
+        // Discover the emitted library before navigation, then hold its real
+        // request before delivery rather than inspecting a fetched response.
+        const libraryChunks = new Set(
+          readdirSync(".next/static/chunks", { recursive: true, encoding: "utf8" })
+            .filter(
+              (file) =>
+                file.endsWith(".js") &&
+                readFileSync(`.next/static/chunks/${file}`, "utf8").includes(
+                  "https://leafletjs.com",
+                ),
+            )
+            .map((file) => `/_next/static/chunks/${file.replaceAll("\\", "/")}`),
+        );
+        expect(
+          libraryChunks.size,
+          "The production build contains the Leaflet library",
+        ).toBeGreaterThan(0);
+        await page.route(
+          (url) => libraryChunks.has(url.pathname),
+          async (route) => {
             libraryHeld = true;
             await release;
-          }
-          await route.fulfill({ response });
-        });
+            await route.continue();
+          },
+        );
         const contentReady = async () => {
           await page.getByRole("heading", { level: 1, name: surface.heading }).waitFor();
           if (surface.name === "library") {
@@ -9671,7 +9825,15 @@ test.describe("capture harness", () => {
           expect(ready).toBe(false);
           releaseLeaflet();
           await mapReady;
-          await expect(page.locator(".leaflet-site-marker button")).toHaveCount(surface.pins);
+          await expect
+            .poll(async () => {
+              const pinCount = await page.locator(".leaflet-site-marker button").count();
+              const clusterCounts = await page
+                .locator("button.leaflet-site-cluster")
+                .allTextContents();
+              return pinCount + clusterCounts.reduce((total, count) => total + Number(count), 0);
+            })
+            .toBe(surface.pins);
           await expect(page.locator(".leaflet-control-zoom-in")).toBeVisible();
           await expect(page.locator(".leaflet-control-attribution")).toBeVisible();
         } finally {
@@ -10078,7 +10240,10 @@ for (const scheme of ["light", "dark"] as const) {
       await page.waitForURL(/[?&]notice=saved/);
       await page.goto(`/shop/${privateShop.slug}/dive-sites`);
       await page.getByText("The entry silted up after the storm").waitFor();
-      await capture(page, "dive-site-planning-note", scheme);
+      await waitForSiteLibrary(page);
+      await capture(page, "dive-site-planning-note", scheme, {
+        beforeShot: () => expectOverviewMapSites(page, 8),
+      });
     });
 
     /**

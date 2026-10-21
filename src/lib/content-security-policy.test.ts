@@ -231,7 +231,8 @@ describe("the policy", () => {
       "https://tile.openstreetmap.org",
     ]);
     expect(imgSrc).toContain("https://*.basemaps.cartocdn.com");
-    expect(imgSrc).toContain("https://*.tile.openstreetmap.org");
+    expect(imgSrc).toContain("https://tile.openstreetmap.org");
+    expect(imgSrc).not.toContain("https://*.tile.openstreetmap.org");
     for (const probe of MAP_REACHABILITY_PROBES) {
       expect(imgSrc).toContain(probe);
     }

@@ -20,3 +20,15 @@ export function cartoTileUrl(style: string = "light_all"): string {
   const base = `https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`;
   return CARTO_API_KEY ? `${base}?key=${encodeURIComponent(CARTO_API_KEY)}` : base;
 }
+
+export function mapTileLayer(style: string = "light_all", environment = process.env.NODE_ENV) {
+  const cartoUrl = cartoTileUrl(style);
+  if (environment === "development" && !CARTO_API_KEY) {
+    return {
+      provider: "openstreetmap" as const,
+      url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    };
+  }
+
+  return { provider: "carto" as const, url: cartoUrl };
+}

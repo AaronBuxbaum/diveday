@@ -1,25 +1,25 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
-import type { MapPin, ShopAnchor } from "@/components/map/SiteMap";
+import type { MapPin } from "@/components/map/SiteMap";
+import { shopMapAnchor } from "@/components/map/shop-map-anchor";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
-import {
-  getGlobalDiveSiteTemplate,
-  listGlobalDiveSiteTemplates,
-  shopSearchAnchor,
-} from "@/db/dive-sites";
+import { getGlobalDiveSiteTemplate, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import type { Shop } from "@/db/schema";
+import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
+import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { joinFacts } from "@/lib/format";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { timeZoneAnchor } from "@/lib/timezones";
 import { importDiveSiteTemplateAction } from "../actions";
+import { cachedCatalogMapRows } from "../catalog-map-cache";
 import { CatalogMapLayout } from "./CatalogMapLayout";
 import { TemplatePreview } from "./TemplatePreview";
 
@@ -75,13 +75,10 @@ export async function CatalogView({
     );
   }
 
-  const [catalog, rawAnchor] = await Promise.all([
-    listGlobalDiveSiteTemplates(db, {
-      page: Number.parseInt(page ?? "", 10),
-      shop,
-    }),
-    shopSearchAnchor(db, shop.id),
-  ]);
+  const catalog = await listGlobalDiveSiteTemplates(db, {
+    page: Number.parseInt(page ?? "", 10),
+    shop,
+  });
   const pageHref = (target: number) => (target > 1 ? `${catalogHref}&page=${target}` : catalogHref);
 
   const previewSlug = slug?.trim();
@@ -99,30 +96,28 @@ export async function CatalogView({
     );
   }
 
-  const anchorCoords = rawAnchor ?? timeZoneAnchor(shop.timezone);
-  const shopAnchor: ShopAnchor | null = anchorCoords
-    ? {
-        latitude: anchorCoords.latitude,
-        longitude: anchorCoords.longitude,
-        name: shop.name,
-      }
-    : null;
+  const mapRows = await cachedCatalogMapRows(catalog.mapRevision);
 
-  const catalogPins: MapPin[] = catalog.templates
-    .filter(
-      (entry) =>
-        entry.version.briefing.forecastLatitude != null &&
-        entry.version.briefing.forecastLongitude != null,
-    )
-    .map(({ template, version }) => ({
-      id: template.id,
-      name: version.briefing.name,
-      latitude: version.briefing.forecastLatitude as number,
-      longitude: version.briefing.forecastLongitude as number,
-      subtitle: version.briefing.locationName,
-      href: `${catalogHref}&template=${encodeURIComponent(template.slug)}`,
-      tone: "primary",
-    }));
+  const shopAnchor = shopMapAnchor(shop);
+
+  const catalogPins: MapPin[] = mapRows.map((site) => ({
+    id: site.templateId,
+    name: site.name,
+    latitude: site.latitude,
+    longitude: site.longitude,
+    subtitle: site.locationName,
+    details: [
+      staffDiveSiteDepthText(t, site, shop.depthUnit),
+      diveSiteDifficultyLabel(
+        site.difficultyLevel ?? parseDiveSiteDifficulty(site.difficulty),
+        diverT,
+      ),
+    ].filter((detail): detail is string => Boolean(detail)),
+    description: site.description,
+    href: `${catalogHref}&template=${encodeURIComponent(site.slug)}`,
+    hrefLabel: t("diveSites.map.openSite"),
+    tone: "primary",
+  }));
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -135,7 +130,11 @@ export async function CatalogView({
           descriptionIsCaption
         />
       </div>
-      <CatalogMapLayout shopAnchor={shopAnchor} pins={catalogPins}>
+      <CatalogMapLayout
+        shopAnchor={shopAnchor}
+        pins={catalogPins}
+        clusterLabel={t("diveSites.map.clusterLabel")}
+      >
         <ul className="space-y-1">
           {catalog.templates.map(({ template, version }) => (
             <LedgerRow

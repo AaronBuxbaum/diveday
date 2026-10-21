@@ -41,7 +41,17 @@
   },
   "overrides": [
     {
-      "includes": ["e2e/**", "scripts/simulate-day/**", "scripts/persona-bots/**"],
+      "includes": [
+        "e2e/**",
+        "scripts/simulate-day/**",
+        "scripts/persona-bots/**",
+        "scripts/capture-session.mjs",
+        "scripts/contact-sheet.mjs",
+        "scripts/screenshot.mjs",
+        "scripts/pixel-probe/collect.mjs",
+        "scripts/pixel-probe/probe.mjs",
+        "scripts/pixel-probe/states.mjs"
+      ],
       "linter": {
         "domains": {
           "playwright": "recommended"

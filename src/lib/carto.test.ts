@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CARTO_API_KEY, cartoTileUrl } from "./carto";
+import { CARTO_API_KEY, cartoTileUrl, mapTileLayer } from "./carto";
 
 describe("carto tile configuration", () => {
   it("defaults CARTO_API_KEY to undefined when environment variable is not set", () => {
@@ -17,5 +17,16 @@ describe("carto tile configuration", () => {
   it("supports different styles", () => {
     const url = cartoTileUrl("voyager");
     expect(url).toBe("https://{s}.basemaps.cartocdn.com/voyager/{z}/{x}/{y}{r}.png");
+  });
+
+  it("uses OpenStreetMap only as the unkeyed development fallback", () => {
+    expect(mapTileLayer("light_all", "development")).toEqual({
+      provider: "openstreetmap",
+      url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    });
+    expect(mapTileLayer("light_all", "production")).toEqual({
+      provider: "carto",
+      url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    });
   });
 });
