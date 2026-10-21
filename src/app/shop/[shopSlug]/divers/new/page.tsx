@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { discardFormDraftAction, saveFormDraftAction } from "@/app/actions/form-drafts";
+import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
 import { seatExistingDiverAction } from "@/app/actions/seat-diver";
 import { SEAT_SURFACES, type SeatSurfaceId } from "@/app/actions/seat-diver-surfaces";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
@@ -21,7 +21,6 @@ import { staffParticipantTypeLabel } from "@/i18n/participant-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
-import { formatTime } from "@/lib/format";
 import { noDiveDayNeedsSaying } from "@/lib/name-match-evidence";
 import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { diverSearchPrefill } from "@/lib/person-fields";
@@ -100,15 +99,14 @@ export default async function NewDiverPage({
   } = await searchParams;
 
   const { db, shop, session } = await requireShopSurface(shopSlug);
+  const draftBinding = bindFormDraft(session.user);
   const keptScope = keptTypedScope(shopSlug, session.user.personId);
 
   const locale = await requestLocale(shop.defaultLocale);
   // What this person had typed here when they were last interrupted (ADR
   // 20260906-before-you-ask, decision 3), applied by `FormDraft` below.
   const draft = await readFormDraft(db, shop.id, session.user.personId, "new_diver");
-  const newDiverDraft = draft
-    ? { fields: draft.fields, savedAtLabel: formatTime(draft.savedAt, locale, shop.timezone) }
-    : null;
+  const newDiverDraft = draftForForm(draft, locale, shop.timezone);
   const t = staffTranslator(locale);
 
   const potentialMatches = confirmName ? await findSimilarDivers(db, shop.id, confirmName) : [];
@@ -298,6 +296,7 @@ export default async function NewDiverPage({
 
       <SectionCard padding="lg" className="mt-6">
         <PersonFieldTrio
+          key={draftBinding.scope}
           as="form"
           action={createDiverFormAction}
           name={surface ? "required" : "optional"}
@@ -323,7 +322,7 @@ export default async function NewDiverPage({
           <FormDraft
             form="new_diver"
             draft={newDiverDraft}
-            actions={{ save: saveFormDraftAction, discard: discardFormDraftAction }}
+            actions={draftBinding.actions}
             copy={formDraftCopy(t)}
           />
           <input type="hidden" name="surface" value={surfaceParam ?? ""} />

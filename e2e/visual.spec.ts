@@ -5710,6 +5710,38 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "divers-new", scheme);
       });
 
+      test(`a restored add-diver draft renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/divers/new");
+        const name = "Ada Lindqvist";
+        const saved = page.waitForResponse(
+          (response) =>
+            response.request().method() === "POST" &&
+            Boolean(response.request().headers()["next-action"]) &&
+            Boolean(response.request().postData()?.includes(name)),
+        );
+        await page.getByLabel(staffCopy("divers.page.fullNameLabel")).fill(name);
+        await page
+          .getByRole("navigation", { name: "Main", exact: true })
+          .getByRole("link", { name: "Divers", exact: true })
+          .click();
+        await expect(page).toHaveURL(/\/divers$/);
+        expect((await saved).ok()).toBe(true);
+        await page.goto("/shop/blue-mantis/divers/new");
+        await expect(page.getByLabel(staffCopy("divers.page.fullNameLabel"))).toHaveValue(name);
+        const startOver = page.getByRole("button", {
+          name: staffCopy("shared.formDraft.startOver"),
+        });
+        await expect(startOver).toBeVisible();
+        try {
+          await capture(page, "divers-new-restored-draft", scheme);
+        } finally {
+          await startOver.click();
+          await expect(startOver).toHaveCount(0);
+        }
+      });
+
       // The roster's one view that leaves the active list behind: where a
       // deleted diver can be found and restored, once the undo toast is long
       // gone. The demo shop deletes nobody, so this photographs the view's own
@@ -9348,6 +9380,21 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "command-palette-results", scheme);
         await page.keyboard.press("Escape");
         await expect(box).toBeHidden();
+      });
+
+      test(`the command palette with a failed search renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/settings/calendar");
+        await page.route("**/api/search?q=zz-unavailable", (route) =>
+          route.fulfill({ status: 503, body: "" }),
+        );
+        await page.keyboard.press("ControlOrMeta+k");
+        await page.getByRole("combobox", { name: /Search divers/ }).fill("zz-unavailable");
+        await expect(
+          page.getByRole("button", { name: staffCopy("shared.commandPalette.retry"), exact: true }),
+        ).toBeVisible();
+        await capture(page, "command-palette-search-failed", scheme);
       });
 
       // The app-wide `notFound()` backstop (src/app/not-found.tsx) — a stale

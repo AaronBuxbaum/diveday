@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX } from "@/components/ui/card";
 import { fill } from "@/i18n/fill";
@@ -33,13 +34,23 @@ export type FormDraftProps = {
 
 const SAVE_DEBOUNCE_MS = 600;
 
+function snapshot(element: HTMLFormElement): Array<[string, string]> {
+  return Object.entries(
+    draftableFields(
+      [...new FormData(element).entries()].filter(
+        (entry): entry is [string, string] => typeof entry[1] === "string",
+      ),
+    ),
+  );
+}
+
 /**
  * Nothing you typed is lost (ADR 20260906-before-you-ask, decision 3).
  *
  * Mounted inside a staff form. On mount it applies the draft on file to the
  * form's own fields and says so in one line, with Start over as the one act;
- * from then on it keeps a draft of what is typed, written on blur and when the
- * page is hidden, and stops once the form is submitted. Renders nothing at all
+ * from then on it keeps a draft of what is typed, written after edits and on
+ * internal navigation, and stops while the form is submitted. Renders nothing at all
  * when there is no draft — the line is the only thing it adds to a surface.
  *
  * Applying goes through `applyFormFields`, so a React-managed control sees the
@@ -50,6 +61,16 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
   const anchor = useRef<HTMLSpanElement>(null);
   const [applied, setApplied] = useState(false);
   const submitted = useRef(false);
+  const dispatchedSubmit = useRef(false);
+  const discarding = useRef(false);
+  const [discardPending, setDiscardPending] = useState(false);
+  const latest = useRef<Array<[string, string]>>([]);
+  const revision = useRef(0);
+  const savedRevision = useRef(0);
+  const queuedRevision = useRef(0);
+  const writes = useRef(Promise.resolve());
+  const { pending } = useFormStatus();
+  const wasPending = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
@@ -69,51 +90,155 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
     if (element && openingDraft && applyFormFields(element, openingDraft.fields)) setApplied(true);
   }, []);
 
-  // The newest actions, read when the save runs rather than subscribed to:
-  // a refreshed page hands in new function objects, and re-binding the
-  // listeners on each one cleared the pending debounce before it could fire.
-  const save = useEffectEvent((element: HTMLFormElement) => {
-    if (submitted.current) return;
-    const fields = draftableFields(
-      [...new FormData(element).entries()].filter(
-        (entry): entry is [string, string] => typeof entry[1] === "string",
-      ),
-    );
-    void actions.save(form, Object.entries(fields));
+  // A server refresh can replace the action references without rebinding the
+  // listeners or cancelling their timer. Each queued write keeps its own copy.
+  const save = useEffectEvent(() => {
+    if (submitted.current || discarding.current || revision.current <= queuedRevision.current)
+      return writes.current;
+    const fields = latest.current;
+    const version = revision.current;
+    const saveAction = actions.save;
+    queuedRevision.current = version;
+    writes.current = writes.current.then(async () => {
+      try {
+        await saveAction(form, fields);
+        savedRevision.current = version;
+      } catch {
+        // Keep the unsaved snapshot eligible for the next edit, blur or leave.
+        if (queuedRevision.current === version) queuedRevision.current = savedRevision.current;
+      }
+    });
+    return writes.current;
   });
+
+  const capture = useEffectEvent((element: HTMLFormElement) => {
+    const fields = snapshot(element);
+    if (JSON.stringify(fields) !== JSON.stringify(latest.current)) {
+      latest.current = fields;
+      revision.current += 1;
+    }
+  });
+
+  // A refused action can leave this form mounted. Resume saving after it
+  // answers, with the current form as the baseline (React resets a successful
+  // form). Successful navigation unmounts while `submitted` is still true.
+  useEffect(() => {
+    if (pending) wasPending.current = true;
+    else if (wasPending.current) {
+      wasPending.current = false;
+      submitted.current = false;
+      dispatchedSubmit.current = false;
+      const element = anchor.current?.closest("form");
+      if (element) latest.current = snapshot(element);
+    }
+  }, [pending]);
 
   useEffect(() => {
     const element = anchor.current?.closest("form");
     if (!element) return;
-    const onFocusOut = () => {
+    latest.current = snapshot(element);
+    let mounted = true;
+    let replayingSubmit = false;
+    const cancelTimer = () => {
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => save(element), SAVE_DEBOUNCE_MS);
+      timer.current = null;
+    };
+    const onEdit = () => {
+      capture(element);
+      cancelTimer();
+      timer.current = setTimeout(() => void save(), SAVE_DEBOUNCE_MS);
     };
     const onHidden = () => {
-      if (document.visibilityState === "hidden") save(element);
+      if (document.visibilityState === "hidden") {
+        capture(element);
+        cancelTimer();
+        void save();
+      }
     };
-    const onSubmit = () => {
+    const onSubmit = (event: SubmitEvent) => {
+      if (replayingSubmit) {
+        dispatchedSubmit.current = true;
+        return;
+      }
+      if (submitted.current || discarding.current) {
+        event.preventDefault();
+        return;
+      }
+      capture(element);
+      cancelTimer();
+      const settled = save();
       submitted.current = true;
-      if (timer.current) clearTimeout(timer.current);
+      // The successful server mutation discards its draft. Let every older
+      // save finish before that mutation can run, so none can resurrect it.
+      event.preventDefault();
+      const submitter = event.submitter;
+      const version = revision.current;
+      void (async () => {
+        let submittedVersion = version;
+        await settled;
+        while (mounted) {
+          capture(element);
+          if (revision.current === submittedVersion) break;
+          submittedVersion = revision.current;
+          submitted.current = false;
+          const newest = save();
+          submitted.current = true;
+          await newest;
+        }
+        if (!mounted) return;
+        dispatchedSubmit.current = false;
+        replayingSubmit = true;
+        element.requestSubmit(submitter);
+        replayingSubmit = false;
+        // Edits made while waiting may now fail native constraint validation.
+        if (!dispatchedSubmit.current) submitted.current = false;
+      })();
     };
-    element.addEventListener("focusout", onFocusOut);
+    element.addEventListener("input", onEdit);
+    element.addEventListener("change", onEdit);
+    element.addEventListener("focusout", onEdit);
     element.addEventListener("submit", onSubmit);
     document.addEventListener("visibilitychange", onHidden);
     return () => {
-      element.removeEventListener("focusout", onFocusOut);
+      mounted = false;
+      element.removeEventListener("input", onEdit);
+      element.removeEventListener("change", onEdit);
+      element.removeEventListener("focusout", onEdit);
       element.removeEventListener("submit", onSubmit);
       document.removeEventListener("visibilitychange", onHidden);
-      if (timer.current) clearTimeout(timer.current);
+      cancelTimer();
+      // Retain the last input snapshot: React may already have removed the
+      // form's fields by passive-effect cleanup. No browser storage is used.
+      if (!dispatchedSubmit.current) submitted.current = false;
+      void save();
     };
   }, []);
 
   async function startOver() {
+    if (discarding.current || submitted.current) return;
     const element = anchor.current?.closest("form");
-    submitted.current = true;
-    setApplied(false);
-    element?.reset();
-    await actions.discard(form);
-    submitted.current = false;
+    discarding.current = true;
+    setDiscardPending(true);
+    if (timer.current) clearTimeout(timer.current);
+    const version = revision.current;
+    try {
+      await writes.current;
+      await actions.discard(form);
+      // Do not wipe edits made while the discard was in flight.
+      if (version === revision.current) {
+        element?.reset();
+        if (element) latest.current = snapshot(element);
+        savedRevision.current = revision.current;
+        queuedRevision.current = revision.current;
+        setApplied(false);
+      }
+    } catch {
+      // Keep both the fields and the recovery line when the discard fails.
+    } finally {
+      discarding.current = false;
+      setDiscardPending(false);
+      void save();
+    }
   }
 
   return (
@@ -121,12 +246,13 @@ export function FormDraft({ form, draft, actions, copy }: FormDraftProps) {
       {applied && openingDraft ? (
         <p
           role="status"
-          className={`flex flex-wrap items-center gap-x-3 gap-y-1 ${INSET_NOTE_BOX} bg-surface-sunken`}
+          className={`col-span-full flex flex-wrap items-center gap-x-3 gap-y-1 ${INSET_NOTE_BOX} bg-surface-sunken`}
         >
           <span>{fill(copy.pickedUp, { time: openingDraft.savedAtLabel })}</span>
           <button
             type="button"
             onClick={startOver}
+            disabled={discardPending}
             className={buttonClass({ variant: "link", size: "sm", flush: true })}
           >
             {copy.startOver}

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SearchResults } from "@/db/search";
@@ -19,6 +19,11 @@ const COPY: CommandPaletteCopy = {
   placeholder: "Type a name, a day, a departure",
   emptyShort: "Keep typing",
   emptyNoMatches: "Nothing matches",
+  searching: "Searching…",
+  searchFailed: "Search unavailable.",
+  searchUnauthorized: "Sign in again to search records.",
+  retry: "Try again",
+  signInAgain: "Sign in",
   groupDivers: "Divers",
   addDiver: "Add a diver",
   groupTrips: "Departures",
@@ -64,6 +69,7 @@ function results(answer: SearchResults["answer"]): SearchResults {
 
 function renderPalette(
   settingsShortcuts?: Parameters<typeof CommandPalette>[0]["settingsShortcuts"],
+  props: Partial<Parameters<typeof CommandPalette>[0]> = {},
 ) {
   return render(
     <CommandPalette
@@ -84,6 +90,7 @@ function renderPalette(
       createDiverAction={async () => {}}
       settingsShortcuts={settingsShortcuts}
       copy={COPY}
+      {...props}
     />,
   );
 }
@@ -426,5 +433,217 @@ describe("CommandPalette recents and today's boats", () => {
     await userEvent.type(screen.getByRole("combobox"), "gra");
     await screen.findByRole("option", { name: "Grace Mensah" });
     expect(screen.queryByRole("option", { name: "Two-Tank Reef" })).toBeNull();
+  });
+});
+
+/** Request boundaries: a typed query never borrows another request's records. */
+describe("CommandPalette search request lifecycle", () => {
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((done) => {
+      resolve = done;
+    });
+    return { promise, resolve };
+  }
+  const empty = { ...results(null), divers: [] };
+  const response = (value: SearchResults) => new Response(JSON.stringify(value));
+
+  async function openQuery(query: string) {
+    renderPalette();
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: query } });
+  }
+
+  it("removes the old answer and record during the next query's debounce, before Enter or click", async () => {
+    const slow = deferred<Response>();
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(response(results(ANSWER)))
+        .mockReturnValue(slow.promise),
+    );
+    await openQuery("grace");
+    const oldRow = await screen.findByRole("option", { name: "Grace Mensah" });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "priya" } });
+    expect(screen.queryByRole("option", { name: ANSWER.title })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Grace Mensah" })).toBeNull();
+    expect(screen.queryByRole("option", { name: COPY.addDiver })).toBeNull();
+    expect(screen.getByRole("combobox")).not.toHaveAttribute("aria-activedescendant");
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Enter" });
+    fireEvent.click(oldRow);
+    expect(routerPush).not.toHaveBeenCalled();
+  });
+
+  it("ignores an out-of-order response even when it belongs to the same query text", async () => {
+    const old = deferred<Response>();
+    const current = deferred<Response>();
+    const fetchMock = vi
+      .fn()
+      .mockReturnValueOnce(old.promise)
+      .mockResolvedValueOnce(response(empty))
+      .mockReturnValueOnce(current.promise);
+    vi.stubGlobal("fetch", fetchMock);
+    await openQuery("grace");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "priya" } });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "grace" } });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await act(async () => old.resolve(response(results(ANSWER))));
+    expect(screen.queryByRole("option", { name: "Grace Mensah" })).toBeNull();
+    await act(async () => current.resolve(response(empty)));
+    await screen.findByText(COPY.emptyNoMatches, { selector: "p" });
+    expect(screen.queryByRole("option", { name: ANSWER.title })).toBeNull();
+  });
+
+  it("cancels lookup on clear and close, and never restores it on reopen", async () => {
+    const late = deferred<Response>();
+    const fetchMock = vi.fn().mockReturnValue(late.promise);
+    vi.stubGlobal("fetch", fetchMock);
+    await openQuery("grace");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "" } });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await act(async () => late.resolve(response(results(ANSWER))));
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    expect(screen.getByRole("combobox")).toHaveValue("");
+    expect(screen.queryByRole("option", { name: "Grace Mensah" })).toBeNull();
+  });
+
+  it.each(["HTTP 503", "network error"])(
+    "distinguishes %s from empty success and retries the current query",
+    async (failure) => {
+      const fetchMock = vi.fn();
+      if (failure === "HTTP 503")
+        fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+      else fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+      fetchMock.mockResolvedValueOnce(response(empty));
+      vi.stubGlobal("fetch", fetchMock);
+      await openQuery("unfindable");
+      await screen.findByText("Search unavailable.", { selector: "p" });
+      expect(screen.queryByText(COPY.emptyNoMatches)).toBeNull();
+      expect(screen.queryByRole("option", { name: COPY.addDiver })).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+      await screen.findByText(COPY.emptyNoMatches, { selector: "p" });
+      expect(await screen.findByRole("option", { name: COPY.addDiver })).toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.calls[1][0]).toBe("/api/search?q=unfindable");
+    },
+  );
+
+  it("announces available local navigation counts while record lookup is pending", async () => {
+    const lookup = deferred<Response>();
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(lookup.promise));
+    await openQuery("divers");
+    expect(screen.getByRole("combobox")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("option", { name: "divers" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog").querySelector('[aria-live="polite"]')).toHaveTextContent(
+      `${COPY.searching}, ${COPY.groupGoTo} (1)`,
+    );
+  });
+
+  it("keeps local navigation usable while a request fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
+    await openQuery("divers");
+    await screen.findByText(COPY.searchFailed, { selector: "p" });
+    await userEvent.click(screen.getByRole("option", { name: "divers" }));
+    expect(routerPush).toHaveBeenCalledWith("/shop/blue-mantis/divers");
+  });
+
+  it("ignores a cancelled response whose JSON finishes after the new query", async () => {
+    const body = deferred<SearchResults>();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: () => body.promise })
+      .mockResolvedValueOnce(response(empty));
+    vi.stubGlobal("fetch", fetchMock);
+    await openQuery("grace");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "priya" } });
+    await screen.findByText(COPY.emptyNoMatches, { selector: "p" });
+    await act(async () => body.resolve(results(ANSWER)));
+    expect(screen.queryByRole("option", { name: ANSWER.title })).toBeNull();
+  });
+
+  it("clears today's private rows when reading recents loses authorization", async () => {
+    const recentKey = "diveday.palette.recent.blue-mantis.p-auth";
+    window.localStorage.setItem(
+      recentKey,
+      JSON.stringify([{ key: "diver:p-grace", kind: "diver", id: "p-grace" }]),
+    );
+    const denied = deferred<Response>();
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(denied.promise));
+    renderPalette(undefined, {
+      readerId: "p-auth",
+      todayBoats: [{ id: "t-1", title: "Two-Tank Reef", time: "7:00 AM" }],
+    });
+    await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+    expect(screen.getByRole("option", { name: "Two-Tank Reef" })).toBeInTheDocument();
+    await act(async () => denied.resolve(new Response(null, { status: 401 })));
+    await screen.findByText(COPY.searchUnauthorized, { selector: "p" });
+    expect(screen.queryByRole("option", { name: "Two-Tank Reef" })).toBeNull();
+    expect(screen.getByRole("link", { name: COPY.signInAgain })).toHaveAttribute(
+      "href",
+      "/sign-in",
+    );
+    window.localStorage.removeItem(recentKey);
+  });
+
+  it.each([401, 403])(
+    "does not let a search started before recents authorization loss (%s) restore private data",
+    async (status) => {
+      const recentKey = "diveday.palette.recent.blue-mantis.p-revoked";
+      window.localStorage.setItem(
+        recentKey,
+        JSON.stringify([{ key: "diver:p-grace", kind: "diver", id: "p-grace" }]),
+      );
+      const recents = deferred<Response>();
+      const lookup = deferred<Response>();
+      const fetchMock = vi
+        .fn()
+        .mockReturnValueOnce(recents.promise)
+        .mockReturnValueOnce(lookup.promise);
+      vi.stubGlobal("fetch", fetchMock);
+      renderPalette(undefined, {
+        readerId: "p-revoked",
+        todayBoats: [{ id: "t-1", title: "Two-Tank Reef", time: "7:00 AM" }],
+      });
+      await userEvent.click(screen.getByRole("button", { name: /Search/ }));
+      expect(screen.getByRole("option", { name: "Two-Tank Reef" })).toBeInTheDocument();
+      fireEvent.change(screen.getByRole("combobox"), { target: { value: "grace" } });
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+      await act(async () => recents.resolve(new Response(null, { status })));
+      expect(screen.getByText(COPY.searchUnauthorized, { selector: "p" })).toBeInTheDocument();
+      await act(async () => lookup.resolve(response(results(ANSWER))));
+      expect(screen.queryByRole("option", { name: "Grace Mensah" })).toBeNull();
+      expect(screen.queryByRole("option", { name: ANSWER.title })).toBeNull();
+      expect(screen.queryByRole("option", { name: COPY.addDiver })).toBeNull();
+      expect(screen.getByText(COPY.searchUnauthorized, { selector: "p" })).toBeInTheDocument();
+      fireEvent.change(screen.getByRole("combobox"), { target: { value: "" } });
+      expect(screen.queryByRole("option", { name: "Two-Tank Reef" })).toBeNull();
+      fireEvent.change(screen.getByRole("combobox"), { target: { value: "other query" } });
+      expect(screen.getByText(COPY.searchUnauthorized, { selector: "p" })).toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      window.localStorage.removeItem(recentKey);
+    },
+  );
+
+  it("clears private data on authorization loss, including after clearing the query", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response(results(ANSWER)))
+      .mockResolvedValueOnce(new Response(null, { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await openQuery("grace");
+    await screen.findByRole("option", { name: ANSWER.title });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "priya" } });
+    await screen.findByText("Sign in again to search records.", { selector: "p" });
+    expect(screen.queryByRole("option", { name: "Grace Mensah" })).toBeNull();
+    expect(screen.queryByRole("option", { name: COPY.addDiver })).toBeNull();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "" } });
+    expect(screen.queryByRole("option", { name: ANSWER.title })).toBeNull();
+    expect(screen.queryByRole("option", { name: "Grace Mensah" })).toBeNull();
   });
 });
