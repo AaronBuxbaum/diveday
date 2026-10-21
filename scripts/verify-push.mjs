@@ -491,7 +491,7 @@ function main() {
   const unitSelection = quick
     ? testPlan({
         changed: selection.changed,
-        readers: sourceReaders(ROOT),
+        readers: () => sourceReaders(ROOT),
         extra: decision.files.filter(existing),
       })
     : null;

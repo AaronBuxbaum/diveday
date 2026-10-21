@@ -84,12 +84,14 @@ export function testPlan({
     changed.some((file) => TEST.test(file)) &&
     changed.every((file) => TEST.test(file) || DOC.test(file));
   const documentsChanged = changed.some((file) => DOC.test(file));
+  const leafTestsOnly =
+    testsOnly && !changed.filter((file) => TEST.test(file) && existing(file)).some(isSharedTest);
+  // A leaf-test-only diff needs no filesystem contracts. Defer the whole-tree
+  // reader scan until a source/document diff actually needs that assurance.
+  readers =
+    leafTestsOnly && !documentsChanged ? [] : typeof readers === "function" ? readers() : readers;
   if (readers === null && documentsChanged) return all("source-reader discovery unavailable");
-  if (
-    testsOnly &&
-    !(documentsChanged && readers?.some((file) => !TEST.test(file))) &&
-    !changed.filter((file) => TEST.test(file) && existing(file)).some(isSharedTest)
-  ) {
+  if (leafTestsOnly && !(documentsChanged && readers?.some((file) => !TEST.test(file)))) {
     return {
       mode: "direct",
       files: [
@@ -137,7 +139,7 @@ function main() {
     workingTree: true,
   });
   if (!diff) throw new Error("could not read the change base");
-  const selection = testPlan({ changed: diff.changed, readers: sourceReaders() });
+  const selection = testPlan({ changed: diff.changed, readers: () => sourceReaders() });
   console.log(
     `test:affected against ${diff.base}: ${selection.mode}; ${selection.files.length} explicit input(s).`,
   );

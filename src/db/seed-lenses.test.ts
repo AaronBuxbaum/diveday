@@ -1,9 +1,11 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { tripLenses, trips } from "./schema";
 import { seedLenses } from "./seed-lenses";
 import { listTripLenses } from "./trip-lenses";
+
+const ctx = fileScopedShopContext();
 
 /**
  * `seedLenses` runs inside `seedDemoSchedule`, which `resetDemoShop` calls again
@@ -18,7 +20,7 @@ import { listTripLenses } from "./trip-lenses";
  */
 describe("the demo's trip tags", () => {
   it("writes the six words in the order the shop wrote them", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const lenses = await listTripLenses(db, shop.id);
 
@@ -33,7 +35,7 @@ describe("the demo's trip tags", () => {
   });
 
   it("re-runs without duplicating a word, and puts the departures back on it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await listTripLenses(db, shop.id);
     // A reset rebuilds the departures, so every assignment is cleared and has
     // to come back.
@@ -55,7 +57,7 @@ describe("the demo's trip tags", () => {
   it("leaves the storefront's first page holding one departure with no word at all", async () => {
     // The silence the visual capture needs in front of it: a row with no lens
     // renders its meta line with no leading separator and no placeholder.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const [unlensed] = await db
       .select({ lensId: trips.lensId })
@@ -70,7 +72,7 @@ describe("the demo's trip tags", () => {
   it("writes no word twice even when one was deleted and re-seeded", async () => {
     // A deleted word frees its slug for reuse, so a reset after a shop deleted
     // one writes it back rather than colliding.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [wrecks] = await db
       .select({ id: tripLenses.id })
       .from(tripLenses)
