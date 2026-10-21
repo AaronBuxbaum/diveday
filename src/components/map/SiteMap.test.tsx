@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import SiteMap, { type MapPin } from "./SiteMap";
 
+beforeAll(async () => {
+  await import("leaflet");
+});
 afterEach(cleanup);
 
 const CENTER = { latitude: 25.01, longitude: -80.37 };
@@ -30,6 +33,36 @@ function popup(container: HTMLElement) {
 }
 
 describe("SiteMap labels through Leaflet", () => {
+  it("gives each marker one named native button without an interactive wrapper", async () => {
+    const { container } = render(
+      <SiteMap center={CENTER} pins={[PIN]} shopAnchor={{ ...CENTER, name: "Blue Mantis" }} />,
+    );
+    const siteButton = await markerButton(container);
+    const shopMarker = container.querySelector(".leaflet-shop-marker");
+    const siteMarker = container.querySelector(".leaflet-site-marker");
+    expect(siteButton).toHaveAccessibleName(PIN.name);
+    for (const marker of [siteMarker, shopMarker]) {
+      expect(marker).not.toHaveAttribute("role", "button");
+      expect(marker).not.toHaveAttribute("tabindex");
+      expect(marker?.querySelectorAll("button")).toHaveLength(1);
+    }
+    expect(shopMarker?.querySelector("button")).toHaveAccessibleName("Blue Mantis");
+  });
+
+  it("opens the shop popup once for the native Enter activation sequence", async () => {
+    const { container } = render(
+      <SiteMap center={CENTER} pins={[]} shopAnchor={{ ...CENTER, name: "Blue Mantis" }} />,
+    );
+    await waitFor(() =>
+      expect(container.querySelector(".leaflet-shop-marker button")).not.toBeNull(),
+    );
+    const button = container.querySelector(".leaflet-shop-marker button");
+    if (!(button instanceof HTMLButtonElement)) throw new Error("Shop button did not mount");
+    fireEvent.keyPress(button, { key: "Enter", keyCode: 13, charCode: 13 });
+    fireEvent.click(button);
+    expect(popup(container).querySelector("strong")?.textContent).toBe("Blue Mantis");
+  });
+
   it("keeps a hostile-shaped site name inside its marker label", async () => {
     const name = '"><img src=x onerror="alert(1)"><span data-injected="yes">';
     const { container } = render(<SiteMap center={CENTER} pins={[{ ...PIN, name }]} />);
@@ -63,7 +96,10 @@ describe("SiteMap labels through Leaflet", () => {
     await waitFor(() => expect(container.querySelector(".leaflet-shop-marker")).not.toBeNull());
     const anchor = container.querySelector(".leaflet-shop-marker");
     if (!anchor) throw new Error("Shop marker did not mount");
-    fireEvent.click(anchor);
+    const button = anchor.querySelector("button");
+    if (!button) throw new Error("Shop button did not mount");
+    expect(button).toHaveAttribute("aria-label", label);
+    fireEvent.click(button);
     const content = popup(container);
     expect(content.querySelector("strong")?.textContent).toBe(label);
     expect(content.querySelector("img, b, [onerror]")).toBeNull();
@@ -95,7 +131,9 @@ describe("SiteMap labels through Leaflet", () => {
     );
     const button = await markerButton(container);
     expect(button).toHaveAttribute("aria-label", PIN.name);
+    fireEvent.keyPress(button, { key: "Enter", keyCode: 13, charCode: 13 });
     fireEvent.click(button);
+    expect(onSelectPin).toHaveBeenCalledTimes(1);
     expect(onSelectPin).toHaveBeenCalledWith(PIN.id);
     const link = popup(container).querySelector("a");
     expect(link).toHaveAttribute("href", href ?? "");
