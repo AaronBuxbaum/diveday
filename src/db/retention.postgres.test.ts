@@ -1,7 +1,8 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterEach, expect, it, vi } from "vitest";
 import type { RetainedTable } from "@/lib/retention";
 import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { setIncidentLegalHold } from "./incident-reports";
 import { isLockWaitRefusal } from "./lock-bounds";
 import {
   initializeRetentionPruneState,
@@ -9,7 +10,18 @@ import {
   pruneExpiredRecords,
   reserveRetentionPruneTable,
 } from "./retention";
-import { retentionPruneState, stripeWebhookEvents } from "./schema";
+import {
+  incidentReportAddenda,
+  incidentReportPeople,
+  incidentReports,
+  people,
+  personRoles,
+  retentionPruneState,
+  shops,
+  stripeWebhookEvents,
+  trips,
+  userAccounts,
+} from "./schema";
 
 const TABLES = Object.keys(PRUNE_ARMS) as RetainedTable[];
 afterEach(() => vi.restoreAllMocks());
@@ -159,5 +171,148 @@ describePostgres("durable retention reservations", () => {
     expect(await pg.db.select().from(retentionPruneState)).toEqual([
       { id: "weekly", nextTable: TABLES[0] },
     ]);
+  });
+});
+
+describePostgres("retention eligibility at mutation time", () => {
+  it("preserves an owner's committed legal hold and its child evidence after candidate selection", async () => {
+    const pg = await postgresTestDb();
+    const [shop] = await pg.db
+      .insert(shops)
+      .values({
+        name: "Retention Race",
+        slug: "retention-race",
+        timezone: "UTC",
+      })
+      .returning();
+    if (!shop) throw new Error("shop missing");
+    const [owner] = await pg.db
+      .insert(people)
+      .values({
+        shopId: shop.id,
+        fullName: "Owner",
+      })
+      .returning();
+    if (!owner) throw new Error("owner missing");
+    await pg.db.insert(personRoles).values({ personId: owner.id, role: "owner" });
+    await pg.db.insert(userAccounts).values({ personId: owner.id, email: "owner@example.com" });
+    const [trip] = await pg.db
+      .insert(trips)
+      .values({
+        shopId: shop.id,
+        title: "Incident departure",
+        capacity: 12,
+        startsAt: new Date("2018-01-01T08:00:00Z"),
+        endsAt: new Date("2018-01-01T12:00:00Z"),
+      })
+      .returning();
+    if (!trip) throw new Error("trip missing");
+    const [report] = await pg.db
+      .insert(incidentReports)
+      .values({
+        shopId: shop.id,
+        tripId: trip.id,
+        createdByPersonId: owner.id,
+        occurredAt: new Date("2018-01-01T10:00:00Z"),
+      })
+      .returning();
+    if (!report) throw new Error("report missing");
+    await pg.db.insert(incidentReportPeople).values({
+      shopId: shop.id,
+      reportId: report.id,
+      personId: owner.id,
+      involvement: "witness",
+    });
+    await pg.db.insert(incidentReportAddenda).values({
+      shopId: shop.id,
+      reportId: report.id,
+      authorPersonId: owner.id,
+      body: "Preserve this evidence.",
+    });
+    await pg.db.insert(retentionPruneState).values({ id: "weekly", nextTable: "incident_reports" });
+    const gate = await holdRowLock(pg, sql`lock table activity_events in share mode`);
+    const clock = vi.spyOn(performance, "now").mockReturnValue(0);
+    const hold = setIncidentLegalHold(pg.connect(), {
+      shopId: shop.id,
+      tripId: trip.id,
+      reportId: report.id,
+      actorPersonId: owner.id,
+      held: true,
+    });
+    let prune: ReturnType<typeof pruneExpiredRecords> | undefined;
+    try {
+      // The owner has updated the hold but cannot commit its required activity INSERT.
+      await waitForLockWaiters(pg.db, 1);
+      prune = pruneExpiredRecords(pg.connect(), {
+        now: new Date("2026-08-03T00:00:00Z"),
+        budgetMs: 10,
+        batchLimit: 1,
+      });
+      // The plain candidate SELECT saw the old version; DELETE waits on the owner's row lock.
+      await waitForLockWaiters(pg.db, 2);
+      clock.mockReturnValue(10);
+    } finally {
+      await gate.release();
+      await Promise.allSettled([hold, ...(prune ? [prune] : [])]);
+    }
+    expect(await hold).toEqual({ ok: true });
+    if (!prune) throw new Error("prune never started");
+    const summary = await prune;
+    expect(summary.failedTables).toEqual([]);
+    expect(summary.totalDeleted).toBe(0);
+    expect(summary.outcomes.find((outcome) => outcome.table === "incident_reports")).toMatchObject({
+      deleted: 0,
+      capped: true,
+      failed: false,
+      skipped: false,
+    });
+    const [remaining] = await pg.db
+      .select()
+      .from(incidentReports)
+      .where(eq(incidentReports.id, report.id));
+    expect(remaining?.legalHoldAt).toBeInstanceOf(Date);
+    expect(await pg.db.select().from(incidentReportPeople)).toHaveLength(1);
+    expect(await pg.db.select().from(incidentReportAddenda)).toHaveLength(1);
+  });
+
+  it("counts one actual deletion across overlapping sweeps of the same candidate", async () => {
+    const pg = await postgresTestDb();
+    await initializeRetentionPruneState(pg.db);
+    await pg.db.insert(stripeWebhookEvents).values({
+      id: "evt_overlap",
+      type: "account.updated",
+      occurredAt: new Date("2020-01-01T00:00:00Z"),
+    });
+    const gate = await holdRowLock(
+      pg,
+      sql`select id from stripe_webhook_events where id = 'evt_overlap' for update`,
+    );
+    const clock = vi.spyOn(performance, "now").mockReturnValue(0);
+    const first = pruneExpiredRecords(pg.connect(), {
+      now: new Date("2026-08-03T00:00:00Z"),
+      budgetMs: 10,
+      batchLimit: 1,
+    });
+    let second: ReturnType<typeof pruneExpiredRecords> | undefined;
+    try {
+      await waitForLockWaiters(pg.db, 1);
+      // Reset priority so the second caller reaches precisely the same candidate.
+      await pg.db.update(retentionPruneState).set({ nextTable: "stripe_webhook_events" });
+      second = pruneExpiredRecords(pg.connect(), {
+        now: new Date("2026-08-03T00:00:00Z"),
+        budgetMs: 10,
+        batchLimit: 1,
+      });
+      await waitForLockWaiters(pg.db, 2);
+      clock.mockReturnValue(10);
+    } finally {
+      await gate.release();
+      await Promise.allSettled([first, ...(second ? [second] : [])]);
+    }
+    if (!second) throw new Error("second sweep never started");
+    const summaries = await Promise.all([first, second]);
+    expect(summaries.map((summary) => summary.totalDeleted).sort()).toEqual([0, 1]);
+    expect(summaries.every((summary) => summary.failedTables.length === 0)).toBe(true);
+    expect(await pg.db.select().from(stripeWebhookEvents)).toEqual([]);
   });
 });

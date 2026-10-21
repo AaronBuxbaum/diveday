@@ -168,11 +168,10 @@ function olderThan(clock: PgColumn | SQL, cutoff: Date): SQL {
 }
 
 /**
- * Deletes at most `batchLimit` rows (`PRUNE_BATCH_LIMIT` in production) in two statements — select the
- * eligible ids, then delete exactly those — rather than one `DELETE ... LIMIT`,
- * which Postgres does not support and which a subquery would only emulate.
- * Two statements are also what makes the count returned here the count actually
- * deleted rather than an estimate.
+ * Selects at most `batchLimit` eligible candidates, then rechecks their age and
+ * extra eligibility when deleting. A committed legal hold must survive a wait
+ * on its report's row lock. RETURNING counts only this statement's deletions;
+ * the candidate count still determines whether more eligible work may remain.
  */
 async function pruneBatch(
   db: AppDb,
@@ -182,24 +181,31 @@ async function pruneBatch(
   batchLimit: number = PRUNE_BATCH_LIMIT,
 ): Promise<PruneOutcome> {
   const retentionDays = RETENTION_DAYS[table];
+  const eligible = and(olderThan(arm.clock, retentionCutoff(table, now)), arm.extraWhere);
   try {
     const rows = (await db
       .select({ id: arm.id })
       .from(arm.from)
-      .where(and(olderThan(arm.clock, retentionCutoff(table, now)), arm.extraWhere))
+      .where(eligible)
       .limit(batchLimit)) as { id: string }[];
     if (rows.length === 0) {
       return { table, deleted: 0, capped: false, failed: false, skipped: false, retentionDays };
     }
-    await db.delete(arm.from).where(
-      inArray(
-        arm.id,
-        rows.map((row) => row.id),
-      ),
-    );
+    const deleted = await db
+      .delete(arm.from)
+      .where(
+        and(
+          inArray(
+            arm.id,
+            rows.map((row) => row.id),
+          ),
+          eligible,
+        ),
+      )
+      .returning({ id: arm.id });
     return {
       table,
-      deleted: rows.length,
+      deleted: deleted.length,
       capped: rows.length >= batchLimit,
       failed: false,
       skipped: false,

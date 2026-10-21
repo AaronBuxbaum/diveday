@@ -97,8 +97,8 @@ not merely a code review.
   no timer of its own ([20260721-scheduled-reminder-cadence](20260721-scheduled-reminder-cadence.md)).
 - **Add the prune to the existing daily tick** — would run a table scan 364 days a year to delete
   nothing, and couples a retention failure to the reminders monitor.
-- **`DELETE ... LIMIT`** — Postgres has no such thing; the two-statement select-then-delete also
-  makes the reported count the count actually deleted rather than an estimate.
+- **`DELETE ... LIMIT`** — Postgres has no such thing; select candidates with a bounded query,
+  then delete still-eligible candidates and count the rows returned by `DELETE ... RETURNING`.
 
 ## Consequences
 
@@ -218,3 +218,16 @@ budget-limited runs retain HTTP 200. Checkpoint failures stop admissions and use
 The machinery row has a primary key and a singleton check, contains no personal data or foreign
 keys, and is explicitly outside shop export, deletion, person erasure and age-based retention.
 It is created lazily, requires no demo seed, and does not change eligibility or retention windows.
+
+
+## Amendment 2026-10-21 — eligibility survives candidate selection
+
+Weekly batches reapply the same captured age cutoff and every extra eligibility predicate in
+`DELETE`, alongside the bounded candidate IDs. In particular, a legal hold committed while the
+delete waits for its report row lock protects the report and its cascaded evidence. This does not
+serialize a hold that starts after deletion wins the row lock.
+
+Counts come from `DELETE ... RETURNING`, so overlapping sweeps cannot both count the same deleted
+row. A full candidate batch remains capped even when fewer candidates are deleted: candidates
+protected or changed since selection do not prove that eligible rows behind the limit are drained.
+The existing admission budget, checkpoint commit boundary and retention windows stay unchanged.

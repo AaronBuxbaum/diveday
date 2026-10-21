@@ -1,11 +1,11 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { RETENTION_DAYS, type RetainedTable } from "@/lib/retention";
 import { unseededTestDb } from "@/test/db";
 import { PRUNE_ARMS, PRUNE_TIME_BUDGET_MS, pruneExpiredRecords } from "./retention";
-import { retentionPruneState, stripeWebhookEvents } from "./schema";
+import { notificationSendQueue, retentionPruneState, shops, stripeWebhookEvents } from "./schema";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = new Date("2026-08-03T00:00:00.000Z");
@@ -73,6 +73,87 @@ describe("pruneExpiredRecords under a time budget", () => {
     expect(visited.filter((table) => table === "integration_events")).toHaveLength(1);
     expect(summary.outcomes.map((outcome) => outcome.table)).toEqual(TABLES);
     expect(summary.skippedTables).toEqual([]);
+  });
+
+  it("rechecks age at deletion and revisits a full candidate batch that deleted nothing", async () => {
+    await backlog(2);
+    // PGlite queues both real queries on one connection. Queue a competing
+    // update at DELETE's logging boundary, before that statement reaches the DB.
+    const changes: Promise<unknown>[] = [];
+    let refreshed = false;
+    let batches = 0;
+    const summary = await pruneExpiredRecords(
+      caller((query) => {
+        if (batchTable(query) === "stripe_webhook_events") batches += 1;
+        if (!refreshed && query.startsWith('delete from "stripe_webhook_events"')) {
+          refreshed = true;
+          changes.push(
+            db.$client.query("update stripe_webhook_events set occurred_at = $1 where id = $2", [
+              NOW,
+              "evt_backlog_0",
+            ]),
+          );
+        }
+      }),
+      { now: NOW, batchLimit: 1 },
+    );
+    await Promise.all(changes);
+    expect(webhookOutcome(summary)).toMatchObject({ deleted: 1, capped: false, failed: false });
+    expect(batches).toBe(3);
+    expect(await db.select().from(stripeWebhookEvents)).toMatchObject([
+      { id: "evt_backlog_0", occurredAt: NOW },
+    ]);
+    expect(
+      await db
+        .select()
+        .from(stripeWebhookEvents)
+        .where(eq(stripeWebhookEvents.id, "evt_backlog_1")),
+    ).toEqual([]);
+  });
+
+  it("rechecks extra eligibility when a completed send becomes queued before deletion", async () => {
+    const [shop] = await db
+      .insert(shops)
+      .values({ name: "Retention", slug: "retention", timezone: "UTC" })
+      .returning();
+    if (!shop) throw new Error("shop missing");
+    const [send] = await db
+      .insert(notificationSendQueue)
+      .values({
+        shopId: shop.id,
+        idempotencyKey: "retention-send",
+        status: "sent",
+        nextAttemptAt: STALE,
+        updatedAt: STALE,
+      })
+      .returning();
+    if (!send) throw new Error("send missing");
+    await db
+      .insert(retentionPruneState)
+      .values({ id: "weekly", nextTable: "notification_send_queue" });
+    let clock = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+    const changes: Promise<unknown>[] = [];
+    const summary = await pruneExpiredRecords(
+      caller((query) => {
+        if (query.startsWith('delete from "notification_send_queue"')) {
+          changes.push(
+            db.$client.query("update notification_send_queue set status = 'queued' where id = $1", [
+              send.id,
+            ]),
+          );
+          clock = 10;
+        }
+      }),
+      { now: NOW, budgetMs: 10, batchLimit: 1 },
+    );
+    await Promise.all(changes);
+    expect(
+      summary.outcomes.find((outcome) => outcome.table === "notification_send_queue"),
+    ).toMatchObject({ deleted: 0, capped: true, failed: false, skipped: false });
+    expect(await db.select().from(notificationSendQueue)).toMatchObject([
+      { id: send.id, status: "queued" },
+    ]);
   });
 
   it("admits no table work with zero budget and reports unknown eligibility", async () => {
