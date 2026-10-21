@@ -5,9 +5,9 @@ import { tripPathByTitle } from "./helpers";
 const REEF = "Two-Tank Reef — Molasses & French";
 const BOAT = "Mantis I";
 
-/** The fleet row whose name box holds this boat. */
+/** The fleet disclosure whose summary names this boat. */
 function boatRow(page: Page, name: string) {
-  return page.locator("form").filter({ has: page.locator(`input[name="name"][value="${name}"]`) });
+  return page.locator("details").filter({ has: page.getByRole("heading", { name, exact: true }) });
 }
 
 /**
@@ -30,14 +30,17 @@ test("a boat's call sign, MMSI and working channel reach the emergency card of t
   // A mistyped MMSI is refused with its own sentence, never the name-and-
   // capacity one that sent the owner looking at the two fields that were fine.
   await page.goto(`${shop}/boats`);
+  await boatRow(page, BOAT).locator("summary").click();
   await boatRow(page, BOAT).getByLabel("MMSI").fill("33801");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
   await expect(page.getByText("Check the call sign")).toBeVisible();
+  await expect(boatRow(page, BOAT)).toHaveAttribute("open");
 
   // 16 is every boat's distress channel, never its working one (dock review S4).
   await boatRow(page, BOAT).getByLabel("Working channel").fill("16");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
   await expect(page.getByText("Channels 16 and 70")).toBeVisible();
+  await expect(boatRow(page, BOAT)).toHaveAttribute("open");
 
   // Typed the way it is read over the radio; stored the way it is printed.
   await boatRow(page, BOAT).getByLabel("Call sign").fill("wdm 3301");
@@ -46,6 +49,8 @@ test("a boat's call sign, MMSI and working channel reach the emergency card of t
   await boatRow(page, BOAT).getByLabel("Working channel").fill(" 68 ");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toBeVisible();
+  await page.reload();
+  await boatRow(page, BOAT).locator("summary").click();
   await expect(boatRow(page, BOAT).getByLabel("Call sign")).toHaveValue("WDM 3301");
   await expect(boatRow(page, BOAT).getByLabel("MMSI")).toHaveValue("338012345");
   await expect(boatRow(page, BOAT).getByLabel("Working channel")).toHaveValue("68");
