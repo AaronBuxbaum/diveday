@@ -3,7 +3,7 @@
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mapTileLayer } from "@/lib/carto";
-import { clusterMapPoints } from "./map-clustering";
+import { clusterMapPoints, mapTargetIsVisible, separateShopAnchor } from "./map-clustering";
 
 export type MapPin = {
   id: string;
@@ -126,7 +126,7 @@ export default function SiteMap({
       return;
     }
 
-    mapInstance.fitBounds(allCoordinates, { padding: [40, 40], maxZoom: 11 });
+    mapInstance.fitBounds(allCoordinates, { padding: [68, 68], maxZoom: 11 });
   }, [allCoordinates, mapInstance, zoom]);
 
   // Render only pins near the viewport and cluster close points to keep marker
@@ -153,33 +153,14 @@ export default function SiteMap({
       }
     };
 
-    const renderMarkers = (L: typeof import("leaflet")) => {
+    const renderMarkers = (L: typeof import("leaflet"), openSelectedPopup = false) => {
       if (isCancelled || mapRef.current !== mapInstance) return;
       clearMarkers();
-
-      if (shopAnchor) {
-        const button = createShopButton(shopAnchor.name || shopLabel);
-        const icon = L.divIcon({
-          html: button,
-          className: "leaflet-shop-marker",
-          iconSize: [32, 32],
-          iconAnchor: [16, 16],
-          popupAnchor: [0, -18],
-        });
-        const marker = L.marker([shopAnchor.latitude, shopAnchor.longitude], {
-          icon,
-          keyboard: false,
-          zIndexOffset: 500,
-        }).addTo(mapInstance);
-        const popup = document.createElement("strong");
-        popup.textContent = shopAnchor.name || shopLabel;
-        marker.bindPopup(popup);
-        markersRef.current.set("shop-anchor", marker);
-      }
 
       const visibleBounds = mapInstance.getBounds().pad(0.35);
       const mapSize = mapInstance.getSize();
       const inViewport = mapSize.x > 0 && mapSize.y > 0;
+      const controlRectangles = mapControlRectangles(mapInstance.getContainer());
       const visiblePoints = pins
         .filter((pin) => !inViewport || visibleBounds.contains([pin.latitude, pin.longitude]))
         .map((pin) => {
@@ -190,24 +171,71 @@ export default function SiteMap({
           return { pin, x: projected.x, y: projected.y };
         });
 
-      const groups = clusterMapPoints(visiblePoints, selectedPinId);
+      const shopPoint =
+        shopAnchor && inViewport
+          ? mapInstance.project([shopAnchor.latitude, shopAnchor.longitude], mapInstance.getZoom())
+          : null;
+      const { groups, showShopAnchor } = separateShopAnchor(
+        clusterMapPoints(visiblePoints, selectedPinId),
+        visiblePoints,
+        shopPoint,
+        (pin) =>
+          mapTargetIsVisible(
+            mapInstance.latLngToContainerPoint([pin.latitude, pin.longitude]),
+            58,
+            mapSize,
+            controlRectangles,
+          ),
+      );
+      // Geographic shop/site/cluster positions and their distinct roles do
+      // not form a uniform control row. Size, focus and overlap rules still apply.
+      if (
+        shopAnchor &&
+        showShopAnchor &&
+        (!inViewport ||
+          mapTargetIsVisible(
+            mapInstance.latLngToContainerPoint([shopAnchor.latitude, shopAnchor.longitude]),
+            32,
+            mapSize,
+            controlRectangles,
+          ))
+      ) {
+        markersRef.current.set("shop-anchor", addShopMarker(L, mapInstance, shopAnchor, shopLabel));
+      }
       groups.forEach((group, groupIndex) => {
+        const pin = group[0];
+        if (!pin) return;
+        const isSelected = pin.id === selectedPinId;
+        const position: [number, number] = [pin.latitude, pin.longitude];
+        if (
+          inViewport &&
+          !isSelected &&
+          !mapTargetIsVisible(
+            mapInstance.latLngToContainerPoint(position),
+            group.length > 1 ? 58 : 32,
+            mapSize,
+            controlRectangles,
+          )
+        ) {
+          return;
+        }
+
         if (group.length > 1) {
           const count = group.length;
           const label = `${count} ${clusterLabel}`;
           const icon = L.divIcon({
             html: createClusterButton(count, label),
             className: "leaflet-site-cluster-marker",
-            iconSize: [42, 42],
-            iconAnchor: [21, 21],
+            iconSize: [44, 44],
+            iconAnchor: [22, 22],
           });
-          const marker = L.marker(
-            [
-              group.reduce((sum, pin) => sum + pin.latitude, 0) / count,
-              group.reduce((sum, pin) => sum + pin.longitude, 0) / count,
-            ],
-            { icon, keyboard: false, zIndexOffset: 600 },
-          ).addTo(mapInstance);
+          // The first point is a real representative with clear target
+          // spacing; averaging positions would put neighbors together again.
+          const marker = L.marker(position, {
+            icon,
+            keyboard: false,
+            zIndexOffset: 600,
+          }).addTo(mapInstance);
           const tooltip = document.createElement("span");
           tooltip.textContent = label;
           marker.bindTooltip(tooltip, {
@@ -239,10 +267,6 @@ export default function SiteMap({
           return;
         }
 
-        const pin = group[0];
-        if (!pin) return;
-
-        const isSelected = pin.id === selectedPinId;
         const colorClass =
           pin.tone === "warning"
             ? "bg-warning-strong text-surface"
@@ -277,7 +301,7 @@ export default function SiteMap({
         });
         marker.on("click", () => onSelectPin?.(pin.id));
         markersRef.current.set(`site:${pin.id}`, marker);
-        if (isSelected) marker.openPopup();
+        if (isSelected && openSelectedPopup) marker.openPopup();
       });
     };
 
@@ -286,12 +310,19 @@ export default function SiteMap({
       updateQueued = true;
       queueMicrotask(() => {
         updateQueued = false;
-        if (leaflet && !isCancelled) renderMarkers(leaflet);
+        // Leaflet can emit moveend during auto-pan before popupopen. Check
+        // again here so that queued work cannot clear the popup it just opened.
+        if (leaflet && !isCancelled && !popupOpen) renderMarkers(leaflet);
       });
     };
 
     const handleViewEnd = () => {
       if (!popupOpen) scheduleRender();
+    };
+    const handleResize = () => {
+      markersRef.current.forEach((marker) => {
+        if (marker.isPopupOpen()) marker.getPopup()?.update();
+      });
     };
     const handlePopupOpen = () => {
       popupOpen = true;
@@ -305,14 +336,16 @@ export default function SiteMap({
       if (isCancelled || mapRef.current !== mapInstance) return;
       leaflet = L;
       mapInstance.on("zoomend moveend", handleViewEnd);
+      mapInstance.on("resize", handleResize);
       mapInstance.on("popupopen", handlePopupOpen);
       mapInstance.on("popupclose", handlePopupClose);
-      renderMarkers(L);
+      renderMarkers(L, true);
     });
 
     return () => {
       isCancelled = true;
       mapInstance.off("zoomend moveend", handleViewEnd);
+      mapInstance.off("resize", handleResize);
       mapInstance.off("popupopen", handlePopupOpen);
       mapInstance.off("popupclose", handlePopupClose);
     };
@@ -335,12 +368,49 @@ export default function SiteMap({
   return <div ref={containerRef} className={className} />;
 }
 
+function mapControlRectangles(container: HTMLElement) {
+  const mapRectangle = container.getBoundingClientRect();
+  return Array.from(container.querySelectorAll(".leaflet-control"))
+    .map((control) => control.getBoundingClientRect())
+    .filter((control) => control.width > 0 && control.height > 0)
+    .map((control) => ({
+      left: control.left - mapRectangle.left,
+      right: control.right - mapRectangle.left,
+      top: control.top - mapRectangle.top,
+      bottom: control.bottom - mapRectangle.top,
+    }));
+}
+
+function addShopMarker(
+  L: typeof import("leaflet"),
+  map: LeafletMap,
+  anchor: ShopAnchor,
+  label: string,
+): LeafletMarker {
+  const icon = L.divIcon({
+    html: createShopButton(anchor.name || label),
+    className: "leaflet-shop-marker",
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -18],
+  });
+  const marker = L.marker([anchor.latitude, anchor.longitude], {
+    icon,
+    keyboard: false,
+    zIndexOffset: 500,
+  }).addTo(map);
+  const popup = document.createElement("strong");
+  popup.textContent = anchor.name || label;
+  return marker.bindPopup(popup);
+}
+
 function createShopButton(label: string): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className =
     "flex items-center justify-center size-8 rounded-full bg-foreground text-surface shadow-md ring-2 ring-surface border border-border";
   button.setAttribute("aria-label", label);
+  button.addEventListener("mousedown", (event) => event.stopPropagation());
   button.addEventListener("keypress", (event) => event.stopPropagation());
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -373,6 +443,7 @@ function createSiteButton(pin: MapPin, colorClass: string, ringClass: string): H
   button.type = "button";
   button.className = `group flex items-center justify-center size-7 rounded-full ${colorClass} shadow-md border border-border transition-transform ${ringClass}`;
   button.setAttribute("aria-label", pin.name);
+  button.addEventListener("mousedown", (event) => event.stopPropagation());
   button.addEventListener("keypress", (event) => event.stopPropagation());
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -391,6 +462,7 @@ function createClusterButton(count: number, label: string): HTMLButtonElement {
   button.type = "button";
   button.className = "leaflet-site-cluster";
   button.setAttribute("aria-label", label);
+  button.addEventListener("mousedown", (event) => event.stopPropagation());
   button.addEventListener("keypress", (event) => event.stopPropagation());
   const countLabel = document.createElement("span");
   countLabel.textContent = String(count);

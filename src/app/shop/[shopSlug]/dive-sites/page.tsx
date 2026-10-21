@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import type { MapPin, ShopAnchor } from "@/components/map/SiteMap";
+import type { MapPin } from "@/components/map/SiteMap";
+import { shopMapAnchor } from "@/components/map/shop-map-anchor";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -17,7 +18,6 @@ import {
   groupSiteLibrary,
   listDiveSiteMapRows,
   listDiveSitesPage,
-  shopSearchAnchor,
 } from "@/db/dive-sites";
 import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
@@ -26,7 +26,6 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { timeZoneAnchor } from "@/lib/timezones";
 import { CatalogView } from "./_components/CatalogView";
 import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
@@ -93,7 +92,7 @@ export default async function DiveSitesPage({
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
   const requestedPage = Number.parseInt(page ?? "", 10);
   const query = q?.trim() ?? "";
-  const [sitePage, librarySize, catalogSize, rawAnchor, mapRows] = await Promise.all([
+  const [sitePage, librarySize, catalogSize, mapRows] = await Promise.all([
     listDiveSitesPage(
       db,
       shop.id,
@@ -107,7 +106,6 @@ export default async function DiveSitesPage({
     // The tail door's number, over the whole published catalog — never the
     // `total` of a page nobody has fetched yet (ADR 20260827-the-shops-shelves).
     countGlobalDiveSiteTemplates(db),
-    shopSearchAnchor(db, shop.id),
     listDiveSiteMapRows(db, shop.id),
   ]);
   const sites = sitePage.rows;
@@ -121,14 +119,7 @@ export default async function DiveSitesPage({
     sites.map((site) => site.sourceTemplateId).filter((id): id is string => Boolean(id)),
   );
 
-  const anchorCoords = rawAnchor ?? timeZoneAnchor(shop.timezone);
-  const shopAnchor: ShopAnchor | null = anchorCoords
-    ? {
-        latitude: anchorCoords.latitude,
-        longitude: anchorCoords.longitude,
-        name: shop.name,
-      }
-    : null;
+  const shopAnchor = shopMapAnchor(shop);
 
   const pins: MapPin[] = mapRows
     .filter(

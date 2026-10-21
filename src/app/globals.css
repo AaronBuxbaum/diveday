@@ -2364,8 +2364,8 @@ details[open]::details-content {
 }
 .leaflet-site-cluster {
   display: flex;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   align-items: center;
   justify-content: center;
   border: 3px solid var(--surface);

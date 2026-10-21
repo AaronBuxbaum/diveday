@@ -28,11 +28,46 @@
     },
     "domains": {
       "next": "recommended",
+      "playwright": "recommended",
       "react": "recommended",
       "test": "recommended"
     }
   },
   "overrides": [
+    {
+      "includes": [
+        "**",
+        "!e2e/**",
+        "!scripts/persona-bots/**",
+        "!scripts/simulate-day/**",
+        "!scripts/capture-session.mjs",
+        "!scripts/contact-sheet.mjs",
+        "!scripts/screenshot.mjs",
+        "!scripts/pixel-probe/collect.mjs",
+        "!scripts/pixel-probe/probe.mjs",
+        "!scripts/pixel-probe/states.mjs"
+      ],
+      "linter": {
+        "domains": {
+          "playwright": "none"
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test.mjs",
+        "src/db/request-cache-scope.probe.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noComponentHookFactories": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["src/app/globals.css"],
       "linter": {
@@ -141,6 +176,16 @@
       "quoteStyle": "double",
       "semicolons": "always",
       "trailingCommas": "all"
+    }
+  },
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    }
+  },
+  "yaml": {
+    "formatter": {
+      "enabled": false
     }
   },
   "assist": {

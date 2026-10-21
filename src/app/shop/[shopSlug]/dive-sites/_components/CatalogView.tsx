@@ -1,18 +1,14 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
-import type { MapPin, ShopAnchor } from "@/components/map/SiteMap";
+import type { MapPin } from "@/components/map/SiteMap";
+import { shopMapAnchor } from "@/components/map/shop-map-anchor";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
-import {
-  getGlobalDiveSiteTemplate,
-  listGlobalDiveSiteMapRows,
-  listGlobalDiveSiteTemplates,
-  shopSearchAnchor,
-} from "@/db/dive-sites";
+import { getGlobalDiveSiteTemplate, listGlobalDiveSiteTemplates } from "@/db/dive-sites";
 import type { Shop } from "@/db/schema";
 import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
@@ -22,8 +18,8 @@ import { parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { joinFacts } from "@/lib/format";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
-import { timeZoneAnchor } from "@/lib/timezones";
 import { importDiveSiteTemplateAction } from "../actions";
+import { cachedCatalogMapRows } from "../catalog-map-cache";
 import { CatalogMapLayout } from "./CatalogMapLayout";
 import { TemplatePreview } from "./TemplatePreview";
 
@@ -79,13 +75,10 @@ export async function CatalogView({
     );
   }
 
-  const [catalog, rawAnchor] = await Promise.all([
-    listGlobalDiveSiteTemplates(db, {
-      page: Number.parseInt(page ?? "", 10),
-      shop,
-    }),
-    shopSearchAnchor(db, shop.id),
-  ]);
+  const catalog = await listGlobalDiveSiteTemplates(db, {
+    page: Number.parseInt(page ?? "", 10),
+    shop,
+  });
   const pageHref = (target: number) => (target > 1 ? `${catalogHref}&page=${target}` : catalogHref);
 
   const previewSlug = slug?.trim();
@@ -103,16 +96,9 @@ export async function CatalogView({
     );
   }
 
-  const mapRows = await listGlobalDiveSiteMapRows(db);
+  const mapRows = await cachedCatalogMapRows(catalog.mapRevision);
 
-  const anchorCoords = rawAnchor ?? timeZoneAnchor(shop.timezone);
-  const shopAnchor: ShopAnchor | null = anchorCoords
-    ? {
-        latitude: anchorCoords.latitude,
-        longitude: anchorCoords.longitude,
-        name: shop.name,
-      }
-    : null;
+  const shopAnchor = shopMapAnchor(shop);
 
   const catalogPins: MapPin[] = mapRows.map((site) => ({
     id: site.templateId,

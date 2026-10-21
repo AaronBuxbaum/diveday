@@ -898,6 +898,8 @@ export type GlobalDiveSiteTemplateRow = {
 
 export type GlobalDiveSiteTemplatePage = {
   templates: GlobalDiveSiteTemplateRow[];
+  /** Shared map cache key for the complete published catalog, independent of this page. */
+  mapRevision: string;
   page: number;
   pageCount: number;
   pageSize: number;
@@ -940,15 +942,29 @@ export async function listGlobalDiveSiteTemplates(
     eq(globalDiveSiteVersions.version, globalDiveSites.currentVersion),
   );
 
+  let mapRevision = "";
   const paged = await offsetPage({
     page: options.page,
     pageSize: options.limit ?? GLOBAL_DIVE_SITE_PAGE_SIZE,
     countRows: async () => {
       const [counted] = await db
-        .select({ total: count() })
+        .select({
+          total: count(),
+          // Published briefings are immutable: changing a briefing publishes
+          // a new version. Hash only their small identities, not every JSON
+          // briefing. The pager already needs this complete-catalog scan, so
+          // the map's revision adds no statement or database round trip.
+          mapRevision: sql<string>`md5(coalesce(string_agg(
+            ${globalDiveSites.id}::text || ':' || ${globalDiveSites.slug} || ':' ||
+            ${globalDiveSites.currentVersion}::text || ':' || ${globalDiveSiteVersions.id}::text,
+            ',' order by ${globalDiveSites.id}
+          ), ''))`,
+        })
         .from(globalDiveSites)
         .innerJoin(globalDiveSiteVersions, currentVersionJoin);
-      return counted?.total ?? 0;
+      if (!counted) throw new Error("listGlobalDiveSiteTemplates: catalog summary returned no row");
+      mapRevision = counted.mapRevision;
+      return counted.total;
     },
     fetchRows: async (offset, limit) => {
       const order = shopCoordinates
@@ -970,6 +986,7 @@ export async function listGlobalDiveSiteTemplates(
   const unit = options.shop?.depthUnit;
   return {
     templates: unit ? paged.rows.map((row) => templateInUnit(row, unit)) : paged.rows,
+    mapRevision,
     page: paged.page,
     pageCount: paged.pageCount,
     pageSize: paged.pageSize,

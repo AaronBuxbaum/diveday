@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import type { Map as LeafletMap } from "leaflet";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import SiteMap, { type MapPin } from "./SiteMap";
 
 beforeAll(async () => {
   await import("leaflet");
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const CENTER = { latitude: 25.01, longitude: -80.37 };
 const PIN: MapPin = {
@@ -73,6 +77,42 @@ describe("SiteMap labels through Leaflet", () => {
     fireEvent.click(button);
     expect(popup(container).querySelector("strong")?.textContent).toBe("Blue Mantis");
   });
+
+  it.each(["site", "shop", "cluster"] as const)(
+    "does not let %s pointer activation focus the map or scroll the page",
+    async (role) => {
+      const { container } = render(
+        <SiteMap
+          center={CENTER}
+          pins={role === "shop" ? [] : role === "site" ? [PIN] : [PIN, { ...PIN, id: "nearby" }]}
+          shopAnchor={role === "shop" ? { ...CENTER, name: "Blue Mantis" } : null}
+          clusterLabel="dive sites"
+        />,
+      );
+      const selector = {
+        site: ".leaflet-site-marker button",
+        shop: ".leaflet-shop-marker button",
+        cluster: "button.leaflet-site-cluster",
+      }[role];
+      await waitFor(() => expect(container.querySelector(selector)).not.toBeNull());
+      const button = container.querySelector(selector);
+      const map = container.querySelector(".leaflet-container");
+      if (!(button instanceof HTMLButtonElement) || !(map instanceof HTMLElement)) {
+        throw new Error("Map target did not mount");
+      }
+      const focus = vi.spyOn(map, "focus");
+      const scroll = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
+      button.focus();
+      fireEvent.mouseDown(button, { button: 0 });
+      fireEvent.mouseUp(button, { button: 0 });
+
+      expect(focus).not.toHaveBeenCalled();
+      expect(scroll).not.toHaveBeenCalled();
+      expect(button).toHaveFocus();
+      fireEvent.click(button);
+      if (role !== "cluster") expect(popup(container)).toBeInTheDocument();
+    },
+  );
 
   it("keeps a hostile-shaped site name inside its marker label", async () => {
     const name = '"><img src=x onerror="alert(1)"><span data-injected="yes">';
@@ -187,5 +227,158 @@ describe("SiteMap labels through Leaflet", () => {
       expect(container.querySelector(".leaflet-tooltip")?.textContent).toContain(PIN.name);
       expect(container.querySelector(".leaflet-tooltip")?.textContent).toContain(PIN.subtitle);
     });
+  });
+
+  it("keeps a selected popup mounted through synchronous auto-pan and lets it close", async () => {
+    const L = await import("leaflet");
+    const dimensions = { width: 640, height: 440 };
+    const getContainer = vi.spyOn(L.Map.prototype, "getContainer");
+    // Supply the layout metrics jsdom cannot measure; Leaflet performs the
+    // projection, popup positioning, auto-pan and event dispatch itself.
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("leaflet-container") ? dimensions.width : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("leaflet-container") ? dimensions.height : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("leaflet-popup") ||
+        this.classList.contains("leaflet-popup-content")
+        ? 264
+        : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this.classList.contains("leaflet-popup")) return 260;
+      return this.classList.contains("leaflet-popup-content") ? 240 : 0;
+    });
+    const originalPanBy = L.Map.prototype.panBy;
+    vi.spyOn(L.Map.prototype, "panBy").mockImplementation(function (
+      this: LeafletMap,
+      offset,
+      options,
+    ) {
+      return originalPanBy.call(this, offset, { ...options, animate: false });
+    });
+    const events = vi.spyOn(L.Map.prototype, "fire");
+    const { container } = render(
+      <SiteMap center={CENTER} pins={[PIN]} selectedPinId={PIN.id} clusterLabel="dive sites" />,
+    );
+    await markerButton(container);
+    await waitFor(() => expect(popup(container).querySelector("h2")).toHaveTextContent(PIN.name));
+    const eventNames = events.mock.calls.map(([name]) => name);
+    const autoPanIndex = eventNames.indexOf("autopanstart");
+    expect(autoPanIndex).toBeGreaterThan(-1);
+    expect(eventNames.indexOf("moveend", autoPanIndex)).toBeLessThan(
+      eventNames.indexOf("popupopen"),
+    );
+    expect(eventNames.filter((name) => name === "popupopen")).toHaveLength(1);
+    expect(eventNames.filter((name) => name === "popupclose")).toHaveLength(0);
+
+    const map = getContainer.mock.contexts[0];
+    if (!(map instanceof L.Map)) throw new Error("Leaflet map did not mount");
+    const popupElement = container.querySelector(".leaflet-site-popup");
+    if (!(popupElement instanceof HTMLElement)) throw new Error("Popup did not mount");
+    const selectedButton = container.querySelector(".leaflet-site-marker button");
+    map.panBy([-120, 0], { animate: false });
+    dimensions.width = 320;
+    map.invalidateSize({ animate: false });
+    await Promise.resolve();
+    const position = map.layerPointToContainerPoint(L.DomUtil.getPosition(popupElement));
+    const left = position.x + Number.parseFloat(popupElement.style.left);
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(left + popupElement.offsetWidth).toBeLessThanOrEqual(dimensions.width);
+    expect(container.querySelector(".leaflet-site-popup")).toBe(popupElement);
+    expect(container.querySelector(".leaflet-site-marker button")).toBe(selectedButton);
+
+    const close = container.querySelector(".leaflet-popup-close-button");
+    if (!(close instanceof HTMLElement)) throw new Error("Popup close button did not mount");
+    fireEvent.click(close);
+    await Promise.resolve();
+    expect(container.querySelector(".leaflet-site-popup")).toBeNull();
+    expect(container.querySelector(".leaflet-site-marker button")).toHaveClass("ring-4");
+    dimensions.width = 640;
+    map.invalidateSize({ animate: false });
+    await Promise.resolve();
+    expect(container.querySelector(".leaflet-site-popup")).toBeNull();
+  });
+
+  it("keeps every clustered site reachable without overlapping the shop target", async () => {
+    const L = await import("leaflet");
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("leaflet-container") ? 640 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("leaflet-container") ? 440 : 0;
+    });
+    const { container } = render(
+      <SiteMap
+        center={CENTER}
+        pins={[PIN, { ...PIN, id: "neighbor" }]}
+        shopAnchor={{ ...CENTER, name: "Blue Mantis" }}
+        clusterLabel="dive sites"
+      />,
+    );
+    await waitFor(() =>
+      expect(container.querySelector(".leaflet-site-cluster")).toHaveAccessibleName("2 dive sites"),
+    );
+    const cluster = container.querySelector(".leaflet-site-cluster-marker");
+    const shop = container.querySelector(".leaflet-shop-marker");
+    if (!(cluster instanceof HTMLElement)) throw new Error("Cluster marker did not mount");
+    if (shop instanceof HTMLElement) {
+      // Leaflet supplies both actual projected centers, independent of
+      // jsdom's absent CSS layout. Their 44px/32px targets need 38px clearance.
+      expect(
+        L.DomUtil.getPosition(cluster).distanceTo(L.DomUtil.getPosition(shop)),
+      ).toBeGreaterThanOrEqual(38);
+    }
+  });
+
+  it("keeps clustered site labels literal at maximum zoom", async () => {
+    const name = '<img src=x onerror="alert(1)"> Reef & <b>Friends</b>';
+    const subtitle = '<b onmouseover="alert(2)">Bank</b>';
+    const { container } = render(
+      <SiteMap
+        center={CENTER}
+        pins={[
+          { ...PIN, name, subtitle },
+          { ...PIN, id: "neighbor", name: "Nearby reef" },
+        ]}
+        clusterLabel="dive sites"
+      />,
+    );
+    const clusterButton = async () => {
+      await waitFor(() => expect(container.querySelector(".leaflet-site-cluster")).not.toBeNull());
+      const button = container.querySelector(".leaflet-site-cluster");
+      if (!(button instanceof HTMLButtonElement)) throw new Error("Cluster button did not mount");
+      return button;
+    };
+
+    // Three genuine cluster activations advance 11 -> 14 -> 17 -> 19; the
+    // next activation opens the still-coincident sites' list.
+    for (const _zoom of [14, 17, 19]) {
+      const button = await clusterButton();
+      expect(button).toHaveAccessibleName("2 dive sites");
+      fireEvent.click(button);
+      await waitFor(() => expect(button).not.toBeInTheDocument());
+    }
+    fireEvent.click(await clusterButton());
+    const content = popup(container);
+    expect(content.querySelector(".leaflet-site-cluster-card__name")?.textContent).toBe(name);
+    expect(content.querySelector(".leaflet-site-cluster-card__location")?.textContent).toBe(
+      subtitle,
+    );
+    expect(content.querySelector("img, b, [onerror], [onmouseover]")).toBeNull();
   });
 });

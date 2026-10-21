@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, openTripAbout, openTripMore } from "./helpers";
 
@@ -1061,8 +1062,10 @@ test("map labels keep saved site text literal and details navigation works", asy
   await page.goto(`/shop/${privateShop.slug}/dive-sites/new`);
   await page.getByLabel("Name").fill(name);
   await page.getByRole("textbox", { name: "Location" }).fill(subtitle);
-  await page.getByLabel("Latitude").fill("25.05");
-  await page.getByLabel("Longitude").fill("-80.37");
+  // Keep this label/keyboard/navigation case separate from the seeded Keys
+  // cluster. Clustered literal text is covered through Leaflet in SiteMap.test.
+  await page.getByLabel("Latitude").fill("25.30");
+  await page.getByLabel("Longitude").fill("-80.00");
   await page.getByRole("button", { name: "Save dive site" }).click();
   await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
@@ -1071,16 +1074,8 @@ test("map labels keep saved site text literal and details navigation works", asy
   await page.goto(`/shop/${privateShop.slug}/dive-sites`);
   const marker = page.locator(".leaflet-site-marker").getByRole("button", { name, exact: true });
   await expect(marker).toBeVisible();
-  await marker.focus();
-  await marker.press("Enter");
-  await expect(marker).toHaveClass(/ring-4/);
   const popup = page.locator(".leaflet-popup-content");
-  await expect(popup).toHaveCount(1);
-  await expect(popup.getByText(name, { exact: true })).toBeVisible();
-  await expect(popup.getByText(subtitle, { exact: true })).toBeVisible();
-  await expect(popup.locator("img, b, [onerror], [onmouseover]")).toHaveCount(0);
-  await page.getByRole("button", { name: "Close popup" }).click();
-  await expect(popup).toHaveCount(0);
+  // Check the shop before another site's popup auto-pan moves the viewport.
   const shopMarker = page.locator(".leaflet-shop-marker button").first();
   await expect(shopMarker).toHaveAccessibleName(/\S/);
   await shopMarker.focus();
@@ -1089,9 +1084,20 @@ test("map labels keep saved site text literal and details navigation works", asy
   await page.getByRole("button", { name: "Close popup" }).click();
   await expect(popup).toHaveCount(0);
   await marker.focus();
+  await marker.press("Enter");
+  await expect(marker).toHaveClass(/ring-4/);
+  await expect(popup).toHaveCount(1);
+  await expect(popup.getByText(name, { exact: true })).toBeVisible();
+  await expect(popup.getByText(subtitle, { exact: true })).toBeVisible();
+  await expect(popup.locator("img, b, [onerror], [onmouseover]")).toHaveCount(0);
+  await page.getByRole("button", { name: "Close popup" }).click();
+  await expect(popup).toHaveCount(0);
+  await marker.focus();
   await marker.press("Space");
   await expect(popup).toHaveCount(1);
-  await popup.getByRole("link", { name: "View details" }).click();
+  await popup
+    .getByRole("link", { name: staffTranslator("en-US")("diveSites.map.openSite") })
+    .click();
   await page.waitForURL(detailsUrl);
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 });
