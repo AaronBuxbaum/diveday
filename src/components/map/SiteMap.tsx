@@ -1,7 +1,7 @@
 "use client";
 
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cartoTileUrl } from "@/lib/carto";
 
 export type MapPin = {
@@ -43,6 +43,7 @@ export default function SiteMap({
 }: SiteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
+  const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
   const markersRef = useRef<Map<string, LeafletMarker>>(new Map());
 
   // Initialize the Leaflet map once on mount
@@ -71,6 +72,7 @@ export default function SiteMap({
       }).addTo(map);
 
       mapRef.current = map;
+      setMapInstance(map);
     });
 
     return () => {
@@ -78,14 +80,14 @@ export default function SiteMap({
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        setMapInstance(null);
       }
     };
   }, [center.latitude, center.longitude, zoom]);
 
   // Update shop anchor and pins whenever they or the selected pin change
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+    if (!mapInstance) return;
 
     let isCancelled = false;
     import("leaflet").then((L) => {
@@ -118,7 +120,7 @@ export default function SiteMap({
         const shopMarker = L.marker([shopAnchor.latitude, shopAnchor.longitude], {
           icon: shopIcon,
           zIndexOffset: 500,
-        }).addTo(map);
+        }).addTo(mapInstance);
 
         shopMarker.bindPopup(`<strong>${shopAnchor.name || shopLabel}</strong>`);
       }
@@ -156,7 +158,7 @@ export default function SiteMap({
         const marker = L.marker([pin.latitude, pin.longitude], {
           icon,
           zIndexOffset: isSelected ? 1000 : 100,
-        }).addTo(map);
+        }).addTo(mapInstance);
 
         const popupContent = `
           <div class="space-y-1">
@@ -184,20 +186,20 @@ export default function SiteMap({
     return () => {
       isCancelled = true;
     };
-  }, [pins, selectedPinId, shopAnchor, shopLabel, onSelectPin]);
+  }, [mapInstance, pins, selectedPinId, shopAnchor, shopLabel, onSelectPin]);
 
   // Center on selected pin if changed
   useEffect(() => {
-    if (!selectedPinId || !mapRef.current) return;
+    if (!selectedPinId || !mapInstance) return;
     const pin = pins.find((p) => p.id === selectedPinId);
     if (pin) {
-      mapRef.current.panTo([pin.latitude, pin.longitude], { animate: true });
+      mapInstance.panTo([pin.latitude, pin.longitude], { animate: true });
       const marker = markersRef.current.get(selectedPinId);
       if (marker && !marker.isPopupOpen()) {
         marker.openPopup();
       }
     }
-  }, [selectedPinId, pins]);
+  }, [selectedPinId, pins, mapInstance]);
 
   return <div ref={containerRef} className={className} />;
 }

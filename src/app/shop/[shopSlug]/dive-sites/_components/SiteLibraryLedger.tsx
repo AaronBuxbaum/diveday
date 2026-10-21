@@ -170,6 +170,7 @@ function SiteRow({
 
   return (
     <LedgerRow
+      id={`site-row-${site.id}`}
       href={`/shop/${shopSlug}/dive-sites/${site.id}`}
       // The site's own name, and nothing appended: the roster, the visual
       // captures and the depth spec all address a site by exactly this, and a
