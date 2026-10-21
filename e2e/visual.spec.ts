@@ -62,6 +62,15 @@ import { mintOnboardFormPath } from "./setup-link";
 const staffCopy = staffTranslator("en-US");
 const diverCopy = diverTranslator("en-US");
 
+async function waitForCatalogMap(page: Page) {
+  // The server heading can precede both lazy imports. Pins prove the map's
+  // data effect has run; controls and attribution prove Leaflet initialized.
+  const map = page.locator(".leaflet-container");
+  await map.locator(".leaflet-site-marker button").first().waitFor();
+  await map.locator(".leaflet-control-zoom-in").waitFor();
+  await map.locator(".leaflet-control-attribution").waitFor();
+}
+
 /**
  * Visual regression coverage: one `capture()` call per surface, each shot in
  * light at a phone and a desktop viewport and in dark at the desktop viewport
@@ -7056,10 +7065,20 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
         const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
         await assignments.getByRole("heading", { name: "Rental assignments" }).waitFor();
-        await assignments.getByRole("button", { name: "Hand over" }).first().click();
-        // Wait on what the destination renders, never on a timeout: the set
-        // that just went out has a return pane and no hand-over.
-        await assignments.getByRole("button", { name: "All good" }).first().waitFor();
+        const diverRow = assignments.locator("li").filter({ hasText: "Priya Sharma" });
+        await expect(diverRow.getByRole("button", { name: "All good" })).toHaveCount(0);
+        await diverRow.getByRole("button", { name: "Hand over" }).click();
+        const acknowledgement = page
+          .getByRole("status")
+          .filter({ hasText: staffCopy("gear.prep.notice.handedOver") });
+        await expect(acknowledgement).toBeVisible();
+        // Wait for the same diver's set, then photograph its saved state after
+        // the acknowledgement leaves, rather than racing its four-second life.
+        await expect(diverRow.getByRole("button", { name: "All good" })).toBeVisible();
+        await expect(diverRow.getByRole("button", { name: "Hand over" })).toHaveCount(0);
+        await page.mouse.move(0, 0);
+        await expect(acknowledgement).toBeHidden();
+        await expect(diverRow.getByRole("button", { name: "All good" })).toBeVisible();
         await capture(page, "departure-load-out-handed-over", scheme);
       });
 
@@ -9319,6 +9338,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the dive-site catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/dive-sites/catalog");
         await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
+        await waitForCatalogMap(page);
         await capture(page, "dive-sites-catalog", scheme);
       });
 
@@ -9566,6 +9586,57 @@ for (const scheme of ["light", "dark"] as const) {
  * prevent. Shoots nothing, so it costs the baseline nothing.
  */
 test.describe("capture harness", () => {
+  test.describe("lazy catalog map", () => {
+    signedInAsOwner();
+
+    test("catalog readiness waits for Leaflet after the heading is visible", async ({ page }) => {
+      let releaseLeaflet = () => {};
+      let libraryHeld = false;
+      let mapReady: Promise<void> | undefined;
+      const release = new Promise<void>((resolve) => {
+        releaseLeaflet = resolve;
+      });
+      await page.route("**/_next/static/chunks/*.js", async (route) => {
+        const response = await route.fetch();
+        // Hold the real lazy library, not a fake map: the server heading and
+        // ledger can render while this control's implementation is in flight.
+        if ((await response.text()).includes("leaflet-control-zoom")) {
+          libraryHeld = true;
+          await release;
+        }
+        await route.fulfill({ response });
+      });
+      try {
+        // A held script also holds `load`; React's fixture hydration check
+        // still runs after DOM content arrives, before any interaction.
+        await page.goto("/shop/blue-mantis/dive-sites/catalog", { waitUntil: "domcontentloaded" });
+        await expect.poll(() => libraryHeld).toBe(true);
+        await expect(
+          page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
+        ).toBeVisible();
+        await expect(page.locator(".leaflet-control-zoom-in")).toHaveCount(0);
+        let ready = false;
+        mapReady = waitForCatalogMap(page).then(() => {
+          ready = true;
+        });
+        // Keep an early failure handled while the independent heading check
+        // runs; the original promise is still joined and rethrows in finally.
+        void mapReady.catch(() => undefined);
+        // The server-heading wait can finish; readiness must still be held
+        // by the library response rather than treating that heading as a map.
+        await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
+        expect(ready).toBe(false);
+        releaseLeaflet();
+        await mapReady;
+        await expect(page.locator(".leaflet-site-marker button")).toHaveCount(20);
+        await expect(page.locator(".leaflet-control-zoom-in")).toBeVisible();
+      } finally {
+        releaseLeaflet();
+        await mapReady;
+      }
+    });
+  });
+
   test("a pass that never settles is bounded, reported, and degraded", async ({ page }) => {
     await page.goto("/");
     const warnings: string[] = [];
