@@ -48,6 +48,19 @@ curtailed, the payment fixture and shared endpoint guards passed 184 tests. The 
 fixture passed its nine focused tests and the then-current shared guard cases; overlapping guard
 runs are not added together.
 
+### Approved crash-screen typography
+
+Aaron approved matching the root crash screen's typeface and title style to the other error
+screens. Because the global error document replaces the root layout, it now supplies the same
+`fontVariables` on its own `html` element. Its heading uses `SHELL_TITLE_CLASS`, the 30px/700
+title shared by the other error screens, instead of the previous 24px/600 reading lead.
+The existing controlled global-error capture now checks the computed heading size and weight,
+Plex font families, font variable and a registered, loaded 700-weight face while preserving its
+action-size and reset checks.
+These assertions are prepared for later execution; no fresh build, browser capture or rendered
+typography measurement was run under the testing hold. The implementation has only source,
+focused syntax/formatting and whitespace checks.
+
 ### Verification boundary after the testing hold
 
 Aaron subsequently asked running chats to stop local test activity because the computer was

@@ -125,12 +125,28 @@ async function auditFallback(
           headingWeight: titleStyle.fontWeight,
           bodyFont: bodyStyle.fontFamily,
           plexVariable: bodyStyle.getPropertyValue("--font-plex-sans"),
+          plexLoaded:
+            document.fonts.check("700 30px plexSans") &&
+            Array.from(document.fonts).some(
+              (face) =>
+                face.family.replace(/^["']|["']$/g, "") === "plexSans" &&
+                face.weight === "700" &&
+                face.status === "loaded",
+            ),
           targetWidth: target.width,
           targetHeight: target.height,
         };
       });
       expect(geometry.targetHeight).toBeGreaterThanOrEqual(expected.minimumTarget);
       expect(geometry.targetWidth).toBeGreaterThanOrEqual(44);
+      if (level === "global") {
+        expect(geometry.headingSize).toBe("30px");
+        expect(geometry.headingWeight).toBe("700");
+        expect(geometry.headingFont).toContain("plexSans");
+        expect(geometry.bodyFont).toContain("plexSans");
+        expect(geometry.plexVariable.trim()).not.toBe("");
+        expect(geometry.plexLoaded).toBe(true);
+      }
       measurements.push(geometry);
     },
   });

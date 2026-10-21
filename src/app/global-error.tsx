@@ -6,9 +6,10 @@
 import { useEffect } from "react";
 import { LogoMark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
+import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { fontVariables } from "./_fonts/fonts";
 import "./globals.css";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * Replaces the entire root layout when it crashes (Next convention — it must
@@ -33,13 +34,13 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className={`${fontVariables} h-full antialiased`}>
       <body className="flex min-h-full flex-col items-center justify-center gap-6 bg-background px-6 text-center text-foreground">
         <span className="grid size-12 place-items-center rounded-inset bg-primary text-primary-foreground">
           <LogoMark className="size-6" />
         </span>
         <div className="max-w-md space-y-2">
-          <h1 className={LEAD_TITLE_CLASS}>Something went sideways</h1>
+          <h1 className={SHELL_TITLE_CLASS}>Something went sideways</h1>
           <p className="text-muted leading-7">
             That one's on us — it's already been reported. Try again, or write in directly if it
             keeps happening; reaching out is always welcome.
