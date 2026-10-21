@@ -122,8 +122,7 @@ export function testArgs(selection) {
     "vitest",
     selection.mode === "related" ? "related" : "run",
     ...(selection.mode === "related" ? ["--run"] : []),
-    "--project",
-    "!guards",
+    ...(selection.mode === "direct" ? [] : ["--project", "!guards"]),
     "--reporter=dot",
     ...selection.files,
   ];

@@ -2,12 +2,25 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { sourceReaders, testPlan } from "./test-affected.mjs";
+import { sourceReaders, testArgs, testPlan } from "./test-affected.mjs";
 
 const reader = "src/features/contracts.test.ts";
 const options = { readers: [reader], existing: () => true, isSharedTest: () => false };
 
 describe("local unit selection", () => {
+  it("lets directly selected guard files run in their matching project", () => {
+    const files = ["src/app/_fonts/fonts.test.ts"];
+    expect(testArgs({ mode: "direct", files })).toEqual([
+      "exec",
+      "vitest",
+      "run",
+      "--reporter=dot",
+      ...files,
+    ]);
+    for (const mode of ["related", "all"]) {
+      expect(testArgs({ mode, files })).toContain("!guards");
+    }
+  });
   it("selects no reader contracts when nothing changed", () => {
     expect(testPlan({ ...options, changed: [] })).toMatchObject({ mode: "direct", files: [] });
     expect(
