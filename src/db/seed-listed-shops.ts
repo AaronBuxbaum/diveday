@@ -3,6 +3,7 @@ import type { DbExecutor } from "./client";
 import { upsertTripRequirements } from "./readiness";
 import { diveSites, shops } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
+import { LISTED_SHOP_SLUGS } from "./seed-identifiers";
 import { createTrip } from "./trips";
 
 /**
@@ -24,7 +25,7 @@ import { createTrip } from "./trips";
  * shop's board and re-runs on reset; this runs once, beside the shop's own
  * stable half, in `seedDemo`.
  */
-export const LISTED_SHOP_SLUGS = ["reef-line-divers", "keys-current-charters"] as const;
+export { LISTED_SHOP_SLUGS } from "./seed-identifiers";
 
 export async function seedListedShops(db: DbExecutor): Promise<void> {
   const address = {
