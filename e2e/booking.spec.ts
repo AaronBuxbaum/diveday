@@ -284,7 +284,7 @@ test.describe("staff", () => {
  * Both questions were asked on the public booking form until 2026-09-06 and are
  * asked on `/ready/<token>` now, so every one of these books a seat first.
  */
-test.describe("staff", () => {
+test.describe("staff counts and intent", () => {
   signedInAsOwner();
 
   test("a diver's intent reaches the crew as a count, and names nobody", async ({ page }) => {

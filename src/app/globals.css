@@ -1199,9 +1199,9 @@ select:not([multiple]):not([size]):dir(rtl) {
   *,
   *::before,
   *::after {
-    /* biome-ignore lint/complexity/noImportantStyles: print must strip every ink-heavy fill to keep the page white */
+    /* print must strip every ink-heavy fill to keep the page white */
     background: transparent !important;
-    /* biome-ignore lint/complexity/noImportantStyles: a shadow prints as grey haze, never as depth */
+    /* a shadow prints as grey haze, never as depth */
     box-shadow: none !important;
   }
 
@@ -1249,7 +1249,7 @@ select:not([multiple]):not([size]):dir(rtl) {
    */
   .trip-print-bundle,
   .trip-print-bundle * {
-    /* biome-ignore lint/complexity/noImportantStyles: a clipped box on paper is content that does not exist */
+    /* a clipped box on paper is content that does not exist */
     overflow: visible !important;
   }
 
@@ -1314,17 +1314,17 @@ select:not([multiple]):not([size]):dir(rtl) {
    * `!important` arms race - and the frame around it stops being a frame.
    */
   .paper-sheet {
-    /* biome-ignore lint/complexity/noImportantStyles: the sheet's ground is the document, not a screen fill to strip */
+    /* the sheet's ground is the document, not a screen fill to strip */
     background: var(--sheet-ground) !important;
   }
 
   .paper-sheet-band {
-    /* biome-ignore lint/complexity/noImportantStyles: the band is the shop's colour on paper, which is the point of the sheet */
+    /* the band is the shop's colour on paper, which is the point of the sheet */
     background: var(--sheet-band) !important;
   }
 
   .paper-sheet-mark {
-    /* biome-ignore lint/complexity/noImportantStyles: the mark is the band's ink, reversed out of it */
+    /* the mark is the band's ink, reversed out of it */
     background: var(--sheet-band-ink) !important;
   }
 
@@ -2104,9 +2104,9 @@ details[open]::details-content {
   *,
   *::before,
   *::after {
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     animation-duration: 0.01ms !important;
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     animation-iteration-count: 1 !important;
     /*
      * Delay, not just duration. A staggered entrance (the board's row menu)
@@ -2115,9 +2115,9 @@ details[open]::details-content {
      * watch three buttons arrive one at a time, each holding its `both`-filled
      * opacity: 0 until its turn came.
      */
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     animation-delay: 0s !important;
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     transition-duration: 0.01ms !important;
   }
 
@@ -2129,7 +2129,7 @@ details[open]::details-content {
    */
   details::details-content,
   details[open]::details-content {
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     transition-duration: 0.01ms !important;
   }
 
@@ -2137,7 +2137,7 @@ details[open]::details-content {
   .marketing-reveal-visible,
   .marketing-hero-motion-active .marketing-roll-call-frame,
   .marketing-hero-motion-active .marketing-roll-call-row {
-    /* biome-ignore lint/complexity/noImportantStyles: reduced-motion must reveal progressive-enhancement content immediately */
+    /* reduced-motion must reveal progressive-enhancement content immediately */
     animation: none !important;
     opacity: 1;
     transform: none;
@@ -2157,9 +2157,9 @@ details[open]::details-content {
   [data-chrome-shop-name],
   [data-chrome-title-slot],
   [data-chrome-fold-title] {
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     animation: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     animation-timeline: none !important;
   }
 }
@@ -2217,7 +2217,7 @@ details[open]::details-content {
 
 @media (prefers-reduced-motion: reduce) {
   .sub-surface-ripple-message {
-    /* biome-ignore lint/complexity/noImportantStyles: must beat the kill-switch's duration override, which would leave the panel at its final opacity 0 */
+    /* must beat the kill-switch's duration override, which would leave the panel at its final opacity 0 */
     animation-name: none !important;
   }
 }
