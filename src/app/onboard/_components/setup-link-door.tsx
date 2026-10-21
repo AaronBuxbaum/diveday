@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { getDb } from "@/db/client";
 import { type OpenSetupLink, openSetupLink } from "@/db/setup-links";
 import { SETUP_LINK_COOKIE, SETUP_LINK_PARAM } from "@/lib/setup-links";
@@ -28,6 +29,7 @@ export async function setupLinkDoor(
 ): Promise<SetupLinkDoor> {
   const setup = fromUrl ?? (await cookies()).get(SETUP_LINK_COOKIE)?.value;
   if (setup === undefined) return { door: "none" };
+  await connection();
   const link = await openSetupLink(await getDb(), setup);
   if (!link || typeof setup !== "string") return { door: "spent" };
   return { door: "open", token: setup, link };
