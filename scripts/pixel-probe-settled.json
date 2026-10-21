@@ -80,6 +80,14 @@
       "container": "div.chip-scroller flex gap-2 items-center max-sm:[scrollbar-width:none] max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:scroll-px-6 sm:flex-wrap",
       "reason": "A filter chip that ends within the ring's 5px of the phone row's scrolling edge (\"Wrecks\", 3.6px from it at 390) loses the ring's edge to the row's clip only while the probe forces :focus-visible without focusing. A real focus scrolls the chip into the row's scroll padding (max-sm:scroll-px-6, the edge fade plus the ring's reach), clear of the edge. The ring's room above and below is padding FilterChips.test.tsx pins.",
       "pointer": "src/components/ui/FilterChips.tsx, the comment on the phone scroller; docs/design/settled-questions.md"
+    },
+    {
+      "check": "focus-invisible",
+      "signature": "input[radio].focus-visible:outline-none size-4",
+      "container": "div.bg-surface border border-border flex gap-2 has-[input:checked]:bg-primary-tint has-[input:checked]:border-primary has-[input:checked]:font-semibold has-[input:focus-visible]:focus-ring items-center min-h-11 not-has-[input:checked]:hover:bg-surface-sunken pe-4 rounded-lg text-base transition-colors",
+      "classes": ["size-4", "shrink-0", "focus-visible:outline-none"],
+      "reason": "The public package picker's native radio leaves its own outline off because focus is drawn around ChoicePill's rounded aside wrapper. That wrapper carries has-[input:focus-visible]:focus-ring from radioRingClass; the visible ring follows the whole option rather than the 16px dot. The probe reads the input's own outline. This entry requires the captured ring-bearing wrapper, not every outline-none radio.",
+      "pointer": "src/components/ui/form.tsx, radioClass/radioRingClass and ChoicePill's aside wrapper; src/components/ui/form.test.tsx:594-612; src/app/s/[shopSlug]/packages/_components/PackagePurchaseForm.tsx:63-75; docs/design/settled-questions.md"
     }
   ]
 }

@@ -163,6 +163,8 @@ const BODY_CLASS = "px-4 pb-6 sm:px-5";
 export function DisclosureRow({
   id,
   heading,
+  value,
+  open,
   children,
 }: {
   /**
@@ -173,17 +175,31 @@ export function DisclosureRow({
    */
   id: string;
   heading: string;
+  /** Saved facts stay readable while the editor is closed. No controls here. */
+  value?: ReactNode;
+  /** Reveal an editor's own refusal or result, without closing a reader-open row. */
+  open?: boolean;
   children: ReactNode;
 }) {
   return (
-    <AutoOpenDetails id={id} openOnHash={id} className="group/row scroll-mt-8">
+    <AutoOpenDetails id={id} openOnHash={id} open={open} className="group/row scroll-mt-24">
       <summary className={SUMMARY_CLASS}>
         {/* A heading inside a `<summary>` (implicit `button` role) is flattened
             by some screen readers' heading navigation — the same trade
             `SettingsRows` documents, kept because the whole row has to be the
             control and the group still needs its members in the outline. */}
-        <h3 className="text-base font-semibold">{heading}</h3>
-        <DisclosureCaret direction="down" className="size-4 text-muted group-open/row:rotate-180" />
+        {value != null ? (
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-semibold">{heading}</h3>
+            <div className="mt-1 whitespace-normal break-words text-base text-muted">{value}</div>
+          </div>
+        ) : (
+          <h3 className="text-base font-semibold">{heading}</h3>
+        )}
+        <DisclosureCaret
+          direction="down"
+          className={`size-4 text-muted group-open/row:rotate-180${value != null ? " mt-1 self-start" : ""}`}
+        />
       </summary>
       <div className={BODY_CLASS}>{children}</div>
     </AutoOpenDetails>

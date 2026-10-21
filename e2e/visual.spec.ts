@@ -7422,10 +7422,16 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/boats");
         await page.getByRole("heading", { level: 1, name: "Boats" }).waitFor();
-        // The submit on the add-a-boat row, which is what this page's own
-        // editor ends in now that it is a page rather than a settings row.
-        await page.getByRole("button", { name: "Add a boat" }).waitFor();
+        const boat = page.locator('details[id^="boat-"]:not(#boat-new)').first();
+        await boat.locator("summary").waitFor();
         await capture(page, "settings-boats", scheme);
+        await boat.locator("summary").click();
+        await boat.getByLabel(staffCopy("boats.nameLabel")).waitFor();
+        await capture(page, "settings-boats-edit", scheme);
+        await boat.locator("summary").click();
+        await page.locator("#boat-new summary").click();
+        await page.getByRole("button", { name: "Add a boat", exact: true }).waitFor();
+        await capture(page, "settings-boats-add", scheme);
       });
 
       /**
@@ -7436,6 +7442,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/trip-tags");
         await page.getByRole("heading", { level: 1, name: "Trip tags" }).waitFor();
         await capture(page, "settings-trip-tags", scheme);
+        const tag = page.locator('details[id^="tag-"]:not(#tag-new)').first();
+        await tag.locator("summary").click();
+        await tag.getByLabel(staffCopy("lenses.nameLabel")).waitFor();
+        await capture(page, "settings-trip-tags-edit", scheme);
+        await tag.locator("summary").click();
+        await page.locator("#tag-new summary").click();
+        await page.locator("#tag-new").getByLabel(staffCopy("lenses.nameLabel")).waitFor();
+        await capture(page, "settings-trip-tags-add", scheme);
       });
 
       /**
@@ -7457,19 +7471,9 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The emergency reference, open — the five number slots, the vessel and
-       * shore-contact boxes, and the free-text plan (issue #688). Its own
-       * capture for the same reason as the dock-day row above: it is closed in
-       * `settings-payments`, so the only form in the app whose output a crew
-       * reads offshore is otherwise never looked at.
-       *
-       * The seeded shop fills it in, so this is the state a configured shop
-       * sees. The *empty* state — the prompt a crew meets when nobody filled
-       * this in — is `manifest-emergency-empty` at the bottom of this file,
-       * which needs a shop of its own to produce. This comment used to claim
-       * the empty state was "covered where it matters more, on the offline
-       * manifest itself"; there was no such capture, and `seed.ts` fills the
-       * field precisely so no offline capture could ever show it.
+       * Saved emergency numbers and the response plan read at rest; the same
+       * capture also opens the contact, plan and shore-alert editors so their
+       * fixed-slot fields and consent controls remain visible in the baseline.
        */
       test(`the emergency reference card renders true to the design (${scheme})`, async ({
         page,
@@ -7478,11 +7482,21 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/emergency-reference");
         await page.getByRole("heading", { level: 1, name: "Emergency reference" }).waitFor();
         await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
-        // H-118 review: blue-mantis is a demo shop, so the shore contact's
-        // alert address says demo shops send nothing, beside the free-text
-        // shore contact's line saying DiveDay never messages it.
-        await page.getByText(staffCopy("settings.main.emergency.shoreAlertDemo")).waitFor();
         await capture(page, "settings-emergency", scheme);
+        const contact = page
+          .locator('details[id^="emergency-contact-"]:not(#emergency-contact-new)')
+          .first();
+        await contact.locator("summary").click();
+        await page.locator("#emergency-response summary").click();
+        await page.locator("#emergency-alerts summary").click();
+        await page.getByText(staffCopy("settings.main.emergency.shoreAlertDemo")).waitFor();
+        await capture(page, "settings-emergency-edit", scheme);
+        await contact.locator("summary").click();
+        await page.locator("#emergency-response summary").click();
+        await page.locator("#emergency-alerts summary").click();
+        await page.locator("#emergency-contact-new summary").click();
+        await page.locator('#emergency-contact-new input[name^="emergencyLabel-"]').waitFor();
+        await capture(page, "settings-emergency-add", scheme);
       });
 
       /**
@@ -7564,8 +7578,11 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the dive-packages page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/promos/packages");
         await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
-        await page.getByRole("button", { name: "Add package" }).waitFor();
+        await page.locator("#package-new summary").waitFor();
         await capture(page, "settings-dive-packages", scheme);
+        await page.locator("#package-new summary").click();
+        await page.getByRole("button", { name: "Add package", exact: true }).waitFor();
+        await capture(page, "settings-dive-packages-add", scheme);
       });
 
       /**
@@ -7855,6 +7872,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Pre-departure checklist" }).waitFor();
         await page.getByText("VHF radio checked").waitFor();
         await capture(page, "settings-safety-checklist", scheme);
+        await page.locator("#checklist-new summary").click();
+        await page.getByLabel(staffCopy("settings.safetyChecklist.addLabel")).waitFor();
+        await capture(page, "settings-safety-checklist-add", scheme);
       });
 
       /**
@@ -10076,6 +10096,7 @@ for (const scheme of ["light", "dark"] as const) {
     }) => {
       test.setTimeout(FLOW_TIMEOUT_MS);
       await page.goto(`/shop/${privateShop.slug}/settings/emergency-reference`);
+      await page.locator("#emergency-alerts summary").click();
       await page.getByLabel("Shore contact’s email for roll-call alerts").fill("shore@example.com");
       await page.getByRole("button", { name: "Save emergency reference" }).click();
       await page.getByText(staffCopy("settings.main.notice.shoreAlertConsentMissing")).waitFor();
@@ -10106,22 +10127,51 @@ for (const scheme of ["light", "dark"] as const) {
       // Settings → clear → manifest → the saved copy, in one flow.
       test.setTimeout(FLOW_TIMEOUT_MS);
       await page.goto(`/shop/${privateShop.slug}/settings/emergency-reference`);
-      // Cleared through the shop's own form, which is how a shop would arrive
-      // in this state — not by writing the column behind the app's back.
-      const filled = page.locator(
-        'input[name^="emergencyLabel-"], input[name^="emergencyPhone-"], ' +
-          'input[name="emergencyVessel"], input[name="emergencyShoreContact"]',
+      await page
+        .getByRole("button", { name: staffCopy("settings.main.emergency.submit") })
+        .waitFor();
+      // A private shop may start with no contacts. Open and clear only
+      // existing rows; the next unused slot is already empty.
+      const contactSummaries = page.locator(
+        'details[id^="emergency-contact-"]:not(#emergency-contact-new) > summary',
       );
-      // The seeded shop has an emergency reference on file, so these boxes
-      // exist — and if they ever stop existing, the capture below would
-      // otherwise photograph a *populated* panel under an "empty" name.
-      await expect(filled).not.toHaveCount(0);
-      for (const field of await filled.all()) await field.fill("");
+      const contactCount = await contactSummaries.count();
+      for (let index = 0; index < contactCount; index += 1) {
+        await contactSummaries.nth(index).click();
+      }
+      for (const id of ["emergency-response", "emergency-alerts"]) {
+        const editor = page.locator(`#${id}`);
+        if ((await editor.getAttribute("open")) === null) await editor.locator("summary").click();
+      }
+      const alertAddress = page.locator('input[name="shoreAlertEmail"]');
+      const hadAlertAddress = (await alertAddress.inputValue()).trim().length > 0;
+      // Clear through the shop's form whether the reference started empty
+      // or populated, including any independently configured alert address.
+      const fields = page
+        .locator(
+          'input[name^="emergencyLabel-"], input[name^="emergencyPhone-"], ' +
+            'input[name="emergencyVessel"], input[name="emergencyShoreContact"], ' +
+            'input[name="shoreAlertEmail"]',
+        )
+        .filter({ visible: true });
+      await expect(fields).not.toHaveCount(0);
+      for (const field of await fields.all()) await field.fill("");
+      await page
+        .getByRole("checkbox", { name: staffCopy("settings.main.emergency.shoreAlertConsent") })
+        .uncheck();
       await page.locator('textarea[name="emergencyPlan"]').fill("");
       await page.getByRole("button", { name: "Save emergency reference" }).click();
-      // The page comes back with its saved notice — the destination's own
-      // render, not a timing guess.
-      await page.getByText("Emergency reference saved.").waitFor();
+      // Observe the completed save before the manifest/offline empty-state
+      // assertions. Clearing an address has its own saved outcome.
+      await page
+        .getByText(
+          staffCopy(
+            hadAlertAddress
+              ? "settings.main.notice.shoreAlertCleared"
+              : "settings.main.notice.emergencySaved",
+          ),
+        )
+        .waitFor();
 
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);
@@ -10180,6 +10230,7 @@ for (const scheme of ["light", "dark"] as const) {
       privateShop,
     }) => {
       await page.goto(`/shop/${privateShop.slug}/promos/packages`);
+      await page.locator("#package-new summary").click();
       await page.getByLabel("What you call it").fill("Ten-dive card");
       await page.getByLabel("Dives included").fill("10");
       await page.getByLabel("Price").fill("450");

@@ -2,7 +2,7 @@ import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
 import { settingsPaneClass } from "../_components/settings-pane";
 
-/** Header + editor-card skeleton at the page's own width, so the route never blocks blank. */
+/** Compact contact rows and response settings at the page's own width. */
 export default function Loading() {
   return (
     <main className={settingsPaneClass()}>
@@ -10,12 +10,12 @@ export default function Loading() {
         <ShopPageHeaderSkeleton
           titleWidth="w-72 max-w-full"
           titleLines={{ base: 2, sm: 1 }}
-          description
-          descriptionIsCaption
-          descriptionWidth="w-full max-w-xl"
-          descriptionLines={2}
+          description={false}
         />
-        <div className={sectionCardClass({ padding: "lg", className: "h-[40rem]" })} />
+        <div className="space-y-6">
+          <div className={sectionCardClass({ padding: "none", className: "h-56" })} />
+          <div className={sectionCardClass({ padding: "none", className: "h-40" })} />
+        </div>
       </div>
     </main>
   );
