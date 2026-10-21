@@ -31,9 +31,9 @@
     "submitting": "Desconectando…"
   },
   "notice": {
-    "connected": "WhatsApp conectado.",
+    "connected": "WhatsApp conectado",
     "disconnected": "WhatsApp desconectado. Los mensajes de cortesía saldrán por SMS.",
-    "tested": "Mensaje de prueba entregado.",
+    "tested": "Mensaje de prueba entregado",
     "test-failed": "WhatsApp rechazó el mensaje de prueba. Revisa que tu token siga siendo válido y que tu plantilla esté aprobada en el idioma indicado arriba.",
     "invalid": "Revisa los datos e inténtalo de nuevo.",
     "no-account": "Todavía no hay ningún número de WhatsApp conectado.",

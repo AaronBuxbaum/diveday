@@ -5,8 +5,8 @@
     "recapHeld": "Recaps are held until the roll call is corrected.",
     "recapNotReady": "Recaps cannot be sent until four hours after the departure ends.",
     "recapLocked": "This recap has been sent. Its note and photos can no longer be changed.",
-    "crewPhotoAdded": "Crew photo added to this departure.",
-    "crewPhotoRemoved": "Crew photo removed.",
+    "crewPhotoAdded": "Crew photo added to this departure",
+    "crewPhotoRemoved": "Crew photo removed",
     "crewPhotoLimit": "This departure already has the maximum number of crew photos.",
     "crewPhotoUnsupported": "Photo uploads are not configured for this shop yet.",
     "crewPhotoFailed": "That photo could not be added. Check the file and try again.",
@@ -16,7 +16,7 @@
   "pastDay": {
     "empty": "No boats went out that day.",
     "countedLater": "counted later, on {date}",
-    "crewNotCounted": "Crew not counted.",
+    "crewNotCounted": "Crew not counted",
     "resolvedNotBack": "A diver was recorded not back after dive {dive}; see the roll call."
   },
   "departures": {
@@ -29,7 +29,7 @@
     },
     "detail": {
       "allHome": "Nobody was aboard.",
-      "stillOut": "Due back at {time}.",
+      "stillOut": "Due back at {time}",
       "notDeparted": "Departs at {time}.",
       "missingDiver": "{count, plural, one {# person was marked not back aboard after dive {dive}.} other {# people were marked not back aboard after dive {dive}.}} Find them. The count closes on the manifest.",
       "missingCrew": "{count, plural, one {# crew member was marked not back aboard after dive {dive}.} other {# crew members were marked not back aboard after dive {dive}.}} Find them. The count closes on the manifest.",
@@ -77,8 +77,8 @@
   },
   "takings": {
     "heading": "What today made",
-    "tips": "And {amount} in tips.",
-    "tipsOnBoat": "And {amount} in tips on {boat}.",
+    "tips": "And {amount} in tips",
+    "tipsOnBoat": "And {amount} in tips on {boat}",
     "imported": "{count, plural, one {Includes # imported record Stripe has not confirmed.} other {Includes # imported records Stripe has not confirmed.}}",
     "boatTips": "{time} {boat}: {amount}"
   },

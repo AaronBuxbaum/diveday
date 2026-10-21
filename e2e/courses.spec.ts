@@ -1322,7 +1322,7 @@ test("a course's learning materials reach the student's thread, and staff tick t
   await expect(row.getByText("Materials not done")).toBeVisible();
   await openRosterDetails(row);
   await row.getByRole("button", { name: "Mark materials done" }).click();
-  await expect(page.getByText("Learning materials updated.")).toBeVisible();
+  await expect(page.getByText("Learning materials updated")).toBeVisible();
   await expect(row.getByText("Materials not done")).toHaveCount(0);
 
   await diverPage.reload();

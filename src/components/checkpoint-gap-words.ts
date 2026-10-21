@@ -20,6 +20,8 @@ export function checkpointGapLine(t: StaffTranslator, gap: CheckpointGap): strin
   const unmarked = unmarkedLine(t, gap.divers, gap.crew, dive);
   if (gap.missing === 0) return unmarked ?? "";
   if (!unmarked) return t("manifest.checkpointGap.lineMissing", { missing: gap.missing, dive });
+  // These counts form a paragraph together. The unmarked message's period
+  // separates it from the missing-person sentence; it is not label punctuation.
   return `${unmarked} ${t("manifest.checkpointGap.lineMissingToo", { missing: gap.missing })}`;
 }
 

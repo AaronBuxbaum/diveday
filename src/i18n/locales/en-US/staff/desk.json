@@ -3,9 +3,9 @@
     "heading": "Crew warnings",
     "missingOxygen": "No oxygen provider on {title}, {when}",
     "missingFirstAid": "No first aid / CPR on {title}, {when}",
-    "longDay": "{name} crews departures over {hours, plural, one {# hour} other {# hours}} on {day}",
-    "credentialExpired": "{name}, crewing {title}: {credential} expired {date}",
-    "credentialExpiredOther": "{name}, crewing {title}: a credential expired {date}"
+    "longDay": "{name} crews departures over {hours, plural, one {# hour} other {# hours}} on {day}.",
+    "credentialExpired": "{name}, crewing {title}: {credential} expired {date}.",
+    "credentialExpiredOther": "{name}, crewing {title}: a credential expired {date}."
   },
   "dockRider": {
     "door": "Add a rider",
@@ -66,7 +66,7 @@
     "noSeat": "Not sure",
     "submit": "Record",
     "pending": "Recording…",
-    "recorded": "Recorded.",
+    "recorded": "Recorded",
     "tell": "Tell {name}",
     "told": "told by {channel}",
     "channels": {
@@ -93,7 +93,7 @@
       "notOpen": "That item is already resolved.",
       "noOwner": "Nobody is tied to this item.",
       "alreadyTold": "They’ve already been told.",
-      "noContact": "No email or phone on file for them.",
+      "noContact": "No email or phone on file for them",
       "failed": "Couldn’t send. Try again in a minute.",
       "other": "That didn’t work."
     }

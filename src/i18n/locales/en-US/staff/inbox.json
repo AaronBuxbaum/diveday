@@ -71,7 +71,7 @@
     "whatsapp": "Reply on WhatsApp to {address}",
     "placeholder": "Type your answer",
     "send": "Send",
-    "sending": "Sending",
+    "sending": "Sending…",
     "windowClosed": "WhatsApp takes a typed reply for 24 hours after a diver’s last message. Theirs is older than that.",
     "diverRemoved": "This diver’s record was removed, so replies are switched off."
   },
@@ -89,13 +89,13 @@
     "notAuthorized": "Your account can’t answer divers for this shop any more. Ask an owner or manager to check your access.",
     "lateMarked": "Marked running late. The roster and the manifest show it.",
     "lateClosed": "That seat is past running late: checked in, canceled, or the boat has sailed.",
-    "deleted": "Message deleted.",
+    "deleted": "Message deleted",
     "gone": "That message is no longer in the inbox.",
     "answerSaved": "Saved. It’s above the reply box now, on every diver’s record.",
     "answerDuplicate": "That answer is already saved.",
     "answersFull": "{count, plural, one {You keep # saved answer.} other {You keep # saved answers.}} Delete one in the Inbox to make room.",
-    "answerDeleted": "Saved answer deleted.",
-    "answerRestored": "Saved answer put back.",
+    "answerDeleted": "Saved answer deleted",
+    "answerRestored": "Saved answer put back",
     "answerGone": "That saved answer is no longer there."
   },
   "savedAnswers": {

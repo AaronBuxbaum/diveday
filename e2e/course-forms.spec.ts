@@ -75,7 +75,7 @@ test.describe("course forms", () => {
     await page.getByLabel("Type your full name").fill(student);
     await page.getByRole("checkbox", { name: /I have read this form/ }).check();
     await page.getByRole("button", { name: "Sign form" }).click();
-    await expect(page.getByText("Course forms signed.")).toBeVisible();
+    await expect(page.getByText("Course forms signed")).toBeVisible();
 
     // 5. The roster clears.
     await signInAsOwner(page);

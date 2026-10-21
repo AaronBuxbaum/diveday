@@ -3,9 +3,9 @@
     "heading": "Avisos de tripulación",
     "missingOxygen": "Nadie con proveedor de oxígeno en {title}, {when}",
     "missingFirstAid": "Nadie con primeros auxilios / RCP en {title}, {when}",
-    "longDay": "{name} tiene salidas durante más de {hours, plural, one {# hora} other {# horas}} el {day}",
-    "credentialExpired": "{name}, en la tripulación de {title}: {credential} venció el {date}",
-    "credentialExpiredOther": "{name}, en la tripulación de {title}: una credencial venció el {date}"
+    "longDay": "{name} tiene salidas durante más de {hours, plural, one {# hora} other {# horas}} el {day}.",
+    "credentialExpired": "{name}, en la tripulación de {title}: {credential} venció el {date}.",
+    "credentialExpiredOther": "{name}, en la tripulación de {title}: una credencial venció el {date}."
   },
   "dockRider": {
     "door": "Agregar un acompañante",
@@ -66,7 +66,7 @@
     "noSeat": "No se sabe",
     "submit": "Registrar",
     "pending": "Registrando…",
-    "recorded": "Registrado.",
+    "recorded": "Registrado",
     "tell": "Avisar a {name}",
     "told": "avisado por {channel}",
     "channels": {

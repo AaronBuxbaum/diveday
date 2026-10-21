@@ -147,6 +147,49 @@ describe("the report", () => {
     expect(report.settled).toHaveLength(1);
     expect(renderMarkdown(report)).toContain("deliberate (Rows.tsx:12)");
   });
+
+  it("passes capture evidence to contextual settlements and leaves old records open", () => {
+    const contextual = {
+      ...flag,
+      el: 12,
+      check: "ragged-edges",
+      sig: "p.conditions",
+      csig: "section.conditions",
+      measure: { lefts: [4, 16, 16], mode: 16, strays: [{ sig: "p.conditions", off: -12 }] },
+    };
+    const settled = [
+      {
+        check: "ragged-edges",
+        signature: "p.conditions",
+        captures: ["site-briefing"],
+        context: "conditions-line-separator",
+        reason: "clip",
+        pointer: "x",
+      },
+    ];
+    const base = {
+      capture: "site-briefing",
+      width: 390,
+      probed: true,
+      path: "/s/x/trips/9",
+      flags: [contextual],
+    };
+    expect(buildReport([base], { settled }).clusters).toHaveLength(1);
+    const report = buildReport(
+      [
+        {
+          ...base,
+          settlementContext: {
+            version: 1,
+            conditionsLine: [{ el: 12, mode: 16 }],
+          },
+        },
+      ],
+      { settled },
+    );
+    expect(report.clusters).toEqual([]);
+    expect(report.settled).toHaveLength(1);
+  });
 });
 
 describe("table cells", () => {

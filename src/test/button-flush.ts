@@ -9,13 +9,18 @@ import { type ButtonSize, type ButtonVariant, buttonClass } from "@/components/u
  * the difference `flush` makes to that variant and size — the tokens it adds,
  * the tokens it drops — and checks the element carries exactly that side of
  * it. jsdom has no layout, so this is as close to "the label is on the column"
- * as a unit test gets.
+ * as a unit test gets. The optional mode also checks an unpainted padded target.
  */
-export function rendersFlush(element: Element, variant: ButtonVariant, size: ButtonSize) {
+export function rendersFlush(
+  element: Element,
+  variant: ButtonVariant,
+  size: ButtonSize,
+  mode: true | "padded" = true,
+) {
   // `flush` is typed `false` on a variant painted at rest. The union here is
   // wider than any one call site, and a painted variant, which `flush` leaves
   // alone, has no difference to find and fails the check.
-  const flush = buttonClass({ variant, size, flush: true as never }).split(" ");
+  const flush = buttonClass({ variant, size, flush: mode as never }).split(" ");
   const plain = buttonClass({ variant, size }).split(" ");
   const adds = flush.filter((token) => !plain.includes(token));
   const drops = plain.filter((token) => !flush.includes(token));

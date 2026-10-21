@@ -720,3 +720,17 @@ and one final disclosure adds a record, removing the repeated standing Save cont
 border around each record disappears before useful facts or consequences do. The open ledger
 serves short action rows, while the inset disclosure group serves records with forms; the
 [source audit](collection-pattern-audit.md) records the workflow-specific differences retained.
+
+## Visual consistency audit, 2026-10-21
+
+The one idea is to make equivalent facts and controls read as the same product across the
+[audited surfaces](visual-pattern-audit.md), preserving each surface's existing purpose.
+Arriving readers see what, when and how much before booking, clearance and contact facts on
+staff records, the fields needed to create a record, and configuration beside its object.
+No new control is introduced; compact disclosures reveal occasional work on intent, while
+separate compact action rows and safety badges keep their established roles and the catch-up
+dismissal keeps a quiet, centred target.
+The redundant settings frame and empty header action wrappers disappear before useful content
+or consequences do.
+The existing public booking compositions, staff ledgers and configuration groups serve their
+content, with readable trip titles and complete explanatory sentences preserving those shapes.

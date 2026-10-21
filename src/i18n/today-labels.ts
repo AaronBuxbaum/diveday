@@ -1187,6 +1187,8 @@ export function daySpineSummaryText(
         time: summary.nextDepartureTime,
       })
     : t("shopHome.spine.summaryAfter", { count: summary.jobs });
+  // The boat count is a clause of this paragraph, not a standalone status.
+  // Its bundle period separates it from the job sentence in both locales.
   return `${boats} ${jobs}`;
 }
 

@@ -172,11 +172,11 @@
     "pending": "Agregando…"
   },
   "notices": {
-    "saved": "Borrador guardado.",
-    "filed": "Informe presentado.",
-    "addendumAdded": "Nota agregada.",
-    "personAdded": "Agregado al informe.",
-    "personRemoved": "Quitado del informe.",
+    "saved": "Borrador guardado",
+    "filed": "Informe presentado",
+    "addendumAdded": "Nota agregada",
+    "personAdded": "Agregado al informe",
+    "personRemoved": "Quitado del informe",
     "occurredAtInvalid": "Indica fecha y hora de cuándo pasó, o deja ambas en blanco.",
     "handedOverAtInvalid": "Indica fecha y hora de la entrega, o deja ambas en blanco.",
     "handedOverBeforeIncident": "La hora de la entrega es anterior al incidente. Revisa las dos horas.",
@@ -191,8 +191,8 @@
     "blankNote": "Escribe la nota antes de agregarla.",
     "notYetFiled": "Presenta el informe antes de agregar una nota posterior.",
     "held": "Un informe con retención legal no se puede eliminar. Levanta antes la retención.",
-    "holdSet": "Retención legal puesta.",
-    "holdReleased": "Retención legal levantada.",
+    "holdSet": "Retención legal puesta",
+    "holdReleased": "Retención legal levantada",
     "alerted": "Desde este informe se avisó a los propietarios, así que se conserva. Marca al buceador como encontrado.",
     "found": "Marcado como encontrado. Se envía a los propietarios el fin de la alerta.",
     "stillMissing": "En el manifiesto sigue sin regresar a bordo. Márcalo antes como de vuelta a bordo."

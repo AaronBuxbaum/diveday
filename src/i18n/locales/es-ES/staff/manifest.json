@@ -76,7 +76,7 @@
     "observedSpecies": "Visto en esta inmersión",
     "observedSpeciesNone": "Nada que destacar",
     "save": "Guardar registro de inmersión",
-    "saved": "Registro de la inmersión guardado.",
+    "saved": "Registro de la inmersión guardado",
     "refusal": {
       "timesTransposed": "La hora de salida debe ser posterior a la de entrada. Revisa las dos horas y guarda de nuevo.",
       "depthOutOfRange": "Esa profundidad está fuera de lo que admite este formulario. Revisa la cifra y guarda de nuevo.",

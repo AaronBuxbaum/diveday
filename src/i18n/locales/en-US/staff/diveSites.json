@@ -4,7 +4,7 @@
     "createSite": "Add a dive site",
     "browseTemplates": "Browse the DiveDay catalog",
     "catalogSiteCount": "{count, plural, one {# published site} other {# published sites}}",
-    "siteDeletedNotice": "Site deleted.",
+    "siteDeletedNotice": "Site deleted",
     "emptyHeading": "Start with a site your crew knows well",
     "emptyBody": "Add a location, a map or route image, and the life divers may encounter.",
     "locationToAdd": "Location to add",
@@ -13,7 +13,7 @@
     "searchPlaceholder": "Name or location",
     "searchClear": "Clear search",
     "noMatchHeading": "No sites match that search",
-    "templateUpdateReady": "Template update v{version} ready.",
+    "templateUpdateReady": "Template update v{version} ready",
     "nitroxBadge": "Nitrox",
     "groups": {
       "unrated": "Unrated"
@@ -107,7 +107,7 @@
       "status": {
         "empty": "Click where the dive starts.",
         "one": "One waypoint down. Click where it goes next.",
-        "some": "{count, plural, one {# waypoint} other {# waypoints}}.",
+        "some": "{count, plural, one {# waypoint} other {# waypoints}}",
         "full": "That’s the most waypoints a route can carry ({count}). Undo to change one."
       }
     },
@@ -186,9 +186,9 @@
       "searchLabel": "Find a species",
       "searchPlaceholder": "Stoplight parrotfish, or Sparisoma viride",
       "add": "Add",
-      "empty": "No species yet.",
+      "empty": "No species yet",
       "full": "{max, plural, one {That’s the most species one guide can hold (#).} other {That’s the most species one guide can hold (#).}}",
-      "notFound": "Not in DiveDay’s catalog yet.",
+      "notFound": "Not in DiveDay’s catalog yet",
       "requestSpecies": "Tell DiveDay about it",
       "requestSent": "Thanks, we have noted {name}. It arrives in a release, not today.",
       "remove": "Remove",
@@ -228,8 +228,8 @@
     "deleteConfirmTitle": "Delete this dive site?",
     "deleteConfirmBody": "It leaves your active library and your new-trip choices.",
     "deleting": "Deleting…",
-    "copiedNotice": "Independent copy ready to tailor.",
-    "savedNotice": "Dive site saved.",
+    "copiedNotice": "Independent copy ready to tailor",
+    "savedNotice": "Dive site saved",
     "errorInvalid": "That didn’t save. Check the name and links, then try again.",
     "certificationDescription": "What this site itself demands.",
     "requiredSpecialties": "Required specialties",
@@ -249,7 +249,7 @@
       "updated": "Template update pulled in. Your edits were kept.",
       "replaced": "Template update pulled in. Template copy replaced.",
       "undone": "Template update undone. Your previous site copy is back.",
-      "undoMessage": "Template update applied.",
+      "undoMessage": "Template update applied",
       "undo": "Undo update",
       "undoing": "Undoing update…",
       "unavailable": "That template update is no longer available. Refresh the page and try again.",

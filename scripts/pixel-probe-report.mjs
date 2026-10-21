@@ -198,7 +198,7 @@ export function buildReport(records, { settled = [], ledger = {} } = {}) {
     }
     probed += 1;
     for (const flag of record.flags || []) {
-      const entry = settledEntryFor(flag, settled);
+      const entry = settledEntryFor(flag, settled, record);
       const key = clusterKey(flag);
       const target = entry ? settledHits : clusters;
       if (!target.has(key)) {

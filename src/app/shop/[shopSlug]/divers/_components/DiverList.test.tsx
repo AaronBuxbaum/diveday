@@ -143,7 +143,7 @@ describe("DiverList empty state", () => {
    */
   it("offers the full add-a-diver form while the search box is empty", () => {
     renderList();
-    expect(screen.getByText("No divers on file yet.")).toBeInTheDocument();
+    expect(screen.getByText("No divers on file yet")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers/new",
@@ -216,7 +216,7 @@ describe("DiverList empty state", () => {
     expect(screen.queryByRole("list")).toBeNull();
     // The one heading that should be there, so this cannot pass by rendering
     // nothing at all.
-    expect(screen.getByRole("heading", { name: "No divers on file yet." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No divers on file yet" })).toBeInTheDocument();
   });
 
   /**

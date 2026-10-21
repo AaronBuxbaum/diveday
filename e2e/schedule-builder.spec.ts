@@ -223,7 +223,7 @@ test.describe("schedule builder", () => {
     await page.getByLabel("New date").fill(next.toISOString().slice(0, 10));
     await page.getByRole("button", { name: "Move it" }).click();
 
-    await expect(page.getByText("Moved.")).toBeVisible();
+    await expect(page.getByText("Moved")).toBeVisible();
     await expect(page.getByText(/^Telling \d+ divers? the new time…$/)).toBeVisible();
     await page.getByRole("button", { name: "Undo" }).click();
     await expect(page.getByText("Not told. The divers still have the old time.")).toBeVisible();
@@ -280,7 +280,7 @@ test.describe("schedule builder", () => {
     await page.getByLabel("New date").fill(moveDay);
     await page.getByLabel("New departure time").fill("07:15");
     await page.getByRole("button", { name: "Move it" }).click();
-    await expect(page.getByRole("status")).toContainText("Moved.");
+    await expect(page.getByRole("status")).toContainText("Moved");
     // 07:15 + the same four hours it was created with.
     // The week's row leads with the hour it leaves; the full range is the
     // departure's own page. The move is proven by the new time appearing on
@@ -306,7 +306,7 @@ test.describe("schedule builder", () => {
     for (let remaining = 2; remaining > 0; remaining -= 1) {
       await chooseRowAction(page, "Remove", title);
       await page.getByRole("button", { name: "Yes, remove the trip" }).click();
-      await expect(page.getByRole("status")).toContainText("Taken off the board.");
+      await expect(page.getByRole("status")).toContainText("Taken off the board");
       await expect(page.getByRole("listitem").filter({ hasText: title })).toHaveCount(
         remaining - 1,
       );
@@ -714,14 +714,14 @@ test.describe("schedule builder", () => {
     await page.getByLabel("New date").fill(moveDay);
     await page.getByLabel("New departure time").fill("06:45");
     await page.getByRole("button", { name: "Move it" }).click();
-    await expect(page.getByRole("status")).toContainText("Moved.");
+    await expect(page.getByRole("status")).toContainText("Moved");
 
     await page.goto(`${BOARD}?week=${moveDay}`);
     await expect(week.getByRole("link", { name: title, exact: true })).toBeVisible();
 
     await chooseRowAction(page, "Remove", title);
     await page.getByRole("button", { name: "Yes, remove the trip" }).click();
-    await expect(page.getByRole("status")).toContainText("Taken off the board.");
+    await expect(page.getByRole("status")).toContainText("Taken off the board");
     await expect(week.getByRole("link", { name: title, exact: true })).toHaveCount(0);
   });
 

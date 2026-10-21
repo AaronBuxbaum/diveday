@@ -23,7 +23,7 @@ test("an owner turns the crew schedule off and on again", async ({ page, private
   await page.goto(features);
   await crewRow.getByLabel("Plan crew in DiveDay").uncheck();
   await crewRow.getByRole("button", { name: "Save" }).click();
-  await expect(crewRow.getByText("Saved.")).toBeVisible();
+  await expect(crewRow.getByText("Saved")).toBeVisible();
 
   await page.goto(board);
   await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
@@ -36,7 +36,7 @@ test("an owner turns the crew schedule off and on again", async ({ page, private
   await page.goto(features);
   await crewRow.getByLabel("Plan crew in DiveDay").check();
   await crewRow.getByRole("button", { name: "Save" }).click();
-  await expect(crewRow.getByText("Saved.")).toBeVisible();
+  await expect(crewRow.getByText("Saved")).toBeVisible();
 
   await page.goto(board);
   await crewTab.click();

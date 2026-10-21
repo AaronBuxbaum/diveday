@@ -32,11 +32,11 @@
   "edit": {
     "depthMarkersHint": "<marker>'{depth18}'</marker> se imprime como “18 metros” o “60 pies”, en la unidad del buceador. También <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> y <marker>'{depth40}'</marker>; agrega <marker>n</marker> para un número sin unidad en un rango. Borra la marca para escribir tú la profundidad.",
     "liveAt": "Publicado en",
-    "hiddenFromDivers": "Oculto para los buceadores y el selector de sesiones.",
+    "hiddenFromDivers": "Oculto para los buceadores y el selector de sesiones",
     "hideFromCatalog": "Ocultar del catálogo",
     "showInCatalog": "Mostrar en el catálogo",
     "previewHidden": "Vista previa",
-    "noticeSaved": "Página del curso guardada.",
+    "noticeSaved": "Página del curso guardada",
     "errorInvalid": "Eso no se guardó. Revisa los campos e inténtalo de nuevo.",
     "errorNotAuthorized": "Solo los propietarios, gerentes e instructores pueden ocultar o mostrar un curso.",
     "errorFaqIncomplete": "Cada pregunta necesita una respuesta, y cada respuesta una pregunta.",
@@ -213,8 +213,8 @@
   },
   "ladder": {
     "heading": "Siguientes pasos",
-    "taster": "{count, plural, one {# hizo {course} en los últimos 12 meses} other {# hicieron {course} en los últimos 12 meses}} · {wentOn} siguieron con {next}",
-    "certified": "{count, plural, one {# buceador que se certificó como {course} aquí en los últimos 12 meses no tiene {next} reservado} other {# buceadores que se certificaron como {course} aquí en los últimos 12 meses no tienen {next} reservado}}",
+    "taster": "{count, plural, one {# hizo {course} en los últimos 12 meses} other {# hicieron {course} en los últimos 12 meses}} · {wentOn} siguieron con {next}.",
+    "certified": "{count, plural, one {# buceador que se certificó como {course} aquí en los últimos 12 meses no tiene {next} reservado} other {# buceadores que se certificaron como {course} aquí en los últimos 12 meses no tienen {next} reservado}}.",
     "nextSession": "Próximo {next}: {date} ({booked} de {capacity})",
     "noSession": "Todavía no hay {next} con plaza en el tablero.",
     "seeWho": "Ver quiénes",
@@ -223,7 +223,7 @@
     "inviteAria": "Invitar a {name} a {next}",
     "referral": "Derivación médica pendiente: llama primero",
     "notice": {
-      "invite-sent": "Invitación enviada.",
+      "invite-sent": "Invitación enviada",
       "invite-opted-out": "Invitación registrada, pero no enviada por correo: este buceador desactivó los correos opcionales del centro.",
       "invite-cooldown": "No se envió: este buceador recibió una invitación del centro en los últimos 30 días.",
       "invite-unavailable": "No se envió: este buceador no puede tomar esa sesión.",

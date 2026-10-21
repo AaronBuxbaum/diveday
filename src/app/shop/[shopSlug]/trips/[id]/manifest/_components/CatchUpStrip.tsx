@@ -66,21 +66,21 @@ export function CatchUpStrip({
         {/* **The padding sets the insets, not the target** (pixel-craft class
             5). At the default `md`, 48px with `px-4`, the row grew round the
             button: the title sat 33px down this 16px panel and "Got it" ended
-            33px inside its edge. `sm` and `flush` keep 8px of hover fill and
-            hand it back sideways, so the word ends on the panel's 16px inset;
+            33px inside its edge. A padded-flush `sm` link leaves the word
+            on the panel's 16px inset without another filled rounded box;
             `-my-2.5` hands back what the 44px target adds round its 20px line,
             leaving the title's own 24px, so the title sits 16px down. The
             target stays whole, overhanging the padding, with room for its
-            ring inside the panel. A flush button has given its padding up, so
-            the row's `gap-x-6` takes that room back: its hover fill ends 16px
-            short of the title. */}
+            ring inside the panel. The row's `gap-x-6` leaves the target clear
+            of the title. The symmetric 8px padding keeps the short label
+            centred in its whole target, including while it is pending. */}
         <form action={dismissAction} className="flex">
           <SubmitButton
             pendingLabel={dismissLabel}
             className={buttonClass({
-              variant: "ghost",
+              variant: "link",
               size: "sm",
-              flush: true,
+              flush: "padded",
               className: "-my-2.5",
             })}
           >

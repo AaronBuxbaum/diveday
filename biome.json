@@ -22,6 +22,12 @@
         "noUnusedVariables": "error",
         "noUnusedImports": "error"
       },
+      "complexity": {
+        "useMathMinMax": "off"
+      },
+      "performance": {
+        "useDomNodeTextContent": "off"
+      },
       "a11y": {
         "useButtonType": "error"
       }
@@ -29,7 +35,8 @@
     "domains": {
       "next": "recommended",
       "react": "recommended",
-      "test": "recommended"
+      "test": "recommended",
+      "playwright": "none"
     }
   },
   "overrides": [
@@ -47,11 +54,20 @@
       }
     },
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.mjs", ".agents/**"],
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test.mjs",
+        ".agents/**",
+        "**/*.probe.mjs"
+      ],
       "linter": {
         "rules": {
           "suspicious": {
             "noTemplateCurlyInString": "off"
+          },
+          "correctness": {
+            "noComponentHookFactories": "off"
           }
         }
       }
@@ -141,6 +157,16 @@
       "quoteStyle": "double",
       "semicolons": "always",
       "trailingCommas": "all"
+    }
+  },
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    }
+  },
+  "yaml": {
+    "formatter": {
+      "enabled": false
     }
   },
   "assist": {

@@ -5,6 +5,7 @@ import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/componen
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { LISTED_SHOP_SLUGS } from "../src/db/seed-listed-shops";
 import { diverTranslator } from "../src/i18n/messages";
+import { staffPassengerCount } from "../src/i18n/participant-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
@@ -56,6 +57,7 @@ import {
   walkInFormPath,
   writeCourseForm,
 } from "./helpers";
+import { PAYMENT_HISTORY_CSV } from "./payment-history-fixture";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 
@@ -2707,6 +2709,10 @@ for (const scheme of ["light", "dark"] as const) {
         // the form mounting.
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing", scheme);
+        await page.getByLabel("Email", { exact: true }).fill("avery@gmial.com");
+        await page.getByLabel("Email", { exact: true }).press("Tab");
+        await page.getByRole("button", { name: /avery@gmail\.com/ }).waitFor();
+        await capture(page, "booking-email-correction", scheme);
       });
 
       /**
@@ -2955,10 +2961,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByLabel("Review link (optional)", { exact: true })
           .fill("https://g.page/r/blue-mantis/review");
         await reviewSettingsPage.getByRole("button", { name: "Save review link" }).click();
-        await reviewSettingsPage
-          .getByText("Review link saved.")
-          .filter({ visible: true })
-          .waitFor();
+        await reviewSettingsPage.getByText("Review link saved").filter({ visible: true }).waitFor();
         await reviewSettingsContext.close();
 
         await request.post("/api/test/seed-stripe-account");
@@ -5498,6 +5501,11 @@ for (const scheme of ["light", "dark"] as const) {
         ).toBeVisible();
         await capture(page, "trip-roster-participant-types", scheme);
 
+        await page.locator(`summary[aria-label="Details for ${mixedBoat.rider}"]`).click();
+        await page.getByText("Coming as: Rider", { exact: true }).click();
+        await page.locator('select[name="participantType"]:visible').waitFor();
+        await capture(page, "trip-coming-as-editor", scheme);
+
         await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}?view=details`);
         await expect(page.locator("details#participant-terms")).toBeVisible();
         await capture(page, "trip-details-participant-terms", scheme);
@@ -5506,6 +5514,21 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Roll call" }).waitFor();
         await expect(page.getByText(/1 snorkeler · 1 rider/).first()).toBeVisible();
         await capture(page, "manifest-participant-types", scheme);
+        const dismiss = page.getByRole("button", {
+          name: staffCopy("manifest.catchUp.dismiss"),
+          exact: true,
+        });
+        await capture(page, "manifest-catchup-focused", scheme, {
+          // Re-establish real keyboard focus after every resize/probe so the
+          // full target's ring is photographed at both light widths.
+          beforeShot: async () => {
+            await dismiss.focus();
+            await page.keyboard.press("Shift+Tab");
+            await page.keyboard.press("Tab");
+            await expect(dismiss).toBeFocused();
+            expect(await dismiss.evaluate((button) => button.matches(":focus-visible"))).toBe(true);
+          },
+        });
       });
 
       // The add-a-departure form as a shop meets it all week: the quick path,
@@ -5786,6 +5809,36 @@ for (const scheme of ["light", "dark"] as const) {
         // record.
         await page.getByRole("region", { name: "The story" }).waitFor();
         await capture(page, "diver-profile", scheme);
+      });
+
+      test(`a diver's agency verification targets render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Mateo Duarte", "Mateo Duarte");
+        await openDiverFileGroup(page, "Certification records");
+        await page.getByRole("link", { name: "Check with SSI", exact: true }).waitFor();
+        await capture(page, "diver-agency-verification-link", scheme);
+        await page.evaluate(() => {
+          document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+          window.dispatchEvent(new Event("diveday-cert-check-ready"));
+        });
+        await page.getByRole("button", { name: "Check with SSI", exact: true }).waitFor();
+        await capture(page, "diver-agency-verification-action", scheme);
+      });
+
+      test(`the drysuit observation form keeps its input and action level (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Priya", "Priya Sharma");
+        const gear = await openDiverFileGroup(page, "Gear and sizes");
+        await gear.getByText("Edit", { exact: true }).click();
+        await gear.getByRole("radio", { name: "Own drysuit", exact: true }).check();
+        await gear.getByRole("button", { name: "Save rental fit" }).click();
+        await page.getByText(staffCopy("divers.notices.profileSaved"), { exact: true }).waitFor();
+        await gear.locator(":scope > summary").click();
+        await openDiverFileGroup(page, "Certification records");
+        await page.getByLabel("What you saw").fill("Own drysuit, three shore dives with us");
+        await capture(page, "diver-drysuit-observation-form", scheme);
       });
 
       /**
@@ -6158,7 +6211,7 @@ for (const scheme of ["light", "dark"] as const) {
         const record = page.url().split("?")[0] ?? "";
         await page.getByText("Delete Felix Grant").click();
         await page.getByRole("button", { name: "Delete diver" }).click();
-        await page.getByText("Diver deleted.").waitFor();
+        await page.getByText("Diver deleted").waitFor();
         await page.goto(record);
         // The two ends of the page this capture exists for, waited on by name
         // so the shot can never land on a half-rendered record.
@@ -6183,7 +6236,7 @@ for (const scheme of ["light", "dark"] as const) {
         const record = page.url().split("?")[0] ?? "";
         await page.getByText("Delete Felix Grant").click();
         await page.getByRole("button", { name: "Delete diver" }).click();
-        await page.getByText("Diver deleted.").waitFor();
+        await page.getByText("Diver deleted").waitFor();
         await page.goto(record);
         await page.getByText("Erase Felix Grant’s personal data").click();
         await page.getByLabel("Type Felix Grant to confirm").fill("Felix Gr");
@@ -7905,7 +7958,7 @@ for (const scheme of ["light", "dark"] as const) {
         await inviteSection.getByLabel("Email").fill(email);
         await inviteSection.getByLabel("Instructor", { exact: true }).check();
         await inviteSection.getByRole("button", { name: "Send invite" }).click();
-        await expect(page.getByText("Invite sent.")).toBeVisible();
+        await expect(page.getByText("Invite sent")).toBeVisible();
 
         const seeded = await request.post("/api/test/seed-account-token", {
           data: { email, purpose: "invite" },
@@ -7966,6 +8019,26 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
         await page.getByRole("heading", { level: 2, name: "PADI" }).waitFor();
         await capture(page, "courses-list", scheme);
+      });
+
+      test(`course follow-up disclosures share the compact row grammar (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        // The existing recap fixture issues a real shop AOW card. Its frozen
+        // issue date predates the processing cut, and the diver has not taken
+        // the next course, so both of the follow-up disclosures are populated.
+        const seeded = await request.post("/api/test/seed-certified-recap");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await page.goto("/shop/blue-mantis/courses");
+        const earlier = page.locator("#cards-to-process-earlier > summary");
+        await earlier.waitFor();
+        const people = page.getByText("See who", { exact: true });
+        await people.waitFor();
+        await capture(page, "course-follow-ups-closed", scheme);
+        await earlier.click();
+        await people.click();
+        await capture(page, "course-follow-ups-open", scheme);
       });
 
       // A later page of the same ledger: the group heading re-rendering on the
@@ -8054,6 +8127,30 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
         await capture(page, "reports", scheme);
+      });
+
+      test(`imported payment history keeps its report review door visible (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/settings/import");
+        await expect(page.locator('input[type="file"]:visible')).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        await page.setInputFiles('input[type="file"]', {
+          name: "payment-history.csv",
+          mimeType: "text/csv",
+          buffer: Buffer.from(PAYMENT_HISTORY_CSV, "utf-8"),
+        });
+        await page.getByRole("button", { name: "Import 1 contact" }).click();
+        await page
+          .getByText(
+            staffCopy("settings.import.wizard.result.paymentHistoryLineOther", { count: 2 }),
+          )
+          .waitFor();
+        await page.goto("/shop/blue-mantis/reports?month=2026-03");
+        await page.getByRole("region", { name: "Unverified imported history" }).waitFor();
+        await capture(page, "reports-imported-history", scheme);
       });
 
       /**
@@ -8770,7 +8867,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.waitForURL(/\/dive-sites\//);
         await page.getByLabel(/Maximum depth/).fill("105");
         await page.getByRole("button", { name: "Save dive site" }).click();
-        await page.getByText("Dive site saved.").waitFor();
+        await page.getByText("Dive site saved").waitFor();
 
         await openReefTrip(page);
         await openTripTab(page, "Trip");
@@ -8808,7 +8905,7 @@ for (const scheme of ["light", "dark"] as const) {
         // button it is about to press.
         await openRosterNotes(row);
         await row.getByRole("button", { name: "Delete" }).click();
-        await page.getByText("Private note deleted.").waitFor();
+        await page.getByText("Private note deleted").waitFor();
         await capture(page, "trip-guests-note-undo", scheme);
       });
 
@@ -9104,6 +9201,29 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "counter-rental-ticket", scheme);
       });
 
+      test(`a counter tank rental keeps its gas correction controls level (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
+        await page
+          .getByRole("group", { name: "Kind of gear" })
+          .getByRole("button", { name: /^Tank\b/ })
+          .click();
+        const tank = page
+          .getByRole("button", { name: /^AL(?:80|63)-/ })
+          .and(page.locator(":enabled"))
+          .first();
+        await tank.click();
+        await expect(tank).toHaveAttribute("aria-pressed", "true");
+        await page.getByRole("combobox", { name: /^Fill for / }).selectOption("21");
+        await page.getByRole("radio", { name: /^No charge/ }).check();
+        await page.getByRole("button", { name: "Rent out", exact: true }).click();
+        await page.waitForURL(/\/gear\/rentals\/[0-9a-f-]{36}(?:[?#]|$)/);
+        await page.locator('[data-tank-gas] select[name="fill"]').waitFor();
+        await capture(page, "counter-rental-tank-gas-correction", scheme);
+      });
+
       // The way back to a deleted unit (ADR 20260820-every-delete-is-soft):
       // the Deleted chip in the filter band, and the list whose one act is
       // Restore. Photographed after deleting a unit rather than seeding one —
@@ -9116,7 +9236,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: "Reg #5", exact: true }).click();
         await page.getByRole("heading", { level: 1, name: "Reg #5" }).waitFor();
         await page.getByRole("button", { name: "Delete unit" }).click();
-        await page.getByRole("status").filter({ hasText: "Unit deleted." }).waitFor();
+        await page.getByRole("status").filter({ hasText: "Unit deleted" }).waitFor();
 
         await page.goto("/shop/blue-mantis/gear?view=deleted");
         await page.getByRole("button", { name: "Restore Reg #5" }).waitFor();
@@ -9135,7 +9255,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Reg #5" }).waitFor();
         const record = page.url();
         await page.getByRole("button", { name: "Delete unit" }).click();
-        await page.getByRole("status").filter({ hasText: "Unit deleted." }).waitFor();
+        await page.getByRole("status").filter({ hasText: "Unit deleted" }).waitFor();
 
         await page.goto(record);
         await page.getByRole("button", { name: "Restore unit" }).waitFor();
@@ -9472,6 +9592,62 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test.describe("read in Spanish", () => {
         test.use({ locale: SPANISH });
+
+        test(`a mixed-passenger departure log reads in Spanish without clipping (${scheme})`, async ({
+          page,
+          request,
+        }) => {
+          const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+          expect(seeded.ok()).toBe(true);
+          const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
+          if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
+
+          const copy = staffTranslator(SPANISH);
+          await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}/log`);
+          await page
+            .getByRole("heading", { name: copy("incidentExport.timelineHeading") })
+            .waitFor();
+          const passengerTotal = await page
+            .locator('section[aria-labelledby="incident-roster-heading"] tbody tr')
+            .count();
+          expect(passengerTotal).toBeGreaterThan(2);
+          const passengerTile = page
+            .locator('section[aria-labelledby="incident-summary-heading"] dl > div')
+            .filter({ has: page.getByText(copy("incidentExport.summaryDivers"), { exact: true }) });
+          const figure = passengerTile.locator("dd");
+          expect(await figure.evaluate((value) => value.firstChild?.textContent?.trim())).toBe(
+            String(passengerTotal),
+          );
+          await expect(figure.locator("span")).toHaveText(
+            String(
+              staffPassengerCount(copy, {
+                totalDivers: passengerTotal,
+                byType: { diver: passengerTotal - 2, snorkeler: 1, rider: 1 },
+              }),
+            ),
+          );
+          await capture(page, "departure-log-participant-types", scheme, {
+            locale: SPANISH,
+            beforeShot: async () => {
+              const fits = await passengerTile.evaluate(async (tile) => {
+                await document.fonts.ready;
+                const value = tile.querySelector("dd");
+                const detail = value?.querySelector("span");
+                if (!value || !detail) return false;
+                const bounds = tile.getBoundingClientRect();
+                const range = document.createRange();
+                range.selectNodeContents(detail);
+                return (
+                  value.scrollWidth <= value.clientWidth &&
+                  [...range.getClientRects()].every(
+                    (rect) => rect.left >= bounds.left && rect.right <= bounds.right,
+                  )
+                );
+              });
+              expect(fits, "the complete passenger breakdown fits within its tile").toBe(true);
+            },
+          });
+        });
 
         /**
          * **The missing-divers grid, whose chips are 80px wide.**
@@ -10235,7 +10411,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByLabel("Dives included").fill("10");
       await page.getByLabel("Price").fill("450");
       await page.getByRole("button", { name: "Add package" }).click();
-      await page.getByText("Package added.").waitFor();
+      await page.getByText("Package added").waitFor();
       await page.goto(`/s/${privateShop.slug}/packages`);
       await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
       await page.getByRole("button", { name: "Buy for $450" }).waitFor();
@@ -10301,7 +10477,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "Save rentals" }).click();
       // The page comes back with its saved notice — the destination's own
       // render, not a timing guess.
-      await page.getByText("Rentals saved.").waitFor();
+      await page.getByText("Rentals saved").waitFor();
 
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);

@@ -47,7 +47,7 @@ test.describe("account security settings", () => {
       .fill(totpCode(secret, Date.parse(E2E_FROZEN_CLOCK)));
     await page.getByRole("button", { name: "Enable", exact: true }).click();
 
-    await expect(page.getByText("Two-factor authentication enabled.")).toBeVisible();
+    await expect(page.getByText("Two-factor authentication enabled")).toBeVisible();
     // The status badge carries a tone glyph beside its word, so the button is
     // the unambiguous read on the state.
     await expect(page.getByRole("button", { name: "Disable two-factor" })).toBeVisible();

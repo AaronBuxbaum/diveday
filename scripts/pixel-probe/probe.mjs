@@ -15,6 +15,7 @@ import {
 } from "./analyze.mjs";
 import { collectGeometry } from "./collect.mjs";
 import { cropRegion, loadRaw, writeClipShot, writeCrop } from "./crop.mjs";
+import { settlementContextFor } from "./settlements.mjs";
 import { STALLED, statePass } from "./states.mjs";
 
 /**
@@ -200,6 +201,7 @@ export async function probeViewport(page, ctx) {
     record.url = snapshot.url;
     record.path = snapshot.path;
     record.doc = snapshot.doc;
+    record.settlementContext = settlementContextFor(snapshot);
     record.counts.elements = snapshot.elements.length;
     record.counts.truncated = snapshot.truncated;
     const ix = buildIndex(snapshot);

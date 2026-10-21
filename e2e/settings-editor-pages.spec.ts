@@ -77,7 +77,7 @@ test("the emergency reference saves on its own page, and the save lands back on 
 
   // Asserted on the banner and the heading, not the URL, for the reason the
   // boats test above gives (`FlashParams`).
-  await expect(page.getByText("Emergency reference saved.")).toBeVisible();
+  await expect(page.getByText("Emergency reference saved")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Emergency reference" })).toBeVisible();
   await expect(page.locator("#emergency-response summary")).toContainText(
     "Second Wind, white hull, blue canopy",
@@ -147,7 +147,7 @@ test("a hull is added on its own page, and the save lands back on it", async ({
   // the hub. Asserted on the banner and the heading, not on the URL: this page
   // clears its own `?notice=` client-side once shown (`FlashParams`), so a URL
   // assertion races that cleanup.
-  await expect(page.getByText("Boat created.")).toBeVisible();
+  await expect(page.getByText("Boat created")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Boats" })).toBeVisible();
   const row = page.locator("details").filter({ has: page.locator('input[value="Second Wind"]') });
   await expect(row.locator("summary")).toContainText("Second Wind");
@@ -175,7 +175,7 @@ test("a package is added on its own page, and the save lands back on it", async 
   await page.getByLabel("Price").fill("450");
   await page.getByRole("button", { name: "Add package" }).click();
 
-  await expect(page.getByText("Package added.")).toBeVisible();
+  await expect(page.getByText("Package added")).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Dive packages" })).toBeVisible();
   const packageRow = page.getByRole("listitem").filter({ hasText: "Ten-dive card" });
   await expect(packageRow).toContainText("10 dives");

@@ -358,9 +358,7 @@ test.describe("staff", () => {
     const dayOf = await openThreadStep(page, "dayof");
     await expect(dayOf.getByText("Anything that would help?")).toBeVisible();
     await expect(dayOf.getByText(diver("booking.reEntry.noGate"))).toBeVisible();
-    await dayOf
-      .getByRole("radio", { name: "A word with the divemaster before we get in." })
-      .check();
+    await dayOf.getByRole("radio", { name: "A word with the divemaster before we get in" }).check();
     await dayOf.getByRole("button", { name: "Save day-of details" }).click();
     await expect(
       page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),

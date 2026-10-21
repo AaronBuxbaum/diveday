@@ -4,7 +4,7 @@
     "createSite": "Agregar un sitio de buceo",
     "browseTemplates": "Explora el catálogo de DiveDay",
     "catalogSiteCount": "{count, plural, one {# sitio publicado} other {# sitios publicados}}",
-    "siteDeletedNotice": "Sitio eliminado.",
+    "siteDeletedNotice": "Sitio eliminado",
     "emptyHeading": "Empieza con un sitio que tu tripulación ya conoce",
     "emptyBody": "Agrega una ubicación, una imagen de mapa o ruta, y la vida marina que verán los buceadores.",
     "locationToAdd": "Ubicación por agregar",
@@ -13,7 +13,7 @@
     "searchPlaceholder": "Nombre o ubicación",
     "searchClear": "Borrar la búsqueda",
     "noMatchHeading": "Ningún sitio coincide con esa búsqueda",
-    "templateUpdateReady": "Actualización de plantilla v{version} disponible.",
+    "templateUpdateReady": "Actualización de plantilla v{version} disponible",
     "nitroxBadge": "Nitrox",
     "groups": {
       "unrated": "Sin clasificar"
@@ -107,7 +107,7 @@
       "status": {
         "empty": "Toca donde empieza la inmersión.",
         "one": "Un punto marcado: toca dónde sigue.",
-        "some": "{count, plural, one {# punto} other {# puntos}}.",
+        "some": "{count, plural, one {# punto} other {# puntos}}",
         "full": "Es el máximo de puntos que admite una ruta ({count}). Deshaz para cambiar alguno."
       }
     },
@@ -228,8 +228,8 @@
     "deleteConfirmTitle": "¿Eliminar este sitio de buceo?",
     "deleteConfirmBody": "Dejará de aparecer en tu biblioteca activa y en las nuevas salidas.",
     "deleting": "Eliminando…",
-    "copiedNotice": "Copia independiente lista para adaptar.",
-    "savedNotice": "Sitio de buceo guardado.",
+    "copiedNotice": "Copia independiente lista para adaptar",
+    "savedNotice": "Sitio de buceo guardado",
     "errorInvalid": "Eso no se guardó. Revisa el nombre y los enlaces e inténtalo de nuevo.",
     "certificationDescription": "Requisitos que impone el sitio.",
     "requiredSpecialties": "Especialidades requeridas",
@@ -249,7 +249,7 @@
       "updated": "Actualización incorporada. Tus cambios se conservaron.",
       "replaced": "Actualización incorporada. Se reemplazó el texto de la plantilla.",
       "undone": "Actualización deshecha. Se restauró el contenido anterior del sitio.",
-      "undoMessage": "Actualización incorporada.",
+      "undoMessage": "Actualización incorporada",
       "undo": "Deshacer actualización",
       "undoing": "Deshaciendo actualización…",
       "unavailable": "Esa actualización ya no está disponible. Recarga la página e inténtalo de nuevo.",

@@ -199,7 +199,7 @@
     "addToCalendar": "Add to calendar",
     "shareWithBuddy": "Share with a buddy",
     "linkCopied": "Link copied",
-    "linkCopiedAnnouncement": "Trip link copied to clipboard.",
+    "linkCopiedAnnouncement": "Trip link copied to clipboard",
     "linkCopyFailed": "Couldn’t copy. Copy it from the address bar instead.",
     "shareText": "Dive with me. Here are the trip details.",
     "packTitle": "Pack with confidence",
@@ -264,8 +264,8 @@
     "surface": "Surface",
     "wind": "Wind",
     "forecastCrewNote": "Forecast supplied by the crew; conditions can change.",
-    "forecastUpdated": "Updated {when}.",
-    "forecastUpdateUnavailable": "Update time unavailable.",
+    "forecastUpdated": "Updated {when}",
+    "forecastUpdateUnavailable": "Update time unavailable",
     "forecastCrewCall": "The crew confirms conditions and makes the final call at the dock.",
     "forecastCreditPrefix": "Forecast by",
     "timeline": {
@@ -421,7 +421,7 @@
     "certNoneOnGatedTrip": "This trip is for certified divers. Book if you like, then talk to the shop: they run courses and easier dives too.",
     "confirmedHeading": "You’ve got a seat, {name}.",
     "confirmedDockCall": "{date}, {time}. Be at the dock {minutes, plural, one {# minute} other {# minutes}} early and we’ll take it from there.",
-    "milestoneDay": "Your {ordinal} dive day with {shopName}.",
+    "milestoneDay": "Your {ordinal} dive day with {shopName}",
     "paymentDepositBalance": "Your seat’s locked in. The {balance} balance is due at the dock.",
     "paymentStillOpen": "Your seat is safe and payment’s still open",
     "codeUsedUp": "That code’s been used up. Your seat is safe, and you can pay the full price from your readiness page.",
@@ -462,13 +462,13 @@
     "continueToPayment": "Continue to payment",
     "alsoOnTheSchedule": "Also on the schedule",
     "worthALook": {
-      "sameCourse": "The same course, another day.",
-      "sameSite": "The same site, another day.",
+      "sameCourse": "The same course, another day",
+      "sameSite": "The same site, another day",
       "gentler": "The shop rates this site for beginners.",
-      "alsoMorning": "Also a morning boat.",
-      "alsoAfternoon": "Also an afternoon boat.",
-      "alsoEvening": "Also an evening boat.",
-      "moreRoom": "More room on this one."
+      "alsoMorning": "Also a morning boat",
+      "alsoAfternoon": "Also an afternoon boat",
+      "alsoEvening": "Also an evening boat",
+      "moreRoom": "More room on this one"
     },
     "intent": {
       "easingBack": "Getting comfortable again",
@@ -480,8 +480,8 @@
     },
     "reEntry": {
       "legend": "Anything that would help?",
-      "deckWord": "A word with the divemaster before we get in.",
-      "easyFirstDive": "An easy first dive to start with.",
+      "deckWord": "A word with the divemaster before we get in",
+      "easyFirstDive": "An easy first dive to start with",
       "refresherCourse": "Tell me about the refresher course.",
       "noGate": "None of these changes whether you can book."
     },
@@ -489,12 +489,12 @@
   },
   "bookingGear": {
     "heading": "Rental gear",
-    "introBody": "sizes come after you book, and your set will be rigged and waiting",
+    "introBody": "Sizes come after you book, and your set will be rigged and waiting.",
     "diverNHeading": "Diver {number}’s gear",
     "gearTotal": "Gear for this diver: {price}",
     "needGear": "Need rental gear?",
     "skipBody": "Bringing your own kit? Leave this unchecked and you won’t be charged for gear. Check it to see what we rent.",
-    "asLastTime": "Ticked as on your last trip."
+    "asLastTime": "Ticked as on your last trip"
   },
   "lastMinute": {
     "heading": "Want a deal on a last-minute seat?",
@@ -783,7 +783,7 @@
     "saveImageFailed": "That didn’t save. Try again in a moment.",
     "postcardFileName": "dive-day",
     "pulseHeading": "Something to fix? Tell the shop privately",
-    "pulseAudience": "Just for the owner and managers at {shop}.",
+    "pulseAudience": "Just for the owner and managers at {shop}",
     "pulseGear": "The gear",
     "pulseBriefing": "The briefing",
     "pulseBoat": "The boat",
@@ -800,10 +800,10 @@
     "nextDiveHeading": "Your next dive",
     "bookedNext": "You’re booked: {date} · {title}, {time}.",
     "nextDiveCrewNamedSite": "Your crew mentioned {site}.",
-    "nextDiveCourseSession": "The next session of {course}.",
-    "nextDiveSameLens": "Another {lens} day.",
-    "nextDiveSameSite": "Back to {site}.",
-    "nextDiveSoonest": "The next one with room.",
+    "nextDiveCourseSession": "The next session of {course}",
+    "nextDiveSameLens": "Another {lens} day",
+    "nextDiveSameSite": "Back to {site}",
+    "nextDiveSoonest": "The next one with room",
     "nextDiveLevelCovers": "Your {level} card covers it.",
     "nextDiveSeats": "{count, plural, one {# seat} other {# seats}}"
   },
@@ -957,7 +957,7 @@
       "nitroxSelfDeclared": "You told the shop you’re nitrox certified, but they haven’t verified the certification evidence yet. Share the details or get in touch so they can add and verify it.",
       "paymentDue": "There’s a balance to settle. Your shop can take payment before the trip.",
       "paymentDueAmount": "{amount} to settle. Your shop can take payment before the trip.",
-      "waiverDone": "Signed and on file.",
+      "waiverDone": "Signed and on file",
       "certificationDone": "Verified and on file.",
       "certificationTrainingDive": "Training dive with your instructor; no card asked.",
       "paymentDone": "Paid up. Thank you.",
@@ -990,7 +990,7 @@
     "certNotYetHowToStart": "Not certified? {course} is how to start",
     "certNotYetSaved": "Thanks for saying so. The shop will get in touch about your options before the day.",
     "certNotYetCardOnFile": "The shop already has a certification on file for you, so nothing changed. If that’s wrong, get in touch with them.",
-    "certSaved": "Certification added.",
+    "certSaved": "Certification added",
     "certKnown": "That certification number is already on file here. Nothing more to do.",
     "certInvalid": "Check the agency, level, and certification number, then try again.",
     "certOptional": "Optional",
@@ -1014,9 +1014,9 @@
     "fitKeptByCrew": "{name} kept your {item} at {size} after your last trip.",
     "savedChanges": "Thanks for checking.",
     "errorChanges": "That did not save. Try it again.",
-    "savedTanks": "Tank choice saved.",
+    "savedTanks": "Tank choice saved",
     "errorTanks": "That change did not save. Try it again.",
-    "savedContact": "Emergency contact updated.",
+    "savedContact": "Emergency contact updated",
     "errorContact": "That contact did not save. Try it again.",
     "lastDivedHeading": "When did you last dive?",
     "lastDivedChoose": "Choose",
@@ -1067,7 +1067,7 @@
     "intentHeading": "What’s this dive for?",
     "intentChoose": "Rather not say",
     "signCourseForms": "Sign course forms",
-    "savedCourseForms": "Course forms signed."
+    "savedCourseForms": "Course forms signed"
   },
   "thread": {
     "stepsDone": "{done} of {total} done",
@@ -1090,7 +1090,7 @@
       "pay": "Next: pay for this trip.",
       "gear": "Next: your gear, renting or bringing your own?",
       "changes": "Next: check that nothing has changed.",
-      "dayof": "Next: a few details for the day."
+      "dayof": "Next: a few details for the day"
     },
     "withShopHead": "Nothing on your side. The shop is finishing up.",
     "stepSign": "Sign",
@@ -1288,8 +1288,8 @@
     "payUnavailable": "We couldn’t open the payment page for that seat. It’s still held. Try again, or pay at the shop."
   },
   "rental": {
-    "ownGear": "Bringing own gear, so no rental needed.",
-    "matched": "Sizes recorded.",
+    "ownGear": "Bringing own gear, so no rental needed",
+    "matched": "Sizes recorded",
     "selectSizes": "Select sizes to confirm your gear match.",
     "noCharge": "You won’t be charged for rentals on this trip.",
     "sizesLocked": "Your sizes are ready for the crew to check at the dock.",
@@ -1317,9 +1317,9 @@
     "weightSetup": "Usual weight setup",
     "anythingElse": "Anything else the crew should know?",
     "savingFit": "Saving fit…",
-    "savedNote": "Saved.",
-    "estimatedRental": "Estimated rental: {price} per person.",
-    "estimatedRentalWithExtras": "Estimated rental: {price} per person, plus a few items settled at the shop.",
+    "savedNote": "Saved",
+    "estimatedRental": "Estimated rental: {price} per person",
+    "estimatedRentalWithExtras": "Estimated rental: {price} per person, plus a few items settled at the shop",
     "beforeDiscountLabel": "Before the full-set discount:",
     "fullSetSavings": "Full-set price. You save {price}.",
     "confirmAtDock": "We’ll confirm at the dock.",
@@ -1388,7 +1388,7 @@
       "snorkelSuitable": "Good for snorkeling",
       "snorkelNotSuitable": "Not suitable for snorkeling",
       "expectedBottomTime": "{minutes, plural, one {# minute} other {# minutes}} bottom time",
-      "requirements": "Requirements: {list}."
+      "requirements": "Requirements: {list}"
     },
     "terrainMapTitle": "Terrain map of {site}",
     "mapUnavailable": "The map for {site} is not loading.",
@@ -3666,8 +3666,8 @@
     "needsYou": "Needs you",
     "kindWaiver": "Waiver",
     "kindCertifications": "Certifications",
-    "waiverNotSent": "Waiver not signed, not sent yet.",
-    "certPending": "Certification not verified yet.",
+    "waiverNotSent": "Waiver not signed, not sent yet",
+    "certPending": "Certification not verified yet",
     "sendWaiver": "Send waiver",
     "tripLine": "Two-Tank Reef · 7:30 AM",
     "rollCallHeading": "Before departure roll call",
@@ -5906,7 +5906,7 @@
     "errorAgreement": "Confirm you agree to the form to continue.",
     "versionChanged": "The shop updated this form while you had it open. Read the new version below.",
     "doneTitle": "Course forms signed",
-    "doneBody": "Nothing left to sign for this course.",
+    "doneBody": "Nothing left to sign for this course",
     "backToPrep": "Back to your trip prep",
     "signing": "Signing…",
     "errorGuardian": "A parent or legal guardian signs this form too. Type their name, choose who they are to the student, and tick their box.",
@@ -5924,7 +5924,7 @@
     "pastRow": "{ordinal} dive day · {title} · {date}",
     "send": "Email me the link",
     "sending": "Sending…",
-    "sent": "Sent to the email on file.",
+    "sent": "Sent to the email on file",
     "rateLimited": "That’s a lot of links at once. Try again in a little while.",
     "failed": "That didn’t send. Try again in a moment.",
     "unavailable": "That day isn’t available anymore."

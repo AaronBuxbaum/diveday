@@ -139,7 +139,7 @@
     "toLabel": "To",
     "clear": "Clear",
     "count": "{count, plural, one {# entry} other {# entries}}",
-    "empty": "Nothing recorded yet.",
+    "empty": "Nothing recorded yet",
     "emptyFiltered": "Nothing matches.",
     "deletedDeparture": "{title} (deleted)",
     "order": "Order",

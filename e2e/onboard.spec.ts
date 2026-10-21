@@ -78,7 +78,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}/settings#contact$`));
   await page.getByLabel("Contact email").fill("hello@firstrun.example.com");
   await page.getByRole("button", { name: "Save contact details" }).click();
-  await expect(page.getByText("Contact details saved.")).toBeVisible();
+  await expect(page.getByText("Contact details saved")).toBeVisible();
 
   await page.goto(`/shop/${unique}`);
   await expect(page.getByText("Contact details on file.")).toBeVisible();
@@ -199,7 +199,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   // Divers: nobody on file. The roster's search is also the quick-add door;
   // typing a name and choosing Add diver creates the record and opens it.
   await page.goto(`/shop/${unique}/divers`);
-  await expect(page.getByText("No divers on file yet.")).toBeVisible();
+  await expect(page.getByText("No divers on file yet")).toBeVisible();
   await expect(page.getByRole("link", { name: "Import your roster" })).toHaveAttribute(
     "href",
     `/shop/${unique}/settings/import`,
@@ -216,7 +216,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   // so it is a card above the list rather than the page's standing primary
   // (UX audit item 20), and the empty state says only what is true.
   await page.goto(`/shop/${unique}/orders`);
-  await expect(page.getByText("No orders yet.", { exact: true })).toBeVisible();
+  await expect(page.getByText("No orders yet", { exact: true })).toBeVisible();
   // One door, once: the header holds no primary without an account to send
   // an order from, and the empty state does not repeat the card's door
   // (docs/design/principles.md #8).

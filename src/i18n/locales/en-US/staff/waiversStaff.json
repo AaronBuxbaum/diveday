@@ -2,7 +2,7 @@
   "title": "Waivers and signed records",
   "editRelease": "Edit the release",
   "banner": {
-    "savedNew": "Saved as a new version.",
+    "savedNew": "Saved as a new version",
     "savedFirst": "Your waiver is saved.",
     "invalid": "That didn’t save. The release needs to be at least a few sentences long.",
     "materialityRequired": "That didn’t publish. Say whether this is a correction or a material change, then publish again.",
@@ -30,7 +30,7 @@
   "versionInfo": "Version {version} · published {date}",
   "signatures": {
     "heading": "Signed records",
-    "noSignedRecords": "No signed records yet.",
+    "noSignedRecords": "No signed records yet",
     "noSignatureDate": "No signature date",
     "noTrip": "Imported record",
     "releaseVersion": "Release version {version}",
@@ -108,8 +108,8 @@
     "medicalScreeningHint": "Signature only; no answers are screened. Keeps blocking boarding for a student who has not signed it, whatever the course forms setting.",
     "bodyPlaceholder": "Paste the form’s full text here.",
     "notice": {
-      "saved": "Saved.",
-      "unchanged": "No change, so no new version.",
+      "saved": "Saved",
+      "unchanged": "No change, so no new version",
       "invalid": "That didn’t save. Give the form a title and at least a few sentences of text.",
       "deleted": "Form deleted. Courses no longer ask for it; signed copies stay on file.",
       "notFound": "That form is no longer here."

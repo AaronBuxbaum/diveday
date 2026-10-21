@@ -35,7 +35,7 @@ test("an owner replies under a published review, and the reply reaches the publi
     .filter({ hasText: comment })
     .getByRole("button", { name: "Publish" })
     .click();
-  await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
+  await expect(page.getByText("Review published to your schedule page")).toBeVisible();
 
   const row = page
     .getByRole("region", { name: /^Published/ })
@@ -44,7 +44,7 @@ test("an owner replies under a published review, and the reply reaches the publi
   await row.getByRole("button", { name: "Reply in public" }).click();
   await row.getByLabel("Your reply").fill(reply);
   await row.getByRole("button", { name: "Save reply" }).click();
-  await expect(row.getByText("Reply published.")).toBeVisible();
+  await expect(row.getByText("Reply published")).toBeVisible();
   await expect(row.getByText(/^Reply from /)).toBeVisible();
   await expect(row.getByText(reply)).toBeVisible();
 
@@ -58,7 +58,7 @@ test("an owner replies under a published review, and the reply reaches the publi
   await page.goto("/shop/blue-mantis/reviews");
   await row.getByRole("button", { name: "Delete", exact: true }).click();
   await row.getByRole("button", { name: "Delete reply" }).click();
-  await expect(row.getByText("Reply deleted.")).toBeVisible();
+  await expect(row.getByText("Reply deleted")).toBeVisible();
   await page.goto("/s/blue-mantis/reviews");
   await expect(publicReview).toHaveCount(1);
   await expect(publicReview.locator("[data-review-reply]")).toHaveCount(0);

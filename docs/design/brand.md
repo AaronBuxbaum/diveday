@@ -170,6 +170,14 @@ Color rules:
 > reads as the same writer as the dock time above it; "See you on the boat!" does not. `pnpm check:voice`
 > refuses `!` and `¡` in `diver.json`, except the WhatsApp template body Meta reviews.
 
+> **Settled 2026-10-21 (#2887, Aaron):** short status, summary, and empty-state fragments have no
+> final period: "None yet", "Changes saved", "No orders yet". Full sentences keep theirs: "No
+> orders match these filters." Judge the rendered text in context, including composed messages,
+> rather than stripping punctuation from every short string. Apply the same distinction in each
+> language: "No orders yet" is a fragment, while "Todavía no hay pedidos." is a sentence.
+> Pending control labels use the ellipsis (`Sending…`); headings and field labels use sentence
+> case (`Hotel pickup`, `Hotel / lodging`). Legal and medical bodies retain their exact wording.
+
 
 The current product type system is:
 

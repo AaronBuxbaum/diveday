@@ -13,9 +13,9 @@
   "deletePending": "Eliminando…",
   "deleteDepartures": "{count, plural, one {# salida lleva esta etiqueta y la pierde.} other {# salidas llevan esta etiqueta y la pierden.}}",
   "noLenses": "Todavía no hay etiquetas de salida.",
-  "created": "Etiqueta de salida agregada.",
-  "updated": "Etiqueta de salida guardada.",
-  "deleted": "Etiqueta de salida eliminada.",
+  "created": "Etiqueta de salida agregada",
+  "updated": "Etiqueta de salida guardada",
+  "deleted": "Etiqueta de salida eliminada",
   "invalid": "Ponle un nombre a la etiqueta de salida.",
   "tripFieldLabel": "Etiqueta de salida",
   "tripFieldNone": "Ninguna"

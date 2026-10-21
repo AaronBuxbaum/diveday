@@ -101,7 +101,7 @@ test.describe("a standing crew clash", () => {
     // And the hull, above the crew: one boat cannot be on both.
     await expect(page.getByText(`${HULL} is already out on ${drift} at that time.`)).toBeVisible();
     await page.getByRole("button", { name: "Move it" }).click();
-    await expect(page.getByRole("status")).toContainText("Moved.");
+    await expect(page.getByRole("status")).toContainText("Moved");
     // Gone with the panel, exactly as before this issue.
     await expect(page.getByText(/is already rostered on/)).toHaveCount(0);
 
