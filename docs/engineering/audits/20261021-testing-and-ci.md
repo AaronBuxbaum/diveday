@@ -133,6 +133,16 @@ including refusal when either a named unit test or browser spec is missing from 
 Whole-file unit and E2E paths remain supported. This is parser and plan validation, not evidence
 that the named browser failures or the full gate passed.
 
+### Payment receipt before leaving an optimistic row
+
+The inherited `ask-to-move` browser failure was reproduced by holding its real payment POST:
+`Payment: Paid` appeared optimistically, but navigating to the diver page still showed $120 to
+settle and the move prompt was missing while the POST remained in flight. The spec now releases
+the held request and awaits the successful `notice=payment` redirect before navigating; cleanup
+also waits for the pending route continuation before removing its handler. A fresh production
+build and the focused Chromium flow passed locally (one test, 14.9 seconds). No runtime behavior
+or timeout changed. This is controlled regression evidence, not a full-gate, CI or deployment claim.
+
 ## Inventory: what already exists
 
 | Layer | Observed inventory | What it establishes |
