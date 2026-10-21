@@ -2,6 +2,51 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 
 /**
+ * WCAG 2.5.8's Essential exception explicitly covers geographic pin spacing:
+ * https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum#exceptions
+ * Resolve axe's targets against the live DOM so only actual site-pin buttons
+ * receive that exception. Zoom, shop, popup and ordinary controls stay checked,
+ * as does every other rule on the pins. Intrinsically undersized pins still
+ * fail; this exception covers spacing only. Site details remain in the ledger.
+ */
+async function withoutEssentialPinSpacing(
+  page: Page,
+  violations: Awaited<ReturnType<AxeBuilder["analyze"]>>["violations"],
+) {
+  const targets = violations
+    .filter((violation) => violation.id === "target-size")
+    .flatMap((violation) => violation.nodes.map((node) => node.target));
+  if (targets.length === 0) return violations;
+  const exempt = new Set(
+    await page.evaluate((candidates) => {
+      const pinSelector = ".leaflet-container .leaflet-marker-pane > .leaflet-site-marker > button";
+      return candidates
+        .filter((target) => {
+          if (target.length !== 1 || typeof target[0] !== "string") return false;
+          try {
+            const nodes = [...document.querySelectorAll(target[0])];
+            return (
+              nodes.length > 0 &&
+              nodes.every((node) => {
+                const rect = node.getBoundingClientRect();
+                return node.matches(pinSelector) && rect.width >= 24 && rect.height >= 24;
+              })
+            );
+          } catch {
+            return false;
+          }
+        })
+        .map((target) => JSON.stringify(target));
+    }, targets),
+  );
+  return violations.flatMap((violation) => {
+    if (violation.id !== "target-size") return [violation];
+    const nodes = violation.nodes.filter((node) => !exempt.has(JSON.stringify(node.target)));
+    return nodes.length > 0 ? [{ ...violation, nodes }] : [];
+  });
+}
+
+/**
  * Automated a11y scan for the current page state — WCAG 2.0 A/AA plus 2.2 AA,
  * the same rule set the specialist optimization audit's accessibility lens
  * (§3) called for. See ADR 20260801-axe-core-playwright-a11y-scans. A
@@ -222,5 +267,6 @@ export async function expectNoA11yViolations(page: Page) {
     .analyze();
   // A describe that asked for reduced motion keeps it; everyone else gets motion back.
   if (!reducedAlready) await page.emulateMedia({ reducedMotion: "no-preference" });
-  expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+  const violations = await withoutEssentialPinSpacing(page, results.violations);
+  expect(violations, JSON.stringify(violations, null, 2)).toEqual([]);
 }
