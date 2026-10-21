@@ -1,0 +1,20 @@
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+NO_COLOR = "1"
+
+[mcp_servers.Sentry]
+url = "https://mcp.sentry.dev/mcp/diveday/diveday"
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+
+[mcp_servers.next-devtools]
+command = "./node_modules/.bin/next-devtools-mcp"
+
+[mcp_servers.playwright]
+command = "./node_modules/.bin/playwright-mcp"
+
+[mcp_servers.vercel]
+url = "https://mcp.vercel.com"
