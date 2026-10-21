@@ -181,3 +181,40 @@ answer 500, bootstrap failures 503, and caps retain the weekly route's explicit 
 `cron_dietary_retention.clear_failed` (including bootstrap) and `.clear_capped` join the existing
 `CronPassFailures` alarm. Reporting contains only counts and outcome codes, never notes,
 identities or database error text, and log shipping is awaited.
+
+## Amendment 2026-10-21 — weekly batch admission and durable progress
+
+The weekly prune checks monotonic elapsed time before every batch, including the first round,
+and again after its reservation commits. Equality with the 45-second deadline admits no work;
+a zero budget runs no table query. It awaits the single admitted batch before reporting. This
+bounds admission, not statement duration: a slow batch can still exceed the deadline or the
+platform's 60-second ceiling.
+
+One global `retention_prune_state` row records the next canonical table code. Each invocation
+initializes it once with `INSERT ... ON CONFLICT DO NOTHING`. Before each batch a short
+transaction sets the existing five-second lock timeout, locks that row, chooses the next pending
+table starting at the cursor, and advances to its canonical successor. It commits before any
+destructive batch. Overlapping reservations serialize their choice; the lock never spans a
+prune. Termination after reservation, or a failing batch, therefore leaves the successor durable.
+An unknown code restarts at the first canonical table. Each round visits a pending table once;
+later rounds consider only full, nonfailed tables. A run must receive the database itself, never
+an enclosing transaction that would defer the checkpoint commit until after deletion.
+
+The explicit transaction adds five sequential query/response waits per admitted batch (`BEGIN`,
+lock timeout, locked read, update, `COMMIT`), plus the single initialization per run. This buys a
+clear commit boundary and bounded lock contention; no latency improvement has been measured.
+Concurrent invocations can still overlap destructive batches. The cursor coordinates priority,
+not ownership or exclusive processing, and a reserved but unexecuted batch will be revisited
+when priority cycles back.
+
+Outcomes distinguish drained tables, failed arms, unresolved full batches (`capped`), and
+never-visited tables (`skipped`, unknown eligibility). Earlier successful deletion counts survive
+a later failed batch. `cron_retention.prune_capped` carries separate `tablesCapped` and
+`tablesSkipped` fields; arm failures emit the alarmed `cron_retention.prune_failed` event. Failed,
+capped or skipped work closes the Sentry monitor with `error`; arm failures retain HTTP 500 and
+budget-limited runs retain HTTP 200. Checkpoint failures stop admissions and use the existing
+503 failure path. Reports contain table codes and counts only.
+
+The machinery row has a primary key and a singleton check, contains no personal data or foreign
+keys, and is explicitly outside shop export, deletion, person erasure and age-based retention.
+It is created lazily, requires no demo seed, and does not change eligibility or retention windows.
