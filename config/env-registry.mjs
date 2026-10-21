@@ -735,7 +735,8 @@ export const ENV_GROUPS = [
         key: "NEXT_PUBLIC_CARTO_API_KEY",
         from: "manual",
         targets: LOCAL_AND_VERCEL,
-        absent: "CARTO tiles load without key parameter and may display the API Key Required watermark",
+        absent:
+          "CARTO tiles load without key parameter and may display the API Key Required watermark",
       },
     ],
   },
