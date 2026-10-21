@@ -133,6 +133,17 @@ describe("routes", () => {
 });
 
 describe("edited specs and helpers", () => {
+  it("leaves mobile behavior to its dedicated engine lane even when edited", () => {
+    const specs = new Map([["e2e/mobile-behavior.spec.ts", ""]]);
+    const { strong, reach } = selectSpecs({
+      changed: ["e2e/mobile-behavior.spec.ts"],
+      diff: new Map(),
+      specs,
+      graph: null,
+    });
+    expect(strong.size).toBe(0);
+    expect(reach.size).toBe(0);
+  });
   it("runs a spec the diff edits and every spec importing an edited helper", () => {
     const specs = new Map([
       ["e2e/a.spec.ts", `import { test } from "./fixtures";`],

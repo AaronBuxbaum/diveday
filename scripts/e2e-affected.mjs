@@ -45,6 +45,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Specs this selector never picks: the capture run is `visual-affected.mjs --grep`'s. */
 const NEVER = new Set(["e2e/visual.spec.ts"]);
+const MOBILE_SPEC = /(?:^|\/)mobile[^/]*\.spec\.ts$/;
 
 /**
  * Specs that test a tool rather than a page, run only when what they test changed (ci.yml's
@@ -295,7 +296,7 @@ export function readSpecs(root = ROOT) {
     for (const entry of readdirSync(path.join(root, dir), { withFileTypes: true })) {
       const rel = `${dir}/${entry.name}`;
       if (entry.isDirectory()) walk(rel);
-      else if (rel.endsWith(".spec.ts") && !NEVER.has(rel)) {
+      else if (rel.endsWith(".spec.ts") && !NEVER.has(rel) && !MOBILE_SPEC.test(rel)) {
         specs.set(rel, readFileSync(path.join(root, rel), "utf8"));
       }
     }
@@ -390,7 +391,7 @@ export function selectSpecs({ changed, diff, specs, graph, modules, lines }) {
   const reach = new Map();
   const rank = new Map();
   const note = (map, spec, why) => {
-    if (NEVER.has(spec) || !specs.has(spec)) return;
+    if (NEVER.has(spec) || MOBILE_SPEC.test(spec) || !specs.has(spec)) return;
     if (!map.has(spec)) map.set(spec, new Set());
     map.get(spec).add(why);
   };
