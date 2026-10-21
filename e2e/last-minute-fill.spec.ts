@@ -41,7 +41,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   // No upper bound — "around from" 2020 covers today's frozen-clock departure.
   await page.locator('input[name="availableFrom"]').filter({ visible: true }).fill("2020-01-01");
   await page.getByRole("button", { name: "Notify me" }).click();
-  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis");
@@ -123,7 +123,7 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   await waitList.getByLabel("Name").fill("Priya Shah");
   await waitList.getByLabel("Email").fill("priya.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();
-  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis");
@@ -182,7 +182,7 @@ test("a diver can self-serve unsubscribe from last-minute deal emails", async ({
   await waitList.getByLabel("Name").fill("Uma Torres");
   await waitList.getByLabel("Email").fill("uma.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();
-  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
   const seeded = await request.post("/api/test/seed-last-minute-unsubscribe-token", {
     data: { shopSlug: "blue-mantis", email: "uma.e2e@example.com" },
@@ -229,7 +229,7 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   await expect(dealList.getByLabel("I’m certified for nitrox (enriched air)")).toHaveCount(0);
   await page.locator('input[name="availableFrom"]').filter({ visible: true }).fill("2020-01-01");
   await page.getByRole("button", { name: "Notify me" }).click();
-  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis");
@@ -285,7 +285,7 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   await dealList.getByLabel("Certification level").selectOption("none_declared");
   await expect(dealList.getByLabel("I’m certified for nitrox (enriched air)")).toHaveCount(0);
   await page.getByRole("button", { name: "Notify me" }).click();
-  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
   await signInAsOwner(page);
   // The night charter, not today's reef morning: the shop-wide list is the same
@@ -321,7 +321,7 @@ test("a self-declared card cannot be certified without verified evidence", async
   await dealList.getByLabel("Email").fill("milo.e2e@example.com");
   await dealList.getByLabel("Certification level").selectOption("rescue");
   await page.getByRole("button", { name: "Notify me" }).click();
-  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
   await signInAsOwner(page);
   // Search rather than the bare index: the roster is paged, and a joiner who

@@ -4,7 +4,7 @@
     "series": "“{title}” is on the board with {count, plural, one {# trip} other {# trips}} scheduled."
   },
   "firstBookable": {
-    "heading": "Your shop is bookable.",
+    "heading": "Your shop is bookable",
     "body": "“{title}” is on the board. This link is your public schedule, the page divers book from. Put it on your website, your socials, and wherever divers find you.",
     "bodySeries": "“{title}” is on the board with {count, plural, one {# trip} other {# trips}} scheduled. This link is your public schedule, the page divers book from. Put it on your website, your socials, and wherever divers find you.",
     "linkLabel": "Your booking link",
@@ -33,7 +33,7 @@
     "activityNotAuthorized": "The activity log is limited to owners and managers."
   },
   "orientation": {
-    "heading": "New here? A few pointers for your role.",
+    "heading": "New here? A few pointers for your role",
     "lineHeading": "New here? Try this:",
     "tryLabel": "Try:",
     "dismiss": "Got it",
@@ -189,7 +189,7 @@
     "crewMonth": "{month}: {boats, plural, one {# boat} other {# boats}} · {dives, plural, one {# dive run} other {# dives run}} · {hours, plural, one {# hour} other {# hours}} on the water."
   },
   "thinBoats": {
-    "heading": "{count, plural, one {One boat in the next two weeks could use divers.} other {# boats in the next two weeks could use divers.}}",
+    "heading": "{count, plural, one {One boat in the next two weeks could use divers} other {# boats in the next two weeks could use divers}}",
     "seats": "{booked} of {capacity}",
     "needsBy": "{count, plural, one {needs # more by {when}, or it cancels itself} other {needs # more by {when}, or it cancels itself}}",
     "deal": "Send a last-minute deal",

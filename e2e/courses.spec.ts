@@ -384,7 +384,7 @@ test.describe("staff", () => {
     const views = page.getByRole("navigation", { name: "Course views" });
     await views.getByRole("link", { name: "Scheduled" }).click();
     await page.waitForURL(/[?&]view=scheduled/);
-    await expect(page.getByText("No courses match.")).toBeVisible();
+    await expect(page.getByText("No courses match")).toBeVisible();
 
     await page.getByRole("link", { name: "Clear search" }).click();
     await expect(page).not.toHaveURL(/[?&]q=/);

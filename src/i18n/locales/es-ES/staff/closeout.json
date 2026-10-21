@@ -14,7 +14,7 @@
     "unknownPerson": "Ese buceador no está en los registros de este centro, así que no se guardó nada."
   },
   "pastDay": {
-    "empty": "Ese día no salió ningún barco.",
+    "empty": "Ese día no salió ningún barco",
     "countedLater": "contado más tarde, el {date}",
     "crewNotCounted": "La tripulación no se contó.",
     "resolvedNotBack": "Se registró que un buceador no volvió a bordo tras la inmersión {dive}; consulta el pase de lista."

@@ -557,7 +557,7 @@
       "deleting": "Eliminando…",
       "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})",
       "createTitle": "Agregar paquete",
-      "empty": "Todavía no hay paquetes a la venta."
+      "empty": "Todavía no hay paquetes a la venta"
     },
     "yourData": {
       "heading": "Exportar, importar, respaldos e integraciones"
@@ -622,7 +622,7 @@
     },
     "current": {
       "heading": "Equipo actual",
-      "empty": "Todavía no se ha invitado a nadie.",
+      "empty": "Todavía no se ha invitado a nadie",
       "emptyAction": "Invitar a un compañero"
     },
     "staffRow": {

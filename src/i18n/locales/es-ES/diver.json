@@ -82,7 +82,7 @@
     "noTripsStaff": "El tablón está vacío. Programa una salida y los buceadores podrán reservar.",
     "noTripsPublic": "Vuelve pronto. Cuéntanos abajo qué te gustaría bucear, o contáctanos con los datos del pie de página.",
     "noTripsPublicNoPhone": "Vuelve pronto, o cuéntanos abajo qué te gustaría bucear.",
-    "noTripsMonth": "No hay salidas este mes. Prueba otro mes.",
+    "noTripsMonth": "No hay salidas este mes. Prueba otro mes",
     "offSeason": {
       "heading": "No hay salidas durante un tiempo",
       "back": "Volvemos al agua el {date}.",
@@ -104,7 +104,7 @@
       "funDive": "Inmersión recreativa",
       "course": "Curso",
       "hasSpace": "Con plazas",
-      "noMatches": "Ninguna salida coincide con estos filtros. Prueba a quitar uno.",
+      "noMatches": "Ninguna salida coincide con estos filtros. Prueba a quitar uno",
       "canDive": "¿Qué puedes bucear?",
       "canDiveUnsaid": "Prefiero no decirlo",
       "hideAboveLevel": "Ocultar las que piden más",
@@ -410,7 +410,7 @@
     "waitlistPartyHint": "Basta con que una persona se anote por todo el grupo.",
     "wantAnyTripAlertsInstead": "¿No te convence esta? ¿Prefieres alertas de ofertas para cualquier salida?",
     "joinLastMinuteDealAlerts": "Anótate en la lista de última hora",
-    "waitlistConfirmedHeading": "Estás en la lista de espera, {name}.",
+    "waitlistConfirmedHeading": "Estás en la lista de espera, {name}",
     "waitlistConfirmedBody": "Todavía no hay plaza reservada. El centro tiene tus datos y te avisará si se libera una.",
     "sailedHeading": "Esta salida ya ha zarpado",
     "sailedCheckSchedule": "Consulta el calendario",
@@ -419,7 +419,7 @@
     "holdBody": "Consulta arriba la actualización de condiciones. Quien ya reservó conserva su plaza y puede seguirlo aquí en directo.",
     "certBelowRequirement": "Esta salida es para buceadores con certificación {required}: trae tu tarjeta y la verificamos en el centro.",
     "certNoneOnGatedTrip": "Esta salida es para buceadores certificados. Reserva si quieres y habla con el centro: también hacen cursos e inmersiones más sencillas.",
-    "confirmedHeading": "Tu plaza está reservada, {name}.",
+    "confirmedHeading": "Tu plaza está reservada, {name}",
     "confirmedDockCall": "{date}, {time}. Preséntate en el muelle {minutes, plural, one {# minuto} other {# minutos}} antes y nos encargamos del resto.",
     "milestoneDay": "Tu {ordinal} día de buceo con {shopName}",
     "paymentDepositBalance": "Tu plaza está asegurada. Los {balance} restantes se pagan en el muelle.",
@@ -509,7 +509,7 @@
     "availableUntil": "Disponible hasta",
     "submit": "Avísame",
     "submitting": "Anotándote…",
-    "joinedHeading": "Estás en la lista.",
+    "joinedHeading": "Estás en la lista",
     "joinedBody": "Te escribiremos si sale una plaza de última hora con descuento en tus fechas.",
     "unsubscribe": {
       "title": "¿Dejar de recibir ofertas de última hora?",
@@ -1101,7 +1101,7 @@
     "stepDayOf": "Detalles del día",
     "diveDayLine": "Hoy es el día.",
     "partyAllSet": "Todos están listos. Nos vemos en el muelle.",
-    "afterGreeting": "Nos alegra verte de vuelta, {name}."
+    "afterGreeting": "Nos alegra verte de vuelta, {name}"
   },
   "waiver": {
     "metaTitle": "Completa tu exención de responsabilidad — DiveDay",
@@ -3424,7 +3424,7 @@
       "comesAcross": "Se traslada",
       "seePricing": "Ver cuánto cuesta DiveDay →",
       "staysBehind": "Se queda atrás",
-      "bothWaysTitle": "La misma tabla, leída al revés.",
+      "bothWaysTitle": "La misma tabla, leída al revés",
       "bothWaysBody": "Las filas de arriba son lo que llega, y la exportación es la misma lista. {claim}",
       "bringFileTitle": "Trae el archivo a DiveDay",
       "bringFileIntro": "El resto ocurre en DiveDay, en el orden de abajo.",
@@ -3440,13 +3440,13 @@
     },
     "hub": {
       "eyebrow": "Cambiarte a DiveDay",
-      "title": "Todas las guías terminan en la misma pantalla de importación.",
+      "title": "Todas las guías terminan en la misma pantalla de importación",
       "description": "Elige lo que usas hoy. Cada guía saca tu archivo de ahí, y la pantalla al final de esta página es donde cae el archivo.",
       "spreadsheetTitle": "Vienes de una hoja de cálculo",
       "spreadsheetDescription": "La hoja que ya llevas es el archivo. Esta guía es la lista de columnas que lee, y después los cuatro trabajos que una lista nunca hizo.",
       "switchingFrom": "Cambiando desde {competitor}",
       "previewEyebrow": "La pantalla en la que termina cada guía",
-      "previewTitle": "La vista previa te lee tu archivo antes de guardar una fila.",
+      "previewTitle": "La vista previa te lee tu archivo antes de guardar una fila",
       "previewNote1": "Cuatro columnas que reconoció por sus encabezados. Los tuyos pueden llamarse de otra forma.",
       "previewNote2": "“No reconocidas, así que se ignoran” nombra las dos columnas que descarta en vez de adivinarlas.",
       "previewNote3": "Una fila está marcada como omitida: no tiene nombre. El nombre es lo único que una fila necesita.",
@@ -3462,15 +3462,15 @@
       "websiteTheirs": "En {competitor}",
       "websiteOurs": "En DiveDay",
       "forExportPrefix": "Para una exportación de {competitor}:",
-      "runTheDay": "Lleva el día de buceo que {competitor} no puede.",
-      "readyToMove": "El cambio desde {competitor}, en una sentada.",
+      "runTheDay": "Lleva el día de buceo que {competitor} no puede",
+      "readyToMove": "El cambio desde {competitor}, en una sentada",
       "walkDemoFirst": "Primero la demo, después tu exportación. Las verificaciones de certificación, las exenciones y el pase de lista en los que cae tu archivo ya están en marcha ahí.",
       "otherGuides": "Otras guías de cambio →",
       "sources": "Fuentes"
     },
     "spreadsheet": {
       "eyebrow": "Vienes de una hoja de cálculo",
-      "title": "Trae la hoja de cálculo contigo.",
+      "title": "Trae la hoja de cálculo contigo",
       "heroLede": "La hoja que llevas es el archivo: una fila por buceador, guardada como CSV. Lo que sigue es la lista de columnas que lee, y después los cuatro trabajos que asume y que una lista nunca hizo.",
       "wedgeIntro1": "Una hoja de cálculo guarda los nombres y los números y no verifica ninguno. Verificar, tarjetas, exenciones, quién sigue sin estar listo, es lo que ahora haces a mano.",
       "wedgeIntro2": "Los cuatro trabajos que asume:",
@@ -3558,13 +3558,13 @@
         }
       },
       "parallelRunNote": "Sigue usando la hoja todo el tiempo que quieras. Una reimportación reconoce a los buceadores por correo y los actualiza en vez de duplicarlos, así que el día que dejes de mantenerla lo eliges tú.",
-      "closingTitle": "La demo es el centro en el que caería tu hoja.",
+      "closingTitle": "La demo es el centro en el que caería tu hoja",
       "closingDescription": "Ábrela como propietario, capitán o buceador. Sin registro, y nada de lo que hay dentro es tuyo para romperlo.",
       "otherSystems": "Cambiar desde otro software →"
     },
     "concierge": {
       "eyebrow": "Una persona hace la importación contigo",
-      "title": "Te ayudamos a cambiarte, y a salir, nosotros mismos.",
+      "title": "Te ayudamos a cambiarte, y a salir, nosotros mismos",
       "description": "Envíanos lo que tengas, sea una exportación limpia o una década de pestañas desordenadas, y mapeamos las columnas y traemos a tus buceadores contigo, gratis. Si algún día DiveDay no encaja, te ayudamos a llevártelo todo de vuelta de la misma manera.",
       "emailCta": "Escríbenos a {email}"
     }
@@ -3604,7 +3604,7 @@
     "full": "Completo",
     "recap": {
       "label": "Resumen de la inmersión",
-      "greeting": "Qué buena inmersión, Priya.",
+      "greeting": "Qué buena inmersión, Priya",
       "tripLine": "Arrecife de dos tanques · Sábado · 14 de junio",
       "crewNoteLabel": "De tu tripulación",
       "crewNote": "Una primera inmersión tranquila y después una deriva brillante sobre el arrecife. Gracias por bucear con nosotros.",
@@ -3619,7 +3619,7 @@
     "import": {
       "label": "Vista previa de importación",
       "eyebrow": "Trayendo a tus buceadores",
-      "title": "No se guarda nada hasta que tú lo digas.",
+      "title": "No se guarda nada hasta que tú lo digas",
       "fieldName": "Nombre completo",
       "fieldEmail": "Correo",
       "fieldCard": "Nivel de certificación",
@@ -3636,7 +3636,7 @@
     "export": {
       "label": "Exportar datos",
       "eyebrow": "Ajustes",
-      "title": "Todo, en CSV normal.",
+      "title": "Todo, en CSV normal",
       "download": "Descargar exportación",
       "bundleHeading": "Qué incluye el paquete",
       "fileCount": "44 archivos, con el número de filas de cada uno",
@@ -3878,7 +3878,7 @@
   "marketing": {
     "home": {
       "eyebrow": "Software para centros de buceo",
-      "heroTitle": "Cada buceador reservado, firmado, verificado y localizado.",
+      "heroTitle": "Cada buceador reservado, firmado, verificado y localizado",
       "heroDescription": "Reservas en línea, exenciones y formularios médicos, control de certificaciones, check-in y el manifiesto del barco, en una sola aplicación para tu centro de buceo. Un buceador que no está listo aparece con su nombre en recepción días antes de la salida.",
       "heroPriceLine": "Un precio único de {price} {cadence}, sin comisión sobre tus reservas.",
       "diverDoor": "¿Reservaste una inmersión?",
@@ -3886,7 +3886,7 @@
       "phoneFrameLabel": "Un capitán pasando lista en DiveDay en el muelle: 4 de 9 buceadores a bordo, un nombre marcado a bordo y el siguiente aún por llamar.",
       "dockEyebrow": "En el muelle",
       "dockDetail": "Guardado en este teléfono antes de que saliera el barco, así que el pase de lista sigue funcionando sin señal.",
-      "stepsTitle": "Una reserva, de tu web al barco y de vuelta a casa.",
+      "stepsTitle": "Una reserva, de tu web al barco y de vuelta a casa",
       "steps": {
         "book": {
           "when": "Días antes",
@@ -3920,9 +3920,9 @@
           "mockupLabel": "La página de recuerdo de un buceador, con el registro del día, una nota de la tripulación y una sola petición de opinión."
         }
       },
-      "featuresTitle": "Lo que hacían la pizarra, la tablilla y las tres aplicaciones, en un solo plan.",
+      "featuresTitle": "Lo que hacían la pizarra, la tablilla y las tres aplicaciones, en un solo plan",
       "featuresLink": "La lista completa de lo que incluye cada función →",
-      "exportTitle": "Cómo llegan los registros, y cómo se van.",
+      "exportTitle": "Cómo llegan los registros, y cómo se van",
       "arrivingLabel": "Al entrar",
       "exportDescription1": "Sube una hoja de cálculo. Antes de guardar nada, la vista previa muestra en qué se convirtió cada columna y qué filas va a saltar. O envíanos el archivo por correo y una persona hace la importación contigo, gratis.",
       "importMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
@@ -3934,7 +3934,7 @@
       "exportItem3": "Un archivo de contactos con el formato del asistente de importación de otro sistema",
       "exportItem4": "Una guía en lenguaje claro de cada archivo",
       "guidesLink": "Guías para dejar {competitors}, y una para una hoja de cálculo →",
-      "tryTitle": "Lo que cuesta, y las condiciones.",
+      "tryTitle": "Lo que cuesta, y las condiciones",
       "tryDescription": "Cada acceso del personal está en el precio y no hay cuota de alta. La prueba dura tres semanas y no pide tarjeta, y el botón de exportar está desde el primer día.",
       "priceLine": "Un precio único de {price} {cadence}, congelado dos años para los centros fundadores.",
       "seeIncluded": "Ver qué incluye →",
@@ -4396,7 +4396,7 @@
         "metaTitle": "FareHarbor y DiveDay: lleva el día de buceo, o cámbiate",
         "metaDescription": "¿Estás en FareHarbor? Conserva su red de reservas y distribución y lleva el día de buceo para el que nunca se construyó (controles de certificación, exenciones y el manifiesto con pase de lista), o deja atrás la comisión por reserva. Trae a tus buceadores con una imagen clara de lo que viene con ellos.",
         "heroEyebrow": "FareHarbor + DiveDay",
-        "heroTitle": "FareHarbor llena los asientos. DiveDay lleva el barco.",
+        "heroTitle": "FareHarbor llena los asientos. DiveDay lleva el barco",
         "heroLede": "FareHarbor toma la reserva online y te pone delante de su red de hoteles y revendedores. Y aun así el día de buceo sigue llevándose con una tablilla, porque un motor de reservas generalista nunca se construyó para verificar certificaciones, exenciones ni un pase de lista en el agua. Conserva FareHarbor como escaparate, o deja atrás la comisión por reserva y toma también la reserva aquí.",
         "context": {
           "item1": "FareHarbor es una plataforma de reservas online para tours, actividades y alquileres, propiedad de Booking Holdings, la empresa detrás de Booking.com, y muchos centros de buceo llevan su escaparate en ella. Es buena en ese trabajo: los clientes reservan y pagan online, y su red de distribución pone tus salidas delante de hoteles, conserjes y revendedores a los que nunca llegarías por tu cuenta.",
@@ -4404,14 +4404,14 @@
           "item3": "El escaparate no es gratis. FareHarbor no cobra nada al mes, pero se lleva una comisión de cada reserva, agregada al precio que paga tu cliente, mientras lo uses. No publica la tarifa; la oyes en una llamada comercial, y terceros hablan de alrededor de un 6%. Un centro que crece nota una comisión sobre cada reserva."
         },
         "coexist": {
-          "heading": "Conserva FareHarbor. Agrega el día que él no puede llevar.",
+          "heading": "Conserva FareHarbor. Agrega el día que él no puede llevar",
           "intro": "DiveDay lleva el lado del agua, todo lo que hay entre “reservado” y “de vuelta en el muelle” que un motor de reservas nunca se construyó para tocar. Punto por punto, esto es lo que FareHarbor deja a tu tablilla:",
           "bridgeNote": "FareHarbor sigue haciendo lo que se le da bien: tomar la reserva online y ponerte delante de su red de hoteles y revendedores, para la que DiveDay no tiene equivalente. No hay cable entre los dos. Traes a tus buceadores con la exportación CSV de abajo, y reimportas a medida que tu lista crece.",
-          "replaceHeading": "O deja atrás la comisión por reserva.",
+          "replaceHeading": "O deja atrás la comisión por reserva",
           "replaceBody": "Si FareHarbor es solo tu botón de reservas y no te apoyas en su red de distribución, no necesitas seguir pagando por cada reserva para conservarlo. DiveDay toma la reserva por sí mismo: un horario público que cualquiera reserva sin cuenta, pago a través de tu propia cuenta de Stripe, exenciones nativas. Trae a tus buceadores una vez, apunta tu enlace de reservas aquí, y la comisión por reserva se acaba."
         },
         "website": {
-          "heading": "Dejar FareHarbor no significa rehacer tu web.",
+          "heading": "Dejar FareHarbor no significa rehacer tu web",
           "intro": "Cada botón, marco y enlace que pegaste de ahí tiene su gemelo aquí, con tus colores y tu tipografía.",
           "rows": {
             "row1": {
@@ -4452,7 +4452,7 @@
             }
           },
           "sitesNote": "FareHarbor vende Sites por separado y no publica el precio; terceros lo sitúan en {sitesPrice} al año, antes de su complemento de SEO.",
-          "offerHeading": "O deja que construyamos la web nosotros.",
+          "offerHeading": "O deja que construyamos la web nosotros",
           "offerBody": "Pídelo, y una persona de DiveDay la construye contigo: tus fotos, tus palabras, la reserva ya dentro, y va en el precio."
         },
         "exportHeading": "Saca tus datos de FareHarbor",
@@ -4492,7 +4492,7 @@
         "metaTitle": "Rezdy y DiveDay: lleva el día de buceo, o cámbiate",
         "metaDescription": "¿Estás en Rezdy? Conserva su mercado de revendedores y lleva el día de buceo para el que nunca se construyó (controles de certificación, exenciones y el manifiesto con pase de lista), o deja atrás la suscripción mensual y la comisión por reserva. Trae a tus buceadores con una imagen clara de lo que viene con ellos.",
         "heroEyebrow": "Rezdy + DiveDay",
-        "heroTitle": "Rezdy vende los asientos. DiveDay lleva el barco.",
+        "heroTitle": "Rezdy vende los asientos. DiveDay lleva el barco",
         "heroLede": "Rezdy toma la reserva online y empuja tus salidas a su mercado de revendedores y a las grandes OTAs. Y aun así el día de buceo sigue llevándose con una tablilla, porque un motor de reservas generalista nunca se construyó para verificar certificaciones, exenciones ni un pase de lista en el agua. Conserva Rezdy como escaparate, o deja atrás la cuota mensual y la comisión por reserva y toma también la reserva aquí.",
         "context": {
           "item1": "Rezdy es una plataforma de reservas online para tours y actividades, nacida en Australia y hoy agrupada con Checkfront y Regiondo bajo una matriz respaldada por capital privado. Muchos centros de buceo llevan su escaparate en ella, y es buena en ese trabajo: los clientes reservan y pagan online, y su gestor de canales empuja tus salidas a revendedores y OTAs como GetYourGuide, Viator, Expedia y Google Things to Do.",
@@ -4500,10 +4500,10 @@
           "item3": "El escaparate no es gratis: Rezdy cobra una suscripción mensual más una comisión de cada reserva online (un 3% en su precio publicado actual). En su favor, Rezdy no te encierra. No hay cuota de alta, ni permanencia, hay una exportación CSV autoservicio y una API que puedes activar tú mismo."
         },
         "coexist": {
-          "heading": "Conserva Rezdy. Agrega el día que él no puede llevar.",
+          "heading": "Conserva Rezdy. Agrega el día que él no puede llevar",
           "intro": "DiveDay lleva el lado del agua, todo lo que hay entre “reservado” y “de vuelta en el muelle” que un motor de reservas nunca se construyó para tocar. Punto por punto, esto es lo que Rezdy deja a tu tablilla:",
           "bridgeNote": "Rezdy sigue haciendo lo que se le da bien: tomar la reserva online y empujar tus salidas a su mercado de revendedores y a las OTAs, para lo que DiveDay no tiene equivalente. No hay cable entre los dos. Traes a tus buceadores con la exportación CSV de abajo, y reimportas a medida que tu lista crece.",
-          "replaceHeading": "O deja atrás la cuota mensual y la comisión por reserva.",
+          "replaceHeading": "O deja atrás la cuota mensual y la comisión por reserva",
           "replaceBody": "Si no te apoyas en el mercado de Rezdy, pagas una suscripción mensual y una comisión de cada reserva por un escaparate que podrías llevar aquí: un horario público que cualquiera reserva sin cuenta, pago a través de tu propia cuenta de Stripe, exenciones nativas. Rezdy te lo pone fácil para irte, sin contrato de permanencia, con una exportación CSV autoservicio y una API que activas tú mismo."
         },
         "exportHeading": "Saca tus datos de Rezdy",
@@ -4545,32 +4545,32 @@
       "heroDescription": "En enero de 1998, Tom y Eileen Lonergan salieron en un barco de buceo al arrecife St. Crispin, en la Gran Barrera de Coral. El barco volvió a puerto sin ellos, y nadie notó que faltaban hasta dos días después, cuando apareció a bordo la bolsa con sus pertenencias. Nunca se encontró a ninguno de los dos.",
       "heroP2": "Por esa historia construimos DiveDay. Un conteo es un número, y un número puede cuadrar con alguien todavía en el agua, así que en DiveDay el pase de lista nombra a cada buceador y tripulante cuando el barco sale y después de cada inmersión, y no termina hasta que cada uno esté confirmado.",
       "peopleEyebrow": "Quiénes somos",
-      "peopleTitle": "Buceadores que han llevado software a millones de personas.",
+      "peopleTitle": "Buceadores que han llevado software a millones de personas",
       "peopleP1": "Las personas que construyen DiveDay han pasado su carrera en software del que dependen millones de personas, y sus fines de semana en barcos de buceo. Conocemos el mostrador desde el lado del buceador, con la tarjeta de certificación en la mano mientras el dueño busca la exención, y la cubierta, donde un divemaster recorre un portapapeles mojado mientras el barco espera. DiveDay es la herramienta que queríamos en los dos lugares: registros en los que confiar, en una pantalla que se maneja con el pulgar mojado.",
       "peopleP2": "Los centros de buceo que conocemos llevan el día en una pizarra junto a la puerta, un portapapeles que sale en el barco, una hoja de cálculo que alguien actualiza a mano y un puñado de aplicaciones que guardan cada una su propia lista de los mismos buceadores. El dueño conoce a cada buceador por su nombre, y cada mañana parte de ese conocimiento se copia de una herramienta a otra mientras el resto viaja en su cabeza. DiveDay está hecho para que ese conocimiento se escriba una sola vez y salga con el barco en el teléfono del capitán.",
       "buildEyebrow": "Lo primero",
-      "buildTitle": "La única tarea en un barco que no puede fallar.",
+      "buildTitle": "La única tarea en un barco que no puede fallar",
       "buildDescription": "El pase de lista es el único registro de un día de buceo que tiene que salir bien a la primera, así que por ahí empieza DiveDay. La reserva, la exención, la verificación de certificación, las tallas y el pago tienen cada uno su propia pantalla, y cada una de esas pantallas existe para que el capitán abra el manifiesto con los registros en orden y lo único que quede sea leer los nombres.",
       "rules": {
         "survivesDock": {
-          "title": "El pase de lista funciona sin señal.",
+          "title": "El pase de lista funciona sin señal",
           "body": "Abre DiveDay en un teléfono de la tripulación mientras todavía hay señal y guarda una copia de los manifiestos de las próximas salidas, así que el pase de lista corre desde esa copia cuando el puerto ya quedó atrás. Los botones tienen el tamaño de un pulgar mojado. Una cortina de agua o una palma mojada sobre el cristal toca en varios puntos a la vez, y el pase de lista lo ignora."
         },
         "noSilentPasses": {
-          "title": "Un hueco en el registro aparece en el mostrador, no en el barco.",
+          "title": "Un hueco en el registro aparece en el mostrador, no en el barco",
           "body": "Cuando nada en el registro de un buceador lo habilita, DiveDay lo marca como Bloqueado en el manifiesto y dice qué falta, así que la tripulación lo ve en el mostrador esa mañana, con el buceador ahí y tiempo para resolverlo."
         },
         "onePrice": {
-          "title": "Un precio cubre el centro.",
+          "title": "Un precio cubre el centro",
           "body": "El plan es {price} {cadence}, y cubre cada parte de DiveDay y una cuenta para cada persona de tu personal. No nos quedamos con nada de tus reservas. La página de precios enumera cada cosa que cubre."
         },
         "yourRecords": {
-          "title": "Descarga cada registro de tu centro, cualquier día.",
+          "title": "Descarga cada registro de tu centro, cualquier día",
           "body": "Llega como un solo ZIP de archivos simples que abres donde quieras. {terms} El plan va mes a mes, sin cuota de alta y sin contrato."
         }
       },
       "workEyebrow": "Cómo trabajamos con los centros",
-      "workTitle": "Configuramos tu centro contigo.",
+      "workTitle": "Configuramos tu centro contigo",
       "workP1": "Escríbenos y alguien de aquí arma tu centro contigo: los barcos, los sitios, el calendario, la exención, los precios y los registros que ya tengas. Si esos registros viven en otro sistema o en una hoja de cálculo, mándanos la exportación y traemos a los buceadores nosotros mismos, con sus certificaciones y tallas donde el archivo las tenga.",
       "workP2": "Después de eso, tu correo llega a las personas que construyen DiveDay. Cuéntanos qué decía la pantalla y qué intentabas hacer, y la respuesta viene de alguien que puede cambiar el producto.",
       "seeCost": "Un precio único de {price} {cadence}. Mira la lista completa",
@@ -4581,23 +4581,23 @@
       "committingValue": "Mes a mes, por ubicación, sin cuota de alta y sin contrato anual.",
       "whoAnswersLabel": "Quién te responde",
       "whoAnswersValue": "Una de las personas que construyen DiveDay, en {email}.",
-      "closingTitle": "La demo es un centro en marcha, con buceadores en el barco de hoy.",
+      "closingTitle": "La demo es un centro en marcha, con buceadores en el barco de hoy",
       "closingDescription": "Ábrela como propietario, capitán o buceador y recorre el día completo: reserva un asiento, firma la exención, registra la llegada de alguien y pasa lista con el teléfono en modo avión. Cuando quieras un centro propio, escríbenos y lo armamos contigo."
     },
     "product": {
       "eyebrow": "Funciones",
-      "heroTitle": "De la primera reserva al pase de lista después de la última inmersión.",
+      "heroTitle": "De la primera reserva al pase de lista después de la última inmersión",
       "heroDescription": "Reservas, exenciones, control de certificaciones, el manifiesto del barco, equipo de alquiler, cursos y pagos funcionan en una sola aplicación. Cada función de abajo tiene una página que muestra su pantalla y lleva a la demo ahí mismo.",
       "boxDescription": "Hay un solo plan, con {count, plural, one {# tarea} other {las # tareas}} dentro.",
       "boxGroupCount": "{count, plural, one {# tarea} other {# tareas}}",
       "leavingNote": "Ajustes tiene un botón Exportación de datos que descarga los registros de tu centro en un solo ZIP, cualquier día. {terms}",
-      "closingTitle": "El centro de demostración tiene salidas en el tablero y buceadores reservados en ellas.",
+      "closingTitle": "El centro de demostración tiene salidas en el tablero y buceadores reservados en ellas",
       "closingDescription": "Un selector dentro te mueve entre el propietario, la tripulación y un buceador. Tu propio centro empieza vacío, y lo configuramos contigo.",
       "spreadsheetLink": "Mira cómo DiveDay lee tu hoja de cálculo →",
       "alsoInPlan": "También en el plan"
     },
     "pricing": {
-      "heroTitle": "Lo que paga un centro, línea por línea.",
+      "heroTitle": "Lo que paga un centro, línea por línea",
       "lockNote": "El precio de hoy, congelado dos años para los centros fundadores.",
       "trialNote": "La prueba es un centro tuyo: gratis 3 semanas, sin tarjeta, y nada se apaga cuando termina el plazo.",
       "earlyAccessBadge": "Acceso anticipado",
@@ -4647,7 +4647,7 @@
       "includedLead": "Qué cubre el precio",
       "seeFullList": "La lista completa está en la página del producto →",
       "feeAnchor": {
-        "title": "Lo que cobran dos canales de reservas, en sus propias palabras.",
+        "title": "Lo que cobran dos canales de reservas, en sus propias palabras",
         "body": "Las dos filas son los términos que publica cada canal, citados en su guía de cambio. Nada de esto es una cifra de lo que paga un centro en la práctica.",
         "rezdy": "El precio publicado actualmente por {competitor} combina una suscripción mensual con un 3% de cada reserva en línea.",
         "fareharbor": "{competitor} no publica ninguna tarifa. No hay cobro mensual. En su lugar, una comisión por cada reserva se agrega al precio que paga tu cliente mientras lo uses, y terceros sitúan esa comisión en torno al 6%.",
@@ -4657,7 +4657,7 @@
       },
       "dataExit": {
         "eyebrow": "Tus registros",
-        "title": "Una exportación completa cuando la necesites.",
+        "title": "Una exportación completa cuando la necesites",
         "note1": "“Descargar exportación” te da un ZIP con los CSV y las fotos guardadas, incluso el primer día de la prueba.",
         "note2": "contacts.csv tiene una fila por persona, con el formato que espera el importador de otro sistema.",
         "note3": "waiver_records.csv guarda el hash de integridad de cada exención y el texto exacto que firmó el buceador.",
@@ -4666,7 +4666,7 @@
         "door": "Abre la demo como propietario →",
         "mockupLabel": "La pantalla Exportar datos de DiveDay, con los archivos del paquete, el número de filas de cada uno y las credenciales de cuenta que siguen protegidas"
       },
-      "faqTitle": "Las preguntas que los dueños hacen primero.",
+      "faqTitle": "Las preguntas que los dueños hacen primero",
       "faq": {
         "billing": {
           "question": "¿Cómo funciona la facturación?",
@@ -4717,7 +4717,7 @@
           "answer": "Cada centro de DiveDay lleva una ubicación por ahora. Si operas más de una, escribe a {email}."
         }
       },
-      "closingTitle": "Ese es el precio completo.",
+      "closingTitle": "Ese es el precio completo",
       "closingBody": "{price} {cadence}, mes a mes, y la exportación funciona cualquier día.",
       "stillQuestion": "Lo que esta página no haya respondido, escríbelo por correo. Lo lee una persona real.",
       "emailCta": "Escribe a {email}"
@@ -4826,9 +4826,9 @@
     "status": {
       "eyebrow": "Estado de DiveDay",
       "headline": {
-        "ok": "Todo está funcionando.",
-        "degraded": "Una parte de DiveDay no está funcionando.",
-        "down": "DiveDay no responde."
+        "ok": "Todo está funcionando",
+        "degraded": "Una parte de DiveDay no está funcionando",
+        "down": "DiveDay no responde"
       },
       "checked": "Última verificación: {time}.",
       "component": {
@@ -4912,7 +4912,7 @@
         "summary": "Los buceadores reservan y pagan sus plazas desde tu horario, y una salida deja de vender en cuanto se llena.",
         "metaTitle": "Reservas en línea para centros de buceo",
         "metaDescription": "Los buceadores reservan sus plazas a cualquier hora, con equipo de alquiler, una solicitud de nitrox y el pago en un solo paso, después de leer la certificación que pide la salida. Las plazas se descuentan del aforo del barco, así que una salida no se puede sobrevender.",
-        "title": "Los buceadores reservan mientras tú estás en el agua, y leen la certificación que pide la salida antes de hacerlo.",
+        "title": "Los buceadores reservan mientras tú estás en el agua, y leen la certificación que pide la salida antes de hacerlo",
         "lede": "El horario de tu web recibe a los buceadores, su equipo de alquiler, una solicitud de nitrox y el pago en tu propia cuenta de Stripe, y una salida deja de vender sola en cuanto se llena.",
         "screenLabel": "El panel de reserva de una salida, como lo ve un buceador: la certificación que pide la salida, las plazas libres, los buceadores, el equipo de alquiler y el nitrox, y el total.",
         "note1": "La certificación que pide la salida va encima del botón, donde el buceador la lee antes de pagar.",
@@ -4930,7 +4930,7 @@
         "faq2A": "Deja de vender plazas y ofrece su lista de espera. Cuando se libera una plaza, el personal invita por correo, con un toque, a quien de la lista encaje.",
         "faq3Q": "¿Puede reservar un grupo junto?",
         "faq3A": "Sí. Una reserva cubre hasta veinte buceadores, y quien organiza recibe un enlace de reclamo por cada persona que nombró, que después completa sus propios datos y su exención.",
-        "closeTitle": "Reserva una plaza en el horario de la demo.",
+        "closeTitle": "Reserva una plaza en el horario de la demo",
         "demoPlace": "el horario del centro, como buceador"
       },
       "website": {
@@ -4938,7 +4938,7 @@
         "summary": "Una página de reservas con los colores de tu centro, y botones de reserva para la web que ya tienes.",
         "metaTitle": "Web y página de reservas para centros de buceo",
         "metaDescription": "Una página de reservas con el color, la tipografía y las fotos de tu centro, además de un botón de reservar, un calendario y una cuadrícula de salidas para WordPress, Squarespace o Wix.",
-        "title": "Los buceadores hacen su reserva en una página con los colores de tu centro, valorada solo por quienes bucearon contigo.",
+        "title": "Los buceadores hacen su reserva en una página con los colores de tu centro, valorada solo por quienes bucearon contigo",
         "lede": "Tu página de reservas lleva tu color, tu tipografía y tus fotos, y sus botones se pegan en la web que ya tienes. Si no tienes web, pídela y una persona del equipo la arma contigo, dentro del mismo precio mensual.",
         "screenLabel": "La página pública de reservas de un centro: el nombre y la valoración del centro, el próximo barco con plazas y las salidas de la semana.",
         "note1": "El color del centro, la tipografía de su nombre y “Desde 1987” se configuran una vez, en Ajustes.",
@@ -4956,7 +4956,7 @@
         "faq2A": "Sí. Es un mismo código para los tres, y la página para insertar en Ajustes muestra la línea extra que necesita cada uno.",
         "faq3Q": "¿Se puede leer en inglés?",
         "faq3A": "Sí. Tus páginas públicas cambian entre inglés y español desde el encabezado, y los enlaces de cada buceador se abren en el idioma que eligió.",
-        "closeTitle": "Recorre una página de reservas hecha con DiveDay.",
+        "closeTitle": "Recorre una página de reservas hecha con DiveDay",
         "demoPlace": "la página de reservas del centro, como buceador"
       },
       "waivers": {
@@ -4964,7 +4964,7 @@
         "summary": "Exenciones y el cuestionario médico de buceo firmados desde casa, sellados y revisados antes de que nadie embarque.",
         "metaTitle": "Exenciones de buceo y formularios médicos en línea",
         "metaDescription": "Los buceadores firman tu exención y responden el cuestionario médico de buceo de 2026 desde casa. Una respuesta que remite al buceador a un médico lo retiene hasta que el personal registre la autorización del médico.",
-        "title": "Las exenciones y los formularios médicos vuelven firmados antes de que llegue el buceador.",
+        "title": "Las exenciones y los formularios médicos vuelven firmados antes de que llegue el buceador",
         "lede": "Los buceadores firman en casa con el enlace que reciben por correo al reservar, y una respuesta que los remite a un médico los deja fuera del barco hasta que la autorización del médico esté archivada.",
         "screenLabel": "La página de la exención en el teléfono de un buceador: la exención, las preguntas médicas y la firma escrita.",
         "note1": "El enlace queda abierto siete días y guarda cada respuesta a medida que el buceador avanza.",
@@ -4982,7 +4982,7 @@
         "faq2A": "La exención de un menor de 18 años pide también la firma de su madre, padre o tutor, y el embarque espera a las dos. Un buceador cuenta como menor cuando la fecha de nacimiento de su ficha lo dice o, sin fecha, cuando quien hizo la reserva marcó “Menor de 18 años”.",
         "faq3Q": "¿Y las exenciones que los buceadores ya firmaron con mi sistema anterior?",
         "faq3A": "Si la exportación de tu sistema anterior marca la exención de un buceador como aceptada, el importador la trae con su fecha, marcada como importada, y confía en la autorización médica que registró tu sistema anterior. No se le pide firmar de nuevo mientras siga vigente.",
-        "closeTitle": "Mira el editor de la exención y cada copia firmada.",
+        "closeTitle": "Mira el editor de la exención y cada copia firmada",
         "demoPlace": "la exención y cada copia firmada, como propietario"
       },
       "certifications": {
@@ -4990,7 +4990,7 @@
         "summary": "Cada buceador figura como Listo o Bloqueado en cada salida, con la tarjeta, el formulario o el pago que falta.",
         "metaTitle": "Control de certificaciones de buceo en cada salida",
         "metaDescription": "DiveDay compara las tarjetas de cada buceador con lo que piden la salida y sus sitios de buceo, como buceo profundo, naufragios, nocturno o nitrox, y nombra lo que falta días antes de zarpar.",
-        "title": "Sabe quién puede embarcar días antes de que salga el barco, y qué les falta a los demás.",
+        "title": "Sabe quién puede embarcar días antes de que salga el barco, y qué les falta a los demás",
         "lede": "DiveDay compara a cada buceador con el nivel y la tarjeta de buceo profundo, naufragios o nitrox que piden la salida y sus sitios, además de la exención, el formulario médico y el pago que exige, y nombra lo que falta.",
         "screenLabel": "Hoy en DiveDay: la barra de preparación de una salida y luego la lista Pendiente, con el motivo junto a cada nombre.",
         "note1": "La barra son las plazas de la salida: verde para los listos, rojo para los bloqueados y el resto todavía libre.",
@@ -5008,7 +5008,7 @@
         "faq2A": "Si está inscrito en un curso que lo lleva a ese nivel y termina antes de la inmersión, se le puede vender la plaza, y el embarque espera a la tarjeta nueva.",
         "faq3Q": "¿El nitrox necesita su propia tarjeta?",
         "faq3A": "Sí, una tarjeta de nitrox archivada. Cada solicitud se compara con ella cada vez que se lee el listado, y a un buceador sin tarjeta verificada se le planifica con aire. RAID y GUE enseñan nitrox dentro de la tarjeta de nivel, así que el número de esa tarjeta se guarda como tarjeta de nitrox.",
-        "closeTitle": "Mira qué buceadores de la demo están bloqueados, y por qué.",
+        "closeTitle": "Mira qué buceadores de la demo están bloqueados, y por qué",
         "demoPlace": "los barcos del día y lo que le falta a cada buceador, como propietario"
       },
       "messages": {
@@ -5016,7 +5016,7 @@
         "summary": "Confirmaciones, un recordatorio una semana antes, un aviso el día antes y el recuerdo salen solos, y las respuestas por correo llegan a un solo lugar.",
         "metaTitle": "Recordatorios automáticos de reserva y mensajes para buceadores",
         "metaDescription": "Correos de confirmación y de exención, un recordatorio una semana antes, un aviso el día antes con la hora en el muelle y un recuerdo después de bucear. Las respuestas por correo de los buceadores llegan a un solo lugar.",
-        "title": "El día antes, cada buceador recibe la hora en el muelle y una lista de lo que aún le toca hacer.",
+        "title": "El día antes, cada buceador recibe la hora en el muelle y una lista de lo que aún le toca hacer",
         "lede": "Las confirmaciones, un recordatorio una semana antes y un aviso el día antes salen por correo con un mensaje de texto al lado, y un correo fallido le aparece a tu personal con un botón Reenviar.",
         "screenLabel": "La página de la noche anterior en el teléfono de un buceador: la hora en el muelle, la exención y la certificación hechas, y el equipo por completar.",
         "note1": "La hora en el muelle abre la página, porque es lo primero que el buceador mira por la mañana.",
@@ -5034,7 +5034,7 @@
         "faq2A": "Sí. Conecta el número de WhatsApp del centro en Ajustes, y los mensajes de recordatorio y de recuerdo salen desde ese número. Las respuestas por WhatsApp llegan a tus Mensajes.",
         "faq3Q": "¿Puedo detener un envío que toqué por error?",
         "faq3A": "Los enlaces de exención de toda una salida, una oferta de última hora y una invitación de la lista de espera esperan ocho segundos con un botón Deshacer antes de enviarse.",
-        "closeTitle": "Lee las respuestas que esperan en los Mensajes de la demo.",
+        "closeTitle": "Lee las respuestas que esperan en los Mensajes de la demo",
         "demoPlace": "los Mensajes del centro, como propietario"
       },
       "checkIn": {
@@ -5042,7 +5042,7 @@
         "summary": "Un toque por buceador en el mostrador, una búsqueda para quien no sabe en qué barco va, y quienes llegan sin reserva agregados al momento.",
         "metaTitle": "Check-in para la hora pico de un centro de buceo",
         "metaDescription": "Registra a los buceadores con un toque en la lista de la propia salida. Quien no está listo muestra lo que falta en lugar del toque, y quienes llegan sin reserva pueden completar sus datos con el código de tu mostrador antes de que les des su plaza.",
-        "title": "La hora pico es un toque por buceador, y quien no está listo muestra lo que falta en lugar del toque.",
+        "title": "La hora pico es un toque por buceador, y quien no está listo muestra lo que falta en lugar del toque",
         "lede": "Las llegadas se abren en la pestaña Buceadores de la salida, con el recuento de quién ha llegado, un toque Registrar junto a cada buceador listo y lo que falta junto a quien no lo está.",
         "screenLabel": "La pestaña Buceadores de una salida durante las llegadas: cuántos han llegado, un buceador registrado, un toque Registrar y una plaza retenida que pregunta si es la misma persona.",
         "note1": "El recuento es de buceadores que llegaron frente a buceadores reservados, y solo se mueve cuando entra un toque.",
@@ -5060,7 +5060,7 @@
         "faq2A": "Sí. El código de la tarjeta de tu mostrador abre un formulario en su teléfono para su nombre, su correo o teléfono, su certificación y sus tallas de alquiler, y se le envía la exención, por SMS si dejó un teléfono y ningún correo. Luego dale su plaza desde la pestaña Buceadores.",
         "faq3Q": "¿Qué pasa cuando alguien no se presenta?",
         "faq3A": "Una vez pasada la hora del barco, márcalo como que no vino. La plaza se libera, la lista de espera aparece al lado, y ese toque no cobra ni reembolsa nada.",
-        "closeTitle": "Registra a los buceadores del próximo barco de la demo.",
+        "closeTitle": "Registra a los buceadores del próximo barco de la demo",
         "demoPlace": "las salidas del día, como propietario"
       },
       "boatManifest": {
@@ -5068,7 +5068,7 @@
         "summary": "Un pase de lista por nombre, buceadores y tripulantes, antes de zarpar y después de cada inmersión, en un teléfono que funciona fuera de cobertura.",
         "metaTitle": "Manifiesto de barco y pase de lista para centros de buceo",
         "metaDescription": "La tripulación pasa lista por nombre a cada buceador y tripulante antes de zarpar y después de cada inmersión, en un teléfono que guarda el manifiesto sin señal. Un toque hecho fuera de cobertura se envía en cuanto el teléfono recupera la señal.",
-        "title": "Pasa lista por nombre a cada buceador después de cada inmersión, con o sin señal.",
+        "title": "Pasa lista por nombre a cada buceador después de cada inmersión, con o sin señal",
         "lede": "Cualquier teléfono de la tripulación que abre DiveDay con señal guarda los manifiestos de los dos días siguientes, y un pase de lista hecho sin cobertura se suma al registro en vivo cuando el teléfono se reconecta.",
         "screenLabel": "El pase de lista del capitán en el muelle: el recuento, el punto de control y un círculo para tocar en cada nombre.",
         "note1": "Cada buceador cuenta a bordo con un toque en su propio nombre, así que nadie queda marcado en bloque.",
@@ -5086,7 +5086,7 @@
         "faq2A": "Sí. El paquete de la salida imprime el plan de inmersión, el manifiesto con su pase de lista y la tarjeta de emergencia que completas tú (tu cámara hiperbárica más cercana, DAN, la autoridad marítima), y la lista de equipo.",
         "faq3Q": "¿Qué ve un buceador mientras estamos afuera?",
         "faq3A": "Su propio enlace de la salida muestra una línea sobre el barco cada vez que la tripulación toca una etapa: embarcando, en el sitio, en superficie, de regreso y de vuelta en el muelle.",
-        "closeTitle": "Pasa lista en el barco de la demo como su capitán.",
+        "closeTitle": "Pasa lista en el barco de la demo como su capitán",
         "demoPlace": "los barcos del día, como capitán"
       },
       "diveSites": {
@@ -5094,7 +5094,7 @@
         "summary": "La ruta, las referencias y la vida marina de cada sitio, escritas una vez y mostradas a cada buceador de un barco que va allí.",
         "metaTitle": "Briefings de sitios de buceo para tus buceadores",
         "metaDescription": "Escribe cada sitio de buceo una vez: profundidad, ruta, referencias con fotos y lo que vive allí. Cada buceador reservado en un barco a ese sitio lee el briefing antes de venir.",
-        "title": "Escribe cada sitio de buceo una vez, y cada buceador con reserva allí lee la ruta y los avistamientos recientes antes de venir.",
+        "title": "Escribe cada sitio de buceo una vez, y cada buceador con reserva allí lee la ruta y los avistamientos recientes antes de venir",
         "lede": "Escribe cada sitio una vez con su profundidad, la ruta sobre un mapa del relieve, referencias con fotos y las especies que se ven allí, y cada buceador reservado lo lee en la página de su salida.",
         "screenLabel": "El briefing de un sitio de buceo como lo leen los buceadores antes de la salida: el sitio, su profundidad y el tiempo en el agua, la ruta y lo que se vio allí este mes.",
         "note1": "La profundidad es la del sitio, en las unidades de tu centro, y el tiempo en el agua es tu habitual para esa inmersión.",
@@ -5112,7 +5112,7 @@
         "faq2A": "Sí. Un sitio puede exigir un nivel y una tarjeta de especialidad, como buceo profundo o naufragios, y cada salida que va allí la pide.",
         "faq3Q": "¿La guía de campo también está en inglés?",
         "faq3A": "Sí. DiveDay escribe las descripciones de sus 148 especies del Caribe y Florida en inglés y en español.",
-        "closeTitle": "Explora los sitios de buceo de la demo.",
+        "closeTitle": "Explora los sitios de buceo de la demo",
         "demoPlace": "los sitios de buceo del centro, como propietario"
       },
       "rentalGear": {
@@ -5120,7 +5120,7 @@
         "summary": "Cada unidad de tu pared con su talla y su próximo mantenimiento, reservada para un buceador a la vez, y el equipo de tus clientes en el taller.",
         "metaTitle": "Alquiler de equipo de buceo y control de mantenimiento",
         "metaDescription": "Lleva cada chaleco, regulador, neopreno y tanque por etiqueta, talla y fecha de mantenimiento. El personal aparta una unidad para una reserva, y el registro no se la da a un segundo buceador en las mismas fechas.",
-        "title": "Sabe qué neopreno lleva cada buceador y qué regulador toca revisar.",
+        "title": "Sabe qué neopreno lleva cada buceador y qué regulador toca revisar",
         "lede": "Registra tus propias unidades por etiqueta, talla y número de serie, aparta una para una reserva desde la pestaña Equipo de la salida y mira la próxima fecha de mantenimiento de cada regulador, tanque y chaleco. Cuando un cliente trae su propio regulador, entra al taller como orden de trabajo y se le avisa cuando está listo.",
         "screenLabel": "El registro de equipo: unidades por tipo con sus cantidades, y la etiqueta, el modelo, la talla y el estado de cada unidad.",
         "note1": "Los contadores muestran las unidades de cada tipo, así que un estante corto se nota antes de la mañana.",
@@ -5138,7 +5138,7 @@
         "faq2A": "El personal aparta una unidad para una reserva, y el registro se niega a dársela a otro buceador cuyas fechas se cruzan.",
         "faq3Q": "¿Tengo que etiquetar cada unidad para alquilar equipo?",
         "faq3A": "No. Los buceadores pueden alquilar equipo y dar sus tallas sin ningún registro. El registro está para cuando quieras llevar el control de las unidades.",
-        "closeTitle": "Revisa la flota de la demo, unidad por unidad.",
+        "closeTitle": "Revisa la flota de la demo, unidad por unidad",
         "demoPlace": "el registro de equipo, como propietario"
       },
       "schedule": {
@@ -5146,7 +5146,7 @@
         "summary": "Arma las salidas de la temporada, repite las habituales y mira qué barco aún necesita tripulación.",
         "metaTitle": "Programación de salidas de buceo y planificación de la tripulación",
         "metaDescription": "Agrega, mueve y copia salidas en el sitio, repite una salida semanal sin fecha final y asigna tripulación a cada barco. La vista de tripulación muestra qué salida está sin cubrir.",
-        "title": "Las salidas habituales se repiten solas, y un barco todavía sin tripulación lo dice en el tablero de la semana.",
+        "title": "Las salidas habituales se repiten solas, y un barco todavía sin tripulación lo dice en el tablero de la semana",
         "lede": "Cuando suspendes un barco por mal tiempo, un toque confirmado lo cancela, le envía por correo a cada buceador las salidas a las que puede ir y reembolsa sus pagos con tarjeta en línea.",
         "screenLabel": "El horario de la semana: salidas por día con sus horas, la tripulación y las plazas ocupadas, y un botón Agregar en cada día.",
         "note1": "Cada fila muestra cuántas plazas del barco están ocupadas, así que una salida floja se nota pronto.",
@@ -5164,7 +5164,7 @@
         "faq2A": "Sí. Cada miembro del personal puede suscribirse a las salidas en Google Calendar, Apple Calendar u Outlook.",
         "faq3Q": "¿Y si una salida no junta suficientes buceadores?",
         "faq3A": "Ponle un mínimo y una hora límite para decidir. Si para entonces no se llega al mínimo, la salida se cancela sola, avisa por correo a cada buceador de la salida y reembolsa sus pagos con tarjeta.",
-        "closeTitle": "Agrega una salida a la semana de la demo.",
+        "closeTitle": "Agrega una salida a la semana de la demo",
         "demoPlace": "el horario de la semana, como propietario"
       },
       "courses": {
@@ -5172,7 +5172,7 @@
         "summary": "Páginas de cursos en el orden en que enseñas, con fechas abiertas a reserva y un instructor en cada sesión.",
         "metaTitle": "Reservas y programación de cursos de buceo",
         "metaDescription": "Páginas de cursos con precio, requisitos, plan día por día y fechas para reservar, a partir del contenido de PADI, SSI o SDI. Las sesiones de Open Water de PADI y los bautismos dejan de vender plazas al llegar a su ratio, y quien reserva en línea confirma que cada buceador cumple la edad mínima del curso.",
-        "title": "Las fechas de tus cursos se reservan desde tu propia web, y una sesión de Open Water de PADI deja de vender al llegar a su ratio de alumnos por instructor.",
+        "title": "Las fechas de tus cursos se reservan desde tu propia web, y una sesión de Open Water de PADI deja de vender al llegar a su ratio de alumnos por instructor",
         "lede": "Empieza con un curso de PADI, SSI o SDI, hazlo tuyo con tu precio, tus requisitos, tu plan día por día y tus fotos, y cada fecha se reserva desde la página del curso.",
         "screenLabel": "Una página pública de curso: la agencia, el nombre y el precio del curso, el plan por día y una próxima fecha para reservar.",
         "note1": "La agencia va encima del título, así que un buceador que compara centros sabe qué tarjeta va a recibir.",
@@ -5190,7 +5190,7 @@
         "faq2A": "Open Water de PADI permite ocho alumnos por instructor, dos más por cada divemaster o instructor asistente, y nunca más de doce. DiveDay limita todo bautismo a dos buceadores por instructor, sea cual sea la agencia, y un asistente no suma plazas. Los demás cursos se limitan por las plazas de la salida.",
         "faq3Q": "¿Se aplican edades mínimas?",
         "faq3A": "Sí. Quien reserva en línea confirma que cada buceador cumple la edad mínima del curso y, cuando la fecha de nacimiento del buceador está en su ficha, la edad se verifica el día del curso y un buceador menor de esa edad se queda en tierra. DiveDay no le pide la fecha de nacimiento al buceador, así que confirma las edades en el mostrador.",
-        "closeTitle": "Mira el catálogo de la demo y sus fechas de curso.",
+        "closeTitle": "Mira el catálogo de la demo y sus fechas de curso",
         "demoPlace": "el catálogo de cursos, como propietario"
       },
       "payments": {
@@ -5198,7 +5198,7 @@
         "summary": "Tarjetas, depósitos y reembolsos a través de tu propia cuenta de Stripe, con los pedidos de cada día en un solo libro.",
         "metaTitle": "Pagos, depósitos y reembolsos para centros de buceo",
         "metaDescription": "Cobra con tarjeta y toma depósitos al reservar a través de tu propia cuenta de Stripe. Los reembolsos salen solos cuando cancelas por mal tiempo o cuando un barco no llega al mínimo de buceadores.",
-        "title": "Cada buceador paga al reservar, y el dinero llega a tu propia cuenta de Stripe.",
+        "title": "Cada buceador paga al reservar, y el dinero llega a tu propia cuenta de Stripe",
         "lede": "Cobra el precio completo o un depósito al reservar, factura todo lo demás desde el mostrador, y cuando se cancela un barco, cada pago con tarjeta en línea se reembolsa solo.",
         "screenLabel": "La página de Pedidos: los pedidos de un día con su cantidad y su subtotal, y el estado de cada pedido.",
         "note1": "Los pedidos se archivan por día con la cantidad y el subtotal del día, como se cuenta la caja al cerrar.",
@@ -5216,7 +5216,7 @@
         "faq2A": "Dentro de la ventana de cancelación gratuita que definas, un pago con tarjeta en línea se reembolsa solo. Pasada la ventana, el reembolso queda a tu criterio.",
         "faq3Q": "¿Funciona con mi contabilidad?",
         "faq3A": "Los pedidos pagados y reembolsados se envían a QuickBooks como recibos, y el informe se descarga como hoja de cálculo.",
-        "closeTitle": "Repasa un día de pedidos en la demo.",
+        "closeTitle": "Repasa un día de pedidos en la demo",
         "demoPlace": "los pedidos del día, como propietario"
       }
     },

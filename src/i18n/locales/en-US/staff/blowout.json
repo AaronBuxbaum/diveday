@@ -5,7 +5,7 @@
     "moneyNote": "Card payments go back automatically. Anything taken at the counter, or on a card DiveDay can’t reach, stays with you to return, and those divers are told a refund is owed.",
     "diversHeading": "{count, plural, one {# diver will be messaged} other {# divers will be messaged}}",
     "noEmail": "No email — flagged for a call",
-    "noDivers": "Nobody is booked on this departure. Calling it cancels the trip.",
+    "noDivers": "Nobody is booked on this departure. Calling it cancels the trip",
     "departed": "This departure is underway or has left, so there is nothing to blow out.",
     "moneyNoteHeld": "Card payments aren’t sent back from here: an owner or manager releases the refunds, and those divers are told a refund is owed. Anything taken at the counter stays with you to return.",
     "button": "Call the blow-out",
@@ -46,7 +46,7 @@
     "releasing": "Sending…",
     "resend": "Retry unsent messages",
     "resending": "Retrying…",
-    "empty": "No divers were booked when the blow-out was called."
+    "empty": "No divers were booked when the blow-out was called"
   },
   "notices": {
     "called": "Blow-out called. The trip is canceled and every diver’s message is on its way.",

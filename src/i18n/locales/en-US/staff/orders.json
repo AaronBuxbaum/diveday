@@ -175,7 +175,7 @@
       "unnamed": "{amount} on {count, plural, one {# order} other {# orders}}"
     },
     "emptyAll": "No orders yet",
-    "emptyFiltered": "No orders match these filters.",
+    "emptyFiltered": "No orders match these filters",
     "ledger": {
       "today": "Today · {date}",
       "continued": "{day}, continued",

@@ -163,6 +163,9 @@ function relative(file) {
  * @param {boolean} [ctx.sweep]
  * @param {string[]} [ctx.titlePath] the Playwright test's title path, for the re-run command
  * @param {string} [ctx.testFile]
+ * @param {string} [ctx.entryFile] registering spec to load for an imported test
+ * @param {boolean} [ctx.exhaustiveAudit] opt-in states were registered for this run
+ * @param {boolean} [ctx.initialPaintAudit] actual SSR fallback captures were enabled
  * @param {Set<string>} ctx.atlasSeen signatures already photographed by this process
  * @param {Function} ctx.bound `(what, ms, work, degraded) => Promise`
  * @param {object} ctx.budgets `{ collectMs, callMs, statesMs, ringsMs, shotMs }`
@@ -179,6 +182,9 @@ export async function probeViewport(page, ctx) {
     sweep: Boolean(ctx.sweep),
     titlePath: ctx.titlePath || [],
     testFile: ctx.testFile || "",
+    entryFile: ctx.entryFile || "",
+    ...(ctx.exhaustiveAudit === true ? { exhaustiveAudit: true } : {}),
+    ...(ctx.initialPaintAudit === true ? { initialPaintAudit: true } : {}),
     source: ctx.source || "visual",
     probed: false,
     skipped: null,

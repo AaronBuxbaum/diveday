@@ -112,7 +112,7 @@ describe("ReadyBookedHeader", () => {
       ),
     );
     const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading.textContent).toBe("You’ve got a seat, Priya.");
+    expect(heading.textContent).toBe("You’ve got a seat, Priya");
     expect(screen.getByText("Blue Mantis Divers")).toBeTruthy();
     expect(screen.getByText(/^Morning Two-Tank\s— Molasses Reef$/)).toBeTruthy();
     expect(screen.getByText(/^Tomorrow · Sun, Oct\s11/)).toBeTruthy();

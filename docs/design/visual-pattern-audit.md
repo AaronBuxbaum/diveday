@@ -4,6 +4,80 @@ Companion to the [copy consistency audit](visual-consistency-audit.md), issue #2
 This pass compares equivalent controls and disclosures rather than changing each surface's
 composition. The collection editor changes in #2886 are the baseline for this branch.
 
+## Expanded light review
+
+After the initial review below, Aaron requested exploration of every surface and excluded dark
+mode. That expanded review is in progress. The initial review's approval applies to its recorded
+scope; it does not establish complete runtime coverage.
+
+The expanded inventory distinguishes route patterns from designed states. A route's ordinary
+page does not prove that its dialogs, nested disclosures, editors, refusals, account outcomes,
+offline reading, or printed document were inspected. Capture assignments derived from source
+are preparation; completed captures are matched to their actual rendered paths. Capability paths
+are normalized to route patterns in the coverage report.
+
+Additional fixtures exercise real account and consent links, payment and identity editors,
+service and staffing controls, initial server-rendered fallbacks, and print pagination. Controlled
+Next boundary states render the existing error components and exercise their reset controls;
+they establish appearance and reset behavior, rather than the handling of a particular fault.
+Security captures remain a one-off audit because session times and recovery codes are dynamic.
+Discovery and static checks are recorded separately from browser execution.
+
+### Expanded source inventory
+
+The expanded source census includes the 111 page-route patterns, all 100 locale bundles, and
+the opening uses of the app's disclosure and editor primitives. Its 182 primitive references
+include native details, automatic disclosures, row menus, modal/dialog bodies, diver-file groups,
+certification disclosures, the 11 course/site editor sections, Settings rows, and ledger groups.
+Twenty-four ledger groups never fold. Separate manual controllers cover the language and shop
+menus, section navigation, week board, manifest menu, and responsive folds. These are source
+references, not 182 distinct rendered states or 182 completed captures.
+
+| Surface family | Additional state preparation |
+| --- | --- |
+| Accounts and capability links | Active, saved, consumed and expired verification/reset/invite links; contact, shore and bookkeeper confirmation; subscription outcomes; short-password and mismatched-password refusals. |
+| Staff records and operations | Diver activity/history, booking and card editors, rental fit, private notes, erasure confirmation, work-order line actions, service history, notes and shifts. |
+| Departures and preparation | Inner buddy builder, dock rider, snag notes, crew person sheet, course completion/forms, pickup, lunch, emergency contact, private/departure notes, readiness and activity bodies. |
+| Payments and requests | Identity ambiguity, order/room-charge editors, provider refusal, promo and date-request details, message composer and sent outcome. |
+| Settings and public pages | Security enrollment, refusal, recovery and step-up states; team/course editors; all 21 configured course/site editor sections at both widths; public language picker, course FAQ answers and product capability lists. Pricing FAQ answers are always visible. |
+| Exceptional output | Controlled error-component appearance/reset, initial server paint, offline disclosure bodies, claim-tag and privacy-waiver print documents. |
+
+The extra link and payment fixtures use the existing production issuers and writers inside
+private demo shops. Both new test endpoints received security review. Before local testing was
+curtailed, the payment fixture and shared endpoint guards passed 184 tests. The earlier link
+fixture passed its nine focused tests and the then-current shared guard cases; overlapping guard
+runs are not added together.
+
+### Verification boundary after the testing hold
+
+Aaron subsequently asked running chats to stop local test activity because the computer was
+struggling. The audit's production build was terminated, its process tree was reaped, and the
+reserved browser window was released. It had not completed compilation. No expanded discovery
+browser batch ran, so the newly prepared states, controlled error fallbacks, initial-paint states,
+and print documents have no new rendered evidence from this expansion. The earlier contact
+sheet and 24-state pixel review remain evidence only for their original scope and source state.
+
+Implementation and lightweight source/syntax checks continue under that instruction. A fresh
+build is required before any later browser verification; killed build state is not reused.
+Heading punctuation follows Aaron's additional decision that every heading omits its final
+period, including a heading that is a complete sentence. It has not received a fresh visual
+replay. This expanded review therefore does not claim that every app state has been seen.
+
+Lightweight discovery loaded the registered suite without starting servers or browsers: 463
+light-mode test declarations, including 142 in the new registration modules. A test may prepare
+more than one capture state. Discovery reported no registration errors. Static route coverage
+still names 111 routes with functional specs, 110 with capture assignments, and the documented
+security-route exemption; those assignments are not evidence of execution. The locale, E2E
+fixture and E2E hygiene source guards pass, as do the workers' focused syntax/format checks and
+the final whitespace check. Full lint, typecheck, updated unit tests, build and runtime replay
+were not rerun after the testing hold.
+
+Two differently framed domain reviews of the 205-value heading follow-up found no lost words,
+conditions, names, ICU arguments, confirmation requirements, or safety qualifications. They
+traced safety headings, shared/dynamic consumers and printed labels. Both reviews were source
+only. The final copy totals and the distinction between the initial and heading passes are in
+the [copy audit](visual-consistency-audit.md#heading-follow-up).
+
 ## Coverage and evidence
 
 The source sweep searched the 111 route shapes and their shared UI primitives for inconsistent
@@ -16,7 +90,8 @@ cover every account, capability or data state, and this geometry/copy pass does 
 dark-mode or print-layout review.
 
 The contact sheet could not discover private capability links, several ID-dependent destinations,
-or account lifecycle states from links on visited pages. The embedded schedule alias answered 404.
+or account lifecycle states from links on visited pages. The internal embedded-schedule path
+answered 404 intentionally: the public `?embed=1` URL reaches it through the proxy rewrite.
 The new dive-site form's first capture was a transient skeleton; a targeted follow-up succeeded.
 The counter card and claim tag are valid print documents without the main-body shape expected by
 the contact-sheet readiness guard. Their existing visual-spec captures are the appropriate path.

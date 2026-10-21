@@ -754,10 +754,10 @@ describe("getBookedCard", () => {
       expect(heading, locale).not.toMatch(/on the boat|a bordo|aboard/i);
     }
     expect(diverTranslator("en-US")("booking.confirmedHeading", { name: "Nora" })).toBe(
-      "You’ve got a seat, Nora.",
+      "You’ve got a seat, Nora",
     );
     expect(diverTranslator("es-ES")("booking.confirmedHeading", { name: "Nora" })).toBe(
-      "Tu plaza está reservada, Nora.",
+      "Tu plaza está reservada, Nora",
     );
   });
 

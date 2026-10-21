@@ -93,7 +93,7 @@
     "route": {
       "legend": "La ruta que se bucea",
       "description": "Toca el mapa para marcar un punto, en el orden en que se bucean. El mapa no se puede arrastrar: la línea que dibujas es la que ve el buceador.",
-      "needsCoordinates": "Completa la ubicación GPS de arriba y el mapa aparece aquí, listo para dibujar.",
+      "needsCoordinates": "Completa la ubicación GPS de arriba y el mapa aparece aquí, listo para dibujar",
       "labelLabel": "Cómo se llama la ruta",
       "labelPlaceholder": "Vuelta por el jardín de coral",
       "noteLabel": "Una línea sobre la ruta",
@@ -177,7 +177,7 @@
       "add": "Agregar una referencia",
       "remove": "Quitar",
       "removeAriaLabel": "Quitar la referencia {name}",
-      "empty": "Todavía no hay referencias. Agrega lo primero que señala tu tripulación.",
+      "empty": "Todavía no hay referencias. Agrega lo primero que señala tu tripulación",
       "full": "{max, plural, one {Ese es el máximo de referencias por sitio (#).} other {Ese es el máximo de referencias por sitio (#).}}"
     },
     "fieldGuide": {
@@ -186,7 +186,7 @@
       "searchLabel": "Buscar una especie",
       "searchPlaceholder": "Loro semáforo, o Sparisoma viride",
       "add": "Agregar",
-      "empty": "Todavía no hay especies.",
+      "empty": "Todavía no hay especies",
       "full": "{max, plural, one {Ese es el máximo de especies por guía (#).} other {Ese es el máximo de especies por guía (#).}}",
       "notFound": "Todavía no está en el catálogo de DiveDay.",
       "requestSpecies": "Cuéntanos sobre ella",
@@ -211,7 +211,7 @@
     "errorTideStation": "El id de una estación de mareas NOAA tiene siete dígitos, como 8723583.",
     "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo.",
     "errorDepthRange": "La profundidad mínima necesita una máxima y no puede superarla.",
-    "errorImages": "Una de esas fotos no se pudo guardar. Un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5\u00a0MB. Todo lo demás que escribiste sigue aquí.",
+    "errorImages": "Una de esas fotos no se pudo guardar. Un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5 MB. Todo lo demás que escribiste sigue aquí.",
     "errorImagesUnconfigured": "El almacenamiento de fotos aún no está configurado para este centro. Guarda el briefing sin fotos por ahora, o pide al propietario o gerente de tu centro que lo configure.",
     "errorConflict": "Alguien más cambió este briefing mientras lo tenías abierto, así que no se guardó nada. Lo que escribiste sigue aquí: copia lo que necesites y recarga la página.",
     "planningNoteLabel": "Qué recordar al planificar este sitio de buceo",
@@ -306,7 +306,7 @@
     "importCreaturesRefused": "dive_site_creatures.csv no es el archivo que escribió tu exportación, así que no se importó nada. Vuelve a elegirlo tal como lo produjo la exportación.",
     "importedGuides": "Se recuperó la guía de campo de {guides, plural, one {# sitio} other {# sitios}} y {dropped, plural, =0 {no se dejó fuera ninguna fila de especies} one {se dejó fuera # fila de especies} other {se dejaron fuera # filas de especies}}.",
     "imported": "Se actualizaron {updated, plural, one {# sitio} other {# sitios}} y se crearon {created, plural, one {# nuevo} other {# nuevos}}. {deleted, plural, =0 {Ninguno volvió eliminado} one {# volvió eliminado} other {# volvieron eliminados}} y {skipped, plural, =0 {no se dejó ninguna fila} one {se dejó # fila} other {se dejaron # filas}} sin tocar.",
-    "importFileTooLarge": "Ese archivo pesa más de 8\u00a0MB. Divídelo o vuelve a exportar desde este centro.",
+    "importFileTooLarge": "Ese archivo pesa más de 8 MB. Divídelo o vuelve a exportar desde este centro.",
     "importTooManyRows": "Ese archivo tiene más de 20.000 filas, más sitios de los que cabe una biblioteca.",
     "importTooManyColumns": "Ese archivo tiene más de 64 columnas, así que no es una exportación de DiveDay.",
     "importCellTooLong": "Uno de los valores de ese archivo pasa de 2.000 caracteres, así que no se leyó nada."

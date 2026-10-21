@@ -279,7 +279,7 @@ export function listedTests(report) {
   function walk(suite, titles, file) {
     for (const spec of suite.specs ?? []) {
       for (const test of spec.tests ?? []) projects.add(test.projectName ?? "");
-      lines.push(testListLine(file, [...titles, spec.title]));
+      lines.push(testListLine(spec.file ?? file, [...titles, spec.title]));
     }
     for (const child of suite.suites ?? []) walk(child, [...titles, child.title], file);
   }
@@ -295,6 +295,35 @@ export function listedTests(report) {
     );
   }
   return lines;
+}
+
+/**
+ * Serialize real test identities for Playwright's CLI. In installed 1.64.1,
+ * `--test-list` filters which files load AND each test's declaration file.
+ * An imported test therefore needs its own location line plus the registering
+ * file with the same title path, so that file loads. The companion selects no
+ * extra test: duplicate full titles in one registering file are already a
+ * Playwright load error. Keep these load lines out of deals and duration keys.
+ */
+export function testListLines(report, selected) {
+  const known = new Set(listedTests(report));
+  const loadLines = new Map();
+  function walk(suite, titles, file) {
+    for (const spec of suite.specs ?? []) {
+      const names = [...titles, spec.title];
+      loadLines.set(testListLine(spec.file ?? file, names), testListLine(file, names));
+    }
+    for (const child of suite.suites ?? []) walk(child, [...titles, child.title], file);
+  }
+  for (const suite of report?.suites ?? []) walk(suite, [], suite.file);
+  const lines = new Set();
+  for (const line of selected ?? known) {
+    if (!known.has(line))
+      throw new Error(`e2e-shard: selected test is absent from the report: ${line}`);
+    lines.add(line);
+    lines.add(loadLines.get(line));
+  }
+  return [...lines];
 }
 
 /**
@@ -374,10 +403,11 @@ async function main() {
   const durations = await readDurations();
   const visualList = option("visual");
   let bins;
+  let visualReport;
   let recordedShare;
   if (visualList) {
-    const report = JSON.parse(await readFile(visualList, "utf8"));
-    bins = dealVisualTests(report, count, durations.visual);
+    visualReport = JSON.parse(await readFile(visualList, "utf8"));
+    bins = dealVisualTests(visualReport, count, durations.visual);
     const items = bins.flatMap((bin) => bin.items);
     recordedShare =
       items.filter((line) => isDuration(durations.visual[line])).length / items.length;
@@ -424,8 +454,10 @@ async function main() {
 
   // One item per line. Spec paths go into a bash array (a spec path must never
   // carry a space; nothing under `e2e/` does), and visual lines are written to
-  // a file for `playwright test --test-list`.
-  for (const item of bins[index - 1].items) console.log(item);
+  // a file for `playwright test --test-list`, including imported-test loaders.
+  const selected = bins[index - 1].items;
+  for (const item of visualReport ? testListLines(visualReport, selected) : selected)
+    console.log(item);
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();

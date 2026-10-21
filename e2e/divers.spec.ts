@@ -468,7 +468,7 @@ test("staff delete a diver, find them again in the Deleted view, and restore the
   // Gone from the active roster, and not findable by searching it.
   await page.goto(`/shop/${SHOP}/divers`);
   await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
-  await expect(page.getByText("No divers match this view.")).toBeVisible();
+  await expect(page.getByText("No divers match this view")).toBeVisible();
 
   // The Deleted view is where they are, and search works inside it.
   await page.getByRole("link", { name: "Deleted", exact: true }).click();

@@ -334,7 +334,7 @@
     "languageGap": "Reservaron en {language}: {divers}. Nadie de esta tripulación tiene registrado {language}.",
     "languageCovered": "Charla en {language} para {divers}: {crew}.",
     "languageDivers": "{count, plural, one {# persona} other {# personas}}",
-    "noCrew": "Todavía no hay tripulación que asignar. Tus instructores y divemasters aparecerán aquí en cuanto se unan al equipo.",
+    "noCrew": "Todavía no hay tripulación que asignar. Tus instructores y divemasters aparecerán aquí en cuanto se unan al equipo",
     "notAssignedYet": "Todavía no asignado",
     "manageShifts": "Gestionar turnos",
     "edit": "Editar tripulación",

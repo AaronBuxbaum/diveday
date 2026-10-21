@@ -55,7 +55,7 @@
   },
   "history": {
     "heading": "Historial de entregas",
-    "empty": "Todavía no hay entregas.",
+    "empty": "Todavía no hay entregas",
     "when": "Cuándo",
     "kind": "Tipo",
     "outcome": "Resultado",

@@ -35,8 +35,8 @@
     "split": "Sailed {sailed} · Still to sail {toSail}"
   },
   "noTripsFuture": "Nothing on the books for this month yet",
-  "noTripsPast": "No trips sailed this month.",
-  "noTripsWithImportedHistory": "No DiveDay departures were recorded this month.",
+  "noTripsPast": "No trips sailed this month",
+  "noTripsWithImportedHistory": "No DiveDay departures were recorded this month",
   "importedHistory": {
     "sectionLabel": "Unverified imported history",
     "heading": "Unverified imported history",
@@ -81,7 +81,7 @@
     "sitesCount": "{count, plural, one {# site} other {# sites}}",
     "siteTimes": "{count, plural, one {# time} other {# times}}",
     "sitesRest": "{count, plural, one {# more site} other {# more sites}} · {dives, plural, one {# dive between them} other {# dives between them}}",
-    "empty": "No departures have sailed this year yet.",
+    "empty": "No departures have sailed this year yet",
     "money": {
       "label": "The year’s money",
       "taxLabel": "Tax collected",

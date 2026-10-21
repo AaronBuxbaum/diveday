@@ -6,9 +6,11 @@
 
 Aaron approved these conventions during the audit:
 
-- Short status, summary, and empty-state fragments have no final period. Full sentences keep
-  periods. The rule follows the rendered message, including plural and select branches, rather
-  than the final character of its source string.
+- Short status, summary, and empty-state fragments have no final period. Complete body sentences
+  keep periods. The rule follows the rendered message, including plural and select branches,
+  rather than the final character of its source string.
+- Headings have no final period, including complete sentences and empty-state titles. Aaron
+  confirmed this separately during the expanded surface review. Internal sentence boundaries stay.
 - The pickup field is **Hotel / lodging** in English and **Hotel / alojamiento** in Spanish.
 
 The punctuation rule is recorded in [brand.md](brand.md#typography). No domain state, safety
@@ -24,7 +26,7 @@ summary, a ledger value, a status, a control, or prose. ICU plural/select messag
 separately, including their resolved branch endings; a source string ending in `}` can still
 render a fragment ending in a period.
 
-The sweep changes **641 message values** across **355 keys** in **73 locale files**: 354 English
+The initial fragment-and-sentence sweep changed **641 message values** across **355 keys** in **73 locale files**: 354 English
 values and 287 Spanish values. The same keys and placeholders remain available in both locales.
 The counts differ because a translated sentence can have a different grammatical shape.
 
@@ -45,21 +47,23 @@ first-run contact and profile descriptions are noun phrases without a main finit
 completed statuses and the short waiver-sent acknowledgement are fragments too. Their final periods
 come off, while complete first-run instructions and standalone failure reasons gain periods.
 
-The full manifest classifies the 641 values as 532 literal fragments, 52 ICU fragments, 43 sentence
+The initial manifest classifies the 641 values as 532 literal fragments, 52 ICU fragments, 43 sentence
 additions, 13 formatting corrections and one spelling correction.
 
 ### Context preserved
 
-- A full sentence such as “No orders match these filters.” keeps its period. So does an
-  imperative error such as “Check the details and try again.”
+- A complete body sentence, including an imperative error such as “Check the details and try
+  again.”, keeps its period. “No orders match these filters” is an empty-state heading and follows
+  the separately approved heading rule.
 - Headings, field labels and controls keep their label conventions. An imperative button such
   as “Save” is a control label; an independent instruction paragraph is prose.
 - Multi-sentence notices keep their sentence punctuation, including their internal status clause:
   “Saved. The crew will have your sizes.” is prose, not a standalone “Saved” label.
-- Sixty-one literal Spanish counterparts remain punctuated because they are full sentences:
-  English “No orders yet” is a fragment; Spanish “Todavía no hay pedidos.” is a sentence.
-  ICU branches were judged separately for the same reason. For example, Spanish
-  `waiverExpired.one` is a sentence while its plural branch is a fragment.
+- The initial pass retained 61 literal Spanish counterparts because they are complete sentences.
+  That is a historical count from the fragment pass, before the heading decision. Spanish body
+  sentences still keep periods; an empty-state heading such as “Todavía no hay pedidos” now
+  follows the heading rule. ICU branches were judged separately for the same reason. For example,
+  the body message `waiverExpired.one` is a sentence while its plural branch is a fragment.
 - `Cant.` remains a Spanish quantity abbreviation, rather than being treated as a sentence-ending
   period. Brand/agency names, quoted third-party menu labels, and ICU quoting keep their spelling.
 - Whitespace scans found 14 composed strings per locale with deliberate surrounding whitespace:
@@ -74,9 +78,9 @@ additions, 13 formatting corrections and one spelling correction.
 - Existing collection list/edit/add work in [#2886](https://github.com/AaronBuxbaum/diveday/pull/2886)
   is the base of this branch and is not repeated as a second redesign.
 
-### Changed values by bundle
+### Changed values by bundle in the initial sweep
 
-A zero means the Spanish counterpart is already consistent or is a full sentence.
+These counts describe the initial 641-value sweep. A zero means the Spanish counterpart is already consistent or is a full sentence.
 
 | Bundle | English | Spanish |
 | --- | ---: | ---: |
@@ -124,7 +128,39 @@ confirmed correction within these categories. Coverage of source strings does no
 every runtime state has been photographed; rendered coverage is recorded in the
 [visual pattern audit](visual-pattern-audit.md).
 
-## Validation
+## Heading follow-up
+
+The later heading decision changes **205 further message values** across **108 keys** in
+**38 locale files**: 97 English values and 108 Spanish values. It also removes the period from the
+root crash heading, “Something went sideways”. These are the heading follow-up counts; the
+641-value fragment-and-sentence table above remains the record of the initial sweep.
+
+Compared with the source before the initial copy commit (`45fffc154^`), the combined copy change
+now covers **846 unique message values** across **453 keys** in **79 locale files**: 451 English
+values and 395 Spanish values. These totals come from the combined JSON diff; keys shared between
+the two passes are counted once.
+
+The review traced semantic headings and shared heading consumers, including page and section
+headers, confirmation moments, disclosure headings, empty-state titles, group labels, dynamic
+feature-page and migration-guide keys, and copy passed through props. The `shopHome.thinBoats`
+heading loses its final period inside both plural branches in each locale; the ICU structure and
+arguments stay intact. Existing email headings were also checked and already follow the rule.
+
+Only terminal heading periods are removed. Internal sentences, questions, ellipses, abbreviations,
+brand names, user-entered titles, tooltips, operational notice prose, legal and medical bodies keep
+their punctuation. A key named `title` or `heading` is not enough to classify the text: for example,
+`shopHome.firstRun.pageTitle` supplies body summary prose, and `tripStage.headingIn` describes the
+boat heading in. Neither is changed by the heading rule.
+
+Existing exact text assertions and locators are aligned with the changed headings. The About copy
+assertion now preserves its statement and length checks while enforcing the approved heading
+punctuation. No copy-only tests are added. Lightweight source checks passed: JSON keys and ICU
+argument structures are preserved, edited TS/TSX files parse,
+and the diff has no whitespace errors. A fresh build and browser replay were not run because Aaron
+stopped testing to reduce computer load. The [visual pattern audit’s verification boundary](visual-pattern-audit.md#verification-boundary-after-the-testing-hold)
+records the testing hold and the distinction between source changes and rendered evidence.
+
+## Validation of the initial sweep
 
 The copy pass preserves key coverage and ICU arguments. `node scripts/check-locale.mjs` passes
 with zero untranslated values; `node scripts/check-voice.mjs` passes with its four existing

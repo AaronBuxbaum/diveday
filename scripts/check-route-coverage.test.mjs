@@ -31,6 +31,7 @@ async function fixture({
   captures = [],
   ledger,
   sources = {},
+  modules = {},
   visual,
 } = {}) {
   const root = await mkdtemp(path.join(tmpdir(), "route-coverage-"));
@@ -42,6 +43,9 @@ async function fixture({
   await mkdir(path.join(root, "e2e"), { recursive: true });
   for (const spec of specs) {
     await writeFile(path.join(root, "e2e", spec), sources[spec] ?? "// a spec\n");
+  }
+  for (const [module, source] of Object.entries(modules)) {
+    await writeFile(path.join(root, "e2e", module), source);
   }
   const body = captures.map((name) => `      await capture(page, "${name}", scheme);`).join("\n");
   await writeFile(path.join(root, "e2e/visual.spec.ts"), visual ?? `${body}\n`);
@@ -116,6 +120,64 @@ describe("parseCaptureNames", () => {
     expect([...parseCaptureNames('await capturePrint(page, "trip-packet");')]).toEqual([
       "trip-packet",
     ]);
+  });
+
+  it("ignores examples in comments and names computed from a template", () => {
+    const source = [
+      '// await capture(page, "comment-example", scheme);',
+      '/* await capturePrint(page, "print-example"); */',
+      "await capture(page, `${name}`, scheme);",
+      'const url = "https://example.com";',
+      'await capture(page, "real-shot", scheme);',
+    ].join("\n");
+    expect([...parseCaptureNames(source)]).toEqual(["real-shot"]);
+  });
+});
+
+describe("visual registration modules", () => {
+  it("reads only reachable visual modules and derives their captures without functional credit", async () => {
+    const root = await fixture({
+      routes: ["/s/[shopSlug]"],
+      specs: ["booking.spec.ts", "visual.spec.ts"],
+      sources: { "booking.spec.ts": 'await page.goto("/s/blue-mantis");' },
+      visual: 'import { register } from "./visual-audit-account";\nregister(capture);',
+      modules: {
+        "visual-audit-account.ts": [
+          'import { other } from "./visual-audit-nested";',
+          '// import { unused } from "./visual-audit-commented";',
+          `const example = 'import { unused } from "./visual-audit-quoted";';`,
+          "export function register(capture) {",
+          '  test("account", async ({ page }) => {',
+          '    await page.goto("/s/blue-mantis");',
+          '    await capture(page, "account-shot", "light");',
+          "  });",
+          "}",
+        ].join("\n"),
+        "visual-audit-nested.ts": [
+          'import { register } from "./visual-audit-account";',
+          'test("nested", async ({ page }) => {',
+          '  await page.goto("/s/blue-mantis");',
+          '  await capturePrint(page, "nested-print");',
+          "});",
+        ].join("\n"),
+        "visual-audit-commented.ts": 'await capture(page, "commented-shot", "light");',
+        "visual-audit-orphan.ts": 'await capture(page, "orphan-shot", "light");',
+      },
+      ledger: { "//": "note" },
+    });
+    const world = await collectWorld(root);
+    expect([...world.captures].sort()).toEqual(["account-shot", "nested-print"]);
+    expect([...world.specs].sort()).toEqual(["booking.spec.ts", "visual.spec.ts"]);
+    expect(effectiveLedger(world)["/s/[shopSlug]"]).toEqual({
+      e2e: ["booking.spec.ts"],
+      visual: ["account-shot", "nested-print"],
+    });
+    expect(auditLedger(world).violations).toEqual([]);
+  });
+
+  it("fails when an imported visual registration module is missing", async () => {
+    const root = await fixture({ visual: 'import { register } from "./visual-audit-missing";' });
+    await expect(collectWorld(root)).rejects.toMatchObject({ code: "ENOENT" });
   });
 });
 

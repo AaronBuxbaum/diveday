@@ -180,7 +180,7 @@
   "buddyDragOver": "Suelta para emparejar a {a} con {b}.",
   "buddyFormSubmit": "Crear pareja de buceo",
   "buddyUnteamedOne": "{name} no tiene pareja de buceo, lo que es normal con un número impar.",
-  "buddyEveryoneTeamed": "Todas las personas de esta salida ya tienen pareja de buceo.",
+  "buddyEveryoneTeamed": "Todas las personas de esta salida ya tienen pareja de buceo",
   "overCapacityLine": "{count, plural, one {# persona está a bordo por encima de las plazas del barco.} other {# personas están a bordo por encima de las plazas del barco.}} Aquí nada rechaza a una persona que la tripulación ya ha contado.",
   "buddySeparatedLine": "{count, plural, one {# pareja de buceo está dividida.} other {# parejas de buceo están divididas.}} Alguien está a bordo y alguien no.",
   "buddyErrorDuplicate": "Elige personas distintas. Nadie es su propio compañero.",

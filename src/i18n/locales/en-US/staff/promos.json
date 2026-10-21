@@ -88,7 +88,7 @@
   "tripDeals": {
     "heading": "Trip deals",
     "description": "One-trip discounts sent from a departure’s page.",
-    "empty": "No trip deals are outstanding right now.",
+    "empty": "No trip deals are outstanding right now",
     "emptyAction": "Open the schedule",
     "recipients": "{count, plural, one {Sent to # diver} other {Sent to # divers}}",
     "expiresAt": "Expires {date}",

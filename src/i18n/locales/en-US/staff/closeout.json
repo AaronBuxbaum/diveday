@@ -14,7 +14,7 @@
     "unknownPerson": "That diver isn’t in this shop’s records, so nothing was saved."
   },
   "pastDay": {
-    "empty": "No boats went out that day.",
+    "empty": "No boats went out that day",
     "countedLater": "counted later, on {date}",
     "crewNotCounted": "Crew not counted",
     "resolvedNotBack": "A diver was recorded not back after dive {dive}; see the roll call."

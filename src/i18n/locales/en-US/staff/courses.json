@@ -16,7 +16,7 @@
     "searchLabel": "Search courses",
     "searchPlaceholder": "Course name",
     "searchClear": "Clear search",
-    "noMatch": "No courses match.",
+    "noMatch": "No courses match",
     "views": {
       "label": "Course views",
       "all": "All",
@@ -43,7 +43,7 @@
     "errorMaterialsIncomplete": "Every learning material needs a name.",
     "errorMaterialsLink": "Each link has to start with https://.",
     "errorImages": "You can keep up to eight gallery photos. Remove one before adding more.",
-    "errorUpload": "That photo didn’t upload. Try a JPG, PNG, or WebP under 5\u00a0MB.",
+    "errorUpload": "That photo didn’t upload. Try a JPG, PNG, or WebP under 5 MB.",
     "errorTooManyPhotos": "Add up to {max} new gallery photos per save. Save this batch, then add more.",
     "errorDepthPlaceholder": "One of your depth markers is broken, so nothing saved. Write it exactly as '{depth18}'. The choices are '{depth12}', '{depth18}', '{depth21}', '{depth30}' and '{depth40}'. If you would rather write the depth in your own words, delete the marker instead.",
     "pitchLegend": "The pitch",

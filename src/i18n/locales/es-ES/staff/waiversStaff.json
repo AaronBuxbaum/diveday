@@ -30,7 +30,7 @@
   "versionInfo": "Versión {version} · publicado el {date}",
   "signatures": {
     "heading": "Registros firmados",
-    "noSignedRecords": "Todavía no hay registros firmados.",
+    "noSignedRecords": "Todavía no hay registros firmados",
     "noSignatureDate": "Sin fecha de firma",
     "noTrip": "Registro importado",
     "releaseVersion": "Versión {version} de la exención",
@@ -45,7 +45,7 @@
     "searchLabel": "Buscar registros firmados",
     "searchPlaceholder": "Nombre, correo o teléfono del buceador",
     "searchClear": "Borrar la búsqueda",
-    "noMatch": "Ningún registro firmado coincide.",
+    "noMatch": "Ningún registro firmado coincide",
     "views": {
       "label": "Vistas de registros firmados",
       "all": "Todos",

@@ -81,7 +81,7 @@
     "statusReturned": "returned",
     "statusDiscarded": "discarded",
     "tripLine": "{title}, {date}",
-    "empty": "Nothing is waiting to go home.",
+    "empty": "Nothing is waiting to go home",
     "whereToAdd": "Items are recorded on each departure’s Boat tab.",
     "waiting": "In lost and found: {items}",
     "refusals": {

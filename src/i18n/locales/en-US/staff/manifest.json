@@ -180,7 +180,7 @@
   "buddyDragOver": "Release to pair {a} with {b}.",
   "buddyFormSubmit": "Form buddy team",
   "buddyUnteamedOne": "{name} has no buddy team, which is normal on an odd roster.",
-  "buddyEveryoneTeamed": "Everyone on this departure is already on a buddy team.",
+  "buddyEveryoneTeamed": "Everyone on this departure is already on a buddy team",
   "overCapacityLine": "{count, plural, one {# person is aboard beyond the seats this boat has.} other {# people are aboard beyond the seats this boat has.}} Nothing here refuses a person the crew has counted.",
   "buddySeparatedLine": "{count, plural, one {# buddy team is split.} other {# buddy teams are split.}} Someone is back aboard, someone is not.",
   "buddyErrorDuplicate": "Pick different people. Nobody is their own buddy.",

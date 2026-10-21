@@ -334,7 +334,7 @@
     "languageGap": "{divers} booked in {language}. No one on this crew has recorded {language}.",
     "languageCovered": "{crew} can brief {divers} in {language}.",
     "languageDivers": "{count, plural, one {# person} other {# people}}",
-    "noCrew": "No crew to assign yet. Your instructors and divemasters show up here once they’re on the team.",
+    "noCrew": "No crew to assign yet. Your instructors and divemasters show up here once they’re on the team",
     "notAssignedYet": "Not yet assigned",
     "manageShifts": "Manage shifts",
     "edit": "Edit crew",

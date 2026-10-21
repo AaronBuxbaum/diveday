@@ -60,6 +60,17 @@ import {
 import { PAYMENT_HISTORY_CSV } from "./payment-history-fixture";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
+import { registerAccountAuditCaptures } from "./visual-audit-account-states";
+import { registerAdditionalAuditCaptures } from "./visual-audit-additional-states";
+import { registerDepartureExpandedAuditCaptures } from "./visual-audit-departure-expanded";
+import { registerDiverExpandedAuditCaptures } from "./visual-audit-diver-expanded";
+import { registerErrorAuditCaptures } from "./visual-audit-error-states";
+import { registerGearStaffOverlayAuditCaptures } from "./visual-audit-gear-staff-overlays";
+import { auditInitialPaint, INITIAL_PAINT_FALLBACK } from "./visual-audit-initial-paint";
+import { registerPrintAuditCaptures } from "./visual-audit-print-states";
+import { registerRemainingExpandedAuditCaptures } from "./visual-audit-remaining-expanded";
+import { registerRequestPaymentOverlayAuditCaptures } from "./visual-audit-request-payment-overlays";
+import { registerStaffAuditCaptures } from "./visual-audit-staff-states";
 
 const staffCopy = staffTranslator("en-US");
 const diverCopy = diverTranslator("en-US");
@@ -657,6 +668,9 @@ function probeContext(page: Page, capture: string, scheme: "light" | "dark", wid
     targets: width === VIEWPORTS[0].width || width === TABLET_VIEWPORT.width,
     titlePath: test.info().titlePath,
     testFile: test.info().file,
+    entryFile: "e2e/visual.spec.ts",
+    exhaustiveAudit: process.env.VISUAL_EXHAUSTIVE_AUDIT === "1",
+    initialPaintAudit: process.env.VISUAL_AUDIT_INITIAL_PAINT === "1",
     atlasSeen: PROBE_ATLAS_SEEN,
     bound: <T>(what: string, ms: number, work: Promise<T>, degraded: T) =>
       withRendererBound(page, what, ms, work, degraded),
@@ -1542,6 +1556,8 @@ async function capture(
   scheme: "light" | "dark",
   options: {
     locale?: typeof SPANISH;
+    /** One-off audit of actual SSR fallbacks with application JavaScript off. */
+    initialPaint?: true;
     /**
      * Run after each width is set and before it is shot, for a mark that does
      * not survive a resize: a focus ring on a field that a narrower width
@@ -1606,25 +1622,31 @@ async function capture(
   // stood photographed a header with no shop name. It is not hypothetical:
   // `public-schedule-new-shop-dark` came back with the placeholder at vw-390
   // and the real chrome at vw-1280 — the same page, one second apart.
-  await page.waitForFunction(
-    () =>
-      !document.querySelector(
-        "main .animate-pulse:not([data-live-pulse]), [data-suspense-placeholder]",
-      ),
-    undefined,
-    {
-      timeout: 15_000,
-    },
-  );
+  if (options.initialPaint) {
+    await expect(page.locator(INITIAL_PAINT_FALLBACK).filter({ visible: true })).not.toHaveCount(0);
+  } else {
+    await page.waitForFunction(
+      () =>
+        !document.querySelector(
+          "main .animate-pulse:not([data-live-pulse]), [data-suspense-placeholder]",
+        ),
+      undefined,
+      {
+        timeout: 15_000,
+      },
+    );
+  }
   // Settings' rail moves to the current row from an effect, after the page has
   // painted, so a capture could catch it at its top or on the row depending on
   // the run (`settings-embed`). The rail marks itself once it has moved.
-  await page.waitForFunction(
-    () => !document.querySelector("[data-settings-rail-scroller]:not([data-rail-settled])"),
-    undefined,
-    { timeout: 15_000 },
-  );
-  await waitForClientFills(page);
+  if (!options.initialPaint) {
+    await page.waitForFunction(
+      () => !document.querySelector("[data-settings-rail-scroller]:not([data-rail-settled])"),
+      undefined,
+      { timeout: 15_000 },
+    );
+    await waitForClientFills(page);
+  }
   // The standard pair, plus the portrait tablet for the five staff surfaces a
   // shop runs on one. Widest last is deliberate: the base viewport is restored
   // below either way, but a capture that fails mid-loop leaves the page at a
@@ -1648,6 +1670,11 @@ async function capture(
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);
       await options.beforeShot?.();
+      if (options.initialPaint) {
+        await expect(
+          page.locator(INITIAL_PAINT_FALLBACK).filter({ visible: true }),
+        ).not.toHaveCount(0);
+      }
       await paintWholeDocument(page);
       const shot = `e2e/screenshots/${baseline}-${scheme}-vw-${viewport.width}.png`;
       await screenshotOrGiveUp(page, shot);
@@ -1669,6 +1696,11 @@ async function capture(
     // running into whatever the test does next.
     if (baseViewport) await page.setViewportSize(baseViewport);
   });
+  if (scheme === "light" && !options.initialPaint) {
+    await auditInitialPaint(page, baseline, withRendererBound, (initialPage, initialName) =>
+      capture(initialPage, initialName, "light", { initialPaint: true }),
+    );
+  }
 }
 
 /**
@@ -1794,6 +1826,17 @@ async function capturePrint(page: Page, name: string) {
   // that reason.
   await withTransitionsOff(page, async () => {
     await page.emulateMedia({ media: "print" });
+    if (process.env.VISUAL_EXHAUSTIVE_AUDIT === "1") {
+      // Save real pagination before the screenshot-only long-sheet rule.
+      // A6 documents keep their own CSS size; other documents use Letter.
+      await paintWholeDocument(page);
+      await page.pdf({
+        path: `e2e/screenshots/${name}-print.pdf`,
+        format: "Letter",
+        preferCSSPageSize: true,
+        printBackground: true,
+      });
+    }
     const statesItsOwnPaper = (await page.locator("style[data-print-sheet]").count()) > 0;
     if (!statesItsOwnPaper) {
       await page.addStyleTag({ content: "@page { size: 8.5in 200in; }" });
@@ -3255,6 +3298,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByTestId("doctor-evaluation-form").waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "waiver-doctor", scheme);
+        if (scheme === "light") {
+          await page.setViewportSize({ width: 816, height: 1056 });
+          await capturePrint(page, "waiver-doctor-evaluation");
+        }
       });
 
       /**
@@ -3614,6 +3661,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Claim this seat" }).click();
         // Every claim lands on the static "check your email" page (#2381).
         await expect(page).toHaveURL(/\/claim\/[^/?#]+\?sent=1$/);
+        if (scheme === "light") await capture(page, "seat-claim-sent", scheme);
         await page.goto(claimPath ?? "/");
         await page.getByRole("heading", { name: /link isn.t available/ }).waitFor();
         await capture(page, "expired-link-claim", scheme);
@@ -3791,7 +3839,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the switching hub renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching");
         await page
-          .getByRole("heading", { name: "Every guide ends at the same import screen." })
+          .getByRole("heading", { name: "Every guide ends at the same import screen" })
           .waitFor();
         await capture(page, "switching-hub", scheme);
       });
@@ -3816,7 +3864,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/switching/spreadsheet");
-        await page.getByRole("heading", { name: "Bring the spreadsheet with you." }).waitFor();
+        await page.getByRole("heading", { name: "Bring the spreadsheet with you" }).waitFor();
         await capture(page, "switching-spreadsheet", scheme);
       });
 
@@ -3829,7 +3877,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/switching/fareharbor");
         await page
-          .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." })
+          .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat" })
           .waitFor();
         await capture(page, "switching-fareharbor", scheme);
       });
@@ -3840,7 +3888,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the Rezdy switching guide renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching/rezdy");
         await page
-          .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." })
+          .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat" })
           .waitFor();
         await capture(page, "switching-rezdy", scheme);
       });
@@ -4104,7 +4152,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Returns").fill("12:30");
         await page.getByRole("button", { name: "Put it on the board" }).click();
         await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
-        await page.getByRole("heading", { name: "Your shop is bookable." }).waitFor();
+        await page.getByRole("heading", { name: "Your shop is bookable" }).waitFor();
         await capture(page, "today-first-bookable", scheme);
 
         // The orientation's *other* form, on the same shop rather than a
@@ -4137,7 +4185,7 @@ for (const scheme of ["light", "dark"] as const) {
         // ...and proof it is the line and not the card: the two forms share
         // that link, so waiting on it alone would pass on either.
         await expect(
-          page.getByRole("heading", { name: "New here? A few pointers for your role." }),
+          page.getByRole("heading", { name: "New here? A few pointers for your role" }),
         ).toHaveCount(0);
         // **The coral morning, in the same frame** (the canvas's `FirstBooking`
         // board; ADR 20260827-first-light, decision 6). Marisol Vega is this
@@ -6485,7 +6533,7 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .fill("2020-01-01");
         await page.getByRole("button", { name: "Notify me" }).click();
-        await page.getByRole("heading", { name: "You’re on the list." }).waitFor();
+        await page.getByRole("heading", { name: "You’re on the list" }).waitFor();
 
         // Already signed in: `signedInAsOwner()` is describe-scoped over this
         // block, which is also why the public form above renders with the staff
@@ -6522,7 +6570,7 @@ for (const scheme of ["light", "dark"] as const) {
             .filter({ visible: true })
             .fill("2020-01-01");
           await page.getByRole("button", { name: "Notify me" }).click();
-          await page.getByRole("heading", { name: "You’re on the list." }).waitFor();
+          await page.getByRole("heading", { name: "You’re on the list" }).waitFor();
         };
         // The optional question, skipped — the common answer on a marketing
         // opt-in, and the one a shop can weigh least.
@@ -9773,6 +9821,17 @@ for (const scheme of ["light", "dark"] as const) {
   });
 }
 
+registerAccountAuditCaptures(capture, FLOW_TIMEOUT_MS);
+registerAdditionalAuditCaptures(capture);
+registerDepartureExpandedAuditCaptures(capture, FLOW_TIMEOUT_MS);
+registerDiverExpandedAuditCaptures(capture);
+registerErrorAuditCaptures(capture);
+registerGearStaffOverlayAuditCaptures(capture);
+registerStaffAuditCaptures(capture, FLOW_TIMEOUT_MS);
+registerPrintAuditCaptures(capturePrint);
+registerRemainingExpandedAuditCaptures(capture, FLOW_TIMEOUT_MS);
+registerRequestPaymentOverlayAuditCaptures(capture, FLOW_TIMEOUT_MS);
+
 /**
  * The capture harness's own escape hatch, exercised on purpose.
  *
@@ -10154,7 +10213,7 @@ test.describe("print", () => {
   // the capture is deterministic without a pinned id.
   test("the counter card prints A6 with the register code", async ({ page }) => {
     await page.goto("/shop/blue-mantis/print/counter-card");
-    await page.getByRole("heading", { name: "New here? Scan this." }).waitFor();
+    await page.getByRole("heading", { name: "New here? Scan this" }).waitFor();
     await capturePrint(page, "paper-counter-card");
   });
 });

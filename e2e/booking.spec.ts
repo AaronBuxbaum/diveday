@@ -96,7 +96,7 @@ test.describe("staff", () => {
     // 34): its `<h1>`, in the Logbook register, with the next step leading the
     // thread under it and the log entry the day turns into at its foot.
     await expect(
-      page.getByRole("heading", { level: 1, name: "You’ve got a seat, Nora." }),
+      page.getByRole("heading", { level: 1, name: "You’ve got a seat, Nora" }),
     ).toBeVisible();
     await expect(threadStatus(page)).toContainText("Next: sign your waiver.");
     await expect(page.getByText(diver("ready.logEntryWaiting"))).toBeVisible();

@@ -39,7 +39,7 @@ export default function GlobalError({
           <LogoMark className="size-6" />
         </span>
         <div className="max-w-md space-y-2">
-          <h1 className={LEAD_TITLE_CLASS}>Something went sideways.</h1>
+          <h1 className={LEAD_TITLE_CLASS}>Something went sideways</h1>
           <p className="text-muted leading-7">
             That one's on us — it's already been reported. Try again, or write in directly if it
             keeps happening; reaching out is always welcome.

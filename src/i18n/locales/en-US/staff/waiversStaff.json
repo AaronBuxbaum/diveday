@@ -45,7 +45,7 @@
     "searchLabel": "Search signed records",
     "searchPlaceholder": "Diver name, email or phone",
     "searchClear": "Clear search",
-    "noMatch": "No signed records match.",
+    "noMatch": "No signed records match",
     "views": {
       "label": "Signed record views",
       "all": "All",

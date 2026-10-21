@@ -174,8 +174,8 @@
       "hotel": "{hotel} {amount} en {count, plural, one {# pedido} other {# pedidos}}",
       "unnamed": "{amount} en {count, plural, one {# pedido} other {# pedidos}}"
     },
-    "emptyAll": "Todavía no hay pedidos.",
-    "emptyFiltered": "Ningún pedido coincide con estos filtros.",
+    "emptyAll": "Todavía no hay pedidos",
+    "emptyFiltered": "Ningún pedido coincide con estos filtros",
     "ledger": {
       "today": "Hoy · {date}",
       "continued": "{day}, continuación",

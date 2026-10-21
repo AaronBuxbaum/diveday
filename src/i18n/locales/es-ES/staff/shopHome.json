@@ -4,7 +4,7 @@
     "series": "“{title}” ya está en el calendario con {count, plural, one {# salida programada} other {# salidas programadas}}."
   },
   "firstBookable": {
-    "heading": "Tu centro ya acepta reservas.",
+    "heading": "Tu centro ya acepta reservas",
     "body": "“{title}” ya está en el calendario. Este enlace es tu calendario público, la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
     "bodySeries": "“{title}” ya está en el calendario con {count, plural, one {# salida programada} other {# salidas programadas}}. Este enlace es tu calendario público, la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
     "linkLabel": "Tu enlace de reservas",
@@ -33,7 +33,7 @@
     "activityNotAuthorized": "El registro de actividad está limitado a propietarios y gerentes."
   },
   "orientation": {
-    "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
+    "heading": "¿Recién llegado? Algunas pistas para tu puesto",
     "lineHeading": "¿Recién llegado? Prueba esto:",
     "tryLabel": "Prueba:",
     "dismiss": "Entendido",
@@ -189,7 +189,7 @@
     "crewMonth": "En {month}: {boats, plural, one {# salida} other {# salidas}} · {dives, plural, one {# inmersión realizada} other {# inmersiones realizadas}} · {hours, plural, one {# hora} other {# horas}} en el agua."
   },
   "thinBoats": {
-    "heading": "{count, plural, one {Una salida de las próximas dos semanas necesita buceadores.} other {# salidas de las próximas dos semanas necesitan buceadores.}}",
+    "heading": "{count, plural, one {Una salida de las próximas dos semanas necesita buceadores} other {# salidas de las próximas dos semanas necesitan buceadores}}",
     "seats": "{booked} de {capacity}",
     "needsBy": "{count, plural, one {falta # más antes del {when}, o se cancela sola} other {faltan # más antes del {when}, o se cancela sola}}",
     "deal": "Enviar una oferta de último minuto",

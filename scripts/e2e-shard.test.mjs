@@ -11,6 +11,7 @@ import {
   readDurations,
   summarizeBins,
   testListLine,
+  testListLines,
   weigh,
 } from "./e2e-shard.mjs";
 
@@ -240,6 +241,28 @@ describe("the visual deal", () => {
       "visual.spec.ts › light › surface 0 renders true to the design (light)",
       "visual.spec.ts › dark › surface 0 renders true to the design (dark)",
     ]);
+  });
+
+  it("names an imported test by its declaration file rather than its registering suite", () => {
+    const report = listReport(2);
+    report.suites[0].suites[0].specs[0].file = "visual-audit-account-states.ts";
+    expect(listedTests(report)).toEqual([
+      "visual-audit-account-states.ts › light › surface 0 renders true to the design (light)",
+      "visual.spec.ts › dark › surface 0 renders true to the design (dark)",
+    ]);
+  });
+
+  it("serializes an imported selection with a registering-file load companion, without counting it as a test", () => {
+    const report = listReport(2);
+    report.suites[0].suites[0].specs[0].file = "visual-audit-account-states.ts";
+    const selected = listedTests(report).slice(0, 1);
+    expect(testListLines(report, selected)).toEqual([
+      "visual-audit-account-states.ts › light › surface 0 renders true to the design (light)",
+      "visual.spec.ts › light › surface 0 renders true to the design (light)",
+    ]);
+    expect(listedTests(report)).toHaveLength(2);
+    expect(dealVisualTests(report, 1)[0].items).toHaveLength(2);
+    expect(testListLines(report)).toHaveLength(3);
   });
 
   it("puts every test in exactly one of eight shards", () => {

@@ -88,7 +88,7 @@
   "tripDeals": {
     "heading": "Ofertas por salida",
     "description": "Descuentos de una sola salida enviados desde la página de una salida.",
-    "empty": "No hay ofertas por salida activas ahora mismo.",
+    "empty": "No hay ofertas por salida activas ahora mismo",
     "emptyAction": "Abrir el calendario",
     "recipients": "{count, plural, one {Enviado a # buceador} other {Enviado a # buceadores}}",
     "expiresAt": "Caduca {date}",
