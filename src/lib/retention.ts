@@ -476,7 +476,13 @@ export const PRUNE_BATCH_LIMIT = 5_000;
  */
 export const DIETARY_NOTE_RETENTION_DAYS = 30;
 
-/** The departure start before which a seat's lunch note is cleared. */
+/** Daily UTC sweep, shared with its Sentry monitor; deployment parity is tested. */
+export const DIETARY_RETENTION_CRONTAB = "9 3 * * *";
+
+/**
+ * Strict eligibility cutoff, not a maximum residence guarantee: the daily sweep
+ * normally clears notes on its next run, later if runs are missed or capped.
+ */
 export function dietaryNoteCutoff(now: Date): Date {
   return new Date(now.getTime() - DIETARY_NOTE_RETENTION_DAYS * DAY_MS);
 }
