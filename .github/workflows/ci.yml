@@ -641,7 +641,7 @@ jobs:
           WANTS_ALL: ${{ contains(github.event.pull_request.labels.*.name, 'visual-all') }}
         run: |
           set -euo pipefail
-          pnpm exec playwright test e2e/visual.spec.ts --list --reporter=json > visual-list.full.json
+          pnpm exec playwright test e2e/visual --list --reporter=json > visual-list.full.json
           if [ "${EVENT_NAME}" = "pull_request" ] && [ "${WANTS_ALL}" != "true" ]; then
             # `|| true` and the script's own fallback: a base it cannot diff
             # against captures everything, never nothing.
@@ -743,7 +743,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          pnpm exec playwright test e2e/visual.spec.ts --test-list visual-tests.txt 2>&1 | tee capture.log || status=$?
+          pnpm exec playwright test e2e/visual --test-list visual-tests.txt 2>&1 | tee capture.log || status=$?
           # Recorded from the first attempt, which ran the whole list; a
           # `--last-failed` rerun below rewrites the report with only its few.
           node scripts/e2e-durations.mjs record e2e-durations/results.json --kind=visual --out=e2e-durations/visual-${{ matrix.shard }}.json \
@@ -758,7 +758,7 @@ jobs:
           echo "::warning title=Renderer wedge detected::Every first-attempt failure has structured wedge evidence; rerunning failed captures once."
           if [ -d test-results ]; then cp -R test-results e2e-durations/first-attempt-results; fi
           rerun=0
-          pnpm exec playwright test e2e/visual.spec.ts --last-failed || rerun=$?
+          pnpm exec playwright test e2e/visual --last-failed || rerun=$?
           cp e2e-durations/results.json e2e-durations/retry-attempt.json
           if [ -d test-results ]; then cp -R test-results e2e-durations/retry-attempt-results; fi
           cp e2e-durations/first-attempt.json e2e-durations/results.json
@@ -1451,8 +1451,29 @@ jobs:
       - coverage-floors
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    permissions: {}
+    permissions:
+      contents: read
+      actions: read
+      checks: read
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Collect exact-attempt CI evidence
+        if: always()
+        run: node scripts/ci-evidence.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_NEEDS: ${{ toJSON(needs) }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: ci-result-${{ github.run_attempt }}
+          path: .agent-out/ci-result.json
+          retention-days: 30
+      - name: Evidence artifact
+        if: always()
+        run: echo 'Download ci-result-${{ github.run_attempt }} for job failures, annotations, reproduction commands and artifact links.' >> "$GITHUB_STEP_SUMMARY"
       - name: Every job passed or was skipped
         env:
           RESULTS: ${{ toJSON(needs.*.result) }}

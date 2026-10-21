@@ -20,6 +20,8 @@ writing code, and update them **in the same PR** as the change that invalidates 
 | [agents/repo-checks.md](agents/repo-checks.md) | Why each `pnpm check:repo` guard exists — what it protects, the incident behind it, and its escape hatch. Read the one section your red check names; the guards say everything else themselves. Its last part holds the full text behind each `.claude/rules/*.md` bullet | a guard is added, or one's reasoning or a path-scoped rule changes |
 | [agents/working-rules.md](agents/working-rules.md) | The full statement of AGENTS.md's commands, context economy, delegation, parallel-work rules and hard rules, with the incident behind each; AGENTS.md carries one line per rule | a hard rule, a parallel-work rule or a command in AGENTS.md changes |
 | [agents/route-map.md](agents/route-map.md) | The route-map rows AGENTS.md does not carry: where each remaining area of the code lives | an area's paths move, or a row moves between AGENTS.md and here |
+| [agents/provider-contract.md](agents/provider-contract.md) | Shared agent capabilities, canonical skill ownership and bootstrap contract | provider entrypoints or shared capability policy changes |
+| [agents/efficiency-implementation.md](agents/efficiency-implementation.md) | Implemented agent-efficiency changes, evidence and measurement limits | verification evidence, lifecycle metrics or context policy changes |
 | [agents/spec-template.md](agents/spec-template.md) | The brief a steering thread writes for each ticket or stack layer it hands to a fresh worker: goal, files owned, constraints, done-when, verification, hand-back | the parallel-work rule on steering and building, or what a worker hands back, changes |
 | [product/human-decisions/](product/human-decisions/README.md) | Human-owned decisions, approvals, and verification work, plus the provisional waiver/course/rental-fit/nitrox/hosting baselines awaiting that approval | a human decision is made, assigned, implemented, or validated, or a provisional default needs recording |
 | [product/marketing.md](product/marketing.md) | The public-page rulebook: positioning spine, claims policy, voice, SEO conventions, visuals, and the maintenance loop (price source of truth is `src/lib/marketing.ts`) | product claims, positioning, public visuals, or pricing change |
@@ -68,6 +70,7 @@ context. When an assessment's recommendations ship, delete them from it and reco
 
 | Doc | What it holds |
 | --- | --- |
+| [assessments/agent-efficiency-20261021.md](product/assessments/agent-efficiency-20261021.md) | Repository-wide assessment of AI coding cost, context retrieval, provider parity, CI repair cycles, visual delivery, and structural hotspots; prioritized proposals with four evidence appendices and a live CI sample |
 | [assessments/competitive-analysis.md](product/assessments/competitive-analysis.md) | Buyer-perspective market comparison, critical-vs-differentiator matrix, pricing posture |
 | [assessments/competitive-strategy.md](product/assessments/competitive-strategy.md) | The battle plan against DiveAdmin and DiveShop360 and the data-portability wedge |
 | [assessments/fareharbor-positioning.md](product/assessments/fareharbor-positioning.md) | 2026-07-24 coexist-vs-compete strategy against FareHarbor as a booking channel, not a records system |

@@ -89,6 +89,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { calls, disabled, literal } from "./e2e-source.mjs";
+import { isVisualSpec, visualSpecs } from "./visual-specs.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -183,7 +184,10 @@ export function parseCaptureNames(source) {
 
 export async function collectCaptureNames(root) {
   try {
-    return parseCaptureNames(await readFile(path.join(root, VISUAL_SPEC), "utf8"));
+    const sources = await Promise.all(
+      visualSpecs(root).map((file) => readFile(path.join(root, file), "utf8")),
+    );
+    return new Set(sources.flatMap((source) => [...parseCaptureNames(source)]));
   } catch (error) {
     if (error?.code === "ENOENT") return new Set();
     throw error;
@@ -307,7 +311,7 @@ export function deriveCoverage({ routes, specSources = new Map() }) {
   );
   for (const [spec, source] of specSources) {
     // A capture photographs a route; it does not drive it. Its paths credit `visual` below.
-    if (spec === path.basename(VISUAL_SPEC)) continue;
+    if (isVisualSpec(spec)) continue;
     for (const { path: shape } of pathLiterals(source)) {
       for (const route of routesForPath(routes, shape)) {
         derived.get(route).e2e.add(spec);
@@ -332,8 +336,8 @@ export function deriveCoverage({ routes, specSources = new Map() }) {
       }
     }
   }
-  const visual = specSources.get(path.basename(VISUAL_SPEC));
-  if (visual !== undefined) {
+  for (const [spec, visual] of specSources) {
+    if (!isVisualSpec(spec)) continue;
     const events = [
       ...[...visual.matchAll(TEST_START)].map((match) => ({ kind: "test", index: match.index })),
       ...pathLiterals(visual).map((literal) => ({ kind: "path", ...literal })),

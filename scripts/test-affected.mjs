@@ -8,10 +8,12 @@ import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TEST = /\.test\.(?:ts|tsx|mts|mjs|js)$/;
-const DOC = /^(?:docs\/|\.claude\/)|\.md$/;
+// Agent playbooks and their provenance are source-reader contracts, not app dependencies.
+const DOC = /^(?:docs\/|\.claude\/|\.agents\/|skills-lock\.json$)|\.md$/;
 const GLOBAL =
   /^(?:package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|(?:vitest|vite|tsconfig)[^/]*\.|src\/test\/|src\/db\/schema\/|drizzle\/)/;
-const KNOWN = /^(?:src\/|scripts\/|infra\/|e2e\/|docs\/|\.claude\/|\.github\/)|\.md$/;
+const KNOWN =
+  /^(?:src\/|scripts\/|infra\/|e2e\/|docs\/|\.claude\/|\.agents\/|\.github\/|skills-lock\.json$)|\.md$/;
 const FILE_READER =
   /\b(?:from\s*|import\s*\(\s*|require\s*\(\s*)["'](?:node:)?fs(?:\/promises)?["']/;
 

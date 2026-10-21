@@ -54,14 +54,31 @@ async function inputsFingerprint(): Promise<string> {
 }
 
 /** Build (or reuse) the migrated (and, for two of three, demo-seeded) snapshots. Once per run. */
-export async function ensureTestDbTemplate(): Promise<void> {
+export type TemplateTiming = {
+  phase: "fingerprint" | "cache" | "build";
+  durationMs: number;
+  cacheHit?: boolean;
+  variant?: string;
+};
+
+export async function ensureTestDbTemplate(
+  options: { onTiming?: (timing: TemplateTiming) => void } = {},
+): Promise<void> {
+  const started = performance.now();
   const fingerprint = await inputsFingerprint();
+  options.onTiming?.({ phase: "fingerprint", durationMs: performance.now() - started });
+  const cacheStarted = performance.now();
   const meta = await readFile(META_FILE, "utf8")
     .then((raw) => JSON.parse(raw) as { fingerprint: string; variants?: string[] })
     .catch(() => null);
   const cached =
     meta?.fingerprint === fingerprint &&
     VARIANTS.every((variant) => meta.variants?.includes(variant));
+  options.onTiming?.({
+    phase: "cache",
+    durationMs: performance.now() - cacheStarted,
+    cacheHit: cached,
+  });
   if (cached) return;
 
   // A warm cache needs filesystem reads only; loading the seed graph costs seconds.
@@ -78,10 +95,17 @@ export async function ensureTestDbTemplate(): Promise<void> {
     // properly`, which names neither the cause nor the fix. `rename` is atomic
     // within a filesystem, and the temp file is a sibling so it is the same
     // one, so a reader sees either the whole old snapshot or the whole new one.
+    const buildStarted = performance.now();
     const destination = templateFile(variant);
     const staging = `${destination}.${process.pid}.tmp`;
     await writeFile(staging, await buildSnapshot(variant));
     await rename(staging, destination);
+    options.onTiming?.({
+      phase: "build",
+      variant,
+      durationMs: performance.now() - buildStarted,
+      cacheHit: false,
+    });
   }
   // Written last and listing what it covers, so a fingerprint hit above always
   // means every tar it claims is on disk and current.

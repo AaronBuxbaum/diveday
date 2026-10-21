@@ -3,6 +3,7 @@ import { appendFile, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { isVisualSpec } from "./visual-specs.mjs";
 
 /**
  * Deals the functional Playwright specs onto shards by *cost* rather than by
@@ -58,7 +59,7 @@ const SPEC_ROOT = "e2e";
  * Never a functional spec — `visual.spec.ts` is dealt by test onto its own
  * eight shards (`--visual`) and has its own baseline plumbing.
  */
-export const EXCLUDED_SPECS = ["e2e/visual.spec.ts"];
+
 // Mobile behavior has its own nightly/manual engine lane, never desktop shards.
 const MOBILE_SPEC = /(?:^|\/)mobile[^/]*\.spec\.ts$/;
 
@@ -169,7 +170,7 @@ export async function listSpecs(root = process.cwd()) {
       if (entry.isDirectory()) await walk(relativePath);
       else if (
         entry.name.endsWith(".spec.ts") &&
-        !EXCLUDED_SPECS.includes(relativePath) &&
+        !isVisualSpec(relativePath) &&
         !MOBILE_SPEC.test(relativePath)
       ) {
         found.push(relativePath);

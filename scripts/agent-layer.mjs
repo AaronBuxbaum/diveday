@@ -97,7 +97,7 @@ export function vendoredSkillProblems(contentsByName) {
  * prose, not a path; a bracketed Next.js segment such as `[shopSlug]` is literal, because the
  * directory is named exactly that.
  */
-const DOC_PATH = /`((?:src|scripts|docs|e2e|config|infra|\.claude)\/[^`\s]*)`/g;
+const DOC_PATH = /`((?:src|scripts|docs|e2e|config|infra|\.claude|\.agents|\.codex)\/[^`\s]*)`/g;
 
 /**
  * A line that tells history or names a path by its absence rather than giving an instruction:
@@ -150,4 +150,11 @@ export function gitignoredPaths(root, tokens) {
       .split("\n")
       .filter(Boolean),
   );
+}
+
+/** Mirrors resolve to the canonical directory; copied bodies inevitably drift. */
+export function providerSkillProblems(canonical, mirrors) {
+  return canonical
+    .filter((name) => mirrors[name] !== true)
+    .map((name) => `.claude/skills/${name}: must resolve to .agents/skills/${name}`);
 }

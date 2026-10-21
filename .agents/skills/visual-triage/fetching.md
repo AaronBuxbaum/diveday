@@ -17,8 +17,7 @@ pnpm visual:report --all                # also pull passed items, not just chang
 This pulls `out.json` and the relevant `expected`/`actual`/`diff` PNGs straight from the same public
 S3 bucket (`regconfig.json`'s `reg-publish-s3-plugin` — no AWS credentials needed, the bucket is
 public-read) into `.reg-report/<commit>/`, alongside a `REPORT.md` listing each changed/new/deleted
-item with the local paths to its images. Read `REPORT.md`, then open each PNG path with `Read` — it
-renders images directly, which is the actual point: raw pixels beat any text description of them.
+item with the local paths to its images. Read `REPORT.md`, then open each PNG path with the provider's image-viewing tool — inspect the pixels directly, which is the actual point: raw pixels beat any text description of them.
 This works from a fresh checkout without ever running Playwright locally, as long as CI has already
 published a report for that commit.
 
@@ -28,3 +27,5 @@ here either. Beside those counts it says how many changed captures **moved geome
 item's section states its expected and actual dimensions and the signed height delta. Read those
 before opening a single image: `unchanged` means the pixels moved inside a stable box, and a height
 delta means the surface itself got taller or shorter.
+
+For local work, `scripts/visual-review.mjs` writes a separate uniquely scoped manifest, private images and probe report under `.agent-out/visual-review/`. It never claims a CI comparison or completed review.

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 // `pnpm verify:push`: everything a push must survive that this container can answer, run once,
 // and a stamp saying HEAD passed it. `scripts/guard-push.mjs` refuses a `git push` without one.
 //
@@ -61,6 +62,7 @@ import { availableParallelism, loadavg } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { readState } from "./agent-task-state.mjs";
 import { baseDecision, baseRedArgs, readBaseVerdict, repoSlug } from "./base-ci.mjs";
 import {
   affectedSpecs,
@@ -69,13 +71,23 @@ import {
   changedDiff,
   durations,
   estimateMs,
-  stackBase,
   withinBudget,
 } from "./e2e-affected.mjs";
+import { requireFreshBuild } from "./e2e-build-evidence.mjs";
 import { verifiedFile } from "./guard-push.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { appendMetric } from "./task-metrics.mjs";
 import { sourceReaders, testArgs, testPlan } from "./test-affected.mjs";
+import { readPullRequestBase, resolveVerificationBase } from "./verification-base.mjs";
+import {
+  collectStages,
+  installationIdentity,
+  lintToolIdentity,
+  runStageAsync,
+  stageKey,
+  verificationInputsStable,
+} from "./verification-stages.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -261,7 +273,7 @@ function browserSteps({ specs, captures = [] }) {
       steps.push({
         name: "visual captures",
         command: "pnpm",
-        args: ["e2e:run", "e2e/visual.spec.ts", "-g", grep, "--reporter=line"],
+        args: ["e2e:run", "e2e/visual", "-g", grep, "--reporter=line"],
         workers: true,
       });
     }
@@ -424,7 +436,7 @@ function buildTreeFile() {
   return path.join(ROOT, ".next", "diveday-build-tree");
 }
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   const quick = args.includes("--quick");
   const git = gitReader(ROOT);
@@ -445,7 +457,12 @@ function main() {
     process.exit(1);
   }
 
-  const base = stackBase(git);
+  const resolvedBase = resolveVerificationBase(git, {
+    prBase: readPullRequestBase(git),
+    explicitBase: args.includes("--base") ? args[args.indexOf("--base") + 1] : undefined,
+  });
+  const base = resolvedBase.ref;
+  if (resolvedBase.warning) console.log(resolvedBase.warning);
   const selection = quick
     ? changedDiff({ root: ROOT, base, git })
     : affectedSpecs({ root: ROOT, base, git });
@@ -549,15 +566,152 @@ function main() {
   const logs = gitPath(git, "diveday-verify");
   mkdirSync(logs, { recursive: true });
   const ran = [];
+  const evidence = {
+    version: 1,
+    sha: head,
+    base: selection.base,
+    baseSource: resolvedBase.source,
+    mode: quick ? "quick" : "full",
+    startedAt: new Date().toISOString(),
+    steps: [],
+    notRunHere: skipped,
+  };
+  const saveEvidence = () =>
+    writeFileSync(path.join(logs, "result.json"), `${JSON.stringify(evidence, null, 2)}\n`);
+  const fullTree = git(["rev-parse", "HEAD^{tree}"]);
+  const dependencies = installationIdentity(ROOT);
+  const lintTool = lintToolIdentity(ROOT);
+  const tools = {
+    node: process.version,
+    platform: process.platform,
+    arch: process.arch,
+    exec: process.execPath,
+  };
+  const cacheFile = path.join(logs, "static-cache.json");
+  let cache = {};
+  try {
+    cache = JSON.parse(readFileSync(cacheFile, "utf8"));
+  } catch {}
+  const staticNames = new Set(["lint", "typecheck", "check:repo", "guards"]);
+  const runStatic = async (step) => {
+    const log = path.join(logs, `${step.name.replace(/\W+/g, "-")}.log`);
+    // Repository checks inspect live git/network state; guards can read arbitrary files.
+    // They are collected together but deliberately never reused.
+    const lintReusable =
+      step.name === "lint" &&
+      lintTool &&
+      readFileSync(path.join(ROOT, "package.json"), "utf8").includes('"lint": "biome check ."');
+    // Include local/global git excludes because Biome honors them; changing exclusions invalidates receipt.
+    const excludeFile = git(["config", "--path", "--get", "core.excludesfile"]);
+    let excludes = "";
+    try {
+      excludes += readFileSync(gitPath(git, "info/exclude"), "utf8");
+    } catch {}
+    if (excludeFile) {
+      try {
+        excludes += readFileSync(excludeFile, "utf8");
+      } catch {
+        excludes = null;
+      }
+    }
+    const key =
+      lintReusable && excludes !== null
+        ? stageKey({
+            tree: fullTree,
+            step,
+            env: process.env,
+            tools: { ...tools, lintTool, excludes },
+            dependencies,
+          })
+        : null;
+    if (key && cache[step.name]?.key === key) {
+      const result = {
+        name: step.name,
+        status: "passed",
+        reused: true,
+        key,
+        command: [step.command, ...step.args],
+        log: cache[step.name].log,
+      };
+      evidence.steps.push(result);
+      return result;
+    }
+    const fd = openSync(log, "w");
+    const start = Date.now();
+    console.log(`… ${step.name}`);
+    const result = await runStageAsync(
+      lintReusable ? lintTool.binary : step.command,
+      lintReusable ? ["check", "."] : step.args,
+      {
+        cwd: ROOT,
+        env: process.env,
+        stdio: ["ignore", fd, fd],
+        timeoutMs: SUBPROCESS_TIMEOUTS.verifyPushStep,
+      },
+    );
+    closeSync(fd);
+    const receipt = {
+      name: step.name,
+      status: result.status === 0 ? "passed" : "failed",
+      durationMs: Date.now() - start,
+      command: [step.command, ...step.args],
+      log,
+      key,
+    };
+    if (receipt.status === "passed" && key) cache[step.name] = { key, log };
+    evidence.steps.push(receipt);
+    console.log(`${receipt.status === "passed" ? "✓" : "✗"} ${step.name}: ${log}`);
+    if (receipt.status === "failed") console.error(tail(log));
+    return receipt;
+  };
+  const stable = () =>
+    verificationInputsStable(
+      {
+        head: git(["rev-parse", "HEAD"]),
+        tree: git(["rev-parse", "HEAD^{tree}"]),
+        status: git(["status", "--porcelain", "--untracked-files=normal"]),
+      },
+      { head, tree: fullTree },
+    );
+  let collected = false;
   let browserNote;
   const workerCounts = [];
   for (const step of steps) {
+    if (staticNames.has(step.name)) {
+      if (collected) continue;
+      collected = true;
+      const receipts = await collectStages(
+        steps.filter((item) => staticNames.has(item.name)),
+        runStatic,
+        2,
+      );
+      if (!stable()) {
+        console.error(
+          "verify:push: inputs changed during verification; no receipts banked. Restore a clean committed tree and rerun.",
+        );
+        process.exitCode = 1;
+        return;
+      }
+      for (const receipt of receipts)
+        if (!evidence.steps.some((item) => item.name === receipt.name))
+          evidence.steps.push(receipt);
+      writeFileSync(cacheFile, `${JSON.stringify(cache)}\n`);
+      saveEvidence();
+      if (receipts.some((item) => item.status === "failed")) {
+        process.exitCode = 1;
+        return;
+      }
+      ran.push(...receipts.map((item) => item.name));
+      continue;
+    }
     if (step.build) {
       try {
-        if (readFileSync(buildTreeFile(), "utf8").trim() === tree) {
-          console.log(`✓ ${step.name} (reused: built from this tree)`);
-          continue;
-        }
+        requireFreshBuild(ROOT);
+        evidence.steps.push({ name: step.name, status: "passed", reused: true });
+        saveEvidence();
+        ran.push(step.name);
+        console.log(`✓ ${step.name} (reused: inputs verified)`);
+        continue;
       } catch {}
     }
     const log = path.join(logs, `${step.name.replace(/\W+/g, "-")}.log`);
@@ -596,6 +750,14 @@ function main() {
       // (CORES_PER_E2E_WORKER above), so nobody chases it again.
       console.log(`${browserNote}\n(not a cause of functional failures; see CORES_PER_E2E_WORKER)`);
     }
+    evidence.steps.push({
+      name: step.name,
+      status: failed ? "failed" : "passed",
+      durationMs: Date.now() - started,
+      command: [step.command, ...step.args],
+      log,
+    });
+    saveEvidence();
     if (failed) {
       console.error(`✗ ${step.name} (${seconds}s) — full log: ${log}\n${tail(log)}${why}`);
       console.error(
@@ -609,6 +771,13 @@ function main() {
     ran.push(step.name);
   }
 
+  if (!stable()) {
+    console.error(
+      "verify:push: HEAD or working inputs changed during checks; no push stamp written.",
+    );
+    process.exitCode = 1;
+    return;
+  }
   const stamp = {
     sha: head,
     mode: quick ? "quick" : "full",
@@ -622,11 +791,33 @@ function main() {
     notRunHere: skipped,
   };
   writeStamps(stamp, { git });
+  try {
+    const state = readState(ROOT);
+    if (state?.task)
+      appendMetric(
+        {
+          task: state.task,
+          provider: state.provider ?? "unknown",
+          taskClass: state.taskClass ?? "unknown",
+          event: "verified",
+          sha: head,
+          baseSha: git(["rev-parse", selection.base]),
+          eventId: `verified:${state.task}:${head}:${stamp.mode}`,
+          evidence: path.join(logs, "result.json"),
+        },
+        { root: ROOT, git },
+      );
+  } catch (error) {
+    console.warn(`Verification passed, but task metrics could not be recorded: ${error.message}`);
+  }
   console.log(`verify:push${quick ? " --quick" : ""}: green. ${head.slice(0, 9)} may be pushed.`);
   console.log("Not run here, so CI is the first to run it:");
   for (const line of skipped) console.log(`  - ${line}`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main();
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }

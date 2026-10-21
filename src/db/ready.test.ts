@@ -390,7 +390,10 @@ describe("getReadyPageData", () => {
   // state rather than a default.
   it("reads back the diver's own currency answer, and nothing before they give one", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
-    expect((await getReadyPageData(db, bookingId))?.lastDivedBand).toBeNull();
+    const before = await getReadyPageData(db, bookingId);
+    expect(before).not.toBeNull();
+    expect(before?.lastDivedBand).toBeNull();
+    const readinessBefore = before?.detail.readiness;
 
     expect(
       await setBookingLastDived(db, { shopId: shop.id, bookingId, band: "over_five_years" }),
@@ -398,9 +401,7 @@ describe("getReadyPageData", () => {
     const data = await getReadyPageData(db, bookingId);
     expect(data?.lastDivedBand).toBe("over_five_years");
     // And it moves nothing else: currency is not a gate.
-    expect(data?.detail.readiness.status).toBe(
-      (await getReadyPageData(db, bookingId))?.detail.readiness.status,
-    );
+    expect(data?.detail.readiness).toEqual(readinessBefore);
   });
 
   it("refuses to record currency against a canceled seat", async () => {

@@ -40,7 +40,8 @@ import { STALLED, statePass } from "./states.mjs";
  * flag-on against flag-off to prove it (docs/design/pixel-craft.md).
  */
 
-export const OUT_DIR = path.join(process.cwd(), "e2e", "pixel-probe");
+export const OUT_DIR =
+  process.env.VISUAL_PROBE_DIR ?? path.join(process.cwd(), "e2e", "pixel-probe");
 
 /**
  * The tight edge of each Tailwind band (sm 640, md 768, lg 1024), plus 360 —

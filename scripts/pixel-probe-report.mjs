@@ -35,7 +35,7 @@ import { CHECKS, censusNearMisses, clusterKey, settledEntryFor } from "./pixel-p
  */
 
 const ROOT = process.cwd();
-const OUT = path.join(ROOT, "e2e", "pixel-probe");
+const OUT = process.env.VISUAL_PROBE_DIR ?? path.join(ROOT, "e2e", "pixel-probe");
 const CAPTURES = path.join(OUT, "captures");
 const SETTLED = path.join(ROOT, "scripts", "pixel-probe-settled.json");
 const SCREENSHOTS = path.join(ROOT, "e2e", "screenshots");
@@ -315,7 +315,7 @@ export function renderMarkdown(report) {
   lines.push(
     `${plural(report.probed, "record")} probed, ${plural(report.skipped.length, "record")} skipped, across ${plural(report.surfaces.length, "capture")}. ${plural(flagged, "flag")} in ${plural(report.clusters.length, "cluster")}; ${plural(report.settled.length, "settled cluster")}.`,
     "",
-    "Every flag is a candidate, not a verdict: give each one a verdict with its measurement (docs/design/pixel-craft.md). Crops are under `e2e/pixel-probe/crops/`, the state atlas under `e2e/pixel-probe/atlas/` (`--atlas` builds contact sheets), and 1:1 tiles of any capture come from `node scripts/pixel-probe-report.mjs --tiles <capture>`.",
+    "Every flag is a candidate, not a verdict: give each one a verdict with its measurement (docs/design/pixel-craft.md). Relative to this report, crops are under `crops/` and the state atlas under `atlas/` (`--atlas` builds contact sheets), and 1:1 tiles of any capture come from `node scripts/pixel-probe-report.mjs --tiles <capture>`.",
     "",
   );
   lines.push(
@@ -648,7 +648,7 @@ async function main() {
   const records = loadRecords();
   if (records.length === 0) {
     console.error(
-      'No probe output in e2e/pixel-probe/captures — run `PIXEL_PROBE=1 pnpm e2e:run e2e/visual.spec.ts --grep "light mode"` first.',
+      `No probe output in ${path.relative(ROOT, path.join(OUT, "captures"))} — run a visual capture with PIXEL_PROBE=1 first.`,
     );
     process.exit(1);
   }
@@ -676,7 +676,7 @@ async function main() {
     )}\n`,
   );
   console.log(
-    `e2e/pixel-probe/REPORT.md — ${report.probed} probed, ${report.skipped.length} skipped, ${report.clusters.length} clusters, ${report.settled.length} settled`,
+    `${path.relative(ROOT, path.join(OUT, "REPORT.md"))} — ${report.probed} probed, ${report.skipped.length} skipped, ${report.clusters.length} clusters, ${report.settled.length} settled`,
   );
 }
 

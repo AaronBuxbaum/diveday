@@ -52,7 +52,7 @@ describe("the pre-push plan", () => {
     });
     expect(names(steps).slice(-3)).toEqual(["e2e build", "e2e specs", "visual captures"]);
     const capture = steps.at(-1);
-    expect(capture.args.slice(0, 2)).toEqual(["e2e:run", "e2e/visual.spec.ts"]);
+    expect(capture.args.slice(0, 2)).toEqual(["e2e:run", "e2e/visual"]);
     expect(capture.args[3]).toContain("(?!.*dark mode)");
     expect(capture.workers).toBe(true);
     // A diff that names only captures still builds once and runs them.
