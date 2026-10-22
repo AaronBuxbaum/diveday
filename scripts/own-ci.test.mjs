@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  lightTitle,
-  ownDecision,
-  ownVerdict,
-  readOwnVerdict,
-  summaryTests,
-} from "./own-ci.mjs";
+import { lightTitle, ownDecision, ownVerdict, readOwnVerdict, summaryTests } from "./own-ci.mjs";
 
 const job = (id, name, conclusion = "failure") => ({
   id,
@@ -55,8 +49,7 @@ describe("the Playwright Run Summary", () => {
     ).toEqual([
       {
         file: "e2e/visual-audit-account-states.ts",
-        title:
-          "last-minute email opt-out renders its question and saved outcome",
+        title: "last-minute email opt-out renders its question and saved outcome",
       },
     ]);
   });
@@ -95,12 +88,8 @@ describe("the branch's own verdict", () => {
   });
 
   it("names the unit files a red shard annotates, and leaves lint to the gate's own step", () => {
-    const verdict = ownVerdict(
-      [job(1, "Unit tests shard 2/4"), job(2, "Lint")],
-      (j) =>
-        j.id === 1
-          ? [fails(".github"), fails("src/db/staff-render-cost.test.ts")]
-          : [],
+    const verdict = ownVerdict([job(1, "Unit tests shard 2/4"), job(2, "Lint")], (j) =>
+      j.id === 1 ? [fails(".github"), fails("src/db/staff-render-cost.test.ts")] : [],
     );
     expect(verdict.files).toEqual(["src/db/staff-render-cost.test.ts"]);
     expect(verdict.red).toEqual(["Lint", "Unit tests shard 2/4"]);
@@ -108,9 +97,7 @@ describe("the branch's own verdict", () => {
   });
 
   it("calls a red job that names nothing unnamed", () => {
-    expect(
-      ownVerdict([job(1, "Build")], () => [fails(".github")]).unnamed,
-    ).toEqual(["Build"]);
+    expect(ownVerdict([job(1, "Build")], () => [fails(".github")]).unnamed).toEqual(["Build"]);
   });
 });
 
@@ -186,23 +173,14 @@ describe("what the gate does with it", () => {
     );
     expect(decision.specs).toEqual(["e2e/last-minute-fill.spec.ts"]);
     expect(decision.lines[0]).toMatch(/on this very commit/);
-    expect(decision.lines.join("\n")).toMatch(
-      /Build named no test; read its log/,
-    );
+    expect(decision.lines.join("\n")).toMatch(/Build named no test; read its log/);
     expect(decision).not.toHaveProperty("refuse");
   });
 
   it("adds nothing when the last run is green or unknown", () => {
-    for (const verdict of [
-      { green: true, sha: "abc123456789" },
-      { unknown: "offline" },
-    ]) {
+    for (const verdict of [{ green: true, sha: "abc123456789" }, { unknown: "offline" }]) {
       const decision = ownDecision(verdict, { branch: "claude/x", head: "f" });
-      expect([
-        ...decision.files,
-        ...decision.specs,
-        ...decision.captures,
-      ]).toEqual([]);
+      expect([...decision.files, ...decision.specs, ...decision.captures]).toEqual([]);
       expect(decision.lines).toHaveLength(1);
     }
   });

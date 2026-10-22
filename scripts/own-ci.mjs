@@ -75,23 +75,16 @@ export function ownVerdict(jobs, annotationsOf) {
   const captures = new Set();
   const unnamed = [];
   for (const job of jobs) {
-    if (job.conclusion !== "failure" && job.conclusion !== "timed_out")
-      continue;
+    if (job.conclusion !== "failure" && job.conclusion !== "timed_out") continue;
     if (NOT_A_VERDICT.test(job.name)) continue;
     red.push(job.name);
     if (COVERED_LOCALLY.test(job.name)) continue;
     let named = false;
     for (const note of annotationsOf(job) ?? []) {
-      if (
-        note.annotation_level === "failure" &&
-        UNIT_FILE.test(note.path ?? "")
-      ) {
+      if (note.annotation_level === "failure" && UNIT_FILE.test(note.path ?? "")) {
         files.add(note.path);
         named = true;
-      } else if (
-        note.annotation_level === "failure" &&
-        SPEC_FILE.test(note.path ?? "")
-      ) {
+      } else if (note.annotation_level === "failure" && SPEC_FILE.test(note.path ?? "")) {
         if (VISUAL_JOB.test(job.name)) continue;
         specs.add(note.path);
         named = true;
@@ -130,8 +123,7 @@ function ghJson(args) {
  * `gh` is injectable for the tests.
  */
 export function readOwnVerdict(branch, { repo, gh = ghJson } = {}) {
-  if (!repo || !branch)
-    return { unknown: "no GitHub repository or branch to ask about" };
+  if (!repo || !branch) return { unknown: "no GitHub repository or branch to ask about" };
   try {
     const listed = gh([
       `repos/${repo}/actions/workflows/ci.yml/runs?branch=${encodeURIComponent(branch)}&per_page=20`,
@@ -142,14 +134,11 @@ export function readOwnVerdict(branch, { repo, gh = ghJson } = {}) {
         run.status === "completed" &&
         (run.conclusion === "success" || run.conclusion === "failure"),
     );
-    if (done.length === 0)
-      return { unknown: `no finished CI run on ${branch} yet` };
+    if (done.length === 0) return { unknown: `no finished CI run on ${branch} yet` };
     const latest = done.reduce((a, b) => (b.created_at > a.created_at ? b : a));
     const sha = latest.head_sha;
     if (latest.conclusion === "success") return { green: true, sha };
-    const jobs =
-      gh([`repos/${repo}/actions/runs/${latest.id}/jobs?per_page=100`]).jobs ??
-      [];
+    const jobs = gh([`repos/${repo}/actions/runs/${latest.id}/jobs?per_page=100`]).jobs ?? [];
     return {
       sha,
       url: latest.html_url,
@@ -170,14 +159,11 @@ export function readOwnVerdict(branch, { repo, gh = ghJson } = {}) {
  */
 export function ownDecision(verdict, { branch, head }) {
   const none = { files: [], specs: [], captures: [] };
-  if (verdict.unknown)
-    return { ...none, lines: [`own CI: unknown (${verdict.unknown}).`] };
+  if (verdict.unknown) return { ...none, lines: [`own CI: unknown (${verdict.unknown}).`] };
   if (verdict.green) {
     return {
       ...none,
-      lines: [
-        `own CI: ${branch}'s last run (${verdict.sha.slice(0, 9)}) is green.`,
-      ],
+      lines: [`own CI: ${branch}'s last run (${verdict.sha.slice(0, 9)}) is green.`],
     };
   }
   const same = verdict.sha === head ? ", on this very commit" : "";
@@ -189,9 +175,7 @@ export function ownDecision(verdict, { branch, head }) {
   const named = [...verdict.files, ...verdict.specs];
   if (named.length > 0) lines.push(`  re-run here: ${named.join(" ")}`);
   if (verdict.captures.length > 0)
-    lines.push(
-      `  captures re-run here (light mode): ${verdict.captures.join("; ")}`,
-    );
+    lines.push(`  captures re-run here (light mode): ${verdict.captures.join("; ")}`);
   if (verdict.unnamed.length > 0)
     lines.push(
       `  ${verdict.unnamed.join(", ")} named no test; read its log (the GitHub MCP's ` +
