@@ -6,6 +6,7 @@ import {
   matchesRoute,
   writeCaptureEvidence,
 } from "../scripts/visual-evidence.mjs";
+import { visualSpecs } from "../scripts/visual-specs.mjs";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { diverTranslator } from "../src/i18n/messages";
@@ -119,7 +120,7 @@ export async function waitForSiteLibrary(page: Page) {
  * light at a phone and a desktop viewport and in dark at the desktop viewport
  * alone (`DARK_VIEWPORTS`), down from two widths in dark (see ADR
  * 20260729-reg-suit-visual-regression). No count is kept here, because every
- * hand-kept one drifted: `grep -c 'await capture(page,' e2e/visual.spec.ts`
+ * hand-kept one drifted: `grep -c 'await capture(page,' e2e/visual-*.spec.ts`
  * reads one more than the number of calls, because it also matches this
  * sentence. Each `capture()` call costs 3 screenshots per CI run, 4 for a
  * surface named in `TABLET_SURFACES`, which takes a third viewport in light.
@@ -257,11 +258,14 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
  * A name in `TABLET_SURFACES` that no `capture()` call uses photographs
  * nothing and fails nothing: the surface simply never gets its third width,
  * and reg-suit reports one fewer new item than anyone was counting. Reading
- * this file back is the cheapest thing that can tell a typo from a decision.
- * Once per worker process, against a file already on the page cache.
+ * the visual specs back is the cheapest thing that can tell a typo from a decision.
+ * Once per worker process, against files already on the page cache.
  */
+const VISUAL_SPEC_TEXT = visualSpecs()
+  .map((file) => readFileSync(file, "utf8"))
+  .join("\n");
 for (const name of TABLET_SURFACES) {
-  if (!readFileSync("e2e/visual.spec.ts", "utf8").includes(`capture(page, "${name}"`)) {
+  if (!VISUAL_SPEC_TEXT.includes(`capture(page, "${name}"`)) {
     throw new Error(
       `TABLET_SURFACES names "${name}", which no capture() call uses — it would ` +
         "silently photograph nothing. Fix the name or drop it from the set.",
@@ -640,7 +644,8 @@ function probeContext(page: Page, capture: string, scheme: "light" | "dark", wid
     targets: width === VIEWPORTS[0].width || width === TABLET_VIEWPORT.width,
     titlePath: test.info().titlePath,
     testFile: test.info().file,
-    entryFile: "e2e/visual.spec.ts",
+    // The spec that registered the test: `titlePath[0]`, relative to `testDir`.
+    entryFile: `e2e/${test.info().titlePath[0]}`,
     exhaustiveAudit: process.env.VISUAL_EXHAUSTIVE_AUDIT === "1",
     initialPaintAudit: process.env.VISUAL_AUDIT_INITIAL_PAINT === "1",
     atlasSeen: PROBE_ATLAS_SEEN,

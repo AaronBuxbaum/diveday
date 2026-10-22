@@ -296,7 +296,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     test.setTimeout(110_000);
     // The orders index only has rows to render (and `/orders/new` only exists
     // at all) for a shop that can take money. This is a pure DB write that
-    // never calls Stripe — the same door e2e/visual.spec.ts opens for the
+    // never calls Stripe — the same door e2e/visual-recap.spec.ts opens for the
     // recap tip section.
     await request.post("/api/test/seed-stripe-account");
     await scanStaticRoutes(page, [

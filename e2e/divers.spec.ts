@@ -352,7 +352,7 @@ test("the roster pages forward, and page two is not page one", async ({ page }) 
   // real flow. Under four Playwright shards it ran out — `waitForURL(/page=2/)`
   // timed out on shard 2/4 of #1592 with the same three navigations passing
   // locally. This is the aggregate-cost case `e2e/dive-sites.spec.ts` and
-  // `visual.spec.ts` already name: no step is stuck, there are simply several
+  // the visual specs already name: no step is stuck, there are simply several
   // of them (issue #1595).
   test.setTimeout(30_000);
   await page.goto("/shop/blue-mantis/divers");

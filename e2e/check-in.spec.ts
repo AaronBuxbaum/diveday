@@ -136,7 +136,7 @@ test("a ready diver checks in with one tap, sinks into the checked-in group, and
 /**
  * **J2, at the counter's own device.** The tablet on the front-desk stand is
  * the width this surface is designed for, so the viewport is set here rather
- * than inherited — `TABLET_SURFACES` in `visual.spec.ts` governs the captures,
+ * than inherited — `TABLET_SURFACES` in `visual-harness.ts` governs the captures,
  * not this spec.
  *
  * What it pins is the instrument itself: the count leading the roster, taps at

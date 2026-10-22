@@ -72,7 +72,7 @@ test.describe("H-14 role permissions", () => {
       // budget before the test's actual assertions ever ran, even after
       // moving sign-in to the cached per-role session above (`signedInAs`)
       // removed the live sign-in's own ~2s. Same reasoning as
-      // visual.spec.ts's `test.setTimeout` on its heaviest capture sequence:
+      // the visual specs' `test.setTimeout` on its heaviest capture sequence:
       // aggregate per-navigation cost accumulating across many sequential
       // steps in one test, not a hang this override would be masking.
       test.setTimeout(30_000);

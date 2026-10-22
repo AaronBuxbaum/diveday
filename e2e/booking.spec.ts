@@ -31,7 +31,7 @@ test.describe("staff", () => {
 
   test("full loop: staff schedules, visitor books, staff sees the roster", async ({ page }) => {
     // Chains several sequential navigations and status-toast waits — same
-    // aggregate-cost reasoning as visual.spec.ts's test.setTimeout and the
+    // aggregate-cost reasoning as the visual specs' test.setTimeout and the
     // sibling fix on this file's identity-confirmation test: legitimate
     // per-step cost under 2-worker CI load can sum past the default 15s
     // test budget even when no individual step is stuck.
@@ -468,7 +468,7 @@ test.describe("as owner", () => {
     // signs out, books as a diver, signs back in as staff, and confirms
     // identity — several full navigation cycles plus one genuine live
     // re-authentication (the sign-out/sign-back-in) chained in one test.
-    // Same aggregate-cost reasoning as visual.spec.ts's `test.setTimeout`: a
+    // Same aggregate-cost reasoning as the visual specs' `test.setTimeout`: a
     // traced CI failure measured the total sequential cost at 19s against
     // the default 15s test timeout, every individual step resolving
     // successfully. Raised again with the activity-trail assertion at the end

@@ -477,11 +477,9 @@ export function withinBudget(reach, rank, record, budgetMs) {
   return { run, left: ordered.filter((spec) => !run.includes(spec)) };
 }
 
-/** The capture spec, whose tests are picked one at a time rather than as a file. */
-const VISUAL_SPEC = "e2e/visual.spec.ts";
-
 /**
- * The tests of `e2e/visual.spec.ts` by title, each with its own source (up to the next
+ * The tests of a visual spec (`e2e/visual-*.spec.ts`, picked one test at a time rather than as a
+ * file) by title, each with its own source (up to the next
  * `test(`). A title written with a template hole matches any text at the hole.
  */
 export function visualBlocks(source) {
@@ -515,7 +513,7 @@ function titlePattern(title) {
  * spec itself. Each value says why. A capture is a screenshot; running it here is what finds the
  * heading it waits for gone (five visual shards, 2026-10-09 to 2026-10-12).
  */
-export function selectCaptures({ changed, diff, source, file = VISUAL_SPEC }) {
+export function selectCaptures({ changed, diff, source, file }) {
   const picked = new Map();
   if (!source) return picked;
   const blocks = visualBlocks(source);

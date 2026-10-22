@@ -103,7 +103,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // later `test.setTimeout` replaces whatever slow() set, so the two never
   // composed (issue #1906).
   // Chains several sequential navigations and status-toast waits — same
-  // aggregate-cost reasoning as visual.spec.ts's test.setTimeout: legitimate
+  // aggregate-cost reasoning as the visual specs' test.setTimeout: legitimate
   // per-step cost under 2-worker CI load can sum past the default 15s test
   // budget even when no individual step is stuck.
   test.setTimeout(30_000);

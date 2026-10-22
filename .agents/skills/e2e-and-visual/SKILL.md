@@ -11,7 +11,7 @@ Which tests a change needs is [testing.md](../../../docs/engineering/testing.md#
 
 ## Visual workflow
 
-1. Add or update a focused capture in `e2e/visual*.spec.ts`, preserving existing capture names. Reuse the shared harness and the real fixture/user interactions.
+1. Add or update a focused capture in its feature's `e2e/visual-<feature>.spec.ts` (`ls e2e/visual-*.spec.ts`; each file's header names what it holds), preserving existing capture names and test titles. A file repeats the `${scheme} mode` › `public` or `staff` describes, so a moved test keeps its title path. Reuse the shared harness and the real fixture/user interactions; a helper two files need goes in `e2e/visual-harness.ts`.
 2. Build once with `pnpm e2e:build`. For changed-state review run `node scripts/visual-review.mjs --grep '<test title>' --route '<route template>' --role owner --fixture '<seed>' --state '<changed state>' --expect '<CSS selector proving changed content>'`. Use `--plan` first to inspect the command without building or launching a browser; add `--color` for colour work.
 3. Inspect the run's `.agent-out/visual-review/` manifest, private PNG copies and probe report. It records build fingerprint, state assertion, browser, locale and viewport and remains `not-reviewed`: successful capture is not a design verdict.
 4. After CI publishes the Linux comparison, fetch `pnpm visual:report --commit <sha>` and explain the changed/new/deleted pixels. CI publishes S3 artifacts and a sticky summary; it does not commit regenerated baselines onto the branch. Full `pnpm visual` is an explicit whole-suite operation, not the local requirement for an ordinary UI change.

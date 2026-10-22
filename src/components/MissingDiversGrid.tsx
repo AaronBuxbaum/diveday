@@ -222,7 +222,7 @@ export function MissingDiversGrid({
                   while the tile's words start at its edge. The es-ES
                   string is not shortened either — the qualifier is the whole
                   reason it exists, and `es-ES/README.md` owns those words.
-                  `e2e/visual.spec.ts` now photographs this grid in Spanish at
+                  `e2e/visual-staff-chrome.spec.ts` now photographs this grid in Spanish at
                   390px, so the next hand to make it longer has a baseline to
                   answer to rather than a paragraph. */}
               {diver.blocked ? (
