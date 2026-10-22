@@ -97,6 +97,7 @@ describe("askToMoveFromCancelledAction", () => {
       expect.objectContaining({
         shopId: "shop-1",
         bookingId: BOOKING_ID,
+        calledOff: true,
         note: expect.stringMatching(/^Por favor, cámbienme a Two-Tank Reef, jue.*29.*oct/),
       }),
     );
