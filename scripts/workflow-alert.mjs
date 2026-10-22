@@ -87,6 +87,19 @@ export const ALERTS = {
     prompt:
       'The nightly quarantine and flake-hunt run (`.github/workflows/e2e-nightly.yml`) is red on main. Read the newest failed run linked in this issue\'s body and comments with `gh api repos/AaronBuxbaum/diveday/actions/runs/<id>/jobs` and its logs, and download its `e2e-nightly-report` artifact. Read `docs/engineering/testing.md` "Flakes" and `scripts/e2e-recent-failures.mjs` first. A failing quarantined test belongs to its own issue: comment there. A flake-hunt spec that failed one of its five repeats is a flake: fix it (starting from the trace, never a wider timeout) or quarantine it with an open issue and an expiry. A broken run is fixed with a failing test first. Done is a manual run of the workflow (its Run workflow button) going green, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo`. Close this issue in the PR that lands the fix.',
   },
+  "ci-health": {
+    title: "Fix the weekly CI health check, which is red",
+    kind: "risk",
+    effort: "S",
+    touches: [".github/workflows/ci-health.yml", "scripts/ci-health.mjs"],
+    noticed:
+      "The scheduled `CI health` workflow failed. A week over its thresholds never fails it (that opens its own issue), so a red run means the script could not read GitHub, threw, or refused to file a malformed issue body, and nobody is measuring red CI runs per pull request or the repeat-red rate until it is fixed. Each red run after this one adds a comment with its link; the first green run closes this issue.",
+    why: "It was found by the scheduled run, not by a change anyone was making. The script reads the pull requests, workflow runs, jobs and check-run annotations endpoints, so a changed response shape, a token permission or an annotation format change can each break it, and only the run log says which.",
+    proposed:
+      "Read the failed step's log. Reproduce with `node scripts/ci-health.mjs --days 7` locally. If a response shape or annotation format changed, fix the reader with a failing test first in `scripts/ci-health.test.mjs`. Do not loosen a threshold to make the run green.",
+    prompt:
+      "The weekly CI health check (`.github/workflows/ci-health.yml`, which runs `node scripts/ci-health.mjs --file-issue`) is red. Read the newest failed run linked in this issue's body and comments, find the failing step, then read `scripts/ci-health.mjs`, `scripts/own-ci.mjs` and `scripts/ci-health.test.mjs`. Reproduce locally with `node scripts/ci-health.mjs --days 7`. Fix the cause with a failing test first. Done is a manual run of the workflow (its Run workflow button) going green, plus `pnpm lint`, `pnpm typecheck` and `pnpm check:repo`. Close this issue in the PR that lands the fix.",
+  },
   mutation: {
     title: "Fix the weekly mutation run, which is red on main",
     kind: "risk",

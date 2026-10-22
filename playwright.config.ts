@@ -14,7 +14,7 @@ import {
 } from "./e2e/servers";
 
 // The worker servers and this runner process must agree on the signing secret:
-// e2e/visual.spec.ts mints a signed recap token in this process (signRecapToken)
+// e2e/visual-recap.spec.ts mints a signed recap token in this process (signRecapToken)
 // and a worker server verifies it. Pin one resolved value into the environment
 // before anything.
 process.env.AUTH_SECRET ??= "diveday-e2e-secret";
@@ -200,7 +200,7 @@ export default defineConfig({
   // `pnpm check:e2e-hygiene`) leaves every PR, push-gate and local run, and
   // runs nightly in e2e-nightly.yml, which sets DIVEDAY_RUN_QUARANTINE=1.
   grepInvert: process.env.DIVEDAY_RUN_QUARANTINE === "1" ? undefined : /@quarantine\b/,
-  // e2e/visual.spec.ts writes raw `page.screenshot()` PNGs into e2e/screenshots
+  // The e2e/visual-*.spec.ts captures write raw `page.screenshot()` PNGs into e2e/screenshots
   // (gitignored); `reg-suit` then diffs them against the baseline for this
   // branch's parent commit, pulled from S3. Nothing visual is committed to the
   // repo. See docs/architecture/decisions/20260729-reg-suit-visual-regression.md
@@ -263,7 +263,7 @@ export default defineConfig({
       // The stream is gone (#1923, finishing slice 23f of ADR
       // 20260919-one-idea). A day is a row on a phone and a row on a desk, so
       // the week renders at every width and there is one board to drive.
-      // `e2e/visual.spec.ts` still sets its own 390 / 820 / 1280 viewports,
+      // The visual captures still set their own 390 / 820 / 1280 viewports,
       // which is where widths are still a question worth asking.
       use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 720 } },
     },

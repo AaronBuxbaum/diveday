@@ -1,4 +1,6 @@
 import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -20,6 +22,7 @@ import {
   selectCaptures,
   shardCount,
 } from "./visual-affected.mjs";
+import { visualSpecs } from "./visual-specs.mjs";
 
 /** A `playwright test --list --reporter=json` report of two describes, as the real one nests. */
 const report = {
@@ -594,8 +597,11 @@ describe("the pieces", () => {
     expect(shardCount(["a", "b"], {})).toBe(2);
   });
 
-  it("names a smoke set the visual spec still has, so a rename cannot empty it silently", () => {
-    const spec = readFileSync(new URL("../e2e/visual.spec.ts", import.meta.url), "utf8");
+  it("names a smoke set the visual specs still have, so a rename cannot empty it silently", () => {
+    const root = fileURLToPath(new URL("..", import.meta.url));
+    const spec = visualSpecs(root)
+      .map((file) => readFileSync(path.join(root, file), "utf8"))
+      .join("\n");
     for (const pattern of SMOKE) {
       const title = pattern.source.replace(/^› /, "").replace(/\\\($/, "(").replace(/\\/g, "");
       expect(spec, title).toContain(title);

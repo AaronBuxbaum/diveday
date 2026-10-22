@@ -15,7 +15,7 @@ every other section stands.
 | Fetch boundary | Vitest + MSW, e.g. `offline-manifest-store.test.ts` | client code calling one of our own `/api/*` routes ([ADR 20260719](../architecture/decisions/20260719-msw-offline-sync-only.md)) | server-side providers |
 | Request-level | Playwright's `request` fixture, or a route-handler unit test | redirects, sitemap, feeds, webhooks, status probes, refusals | a browser |
 | Browser | Playwright, `e2e/*.spec.ts` | the [critical journeys](#critical-journeys) and the flows a change touches: the happy path plus the refusals that protect safety or money; found by role and message key | exact wording, layout, edge cases a rules test can carry |
-| Screenshots | reg-suit + S3, `e2e/visual.spec.ts` | a surface's populated and trouble states, per [captures.md](../../.claude/skills/e2e-and-visual/captures.md): light at phone and desktop, dark at desktop only, plus print ([ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md)) | proving behavior |
+| Screenshots | reg-suit + S3, `e2e/visual-*.spec.ts` | a surface's populated and trouble states, per [captures.md](../../.claude/skills/e2e-and-visual/captures.md): light at phone and desktop, dark at desktop only, plus print ([ADR 20260729](../architecture/decisions/20260729-reg-suit-visual-regression.md)) | proving behavior |
 | Repo checks | `pnpm check:repo` (`scripts/check-*.mjs`) and the Vitest `guards` project | every rule that reads source: "every X has Y", no raw colour, one way imports | a single page's markup |
 | Coverage floors | `@vitest/coverage-v8`, ci.yml's `coverage-floors` ([below](#coverage-floors)) | branch coverage of the eleven safety files never falling | a coverage target for the rest of the tree |
 | Mutation | Stryker, `mutation.yml` ([below](#mutation-testing)) | survivors in the safety rules, filed as issues | failing a run |
@@ -53,7 +53,7 @@ assertion: the screenshot shows the overlap gone.
 3. A new or changed flow: extend the spec that walks it; a new spec file only for a new kind of
    user or a new entry point. A new journey a shop could not run a day without gets a row in
    [Critical journeys](#critical-journeys).
-4. A new screen or state: a capture in `e2e/visual.spec.ts`, in the matrix above;
+4. A new screen or state: a capture in its feature's `e2e/visual-*.spec.ts`, in the matrix above;
    [captures.md](../../.claude/skills/e2e-and-visual/captures.md) says which states earn one.
 5. A wording-only change: no new test.
 6. A redirect, feed, webhook or probe: a request-level test.
@@ -144,21 +144,23 @@ What a diff runs is decided by reading it, at two places:
   follows each changed declaration by name (`scripts/symbol-reach.mjs`: through imports, barrels
   and re-exports, not whole files) to the routes that render it, a changed message key to the
   modules that name it, a `public/` asset to the code that names its path, and picks the captures
-  that visit those routes plus a fixed smoke set; an edit inside `e2e/visual.spec.ts` or a capture
+  that visit those routes plus a fixed smoke set; an edit inside an `e2e/visual-*.spec.ts` or a capture
   helper picks the captures it touched. It captures everything for the capture harness, the seed
   and schema, a stylesheet, a root config or renderer dependency, a module every page runs (the
   proxy, the service worker), and its own plumbing (`ci.yml`, the setup action, these scripts). The `visual-all` label forces
   everything; every surface not captured is copied from the baseline before the compare.
   Locally, `--grep <file>` writes the light-mode Playwright grep for the same selection.
 - **Specs before a push**: `scripts/e2e-affected.mjs`, run by `verify:push`. *Strong*: a spec or
-  helper the diff edits, a spec quoting text the diff removed, a spec visiting a route whose own
-  directory changed. *Smoke*: five tests (booking, a waiver, check-in, roll call offline, sign-in)
+  helper the diff edits, a spec quoting text the diff removed (a seeded name included), a spec
+  reading an en-US key whose value changed by its full dotted key, a spec naming a seeded record
+  or seed constant on a changed seed line when at most three specs name it, a spec visiting a
+  route whose own directory changed. *Smoke*: five tests (booking, a waiver, check-in, roll call offline, sign-in)
   whenever the app changed. *Reach*: specs visiting a route the changed names reach, ranked by how
   much of the diff's vocabulary they name, run while they fit the time budget. `--commit <sha>`
   replays one commit, to score the selector against what CI caught.
 
 **One `capture()` is three images** (four for a `TABLET_SURFACES` name): light at 390 and 1280
-(and 820 for a tablet surface), dark at 1280 only (`DARK_VIEWPORTS` in `e2e/visual.spec.ts`);
+(and 820 for a tablet surface), dark at 1280 only (`DARK_VIEWPORTS` in `e2e/visual-viewports.ts`);
 `captureStickyFoot()` follows the same rule and the phone fold capture is light only. A full run is
 912 images, down from 1,218. The accepted risk is a dark-only defect that shows only at phone
 width.
@@ -339,7 +341,7 @@ tree is also what ADR 20260730-pinned-browser-visual-determinism assumes.
 ## The route coverage ledger
 
 `pnpm check:route-coverage` (part of `pnpm check:repo`) checks static source associations for every
-`src/app/**/page.tsx` route: an `e2e/*.spec.ts` file and an `e2e/visual.spec.ts` capture, or a written
+`src/app/**/page.tsx` route: an `e2e/*.spec.ts` file and an `e2e/visual-*.spec.ts` capture, or a written
 `exempt` reason for the half it lacks. A spec's path literal associates it with a route; a capture
 uses the last such literal within its test. These associations are candidates for coverage, not
 proof that a route was visited or a capture ran. A capture never counts as a route's flow spec.
@@ -687,7 +689,7 @@ the full suite locally with identical pass counts across repeated runs.
   `DIVEDAY_E2E_SECRET` bearer token, failing closed). `pnpm check:e2e-fixtures` fails when a handler
   under `src/app/api/test/**` doesn't call it, and each route carries auth-gate unit tests asserting
   the refusal lands before any database work.
-- **Visual regression freezes the clock, never masks.** `e2e/visual.spec.ts` photographs each
+- **Visual regression freezes the clock, never masks.** The `e2e/visual-*.spec.ts` files photograph each
   surface through `capture()` (or `capturePrint()` for the dock surfaces). Nothing is masked: the
   server clock is pinned by `DIVEDAY_CLOCK` and the browser clock by fixture setup, so
   clock-derived text is pixel-stable and a regression in a date stays visible. Each capture first

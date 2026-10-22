@@ -95,7 +95,7 @@ export function MarketingHeroMotion({ children }: { children: ReactNode }) {
  * **A reader never needs it; the camera does.** The withholding happens in a
  * layout effect, so it cannot happen before hydration, and anything that wants
  * to know whether a page is finished hiding things has otherwise only a guess
- * about when React got there. `e2e/visual.spec.ts` waits for this before its
+ * about when React got there. `e2e/visual-harness.ts` waits for this before its
  * scroll-through, which is the pass that reveals the sections again — without
  * it the two race, and the race is what put a hero, nine thousand blank pixels
  * and a footer into the `product-dark-vw-390` baseline (issue #1910).

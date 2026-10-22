@@ -618,7 +618,7 @@ async function snap(page: Page, index: number, id: string, suffix = ""): Promise
   // renders every `position: sticky` element at the offset it is stuck at
   // rather than at rest. The staff header then lands in the middle of the
   // transcript's screenshot, lying across the content it was taken to show
-  // (`13-day-closed.png` had it over the 11:00 station). `e2e/visual.spec.ts`
+  // (`13-day-closed.png` had it over the 11:00 station). `e2e/visual-harness.ts`
   // scrolls to the top for exactly this reason, and warns when a page scrolls
   // itself away again.
   await page.evaluate(() => {

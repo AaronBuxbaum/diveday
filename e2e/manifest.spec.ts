@@ -22,7 +22,7 @@ signedInAsOwner();
 // The worker *activated*, not this page *controlled*: a page whose own
 // navigation was in flight when the worker activated is never claimed, and
 // waiting on its controller then waits forever (visual run 36103429213; see
-// `settleOfflineShellWorker` in visual.spec.ts). Every caller proves the shell
+// `settleOfflineShellWorker` in visual-harness.ts). Every caller proves the shell
 // with a fresh navigation — a reload, a goto — which an activated worker
 // controls from its first byte, so that is the state worth waiting for.
 async function waitForShellPrimed(page: Page) {

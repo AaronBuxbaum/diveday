@@ -20,6 +20,10 @@
 // Left alone: a push of a commit the remote already has, a branch deletion, a tag push, and a
 // push in any directory that is not this repository's checkout or one of its worktrees.
 //
+// A push whose layer below is red on tests this branch does not edit, and that its stamp did not
+// replay, is let through with a loud warning naming that layer (`scripts/red-below.mjs` says why
+// it is not a refusal).
+//
 // The contract is Claude Code's: JSON on stdin, exit 2 with the reason on stderr to block, exit 0
 // to stay out of the way. It fails open on anything it does not understand.
 
@@ -29,8 +33,11 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { readBaseVerdict, repoSlug } from "./base-ci.mjs";
 import { recordOverride, recordRefusal } from "./hook-log.mjs";
+import { pushWarning } from "./red-below.mjs";
 import { gitReader } from "./stack-map.mjs";
+import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { branchLabel, tracker } from "./tracker.mjs";
 
 export const OVERRIDE = "DIVEDAY_PUSH_UNVERIFIED";
@@ -172,6 +179,73 @@ export function pushViolation(command, read, cwd = ".") {
   return null;
 }
 
+/**
+ * The directories `command` pushes commits from (a `cd <dir> &&` or `git -C <dir>` resolved from
+ * `cwd`); a branch deletion or a tag push is not one.
+ */
+export function pushDirs(command, cwd = ".") {
+  if (typeof command !== "string") return [];
+  let dir = cwd;
+  const dirs = [];
+  for (const segment of segments(command)) {
+    const cd = segment.match(/^cd\s+("[^"]*"|'[^']*'|\S+)$/);
+    if (cd) {
+      dir = path.resolve(dir, unquote(cd[1]));
+      continue;
+    }
+    const push = parsePush(segment);
+    if (!push) continue;
+    if (push.flags.some((flag) => flag === "--delete" || flag === "-d" || flag === "--tags")) {
+      continue;
+    }
+    if (push.positional.slice(1).some((spec) => spec.startsWith(":"))) continue;
+    dirs.push(push.dir ? path.resolve(dir, push.dir) : dir);
+  }
+  return [...new Set(dirs)];
+}
+
+/** How long the red-below read may take, inside the hook's 30-second ceiling. */
+const RED_BELOW_BUDGET_MS = 15_000;
+
+/**
+ * The red-below warning for a push from `dir` (scripts/red-below.mjs), or null. Never a refusal,
+ * and null on anything it cannot read: the guard fails open.
+ */
+export function redBelowWarning(dir, { now = Date.now } = {}) {
+  try {
+    const git = gitReader(dir);
+    const deadline = now() + RED_BELOW_BUDGET_MS;
+    const gh = (args) => {
+      if (now() > deadline) throw new Error("out of time");
+      return JSON.parse(
+        readBounded("gh", ["api", ...args], {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+          timeoutMs: SUBPROCESS_TIMEOUTS.ghHookRead,
+        }),
+      );
+    };
+    const repo = repoSlug(git(["remote", "get-url", "origin"]));
+    const head = git(["rev-parse", "HEAD"]);
+    const file = verifiedFile(
+      git(["rev-parse", "--path-format=absolute", "--git-common-dir"]),
+      head,
+    );
+    let stamp = null;
+    try {
+      stamp = file ? JSON.parse(readFileSync(file, "utf8")) : null;
+    } catch {}
+    return pushWarning({
+      git,
+      pulls: () => tracker().listPulls(),
+      readVerdict: (sha) => readBaseVerdict(sha, { repo, gh }),
+      stamp,
+    });
+  } catch {
+    return null;
+  }
+}
+
 /** The reason a push in `command` gives for skipping verify:push, when it is long enough to count. */
 export function overrideReason(command) {
   if (typeof command !== "string") return null;
@@ -292,7 +366,20 @@ async function main() {
       detail: gitAnswers(cwd).head(),
     });
   }
-  if (!reason) return;
+  if (!reason) {
+    // Loud, never a refusal: see scripts/red-below.mjs for why a push is not blocked on it.
+    const warnings = pushDirs(command, cwd)
+      .map((dir) => redBelowWarning(dir))
+      .filter(Boolean);
+    if (warnings.length > 0) {
+      const text = `scripts/guard-push.mjs: ${[...new Set(warnings)].join("\n")}`;
+      console.error(text);
+      process.stdout.write(
+        `${JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: text } })}\n`,
+      );
+    }
+    return;
+  }
   recordRefusal("guard-push", reason, { session: parsed.session_id });
   console.error(`Refused by scripts/guard-push.mjs: ${reason}`);
   process.exit(2);

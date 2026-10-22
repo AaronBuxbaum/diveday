@@ -71,14 +71,14 @@ pnpm e2e e2e/<flow>.spec.ts --reporter=line   # one spec; the whole suite runs o
 ```
 
 If new user-facing flows were added, extend `e2e/` with a smoke spec for them first, and add a
-visual snapshot in `e2e/visual.spec.ts` for any new surface (see the `e2e-and-visual` skill). `pnpm
+visual snapshot in the feature's `e2e/visual-*.spec.ts` for any new surface (see the `e2e-and-visual` skill). `pnpm
 lint` includes the `clock` rule, which fails if domain/data code reads the wall clock directly.
 
 ## 3. UI changed: look at it
 
 Never ship UI you haven't seen; the commands, the probe and the dev-server traps are in
 [look.md](look.md). In light only (dark only for colour work, H-90): `pnpm e2e:build` once, then
-`pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*<capture group>' --reporter=line` (or the
+`pnpm e2e:run e2e/visual-<feature>.spec.ts -g 'light mode.*<capture group>' --reporter=line` (or the
 captures the diff reaches, by the **e2e-and-visual** skill's `--grep` recipe), read the PNGs
 in `e2e/screenshots/` against `docs/design/principles.md`'s checklist, and give every pixel-probe
 flag a verdict. No capture group: `node scripts/screenshot.mjs <path>`. Significant UI: the

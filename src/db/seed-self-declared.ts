@@ -60,7 +60,7 @@ import { recordSelfDeclaredCards } from "./self-declared-cards";
  * recipient before a demo visitor opens it. Rowan still starts tomorrow, which
  * keeps the first capture's list realistic without putting two marked rows on
  * the three-person headline list. The reef panel's two visual baselines and
- * exact-count wait are consequently updated together in `e2e/visual.spec.ts`.
+ * exact-count wait are consequently updated together in `e2e/visual-staff-trips.spec.ts`.
  */
 const AVAILABLE_UNTIL_DAYS = 30;
 

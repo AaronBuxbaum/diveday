@@ -18,7 +18,7 @@ signedInAsOwner();
  * counts — so every create in this file pays one board render on the way in and
  * another on the way out. Measured against the default 15s budget that is not a
  * hang, it is aggregate per-navigation cost across a sequence, the same
- * reasoning e2e/role-permissions.spec.ts and e2e/visual.spec.ts already carry.
+ * reasoning e2e/role-permissions.spec.ts and the visual specs already carry.
  */
 const BOARD_FLOW_TIMEOUT_MS = 30_000;
 
@@ -207,7 +207,7 @@ test("staff moves a departure to a different boat after it is on the board", asy
   // it.
   await openTripAbout(page);
   await page.getByText("Edit details", { exact: true }).click();
-  // Located by its form name, the same shape `visual.spec.ts` uses for the
+  // Located by its form name, the same shape the visual specs use for the
   // onboarding inputs. Not by label: `Field` renders its `(optional)` hint
   // inside the caption, so an accessible-name match here is fragile in a way
   // that says nothing about the behaviour under test. There is exactly one

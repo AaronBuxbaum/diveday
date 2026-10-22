@@ -68,7 +68,7 @@ test.describe("as owner", () => {
   }) => {
     // Invites a new member, signs in as them, then removes and undoes it —
     // several full navigations and status-toast waits chained in one test.
-    // Same aggregate-cost reasoning as visual.spec.ts's `test.setTimeout`: a
+    // Same aggregate-cost reasoning as the visual specs' `test.setTimeout`: a
     // traced CI failure measured the total sequential cost at 17.7s against
     // the default 15s test timeout, every individual step resolving
     // successfully. The `signedInAs("owner")` above only removes the

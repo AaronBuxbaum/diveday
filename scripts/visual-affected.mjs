@@ -29,15 +29,15 @@
 //   - a locale bundle: the keys whose value changed, mapped to the modules that name them;
 //   - a `public/` asset: the modules that name its path (or its folder, for a path built from
 //     a slug);
-//   - `e2e/visual.spec.ts`: the captures whose lines changed, and the captures that call a
-//     helper whose lines changed;
+//   - a visual spec (`e2e/visual-*.spec.ts`, one per feature): the captures whose lines changed,
+//     and the captures that call a helper whose lines changed;
 //   - a module: its changed lines, followed name by name to the pages that read them
 //     (`symbol-reach.mjs`; a layout's reach is every page beneath it); a module no page reads
 //     (a test fixture, a script's helper, a deleted file whose importers are in the same diff)
 //     moves nothing, and a not-found or error page moves only the captures that show one.
 //
 // Which routes a capture visits is read from its own source: the test's lines in
-// `e2e/visual.spec.ts` and the bodies of the helpers it calls (the spec's own and
+// its `e2e/visual-*.spec.ts` and the bodies of the helpers it calls (the spec's own and
 // `e2e/helpers.ts`'s), transitively. A capture is picked when a route it names is the changed
 // route or an ancestor of it — a test that opens the staff day and clicks into a trip is picked
 // for a change to the trip page — or, for a layout change, a descendant. A capture that names no
@@ -64,7 +64,7 @@ import { importersOf, importGraph, routeOf } from "./e2e-affected.mjs";
 import { listedTests, testListLine } from "./e2e-shard.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { changedLinesByFile, moduleIndex, readModules, symbolReach } from "./symbol-reach.mjs";
-import { visualSpecs } from "./visual-specs.mjs";
+import { isVisualSpec, visualSpecs } from "./visual-specs.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -281,7 +281,7 @@ function namedBy(needles, sources, { code = true } = {}) {
  * Why `changed` cannot be bounded (a reason to capture everything), or the routes it reaches:
  * `{ all: string }` or `{ routes: [{ route, broad }], boundaries, visualSpec, helpersEdited }`:
  * `boundaries` are the not-found and error pages edited (`{ route, boundary }`); the two flags
- * say {@link editedCaptures} must read `e2e/visual.spec.ts`'s or `e2e/helpers.ts`'s changed lines.
+ * say {@link editedCaptures} must read the visual spec's or `e2e/helpers.ts`'s changed lines.
  *
  * `context` reads what a path alone cannot say; each piece left out falls back to capturing
  * everything for the files that need it:
@@ -325,7 +325,7 @@ export function changedRoutes(changed, graph, context = {}) {
   };
   for (const file of changed) {
     if (INERT.test(file)) continue;
-    if (file === "e2e/visual.spec.ts") {
+    if (isVisualSpec(file)) {
       visualSpec = true;
       continue;
     }
@@ -571,11 +571,11 @@ export function captureSpans(report, sourceLines, visualSources = new Map()) {
 }
 
 /**
- * What an edit to `e2e/visual.spec.ts` recaptures: the captures whose test body holds a changed
+ * What an edit to the visual spec `file` recaptures: the captures whose test body holds a changed
  * line, and those that call (transitively) a helper whose lines changed. A changed line in
  * neither (an import, a `beforeEach`, a describe's options) can move any capture: `{ all }`.
  */
-export function editedCaptures(spans, source, changed) {
+export function editedCaptures(spans, source, changed, file = "the visual spec") {
   const sourceLines = source.split("\n");
   const helpers = helperSpans(source);
   const touched = new Set();
@@ -602,7 +602,7 @@ export function editedCaptures(spans, source, changed) {
       continue;
     }
     if (/^\s*(?:\/\/.*)?$/.test(sourceLines[line - 1] ?? "")) continue;
-    return { all: `e2e/visual.spec.ts line ${line} sits outside every capture and helper` };
+    return { all: `${file} line ${line} sits outside every capture and helper` };
   }
   return { at: hitAt, helpers: touched };
 }
@@ -629,8 +629,8 @@ export function editedHelpers(source, changed) {
 /**
  * The selection. Returns `{ mode: "all", why }` or `{ mode: "affected", lines, why }`, where
  * `lines` is the set of `--test-list` lines to capture. `context` is {@link changedRoutes}'s;
- * `visualLines` and `helperLines` the new-side lines a diff changes in `e2e/visual.spec.ts` and
- * `e2e/helpers.ts` (whose text is `helpersSource`).
+ * `visualLines` and `helperLines` the new-side lines a diff changes in the visual spec `file`
+ * (whose text is `source`) and `e2e/helpers.ts` (whose text is `helpersSource`).
  */
 export function selectCaptures({
   changed,
@@ -643,6 +643,7 @@ export function selectCaptures({
   helperLines,
   helpersSource,
   visualSources = new Map(),
+  file = "the visual spec",
 }) {
   const reach = changedRoutes(changed, graph, context);
   if (reach.all) return { mode: "all", why: reach.all };
@@ -652,11 +653,12 @@ export function selectCaptures({
     return { mode: "all", why: `${missing.file} was not read for its capture locations` };
   let edits = { at: new Set(), helpers: new Set() };
   if (reach.visualSpec) {
-    if (!visualLines) return { mode: "all", why: "e2e/visual.spec.ts changed in lines not read" };
+    if (!visualLines) return { mode: "all", why: `${file} changed in lines not read` };
     edits = editedCaptures(
       spans.filter((span) => span.file === span.rootFile),
       source,
       visualLines,
+      file,
     );
     if (edits.all) return { mode: "all", why: edits.all };
   }
@@ -780,8 +782,8 @@ export function readSources(root = ROOT) {
 
 /**
  * Everything {@link selectCaptures} reads from git and the tree, for a diff from `forkPoint` to
- * HEAD: the changed paths, the {@link changedRoutes} context, and the changed lines of the visual
- * spec and the e2e helpers.
+ * HEAD: the changed paths, the {@link changedRoutes} context, and the changed lines of the e2e
+ * helpers (each visual spec's own are read per file, in {@link selectCaptureFiles}).
  */
 export function diffContext({ root = ROOT, git = gitReader(root), forkPoint }) {
   const names = git(["diff", "--name-only", forkPoint, "HEAD"]);
@@ -813,7 +815,6 @@ export function diffContext({ root = ROOT, git = gitReader(root), forkPoint }) {
       ),
       modules: moduleIndex(readModules(root)),
     },
-    visualLines: lines("e2e/visual.spec.ts"),
     helperLines: lines("e2e/helpers.ts"),
     helpersSource: read("e2e/helpers.ts") ?? undefined,
   };
@@ -851,13 +852,13 @@ export function selectCaptureFiles({
       ...report,
       suites: report.suites.filter((suite) => path.basename(suite.file) === path.basename(file)),
     };
-    const changed = diff.changed
-      .filter((name) => !files.includes(name) || name === file)
-      .map((name) => (name === file ? "e2e/visual.spec.ts" : name));
+    // Another visual spec's edit is that file's own selection, never this one's.
+    const changed = diff.changed.filter((name) => !files.includes(name) || name === file);
     const visualLines = linesFor(file);
     return selectCaptures({
       ...diff,
       changed,
+      file,
       visualLines,
       graph,
       report: fileReport,
