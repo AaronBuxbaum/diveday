@@ -6,7 +6,14 @@ import { raceShop, withinOrParked } from "@/test/postgres-shop";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { assignHelpRequestHelper, saveHelpRequest } from "./help-requests";
-import { people, personRoles, tripAssignments, tripHelpRequests, trips } from "./schema";
+import {
+  people,
+  personRoles,
+  tripAssignments,
+  tripHelpRequests,
+  trips,
+  userAccounts,
+} from "./schema";
 import { setTripCrew } from "./trips";
 
 /** A statement trigger parks removal after request cleanup but before assignment tuple locks. */
@@ -21,6 +28,10 @@ async function requestedHelp(db: AppDb) {
     .returning();
   if (!helper) throw new Error("helper insert failed");
   await db.insert(personRoles).values({ personId: helper.id, role: "crew" });
+  // The helper is also the acting staffer, so it needs the active account every staff write checks.
+  await db
+    .insert(userAccounts)
+    .values({ personId: helper.id, email: `${helper.id}@example.invalid` });
   const [trip] = await db
     .insert(trips)
     .values({

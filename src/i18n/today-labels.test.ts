@@ -7,6 +7,7 @@ import {
   daySpineSummaryText,
   helpRequestActionText,
   helpRequestDetailText,
+  helpRequestMeetingText,
   reviewsPendingSubjectText,
   rollCallGapDetailText,
   unansweredMessagesSubjectText,
@@ -196,8 +197,18 @@ describe("a Needs you row's sentence", () => {
         helperPersonName: "Sam Rivera",
       }),
     ).toBe("Sam Rivera will help with finding their group.");
-    expect(helpRequestActionText(en, "requested")).toBe("Arrange help");
-    expect(helpRequestActionText(en, "acknowledged", "Sam Rivera")).toBe("Help completed");
+    // The label the row's control opens its crew choice with: one source for both.
+    expect(helpRequestActionText(en, null)).toBe("Arrange help");
+    expect(helpRequestActionText(en, "Sam Rivera")).toBe("Change helper");
+  });
+
+  it("joins the meeting label and place in the bundle, not in the control", () => {
+    expect(helpRequestMeetingText(staffTranslator("en-US"), "North dock")).toBe(
+      "Departure meeting: North dock",
+    );
+    expect(helpRequestMeetingText(staffTranslator("es-ES"), "Muelle norte")).toBe(
+      "Encuentro de la salida: Muelle norte",
+    );
   });
 
   it("ends with a period, the count-only rows included", () => {

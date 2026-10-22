@@ -44,7 +44,8 @@
   (`carry gear`, `first-timer orientation`, or `find my group`). It is scoped to one booking,
   expires from active Today work when the trip ends, and moves through `requested`,
   `acknowledged`, and `handled`. `Acknowledged` records the crew member who agreed after the desk
-  spoke with them; `handled` preserves that helper and can be undone back to the assigned state.
+  spoke with them; `handled` preserves that helper, even after they leave the crew, and can be
+  undone back to the assigned state while the departure is live and the helper is still on it.
   Staff actions apply only to the displayed request revision; replacing the request or changing
   its handoff invalidates older assignment, completion and undo forms.
   It is not a social feed, medical record, or free-text inbox.

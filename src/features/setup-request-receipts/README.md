@@ -9,7 +9,7 @@ Decision: [20261021-setup-request-receipts](../../../docs/architecture/decisions
 
 `sendSetupRequestReceipt(id)` is exported by `index.ts`. It claims the request through the database
 module, rereads the claimed recipient, sends through the notification provider with one attempt,
-and records the outcome. The app's receipt module is a thin adapter.
+and records the outcome.
 
 ## Invariants
 

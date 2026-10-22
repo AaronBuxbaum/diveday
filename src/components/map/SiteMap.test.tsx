@@ -323,6 +323,33 @@ describe("SiteMap labels through Leaflet", () => {
     sessionStorage.clear();
   });
 
+  it("fits the changed pins instead of restoring a camera saved against other pins", async () => {
+    const L = await import("leaflet");
+    const getContainer = vi.spyOn(L.Map.prototype, "getContainer");
+    const key = "test-map-camera-pins";
+    sessionStorage.clear();
+    const first = render(
+      <SiteMap center={CENTER} pins={[PIN]} clusterLabel="dive sites" viewportStorageKey={key} />,
+    );
+    await markerButton(first.container);
+    const map = getContainer.mock.contexts[0];
+    if (!(map instanceof L.Map)) throw new Error("Map did not mount");
+    map.setView([26, -81], 7, { animate: false });
+    first.unmount();
+    getContainer.mockClear();
+    // A new site saved elsewhere: the library reopens on a different pin set.
+    const moved: MapPin = { ...PIN, id: "wreck", latitude: 24.46, longitude: -81.88 };
+    const second = render(
+      <SiteMap center={CENTER} pins={[moved]} clusterLabel="dive sites" viewportStorageKey={key} />,
+    );
+    await markerButton(second.container);
+    const refit = getContainer.mock.contexts[0];
+    if (!(refit instanceof L.Map)) throw new Error("Refit map did not mount");
+    expect(refit.getCenter().lat).toBeCloseTo(moved.latitude);
+    expect(refit.getCenter().lng).toBeCloseTo(moved.longitude);
+    sessionStorage.clear();
+  });
+
   it("opens an isolated marker at the wide overview and switches selected popups", async () => {
     const { container } = await sizedOverview({ width: 640, height: 440 });
     const buttons = container.querySelectorAll<HTMLButtonElement>(".leaflet-site-marker button");

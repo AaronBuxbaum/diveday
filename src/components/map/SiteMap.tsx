@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { mapTileLayer } from "@/lib/carto";
 import { clusterMapPoints, mapTargetIsVisible, separateShopAnchor } from "./map-clustering";
 import { labelRectangle, placeMapLabel, rectanglesOverlap } from "./map-label-placement";
-import { readMapViewport, writeMapViewport } from "./map-viewport-storage";
+import { mapCoordinateKey, readMapViewport, writeMapViewport } from "./map-viewport-storage";
 
 export type MapPin = {
   id: string;
@@ -66,7 +66,8 @@ export default function SiteMap({
   const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
   const markersRef = useRef<Map<string, LeafletMarker>>(new Map());
   const lastFitRef = useRef<FittedOverview | null>(null);
-  const restoredViewRef = useRef(false);
+  /** The pins a restored camera was saved against; the overview refits once they change. */
+  const restoredViewRef = useRef<string | null>(null);
   const [activePinId, setActivePinId] = useState(selectedPinId ?? null);
   const activePinIdRef = useRef(selectedPinId ?? null);
   useEffect(() => {
@@ -79,6 +80,10 @@ export default function SiteMap({
     coordinates.push(...pins.map((pin): [number, number] => [pin.latitude, pin.longitude]));
     return coordinates;
   }, [pins, shopAnchor]);
+  const coordinateKey = useMemo(() => mapCoordinateKey(allCoordinates), [allCoordinates]);
+  // Read by the save paths, which outlive the render that set them up.
+  const coordinateKeyRef = useRef(coordinateKey);
+  coordinateKeyRef.current = coordinateKey;
 
   // Initialize Leaflet once the client component has mounted.
   useEffect(() => {
@@ -89,8 +94,10 @@ export default function SiteMap({
       if (isCancelled || !containerRef.current) return;
       if (mapRef.current) return;
 
-      const savedView = viewportStorageKey ? readMapViewport(viewportStorageKey) : null;
-      restoredViewRef.current = savedView !== null;
+      const savedView = viewportStorageKey
+        ? readMapViewport(viewportStorageKey, coordinateKeyRef.current)
+        : null;
+      restoredViewRef.current = savedView ? coordinateKeyRef.current : null;
       const map = L.map(containerRef.current, {
         center: savedView
           ? [savedView.latitude, savedView.longitude]
@@ -120,7 +127,9 @@ export default function SiteMap({
     return () => {
       isCancelled = true;
       if (mapRef.current) {
-        if (viewportStorageKey) persistMapView(mapRef.current, viewportStorageKey);
+        if (viewportStorageKey) {
+          persistMapView(mapRef.current, viewportStorageKey, coordinateKeyRef.current);
+        }
         mapRef.current.remove();
         markersRef.current.clear();
         mapRef.current = null;
@@ -130,24 +139,16 @@ export default function SiteMap({
     };
   }, [center.latitude, center.longitude, viewportStorageKey, zoom]);
 
-  // Keep the untouched overview fitted as its container changes size.
-  useEffect(() => {
-    if (!mapInstance || allCoordinates.length === 0 || restoredViewRef.current) return;
-    return keepOverviewFitted(mapInstance, allCoordinates, zoom, lastFitRef, markersRef.current);
-  }, [allCoordinates, mapInstance, zoom]);
-
-  useEffect(() => {
-    if (!mapInstance || !viewportStorageKey) return;
-    const saveView = () => {
-      if (mapRef.current === mapInstance) persistMapView(mapInstance, viewportStorageKey);
-    };
-    saveView();
-    mapInstance.on("moveend", saveView);
-    return () => {
-      saveView();
-      mapInstance.off("moveend", saveView);
-    };
-  }, [mapInstance, viewportStorageKey]);
+  useOverviewFit({
+    mapInstance,
+    allCoordinates,
+    coordinateKey,
+    zoom,
+    lastFitRef,
+    markersRef,
+    restoredViewRef,
+  });
+  useViewportSaving(mapInstance, mapRef, viewportStorageKey, coordinateKeyRef);
 
   // Render only pins near the viewport and cluster close points to keep marker
   // work proportional to the visible map while retaining every site in bounds.
@@ -452,13 +453,74 @@ function selectMapPin(
   }
 }
 
-function persistMapView(map: LeafletMap, key: string) {
+/**
+ * Keep the untouched overview fitted as its container changes size. A restored camera holds
+ * until the pins differ from the ones it was saved against.
+ */
+function useOverviewFit({
+  mapInstance,
+  allCoordinates,
+  coordinateKey,
+  zoom,
+  lastFitRef,
+  markersRef,
+  restoredViewRef,
+}: {
+  mapInstance: LeafletMap | null;
+  allCoordinates: [number, number][];
+  coordinateKey: string;
+  zoom: number;
+  lastFitRef: { current: FittedOverview | null };
+  markersRef: { current: Map<string, LeafletMarker> };
+  restoredViewRef: { current: string | null };
+}) {
+  useEffect(() => {
+    if (!mapInstance || allCoordinates.length === 0) return;
+    if (restoredViewRef.current !== null) {
+      if (restoredViewRef.current === coordinateKey) return;
+      restoredViewRef.current = null;
+    }
+    return keepOverviewFitted(
+      mapInstance,
+      allCoordinates,
+      coordinateKey,
+      zoom,
+      lastFitRef,
+      markersRef.current,
+    );
+  }, [allCoordinates, coordinateKey, mapInstance, zoom, lastFitRef, markersRef, restoredViewRef]);
+}
+
+/** Save the camera, with the pins it was taken against, on every settled move and on unmount. */
+function useViewportSaving(
+  mapInstance: LeafletMap | null,
+  mapRef: { current: LeafletMap | null },
+  viewportStorageKey: string | undefined,
+  coordinateKeyRef: { current: string },
+) {
+  useEffect(() => {
+    if (!mapInstance || !viewportStorageKey) return;
+    const saveView = () => {
+      if (mapRef.current === mapInstance) {
+        persistMapView(mapInstance, viewportStorageKey, coordinateKeyRef.current);
+      }
+    };
+    saveView();
+    mapInstance.on("moveend", saveView);
+    return () => {
+      saveView();
+      mapInstance.off("moveend", saveView);
+    };
+  }, [mapInstance, mapRef, viewportStorageKey, coordinateKeyRef]);
+}
+
+function persistMapView(map: LeafletMap, key: string, coordinates: string) {
   const position = map.getCenter();
-  writeMapViewport(key, {
-    latitude: position.lat,
-    longitude: position.lng,
-    zoom: map.getZoom(),
-  });
+  writeMapViewport(
+    key,
+    { latitude: position.lat, longitude: position.lng, zoom: map.getZoom() },
+    coordinates,
+  );
 }
 
 function updateOpenPopup(marker: LeafletMarker) {
@@ -476,13 +538,11 @@ function updateOpenPopup(marker: LeafletMarker) {
 function keepOverviewFitted(
   map: LeafletMap,
   coordinates: [number, number][],
+  coordinateKey: string,
   zoom: number,
   lastFit: { current: FittedOverview | null },
   markers: ReadonlyMap<string, LeafletMarker>,
 ) {
-  const coordinateKey = coordinates
-    .map(([latitude, longitude]) => `${String(latitude)},${String(longitude)}`)
-    .join(";");
   const fitOverview = () => {
     if (coordinates.length === 1) {
       map.setView(coordinates[0], Math.min(map.getZoom(), zoom), { animate: false });

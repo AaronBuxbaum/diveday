@@ -1,7 +1,8 @@
 import { and, asc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { STAFF_ROLES } from "@/lib/authz";
+import { isStaff, STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, AppTransaction } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { lockHelpRequestDeparture } from "./help-request-lock";
@@ -288,26 +289,50 @@ export type HelpRequestMutationResult =
   | { ok: true; request: HelpRequest }
   | { ok: false; reason: "unavailable" | "invalid_transition" | "invalid_helper" };
 
-/** The actor must still be an active staff member in this shop at write time. */
+/**
+ * The actor must still be an active staff member in this shop at write time:
+ * this shop's live person, an active sign-in account, and a staff role. The
+ * same check every other write-time staff recheck uses (`manifests.ts`).
+ */
 async function isActiveStaff(
   tx: AppTransaction,
   shopId: string,
   personId: string,
 ): Promise<boolean> {
-  const [staff] = await tx
+  const roles = await loadActiveStaffRoles(tx, shopId, personId);
+  return roles !== null && isStaff(roles);
+}
+
+/**
+ * The helper must be this shop's live staff member and on this departure's
+ * crew. The share lock holds the crew row until the write commits, so a crew
+ * removal cannot slip between this check and the update.
+ */
+async function isEligibleHelper(
+  tx: AppTransaction,
+  shopId: string,
+  tripId: string,
+  helperPersonId: string,
+): Promise<boolean> {
+  const [helper] = await tx
     .select({ id: people.id })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .innerJoin(
+      tripAssignments,
+      and(eq(tripAssignments.personId, people.id), eq(tripAssignments.tripId, tripId)),
+    )
     .where(
       and(
-        eq(people.id, personId),
+        eq(people.id, helperPersonId),
         eq(people.shopId, shopId),
         livePerson(),
         inArray(personRoles.role, [...STAFF_ROLES]),
       ),
     )
-    .limit(1);
-  return Boolean(staff);
+    .limit(1)
+    .for("share", { of: tripAssignments });
+  return Boolean(helper);
 }
 
 /** Record the named crew member who agreed after the desk spoke with them. */
@@ -357,28 +382,11 @@ export async function assignHelpRequestHelper(
     if (!(await isActiveStaff(tx, input.shopId, input.actorPersonId))) {
       return { ok: false, reason: "unavailable" };
     }
-    const [eligibleHelper] = await tx
-      .select({ id: people.id })
-      .from(people)
-      .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .innerJoin(
-        tripAssignments,
-        and(
-          eq(tripAssignments.personId, people.id),
-          eq(tripAssignments.tripId, existing.request.tripId),
-        ),
-      )
-      .where(
-        and(
-          eq(people.id, input.helperPersonId),
-          eq(people.shopId, input.shopId),
-          livePerson(),
-          inArray(personRoles.role, [...STAFF_ROLES]),
-        ),
-      )
-      .limit(1)
-      .for("share", { of: tripAssignments });
-    if (!eligibleHelper) return { ok: false, reason: "invalid_helper" };
+    if (
+      !(await isEligibleHelper(tx, input.shopId, existing.request.tripId, input.helperPersonId))
+    ) {
+      return { ok: false, reason: "invalid_helper" };
+    }
     const [request] = await tx
       .update(tripHelpRequests)
       .set({
@@ -470,7 +478,11 @@ export async function completeHelpRequest(
   });
 }
 
-/** Restore the assigned state only while the same helper is still recorded. */
+/**
+ * Restore the assigned state only while the same helper is still recorded and
+ * everything completion checks still holds: a scheduled, unfinished departure,
+ * a booking that is not cancelled, and a helper still on the crew.
+ */
 export async function undoHelpRequestCompletion(
   db: AppDb,
   input: {
@@ -488,8 +500,10 @@ export async function undoHelpRequestCompletion(
       return { ok: false, reason: "invalid_transition" };
     }
     const [existing] = await tx
-      .select({ id: tripHelpRequests.id })
+      .select({ request: tripHelpRequests })
       .from(tripHelpRequests)
+      .innerJoin(bookings, eq(bookings.id, tripHelpRequests.bookingId))
+      .innerJoin(trips, eq(trips.id, tripHelpRequests.tripId))
       .where(
         and(
           eq(tripHelpRequests.id, input.requestId),
@@ -497,6 +511,13 @@ export async function undoHelpRequestCompletion(
           eq(tripHelpRequests.shopId, input.shopId),
           eq(tripHelpRequests.status, "handled"),
           eq(tripHelpRequests.helperPersonId, input.expectedHelperPersonId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, tripHelpRequests.tripId),
+          ne(bookings.status, "cancelled"),
+          eq(trips.shopId, input.shopId),
+          liveTrip(),
+          eq(trips.status, "scheduled"),
+          gt(trips.endsAt, now),
         ),
       )
       .limit(1)
@@ -504,6 +525,16 @@ export async function undoHelpRequestCompletion(
     if (!existing) return { ok: false, reason: "invalid_transition" };
     if (!(await isActiveStaff(tx, input.shopId, input.actorPersonId))) {
       return { ok: false, reason: "unavailable" };
+    }
+    if (
+      !(await isEligibleHelper(
+        tx,
+        input.shopId,
+        existing.request.tripId,
+        input.expectedHelperPersonId,
+      ))
+    ) {
+      return { ok: false, reason: "invalid_helper" };
     }
     const [request] = await tx
       .update(tripHelpRequests)

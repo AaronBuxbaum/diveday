@@ -51,7 +51,7 @@
     "cancel": "Cancel",
     "crewSelector": "Crew member",
     "speakFirst": "Speak to them first, then confirm.",
-    "meeting": "Departure meeting",
+    "meetingLine": "Departure meeting: {where}",
     "saving": "Saving…",
     "assigned": "Helper saved.",
     "completed": "Help marked complete.",

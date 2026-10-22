@@ -8,8 +8,8 @@ afterEach(cleanup);
 const labels = {
   thisDevice: "This device",
   details: "Details",
-  browserDetails: "Browser",
-  networkDetails: "Network",
+  browserLine: (browser: string) => `Browser: ${browser}`,
+  networkLine: (network: string) => `Network: ${network}`,
   unknownDevice: "Unknown device",
   unknownIp: "Unknown network",
   revoke: "Revoke",
@@ -52,5 +52,37 @@ describe("active account sessions", () => {
       expect(within(item).getByRole("button", { name: labels.revoke })).toBeVisible();
       expect(within(item).queryByText(labels.thisDevice) !== null).toBe(id === currentId);
     }
+  });
+
+  it("says each detail as one bundle sentence, falling back to the unknown words", () => {
+    render(
+      <AccountSessionsList
+        rows={[
+          {
+            id: "known",
+            deviceLabel: "Chrome on Windows",
+            isCurrent: false,
+            lastSeen: "last seen today",
+            userAgent: "Chrome/125 Windows",
+            ipAddress: "192.0.2.1",
+          },
+          {
+            id: "unknown",
+            deviceLabel: "Unknown device",
+            isCurrent: false,
+            lastSeen: "last seen today",
+            userAgent: null,
+            ipAddress: null,
+          },
+        ]}
+        labels={labels}
+        shopSlug="blue-mantis"
+        revokeAction={vi.fn(async () => {})}
+      />,
+    );
+    expect(screen.getByText("Browser: Chrome/125 Windows")).toBeInTheDocument();
+    expect(screen.getByText("Network: 192.0.2.1")).toBeInTheDocument();
+    expect(screen.getByText("Browser: Unknown device")).toBeInTheDocument();
+    expect(screen.getByText("Network: Unknown network")).toBeInTheDocument();
   });
 });

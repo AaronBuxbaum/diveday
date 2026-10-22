@@ -824,6 +824,7 @@
     "identifierLabel": "Card number",
     "cardPhoto": "Fill this from a photo of my card",
     "cardPhotoPending": "Reading your card…",
+    "cardPhotoNothing": "We couldn’t read that card. Type it in, or try a clearer photo.",
     "sizesHeading": "Your sizes",
     "sizesHint": "Only if you rent from us. It saves a fitting at the counter.",
     "wetsuitLabel": "Wetsuit",

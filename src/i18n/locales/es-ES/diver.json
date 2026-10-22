@@ -824,6 +824,7 @@
     "identifierLabel": "Número de tarjeta",
     "cardPhoto": "Llenar esto con una foto de mi tarjeta",
     "cardPhotoPending": "Leyendo tu tarjeta…",
+    "cardPhotoNothing": "No pudimos leer esa tarjeta. Escríbela tú, o prueba con una foto más clara.",
     "sizesHeading": "Tus tallas",
     "sizesHint": "Solo si alquilas con nosotros. Te ahorra la prueba en el mostrador.",
     "wetsuitLabel": "Neopreno",

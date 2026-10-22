@@ -51,7 +51,7 @@
     "cancel": "Cancelar",
     "crewSelector": "Tripulante",
     "speakFirst": "Habla con esa persona y luego confirma.",
-    "meeting": "Encuentro de la salida",
+    "meetingLine": "Encuentro de la salida: {where}",
     "saving": "Guardando…",
     "assigned": "Ayuda asignada.",
     "completed": "Ayuda marcada como completada.",

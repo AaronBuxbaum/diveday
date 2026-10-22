@@ -54,7 +54,7 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
           status: request.status,
           helperPersonName: request.helperPersonName,
         }),
-        actionLabel: helpRequestActionText(t, request.status, request.helperPersonName),
+        actionLabel: helpRequestActionText(t, request.helperPersonName),
         href: `${tripHref}#booking-${request.bookingId}`,
         helpRequest: {
           requestId: request.id,

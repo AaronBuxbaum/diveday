@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { countSetupRequestsSince, recordSetupRequest } from "@/db/funnel";
+import { sendSetupRequestReceipt } from "@/features/setup-request-receipts";
 import { requestLocale } from "@/i18n/request";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { formValue, parseForm } from "@/lib/form-parse";
@@ -26,7 +27,6 @@ import {
 } from "@/lib/setup-requests";
 // A plain module, deliberately not a second server action — see its comment.
 import { announceSetupRequest } from "./announce";
-import { sendSetupRequestReceipt } from "./receipt";
 
 /** Long enough for any honest answer; a value past it is refused by the parser anyway. */
 const ECHO_MAX = 400;

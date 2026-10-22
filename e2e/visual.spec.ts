@@ -7,6 +7,7 @@ import {
   DEMO_RECAP_BOOKING_ID,
   LISTED_SHOP_SLUGS,
 } from "../src/db/seed-identifiers";
+import { diverTranslator } from "../src/i18n/messages";
 import { staffPassengerCount } from "../src/i18n/participant-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate } from "../src/lib/calendar-date";

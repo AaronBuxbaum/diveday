@@ -14,14 +14,11 @@ import {
 afterEach(cleanup);
 
 const copy: HelpRequestCopy = {
-  arrange: "Arrange help",
-  change: "Change helper",
   complete: "Help completed",
   confirm: "Confirm helper",
   cancel: "Cancel",
   selector: "Crew member",
   speakFirst: "Speak to them first, then confirm.",
-  meeting: "Departure meeting",
   saving: "Saving…",
   assigned: "Helper saved.",
   completed: "Help marked complete.",
@@ -43,8 +40,9 @@ function renderControl(status: "requested" | "acknowledged" = "requested", helpe
         status={status}
         helperPersonId={helper ? "person-1" : null}
         helperPersonName={helper ? "Sam Rivera" : null}
+        label={helper ? "Change helper" : "Arrange help"}
         crew={[{ personId: "person-1", fullName: "Sam Rivera" }]}
-        meetingInstructions="North dock · Meet by the blue flag"
+        meetingLine="Departure meeting: North dock · Meet by the blue flag"
       />
     </HelpRequestProvider>,
   );
@@ -76,8 +74,9 @@ describe("HelpRequestControl", () => {
           status="acknowledged"
           helperPersonId={null}
           helperPersonName={null}
+          label="Arrange help"
           crew={[]}
-          meetingInstructions={null}
+          meetingLine={null}
         />
       </HelpRequestProvider>,
     );

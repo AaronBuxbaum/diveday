@@ -62,7 +62,9 @@ test.describe("account security settings", () => {
     const details = page.getByText(staff("settings.security.details"), { exact: true });
     await details.focus();
     await details.press("Enter");
-    await expect(page.getByText(staff("settings.security.browserDetails"))).toBeVisible();
+    // The line is "Browser: <user agent>"; its label half is enough to find it.
+    const browserLabel = staff("settings.security.browserLine", { browser: "" }).trim();
+    await expect(page.getByText(browserLabel)).toBeVisible();
 
     // The reveal, which is the only moment ten usable codes exist anywhere: the
     // shop is told to save them because DiveDay keeps only their hashes.
