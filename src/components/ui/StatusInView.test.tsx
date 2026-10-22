@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SCROLL_SETTLED_ATTRIBUTE } from "@/components/PreserveFormScroll";
 import { FormStatus } from "./form";
@@ -9,13 +9,11 @@ afterEach(cleanup);
 /**
  * **An outcome that lands below the fold says nothing at all.**
  *
- * A section's outcome renders inside that section rather than in one banner at
- * the top, which fixed the confirmation appearing off-screen *above* a reader
- * who saved halfway down. `PreserveFormScroll` then puts them back exactly
- * where they submitted from, so the same confirmation can land below the fold
- * instead — the same silence, from the other direction. Measured on the diver
- * record's gear group at 1280×720, the notice sat 26px above the fold, and
- * clearing the sticky bar for anchor landings (#1941) spent that margin.
+ * An inline warning renders inside its section, where `PreserveFormScroll`
+ * returns the reader after submission. The status can land below the fold —
+ * the same silence, from the other direction. Measured on the diver record's
+ * gear group at 1280×720, the notice sat 26px above the fold, and clearing
+ * the sticky bar for anchor landings (#1941) spent that margin.
  *
  * jsdom lays nothing out, so every rectangle here is stubbed: what is under
  * test is the *decision* — when to move the page and when to leave it alone —
@@ -65,17 +63,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("a form's outcome that lands where nobody can read it", () => {
+describe("an inline form outcome that lands where nobody can read it", () => {
   it("brings itself into view when it is below the fold", () => {
-    const { container } = render(<FormStatus tone="success">Rental fit profile saved.</FormStatus>);
+    const { container } = render(
+      <FormStatus tone="warning">Check the rental fit profile.</FormStatus>,
+    );
     reveal(container, { top: 750, bottom: 770 });
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
   });
 
   it("brings itself into view when it is above the fold", () => {
-    // The original complaint, and still a case: a save from far down the page
-    // that leaves the confirmation behind the reader.
-    const { container } = render(<FormStatus tone="success">Saved.</FormStatus>);
+    // A warning from far down the page that would otherwise be left behind.
+    const { container } = render(<FormStatus tone="warning">Check this detail.</FormStatus>);
     reveal(container, { top: -120, bottom: -100 });
     expect(scrollIntoView).toHaveBeenCalledOnce();
   });
@@ -86,7 +85,7 @@ describe("a form's outcome that lands where nobody can read it", () => {
    * nothing at all.
    */
   it("leaves the page alone when it is already on screen", () => {
-    const { container } = render(<FormStatus tone="success">Saved.</FormStatus>);
+    const { container } = render(<FormStatus tone="warning">Check this detail.</FormStatus>);
     reveal(container, { top: 300, bottom: 320 });
     expect(scrollIntoView).not.toHaveBeenCalled();
   });
@@ -97,7 +96,7 @@ describe("a form's outcome that lands where nobody can read it", () => {
    * is where the usable viewport starts.
    */
   it("counts a status hidden behind the chrome bar as off screen", () => {
-    const { container } = render(<FormStatus tone="success">Saved.</FormStatus>);
+    const { container } = render(<FormStatus tone="warning">Check this detail.</FormStatus>);
     reveal(container, { top: 20, bottom: 40 });
     expect(scrollIntoView).toHaveBeenCalledOnce();
   });
@@ -121,7 +120,7 @@ describe("a form's outcome that lands where nobody can read it", () => {
    */
   it("waits for the page to say where the viewport has settled", () => {
     document.documentElement.removeAttribute(SCROLL_SETTLED_ATTRIBUTE);
-    const { container } = render(<FormStatus tone="success">Saved.</FormStatus>);
+    const { container } = render(<FormStatus tone="warning">Check this detail.</FormStatus>);
     const status = statusElement(container);
     status.scrollIntoView = scrollIntoView;
     // On screen *now*, off screen once the restore has run — the exact trap.
@@ -145,7 +144,7 @@ describe("a form's outcome that lands where nobody can read it", () => {
    * 138 while the page was still travelling, 748 once it had landed.
    */
   it("waits for the page to stop moving before it measures", () => {
-    const { container } = render(<FormStatus tone="success">Saved.</FormStatus>);
+    const { container } = render(<FormStatus tone="warning">Check this detail.</FormStatus>);
     const status = statusElement(container);
     status.scrollIntoView = scrollIntoView;
     // On screen at the offset the page is passing through, off screen at the
@@ -172,5 +171,19 @@ describe("a form's outcome that lands where nobody can read it", () => {
     const { container } = render(<FormStatus tone="success">{undefined}</FormStatus>);
     expect(container.querySelector("p")).toBeNull();
     expect(container.querySelector("span[hidden]")).toBeNull();
+  });
+
+  it("keeps a successful form confirmation in the fixed toast without scrolling", () => {
+    const pageScroll = vi.fn();
+    vi.stubGlobal("scrollTo", pageScroll);
+    const { container } = render(<FormStatus tone="success">Saved.</FormStatus>);
+    const status = screen.getByRole("status");
+    const toastScroll = vi.fn();
+    status.scrollIntoView = toastScroll;
+
+    expect(status.parentElement).toHaveClass("fixed");
+    expect(container.querySelector("p")).toBeNull();
+    expect(toastScroll).not.toHaveBeenCalled();
+    expect(pageScroll).not.toHaveBeenCalled();
   });
 });

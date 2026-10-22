@@ -5,9 +5,11 @@ import {
   cloneElement,
   type ElementType,
   isValidElement,
+  type Key,
   type ReactNode,
   useId,
 } from "react";
+import { Toast } from "@/components/Toast";
 import { StatusInView } from "@/components/ui/StatusInView";
 import { currencySymbol, minorToMajor } from "@/lib/money";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
@@ -1067,21 +1069,13 @@ const STATUS_TONE: Record<NoticeTone, string> = {
 /**
  * How a form says what happened, **where the form is**.
  *
- * Staff surfaces here overwhelmingly answer a save by redirecting back with a
- * `?notice=` code, which one page-level banner under the `<h1>` then resolves.
- * That reads fine on a one-form page and badly everywhere else: the trip
- * Overview alone has six independent forms down a long page, so saving the
- * requirements block — or being refused by it — put the answer somewhere the
- * staffer had scrolled past minutes ago. Worse, the last-minute-deal refusal
- * redirects to `#last-minute-deal`, which *scrolls the banner off screen* on
- * the way in.
+ * A `?notice=` banner under the `<h1>` can be far from the action on a long
+ * page, or scrolled off screen after a redirect.
  *
- * `FormStatus` is the fix, and it is deliberately not another banner: it is one
- * line of tone-coloured text that lives in the form's own action row, beside
- * the button that was just pressed. The rule it encodes:
+ * `FormStatus` keeps refusals beside their form and sends success to a toast.
  *
- * - a **form-level** outcome (this save was refused, this save worked) renders
- *   here, adjacent to the submit control;
+ * - a **form-level** refusal renders here, adjacent to the submit control;
+ * - a successful submission uses the shared, auto-dismissing `Toast`;
  * - a **field-level** refusal renders on the field, via `Field`'s `error` prop;
  * - the page-level banner is left for things that are genuinely about the page
  *   rather than about one form — a permission refusal that bounced the staffer
@@ -1102,11 +1096,13 @@ export function FormStatus({
   id,
   className = "",
   children,
+  occurrenceKey,
 }: {
   tone?: NoticeTone;
   id?: string;
   className?: string;
   children?: ReactNode;
+  occurrenceKey?: Key;
 }) {
   // **`Children.toArray`, not `!children`.** The falsy check held only while
   // every caller passed exactly one expression: `{undefined}` is falsy, but
@@ -1117,6 +1113,7 @@ export function FormStatus({
   // null, undefined and booleans, which is precisely the question being asked
   // (found on the waiver editor, issue #790).
   if (Children.toArray(children).length === 0) return null;
+  if (tone === "success") return <Toast message={children} occurrenceKey={occurrenceKey} />;
   const mark = toneMark(tone);
   return (
     <>

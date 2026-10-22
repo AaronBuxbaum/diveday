@@ -97,8 +97,8 @@ not merely a code review.
   no timer of its own ([20260721-scheduled-reminder-cadence](20260721-scheduled-reminder-cadence.md)).
 - **Add the prune to the existing daily tick** — would run a table scan 364 days a year to delete
   nothing, and couples a retention failure to the reminders monitor.
-- **`DELETE ... LIMIT`** — Postgres has no such thing; the two-statement select-then-delete also
-  makes the reported count the count actually deleted rather than an estimate.
+- **`DELETE ... LIMIT`** — Postgres has no such thing; select candidates with a bounded query,
+  then delete still-eligible candidates and count the rows returned by `DELETE ... RETURNING`.
 
 ## Consequences
 
@@ -155,3 +155,79 @@ No window changed in this amendment; the numbers stay HD-11's and H-82's.
 ## Amendment 2026-10-13 — a run drains, under a time budget
 
 The escape hatch above assumed a capped table would be noticed. It was only logged: `tablesCapped` sat in the `prune_complete` line and nothing alarmed, and at one batch of 5 000 rows a week a table gaining more than about 714 rows a day never converged (fourth review, row 18). `pruneExpiredRecords` now takes batches in rounds, one per table and then again for each table still `capped`, until every table is inside its window or 45 of the route's 60 seconds are spent (`PRUNE_TIME_BUDGET_MS`). `PRUNE_BATCH_LIMIT` is now the bound per batch, not per run. A table still `capped` when the budget runs out logs `cron_retention.prune_capped`, which the CronPassFailures alarm counts (`infra/lib/observability.ts`). It alarms on one such run, not two in a row: the run is weekly, CloudWatch's alarm period ceiling is one day, and a backlog that survives 45 seconds of deletes is already growing faster than the prune. The response is the hatch above: a daily schedule, or a faster arm.
+
+## Amendment 2026-10-21 — dietary notes drain independently each day
+
+`DIETARY_NOTE_RETENTION_DAYS` remains 30, measured strictly before the departure's start-time
+cutoff. This is eligibility policy, not a guarantee that no note survives its thirtieth day:
+`GET /api/cron/dietary-retention` runs daily at 03:09 UTC (`9 3 * * *`), normally clearing newly
+eligible notes on its next run. Missed, failed or capped runs add latency. The weekly table prune
+remains Sunday 03:08 UTC (`8 3 * * 0`) and no longer clears dietary notes, so a table backlog
+cannot postpone the dietary sweep's first batch.
+
+The dietary sweep admits bounded batches for 45 seconds, using monotonic elapsed time and one
+captured eligibility cutoff. This bounds admission; one admitted database statement can still be
+in flight after the deadline. A full last batch conservatively reports `capped`, without starting
+an extra query after the deadline. Each statement updates only the note and counts rows returned
+by the update, including on deleted departures. Eligibility selection and mutation share one
+statement snapshot, avoiding a separate select/update gap; this does not serialize against later
+concurrent departure moves. Bookings, statuses and other booking data survive. A failed statement
+leaves earlier completed batches counted and resumable.
+
+The fail-closed bearer gate precedes the daily Sentry check-in. Its compiled monitor identity is
+`diveday-dietary-retention`; the monitor schedule shares `DIETARY_RETENTION_CRONTAB` with a test
+against deployment. Failed or capped outcomes close the monitor with `error`; statement failures
+answer 500, bootstrap failures 503, and caps retain the weekly route's explicit 200 convention.
+`cron_dietary_retention.clear_failed` (including bootstrap) and `.clear_capped` join the existing
+`CronPassFailures` alarm. Reporting contains only counts and outcome codes, never notes,
+identities or database error text, and log shipping is awaited.
+
+## Amendment 2026-10-21 — weekly batch admission and durable progress
+
+The weekly prune checks monotonic elapsed time before every batch, including the first round,
+and again after its reservation commits. Equality with the 45-second deadline admits no work;
+a zero budget runs no table query. It awaits the single admitted batch before reporting. This
+bounds admission, not statement duration: a slow batch can still exceed the deadline or the
+platform's 60-second ceiling.
+
+One global `retention_prune_state` row records the next canonical table code. Each invocation
+initializes it once with `INSERT ... ON CONFLICT DO NOTHING`. Before each batch a short
+transaction sets the existing five-second lock timeout, locks that row, chooses the next pending
+table starting at the cursor, and advances to its canonical successor. It commits before any
+destructive batch. Overlapping reservations serialize their choice; the lock never spans a
+prune. Termination after reservation, or a failing batch, therefore leaves the successor durable.
+An unknown code restarts at the first canonical table. Each round visits a pending table once;
+later rounds consider only full, nonfailed tables. A run must receive the database itself, never
+an enclosing transaction that would defer the checkpoint commit until after deletion.
+
+The explicit transaction adds five sequential query/response waits per admitted batch (`BEGIN`,
+lock timeout, locked read, update, `COMMIT`), plus the single initialization per run. This buys a
+clear commit boundary and bounded lock contention; no latency improvement has been measured.
+Concurrent invocations can still overlap destructive batches. The cursor coordinates priority,
+not ownership or exclusive processing, and a reserved but unexecuted batch will be revisited
+when priority cycles back.
+
+Outcomes distinguish drained tables, failed arms, unresolved full batches (`capped`), and
+never-visited tables (`skipped`, unknown eligibility). Earlier successful deletion counts survive
+a later failed batch. `cron_retention.prune_capped` carries separate `tablesCapped` and
+`tablesSkipped` fields; arm failures emit the alarmed `cron_retention.prune_failed` event. Failed,
+capped or skipped work closes the Sentry monitor with `error`; arm failures retain HTTP 500 and
+budget-limited runs retain HTTP 200. Checkpoint failures stop admissions and use the existing
+503 failure path. Reports contain table codes and counts only.
+
+The machinery row has a primary key and a singleton check, contains no personal data or foreign
+keys, and is explicitly outside shop export, deletion, person erasure and age-based retention.
+It is created lazily, requires no demo seed, and does not change eligibility or retention windows.
+
+
+## Amendment 2026-10-21 — eligibility survives candidate selection
+
+Weekly batches reapply the same captured age cutoff and every extra eligibility predicate in
+`DELETE`, alongside the bounded candidate IDs. In particular, a legal hold committed while the
+delete waits for its report row lock protects the report and its cascaded evidence. This does not
+serialize a hold that starts after deletion wins the row lock.
+
+Counts come from `DELETE ... RETURNING`, so overlapping sweeps cannot both count the same deleted
+row. A full candidate batch remains capped even when fewer candidates are deleted: candidates
+protected or changed since selection do not prove that eligible rows behind the limit are drained.
+The existing admission budget, checkpoint commit boundary and retention windows stay unchanged.

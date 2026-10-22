@@ -90,14 +90,10 @@ describe("the policy", () => {
     expect(directives(enforcedPolicy(base)).get("frame-src")).toContain("'self'");
   });
 
-  it("frames the host Google's embed URL actually redirects to", () => {
-    // maps.google.com 302s to www.google.com/maps/embed, and a frame
-    // navigation re-checks the directive across that hop. Listing only the URL
-    // src/lib/maps.ts writes would break /ready, the public trip page and the
-    // dive-site editor at once while reading as correct.
+  it("frames OpenStreetMap's export embed URL", () => {
     const frameSrc = directives(enforcedPolicy(base)).get("frame-src") ?? [];
-    expect(frameSrc).toContain("https://maps.google.com");
-    expect(frameSrc).toContain("https://www.google.com");
+    expect(frameSrc).toContain("https://www.openstreetmap.org");
+    expect(frameSrc).not.toContain("https://maps.google.com");
   });
 
   it("keeps eval out of production and allows it in development", () => {
@@ -229,17 +225,16 @@ describe("the policy", () => {
     // expression every browser drops (issue #1263).
     expect(imgSrc).toContain("https://*.s3.amazonaws.com");
     expect(imgSrc).toContain("https://*.cloudfront.net");
-    // The route maps' reachability read (UX review 2026-10-10, item 20), and
-    // only a host the map frame already reaches.
-    // One per host the embed needs (#2441): maps.google.com and www.google.com.
+    // The route maps' reachability read (UX review 2026-10-10, item 20).
     expect(MAP_REACHABILITY_PROBES.map((probe) => new URL(probe).origin).sort()).toEqual([
-      "https://maps.google.com",
-      "https://www.google.com",
+      "https://a.basemaps.cartocdn.com",
+      "https://tile.openstreetmap.org",
     ]);
-    const frameSrc = directives(enforcedPolicy(base)).get("frame-src");
+    expect(imgSrc).toContain("https://*.basemaps.cartocdn.com");
+    expect(imgSrc).toContain("https://tile.openstreetmap.org");
+    expect(imgSrc).not.toContain("https://*.tile.openstreetmap.org");
     for (const probe of MAP_REACHABILITY_PROBES) {
       expect(imgSrc).toContain(probe);
-      expect(frameSrc).toContain(new URL(probe).origin);
     }
   });
 });

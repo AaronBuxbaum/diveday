@@ -48,10 +48,16 @@ export default async function EmergencyReferenceSettingsPage({
       shopSlug={shopSlug}
       t={t}
       title={t("settings.main.emergency.heading")}
-      description={t("settings.main.emergency.intro")}
       banner={noticeFromParam(notice, emergencyReferenceNoticeMessages(t))}
+      unframed
     >
-      <EmergencyReferenceForm shop={shop} t={t} locale={locale} consentByName={consentByName} />
+      <EmergencyReferenceForm
+        shop={shop}
+        t={t}
+        locale={locale}
+        consentByName={consentByName}
+        alertOpen={notice === "shore-alert-invalid" || notice === "shore-alert-consent-missing"}
+      />
     </SettingsEditorPage>
   );
 }

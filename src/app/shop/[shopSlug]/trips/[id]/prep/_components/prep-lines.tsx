@@ -151,10 +151,8 @@ export const pieceDetail = (t: StaffTranslator, piece: PrepPiece) => {
   if (piece.drysuitWeightCheck) {
     return <span className="font-medium text-warning">{t("tripPrep.drysuitWeightCheck")}</span>;
   }
-  // A drysuit diver's fins. The stated size is a shoe size — one question,
-  // "Fin & boot size" — and a drysuit boot is two to three fin sizes bigger
-  // than the foot in it, so the size is where the packer starts and never
-  // what they pull (dive-prep.ts).
+  // Fin size is recorded independently. For a drysuit diver it describes the
+  // bare foot; confirm a boot-clearing pair at check-in (dive-prep.ts).
   if (piece.drysuitFinFit) {
     return (
       <span className="font-medium text-warning">

@@ -1,5 +1,0 @@
-reviews:
-  auto_review:
-    enabled: true
-  # Off: its "review skipped" comment is edited on every push and wakes every session watching the PR.
-  review_status: false

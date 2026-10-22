@@ -63,6 +63,10 @@ export function MoneyGroup({
   return (
     <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
       <InsetGroup>
+        <SettingsDoorRow
+          href={`/shop/${shopSlug}/settings/bookkeeper`}
+          heading={t("reports.bookkeeper.label")}
+        />
         {canPayments ? (
           <>
             {passThroughRow(view)}

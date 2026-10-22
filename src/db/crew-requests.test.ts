@@ -22,6 +22,7 @@ import {
   crewAvailabilityBlocks,
   people,
   personRoles,
+  staffCredentials,
 } from "./schema";
 import { createStaffCredential } from "./staff-credentials";
 import { createTrip, setTripCrew, upcomingTripsWithCounts } from "./trips";
@@ -308,6 +309,16 @@ describe("crew assignment requests", () => {
     const staff = await listStaff(db, shop.id);
     const instructor = staff.find((row) => row.roles.includes("instructor"));
     if (!instructor) throw new Error("demo staff missing an instructor");
+    // The canonical demo now gives staff their current fictional credentials.
+    // Start from no rating so this case models a lapsed-only record.
+    await db
+      .delete(staffCredentials)
+      .where(
+        and(
+          eq(staffCredentials.personId, instructor.person.id),
+          eq(staffCredentials.kind, "instructor_rating"),
+        ),
+      );
     const tripDay = calendarDateInTimezone(trip.endsAt, shop.timezone);
     const made = await createStaffCredential(db, {
       shopId: shop.id,

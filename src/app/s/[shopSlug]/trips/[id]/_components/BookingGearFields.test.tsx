@@ -11,7 +11,7 @@ const pricing: RentalPricing = {
     bcd: 1500,
     regulator: 1500,
     wetsuit: 1200,
-    mask_fins: 800,
+    fins: 800,
     weights: 500,
     dive_computer: 1000,
     gopro: 2000,
@@ -23,7 +23,7 @@ const rentalItems = [
   "bcd",
   "regulator",
   "wetsuit",
-  "mask_fins",
+  "fins",
   "weights",
   "dive_computer",
   "gopro",
@@ -253,7 +253,7 @@ describe("BookingGearFields", () => {
     );
 
     askForGear();
-    for (const label of [/^BCD/, /^Regulator/, /^Wetsuit/, /^Mask & fins/, /^Dive computer/]) {
+    for (const label of [/^BCD/, /^Regulator/, /^Wetsuit/, /^Fins/, /^Dive computer/]) {
       fireEvent.click(screen.getByLabelText(label));
     }
     // Five of the six core pieces, priced individually, come to

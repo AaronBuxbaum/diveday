@@ -170,6 +170,7 @@ function SiteRow({
 
   return (
     <LedgerRow
+      id={`site-row-${site.id}`}
       href={`/shop/${shopSlug}/dive-sites/${site.id}`}
       // The site's own name, and nothing appended: the roster, the visual
       // captures and the depth spec all address a site by exactly this, and a
@@ -189,6 +190,10 @@ function SiteRow({
       // an empty wrapper there was an empty line, 12px of row gap below the
       // site's name (the pixel probe: 24px where the lines sit 12px apart,
       // and the name 6px above the row's centre).
+      // **These facts are decorative.** Their raised slot must pass taps to
+      // the stretched site link beneath it, including when this ledger is
+      // narrow inside a desktop viewport.
+      trailingPassthrough={updateReady || requirementWords.length > 0}
       trailing={
         updateReady || requirementWords.length > 0 ? (
           // Nothing in here is interactive, and `LedgerRow` lifts its trailing

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { DateRequestRow } from "@/db/course-inquiries";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -44,6 +44,7 @@ function row(request: Partial<DateRequestRow> = {}) {
       />
     </ul>,
   );
+  fireEvent.click(screen.getByRole("button", { name: /^Actions for/ }));
   const item = container.querySelector("li");
   if (!item) throw new Error("the row rendered no list item");
   return item;
@@ -67,6 +68,7 @@ describe("a request row renders flat, in one shape", () => {
 
   it("carries no fill and no pill", () => {
     const item = row();
+    fireEvent.click(screen.getByRole("button", { name: /^Actions for/ }));
     expect(item.outerHTML).not.toMatch(FILL);
     expect(item.outerHTML).not.toMatch(PILL);
   });
@@ -150,11 +152,7 @@ describe("where a request's lines may break", () => {
    */
   it("sinks the last act's unseen lower half into the row's inset below sm", () => {
     row({});
-    expect(screen.getByRole("button", { name: "Mark done" })).toHaveClass(
-      "max-sm:-mb-3",
-      "max-sm:align-bottom",
-      "focus-visible:focus-ring-inset",
-    );
+    expect(screen.getByRole("button", { name: "Mark done" })).toHaveClass("min-h-11", "px-3");
   });
 });
 

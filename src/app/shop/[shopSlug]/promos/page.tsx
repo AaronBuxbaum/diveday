@@ -217,8 +217,7 @@ export default async function PromosPage({
   };
   const promosHref = (target: number) => pairedHref("page", target);
   const dealsHref = (target: number) => pairedHref("dealsPage", target);
-  const connected = canAcceptPayments(stripeAccount);
-  const banner = noticeFromParam(notice, NOTICES);
+  const [connected, banner] = [canAcceptPayments(stripeAccount), noticeFromParam(notice, NOTICES)];
   // Three homes, decided once: a field in the new-code form, that form's
   // action row, or the page. Nothing lands in more than one.
   // `noticeFromParam`, not `NOTICE_FIELD[notice]`: `?notice=` is
@@ -335,7 +334,6 @@ export default async function PromosPage({
     locale,
     timezone,
   });
-
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams
@@ -376,11 +374,11 @@ export default async function PromosPage({
           }}
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
+          dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : pageBanner ? (
         <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
       ) : null}
-
       {/* **A form that cannot submit does not stand open**: unconnected, the
           notice stands in for the composer, here when there are no codes and
           inside "New code" when there are (`PromoConnectNotice`). */}

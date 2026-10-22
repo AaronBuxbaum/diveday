@@ -156,7 +156,7 @@ describe("DiverFileGroupDisclosure", () => {
       <DiverFileGroupDisclosure
         id="gear"
         label="Gear and sizes"
-        summary="BCD M · Wetsuit M · Boots 8 · Mask & fins M · Weights 6 kg"
+        summary="BCD M · Wetsuit M · Boots 8 · Fins M · Weights 6 kg"
         stacked
       >
         <p>Gear rows</p>

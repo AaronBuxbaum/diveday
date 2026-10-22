@@ -181,6 +181,29 @@ props that were asked for and refused.
 
 New code uses `SectionCard` from the start; a migrated route never goes back.
 
+## Small collection editors: readable rows, forms on intent
+
+A collection states its saved values at rest. `DisclosureRowList` and `DisclosureRow` draw the
+settings collection grammar: a full-width summary opens the item's form in place, and the last
+row opens the add form. Use the row's `value` for facts a reader needs before editing; it wraps
+at the full available width. An error can pass `open` to reveal the form that needs attention.
+Do not put interactive controls inside a summary.
+
+Boats and trip tags use this shared grammar for their editable records. Emergency reference
+keeps every populated contact's inputs mounted inside its closed row, so its one form submits
+all unchanged contacts alongside the edited one. It offers only the next available contact slot,
+up to the domain's five-contact limit. Response plan and roll-call alerts are separate disclosed
+groups in that same save; closing a group does not omit its fields or record consent.
+
+A collection without an update operation keeps its supported actions. Dive packages and the
+pre-departure checklist use `LedgerRow` for readable records and the same add disclosure; package
+delete and checklist reorder/delete stay on their records. A visual consistency pass does not
+create a rename operation or change purchased package entitlements.
+
+Long document editors, temporary repeating fields inside a single save, photo grids, operational
+queues and task-specific person sheets keep their established compositions. The collection
+pattern does not replace the context those workflows carry.
+
 ## Fields: `FieldGrid` + `Field`
 
 Multi-column forms used to give every field its own `flex flex-col` stack. That looks fine until a
@@ -358,9 +381,9 @@ the page away from the button that earned it. The rule has three steps, in order
 1. **Field-level** — the refusal names one box, so it renders on that box. Pass `Field`'s `error`
    prop; it renders the message under the control in a `role="alert"` region and wires the control's
    own `aria-invalid` and `aria-describedby` automatically. Never hand-roll that triple.
-2. **Form-level** — the refusal (or the confirmation) is about the submission as a whole, so it
-   renders in the form's action row, beside the submit control. Use `FormStatus`, which follows the
-   shared tone→role rule (`noticeRole`): a refusal is an `alert`, a confirmation is a `status`.
+2. **Form-level** — a refusal renders beside the submit control through `FormStatus` as an
+   `alert`. Immediate success confirmations use the shared `Toast` and disappear after four
+   seconds. `FormStatus` and `ShopNotice` route their success tone through that same toast.
 3. **Page-level** — only for what is genuinely about the page rather than one form on it. A
    permission refusal that bounced someone here from elsewhere is the honest example; "your save
    worked" is not.
@@ -426,16 +449,14 @@ Three ways to say what a tap did, cheapest first:
    outcome, nothing else should say it too; the diver record's three waiver-delivery buttons wear
    a ring and a mark for exactly this reason; a bordered box repeating "sent"/"failed" underneath
    them was a caption on a photograph of itself (copy-restraint).
-2. **`Toast`** (`src/components/Toast.tsx`) — a brief, auto-dismissing line for an action that
-   leaves no other trace: a clipboard write is the case it exists for. Not for anything reversible
-   or that offers a next step (that's `UndoToast`), and never a substitute for state a control
-   already shows on its own face — reach for it only once you've confirmed step 1 has nothing to
-   say.
-3. **`FormStatus`**, inline beside the form — for an outcome nothing else on screen carries: a
-   genuine refusal, a batch result naming several people. This is still "beside the form, never a
-   banner the length of the page away" from the section above; the difference from `Toast` is
-   permanence — `FormStatus` sits in the form's resting layout and reappears on every render of
-   that state, where `Toast` fires once and is gone.
+2. **`Toast`** (`src/components/Toast.tsx`) — the shared immediate success confirmation. Plain
+   success toasts disappear after four seconds, so completed actions do not leave permanent
+   messages in the page. `FormStatus` and `ShopNotice` use it automatically for success. Reversible
+   actions use `UndoToast`, which stays actionable until the person uses Undo, dismisses the toast,
+   or navigates away.
+3. **`FormStatus`**, inline beside the form — for refusals and warnings that need attention.
+   These remain visible until resolved. A successful submission uses the toast above.
+
 
 Never reach for a box or a banner to restate what a fresh row, a badge, or a ring elsewhere on the
 page already shows the instant the action lands — see copy-restraint's deletion #1 for the general
@@ -721,10 +742,10 @@ passed through `className` loses to the rung by stylesheet order, so `button.tes
 Pass one-off adjustments through `className`; do not rebuild the base. If you find yourself
 cancelling a variant's own styles, the variant is wrong — add one.
 
-**`primary` is the one thing in the app that carries a `shadow-sm` at rest**, and it is an
-exception stated at the rule rather than a second rule: ADR
-[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
-decision 1 says why, and why no other variant may follow it. Do not sweep it away.
+**`primary` is flat at rest**, like the current Logbook panels. Its fill and foreground carry
+its importance; `buttonClass()` adds no resting shadow. This is the current spelling under
+[20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 5, and replaces the older
+Clearwater button-shadow exception.
 
 **The size follows the surface, never the button's importance.** Importance is the variant's job.
 A page header, a form's action row, a card body and a dialog take `md`; a ledger row, a table cell

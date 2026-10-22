@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { RowMenu } from "@/components/RowMenu";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
+import { menuRowClass } from "@/components/ui/menu";
 import type { DateRequestRow } from "@/db/course-inquiries";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
@@ -134,12 +135,7 @@ export function RequestLedgerRow({
     : request.phone
       ? `tel:${request.phone.replace(/[^\d+]/g, "")}`
       : null;
-  const actionLink = buttonClass({
-    variant: "link",
-    size: "sm",
-    flush: true,
-    className: "focus-visible:focus-ring-inset",
-  });
+  const actionLink = menuRowClass("quiet", { gutter: false });
 
   return (
     <LedgerRow
@@ -155,7 +151,7 @@ export function RequestLedgerRow({
       // ring is drawn inside it.
       stacked
       trailing={
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 sm:flex-col sm:items-end">
+        <RowMenu label={t("requests.moreFor", { name })} panelClassName="w-60">
           <Link
             href={`${shopPath(shopSlug, "bookings", "new")}?request=${encodeURIComponent(request.id)}`}
             className={actionLink}
@@ -170,20 +166,11 @@ export function RequestLedgerRow({
           <form action={markDoneAction}>
             <input type="hidden" name="requestId" value={request.id} />
             <input type="hidden" name="outcome" value="done" />
-            <SubmitButton
-              pendingLabel={t("requests.markDone")}
-              className={buttonClass({
-                variant: "link",
-                size: "sm",
-                flush: true,
-                outdent: "block-end-phone",
-                className: "focus-visible:focus-ring-inset",
-              })}
-            >
+            <SubmitButton pendingLabel={t("requests.markDone")} className={actionLink}>
               {t("requests.markDone")}
             </SubmitButton>
           </form>
-        </div>
+        </RowMenu>
       }
     >
       <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-4">

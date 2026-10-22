@@ -14,7 +14,8 @@ const fullFit: RentalFit = {
   rentsBcd: true,
   rentsRegulator: true,
   rentsWetsuit: true,
-  rentsMaskFins: true,
+  rentsMask: false,
+  rentsFins: true,
   rentsWeights: true,
   rentsDiveComputer: false,
   rentsGopro: false,
@@ -164,7 +165,8 @@ describe("a drysuit on the prep list (issue 1414)", () => {
     rentsBcd: false,
     rentsRegulator: false,
     rentsWetsuit: false,
-    rentsMaskFins: false,
+    rentsMask: false,
+    rentsFins: false,
     rentsWeights: false,
     rentsDrysuit: true,
     drysuitSize: "ML",
@@ -233,7 +235,7 @@ describe("a drysuit on the prep list (issue 1414)", () => {
       "wetsuit",
       "boots",
       "drysuit",
-      "mask_fins",
+      "fins",
       "weights",
     ]);
   });
@@ -393,7 +395,8 @@ describe("a diver in their own drysuit", () => {
     divesDry: true,
     rentsWeights: true,
     weightPreference: "12 lb with 3 mm suit",
-    rentsMaskFins: true,
+    rentsMask: false,
+    rentsFins: true,
     finSize: "US 9",
   };
 
@@ -427,7 +430,7 @@ describe("a diver in their own drysuit", () => {
     const checklist = buildDivePrepChecklist({
       divers: [diver({ bookingId: "b1", fullName: "Own-suit Olu", fit: ownDrysuit })],
       plannedDives: 1,
-      offeredKinds: ["bcd", "regulator", "wetsuit", "mask_fins", "weights"],
+      offeredKinds: ["bcd", "regulator", "wetsuit", "fins", "weights"],
     });
     expect(lineFor(checklist, "weights", null)).toMatchObject({ drysuitWeightCheck: true });
   });
@@ -436,12 +439,12 @@ describe("a diver in their own drysuit", () => {
     // H-78 names `drysuitFinFit` among the signals that key on what the diver
     // wears. Every drysuit has a boot, ours vulcanised or theirs, and the fit
     // forms ask the bare shoe size (dive-domain-expert review).
-    expect(ownDrysuit).toMatchObject({ divesDry: true, rentsDrysuit: false, rentsMaskFins: true });
+    expect(ownDrysuit).toMatchObject({ divesDry: true, rentsDrysuit: false, rentsFins: true });
     const checklist = buildDivePrepChecklist({
       divers: [diver({ bookingId: "b1", fullName: "Own-suit Olu", fit: ownDrysuit })],
       plannedDives: 1,
     });
-    expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({ drysuitFinFit: true });
+    expect(lineFor(checklist, "fins", "US 9")).toMatchObject({ drysuitFinFit: true });
   });
 
   it("packs a wet diver renting the same kit to their stated number", () => {
@@ -457,14 +460,6 @@ describe("a diver in their own drysuit", () => {
   });
 });
 
-/**
- * **Fins packed to a shoe size do not go over a drysuit boot.** Both fit forms
- * ask one question for them — "Fin & boot size", placeholder "US 9 / EU 42" —
- * and a vulcanised drysuit boot is two to three fin sizes bigger than the foot
- * inside it. Packed to the stated number, the crew hands over a pair that will
- * not go on: the diver sits on the bench, the boat waits, and the fix is
- * somebody's spare pair. These tests refuse it.
- */
 describe("fins for a diver in a drysuit", () => {
   const drysuitDiver = {
     ...fullFit,
@@ -472,7 +467,8 @@ describe("fins for a diver in a drysuit", () => {
     divesDry: true,
     drysuitSize: "ML",
     rentsWetsuit: false,
-    rentsMaskFins: true,
+    rentsMask: false,
+    rentsFins: true,
     finSize: "US 9",
   };
 
@@ -482,14 +478,14 @@ describe("fins for a diver in a drysuit", () => {
       plannedDives: 1,
     });
     // The size stays: it is where the packer sizes up from, not what they pull.
-    expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({
+    expect(lineFor(checklist, "fins", "US 9")).toMatchObject({
       count: 1,
       drysuitFinFit: true,
       divers: ["Dry Dana"],
     });
     // Both groupings are built from the same pieces, so neither can read the
     // shoe size as the pair to hand over while the other says otherwise.
-    const fins = checklist.diverLines[0]?.items.find((piece) => piece.kind === "mask_fins");
+    const fins = checklist.diverLines[0]?.items.find((piece) => piece.kind === "fins");
     expect(fins).toMatchObject({ size: "US 9", drysuitFinFit: true });
   });
 
@@ -512,7 +508,7 @@ describe("fins for a diver in a drysuit", () => {
       ],
       plannedDives: 1,
     });
-    expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({
+    expect(lineFor(checklist, "fins", "US 9")).toMatchObject({
       count: 1,
       drysuitFinFit: false,
     });
@@ -540,7 +536,7 @@ describe("fins for a diver in a drysuit", () => {
     });
     // One string, two pairs off the rack. Collapsed into a row of two, the
     // packer pulls two bare-foot pairs and one of them goes back.
-    const fins = checklist.lines.filter((line) => line.kind === "mask_fins");
+    const fins = checklist.lines.filter((line) => line.kind === "fins");
     expect(fins.map((line) => [line.drysuitFinFit, line.count, line.divers])).toEqual([
       [false, 1, ["Wet Wanda"]],
       [true, 1, ["Dry Dana"]],
@@ -555,7 +551,7 @@ describe("fins for a diver in a drysuit", () => {
       plannedDives: 1,
     });
     // The suit is the reason, not the missing answer.
-    expect(lineFor(checklist, "mask_fins", null)).toMatchObject({ drysuitFinFit: true });
+    expect(lineFor(checklist, "fins", null)).toMatchObject({ drysuitFinFit: true });
   });
 
   it("leaves a flagged diver on fit-at-check-in, which is the same job in person", () => {
@@ -571,7 +567,7 @@ describe("fins for a diver in a drysuit", () => {
       plannedDives: 1,
       now: flaggedAt,
     });
-    expect(lineFor(checklist, "mask_fins", null)).toMatchObject({
+    expect(lineFor(checklist, "fins", null)).toMatchObject({
       fitAtCheckIn: true,
       drysuitFinFit: false,
     });
@@ -583,8 +579,8 @@ describe("fins for a diver in a drysuit", () => {
     // pair to hand over.
     const line = rentalFitLine(drysuitDiver);
     const items = line.state === "rents" ? line.items : [];
-    expect(items.find((item) => item.kind === "mask_fins")).toEqual({
-      kind: "mask_fins",
+    expect(items.find((item) => item.kind === "fins")).toEqual({
+      kind: "fins",
       size: "US 9",
       drysuitFinFit: true,
     });
@@ -812,12 +808,7 @@ describe("buildDivePrepChecklist rental lines", () => {
     });
     // Fins don't fit over bare feet: a blank boot size is a loose end to chase,
     // not a reason to send the diver to the dock without boots.
-    expect(checklist.lines.map((line) => line.kind)).toEqual([
-      "bcd",
-      "wetsuit",
-      "boots",
-      "mask_fins",
-    ]);
+    expect(checklist.lines.map((line) => line.kind)).toEqual(["bcd", "wetsuit", "boots", "fins"]);
     expect(lineFor(checklist, "boots", null)).toMatchObject({ count: 1 });
   });
 
@@ -885,7 +876,7 @@ describe("needs-staff-fit fallback (H-06)", () => {
           { kind: "bcd", size: "M" },
           { kind: "wetsuit", size: "5mm M" },
           { kind: "boots", size: "9" },
-          { kind: "mask_fins", size: "M" },
+          { kind: "fins", size: "M" },
         ],
         flaggedDaysAgo: 0,
       },
@@ -979,7 +970,7 @@ describe("needs-staff-fit fallback (H-06)", () => {
           { kind: "bcd", size: "M" },
           { kind: "wetsuit", size: "5mm M" },
           { kind: "boots", size: "9" },
-          { kind: "mask_fins", size: "M" },
+          { kind: "fins", size: "M" },
         ],
         flaggedDaysAgo: 0,
       },
@@ -1014,7 +1005,7 @@ describe("rentalFitLine", () => {
         { kind: "regulator", size: null },
         { kind: "wetsuit", size: "5mm M" },
         { kind: "boots", size: "9" },
-        { kind: "mask_fins", size: "M" },
+        { kind: "fins", size: "M" },
         { kind: "weights", size: "6 kg" },
       ],
     });
@@ -1028,7 +1019,7 @@ describe("rentalFitLine", () => {
       items: [
         { kind: "wetsuit", size: "5mm M" },
         { kind: "boots", size: "9" },
-        { kind: "mask_fins", size: "M" },
+        { kind: "fins", size: "M" },
       ],
     });
     expect(rentalFitLine(fullFit, undefined, "rider")).toEqual({ state: "own_kit" });
@@ -1044,7 +1035,8 @@ describe("rentalFitLine", () => {
         rentsBcd: false,
         rentsRegulator: false,
         rentsWetsuit: false,
-        rentsMaskFins: false,
+        rentsMask: false,
+        rentsFins: false,
         rentsWeights: false,
       }),
     ).toEqual({ state: "own_kit" });
@@ -1087,7 +1079,7 @@ describe("staffFitPieces", () => {
       { kind: "regulator", size: null },
       { kind: "wetsuit", size: null },
       { kind: "boots", size: null },
-      { kind: "mask_fins", size: null },
+      { kind: "fins", size: null },
       // Lead keeps its number: the flag never blanks it (`rentedItems`).
       { kind: "weights", size: "6 kg" },
     ]);
@@ -1144,7 +1136,7 @@ describe("divers with an incomplete fit", () => {
       "regulator",
       "wetsuit",
       "boots",
-      "mask_fins",
+      "fins",
       "weights",
     ]);
     expect(lineFor(checklist, "bcd", null)).toMatchObject({ count: 1, divers: ["Partial Pat"] });
@@ -1186,7 +1178,8 @@ describe("divers with an incomplete fit", () => {
             ...fullFit,
             rentsBcd: false,
             rentsWetsuit: false,
-            rentsMaskFins: false,
+            rentsMask: false,
+            rentsFins: false,
             rentsWeights: false,
             rentsDiveComputer: true,
             rentsGopro: true,
@@ -1219,7 +1212,7 @@ describe("divers with an incomplete fit", () => {
     // Same fit, a shop that no longer rents BCDs: no size to hand over, so no
     // size to chase.
     expect(
-      buildDivePrepChecklist({ divers, plannedDives: 1, offeredKinds: ["wetsuit", "mask_fins"] })
+      buildDivePrepChecklist({ divers, plannedDives: 1, offeredKinds: ["wetsuit", "fins"] })
         .diversWithIncompleteFit,
     ).toEqual([]);
   });
@@ -1249,11 +1242,12 @@ describe("a piece the shop stopped renting", () => {
     drysuitSize: "ML",
     rentsWeights: true,
     weightPreference: "12 lb with 3 mm suit",
-    rentsMaskFins: true,
+    rentsMask: false,
+    rentsFins: true,
     finSize: "US 9",
   };
   /** Everything the fit above asks for, except the suit. */
-  const noDrysuits = ["bcd", "regulator", "wetsuit", "mask_fins", "weights"];
+  const noDrysuits = ["bcd", "regulator", "wetsuit", "fins", "weights"];
   const withDrysuits = [...noDrysuits, "drysuit"];
 
   it("keeps the drysuit on the list and says the shop no longer rents it", () => {
@@ -1305,7 +1299,7 @@ describe("a piece the shop stopped renting", () => {
     });
     // The diver still dives dry, so a boot is still on their foot: the catalog
     // says what the shop hands over, not what the diver wears (H-78).
-    expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({
+    expect(lineFor(checklist, "fins", "US 9")).toMatchObject({
       count: 1,
       drysuitFinFit: true,
       notOffered: false,
@@ -1322,8 +1316,8 @@ describe("a piece the shop stopped renting", () => {
       size: null,
       drysuitWeightCheck: true,
     });
-    expect(items.find((item) => item.kind === "mask_fins")).toEqual({
-      kind: "mask_fins",
+    expect(items.find((item) => item.kind === "fins")).toEqual({
+      kind: "fins",
       size: "US 9",
       drysuitFinFit: true,
     });
@@ -1363,7 +1357,7 @@ describe("a piece the shop stopped renting", () => {
     });
     // The mirror case: only the suit's own mark follows the catalog.
     expect(lineFor(checklist, "weights", null)).toMatchObject({ drysuitWeightCheck: true });
-    expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({ drysuitFinFit: true });
+    expect(lineFor(checklist, "fins", "US 9")).toMatchObject({ drysuitFinFit: true });
     expect(lineFor(checklist, "drysuit", "ML")).toMatchObject({ notOffered: false });
   });
 
@@ -1410,7 +1404,7 @@ describe("a piece the shop stopped renting", () => {
     const dropped = buildDivePrepChecklist({
       divers: [diver({ bookingId: "b1", fullName: "Wet Wanda" })],
       plannedDives: 1,
-      offeredKinds: ["bcd", "regulator", "mask_fins", "weights"],
+      offeredKinds: ["bcd", "regulator", "fins", "weights"],
     });
     expect(lineFor(dropped, "boots", "9")).toMatchObject({ notOffered: true });
     expect(lineFor(dropped, "wetsuit", "5mm M")).toMatchObject({ notOffered: true });
@@ -1472,21 +1466,21 @@ describe("a piece the shop stopped renting", () => {
       expect(items.find((item) => item.kind === "drysuit")?.notOffered).toBe(true);
     });
 
-    it("counts mask and fins as held only when both units are", () => {
-      const fit: RentalFit = { ...fullFit, rentsMaskFins: true, finSize: "US 9" };
+    it("counts fins as held independently of a mask", () => {
+      const fit: RentalFit = { ...fullFit, rentsFins: true, finSize: "US 9" };
       const catalog = ["bcd", "regulator", "wetsuit", "weights"];
       const marked = (held: GearItemKind[]) => {
         const line = rentalFitLine(fit, catalog, undefined, held);
         const items = line.state === "rents" ? line.items : [];
-        return items.find((item) => item.kind === "mask_fins")?.notOffered === true;
+        return items.find((item) => item.kind === "fins")?.notOffered === true;
       };
-      expect(marked(["fins"])).toBe(true);
+      expect(marked(["fins"])).toBe(false);
       expect(marked(["mask"])).toBe(true);
       expect(marked(["mask", "fins"])).toBe(false);
     });
 
     it("does not let a held wetsuit vouch for boots nobody reserved", () => {
-      const dropped = ["bcd", "regulator", "mask_fins", "weights"];
+      const dropped = ["bcd", "regulator", "fins", "weights"];
       const checklist = buildDivePrepChecklist({
         divers: [diver({ bookingId: "b1", fullName: "Wet Wanda", heldGearKinds: ["wetsuit"] })],
         plannedDives: 1,
@@ -1555,7 +1549,7 @@ describe("the same packing list grouped by diver", () => {
         { kind: "regulator", size: null, fitAtCheckIn: false },
         { kind: "wetsuit", size: "5mm L", fitAtCheckIn: false },
         { kind: "boots", size: "11", fitAtCheckIn: false },
-        { kind: "mask_fins", size: "L", fitAtCheckIn: false },
+        { kind: "fins", size: "L", fitAtCheckIn: false },
         { kind: "weights", size: "6 kg", fitAtCheckIn: false },
       ],
     });
@@ -1567,7 +1561,8 @@ describe("the same packing list grouped by diver", () => {
       rentsBcd: false,
       rentsRegulator: false,
       rentsWetsuit: false,
-      rentsMaskFins: false,
+      rentsMask: false,
+      rentsFins: false,
       rentsWeights: false,
     };
     const checklist = buildDivePrepChecklist({
@@ -1605,7 +1600,7 @@ describe("the same packing list grouped by diver", () => {
       "regulator",
       "wetsuit",
       "boots",
-      "mask_fins",
+      "fins",
       "weights",
     ]);
     // ...and no piece the flag touches names a size the shop is short of.
@@ -1633,7 +1628,7 @@ describe("the same packing list grouped by diver", () => {
    * the GoPro's, while the by-item table sorts a drysuit fifth. So the two
    * groupings disagreed about the same departure — and `rentalFitLine` carries
    * this order to the roll call, the offline manifest and the diver record, so
-   * a drysuit diver's rail line read "Mask & fins over the drysuit boot ·
+   * a drysuit diver's rail line read "Fins over the drysuit boot ·
    * Weights: weight check in the water · Drysuit ML": both derived
    * instructions ahead of the fact they derive from, at the rail, in the dark.
    *
@@ -1669,7 +1664,7 @@ describe("the same packing list grouped by diver", () => {
       "bcd",
       "regulator",
       "drysuit",
-      "mask_fins",
+      "fins",
       "weights",
       "dive_computer",
       "hood",
@@ -1802,7 +1797,7 @@ describe("participant types on the packing list (ADR 20261007-participant-types)
     expect(checklist.tanks.total).toBe(0);
     expect(checklist.diversWithIncompleteFit).toEqual([]);
     const kinds = checklist.diverLines[0]?.items.map((item) => item.kind) ?? [];
-    expect(kinds).toContain("mask_fins");
+    expect(kinds).toContain("fins");
     expect(kinds).toContain("wetsuit");
     expect(kinds).not.toContain("bcd");
     expect(kinds).not.toContain("regulator");

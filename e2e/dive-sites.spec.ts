@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, openTripAbout, openTripMore } from "./helpers";
 
@@ -862,7 +863,12 @@ test.describe("an owner's own library", () => {
     // unseen: a cert gate, and a field guide. The row **is** the preview door
     // now, so it is the row's own link that opens it rather than a button beside
     // an Import the shop had not decided on yet.
-    await page.getByRole("link", { name: "Eagle Wreck", exact: true }).click();
+    // The row's stretched link sits behind the separate Import button. In the
+    // narrower catalog column, the link's geometric midpoint falls inside
+    // that button, so click the title end of its own link target.
+    await page.getByRole("link", { name: "Eagle Wreck", exact: true }).click({
+      position: { x: 24, y: 20 },
+    });
     await page.waitForURL(/template=eagle-wreck/);
 
     await expect(page.getByRole("heading", { name: "Eagle Wreck", level: 1 })).toBeVisible();
@@ -1045,4 +1051,53 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
   await page.goto(`/shop/${privateShop.slug}/dive-sites`);
   await expect(page.getByText("Lantern Wall")).toBeVisible();
   await expect(page.getByText("Somewhere Else")).toHaveCount(0);
+});
+
+test("map labels keep saved site text literal and details navigation works", async ({
+  page,
+  privateShop,
+}) => {
+  const name = "Z Reef <img src=x onerror=alert(1)>";
+  const subtitle = "<b onmouseover=alert(2)>Bank</b>";
+  await page.goto(`/shop/${privateShop.slug}/dive-sites/new`);
+  await page.getByLabel("Name").fill(name);
+  await page.getByRole("textbox", { name: "Location" }).fill(subtitle);
+  // Keep this label/keyboard/navigation case separate from the seeded Keys
+  // cluster. Clustered literal text is covered through Leaflet in SiteMap.test.
+  await page.getByLabel("Latitude").fill("25.30");
+  await page.getByLabel("Longitude").fill("-80.00");
+  await page.getByRole("button", { name: "Save dive site" }).click();
+  await page.waitForURL(/\/dive-sites\/[0-9a-f-]{36}/);
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+  const detailsUrl = page.url();
+
+  await page.goto(`/shop/${privateShop.slug}/dive-sites`);
+  const marker = page.locator(".leaflet-site-marker").getByRole("button", { name, exact: true });
+  await expect(marker).toBeVisible();
+  const popup = page.locator(".leaflet-popup-content");
+  // Check the shop before another site's popup auto-pan moves the viewport.
+  const shopMarker = page.locator(".leaflet-shop-marker button").first();
+  await expect(shopMarker).toHaveAccessibleName(/\S/);
+  await shopMarker.focus();
+  await shopMarker.press("Enter");
+  await expect(popup.locator("strong")).toBeVisible();
+  await page.getByRole("button", { name: "Close popup" }).click();
+  await expect(popup).toHaveCount(0);
+  await marker.focus();
+  await marker.press("Enter");
+  await expect(marker).toHaveClass(/ring-4/);
+  await expect(popup).toHaveCount(1);
+  await expect(popup.getByText(name, { exact: true })).toBeVisible();
+  await expect(popup.getByText(subtitle, { exact: true })).toBeVisible();
+  await expect(popup.locator("img, b, [onerror], [onmouseover]")).toHaveCount(0);
+  await page.getByRole("button", { name: "Close popup" }).click();
+  await expect(popup).toHaveCount(0);
+  await marker.focus();
+  await marker.press("Space");
+  await expect(popup).toHaveCount(1);
+  await popup
+    .getByRole("link", { name: staffTranslator("en-US")("diveSites.map.openSite") })
+    .click();
+  await page.waitForURL(detailsUrl);
+  await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
 });

@@ -158,6 +158,19 @@ function certificateRefusal(page: string, boat: string, refusal: BoatSeatsRefusa
   );
 }
 
+/** Validation must return to the editor that can correct it, including Add. */
+function validationRefusal(
+  page: string,
+  boat: string | null | undefined,
+  notice: "boat-invalid" | "boat-radio-invalid" | "boat-channel-distress",
+): never {
+  redirect(
+    noticeUrl(boat ? `${page}#${boatRowId(boat)}` : page, notice, {
+      boat: boat ?? undefined,
+    }),
+  );
+}
+
 /** Creates a new boat for the shop. */
 export async function createBoatAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -170,10 +183,10 @@ export async function createBoatAction(formData: FormData) {
   const description = boatDescription(form);
   const papers = boatPapers(form);
 
-  if (papers === "radio-invalid") redirect(noticeUrl(page, "boat-radio-invalid"));
-  if (papers === "channel-distress") redirect(noticeUrl(page, "boat-channel-distress"));
+  if (papers === "radio-invalid") validationRefusal(page, "new", "boat-radio-invalid");
+  if (papers === "channel-distress") validationRefusal(page, "new", "boat-channel-distress");
   if (!name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
-    redirect(noticeUrl(page, "boat-invalid"));
+    validationRefusal(page, "new", "boat-invalid");
   }
 
   // H-107: no seat above the certificate is sold, so none is put on sale.
@@ -207,10 +220,10 @@ export async function updateBoatAction(formData: FormData) {
   const description = boatDescription(form);
   const papers = boatPapers(form);
 
-  if (papers === "radio-invalid") redirect(noticeUrl(page, "boat-radio-invalid"));
-  if (papers === "channel-distress") redirect(noticeUrl(page, "boat-channel-distress"));
+  if (papers === "radio-invalid") validationRefusal(page, boatId, "boat-radio-invalid");
+  if (papers === "channel-distress") validationRefusal(page, boatId, "boat-channel-distress");
   if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0 || papers === "invalid") {
-    redirect(noticeUrl(page, "boat-invalid"));
+    validationRefusal(page, boatId, "boat-invalid");
   }
 
   const db = await getDb();

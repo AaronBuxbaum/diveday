@@ -58,8 +58,6 @@
     "rangeLabel": "Choose a range",
     "thisMonth": "This month",
     "thisYear": "This year",
-    "rangeSoFar": "{year} so far · {start} to today · {zone}",
-    "rangeSince": "{year} so far · since {month} · {zone}",
     "printCard": "Print the card",
     "sentence": "{divers, plural, one {# diver} other {# divers}}, {boats, plural, one {# boat out} other {# boats out}}, {sites, plural, one {# site} other {# sites}}.",
     "busiest": "The busiest day was {day}.",
@@ -92,7 +90,6 @@
       "tipsDetail": "{count, plural, =0 {No tips yet this year} one {# tip, for the crew} other {# tips, for the crew}}"
     },
     "chooseYear": "Choose a year",
-    "rangeWhole": "{year} · {start} to {end} · {zone}",
     "lastYearToDate": "{value, number} by this date in {year}",
     "lastYearWhole": "{value, number} in {year}",
     "weatherDays": "{days, plural, one {# day with a weather call} other {# days with a weather call}}, {departures, plural, one {# departure called off} other {# departures called off}}",

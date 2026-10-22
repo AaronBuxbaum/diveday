@@ -6,6 +6,7 @@ import { ImageFileInput } from "@/components/ImageFileInput";
 import { RemovablePhoto } from "@/components/RemovablePhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { DisclosureRow } from "@/components/ui/disclosure";
 import { ChoiceFieldset, ChoiceRow, Field, FieldActions } from "@/components/ui/form";
 import type { AppDb } from "@/db/client";
 import { listDiveSites, listSiteBottomTimeOverrides } from "@/db/dive-sites";
@@ -198,9 +199,82 @@ describe("the emergency reference editor", () => {
     return EmergencyReferenceForm({ shop, t, locale: "en-US" });
   }
 
-  it("leaves what it is for to the page's description", async () => {
+  it("states each contact's saved number while keeping every closed editor in the save", async () => {
+    const { shop } = await demoShop();
+    const form = EmergencyReferenceForm({
+      shop: {
+        ...shop,
+        emergencyReference: {
+          ...shop.emergencyReference,
+          lines: [
+            { label: "Chamber", phone: "+1 305 555 0101" },
+            { label: "Coast guard", phone: "+1 305 555 0102" },
+          ],
+        },
+      },
+      t,
+      locale: "en-US",
+    });
+    const rows = findElements<{ id: string; heading: string; value?: unknown }>(
+      form,
+      DisclosureRow,
+    );
+    expect(
+      rows
+        .filter((row) => row.props.id.startsWith("emergency-contact-"))
+        .map((row) => ({
+          heading: row.props.heading,
+          value: row.props.value,
+        })),
+    ).toEqual([
+      { heading: "Chamber", value: "+1 305 555 0101" },
+      { heading: "Coast guard", value: "+1 305 555 0102" },
+      { heading: EMERGENCY.addContact, value: undefined },
+    ]);
+    expect(named(form, "emergencyPhone-0")[0]?.props).toMatchObject({
+      defaultValue: "+1 305 555 0101",
+    });
+    expect(named(form, "emergencyPhone-1")[0]?.props).toMatchObject({
+      defaultValue: "+1 305 555 0102",
+    });
+    expect(inputNamesIn(form).filter((name) => name.startsWith("emergencyPhone-"))).toEqual([
+      "emergencyPhone-0",
+      "emergencyPhone-1",
+      "emergencyPhone-2",
+    ]);
+  });
+
+  it("offers no sixth contact when all five slots are in use", async () => {
+    const { shop } = await demoShop();
+    const form = EmergencyReferenceForm({
+      shop: {
+        ...shop,
+        emergencyReference: {
+          ...shop.emergencyReference,
+          lines: Array.from({ length: 5 }, (_, index) => ({
+            label: `Contact ${index}`,
+            phone: `555-${index}`,
+          })),
+        },
+      },
+      t,
+      locale: "en-US",
+    });
+    expect(
+      findElements<{ heading: string }>(form, DisclosureRow).some(
+        (row) => row.props.heading === EMERGENCY.addContact,
+      ),
+    ).toBe(false);
+    expect(inputNamesIn(form).filter((name) => name.startsWith("emergencyPhone-"))).toHaveLength(5);
+  });
+
+  it("omits the removed emergency-reference explanation", async () => {
     const paragraphs = findElements<{ children?: unknown }>(await emergencyForm(), "p");
-    expect(paragraphs.filter((p) => p.props.children === EMERGENCY.intro)).toHaveLength(0);
+    expect(
+      paragraphs.filter((p) =>
+        String(p.props.children).includes("These ride on the boat manifest"),
+      ),
+    ).toHaveLength(0);
   });
 
   /** One Save at the default 48px with 16px, in `FieldActions` (K-308). */
@@ -213,8 +287,8 @@ describe("the emergency reference editor", () => {
     expect(saves[0]?.props.className).toBe(buttonClass({ variant: "secondary" }));
   });
 
-  /** The examples wrap under the first line, never cut in a box's placeholder (K-583). */
-  it("gives its examples once, under the first line, where they wrap", async () => {
+  /** The examples wrap in Add contact, never cut in a box's placeholder (K-583). */
+  it("gives its examples once, under the new contact's label, where they wrap", async () => {
     const lines = findElements<{ description?: unknown; children?: unknown }>(
       await emergencyForm(),
       Field,
@@ -222,15 +296,14 @@ describe("the emergency reference editor", () => {
       const control = field.props.children as ReactElement<{ name?: string }> | undefined;
       return control?.props?.name?.startsWith("emergencyLabel-");
     });
-    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.length).toBeGreaterThan(0);
     for (const line of lines) {
       const control = line.props.children as ReactElement<{ placeholder?: unknown }>;
       expect(control.props.placeholder).toBeUndefined();
     }
-    expect(lines.map((line) => line.props.description)).toEqual([
-      EMERGENCY.lineExamples,
-      ...lines.slice(1).map(() => undefined),
-    ]);
+    expect(lines.filter((line) => line.props.description === EMERGENCY.lineExamples)).toHaveLength(
+      1,
+    );
   });
 
   /** H-118: the shore contact's alert address, and the box that records their consent. */
@@ -351,7 +424,7 @@ describe("the Rentals form", () => {
     const html = renderToStaticMarkup(<RentalsForm shop={shop} t={t} locale="en-US" />);
     expect(html).toContain('name="setPrice"');
     expect(html).toContain('name="nitroxPrice"');
-    expect(html).toContain('name="price_maskFins"');
+    expect(html).toContain('name="price_fins"');
     expect(html).toContain('name="rentalTerms"');
     expect(html).toContain('name="regulatorServiceMonths"');
     // One form, one save.

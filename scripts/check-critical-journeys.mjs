@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { calls, disabled, literal } from "./e2e-source.mjs";
 
 /**
  * **The critical journeys keep their browser test.**
@@ -36,19 +37,15 @@ export function parseLedger(markdown) {
   return rows;
 }
 
-const escapeForRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/**
- * How the spec source declares `title`: `"test"`, `"skipped"` (`.skip`/`.fixme`), or `null`
- * when no `test(…)` carries it as its first argument.
- */
+/** Static declaration check; runtime conditional skips are conservatively rejected. */
 export function findTest(source, title) {
-  const declared = new RegExp(
-    `\\btest(\\.(?:skip|fixme|only|fail|slow))?\\(\\s*(["'\`])${escapeForRegExp(title)}\\2`,
+  const all = calls(source);
+  const declared = all.find(
+    (call) =>
+      /^test(?:\.(?:skip|fixme|only|fail|slow))?$/.test(call.name) && literal(call.arg) === title,
   );
-  const match = source.match(declared);
-  if (!match) return null;
-  return /^\.(?:skip|fixme)$/.test(match[1] ?? "") ? "skipped" : "test";
+  if (!declared) return null;
+  return disabled(declared, all) ? "skipped" : "test";
 }
 
 /** Every problem with the ledger, given a reader for spec files (`null` when absent). */

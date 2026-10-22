@@ -20,7 +20,7 @@
   Settings' Team group at `/settings/activity`.
 
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
-  SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
+  SPG), **wetsuit** (sized, thickness in mm) with **boots**, **mask**, **fins**, **weights**, a **dive
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on
   for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9). Six
   add-ons are off by default and priced separately: the **GoPro**, the **drysuit**, a **hood**,
@@ -28,11 +28,14 @@
   piece (brings their own dive computer, say) is quoted whichever is cheaper — the set price or the
   sum of the pieces they actually take — so skipping one never costs more than the full set would
   have (`quoteRentalFit`, `src/lib/rentals.ts`).
+- **Mask and fins rental** — two independent rental choices, each with its own price and physical
+  unit. Renting a mask requires no fin size and never requests fins; renting fins never requests a
+  mask. A diver may choose both or neither.
 - **Rental catalog** — the shop-level list of gear and services a shop actually offers
   (`shops.rental_items`, `src/lib/rentals.ts`). It gates the rental-fit forms: a diver is only
   offered — and only sees size fields for — gear the shop stocks, so a shop that doesn't rent
   GoPros never offers one. It also holds one non-gear entry, `"nitrox"` (`shopOffersNitrox`):
-  whether the shop fills enriched air at all. Defaults to the five core items plus the dive
+  whether the shop fills enriched air at all. Defaults to the six core items plus the dive
   computer (default-on); the GoPro and nitrox are opt-in — most shops don't fill nitrox, so a shop
   that hasn't ticked it never shows the nitrox request, its price field, or the packing list's
   nitrox tank count and blockers. Editing the catalog changes what is offered going forward; it
@@ -47,8 +50,8 @@
   live reservation of that kind on the gear register means a unit is on its peg with the diver's
   name against it, so the prep list and the manifest rail read it as an ordinary piece. The rule is
   one place, `rentalFitLine`/`buildDivePrepChecklist` handed the booking's held register kinds;
-  mask & fins counts as held only when both units are, and a paid rental line with no unit behind
-  it keeps the mark, because money taken is a refund conversation the mark starts. The offline snapshot freezes that fact with everything else it holds, so a shop
+  mask and fins each count as held only when their own unit is reserved. A paid rental line with no
+  unit behind it keeps the mark, because money taken is a refund conversation the mark starts. The offline snapshot freezes that fact with everything else it holds, so a shop
   that re-adds the piece after a snapshot is taken carries the old mark onto the boat until the
   next one. No *other* line changes with it: the weighting, the fin sizing and the drysuit-card
   advisory are not about the rental at all. They follow **Dives dry** below, which the catalog
@@ -78,7 +81,7 @@
   the scuba unit and an instructor briefing. A yes/no rather than a set of included kinds; the public
   booking page still quotes rental prices for these courses until the rest of the slice lands.
 - **Rental prices** — the shop's optional price list for rental gear, set beside the catalog on the Rentals page (`shops.rental_pricing`,
-  `src/lib/rentals.ts`): a **set price** for the full core kit of six pieces (BCD, regulator, wetsuit, mask and fins, weights,
+  `src/lib/rentals.ts`): a **set price** for the full core kit of seven pieces (BCD, regulator, wetsuit, mask, fins, weights,
   dive computer; usually cheaper than the pieces), a **per-piece** price for any item, and a **per-dive nitrox** surcharge —
   all in minor units, all optional. A diver renting core items is quoted the set when it is no dearer than
   the sum of those pieces, and the pieces otherwise (so an own-computer diver keeps the set discount
@@ -105,7 +108,7 @@
   vulcanised on, so they come off the wall with the suit and there is nothing extra to pull. A fleet
   stocking neoprene-sock suits worn with separate rock boots writes that into the drysuit size
   itself ("ML, rock boot 9"), which is free text staff-side and reaches the packing list verbatim.
-  The diver's shoe size still matters for fins over that boot, and the mask/fins question already
+  The diver's shoe size still matters for fins over that boot, and the fin-size question
   asks it.
   Every size field holds **40 characters** and the usual-weighting note 120
   (`RENTAL_FIT_TEXT_LIMITS`, `src/lib/rentals.ts`) — one bound for all four writers, because the
@@ -304,9 +307,9 @@
   groups by item *and* size; an unrecorded size is shown as a loose end, not silently dropped.
 - **Complete rental fit** — a fit is complete when *every piece the diver takes from the shop* has
   the size it needs, not merely when a record exists: a diver who ticks BCD, wetsuit and weights and
-  supplies only a shoe size has an **incomplete** fit, with three loose ends. One shoe size answers
-  for both boots and fins. The **sized** pieces are BCD, wetsuit, boots, mask & fins, weights and
-  drysuit (`SIZED_RENTAL_KINDS`, `src/lib/rentals.ts`); every other piece has no size column, so it
+  supplies only a fin size has an **incomplete** fit. Boots and fins each retain their own size;
+  neither answers for the other. The **sized** pieces are BCD, wetsuit, boots, fins, weights,
+  drysuit, hood and gloves (`SIZED_RENTAL_KINDS`, `src/lib/rentals.ts`); every other piece has no size column, so it
   has no size to be missing. Named that way round on purpose: the unsized list was kept by hand as
   three, drifted to six without anybody noticing, and a diver renting a dive light read "Not
   recorded" — a gap nobody could fill (#1805). Two facts stay distinct, in the words Today and the
@@ -345,8 +348,8 @@
   weights line reads "weight check in the water" on the prep list and carries no size on a manifest
   or roster line. Under-weighted is the direction a drysuit diver cannot hold a safety stop in; the
   stated answer stays on the diver profile, where the question was asked. Their **fins** are the
-  same question one step over: every fit form asks one shoe size ("Fin & boot size", "US 9 / EU
-  42"), a vulcanised drysuit boot is two to three fin sizes bigger than the foot in it, and a pair
+  same question one step over: the fin-size field records their stated fit (for example "US 9 / EU
+  42"). A vulcanised drysuit boot is two to three fin sizes bigger than the foot in it, and a pair
   packed to the stated number does not go on at the bench. That size stays on the line as the
   number the packer sizes up from, and the line says the pair has to clear the boot.
   **Both follow the diver, never the catalog** (H-78, issue #1810): every drysuit has a boot, a

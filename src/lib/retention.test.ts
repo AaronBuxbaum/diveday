@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  DIETARY_NOTE_RETENTION_DAYS,
+  dietaryNoteCutoff,
   PRUNE_BATCH_LIMIT,
   RETENTION_DAYS,
   type RetainedTable,
@@ -11,6 +13,10 @@ import {
 const NOW = new Date("2026-08-03T00:00:00.000Z");
 
 describe("retention windows", () => {
+  it("keeps the dietary policy at a strict 30-day eligibility cutoff", () => {
+    expect(DIETARY_NOTE_RETENTION_DAYS).toBe(30);
+    expect(dietaryNoteCutoff(NOW).toISOString()).toBe("2026-07-04T00:00:00.000Z");
+  });
   // The hazard the review named explicitly (PAY-L2): a `stripe_webhook_events`
   // row is not just dedup state, it is the chronological evidence
   // `hasNewerAccountUpdate` reads. Pruning inside Stripe's own retry horizon

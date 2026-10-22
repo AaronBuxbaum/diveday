@@ -25,6 +25,7 @@ export function StaffNoticeBanner({
   className?: string;
   children: React.ReactNode;
 }) {
+  if (tone === "success") return <ShopNotice tone={tone}>{children}</ShopNotice>;
   return (
     <div className={`mb-6 ${className}`.trim()}>
       <ShopNotice tone={tone} role={noticeRole(tone)}>

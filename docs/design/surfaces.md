@@ -591,7 +591,8 @@ primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 - **Remove first:** the merge panel's standing card — it earns its place only while candidates
   exist, and the redesign keeps it conditional.
 - **Composition:** status, story, file — a person is a readiness question, a history, and a set of
-  facts, in that order; ten co-equal sections answered no question first.
+  facts, in that order; ten co-equal sections answered no question first. Their own gear and any
+  open service order stay together in the file; shop rentals remain under Gear and sizes.
 
 **Amended 2026-09-17, the file is one door grammar.** The 8b build shipped two: "legacy" groups
 (certification records, waiver, gear and sizes, diver notes, conversation) hid their summary above
@@ -708,3 +709,14 @@ pages", amended): the sale goes back in front of the notes.
   (marker, title, two notes, the link to the feature page, the screen; on a phone the screen sits
   between the title and the notes, so each note lands under what it points at), the directory of
   every feature page in three columns on the surface band, the records diptych, the close.
+
+
+## Small collection editors: Boats, emergency reference, trip tags, packages and checklist
+
+The one idea is to read the saved collection first and open a form only for the record being
+changed. A reader asking what is configured sees names, capacities, emergency numbers, package
+terms and checklist order without opening an editor. The row's summary carries its edit action,
+and one final disclosure adds a record, removing the repeated standing Save controls. The second
+border around each record disappears before useful facts or consequences do. The open ledger
+serves short action rows, while the inset disclosure group serves records with forms; the
+[source audit](collection-pattern-audit.md) records the workflow-specific differences retained.

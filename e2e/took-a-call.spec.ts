@@ -42,7 +42,6 @@ async function fullDeparture(page: Page): Promise<string> {
     returnsAt: "11:00",
     capacity: 1,
   });
-  await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
   // Tomorrow's boat is inside the arrivals window, where "Add a diver" is one
   // search field and a booked seat is its empty result's "Add diver".
@@ -94,6 +93,11 @@ test.describe("took a call", () => {
   test("a caller wanting a full boat is wait-listed by the trip page's own writer", async ({
     page,
   }) => {
+    // Sized for the aggregate multi-step setup: creates a capacity-1 trip on
+    // the schedule board, books it to capacity with a walk-in diver, navigates
+    // to Add a booking (#call), and submits the wait-list entry. Measured at
+    // 15.9s under parallel runner load against the 15s default (run #39457126701).
+    test.setTimeout(30_000);
     const title = await fullDeparture(page);
     const call = await openCallForm(page);
     await call.getByLabel("Full name").fill("Tobias Fenn E2E");
@@ -135,6 +139,10 @@ test.describe("took a call", () => {
    * have been a perfectly good date request.
    */
   test("a wait-list call with only a phone number is refused for the address", async ({ page }) => {
+    // Same aggregate multi-step setup as the wait-list writer above: creates
+    // and fills a capacity-1 departure, opens the call form, and exercises the
+    // email requirement refusal. Measured at 13.4s of 15s on CI (run #39457126701).
+    test.setTimeout(30_000);
     const title = await fullDeparture(page);
     const call = await openCallForm(page);
     await call.getByLabel("Full name").fill("Phone Only E2E");

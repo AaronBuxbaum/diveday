@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -8,7 +7,6 @@ import { payoutSentence } from "@/i18n/payout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RevenueLine } from "@/lib/report-lines";
 import { shopPath } from "@/lib/staff-notices";
-import { MonthEndSection } from "./MonthEndSection";
 
 /** Each revenue line's name in the staff bundle. */
 export const BY_LINE_KEYS = {
@@ -284,16 +282,6 @@ export function MonthFootnotes({
       </p>
       {counterTaxIncludedCents > 0 ? (
         <p className="mt-1 text-end text-sm text-muted">{t("reports.counterTaxIncluded")}</p>
-      ) : null}
-      {monthEnd ? (
-        <Suspense fallback={null}>
-          <MonthEndSection
-            shopSlug={monthEnd.shopSlug}
-            locale={monthEnd.locale}
-            timeZone={monthEnd.timeZone}
-            t={t}
-          />
-        </Suspense>
       ) : null}
     </>
   );

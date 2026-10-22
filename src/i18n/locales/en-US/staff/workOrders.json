@@ -107,7 +107,7 @@
     "deleting": "Deleting…",
     "restore": "Restore",
     "restoring": "Restoring…",
-    "claimTag": "Claim tag",
+    "claimTag": "Print claim tag",
     "jobHeading": "The job",
     "inspectionDue": "Visual inspection due {date}",
     "hydroDue": "Hydro test due {date}",
@@ -151,6 +151,8 @@
   },
   "diver": {
     "heading": "Their own gear",
+    "gearHeading": "Gear on file",
+    "ordersHeading": "Service history",
     "gearEmpty": "Nothing on file.",
     "ordersEmpty": "None yet.",
     "onTheBench": "{count, plural, one {# on the bench} other {# on the bench}}",

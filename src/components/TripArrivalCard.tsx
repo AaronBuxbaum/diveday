@@ -8,7 +8,7 @@ import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { dockCallAt } from "@/lib/dock-call";
 import { formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
+import { openMapsUrl, osmMapEmbedUrl } from "@/lib/maps";
 import { meetingPointOf } from "@/lib/meeting-point";
 import type { ShopAddressParts } from "@/lib/shop-address";
 
@@ -182,7 +182,7 @@ export function TripArrivalCard({
       ) : showMap && facts.mapQuery ? (
         <ArrivalMap
           title={t("trip.arrivalMapTitle", { place: facts.label })}
-          src={googleMapEmbedUrl(facts.mapQuery)}
+          src={osmMapEmbedUrl(facts.mapQuery)}
         />
       ) : null}
       {/* A ruled row pads `pt-3` under its rule, the column's own gap above
@@ -196,7 +196,7 @@ export function TripArrivalCard({
           ) : null}
           {facts.mapQuery ? (
             <a
-              href={googleMapsUrl(facts.mapQuery)}
+              href={openMapsUrl(facts.mapQuery)}
               target="_blank"
               rel="noreferrer"
               className="mt-2 inline-flex min-h-11 items-center font-medium text-primary hover:underline"

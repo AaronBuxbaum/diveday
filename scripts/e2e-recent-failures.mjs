@@ -12,11 +12,12 @@
  *   node scripts/e2e-recent-failures.mjs [--days 7] [--max 8]
  *
  * Needs `gh` with `actions: read` and `checks: read`. Prints nothing (and exits 0) when no
- * spec failed or `gh` cannot answer, so the nightly simply has nothing to repeat.
+ * spec failed. History lookup failures exit nonzero; they are never an empty history.
  */
 import { existsSync } from "node:fs";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { stripVTControlCharacters } from "node:util";
 
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
@@ -32,8 +33,9 @@ export function rankFailedSpecs(annotationsPerJob, { max = 8, exists = () => tru
   for (const annotations of annotationsPerJob) {
     const specs = new Set(
       annotations
-        .filter((a) => a.annotation_level === "failure" && SPEC.test(a.path ?? ""))
-        .map((a) => a.path),
+        .filter((a) => a.annotation_level === "failure")
+        .map(annotationSpec)
+        .filter(Boolean),
     );
     for (const spec of specs) counts.set(spec, (counts.get(spec) ?? 0) + 1);
   }
@@ -42,6 +44,51 @@ export function rankFailedSpecs(annotationsPerJob, { max = 8, exists = () => tru
     .sort(([a, x], [b, y]) => y - x || a.localeCompare(b))
     .slice(0, max)
     .map(([spec]) => spec);
+}
+
+// Playwright's GitHub reporter title contains the test's declaration identity;
+// annotation.path can instead be the helper frame where the assertion threw.
+export function annotationSpec(annotation) {
+  const identity = stripVTControlCharacters(annotation.title ?? "");
+  const match = identity.match(
+    /(?:^|[\s›])(?:.*?\/)?(e2e\/[^\s:›]+\.spec\.ts):\d+(?::\d+)?(?:\s|$)/,
+  );
+  if (match) return match[1];
+  return SPEC.test(annotation.path ?? "") ? annotation.path : null;
+}
+
+/** Fetch all pages, rejecting a partial lookup instead of publishing partial history. */
+export function pages(endpoint, key, request) {
+  const items = [];
+  for (let page = 1; page <= 1000; page++) {
+    const response = request(
+      `${endpoint}${endpoint.includes("?") ? "&" : "?"}per_page=100&page=${page}`,
+    );
+    const rows = key === null ? response : response[key];
+    if (!Array.isArray(rows)) throw new Error(`Malformed history response: ${endpoint}`);
+    items.push(...rows);
+    if (rows.length < 100) return items;
+  }
+  throw new Error(`History pagination exceeded safety limit: ${endpoint}`);
+}
+
+export function readFailureHistory(repo, since, request) {
+  const runs = pages(
+    `repos/${repo}/actions/workflows/ci.yml/runs?status=failure&created=>=${since}`,
+    "workflow_runs",
+    request,
+  );
+  const perJob = [];
+  for (const run of runs) {
+    const jobs = pages(`repos/${repo}/actions/runs/${run.id}/jobs`, "jobs", request);
+    for (const job of jobs.filter(
+      (job) =>
+        job.conclusion === "failure" && /^(?:Playwright shard|Visual capture shard)/.test(job.name),
+    )) {
+      perJob.push(pages(`repos/${repo}/check-runs/${job.id}/annotations`, null, request));
+    }
+  }
+  return { perJob, runCount: runs.length };
 }
 
 function flag(name, fallback) {
@@ -58,27 +105,16 @@ function main() {
   const repo = process.env.GITHUB_REPOSITORY ?? "AaronBuxbaum/diveday";
   const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
   try {
-    const runs = gh([
-      "api",
-      `repos/${repo}/actions/workflows/ci.yml/runs?status=failure&created=>=${since}&per_page=100`,
-      "--jq",
-      "[.workflow_runs[].id]",
-    ]);
-    const perJob = [];
-    for (const run of runs) {
-      const jobs = gh([
-        "api",
-        `repos/${repo}/actions/runs/${run}/jobs?per_page=100`,
-        "--jq",
-        '[.jobs[] | select(.conclusion == "failure" and (.name | startswith("Playwright shard"))) | .id]',
-      ]);
-      for (const job of jobs) {
-        perJob.push(gh(["api", `repos/${repo}/check-runs/${job}/annotations?per_page=100`]));
-      }
-    }
+    const { perJob, runCount } = readFailureHistory(repo, since, (endpoint) =>
+      gh(["api", endpoint]),
+    );
+    console.error(
+      `e2e-recent-failures: inspected ${runCount} failed CI runs since ${since}; Playwright and visual shards`,
+    );
     for (const spec of rankFailedSpecs(perJob, { max, exists: existsSync })) console.log(spec);
   } catch (error) {
     console.error(`e2e-recent-failures: could not read CI history (${error.message})`);
+    process.exitCode = 1;
   }
 }
 

@@ -229,7 +229,7 @@
     "unrecordedSailings": "{count, plural, one {# sailing} other {# sailings}} this month",
     "noDepartures": "No departures came back this month.",
     "year": {
-      "open": "The year",
+      "open": "Year view",
       "print": "Print the year",
       "intro": "What the shop recorded on the year’s departures that are home. Lapsed credentials are read as the records stand today.",
       "figuresLabel": "The year’s safety record",
@@ -248,7 +248,9 @@
       "earliestTitle": "This is your first year with departures",
       "currentTitle": "You’re viewing the current year"
     },
-    "incidentsValue": "{filed} filed{drafts, plural, =0 {} one { · # draft} other { · # drafts}}"
+    "incidentsValue": "{filed} filed{drafts, plural, =0 {} one { · # draft} other { · # drafts}}",
+    "monthView": "Month view",
+    "printMonth": "Print month"
   },
   "discard": {
     "title": "Delete this draft",

@@ -45,7 +45,6 @@ import {
 } from "./trips";
 import { issueWaiverRequest } from "./waivers";
 
-// One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`).
 const ctx = fileScopedShopContext();
 
@@ -1149,7 +1148,8 @@ describe("the manifest packs each seat its own kit", () => {
       personId: row.personId,
       rentsBcd: true,
       rentsRegulator: true,
-      rentsMaskFins: true,
+      rentsMask: false,
+      rentsFins: true,
       bcdSize: "M",
       finSize: "M",
     });
@@ -1157,7 +1157,7 @@ describe("the manifest packs each seat its own kit", () => {
     const manifest = await getTripManifest(db, shop.id, trip.id);
     const fit = manifest?.divers.find((d) => d.bookingId === snorkeler.bookingId)?.rentalFit;
     const kinds = fit?.state === "rents" ? fit.items.map((item) => item.kind) : [];
-    expect(kinds).toContain("mask_fins");
+    expect(kinds).toContain("fins");
     expect(kinds).not.toContain("bcd");
     expect(kinds).not.toContain("regulator");
   });

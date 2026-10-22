@@ -117,6 +117,7 @@ export default async function WorkOrdersPage({
           fields={{ workOrderId: search.undoId }}
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
+          dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : banner ? (
         <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>

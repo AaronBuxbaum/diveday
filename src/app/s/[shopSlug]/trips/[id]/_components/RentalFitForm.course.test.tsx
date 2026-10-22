@@ -7,7 +7,7 @@ import { RentalFitForm } from "./RentalFitForm";
 
 const defaultPricing: RentalPricing = {
   setCents: 5000,
-  perItemCents: { bcd: 1500, regulator: 1500, wetsuit: 2000, mask_fins: 1000, weights: 500 },
+  perItemCents: { bcd: 1500, regulator: 1500, wetsuit: 2000, fins: 1000, weights: 500 },
   nitroxCents: 1000,
 };
 
@@ -29,7 +29,7 @@ describe("RentalFitForm on a course that includes the gear", () => {
       <RentalFitForm
         action={mockAction}
         rentalFit={null}
-        rentalItems={["bcd", "wetsuit", "mask_fins"]}
+        rentalItems={["bcd", "wetsuit", "fins"]}
         course={{ nitroxCompatible: false, gearIncluded: true }}
         pricing={defaultPricing}
         wantsNitrox={false}
@@ -54,7 +54,7 @@ describe("RentalFitForm on a course that includes the gear", () => {
       <RentalFitForm
         action={mockAction}
         rentalFit={null}
-        rentalItems={["bcd", "regulator", "wetsuit", "mask_fins", "weights", "nitrox"]}
+        rentalItems={["bcd", "regulator", "wetsuit", "fins", "weights", "nitrox"]}
         course={{ nitroxCompatible: true, gearIncluded: true }}
         pricing={defaultPricing}
         wantsNitrox={false}
@@ -77,7 +77,7 @@ describe("RentalFitForm on a course that includes the gear", () => {
       <RentalFitForm
         action={mockAction}
         rentalFit={null}
-        rentalItems={["bcd", "wetsuit", "mask_fins"]}
+        rentalItems={["bcd", "wetsuit", "fins"]}
         course={{ nitroxCompatible: false, gearIncluded: false }}
         pricing={defaultPricing}
         wantsNitrox={false}

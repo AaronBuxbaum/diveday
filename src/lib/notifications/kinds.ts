@@ -106,7 +106,7 @@ const learningMaterialsSchema = z
 /**
  * Where to go for the departure (ux review 2026-10-11, items 4 and 27), as
  * `meetingPointOf` reads it and `meetingPointForMessage` clips it. The map
- * link is built by the renderer from `mapQuery` (`googleMapsUrl`), so no
+ * link is built by the renderer from `mapQuery` (`openMapsUrl`), so no
  * caller can put an arbitrary `href` in a diver's inbox through this field.
  */
 const meetingPointSchema = z.object({

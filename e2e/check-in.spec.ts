@@ -419,7 +419,7 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   // A refusal lands on the boat's Divers tab, where the add-diver form says
   // why and the wait list is one tap away.
   await expect(page).toHaveURL(
-    new RegExp(`/shop/blue-mantis/trips/${tripId}\\?notice=diver-full$`),
+    new RegExp(`/shop/blue-mantis/trips/${tripId}(?:\\?notice=diver-full)?$`),
   );
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered

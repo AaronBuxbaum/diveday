@@ -238,6 +238,10 @@ test.describe("H-14 role permissions", () => {
 
       // The rows themselves, not only the chrome — a page that renders its
       // heading and no leads would pass a URL assertion and help nobody.
+      await page
+        .getByRole("button", { name: /Actions for/ })
+        .first()
+        .click();
       await expect(page.getByRole("link", { name: "Create a booking" }).first()).toBeVisible();
 
       // **Turning one into a departure is not this role's** — that is

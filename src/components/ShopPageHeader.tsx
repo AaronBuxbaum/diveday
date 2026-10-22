@@ -1,6 +1,7 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { Key, ReactNode } from "react";
 import { FoldedPageTitle } from "@/components/chrome/FoldedPageTitle";
+import { Toast } from "@/components/Toast";
 import { tapTargetOverhangClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMarkColumn } from "@/components/ui/StatusMark";
@@ -692,12 +693,20 @@ export function ShopNotice({
   tone = "success",
   role = "status",
   className = "",
+  occurrenceKey,
+  persistent = false,
 }: {
   children: React.ReactNode;
   tone?: "success" | "danger" | "warning" | "neutral";
   role?: "status" | "alert";
   className?: string;
+  /** Action/result identity so consecutive identical confirmations replay. */
+  occurrenceKey?: Key;
+  /** Keep detailed result content on the page instead of auto-dismissing it. */
+  persistent?: boolean;
 }) {
+  if (tone === "success" && !persistent)
+    return <Toast message={children} pausable occurrenceKey={occurrenceKey} />;
   // `-strong` on the success tint: the raw hue on its own 10% fill is 4.39:1 in
   // the light palette, under AA (docs/design/forms-and-controls.md). `danger`
   // needs no nudge and `warning` already reads as body text on its tint.

@@ -44,6 +44,7 @@ export const rentalFitItem = pgEnum("rental_fit_item", [
   "wetsuit",
   "boots",
   "mask_fins",
+  "fins",
   "weights",
   "drysuit",
   "hood",
@@ -87,7 +88,10 @@ export const rentalFitProfiles = pgTable(
     rentsBcd: boolean("rents_bcd").notNull().default(false),
     rentsRegulator: boolean("rents_regulator").notNull().default(false),
     rentsWetsuit: boolean("rents_wetsuit").notNull().default(false),
-    rentsMaskFins: boolean("rents_mask_fins").notNull().default(false),
+    // Storage-only for the previous serving release; no feature reads or writes it.
+    retiringRentsMaskFins: boolean("rents_mask_fins").notNull().default(false),
+    rentsMask: boolean("rents_mask").notNull().default(false),
+    rentsFins: boolean("rents_fins").notNull().default(false),
     rentsWeights: boolean("rents_weights").notNull().default(false),
     /**
      * Optional add-ons — a diver usually owns a computer, and the rest are kit

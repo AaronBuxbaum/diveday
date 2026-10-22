@@ -194,6 +194,12 @@ test.describe("owner, the Safety page", () => {
     await expect(page.getByRole("region", { name: "Roll calls left open" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Incident reports" })).toBeVisible();
 
+    await expect(page.getByRole("button", { name: "Print month" })).toBeVisible();
+    await page.getByRole("link", { name: "Year view", exact: true }).click();
+    await expect(page).toHaveURL(/\/safety\?year=\d{4}/);
+    await expect(page.getByRole("button", { name: "Print the year" })).toBeVisible();
+    await page.getByRole("link", { name: "Month view", exact: true }).click();
+    await expect(page).toHaveURL(/\/safety\?month=\d{4}-\d{2}/);
     const chooser = page.getByRole("navigation", { name: "Choose month" });
     await chooser.getByRole("link", { name: "Previous month" }).click();
     await expect(page).toHaveURL(/\/safety\?month=\d{4}-\d{2}/);

@@ -726,6 +726,22 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "CARTO basemap API key for client-rendered dive site maps (src/components/map/SiteMap.tsx).",
+      "Passed to CARTO basemaps.cartocdn.com tile requests via ?key=. Without a key,",
+      "CARTO returns tiles with an 'API Key Required' watermark.",
+    ],
+    keys: [
+      {
+        key: "NEXT_PUBLIC_CARTO_API_KEY",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent:
+          "CARTO tiles load without key parameter and may display the API Key Required watermark",
+      },
+    ],
+  },
+  {
+    doc: [
       "Scheduled pre-trip reminders (ADR 20260721-scheduled-reminder-cadence). Vercel",
       "Cron calls GET /api/cron/reminders daily with this as a bearer token (the Hobby",
       "plan caps crons at daily; the cadence buckets are >=24h wide so a daily run",
@@ -917,6 +933,28 @@ export const ENV_GROUPS = [
         from: "manual",
         targets: LOCAL_AND_VERCEL,
         absent: "defaults to sandbox, so nothing reaches a real company file",
+      },
+    ],
+  },
+  {
+    doc: [
+      "Claude assists (ADR 20261018-claude-assists). Unset, assists offer nothing and",
+      "every feature works as it does without Claude. ANTHROPIC_API_KEY is an",
+      "Anthropic API key for DiveDay. DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD is the",
+      "optional monthly spend cap per shop (defaults to 15 USD).",
+    ],
+    keys: [
+      {
+        key: "ANTHROPIC_API_KEY",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "Claude assists are disabled; operations run without AI assists",
+      },
+      {
+        key: "DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "uses the default monthly cap of 15 USD per shop",
       },
     ],
   },

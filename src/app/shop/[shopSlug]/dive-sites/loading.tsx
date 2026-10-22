@@ -25,35 +25,44 @@ export default function DiveSitesLoading() {
         <ShopPageHeaderSkeleton titleWidth="w-56" description={false} actions />
         {/* The search box, in the `mb-6` toolbar the page draws it in. */}
         <div className="mb-6 h-12 w-full rounded-lg bg-surface-sunken sm:w-80" />
-        <div className="mt-8 space-y-8">
-          {[3, 2].map((rows, group) => (
-            <div key={rows}>
-              {/* The group label, at `GroupLabel`'s own height. */}
-              <div className="h-4 w-28 rounded bg-surface-sunken" />
-              <div className="mt-2">
-                {Array.from({ length: rows }, (_unused, row) => (
-                  <div
-                    // Bars, not records: this list has a fixed length, never
-                    // reorders, and holds no state — the position is the only
-                    // identity a placeholder row has.
-                    // biome-ignore lint/suspicious/noArrayIndexKey: see above
-                    key={`${group}-${row}`}
-                    className={`flex min-h-13 items-center justify-between gap-4 ${ledgerRowBoxClass}`}
-                  >
-                    <SiteLineBars nameWidth="w-40" metaWidth="w-56" />
-                    <span className="block h-5 w-20 shrink-0 rounded bg-surface-sunken" />
+        <div className="mt-6 flex flex-col gap-8">
+          {/* The map skeleton on the top */}
+          <div className="w-full">
+            <div className="h-[440px] w-full rounded-xl bg-surface-sunken sm:h-[540px] lg:h-[620px]" />
+          </div>
+
+          {/* The ledger skeleton underneath the map */}
+          <div className="w-full min-w-0">
+            <div className="space-y-8">
+              {[3, 2].map((rows, group) => (
+                <div key={rows}>
+                  {/* The group label, at `GroupLabel`'s own height. */}
+                  <div className="h-4 w-28 rounded bg-surface-sunken" />
+                  <div className="mt-2">
+                    {Array.from({ length: rows }, (_unused, row) => (
+                      <div
+                        // Bars, not records: this list has a fixed length, never
+                        // reorders, and holds no state — the position is the only
+                        // identity a placeholder row has.
+                        // biome-ignore lint/suspicious/noArrayIndexKey: see above
+                        key={`${group}-${row}`}
+                        className={`flex min-h-13 items-center justify-between gap-4 ${ledgerRowBoxClass}`}
+                      >
+                        <SiteLineBars nameWidth="w-40" metaWidth="w-56" />
+                        <span className="block h-5 w-20 shrink-0 rounded bg-surface-sunken" />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+              ))}
+            </div>
+            {/* The catalog door: the ledger's tail row */}
+            <div className="mt-10">
+              <div className={`flex min-h-13 items-center gap-3 ${ledgerRowBoxClass}`}>
+                <span className="block size-5 shrink-0 rounded bg-surface-sunken" />
+                <SiteLineBars nameWidth="w-52" metaWidth="w-32" />
               </div>
             </div>
-          ))}
-        </div>
-        {/* The catalog door: the ledger's tail row, one `LedgerRow` of its own
-            with the pin leading, so the same box and the same two lines. */}
-        <div className="mt-10">
-          <div className={`flex min-h-13 items-center gap-3 ${ledgerRowBoxClass}`}>
-            <span className="block size-5 shrink-0 rounded bg-surface-sunken" />
-            <SiteLineBars nameWidth="w-52" metaWidth="w-32" />
           </div>
         </div>
       </div>

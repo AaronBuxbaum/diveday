@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RowMenu } from "./RowMenu";
@@ -60,6 +60,29 @@ describe("RowMenu", () => {
       render(<RowMenu label="More">{<button type="button">Delete</button>}</RowMenu>);
       await userEvent.click(screen.getByRole("button", { name: "More" }));
       expect(document.querySelector("[data-row-menu]")).toHaveClass("bottom-full");
+    } finally {
+      document.documentElement.style.removeProperty("--tabbar-h");
+    }
+  });
+
+  it("repositions an open menu when the viewport changes to phone size", async () => {
+    let screenHeight = 900;
+    vi.spyOn(window, "innerHeight", "get").mockImplementation(() => screenHeight);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.hasAttribute("data-row-menu") ? rect(0, 120) : rect(700, 32);
+    });
+    render(<RowMenu label="More">{<button type="button">Delete</button>}</RowMenu>);
+    await userEvent.click(screen.getByRole("button", { name: "More" }));
+    const panel = document.querySelector("[data-row-menu]");
+    expect(panel).toHaveClass("top-full");
+
+    screenHeight = 844;
+    document.documentElement.style.setProperty("--tabbar-h", "64px");
+    try {
+      act(() => window.dispatchEvent(new Event("resize")));
+      expect(panel).toHaveClass("bottom-full");
     } finally {
       document.documentElement.style.removeProperty("--tabbar-h");
     }

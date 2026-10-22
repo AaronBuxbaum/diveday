@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
@@ -13,12 +14,14 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  */
 export function SavedAnswersSection({
   answers,
+  shopSlug,
   deleted,
   t,
   deleteAction,
   restoreAction,
 }: {
   answers: readonly SavedAnswer[];
+  shopSlug: string;
   deleted: readonly SavedAnswer[];
   t: StaffTranslator;
   deleteAction: (formData: FormData) => Promise<void>;
@@ -27,11 +30,16 @@ export function SavedAnswersSection({
   return (
     <section aria-labelledby="saved-answers" className="mt-10 scroll-mt-24">
       <LedgerGroup as="h2" id="saved-answers" label={t("inbox.savedAnswers.heading")}>
-        {answers.length === 0 ? (
-          <p className="text-sm text-muted">{t("inbox.savedAnswers.empty")}</p>
-        ) : (
+        <p className="mb-3 text-sm text-muted">{t("inbox.savedAnswers.empty")}</p>
+        <Link
+          href={`/shop/${shopSlug}/divers`}
+          className={buttonClass({ variant: "secondary", size: "sm" })}
+        >
+          {t("inbox.savedAnswers.openDiver")}
+        </Link>
+        {answers.length === 0 ? null : (
           <>
-            <ul className="divide-y divide-border border-y border-border">
+            <ul className="mt-3 divide-y divide-border border-y border-border">
               {answers.map((answer) => (
                 <li key={answer.id} className="flex items-start gap-3 py-3">
                   <div className="min-w-0 flex-1">

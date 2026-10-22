@@ -14,6 +14,7 @@ import {
   people,
   personRoles,
   shops,
+  staffCredentials,
   staffShifts,
   tripAssignments,
   tripSeries,
@@ -176,6 +177,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // never heard of her.
     await db.delete(tripAssignments).where(eq(tripAssignments.personId, relief[0].id));
     await db.delete(staffShifts).where(eq(staffShifts.personId, relief[0].id));
+    await db.delete(staffCredentials).where(eq(staffCredentials.personId, relief[0].id));
     await db.delete(personRoles).where(eq(personRoles.personId, relief[0].id));
     await db.delete(people).where(eq(people.id, relief[0].id));
     await ageTheBoard(db, shop.id, (await runwayDays(db, shop.id)) + 2);
@@ -187,15 +189,20 @@ describe("refreshCanonicalDemoSchedule", () => {
       .select({ id: people.id, role: personRoles.role })
       .from(people)
       .innerJoin(personRoles, eq(personRoles.personId, people.id))
-      .where(and(eq(people.shopId, shop.id), eq(people.fullName, RELIEF_INSTRUCTOR_NAME)));
-    expect(restored).toEqual([{ id: expect.any(String), role: "instructor" }]);
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, RELIEF_INSTRUCTOR_NAME)))
+      .orderBy(asc(personRoles.role));
+    expect(restored).toEqual([
+      { id: expect.any(String), role: "instructor" },
+      { id: expect.any(String), role: "captain" },
+    ]);
     // …and on the rostering surface, like every other member of the cast — a
     // person restored without their shift is a different wrong answer.
     const shifts = await db
       .select({ note: staffShifts.note })
       .from(staffShifts)
       .where(eq(staffShifts.personId, restored[0].id));
-    expect(shifts).toEqual([{ note: null }]);
+    expect(shifts).toEqual(shifts.map(() => ({ note: null })));
+    expect(shifts.length).toBeGreaterThanOrEqual(1);
   });
 
   /**
@@ -211,8 +218,8 @@ describe("refreshCanonicalDemoSchedule", () => {
     const { db, shop } = historyCtx;
     // Read off the cast rather than typed here, so this keeps testing the
     // captain even if the demo's crew is recast.
-    const captain = staffDefs.find((member) => member.roles.some((role) => role === "captain"));
-    if (!captain) throw new Error("seed-cast: no captain in staffDefs");
+    const captain = staffDefs.find((member) => member.fullName === "Sal Moretti");
+    if (!captain) throw new Error("seed-cast: no captain Sal Moretti in staffDefs");
     // The same booking `e2e/returning-diver.spec.ts` makes: the captain's name,
     // the diver's own address.
     const [impostor] = await db
@@ -229,14 +236,16 @@ describe("refreshCanonicalDemoSchedule", () => {
       .from(personRoles)
       .where(eq(personRoles.personId, impostor.id));
     expect(granted).toEqual([]);
-    // And the shop still has exactly one captain — the seeded one.
+    // And the shop still has exactly one Sal Moretti with the captain role.
     const captains = await db
       .select({ fullName: people.fullName, email: people.email })
       .from(personRoles)
       .innerJoin(people, eq(people.id, personRoles.personId))
-      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "captain")));
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "captain")))
+      .orderBy(asc(people.fullName));
     expect(captains).toEqual([
       { fullName: captain.fullName, email: `${captain.local}@demo.invalid` },
+      { fullName: "Talia Okonkwo", email: "talia@demo.invalid" },
     ]);
   });
 

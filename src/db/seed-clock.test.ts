@@ -164,25 +164,3 @@ describe("sailsAfterDayBoats", () => {
     expect(sailsAfterDayBoats(morning, TZ)).toBe(false);
   });
 });
-
-/**
- * **A boat leaving after 8 PM is a night dive** (issue #2440). Seeded in the
- * shop's evening, today's departure can only sail late, and it read as a
- * two-tank reef trip leaving at 11:30 PM.
- */
-describe("sailsAfterDayBoats", () => {
-  const TZ = "America/New_York";
-
-  it("is false through 8 PM shop time and true after it", () => {
-    expect(sailsAfterDayBoats(new Date("2026-07-20T13:00:00Z"), TZ)).toBe(false); // 9:00 AM EDT
-    expect(sailsAfterDayBoats(new Date("2026-07-21T00:00:00Z"), TZ)).toBe(false); // 8:00 PM EDT
-    expect(sailsAfterDayBoats(new Date("2026-07-21T00:30:00Z"), TZ)).toBe(true); // 8:30 PM EDT
-  });
-
-  it("names the evening seed's 11:30 PM slot as the night boat it is", () => {
-    const start = demoTodayDepartureStart(new Date("2026-07-20T22:34:00Z"), TZ); // 6:34 PM EDT
-    expect(sailsAfterDayBoats(start, TZ)).toBe(true);
-    const morning = demoTodayDepartureStart(new Date("2026-07-20T15:04:00Z"), TZ); // 11:04 AM EDT
-    expect(sailsAfterDayBoats(morning, TZ)).toBe(false);
-  });
-});

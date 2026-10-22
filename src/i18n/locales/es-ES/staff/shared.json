@@ -158,6 +158,11 @@
     "placeholder": "Busca buceadores, salidas, o ve directo a una página…",
     "emptyShort": "Escribe para buscar personas y salidas, o ve directo a una página.",
     "emptyNoMatches": "Sin resultados. Prueba un nombre, correo o título de salida.",
+    "searching": "Buscando…",
+    "searchFailed": "La búsqueda no está disponible.",
+    "searchUnauthorized": "Vuelve a iniciar sesión para buscar registros.",
+    "retry": "Reintentar",
+    "signInAgain": "Iniciar sesión",
     "groupDivers": "Buceadores",
     "addDiver": "Agregar buceador",
     "groupTrips": "Salidas",
@@ -309,6 +314,7 @@
     "message": "Pase de lista completo"
   },
   "undoToast": {
+    "dismiss": "Cerrar",
     "pendingLabel": "Deshaciendo…",
     "undo": "Deshacer"
   },
@@ -470,7 +476,8 @@
       "regulator": "Regulador",
       "wetsuit": "Neopreno",
       "boots": "Escarpines",
-      "maskFins": "Máscara y aletas",
+      "mask": "Máscara",
+      "fins": "Aletas",
       "weights": "Lastre",
       "diveComputer": "Computadora de buceo",
       "gopro": "GoPro",

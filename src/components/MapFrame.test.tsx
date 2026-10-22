@@ -38,7 +38,7 @@ const frame = () =>
   render(
     <MapFrame
       title="Terrain map"
-      src="https://maps.google.com/x"
+      src="https://www.openstreetmap.org/export/embed.html"
       className="h-full"
       interactive={false}
     />,
@@ -114,7 +114,7 @@ describe("MapFrame", () => {
     const { unmount } = render(
       <MapFrame
         title="Terrain map"
-        src="https://maps.google.com/x"
+        src="https://www.openstreetmap.org/export/embed.html"
         className="h-full"
         interactive={false}
       />,

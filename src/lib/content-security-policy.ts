@@ -170,13 +170,15 @@ function mediaRegionalImageHosts(region: string | null | undefined): string[] {
 
 /**
  * The map `/ready`, the public trip page's dive briefing and the staff
- * dive-site editor all frame. `src/lib/maps.ts` builds every embed URL against
- * `maps.google.com` — and that host **302s to `www.google.com/maps/embed`**,
- * which a frame navigation re-checks against this directive. Listing only the
- * URL the app writes would therefore break all three surfaces at once while
- * looking correct in the source.
+ * dive-site editor frame OpenStreetMap export embeds (`src/lib/maps.ts`).
  */
-const MAP_FRAME_HOSTS = ["https://maps.google.com", "https://www.google.com"];
+const MAP_FRAME_HOSTS = ["https://www.openstreetmap.org"];
+
+/**
+ * Public tile servers used by client map views (ADR 20261019-map-centric-dive-sites).
+ * CARTO Positron / Voyager raster basemap tiles, plus OpenStreetMap fallbacks.
+ */
+const MAP_TILE_IMAGE_HOSTS = ["https://*.basemaps.cartocdn.com", "https://tile.openstreetmap.org"];
 
 /**
  * The images the route maps may read from a frame host: each probe URL itself,
@@ -372,6 +374,7 @@ export function enforcedPolicy(options: CspOptions): string {
         // The one-pixel reads the route maps make before showing their frame
         // (`MAP_REACHABILITY_PROBES`, src/lib/maps.ts): frame hosts already.
         ...MAP_PROBE_IMAGE_SOURCES,
+        ...MAP_TILE_IMAGE_HOSTS,
       ],
     ],
     ["font-src", ["'self'", GOOGLE_FONTS_FILE_HOST]],

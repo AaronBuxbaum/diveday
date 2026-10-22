@@ -265,9 +265,9 @@ test.describe("owner", () => {
   }) => {
     await page.goto("/shop/blue-mantis");
     await page.locator("header [data-identity-menu]").click();
-    const header = page.locator("header");
+    const header = page.locator("header[data-chrome-bar]");
     await expect(header.getByRole("button", { name: "Sign out" })).toBeVisible();
-    await expect(header.getByRole("link", { name: "Settings" })).toHaveCount(0);
+    await expect(header.getByRole("link", { name: "Settings", exact: true })).toHaveCount(0);
     // The reader's own things are one labelled group, My account (issue #2813,
     // Aaron 2026-10-17): security, calendar feed and email, for every role.
     const account = header.getByRole("navigation", { name: "My account" });

@@ -200,6 +200,7 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         deliveryId: issue.delivery.id,
         bookingId: issue.booking.id,
         fullName: issue.person.fullName,
+        personId: issue.person.id,
         isWaiver: issue.delivery.kind !== "booking_confirmation",
         status: issue.delivery.status,
         trip: {

@@ -38,16 +38,7 @@ export const metadata: Metadata = {
   title: "Safety — DiveDay",
 };
 
-/**
- * **The month's safety, a place of its own** (ADR 20261012-incident-reports).
- * Owners and managers only, on the Reports gate. It reads what the shop
- * already records — roll calls, dock marks, card checks written past, crew
- * credentials, incident reports — over the departures that came back in the
- * month, and changes nothing.
- *
- * The month is walked the way Reports walks it: the same arrows and the same
- * picker, floored at the shop's first departure.
- */
+/** Safety records over the departures that came home in the chosen month or year. */
 export default async function SafetyReportPage({
   params,
   searchParams,
@@ -248,7 +239,13 @@ export default async function SafetyReportPage({
         year: String(year.number),
         zone: formatTimeZoneName(locale, tz, now),
       })
-    : null;
+    : t("incidents.safety.year.printedFor", {
+        shopName: shop.name,
+        start: formatMonthDay(current.month, 1, locale),
+        end: formatMonthDay(current.month, isThisMonth ? todayWall.day : lastDay, locale),
+        year: String(current.year),
+        zone: formatTimeZoneName(locale, tz, now),
+      });
 
   const navClass = buttonClass({ variant: "secondary", size: "icon" });
   const navDisabledClass = `${navClass} pointer-events-none opacity-40`;
@@ -259,16 +256,21 @@ export default async function SafetyReportPage({
       <ShopPageHeader
         title={t("shared.shopSections.safety")}
         actions={
-          year ? (
-            <PrintButton label={t("incidents.safety.year.print")} />
-          ) : (
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
             <Link
-              href={`${safetyPath}?year=${thisMonth.year}`}
+              href={
+                year
+                  ? `${safetyPath}?month=${monthKey(current)}`
+                  : `${safetyPath}?year=${current.year}`
+              }
               className={buttonClass({ variant: "secondary" })}
             >
-              {t("incidents.safety.year.open")}
+              {t(year ? "incidents.safety.monthView" : "incidents.safety.year.open")}
             </Link>
-          )
+            <PrintButton
+              label={t(year ? "incidents.safety.year.print" : "incidents.safety.printMonth")}
+            />
+          </div>
         }
       />
       {printedFor ? (

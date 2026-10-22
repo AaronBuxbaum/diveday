@@ -1,18 +1,20 @@
+"use client";
+
+import { useState } from "react";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ToastShell } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
 
 /**
- * A land-then-undo toast: the action already happened, and this offers a few
- * seconds to take it back — the delight-first alternative to a blocking
- * "are you sure?" for reversible staff actions (docs delight backlog). It is
- * driven by the redirect that carries the undo target in the URL, auto-dismisses
- * after a beat, and its Undo submits a bound server action. Deliberately generic:
- * pass any inverse action plus the hidden fields it needs.
+ * A land-then-undo toast: the action already happened, and this keeps the
+ * reversal available until staff act on it — the delight-first alternative
+ * to a blocking "are you sure?" for reversible staff actions. It is driven by
+ * the redirect that carries the undo target; Undo submits a bound server action
+ * and Dismiss clears the notice. Pass any inverse action and its hidden fields.
  *
- * The shared `ToastShell` with an Undo inside it, so the countdown pauses while
- * a reader's mouse or keyboard focus is in the toast (including the Undo
- * button) and resumes from wherever it left off once they leave.
+ * The shared `ToastShell` stays until the inverse action is taken. A transient
+ * acknowledgement must not carry the only control that can reverse a write.
  */
 export function UndoToast({
   message,
@@ -20,27 +22,26 @@ export function UndoToast({
   fields,
   pendingLabel,
   undoLabel,
-  // Deliberately clear of Playwright's 8s expect timeout (playwright.config.ts)
-  // so any render delay can't make the toast vanish out from under an assertion
-  // racing to see it — that collision produced exactly this failure signature.
-  autoDismissMs = 12000,
+  dismissLabel,
 }: {
   message: string;
   action: (formData: FormData) => void;
   fields: Record<string, string>;
   pendingLabel: string;
   undoLabel: string;
-  autoDismissMs?: number;
+  dismissLabel: string;
 }) {
-  // `ps-4 pe-1`, not `px-4`: Undo's own `px-3` supplies the rest of the end
-  // inset, so the word ends 16px inside the toast as the message starts 16px
-  // inside it. Both sides at `px-4` put Undo 7px further in (pixel-craft K-102).
+  const fieldsIdentity = JSON.stringify(fields);
+  const [dismissedTarget, setDismissedTarget] = useState<{
+    fieldsIdentity: string;
+    message: string;
+  } | null>(null);
+  const dismissed =
+    dismissedTarget?.fieldsIdentity === fieldsIdentity && dismissedTarget.message === message;
+  if (dismissed) return null;
+
   return (
-    <ToastShell
-      autoDismissMs={autoDismissMs}
-      pausable
-      className="flex items-center gap-4 py-3 ps-4 pe-1"
-    >
+    <ToastShell autoDismissMs={null} className="flex items-center gap-2 py-3 ps-4 pe-1">
       <span className="text-sm font-medium">{message}</span>
       <form action={action}>
         {Object.entries(fields).map(([name, value]) => (
@@ -64,6 +65,18 @@ export function UndoToast({
           {undoLabel}
         </SubmitButton>
       </form>
+      <button
+        type="button"
+        aria-label={dismissLabel}
+        onClick={() => setDismissedTarget({ fieldsIdentity, message })}
+        className={buttonClass({
+          variant: "ghost",
+          size: "icon",
+          className: "focus-visible:focus-ring-inset",
+        })}
+      >
+        <DiveDayIcon name="close" />
+      </button>
     </ToastShell>
   );
 }

@@ -64,5 +64,6 @@
   "departuresAboveCertificateDatedError": "{count, plural, one {La salida del {dates} vende más plazas que las {limit} del certificado. Baja antes su capacidad.} other {# salidas próximas de esta embarcación venden más plazas que las {limit} del certificado, entre ellas {dates}. Baja antes su capacidad.}}",
   "boatChannelDistress": "Los canales 16 y 70 son de socorro y llamada. Escribe el canal en el que trabaja esta embarcación.",
   "boatRadioInvalid": "Revisa el indicativo (letras, números, espacios y guiones), el MMSI (nueve dígitos) y el canal de trabajo (un canal VHF del 1 al 88, por ejemplo 68).",
-  "radioIdentityMissing": "{count, plural, one {# barco no tiene indicativo ni MMSI} other {# barcos no tienen indicativo ni MMSI}}"
+  "radioIdentityMissing": "{count, plural, one {# barco no tiene indicativo ni MMSI} other {# barcos no tienen indicativo ni MMSI}}",
+  "seats": "{count, plural, one {# plaza} other {# plazas}}"
 }

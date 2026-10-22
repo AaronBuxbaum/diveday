@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.2/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -22,6 +22,12 @@
         "noUnusedVariables": "error",
         "noUnusedImports": "error"
       },
+      "complexity": {
+        "useMathMinMax": "off"
+      },
+      "performance": {
+        "useDomNodeTextContent": "off"
+      },
       "a11y": {
         "useButtonType": "error"
       }
@@ -29,16 +35,57 @@
     "domains": {
       "next": "recommended",
       "react": "recommended",
-      "test": "recommended"
+      "test": "recommended",
+      "playwright": "none"
     }
   },
   "overrides": [
     {
-      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.mjs", ".agents/**"],
+      "includes": [
+        "e2e/**",
+        "scripts/simulate-day/**",
+        "scripts/persona-bots/**",
+        "scripts/capture-session.mjs",
+        "scripts/contact-sheet.mjs",
+        "scripts/screenshot.mjs",
+        "scripts/pixel-probe/collect.mjs",
+        "scripts/pixel-probe/probe.mjs",
+        "scripts/pixel-probe/states.mjs"
+      ],
+      "linter": {
+        "domains": {
+          "playwright": "recommended"
+        }
+      }
+    },
+    {
+      "includes": ["src/app/globals.css"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          },
+          "style": {
+            "noDescendingSpecificity": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test.mjs",
+        ".agents/**",
+        "**/*.probe.mjs"
+      ],
       "linter": {
         "rules": {
           "suspicious": {
             "noTemplateCurlyInString": "off"
+          },
+          "correctness": {
+            "noComponentHookFactories": "off"
           }
         }
       }
@@ -128,6 +175,16 @@
       "quoteStyle": "double",
       "semicolons": "always",
       "trailingCommas": "all"
+    }
+  },
+  "markdown": {
+    "formatter": {
+      "enabled": false
+    }
+  },
+  "yaml": {
+    "formatter": {
+      "enabled": false
     }
   },
   "assist": {

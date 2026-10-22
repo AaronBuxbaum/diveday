@@ -2,6 +2,13 @@
   "//": "Pixel-probe flags that are right as they are. Each entry names the check and the signature (or a `classes` list the flag's class string must all carry), the reason, and a pointer to the code comment that explains it. The report lists matches as settled — never drops them. A flag that belongs here also earns a row in docs/design/settled-questions.md.",
   "settled": [
     {
+      "check": "mismatched-controls",
+      "classes": ["bg-foreground", "rounded-full", "text-surface"],
+      "container": "div.leaflet-marker-pane leaflet-pane",
+      "reason": "The shop anchor and numbered dive-site clusters are geographic objects positioned by coordinates. Their shared Leaflet marker pane does not make them a row of peer form controls, and their different glyph/count typography distinguishes their roles. This settles only the control-row comparison; target size, focus geometry and marker overlap remain separate findings.",
+      "pointer": "src/components/map/SiteMap.tsx, the comment on geographic marker roles; docs/design/settled-questions.md"
+    },
+    {
       "check": "focus-invisible",
       "classes": ["focus-visible:outline-none", "focus-visible:after:focus-ring-inset"],
       "reason": "Focus shows on the link's ::after overlay, the target a pointer has — RowLink's in a table cell, SettingsDoorRow's across a settings row: focus-visible:after:focus-ring-inset draws the ring inside the overlay's own edge, and the text is not ringed a second time. The probe reads only the element's own outline. How far RowLink's overlay reaches (the cell or the whole row) is issue #1989.",
@@ -55,10 +62,39 @@
       "pointer": "src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.tsx, the comment on the link's min-w-0 wrapper; docs/design/settled-questions.md"
     },
     {
+      "check": "truncated",
+      "signature": "p.truncate",
+      "container": "li.border-border border-t flex gap-3 has-[a:focus-visible]:bg-surface-sunken/60 hover:bg-surface-sunken/60 items-center last:border-b max-sm:flex-wrap max-sm:gap-y-1 max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-5 min-h-13 pressable-row px-2 py-3 relative sm:items-baseline sm:py-4",
+      "reason": "An inbox row's one-line excerpt previews the diver's message; the full message is on their record one tap away.",
+      "pointer": "src/app/shop/[shopSlug]/inbox/_components/InboxRow.tsx, the wordsCut comment; docs/design/settled-questions.md"
+    },
+    {
+      "check": "truncated",
+      "signature": "p.text-muted text-sm truncate",
+      "container": "li.border-border border-t flex gap-3 has-[a:focus-visible]:bg-surface-sunken/60 hover:bg-surface-sunken/60 items-center last:border-b max-sm:flex-wrap max-sm:gap-y-1 max-sm:has-[>[data-ledger-fix]_:is(a,button)]:pb-5 min-h-13 pressable-row px-2 py-3 relative sm:items-baseline sm:py-4",
+      "reason": "An inbox row's one-line excerpt previews the diver's message; the full message is on their record one tap away.",
+      "pointer": "src/app/shop/[shopSlug]/inbox/_components/InboxRow.tsx, the wordsCut comment; docs/design/settled-questions.md"
+    },
+    {
+      "check": "ragged-edges",
+      "signature": "div.space-y-10",
+      "container": "main.px-4 py-8 sm:px-6 sm:py-10",
+      "reason": "The disclosure rule bleeds into the ledger's 8px room while its content is inset back to the shared column edge.",
+      "pointer": "src/app/shop/[shopSlug]/divers/[personId]/_components/DiverFileGroupDisclosure.tsx, the -mx-2 px-2 rule comment; docs/design/settled-questions.md"
+    },
+    {
       "check": "focus-ring-clipped",
       "container": "div.chip-scroller flex gap-2 items-center max-sm:[scrollbar-width:none] max-sm:overflow-x-auto max-sm:px-4 max-sm:py-1.5 max-sm:scroll-px-6 sm:flex-wrap",
       "reason": "A filter chip that ends within the ring's 5px of the phone row's scrolling edge (\"Wrecks\", 3.6px from it at 390) loses the ring's edge to the row's clip only while the probe forces :focus-visible without focusing. A real focus scrolls the chip into the row's scroll padding (max-sm:scroll-px-6, the edge fade plus the ring's reach), clear of the edge. The ring's room above and below is padding FilterChips.test.tsx pins.",
       "pointer": "src/components/ui/FilterChips.tsx, the comment on the phone scroller; docs/design/settled-questions.md"
+    },
+    {
+      "check": "focus-invisible",
+      "signature": "input[radio].focus-visible:outline-none size-4",
+      "container": "div.bg-surface border border-border flex gap-2 has-[input:checked]:bg-primary-tint has-[input:checked]:border-primary has-[input:checked]:font-semibold has-[input:focus-visible]:focus-ring items-center min-h-11 not-has-[input:checked]:hover:bg-surface-sunken pe-4 rounded-lg text-base transition-colors",
+      "classes": ["size-4", "shrink-0", "focus-visible:outline-none"],
+      "reason": "The public package picker's native radio leaves its own outline off because focus is drawn around ChoicePill's rounded aside wrapper. That wrapper carries has-[input:focus-visible]:focus-ring from radioRingClass; the visible ring follows the whole option rather than the 16px dot. The probe reads the input's own outline. This entry requires the captured ring-bearing wrapper, not every outline-none radio.",
+      "pointer": "src/components/ui/form.tsx, radioClass/radioRingClass and ChoicePill's aside wrapper; src/components/ui/form.test.tsx:594-612; src/app/s/[shopSlug]/packages/_components/PackagePurchaseForm.tsx:63-75; docs/design/settled-questions.md"
     }
   ]
 }

@@ -232,6 +232,8 @@ type StaffScan = {
   path: string;
   /** The page's own `<h1>`, waited for so no scan lands on a loading skeleton. */
   heading: string | RegExp;
+  /** Dynamic Leaflet site pins or clusters must exist before axe snapshots a map surface. */
+  mapPins?: boolean;
 };
 
 async function scanStaticRoutes(page: Page, routes: readonly StaffScan[]) {
@@ -241,6 +243,11 @@ async function scanStaticRoutes(page: Page, routes: readonly StaffScan[]) {
       page.getByRole("heading", { level: 1, name: route.heading }),
       `${route.path} never rendered its <h1>`,
     ).toBeVisible();
+    if (route.mapPins) {
+      await expect(
+        page.locator(".leaflet-site-marker button, button.leaflet-site-cluster").first(),
+      ).toBeVisible();
+    }
     await expectNoA11yViolations(page);
   }
 }
@@ -301,8 +308,12 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/staffing", heading: "Schedule" },
       { path: "/shop/blue-mantis/courses", heading: "Courses" },
       { path: "/shop/blue-mantis/waivers", heading: "Waivers and signed records" },
-      { path: "/shop/blue-mantis/dive-sites", heading: "Dive-site library" },
-      { path: "/shop/blue-mantis/dive-sites/catalog", heading: "DiveDay common dive sites" },
+      { path: "/shop/blue-mantis/dive-sites", heading: "Dive-site library", mapPins: true },
+      {
+        path: "/shop/blue-mantis/dive-sites/catalog",
+        heading: "DiveDay common dive sites",
+        mapPins: true,
+      },
     ]);
   });
 
@@ -363,8 +374,8 @@ test.describe("automated accessibility scans of the static staff routes", () => 
         path: "/shop/blue-mantis/safety-checklist",
         heading: "Pre-departure checklist",
       },
-      { path: "/shop/blue-mantis/settings/import?what=gear", heading: "Import" },
-      { path: "/shop/blue-mantis/settings/import?what=dive-sites", heading: "Import" },
+      { path: "/shop/blue-mantis/settings/import?what=gear", heading: "Your data" },
+      { path: "/shop/blue-mantis/settings/import?what=dive-sites", heading: "Your data" },
     ]);
   });
 });

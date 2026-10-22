@@ -545,7 +545,6 @@ export default async function TeamSettingsPage({
   // as due soon or expired.
   const today = calendarDateInTimezone(nowDate(), shop.timezone);
   const credentialRows = credentialRowsFor(credentials, today, locale, t);
-
   return (
     <main className={settingsPaneClass("5xl")}>
       <FlashParams
@@ -578,6 +577,7 @@ export default async function TeamSettingsPage({
           }}
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
+          dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : pageBanner ? (
         <StaffNoticeBanner tone={pageBanner.tone}>{pageBanner.text}</StaffNoticeBanner>

@@ -23,7 +23,9 @@ import {
   listUpcomingDeparturesForSite,
 } from "@/db/dive-sites";
 import { shopBySlugCached } from "@/db/shops-cached";
+import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
+import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestReaderUnits, requestTranslator } from "@/i18n/request";
 import { diveSiteDepthText } from "@/i18n/unit-labels";
 import { parseDiveSiteSlug } from "@/lib/dive-site-slug";
@@ -135,7 +137,22 @@ export default async function DiveSitePage({
   // reader's unit follows the shop's when it differs (fifth-loop ideas, item 22).
   const readerDepth = (await requestReaderUnits(locale)).depth;
   const depth = diveSiteDepthText(t, site, shop.depthUnit, readerDepth);
-  const facts = [site.locationName, depth].filter((fact) => fact !== null);
+  const difficulty = site.difficultyLevel ? diveSiteDifficultyLabel(site.difficultyLevel, t) : null;
+  const snorkel =
+    site.snorkelSuitable === true
+      ? t("site.page.snorkelSuitable")
+      : site.snorkelSuitable === false
+        ? t("site.page.snorkelNotSuitable")
+        : null;
+  const bottomTime = site.expectedBottomTimeMinutes
+    ? t("site.page.expectedBottomTime", { minutes: site.expectedBottomTimeMinutes })
+    : null;
+  const reqList = tripRequirementList(t, site, locale);
+  const requirements = reqList ? t("site.page.requirements", { list: reqList }) : null;
+
+  const facts = [site.locationName, depth, difficulty, bottomTime, snorkel, requirements].filter(
+    (fact): fact is string => fact !== null,
+  );
   const [cover = null, ...gallery] = site.imageUrls;
 
   return (

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { discardFormDraftAction, saveFormDraftAction } from "@/app/actions/form-drafts";
+import { bindFormDraft, draftForForm } from "@/app/actions/form-draft-props";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
@@ -15,7 +15,6 @@ import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { formatTime } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
@@ -96,6 +95,7 @@ export default async function ScheduleBoardPage({
     ),
   ];
   const { session, db, shop } = await requireShopSurface(shopSlug);
+  const draftBinding = bindFormDraft(session.user);
 
   const tz = shop.timezone;
   // Some of this staff page's copy (the header eyebrow/title/description,
@@ -185,9 +185,7 @@ export default async function ScheduleBoardPage({
         )
       : [],
   ]);
-  const addDraft = draft
-    ? { fields: draft.fields, savedAtLabel: formatTime(draft.savedAt, locale, shop.timezone) }
-    : null;
+  const addDraft = draftForForm(draft, locale, shop.timezone);
   const boatMap = new Map(boatsEverOwned.map((boat) => [boat.id, boat.name]));
   const hasUpcoming = range.first !== null;
   const requestPlan = builderRequestPlan({ requestRows, shop, shopBoats, st });
@@ -381,6 +379,7 @@ export default async function ScheduleBoardPage({
       ) : null}
 
       <ScheduleBuilder
+        key={draftBinding.scope}
         context={{
           shopSlug,
           locale,
@@ -407,7 +406,7 @@ export default async function ScheduleBoardPage({
             move: moveDepartureAction.bind(null, shopSlug),
             duplicate: duplicateDepartureAction.bind(null, shopSlug),
             remove: removeDepartureAction.bind(null, shopSlug),
-            draft: { save: saveFormDraftAction, discard: discardFormDraftAction },
+            draft: draftBinding.actions,
           },
         }}
       />

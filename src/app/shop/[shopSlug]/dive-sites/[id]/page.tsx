@@ -228,10 +228,7 @@ export default async function EditDiveSitePage({
           }
         />
       </div>
-      {/* Only "copied" is genuinely about the page: it lands the staffer on a
-          *different* site's record, which is news the whole page carries. The
-          save confirmation went to the form that earned it, and the archive
-          refusal to the archive button. */}
+      {/* Only "copied" needs a page-level notice; form feedback stays with its control. */}
       {noticeKey &&
       (notice === "copied" ||
         notice === "template-updated" ||
@@ -256,6 +253,7 @@ export default async function EditDiveSitePage({
           fields={{}}
           pendingLabel={t("diveSites.edit.templateUpdates.undoing")}
           undoLabel={t("diveSites.edit.templateUpdates.undo")}
+          dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : null}
       {templateUpdate ? (

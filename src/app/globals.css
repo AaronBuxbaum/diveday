@@ -1199,9 +1199,9 @@ select:not([multiple]):not([size]):dir(rtl) {
   *,
   *::before,
   *::after {
-    /* biome-ignore lint/complexity/noImportantStyles: print must strip every ink-heavy fill to keep the page white */
+    /* print must strip every ink-heavy fill to keep the page white */
     background: transparent !important;
-    /* biome-ignore lint/complexity/noImportantStyles: a shadow prints as grey haze, never as depth */
+    /* a shadow prints as grey haze, never as depth */
     box-shadow: none !important;
   }
 
@@ -1249,7 +1249,7 @@ select:not([multiple]):not([size]):dir(rtl) {
    */
   .trip-print-bundle,
   .trip-print-bundle * {
-    /* biome-ignore lint/complexity/noImportantStyles: a clipped box on paper is content that does not exist */
+    /* a clipped box on paper is content that does not exist */
     overflow: visible !important;
   }
 
@@ -1314,17 +1314,17 @@ select:not([multiple]):not([size]):dir(rtl) {
    * `!important` arms race - and the frame around it stops being a frame.
    */
   .paper-sheet {
-    /* biome-ignore lint/complexity/noImportantStyles: the sheet's ground is the document, not a screen fill to strip */
+    /* the sheet's ground is the document, not a screen fill to strip */
     background: var(--sheet-ground) !important;
   }
 
   .paper-sheet-band {
-    /* biome-ignore lint/complexity/noImportantStyles: the band is the shop's colour on paper, which is the point of the sheet */
+    /* the band is the shop's colour on paper, which is the point of the sheet */
     background: var(--sheet-band) !important;
   }
 
   .paper-sheet-mark {
-    /* biome-ignore lint/complexity/noImportantStyles: the mark is the band's ink, reversed out of it */
+    /* the mark is the band's ink, reversed out of it */
     background: var(--sheet-band-ink) !important;
   }
 
@@ -2104,9 +2104,9 @@ details[open]::details-content {
   *,
   *::before,
   *::after {
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     animation-duration: 0.01ms !important;
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     animation-iteration-count: 1 !important;
     /*
      * Delay, not just duration. A staggered entrance (the board's row menu)
@@ -2115,9 +2115,9 @@ details[open]::details-content {
      * watch three buttons arrive one at a time, each holding its `both`-filled
      * opacity: 0 until its turn came.
      */
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     animation-delay: 0s !important;
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     transition-duration: 0.01ms !important;
   }
 
@@ -2129,7 +2129,7 @@ details[open]::details-content {
    */
   details::details-content,
   details[open]::details-content {
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     transition-duration: 0.01ms !important;
   }
 
@@ -2137,7 +2137,7 @@ details[open]::details-content {
   .marketing-reveal-visible,
   .marketing-hero-motion-active .marketing-roll-call-frame,
   .marketing-hero-motion-active .marketing-roll-call-row {
-    /* biome-ignore lint/complexity/noImportantStyles: reduced-motion must reveal progressive-enhancement content immediately */
+    /* reduced-motion must reveal progressive-enhancement content immediately */
     animation: none !important;
     opacity: 1;
     transform: none;
@@ -2157,9 +2157,9 @@ details[open]::details-content {
   [data-chrome-shop-name],
   [data-chrome-title-slot],
   [data-chrome-fold-title] {
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     animation: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: accessibility kill-switch must win every cascade */
+    /* accessibility kill-switch must win every cascade */
     animation-timeline: none !important;
   }
 }
@@ -2217,7 +2217,7 @@ details[open]::details-content {
 
 @media (prefers-reduced-motion: reduce) {
   .sub-surface-ripple-message {
-    /* biome-ignore lint/complexity/noImportantStyles: must beat the kill-switch's duration override, which would leave the panel at its final opacity 0 */
+    /* must beat the kill-switch's duration override, which would leave the panel at its final opacity 0 */
     animation-name: none !important;
   }
 }
@@ -2228,3 +2228,515 @@ details[open]::details-content {
  * one fact: the pill already says where you are, and the bar under it read as a
  * stray rule inside the segmented control rather than as an accent.
  */
+
+/*
+ * Leaflet core map styles (ADR 20261019-map-centric-dive-sites).
+ * Styled with semantic design tokens so the map chrome obeys the active theme.
+ */
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.leaflet-container {
+  overflow: hidden;
+  position: relative;
+  outline-offset: 1px;
+  font-family: inherit;
+}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.leaflet-tile::selection {
+  background: transparent;
+}
+.leaflet-safari .leaflet-tile {
+  image-rendering: -webkit-optimize-contrast;
+}
+.leaflet-safari .leaflet-tile-container {
+  width: 1600px;
+  height: 1600px;
+  -webkit-transform-origin: 0 0;
+}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  display: block;
+}
+.leaflet-container .leaflet-overlay-pane svg {
+  max-width: none !important;
+  max-height: none !important;
+}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+  max-width: none !important;
+  max-height: none !important;
+  width: auto;
+  padding: 0;
+}
+.leaflet-container.leaflet-touch-zoom {
+  -ms-touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y;
+}
+.leaflet-container.leaflet-touch-drag {
+  -ms-touch-action: pinch-zoom;
+  touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+  -ms-touch-action: none;
+  touch-action: none;
+}
+.leaflet-container {
+  -webkit-tap-highlight-color: transparent;
+}
+.leaflet-tile {
+  filter: inherit;
+  visibility: hidden;
+}
+.leaflet-tile-loaded {
+  visibility: inherit;
+}
+.leaflet-zoom-box {
+  width: 0;
+  height: 0;
+  box-sizing: border-box;
+  z-index: 800;
+}
+.leaflet-overlay-pane {
+  z-index: 400;
+}
+.leaflet-shadow-pane {
+  z-index: 500;
+}
+.leaflet-marker-pane {
+  z-index: 600;
+}
+.leaflet-tooltip-pane {
+  z-index: 650;
+}
+.leaflet-site-tooltip.leaflet-tooltip {
+  max-width: 240px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-inset);
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 5px 16px color-mix(in srgb, var(--foreground) 16%, transparent);
+  white-space: normal;
+}
+.leaflet-site-tooltip.leaflet-tooltip-top::before {
+  border-top-color: var(--border);
+}
+.leaflet-site-tooltip__name,
+.leaflet-site-tooltip__location {
+  display: block;
+}
+.leaflet-site-tooltip__name {
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.leaflet-site-tooltip__location {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+.leaflet-site-cluster-marker {
+  border: 0;
+  background: transparent;
+}
+.leaflet-site-cluster {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--surface);
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--surface);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--foreground) 24%, transparent);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+.leaflet-site-cluster:hover,
+.leaflet-site-cluster:focus-visible {
+  transform: scale(1.08);
+  box-shadow: 0 7px 18px color-mix(in srgb, var(--foreground) 32%, transparent);
+}
+.leaflet-popup-pane {
+  z-index: 700;
+}
+.leaflet-map-pane canvas {
+  z-index: 100;
+}
+.leaflet-map-pane svg {
+  z-index: 200;
+}
+.leaflet-control {
+  position: relative;
+  z-index: 800;
+  pointer-events: auto;
+}
+.leaflet-top,
+.leaflet-bottom {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: none;
+}
+.leaflet-top {
+  top: 0;
+}
+.leaflet-right {
+  right: 0;
+}
+.leaflet-bottom {
+  bottom: 0;
+}
+.leaflet-left {
+  left: 0;
+}
+.leaflet-control {
+  float: left;
+  clear: both;
+}
+.leaflet-right .leaflet-control {
+  float: right;
+}
+.leaflet-top .leaflet-control {
+  margin-top: 10px;
+}
+.leaflet-bottom .leaflet-control {
+  margin-bottom: 10px;
+}
+.leaflet-left .leaflet-control {
+  margin-left: 10px;
+}
+.leaflet-right .leaflet-control {
+  margin-right: 10px;
+}
+.leaflet-fade-anim .leaflet-popup {
+  opacity: 0;
+  transition: opacity 0.2s linear;
+}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+  opacity: 1;
+}
+.leaflet-zoom-animated {
+  transform-origin: 0 0;
+}
+svg.leaflet-zoom-animated {
+  will-change: transform;
+}
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1);
+}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+  transition: none;
+}
+.leaflet-zoom-anim .leaflet-zoom-hide {
+  visibility: hidden;
+}
+.leaflet-interactive {
+  cursor: pointer;
+  pointer-events: auto;
+}
+.leaflet-grab {
+  cursor: grab;
+}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+  cursor: crosshair;
+}
+.leaflet-popup-pane,
+.leaflet-control {
+  cursor: auto;
+}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+  cursor: grabbing;
+}
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+  pointer-events: none;
+}
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+  pointer-events: auto;
+}
+.leaflet-bar {
+  border-radius: var(--radius-base);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+}
+.leaflet-bar a {
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: var(--foreground);
+  font-weight: 600;
+  font-size: 16px;
+}
+.leaflet-bar a:hover {
+  background-color: var(--surface-sunken);
+}
+.leaflet-bar a:last-child {
+  border-bottom: none;
+}
+.leaflet-bar a.leaflet-disabled {
+  cursor: default;
+  background-color: var(--surface-sunken);
+  color: var(--muted);
+}
+.leaflet-control-attribution {
+  background: var(--surface);
+  opacity: 0.9;
+  margin: 0;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--muted);
+  border-top-left-radius: var(--radius-base);
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+.leaflet-control-attribution a {
+  color: var(--primary);
+  text-decoration: none;
+}
+.leaflet-popup {
+  position: absolute;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.leaflet-popup-content-wrapper {
+  padding: 0;
+  text-align: start;
+  border-radius: var(--radius-base);
+  background: var(--surface);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.leaflet-popup-content {
+  margin: 10px 12px;
+  line-height: 1.4;
+  font-size: 13px;
+}
+.leaflet-popup-tip-container {
+  width: 32px;
+  height: 16px;
+  position: absolute;
+  left: 50%;
+  margin-left: -16px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.leaflet-popup-tip {
+  width: 12px;
+  height: 12px;
+  padding: 1px;
+  margin: -6px auto 0;
+  transform: rotate(45deg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.leaflet-popup-close-button {
+  position: absolute;
+  inset-block-start: 4px;
+  right: 6px;
+  padding: 2px;
+  border: none;
+  text-align: center;
+  width: 18px;
+  height: 18px;
+  font-size: 14px;
+  line-height: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: bold;
+  background: transparent;
+}
+.leaflet-popup-close-button:hover {
+  color: var(--foreground);
+}
+.leaflet-site-popup .leaflet-popup-content-wrapper {
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+.leaflet-site-popup .leaflet-popup-content {
+  width: 264px !important;
+  margin: 0;
+}
+.leaflet-site-popup .leaflet-popup-close-button {
+  z-index: 1;
+  inset-block-start: 10px;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-inset);
+  background: var(--surface-sunken);
+  font-size: 16px;
+  line-height: 20px;
+  text-align: center;
+}
+.leaflet-site-card {
+  overflow: hidden;
+  color: var(--foreground);
+}
+.leaflet-site-card__body {
+  padding: 16px 16px 14px;
+}
+.leaflet-site-card__title {
+  margin: 0;
+  padding-right: 22px;
+  color: var(--foreground);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.leaflet-site-card__location {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.leaflet-site-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 11px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.leaflet-site-card__fact {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.leaflet-site-card__description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 11px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.leaflet-site-card__link {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 calc(var(--radius-panel) - 1px) calc(var(--radius-panel) - 1px);
+  background: var(--surface-sunken);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.leaflet-site-card__link:hover {
+  background: var(--surface);
+  text-decoration: underline;
+}
+@layer components {
+  .leaflet-site-card__link:focus-visible {
+    @apply focus-ring-inset;
+  }
+}
+.leaflet-site-cluster-popup .leaflet-popup-content-wrapper {
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+.leaflet-site-cluster-popup .leaflet-popup-content {
+  width: min(304px, calc(100vw - 64px)) !important;
+  margin: 0;
+}
+.leaflet-site-cluster-card {
+  color: var(--foreground);
+}
+.leaflet-site-cluster-card__title {
+  margin: 0;
+  padding: 15px 16px 11px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 650;
+}
+.leaflet-site-cluster-card__list {
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 16px;
+  list-style: none;
+}
+.leaflet-site-cluster-card__item {
+  display: grid;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.leaflet-site-cluster-card__item:last-child {
+  border-bottom: 0;
+}
+.leaflet-site-cluster-card__name {
+  color: var(--primary);
+  font-weight: 650;
+  text-decoration: none;
+}
+.leaflet-site-cluster-card__name:hover {
+  text-decoration: underline;
+}
+.leaflet-site-cluster-card__location,
+.leaflet-site-cluster-card__facts {
+  color: var(--muted);
+}
+@media (max-width: 480px) {
+  .leaflet-site-popup .leaflet-popup-content {
+    width: min(264px, calc(100vw - 64px)) !important;
+  }
+}

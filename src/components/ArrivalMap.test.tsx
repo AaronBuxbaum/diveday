@@ -34,7 +34,9 @@ const answerAll = () => {
   for (const probe of probes) probe.onload?.();
 };
 
-const mount = () => render(<ArrivalMap title="Map" src="https://maps.google.com/x" />).container;
+const mount = () =>
+  render(<ArrivalMap title="Map" src="https://www.openstreetmap.org/export/embed.html" />)
+    .container;
 
 describe("ArrivalMap", () => {
   it("draws nothing while online until the map host answers, then the map", () => {
@@ -75,8 +77,8 @@ describe("ArrivalMap", () => {
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
-    expect(probes).toHaveLength(2);
-    act(() => probes[1]?.onload?.());
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length * 2);
+    act(() => answerAll());
     expect(container.querySelector("iframe")).not.toBeNull();
   });
 
@@ -87,34 +89,36 @@ describe("ArrivalMap", () => {
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(1);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
     visibility.mockReturnValue("visible");
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(2);
-    act(() => probes[1]?.onload?.());
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length * 2);
+    act(() => answerAll());
     expect(container.querySelector("iframe")).not.toBeNull();
   });
 
   it("asks nothing more after the host has answered", () => {
     mount();
-    act(() => probes[0]?.onload?.());
+    act(() => answerAll());
     act(() => {
       window.dispatchEvent(new Event("online"));
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(1);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
   });
 
   it("stops listening once the map is gone", () => {
-    const { unmount } = render(<ArrivalMap title="Map" src="https://maps.google.com/x" />);
+    const { unmount } = render(
+      <ArrivalMap title="Map" src="https://www.openstreetmap.org/export/embed.html" />,
+    );
     act(() => probes[0]?.onerror?.());
     unmount();
     act(() => {
       window.dispatchEvent(new Event("online"));
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    expect(probes).toHaveLength(1);
+    expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
   });
 });

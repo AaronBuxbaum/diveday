@@ -78,6 +78,7 @@ export async function GET(request: Request) {
 
     for (const outcome of summary.outcomes) {
       if (outcome.failed) {
+        log("cron_retention.prune_failed", "error", { table: outcome.table });
         await sentry.captureMessage("retention prune arm failed", {
           level: "error",
           tags: { retention_table: outcome.table },
@@ -85,13 +86,14 @@ export async function GET(request: Request) {
       }
     }
 
-    // Still over the window after the whole time budget: the backlog grows
-    // faster than a run can drain it. Counted by the CronPassFailures alarm
-    // (infra/lib/observability.ts), which is why it is its own line.
+    // Unknown eligibility and an unresolved full batch both need attention.
+    // The existing CronPassFailures alarm counts this event.
     const stillCapped = summary.outcomes.filter((outcome) => outcome.capped);
-    if (stillCapped.length > 0) {
+    const tablesSkipped = summary.skippedTables.join(",");
+    if (stillCapped.length > 0 || summary.skippedTables.length > 0) {
       log("cron_retention.prune_capped", "warn", {
         tablesCapped: stillCapped.map((outcome) => outcome.table).join(","),
+        tablesSkipped,
       });
     }
 
@@ -100,8 +102,8 @@ export async function GET(request: Request) {
     // knows about a row anyway.
     log("cron_retention.prune_complete", "info", {
       totalDeleted: summary.totalDeleted,
-      dietaryNotesCleared: summary.dietaryNotesCleared,
       tablesFailed: summary.failedTables.length,
+      tablesSkipped: tablesSkipped || undefined,
       failedTables: summary.failedTables.length > 0 ? summary.failedTables.join(",") : undefined,
       tablesCapped: stillCapped.map((outcome) => outcome.table).join(",") || undefined,
       ...Object.fromEntries(
@@ -112,7 +114,12 @@ export async function GET(request: Request) {
     await sentry.captureCheckIn({
       checkInId,
       monitorSlug: CRON_MONITOR_SLUG,
-      status: summary.failedTables.length > 0 ? "error" : "ok",
+      status:
+        summary.failedTables.length > 0 ||
+        stillCapped.length > 0 ||
+        summary.skippedTables.length > 0
+          ? "error"
+          : "ok",
     });
 
     // A partial pass answers 500 so the scheduler's invocation log agrees with
@@ -122,9 +129,8 @@ export async function GET(request: Request) {
       status: summary.failedTables.length > 0 ? 500 : 200,
     });
   } catch (error) {
-    // Only reachable before any arm runs — `getDb()` failing to connect or
-    // migrate. The check-in still has to be closed out or the monitor would
-    // read this as a run that is somehow still in progress.
+    // Connection, migration or checkpoint failure admits no further batch.
+    // Close the monitor even when durable scheduling state is unavailable.
     await sentry.captureException(error, { tags: { cron_scan: "retention_bootstrap" } });
     log("cron_retention.prune_failed", "error", { scan: "bootstrap" });
     await sentry.captureCheckIn({ checkInId, monitorSlug: CRON_MONITOR_SLUG, status: "error" });

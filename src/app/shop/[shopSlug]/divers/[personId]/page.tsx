@@ -206,7 +206,6 @@ export default async function DiverDetailPage({
         ({ booking }) => booking.tripId === trip.id && booking.status !== "cancelled",
       ) && trip.booked < trip.capacity,
   );
-
   /**
    * The page's `?notice=` resolved once, to words *and* to the group those
    * words belong beside. Each group is handed its own below with
@@ -245,7 +244,6 @@ export default async function DiverDetailPage({
   const cleared = detailsStatus?.code === "diver-clear" ? detailsStatus : undefined;
   // Who this person is to the shop, in one line (item 36); money only for a reader who may see it.
   const standing = diverStanding(diver, { now, shop, showMoney: canManageOrders });
-
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "undo", "cardType", "by", "form", "edit", "noteBody"]} />
@@ -302,6 +300,7 @@ export default async function DiverDetailPage({
           fields={{ certificationId: undo, cardType }}
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
+          dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : diverNoteRemovalUndo ? (
         <UndoToast
@@ -310,6 +309,7 @@ export default async function DiverDetailPage({
           fields={{ body: noteBody }}
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
+          dismissLabel={t("shared.undoToast.dismiss")}
         />
       ) : (
         <NoticeBanner notice={pageNotice} />

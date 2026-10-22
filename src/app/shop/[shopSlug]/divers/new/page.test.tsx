@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -211,5 +211,26 @@ describe("NewDiverPage action row", () => {
     expect(row).toHaveClass("col-span-full");
     expect(row?.parentElement).toHaveClass("grid", "gap-y-4");
     expect(row?.className).not.toMatch(/(^|\s)m[ty]-/);
+  });
+});
+
+describe("new-diver form ownership", () => {
+  it("clears the old account's uncontrolled inputs when a refresh changes the account", async () => {
+    const { rerender } = await renderPage({});
+    fireEvent.input(screen.getByLabelText(/divers.page.fullNameLabel/), {
+      target: { value: "Old account's private input" },
+    });
+    const surface = await requireShopSurface("blue-mantis");
+    vi.mocked(requireShopSurface).mockResolvedValue({
+      ...surface,
+      session: { user: { ...surface.session.user, personId: "replacement-staff" } },
+    });
+    rerender(
+      await NewDiverPage({
+        params: Promise.resolve({ shopSlug: "blue-mantis" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+    expect(screen.getByLabelText(/divers.page.fullNameLabel/)).toHaveValue("");
   });
 });

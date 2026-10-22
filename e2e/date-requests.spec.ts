@@ -213,6 +213,7 @@ test("staff mark a request done, and reopen it", async ({ page }) => {
   const open = page.getByRole("region", { name: /^No date named/i });
   const row = open.locator("li").filter({ hasText: "Wants to dive: A night dive, any week" });
   await expect(row).toBeVisible();
+  await row.getByRole("button", { name: /^Actions for/ }).click();
   // A lead with only a phone is answered by calling it.
   await expect(row.getByRole("link", { name: "Reply" })).toHaveAttribute(
     "href",
@@ -234,4 +235,17 @@ test("staff mark a request done, and reopen it", async ({ page }) => {
       .getByRole("region", { name: /^No date named/i })
       .getByText("Wants to dive: A night dive, any week"),
   ).toBeVisible();
+});
+
+test("request actions stay in the row menu until opened", async ({ page }) => {
+  await signInAsOwner(page);
+  await page.goto("/shop/blue-mantis/requests");
+  const menu = page.getByRole("button", { name: /^Actions for/ }).first();
+  await expect(menu).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("button", { name: "Mark done" })).toHaveCount(0);
+  await menu.click();
+  await expect(page.getByRole("button", { name: "Mark done" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Create a booking", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveAttribute("aria-expanded", "false");
 });

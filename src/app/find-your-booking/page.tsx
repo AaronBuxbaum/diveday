@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { MarketingNav } from "@/app/_components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
@@ -34,6 +35,7 @@ export const metadata: Metadata = {
  * out of search, so the line under the list says where else the link is.
  */
 export default async function FindYourBookingPage() {
+  await connection();
   const [locale, shops] = await Promise.all([
     requestLocale(),
     getDb().then((db) => listShopsForDiverPicker(db)),

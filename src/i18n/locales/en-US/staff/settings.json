@@ -513,7 +513,6 @@
     },
     "emergency": {
       "heading": "Emergency reference",
-      "intro": "These ride on the boat manifest, including offline. DiveDay never fills them in, because the nearest chamber and the right hotline depend on where you dive.",
       "lineLabel": "What it is {n}",
       "lineExamples": "Chamber, dive-accident hotline, coast guard…",
       "phoneLabel": "Number {n}",
@@ -535,7 +534,11 @@
       "shoreAlertDemo": "Demo shops send nothing: no link and no alerts.",
       "planLabel": "If something goes wrong",
       "submit": "Save emergency reference",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "addContact": "Add contact",
+      "responseHeading": "Response plan",
+      "alertHeading": "Roll-call alerts",
+      "noContacts": "No emergency numbers yet."
     },
     "divePackages": {
       "heading": "Dive packages",
@@ -552,7 +555,9 @@
       "submitting": "Adding…",
       "delete": "Delete",
       "deleting": "Deleting…",
-      "owed": "Dives owed on packages: {dives, number} ({value})"
+      "owed": "Dives owed on packages: {dives, number} ({value})",
+      "createTitle": "Add package",
+      "empty": "No packages for sale yet."
     },
     "yourData": {
       "heading": "Export, import, backups and integrations"
@@ -670,7 +675,8 @@
       "duplicateLabel": "That line is already on the list.",
       "notAuthorized": "You don’t have permission to change this.",
       "moveRefused": "That didn’t move. Try it again."
-    }
+    },
+    "addTitle": "Add a line"
   },
   "export": {
     "downloadButton": {
@@ -944,8 +950,7 @@
       "noName": "This row has no name and was skipped.",
       "mergedDuplicate": "Same diver as row {row} ({email}), so this row’s certifications, waiver, and past visit are added to them, with contact details left as the earlier row has them.",
       "noEmailNewRecord": "This row has no email and was imported as a new record; a re-import can’t match it to update.",
-      "sizeTooLong": "{field} “{value}” is too long for a size box, so the diver imports without it. Set it on their record, or their gear form will ask them for it.",
-      "shoeSizeCollapsed": "The boot size and the fin size differ, and DiveDay keeps one shoe size for both. This diver imports with the fin size, “{value}”, which is what every gear form reads."
+      "sizeTooLong": "{field} “{value}” is too long for a size box, so the diver imports without it. Set it on their record, or their gear form will ask them for it."
     },
     "declinedSizeNote": "{item} from the import, too long for the size box: “{value}”",
     "errors": {
