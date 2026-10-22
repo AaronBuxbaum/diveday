@@ -240,6 +240,17 @@ override whose reason says the red came from elsewhere ("red on main", "not mine
 "flake", "pre-existing"), and names the base check instead. The override is left for its two
 cases: work saved before the container is reclaimed, and a question only CI can answer.
 
+**Loud, with the layer's name.** When the base is red on test files this branch does not edit,
+`verify:push` prints a `THE LAYER BELOW IS RED` banner naming that layer's branch and pull request
+before it runs them (`scripts/red-below.mjs`). The base can also finish red after the stamp (a
+running base is only a note), so `scripts/guard-push.mjs` reads it again at push time and prints
+the same banner when the stamp did not replay those files. That one is a warning, not a refusal:
+the guard cannot run tests, so it cannot tell a push that carries the fix from one that does not,
+and a push that fixes the layer below must never be blocked. Proving the fix stays the gate's job
+(`pnpm verify:push --quick` replays them and stamps only if they pass). It fails open, and there is
+no override for it: an inherited-red reason stays refused. Fix the bottom first, then
+`pnpm stack:sync` merges it up one layer at a time (the **stacked-prs** skill).
+
 The PR body rows are a separate gate: `scripts/guard-pr-body.mjs` runs `check-pr-body.mjs`
 before the GitHub MCP creates or edits a pull request.
 

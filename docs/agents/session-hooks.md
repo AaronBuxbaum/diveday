@@ -33,7 +33,7 @@ what is currently wired.
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count against the upstream, stack position, and the account's open pull requests (`gh api`, cached ten minutes in the git common dir; `DIVEDAY_OPEN_PULLS=0` turns it off), because one PR's CI runs at a time; on the first prompt of a session, the last session's hook refusals, and "write a papercut" with a ready `file-follow-up.mjs --papercut` command when one rule has refused three or more times this week and no papercut has its slug |
 | `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses eight command shapes, each naming the correct form; writes the quiet reporter into a focused test or e2e run |
 | `PreToolUse` on `Bash` | `scripts/guard-commit-format.mjs` | before a `git commit`, Biome's safe fixes over the fully staged files, re-staged; never refuses |
-| `PreToolUse` on `Bash` | `scripts/guard-push.mjs` | refuses a `git push` of a commit `pnpm verify:push` has not stamped, unless a reason is written in front |
+| `PreToolUse` on `Bash` | `scripts/guard-push.mjs` | refuses a `git push` of a commit `pnpm verify:push` has not stamped, unless a reason is written in front; warns, loudly and without refusing, when the layer below is red on tests the stamp did not replay |
 | `PreToolUse` on the GitHub MCP's pull request create/update | `scripts/guard-pr-body.mjs` | runs CI's `check-pr-body.mjs` over the body first and refuses one CI would refuse |
 | `PreToolUse` on `Read` | `scripts/guard-read.mjs` | refuses a generated artifact and a whole-file read of a large source file |
 | `PostToolUse` on `Edit`/`Write` | `scripts/format-touched.mjs` | Biome over the one file just touched; hands back what its safe fixes could not clear |
@@ -196,6 +196,11 @@ checks and related unit tests; the default since 2026-10-16, [verifying.md](veri
 commit the remote already has, a branch deletion, a tag push. The way past it is
 `DIVEDAY_PUSH_UNVERIFIED="<reason>"` in front of the command, a reason of at least ten characters
 that the PR repeats; the two right uses are in the verify skill.
+
+It also reads the layer below's latest CI at push time (`scripts/red-below.mjs`, at most 15
+seconds, failing open) and prints a `THE LAYER BELOW IS RED` warning naming that layer's branch
+when it is red on test files this branch does not edit and the stamp did not replay. A warning,
+not a refusal: [verifying.md](verifying.md#a-red-base) says why.
 
 ## `guard-pr-body.mjs` — the body CI reads, checked before it is sent
 

@@ -75,10 +75,12 @@ import {
 } from "./e2e-affected.mjs";
 import { requireFreshBuild } from "./e2e-build-evidence.mjs";
 import { verifiedFile } from "./guard-push.mjs";
+import { branchOf, redBelowMessage, unansweredRed } from "./red-below.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { appendMetric } from "./task-metrics.mjs";
 import { sourceReaders, testArgs, testPlan } from "./test-affected.mjs";
+import { tracker } from "./tracker.mjs";
 import { readPullRequestBase, resolveVerificationBase } from "./verification-base.mjs";
 import {
   collectStages,
@@ -489,6 +491,18 @@ async function main() {
   });
   const decision = baseDecision(verdict, { base: selection.base, extra: baseRedArgs(args) });
   for (const line of decision.lines) console.log(line);
+  const redBelow = unansweredRed(verdict, { touched: selection.changed });
+  if (redBelow && !docsOnly) {
+    const below = branchOf(selection.base);
+    let pull = null;
+    try {
+      pull =
+        tracker()
+          .listPulls()
+          .find((open) => open.headRefName === below)?.number ?? null;
+    } catch {}
+    console.log(`\n!!! ${redBelowMessage({ base: below, pull, red: redBelow, when: "verify" })}\n`);
+  }
   if (decision.refuse && !docsOnly) {
     console.error(`verify:push: ${decision.refuse}`);
     if (!args.includes("--plan")) process.exit(1);
