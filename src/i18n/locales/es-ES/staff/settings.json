@@ -58,7 +58,9 @@
       "shoreAlertCleared": "Correo del contacto en tierra quitado. Ya no recibe avisos del pase de lista.",
       "packageSaved": "Paquete agregado",
       "packageDeleted": "Paquete eliminado",
-      "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar."
+      "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar.",
+      "crewLeadSaved": "Minutos de la tripulación guardados",
+      "crewLeadInvalid": "Introduce entre 5 y 180 minutos para la tripulación, o déjalo vacío."
     },
     "timezone": {
       "heading": "Zona horaria",
@@ -280,6 +282,11 @@
       "label": "Margen entre salidas",
       "description": "Al mover una salida, avisa si un barco, o un tripulante que sale desde otro punto de encuentro, tiene menos que esto. Con 0 no avisa.",
       "submit": "Guardar margen"
+    },
+    "crewLead": {
+      "label": "La tripulación llega antes que los buceadores",
+      "description": "Minutos antes de que los buceadores lleguen al muelle; el turno propio de un tripulante gana si empieza antes. Vacío, la tripulación llega con los buceadores.",
+      "submit": "Guardar minutos de la tripulación"
     },
     "units": {
       "heading": "Unidades",

@@ -970,9 +970,9 @@
     },
     "gearAndSetup": "Gear and setup",
     "dockCallLine": "Aim to be at the dock by {time}, {dock} before we sail.",
-    "flySafePlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance.",
-    "flySafePlannedDivesPlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: we plan more than one dive, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance.",
-    "flySafePlannedEarlierDay": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: you have another dive day with us in the two days before this one, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance.",
+    "flySafePlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
+    "flySafePlannedDivesPlanned": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: we plan more than one dive, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
+    "flySafePlannedEarlierDay": "Flying home soon? {shopName} asks you to plan your flight no earlier than {when}: you have another dive day with us in the two days before this one, so {count, plural, one {# hour} other {# hours}} after we’re due back, plus an hour in case we run late, following DAN’s guidance, and longer if you make decompression stops.",
     "fitUnavailable": "We couldn’t save your gear and setup just now. Try again in a moment.",
     "fitSaved": "Saved. The crew will have your sizes.",
     "certHeading": "Add your certification",
@@ -5420,7 +5420,8 @@
       "daySubject": "{day, select, today {You sail today} other {You sail tomorrow}}: {tripTitle}",
       "dayBody": "{tripTitle} sails {day, select, today {today} other {tomorrow}}; be at the dock by {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
       "daySubjectCourse": "{day, select, today {Your course starts today} other {Your course starts tomorrow}}: {tripTitle}",
-      "dayBodyCourse": "{tripTitle} starts {day, select, today {today} other {tomorrow}} at {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}"
+      "dayBodyCourse": "{tripTitle} starts {day, select, today {today} other {tomorrow}} at {when}{medical, select, yes {, and a doctor must sign off your medical answers before you dive.} other {{open, plural, =0 {.} one {, and # thing is left to finish.} other {, and # things are left to finish.}}}}",
+      "flySafe": "Plan to fly no earlier than {count, plural, one {# hour} other {# hours}} after your last dive, and longer if you make decompression stops."
     },
     "courseMaterials": {
       "heading": "Before your first day"

@@ -42,6 +42,7 @@ import { temperatureUnitFor } from "@/lib/temperature-units";
 import { issueBookingCapabilities } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
+import { readReminderFlySafeHours } from "./fly-safe-plan";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
@@ -330,6 +331,31 @@ function checklistFor(
 }
 
 /**
+ * The night before a diver's last boat with the shop, the email says the
+ * fly-safe rule in hours under the dock time (H-150); every other reminder,
+ * and a seat the plan is silent on, carries nothing.
+ */
+async function nightBeforeFlySafe(
+  db: AppDb,
+  kind: ReminderKind,
+  seat: {
+    booking: { participantType: ParticipantType };
+    person: { id: string };
+    trip: { id: string; startsAt: Date };
+    shop: { id: string; timezone: string };
+  },
+): Promise<{ flySafeHours?: number }> {
+  if (kind !== "trip_reminder_24h") return {};
+  const flySafeHours = await readReminderFlySafeHours(db, {
+    shop: { id: seat.shop.id },
+    person: { id: seat.person.id },
+    participantType: seat.booking.participantType,
+    detail: { shop: { timezone: seat.shop.timezone }, trip: seat.trip },
+  });
+  return flySafeHours === null ? {} : { flySafeHours };
+}
+
+/**
  * Send every pre-trip reminder that has come due since the last run, across all
  * shops. Idempotent by construction: a booking's reminder is deduped by a
  * `notification_deliveries` row keyed on (booking, cadence kind), so re-running
@@ -545,7 +571,6 @@ export async function sendDueReminders(
         : [];
     const materialsDue =
       trip.courseId &&
-      student &&
       courseMaterialsList.length > 0 &&
       !(
         await courseMaterialsDoneByPerson(db, {
@@ -683,6 +708,7 @@ export async function sendDueReminders(
             readinessUrl,
             ...(inboundEmailOn ? { replyKeywords: true } : {}),
             ...(student ? { courseSession: true } : {}),
+            ...(await nightBeforeFlySafe(db, cadence.kind, { booking, person, trip, shop })),
           },
         });
       } else if (phone) {

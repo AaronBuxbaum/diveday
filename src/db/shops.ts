@@ -438,6 +438,21 @@ export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: Do
 }
 
 /**
+ * Sets "Crew arrive N minutes before divers" (ux-delight sheet 2026-10-22,
+ * item 2; H-149), or clears it with null so crew read the divers' time. The
+ * action narrows the value through `parseCrewLeadMinutes`; the table's CHECK
+ * holds the same bounds.
+ */
+export async function setShopCrewLead(db: AppDb, shopId: string, minutes: number | null) {
+  const [shop] = await db
+    .update(shops)
+    .set({ crewLeadMinutes: minutes })
+    .where(eq(shops.id, shopId))
+    .returning({ id: shops.id, crewLeadMinutes: shops.crewLeadMinutes });
+  return shop ?? null;
+}
+
+/**
  * Whether the shop runs hotel pickups (fourth UX review, item 8). Only then
  * does `/ready` ask a diver "Want a pickup?".
  */

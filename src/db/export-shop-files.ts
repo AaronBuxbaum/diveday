@@ -181,6 +181,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // `shops` columns, so a restore does not bring it back: the Move
       // panel's advice waits until it is set again in Settings.
       "min_turnaround_minutes",
+      // "Crew arrive N minutes before divers" (H-149): the shop's own
+      // operating policy, blank when the shop cleared it.
+      "crew_lead_minutes",
       "review_url",
       "packing_list",
       "rental_items",
@@ -273,6 +276,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.bottomTimeMinutes,
         shop.surfaceIntervalMinutes,
         shop.minTurnaroundMinutes,
+        shop.crewLeadMinutes ?? "",
         shop.reviewUrl,
         JSON.stringify(shop.packingList),
         JSON.stringify(shop.rentalItems),

@@ -24,9 +24,10 @@ export type CrewWeekLine = {
    */
   gap: StaffGapCode | null;
   /**
-   * When to be at the dock (item 47), and whose time it is: this person's own
-   * shift covering the departure, else the divers' dock call (`crewCallAt`);
-   * null when neither leads the departure.
+   * When to be at the dock (item 47), and whose time it is: the shop's crew
+   * time (H-149), else the divers' dock call, unless a shift of this person's
+   * already running at that call starts earlier (`crewCallAt`); null when
+   * none leads the departure.
    */
   crewCall: CrewCall | null;
 };
@@ -91,7 +92,7 @@ export async function crewWeekFor(
       now: input.now,
     }),
     db
-      .select({ dockCallMinutes: shops.dockCallMinutes })
+      .select({ dockCallMinutes: shops.dockCallMinutes, crewLeadMinutes: shops.crewLeadMinutes })
       .from(shops)
       .where(eq(shops.id, input.shopId))
       .limit(1),
@@ -113,6 +114,13 @@ export async function crewWeekFor(
   return rows.map((row) => ({
     ...row,
     gap: gaps.get(row.tripId) ?? null,
-    crewCall: crewCallAt(row.startsAt, shop?.dockCallMinutes ?? 0, shifts),
+    crewCall: crewCallAt(
+      row.startsAt,
+      {
+        dockCallMinutes: shop?.dockCallMinutes ?? 0,
+        crewLeadMinutes: shop?.crewLeadMinutes ?? null,
+      },
+      shifts,
+    ),
   }));
 }

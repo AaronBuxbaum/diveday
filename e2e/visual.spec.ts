@@ -25,7 +25,7 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { demoEmail } from "../src/lib/simulator-email";
 import { weekStartOf } from "../src/lib/week-board";
 import { clearCourseForms } from "./course-form-only";
-import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   bookOpenWaterSession,
@@ -2397,6 +2397,31 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "shopfront-register", scheme);
       });
 
+      /**
+       * **The night-before reminder, on the diver's last boat** (ux-delight
+       * sheet 2026-10-22, item 1; H-150): the fly-safe rule in hours under
+       * the dock time, never a clock time. The email as sent, from the
+       * preview route's fixture notification.
+       */
+      test(`the night-before reminder email says the fly-safe hours (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const response = await request.get("/api/test/email-previews");
+        expect(response.ok()).toBe(true);
+        const { previews } = (await response.json()) as {
+          previews: { kind: string; message: { html: string } }[];
+        };
+        const reminder = previews.find((preview) => preview.kind === "trip_reminder_24h");
+        if (!reminder) throw new Error("no night-before reminder preview");
+        await page.setContent(reminder.message.html);
+        const flySafe = diverTranslator("en-US")("notifications.tripReminder.flySafe", {
+          count: 24,
+        });
+        await page.getByText(flySafe).waitFor();
+        await capture(page, "email-reminder-night-before", scheme);
+      });
+
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/");
         await capture(page, "landing", scheme);
@@ -4319,6 +4344,25 @@ for (const scheme of ["light", "dark"] as const) {
 
     test.describe("staff", () => {
       signedInAsOwner();
+
+      /**
+       * **Crew get a dock time of their own** (ux-delight sheet 2026-10-22,
+       * item 2; H-149): the demo captain's "Your week" reads "At the dock",
+       * 30 minutes before the divers, from the shop's crew time.
+       */
+      test.describe("as the captain", () => {
+        signedInAs("captain");
+
+        test(`a captain's week names the crew's own dock time (${scheme})`, async ({ page }) => {
+          await page.goto("/shop/blue-mantis");
+          await page.getByRole("heading", { name: "Your week" }).waitFor();
+          await page
+            .getByText(/At the dock \d{1,2}:\d\d\s[AP]M · leaves/)
+            .first()
+            .waitFor();
+          await capture(page, "today-captain-your-week", scheme);
+        });
+      });
 
       test(`the day spine renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis");

@@ -68,6 +68,8 @@ export function dockDayNoticeMessages(t: StaffTranslator): NoticeMessages {
     "pickup-saved": { tone: "success", text: t("settings.main.notice.pickupSaved") },
     "turnaround-saved": { tone: "success", text: t("settings.main.notice.turnaroundSaved") },
     "turnaround-invalid": { tone: "danger", text: t("settings.main.notice.turnaroundInvalid") },
+    "crew-lead-saved": { tone: "success", text: t("settings.main.notice.crewLeadSaved") },
+    "crew-lead-invalid": { tone: "danger", text: t("settings.main.notice.crewLeadInvalid") },
     "desk-payment-saved": { tone: "success", text: t("settings.main.notice.deskPaymentSaved") },
     "desk-payment-invalid": { tone: "danger", text: t("settings.main.notice.deskPaymentInvalid") },
   };

@@ -9,7 +9,11 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import type { DeskPayment } from "@/lib/desk-payment";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { DockDayForm, TurnaroundForm } from "../_components/editors/BoatsSitesEditors";
+import {
+  CrewLeadForm,
+  DockDayForm,
+  TurnaroundForm,
+} from "../_components/editors/BoatsSitesEditors";
 import { SettingsEditorPage } from "../_components/SettingsEditorPage";
 import { dockDayNoticeMessages } from "../sub-page-notices";
 import { saveDeskPaymentAction } from "./desk-payment-actions";
@@ -74,6 +78,7 @@ export default async function DockDaySettingsPage({
         t={t}
         siteBottomTimeOverrides={siteBottomTimeOverrides}
       />
+      <CrewLeadForm shop={shop} t={t} />
       {/* Whether `/ready` asks a diver about a pickup at all (fourth UX
           review, item 8): most shops run none, so it is off until a shop
           says it does. Part of the same dock day, so it lives on this page. */}
