@@ -38,9 +38,10 @@ Before every push:
    did not run: say "verify:push --quick green" or "verify:push green", never "all tests pass
    locally". Independent static checks finish together and report every failure. Dependent later stages stop after a failed prerequisite; their omission is explicit. Green, it stamps HEAD; `git push` is refused for a commit without a stamp
    (`scripts/guard-push.mjs`), so a merge from the layer below means another run. It reads the
-   layer below's CI first: on a red base it re-runs the files CI names and stamps only when they
-   pass here, so carry the fix or wait for the layer that broke; a red job naming no file needs
-   `--base-red <file…>` from its log. It also replays what this branch's own last red CI run
+   layer below's CI first: on a red base the full run re-runs the files CI names and stamps only
+   when they pass here (a red job naming no file needs `--base-red <file…>`); `--quick` names them
+   in a warning and stamps, and the base's owner fixes them. A merge-only push (nothing of the
+   branch's own since its last push) runs static checks without the unit suite. It also replays what this branch's own last red CI run
    names (unit files, specs, captures), so a fix is checked here, not by CI's next round. A red
    **Visual capture** shard is a functional failure, not a pixel diff. The reasons
    and the measurements: [verifying.md](../../../docs/agents/verifying.md#the-pre-push-gate).
