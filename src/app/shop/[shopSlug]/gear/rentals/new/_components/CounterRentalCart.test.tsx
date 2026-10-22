@@ -158,13 +158,30 @@ describe("issue 2723 refused cart", () => {
     const groups = [{ kind: "tank" as const, kindLabel: "Tank", units: tanks }];
     const typedPrice = (index: number) => `${index + 50}.25`;
     render(<Cart groups={groups} />);
+    // Query roles once per phase, then exercise every real control. Repeated
+    // accessible-tree scans of the growing 40-row cart dominated this test.
+    const pickButtons = within(gear()).getAllByRole("button", { name: /^Tank \d{3}· AL80$/ });
+    expect(pickButtons).toHaveLength(tanks.length);
     for (const [index, tank] of tanks.entries()) {
-      fireEvent.click(within(gear()).getByRole("button", { name: `${tank.label}· AL80` }));
-      fireEvent.change(fill(tank), { target: { value: "32" } });
-      fireEvent.change(screen.getByRole("spinbutton", { name: tank.priceAria }), {
-        target: { value: typedPrice(index) },
-      });
+      expect(pickButtons[index]).toHaveAccessibleName(`${tank.label}· AL80`);
     }
+    act(() => {
+      for (const button of pickButtons) fireEvent.click(button);
+    });
+    const fills = screen.getAllByRole("combobox");
+    const prices = screen.getAllByRole("spinbutton");
+    expect(fills).toHaveLength(tanks.length);
+    expect(prices).toHaveLength(tanks.length);
+    for (const [index, tank] of tanks.entries()) {
+      expect(fills[index]).toHaveAccessibleName(tank.fillAria ?? "");
+      expect(prices[index]).toHaveAccessibleName(tank.priceAria);
+    }
+    act(() => {
+      for (const [index] of tanks.entries()) {
+        fireEvent.change(fills[index], { target: { value: "32" } });
+        fireEvent.change(prices[index], { target: { value: typedPrice(index) } });
+      }
+    });
     fireEvent.click(screen.getByRole("radio", { name: t("counterRentals.new.pay.none") }));
     fireEvent.submit(screen.getByRole("form", { name: "Rental" }));
     cleanup();
@@ -186,10 +203,13 @@ describe("issue 2723 refused cart", () => {
     const restored = new FormData(screen.getByRole("form", { name: "Rental" }) as HTMLFormElement);
     expect(restored.getAll(UNIT_FIELD)).toEqual(tanks.map((tank) => tank.id));
     expect(restored.get(PAYMENT_FIELD)).toBe("none");
+    const restoredFills = screen.getAllByRole("combobox");
+    expect(restoredFills).toHaveLength(tanks.length);
     for (const [index, tank] of tanks.entries()) {
       expect(restored.get(`${PRICE_FIELD_PREFIX}${tank.id}`)).toBe(typedPrice(index));
       expect(restored.get(`${FILL_FIELD_PREFIX}${tank.id}`)).toBe("32");
-      expect(fill(tank)).toHaveAttribute("aria-invalid", "true");
+      expect(restoredFills[index]).toHaveAccessibleName(tank.fillAria ?? "");
+      expect(restoredFills[index]).toHaveAttribute("aria-invalid", "true");
     }
   });
 
