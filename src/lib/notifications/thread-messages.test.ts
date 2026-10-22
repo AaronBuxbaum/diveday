@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { courseCertifiedEmail, courseCertifiedText } from "./course-certified";
-import { leadReceivedAckEmail } from "./lead-received-ack";
+import { interestReceivedAckEmail } from "./interest-received-ack";
 
 /**
  * The two messages the third UX review's "thread between departures" adds:
@@ -120,9 +120,9 @@ describe("courseCertifiedEmail", () => {
   });
 });
 
-describe("leadReceivedAckEmail", () => {
+describe("interestReceivedAckEmail", () => {
   it("says what was asked, when, and how to reach the shop sooner", () => {
-    const email = leadReceivedAckEmail({
+    const email = interestReceivedAckEmail({
       locale: "en-US",
       shopName: "Blue Mantis Divers",
       courseTitle: "Advanced Open Water Diver",
@@ -144,7 +144,7 @@ describe("leadReceivedAckEmail", () => {
   });
 
   it("leaves out what the shop has not given and never names a course it was not asked about", () => {
-    const email = leadReceivedAckEmail({
+    const email = interestReceivedAckEmail({
       locale: "en-US",
       shopName: "Blue Mantis Divers",
       timezone: "America/New_York",

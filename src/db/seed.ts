@@ -59,8 +59,8 @@ import {
   integrationEvents,
   integrationOauthStates,
   internalNotes,
-  leads,
-  leadUnsubscribeTokens,
+  interests,
+  interestUnsubscribeTokens,
   marineLifeRequests,
   mediaDeletionAttempts,
   nitroxCertifications,
@@ -202,7 +202,7 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
  * | `./seed-nitrox.ts` | EANx cards and the per-dive gas the wreck charter gates on |
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
  * | `./seed-gear.ts` | the rental fleet on the wall — tagged units, service clocks, a few reserved for the wreck trip |
- * | `./seed-course-inquiries.ts` | date leads for courses off the public pages, in all three `person_id` states |
+ * | `./seed-course-inquiries.ts` | date interests for courses off the public pages, in all three `person_id` states |
  * | `./seed-course-materials.ts` | the links behind two courses' learning materials, and one student marked done |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-course-photos.ts` | a species photo of its own on every course, so the storefront reads as a shop and not a template |
@@ -1053,8 +1053,8 @@ export async function seedDemoSchedule(
     timezone: shopRow?.timezone ?? DEMO_SHOP_TIMEZONE,
     divers: customers,
   });
-  // Leads off the public course pages. After the catalog and the divers, so the
-  // one lead that links to an existing diver has somebody to link to.
+  // Interests off the public course pages. After the catalog and the divers, so the
+  // one interest that links to an existing diver has somebody to link to.
   await seedCourseInquiries(db, shopId, { courseIdByTitle });
   // The same table's other half: divers asking for a *dive* on a date the
   // board has nothing on — the rows the requests list groups by day
@@ -1535,15 +1535,15 @@ export async function resetDemoSchedule(
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
-  // The last-minute list's unsubscribe links name a lead by foreign key, so
-  // they go before the leads. Added with Leo's self-serve unsubscribe (docs ADR
+  // The last-minute list's unsubscribe links name an interest by foreign key, so
+  // they go before the interests. Added with Leo's self-serve unsubscribe (docs ADR
   // 20260731-self-serve-unsubscribe) but not to this ordering once, which made
   // every `/api/test/reset` throw 23503 mid-run and leave the demo shop
   // half-reset — the e2e fleet then failed in whichever spec happened to read
   // the wreckage next, which is why the flake moved around between runs.
-  await db.delete(leadUnsubscribeTokens).where(eq(leadUnsubscribeTokens.shopId, shopId));
-  await db.delete(leads).where(eq(leads.shopId, shopId));
-  // References trips (last-minute-deal blasts) and the leads that carry a deal's
+  await db.delete(interestUnsubscribeTokens).where(eq(interestUnsubscribeTokens.shopId, shopId));
+  await db.delete(interests).where(eq(interests.shopId, shopId));
+  // References trips (last-minute-deal blasts) and the interests that carry a deal's
   // `promo_id`, so it goes after them and before the trips/people deletes below
   // or this FK-violates and aborts the whole reset mid-run (docs ADR
   // 20260727-last-minute-fill-promos).

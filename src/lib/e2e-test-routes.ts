@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 
 /**
  * Shared guard for every `/api/test/*` route (`reset`, `seed-account-token`,
- * `seed-stripe-account`, `seed-lead-unsubscribe-token`,
+ * `seed-stripe-account`, `seed-interest-unsubscribe-token`,
  * `seed-courtesy-email-unsubscribe-token`). Two independent checks, both
  * required:
  *

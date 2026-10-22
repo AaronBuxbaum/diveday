@@ -39,7 +39,7 @@ import { readReviewsAwaitingModeration } from "./reviews";
 import {
   bookings,
   incidentReports,
-  leads,
+  interests,
   people,
   personRoles,
   shops,
@@ -203,18 +203,18 @@ async function countDateRequestsWaiting(
 ): Promise<number> {
   const [row] = await db
     .select({ n: count() })
-    .from(leads)
+    .from(interests)
     .where(
       and(
-        eq(leads.shopId, shopId),
-        eq(leads.scope, "date"),
-        isNull(leads.closedAt),
+        eq(interests.shopId, shopId),
+        eq(interests.scope, "date"),
+        isNull(interests.closedAt),
         or(
-          sql`greatest(${leads.preferredDate}, ${leads.alternateDate}) >= ${today}`,
+          sql`greatest(${interests.preferredDate}, ${interests.alternateDate}) >= ${today}`,
           and(
-            isNull(leads.preferredDate),
-            isNull(leads.alternateDate),
-            gte(leads.askedAt, weeks.lastWeek.startUtc),
+            isNull(interests.preferredDate),
+            isNull(interests.alternateDate),
+            gte(interests.askedAt, weeks.lastWeek.startUtc),
           ),
         ),
       ),

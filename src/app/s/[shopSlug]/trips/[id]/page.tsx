@@ -138,7 +138,7 @@ export default async function TripDetailPage({
   params: Promise<{ shopSlug: string; id: string }>;
   searchParams: Promise<{
     booking?: string;
-    lead?: string;
+    interest?: string;
     error?: string;
     /** Stripe's cancel return, embed only — see `EmbedBookedNotice`. */
     pay?: string;
@@ -155,7 +155,7 @@ export default async function TripDetailPage({
   if (!uuidParam(tripId)) notFound();
   const {
     booking: bookingToken,
-    lead: leadId,
+    interest: interestId,
     error,
     pay,
     embed,
@@ -207,7 +207,7 @@ export default async function TripDetailPage({
     tripId,
     isEmbed,
     bookingToken,
-    leadId,
+    interestId,
     handoffToken,
     payDue: pay === "due",
     session,

@@ -261,7 +261,7 @@ script again.
 | 20260813-search-listing-is-a-choice | A shop is indexed by… |
 | 20260813-shop-cancellation-refunds-itself | When the shop cancels a… |
 | 20260813-wait-list-is-a-lead-list | A wait list is a… |
-| 20260814-a-date-request-is-a-course-inquiry | ~~One table for "please run…~~ → 20261017-one-lead-with-a-scope |
+| 20260814-a-date-request-is-a-course-inquiry | ~~One table for "please run…~~ → 20261017-one-interest-with-a-scope |
 | 20260814-checkout-recovery-is-commercial | The abandoned-checkout nudge is a… |
 | 20260814-course-depth-markers | A depth in course prose… |
 | 20260814-one-tap-imported-card-confirm | Every imported card confirms the… |
@@ -280,7 +280,7 @@ script again.
 | 20260816-course-template-updates | Review source revisions before updating… |
 | 20260816-e2e-server-process-groups | Supervise each e2e Next server… |
 | 20260816-imported-payment-history-is-evidence | Carry prior payment and receipt… |
-| 20260816-trip-invitations-are-outreach | ~~Invite a lead without silently…~~ → 20261017-one-lead-with-a-scope |
+| 20260816-trip-invitations-are-outreach | ~~Invite a lead without silently…~~ → 20261017-one-interest-with-a-scope |
 | 20260820-attested-at-booking-verified-at-boarding | Before the trip a stated… |
 | 20260820-every-delete-is-soft | Delete is reversible underneath and… |
 | 20260820-one-page-after-booking | A booked diver lands on… |
@@ -402,7 +402,7 @@ script again.
 | 20261016-fresh-link-per-booking-row | A booking's page lists the… |
 | 20261016-incident-drafts | Reuse an incident draft only… |
 | 20261016-shared-boat-photos | A diver may share a… |
-| 20261017-one-lead-with-a-scope | One `leads` table for everyone… (proposed) |
+| 20261017-one-interest-with-a-scope | One `interests` table for everyone… (proposed) |
 | 20261017-xero-removed-before-launch | Xero is removed before launch,… |
 | 20261018-claude-assists | Use the Claude API for… |
 | 20261018-diver-messages-are-states | Every diver reminder is a… |

@@ -424,7 +424,7 @@ export function RequestPlanBrief({
           <li key={request.id}>
             <ChoiceRow
               type="checkbox"
-              name="leadId"
+              name="interestId"
               value={request.id}
               defaultChecked
               className="rounded-lg bg-surface px-3 py-2 text-sm"

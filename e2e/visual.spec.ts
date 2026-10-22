@@ -5369,7 +5369,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **The days somebody asked for, under the week they belong to** (ADR
        * 20260919-one-idea, slice 23f).
        *
-       * A week off the current one, because that is where the seeded leads
+       * A week off the current one, because that is where the seeded interests
        * are: `seed-date-requests.ts` places them twelve and thirteen days out,
        * and the week board is seven days wide. Addressed by `?week=` rather
        * than by clicking the pager twice — the pager has its own coverage, and
@@ -5378,7 +5378,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the week draws the days somebody asked for (${scheme})`, async ({ page }) => {
         // Derived from the fleet's frozen clock rather than written down: the
-        // seed places these leads twelve days out, so a literal date here
+        // seed places these interests twelve days out, so a literal date here
         // would rot the moment either moves. Monday-first, like the board.
         const day = new Date(e2eNow());
         day.setUTCDate(day.getUTCDate() + 12);
@@ -6702,7 +6702,7 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * The tick beside the name is in the frame deliberately. Nothing
        * about this mark filters the list, reorders it, or disables the tick —
-       * a wait list is leads in the order they asked (ADR
+       * a wait list is interests in the order they asked (ADR
        * 20260813-wait-list-is-a-lead-list) and informing the staffer is the whole
        * design.
        */

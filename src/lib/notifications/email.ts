@@ -131,8 +131,12 @@ type WaitlistInviteEmailInput = {
   timezone: string;
   /** The public trip page where the freed seat can be claimed. */
   bookingUrl: string;
-  /** Self-serve opt-out of `seat_offer_commercial`/`trip_recap` courtesy email. */
-  unsubscribeUrl: string;
+  /**
+   * Self-serve opt-out of courtesy email. Present on the commercial offer
+   * (`seat_offer_commercial`) only: an invite to a diver who asked for this
+   * departure is service mail and carries none (H-145, D-2 option b).
+   */
+  unsubscribeUrl?: string;
   /** How many seats the waiting party asked for (fourth review, item 34); one when absent. */
   partySize?: number;
   /**
@@ -880,7 +884,7 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
   const title = escapeHtml(input.tripTitle);
   const seats = Math.max(1, input.partySize ?? 1);
 
-  // A rolled lead hears why the date moved; a party hears its count; anyone
+  // A rolled interest hears why the date moved; a party hears its count; anyone
   // else, that a seat opened.
   const bodyFor = (tripTitle: string) =>
     input.sailedStartsAt
@@ -897,16 +901,20 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
   const bodyHtml = bodyFor(`<strong>${title}</strong>`);
   const claim = t("notifications.waitlistInvite.claim");
   const footer = t("notifications.waitlistInvite.footer");
+  // The way out is drawn only when the schema gave one (`seat_offer_commercial`).
   const unsubscribe = t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName });
-  const unsubscribeUrl = escapeHtml(input.unsubscribeUrl);
+  const unsubscribeText = input.unsubscribeUrl ? `\n\n${unsubscribe}:\n${input.unsubscribeUrl}` : "";
+  const unsubscribeHtml = input.unsubscribeUrl
+    ? `<p><a href="${escapeHtml(input.unsubscribeUrl)}">${escapeHtml(unsubscribe)}</a></p>`
+    : "";
 
   return {
     subject:
       seats > 1
         ? t("notifications.waitlistInvite.subjectParty", { seats, tripTitle: input.tripTitle })
         : t("notifications.waitlistInvite.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${emailButton(input.bookingUrl, t("notifications.waitlistInvite.claimLink"))}<p>${footer}</p><p><a href="${unsubscribeUrl}">${escapeHtml(unsubscribe)}</a></p>`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${date}\n${time}\n\n${claim}:\n${input.bookingUrl}\n\n${footer}${unsubscribeText}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${emailButton(input.bookingUrl, t("notifications.waitlistInvite.claimLink"))}<p>${footer}</p>${unsubscribeHtml}`,
   };
 }
 
@@ -1825,7 +1833,7 @@ type CourseInquiryEmailInput = {
  * send (staffInviteEmail), not English-only like the founder-only
  * the new_account operator alert.
  */
-export function leadReceivedEmail(input: CourseInquiryEmailInput): NotificationEmail {
+export function interestReceivedEmail(input: CourseInquiryEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const notSaid = t("inquiry.notSaid");
   const name = input.inquirerName?.trim() || t("notifications.courseInquiry.anonymous");

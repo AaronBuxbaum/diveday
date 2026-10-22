@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { bookings, leads, people } from "./schema";
+import { bookings, interests, people } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
 
 /**
@@ -53,9 +53,9 @@ describe("seeded self-declared joiners", () => {
     for (const personId of [claimed, uncertified]) {
       const entries = await db
         .select()
-        .from(leads)
+        .from(interests)
         .where(
-          and(eq(leads.shopId, shop.id), eq(leads.scope, "anytime"), eq(leads.personId, personId)),
+          and(eq(interests.shopId, shop.id), eq(interests.scope, "anytime"), eq(interests.personId, personId)),
         );
       expect(entries).toHaveLength(1);
       expect(entries[0]?.closedAt).toBeNull();

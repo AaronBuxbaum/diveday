@@ -119,7 +119,7 @@ describe("messageFor", () => {
     const invite = {
       kind: "seat_offer_commercial" as const,
       askedBy: "diver" as const,
-      leadId: "3f2504e0-4f89-41d3-9a0c-0305e82c3304",
+      interestId: "3f2504e0-4f89-41d3-9a0c-0305e82c3304",
       ...trip,
       bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
       offeredAt: new Date("2026-07-30T12:00:00.000Z"),
@@ -174,7 +174,7 @@ describe("messageFor", () => {
     describe("the two trip invitations", () => {
       const invitation = {
         ...trip,
-        leadId: "3f2504e0-4f89-41d3-9a0c-0305e82c3305",
+        interestId: "3f2504e0-4f89-41d3-9a0c-0305e82c3305",
         bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
         offeredAt: new Date("2026-07-30T12:00:00.000Z"),
       };
@@ -200,7 +200,24 @@ describe("messageFor", () => {
       });
 
       it("leaves the answer to a diver's own request without either", () => {
-        const email = messageFor({ ...invitation, kind: "seat_offer", sender });
+        const email = messageFor({ ...invitation, kind: "seat_offer", answers: "date_request", sender });
+        expect(email.text).not.toContain("unsubscribe");
+        expect(email.html).not.toContain("unsubscribe");
+        expect(email.text).not.toContain("1 Harbor Rd");
+        expect(email.html).not.toContain("1 Harbor Rd");
+      });
+
+      // H-145 D-2 option b (Aaron, 2026-10-17): the diver joined this
+      // departure's wait list, so the seat is service mail in the wait list's words.
+      it("tells a waiting diver a seat opened, with neither a way out nor the address", () => {
+        const email = messageFor({
+          ...invitation,
+          kind: "seat_offer",
+          answers: "wait_list",
+          partySize: 2,
+          sender,
+        });
+        expect(email.subject).toBe("2 seats opened up on Two-Tank Reef");
         expect(email.text).not.toContain("unsubscribe");
         expect(email.html).not.toContain("unsubscribe");
         expect(email.text).not.toContain("1 Harbor Rd");

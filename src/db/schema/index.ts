@@ -27,7 +27,7 @@ export * from "./funnel";
 export * from "./gear";
 export * from "./incidents";
 export * from "./integrations";
-export * from "./leads";
+export * from "./interests";
 export * from "./notifications";
 export * from "./payments";
 export * from "./retention";

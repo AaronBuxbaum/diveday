@@ -67,7 +67,7 @@ export function requestAdviceLines(
  *
  * The same component renders the "no date named" tail, which has a count and no
  * day, so no advice and no act: prose a date field could not hold is still a
- * lead, but it is not a day anyone can put a boat on.
+ * interest, but it is not a day anyone can put a boat on.
  *
  * `advice` is empty on a day whose planner sentence is word for word the one
  * above it — the page decides that, because only the page can see the group
@@ -89,7 +89,7 @@ export function RequestDayGroup({
   add?: { href: string; label: string };
   /**
    * Departures already on the board for this day, each a link to its
-   * `#who-wants-in` (ADR 20261017-one-lead-with-a-scope). "Add a departure"
+   * `#who-wants-in` (ADR 20261017-one-interest-with-a-scope). "Add a departure"
    * stays for the days with none.
    */
   onBoard?: readonly { href: string; label: string }[];

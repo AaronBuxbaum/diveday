@@ -78,7 +78,7 @@ test.describe("took a call", () => {
     await call.getByLabel("How many divers").fill("3");
     await call.getByRole("button", { name: "Log the call" }).click();
 
-    // Lands where the lead now lives, saying so once.
+    // Lands where the interest now lives, saying so once.
     await page.waitForURL(/\/shop\/blue-mantis\/requests\?notice=call-logged/);
     await expect(page.getByText("Call logged")).toBeVisible();
     await expect(page.getByText("Wants to dive: A night dive over the holidays")).toBeVisible();

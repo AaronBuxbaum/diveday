@@ -13,9 +13,9 @@ import {
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { createInvitationUnderCooldown } from "@/db/invite-suggestions";
-import { deliverSeatOffer, type SeatOfferDelivery } from "@/db/lead-offers";
-import { carryLeads } from "@/db/lead-roll";
-import { askForDeparture, type DepartureAskOutcome, ensureDepartureLead } from "@/db/leads";
+import { deliverSeatOffer, type SeatOfferDelivery } from "@/db/interest-offers";
+import { carryInterests } from "@/db/interest-roll";
+import { askForDeparture, type DepartureAskOutcome, ensureDepartureInterest } from "@/db/interests";
 import { getBookingPayment } from "@/db/payments";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { type MoveSeatRefusal, moveSeat } from "@/db/seat-diver";
@@ -139,7 +139,7 @@ async function inviteOneDiver(
     personId: parsed.data.personId,
     createdByPersonId: s.user.personId,
   };
-  let leadId: string | null;
+  let interestId: string | null;
   if (rule.cooldown) {
     // A suggestion: the cooldown and the departure's own gate, re-checked
     // under one lock for a page left open (H-130; review F1, N2).
@@ -150,13 +150,13 @@ async function inviteOneDiver(
     if (outcome.status === "unavailable") {
       redirect(noticeUrl(`${guests}#who-wants-in`, "invite-unavailable"));
     }
-    leadId = outcome.status === "created" ? outcome.leadId : null;
+    interestId = outcome.status === "created" ? outcome.interestId : null;
   } else {
-    leadId = (await ensureDepartureLead(db, input))?.leadId ?? null;
+    interestId = (await ensureDepartureInterest(db, input))?.interestId ?? null;
   }
   let delivery: SeatOfferDelivery | null = null;
-  if (leadId) {
-    delivery = await deliverSeatOffer(db, { shopId: s.user.shopId, shopSlug, tripId, leadId });
+  if (interestId) {
+    delivery = await deliverSeatOffer(db, { shopId: s.user.shopId, shopSlug, tripId, interestId });
   }
   revalidatePath(guests);
   redirect(
@@ -381,7 +381,7 @@ export async function moveSeatAction(shopSlug: string, tripId: string, formData:
 
 /**
  * **"Carry the wait list"** from the demand banner (third UX review, item 12):
- * every lead still waiting on this full departure is copied to the one staff
+ * every interest still waiting on this full departure is copied to the one staff
  * chose, and the staffer lands on it, where the wait list's one-tap invite
  * reaches them. Nobody is messaged here.
  */
@@ -395,7 +395,7 @@ export async function carryWaitlistAction(shopSlug: string, tripId: string, form
   const parsed = parseForm(carryWaitlistForm, formData);
   if (!uuidParam(tripId) || !parsed.ok) redirect(back);
   const { toTripId } = parsed.data;
-  const carried = await carryLeads(await getDb(), {
+  const carried = await carryInterests(await getDb(), {
     shopId: s.user.shopId,
     fromTripId: tripId,
     toTripId,

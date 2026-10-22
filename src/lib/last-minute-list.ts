@@ -5,7 +5,7 @@ import { isValidPromoDiscountAmountCents, type PromoDiscount } from "./promo-cod
  * Fill-the-boat promo logic: the discount's bounds and the code text a diver
  * types at booking. Framework-free (docs ADR 20260727-last-minute-fill-promos);
  * the Stripe coupon/promotion-code calls live in src/lib/payments/promotions.ts.
- * Who a deal reaches (the anytime leads) is `src/lib/leads.ts`.
+ * Who a deal reaches (the anytime interests) is `src/lib/interests.ts`.
  */
 
 /** Discount bounds mirrored from the `trip_last_minute_promos_discount_range` check constraint. */

@@ -14,7 +14,7 @@ import {
 } from "@/i18n/today-labels";
 import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
-import { lastMinuteEntryMatchesTripDate } from "@/lib/leads";
+import { lastMinuteEntryMatchesTripDate } from "@/lib/interests";
 import { publicTripPath } from "@/lib/public-routes";
 import { shopPath } from "@/lib/staff-notices";
 import {
@@ -115,7 +115,7 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
     // Against the seats on sale, as the booking transaction counts (#2388).
     const openSeats = Math.max(0, trip.sellableCapacity - trip.booked);
     const front = seatWanted.get(trip.id);
-    // **One item for everyone who wants in** (ADR 20261017-one-lead-with-a-scope):
+    // **One item for everyone who wants in** (ADR 20261017-one-interest-with-a-scope):
     // the divers who asked for this boat, and, within three days, the
     // last-minute list divers whose window covers it. The reach test is the
     // only clause that scans a list, so it goes last. A row is work someone can
@@ -124,7 +124,7 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
     const waiting = front?.count ?? 0;
     // The one tap goes to the first who asked whose whole party fits; none
     // fitting leaves the row and its link to the panel, with no tap to send.
-    const fits = front?.leads.find((lead) => lead.partySize <= openSeats);
+    const fits = front?.interests.find((interest) => interest.partySize <= openSeats);
     const around =
       openSeats > 0 && urgencyFor(trip.startsAt, now) !== "later"
         ? lastMinuteWindows.filter((entry) =>
@@ -150,7 +150,7 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
           ? {
               offer: {
                 tripId: trip.id,
-                leadId: fits.leadId,
+                interestId: fits.interestId,
                 personName: fits.personName,
                 personEmail: fits.personEmail,
                 offeredAt: fits.invitedAt,

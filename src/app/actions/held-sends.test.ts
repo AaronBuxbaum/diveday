@@ -56,7 +56,7 @@ function dealForm(tripId: string, recipient: string): FormData {
   form.set("holdKind", "seat_offer");
   form.set("tripId", tripId);
   form.set("discountPercent", "25");
-  form.append("leadId", recipient);
+  form.append("interestId", recipient);
   return form;
 }
 
@@ -89,7 +89,7 @@ describe("holdSendAction", () => {
     expect(row?.payload).toEqual({
       kind: "seat_offer",
       tripId: seat.tripId,
-      leadIds: [owner.personId],
+      interestIds: [owner.personId],
       discount: { percent: 25 },
     });
     expect(row?.actorPersonId).toBe(owner.personId);
@@ -107,7 +107,7 @@ describe("holdSendAction", () => {
     expect(row?.payload).toEqual({
       kind: "seat_offer",
       tripId: seat.tripId,
-      leadIds: [owner.personId],
+      interestIds: [owner.personId],
       discount: { amountCents: 2_000 },
     });
   });
@@ -184,7 +184,7 @@ describe("holdSendAction wait-list invite", () => {
     const form = new FormData();
     form.set("holdKind", "seat_offer");
     form.set("tripId", tripId);
-    form.set("leadId", crypto.randomUUID());
+    form.set("interestId", crypto.randomUUID());
     return form;
   };
 

@@ -52,7 +52,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
-    case "lead_received_ack":
+    case "interest_received_ack":
     // The shore contact is asked, and later told, by the shop it agreed to
     // hear from (H-118).
     case "roll_call_stale_shore":
@@ -65,7 +65,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "password_changed":
     case "staff_invite":
     case "operator_alert":
-    case "lead_received":
+    case "interest_received":
     case "weekly_digest":
     case "desk_after_hours":
     case "stripe_payments_restricted":

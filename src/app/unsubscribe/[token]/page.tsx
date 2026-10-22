@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { resolveBookkeeperStopToken } from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
 import { resolveCourtesyEmailUnsubscribeToken } from "@/db/courtesy-email";
-import { resolveLeadUnsubscribeToken } from "@/db/leads";
+import { resolveInterestUnsubscribeToken } from "@/db/interests";
 import { resolveShoreAlertStopToken } from "@/db/shore-alert-tokens";
 import { resolveWeeklyDigestUnsubscribeToken } from "@/db/weekly-digest";
 import { diverTranslator } from "@/i18n/messages";
@@ -71,7 +71,7 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
   const db = await getDb();
   const t = diverTranslator(await requestLocale());
 
-  const lastMinute = await resolveLeadUnsubscribeToken(db, token);
+  const lastMinute = await resolveInterestUnsubscribeToken(db, token);
   if (lastMinute) {
     if (lastMinute.alreadyUnsubscribed) {
       return (

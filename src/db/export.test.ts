@@ -16,7 +16,7 @@ import {
   courses,
   diveSites,
   internalNotes,
-  leads,
+  interests,
   people,
   personRoles,
   shops,
@@ -53,7 +53,7 @@ const EXPECTED_FILES = [
   "staff_credentials.csv",
   "bookings.csv",
   "trip_help_requests.csv",
-  "leads.csv",
+  "interests.csv",
   "trip_last_minute_promos.csv",
   "booking_payment_events.csv",
   "booking_checkouts.csv",
@@ -151,7 +151,7 @@ const EXPORTED_TABLES = [
   "activity_events",
   "notification_deliveries",
   "shop_promo_redemptions",
-  "leads",
+  "interests",
   "trip_last_minute_promos",
   "booking_arrival_events",
   "roll_call_events",
@@ -317,7 +317,7 @@ const EXCLUDED_TABLES = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
-  "lead_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "interest_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
   "claude_usage", // token counts and cost codes for Claude calls — DiveDay's billing ledger, not the shop's records
@@ -716,7 +716,7 @@ describe("full-shop export dataset", () => {
       "trip_requirements.csv",
       "trip_assignments.csv",
       "bookings.csv",
-      "leads.csv",
+      "interests.csv",
       "waiver_templates.csv",
       "dive_sites.csv",
       "dive_site_creatures.csv",
@@ -1210,7 +1210,7 @@ describe("full-shop export dataset", () => {
 
   /**
    * The guard ADR 20260806-export-operational-records leans on. The test above
-   * erases a diver with no notes, no leads, no messages and no checkouts, so it
+   * erases a diver with no notes, no interests, no messages and no checkouts, so it
    * proved nothing about the seven files that record went on to add — a table
    * exported but not swept by `anonymize.ts` hands a diver's details back out
    * through the bundle, and nothing mechanical would have said so (security
@@ -1274,7 +1274,7 @@ describe("full-shop export dataset", () => {
       code: "counter_check_in",
       params: { diver: "Erasable Esme" },
     });
-    await db.insert(leads).values({
+    await db.insert(interests).values({
       shopId: shop.id,
       scope: "date",
       askedBy: "diver",

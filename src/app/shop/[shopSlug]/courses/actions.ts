@@ -7,7 +7,7 @@ import { CARD_KINDS, setCardProcessed } from "@/db/agency-processing";
 import { getDb } from "@/db/client";
 import { ladderInviteRefusal } from "@/db/course-ladder";
 import { createInvitationUnderCooldown } from "@/db/invite-suggestions";
-import { deliverSeatOffer } from "@/db/lead-offers";
+import { deliverSeatOffer } from "@/db/interest-offers";
 import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -55,7 +55,7 @@ export async function inviteToCourseSessionAction(shopSlug: string, formData: Fo
   if (outcome.status === "unavailable") redirect(noticeUrl(back, "invite-unavailable"));
   const delivery =
     outcome.status === "created"
-      ? await deliverSeatOffer(db, { shopId, shopSlug, tripId, leadId: outcome.leadId })
+      ? await deliverSeatOffer(db, { shopId, shopSlug, tripId, interestId: outcome.interestId })
       : null;
   revalidatePath(back);
   redirect(

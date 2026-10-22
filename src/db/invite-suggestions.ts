@@ -22,15 +22,15 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { readCertificationEvidenceFor } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
-import { departureOpenToDiver } from "./lead-offers";
-import { ensureDepartureLead } from "./leads";
+import { departureOpenToDiver } from "./interest-offers";
+import { ensureDepartureInterest } from "./interests";
 import { queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookings,
   courses,
   diveSites,
-  leads,
+  interests,
   people,
   personRoles,
   trips,
@@ -79,11 +79,11 @@ export type InviteSuggestions = {
  */
 function invitedSince(since: Date) {
   return and(
-    eq(leads.scope, "departure"),
+    eq(interests.scope, "departure"),
     // The shop's own outreach: a diver who asked and was offered a seat was
     // not "invited" in the sense the cooldown spaces out.
-    eq(leads.askedBy, "shop"),
-    or(gte(leads.askedAt, since), gte(leads.offeredAt, since), gte(leads.emailedAt, since)),
+    eq(interests.askedBy, "shop"),
+    or(gte(interests.askedAt, since), gte(interests.offeredAt, since), gte(interests.emailedAt, since)),
   );
 }
 
@@ -95,9 +95,9 @@ export async function recentlyInvitedPeople(
 ): Promise<Set<string>> {
   const since = inviteCooldownStart(now);
   const rows = await db
-    .selectDistinct({ personId: leads.personId })
-    .from(leads)
-    .where(and(eq(leads.shopId, shopId), isNotNull(leads.personId), invitedSince(since)));
+    .selectDistinct({ personId: interests.personId })
+    .from(interests)
+    .where(and(eq(interests.shopId, shopId), isNotNull(interests.personId), invitedSince(since)));
   return new Set(rows.flatMap((row) => (row.personId ? [row.personId] : [])));
 }
 
@@ -110,9 +110,9 @@ export async function invitedWithinCooldown(
 ): Promise<boolean> {
   const since = inviteCooldownStart(now);
   const [row] = await db
-    .select({ id: leads.id })
-    .from(leads)
-    .where(and(eq(leads.shopId, shopId), eq(leads.personId, personId), invitedSince(since)))
+    .select({ id: interests.id })
+    .from(interests)
+    .where(and(eq(interests.shopId, shopId), eq(interests.personId, personId), invitedSince(since)))
     .limit(1);
   return Boolean(row);
 }
@@ -204,13 +204,13 @@ export async function listInviteSuggestions(
         ),
     () =>
       db
-        .select({ personId: leads.personId })
-        .from(leads)
+        .select({ personId: interests.personId })
+        .from(interests)
         .where(
           and(
-            eq(leads.scope, "departure"),
-            eq(leads.shopId, input.shopId),
-            eq(leads.tripId, input.tripId),
+            eq(interests.scope, "departure"),
+            eq(interests.shopId, input.shopId),
+            eq(interests.tripId, input.tripId),
           ),
         ),
     () => recentlyInvitedPeople(db, input.shopId, input.now),
@@ -361,7 +361,7 @@ const NO_CARDS: TripAdmissionEvidence = {
 };
 
 export type CooledInvitation =
-  | { status: "created"; leadId: string }
+  | { status: "created"; interestId: string }
   | { status: "cooldown" | "unavailable" | "refused" };
 
 /**
@@ -396,7 +396,7 @@ export async function createInvitationUnderCooldown(
     if ((await physicianReferrals(tx, input.shopId, [input.personId])).size > 0) {
       return { status: "unavailable" };
     }
-    const lead = await ensureDepartureLead(tx, input);
-    return lead ? { status: "created", leadId: lead.leadId } : { status: "refused" };
+    const interest = await ensureDepartureInterest(tx, input);
+    return interest ? { status: "created", interestId: interest.interestId } : { status: "refused" };
   });
 }

@@ -1,33 +1,33 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import { leads, people } from "./schema";
+import { interests, people } from "./schema";
 import { at, dateAt } from "./seed-clock";
 
 /**
- * Three course leads off the public course pages — the shape a shop's inquiry
+ * Three course interests off the public course pages — the shape a shop's inquiry
  * pile actually has, which is not "three rows that all look the same".
  *
  * The point of seeding them is the `person_id` column and its three states
  * (ADR 20260802-diver-data-erasure, and the DATA-H1 residue the 2026-08-02
  * review left open). It is resolved at capture time by **exact email match**
  * against a live diver of this shop, never fuzzily and never from a phone
- * number, and it is never back-filled. So a lead can be:
+ * number, and it is never back-filled. So an interest can be:
  *
  * - **linked** — an existing diver asking about their next card, matched on the
  *   address already on their record;
- * - **unlinked with an address** — a stranger, which is what most leads are;
+ * - **unlinked with an address** — a stranger, which is what most interests are;
  * - **unlinked with no address at all** — someone who left a phone number only.
  *   This is the case the residue is about: nothing can ever tie that row to a
  *   person, so an erasure request from the human behind it will not reach it,
- *   and closing that needs a human saying "this lead is that diver".
+ *   and closing that needs a human saying "this interest is that diver".
  *
  * Until this scenario existed all three states were unrepresented, which meant
- * `leads.csv` in the export bundle was a header row with nothing
+ * `interests.csv` in the export bundle was a header row with nothing
  * under it on every demo (DATA-A10).
  *
  * The rows are written directly rather than through `askForDate`
- * (src/db/leads.ts) because that helper takes the app's `AppDb` and
+ * (src/db/interests.ts) because that helper takes the app's `AppDb` and
  * the seed runs on a plain executor. The matching rule is reproduced here on
  * exactly one row, by looking the diver up by the address the seed itself gave
  * them — never by re-implementing the fuzzy version the helper deliberately
@@ -89,7 +89,7 @@ export async function seedCourseInquiries(
             courseId: openWaterCourseId,
             personId: null,
             name: "Marisol Vega",
-            // Nobody at this shop holds this address, so the lead stays
+            // Nobody at this shop holds this address, so the interest stays
             // unlinked — the ordinary case, and not a bug.
             email: demoEmail("marisol.vega"),
             phone: "+1-305-555-0410",
@@ -130,5 +130,5 @@ export async function seedCourseInquiries(
       : []),
   ];
 
-  if (rows.length > 0) await db.insert(leads).values(rows);
+  if (rows.length > 0) await db.insert(interests).values(rows);
 }

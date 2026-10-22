@@ -54,7 +54,7 @@ import {
   bookingPayments,
   bookings,
   courses,
-  leads,
+  interests,
   notificationDeliveries,
   notificationDeliveryAttempts,
   notificationSendQueue,
@@ -677,13 +677,13 @@ function drainableStatus() {
  * password resets) is never governed by the opt-out.
  *
  * The person is resolved the way each kind's own sender resolved them: through
- * the lead or the booking the payload names, and for
+ * the interest or the booking the payload names, and for
  * a checkout reminder through the address, which is the only handle a party
  * checkout has (`findCourtesyEmailRecipientByAddress`). Each lookup is scoped to
  * the payload's shop.
  */
-/** The last-minute-list lead a commercial offer's departure row was copied from. */
-const offerListLead = alias(leads, "offer_list_lead");
+/** The last-minute-list interest a commercial offer's departure row was copied from. */
+const offerListInterest = alias(interests, "offer_list_interest");
 
 async function courtesyRecipientOptedOut(db: AppDb, notification: Notification): Promise<boolean> {
   const optOutAt = { at: people.courtesyEmailOptOutAt };
@@ -707,18 +707,18 @@ async function courtesyRecipientOptedOut(db: AppDb, notification: Notification):
     // list's link, and a click on it after this was queued must still hold.
     case "seat_offer_commercial": {
       const [row] = await db
-        .select({ at: people.courtesyEmailOptOutAt, listLeftAt: offerListLead.closedAt })
-        .from(leads)
-        .innerJoin(people, eq(people.id, leads.personId))
+        .select({ at: people.courtesyEmailOptOutAt, listLeftAt: offerListInterest.closedAt })
+        .from(interests)
+        .innerJoin(people, eq(people.id, interests.personId))
         .leftJoin(
-          offerListLead,
+          offerListInterest,
           and(
-            eq(offerListLead.id, leads.parentLeadId),
-            eq(offerListLead.shopId, leads.shopId),
-            eq(offerListLead.scope, "anytime"),
+            eq(offerListInterest.id, interests.parentInterestId),
+            eq(offerListInterest.shopId, interests.shopId),
+            eq(offerListInterest.scope, "anytime"),
           ),
         )
-        .where(and(eq(leads.id, notification.leadId), eq(leads.shopId, notification.shopId)))
+        .where(and(eq(interests.id, notification.interestId), eq(interests.shopId, notification.shopId)))
         .limit(1);
       return Boolean(row?.at ?? row?.listLeftAt);
     }

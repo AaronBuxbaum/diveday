@@ -817,9 +817,9 @@ For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
   (`marineLife.*` in `diver.json`), and `MARINE_LIFE_CATALOG` is `as const`, so a species added
   without its copy is a **compile** error (ADR 20260813-marine-life-is-diveday-copy). A species
   DiveDay does not carry lands in `marine_life_requests` — a table nothing renders.
-- **Date leads** (`leads` with `scope = 'date'`, `src/db/leads.ts`, `src/db/lead-dates.ts`): `course_id`
-  is nullable and `leads_scope_columns` refuses a row naming neither a course nor an interest (ADR
-  20261017-one-lead-with-a-scope).
+- **Date interests** (`interests` with `scope = 'date'`, `src/db/interests.ts`, `src/db/interest-dates.ts`): `course_id`
+  is nullable and `interests_scope_columns` refuses a row naming neither a course nor an interest (ADR
+  20261017-one-interest-with-a-scope).
 - **Integrations**: rows in `src/db/integrations.ts` (credentials sealed by `src/lib/secret-box.ts`)
   and `src/db/integration-events.ts` (the at-least-once outbox); OAuth state in
   `integration_oauth_states`, consumed once and bound to the shop **and** the person who started it.

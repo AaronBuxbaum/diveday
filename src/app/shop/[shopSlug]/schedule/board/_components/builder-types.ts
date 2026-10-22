@@ -283,7 +283,7 @@ export type BuilderInitialSite = {
 };
 
 /**
- * Lead context handed from Requests to the one trip-creation form. Checked
+ * Interest context handed from Requests to the one trip-creation form. Checked
  * rows become invitations only; they do not become bookings or consume seats.
  */
 export type BuilderRequestPlan = {

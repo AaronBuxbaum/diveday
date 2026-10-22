@@ -33,7 +33,7 @@ import {
   gearItems,
   gearReservations,
   internalNotes,
-  leads,
+  interests,
   people,
   personRoles,
   priorVisits,
@@ -422,23 +422,23 @@ describe("diver record merge, a seat that is already over", () => {
     expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
   });
 
-  it("drops the merged-away record's duplicate departure and anytime leads", async () => {
+  it("drops the merged-away record's duplicate departure and anytime interests", async () => {
     const f = await mergeFixtures();
     await seatBoth(f, "cancelled", "booked");
-    const lead = (personId: string, scope: "departure" | "anytime") => ({
+    const interest = (personId: string, scope: "departure" | "anytime") => ({
       ...(scope === "departure" ? { tripId: f.trip.id, partySize: 1 } : {}),
       shopId: f.shop.id,
       scope,
       askedBy: "diver" as const,
       personId,
     });
-    const both = (personId: string) => [lead(personId, "departure"), lead(personId, "anytime")];
-    await f.db.insert(leads).values([...both(f.source.id), ...both(f.survivor.id)]);
+    const both = (personId: string) => [interest(personId, "departure"), interest(personId, "anytime")];
+    await f.db.insert(interests).values([...both(f.source.id), ...both(f.survivor.id)]);
     expect((await merge(f)).ok).toBe(true);
     const rows = await f.db
-      .select({ personId: leads.personId, scope: leads.scope })
-      .from(leads)
-      .where(inArray(leads.personId, [f.source.id, f.survivor.id]));
+      .select({ personId: interests.personId, scope: interests.scope })
+      .from(interests)
+      .where(inArray(interests.personId, [f.source.id, f.survivor.id]));
     expect(rows.sort((a, b) => a.scope.localeCompare(b.scope))).toEqual([
       { personId: f.survivor.id, scope: "anytime" },
       { personId: f.survivor.id, scope: "departure" },

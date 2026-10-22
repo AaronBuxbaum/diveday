@@ -185,7 +185,7 @@ test("the builder opened from a day's requests reads as finished sentences", asy
   const plan = page.getByRole("group", { name: "Starting from requests" });
   await expect(plan).toBeVisible();
 
-  // The lead is named and counted, and the crew line is a sentence rather than
+  // The interest is named and counted, and the crew line is a sentence rather than
   // the ICU template that used to survive to the screen.
   await expect(plan.getByText("Nadia Okonkwo (1 diver)")).toBeVisible();
   await expect(plan.getByText(/^Bring 1 divemaster for your \d+:1 target\.$/)).toBeVisible();

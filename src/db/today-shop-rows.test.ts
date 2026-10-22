@@ -9,7 +9,7 @@ import { createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
 import { markInboundAnswered, recordInboundMessage } from "./inbound-messages";
 import { startIncidentReport } from "./incident-reports";
-import { setDateLeadOutcome } from "./leads";
+import { setDateInterestOutcome } from "./interests";
 import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
 import { recordStripeDispute } from "./payment-disputes";
 import { startPaymentOperation } from "./payment-operations";
@@ -18,7 +18,7 @@ import { submitTripReview } from "./reviews";
 import {
   inboundMessages,
   incidentReports,
-  leads,
+  interests,
   orders,
   people,
   tripAssignments,
@@ -578,13 +578,13 @@ describe("unanswered messages", () => {
       href: `/shop/${shop.slug}/requests`,
     });
     const open = await db
-      .select({ id: leads.id })
-      .from(leads)
-      .where(and(eq(leads.shopId, shop.id), eq(leads.scope, "date"), isNull(leads.closedAt)));
+      .select({ id: interests.id })
+      .from(interests)
+      .where(and(eq(interests.shopId, shop.id), eq(interests.scope, "date"), isNull(interests.closedAt)));
     for (const row of open) {
-      await setDateLeadOutcome(db, {
+      await setDateInterestOutcome(db, {
         shopId: shop.id,
-        leadId: row.id,
+        interestId: row.id,
         outcome: "done",
         now: nowDate(),
       });

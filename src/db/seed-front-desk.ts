@@ -5,7 +5,7 @@ import type { DbExecutor } from "./client";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
-  leads,
+  interests,
   notificationDeliveries,
   notificationDeliveryAttempts,
   paymentOperationIntents,
@@ -47,7 +47,7 @@ export async function seedFrontDesk(
     .filter((person) => person !== undefined);
   if (includeHistoryData && listPeople.length > 0) {
     await db
-      .insert(leads)
+      .insert(interests)
       .values(
         listPeople.map((person, index) => ({
           shopId,
@@ -69,7 +69,7 @@ export async function seedFrontDesk(
   if (includeHistoryData && wreckId) {
     const waiting = [10, 11, 12].map((index) => customers[index]).filter((c) => c !== undefined);
     if (waiting.length > 0) {
-      await db.insert(leads).values(
+      await db.insert(interests).values(
         waiting.map((person) => ({
           shopId,
           scope: "departure" as const,

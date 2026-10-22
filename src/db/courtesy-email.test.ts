@@ -7,9 +7,9 @@ import {
   optOutPersonFromCourtesyEmailByToken,
   resolveCourtesyEmailUnsubscribeToken,
 } from "./courtesy-email";
-import { askAnytime } from "./leads";
+import { askAnytime } from "./interests";
 import { findOrCreatePerson } from "./people";
-import { leads, people, personCourtesyEmailUnsubscribeTokens, shops } from "./schema";
+import { interests, people, personCourtesyEmailUnsubscribeTokens, shops } from "./schema";
 
 async function seededPerson() {
   const { db, shop } = ctx;
@@ -115,7 +115,7 @@ describe("self-serve courtesy-email unsubscribe token", () => {
 
 // ADR 20260902-sender-standards-for-ses: a spam complaint is an unsubscribe.
 describe("a complaint opts the address out", () => {
-  it("stops courtesy mail and every open last-minute-list lead for that address, in that shop only", async () => {
+  it("stops courtesy mail and every open last-minute-list interest for that address, in that shop only", async () => {
     const { db, shop, person } = await seededPerson();
     await askAnytime(db, {
       shopId: shop.id,
@@ -148,9 +148,9 @@ describe("a complaint opts the address out", () => {
     expect(outcome).toEqual({ people: 1, listEntries: 1 });
     const [row] = await db.select().from(people).where(eq(people.id, person.id));
     expect(row?.courtesyEmailOptOutAt).toEqual(at);
-    const [lead] = await db.select().from(leads).where(eq(leads.personId, person.id));
-    expect(lead?.closedAt).toEqual(at);
-    expect(lead?.closedAs).toBe("unsubscribed");
+    const [interest] = await db.select().from(interests).where(eq(interests.personId, person.id));
+    expect(interest?.closedAt).toEqual(at);
+    expect(interest?.closedAs).toBe("unsubscribed");
     const [other] = await db.select().from(people).where(eq(people.id, neighbour.id));
     expect(other?.courtesyEmailOptOutAt).toBeNull();
     const [elsewhere] = await db

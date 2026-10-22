@@ -1,11 +1,11 @@
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import { leads } from "./schema";
+import { interests } from "./schema";
 import { at, dateAt } from "./seed-clock";
 
 /**
  * Divers asking for a *dive* on a date the board has nothing on — the half of
- * `date` leads that name no course, written from the shop's own schedule
+ * `date` interests that name no course, written from the shop's own schedule
  * page ("Nothing on a date that works?").
  *
  * Its own scenario rather than rows wedged into `seed-course-inquiries.ts`:
@@ -27,7 +27,7 @@ import { at, dateAt } from "./seed-clock";
  * the past.
  */
 export async function seedDateRequests(db: DbExecutor, shopId: string): Promise<void> {
-  await db.insert(leads).values([
+  await db.insert(interests).values([
     {
       shopId,
       scope: "date" as const,

@@ -37,7 +37,7 @@ function shape(entries: { request: Row; match: string }[]): string[] {
  * **One full rendering per request.** A request is counted on every day it
  * could make — that is the point of the grouping — but the staff list prints
  * its body under `homeDate` alone and a one-line reference everywhere else, so
- * five days' worth of identical four-line bodies stop being five leads.
+ * five days' worth of identical four-line bodies stop being five interests.
  */
 describe("homeDate", () => {
   it("is the date a request named first, in every group it reaches", () => {

@@ -51,8 +51,8 @@ import {
   integrationEvents,
   integrationOauthStates,
   internalNotes,
-  leads,
-  leadUnsubscribeTokens,
+  interests,
+  interestUnsubscribeTokens,
   marineLifeRequests,
   mediaDeletionAttempts,
   nitroxCertifications,
@@ -254,9 +254,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(notificationSendQueue).where(eq(notificationSendQueue.shopId, shopId));
   await db.delete(notificationDeliveries).where(eq(notificationDeliveries.shopId, shopId));
   // Same reasoning as resetDemoSchedule above (docs ADR 20260727-last-minute-fill-promos),
-  // including the unsubscribe tokens that reference the leads.
-  await db.delete(leadUnsubscribeTokens).where(eq(leadUnsubscribeTokens.shopId, shopId));
-  await db.delete(leads).where(eq(leads.shopId, shopId));
+  // including the unsubscribe tokens that reference the interests.
+  await db.delete(interestUnsubscribeTokens).where(eq(interestUnsubscribeTokens.shopId, shopId));
+  await db.delete(interests).where(eq(interests.shopId, shopId));
   await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
   // References people, same reasoning as resetDemoSchedule above.
   await db

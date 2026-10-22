@@ -165,8 +165,8 @@ test("a failed send attempt does not silence the Today row — nothing actually 
   await expect(page.getByText(/3 seats open, \d+ want in\./)).toBeVisible();
 });
 
-// /api/test/seed-lead-unsubscribe-token mints a real
-// lead_unsubscribe_tokens row (test-only, gated identically to
+// /api/test/seed-interest-unsubscribe-token mints a real
+// interest_unsubscribe_tokens row (test-only, gated identically to
 // /api/test/reset) so this drives the actual /unsubscribe/[token] page and
 // server action, since the real send flow can't reach a live email in e2e
 // (Stripe always fails first — see the tests above) and the token is
@@ -186,7 +186,7 @@ test("a diver can self-serve unsubscribe from last-minute deal emails", async ({
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
-  const seeded = await request.post("/api/test/seed-lead-unsubscribe-token", {
+  const seeded = await request.post("/api/test/seed-interest-unsubscribe-token", {
     data: { shopSlug: "blue-mantis", email: "uma.e2e@example.com" },
   });
   expect(seeded.ok()).toBe(true);

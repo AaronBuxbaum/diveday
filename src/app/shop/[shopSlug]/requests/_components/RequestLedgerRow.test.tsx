@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { DateLeadRow } from "@/db/lead-dates";
+import type { DateInterestRow } from "@/db/interest-dates";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RequestLedgerRow } from "./RequestLedgerRow";
 
@@ -9,7 +9,7 @@ afterEach(cleanup);
 
 const t = staffTranslator("en-US");
 
-const BASE: DateLeadRow = {
+const BASE: DateInterestRow = {
   id: "8f000000-1111-4222-8333-444444444444",
   courseId: null,
   courseTitle: null,
@@ -30,7 +30,7 @@ const BASE: DateLeadRow = {
   closedAs: null,
 };
 
-function row(request: Partial<DateLeadRow> = {}) {
+function row(request: Partial<DateInterestRow> = {}) {
   const { container } = render(
     <ul>
       <RequestLedgerRow
@@ -167,7 +167,7 @@ describe("what one request says", () => {
     expect(lineOf("2 divers")).toMatch(/^2 divers · Certified, can share certification record/);
   });
 
-  it("names the course when the lead came off a course page", () => {
+  it("names the course when the interest came off a course page", () => {
     row({ courseId: "c1", courseTitle: "Open Water Diver", interest: null });
     expect(screen.getByText("About Open Water Diver")).toBeTruthy();
   });
@@ -217,14 +217,14 @@ describe("what one request says", () => {
 });
 
 /**
- * **The name is the door, and only when there is somewhere to go.** A lead is
+ * **The name is the door, and only when there is somewhere to go.** An interest is
  * tied to a diver on file by exact email match at capture time and never
- * back-filled (`src/db/lead-dates.ts`), so most requests are strangers
+ * back-filled (`src/db/interest-dates.ts`), so most requests are strangers
  * with no record to open — and a row that looks tappable and is not is worse
  * than one that never claimed to be.
  */
 describe("the door", () => {
-  it("opens the diver record when the lead is linked to one", () => {
+  it("opens the diver record when the interest is linked to one", () => {
     row({ personId: "aaaaaaaa-1111-4222-8333-444444444444" });
     const door = screen.getByRole("link", { name: "Tomás Ferreira" });
     expect(door.getAttribute("href")).toBe(

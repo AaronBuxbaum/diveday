@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { getDepartureLeadForTrip, listDepartureLeads } from "./leads";
-import { bookings, leads, people, trips } from "./schema";
+import { getDepartureInterestForTrip, listDepartureInterests } from "./interests";
+import { bookings, interests, people, trips } from "./schema";
 import { getTripRoster, listTripDiverContacts } from "./trips-roster";
 
 const OTHER_SHOP = "00000000-0000-0000-0000-000000000000";
@@ -307,7 +307,7 @@ describe("listTripDiverContacts", () => {
   });
 });
 
-describe("the departure leads", () => {
+describe("the departure interests", () => {
   const ask = (shopId: string, tripId: string, personId: string, askedAt?: Date) =>
     ({
       shopId,
@@ -324,33 +324,33 @@ describe("the departure leads", () => {
     const [trip] = await twoTrips(db, shop.id);
     const first = await makeDiver(db, shop.id);
     const second = await makeDiver(db, shop.id);
-    await db.insert(leads).values(ask(shop.id, trip, first.id, new Date("2020-01-01T00:00:00Z")));
-    await db.insert(leads).values(ask(shop.id, trip, second.id, new Date("2020-02-01T00:00:00Z")));
+    await db.insert(interests).values(ask(shop.id, trip, first.id, new Date("2020-01-01T00:00:00Z")));
+    await db.insert(interests).values(ask(shop.id, trip, second.id, new Date("2020-02-01T00:00:00Z")));
 
-    const waiting = (await listDepartureLeads(db, shop.id, trip)).filter((row) =>
+    const waiting = (await listDepartureInterests(db, shop.id, trip)).filter((row) =>
       [first.id, second.id].includes(row.person?.id ?? ""),
     );
     expect(waiting.map((row) => row.person?.id)).toEqual([first.id, second.id]);
     const rosterIds = (await getTripRoster(db, shop.id, trip)).map((row) => row.person.id);
     expect(rosterIds).not.toContain(first.id);
-    expect(await listDepartureLeads(db, OTHER_SHOP, trip)).toEqual([]);
+    expect(await listDepartureInterests(db, OTHER_SHOP, trip)).toEqual([]);
   });
 
-  it("resolves one lead only under its own trip and shop", async () => {
+  it("resolves one interest only under its own trip and shop", async () => {
     const { db, shop } = ctx;
     const [trip, otherTrip] = await twoTrips(db, shop.id);
     const diver = await makeDiver(db, shop.id);
-    const [lead] = await db
-      .insert(leads)
+    const [interest] = await db
+      .insert(interests)
       .values(ask(shop.id, trip, diver.id))
-      .returning({ id: leads.id });
-    if (!lead) throw new Error("failed to insert lead");
+      .returning({ id: interests.id });
+    if (!interest) throw new Error("failed to insert interest");
 
-    const found = await getDepartureLeadForTrip(db, shop.id, trip, lead.id);
-    expect(found?.lead.id).toBe(lead.id);
+    const found = await getDepartureInterestForTrip(db, shop.id, trip, interest.id);
+    expect(found?.interest.id).toBe(interest.id);
     expect(found?.person?.id).toBe(diver.id);
-    expect(await getDepartureLeadForTrip(db, shop.id, otherTrip, lead.id)).toBeNull();
-    expect(await getDepartureLeadForTrip(db, OTHER_SHOP, trip, lead.id)).toBeNull();
-    expect(await getDepartureLeadForTrip(db, shop.id, trip, OTHER_SHOP)).toBeNull();
+    expect(await getDepartureInterestForTrip(db, shop.id, otherTrip, interest.id)).toBeNull();
+    expect(await getDepartureInterestForTrip(db, OTHER_SHOP, trip, interest.id)).toBeNull();
+    expect(await getDepartureInterestForTrip(db, shop.id, trip, OTHER_SHOP)).toBeNull();
   });
 });

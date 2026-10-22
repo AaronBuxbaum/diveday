@@ -9,7 +9,7 @@ import {
   filterEligibleLastMinuteRecipients,
   lastMinuteEntryMatchesTripDate,
   orderLastMinuteRecipients,
-} from "@/lib/leads";
+} from "@/lib/interests";
 import { unionRequirements } from "@/lib/requirement";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -25,8 +25,8 @@ import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
 import { otherSameNamePeople } from "./identity-repoint";
 import { listInviteSuggestions } from "./invite-suggestions";
-import { listDateLeadsInReach } from "./lead-dates";
-import { listDepartureLeads, listOpenAnytimeLeads } from "./leads";
+import { listDateInterestsInReach } from "./interest-dates";
+import { listDepartureInterests, listOpenAnytimeInterests } from "./interests";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRosterWithPaymentMarks } from "./payment-marks";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
@@ -91,8 +91,8 @@ export async function getTripGuests(
     siteRequirement,
     readinessRows,
     prepDivers,
-    departureLeads,
-    dateLeadsInReach,
+    departureInterests,
+    dateInterestsInReach,
     inviteSuggestions,
     lastMinuteList,
     lastMinutePromos,
@@ -118,13 +118,13 @@ export async function getTripGuests(
     shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
     shared ? shared.readiness : listTripReadiness(db, shop.id, tripId),
     shared ? shared.prepDivers : listTripPrepDivers(db, shop.id, tripId),
-    listDepartureLeads(db, shop.id, tripId),
+    listDepartureInterests(db, shop.id, tripId),
     // Open date requests that could make this day, for the panel's second group.
-    listDateLeadsInReach(db, shop.id, { tripId }),
+    listDateInterestsInReach(db, shop.id, { tripId }),
     // Past divers of this departure's site worth asking (H-130), only while
     // it has a seat to offer.
     isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
-    listOpenAnytimeLeads(db, shop.id),
+    listOpenAnytimeInterests(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listTripLastMinutePromoRecipients(db, shop.id, tripId),
     listBookingNotes(db, shop.id, tripId),
@@ -147,25 +147,25 @@ export async function getTripGuests(
   // The last-minute pipeline: who said they are around on this date, who among
   // them could actually be cleared for it, and in what order to offer the seat.
   const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
-  const lastMinuteMatched = lastMinuteList.filter(({ lead }) =>
-    lastMinuteEntryMatchesTripDate(lead, tripDateIso),
+  const lastMinuteMatched = lastMinuteList.filter(({ interest }) =>
+    lastMinuteEntryMatchesTripDate(interest, tripDateIso),
   );
-  // **Seated means hidden**: a lead reserves nothing and the booking transaction
-  // never writes to this table (ADR 20261017-one-lead-with-a-scope, R1), so who
+  // **Seated means hidden**: an interest reserves nothing and the booking transaction
+  // never writes to this table (ADR 20261017-one-interest-with-a-scope, R1), so who
   // wants in is read against the seats at read time.
   const seatedPersonIds = new Set(
     roster
       .filter(({ booking }) => booking.status !== "cancelled")
       .map(({ booking }) => booking.personId),
   );
-  const leads = departureLeads.filter(
-    ({ lead }) => lead.personId === null || !seatedPersonIds.has(lead.personId),
+  const interests = departureInterests.filter(
+    ({ interest }) => interest.personId === null || !seatedPersonIds.has(interest.personId),
   );
-  const dateLeads = dateLeadsInReach.filter((r) => !r.personId || !seatedPersonIds.has(r.personId));
-  // The leads the diver asked for: what the demand banner counts and the deal
-  // list orders by. The shop's own outreach (`asked_by`) is in `leads` too.
-  const waitlist = leads.filter(({ lead }) => lead.askedBy === "diver");
-  const waitlistPersonIds = waitlist.flatMap(({ lead }) => (lead.personId ? [lead.personId] : []));
+  const dateInterests = dateInterestsInReach.filter((r) => !r.personId || !seatedPersonIds.has(r.personId));
+  // The interests the diver asked for: what the demand banner counts and the deal
+  // list orders by. The shop's own outreach (`asked_by`) is in `interests` too.
+  const waitlist = interests.filter(({ interest }) => interest.askedBy === "diver");
+  const waitlistPersonIds = waitlist.flatMap(({ interest }) => (interest.personId ? [interest.personId] : []));
   const heldSeats = roster.filter(({ booking }) => booking.identityUnconfirmedAt);
 
   // **One wave after the roster** (code review 2026-10-11, item 12): each of
@@ -236,7 +236,7 @@ export async function getTripGuests(
       ...new Set([
         ...lastMinuteMatched.map(({ person }) => person.id),
         ...waitlistPersonIds,
-        ...dateLeads.flatMap((row) => (row.personId ? [row.personId] : [])),
+        ...dateInterests.flatMap((row) => (row.personId ? [row.personId] : [])),
       ]),
     ]),
     // Who finished the course's materials, read across every departure of the
@@ -393,7 +393,7 @@ export async function getTripGuests(
     courseTarget,
     roster,
     requirement,
-    leads,
+    interests,
     waitlist,
     inviteSuggestions,
     activity,
@@ -474,10 +474,10 @@ export async function getTripGuests(
     demand: demandRecommendation({
       capacity: trip.capacity,
       booked: trip.booked,
-      // Seats wanted, not leads: a waiting couple is two (fourth review, item 34).
-      waitlisted: waitlist.reduce((seats, { lead }) => seats + (lead.partySize ?? 1), 0),
+      // Seats wanted, not interests: a waiting couple is two (fourth review, item 34).
+      waitlisted: waitlist.reduce((seats, { interest }) => seats + (interest.partySize ?? 1), 0),
     }),
-    dateLeads,
+    dateInterests,
     lastMinute: {
       matched: lastMinuteMatched,
       dateIso: tripDateIso,

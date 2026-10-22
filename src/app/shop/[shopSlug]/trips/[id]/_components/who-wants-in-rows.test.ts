@@ -1,38 +1,38 @@
 import { describe, expect, it } from "vitest";
-import type { DateLeadInReach } from "@/db/lead-dates";
-import type { AnytimeRecipient } from "@/db/leads";
+import type { DateInterestInReach } from "@/db/interest-dates";
+import type { AnytimeRecipient } from "@/db/interests";
 import type { CertificationSummary } from "@/db/self-declared-cards";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { CertificationLevel, CertRequirementSource } from "@/lib/readiness";
 import type { Waitlist } from "./types";
 import {
-  anytimeLeadRows,
-  dateLeadRows,
-  departureLeadRows,
+  anytimeInterestRows,
+  dateInterestRows,
+  departureInterestRows,
   whoWantsInSources,
 } from "./who-wants-in-rows";
 
 const t = staffTranslator("en-US");
 
-function lead(
+function interest(
   id: string,
   fullName: string | null,
   askedAt: Date,
   over: Record<string, unknown> = {},
 ): Waitlist[number] {
   return {
-    lead: {
+    interest: {
       id,
       askedAt,
       askedBy: "diver",
       offeredAt: null,
       partySize: 1,
       personId: fullName ? `p-${id}` : null,
-      parentLeadId: null,
+      parentInterestId: null,
       name: fullName ? null : "Snapshot Name",
       email: fullName ? null : "snap@example.com",
       ...over,
-    } as unknown as Waitlist[number]["lead"],
+    } as unknown as Waitlist[number]["interest"],
     person: fullName
       ? ({ id: `p-${id}`, fullName, email: `${id}@example.com` } as Waitlist[number]["person"])
       : null,
@@ -56,12 +56,12 @@ const openWater: CertificationSummary = {
 };
 
 function rows(
-  leads: Waitlist,
+  interests: Waitlist,
   summaries: Map<string, CertificationSummary> = new Map(),
   bar: CertRequirementSource | null = null,
 ) {
-  return departureLeadRows({
-    leads,
+  return departureInterestRows({
+    interests,
     certificationSummaries: summaries,
     departureRequirement: bar,
     t,
@@ -73,12 +73,12 @@ function rows(
 /** Date formatting may use a no-break space; the assertion is about the words. */
 const plain = (text: string | undefined) => text?.replace(/\s/g, " ");
 
-describe("departureLeadRows", () => {
+describe("departureInterestRows", () => {
   it("keeps the order people asked in and never lifts a name by fit (ADR 20260813)", () => {
     const out = rows(
       [
-        lead("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z")),
-        lead("b", "Rafa Ortiz", new Date("2026-08-03T14:00:00Z")),
+        interest("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z")),
+        interest("b", "Rafa Ortiz", new Date("2026-08-03T14:00:00Z")),
       ],
       new Map([
         ["p-a", { ...openWater, level: "instructor" }],
@@ -92,8 +92,8 @@ describe("departureLeadRows", () => {
 
   it("says when they asked in the shop's zone, and the party only above one", () => {
     const [pair, single] = rows([
-      lead("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"), { partySize: 2 }),
-      lead("b", "Rafa Ortiz", new Date("2026-08-03T14:00:00Z")),
+      interest("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"), { partySize: 2 }),
+      interest("b", "Rafa Ortiz", new Date("2026-08-03T14:00:00Z")),
     ]);
     expect(plain(pair?.facts)).toBe("a@example.com · Asked Sat, Aug 1 · Party of 2");
     expect(single?.facts).not.toContain("Party");
@@ -101,16 +101,16 @@ describe("departureLeadRows", () => {
 
   it("calls the shop's own outreach an invitation, not an ask", () => {
     const [row] = rows([
-      lead("a", "Cleo Park", new Date("2026-08-01T14:00:00Z"), {
+      interest("a", "Cleo Park", new Date("2026-08-01T14:00:00Z"), {
         askedBy: "shop",
-        parentLeadId: "request-1",
+        parentInterestId: "request-1",
       }),
     ]);
     expect(plain(row?.facts)).toBe("a@example.com · Invited Sat, Aug 1 · from a request");
   });
 
-  it("renders a person-less lead from its snapshot and weighs no card", () => {
-    const [row] = rows([lead("a", null, new Date("2026-08-01T14:00:00Z"))]);
+  it("renders a person-less interest from its snapshot and weighs no card", () => {
+    const [row] = rows([interest("a", null, new Date("2026-08-01T14:00:00Z"))]);
     expect(row).toMatchObject({ name: "Snapshot Name", email: "snap@example.com" });
     expect(row?.certification).toBeNull();
     expect(row?.belowBar).toBe(false);
@@ -118,7 +118,7 @@ describe("departureLeadRows", () => {
 
   it("marks a self-declared level unchecked and says a carded diver is under the bar", () => {
     const [unchecked] = rows(
-      [lead("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"))],
+      [interest("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"))],
       new Map([["p-a", { ...openWater, levelSelfDeclared: true }]]),
     );
     expect(unchecked?.certification).toEqual({
@@ -126,7 +126,7 @@ describe("departureLeadRows", () => {
       unchecked: true,
     });
     const [under] = rows(
-      [lead("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"))],
+      [interest("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"))],
       new Map([["p-a", openWater]]),
       requirement("advanced_open_water"),
     );
@@ -136,13 +136,13 @@ describe("departureLeadRows", () => {
   it("carries the offered stamp through", () => {
     const at = new Date("2026-08-02T10:00:00Z");
     const [row] = rows([
-      lead("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"), { offeredAt: at }),
+      interest("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"), { offeredAt: at }),
     ]);
     expect(row?.offeredAt).toBe(at);
   });
 });
 
-function dateLead(id: string, over: Partial<DateLeadInReach> = {}): DateLeadInReach {
+function dateInterest(id: string, over: Partial<DateInterestInReach> = {}): DateInterestInReach {
   return {
     id,
     courseId: null,
@@ -163,15 +163,15 @@ function dateLead(id: string, over: Partial<DateLeadInReach> = {}): DateLeadInRe
     closedAt: null,
     closedAs: null,
     match: "preferred",
-    departureLeadId: null,
+    departureInterestId: null,
     offeredAt: null,
     ...over,
-  } as DateLeadInReach;
+  } as DateInterestInReach;
 }
 
-function dateRows(leads: DateLeadInReach[], summaries = new Map<string, CertificationSummary>()) {
-  return dateLeadRows({
-    leads,
+function dateRows(interests: DateInterestInReach[], summaries = new Map<string, CertificationSummary>()) {
+  return dateInterestRows({
+    interests,
     certificationSummaries: summaries,
     departureRequirement: null,
     t,
@@ -179,10 +179,10 @@ function dateRows(leads: DateLeadInReach[], summaries = new Map<string, Certific
   });
 }
 
-describe("dateLeadRows", () => {
+describe("dateInterestRows", () => {
   it("reads a person-less request from its snapshot: name, address, dates, party, interest", () => {
-    const [row] = dateRows([dateLead("d1")]);
-    expect(row).toMatchObject({ leadId: "d1", name: "Eli Moss", email: "eli@example.com" });
+    const [row] = dateRows([dateInterest("d1")]);
+    expect(row).toMatchObject({ interestId: "d1", name: "Eli Moss", email: "eli@example.com" });
     expect(plain(row?.facts)).toBe(
       "eli@example.com · Oct 24, 2026 or Oct 25, 2026 · Party of 3 · night dive",
     );
@@ -192,7 +192,7 @@ describe("dateLeadRows", () => {
 
   it("says flexible, quotes a long message once, and names a request with no name", () => {
     const [row] = dateRows([
-      dateLead("d1", {
+      dateInterest("d1", {
         name: null,
         email: null,
         dateFlexible: true,
@@ -210,7 +210,7 @@ describe("dateLeadRows", () => {
 
   it("weighs the card of a request that matched a diver", () => {
     const [row] = dateRows(
-      [dateLead("d1", { personId: "p-1", name: "Eli Moss" })],
+      [dateInterest("d1", { personId: "p-1", name: "Eli Moss" })],
       new Map([["p-1", openWater]]),
     );
     expect(row?.certification?.text).toBe("Open Water");
@@ -218,25 +218,25 @@ describe("dateLeadRows", () => {
 
   it("carries the offered stamp of its departure child", () => {
     const at = new Date("2026-10-20T10:00:00Z");
-    const [row] = dateRows([dateLead("d1", { departureLeadId: "c1", offeredAt: at })]);
+    const [row] = dateRows([dateInterest("d1", { departureInterestId: "c1", offeredAt: at })]);
     expect(row?.offeredAt).toBe(at);
   });
 });
 
 function recipient(id: string, fullName: string, level?: CertificationSummary): AnytimeRecipient {
   return {
-    lead: {
+    interest: {
       id,
       availableFrom: "2026-10-10",
       availableUntil: "2026-10-20",
-    } as AnytimeRecipient["lead"],
+    } as AnytimeRecipient["interest"],
     person: { id: `p-${id}`, fullName, email: `${id}@example.com` } as AnytimeRecipient["person"],
     certification: level ?? null,
   };
 }
 
 function anytime(recipients: AnytimeRecipient[], bar: CertRequirementSource | null, limit = 10) {
-  return anytimeLeadRows({
+  return anytimeInterestRows({
     recipients,
     offeredAtByPerson: new Map(),
     departureRequirement: bar,
@@ -246,12 +246,12 @@ function anytime(recipients: AnytimeRecipient[], bar: CertRequirementSource | nu
   });
 }
 
-describe("anytimeLeadRows", () => {
+describe("anytimeInterestRows", () => {
   it("prints the window they are around, and an open window as any day", () => {
     const [row] = anytime([recipient("a", "Fay Ng", openWater)], null).shown;
     expect(plain(row?.facts)).toContain("a@example.com · Oct 10 – 20, 2026");
     const open = recipient("b", "Gus Ode");
-    open.lead = { ...open.lead, availableFrom: null, availableUntil: null };
+    open.interest = { ...open.interest, availableFrom: null, availableUntil: null };
     expect(anytime([open], null).shown[0]?.facts).toContain("Any day");
   });
 
@@ -272,41 +272,41 @@ describe("anytimeLeadRows", () => {
 });
 
 describe("whoWantsInSources", () => {
-  const departureLead = (
+  const departureInterest = (
     id: string,
     personId: string,
     over: Record<string, unknown> = {},
   ): Waitlist[number] =>
-    lead(id, "Nora Quinn", new Date("2026-08-01T14:00:00Z"), { personId, ...over });
+    interest(id, "Nora Quinn", new Date("2026-08-01T14:00:00Z"), { personId, ...over });
 
-  it("leaves an attached but unoffered date lead to its child row in the first group", () => {
+  it("leaves an attached but unoffered date interest to its child row in the first group", () => {
     const out = whoWantsInSources({
-      departureLeads: [departureLead("c1", "p-x", { parentLeadId: "d1" })],
-      dateLeads: [dateLead("d1", { departureLeadId: "c1" }), dateLead("d2")],
+      departureInterests: [departureInterest("c1", "p-x", { parentInterestId: "d1" })],
+      dateInterests: [dateInterest("d1", { departureInterestId: "c1" }), dateInterest("d2")],
       anytimeRecipients: [],
     });
-    expect(out.dateLeads.map((row) => row.id)).toEqual(["d2"]);
-    expect(out.departureLeads).toHaveLength(1);
+    expect(out.dateInterests.map((row) => row.id)).toEqual(["d2"]);
+    expect(out.departureInterests).toHaveLength(1);
   });
 
-  it("draws an offered date or anytime lead once, in its own group, reading offered", () => {
+  it("draws an offered date or anytime interest once, in its own group, reading offered", () => {
     const at = new Date("2026-10-20T10:00:00Z");
     const out = whoWantsInSources({
-      departureLeads: [
-        departureLead("c1", "p-x", { parentLeadId: "d1", offeredAt: at }),
-        departureLead("c2", "p-a1", { parentLeadId: "a1", offeredAt: at }),
-        departureLead("c3", "p-gus", { parentLeadId: null }),
+      departureInterests: [
+        departureInterest("c1", "p-x", { parentInterestId: "d1", offeredAt: at }),
+        departureInterest("c2", "p-a1", { parentInterestId: "a1", offeredAt: at }),
+        departureInterest("c3", "p-gus", { parentInterestId: null }),
       ],
-      dateLeads: [dateLead("d1", { departureLeadId: "c1", offeredAt: at })],
+      dateInterests: [dateInterest("d1", { departureInterestId: "c1", offeredAt: at })],
       anytimeRecipients: [
         recipient("a1", "Fay Ng"),
         // Wait-listing here already: the first group has them.
         { ...recipient("a2", "Gus Ode"), person: { id: "p-gus" } as AnytimeRecipient["person"] },
       ],
     });
-    expect(out.dateLeads.map((row) => row.id)).toEqual(["d1"]);
-    expect(out.anytimeRecipients.map(({ lead }) => lead.id)).toEqual(["a1"]);
+    expect(out.dateInterests.map((row) => row.id)).toEqual(["d1"]);
+    expect(out.anytimeRecipients.map(({ interest }) => interest.id)).toEqual(["a1"]);
     expect(out.offeredAtByPerson.get("p-a1")).toBe(at);
-    expect(out.departureLeads.map(({ lead }) => lead.id)).toEqual(["c3"]);
+    expect(out.departureInterests.map(({ interest }) => interest.id)).toEqual(["c3"]);
   });
 });

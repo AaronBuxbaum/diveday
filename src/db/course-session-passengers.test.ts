@@ -8,7 +8,7 @@ import { createBooking, setBookingParticipantType } from "./bookings";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";
 import { tripRatioGapNeedsInstructor } from "./crew-requests";
-import { departureOpenToDiver, invitableSeats } from "./lead-offers";
+import { departureOpenToDiver, invitableSeats } from "./interest-offers";
 import { markBookingNoShow, undoBookingNoShow } from "./no-show";
 import {
   issueShopCertification,

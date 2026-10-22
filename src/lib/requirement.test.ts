@@ -6,7 +6,7 @@ import type {
   SpecialtyCertification,
   TripRequirement,
 } from "@/db/schema";
-import { ranksBelow } from "./leads";
+import { ranksBelow } from "./interests";
 import { PARTICIPANT_TYPES, type ParticipantType } from "./participant-types";
 import { type CertificationLevel, calculateReadiness, combineSiteRequirements } from "./readiness";
 import { buildDiverChecklist } from "./readiness-summary";

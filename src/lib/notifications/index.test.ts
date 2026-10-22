@@ -36,7 +36,8 @@ const booking = {
 
 const tripInvitation = {
   kind: "seat_offer" as const,
-  leadId: "00000000-0000-4000-8000-000000000002",
+  answers: "date_request" as const,
+  interestId: "00000000-0000-4000-8000-000000000002",
   shopId: "00000000-0000-4000-8000-000000000010",
   to: "delivered+invitation@dive.day",
   locale: "en-US" as const,
@@ -53,7 +54,7 @@ const tripInvitation = {
 const commercialOffer = {
   kind: "seat_offer_commercial",
   askedBy: "diver",
-  leadId: "00000000-0000-4000-8000-000000000003",
+  interestId: "00000000-0000-4000-8000-000000000003",
   shopId: "00000000-0000-4000-8000-000000000010",
   to: "delivered+waitlist@dive.day",
   locale: "en-US",
@@ -358,7 +359,7 @@ describe("the seat offer notification schema", () => {
   it("accepts a shop-scoped invitation payload for SES delivery", () => {
     const notification = {
       kind: "seat_offer" as const,
-      leadId: "00000000-0000-4000-8000-000000000002",
+      interestId: "00000000-0000-4000-8000-000000000002",
       shopId: "00000000-0000-4000-8000-000000000010",
       to: "nora@dive.day",
       locale: "en-US" as const,

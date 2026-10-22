@@ -7,7 +7,7 @@ import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db"
 import { readOwed } from "./owed";
 import {
   bookings,
-  leads,
+  interests,
   orders,
   paymentOperationIntents,
   people,
@@ -450,7 +450,7 @@ describe("previewWeeklyDigest", () => {
     const waitingOf = async () =>
       (await readWeeklyDigestFacts(db, shop, monday)).grades.reports.dateRequestsWaiting;
     const before = await waitingOf();
-    await db.insert(leads).values([
+    await db.insert(interests).values([
       {
         shopId: shop.id,
         scope: "date",

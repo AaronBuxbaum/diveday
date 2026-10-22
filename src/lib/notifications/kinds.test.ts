@@ -82,7 +82,7 @@ function branches(): { kind: string; email: string[]; phone: string[] }[] {
  * non-recipient contact field a *distinct* value, and the test asserts every
  * one of those values comes back out of one of the two functions. So it fails
  * not only when a new kind carries an unsurfaced handle — the bug it was
- * written for, `lead_received`'s `inquirerEmail` (issue #1298) — but also
+ * written for, `interest_received`'s `inquirerEmail` (issue #1298) — but also
  * when a kind already covered *grows a second one*, which a "returns something
  * truthy" assertion would have waved through.
  */
@@ -92,9 +92,9 @@ describe("every handle a notification carries is reachable by the erasure sweep"
    * distinct value so the assertion below can tell which one came back.
    */
   const SUBJECT_SAMPLES: Record<string, Notification> = {
-    lead_received: {
-      kind: "lead_received",
-      leadId: "00000000-0000-4000-8000-000000000001",
+    interest_received: {
+      kind: "interest_received",
+      interestId: "00000000-0000-4000-8000-000000000001",
       shopId: "00000000-0000-4000-8000-000000000002",
       to: "desk@shop.invalid",
       locale: "en-US",
@@ -174,7 +174,7 @@ describe("every handle a notification carries is reachable by the erasure sweep"
     // pass vacuously over an empty list, which is the failure mode a guard
     // must never have.
     expect(kinds.length).toBeGreaterThan(20);
-    expect(kinds).toContain("lead_received");
+    expect(kinds).toContain("interest_received");
     expect(kinds).toContain("booking_confirmation");
   });
 
@@ -182,7 +182,7 @@ describe("every handle a notification carries is reachable by the erasure sweep"
     // The half that stops a future `replyTo` or `mailbox` slipping past. If
     // this ever reads zero, `unwrap` has lost track of zod's shape and every
     // assertion below is vacuous.
-    const inquiry = branches().find((branch) => branch.kind === "lead_received");
+    const inquiry = branches().find((branch) => branch.kind === "interest_received");
     expect(inquiry?.email).toEqual(["to", "inquirerEmail"]);
     expect(inquiry?.phone).toEqual(["inquirerPhone"]);
   });
@@ -196,7 +196,7 @@ describe("every handle a notification carries is reachable by the erasure sweep"
    * kind is still caught.
    */
   const SHOP_OWNED_NUMBERS: Record<string, readonly string[]> = {
-    lead_received_ack: ["shopPhone"],
+    interest_received_ack: ["shopPhone"],
     // The stale-roll-call alert's shore copy says whom to call first: the
     // shop's own `contact_phone` (H-118). Never queued, either.
     roll_call_stale_shore: ["shopPhone"],
@@ -248,9 +248,9 @@ describe("every handle a notification carries is reachable by the erasure sweep"
   it("hands back null rather than undefined when an optional handle is absent", () => {
     // Both columns are nullable and the writer inserts these values directly,
     // so `undefined` would silently become a Drizzle default rather than a
-    // null. A phone-only lead is the case that matters: it has no address at
+    // null. A phone-only interest is the case that matters: it has no address at
     // all, which is the hole the first version of this fix shipped.
-    const phoneOnly = { ...SUBJECT_SAMPLES.lead_received } as Record<string, unknown>;
+    const phoneOnly = { ...SUBJECT_SAMPLES.interest_received } as Record<string, unknown>;
     delete phoneOnly.inquirerEmail;
     expect(notificationSubjectEmail(phoneOnly as Notification)).toBeNull();
     expect(notificationSubjectPhone(phoneOnly as Notification)).toBe("+1 305 555 0134");

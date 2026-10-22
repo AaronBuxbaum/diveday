@@ -6,7 +6,7 @@ import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
 import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
-import { getDepartureLeadForTrip } from "@/db/leads";
+import { getDepartureInterestForTrip } from "@/db/interests";
 import { bookingConfirmationMailState } from "@/db/notifications";
 import {
   getTripRequirements,
@@ -60,7 +60,7 @@ export type TripPageRequest = {
   tripId: string;
   isEmbed: boolean;
   bookingToken: string | undefined;
-  leadId: string | undefined;
+  interestId: string | undefined;
   handoffToken: string | null;
   /** `?pay=due`: the embed's confirmation links the booking's open checkout. */
   payDue: boolean;
@@ -77,7 +77,7 @@ export type TripPageRequest = {
 export async function readTripPage(
   db: AppDb,
   shop: Shop,
-  { tripId, isEmbed, bookingToken, leadId, handoffToken, payDue, session, now }: TripPageRequest,
+  { tripId, isEmbed, bookingToken, interestId, handoffToken, payDue, session, now }: TripPageRequest,
 ) {
   // **Every read this page makes is one wave** (issue #2353). A read that
   // needs another's answer chains off that one promise inside the wave — the
@@ -106,8 +106,8 @@ export async function readTripPage(
             capability ? getBookingForTrip(db, shop.id, tripId, capability.bookingId) : null,
         )
       : Promise.resolve(null);
-  const waitlistRead = leadId
-    ? getDepartureLeadForTrip(db, shop.id, tripId, leadId)
+  const waitlistRead = interestId
+    ? getDepartureInterestForTrip(db, shop.id, tripId, interestId)
     : Promise.resolve(null);
   const [
     staffPreview,
