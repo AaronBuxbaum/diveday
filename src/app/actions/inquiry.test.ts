@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { listDateRequestsForStaff } from "@/db/course-inquiries";
 import { getCourseBySlug } from "@/db/courses";
+import { listOpenDateInterests } from "@/db/interest-dates";
 import { courses, shops } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
@@ -99,7 +99,7 @@ describe("course date requests without a shop notification address (issue 2860)"
         .where(eq(shops.id, ctx.shop.id));
 
       expect(await submit(requestForm(email), "open-water-diver")).toEqual({ success: true });
-      const page = await listDateRequestsForStaff(db, ctx.shop.id);
+      const page = await listOpenDateInterests(db, ctx.shop.id);
       expect(page.rows).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -111,13 +111,15 @@ describe("course date requests without a shop notification address (issue 2860)"
           }),
         ]),
       );
-      expect(sentKinds().filter((kind) => kind === "course_inquiry")).toHaveLength(nudge ? 1 : 0);
-      expect(sentKinds()).toContain("course_inquiry_received");
+      expect(sentKinds().filter((kind) => kind === "interest_received")).toHaveLength(
+        nudge ? 1 : 0,
+      );
+      expect(sentKinds()).toContain("interest_received_ack");
       if (nudge) {
         expect(sendNotification).toHaveBeenCalledWith(
           db,
           expect.objectContaining({
-            kind: "course_inquiry",
+            kind: "interest_received",
             to: contactEmail,
             shopId: ctx.shop.id,
           }),
@@ -136,7 +138,7 @@ describe("course date requests without a shop notification address (issue 2860)"
     form.set("phone", "+1 305 555 0199");
 
     expect(await submit(form, "open-water-diver")).toEqual({ success: true });
-    expect((await listDateRequestsForStaff(db, ctx.shop.id)).rows).toEqual(
+    expect((await listOpenDateInterests(db, ctx.shop.id)).rows).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           courseTitle: "Open Water Diver",
@@ -176,7 +178,7 @@ describe("course date requests without a shop notification address (issue 2860)"
       error: t("inquiry.errors.unavailable"),
     });
     expect(
-      (await listDateRequestsForStaff(db, ctx.shop.id)).rows.map((row) => row.email),
+      (await listOpenDateInterests(db, ctx.shop.id)).rows.map((row) => row.email),
     ).not.toContain(email);
     expect(sendNotification).not.toHaveBeenCalled();
   });
@@ -195,10 +197,10 @@ describe("course date requests without a shop notification address (issue 2860)"
     });
     expect(sendNotification).not.toHaveBeenCalled();
     expect(await submit(requestForm(email), "open-water-diver")).toEqual({ success: true });
-    expect((await listDateRequestsForStaff(db, other.id)).rows).toEqual([]);
-    expect(
-      (await listDateRequestsForStaff(db, ctx.shop.id)).rows.map((row) => row.email),
-    ).toContain(email);
+    expect((await listOpenDateInterests(db, other.id)).rows).toEqual([]);
+    expect((await listOpenDateInterests(db, ctx.shop.id)).rows.map((row) => row.email)).toContain(
+      email,
+    );
   });
 });
 

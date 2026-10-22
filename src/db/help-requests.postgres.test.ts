@@ -20,7 +20,7 @@ async function requestedHelp(db: AppDb) {
     .values({ shopId: shop.id, fullName: "Confirmed Crew" })
     .returning();
   if (!helper) throw new Error("helper insert failed");
-  await db.insert(personRoles).values({ shopId: shop.id, personId: helper.id, role: "crew" });
+  await db.insert(personRoles).values({ personId: helper.id, role: "crew" });
   const [trip] = await db
     .insert(trips)
     .values({

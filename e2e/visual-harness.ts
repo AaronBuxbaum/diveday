@@ -18,7 +18,7 @@ import {
 import { expect, makeActivitySafe, test } from "./fixtures";
 import { offlineCopySaved, openTripFromBoard, openTripTab, seededTripId } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
-import { INITIAL_PAINT_FALLBACK } from "./visual-audit-initial-paint";
+import { auditInitialPaint, INITIAL_PAINT_FALLBACK } from "./visual-audit-initial-paint";
 
 export const staffCopy = staffTranslator("en-US");
 export const diverCopy = diverTranslator("en-US");
@@ -217,7 +217,7 @@ export async function waitForSiteLibrary(page: Page) {
 // Phone first, then desktop — matches scripts/screenshot.mjs. Navigation and
 // clicks happen at the desktop base viewport (see viewport in test.use below);
 // these only resize the page for the capture itself.
-const VIEWPORTS = [
+export const VIEWPORTS = [
   { width: 390, height: 844 }, // phone
   { width: 1280, height: 800 }, // desktop
 ] as const;
@@ -245,7 +245,7 @@ const VIEWPORTS = [
  * something other than a hunch says it needs to be.
  */
 /** The phone of `VIEWPORTS`, named — the fold is a phone behaviour and shoots there alone. */
-const PHONE_VIEWPORT = VIEWPORTS[0];
+export const PHONE_VIEWPORT = VIEWPORTS[0];
 
 /**
  * **Dark mode is photographed at the desktop width only** (owner decision 1 of

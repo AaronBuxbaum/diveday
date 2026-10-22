@@ -50,6 +50,7 @@ import {
 import { counterRentalCartWords } from "./_components/counter-rental-cart-words";
 import { RentalCardSeen } from "./_components/RentalCardSeen";
 import { RentalPersonStep } from "./_components/RentalPersonStep";
+import { RentalWindowFields } from "./_components/RentalWindowFields";
 import { rentalWindowStatus } from "./_components/rental-window-status";
 import { RENT_OUT_NOTICES as NOTICES } from "./notices";
 
@@ -106,7 +107,7 @@ export default async function RentOutPage({
   const windowRefusal = checkCounterRentalWindow({ from, until, todayLocal });
 
   const noticeUnitId = uuidParam(search.unit);
-  const [person, fleetSize, matches, cards, noticeUnit, _waivers] = await Promise.all([
+  const [person, fleetSize, matches, cards, noticeUnit, waivers] = await Promise.all([
     personId ? counterRentalPerson(db, shop.id, personId) : null,
     countGearItems(db, shop.id),
     !personId && query
@@ -374,7 +375,11 @@ export default async function RentOutPage({
                 restoreKept={rentRefused ? keptScope : null}
                 refusal={
                   rentRefused
-                    ? { code: search.notice ?? "", unitId: noticeUnitId, message: noticeText ?? "" }
+                    ? {
+                        code: search.notice ?? "",
+                        unitId: noticeUnitId ?? null,
+                        message: noticeText ?? "",
+                      }
                     : null
                 }
                 words={counterRentalCartWords(t, days)}

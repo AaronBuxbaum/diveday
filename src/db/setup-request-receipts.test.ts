@@ -29,9 +29,15 @@ function input(email = "requester@reef.invalid") {
 describe("set-up receipt claims", () => {
   it("opts in public inserts only, and terminally claims one saved row once", async () => {
     const db = await unseededTestDb();
+    const internalInput: Parameters<typeof recordSetupRequest>[1] = input();
+    delete internalInput.receiptPending;
+    const internal = await recordSetupRequest(db, internalInput);
+    expect(internal.receiptStatus).toBeNull();
+    expect(await claimSetupRequestReceipt(db, internal.id, AT)).toBe(false);
     const historical = await recordSetupRequest(db, { ...input(), receiptPending: false });
     expect(await claimSetupRequestReceipt(db, historical.id, AT)).toBe(false);
     const row = await recordSetupRequest(db, input());
+    expect(row.receiptStatus).toBe("pending");
     expect(await claimSetupRequestReceipt(db, row.id, AT)).toBe(true);
     expect(await claimSetupRequestReceipt(db, row.id, AT)).toBe(false);
     expect(await readClaimedSetupRequestReceipt(db, row.id)).toEqual({

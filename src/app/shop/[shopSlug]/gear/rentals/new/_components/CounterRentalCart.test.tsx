@@ -115,7 +115,7 @@ describe("the counter cart's local lookup", () => {
     fireEvent.change(filter(), { target: { value: "002" } });
     expect(within(gear()).getAllByRole("listitem")).toHaveLength(1);
     fireEvent.click(within(gear()).getByRole("button", { name: "Tank 002· AL80" }));
-    fireEvent.click(within(gear()).getByRole("button", { name: "Wetsuit", exact: true }));
+    fireEvent.click(within(gear()).getByRole("button", { name: "Wetsuit" }));
     expect(filter()).toHaveValue("");
     fireEvent.change(filter(), { target: { value: "azul 2xl" } });
     expect(within(gear()).getAllByRole("listitem")).toHaveLength(1);
@@ -308,7 +308,7 @@ describe("issue 2723 refused cart", () => {
     expect(bill()).toHaveTextContent(tank1.label);
     expect(fill(tank1)).toHaveValue("21");
     expect(within(bill()).getByText(unavailable.blocked)).toBeVisible();
-    expect(screen.getByRole("button", { name: props.words.submit, exact: true })).toBeDisabled();
+    expect(screen.getByRole("button", { name: props.words.submit })).toBeDisabled();
     fireEvent.click(within(bill()).getByRole("button", { name: tank1.removeAria }));
     expect(screen.queryByRole("list", { name: props.words.billHeading })).toBeNull();
   });

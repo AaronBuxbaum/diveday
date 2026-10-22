@@ -44,6 +44,7 @@ export async function recordSetupRequest(
   db: DbExecutor,
   input: Omit<SetupRequestInput, "currentSystemGuide"> & {
     currentSystemGuide?: string | null;
+    receiptPending?: boolean;
     source: FunnelSource | "unknown";
     locale: string;
     at?: Date;

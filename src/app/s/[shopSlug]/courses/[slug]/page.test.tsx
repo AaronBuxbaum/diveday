@@ -14,7 +14,9 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 vi.mock("@/app/actions/inquiry", () => ({
-  submitInquiryAction: vi.fn(async () => ({ success: true })),
+  submitInquiryAction: vi.fn<typeof import("@/app/actions/inquiry").submitInquiryAction>(
+    async () => ({ success: true }),
+  ),
 }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/courses", () => ({ getCourseBySlug: vi.fn() }));
@@ -35,7 +37,7 @@ const { shopBySlugCached } = await import("@/db/shops-cached");
 const { listUpcomingSessionsForCourse } = await import("@/db/trips");
 const { default: CoursePage } = await import("./page");
 
-const course = {
+const course: Course = {
   id: "course-1",
   shopId: "shop-1",
   slug: "open-water-diver",
@@ -60,8 +62,17 @@ const course = {
   eLearningPriceCents: null,
   privatePriceCents: null,
   minimumCertificationLevel: null,
+  certifiesLevel: "open_water",
   isActive: true,
-} as Course;
+  isIntroCourse: false,
+  nitroxCompatible: false,
+  gearIncluded: false,
+  rowVersion: 0,
+  sourceTemplateSlug: null,
+  sourceTemplateVersion: null,
+  sourceTemplateSnapshot: null,
+  createdAt: new Date("2030-08-01T12:00:00Z"),
+};
 
 function shop(contactEmail: string | null, contactPhone: string | null): Shop {
   return {
@@ -143,7 +154,7 @@ describe.each(["en-US", "es-ES"] as const)("public course requests in %s", (loca
     fireEvent.change(inquiry.getByLabelText(t("inquiry.yourEmail")), {
       target: { value: "ana@example.com" },
     });
-    fireEvent.click(inquiry.getByRole("button", { name: t("inquiry.send"), exact: true }));
+    fireEvent.click(inquiry.getByRole("button", { name: t("inquiry.send") }));
     await waitFor(() => expect(submitInquiryAction).toHaveBeenCalledOnce());
     expect(vi.mocked(submitInquiryAction).mock.calls[0]?.slice(0, 2)).toEqual([
       "blue-mantis",

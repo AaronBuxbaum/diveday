@@ -1,9 +1,8 @@
-import { eq } from "drizzle-orm";
-import { expect, it, onTestFinished } from "vitest";
+import { eq, sql } from "drizzle-orm";
+import { expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
-import { describePostgres, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
+import { describePostgres, holdRowLock, postgresTestDb, waitForLockWaiters } from "@/test/postgres";
 import { createBooking, moveBooking } from "./bookings";
-import type { AppDb } from "./client";
 import { hasMoveAsk, recordMoveAsk } from "./inbound-messages";
 import { bookings, inboundMessages, shops } from "./schema";
 import { createTrip } from "./trips";
@@ -44,34 +43,44 @@ describePostgres("a move request racing a staff move", () => {
       fullName: "Move Request Diver",
     });
     if (!seat.ok) throw new Error(`seat refused: ${seat.reason}`);
-    const moved = Promise.withResolvers<void>();
-    const commit = Promise.withResolvers<void>();
-    onTestFinished(() => commit.resolve());
-    const staffMove = pg.connect().transaction(async (tx) => {
-      const outcome = await moveBooking(tx as AppDb, {
-        shopId: shop.id,
-        bookingId: seat.bookingId,
-        fromTripId: from.id,
-        toTripId: to.id,
-      });
-      expect(outcome).toMatchObject({ ok: true });
-      moved.resolve();
-      await commit.promise;
-    });
-    await Promise.race([moved.promise, staffMove]);
-    const request = recordMoveAsk(pg.connect(), {
+    // Hold the real move inside its own transaction, after its trip/seat locks
+    // and before the changed departure commits. No transaction-as-database cast.
+    await pg.db.execute(sql`
+      create function gate_staff_booking_move() returns trigger language plpgsql as $$
+      begin
+        perform pg_advisory_xact_lock(2915);
+        return new;
+      end;
+      $$
+    `);
+    await pg.db.execute(sql`
+      create trigger gate_staff_booking_move before update on bookings
+      for each row when (new.trip_id is distinct from old.trip_id)
+      execute function gate_staff_booking_move()
+    `);
+    const gate = await holdRowLock(pg, sql`select pg_advisory_xact_lock(2915)`);
+    const staffMove = moveBooking(pg.connect(), {
       shopId: shop.id,
       bookingId: seat.bookingId,
-      expectedTripId: from.id,
-      note: "A note about the original date",
-      now: nowDate(),
+      fromTripId: from.id,
+      toTripId: to.id,
     });
+    let request: ReturnType<typeof recordMoveAsk> | undefined;
     try {
       await waitForLockWaiters(pg.db, 1);
+      request = recordMoveAsk(pg.connect(), {
+        shopId: shop.id,
+        bookingId: seat.bookingId,
+        expectedTripId: from.id,
+        note: "A note about the original date",
+        now: nowDate(),
+      });
+      // Both the move's trigger and the request's departure lock are parked.
+      await waitForLockWaiters(pg.db, 2);
     } finally {
-      commit.resolve();
+      await gate.release();
     }
-    await staffMove;
+    expect(await staffMove).toMatchObject({ ok: true });
     expect(await request).toEqual({ status: "not_found" });
     expect(await hasMoveAsk(pg.db, shop.id, seat.bookingId)).toBe(false);
     const [current] = await pg.db
