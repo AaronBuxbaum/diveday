@@ -4,6 +4,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { getDb } from "@/db/client";
 import { lastDayStartsAt, listDepartureNotes } from "@/db/departure-notes";
 import { fill } from "@/i18n/fill";
+import { sayWords, sendLimitWords } from "@/i18n/shared-sentences";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { DEPARTURE_NOTES_PER_DEPARTURE, departureNoteBlock } from "@/lib/departure-notes";
@@ -88,7 +89,7 @@ export async function DepartureNoteSection({
                 past: t("desk.departureNote.refusals.past"),
                 limit,
                 no_recipients: t("desk.departureNote.refusals.noRecipients"),
-                rate_limited: t("desk.departureNote.refusals.sendLimit"),
+                rate_limited: sayWords(t, sendLimitWords("notes")),
                 other: t("desk.departureNote.refusals.other"),
               },
             }}

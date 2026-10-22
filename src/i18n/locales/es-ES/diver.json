@@ -249,6 +249,7 @@
     "diveNumber": "Inmersión {number}",
     "siteToBeConfirmed": "Sitio por confirmar",
     "sitesToBeConfirmed": "{count, plural, one {Una inmersión · sitio por confirmar} other {# inmersiones · sitios por confirmar}}",
+    "courseGearIncluded": "El equipo está incluido.",
     "seen": {
       "heading": "Visto aquí este mes",
       "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}}",

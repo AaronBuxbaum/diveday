@@ -1,6 +1,6 @@
 {
   "limits": {
-    "sendLimit": "You have sent a lot of {thing, select, replies {replies} recaps {recaps} invites {invites} other {messages}} this hour. Nothing went out; try again in a little while.",
+    "sendLimit": "You have sent a lot of {thing, select, replies {replies} recaps {recaps} invites {invites} links {links} notes {notes} other {messages}} this hour. Nothing went out; try again in a little while.",
     "ownerOrManager": "Only an owner or manager can {act, select, whatsapp {change WhatsApp settings} integrations {change integrations} backup {change backup settings} questionnaire {read the full questionnaire} invoice {send an invoice} bill {send a bill} courseForm {take a form off a course} other {do this}}."
   },
   "operationalWindow": {},
