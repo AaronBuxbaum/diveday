@@ -22,15 +22,25 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ENV_GROUPS, isManual, isOverridable } from "../config/env-registry.mjs";
-import { parseDotenv } from "./dotenv.mjs";
+import { dotenvEntries } from "./dotenv.mjs";
 
 // Resolved against the working directory, not this file: the deploy runs from
 // the repo root, and a test runs from a temporary one.
 const MANUAL_PATH = join(process.cwd(), ".env.manual");
 const LOCAL_PATH = join(process.cwd(), ".env.local");
 
-/** Every `KEY=value` line in a dotenv document, as an object. */
-export const parseEnvDocument = parseDotenv;
+/**
+ * Every `KEY=value` line in a dotenv document, as an object. A key written
+ * twice keeps its last non-blank value, so a blank repeat (left by a registry
+ * row that was once duplicated) never erases the value typed above it.
+ */
+export const parseEnvDocument = (text) => {
+  const values = {};
+  for (const [key, value] of dotenvEntries(text)) {
+    if (value || !(key in values)) values[key] = value;
+  }
+  return values;
+};
 
 const read = (path) => (existsSync(path) ? readFileSync(path, "utf8") : "");
 
