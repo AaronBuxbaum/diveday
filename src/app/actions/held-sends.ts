@@ -169,11 +169,11 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
     );
     if (!allowed) throw new Error("not_authorized");
   }
-  // An offer of a seat is Today's `waitlist_seat` row: what Today hides from
+  // An offer of a seat is Today’s `seat_wanted` row: what Today hides from
   // a role, the action refuses it too (issue #2134).
   if (
     payload.kind === "seat_offer" &&
-    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
+    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "seat_wanted"))
   ) {
     throw new Error("not_authorized");
   }
@@ -226,7 +226,7 @@ async function assertMayActOnHeld(
   }
   if (
     row.kind === "seat_offer" &&
-    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
+    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "seat_wanted"))
   ) {
     throw new Error("not_authorized");
   }

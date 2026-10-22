@@ -41,7 +41,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   payment: "today.actionKind.payment",
   email_delivery: "today.actionKind.emailDelivery",
   blocked_aboard: "today.actionKind.blockedAboard",
-  waitlist_seat: "today.actionKind.waitlistSeat",
+  seat_wanted: "today.actionKind.seatWanted",
   last_minute_fill: "today.actionKind.lastMinuteFill",
   emergency_contact: "today.actionKind.emergencyContact",
   crew_below_target: "today.actionKind.crewBelowTarget",
@@ -562,8 +562,8 @@ export function lastMinuteFillDetailText(t: StaffTranslator, seats: number): str
   return t("today.detail.lastMinuteFill", { seats });
 }
 
-export function waitlistSeatDetailText(t: StaffTranslator, seats: number, waiting: number): string {
-  return t("today.detail.waitlistSeat", { seats, waiting });
+export function seatWantedDetailText(t: StaffTranslator, seats: number, waiting: number): string {
+  return t("today.detail.seatWanted", { seats, waiting });
 }
 
 /**
@@ -953,8 +953,8 @@ export function openLastMinuteDealActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openLastMinuteDeal");
 }
 
-export function inviteFromWaitlistActionText(t: StaffTranslator): string {
-  return t("today.actionLabel.inviteFromWaitlist");
+export function offerSeatActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.offerSeat");
 }
 
 export function emailResendActionText(

@@ -147,10 +147,20 @@ export async function getTripGuests(
   const lastMinuteMatched = lastMinuteList.filter(({ entry }) =>
     lastMinuteEntryMatchesTripDate(entry, tripDateIso),
   );
-  // The wait list is the leads the diver asked for; the rest were the shop's own
-  // outreach (`asked_by`). One table, two readings.
-  const waitlist = departureLeads.filter(({ lead }) => lead.askedBy === "diver");
-  const invitations = departureLeads.filter(({ lead }) => lead.askedBy === "shop");
+  // **Seated means hidden**: a lead reserves nothing and the booking transaction
+  // never writes to this table (ADR 20261017-one-lead-with-a-scope, R1), so who
+  // wants in is read against the seats at read time.
+  const seatedPersonIds = new Set(
+    roster
+      .filter(({ booking }) => booking.status !== "cancelled")
+      .map(({ booking }) => booking.personId),
+  );
+  const leads = departureLeads.filter(
+    ({ lead }) => lead.personId === null || !seatedPersonIds.has(lead.personId),
+  );
+  // The leads the diver asked for: what the demand banner counts and the deal
+  // list orders by. The shop's own outreach (`asked_by`) is in `leads` too.
+  const waitlist = leads.filter(({ lead }) => lead.askedBy === "diver");
   const waitlistPersonIds = waitlist.flatMap(({ lead }) => (lead.personId ? [lead.personId] : []));
   const heldSeats = roster.filter(({ booking }) => booking.identityUnconfirmedAt);
 
@@ -372,8 +382,8 @@ export async function getTripGuests(
     courseTarget,
     roster,
     requirement,
+    leads,
     waitlist,
-    invitations,
     inviteSuggestions,
     activity,
     confirmMatches,

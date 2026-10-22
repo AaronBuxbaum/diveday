@@ -359,7 +359,7 @@ describe("LastMinuteDealSection recipient review", () => {
 
 describe("LastMinuteDealSection on a full boat", () => {
   it("points at the wait list only when someone is on it", () => {
-    // The `#waitlist` band renders only for a non-empty wait list, so the link
+    // The `#who-wants-in` band renders only for a non-empty wait list, so the link
     // on a full boat with nobody waiting went nowhere.
     const { unmount } = renderSection([], null, { openSeats: 0, hasWaitlist: false });
     expect(screen.getByText("Every seat is taken")).toBeInTheDocument();
@@ -369,7 +369,7 @@ describe("LastMinuteDealSection on a full boat", () => {
     renderSection([], null, { openSeats: 0, hasWaitlist: true });
     expect(screen.getByRole("link", { name: "See the wait list" })).toHaveAttribute(
       "href",
-      "#waitlist",
+      "#who-wants-in",
     );
   });
 });

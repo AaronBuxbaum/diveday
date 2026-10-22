@@ -200,7 +200,7 @@ describe("holdSendAction wait-list invite", () => {
   });
 
   for (const role of ALL_ROLES) {
-    const allowed = KIND_AUDIENCE.waitlist_seat.includes(role);
+    const allowed = KIND_AUDIENCE.seat_wanted.includes(role);
     it(`${allowed ? "does not refuse" : "refuses"} a ${role}`, async () => {
       const { db, shop, owner, captain, seat } = await context();
       // The live roles are the database's: an owner for the roles the audience

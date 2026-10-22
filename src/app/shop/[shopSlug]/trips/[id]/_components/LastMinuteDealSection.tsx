@@ -92,7 +92,7 @@ export function LastMinuteDealSection({
   course?: CourseTargetInfo | null;
   openSeats: number;
   /**
-   * Whether the trip's wait list has anyone on it. The wait list's `#waitlist`
+   * Whether the trip's wait list has anyone on it. The wait list's `#who-wants-in`
    * band renders only then, so a full boat with nobody waiting gets no link.
    */
   hasWaitlist: boolean;
@@ -291,7 +291,7 @@ export function LastMinuteDealSection({
               </Link>
             ) : openSeats > 0 || hasWaitlist ? (
               <a
-                href={openSeats <= 0 ? "#waitlist" : "#add-diver"}
+                href={openSeats <= 0 ? "#who-wants-in" : "#add-diver"}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {openSeats <= 0

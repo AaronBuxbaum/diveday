@@ -58,7 +58,7 @@ export function noShowSalvageCopy(input: {
         line: t("checkIn.noShow.waiting", { count: offer.count }),
         links: [
           {
-            href: `/shop/${shopSlug}/trips/${tripId}#waitlist`,
+            href: `/shop/${shopSlug}/trips/${tripId}#who-wants-in`,
             label: t("checkIn.noShow.waitingDoor"),
           },
         ],
@@ -74,14 +74,14 @@ export function noShowSalvageCopy(input: {
   };
   if (offer.kind === "waitlist") {
     return {
-      // The shipped invite control lives on the departure's Divers tab with its
+      // The shipped offer control lives on the departure's Divers tab with its
       // held send, its undo window and its copyable fallback
-      // (`WaitlistSection.tsx`). The counter points at it rather than growing a
+      // (`WhoWantsInPanel.tsx`). The counter points at it rather than growing a
       // second sender beside it.
       line: t("checkIn.noShow.waiting", { count: offer.count }),
       links: [
         {
-          href: `/shop/${shopSlug}/trips/${tripId}#waitlist`,
+          href: `/shop/${shopSlug}/trips/${tripId}#who-wants-in`,
           label: t("checkIn.noShow.waitingDoor"),
         },
       ],

@@ -6597,8 +6597,8 @@ for (const scheme of ["light", "dark"] as const) {
        * anybody seen this card?" and must stay that; if it ever warms here, this
        * is the baseline that catches it.
        *
-       * The Invite button beside the name is in the frame deliberately. Nothing
-       * about this mark filters the list, reorders it, or disables the invite —
+       * The tick beside the name is in the frame deliberately. Nothing
+       * about this mark filters the list, reorders it, or disables the tick —
        * a wait list is leads in the order they asked (ADR
        * 20260813-wait-list-is-a-lead-list) and informing the staffer is the whole
        * design.
@@ -6618,12 +6618,11 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#waitlist`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
         // Scoped to the ledger: the deal panel further down the same page
         // renders the identical phrase for its own recipients, and this test is
-        // about the list that was still silent until now. (`#waitlist` is the
-        // group's band heading, not an ancestor of its rows — the rows are the
-        // band's sibling list, so the section is the narrowest honest scope.)
+        // about the list that was still silent until now. (`#who-wants-in` is the
+        // panel that holds the rows, so the roster is still the narrowest honest scope.)
         await page
           .locator("#roster")
           .getByText("Open Water · below this departure’s minimum")

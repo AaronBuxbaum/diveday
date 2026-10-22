@@ -145,10 +145,10 @@ async function inviteOneDiver(
     // under one lock for a page left open (H-130; review F1, N2).
     const outcome = await createInvitationUnderCooldown(db, { ...input, now: nowDate() });
     if (outcome.status === "cooldown") {
-      redirect(noticeUrl(`${guests}#invitations`, "invite-cooldown"));
+      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-cooldown"));
     }
     if (outcome.status === "unavailable") {
-      redirect(noticeUrl(`${guests}#invitations`, "invite-unavailable"));
+      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-unavailable"));
     }
     leadId = outcome.status === "created" ? outcome.leadId : null;
   } else {
@@ -161,8 +161,8 @@ async function inviteOneDiver(
   revalidatePath(guests);
   redirect(
     delivery === "opted_out"
-      ? noticeUrl(`${guests}#invitations`, "invitation-opted-out")
-      : `${guests}#invitations`,
+      ? noticeUrl(`${guests}#who-wants-in`, "invitation-opted-out")
+      : `${guests}#who-wants-in`,
   );
 }
 

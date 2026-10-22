@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, lte, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lte, ne, notExists, or } from "drizzle-orm";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   highWindAlertDetailText,
@@ -1007,15 +1007,16 @@ export async function openAfterDiveRollCalls(
 }
 
 /**
- * Wait-list depth *and* one suggested entry per trip, so a freed seat can be
- * offered to a real person without leaving Today. The suggestion is the
- * longest-waiting diver — a sensible default, not an entitlement: nothing tells
- * the diver they are in a line, and staff may invite anyone on the list
- * (ADR 20260813-wait-list-is-a-lead-list). Its name, email, and last-invited
- * stamp ride along so the Today row can one-tap invite and fall back to a
- * prewritten composer exactly like the trip page's wait-list section.
+ * How many divers asked for each departure *and* one suggested lead per trip,
+ * so a freed seat can be offered to a real person without leaving Today. The
+ * suggestion is the one who asked first: a sensible default, not an entitlement
+ * and never a ranking by fit (ADR 20260813-wait-list-is-a-lead-list). A diver
+ * who holds a seat is not wanting one (a lead is read against the seats, never
+ * written by the booking). Name, email and offered stamp ride along so the
+ * Today row can offer in one tap and fall back to the composer exactly like the
+ * trip page's panel (`OfferSeat`).
  */
-export type WaitlistFront = {
+export type SeatWantedFront = {
   count: number;
   leadId: string;
   personName: string;
@@ -1023,8 +1024,8 @@ export type WaitlistFront = {
   invitedAt: Date | null;
 };
 
-async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[]) {
-  const fronts = new Map<string, WaitlistFront>();
+async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
+  const fronts = new Map<string, SeatWantedFront>();
   if (tripIds.length === 0) return fronts;
   const rows = await db
     .select({
@@ -1042,6 +1043,18 @@ async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[])
         eq(leads.askedBy, "diver"),
         eq(leads.shopId, shopId),
         inArray(leads.tripId, tripIds),
+        notExists(
+          db
+            .select({ id: bookings.id })
+            .from(bookings)
+            .where(
+              and(
+                eq(bookings.tripId, leads.tripId),
+                eq(bookings.personId, leads.personId),
+                ne(bookings.status, "cancelled"),
+              ),
+            ),
+        ),
       ),
     )
     .orderBy(asc(leads.askedAt), asc(people.fullName), asc(leads.id));
@@ -1662,7 +1675,7 @@ async function readTodayWave(
     departureRollCall,
     departureCrewRollCall,
     boatWork,
-    waitlisted,
+    seatWanted,
     courseCrewCounts,
     deliveryIssues,
     neverSentLastMinuteDeal,
@@ -1714,7 +1727,7 @@ async function readTodayWave(
     // The boat's work, one reader shared with the trip's own band
     // (`./boat-work`): sizes, nitrox, contacts and open orders per departure.
     readBoatWork(db, shopId, bookingIdsByTrip),
-    waitlistFrontByTrip(
+    seatWantedByTrip(
       db,
       shopId,
       inWindow.map((trip) => trip.id),
@@ -1867,7 +1880,7 @@ async function readTodayWave(
     departureRollCall,
     departureCrewRollCall,
     boatWork,
-    waitlisted,
+    seatWanted,
     courseCrewCounts,
     deliveryIssues,
     neverSentLastMinuteDeal,

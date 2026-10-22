@@ -3,16 +3,16 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   helpRequestActionText,
   helpRequestDetailText,
-  inviteFromWaitlistActionText,
   lastMinuteFillDetailText,
   missingContactNamedDetailText,
   missingFitNamedDetailText,
+  offerSeatActionText,
   openLastMinuteDealActionText,
   openOrdersActionText,
   openPrepListActionText,
   openTripActionText,
+  seatWantedDetailText,
   ungatedNitroxNamedDetailText,
-  waitlistSeatDetailText,
 } from "@/i18n/today-labels";
 import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
@@ -37,7 +37,7 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
   const { inWindow, readinessByTrip, shopSlug, timeZone, locale, t, now, helpRequestsByTrip } = ctx;
   const {
     boatWork,
-    waitlisted,
+    seatWanted,
     deliveryIssues,
     neverSentLastMinuteDeal,
     lastMinuteWindows,
@@ -162,29 +162,29 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
       });
     }
 
-    const front = waitlisted.get(trip.id);
+    const front = seatWanted.get(trip.id);
     const waiting = front?.count ?? 0;
     if (front && waiting > 0 && openSeats > 0) {
       actions.push({
-        id: `waitlist:${trip.id}`,
-        kind: "waitlist_seat",
+        id: `seat-wanted:${trip.id}`,
+        kind: "seat_wanted",
         urgency: urgencyFor(trip.startsAt, now),
         subject: trip.title,
         context: when,
         departure,
         aboutDeparture: true,
-        detail: waitlistSeatDetailText(t, openSeats, waiting),
-        // One tap invites the longest-waiting diver without leaving Today; the href
-        // stays the row's real destination — a pre-hydration tap, a middle-click
-        // or an open-in-new-tab lands on the trip's wait-list section.
-        actionLabel: inviteFromWaitlistActionText(t),
-        href: `${tripHref}#waitlist`,
-        invite: {
+        detail: seatWantedDetailText(t, openSeats, waiting),
+        // One tap offers the seat to whoever asked first without leaving Today;
+        // the href stays the row's real destination — a pre-hydration tap, a
+        // middle-click or an open-in-new-tab lands on the trip's panel.
+        actionLabel: offerSeatActionText(t),
+        href: `${tripHref}#who-wants-in`,
+        offer: {
           tripId: trip.id,
           leadId: front.leadId,
           personName: front.personName,
           personEmail: front.personEmail,
-          invitedAt: front.invitedAt,
+          offeredAt: front.invitedAt,
           bookingPath: publicTripPath(shopSlug, trip.id),
           tripTitle: trip.title,
           tripWhen: when,

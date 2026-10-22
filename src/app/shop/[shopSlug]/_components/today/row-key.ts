@@ -19,7 +19,7 @@ import type { TodayAction } from "@/lib/today";
 export function rowKey(action: TodayAction): string {
   if (action.waiver) return `waiver:${action.waiver.bookingIds.join(",")}`;
   if (action.resend) return `resend:${action.resend.bookingIds.join(",")}`;
-  if (action.invite) return `invite:${action.invite.leadId}`;
+  if (action.offer) return `offer:${action.offer.leadId}`;
   if (action.payment?.orderId) return `payment:${action.payment.orderId}`;
   if (action.helpRequest) return `help-request:${action.helpRequest.requestId}`;
   return action.id;

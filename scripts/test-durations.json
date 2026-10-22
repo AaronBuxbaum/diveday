@@ -608,7 +608,6 @@
   "src/app/shop/[shopSlug]/trips/[id]/_components/TripNoticeBanner.test.tsx": 349,
   "src/app/shop/[shopSlug]/trips/[id]/_components/TripPageHeader.test.tsx": 410,
   "src/app/shop/[shopSlug]/trips/[id]/_components/TripTabs.test.tsx": 289,
-  "src/app/shop/[shopSlug]/trips/[id]/_components/WaitlistSection.test.tsx": 799,
   "src/app/shop/[shopSlug]/trips/[id]/_components/carry-target-label.test.ts": 270,
   "src/app/shop/[shopSlug]/trips/[id]/_components/course-roster-actions.test.ts": 97,
   "src/app/shop/[shopSlug]/trips/[id]/_components/departure-conditions.test.ts": 346,

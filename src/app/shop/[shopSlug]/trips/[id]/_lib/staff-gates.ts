@@ -15,7 +15,7 @@ export async function readStaffGates(db: AppDb, shopId: string, personId: string
   const [canManageOrders, mayOverrideCertBlock, mayInviteFromWaitlist] = await Promise.all([
     canPersonManageOrders(db, shopId, personId),
     canPersonOverrideCertBlock(db, shopId, personId),
-    canPersonActOnKind(db, shopId, personId, "waitlist_seat"),
+    canPersonActOnKind(db, shopId, personId, "seat_wanted"),
   ]);
   return { canManageOrders, mayOverrideCertBlock, mayInviteFromWaitlist };
 }

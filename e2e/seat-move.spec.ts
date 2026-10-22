@@ -80,7 +80,7 @@ test("staff carry a full boat's wait list to another departure, then move a seat
   const carry = page.getByLabel("Or offer them a departure already on the board");
   const laterOption = carry.locator("option", { hasText: later });
   await carry.selectOption((await laterOption.getAttribute("value")) ?? "");
-  await page.getByRole("button", { name: "Carry the wait list" }).click();
+  await page.getByRole("button", { name: "Carry who’s waiting" }).click();
   await page.waitForURL((url) => /\/trips\//.test(url.pathname) && !url.pathname.includes(fromId));
   await expect(page.getByRole("status")).toContainText(
     "2 divers from the wait list are here now. Invite them below.",

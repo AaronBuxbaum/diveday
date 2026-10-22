@@ -89,7 +89,7 @@ export type TodayActionKind =
   | "crew_clash_sailed"
   | "crew_away"
   | "crew_below_target"
-  | "waitlist_seat"
+  | "seat_wanted"
   | "last_minute_fill"
   | "email_delivery"
   | "emergency_contact"
@@ -248,7 +248,7 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   help_request: 18,
   payment: 18,
   email_delivery: 19,
-  waitlist_seat: 20,
+  seat_wanted: 20,
   // A revenue opportunity, not anything blocking or dock-settleable — ranks
   // with the other purely-commercial rows.
   last_minute_fill: 21,
@@ -494,7 +494,7 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   emergency_contact: ["owner", "manager"],
   payment: ["owner", "manager"],
   readiness_unavailable: ["owner", "manager"],
-  waitlist_seat: ["owner", "manager"],
+  seat_wanted: ["owner", "manager"],
   last_minute_fill: ["owner", "manager"],
   // Every staff role (issue #2066, decided 2026-10-05). The resend retries only
   // mail already on the failed-delivery list, so it puts nothing new in front of
@@ -698,7 +698,7 @@ export const ACTION_KIND_META = {
   help_request: { tone: "neutral" },
   payment: { tone: "neutral" },
   email_delivery: { tone: "neutral" },
-  waitlist_seat: { tone: "neutral" },
+  seat_wanted: { tone: "neutral" },
   last_minute_fill: { tone: "neutral" },
   emergency_contact: { tone: "neutral" },
   // Neutral, not warning: the target binds nothing and this is advice, not a
@@ -906,18 +906,18 @@ export type TodayAction = {
    */
   resend?: { bookingIds: string[] };
   /**
-   * Present on a freed-seat row: the front-of-line wait-list entry plus the
-   * context the one-tap invite needs for its composer fallback, so staff can
-   * offer the seat straight from the queue instead of navigating to the trip.
-   * `href` stays the row's real destination (pre-hydration tap, middle-click,
-   * open-in-new-tab), the wait-list section.
+   * Present on a `seat_wanted` row: the lead who asked first plus the context
+   * the one-tap offer needs for its composer fallback, so staff can offer the
+   * seat straight from the queue instead of navigating to the trip. `href`
+   * stays the row's real destination (pre-hydration tap, middle-click,
+   * open-in-new-tab), the trip's `#who-wants-in` panel.
    */
-  invite?: {
+  offer?: {
     tripId: string;
     leadId: string;
     personName: string;
     personEmail: string | null;
-    invitedAt: Date | null;
+    offeredAt: Date | null;
     bookingPath: string;
     tripTitle: string;
     tripWhen: string;

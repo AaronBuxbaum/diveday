@@ -388,12 +388,12 @@ export type RosterRecord = {
 /** What the page slots into the ledger beneath the seats. */
 export type RosterSlots = {
   /**
-   * The wait list, rendered as this ledger's "Waiting for a seat" group —
-   * band plus rows, no card of its own (`WaitlistGroup`).
+   * **Who wants in** (`WhoWantsInPanel`, `#who-wants-in`): everyone who asked
+   * for a seat here, as one group of the ledger.
    */
-  waitingGroup?: ReactNode;
-  /** Recorded invitations, as the "Invited" group (`TripInvitationGroup`). */
-  invitedGroup?: ReactNode;
+  whoWantsInGroup?: ReactNode;
+  /** Past divers of the site worth asking (`InviteSuggestionsGroup`). */
+  suggestionsGroup?: ReactNode;
   /** The one terminal action group in the guests ledger, supplied by the page. */
   addDiverGroup?: ReactNode;
   /**

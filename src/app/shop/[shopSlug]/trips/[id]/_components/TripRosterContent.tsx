@@ -31,9 +31,9 @@ import { InviteSuggestionsGroup } from "./InviteSuggestionsGroup";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
-import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
-import { WaitlistGroup } from "./WaitlistSection";
+import { WhoWantsInPanel } from "./WhoWantsInPanel";
+import { departureLeadRows } from "./who-wants-in-rows";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 
@@ -132,7 +132,7 @@ export type TripRosterContentContext = {
    * invite control is drawn at all (owner, 2026-10-06).
    */
   acceptsDivers: boolean;
-  /** The live roles may send a wait-list invite (`waitlist_seat`'s audience), as the action will. */
+  /** The live roles may send a wait-list invite (`seat_wanted`'s audience), as the action will. */
   mayInviteFromWaitlist: boolean;
   actions: TripRosterActions;
 };
@@ -179,8 +179,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     trip,
     roster,
     requirement,
-    waitlist,
-    invitations,
+    leads,
     confirmMatches,
     diverCandidates,
     notesByBooking,
@@ -350,66 +349,58 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         slots={{
           arrival,
           record,
-          waitingGroup:
-            waitlist.length > 0 ? (
-              <>
-                <WaitlistGroup
-                  waitlist={waitlist}
-                  shopSlug={shopSlug}
-                  tripId={trip.id}
-                  shopName={shopName}
-                  tripTitle={trip.title}
-                  tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
-                  certificationSummaries={certificationSummaries}
-                  departureRequirement={dealRequirement}
-                  locale={locale}
-                  timezone={timezone}
-                  canInvite={acceptsDivers && mayInviteFromWaitlist}
-                />
-                {/* **One waiting diver is worth carrying too** (fourth review,
-                    item 31). The demand banner, and the carry door inside it,
-                    wait for a cluster; a full boat with one lead offered
-                    staff only an invite to a boat with no seat. Under the list
-                    it is about, whenever the banner is not standing. */}
-                {!demand &&
-                isFull(seatsOnSale(trip)) &&
-                actions.carryWaitlistAction &&
-                actions.moveSeat?.targets.length ? (
-                  <div className="px-4 pb-4 sm:px-5">
+          whoWantsInGroup:
+            leads.length > 0 ? (
+              <WhoWantsInPanel
+                groups={[
+                  {
+                    id: "departure",
+                    heading: t("trips.whoWantsIn.groupDeparture"),
+                    rows: departureLeadRows({
+                      leads,
+                      certificationSummaries,
+                      departureRequirement: dealRequirement,
+                      t,
+                      locale,
+                      timezone,
+                    }),
+                  },
+                ]}
+                tripId={trip.id}
+                shopSlug={shopSlug}
+                shopName={shopName}
+                tripTitle={trip.title}
+                tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
+                seatsOpen={spotsRemaining(seatsOnSale(trip))}
+                canOffer={acceptsDivers && mayInviteFromWaitlist}
+                locale={locale}
+                // **One waiting diver is worth carrying too** (fourth review,
+                // item 31). The demand banner, and the carry door inside it,
+                // wait for a cluster; a full boat with one lead offered staff
+                // only an offer of a boat with no seat. Under the list it is
+                // about, whenever the banner is not standing.
+                carry={
+                  !demand &&
+                  isFull(seatsOnSale(trip)) &&
+                  actions.carryWaitlistAction &&
+                  actions.moveSeat?.targets.length ? (
                     <CarryWaitlistForm
                       action={actions.carryWaitlistAction}
                       targets={actions.moveSeat.targets}
                       t={t}
                     />
-                  </div>
-                ) : null}
-              </>
+                  ) : null
+                }
+              />
             ) : null,
-          invitedGroup:
-            invitations.length > 0 || (acceptsDivers && guests.inviteSuggestions) ? (
-              <>
-                {invitations.length > 0 ? (
-                  <TripInvitationGroup
-                    invitations={invitations}
-                    shopSlug={shopSlug}
-                    tripId={trip.id}
-                    shopName={shopName}
-                    tripTitle={trip.title}
-                    tripStartsAt={trip.startsAt}
-                    timezone={timezone}
-                    locale={locale}
-                    canInvite={acceptsDivers && mayInviteFromWaitlist}
-                  />
-                ) : null}
-                {acceptsDivers && guests.inviteSuggestions ? (
-                  <InviteSuggestionsGroup
-                    suggestions={guests.inviteSuggestions}
-                    action={actions.invitePastDiverAction}
-                    locale={locale}
-                    timeZone={timezone}
-                  />
-                ) : null}
-              </>
+          suggestionsGroup:
+            acceptsDivers && guests.inviteSuggestions ? (
+              <InviteSuggestionsGroup
+                suggestions={guests.inviteSuggestions}
+                action={actions.invitePastDiverAction}
+                locale={locale}
+                timeZone={timezone}
+              />
             ) : null,
           addDiverGroup: !acceptsDivers ? null : (
             <AddDiverSection
@@ -426,7 +417,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                 addExistingDiverAction: walkInOpen
                   ? actions.walkInAddExistingDiverAction
                   : actions.addExistingDiverAction,
-                inviteAction: actions.createDirectTripInvitationAction,
+                offerAction: actions.createDirectTripInvitationAction,
                 status: noticeForForm(tripNotice, "add-diver"),
                 locale,
                 timeZone: timezone,
