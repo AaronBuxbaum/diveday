@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -10,6 +11,8 @@ import {
   signInAsOwner,
   signOut,
 } from "./helpers";
+
+const staff = staffTranslator("en-US");
 
 test.describe("the dive arrival arc", () => {
   signedInAsOwner();
@@ -110,7 +113,13 @@ test.describe("the dive arrival arc", () => {
     // The demo seed keeps its own open help request (Diego's, from the desk
     // hand-off), so Today lists two; act on this diver's row only. The row
     // leads with the name, so the sentence does not repeat it.
-    const helpRow = page.getByRole("listitem").filter({ hasText: "Arrival Diver" });
+    // A diver can also appear in cert, prep, email and contact rows. Keep
+    // identity tied to the help kind even when completion removes its controls.
+    const helpRow = page
+      .getByRole("listitem")
+      .filter({ hasText: "Arrival Diver" })
+      .filter({ has: page.getByText(staff("today.actionKind.helpRequest"), { exact: true }) });
+    await expect(helpRow).toHaveCount(1);
     await expect(helpRow.getByText("Asked for help: carry gear.")).toBeVisible();
     await helpRow.getByRole("button", { name: "Arrange help" }).click();
     const crew = helpRow.getByLabel("Crew member");
@@ -123,8 +132,8 @@ test.describe("the dive arrival arc", () => {
     await helpRow.getByRole("button", { name: "Help completed" }).click();
     // The row leaves the active queue after completion; the page-level outcome
     // keeps Undo available after its unmount.
-    await expect(helpRow).not.toBeVisible();
     await expect(page.getByText("Help marked complete.", { exact: true })).toBeVisible();
+    await expect(helpRow).not.toBeVisible();
 
     const diverPage = await page.context().newPage();
     await diverPage.goto(readyPath);
@@ -133,6 +142,7 @@ test.describe("the dive arrival arc", () => {
     await diverPage.close();
 
     await page.getByRole("button", { name: "Undo" }).click();
+    await expect(helpRow).toHaveCount(1);
     await expect(helpRow.getByText(`${helperName} will help with carry gear.`)).toBeVisible();
 
     await page.goto(readyPath);
