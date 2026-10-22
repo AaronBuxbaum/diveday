@@ -16,7 +16,7 @@ import { deskTimeValue } from "@/lib/desk-hours";
 import { formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
 import { log } from "@/lib/log";
 import { seatsOnSale, spotsRemaining } from "@/lib/trips";
-import { type AssistOptions, assistsAvailable, runAssist } from "./assists";
+import { type AssistOptions, assistsAvailable, runAssist, runAssistOutcome } from "./assists";
 import type { AppDb } from "./client";
 import { listActiveCourses } from "./courses";
 import { personThread } from "./inbound-messages";
@@ -68,20 +68,26 @@ export async function triageInboundMessage(
         isNull(inboundMessages.assistedAt),
         isNull(inboundMessages.keywordIntent),
         eq(inboundMessages.spamFlagged, false),
+        // The webhook's own rule, here too: a sender whose domain checks failed
+        // must not spend the shop's Claude budget by a staffer's page view.
+        eq(inboundMessages.senderAuthenticated, true),
         ne(inboundMessages.channel, "page"),
       ),
     )
     .limit(1);
   if (!row?.body.trim()) return;
   if (!(await assistsAvailable(db, shopId, options))) return;
-  const value = await runAssist(db, {
+  const { status, value } = await runAssistOutcome(db, {
     ...options,
     shopId,
     feature: "inbox_sort",
     call: inboundTriageCall({ subject: row.subject, body: row.body, targetLocale: row.locale }),
   });
-  // A call that ran and found nothing usable still counts as read: asking
-  // again on every view would spend the shop's cap on the same answer.
+  // Nothing was asked, or nothing came back (over the cap, two calls in
+  // flight, a provider error): left unread, so a later view asks again.
+  if (status === "skipped") return;
+  // An answer that was unusable still counts as read: asking again on every
+  // view would spend the shop's cap on the same answer.
   const stored = value ? storedTriage(value, { body: row.body, targetLocale: row.locale }) : null;
   await db
     .update(inboundMessages)
@@ -93,7 +99,19 @@ export async function triageInboundMessage(
       assistTranslatedTo: stored?.translatedTo ?? null,
       assistedAt: options.now ?? nowDate(),
     })
-    .where(and(eq(inboundMessages.shopId, shopId), eq(inboundMessages.id, messageId)));
+    .where(
+      and(
+        eq(inboundMessages.shopId, shopId),
+        eq(inboundMessages.id, messageId),
+        // Only onto the row as it was read. An erasure that redacted the body
+        // while Claude was answering must not get the diver's words back as
+        // a translation, and a second triage of the same message writes
+        // nothing (security review L2, B2).
+        isNull(inboundMessages.assistedAt),
+        eq(inboundMessages.body, row.body),
+        isNull(inboundMessages.deletedAt),
+      ),
+    );
 }
 
 /** {@link triageInboundMessage} that can never throw: for `after()` in a webhook or a page. */

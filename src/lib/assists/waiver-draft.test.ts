@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildStructuredRequest, callStructured } from "@/lib/claude/structured";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
-import { looksLikePdf, waiverDraftBody, waiverDraftCall } from "./waiver-draft";
+import { reservedMicroUsd } from "@/db/assists";
+import { looksLikePdf, pdfInputTokens, waiverDraftBody, waiverDraftCall } from "./waiver-draft";
 
 const RELEASE =
   "Release of Liability\n\nI understand that scuba diving carries risks.\n\n\n\nI agree.";
@@ -27,6 +28,22 @@ describe("waiverDraftCall", () => {
         }),
     });
     expect((await callStructured(provider, waiverDraftCall("x"))).value).toBeNull();
+  });
+});
+
+describe("the reservation for a PDF", () => {
+  it("grows with the file, so a long release is held against the cap before it is sent", () => {
+    const small = Buffer.from("%PDF-1.7 short").toString("base64");
+    const large = Buffer.alloc(5 * 1024 * 1024, 65).toString("base64");
+    expect(pdfInputTokens(small)).toBe(20_000);
+    expect(pdfInputTokens(large)).toBe(300_000);
+    expect(reservedMicroUsd(waiverDraftCall(large))).toBeGreaterThan(
+      reservedMicroUsd(waiverDraftCall(small)) * 5,
+    );
+    // The hint is the cap's, never part of the request.
+    expect(JSON.stringify(buildStructuredRequest(waiverDraftCall(small)))).not.toContain(
+      "inputTokens",
+    );
   });
 });
 

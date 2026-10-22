@@ -1,8 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { ClaudeRequest } from "@/lib/claude/provider";
+import { REDACTED_TEXT } from "@/lib/anonymization";
+import type { ClaudeProvider, ClaudeRequest } from "@/lib/claude/provider";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
+import { anonymizeDiver } from "./anonymize";
 import { recordInboundMessage, recordStaffReply } from "./inbound-messages";
 import {
   diverReplyLanguage,
@@ -125,6 +127,76 @@ describe("triageInboundMessage", () => {
       env: keyed,
     });
     expect(provider.requests).toHaveLength(0);
+  });
+
+  it("skips a message the webhook could not authenticate, so a spoofed sender cannot spend the shop's cap", async () => {
+    const { messageId } = await diverWithMessage("Gibt es Platz am Samstag?");
+    await ctx.db
+      .update(inboundMessages)
+      .set({ senderAuthenticated: false })
+      .where(eq(inboundMessages.id, messageId));
+    const provider = answering(triage);
+    await triageInboundMessage(ctx.db, ctx.shop.id, messageId, { provider, env: keyed });
+    expect(provider.requests).toHaveLength(0);
+    expect((await stored(messageId))?.assistedAt).toBeNull();
+  });
+
+  it("does not mark a message read when the call never happened, so a later view asks again", async () => {
+    const { messageId } = await diverWithMessage("Gibt es Platz am Samstag?");
+    const failing: ClaudeProvider = {
+      async createMessage() {
+        throw new Error("overloaded");
+      },
+    };
+    await triageInboundMessage(ctx.db, ctx.shop.id, messageId, { provider: failing, env: keyed });
+    expect((await stored(messageId))?.assistedAt).toBeNull();
+    const provider = answering(triage);
+    await triageInboundMessage(ctx.db, ctx.shop.id, messageId, { provider, env: keyed });
+    expect(await stored(messageId)).toMatchObject({
+      assistTranslation: "Is there room on Saturday?",
+    });
+  });
+
+  it("writes nothing back when the diver was erased while the call was in flight", async () => {
+    const { personId, messageId } = await diverWithMessage("Gibt es Platz am Samstag?");
+    const [owner] = await ctx.db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, ctx.shop.id), eq(personRoles.role, "owner")));
+    if (!owner) throw new Error("expected the seeded owner");
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let called: () => void = () => {};
+    const asked = new Promise<void>((resolve) => {
+      called = resolve;
+    });
+    const held: ClaudeProvider = {
+      async createMessage() {
+        called();
+        await gate;
+        return fakeClaudeMessage({ text: JSON.stringify(triage) });
+      },
+    };
+    const pending = triageInboundMessage(ctx.db, ctx.shop.id, messageId, {
+      provider: held,
+      env: keyed,
+    });
+    await asked;
+    const erased = await anonymizeDiver(ctx.db, {
+      shopId: ctx.shop.id,
+      personId,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+    release();
+    await pending;
+    expect(await stored(messageId)).toMatchObject({
+      body: REDACTED_TEXT,
+      assistTranslation: null,
+    });
   });
 });
 

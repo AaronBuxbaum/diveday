@@ -23,6 +23,16 @@ describe("check-assist-prompts", () => {
     expect(result.stderr).toContain("src/app/shop/x/actions.ts:3: names medical answers");
   });
 
+  it("refuses a db module that calls the seam through a relative import", () => {
+    const result = runGuard(GUARD, {
+      "src/db/x-assists.ts":
+        'import { runAssist } from "./assists";\nimport { medicalAnswersFor } from "./medical-questionnaire";\nimport { w } from "./waivers";\n',
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("src/db/x-assists.ts:2: imports ./medical-questionnaire");
+    expect(result.stderr).toContain("src/db/x-assists.ts:3: imports ./waivers");
+  });
+
   it("leaves modules that build no prompt, tests and the seam itself alone", () => {
     const result = runGuard(GUARD, {
       "src/app/shop/x/page.tsx": 'import { needsMedicalReview } from "@/lib/medical";\n',

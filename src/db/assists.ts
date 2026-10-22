@@ -175,7 +175,10 @@ const DEFAULT_RESERVED_OUTPUT_TOKENS = 8_000;
 export function reservedMicroUsd(call: StructuredCall<z.ZodType>): number {
   const model: ClaudeModel = CLAUDE_MODELS[call.model];
   const price = MODEL_PRICES_MICRO_USD_PER_TOKEN[model];
-  const input = call.tools?.length ? RESERVED_TOOL_INPUT_TOKENS : RESERVED_INPUT_TOKENS;
+  const input = Math.max(
+    call.inputTokens ?? 0,
+    call.tools?.length ? RESERVED_TOOL_INPUT_TOKENS : RESERVED_INPUT_TOKENS,
+  );
   const output = call.maxTokens ?? DEFAULT_RESERVED_OUTPUT_TOKENS;
   return Math.ceil(input * price.input + output * price.output);
 }
@@ -299,19 +302,36 @@ export async function runAssist<S extends z.ZodType>(
   db: AppDb,
   input: RunAssistInput<S>,
 ): Promise<z.infer<S> | null> {
+  return (await runAssistOutcome(db, input)).value;
+}
+
+/**
+ * What became of one assist. `answered`: Claude answered, and `value` is what
+ * survived validation (null for a refusal, an invalid or a low-confidence
+ * answer), so asking again would cost the same for the same answer. `skipped`:
+ * nothing was asked or nothing came back (dark, over the cap, two calls
+ * already in flight, a provider error), so a later attempt may succeed.
+ */
+export type AssistOutcome<T> = { status: "answered" | "skipped"; value: T | null };
+
+export async function runAssistOutcome<S extends z.ZodType>(
+  db: AppDb,
+  input: RunAssistInput<S>,
+): Promise<AssistOutcome<z.infer<S>>> {
+  const skipped = { status: "skipped", value: null } as const;
   const { shopId, feature } = input;
   if (!FEATURE_KEY.test(feature)) {
     log("claude_assist.bad_feature_key", "error", {});
-    return null;
+    return skipped;
   }
   try {
     const dark = await assistDarkReasonFor(db, shopId, input);
     if (dark) {
       log("claude_assist.dark", "info", { feature, reason: dark });
-      return null;
+      return skipped;
     }
     const provider = providerFor(input);
-    if (!provider) return null;
+    if (!provider) return skipped;
     const reserve = reservedMicroUsd(input.call);
     const usageId = await reserveClaudeCall(
       db,
@@ -326,7 +346,7 @@ export async function runAssist<S extends z.ZodType>(
     );
     if (!usageId) {
       log("claude_assist.dark", "info", { feature, reason: "over_cap" });
-      return null;
+      return skipped;
     }
     const result = await callStructured(provider, input.call);
     await settleClaudeUsage(db, usageId, reserve, result);
@@ -340,12 +360,12 @@ export async function runAssist<S extends z.ZodType>(
       outputTokens: result.usage.outputTokens,
       costMicroUsd: result.costMicroUsd,
     });
-    return result.value;
+    return result.outcome === "error" ? skipped : { status: "answered", value: result.value };
   } catch {
     // The database failing under an assist is not the assist's problem to
     // report: the feature carries on dark and the database error surfaces
     // wherever the page reads next.
     log("claude_assist.failed", "warn", { feature });
-    return null;
+    return skipped;
   }
 }

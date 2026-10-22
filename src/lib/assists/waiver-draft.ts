@@ -53,8 +53,19 @@ export function looksLikePdf(bytes: Uint8Array): boolean {
   );
 }
 
+/**
+ * What a PDF of this size is reserved as, in input tokens: about a third of its
+ * bytes (pages arrive as text and as an image), between the usual 20K and the
+ * 300K a 5 MB release could reach. The cap reserves this before the call.
+ */
+export function pdfInputTokens(pdfBase64: string): number {
+  const bytes = Math.floor((pdfBase64.length * 3) / 4);
+  return Math.min(300_000, Math.max(20_000, Math.ceil(bytes / 3)));
+}
+
 export function waiverDraftCall(pdfBase64: string): StructuredCall<typeof WaiverDraft> {
   return {
+    inputTokens: pdfInputTokens(pdfBase64),
     model: "draft",
     system: WAIVER_SYSTEM,
     content: [
