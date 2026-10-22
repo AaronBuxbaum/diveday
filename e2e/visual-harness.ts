@@ -664,6 +664,25 @@ function probeContext(page: Page, capture: string, scheme: "light" | "dark", wid
 const FLOW_ALLOWANCE_MS = 15_000;
 export const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 
+/**
+ * **Each step's own bound, under the test's.** The ceilings above are sums of
+ * bounded paint waits, sized so a capture that degrades still shoots. They were
+ * never meant to bound a *flow step*: Playwright leaves `actionTimeout` and
+ * `navigationTimeout` at 0, so a `click()`, a `locator.waitFor()` or a
+ * `waitForURL` whose element or address never arrives waited out the whole
+ * test — "Test timeout of 230000ms exceeded" on a capture whose heading had
+ * been renamed, almost four minutes of a shard for a deterministic break.
+ *
+ * Bounded here, a missing element fails in 15s with Playwright's own message
+ * naming the locator. 15s is the bound every client-fill and hash-landing wait
+ * in this file already uses, and the whole budget of an ordinary flow test
+ * (playwright.config.ts); a navigation gets 30s, twice that, for a cold heavy
+ * page on a loaded runner. An explicit `{ timeout }` at a call site still wins,
+ * and the paint waits above are bounded on their own, so this shortens no
+ * passing capture.
+ */
+export const VISUAL_STEP_BOUNDS = { actionTimeout: 15_000, navigationTimeout: 30_000 } as const;
+
 /** The seeded reef charter, the departure most of the staff tour hangs off. */
 export const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 

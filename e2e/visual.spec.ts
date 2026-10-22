@@ -113,6 +113,7 @@ import {
   staffCopy,
   tripIdWithoutSigningIn,
   VIEWPORTS,
+  VISUAL_STEP_BOUNDS,
   waitForHashLanding,
   waitForSiteLibrary,
   waitForSiteMap,
@@ -122,6 +123,7 @@ import {
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
+test.use(VISUAL_STEP_BOUNDS);
 
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {
