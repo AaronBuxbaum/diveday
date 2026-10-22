@@ -8,6 +8,7 @@ import { shops, trips } from "./schema";
 import { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
 import { demoTodayDepartureStart } from "./seed-clock";
 import { seedRecentRecaps } from "./seed-recent-recaps";
+import { syncDemoShopBrand } from "./seed-shop-brand";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 import { upcomingScheduleRange } from "./trips";
 import { liveTrip } from "./trips-live";
@@ -135,6 +136,8 @@ export async function refreshCanonicalDemoSchedule(
   // configuration every night, so setting or removing the pair takes effect by
   // the next run without a reset (ADR 20261009-demo-test-mode-payments).
   await syncDemoStripeAccount(db, shop.id);
+  // A database seeded before the demo had a logo and a profile gets them once.
+  await syncDemoShopBrand(db);
 
   // The furthest-out departure, not the soonest: what is being measured is how
   // much board is left, and a shop whose next boat is tomorrow and whose last is

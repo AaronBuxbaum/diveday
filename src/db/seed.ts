@@ -171,6 +171,7 @@ import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSafeCrew } from "./seed-safe-crew";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
+import { DEMO_SHOP_BRAND } from "./seed-shop-brand";
 import { seedSightings } from "./seed-sightings";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
@@ -351,30 +352,7 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
   await seedDemo(db);
 }
 
-/**
- * **Blue Mantis's storefront: a cover photo and a badge wall, in Logbook's own
- * colour and face.** It set no brand colour and no display face (ADR
- * 20261001-logbook, decision 8): the demo is what every diver-facing capture
- * photographs, and a demo in its own green and Bricolage showed the retheme
- * nowhere. The per-shop brand is still a shop feature; the minted fixture
- * below is where it is exercised. The photo is one of the bundled Molasses
- * Reef frames the site catalog already ships.
- */
-export const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
-  brandHeroImageUrl: `/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`,
-  // i18n-exempt: a shop writes its own alt text, like its tagline.
-  brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
-  establishedYear: 1998,
-  brandBadges: ["padi_5_star", "blue_star", "tripadvisor"],
-  // The photo strip under the cover: four of the bundled reef frames, so the
-  // storefront captures draw the strip at the width a real shop's would.
-  shopfrontPhotoUrls: [
-    "Blue Parrotfish on Molasses Outer Reef, Key Largo (15274849398).jpg",
-    "French Angelfish Pickles Reef 20230713.jpg",
-    "FGBNMS - nurse shark (27551309652).jpg",
-    "Restored staghorn coral (Acropora cervicornis) at Looe Key reef (106714).jpg",
-  ].map((file) => `/dive-sites/${encodeURIComponent(file)}`),
-};
+export { DEMO_SHOP_BRAND } from "./seed-shop-brand";
 
 /**
  * The colour a branded minted shop wears: mantis green, chosen because it is
@@ -385,12 +363,10 @@ export { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 
 /**
  * **The brand a minted shop wears when a visual capture or a brand spec asks
- * for one**: Blue Mantis's cover photo and badges, plus the colour, display
- * face and logo Blue Mantis itself does not carry. The settings
- * profile row takes a stored logo and cover photo back off, and
- * `settings-profile` is the only capture that shows it with both on file. The
- * canonical demo cannot be that fixture: a logo on it would sit in the header
- * of every staff capture in the suite.
+ * for one**: Blue Mantis's profile, in a different colour, face and logo, so
+ * the brand spec proves the storefront follows the shop's own choices rather
+ * than the canonical demo's. Left off, a minted shop is blank shop-wide config,
+ * which is what every behavioural spec expects.
  *
  * The logo is a bundled frame, as the cover photo is, because the fleet
  * configures no media storage, so an upload through the form is refused. A
@@ -416,14 +392,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     .values({
       name: "Blue Mantis Divers",
       slug: DEMO_SHOP_SLUG,
-      // **The shop's own line, because the storefront leads with the shop.**
-      // The identity band renders only what a shop authored (ADR
-      // 20260827-clearwater-surface-language, decision 8), so a demo with no
-      // tagline photographs the day-zero hero rather than the one a trading
-      // shop has — and `public-schedule-new-shop` is already the baseline for
-      // that state.
-      // i18n-exempt: a shop types its own tagline, like its packing list.
-      tagline: "Small-boat reef and wreck diving out of Key Largo.",
       ...DEMO_SHOP_BRAND,
       timezone: DEMO_SHOP_TIMEZONE,
       ...DEMO_SHOP_UNITS,

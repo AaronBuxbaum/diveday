@@ -17,6 +17,7 @@ describe("BookingPartyFields", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} />);
 
     fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact’s email/i }));
     expect(screen.getByRole("textbox", { name: "Name" })).toHaveAttribute("autocomplete", "name");
     expect(screen.getByRole("textbox", { name: "Diver 2 name" })).toHaveAttribute(
       "autocomplete",
@@ -29,18 +30,19 @@ describe("BookingPartyFields", () => {
     );
   });
 
-  it("hides a non-lead diver's email when they use the main contact (task 21)", () => {
+  it("uses the main contact's email for a non-lead diver until it is unticked (task 21)", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} />);
     fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
 
-    const email2 = screen.getByRole("textbox", { name: "Diver 2 email" });
-    expect(email2).toBeRequired();
-
-    fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact’s email/i }));
+    const box = screen.getByRole("checkbox", { name: /use the main contact’s email/i });
+    expect(box).toBeChecked();
     expect(screen.queryByRole("textbox", { name: "Diver 2 email" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact’s email/i }));
+    fireEvent.click(box);
     expect(screen.getByRole("textbox", { name: "Diver 2 email" })).toBeRequired();
+
+    fireEvent.click(box);
+    expect(screen.queryByRole("textbox", { name: "Diver 2 email" })).not.toBeInTheDocument();
   });
 
   it("asks each member 'Under 18', posts it per seat and says what it means once ticked", () => {
@@ -172,6 +174,7 @@ describe("BookingPartyFields — a diver's boxes", () => {
   it("gives every box its own row, so a long address is never cut", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} leadPhone />);
     fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact’s email/i }));
     for (const name of ["Email", "Diver 2 email"]) {
       const grid = screen.getByRole("textbox", { name }).closest(".grid-cols-1");
       expect(grid).not.toBeNull();

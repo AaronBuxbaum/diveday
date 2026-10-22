@@ -135,8 +135,11 @@ export function BookingPartyFields({
   // person row with no email, never a second row sharing the lead's address
   // (which would collide with it as "already booked" the moment a second
   // member opted in — see src/db/bookings.ts and its "rolls back the whole
-  // party" test).
-  const [useLeadEmail, setUseLeadEmail] = useState<Record<number, boolean>>({});
+  // party" test). On by default: most parties are a family or a couple
+  // booking together, and the box is one tap to untick for the friend who
+  // wants their own reminders.
+  const [leadEmailChoice, setLeadEmailChoice] = useState<Record<number, boolean>>({});
+  const usesLeadEmail = (index: number) => index > 0 && (leadEmailChoice[index] ?? true);
   const [types, setTypes] = useState<ParticipantType[]>(() =>
     Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, () => "diver" as const),
   );
@@ -372,8 +375,7 @@ export function BookingPartyFields({
                       </select>
                     </Field>
                   ) : null}
-                  {leadOnly ? null : <UnderEighteenChoice index={index} />}
-                  {index === 0 || !useLeadEmail[index] ? (
+                  {!usesLeadEmail(index) ? (
                     <Field
                       label={
                         index === 0
@@ -402,7 +404,7 @@ export function BookingPartyFields({
                       <input
                         name={`email-${index}`}
                         type="email"
-                        required={index === 0 || !useLeadEmail[index]}
+                        required
                         maxLength={200}
                         inputMode="email"
                         autoComplete={index === 0 ? "email" : `section-diver${index} email`}
@@ -416,20 +418,6 @@ export function BookingPartyFields({
                         className={controlClass}
                       />
                     </Field>
-                  ) : null}
-                  {index > 0 ? (
-                    <ChoiceRow
-                      type="checkbox"
-                      checked={!!useLeadEmail[index]}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setUseLeadEmail((current) => ({ ...current, [index]: checked }));
-                        if (checked) updateMember(index, { email: "" });
-                      }}
-                      className="text-sm text-muted"
-                    >
-                      {t("party.useMainContactEmail")}
-                    </ChoiceRow>
                   ) : null}
                   {index === 0 && leadPhone ? (
                     <Field
@@ -451,6 +439,30 @@ export function BookingPartyFields({
                       />
                     </Field>
                   ) : null}
+                  {/* The boxes close the diver's block, together: "Under 18" stood
+                      between Joining as and Email, a 44px row with the grid's
+                      16px either side, so it read as a gap in the person's
+                      details rather than a question about them. Stacked
+                      without a gap, each row's own 44px is the rhythm. */}
+                  {leadOnly ? null : (
+                    <div className="grid">
+                      {index > 0 ? (
+                        <ChoiceRow
+                          type="checkbox"
+                          checked={usesLeadEmail(index)}
+                          onChange={(event) => {
+                            const checked = event.target.checked;
+                            setLeadEmailChoice((current) => ({ ...current, [index]: checked }));
+                            if (checked) updateMember(index, { email: "" });
+                          }}
+                          className="text-sm text-muted"
+                        >
+                          {t("party.useMainContactEmail")}
+                        </ChoiceRow>
+                      ) : null}
+                      <UnderEighteenChoice index={index} />
+                    </div>
+                  )}
                 </FieldGrid>
               </div>
             </fieldset>
@@ -476,6 +488,7 @@ function UnderEighteenChoice({ index }: { index: number }) {
     <ChoiceRow
       type="checkbox"
       name={`minor-${index}`}
+      outdent="block-end"
       checked={checked}
       onChange={(event) => setChecked(event.target.checked)}
       className="text-sm"
