@@ -53,7 +53,7 @@ import { uuidParam } from "@/lib/uuid";
 import type { PatternDeparture } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
-import { attachRequestedLeads } from "./attach-leads";
+import { attachRequestedInterests } from "./attach-interests";
 import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
 
 const removeDepartureForm = z.object({ tripId: z.uuid() });
@@ -398,8 +398,8 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   };
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return await invalid();
-  // The lead ids a Requests link carried are navigation context, not authority:
-  // the writer reads each one inside this shop's date leads, so a shareable URL
+  // The interest ids a Requests link carried are navigation context, not authority:
+  // the writer reads each one inside this shop's date interests, so a shareable URL
   // or a hand-built POST reaches nothing outside it (issue #1679).
   const {
     title,
@@ -590,7 +590,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       actorPersonId: session.user.personId,
       write: { code: "series_added", tripId: firstTrip.id },
     });
-    await attachRequestedLeads(db, shop.id, firstTrip.id, session.user.personId, formData);
+    await attachRequestedInterests(db, shop.id, firstTrip.id, session.user.personId, formData);
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
     await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
     return await landAfterAdd(db, shop, shopSlug, title, series.trips.length);
@@ -615,7 +615,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
     });
   }
   // A rehearsal answers nobody's request, and the writer skips it.
-  await attachRequestedLeads(db, shop.id, created.id, session.user.personId, formData);
+  await attachRequestedInterests(db, shop.id, created.id, session.user.personId, formData);
   // "Add it as well": the pattern's second departure, read back off the board
   // here rather than taken from the form, so what goes up is what the shop
   // actually ran. Its own fields where the days agreed; this submission's

@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 import { nowMs } from "@/lib/clock";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
-import { departureLead } from "@/test/leads";
+import { departureInterest } from "@/test/interests";
 import { createBooking } from "./bookings";
 import {
   applyProviderEmailEvent,
@@ -18,7 +18,7 @@ import {
 } from "./notifications";
 import {
   bookings,
-  leads,
+  interests,
   notificationDeliveries,
   notificationDeliveryAttempts,
   notificationSendQueue,
@@ -453,8 +453,8 @@ describe("a courtesy message waiting in the retry queue", () => {
     const { db, shop, trip, booking } = context;
     const personId = await personOf(db, booking.bookingId);
     const [invitation] = await db
-      .insert(leads)
-      .values(departureLead({ shopId: shop.id, tripId: trip.id, personId }))
+      .insert(interests)
+      .values(departureInterest({ shopId: shop.id, tripId: trip.id, personId }))
       .returning();
     if (!invitation) throw new Error("invitation insert failed");
     const { provider, sent } = flakyProvider();
@@ -464,7 +464,7 @@ describe("a courtesy message waiting in the retry queue", () => {
         ...SCHEDULE,
         kind: "seat_offer_commercial",
         askedBy: "shop",
-        leadId: invitation.id,
+        interestId: invitation.id,
         shopId: shop.id,
         to: "nora@example.com",
         shopName: shop.name,
@@ -635,7 +635,7 @@ describe("what the retry queue is allowed to hold", () => {
 
   it("lifts the subject's own handles out for a message addressed to somebody else", async () => {
     // The seam the erasure sweep rests on, exercised through `queueRetry`
-    // rather than by inserting a row by hand: `lead_received` is addressed to
+    // rather than by inserting a row by hand: `interest_received` is addressed to
     // the shop's front desk and is *about* a diver, so `recipient_email` is
     // the desk and the two subject handles are the diver's. Without this,
     // deleting either `notificationSubjectEmail`/`notificationSubjectPhone`
@@ -645,8 +645,8 @@ describe("what the retry queue is allowed to hold", () => {
     await sendNotification(
       db,
       {
-        kind: "lead_received",
-        leadId: "00000000-0000-4000-8000-00000000c001",
+        kind: "interest_received",
+        interestId: "00000000-0000-4000-8000-00000000c001",
         shopId: shop.id,
         to: "front-desk@example.invalid",
         locale: "en-US",

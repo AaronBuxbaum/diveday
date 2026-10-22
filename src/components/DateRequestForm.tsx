@@ -20,7 +20,7 @@ import {
  * "Get in touch and we will set one" used to be the end of the road: a diver
  * with no workable date was handed a sentence and left to write the email
  * themselves. This asks the questions a shop always ends up asking for and
- * turns them into a lead the desk can act on without a round trip.
+ * turns them into an interest the desk can act on without a round trip.
  *
  * It stands on **two** surfaces now, which is why it lives here rather than in
  * the course folder it grew up in: a course page, where the request is about
@@ -29,7 +29,7 @@ import {
  * only difference between the two is `askInterest` — with no course in the URL,
  * the form has to ask what the request is *about*, because a row that names
  * neither is a request nobody can act on (the check constraint on
- * `leads_scope_columns` says the same thing in SQL).
+ * `interests_scope_columns` says the same thing in SQL).
  *
  * The dates are real `<input type="date">` fields, grouped with the free-text
  * flexible-timing answer: "any weekend in the autumn" is still a true answer,
@@ -51,9 +51,9 @@ import {
  * not take it out of the form, so nothing about what the shop receives
  * changes.
  *
- * Submitting records the request server-side (a date lead, via
+ * Submitting records the request server-side (a date interest, via
  * `submitRequest`) and best-effort notifies the shop's own inbox, so a diver on
- * a phone with no mail client configured no longer loses the lead entirely
+ * a phone with no mail client configured no longer loses the interest entirely
  * (docs/product/archive/ux-personas-20260730-findings.md task 7).
  *
  * That is the only way to send it. The `mailto:` composer and the copy-the-
@@ -86,7 +86,7 @@ export function DateRequestForm({
   sectionId?: string;
   /**
    * Null for a shop that has not filled its contact details in yet. The form
-   * still renders and the request still lands as a date lead for staff
+   * still renders and the request still lands as a date interest for staff
    * to read on the Requests page — only this line stands down. Guarding the
    * whole form on it switched off the one public conversion available to a
    * shop with nothing on the books (issue #710).

@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { sendFindMyBookingLinks } from "@/db/find-my-booking";
-import { askAnytime } from "@/db/leads";
+import { askAnytime } from "@/db/interests";
 import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";

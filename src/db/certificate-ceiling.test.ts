@@ -8,7 +8,7 @@ import { publicAvailabilityTrips } from "./availability";
 import { cancelBooking, createBooking, createBookingParty, restoreBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { listUpcomingDeparturesForSite } from "./dive-sites";
-import { askForDeparture } from "./leads";
+import { askForDeparture } from "./interests";
 import { nextDiveForBooking } from "./next-dive";
 import { markBookingNoShow, undoBookingNoShow } from "./no-show";
 import { boats, bookings, courses, diveSites, people, trips } from "./schema";

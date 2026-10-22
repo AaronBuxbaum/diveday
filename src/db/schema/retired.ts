@@ -20,8 +20,8 @@ import { trips } from "./trips";
 
 /*
  * **Retired tables: no code reads or writes them, and they are not exported
- * from `index.ts`** (ADR 20261017-one-lead-with-a-scope). Their rows now live in
- * `leads`. The tables stay in the database for one release because the deploy in
+ * from `index.ts`** (ADR 20261017-one-interest-with-a-scope). Their rows now live in
+ * `interests`. The tables stay in the database for one release because the deploy in
  * flight still reads them; a declaration that `drizzle.config.ts` still sees
  * keeps `drizzle-kit generate` from writing the `DROP TABLE` early. The next
  * release deletes this file and the generated migration drops them, each with
@@ -54,7 +54,7 @@ export const tripWaitlistEntries = pgTable(
     // When staff last invited this diver to grab a freed seat. Null until the
     // first invite; shown as "Invited 2h ago" so two staff don't double-invite.
     invitedAt: timestamp("invited_at", { withTimezone: true }),
-    // How many seats this lead waits for: the joiner and the people they are
+    // How many seats this entry waits for: the joiner and the people they are
     // diving with, who wait and are invited together, never split across dates
     // (fourth review, item 34; ADR 20260719-trip-waitlist, amended). The
     // public form's own ceiling bounds it.
@@ -137,7 +137,7 @@ export const tripInvitations = pgTable(
   ],
 );
 
-/** Retired with `course_inquiries`: now `lead_experience` (`leads.ts`). */
+/** Retired with `course_inquiries`: now `interest_experience` (`interests.ts`). */
 export const courseInquiryExperience = pgEnum("course_inquiry_experience", [
   "never",
   "tried",
@@ -145,12 +145,12 @@ export const courseInquiryExperience = pgEnum("course_inquiry_experience", [
   "lapsed",
 ]);
 
-/** Retired with `course_inquiries`: now `lead_closed_as` (`leads.ts`). */
+/** Retired with `course_inquiries`: now `interest_closed_as` (`interests.ts`). */
 export const courseInquiryOutcome = pgEnum("course_inquiry_outcome", ["booked", "done"]);
 
 /**
  * A diver asking a shop to run something on a date that is not on the board.
- * Its rows are `leads` with `scope = 'date'` (ADR 20261017-one-lead-with-a-scope,
+ * Its rows are `interests` with `scope = 'date'` (ADR 20261017-one-interest-with-a-scope,
  * which supersedes 20260814-a-date-request-is-a-course-inquiry). The columns
  * map one to one: `divers` is `party_size`, `created_at` is `asked_at`,
  * `handled_at`/`handled_as` are `closed_at`/`closed_as`.

@@ -17,8 +17,8 @@ import { loadActiveStaffRoles } from "./authz";
 import { tripCourseCrewCounts } from "./bookings";
 import { expirePendingCheckoutsForBooking } from "./checkouts";
 import type { AppDb, DbExecutor } from "./client";
-import { departureOpenToDiver } from "./lead-offers";
-import { listDepartureLeads } from "./leads";
+import { departureOpenToDiver } from "./interest-offers";
+import { listDepartureInterests } from "./interests";
 import { publishManifestEvent } from "./manifest-events";
 import { onTheWaterByRollCall } from "./manifests";
 import { activityEvents, bookings, courses, people, trips } from "./schema";
@@ -465,7 +465,7 @@ export async function noShowSalvage(
   // once per diver who missed, one after another. The wait list and the trip
   // go out together; the board only when nobody is waiting.
   const [waitlist, [trip]] = await Promise.all([
-    listDepartureLeads(db, input.shopId, input.tripId),
+    listDepartureInterests(db, input.shopId, input.tripId),
     db
       .select({ id: trips.id, courseId: trips.courseId, diveSiteId: trips.diveSiteId })
       .from(trips)
@@ -473,7 +473,7 @@ export async function noShowSalvage(
       .limit(1),
   ]);
   const waitlistCount = waitlist.filter(
-    ({ lead }) => lead.askedBy === "diver" && !lead.offeredAt,
+    ({ interest }) => interest.askedBy === "diver" && !interest.offeredAt,
   ).length;
   if (waitlistCount > 0) return offerEach(salvageOffer({ waitlistCount, alternatives: [] }));
   if (!trip) return offerEach(salvageOffer({ waitlistCount: 0, alternatives: [] }));

@@ -29,11 +29,11 @@ import { trips } from "./trips";
  * listed on `issuePersonCourtesyEmailUnsubscribeToken` in
  * `src/db/courtesy-email.ts` (docs features/story-backlog.md "Leo — self-serve
  * email unsubscribe"). Same
- * shape and reasoning as `leadUnsubscribeTokens`: a fresh token per
+ * shape and reasoning as `interestUnsubscribeTokens`: a fresh token per
  * send rather than one stable token per person, never expires, and consuming
  * it is an idempotent write (only ever sets `courtesyEmailOptOutAt`) — kept as
- * a separate table rather than folded into `leadUnsubscribeTokens`
- * because it resolves to a person, not an anytime lead.
+ * a separate table rather than folded into `interestUnsubscribeTokens`
+ * because it resolves to a person, not an anytime interest.
  */
 export const personCourtesyEmailUnsubscribeTokens = pgTable(
   "person_courtesy_email_unsubscribe_tokens",
@@ -318,7 +318,7 @@ export const notificationSendQueue = pgTable(
      *
      * None is a new disclosure — every one of them is an address or a number
      * this same tenant already stores in a plaintext column of its own
-     * (`people`, `shops`, `leads`), unlike the payload, which held
+     * (`people`, `shops`, `interests`), unlike the payload, which held
      * raw bearer tokens that exist nowhere else un-hashed.
      *
      * **Cleared when a row is finished with, retained while it is only
@@ -352,19 +352,19 @@ export const notificationSendQueue = pgTable(
      * **`subject_email` and `subject_phone` are the person the message is
      * *about***, when that is not the person it is addressed to — and null when
      * the two are the same, which is almost every kind. Two are not:
-     * `lead_received` mails the shop's own front desk about a diver who used
+     * `interest_received` mails the shop's own front desk about a diver who used
      * the public composer and carries their name, address, phone and free-text
      * message; and the `new_account` operator alert mails DiveDay about a shop owner.
      * Before these a live row for either survived an erasure until it drained,
      * because neither handle could see it and no `->>` probe can be added to a
      * sealed payload (issue #1298).
      *
-     * **Two handles rather than one, because a lead may carry no address at
+     * **Two handles rather than one, because an interest may carry no address at
      * all.** The public composer takes an address *or* a number, so a diver who
      * leaves only a number produces a row a `subject_email` alone still could
      * not reach — the first version of this fix shipped that hole and a
      * `security-reviewer` pass found it. The phone match carries the same
-     * accepted over-reach the the date-lead phone sweep does, and for the
+     * accepted over-reach the the date-interest phone sweep does, and for the
      * same written reason.
      *
      * Both are written from `notificationSubjectEmail`/`notificationSubjectPhone`

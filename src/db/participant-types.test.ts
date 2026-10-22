@@ -15,7 +15,7 @@ import {
 import { formBuddyTeam } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { openGearReservation } from "./gear";
-import { askForDeparture } from "./leads";
+import { askForDeparture } from "./interests";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { setBookingNitrox } from "./nitrox";
 import { setBookingPayment } from "./payments";

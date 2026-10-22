@@ -10,7 +10,7 @@ import {
 import { log } from "@/lib/log";
 import type { AppDb } from "./client";
 import { type SendDepartureNoteOutcome, sendDepartureNote } from "./departure-notes";
-import type { SeatOffersOutcome } from "./lead-offers";
+import type { SeatOffersOutcome } from "./interest-offers";
 import { heldSends } from "./schema";
 import type { RescheduleNoticeOutcome } from "./trip-rescheduled";
 import { deliverWaiverBatch, type WaiverBatchOutcome } from "./waiver-issue";
@@ -199,12 +199,12 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
       return { kind: "departure_note", outcome };
     }
     case "seat_offer": {
-      const { offerSeats } = await import("./lead-offers");
+      const { offerSeats } = await import("./interest-offers");
       const outcome = await offerSeats(db, {
         shopId: row.shopId,
         shopSlug: await shopSlugOf(db, row.shopId),
         tripId: payload.tripId,
-        leadIds: payload.leadIds,
+        interestIds: payload.interestIds,
         discount: payload.discount,
         createdByPersonId: row.actorPersonId ?? undefined,
       });

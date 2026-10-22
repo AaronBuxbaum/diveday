@@ -1,5 +1,5 @@
-import type { DateLeadInReach } from "@/db/lead-dates";
-import type { AnytimeRecipient } from "@/db/leads";
+import type { DateInterestInReach } from "@/db/interest-dates";
+import type { AnytimeRecipient } from "@/db/interests";
 import type { CertificationSummary } from "@/db/self-declared-cards";
 import type { TripGuests } from "@/db/trips";
 import {
@@ -11,12 +11,12 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatCalendarDateRange, formatShortDate } from "@/lib/format";
 import {
+  interestContact,
   LAST_MINUTE_RECIPIENT_PREVIEW_LIMIT,
   type LastMinuteDepartureBar,
-  leadContact,
   ranksBelow,
   reviewLastMinuteRecipients,
-} from "@/lib/leads";
+} from "@/lib/interests";
 import type { Waitlist } from "./types";
 import type { WhoWantsInGroup } from "./WhoWantsInPanel";
 
@@ -27,12 +27,12 @@ import type { WhoWantsInGroup } from "./WhoWantsInPanel";
  * new builder, not a new component.
  */
 export type WhoWantsInRow = {
-  leadId: string;
+  interestId: string;
   name: string;
   email: string | null;
   /** The quiet line: address, when they asked, party, where the ask came from. */
   facts: string;
-  /** What the diver can dive, when this lead is a known person. */
+  /** What the diver can dive, when this interest is a known person. */
   certification: { text: string; unchecked: boolean } | null;
   /** Below this departure's bar. Informs the staffer; never filters, orders or disables. */
   belowBar: boolean;
@@ -41,14 +41,14 @@ export type WhoWantsInRow = {
 };
 
 /**
- * **The "Asked for this departure" rows**: the departure-scope leads, a diver's
+ * **The "Asked for this departure" rows**: the departure-scope interests, a diver's
  * own ask and the shop's own invitation alike, in the order people asked. Never
  * ranked or filtered by fit (ADR 20260813-wait-list-is-a-lead-list): the
  * below-the-bar mark is a fact printed on the row, the same predicate the deal
  * list uses.
  */
-export function departureLeadRows(input: {
-  leads: Waitlist;
+export function departureInterestRows(input: {
+  interests: Waitlist;
   /** What each known person can dive, by person id (`listCertificationSummaries`). */
   certificationSummaries: Map<string, CertificationSummary>;
   /** The folded departure bar. */
@@ -58,28 +58,28 @@ export function departureLeadRows(input: {
   timezone: string;
 }): WhoWantsInRow[] {
   const { t, locale, timezone } = input;
-  return input.leads.map((row) => {
-    const { lead } = row;
-    const contact = leadContact(row);
+  return input.interests.map((row) => {
+    const { interest } = row;
+    const contact = interestContact(row);
     const summary =
-      (lead.personId ? input.certificationSummaries.get(lead.personId) : null) ?? null;
+      (interest.personId ? input.certificationSummaries.get(interest.personId) : null) ?? null;
     const belowBar = ranksBelow({ certification: summary }, input.departureRequirement);
     const parts = [
       contact.email ?? t("trips.whoWantsIn.noEmail"),
-      t(lead.askedBy === "shop" ? "trips.whoWantsIn.invited" : "trips.whoWantsIn.asked", {
-        date: formatShortDate(lead.askedAt, locale, timezone),
+      t(interest.askedBy === "shop" ? "trips.whoWantsIn.invited" : "trips.whoWantsIn.asked", {
+        date: formatShortDate(interest.askedAt, locale, timezone),
       }),
     ];
-    if ((lead.partySize ?? 1) > 1) {
-      parts.push(t("trips.whoWantsIn.party", { count: lead.partySize ?? 1 }));
+    if ((interest.partySize ?? 1) > 1) {
+      parts.push(t("trips.whoWantsIn.party", { count: interest.partySize ?? 1 }));
     }
-    if (lead.parentLeadId) parts.push(t("trips.whoWantsIn.fromRequest"));
+    if (interest.parentInterestId) parts.push(t("trips.whoWantsIn.fromRequest"));
     return {
-      leadId: lead.id,
+      interestId: interest.id,
       name: contact.name ?? t("trips.whoWantsIn.noName"),
       email: contact.email,
       facts: parts.join(" · "),
-      certification: lead.personId
+      certification: interest.personId
         ? {
             text: belowBar
               ? certificationSummaryBelowRequirementText(t, summary, locale)
@@ -88,55 +88,59 @@ export function departureLeadRows(input: {
           }
         : null,
       belowBar,
-      offeredAt: lead.offeredAt,
+      offeredAt: interest.offeredAt,
     };
   });
 }
 
 /**
- * **One person, one row.** Offering a seat to a date or anytime lead writes a
- * departure row for it (`parent_lead_id`), so the same ask can be read from two
+ * **One person, one row.** Offering a seat to a date or anytime interest writes a
+ * departure row for it (`parent_interest_id`), so the same ask can be read from two
  * groups. This decides which group draws it:
  *
  * - **Not offered yet**: the ask stays in its own group (a date or anytime row),
  *   and an attached-but-unoffered child stays in "Asked for this departure"
- *   reading "from a request"; the date group leaves that lead out.
+ *   reading "from a request"; the date group leaves that interest out.
  * - **Offered**: the ask stays in its own group and reads "offered", and the
  *   child row leaves "Asked for this departure".
  */
 export function whoWantsInSources(input: {
-  departureLeads: Waitlist;
-  dateLeads: readonly DateLeadInReach[];
+  departureInterests: Waitlist;
+  dateInterests: readonly DateInterestInReach[];
   anytimeRecipients: readonly AnytimeRecipient[];
 }): {
-  departureLeads: Waitlist;
-  dateLeads: DateLeadInReach[];
+  departureInterests: Waitlist;
+  dateInterests: DateInterestInReach[];
   anytimeRecipients: AnytimeRecipient[];
-  /** When the offer on an anytime lead went, by person. */
+  /** When the offer on an anytime interest went, by person. */
   offeredAtByPerson: Map<string, Date | null>;
 } {
   const offeredChildren = new Set<string>();
-  const dateLeads = input.dateLeads.filter((row) => {
-    if (!row.departureLeadId) return true;
+  const dateInterests = input.dateInterests.filter((row) => {
+    if (!row.departureInterestId) return true;
     if (!row.offeredAt) return false;
-    offeredChildren.add(row.departureLeadId);
+    offeredChildren.add(row.departureInterestId);
     return true;
   });
   const byPerson = new Map(
-    input.departureLeads.flatMap((row) => (row.lead.personId ? [[row.lead.personId, row]] : [])),
+    input.departureInterests.flatMap((row) =>
+      row.interest.personId ? [[row.interest.personId, row]] : [],
+    ),
   );
   const offeredAtByPerson = new Map<string, Date | null>();
-  const anytimeRecipients = input.anytimeRecipients.filter(({ lead, person }) => {
-    const child = byPerson.get(person.id)?.lead;
+  const anytimeRecipients = input.anytimeRecipients.filter(({ interest, person }) => {
+    const child = byPerson.get(person.id)?.interest;
     if (!child) return true;
-    if (!child.offeredAt || child.parentLeadId !== lead.id) return false;
+    if (!child.offeredAt || child.parentInterestId !== interest.id) return false;
     offeredChildren.add(child.id);
     offeredAtByPerson.set(person.id, child.offeredAt);
     return true;
   });
   return {
-    departureLeads: input.departureLeads.filter((row) => !offeredChildren.has(row.lead.id)),
-    dateLeads,
+    departureInterests: input.departureInterests.filter(
+      (row) => !offeredChildren.has(row.interest.id),
+    ),
+    dateInterests,
     anytimeRecipients,
     offeredAtByPerson,
   };
@@ -147,22 +151,22 @@ const MESSAGE_QUOTE_LIMIT = 60;
 
 /**
  * **The "Asked for this date" rows**: open date requests that could make this
- * departure's day (`listDateLeadsInReach`), in the order people asked. A lead
+ * departure's day (`listDateInterestsInReach`), in the order people asked. An interest
  * already copied to this departure (attached from the schedule builder, or
  * offered a seat) is its child row's business: that row is in the first group,
  * reading "from a request", so it is left out here rather than drawn twice. A
  * request with no person keeps the name and address it was made with and has no
  * card to weigh; one that matched a diver carries their card.
  */
-export function dateLeadRows(input: {
-  leads: readonly DateLeadInReach[];
+export function dateInterestRows(input: {
+  interests: readonly DateInterestInReach[];
   certificationSummaries: Map<string, CertificationSummary>;
   departureRequirement: LastMinuteDepartureBar | null;
   t: StaffTranslator;
   locale: string;
 }): WhoWantsInRow[] {
   const { t, locale } = input;
-  return input.leads.map((row) => {
+  return input.interests.map((row) => {
     const summary = (row.personId ? input.certificationSummaries.get(row.personId) : null) ?? null;
     const belowBar = ranksBelow({ certification: summary }, input.departureRequirement);
     const dates = [row.preferredDate, row.alternateDate]
@@ -184,7 +188,7 @@ export function dateLeadRows(input: {
         : null,
     ].filter((part): part is string => Boolean(part));
     return {
-      leadId: row.id,
+      interestId: row.id,
       name: row.name ?? t("trips.whoWantsIn.noName"),
       email: row.email,
       facts: parts.join(" · "),
@@ -210,7 +214,7 @@ export function dateLeadRows(input: {
  * marks only a self-declared level that still ranks under it. Without a
  * `limit` every row is shown.
  */
-export function anytimeLeadRows(input: {
+export function anytimeInterestRows(input: {
   recipients: readonly AnytimeRecipient[];
   /** People who already have a row on this departure (offered, or waiting). */
   offeredAtByPerson: ReadonlyMap<string, Date | null>;
@@ -226,21 +230,21 @@ export function anytimeLeadRows(input: {
     input.recipients.length,
   );
   const rows = review.shown.map(({ recipient, belowRequirement }): WhoWantsInRow => {
-    const { lead, person } = recipient;
+    const { interest, person } = recipient;
     const window =
-      lead.availableFrom && lead.availableUntil
-        ? formatCalendarDateRange(lead.availableFrom, lead.availableUntil, locale)
-        : lead.availableFrom
+      interest.availableFrom && interest.availableUntil
+        ? formatCalendarDateRange(interest.availableFrom, interest.availableUntil, locale)
+        : interest.availableFrom
           ? t("trips.whoWantsIn.windowFrom", {
-              date: formatCalendarDate(lead.availableFrom, locale),
+              date: formatCalendarDate(interest.availableFrom, locale),
             })
-          : lead.availableUntil
+          : interest.availableUntil
             ? t("trips.whoWantsIn.windowUntil", {
-                date: formatCalendarDate(lead.availableUntil, locale),
+                date: formatCalendarDate(interest.availableUntil, locale),
               })
             : t("trips.whoWantsIn.anyDay");
     return {
-      leadId: lead.id,
+      interestId: interest.id,
       name: person.fullName,
       email: person.email,
       facts: [person.email ?? t("trips.whoWantsIn.noEmail"), window].join(" · "),
@@ -266,7 +270,7 @@ export function anytimeLeadRows(input: {
 export function whoWantsInGroupsOf(input: {
   guests: Pick<
     TripGuests,
-    "leads" | "dateLeads" | "lastMinute" | "certificationSummaries" | "dealRequirement"
+    "interests" | "dateInterests" | "lastMinute" | "certificationSummaries" | "dealRequirement"
   >;
   t: StaffTranslator;
   locale: string;
@@ -275,8 +279,8 @@ export function whoWantsInGroupsOf(input: {
   const { guests, t, locale, timezone } = input;
   const { certificationSummaries } = guests;
   const sources = whoWantsInSources({
-    departureLeads: guests.leads,
-    dateLeads: guests.dateLeads,
+    departureInterests: guests.interests,
+    dateInterests: guests.dateInterests,
     anytimeRecipients: guests.lastMinute.recipients,
   });
   const shared = {
@@ -285,7 +289,7 @@ export function whoWantsInGroupsOf(input: {
     t,
     locale,
   };
-  const anytime = anytimeLeadRows({
+  const anytime = anytimeInterestRows({
     recipients: sources.anytimeRecipients,
     offeredAtByPerson: sources.offeredAtByPerson,
     limit: LAST_MINUTE_RECIPIENT_PREVIEW_LIMIT,
@@ -295,12 +299,12 @@ export function whoWantsInGroupsOf(input: {
     {
       id: "departure",
       heading: t("trips.whoWantsIn.groupDeparture"),
-      rows: departureLeadRows({ leads: sources.departureLeads, timezone, ...shared }),
+      rows: departureInterestRows({ interests: sources.departureInterests, timezone, ...shared }),
     },
     {
       id: "date",
       heading: t("trips.whoWantsIn.groupDate"),
-      rows: dateLeadRows({ leads: sources.dateLeads, ...shared }),
+      rows: dateInterestRows({ interests: sources.dateInterests, ...shared }),
     },
     {
       id: "anytime",

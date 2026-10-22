@@ -1,5 +1,5 @@
 import type { listBoats } from "@/db/boats";
-import type { listDateLeadsByIds } from "@/db/lead-dates";
+import type { listDateInterestsByIds } from "@/db/interest-dates";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import type { BuilderRequestPlan } from "./ScheduleBuilder";
@@ -16,7 +16,7 @@ export function builderRequestPlan({
   shopBoats,
   st,
 }: {
-  requestRows: Awaited<ReturnType<typeof listDateLeadsByIds>>;
+  requestRows: Awaited<ReturnType<typeof listDateInterestsByIds>>;
   shop: Parameters<typeof departureShapeFor>[0] & {
     crewScheduleEnabled: boolean;
     diversPerDivemaster: number;

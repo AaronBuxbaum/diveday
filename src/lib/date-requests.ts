@@ -20,8 +20,8 @@ import { type CalendarDate, calendarDaysBetween } from "./calendar-date";
  * - **It is printed whole in exactly one of them.** Every entry carries
  *   `homeDate`, the first date its request named; the staff list renders the
  *   full record there and a one-line reference in every other group it reaches.
- *   Five identical four-line bodies for one diver is the same lead five times,
- *   not five leads.
+ *   Five identical four-line bodies for one diver is the same interest five times,
+ *   not five interests.
  * - **A flexible request joins every group near one of its own dates** rather
  *   than getting a bucket of its own. A bucket labelled "flexible" is a list
  *   nobody schedules from.
@@ -67,7 +67,7 @@ export type DateRequestEntry<T> = {
    * it named (`preferredDate ?? alternateDate`).
    *
    * A request lands in every group it could make, which is the whole point of
-   * the grouping — but printing it whole in each of them is the same lead said
+   * the grouping — but printing it whole in each of them is the same interest said
    * five times. Every group where `homeDate` is not the group's own date shows
    * a one-line reference pointing here instead. Recorded rather than derived by
    * the page, because "which date does this request belong to" is the same
@@ -128,6 +128,24 @@ export function dateRequestMatchFor(
 }
 
 /**
+ * The requests beside each departure date, and the first of those dates each
+ * request belongs to (so a request shows once among the booking flow's cards).
+ */
+export function dateRequestsByDay<T extends DateRequestDates & { id: string }>(
+  rows: readonly T[],
+  days: readonly CalendarDate[],
+): { byDay: Map<CalendarDate, T[]>; firstDayById: Map<string, CalendarDate> } {
+  const byDay = new Map(days.map((day) => [day, rows.filter((row) => matchFor(row, day))]));
+  const firstDayById = new Map<string, CalendarDate>();
+  for (const day of days) {
+    for (const row of byDay.get(day) ?? []) {
+      if (!firstDayById.has(row.id)) firstDayById.set(row.id, day);
+    }
+  }
+  return { byDay, firstDayById };
+}
+
+/**
  * Groups requests by the dates they name.
  *
  * `datesOf` reads the three fields off whatever row shape the caller holds, so
@@ -175,7 +193,7 @@ export function groupDateRequests<T>(
 }
 
 /**
- * The schedule builder, opened on this day with these leads carried forward.
+ * The schedule builder, opened on this day with these interests carried forward.
  *
  * The whole point of counting groups against a day: the builder opens on that
  * date with the full form already disclosed (ADR 20260806-one-trip-create-form)
@@ -185,7 +203,7 @@ export function groupDateRequests<T>(
  * Here rather than beside the Requests page's own row, because the week's
  * "Asked for" section offers the same act (ADR 20260919-one-idea, slice 23f)
  * and two surfaces building this URL by hand is how one of them comes to open
- * the builder on the wrong day or drop the leads.
+ * the builder on the wrong day or drop the interests.
  */
 export function addDepartureHref(
   shopSlug: string,

@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import type { CsvValue, ExportTable } from "@/lib/export";
 import { fileScopedShopContext } from "@/test/db";
 import { loadDiverExportBundleInput, loadShopExportBundleInput } from "./export";
-import { bookings, leads, people, trips } from "./schema";
+import { bookings, interests, people, trips } from "./schema";
 
 const ctx = fileScopedShopContext({ history: true });
 
@@ -145,11 +145,11 @@ describe("the export bundle, pinned", () => {
     );
   });
 
-  // Security review of #2656, minor 4: the seeded divers hold no lead, so the
-  // person scope of `leads.csv` was never pinned. One diver who waited, joined
+  // Security review of #2656, minor 4: the seeded divers hold no interest, so the
+  // person scope of `interests.csv` was never pinned. One diver who waited, joined
   // the last-minute list and asked for a date, beside a stranger's request
   // attached to the same departure that must not reach her bundle.
-  it("pins a diver's own leads.csv: every scope she asked in, nobody else's row", async () => {
+  it("pins a diver's own interests.csv: every scope she asked in, nobody else's row", async () => {
     const { db, shop } = ctx;
     const [diver] = await db
       .select({ id: people.id, email: people.email })
@@ -168,7 +168,7 @@ describe("the export bundle, pinned", () => {
     if (!diver || !trip) throw new Error("seeded diver or trip missing");
     const askedAt = new Date("2026-05-01T12:00:00Z");
     const [own, stranger] = await db
-      .insert(leads)
+      .insert(interests)
       .values([
         {
           shopId: shop.id,
@@ -189,9 +189,9 @@ describe("the export bundle, pinned", () => {
           askedAt,
         },
       ])
-      .returning({ id: leads.id });
-    if (!own || !stranger) throw new Error("date leads missing");
-    await db.insert(leads).values([
+      .returning({ id: interests.id });
+    if (!own || !stranger) throw new Error("date interests missing");
+    await db.insert(interests).values([
       {
         shopId: shop.id,
         scope: "departure",
@@ -216,7 +216,7 @@ describe("the export bundle, pinned", () => {
         scope: "departure",
         askedBy: "diver",
         tripId: trip.id,
-        parentLeadId: stranger.id,
+        parentInterestId: stranger.id,
         name: "Stranger Sam",
         email: "sam@example.com",
         partySize: 1,
@@ -225,14 +225,14 @@ describe("the export bundle, pinned", () => {
     ]);
 
     const input = await loadDiverExportBundleInput(db, shop.id, diver.id);
-    const table = input?.tables.find((candidate) => candidate.file === "leads.csv");
-    if (!table) throw new Error("leads.csv missing");
+    const table = input?.tables.find((candidate) => candidate.file === "interests.csv");
+    if (!table) throw new Error("interests.csv missing");
     const [file] = normalizeTables([table]);
     expect(table.rows).toHaveLength(3);
     expect(table.header).not.toContain("closed_as");
     expect(file?.text).not.toContain("Stranger Sam");
     await expect(`${file?.text}\n`).toMatchFileSnapshot(
-      "./__snapshots__/export-bundle.diver-leads.snap",
+      "./__snapshots__/export-bundle.diver-interests.snap",
     );
   });
 });

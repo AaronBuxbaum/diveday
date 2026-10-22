@@ -1,4 +1,4 @@
-import type { listOpenDateLeadsForDates } from "@/db/lead-dates";
+import type { listOpenDateInterestsForDates } from "@/db/interest-dates";
 import type { openAfterDiveRollCalls } from "@/db/today";
 import type { weekBoard } from "@/db/trips";
 // `instant = true` asserts that navigating *into* this page paints
@@ -128,7 +128,7 @@ export function boardWeekView({
   todayIso: string;
   range: { first: Date | null };
   weekRows: Awaited<ReturnType<typeof weekBoard>>;
-  weekAsks: Awaited<ReturnType<typeof listOpenDateLeadsForDates>>;
+  weekAsks: Awaited<ReturnType<typeof listOpenDateInterestsForDates>>;
   openRollCalls: Awaited<ReturnType<typeof openAfterDiveRollCalls>>;
   crewByTrip: Awaited<ReturnType<typeof weekCrewRead>>;
   boatMap: Map<string, string>;
@@ -322,7 +322,7 @@ export function boardWeekView({
   //
   // Every ask for a day in this week, not only the empty ones. The first cut
   // filtered out days that already had a departure, on the reading that a boat
-  // answers the ask — and the seed showed that up straight away: two leads
+  // answers the ask — and the seed showed that up straight away: two interests
   // asking for the 2nd and the 3rd were hidden by a four-seat buoyancy course
   // and a wreck charter that have nothing to do with what either group asked
   // for. Whether a departure answers a request is the staffer's judgement, and
@@ -332,7 +332,7 @@ export function boardWeekView({
     .filter((group) => weekDayIsos.includes(group.date))
     .map((group) => {
       const rows = group.entries.map((entry) => entry.request);
-      // A lead who did not say how many is one person, not none.
+      // An interest who did not say how many is one person, not none.
       const people = rows.reduce((total, row) => total + Math.max(1, row.partySize ?? 1), 0);
       // The reader's own list grammar, not a hard-coded comma: "A, B and C" is
       // English's, and `es-ES` writes it differently.

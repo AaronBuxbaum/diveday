@@ -223,11 +223,11 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
+- Interest
 - Invite suggestion
 - Invoice
 - Last-minute deal
 - Last-minute list
-- Lead
 - Learning materials
 - Legal hold
 - Lunch aboard

@@ -7,9 +7,9 @@ import { fileScopedShopContext } from "@/test/db";
 import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
-import { askAnytime } from "./leads";
+import { askAnytime } from "./interests";
 import { setBookingNitrox } from "./nitrox";
-import { boats, bookings, leads, nitroxCertifications, orders, people } from "./schema";
+import { boats, bookings, interests, nitroxCertifications, orders, people } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { getDepartureNeeds } from "./today-departure-needs";
@@ -65,7 +65,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       scope: "departure",
       askedBy: "diver",
     } as const;
-    await db.insert(leads).values([
+    await db.insert(interests).values([
       {
         ...asked,
         personId: front.id,
@@ -82,8 +82,8 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     const frontEntry = (
       await db
         .select()
-        .from(leads)
-        .where(and(eq(leads.tripId, reef.id), eq(leads.personId, front.id)))
+        .from(interests)
+        .where(and(eq(interests.tripId, reef.id), eq(interests.personId, front.id)))
     )[0];
     if (!frontEntry) throw new Error("front entry missing");
 
@@ -93,7 +93,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     // Depth is counted, but the offer targets the earliest joiner specifically.
     expect(row?.detail).toContain("2 want in");
     expect(row?.offer).toBeDefined();
-    expect(row?.offer?.leadId).toBe(frontEntry.id);
+    expect(row?.offer?.interestId).toBe(frontEntry.id);
     expect(row?.offer?.personName).toBe("Marina Reyes");
     expect(row?.offer?.personEmail).toBe("marina@example.com");
     expect(row?.offer?.tripId).toBe(reef.id);
@@ -123,7 +123,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       scope: "departure",
       askedBy: "diver",
     } as const;
-    await db.insert(leads).values({
+    await db.insert(interests).values({
       ...asked,
       personId: big.id,
       partySize: open + 1,
@@ -135,7 +135,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(tooBig?.detail).toContain("1 want in");
     expect(tooBig?.offer).toBeUndefined();
 
-    await db.insert(leads).values({
+    await db.insert(interests).values({
       ...asked,
       personId: small.id,
       partySize: 1,
@@ -147,7 +147,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(row?.offer?.personName).toBe("Solo Diver");
   });
 
-  it("does not count a lead who already holds a seat (seated means hidden)", async () => {
+  it("does not count a diver who already holds a seat (seated means hidden)", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -166,7 +166,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       scope: "departure",
       askedBy: "diver",
     } as const;
-    await db.insert(leads).values([
+    await db.insert(interests).values([
       {
         ...asked,
         personId: seated.id,

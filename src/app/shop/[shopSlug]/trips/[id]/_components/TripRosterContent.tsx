@@ -377,7 +377,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
               locale={locale}
               // **One waiting diver is worth carrying too** (fourth review,
               // item 31). The demand banner, and the carry door inside it,
-              // wait for a cluster; a full boat with one lead offered staff
+              // wait for a cluster; a full boat with one interest offered staff
               // only an offer of a boat with no seat. Under the list it is
               // about, whenever the banner is not standing.
               carry={
@@ -545,7 +545,7 @@ export function TripPromoteAndActivity({
 }
 
 /**
- * The demand banner's second door: hand the waiting leads to a departure that
+ * The demand banner's second door: hand the waiting interests to a departure that
  * is already on the board, including the one just added from "Schedule another
  * departure". The same departures a seat may move to (`seatMoveFor`).
  */
