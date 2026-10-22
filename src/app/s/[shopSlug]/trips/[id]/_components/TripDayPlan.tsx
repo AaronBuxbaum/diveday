@@ -89,6 +89,13 @@ export function dayProfileFacts(
  * page shows, and whether its gear comes with it. Read off the course row the
  * shop edits, never written again here, with its depth markers said in the
  * shop's unit as the course page says them.
+ *
+ * **One session, one day.** A trip page is one session, so it says that
+ * session's day of the plan and never the whole multi-day plan. A session
+ * records no plan day of its own (`trip_schedule_days` numbers its meetings,
+ * not the course's days), so the only day it can be matched to is a
+ * one-meeting session of a one-day plan: Discover Scuba's afternoon. Any other
+ * session says no plan day at all; the gear line is the course's either way.
  */
 export type CourseDayPlan = { days: CourseScheduleDay[]; gearIncluded: boolean };
 
@@ -96,11 +103,15 @@ export function courseDayPlan(
   course: CourseFacts | null | undefined,
   t: DiverTranslator,
   depthUnit: DepthUnit,
+  meetingDays: number,
 ): CourseDayPlan | undefined {
-  if (!course || (course.scheduleDays.length === 0 && !course.gearIncluded)) return undefined;
+  if (!course) return undefined;
+  const sessionDays =
+    meetingDays === 1 && course.scheduleDays.length === 1 ? course.scheduleDays : [];
+  if (sessionDays.length === 0 && !course.gearIncluded) return undefined;
   const format = courseDepthFormat(t, depthUnit);
   return {
-    days: course.scheduleDays.map((day) => ({
+    days: sessionDays.map((day) => ({
       ...day,
       title: resolveCourseDepths(day.title, format),
       items: day.items.map((item) => resolveCourseDepths(item, format)),
@@ -313,7 +324,9 @@ export function TripDayPlan({
   siteReviews?: readonly SiteReview[];
 }) {
   const t = diverTranslator(locale);
-  const course = profile ? courseDayPlan(profile.course, t, profile.depthUnit) : undefined;
+  const course = profile
+    ? courseDayPlan(profile.course, t, profile.depthUnit, profile.dayCount)
+    : undefined;
   if (briefings.length === 0 && !course) return null;
   const rhythm = profile ? dayRhythmLine(profile, briefings, t, locale, shop.timezone) : null;
   const rhythmLine = rhythm ? (

@@ -449,10 +449,42 @@ describe("TripDayPlan's course plan", () => {
   } as const;
 
   it("reads the course's own days, with depths in the shop's unit", () => {
-    const plan = courseDayPlan(course, t, "feet");
+    const plan = courseDayPlan(course, t, "feet", 1);
     expect(plan?.days[0]?.items[1]).toBe("One shallow open-water dive, maximum 40 feet");
-    expect(courseDayPlan(null, t, "meters")).toBeUndefined();
-    expect(courseDayPlan({ scheduleDays: [], gearIncluded: false }, t, "meters")).toBeUndefined();
+    expect(courseDayPlan(null, t, "meters", 1)).toBeUndefined();
+    expect(
+      courseDayPlan({ scheduleDays: [], gearIncluded: false }, t, "meters", 1),
+    ).toBeUndefined();
+  });
+
+  it("never lays a multi-day plan on one session's page", () => {
+    const threeDays = {
+      scheduleDays: [
+        { title: "Day 1: pool", items: ["Skills in the pool"] },
+        { title: "Day 2: first ocean dives", items: ["Open-water dives 1 and 2"] },
+        { title: "Day 3: certify", items: ["Open-water dives 3 and 4"] },
+      ],
+      gearIncluded: false,
+    };
+    // A session records no plan day of its own, so neither a one-meeting
+    // session nor the whole three-meeting run can say which day it is.
+    expect(courseDayPlan(threeDays, t, "meters", 1)).toBeUndefined();
+    expect(courseDayPlan(threeDays, t, "meters", 3)).toBeUndefined();
+    // The gear line is the course's, whichever day this is.
+    expect(courseDayPlan({ ...threeDays, gearIncluded: true }, t, "meters", 1)?.days).toEqual([]);
+    for (const dayCount of [1, 3]) {
+      cleanup();
+      render(
+        <TripDayPlan
+          briefings={[briefing()]}
+          shop={SHOP}
+          locale={DEFAULT_DIVER_LOCALE}
+          profile={{ ...profile, dayCount, course: threeDays }}
+        />,
+      );
+      expect(screen.queryByText(/^Day \d:/)).not.toBeInTheDocument();
+      expect(screen.queryByTestId("trip-course-plan")).not.toBeInTheDocument();
+    }
   });
 
   it("puts the course's afternoon and its gear under The day", () => {
