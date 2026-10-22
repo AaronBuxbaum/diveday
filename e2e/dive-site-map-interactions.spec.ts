@@ -130,13 +130,12 @@ test("browser back and All templates restore the camera while preview titles nam
     page.getByRole("button", { name: staff("diveSites.catalog.importToLibrary") }),
   ).toHaveCount(0);
   const overview = await markerPositions(page);
-  await expect.poll(() => catalogCamera(page)).not.toBeNull();
-  const originalCamera = await catalogCamera(page);
-  if (!originalCamera) throw new Error("Catalog camera was not saved");
+  // The overview is the map's own fit, not a camera anyone set: nothing is kept.
+  expect(await catalogCamera(page)).toBeNull();
   await map.getByRole("button", { name: "Zoom out", exact: true }).click();
-  // The stored camera changes on moveend, after Leaflet's rAF zoom begins and ends.
+  // The stored camera is written on moveend, after Leaflet's rAF zoom begins and ends.
   // A class-absence check alone can pass before that first animation frame.
-  await expect.poll(async () => (await catalogCamera(page))?.zoom).toBe(originalCamera.zoom - 1);
+  await expect.poll(() => catalogCamera(page)).not.toBeNull();
   // Leaflet puts the animation class on its map pane, not its outer container.
   // Reading marker coordinates during that transform captures an intermediate camera.
   await expect(map.locator(".leaflet-zoom-anim")).toHaveCount(0);

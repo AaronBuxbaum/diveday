@@ -11,8 +11,10 @@ import {
   E2E_CHUNK,
   e2eWorkers,
   excerpt,
+  mergeOnly,
   notRunHere,
   plan,
+  quickBase,
   quickPlan,
   runStep,
   stampCoverage,
@@ -461,5 +463,67 @@ describe("a step that hits its ceiling", () => {
       kill: (pid, signal) => killed.push([pid, signal]),
     });
     expect(killed).toEqual([[-4321, "SIGKILL"]]);
+  });
+});
+
+describe("a merge-only quick push", () => {
+  const reader = (answers) => (args) => {
+    const key = args.join(" ");
+    return key in answers ? answers[key] : null;
+  };
+  const pushed = "origin/claude/x";
+
+  it("is every commit since the last push being a merge of another branch", () => {
+    const git = reader({
+      [`rev-parse --verify --quiet ${pushed}`]: "abc",
+      [`rev-list --first-parent --no-merges ${pushed}..HEAD`]: "",
+      [`rev-list --first-parent --merges ${pushed}..HEAD`]: "m1",
+    });
+    expect(mergeOnly(git, "claude/x")).toBe(true);
+  });
+
+  it("is not a push with a commit of the branch's own, nothing new, or no pushed branch", () => {
+    const base = { [`rev-parse --verify --quiet ${pushed}`]: "abc" };
+    expect(
+      mergeOnly(
+        reader({
+          ...base,
+          [`rev-list --first-parent --no-merges ${pushed}..HEAD`]: "c1",
+          [`rev-list --first-parent --merges ${pushed}..HEAD`]: "m1",
+        }),
+        "claude/x",
+      ),
+    ).toBe(false);
+    expect(
+      mergeOnly(
+        reader({
+          ...base,
+          [`rev-list --first-parent --no-merges ${pushed}..HEAD`]: "",
+          [`rev-list --first-parent --merges ${pushed}..HEAD`]: "",
+        }),
+        "claude/x",
+      ),
+    ).toBe(false);
+    expect(mergeOnly(reader({}), "claude/x")).toBe(false);
+    expect(mergeOnly(reader(base), "")).toBe(false);
+  });
+});
+
+describe("the base's red in a quick run", () => {
+  it("is a warning naming what was not replayed, never a refusal", () => {
+    const decision = quickBase({
+      refuse: "Build named no test",
+      files: ["src/a.test.ts"],
+      specs: ["e2e/b.spec.ts"],
+      lines: [],
+    });
+    expect(decision.refuse).toBeNull();
+    expect([...decision.files, ...decision.specs]).toEqual([]);
+    expect(decision.lines.join("\n")).toMatch(/not blocking a quick run\): Build named no test/);
+    expect(decision.lines.join("\n")).toMatch(/src\/a\.test\.ts e2e\/b\.spec\.ts/);
+  });
+
+  it("says nothing when the base is green", () => {
+    expect(quickBase({ refuse: null, files: [], specs: [], lines: [] }).lines).toEqual([]);
   });
 });
