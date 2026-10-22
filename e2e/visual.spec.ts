@@ -11227,7 +11227,7 @@ test.describe("light mode — Claude's assists, lit", () => {
       await page.waitForURL(/checkpoint=after_dive_1/);
       const seen = page.getByRole("region", { name: "Seen" });
       // i18n-exempt: what the crew said, typed as they would
-      await seen.getByLabel("Or say what you saw").fill("a couple of rays and a big grouper");
+      await seen.getByLabel("Or say what you saw").fill("two stingrays and a big grouper");
       await seen.getByRole("button", { name: "Match" }).click();
       const add = seen.getByRole("button", { name: "Add these" });
       await add.waitFor();

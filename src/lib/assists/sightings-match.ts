@@ -62,8 +62,19 @@ export function sightingMatches(
 
 export function sightingsMatchFixture(request: { messages: unknown }): unknown {
   const content = String((request.messages as { content: string }[])[0]?.content ?? "{}");
-  const { offered = [] } = JSON.parse(content) as { offered?: { slug: string }[] };
-  return {
-    species: offered.slice(0, 2).map((chip, index) => ({ slug: chip.slug, count: index + 1 })),
+  const { offered = [], said = "" } = JSON.parse(content) as {
+    offered?: { slug: string; name?: string }[];
+    said?: string;
   };
+  // A chip the words name: the last word of its name ("grouper" in Goliath
+  // grouper), said once or plural, the plural counted as two. A capture of the
+  // rail then reads as a match, never as two chips unrelated to what was typed.
+  const words = said.toLowerCase().split(/[^a-z]+/);
+  const species = offered.flatMap((chip) => {
+    const noun = (chip.name ?? "").toLowerCase().split(" ").at(-1);
+    if (!noun) return [];
+    if (words.includes(`${noun}s`)) return [{ slug: chip.slug, count: 2 }];
+    return words.includes(noun) ? [{ slug: chip.slug, count: 1 }] : [];
+  });
+  return { species };
 }

@@ -165,25 +165,25 @@ export function WebsiteSetupPanel({
                   >
                     <span className="text-sm font-medium text-muted">{kind}</span>
                     <div className="min-w-0">
-                      {line.kind === "policy" && line.status === "open" ? (
-                        <Copyable
-                          value={line.text}
-                          hint={t("assistsFront.setup.policyHint")}
-                          copyLabel={t("assistsFront.setup.copy")}
-                          copiedLabel={t("assistsFront.setup.copied")}
-                          failedLabel={t("assistsFront.setup.copyFailed")}
-                          layout="inline"
-                        />
-                      ) : (
-                        <p className="font-medium text-foreground wrap-anywhere">{value}</p>
-                      )}
+                      <p className="font-medium text-foreground wrap-anywhere">{value}</p>
                       <p className="mt-1 text-sm text-muted wrap-anywhere">
                         {t("assistsFront.setup.source", { source: line.source })}
                       </p>
                     </div>
                     {line.status === "open" ? (
                       <div className="flex flex-wrap gap-2">
-                        {line.kind === "policy" ? null : (
+                        {/* A policy has nowhere here to go: its text is shown
+                            like any line's, and Copy stands where Accept would. */}
+                        {line.kind === "policy" ? (
+                          <Copyable
+                            value={line.text}
+                            hint={t("assistsFront.setup.policyHint")}
+                            copyLabel={t("assistsFront.setup.copy")}
+                            copiedLabel={t("assistsFront.setup.copied")}
+                            failedLabel={t("assistsFront.setup.copyFailed")}
+                            layout="inline"
+                          />
+                        ) : (
                           <form action={accept}>
                             <input type="hidden" name="key" value={line.key} />
                             <SubmitButton

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { callStructured } from "@/lib/claude/structured";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import { RECAP_LINE_SYSTEM, recapLine, recapLineCall } from "./recap-line";
-import { sightingMatches, sightingsMatchCall } from "./sightings-match";
+import { sightingMatches, sightingsMatchCall, sightingsMatchFixture } from "./sightings-match";
 
 const chips = [
   { slug: "green-sea-turtle", name: "Green sea turtle" },
@@ -10,6 +10,24 @@ const chips = [
 ];
 
 describe("sightings match", () => {
+  it("answers the e2e fixture with the chips the words name, not the first two offered", () => {
+    const offered = [
+      { slug: "blue-tang", name: "Blue tang" },
+      { slug: "southern-stingray", name: "Southern stingray" },
+      { slug: "goliath-grouper", name: "Goliath grouper" },
+    ];
+    const said = "two southern stingrays and a goliath grouper";
+    const request = {
+      messages: [sightingsMatchCall(said, offered).content].map((content) => ({ content })),
+    };
+    expect(sightingsMatchFixture(request)).toEqual({
+      species: [
+        { slug: "southern-stingray", count: 2 },
+        { slug: "goliath-grouper", count: 1 },
+      ],
+    });
+  });
+
   it("proposes offered chips with counts", async () => {
     const provider = fakeClaude({
       reply: () =>
