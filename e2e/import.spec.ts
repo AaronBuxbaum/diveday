@@ -437,7 +437,9 @@ test.describe("contact import — payment and receipt history", () => {
     });
     const historyLinkBox = await historyLink.boundingBox();
     if (!historyLinkBox) throw new Error("Imported-history review link is missing");
-    expect(historyLinkBox.height).toBeGreaterThanOrEqual(44);
+    // Bounding boxes come back as 43.99993896484375px for a 44px link; restore
+    // Chromium's 1/64px layout precision, as visual-consistency.spec.ts does.
+    expect(Math.round(historyLinkBox.height * 64) / 64).toBeGreaterThanOrEqual(44);
     const emptySeatLinks = page
       .getByRole("region", { name: "Departures that left with empty seats" })
       .getByRole("link");
