@@ -1,11 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "327ac268-40a2-4c00-a1c2-223825bb6853",
+  "id": "031b1b69-edc7-4d38-9ef1-237ae13ae5dd",
   "prevIds": [
-    "26d721d8-b859-4b65-b33c-57f1296d0255",
-    "364c20fe-19fa-435f-b3a9-daeba01f5dee",
-    "c089d4f2-0965-4063-91d7-7fd43228b9bc"
+    "7cdfab53-2b91-40f6-af9b-8b4b0411eb85"
   ],
   "ddl": [
     {
@@ -697,6 +695,7 @@
         "wetsuit",
         "boots",
         "mask_fins",
+        "fins",
         "weights",
         "drysuit",
         "hood",
@@ -1978,6 +1977,12 @@
     {
       "isRlsEnabled": false,
       "name": "tips",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "retention_prune_state",
       "entityType": "tables",
       "schema": "public"
     },
@@ -7105,7 +7110,7 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
-      "default": "'[\"bcd\",\"regulator\",\"wetsuit\",\"mask_fins\",\"weights\",\"dive_computer\"]'",
+      "default": "'[\"bcd\",\"regulator\",\"wetsuit\",\"mask\",\"fins\",\"weights\",\"dive_computer\"]'",
       "generated": null,
       "identity": null,
       "name": "rental_items",
@@ -14350,6 +14355,32 @@
       "generated": null,
       "identity": null,
       "name": "rents_mask_fins",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_fit_profiles"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "rents_mask",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_fit_profiles"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "rents_fins",
       "entityType": "columns",
       "schema": "public",
       "table": "rental_fit_profiles"
@@ -21932,6 +21963,32 @@
       "entityType": "columns",
       "schema": "public",
       "table": "tips"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "retention_prune_state"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "next_table",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "retention_prune_state"
     },
     {
       "type": "uuid",
@@ -45893,6 +45950,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "retention_prune_state_pkey",
+      "schema": "public",
+      "table": "retention_prune_state",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "recap_photos_pkey",
       "schema": "public",
       "table": "recap_photos",
@@ -47509,6 +47576,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "tips"
+    },
+    {
+      "value": "\"id\" = 'weekly'",
+      "name": "retention_prune_state_singleton",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "retention_prune_state"
     },
     {
       "value": "\"deleted_at\" is not null or jsonb_array_length(\"categories\") > 0",
