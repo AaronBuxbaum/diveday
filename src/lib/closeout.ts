@@ -334,6 +334,12 @@ export type CloseoutDeparture = {
   gapReason: RollCallGapReason | null;
   diveNumber: number;
   uncounted: number;
+  /**
+   * Set only on a `still_out` count still being taken
+   * (`countStillBeingTaken`): who is still to mark at `diveNumber`, each half
+   * apart, so the station never folds a crew member into "people".
+   */
+  openCount?: OpenCount;
   /** See `CloseoutTripInput.recapShoutout`. */
   recapShoutout: string | null;
   recapSentAt: Date | null;
@@ -362,6 +368,9 @@ export type CloseoutDeparture = {
   }[];
 };
 
+/** People (bookings) and crew still to mark at a count being taken. */
+export type OpenCount = { people: number; crew: number };
+
 export type DayCloseoutState = {
   /** The shop-local date, as "YYYY-MM-DD". */
   shopDay: string;
@@ -387,7 +396,7 @@ function departureStatus(
   now: Date,
   timeZone: string,
   historical: boolean,
-): Pick<CloseoutDeparture, "status" | "gapReason" | "diveNumber" | "uncounted"> {
+): Pick<CloseoutDeparture, "status" | "gapReason" | "diveNumber" | "uncounted" | "openCount"> {
   if (gap) {
     // **A count still being taken at sea is not a count never closed**
     // (visual triage of PR #2918, item 1b), within the narrow window
@@ -399,6 +408,10 @@ function departureStatus(
         gapReason: null,
         diveNumber: gap.diveNumber,
         uncounted: gap.uncounted,
+        openCount: {
+          people: openAt(tripGaps, "after_dive_uncounted"),
+          crew: openAt(tripGaps, "crew_uncounted"),
+        },
       };
     }
     return {
@@ -474,9 +487,11 @@ const NOT_BACK_ABOARD_REASONS: ReadonlySet<RollCallGapReason> = new Set([
  * 5. The whole trip lies within the shop day `now` is on. A multi-day trip
  *    never softens: which day holds the open dive is not known here, and a
  *    count left open overnight is not in progress.
- * 6. The open checkpoint is the latest any result was recorded at, and no
- *    later dive is logged: an earlier dive's count left open while the boat
- *    moved on is how a diver is left at the first site.
+ * 6. **Every** gap on the trip, diver and crew, is an unfinished count at
+ *    the latest checkpoint any result was recorded at, and no later dive is
+ *    logged: an earlier dive's count left open while the boat moved on is how
+ *    a diver or a guide is left at the first site, whichever half it is and
+ *    whichever gap headlines (re-review B1).
  */
 function countStillBeingTaken(
   trip: CloseoutTripInput,
@@ -488,6 +503,12 @@ function countStillBeingTaken(
 ): boolean {
   if (!UNFINISHED_COUNT_REASONS.has(gap.reason)) return false;
   if (tripGaps.some((other) => NOT_BACK_ABOARD_REASONS.has(other.reason))) return false;
+  for (const other of tripGaps) {
+    if (!UNFINISHED_COUNT_REASONS.has(other.reason)) return false;
+    if (other.latestMarkedDive === undefined) return false;
+    if (other.diveNumber !== other.latestMarkedDive) return false;
+    if (other.diveNumber !== gap.diveNumber) return false;
+  }
   if (historical) return false;
   if (!hasSailed(trip.startsAt, now)) return false;
   if (now.getTime() >= trip.endsAt.getTime()) return false;
@@ -498,6 +519,16 @@ function countStillBeingTaken(
   if (gap.latestMarkedDive === undefined || gap.latestMarkedDive !== gap.diveNumber) return false;
   if (trip.loggedDives === undefined || trip.loggedDives > gap.diveNumber) return false;
   return true;
+}
+
+/** The open count of one half (`reason`) on a trip's gaps; `0` when that half has none. */
+function openAt(
+  tripGaps: readonly CloseoutRollCallGap[],
+  reason: "after_dive_uncounted" | "crew_uncounted",
+): number {
+  return tripGaps
+    .filter((other) => other.reason === reason)
+    .reduce((total, other) => total + other.uncounted, 0);
 }
 
 /**
@@ -607,6 +638,8 @@ export type StationClose = {
   gapReason: RollCallGapReason | null;
   diveNumber: number;
   uncounted: number;
+  /** See `CloseoutDeparture.openCount`. */
+  openCount?: OpenCount;
   /** The roster the day is judged against — non-cancelled bookings. */
   booked: number;
   /**
@@ -801,6 +834,7 @@ export function assembleEveningClose(
         gapReason: departure.gapReason,
         diveNumber: departure.diveNumber,
         uncounted: departure.uncounted,
+        ...(departure.openCount ? { openCount: departure.openCount } : {}),
         booked: departure.booked,
         sailed: departure.sailed,
         back: Math.max(0, departure.sailed - missing),

@@ -1,4 +1,4 @@
-import type { CloseoutDepartureStatus, CloseoutPlanChange } from "@/lib/closeout";
+import type { CloseoutDepartureStatus, CloseoutPlanChange, OpenCount } from "@/lib/closeout";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { PlanChangeReason } from "@/lib/plan-change";
 import type { RollCallGapReason } from "@/lib/today";
@@ -58,6 +58,7 @@ export function closeoutDepartureDetailText(
     gapReason: RollCallGapReason | null;
     uncounted: number;
     diveNumber: number;
+    openCount?: OpenCount;
   },
   time: string,
 ): string {
@@ -68,16 +69,23 @@ export function closeoutDepartureDetailText(
     });
   }
   switch (departure.status) {
-    case "still_out":
-      // A count still being taken keeps its dive and count (src/lib/closeout.ts,
-      // `countStillBeingTaken`), so the station says it is open.
-      return departure.diveNumber >= 1 && departure.uncounted > 0
-        ? t("closeout.departures.detail.stillOutCountOpen", {
-            dive: departure.diveNumber,
-            count: departure.uncounted,
-            time,
-          })
-        : t("closeout.departures.detail.stillOut", { time });
+    case "still_out": {
+      // A count still being taken keeps its dive and each half's open count
+      // (src/lib/closeout.ts, `countStillBeingTaken`), so the station says it
+      // is open and who is still to mark: people and crew, never folded.
+      const open = departure.openCount;
+      if (open && departure.diveNumber >= 1 && open.people + open.crew > 0) {
+        const half = open.people > 0 && open.crew > 0 ? "both" : open.crew > 0 ? "crew" : "people";
+        return t("closeout.departures.detail.stillOutCountOpen", {
+          dive: departure.diveNumber,
+          half,
+          people: open.people,
+          crew: open.crew,
+          time,
+        });
+      }
+      return t("closeout.departures.detail.stillOut", { time });
+    }
     case "not_departed":
       return t("closeout.departures.detail.notDeparted", { time });
     default:

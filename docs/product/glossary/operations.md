@@ -66,9 +66,10 @@
   maintaining. The asymmetry is affordable only because the head count returns before any of it:
   the promotion is reached solely over a departure whose divers are all already counted back
   aboard. One exception runs the other way: an after-dive count started and still open reads
-  `still_out` ("Dive 2 count open, 2 to mark"), a count in progress rather than one never closed,
-  only before she is due back, on a trip within today's shop day, at the latest checkpoint anybody
-  marked with no later dive logged, and never on a past day's record; a person recorded not back
+  `still_out` ("Dive 2 count open, 2 people and 1 crew member to mark"), a count in progress rather
+  than one never closed, only before she is due back, on a trip within today's shop day, when every
+  open count on the boat, diver and crew, is at the latest checkpoint anybody marked with no later
+  dive logged, and never on a past day's record; a person recorded not back
   aboard, diver or crew, reads `unreconciled` wherever the boat is. There is **no act of closing the day**: a "Close the day" button that recorded who closed
   it (`day_closeouts`) and a leftovers list with per-row Dismiss were removed on 2026-10-05,
   because nothing read the record and the leftovers repeated Needs you (ADR 20260804-day-closeout,

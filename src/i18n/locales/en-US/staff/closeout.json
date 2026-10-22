@@ -30,7 +30,7 @@
     "detail": {
       "allHome": "Nobody was aboard.",
       "stillOut": "Due back at {time}",
-      "stillOutCountOpen": "Dive {dive} count open, {count, plural, one {# to mark} other {# to mark}} · due back at {time}",
+      "stillOutCountOpen": "Dive {dive} count open, {half, select, crew {{crew, plural, one {# crew member} other {# crew members}}} both {{people, plural, one {# person} other {# people}} and {crew, plural, one {# crew member} other {# crew members}}} other {{people, plural, one {# person} other {# people}}}} to mark · due back at {time}",
       "notDeparted": "Departs at {time}.",
       "missingDiver": "{count, plural, one {# person was marked not back aboard after dive {dive}.} other {# people were marked not back aboard after dive {dive}.}} Find them. The count closes on the manifest.",
       "missingCrew": "{count, plural, one {# crew member was marked not back aboard after dive {dive}.} other {# crew members were marked not back aboard after dive {dive}.}} Find them. The count closes on the manifest.",

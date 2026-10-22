@@ -103,6 +103,41 @@ describe("an open count on a boat still out", () => {
       expect(departure?.diveNumber).toBe(2);
       expect(departure?.uncounted).toBe(2);
     }
+    // Each half's open count is carried apart, so the station can name both.
+    expect(read(atSea(), diveTwo("after_dive_uncounted"))?.openCount).toEqual({
+      people: 2,
+      crew: 0,
+    });
+    expect(read(atSea(), diveTwo("crew_uncounted"))?.openCount).toEqual({ people: 0, crew: 2 });
+    const both = read(atSea(), [
+      diveTwo("after_dive_uncounted"),
+      { ...diveTwo("crew_uncounted"), uncounted: 1 },
+    ]);
+    expect(both?.status).toBe("still_out");
+    expect(both?.openCount).toEqual({ people: 2, crew: 1 });
+  });
+
+  it("never softens when the other half's count is open at an earlier dive (re-review B1)", () => {
+    const diveOne = (reason: "after_dive_uncounted" | "crew_uncounted"): CloseoutRollCallGap => ({
+      tripId: "t1",
+      reason,
+      diveNumber: 1,
+      uncounted: 1,
+      latestMarkedDive: 2,
+    });
+    // Divers mid-count at dive 2; a divemaster never marked back after dive 1.
+    expectLoud(
+      read(atSea(), [diveTwo("after_dive_uncounted"), diveOne("crew_uncounted")]),
+      "after_dive_uncounted",
+    );
+    const crewLeft = read(atSea(), [diveTwo("after_dive_uncounted"), diveOne("crew_uncounted")]);
+    expect(crewLeft?.openCount).toBeUndefined();
+    // The mirror: crew mid-count at dive 2; a diver never marked back after dive 1.
+    expectLoud(
+      read(atSea(), [diveTwo("crew_uncounted"), diveOne("after_dive_uncounted")]),
+      "after_dive_uncounted",
+      1,
+    );
   });
 
   it("reads unreconciled from the moment she is due back, not an hour later (captain F1)", () => {
@@ -201,14 +236,31 @@ describe("an open count on a boat still out", () => {
   it("says the count is open and how many are left to mark (captain F3, auditor F3)", () => {
     const departure = read(atSea(), diveTwo("after_dive_uncounted"));
     if (!departure) throw new Error("no departure");
-    expect(closeoutDepartureDetailText(en, departure, "10:00\u00a0AM")).toBe(
-      "Dive 2 count open, 2 to mark · due back at 10:00\u00a0AM",
+    const open = (people: number, crew: number) => ({ ...departure, openCount: { people, crew } });
+    const time = "10:00\u00a0AM";
+    expect(closeoutDepartureDetailText(en, departure, time)).toBe(
+      "Dive 2 count open, 2 people to mark · due back at 10:00\u00a0AM",
     );
-    expect(closeoutDepartureDetailText(es, { ...departure, uncounted: 1 }, "10:00")).toBe(
-      "Recuento de la inmersión 2 abierto, falta 1 por marcar · vuelve a las 10:00",
+    expect(closeoutDepartureDetailText(en, open(1, 0), time)).toBe(
+      "Dive 2 count open, 1 person to mark · due back at 10:00\u00a0AM",
+    );
+    expect(closeoutDepartureDetailText(en, open(0, 1), time)).toBe(
+      "Dive 2 count open, 1 crew member to mark · due back at 10:00\u00a0AM",
+    );
+    expect(closeoutDepartureDetailText(en, open(2, 2), time)).toBe(
+      "Dive 2 count open, 2 people and 2 crew members to mark · due back at 10:00\u00a0AM",
+    );
+    expect(closeoutDepartureDetailText(es, open(1, 0), "10:00")).toBe(
+      "Recuento de la inmersión 2 abierto, falta 1 persona por marcar · vuelve a las 10:00",
     );
     expect(closeoutDepartureDetailText(es, departure, "10:00")).toBe(
-      "Recuento de la inmersión 2 abierto, faltan 2 por marcar · vuelve a las 10:00",
+      "Recuento de la inmersión 2 abierto, faltan 2 personas por marcar · vuelve a las 10:00",
+    );
+    expect(closeoutDepartureDetailText(es, open(0, 2), "10:00")).toBe(
+      "Recuento de la inmersión 2 abierto, faltan 2 tripulantes por marcar · vuelve a las 10:00",
+    );
+    expect(closeoutDepartureDetailText(es, open(1, 1), "10:00")).toBe(
+      "Recuento de la inmersión 2 abierto, faltan 1 persona y 1 tripulante por marcar · vuelve a las 10:00",
     );
     // A boat with no count started still reads its plain return time.
     expect(
