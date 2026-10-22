@@ -513,6 +513,12 @@ const tripReminderFields = {
   replyKeywords: z.boolean().optional(),
   /** A course session: the sentence says it starts, where a fun dive sails. */
   courseSession: z.boolean().optional(),
+  /**
+   * The fly-safe wait in hours, set only on the night-before reminder for a
+   * diver whose last boat with the shop this is (`readReminderFlySafeHours`).
+   * The rule in hours, never a clock time (H-150): a late boat moves the time.
+   */
+  flySafeHours: z.number().int().min(12).max(48).optional(),
 };
 
 // One literal per cadence so the delivery row's `kind` is the cadence itself,

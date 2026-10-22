@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { temperatureUnitFor } from "@/lib/temperature-units";
-import { fileScopedShopContext, unseededTestDb } from "@/test/db";
+import { fileScopedShopContext, seededShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import { courses, divePackages, shops, trips } from "./schema";
 import {
@@ -12,6 +12,7 @@ import {
   listShopsForDiverPicker,
   listShopsForSitemap,
   setShopAddress,
+  setShopCrewLead,
   setShopDepthUnit,
   setShopReopensOn,
   setShopSearchListing,
@@ -128,6 +129,29 @@ describe("setShopTemperatureUnit", () => {
       .from(trips)
       .where(eq(trips.id, trip.id));
     expect(after?.waterTemperatureC).toBe(24);
+  });
+});
+
+/** Ux-delight sheet 2026-10-22, item 2 (H-149): "Crew arrive N minutes before divers". */
+describe("setShopCrewLead", () => {
+  it("starts a new shop at 30 minutes, and stores or clears the shop's choice", async () => {
+    const { db, shop } = ctx;
+    const [fresh] = await db
+      .insert(shops)
+      .values({ name: "Crew Shop", slug: "crew-lead-default", timezone: "America/New_York" })
+      .returning();
+    expect(fresh?.crewLeadMinutes).toBe(30);
+    expect((await setShopCrewLead(db, shop.id, 45))?.crewLeadMinutes).toBe(45);
+    expect((await setShopCrewLead(db, shop.id, null))?.crewLeadMinutes).toBeNull();
+    expect((await getShopBySlug(db, shop.slug))?.crewLeadMinutes).toBeNull();
+  });
+
+  it("is refused by the table outside 5 to 180 minutes", async () => {
+    // Each refusal in its own database: the first aborts the transaction it runs in.
+    for (const minutes of [0, 181]) {
+      const { db, shop } = await seededShopContext();
+      await expect(setShopCrewLead(db, shop.id, minutes)).rejects.toThrow();
+    }
   });
 });
 

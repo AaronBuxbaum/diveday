@@ -82,9 +82,12 @@ async function pathHash(path: string): Promise<string> {
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/** Every entry in the copy's cache, the one copy included. */
-async function clearCopies(cache: Cache): Promise<void> {
-  for (const request of await cache.keys()) await cache.delete(request);
+/** Every entry in the copy's cache, the one copy included unless it is `keep`. */
+async function clearCopies(cache: Cache, keep?: string): Promise<void> {
+  for (const request of await cache.keys()) {
+    if (keep && new URL(request.url).pathname === keep) continue;
+    await cache.delete(request);
+  }
 }
 
 /** The cache key for a request this module may handle, or null for every other. */
@@ -143,8 +146,10 @@ export async function saveReadyPage(
       headers,
     },
   );
-  await clearCopies(cache);
+  // Replace, then sweep: an offline reload landing mid-save (two saves overlap,
+  // the navigation's and the page's keep request) still finds a copy.
   await cache.put(READY_COPY_KEY, copy);
+  await clearCopies(cache, READY_COPY_KEY);
   return true;
 }
 

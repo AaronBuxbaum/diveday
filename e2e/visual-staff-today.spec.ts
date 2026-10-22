@@ -5,7 +5,7 @@
  * `e2e/visual-harness.ts`, and the procedure is the e2e-and-visual skill.
  */
 import { clearCourseForms } from "./course-form-only";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   bookOpenWaterSession,
   counterPath,
@@ -15,6 +15,7 @@ import {
   openCounterFor,
   openPaperWaiverForm,
   openRosterDetails,
+  openTodayBoatFolds,
   requireCourseForm,
   STAFF_DAY_HEADING,
   scheduleCrewedOpenWaterSession,
@@ -44,6 +45,25 @@ for (const scheme of ["light", "dark"] as const) {
 
     test.describe("staff", () => {
       signedInAsOwner();
+
+      /**
+       * **Crew get a dock time of their own** (ux-delight sheet 2026-10-22,
+       * item 2; H-149): the demo captain's "Your week" reads "At the dock",
+       * 30 minutes before the divers, from the shop's crew time.
+       */
+      test.describe("as the captain", () => {
+        signedInAs("captain");
+
+        test(`a captain's week names the crew's own dock time (${scheme})`, async ({ page }) => {
+          await page.goto("/shop/blue-mantis");
+          await page.getByRole("heading", { name: "Your week" }).waitFor();
+          await page
+            .getByText(/At the dock \d{1,2}:\d\d\s[AP]M · leaves/)
+            .first()
+            .waitFor();
+          await capture(page, "today-captain-your-week", scheme);
+        });
+      });
 
       test(`the day spine renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis");
@@ -219,6 +239,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`failed emails batch into one row (${scheme})`, async ({ page, request }) => {
         await request.post("/api/test/seed-trouble-states?failedEmails=1");
         await page.goto("/shop/blue-mantis");
+        // A chore on a long boat: the row sits behind "and N more" (foldBoatRows).
+        await openTodayBoatFolds(page);
         await page.getByRole("button", { name: "Resend confirmations" }).waitFor();
         await capture(page, "today-failed-emails", scheme);
       });

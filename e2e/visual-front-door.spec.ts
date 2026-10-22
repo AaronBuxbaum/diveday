@@ -6,6 +6,7 @@
  */
 import type { Page } from "@playwright/test";
 import { LISTED_SHOP_SLUGS } from "../src/db/seed-identifiers";
+import { diverTranslator } from "../src/i18n/messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { publicFindMyBookingPath } from "../src/lib/public-routes";
 import { expect, signedInAsOwner, test } from "./fixtures";
@@ -45,6 +46,31 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Send it to the shop" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "shopfront-register", scheme);
+      });
+
+      /**
+       * **The night-before reminder, on the diver's last boat** (ux-delight
+       * sheet 2026-10-22, item 1; H-150): the fly-safe rule in hours under
+       * the dock time, never a clock time. The email as sent, from the
+       * preview route's fixture notification.
+       */
+      test(`the night-before reminder email says the fly-safe hours (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const response = await request.get("/api/test/email-previews");
+        expect(response.ok()).toBe(true);
+        const { previews } = (await response.json()) as {
+          previews: { kind: string; message: { html: string } }[];
+        };
+        const reminder = previews.find((preview) => preview.kind === "trip_reminder_24h");
+        if (!reminder) throw new Error("no night-before reminder preview");
+        await page.setContent(reminder.message.html);
+        const flySafe = diverTranslator("en-US")("notifications.tripReminder.flySafe", {
+          count: 24,
+        });
+        await page.getByText(flySafe).waitFor();
+        await capture(page, "email-reminder-night-before", scheme);
       });
 
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {

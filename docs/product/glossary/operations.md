@@ -19,11 +19,16 @@
   row ranked. Rows bound to no departure (unanswered messages, found items waiting to go home)
   follow every boat as **The desk** group. A row about the shop that names a boat, such as a blank
   emergency reference, is filed under that boat so it keeps its rank. It sits under the day's
-  departures, which carry no rows of their own. A status list, not a page: an empty one is not drawn. A row about one diver is
-  titled with their name over what is wrong in a few words ("Waiver not signed, not sent yet."); a
-  row for several says it as one sentence ("9 divers not certified for this trip.") and names
-  nobody. Neither carries the levels or the other blockers — the roster and the diver record carry
-  the full sentence. Failed emails of one kind and one cause are one row with one resend, however
+  departures, which carry no rows of their own. A status list, not a page: an empty one is not drawn. Each diver is named
+  once under each boat they are on: one row with their name over what is wrong in a few words
+  ("Waiver not signed, not sent yet."), or, when several things are open for them, over that sentence and every other
+  item ("Priya Sharma · Waiver not signed, not sent yet; also emergency contact"). A readiness
+  blocker always leads and keeps its own button and its own words. Counts stay only
+  for what cannot name a person, such as a boat's open orders, and for a batch fix: two or more
+  divers on a boat sharing a waiver gap get one row above them that sends every waiver at once. A boat with many rows shows its
+  first five and folds the rest behind "and N more"; a danger row or a readiness blocker never
+  folds. No row carries the
+  levels — the roster and the diver record carry the full sentence. Failed emails of one kind and one cause are one row with one resend, however
   many people they missed. **A crew reader's lens** (UX audit 2026-10-07, item 7): for a captain or
   divemaster who crews one of today's boats, the list leads with that boat's rows, every
   danger-tone row about any boat (a diver unaccounted for is everyone's to see), and any row about
@@ -551,6 +556,12 @@
   shop in settings because real muster times vary; it drives the arrival copy on booking
   confirmations, the diver's dock-day rhythm, and every pre-trip reminder, so no surface hardcodes
   "30 minutes".
+- **Crew dock time** — when a crew member should be at the dock for a departure (`crewCallAt`,
+  `src/lib/dock-call.ts`): the shop's crew lead ("Crew arrive N minutes before divers",
+  `shops.crew_lead_minutes`, default 30, H-149) before the divers' dock call time, or with none set
+  the divers' dock call time, which the line names as the divers'. A shift of their own that starts
+  before the departure and is still running at that call wins only when it starts earlier, so the
+  line never names a time later than their own shift, and a shift never makes it later.
 - **Export bundle** — the self-serve ZIP of the shop's records as documented RFC-4180 CSVs plus a
   README manifest: people and roles, all certification kinds, trips with their boarding gates and
   crew, series, bookings with payment state, wait lists, the roll-call ledger, waiver templates
@@ -1678,7 +1689,9 @@
   `trip_reminder_7d` is `week_out`, `trip_reminder_24h` is `tonight` and `trip_recap` is `home`.
   Booking sends one message, `booking_confirmation`, the `booked` state: the waiver link rides in it
   (UX review 2026-10-11, item 7), so there is no second booking-time email. The sentence says how many things the diver still has to finish
-  when there are any, and the recap's sentence is the fly-safe sentence when one exists. The 7-day
+  when there are any, and the recap's sentence is the fly-safe sentence when one exists. The one
+  exception is `tonight` before a diver's last boat with the shop: a second paragraph under the
+  dock time says the fly-safe rule in hours (H-150, see **Earliest flight**). The 7-day
   and 24-hour cadences and the recap's four-hour floor are unchanged. Renderer in
   `src/lib/notifications/diver-state-email.ts`. The booked message still carries the waiver link,
   the course's materials and the terms the diver agreed to, which no thread page has to repeat
@@ -1949,11 +1962,11 @@
 - **Your week** — a crew member's next three departures, on their Today below the day: the boat
   and departure, when, their job on it (`trip_assignments.trip_role`, "On the crew" when the
   roster did not say), and the one crew gap the staffing week would draw on it, from the same pass
-  (`getStaffingView`'s `gapTrips`). When reads "At the dock 6:15 AM · leaves 7:00 AM" from their
-  own shift that covers the departure and starts no more than three hours before it, taken with
-  the shop's dock call if that is earlier; with no such shift it reads "Divers at the dock 6:30 AM
-  · leaves 7:00 AM", because the divers' call is not the crew's (`crewCallAt` in
-  `src/lib/dock-call.ts`). The window is tomorrow and the six days after it in the shop's zone;
+  (`getStaffingView`'s `gapTrips`). When reads "At the dock 6:00 AM · leaves 7:00 AM" from the
+  crew dock time (the shop's crew lead, or an earlier shift of their own still running at it); with
+  no crew lead set and no earlier shift it reads "Divers at the dock 6:30 AM · leaves 7:00 AM",
+  because the divers' call is not the crew's (`crewCallAt` in `src/lib/dock-call.ts`). A call on
+  an earlier day than the departure names its own weekday. The window is tomorrow and the six days after it in the shop's zone;
   today's boat is already badged on the spine, including one that has already sailed. Shown to any
   reader with a crew assignment, whatever their role, at a shop that plans its crew
   (`shops.crew_schedule_enabled`), less the sessions "Your sessions" already lists (fourth review

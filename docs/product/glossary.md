@@ -179,6 +179,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Course session
 - Courtesy message
 - Crew clash
+- Crew dock time
 - Crew gap
 - Crew month line
 - Crew news

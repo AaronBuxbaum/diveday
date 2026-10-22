@@ -311,6 +311,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "public-trip-full", scheme);
       });
 
+      /**
+       * **A first-timer's course session** (UX sheet 2026-10-22, item 3). Under
+       * The day, the course's own "Your afternoon" and, since the seed's
+       * Discover Scuba includes its gear, "Gear is included." The page where
+       * she pays now says what the course page says.
+       */
+      test(`a course session's page carries the afternoon and the gear (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis");
+        await page
+          .getByRole("link", { name: /Discover Scuba — Pool & Reef/ })
+          .first()
+          .click();
+        await page.getByTestId("trip-course-plan").getByText("Gear is included.").waitFor();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await capture(page, "public-trip-course-session", scheme);
+      });
+
       test(`the pitch's door opens onto the whole briefing (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis");
         await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();

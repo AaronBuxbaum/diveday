@@ -1,3 +1,4 @@
+import { diverTranslator } from "../src/i18n/messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -24,6 +25,7 @@ import {
 signedInAsOwner();
 
 const SHOP = "blue-mantis";
+const diver = diverTranslator("en-US");
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
 test.describe("weather blow-out cascade", () => {
@@ -224,5 +226,15 @@ test.describe("weather blow-out cascade", () => {
     // would be worth nothing, because it would be true of everybody.
     await expect(page.getByText("Your signed waiver")).toHaveCount(0);
     await expect(page.getByText("Your certification")).toHaveCount(0);
+
+    // **And one boat to ask for** (UX sheet 2026-10-22, item 5): the soonest
+    // departure of the same kind at the same price or lower with a seat free,
+    // as an ask the desk confirms. Once asked, the card says so in its place.
+    await page.getByRole("button", { name: /^Ask to move to / }).click();
+    await expect(
+      page.getByText(diver("ready.moveAsk.asked", { shop: "Blue Mantis Divers" })),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Ask to move to / })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /See what.s next/ })).toBeVisible();
   });
 });

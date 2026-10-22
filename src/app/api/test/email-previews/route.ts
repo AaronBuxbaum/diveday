@@ -47,6 +47,9 @@ const SAMPLES: Notification[] = [
     startsAt: new Date("2026-09-01T13:00:00Z"),
     timezone: "America/New_York",
     open: 1,
+    dockCallMinutes: 30,
+    // The diver's last boat: the fly-safe rule in hours under the dock time (H-150).
+    flySafeHours: 24,
     readinessUrl: "https://diveday.example/ready/sample-token",
   },
   {

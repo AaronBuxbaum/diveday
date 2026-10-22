@@ -745,3 +745,86 @@ describe("tomorrow from tonight", () => {
     expect(screen.getByText("Still out")).toBeInTheDocument();
   });
 });
+
+/**
+ * **Each diver once, a long boat folded** (UX delight sheet 2026-10-22, item
+ * 4): naming every diver may not bury the boat, and folding may not drop one.
+ */
+describe("a boat with many divers to name", () => {
+  const names = ["Ana", "Ben", "Cara", "Dev", "Eli", "Fay", "Gus", "Hal"];
+  const rows = names.map((name, index) =>
+    action({
+      // Boat work: a readiness blocker never folds (`foldBoatRows`).
+      id: `prep:t1:p${index}`,
+      kind: "dive_prep",
+      subject: `${name} Diver`,
+      detail: "rental size, emergency contact",
+      departure: { tripId: "t1", label: "Two-Tank Reef · 1:00 PM" },
+      diver: { personId: `p${index}`, items: ["rental size", "emergency contact"] },
+      dueAt: hoursFromNow(2),
+    }),
+  );
+
+  it("shows its first rows and folds the rest behind and N more, every diver still on the page", () => {
+    const { container } = renderSpine({ actions: rows });
+    const fold = screen.getByText("and 3 more");
+    expect(fold.closest("summary")).not.toBeNull();
+    expect(fold.closest("details")?.hasAttribute("open")).toBe(false);
+    for (const name of names) expect(screen.getByText(`${name} Diver`)).toBeTruthy();
+    // The folded rows sit inside the fold, the first five above it.
+    const folded = fold.closest("details");
+    expect(folded?.textContent).toContain("Fay Diver");
+    expect(folded?.textContent).not.toContain("Ana Diver");
+    expect(container.textContent).toContain("rental size, emergency contact");
+  });
+
+  it("shows a boat of six whole, since and 1 more would cost the row it hides", () => {
+    renderSpine({ actions: rows.slice(0, 6) });
+    expect(screen.queryByText(/and \d+ more/)).toBeNull();
+  });
+});
+
+/**
+ * **The boat's waiver batch says what it sends** (layer 3 auditor review, B1):
+ * a row about the departure renders its detail and not its subject, so the
+ * sentence lives in the detail, and the row acts on divers already counted.
+ */
+describe("the boat's one-tap waiver row", () => {
+  const departureRef = { tripId: "t1", label: "Two-Tank Reef · 1:00 PM" };
+  const names = ["Ana", "Ben", "Cara"];
+  const divers = names.map((name, index) =>
+    action({
+      id: `blocker:b${index}:waiver_not_sent`,
+      subject: `${name} Diver`,
+      detail: "Waiver not signed, not sent yet",
+      departure: departureRef,
+      diver: { personId: `p${index}`, items: ["waiver"], readiness: true },
+      waiver: { bookingIds: [`b${index}`] },
+      actionLabel: "Send waiver",
+      dueAt: hoursFromNow(2),
+    }),
+  );
+  const batch = action({
+    id: "waivers:t1:waiver_not_sent",
+    subject: "Two-Tank Reef · 1:00 PM",
+    detail: "3 waivers not signed, not sent yet",
+    departure: departureRef,
+    aboutDeparture: true,
+    batch: true,
+    actionLabel: "Send waivers",
+    waiver: { bookingIds: ["b0", "b1", "b2"] },
+    dueAt: hoursFromNow(2),
+  });
+
+  it("renders its sentence beside its one button", () => {
+    renderSpine({ actions: [batch, ...divers] });
+    expect(screen.getByText("3 waivers not signed, not sent yet")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Send waivers" })).toBeTruthy();
+  });
+
+  it("is not counted again in Needs you's number", () => {
+    renderSpine({ actions: [batch, ...divers] });
+    expect(screen.getAllByText(/^3 things/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^4 things/)).toBeNull();
+  });
+});

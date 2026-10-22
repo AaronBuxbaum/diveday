@@ -109,7 +109,14 @@
   inside the lookback window. It is said with weekday, date, time and zone, because it is read days
   ahead and from other zones. It answers a diver's seat only, and stays **silent** past
   no-decompression limits, with no scheduled end, or when the diver's next seat with the shop
-  starts before the time it would name (that boat's own page says the time). The
+  starts before the time it would name (that boat's own page says the time). The **night-before
+  reminder email** carries the same planned rule in **hours only**, never a clock time, because a
+  late boat would make a time wrong (H-150): "Plan to fly no earlier than 24 hours after your last
+  dive, and longer if you make decompression stops", only when this is the diver's last seat with
+  the shop (any later seat, however far ahead, silences it) and silent wherever the planned form
+  is (`readReminderFlySafeHours`, `src/db/fly-safe-plan.ts`). Both before-the-dive sentences end
+  on the decompression clause, because they are read before anyone knows whether the dive will
+  need stops, and DAN gives no figure for one that does. The
   sentence states its reason on the two routes a diver cannot check for themselves — the earlier
   day, which is nowhere on a recap of today, and the multi-dive *plan*, whose figure can be more
   than the diver dived — because neither surface carries a dive count at all: the record card

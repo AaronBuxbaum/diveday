@@ -3,8 +3,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { diverTranslator } from "@/i18n/messages";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { TripDayPlan, TripLookFor, TripSiteNotes } from "./TripDayPlan";
+import { courseDayPlan, TripDayPlan, TripLookFor, TripSiteNotes } from "./TripDayPlan";
 import type { DiveBriefing } from "./types";
 
 /**
@@ -414,6 +415,138 @@ describe("TripDayPlan's profile", () => {
       />,
     );
     expect(screen.queryByText(/on the surface/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * **A first-timer's trip page carries her afternoon and her gear** (UX sheet
+ * 2026-10-22, item 3). The course page said "Your afternoon" and "Complete
+ * rental gear"; the session's trip page, where she pays, said neither. The
+ * plan is the course's own day list, read off the course row, never copy of
+ * this page's.
+ */
+describe("TripDayPlan's course plan", () => {
+  const afternoon = {
+    title: "Your afternoon",
+    timeNote: "about 3 hours",
+    items: ["Briefing: how the gear works", "One shallow open-water dive, maximum {depth12}"],
+  };
+  const course = { scheduleDays: [afternoon], gearIncluded: true };
+  const t = diverTranslator(DEFAULT_DIVER_LOCALE);
+  // A course session: the day's two ends are the course's to say.
+  const profile = {
+    rhythm: {
+      dockCallMinutes: 30,
+      gearSetupMinutes: 0,
+      briefingMinutes: 15,
+      boatRideMinutes: 20,
+      bottomTimeMinutes: 45,
+      surfaceIntervalMinutes: 60,
+    },
+    depthUnit: "meters",
+    diveMode: "boat",
+    dayCount: 1,
+  } as const;
+
+  it("reads the course's own days, with depths in the shop's unit", () => {
+    const plan = courseDayPlan(course, t, "feet", 1);
+    expect(plan?.days[0]?.items[1]).toBe("One shallow open-water dive, maximum 40 feet");
+    expect(courseDayPlan(null, t, "meters", 1)).toBeUndefined();
+    expect(
+      courseDayPlan({ scheduleDays: [], gearIncluded: false }, t, "meters", 1),
+    ).toBeUndefined();
+  });
+
+  it("never lays a multi-day plan on one session's page", () => {
+    const threeDays = {
+      scheduleDays: [
+        { title: "Day 1: pool", items: ["Skills in the pool"] },
+        { title: "Day 2: first ocean dives", items: ["Open-water dives 1 and 2"] },
+        { title: "Day 3: certify", items: ["Open-water dives 3 and 4"] },
+      ],
+      gearIncluded: false,
+    };
+    // A session records no plan day of its own, so neither a one-meeting
+    // session nor the whole three-meeting run can say which day it is.
+    expect(courseDayPlan(threeDays, t, "meters", 1)).toBeUndefined();
+    expect(courseDayPlan(threeDays, t, "meters", 3)).toBeUndefined();
+    // The gear line is the course's, whichever day this is.
+    expect(courseDayPlan({ ...threeDays, gearIncluded: true }, t, "meters", 1)?.days).toEqual([]);
+    for (const dayCount of [1, 3]) {
+      cleanup();
+      render(
+        <TripDayPlan
+          briefings={[briefing()]}
+          shop={SHOP}
+          locale={DEFAULT_DIVER_LOCALE}
+          profile={{ ...profile, dayCount, course: threeDays }}
+        />,
+      );
+      expect(screen.queryByText(/^Day \d:/)).not.toBeInTheDocument();
+      expect(screen.queryByTestId("trip-course-plan")).not.toBeInTheDocument();
+    }
+  });
+
+  it("puts the course's afternoon and its gear under The day", () => {
+    render(
+      <TripDayPlan
+        briefings={[
+          briefing({
+            dive: { id: "dive-1", diveNumber: 1, title: null },
+            diveSite: null,
+          } as unknown as Partial<DiveBriefing>),
+        ]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={{ ...profile, course }}
+      />,
+    );
+    const plan = screen.getByTestId("trip-course-plan");
+    expect(within(plan).getByText("Your afternoon")).toBeInTheDocument();
+    expect(within(plan).getByText("about 3 hours")).toBeInTheDocument();
+    expect(
+      within(plan).getByText("One shallow open-water dive, maximum 12 meters"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Gear is included.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "The day" })).toBeInTheDocument();
+  });
+
+  it("says nothing about gear the course does not include", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={{ ...profile, course: { ...course, gearIncluded: false } }}
+      />,
+    );
+    expect(screen.getByText("Your afternoon")).toBeInTheDocument();
+    expect(screen.queryByText("Gear is included.")).not.toBeInTheDocument();
+  });
+
+  it("still says the afternoon on a session with no dives planned", () => {
+    render(
+      <TripDayPlan
+        briefings={[]}
+        shop={SHOP}
+        locale={DEFAULT_DIVER_LOCALE}
+        profile={{ ...profile, course }}
+      />,
+    );
+    expect(screen.getByText("Your afternoon")).toBeInTheDocument();
+    expect(screen.queryByText(/to be confirmed/)).not.toBeInTheDocument();
+  });
+
+  it("says the gear line in the diver's language", () => {
+    render(
+      <TripDayPlan
+        briefings={[briefing()]}
+        shop={SHOP}
+        locale="es-ES"
+        profile={{ ...profile, course }}
+      />,
+    );
+    expect(screen.getByText("El equipo está incluido.")).toBeInTheDocument();
   });
 });
 
