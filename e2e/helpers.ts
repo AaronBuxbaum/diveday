@@ -1138,7 +1138,12 @@ export async function writeCourseForm(page: Page, title: string, body: string): 
   await page.locator("#course-form-title-new").fill(title);
   await page.locator("#course-form-body-new").fill(body);
   await page.getByRole("button", { name: "Add form" }).click();
-  await expect(page.locator("#course-forms summary", { hasText: title })).toBeVisible();
+  // The exact title: `hasText` is a case-insensitive substring, so "Safe diving practices"
+  // matched the demo's own "Standard Safe Diving Practices Statement of Understanding" before
+  // the save landed, and the next navigation could cancel the save.
+  await expect(
+    page.locator("#course-forms summary").getByText(title, { exact: true }),
+  ).toBeVisible();
 }
 
 /** Choose a written course form on a course's page and wait for the save. */
