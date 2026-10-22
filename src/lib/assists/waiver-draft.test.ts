@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { reservedMicroUsd } from "@/db/assists";
 import { buildStructuredRequest, callStructured } from "@/lib/claude/structured";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
-import { reservedMicroUsd } from "@/db/assists";
 import { looksLikePdf, pdfInputTokens, waiverDraftBody, waiverDraftCall } from "./waiver-draft";
 
 const RELEASE =
