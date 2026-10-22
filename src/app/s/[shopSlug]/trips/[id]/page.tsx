@@ -101,7 +101,6 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
-      ...(shop.logoUrl ? { images: [{ url: shop.logoUrl, alt: `${shop.name} logo` }] } : {}),
     },
   };
 }

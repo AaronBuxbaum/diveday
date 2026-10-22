@@ -82,6 +82,24 @@ it("refuses receipts after a concurrent HEAD/tree/working-file change", () => {
   ])
     expect(verificationInputsStable({ ...initial, status: "", ...changed }, initial)).toBe(false);
 });
+/**
+ * Whether `pid` still runs. A killed child whose parent has gone is re-parented to
+ * PID 1, and a container whose PID 1 never reaps leaves it a zombie: dead, yet
+ * still answering signal 0. Its state letter in /proc says which.
+ */
+function isAlive(pid) {
+  try {
+    process.kill(pid, 0);
+  } catch {
+    return false;
+  }
+  try {
+    return readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1]?.[0] !== "Z";
+  } catch {
+    return true;
+  }
+}
+
 it("reaps owned detached stages with quote-bearing paths when their parent receives SIGTERM", () => {
   // These bytes must remain path data through both JSON-encoded JavaScript literals.
   // Unquoted interpolation would execute the exit canary instead of writing the PID.
@@ -98,7 +116,7 @@ it("reaps owned detached stages with quote-bearing paths when their parent recei
     });
     expect(result.status).toBe(143);
     pid = Number(readFileSync(pidFile, "utf8"));
-    expect(() => process.kill(pid, 0)).toThrow();
+    expect(isAlive(pid)).toBe(false);
   } finally {
     if (pid) {
       try {

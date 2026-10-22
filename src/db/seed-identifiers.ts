@@ -9,6 +9,9 @@ export const DEMO_RECAP_BOOKING_ID = "0de3c0de-1eaf-4b0a-9c0f-000000000001";
 /** Listed shops beside the canonical demo, with no staff or bookings. */
 export const LISTED_SHOP_SLUGS = ["reef-line-divers", "keys-current-charters"] as const;
 
+/** Blue Mantis's own blue, worn by the canonical demo (`seed-shop-brand.ts`). */
+export const DEMO_SHOP_BRAND_COLOR = "#1d5fa3";
+
 /** Mantis green, used only when a minted shop requests the brand fixture. */
 export const MINTED_DEMO_BRAND_COLOR = "#158462";
 

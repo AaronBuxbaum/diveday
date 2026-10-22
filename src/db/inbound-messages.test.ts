@@ -834,6 +834,49 @@ describe("an Ask to move", () => {
     expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(false);
   });
 
+  /** H-151: the called-off card's ask opens only a booked seat on a cancelled departure. */
+  it.each(["live departure", "cancelled seat", "deleted departure", "held identity"] as const)(
+    "refuses a called-off ask for a %s",
+    async (state) => {
+      const { db, shop } = ctx;
+      const { bookingId, tripId } = await aBooking();
+      if (state !== "live departure")
+        await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, tripId));
+      if (state === "cancelled seat")
+        await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+      if (state === "deleted departure")
+        await db.update(trips).set({ deletedAt: NOW }).where(eq(trips.id, tripId));
+      if (state === "held identity")
+        await db
+          .update(bookings)
+          .set({ identityUnconfirmedAt: NOW })
+          .where(eq(bookings.id, bookingId));
+      const asked = await recordMoveAsk(db, {
+        shopId: shop.id,
+        bookingId,
+        calledOff: true,
+        now: NOW,
+      });
+      expect(asked).toEqual({ status: "not_found" });
+      expect(await hasMoveAsk(db, shop.id, bookingId, undefined, { calledOff: true })).toBe(false);
+    },
+  );
+
+  it("files a called-off ask on a cancelled departure, which an ordinary read never sees", async () => {
+    const { db, shop } = ctx;
+    const { bookingId, tripId } = await aBooking();
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, tripId));
+    const filed = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId,
+      calledOff: true,
+      now: NOW,
+    });
+    expect(filed.status).toBe("recorded");
+    expect(await hasMoveAsk(db, shop.id, bookingId, undefined, { calledOff: true })).toBe(true);
+    expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(false);
+  });
+
   it("finds no booking from another shop", async () => {
     const { db } = ctx;
     const { bookingId } = await aBooking();

@@ -5,11 +5,11 @@ import { expect, test } from "./fixtures";
 
 /**
  * Harbor (ADR 20260901-diveday-reimagined, decision 2): the storefront and the
- * embed wear the shop's brand. The canonical demo, Blue Mantis, carries a cover
- * photo, three badges and an opening year but no colour or face of its own —
- * it wears Logbook's (ADR 20261001-logbook, decision 8) — so the colour is
- * proved on a minted shop dressed in the brand fixture (`privateShopBrand`,
- * `MINTED_DEMO_BRAND` in `src/db/seed.ts`): mantis green and Bricolage.
+ * embed wear the shop's brand. The canonical demo, Blue Mantis, wears a full
+ * profile in its own blue (`src/db/seed-shop-brand.ts`), so the colour is
+ * proved on a minted shop dressed in a different one (`privateShopBrand`,
+ * `MINTED_DEMO_BRAND` in `src/db/seed.ts`): mantis green and Bricolage, which
+ * only the shop's own choice can explain.
  *
  * The colour on screen is the derivation's, not the row's: `deriveBrandTheme`
  * moves a fill that would fail AA on the ground or on its own tint, so every

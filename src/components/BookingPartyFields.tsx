@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { SmsConsentNote } from "@/components/SmsConsentNote";
 import { buttonClass } from "@/components/ui/button";
-import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoicePill, ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
@@ -135,8 +135,11 @@ export function BookingPartyFields({
   // person row with no email, never a second row sharing the lead's address
   // (which would collide with it as "already booked" the moment a second
   // member opted in — see src/db/bookings.ts and its "rolls back the whole
-  // party" test).
-  const [useLeadEmail, setUseLeadEmail] = useState<Record<number, boolean>>({});
+  // party" test). On by default: most parties are a family or a couple
+  // booking together, and the box is one tap to untick for the friend who
+  // wants their own reminders.
+  const [leadEmailChoice, setLeadEmailChoice] = useState<Record<number, boolean>>({});
+  const usesLeadEmail = (index: number) => index > 0 && (leadEmailChoice[index] ?? true);
   const [types, setTypes] = useState<ParticipantType[]>(() =>
     Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, () => "diver" as const),
   );
@@ -372,8 +375,7 @@ export function BookingPartyFields({
                       </select>
                     </Field>
                   ) : null}
-                  {leadOnly ? null : <UnderEighteenChoice index={index} />}
-                  {index === 0 || !useLeadEmail[index] ? (
+                  {!usesLeadEmail(index) ? (
                     <Field
                       label={
                         index === 0
@@ -402,7 +404,7 @@ export function BookingPartyFields({
                       <input
                         name={`email-${index}`}
                         type="email"
-                        required={index === 0 || !useLeadEmail[index]}
+                        required
                         maxLength={200}
                         inputMode="email"
                         autoComplete={index === 0 ? "email" : `section-diver${index} email`}
@@ -418,18 +420,13 @@ export function BookingPartyFields({
                     </Field>
                   ) : null}
                   {index > 0 ? (
-                    <ChoiceRow
-                      type="checkbox"
-                      checked={!!useLeadEmail[index]}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setUseLeadEmail((current) => ({ ...current, [index]: checked }));
+                    <LeadEmailChoice
+                      checked={usesLeadEmail(index)}
+                      onChange={(checked) => {
+                        setLeadEmailChoice((current) => ({ ...current, [index]: checked }));
                         if (checked) updateMember(index, { email: "" });
                       }}
-                      className="text-sm text-muted"
-                    >
-                      {t("party.useMainContactEmail")}
-                    </ChoiceRow>
+                    />
                   ) : null}
                   {index === 0 && leadPhone ? (
                     <Field
@@ -451,6 +448,12 @@ export function BookingPartyFields({
                       />
                     </Field>
                   ) : null}
+                  {/* The boxes close the diver's block, together: "Under 18" stood
+                      between Joining as and Email, a 44px row with the grid's
+                      16px either side, so it read as a gap in the person's
+                      details rather than a question about them. Stacked
+                      without a gap, each row's own 44px is the rhythm. */}
+                  {leadOnly ? null : <UnderEighteenChoice index={index} />}
                 </FieldGrid>
               </div>
             </fieldset>
@@ -461,6 +464,27 @@ export function BookingPartyFields({
   );
 }
 
+/** "Use the main contact's email" (task 21), under the email it stands in for. */
+function LeadEmailChoice({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const t = useTranslations();
+  return (
+    <ChoiceRow
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      className="text-sm text-muted"
+    >
+      {t("party.useMainContactEmail")}
+    </ChoiceRow>
+  );
+}
+
 /**
  * **The parent's "Under 18"** (H-113, 2026-10-13). The form asks nobody a date
  * of birth, so without this a parent who booked a twelve-year-old watched her
@@ -468,20 +492,26 @@ export function BookingPartyFields({
  * a parent or guardian to co-sign. Controlled so a refused submit keeps the
  * tick, and never remembered with the diver: a child grows up, and the next
  * booking asks again.
+ *
+ * The last box of each diver's block, drawn as a bordered box at the inputs'
+ * width and type size (Aaron, 2026-10-22): as a bare checkbox row between the
+ * fields it read as a gap in the form rather than a question in it.
  */
 function UnderEighteenChoice({ index }: { index: number }) {
   const t = useTranslations();
   const [checked, setChecked] = useState(false);
   return (
-    <ChoiceRow
+    <ChoicePill
       type="checkbox"
+      size="field"
       name={`minor-${index}`}
       checked={checked}
       onChange={(event) => setChecked(event.target.checked)}
-      className="text-sm"
     >
       {t("party.under18")}
-      {checked ? <span className="block text-muted">{t("party.under18Hint")}</span> : null}
-    </ChoiceRow>
+      {checked ? (
+        <span className="block text-sm font-normal text-muted">{t("party.under18Hint")}</span>
+      ) : null}
+    </ChoicePill>
   );
 }

@@ -265,6 +265,12 @@ export async function recordMoveAsk(
     bookingId: string;
     /** The departure on the validated page; refused if staff moved the seat meanwhile. */
     expectedTripId?: string;
+    /**
+     * The ask comes from a called-off departure's card (`askToMoveFromCancelledAction`,
+     * H-151): the seat must be on a cancelled departure, the one state an
+     * ordinary ask refuses, and a boat that never sails is not refused as sailed.
+     */
+    calledOff?: true;
     note?: string | null;
     now: Date;
   },
@@ -301,14 +307,16 @@ export async function recordMoveAsk(
           input.expectedTripId ? eq(bookings.tripId, input.expectedTripId) : undefined,
           eq(bookings.status, "booked"),
           isNull(bookings.identityUnconfirmedAt),
-          ne(trips.status, "cancelled"),
+          input.calledOff ? eq(trips.status, "cancelled") : ne(trips.status, "cancelled"),
           liveTrip(),
           notRehearsal(),
         ),
       )
       .limit(1)
       .for("update", { of: bookings });
-    if (!seat || hasSailed(seat.startsAt, input.now)) return { status: "not_found" };
+    if (!seat || (!input.calledOff && hasSailed(seat.startsAt, input.now))) {
+      return { status: "not_found" };
+    }
     const note = truncateInboundBody(input.note ?? "").slice(0, MOVE_ASK_NOTE_MAX_LENGTH);
     const fromAddress =
       normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "";
@@ -371,6 +379,8 @@ export async function getPendingMoveAsk(
   shopId: string,
   bookingId: string,
   knownTripId?: string,
+  /** The called-off card's ask (`recordMoveAsk`'s `calledOff`): it stands only on a cancelled departure. */
+  options: { calledOff?: true } = {},
 ): Promise<PendingMoveAsk | null> {
   const tripId =
     knownTripId ??
@@ -415,7 +425,7 @@ export async function getPendingMoveAsk(
         eq(inboundMessages.providerMessageId, moveAskProviderId(bookingId, tripId)),
         isNull(inboundMessages.answeredAt),
         isNull(inboundMessages.deletedAt),
-        ne(trips.status, "cancelled"),
+        options.calledOff ? eq(trips.status, "cancelled") : ne(trips.status, "cancelled"),
         liveTrip(),
         notRehearsal(),
       ),
@@ -430,8 +440,9 @@ export async function hasMoveAsk(
   shopId: string,
   bookingId: string,
   knownTripId?: string,
+  options: { calledOff?: true } = {},
 ): Promise<boolean> {
-  return (await getPendingMoveAsk(db, shopId, bookingId, knownTripId)) !== null;
+  return (await getPendingMoveAsk(db, shopId, bookingId, knownTripId, options)) !== null;
 }
 
 /** The shop a reply-to token names, or null for a token nobody holds. */

@@ -93,7 +93,7 @@ describe("pushDepartureRows", () => {
     expect(actions[3]?.href).toBe("/shop/blue-mantis/trips/t1");
     // Orders cannot name a person: one row about the boat.
     expect(actions[5]?.aboutDeparture).toBe(true);
-    expect(actions[5]?.detail).toBe("2 orders awaiting payment.");
+    expect(actions[5]?.detail).toBe("2 orders awaiting payment");
 
     // Then Ana is one row with everything open for her, the warning first.
     const folded = oneRowPerDiver(actions);

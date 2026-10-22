@@ -1,3 +1,4 @@
+import { DEMO_SHOP_BRAND_COLOR } from "@/db/seed-identifiers";
 import { deriveBrandTheme } from "@/lib/brand";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
@@ -122,10 +123,9 @@ test.describe("the widget views", () => {
     const primary = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
     );
-    // The seeded shop sets no colour, so it wears Logbook's own sea teal —
-    // never the colour the URL asked for.
+    // The seeded shop's own blue, never the colour the URL asked for.
     expect(primary).not.toBe(deriveBrandTheme("#b45309").primary);
-    expect(primary).toBe("#0b6e8a");
+    expect(primary).toBe(deriveBrandTheme(DEMO_SHOP_BRAND_COLOR).primary);
   });
 });
 

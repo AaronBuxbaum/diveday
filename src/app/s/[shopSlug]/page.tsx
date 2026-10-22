@@ -108,7 +108,6 @@ export async function generateMetadata({
       title: `Dive schedule — ${shop.name}`,
       description,
       url: publicSchedulePath(shop.slug),
-      ...(shop.logoUrl ? { images: [{ url: shop.logoUrl, alt: `${shop.name} logo` }] } : {}),
     },
   };
 }
@@ -379,7 +378,7 @@ export default async function SchedulePage({
           inside the frame, where the widget stays the list-first window onto the
           schedule that issue #805 made it. */}
       {isEmbed ? null : (
-        <div className="flex min-w-0 items-start gap-4">
+        <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
           {shop.logoUrl ? (
             // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
             <img

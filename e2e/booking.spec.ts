@@ -85,6 +85,7 @@ test.describe("staff", () => {
     await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
     await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Quinn");
+    await page.getByLabel("Use the main contact’s email for this diver").uncheck();
     await page.getByLabel("Diver 2 email").fill(`sam-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: "Book 2 seats" }).click();
     // Booking lands on the diver's own readiness page, not a branch of the

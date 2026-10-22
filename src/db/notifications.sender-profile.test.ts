@@ -49,6 +49,10 @@ describe("the shop's sender profile", () => {
     await db
       .update(shops)
       .set({
+        // The demo's logo and colour ride a send too; this test is about the
+        // reply address and the street.
+        logoUrl: null,
+        brandColor: null,
         contactEmail: "desk@bluemantis.dive",
         contactEmailConfirmedAt: new Date("2026-09-01T12:00:00.000Z"),
         addressStreet: "1 Harbor Rd",
@@ -123,6 +127,8 @@ describe("the shop's sender profile", () => {
     await db
       .update(shops)
       .set({
+        logoUrl: null,
+        brandColor: null,
         contactEmail: null,
         addressStreet: null,
         addressLocality: null,

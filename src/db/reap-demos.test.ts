@@ -150,8 +150,8 @@ describe("createDemoShop", () => {
    * by default it has no logo, cover photo or badges. `brand` exists for the
    * one surface that needs all of them on file: the settings profile row,
    * where a stored logo and cover photo are taken back off (`settings-profile`).
-   * The canonical demo cannot be that fixture: it has no logo, and giving it
-   * one would put a logo in the header of every staff capture.
+   * The canonical demo wears its own profile (`seed-shop-brand.ts`); the
+   * minted fixture differs from it in colour, face and logo.
    */
   it("wears the canonical demo's brand, and a logo, only when asked", async () => {
     const db = await seededTestDb();
@@ -168,10 +168,11 @@ describe("createDemoShop", () => {
     expect(branded.brandHeroImageUrl).toBe(canonical.brandHeroImageUrl);
     expect(branded.brandHeroImageAlt).toBe(canonical.brandHeroImageAlt);
     expect(branded.brandBadges).toEqual(canonical.brandBadges);
-    // The colour and face are the minted fixture's alone: the canonical demo
-    // wears Logbook's own (ADR 20261001-logbook).
-    expect(canonical.brandColor).toBeNull();
-    expect(canonical.brandDisplayFont).toBeNull();
+    // The colour and face are the minted fixture's own, apart from the
+    // canonical demo's, so the brand spec proves the shop's choice is worn.
+    expect(canonical.brandColor).toBeTruthy();
+    expect(canonical.brandColor).not.toBe(MINTED_DEMO_BRAND_COLOR);
+    expect(canonical.brandDisplayFont).not.toBe("bricolage_grotesque");
     expect(branded.brandColor).toBe(MINTED_DEMO_BRAND_COLOR);
     expect(branded.brandDisplayFont).toBe("bricolage_grotesque");
     // A bundled file, as the cover photo is, so a capture draws it with no
