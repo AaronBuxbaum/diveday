@@ -268,6 +268,8 @@ describe("replyFacts", () => {
   });
 
   it("ends with the shop's notes for replies, one line each, and leaves them out when there are none", async () => {
+    // The seed writes demo notes, so this starts from none.
+    await setShopReplyNotes(ctx.db, ctx.shop.id, null);
     const before = (await replyFacts(ctx.db, ctx.shop.id)).lines;
     expect(before).not.toContain("Notes from the shop:");
     await setShopReplyNotes(
