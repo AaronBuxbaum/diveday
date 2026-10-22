@@ -5,7 +5,6 @@ import { shopDayBounds } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import { listTripReadiness } from "./readiness";
 import {
-  boats,
   bookingPayments,
   bookings,
   buddyPairMembers,
@@ -36,6 +35,7 @@ import {
   demoAtSeaDeparture,
   withinDeskHours,
 } from "./seed-clock";
+import { freeHull } from "./seed-hulls";
 import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed-identifiers";
 import { paperRelease } from "./seed-paper-release";
 import { liveTrip } from "./trips-live";
@@ -266,32 +266,6 @@ async function atSeaCrew(
     const row = rows.find((candidate) => candidate.fullName === member.fullName);
     return row ? [{ personId: row.id, tripRole: member.tripRole }] : [];
   });
-}
-
-/** Mantis I, else Mantis II: whichever hull nothing else has out in her hours. */
-async function freeHull(
-  db: DbExecutor,
-  shopId: string,
-  plan: DemoAtSeaDeparture,
-): Promise<string | null> {
-  const fleet = await db
-    .select({ id: boats.id, name: boats.name })
-    .from(boats)
-    .where(eq(boats.shopId, shopId))
-    .orderBy(asc(boats.name));
-  for (const hull of fleet) {
-    const busy = await db
-      .select({ id: trips.id, startsAt: trips.startsAt, endsAt: trips.endsAt })
-      .from(trips)
-      .where(and(eq(trips.shopId, shopId), eq(trips.boatId, hull.id), liveTrip()));
-    const clash = busy.some(
-      (other) =>
-        other.startsAt.getTime() < plan.endsAt.getTime() &&
-        other.endsAt.getTime() > plan.startsAt.getTime(),
-    );
-    if (!clash) return hull.id;
-  }
-  return null;
 }
 
 type Diver = { personId: string; fullName: string; bookingId: string };

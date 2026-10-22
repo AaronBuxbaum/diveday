@@ -81,11 +81,12 @@ export function ImportPreview({
   locale: string;
 }) {
   const anyAssisted = prepared.mapping.some((entry) => entry.assisted);
-  const afterToday = prepared.rows.filter(
-    (row) => row.action !== "skip" && row.bookingAfterToday !== null,
-  );
-  const listedAfterToday = afterToday.slice(0, PREVIEW_LIMIT);
-  const unlistedAfterToday = afterToday.length - listedAfterToday.length;
+  // The count is the importer's own total; the rows are only for the list.
+  const afterTodayCount = prepared.totals.bookingsAfterToday;
+  const listedAfterToday = prepared.rows
+    .filter((row) => row.action !== "skip" && row.bookingAfterToday !== null)
+    .slice(0, PREVIEW_LIMIT);
+  const unlistedAfterToday = afterTodayCount - listedAfterToday.length;
   return (
     <div className="mt-6">
       <div className="flex flex-wrap gap-2">
@@ -140,15 +141,15 @@ export function ImportPreview({
       {/* Seats sold in the old system for a day that has not come. They are
           not visits and not seats here; each is named so the shop can add it
           on the board or leave it where it was sold until it sails. */}
-      {afterToday.length > 0 ? (
+      {afterTodayCount > 0 ? (
         <div className="mt-3 text-sm">
           <p id="import-bookings-after-today" className="text-warning">
             {fill(
-              pluralForm(afterToday.length, {
+              pluralForm(afterTodayCount, {
                 one: copy.bookingsAfterTodayOne,
                 other: copy.bookingsAfterTodayOther,
               }),
-              { count: afterToday.length, system: copy.sourceSystem },
+              { count: afterTodayCount, system: copy.sourceSystem },
             )}
           </p>
           <ul aria-labelledby="import-bookings-after-today" className="mt-1 space-y-0.5 text-muted">

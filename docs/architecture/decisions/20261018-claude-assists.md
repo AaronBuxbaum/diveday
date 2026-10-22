@@ -5,35 +5,31 @@
 
 ## Context
 
-Aaron picked twenty-one Claude features (inbox replies, import mapping, card reading, website
-setup and more). All send shop data to an outside model, so they need one dependency, one gate,
-one cost ledger and one rule about what a suggestion may do. Invariants: an
+Aaron picked twenty-one Claude features. All send shop data to an outside model, so they need one
+dependency, one gate, one cost ledger and one rule about what a suggestion may do. Invariants: an
 assist clears no gate (readiness, admission, cert, medical, nitrox, boarding), sends nothing to a
 diver without a staff tap, and publishes nothing; every feature works identically without it.
+Detail: [ai-ml.md](../../product/features/ai-ml.md#claude-assists-in-detail).
 
 ## Decision
 
-- **Dependency**: `@anthropic-ai/sdk` (runtime). Models by role, in `src/lib/claude/models.ts`:
-  `quick` is `claude-haiku-5-5` (sorting, extraction, short text), `draft` is `claude-sonnet-5-5`
-  (drafting, onboarding, vision fallback, and anything using `web_fetch`, which Haiku lacks).
-- **Seam**: `src/lib/claude/` holds the provider (SDK with the base URL pinned; fake in
-  `src/test/fakes.ts`), the dark rules, the price table and `callStructured`: stable context first
-  under `cache_control`, the answer constrained by a zod schema and validated again. Refusal,
-  truncation, invalid JSON, low confidence and provider errors return `null`; nothing throws.
-- **Running**: every feature calls `runAssist` (`src/db/assists.ts`) with the session's shop. It is
-  **dark** with no `ANTHROPIC_API_KEY`, with `DIVEDAY_DISABLE_EXTERNAL_HTTP=1`, when the shop's
-  "Claude suggestions" switch (Features, on by default) is off, for a demo shop (anyone can mint
-  one), or when the shop's spend this UTC
-  month reached its cap: $15, `DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD` overrides it.
-- **Ledger**: `claude_usage` records every call (shop, feature code, model, outcome code, token
-  counts, cost in micro-USD at list price). It holds no prompt, answer or person. The cron's
-  `anthropic_spend` ceiling ($200 a month, alert-only) sums it across shops.
-- **Websites**: read through the server-side `web_fetch` tool restricted by `allowed_domains` to the
-  exact host the owner pasted (`webFetchTool`); a registry or a builder's shared root (`co.uk`,
-  `wixsite.com`) is refused, since the allowance covers every subdomain. DiveDay's servers never
-  fetch it.
-- **Screen**: one pattern, `AssistDraftButton`: a quiet button that fills a field for editing,
-  rendered only when `assistsAvailable` is true.
+- **Dependency**: `@anthropic-ai/sdk`. Models by role in `src/lib/claude/models.ts`: `quick` is
+  `claude-haiku-5-5`, `draft` is `claude-sonnet-5-5`.
+- **Seam**: `src/lib/claude/` holds the provider, the dark rules, the price table and
+  `callStructured`: the answer zod-constrained and validated again. Every failure returns `null`;
+  nothing throws.
+- **Running**: every feature calls `runAssist` (`src/db/assists.ts`). It is **dark** with no
+  `ANTHROPIC_API_KEY`, with `DIVEDAY_DISABLE_EXTERNAL_HTTP=1`, when the shop's "Claude
+  suggestions" switch is off, for a demo shop, or past the shop's monthly cap ($15;
+  `DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD`).
+- **Ledger**: `claude_usage` records each call's tokens and cost, never a prompt, answer or
+  person. The cron's `anthropic_spend` ceiling ($200 a month, alert-only) sums it.
+- **Websites**: read by `web_fetch` limited to the exact host the owner pasted, never a shared
+  root; DiveDay's servers never fetch it.
+- **Screen**: controls in `src/components/assists/`, rendered only when `assistsAvailable`, each
+  leaving the page's own save, send or merge as the way through: `AssistDraftButton`,
+  `AssistFillButton`, `AssistPhotoButton`, `AssistReadButton`, `AssistAskForm`, `CallNoteAssist`,
+  `PdfDraftButton`, `TranslateReplyButton` and `TranslationEditor`.
 
 ## Alternatives considered
 
@@ -44,12 +40,24 @@ diver without a staff tap, and publishes nothing; every feature works identicall
 
 ## Consequences
 
-Later layers add a prompt, a schema, a feature code and an action. Shop data now reaches
-Anthropic and the switch is on by default, so the key is the gate: the privacy-policy subprocessor
-entry and a confirmed retention setting come before `ANTHROPIC_API_KEY` is set in production
-(issue #2836). A price change needs `models.ts` updated (Haiku's long-prompt rate included). Each
-call reserves its likely cost under a per-shop lock, with at most two in flight, so concurrent calls
-overshoot the cap only by how far a call exceeds its reservation; a call that may have been billed
-and failed is charged its reservation. Prompt modules
-never import medical readers (`check:assist-prompts`). Leaving: remove the callers and
-`src/lib/claude/`; every feature already works dark, and `claude_usage` can be dropped.
+Shop data now reaches Anthropic with the switch on by default, so the key is the gate: the
+privacy-policy entry and a confirmed retention setting come before `ANTHROPIC_API_KEY` is set in
+production (issue #2836). Prompt modules never import medical readers (`check:assist-prompts`).
+Leaving: remove the callers and `src/lib/claude/`; every feature already works dark.
+
+## Amendment, 2026-10-22: one diver-facing door and one write without a tap
+
+Review #2923 found two exceptions to the Context; both stay.
+
+- **A diver can start one assist.** The public register page's card photo
+  (`src/app/s/[shopSlug]/register/card-photo-action.ts`) runs `cert_scan` for an anonymous
+  visitor. It fills the boxes the diver would type, keeps no image and writes no row. It spends the
+  shop's cap, so two limits apply, both failing closed: 10 an hour per address (`cardScanByIp`),
+  40 a day per shop (`cardScanByShop`). A photo Haiku says is not a card never reaches Sonnet.
+- **The recap line can reach divers without a tap.** With "Recap highlights" on
+  (`shops.recap_assist_auto_approve`, off by default), the recap send (`autoFillRecapLine`) fills
+  a blank highlight; turning it on is the shop's standing approval. It never replaces the crew's
+  words, never runs with a live incident report, and any failure is no line. Every guard:
+  [ai-ml.md](../../product/features/ai-ml.md#recap-highlights-filled-before-send).
+
+No other assist publishes, saves or sends to a diver on its own.

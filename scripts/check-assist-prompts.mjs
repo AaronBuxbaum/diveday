@@ -11,10 +11,9 @@ import process from "node:process";
  * `context` its caller built. So the guard is on what a prompt-building module
  * can *reach*. A module that builds or sends a prompt is one under
  * `src/lib/assists/` (the prompts), a `src/db/*assist*.ts` module, or any
- * module that names `runAssist`, `runAssistOutcome` or the shop wrapper
- * `shopAssist`, or imports the seam (`@/db/assists`, `./assists`) or the
- * wrapper (`@/db/assist-shop`, `./assist-shop`), by alias or relative path
- * (security review L3, B1). None may import a medical reader: a module
+ * module that names `runAssist` or `runAssistOutcome`, or imports the seam
+ * (`@/db/assists`, `./assists`) by alias or relative path (security review
+ * L3, B1). None may import a medical reader: a module
  * whose path names `medical` or `questionnaire`, the waiver-records schema,
  * or the waiver module that reads the answers. Neither may name the answer
  * columns (`medicalAnswers`, `medical_answers`) at all.
@@ -29,8 +28,7 @@ const IMPORT =
 // A caller of the seam by any spelling: the call itself, or the module by its
 // alias or a relative path. `src/db/*.ts` imports it as `./assists`, which an
 // alias-only pattern missed (security review L2, B1).
-const SENDS =
-  /\b(?:runAssist|runAssistOutcome|shopAssist)\b|["'](?:@\/db|\.\.?(?:\/\.\.)*)\/(?:assists|assist-shop)["']/;
+const SENDS = /\b(?:runAssist|runAssistOutcome)\b|["'](?:@\/db|\.\.?(?:\/\.\.)*)\/assists["']/;
 // A db module named for the assists builds their inputs, whatever it imports.
 const ASSIST_DB_MODULE = /^src\/db\/[^/]*assist[^/]*\.[cm]?[jt]sx?$/;
 const MEDICAL_SPECIFIER =
@@ -76,7 +74,7 @@ for (const file of await walk("src")) {
 
 if (violations.length > 0) {
   console.error(
-    `assist-prompts: ${violations.length} way(s) a medical answer could reach a Claude prompt. A module that builds or sends a prompt (under ${PROMPTS}, a src/db/*assist* module, or calling runAssist, runAssistOutcome or shopAssist) must not read medical data:\n${violations.map((v) => `- ${v}`).join("\n")}`,
+    `assist-prompts: ${violations.length} way(s) a medical answer could reach a Claude prompt. A module that builds or sends a prompt (under ${PROMPTS}, a src/db/*assist* module, or calling runAssist or runAssistOutcome) must not read medical data:\n${violations.map((v) => `- ${v}`).join("\n")}`,
   );
   process.exit(1);
 }

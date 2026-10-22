@@ -7,7 +7,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { assistsAvailable } from "@/db/assists";
 import { pagedInboxMessages } from "@/db/inbound-messages";
-import { triageInboundMessagesSafely } from "@/db/inbox-assists";
+import { awaitsTriage, triageInboundMessagesSafely } from "@/db/inbox-assists";
 import { listDeletedSavedAnswers, listSavedAnswers } from "@/db/inbox-saved-answers";
 import { inboxSeats } from "@/db/inbox-seats";
 import { requestLocale } from "@/i18n/request";
@@ -128,9 +128,9 @@ export default async function InboxPage({
   // Waiting messages nobody has read for intent and language yet, read after
   // the response so the inbox never waits on Claude; the next view shows them.
   if (assists) {
-    const unread = waiting.flatMap((row) =>
-      row.message.assistedAt === null ? [row.message.id] : [],
-    );
+    // Only the messages triage would read: one it skips is never stamped, and
+    // would hold a per-view slot on every view.
+    const unread = waiting.flatMap((row) => (awaitsTriage(row.message) ? [row.message.id] : []));
     if (unread.length > 0) after(() => triageInboundMessagesSafely(db, shop.id, unread));
   }
   const requestAction = assists ? requestFromMessageAction : undefined;

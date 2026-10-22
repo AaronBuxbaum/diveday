@@ -159,6 +159,7 @@ export function WorkOrderJobCard({
                 draft={draftNote}
                 label={t("deskAssists.bench.draft")}
                 pendingLabel={t("deskAssists.drafting")}
+                emptyLabel={t("deskAssists.nothing")}
               />
             </div>
           ) : null}

@@ -57,7 +57,7 @@ describe("e2eClaudeFixtureProvider", () => {
     expect(triage.value?.translation).toBeTruthy();
     const facts = ["Morning two-tank: 4 seats open"];
     const thread = [{ from: "diver" as const, text: "Can we move to tomorrow?" }];
-    const draft = await callStructured(provider, replyDraftCall({ facts, thread }));
+    const draft = await callStructured(provider, replyDraftCall({ window: "", facts, thread }));
     expect(draft.value && groundedReply(draft.value, { facts, thread })).toBeTruthy();
     const mapping = await callStructured(
       provider,

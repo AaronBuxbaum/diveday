@@ -10,7 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import { latestServiceClocks } from "@/db/gear";
 import { listStaff } from "@/db/trips";
 import { getWorkOrderDetail } from "@/db/work-orders";
@@ -185,7 +185,7 @@ export default async function WorkOrderPage({
           locale={locale}
           t={t}
           draftNote={
-            !deleted && (await shopAssistsAvailable(db, shop.id))
+            !deleted && (await assistsAvailable(db, shop.id))
               ? draftBenchNoteAction.bind(null, shopSlug)
               : undefined
           }

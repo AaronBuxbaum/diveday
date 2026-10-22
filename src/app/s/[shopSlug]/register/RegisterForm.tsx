@@ -147,6 +147,7 @@ export function RegisterForm({
             read={readCardPhoto}
             label={t("register.cardPhoto")}
             pendingLabel={t("register.cardPhotoPending")}
+            emptyLabel={t("register.cardPhotoNothing")}
             className="mt-3"
           />
         ) : null}

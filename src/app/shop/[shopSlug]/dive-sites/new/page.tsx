@@ -4,7 +4,7 @@ import { EditorRail, UnsavedSections } from "@/components/editor/EditorRail";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -55,7 +55,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
   const { shopSlug } = await params;
   const back = `/shop/${shopSlug}/dive-sites`;
   const { db, shop } = await requireShopSurface(shopSlug);
-  const canAssist = await shopAssistsAvailable(db, shop.id);
+  const canAssist = await assistsAvailable(db, shop.id);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // The species picker previews what a *diver* will read off this site's

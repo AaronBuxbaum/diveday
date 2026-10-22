@@ -1012,8 +1012,8 @@
     "unknownIp": "Unknown network",
     "thisDevice": "This device",
     "details": "Details",
-    "browserDetails": "Browser",
-    "networkDetails": "Network",
+    "browserLine": "Browser: {browser}",
+    "networkLine": "Network: {network}",
     "browser": {
       "chrome": "Chrome",
       "edge": "Microsoft Edge",

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   readSetupLines,
   type SetupLine,
@@ -8,7 +8,7 @@ import {
 import { allowedFetchHost } from "@/lib/claude/web-fetch";
 import { nowDate } from "@/lib/clock";
 import { type AssistOptions, assistsAvailable, runAssist } from "./assists";
-import type { AppDb } from "./client";
+import type { AppDb, AppTransaction } from "./client";
 import { listActiveCourses } from "./courses";
 import { setShopDeskHours } from "./desk-pings";
 import { saveFormDraft } from "./form-drafts";
@@ -29,13 +29,60 @@ import { courses, shops, websiteSetupDrafts } from "./schema";
 
 export type WebsiteSetup = { host: string; lines: SetupLine[]; readAt: Date };
 
+/**
+ * The key a page posts back names its line *within one reading*: the
+ * reading's time, then the line's stored key. Stored keys are positional
+ * (`tagline-0`), so after the site is read again in another tab the same
+ * stored key can name a different proposal; a tap carrying the old reading's
+ * time is refused instead of writing words the owner never saw.
+ */
+function readingKey(readAt: Date, lineKey: string): string {
+  return `${readAt.getTime()}.${lineKey}`;
+}
+
+function lineKeyIn(readAt: Date, key: string): string | null {
+  const prefix = `${readAt.getTime()}.`;
+  return key.startsWith(prefix) && key.length > prefix.length ? key.slice(prefix.length) : null;
+}
+
 export async function readWebsiteSetup(db: AppDb, shopId: string): Promise<WebsiteSetup | null> {
   const [row] = await db
     .select()
     .from(websiteSetupDrafts)
     .where(eq(websiteSetupDrafts.shopId, shopId))
     .limit(1);
-  return row ? { host: row.host, lines: readSetupLines(row.lines), readAt: row.readAt } : null;
+  if (!row) return null;
+  const lines = readSetupLines(row.lines).map((line) => ({
+    ...line,
+    key: readingKey(row.readAt, line.key),
+  }));
+  return { host: row.host, lines, readAt: row.readAt };
+}
+
+/**
+ * The open line a tap names, with the draft row locked until the tap's
+ * transaction ends: a second tap (the same line, or another line of the same
+ * reading) waits here and then reads what the first one wrote. `null` when
+ * there is no draft, the key is from another reading, or the line is not open.
+ */
+async function lockOpenLine(
+  tx: AppTransaction,
+  shopId: string,
+  key: string,
+): Promise<{ line: SetupLine; index: number } | null> {
+  const [row] = await tx
+    .select({ lines: websiteSetupDrafts.lines, readAt: websiteSetupDrafts.readAt })
+    .from(websiteSetupDrafts)
+    .where(eq(websiteSetupDrafts.shopId, shopId))
+    .for("update")
+    .limit(1);
+  if (!row) return null;
+  const lineKey = lineKeyIn(row.readAt, key);
+  if (!lineKey) return null;
+  const lines = readSetupLines(row.lines);
+  const index = lines.findIndex((candidate) => candidate.key === lineKey);
+  const line = lines[index];
+  return line && line.status === "open" ? { line, index } : null;
 }
 
 export type ReadWebsiteOutcome = "read" | "nothing-found" | "bad-site" | "dark";
@@ -71,32 +118,50 @@ export async function readWebsiteForSetup(
   return "read";
 }
 
+/** Sets one line's status in place, leaving every other line as it stands. */
 async function markLine(
-  db: AppDb,
+  tx: AppTransaction,
   shopId: string,
-  setup: WebsiteSetup,
-  key: string,
+  index: number,
   status: "accepted" | "dismissed",
 ): Promise<void> {
-  const lines = setup.lines.map((line) => (line.key === key ? { ...line, status } : line));
-  await db.update(websiteSetupDrafts).set({ lines }).where(eq(websiteSetupDrafts.shopId, shopId));
+  const path = `{${index},status}`;
+  await tx
+    .update(websiteSetupDrafts)
+    .set({
+      lines: sql`jsonb_set(${websiteSetupDrafts.lines}, ${path}::text[], to_jsonb(${status}::text))`,
+    })
+    .where(eq(websiteSetupDrafts.shopId, shopId));
 }
 
 export type AcceptSetupOutcome = "saved" | "departure-drafted" | "gone";
 
 /**
- * Writes one accepted line through its writer and marks it accepted. `gone`
- * when there is no such open line (accepted already, dismissed, read over,
- * or a key that names nothing), or when its course is no longer the shop's.
+ * Writes one accepted line through its writer and marks it accepted, in one
+ * transaction holding the draft row. `gone` when there is no such open line
+ * (accepted already, dismissed, a key from an earlier reading, or a key that
+ * names nothing), or when its course is no longer the shop's; a `gone` writes
+ * nothing.
  */
 export async function acceptSetupLine(
   db: AppDb,
   input: { shopId: string; personId: string; key: string; now?: Date },
 ): Promise<AcceptSetupOutcome> {
-  const setup = await readWebsiteSetup(db, input.shopId);
-  const line = setup?.lines.find((candidate) => candidate.key === input.key);
-  if (!setup || !line || line.status !== "open") return "gone";
+  return db.transaction(async (tx) => {
+    const open = await lockOpenLine(tx, input.shopId, input.key);
+    if (!open) return "gone";
+    const outcome = await writeLine(tx, input, open.line);
+    if (outcome !== "gone") await markLine(tx, input.shopId, open.index, "accepted");
+    return outcome;
+  });
+}
 
+/** The one writer an accepted line goes through. */
+async function writeLine(
+  db: AppTransaction,
+  input: { shopId: string; personId: string; now?: Date },
+  line: SetupLine,
+): Promise<AcceptSetupOutcome> {
   let outcome: AcceptSetupOutcome = "saved";
   switch (line.kind) {
     case "tagline":
@@ -147,15 +212,15 @@ export async function acceptSetupLine(
       // Copy for the owner to place; nothing to write.
       return "gone";
   }
-  await markLine(db, input.shopId, setup, line.key, "accepted");
   return outcome;
 }
 
-/** Stops offering one line. */
+/** Stops offering one line; false when the key names no open line of the current reading. */
 export async function dismissSetupLine(db: AppDb, shopId: string, key: string): Promise<boolean> {
-  const setup = await readWebsiteSetup(db, shopId);
-  const line = setup?.lines.find((candidate) => candidate.key === key);
-  if (!setup || !line || line.status !== "open") return false;
-  await markLine(db, shopId, setup, key, "dismissed");
-  return true;
+  return db.transaction(async (tx) => {
+    const open = await lockOpenLine(tx, shopId, key);
+    if (!open) return false;
+    await markLine(tx, shopId, open.index, "dismissed");
+    return true;
+  });
 }

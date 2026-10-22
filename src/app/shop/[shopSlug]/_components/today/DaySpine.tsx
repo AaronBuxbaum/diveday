@@ -51,8 +51,9 @@ import {
 import { ClosingStation } from "./ClosingStation";
 import { crewAwayRowControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
-import { HelpRequestControl, HelpRequestProvider } from "./HelpRequestControl";
+import { HelpRequestProvider } from "./HelpRequestControl";
 import { helpRequestCopy } from "./help-request-copy";
+import { helpRequestControl } from "./help-request-row";
 import { NeedsYouGroups } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
@@ -137,7 +138,6 @@ type RowControls = {
  * The copy and context every row's control needs, composed once per render on the server:
  * the controls are Client Components, so a translator never crosses the boundary.
  */
-
 function rowControls(
   base: Pick<RowControls, "shopSlug" | "shopName" | "readerPersonId" | "t">,
 ): RowControls {
@@ -445,10 +445,7 @@ function StationRow({
       copy={controls.paymentCopy}
     />
   ) : action.helpRequest ? (
-    <HelpRequestControl
-      {...action.helpRequest}
-      meetingInstructions={action.helpRequest.meetingInstructions}
-    />
+    helpRequestControl(action.helpRequest, action.actionLabel, t)
   ) : action.agencyCheck && action.agencyCheck.cards.length > 0 ? (
     // **"Check with SSI" beside a card still waiting for its check** (H-105):
     // drawn only with the browser extension, and then the same check the

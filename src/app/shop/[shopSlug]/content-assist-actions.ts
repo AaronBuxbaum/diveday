@@ -1,6 +1,6 @@
 "use server";
 
-import { shopAssist } from "@/db/assist-shop";
+import { runAssist } from "@/db/assists";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { courseWords, tripWords } from "@/db/content-assists";
 import type { DiveSpecialty } from "@/db/schema";
@@ -131,7 +131,7 @@ export async function draftTripDescriptionAction(
     }),
   };
   const draft = descriptionDraft(
-    await shopAssist(db, {
+    await runAssist(db, {
       shopId: shop.id,
       feature: DESCRIPTION_DRAFT_FEATURE,
       call: descriptionDraftCall(input),
@@ -174,7 +174,7 @@ export async function draftCourseSummaryAction(
     facts: {},
   };
   const draft = descriptionDraft(
-    await shopAssist(db, {
+    await runAssist(db, {
       shopId: shop.id,
       feature: DESCRIPTION_DRAFT_FEATURE,
       call: descriptionDraftCall(input),
@@ -221,7 +221,7 @@ export async function draftSiteBriefAction(
   };
   if (!input.words.name) return null;
   const brief = siteBrief(
-    await shopAssist(db, {
+    await runAssist(db, {
       shopId: shop.id,
       feature: SITE_BRIEF_FEATURE,
       call: siteBriefCall(input),
@@ -247,7 +247,7 @@ export async function draftTranslationAction(
   const original = await translatableOriginal(db, shop.id, kind, id, field);
   if (!original?.trim()) return null;
   const text = shopTranslation(
-    await shopAssist(db, {
+    await runAssist(db, {
       shopId: shop.id,
       feature: SHOP_TRANSLATE_FEATURE,
       call: shopTranslateCall(original),
@@ -302,7 +302,7 @@ export async function draftBenchNoteAction(
   };
   if (!input.technicianNotes) return null;
   const message = benchNote(
-    await shopAssist(db, {
+    await runAssist(db, {
       shopId: shop.id,
       feature: BENCH_NOTE_FEATURE,
       call: benchNoteCall(input),

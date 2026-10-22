@@ -10,7 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { FormStatus, StickyFormActions } from "@/components/ui/form";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getCourseBySlug, getCourseTemplateUpdate } from "@/db/courses";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
@@ -80,7 +80,7 @@ export default async function EditCoursePage({
   // whose only outcome is a refusal is a control that should not be drawn.
   const canSetVisibility = await canPersonConfigureTrips(db, shop.id, session.user.personId);
   const templateUpdate = await getCourseTemplateUpdate(db, session.user.shopId, course.id);
-  const canAssist = await shopAssistsAvailable(db, shop.id);
+  const canAssist = await assistsAvailable(db, shop.id);
   const summaryTranslation = await loadTranslationBox(
     db,
     shop,
@@ -267,6 +267,7 @@ export default async function EditCoursePage({
                         draft={draftCourseSummaryAction.bind(null, shopSlug, course.id)}
                         label={t("deskAssists.draft")}
                         pendingLabel={t("deskAssists.drafting")}
+                        emptyLabel={t("deskAssists.nothing")}
                       />
                     ) : undefined
                   }

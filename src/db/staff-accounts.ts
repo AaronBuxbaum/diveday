@@ -7,6 +7,7 @@ import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import { isSpokenLanguageTag } from "@/lib/spoken-languages";
 import type { AppDb, DbExecutor } from "./client";
+import { releaseHelpRequestsOfPerson } from "./help-requests";
 import { selectActivePersonByEmail } from "./people";
 import { accountSessions, people, personRoles, pushSubscriptions, userAccounts } from "./schema";
 
@@ -465,6 +466,11 @@ export async function setStaffRoles(
     if (!input.roles.includes("owner") && (await isLastOwner(tx, input.shopId, input.personId))) {
       return { ok: false, reason: "last_owner" };
     }
+    // Someone left with no staff role cannot be the crew member a diver was
+    // promised help from: their acknowledged requests go back to the desk.
+    if (!input.roles.some((role) => STAFF_ROLES.includes(role))) {
+      await releaseHelpRequestsOfPerson(tx, { shopId: input.shopId, personId: input.personId });
+    }
     await tx
       .delete(personRoles)
       .where(
@@ -540,6 +546,8 @@ export async function removeStaffMember(
     if (await isLastOwner(tx, input.shopId, input.personId)) {
       return { ok: false, reason: "last_owner" };
     }
+    // A leaver cannot be the crew member a diver was promised help from.
+    await releaseHelpRequestsOfPerson(tx, { shopId: input.shopId, personId: input.personId });
     await tx
       .delete(personRoles)
       .where(

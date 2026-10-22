@@ -1012,8 +1012,8 @@
     "unknownIp": "Red desconocida",
     "thisDevice": "Este dispositivo",
     "details": "Detalles",
-    "browserDetails": "Navegador",
-    "networkDetails": "Red",
+    "browserLine": "Navegador: {browser}",
+    "networkLine": "Red: {network}",
     "browser": {
       "chrome": "Chrome",
       "edge": "Microsoft Edge",

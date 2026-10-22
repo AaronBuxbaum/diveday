@@ -282,8 +282,8 @@ export default async function SecurityPage({
             labels={{
               thisDevice: t("settings.security.thisDevice"),
               details: t("settings.security.details"),
-              browserDetails: t("settings.security.browserDetails"),
-              networkDetails: t("settings.security.networkDetails"),
+              browserLine: (browser) => t("settings.security.browserLine", { browser }),
+              networkLine: (network) => t("settings.security.networkLine", { network }),
               unknownDevice: t("settings.security.unknownDevice"),
               unknownIp: t("settings.security.unknownIp"),
               revoke: t("settings.security.revoke"),

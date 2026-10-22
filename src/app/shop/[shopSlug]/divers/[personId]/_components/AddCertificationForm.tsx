@@ -105,6 +105,7 @@ export function AddCertificationForm({
                   read={readCardPhotoAction.bind(null, shopSlug)}
                   label={t("deskAssists.cardPhoto")}
                   pendingLabel={t("deskAssists.cardPhotoPending")}
+                  emptyLabel={t("deskAssists.nothing")}
                 />
               ) : null}
               <SubmitButton

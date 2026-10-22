@@ -7,7 +7,9 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import {
   assistDarkReasonFor,
+  assistsAvailable,
   claudeSpendUsdBetween,
+  IN_FLIGHT_WINDOW_MS,
   MAX_CALLS_IN_FLIGHT,
   reservedMicroUsd,
   runAssist,
@@ -295,6 +297,25 @@ describe("assistDarkReasonFor", () => {
         now,
       }),
     ).toBe("over_cap");
+  });
+});
+
+describe("IN_FLIGHT_WINDOW_MS", () => {
+  it("outlasts the longest call: four turns of a 90 s timeout, each retried once", () => {
+    expect(IN_FLIGHT_WINDOW_MS).toBeGreaterThanOrEqual(4 * 2 * 90_000);
+  });
+});
+
+describe("assistsAvailable", () => {
+  it("reads as dark when the read throws, so an assist is never why a page fails", async () => {
+    // Not a uuid: the shop read itself throws.
+    await expect(assistsAvailable(ctx.db, "not-a-shop-id", { env: keyed, now })).resolves.toBe(
+      false,
+    );
+  });
+
+  it("is lit for a lit shop", async () => {
+    expect(await assistsAvailable(ctx.db, ctx.shop.id, { env: keyed, now })).toBe(true);
   });
 });
 

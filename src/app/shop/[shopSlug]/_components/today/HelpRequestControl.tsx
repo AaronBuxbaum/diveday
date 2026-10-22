@@ -8,21 +8,20 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
 
 export type HelpRequestCopy = {
-  arrange: string;
-  change: string;
   complete: string;
   confirm: string;
   cancel: string;
   selector: string;
   speakFirst: string;
-  meeting: string;
   saving: string;
   assigned: string;
   completed: string;
   undone: string;
+  reopened: string;
   stale: string;
   invalidHelper: string;
   failed: string;
+  undoRefused: string;
   undo: string;
   undoPending: string;
   dismiss: string;
@@ -46,8 +45,21 @@ export function HelpRequestProvider({
 }) {
   const [result, run] = useActionState(helpRequestAction, null);
   const completed = result?.ok && result.effect === "completed" ? result : null;
+  // A handled request has no row on Today, so a refused undo is said here,
+  // where its toast was. Without it the desk would think the request was back.
+  const refusedUndo =
+    result && !result.ok && result.intent === "undo"
+      ? result.reason === "stale"
+        ? copy.undoRefused
+        : copy.failed
+      : null;
   return (
     <HelpRequestContext.Provider value={{ result, run, copy }}>
+      {refusedUndo ? (
+        <p role="alert" className="text-sm font-medium text-danger">
+          {refusedUndo}
+        </p>
+      ) : null}
       {completed ? (
         <UndoToast
           message={copy.completed}
@@ -80,37 +92,50 @@ export function HelpRequestControl({
   status,
   helperPersonId,
   helperPersonName,
+  label,
   crew,
-  meetingInstructions,
+  meetingLine,
 }: {
   requestId: string;
   revision: number;
   status: "requested" | "acknowledged";
   helperPersonId: string | null;
   helperPersonName: string | null;
+  /** The row's own action label (`helpRequestActionText`): Arrange help, or Change helper. */
+  label: string;
   crew: readonly { personId: string; fullName: string }[];
-  meetingInstructions: string | null;
+  /** Where the departure meets, already a whole bundle sentence. */
+  meetingLine: string | null;
 }) {
   const { result, run, copy } = useHelpRequest();
   const [open, setOpen] = useState(false);
   const assigned = Boolean(helperPersonId && helperPersonName);
+  // The picker starts on the saved helper only while they are still on the
+  // crew list. A helper who left would otherwise fall through to whoever is
+  // listed first, and Confirm would promise the diver the wrong person.
+  const preselected =
+    assigned && crew.some((member) => member.personId === helperPersonId)
+      ? (helperPersonId ?? "")
+      : "";
   const ownResult = result?.requestId === requestId ? result : null;
   const success = ownResult?.ok
     ? ownResult.effect === "assigned"
       ? copy.assigned
       : ownResult.effect === "undone"
         ? copy.undone
-        : null
+        : ownResult.effect === "reopened"
+          ? copy.reopened
+          : null
     : null;
+  // A refused undo is the provider's to say (`HelpRequestProvider`).
   const error =
-    ownResult && !ownResult.ok
+    ownResult && !ownResult.ok && ownResult.intent !== "undo"
       ? ownResult.reason === "helper"
         ? copy.invalidHelper
         : ownResult.reason === "stale"
           ? copy.stale
           : copy.failed
       : null;
-  const label = assigned ? copy.change : copy.arrange;
 
   return (
     <div className="flex flex-col items-start gap-2">
@@ -161,7 +186,7 @@ export function HelpRequestControl({
             <select
               name="helperPersonId"
               required
-              defaultValue={helperPersonId ?? ""}
+              defaultValue={preselected}
               className={controlClass}
             >
               <option value="" disabled>
@@ -175,11 +200,7 @@ export function HelpRequestControl({
             </select>
           </label>
           <p className="text-sm text-muted">{copy.speakFirst}</p>
-          {meetingInstructions ? (
-            <p className="text-sm text-muted">
-              {copy.meeting}: {meetingInstructions}
-            </p>
-          ) : null}
+          {meetingLine ? <p className="text-sm text-muted">{meetingLine}</p> : null}
           <div className="flex flex-wrap gap-2">
             <SubmitButton
               pendingLabel={copy.saving}

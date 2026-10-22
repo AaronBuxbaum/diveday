@@ -1,6 +1,6 @@
 "use server";
 
-import { shopAssist } from "@/db/assist-shop";
+import { runAssist } from "@/db/assists";
 import { marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -37,7 +37,7 @@ export async function matchSightingsAction(
     .filter((card) => offered.has(card.slug))
     .map((card) => ({ slug: card.slug, name: card.name }));
   if (chips.length === 0) return null;
-  const value = await shopAssist(db, {
+  const value = await runAssist(db, {
     shopId: shop.id,
     feature: SIGHTINGS_MATCH_FEATURE,
     call: sightingsMatchCall(said, chips),

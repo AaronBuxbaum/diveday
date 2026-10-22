@@ -1,6 +1,6 @@
 "use server";
 
-import { shopAssist } from "@/db/assist-shop";
+import { runAssist } from "@/db/assists";
 import { canPersonMergeDiver } from "@/db/authz";
 import { readUnsurePair } from "@/db/desk-assists";
 import { requestLocale } from "@/i18n/request";
@@ -30,7 +30,7 @@ export async function readSamePersonAction(
   const pair = await readUnsurePair(db, shop.id, sourceId, survivorId);
   if (!pair) return null;
   const locale = await requestLocale(shop.defaultLocale);
-  const value = await shopAssist(db, {
+  const value = await runAssist(db, {
     shopId: shop.id,
     feature: SAME_PERSON_FEATURE,
     call: samePersonCall(pair[0], pair[1], locale),

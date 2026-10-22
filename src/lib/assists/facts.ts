@@ -28,22 +28,247 @@ export function fillFacts(text: string, facts: Readonly<Record<string, string>>)
   return text.replace(PLACEHOLDER, (_whole, key: string) => facts[key] ?? "").trim();
 }
 
-/** The runs of digits in a text, sorted, for comparing two texts' numbers. */
-export function digitRuns(text: string): string[] {
-  return [...text.matchAll(/\p{Nd}+(?:[.,]\p{Nd}+)?/gu)].map((match) => match[0]).sort();
+/**
+ * A number in a text, read as one whole token of one kind. "8:00 AM" is one
+ * time, never an 8 and a 00; "Oct 24" is one date; "$95.00" is one price;
+ * "+1 305-555-0100" is one phone number. Only what is left is a plain count.
+ * A number is matched only against numbers of its own kind, so "8 seats"
+ * cannot borrow the 8 of "8:00" and "8:30" cannot borrow the 30 of "1:30".
+ *
+ * This is a conservative check, not a parser: anything it cannot read as a
+ * whole time, date or price is a plain count, and a plain count the source
+ * does not hold is refused. A doubtful draft is thrown away, never kept. It
+ * does not tie a number to the departure its sentence names: "3 seats" on the
+ * wreck passes if the reef has 3 seats. A staffer still reads every draft.
+ */
+type NumberToken =
+  | { kind: "phone"; digits: string }
+  | { kind: "price"; cents: number }
+  | { kind: "time"; hour12: number; minute: number; half: "am" | "pm" | null }
+  | { kind: "date"; month: number; day: number }
+  /** A day of the month with no month: "the 24th", or "10/24" read either way. */
+  | { kind: "day"; days: readonly { month: number | null; day: number }[] }
+  /** "9 h": an hour of the day or a number of hours, so it may stand for either. */
+  | { kind: "hour"; hour: number }
+  | { kind: "count"; value: string };
+
+/** Spaces a formatter may put inside a number, a price or a date. */
+const SP = "[ \\u00a0\\u202f]";
+const MERIDIEM = `${SP}?([ap])\\.?${SP}?m\\.?(?![\\p{L}])`;
+// i18n-exempt: currency markers the reader looks for, never shown
+const CURRENCY_WORD = "dollars?|d[oó]lares|pesos|euros?|usd|eur|mxn|gbp|cad|aud";
+const CURRENCY_MARK = `(?:\\p{Lu}{0,3}[$€£¥]\\p{Lu}{0,3}|(?:${CURRENCY_WORD})(?![\\p{L}]))`;
+const AMOUNT = `\\p{Nd}{1,3}(?:[,.${SP.slice(1, -1)}]\\p{Nd}{3})+(?:[.,]\\p{Nd}{1,2})?|\\p{Nd}+(?:[.,]\\p{Nd}{1,2})?`;
+
+/** Month names and short forms, English and Spanish, to their number. */
+const MONTHS: readonly (readonly [number, string])[] = [
+  // i18n-exempt: month names the reader looks for, never shown
+  [1, "jan(?:uary)?|ene(?:ro)?"],
+  [2, "feb(?:ruary|rero)?"],
+  [3, "mar(?:ch|zo)?"],
+  [4, "apr(?:il)?|abr(?:il)?"],
+  [5, "may(?:o)?"],
+  [6, "jun(?:e|io)?"],
+  [7, "jul(?:y|io)?"],
+  [8, "aug(?:ust)?|ago(?:sto)?"],
+  [9, "sept?(?:ember|iembre)?|set(?:iembre)?"],
+  [10, "oct(?:ober|ubre)?"],
+  [11, "nov(?:ember|iembre)?"],
+  [12, "dec(?:ember)?|dic(?:iembre)?"],
+];
+const MONTH = `(${MONTHS.map(([, names]) => names).join("|")})\\.?`;
+
+function monthNumber(name: string): number {
+  const lower = name.toLowerCase();
+  for (const [month, names] of MONTHS) {
+    if (new RegExp(`^(?:${names})$`, "u").test(lower)) return month;
+  }
+  return 0;
+}
+
+/** "1,234.50", "1.234,50", "1 234,50" and "95" to cents; the last separator followed by one or two digits is the decimal one. */
+function amountCents(text: string): number {
+  const compact = text.replace(/[   ]/gu, "");
+  const decimal = /[.,](\p{Nd}{1,2})$/u.exec(compact);
+  const whole = (decimal ? compact.slice(0, decimal.index) : compact).replace(/[.,]/gu, "");
+  const fraction = (decimal?.[1] ?? "").padEnd(2, "0");
+  return Number(whole) * 100 + Number(fraction || "0");
+}
+
+function timeToken(hourText: string, minuteText: string, halfText: string | undefined) {
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const half = halfText ? (halfText.toLowerCase() === "a" ? "am" : "pm") : null;
+  if (half || hour === 0 || hour > 12) {
+    // A 24-hour time, or one with its half of the day, is a known instant.
+    const hour24 = half ? (hour % 12) + (half === "pm" ? 12 : 0) : hour;
+    return {
+      kind: "time" as const,
+      hour12: hour24 % 12 || 12,
+      minute,
+      half: hour24 < 12 ? ("am" as const) : ("pm" as const),
+    };
+  }
+  return { kind: "time" as const, hour12: hour, minute, half: null };
 }
 
 /**
- * True when every number in `output` appears in `source`: a summary or a
- * translation may drop a number, never add or change one.
+ * Each pattern reads one kind and blanks what it read, in this order, so a
+ * later kind never sees a piece of an earlier one.
+ */
+const READERS: readonly {
+  pattern: RegExp;
+  /** The whole match first, then each group. */
+  read: (match: readonly (string | undefined)[]) => NumberToken | null;
+}[] = [
+  {
+    // Seven digits or more, spaced or dashed: a phone number.
+    pattern: /\+?\p{Nd}[\p{Nd} () .-]{5,}\p{Nd}/gu,
+    read: (match) => {
+      const whole = match[0] ?? "";
+      const digits = whole.replace(/\P{Nd}/gu, "");
+      return digits.length >= 7 && !/[.]\p{Nd}{1,2}$/u.test(whole)
+        ? { kind: "phone", digits }
+        : null;
+    },
+  },
+  {
+    // A mark before the amount ("$95", "US$ 95") or after it ("95,00 €"); a
+    // mark after is never one that starts the next amount ("2 $95").
+    pattern: new RegExp(
+      `${CURRENCY_MARK}${SP}?(${AMOUNT})|(${AMOUNT})${SP}?${CURRENCY_MARK}(?!${SP}?\\p{Nd})`,
+      "giu",
+    ),
+    read: (match) => ({ kind: "price", cents: amountCents(match[1] ?? match[2] ?? "") }),
+  },
+  {
+    pattern: new RegExp(`(\\p{Nd}{1,2})[:h](\\p{Nd}{2})(?!\\p{Nd})(?:${MERIDIEM})?`, "giu"),
+    read: (match) => timeToken(match[1] ?? "", match[2] ?? "", match[3]),
+  },
+  {
+    pattern: new RegExp(`(?<![\\p{Nd}.,])(\\p{Nd}{1,2})${MERIDIEM}`, "giu"),
+    read: (match) => timeToken(match[1] ?? "", "0", match[2]),
+  },
+  {
+    pattern: new RegExp(`(?<![\\p{Nd}.,])(\\p{Nd}{1,2})${SP}?h(?![\\p{L}])`, "giu"),
+    read: (match) => ({ kind: "hour", hour: Number(match[1]) }),
+  },
+  {
+    pattern: new RegExp(
+      `(?<![\\p{L}])${MONTH}${SP}+(\\p{Nd}{1,2})(?![\\p{Nd}])|(?<![\\p{Nd}])(\\p{Nd}{1,2})\\.?${SP}+(?:de${SP}+)?${MONTH}(?![\\p{L}])`,
+      "giu",
+    ),
+    read: (match) => {
+      const month = monthNumber(match[1] ?? match[4] ?? "");
+      const day = Number(match[2] ?? match[3]);
+      return month ? { kind: "date", month, day } : null;
+    },
+  },
+  {
+    // "10/24": a date written in figures, read either way round.
+    pattern: /(?<![\p{Nd}/])(\p{Nd}{1,2})\/(\p{Nd}{1,2})(?![\p{Nd}/])/gu,
+    read: (match) => {
+      const first = Number(match[1]);
+      const second = Number(match[2]);
+      return {
+        kind: "day",
+        days: [
+          { month: first, day: second },
+          { month: second, day: first },
+        ],
+      };
+    },
+  },
+  {
+    // i18n-exempt: ordinal endings the reader looks for, never shown
+    pattern: /(?<![\p{Nd}])(\p{Nd}{1,2})(?:st|nd|rd|th|º|ª)(?![\p{L}])/giu,
+    read: (match) => ({ kind: "day", days: [{ month: null, day: Number(match[1]) }] }),
+  },
+  {
+    pattern: /\p{Nd}+(?:[.,]\p{Nd}+)?/gu,
+    read: (match) => ({ kind: "count", value: (match[0] ?? "").replace(",", ".") }),
+  },
+];
+
+/** Every number in a text, each as one token of its kind. */
+function numberTokens(text: string): NumberToken[] {
+  const tokens: NumberToken[] = [];
+  let rest = text;
+  for (const { pattern, read } of READERS) {
+    rest = rest.replace(pattern, (whole: string, ...rest: unknown[]) => {
+      // `replace` passes the groups, then the offset and the whole string.
+      const token = read([whole, ...(rest.slice(0, -2) as (string | undefined)[])]);
+      if (!token) return whole;
+      tokens.push(token);
+      return " ".repeat(whole.length);
+    });
+  }
+  return tokens;
+}
+
+/** Whether `said` can be read as `given`. 2 means the same token; 1 a looser reading. */
+function matchScore(said: NumberToken, given: NumberToken): 0 | 1 | 2 {
+  switch (said.kind) {
+    case "phone":
+      return given.kind === "phone" && given.digits === said.digits ? 2 : 0;
+    case "price":
+      return given.kind === "price" && given.cents === said.cents ? 2 : 0;
+    case "count":
+      if (given.kind === "hour") return given.hour === Number(said.value) ? 1 : 0;
+      return given.kind === "count" && Number(given.value) === Number(said.value) ? 2 : 0;
+    case "hour":
+      if (given.kind === "hour") return given.hour === said.hour ? 2 : 0;
+      if (given.kind === "count") return Number(given.value) === said.hour ? 1 : 0;
+      return given.kind === "time" && given.minute === 0 && given.hour12 === (said.hour % 12 || 12)
+        ? 1
+        : 0;
+    case "time":
+      if (given.kind === "hour") {
+        return said.minute === 0 && said.hour12 === (given.hour % 12 || 12) ? 1 : 0;
+      }
+      if (given.kind !== "time" || given.hour12 !== said.hour12 || given.minute !== said.minute) {
+        return 0;
+      }
+      if (said.half === given.half) return 2;
+      return said.half === null || given.half === null ? 1 : 0;
+    case "date":
+      return given.kind === "date" && given.month === said.month && given.day === said.day ? 2 : 0;
+    case "day":
+      if (given.kind === "day") {
+        return JSON.stringify(given.days) === JSON.stringify(said.days) ? 2 : 0;
+      }
+      return given.kind === "date" &&
+        said.days.some(
+          (option) =>
+            option.day === given.day && (option.month === null || option.month === given.month),
+        )
+        ? 1
+        : 0;
+  }
+}
+
+/**
+ * True when every number in `output` is a number of the same kind in
+ * `source`, used no more often than `source` gives it: a summary or a
+ * translation may drop a number, never add or change one. See
+ * {@link NumberToken} for what counts as one number.
  */
 export function numbersCameFrom(output: string, source: string): boolean {
-  const offered = new Map<string, number>();
-  for (const run of digitRuns(source)) offered.set(run, (offered.get(run) ?? 0) + 1);
-  for (const run of digitRuns(output)) {
-    const left = offered.get(run) ?? 0;
-    if (left === 0) return false;
-    offered.set(run, left - 1);
+  const offered = numberTokens(source);
+  const used = new Set<number>();
+  for (const said of numberTokens(output)) {
+    let best = -1;
+    let bestFit = 0;
+    offered.forEach((given, index) => {
+      if (used.has(index)) return;
+      const score = matchScore(said, given);
+      if (score > bestFit) {
+        best = index;
+        bestFit = score;
+      }
+    });
+    if (best < 0) return false;
+    used.add(best);
   }
   return true;
 }
@@ -84,8 +309,101 @@ const NUMBER_WORD = wordPattern([
   "uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|doce|quince|veinte|treinta|cuarenta|cincuenta|cien|cientos|docenas?|par|pareja",
 ]);
 
-export function hasNumberWord(text: string): boolean {
-  return NUMBER_WORD.test(bareText(text));
+/** Every count word in a text, lowercased, repeats included. */
+function numberWordsIn(text: string): string[] {
+  const words: string[] = [];
+  const global = new RegExp(NUMBER_WORD.source, "giu");
+  // `lastIndex` steps back over the trailing boundary, so two count words in
+  // a row are both found.
+  for (let match = global.exec(text); match; match = global.exec(text)) {
+    words.push((match[2] ?? "").toLowerCase());
+    global.lastIndex -= (match[3] ?? "").length;
+  }
+  return words;
+}
+
+/** What each count word is worth, so English and Spanish can be compared. */
+const NUMBER_WORD_VALUES: Readonly<Record<string, number>> = {
+  // i18n-exempt: words the comparison reads, never shown
+  one: 1,
+  single: 1,
+  uno: 1,
+  two: 2,
+  couple: 2,
+  pair: 2,
+  dos: 2,
+  par: 2,
+  pareja: 2,
+  three: 3,
+  tres: 3,
+  four: 4,
+  cuatro: 4,
+  five: 5,
+  cinco: 5,
+  six: 6,
+  seis: 6,
+  seven: 7,
+  siete: 7,
+  eight: 8,
+  ocho: 8,
+  nine: 9,
+  nueve: 9,
+  ten: 10,
+  diez: 10,
+  eleven: 11,
+  twelve: 12,
+  doce: 12,
+  dozen: 12,
+  dozens: 12,
+  docena: 12,
+  docenas: 12,
+  thirteen: 13,
+  fifteen: 15,
+  quince: 15,
+  twenty: 20,
+  veinte: 20,
+  thirty: 30,
+  treinta: 30,
+  forty: 40,
+  cuarenta: 40,
+  fifty: 50,
+  cincuenta: 50,
+  hundred: 100,
+  hundreds: 100,
+  cien: 100,
+  cientos: 100,
+};
+
+/**
+ * True when both texts write the same counts in words, compared by value
+ * ("two" and "dos" agree; "two" and "tres" do not). One is left out: Spanish
+ * says it with the article "un" or "una", which is not a count word here.
+ */
+export function sameNumberWords(a: string, b: string): boolean {
+  const values = (text: string) =>
+    numberWordsIn(bareText(text))
+      .map((word) => NUMBER_WORD_VALUES[word] ?? -1)
+      .filter((value) => value !== 1)
+      .sort((x, y) => x - y);
+  const left = values(a);
+  const right = values(b);
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+/**
+ * True when the text writes a count in words. With `given`, a word the given
+ * text already says (a trip called "Two-tank reef") is quoting, not counting,
+ * and passes as often as `given` says it.
+ */
+export function hasNumberWord(text: string, given = ""): boolean {
+  const offered = new Map<string, number>();
+  for (const word of numberWordsIn(given)) offered.set(word, (offered.get(word) ?? 0) + 1);
+  for (const word of numberWordsIn(bareText(text))) {
+    const left = offered.get(word) ?? 0;
+    if (left === 0) return true;
+    offered.set(word, left - 1);
+  }
+  return false;
 }
 
 /**
@@ -129,7 +447,7 @@ export function softensTheDive(text: string, given: readonly string[]): boolean 
 }
 
 /** The locale's language as the prompt names it. */
-export function languageName(locale: string): string {
+export function promptLanguage(locale: string): string {
   return locale.toLowerCase().startsWith("es")
     ? "Latin American Spanish"
     : "English (United States)";

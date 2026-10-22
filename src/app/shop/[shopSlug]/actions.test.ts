@@ -175,6 +175,45 @@ describe("helpRequestAction", () => {
     );
     expect(result).toMatchObject({ ok: true, effect });
   });
+
+  it("says an undo reopened the request when the helper no longer serves the departure", async () => {
+    signedIn();
+    vi.mocked(undoHelpRequestCompletion).mockResolvedValue({
+      ok: true,
+      request: { revision: 8, status: "requested", helperPersonId: null },
+    } as never);
+    const result = await helpRequestAction(
+      null,
+      form({
+        requestId: "11111111-1111-4111-8111-111111111111",
+        helperPersonId: "22222222-2222-4222-8222-222222222222",
+        intent: "undo",
+      }),
+    );
+    expect(result).toMatchObject({ ok: true, effect: "reopened" });
+  });
+
+  it("names the intent on a refusal, so a refused undo can be shown without its row", async () => {
+    signedIn();
+    vi.mocked(undoHelpRequestCompletion).mockResolvedValue({
+      ok: false,
+      reason: "invalid_transition",
+    });
+    const result = await helpRequestAction(
+      null,
+      form({
+        requestId: "11111111-1111-4111-8111-111111111111",
+        helperPersonId: "22222222-2222-4222-8222-222222222222",
+        intent: "undo",
+      }),
+    );
+    expect(result).toEqual({
+      ok: false,
+      requestId: "11111111-1111-4111-8111-111111111111",
+      intent: "undo",
+      reason: "stale",
+    });
+  });
 });
 
 describe("dismissOrientationAction", () => {

@@ -9,7 +9,7 @@ import {
   type ExportTableRead,
   readScoped,
 } from "./export-tables";
-import { bookings, certifications, people } from "./schema";
+import { bookings, certifications, people, shopTextTranslations } from "./schema";
 
 /**
  * The read list both export bundles go through. What matters about it is the
@@ -97,6 +97,27 @@ describe("the export read list", () => {
       .sort();
     // `buddyPairMembers` is put in team order after the read (issue #1795).
     expect(unordered).toEqual(["bookingPayments", "buddyPairMembers", "tripRequirements"]);
+  });
+
+  it("reads one field's translations in locale order, whatever order they were written in", async () => {
+    const { db, shop } = await seededShopContext();
+    const subject = {
+      shopId: shop.id,
+      subjectKind: "trip",
+      subjectId: randomUUID(),
+      field: "title",
+    };
+    // Written out of locale order, so a read that only orders by subject and
+    // field would hand them back as they were inserted.
+    for (const locale of ["fr-FR", "de-DE", "es-ES"]) {
+      await db
+        .insert(shopTextTranslations)
+        .values({ ...subject, locale, text: locale, sourceDigest: "digest" });
+    }
+    const rows = await readScoped(db, "shopTextTranslations", { kind: "shop", shopId: shop.id });
+    expect(
+      rows.filter((row) => row.subjectId === subject.subjectId).map((row) => row.locale),
+    ).toEqual(["de-DE", "es-ES", "fr-FR"]);
   });
 
   it("builds a bundle's files in list order, each from its own row builder", () => {

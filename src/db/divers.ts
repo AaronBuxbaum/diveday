@@ -23,6 +23,7 @@ import { shopDayBounds } from "@/lib/zoned";
 import { friendsBroughtBy } from "./buddy-referrals";
 import type { AppDb, DbExecutor } from "./client";
 import { diveDay } from "./dive-days";
+import { releaseHelpRequestsOfPerson } from "./help-requests";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { recordDiverActivity } from "./operations";
 import { listOrdersForPerson } from "./orders";
@@ -305,19 +306,26 @@ export async function updateDiver(
  * `src/db/anonymize.ts`, ADR 20260802-diver-data-erasure).
  */
 export async function deleteDiver(db: AppDb, shopId: string, personId: string) {
-  const [person] = await db
-    .update(people)
-    .set({ deletedAt: nowDate() })
-    .where(
-      and(
-        eq(people.id, personId),
-        eq(people.shopId, shopId),
-        isNull(people.deletedAt),
-        isNull(people.mergedIntoPersonId),
-      ),
-    )
-    .returning({ id: people.id });
-  return Boolean(person);
+  return db.transaction(async (tx) => {
+    const now = nowDate();
+    const [person] = await tx
+      .update(people)
+      .set({ deletedAt: now })
+      .where(
+        and(
+          eq(people.id, personId),
+          eq(people.shopId, shopId),
+          isNull(people.deletedAt),
+          isNull(people.mergedIntoPersonId),
+        ),
+      )
+      .returning({ id: people.id });
+    if (!person) return false;
+    // A staff member who also dives can be deleted here, and a deleted person
+    // cannot be the crew member a diver was promised help from.
+    await releaseHelpRequestsOfPerson(tx, { shopId, personId, now });
+    return true;
+  });
 }
 
 /**

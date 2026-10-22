@@ -65,15 +65,28 @@ async function shopHome() {
   return { staff, home: shopPath(staff.user.shopSlug) };
 }
 
+export type HelpRequestIntent = "assign" | "complete" | "undo";
+
 export type HelpRequestActionResult =
   | {
       ok: true;
       requestId: string;
-      effect: "assigned" | "completed" | "undone";
+      /** `reopened`: an undo whose helper no longer serves the departure sent it back to the desk. */
+      effect: "assigned" | "completed" | "undone" | "reopened";
       helperPersonId: string;
       revision: number;
     }
-  | { ok: false; requestId: string; reason: "invalid" | "stale" | "helper" | "error" };
+  | {
+      ok: false;
+      requestId: string;
+      /** Null when the form was malformed. A refused undo has no row to show it, so the provider does. */
+      intent: HelpRequestIntent | null;
+      reason: "invalid" | "stale" | "helper" | "error";
+    };
+
+function helpRequestIntent(value: string): HelpRequestIntent | null {
+  return value === "assign" || value === "complete" || value === "undo" ? value : null;
+}
 
 /** Save one desk-confirmed handoff, completion, or race-safe undo in place. */
 export async function helpRequestAction(
@@ -83,7 +96,7 @@ export async function helpRequestAction(
   const { staff, home } = await shopHome();
   const requestId = String(formData.get("requestId") ?? "");
   const helperPersonId = String(formData.get("helperPersonId") ?? "");
-  const intent = String(formData.get("intent") ?? "");
+  const intent = helpRequestIntent(String(formData.get("intent") ?? ""));
   const revisionValue = String(formData.get("expectedRevision") ?? "");
   const expectedRevision = Number(revisionValue);
   if (
@@ -92,9 +105,9 @@ export async function helpRequestAction(
     expectedRevision > 2_147_483_647 ||
     !uuidParam(requestId) ||
     !uuidParam(helperPersonId) ||
-    !["assign", "complete", "undo"].includes(intent)
+    !intent
   ) {
-    return { ok: false, requestId, reason: "invalid" };
+    return { ok: false, requestId, intent, reason: "invalid" };
   }
   const expectedStatusValue = String(formData.get("expectedStatus"));
   const expectedStatus =
@@ -104,7 +117,7 @@ export async function helpRequestAction(
         ? "requested"
         : null;
   if (intent === "assign" && !expectedStatus) {
-    return { ok: false, requestId, reason: "invalid" };
+    return { ok: false, requestId, intent, reason: "invalid" };
   }
   const db = await getDb();
   const input = {
@@ -131,6 +144,7 @@ export async function helpRequestAction(
     return {
       ok: false,
       requestId,
+      intent,
       reason:
         result.reason === "invalid_helper"
           ? "helper"
@@ -143,7 +157,14 @@ export async function helpRequestAction(
   return {
     ok: true,
     requestId,
-    effect: intent === "assign" ? "assigned" : intent === "complete" ? "completed" : "undone",
+    effect:
+      intent === "assign"
+        ? "assigned"
+        : intent === "complete"
+          ? "completed"
+          : result.request.status === "requested"
+            ? "reopened"
+            : "undone",
     helperPersonId: result.request.helperPersonId ?? helperPersonId,
     revision: result.request.revision,
   };

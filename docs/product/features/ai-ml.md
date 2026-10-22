@@ -20,8 +20,9 @@ the rest of the build plan) land in the layers above that ADR; each keeps the gu
   (`inbound_messages.assist_*`) by the inbound webhooks and the inbox view; the diver's words stay
   in view, and a cancellation still goes through the reply keyword's confirm.
 - **Reply draft and translation**: Draft and Translate beside the diver record's reply box; a draft
-  is thrown away when it quotes a number the database did not give it, or the diver asked a medical
-  question. Staff send.
+  is thrown away when it quotes a number, in digits or words, the shop's facts did not give it (a
+  number only the diver wrote does not count), or the diver asked a medical question; a translation
+  is thrown away when its numbers are not the staffer's. Staff send.
 - **Request and call note**: "Make a request" reads a message, and the Took-a-call scribble box
   reads a call, into the Took-a-call form's own fields for a staffer to log; admission decides
   after that. The scribble lands in the note as typed.
@@ -41,6 +42,59 @@ Monday read in the weekly digest, trip and course description drafts, Spanish dr
 said, and bench notes on work orders. Pure prompt and guard code is in `src/lib/assists/`, cached
 reads in `assist_results`. No prompt carries medical or waiver answers; a fact the model must
 repeat is passed as a placeholder, and an answer that invents a number or a species is refused.
+
+## Claude assists in detail
+
+The mechanics behind [ADR 20261018-claude-assists](../../architecture/decisions/20261018-claude-assists.md),
+kept here so the ADR stays short.
+
+- **Models**: `quick` (Haiku) sorts, extracts and writes short text; `draft` (Sonnet) drafts,
+  onboards, reads a photo Haiku could not, and runs anything that uses `web_fetch`, which Haiku
+  lacks.
+- **Provider**: the SDK with its base URL pinned; the fake is in `src/test/fakes.ts`.
+  `callStructured` sends the stable context first under `cache_control`. A refusal, a truncation,
+  invalid JSON, low confidence or a provider error each return `null`.
+- **The switch and the dark rules**: "Claude suggestions" is under Settings → Features, on by
+  default. A demo shop is dark because anyone can mint one. The $15 cap counts the UTC month.
+- **Ledger**: a `claude_usage` row holds the shop, feature code, model, outcome code, token counts
+  and cost in micro-USD at list price. A price change updates `models.ts`, Haiku's long-prompt
+  rate included.
+- **Reservations**: each call reserves its likely cost under a per-shop lock, with at most two in
+  flight, so concurrent calls overshoot the cap only by how far a call exceeds its reservation. A
+  call that may have been billed and failed is charged its reservation.
+- **Websites**: `webFetchTool` sets `allowed_domains` to the pasted host. A registry or a
+  builder's shared root (`co.uk`, `wixsite.com`) is refused, since the allowance covers every
+  subdomain.
+- **On screen**: `AssistDraftButton` fills one field, `AssistFillButton` several boxes of one
+  form, `AssistPhotoButton` a form from a card photo, `AssistReadButton` shows a read in place
+  (the merge check), `AssistAskForm` turns plain words into the divers list's own filters,
+  `CallNoteAssist` fills the Took-a-call form from a call note, `PdfDraftButton` drafts the release
+  editor from a PDF, `TranslateReplyButton` puts a reply in the diver's language before Send, and
+  `TranslationEditor` holds the Spanish of a shop field, saved on its own form.
+- **A new assist** adds a prompt, a schema, a feature code and an action. Leaving Claude also
+  drops `claude_usage`.
+- **The diver's card photo** fills agency, level and number. What the diver submits is filed as
+  their own word, never as evidence. `scanCard` stops at Haiku when the photo is not a card. Every
+  other assist runs for staff.
+
+### Recap highlights, filled before send
+
+With "Recap highlights" on (`shops.recap_assist_auto_approve`, Settings → Features, off by
+default), the recap send (`autoFillRecapLine` in `src/db/recap-assist.ts`, called from
+`src/db/recap.ts`) writes Claude's line into `trips.recap_shoutout` as if the crew had saved it,
+and divers read it on the recap. Turning the switch on is the shop's standing approval. Its guards:
+
+- It fills a blank highlight only. The update is conditioned on `recap_shoutout IS NULL`, so a
+  crew's own words are never replaced, even by a race.
+- It never runs on a departure with a live incident report: that recap may reach the diver it is
+  about, or their family.
+- The line is built from the crew's logged sightings, sites and conditions only. Crew notes are
+  not sent. Every site, species and count goes in by placeholder, and a line that writes its own
+  number, puts a creature at another site, or names a species the crew did not log is refused
+  (`recapLine`).
+- Any failure is no line. A refused line is remembered for that sightings log, so the next send
+  does not ask again. The recap still sends, and the crew can still draft and save one by hand on
+  Today.
 
 ## Guardrails
 

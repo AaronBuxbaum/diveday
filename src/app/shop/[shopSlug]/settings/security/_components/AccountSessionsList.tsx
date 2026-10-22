@@ -15,8 +15,10 @@ export type AccountSessionDisplayRow = {
 export type AccountSessionsLabels = {
   thisDevice: string;
   details: string;
-  browserDetails: string;
-  networkDetails: string;
+  /** "Browser: {browser}", whole from the bundle so the translator owns the punctuation. */
+  browserLine: (browser: string) => string;
+  /** "Network: {network}", likewise. */
+  networkLine: (network: string) => string;
   unknownDevice: string;
   unknownIp: string;
   revoke: string;
@@ -25,7 +27,10 @@ export type AccountSessionsLabels = {
 
 type RevokeAction = (shopSlug: string, formData: FormData) => void | Promise<void>;
 
-/** Renders every active session row; the caller supplies account-scoped rows and localized copy. */
+/**
+ * Renders every active session row; the caller supplies account-scoped rows and localized copy.
+ * A Server Component, so `labels` can carry the two line formatters.
+ */
 export function AccountSessionsList({
   rows,
   labels,
@@ -54,16 +59,10 @@ export function AccountSessionsList({
               <summary className="min-h-11 w-fit cursor-pointer py-2 text-muted focus-visible:focus-ring-inset">
                 {labels.details}
               </summary>
-              <dl className="space-y-1 break-all pb-2 text-muted">
-                <div>
-                  <dt className="inline font-medium">{labels.browserDetails}: </dt>
-                  <dd className="inline">{row.userAgent ?? labels.unknownDevice}</dd>
-                </div>
-                <div>
-                  <dt className="inline font-medium">{labels.networkDetails}: </dt>
-                  <dd className="inline">{row.ipAddress ?? labels.unknownIp}</dd>
-                </div>
-              </dl>
+              <div className="space-y-1 break-all pb-2 text-muted">
+                <p>{labels.browserLine(row.userAgent ?? labels.unknownDevice)}</p>
+                <p>{labels.networkLine(row.ipAddress ?? labels.unknownIp)}</p>
+              </div>
             </details>
           </div>
           <form action={revokeAction.bind(null, shopSlug)} className="shrink-0">

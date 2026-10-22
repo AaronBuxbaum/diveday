@@ -18,7 +18,7 @@ const { getDb } = await import("@/db/client");
 const { notificationProviderFromEnvironment, sesNotificationProvider } = await import(
   "@/lib/notifications"
 );
-const { sendSetupRequestReceipt } = await import("./receipt");
+const { sendSetupRequestReceipt } = await import("@/features/setup-request-receipts");
 const ctx = fileScopedShopContext();
 let db: AppDb;
 const send = vi.fn();

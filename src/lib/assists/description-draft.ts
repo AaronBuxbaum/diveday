@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { StructuredCall } from "@/lib/claude/structured";
-import { claimsAnAudience, fillFacts, hasNumberWord, languageName, VOICE_RULES } from "./facts";
+import { claimsAnAudience, fillFacts, hasNumberWord, promptLanguage, VOICE_RULES } from "./facts";
 
 /**
  * **copywriter**: "Draft it" on a trip description or a course summary, in
@@ -56,7 +56,7 @@ export function descriptionDraftCall(input: DescriptionFacts): StructuredCall<ty
     context: undefined,
     content: JSON.stringify({
       kind: input.kind,
-      shopLanguage: languageName(input.locale),
+      shopLanguage: promptLanguage(input.locale),
       about: input.words,
       requirement: input.requirement ?? {},
       placeholders: Object.keys(input.facts),

@@ -2,11 +2,12 @@ import { desc, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CERT_SCAN_FEATURE, certScanCall, certScanFields, scanCard } from "@/lib/assists/cert-scan";
 import { sourceDigest } from "@/lib/assists/shop-translate";
+import type { ClaudeProvider } from "@/lib/claude/provider";
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import { readAssistResults } from "./assist-results";
-import { shopAssist } from "./assist-shop";
+import { runAssist } from "./assists";
 import { readUnsurePair } from "./desk-assists";
 import { deleteDiveSite } from "./dive-sites";
 import { mondayReadFor } from "./monday-read";
@@ -46,6 +47,20 @@ function answering(value: unknown) {
   return fakeClaude({ reply: () => fakeClaudeMessage({ text: JSON.stringify(value) }) });
 }
 
+/** A provider that refuses every call: an answer, so asking again costs the same for the same refusal. */
+function refusing() {
+  return fakeClaude({ reply: () => fakeClaudeMessage({ text: "", stopReason: "refusal" }) });
+}
+
+/** A provider whose every call fails before answering: nothing was answered, so a later pass asks again. */
+function failing() {
+  return fakeClaude({
+    reply: () => {
+      throw new Error("provider down");
+    },
+  });
+}
+
 describe("the Monday read", () => {
   const sections = [
     { kind: "waivers", divers: 3, departures: 2, url: "https://diveday.test/shop/x/waivers" },
@@ -69,6 +84,20 @@ describe("the Monday read", () => {
     expect(provider.requests).toHaveLength(1);
     // Only the counts go out: no link, no shop name.
     expect(JSON.stringify(provider.requests[0]?.messages)).not.toContain("diveday.test");
+  });
+
+  it("remembers a refused read, so the hourly pass does not ask again", async () => {
+    const provider = refusing();
+    expect(await mondayReadFor(ctx.db, input(), { provider, env, now })).toEqual([]);
+    expect(await mondayReadFor(ctx.db, input(), { provider, env, now })).toEqual([]);
+    expect(provider.requests).toHaveLength(1);
+  });
+
+  it("asks again when the call never answered", async () => {
+    const provider = failing();
+    await mondayReadFor(ctx.db, input(), { provider, env, now });
+    await mondayReadFor(ctx.db, input(), { provider, env, now });
+    expect(provider.requests.length).toBeGreaterThanOrEqual(2);
   });
 
   it("says nothing and stores nothing while the shop is dark", async () => {
@@ -115,6 +144,41 @@ describe("review flags", () => {
   });
 });
 
+describe("review flags after a refusal", () => {
+  it("remembers a refused comment and reads the ones behind it", async () => {
+    const [a, b] = await seededReviews(2);
+    if (!a || !b) throw new Error("seed has no reviews");
+    const waiting = [
+      { id: a, comment: "Words the model will not read." },
+      { id: b, comment: "The divemaster Ana left us at depth." },
+    ];
+    const provider = fakeClaude({
+      reply: (request) =>
+        JSON.stringify(request.messages).includes("will not read")
+          ? fakeClaudeMessage({ text: "", stopReason: "refusal" })
+          : fakeClaudeMessage({ text: JSON.stringify({ flags: ["safety_complaint"] }) }),
+    });
+    expect(await flagWaitingReviews(ctx.db, ctx.shop.id, waiting, { provider, env, now })).toBe(2);
+    expect((await readReviewFlags(ctx.db, ctx.shop.id, waiting)).get(b)).toEqual([
+      "safety_complaint",
+    ]);
+    // The next visit asks about neither.
+    expect(await flagWaitingReviews(ctx.db, ctx.shop.id, waiting, { provider, env, now })).toBe(0);
+    expect(provider.requests).toHaveLength(2);
+  });
+
+  it("stores nothing for a call that never answered, so the next visit asks again", async () => {
+    const [a] = await seededReviews(1);
+    if (!a) throw new Error("seed has no reviews");
+    const waiting = [{ id: a, comment: "Lovely day." }];
+    const provider = failing();
+    expect(await flagWaitingReviews(ctx.db, ctx.shop.id, waiting, { provider, env, now })).toBe(0);
+    const before = provider.requests.length;
+    await flagWaitingReviews(ctx.db, ctx.shop.id, waiting, { provider, env, now });
+    expect(provider.requests.length).toBeGreaterThan(before);
+  });
+});
+
 describe("review themes", () => {
   it("keeps one set a month, quoting the reviews as they stand now", async () => {
     const ids = await seededReviews(6);
@@ -156,6 +220,21 @@ describe("review themes", () => {
       themesMonth(now),
     ]);
     expect(stored.size).toBe(1);
+  });
+
+  it("remembers a refused month, so each visit does not ask again", async () => {
+    const ids = await seededReviews(6);
+    for (const [index, id] of ids.entries()) {
+      await ctx.db
+        .update(tripReviews)
+        .set({ isPublished: true, publishedAt: now, comment: `Refused words ${index}` })
+        .where(eq(tripReviews.id, id));
+    }
+    const provider = refusing();
+    await refreshReviewThemes(ctx.db, ctx.shop.id, "en-US", now, { provider, env, now });
+    await refreshReviewThemes(ctx.db, ctx.shop.id, "en-US", now, { provider, env, now });
+    expect(provider.requests).toHaveLength(1);
+    expect(await readReviewThemes(ctx.db, ctx.shop.id, now)).toEqual([]);
   });
 
   it("drops a theme whose quotes were unpublished since", async () => {
@@ -399,6 +478,30 @@ describe("the recap highlight", () => {
     ).toBe(false);
   });
 
+  it("remembers a refused line, so the next send pass does not ask again", async () => {
+    const { tripId } = await tripWithSightings(["green-sea-turtle"]);
+    const provider = refusing();
+    const trip = { id: tripId, shopId: ctx.shop.id, recapShoutout: null };
+    const shop = { recapAssistAutoApprove: true };
+    expect(await autoFillRecapLine(ctx.db, trip, shop, { provider, env, now })).toBe(false);
+    expect(await autoFillRecapLine(ctx.db, trip, shop, { provider, env, now })).toBe(false);
+    expect(provider.requests).toHaveLength(1);
+    // A staffer's own tap still asks.
+    await draftRecapLine(ctx.db, ctx.shop.id, tripId, { provider, env, now });
+    expect(provider.requests).toHaveLength(2);
+  });
+
+  it("asks again on the next pass when the call never answered", async () => {
+    const { tripId } = await tripWithSightings(["green-sea-turtle"]);
+    const provider = failing();
+    const trip = { id: tripId, shopId: ctx.shop.id, recapShoutout: null };
+    const shop = { recapAssistAutoApprove: true };
+    await autoFillRecapLine(ctx.db, trip, shop, { provider, env, now });
+    const before = provider.requests.length;
+    await autoFillRecapLine(ctx.db, trip, shop, { provider, env, now });
+    expect(provider.requests.length).toBeGreaterThan(before);
+  });
+
   it("writes no line by itself on a departure with an incident report", async () => {
     const { tripId, personId } = await tripWithSightings(["green-sea-turtle"]);
     await ctx.db
@@ -423,6 +526,35 @@ describe("the recap highlight", () => {
     expect(await draftRecapLine(ctx.db, ctx.shop.id, tripId, { provider, env, now })).toMatch(
       /turtle/i,
     );
+    await ctx.db.delete(incidentReports).where(eq(incidentReports.tripId, tripId));
+  });
+
+  it("writes no line when an incident report is filed while Claude is answering", async () => {
+    const { tripId, personId } = await tripWithSightings(["green-sea-turtle"]);
+    // The check before the call passes; the report lands during the call.
+    const provider: ClaudeProvider = {
+      async createMessage() {
+        await ctx.db
+          .insert(incidentReports)
+          .values({ shopId: ctx.shop.id, tripId, createdByPersonId: personId });
+        return fakeClaudeMessage({
+          text: JSON.stringify({ text: "{species:1:green-sea-turtle} at {site1}." }),
+        });
+      },
+    };
+    expect(
+      await autoFillRecapLine(
+        ctx.db,
+        { id: tripId, shopId: ctx.shop.id, recapShoutout: null },
+        { recapAssistAutoApprove: true },
+        { provider, env, now },
+      ),
+    ).toBe(false);
+    const [row] = await ctx.db
+      .select({ line: trips.recapShoutout })
+      .from(trips)
+      .where(eq(trips.id, tripId));
+    expect(row?.line).toBeNull();
     await ctx.db.delete(incidentReports).where(eq(incidentReports.tripId, tripId));
   });
 
@@ -501,7 +633,7 @@ describe("the card photo read", () => {
       });
     const sure = read(0.95);
     const value = await scanCard((model) =>
-      shopAssist(ctx.db, {
+      runAssist(ctx.db, {
         shopId: ctx.shop.id,
         feature: CERT_SCAN_FEATURE,
         call: certScanCall(image, options, model),
@@ -518,7 +650,7 @@ describe("the card photo read", () => {
 
     const doubtful = read(0.3);
     const none = await scanCard((model) =>
-      shopAssist(ctx.db, {
+      runAssist(ctx.db, {
         shopId: ctx.shop.id,
         feature: CERT_SCAN_FEATURE,
         call: certScanCall(image, options, model),
@@ -541,7 +673,7 @@ describe("the card photo read", () => {
         }),
     });
     const nothing = await scanCard((model) =>
-      shopAssist(ctx.db, {
+      runAssist(ctx.db, {
         shopId: ctx.shop.id,
         feature: CERT_SCAN_FEATURE,
         call: certScanCall(image, options, model),

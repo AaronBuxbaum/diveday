@@ -19,8 +19,11 @@ export interface ClaudeProvider {
  * short enough that a stuck call never holds a server action open for long.
  * The SDK retries once (429, 5xx, connection) before the assist goes dark.
  */
-export const CLAUDE_TIMEOUT_MS = 90_000;
+const CLAUDE_TIMEOUT_MS = 90_000;
 const CLAUDE_MAX_RETRIES = 1;
+
+/** The longest one request can take, its retry included. */
+export const CLAUDE_REQUEST_MAX_MS = CLAUDE_TIMEOUT_MS * (CLAUDE_MAX_RETRIES + 1);
 
 /**
  * Pinned, so an `ANTHROPIC_BASE_URL` left in an environment can never send a
@@ -29,7 +32,7 @@ const CLAUDE_MAX_RETRIES = 1;
 const ANTHROPIC_API_URL = "https://api.anthropic.com";
 
 /** The real provider over one API key. */
-export function anthropicProvider(apiKey: string): ClaudeProvider {
+function anthropicProvider(apiKey: string): ClaudeProvider {
   const client = new Anthropic({
     apiKey,
     baseURL: ANTHROPIC_API_URL,

@@ -256,6 +256,7 @@ export function ConversationSection({
                     fieldId={REPLY_FIELD_ID}
                     label={t("assistsFront.conversation.draft")}
                     pendingLabel={t("assistsFront.conversation.drafting")}
+                    emptyLabel={t("deskAssists.nothing")}
                   />
                   {assist.translate && assist.diverLanguage ? (
                     <TranslateReplyButton

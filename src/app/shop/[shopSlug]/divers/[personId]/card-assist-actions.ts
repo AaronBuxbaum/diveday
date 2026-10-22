@@ -1,6 +1,6 @@
 "use server";
 
-import { shopAssist } from "@/db/assist-shop";
+import { runAssist } from "@/db/assists";
 import { readGearNote } from "@/db/desk-assists";
 import { certificationAgency } from "@/db/schema";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
@@ -38,7 +38,7 @@ function deskCardOptions(locale: string) {
     ...Object.entries(SPECIALTY_KEYS).map(
       ([value, key]) => [`specialty:${value}`, label(key)] as const,
     ),
-    ["nitrox", "Nitrox"] as const,
+    ["nitrox", label("divers.specialty.nitroxOption")] as const,
   ];
   return { agencies: certificationAgency.enumValues, cards };
 }
@@ -52,7 +52,7 @@ export async function readCardPhotoAction(
   if (!parsed) return null;
   const options = deskCardOptions(shop.defaultLocale);
   const value = await scanCard((model) =>
-    shopAssist(db, {
+    runAssist(db, {
       shopId: shop.id,
       feature: CERT_SCAN_FEATURE,
       call: certScanCall(parsed, options, model),
@@ -76,7 +76,7 @@ export async function readGearNoteAction(
   const { db, shop } = await requireShopSurface(shopSlug);
   const note = await readGearNote(db, shop.id, personId);
   if (!note) return null;
-  const value = await shopAssist(db, {
+  const value = await runAssist(db, {
     shopId: shop.id,
     feature: RENTAL_NOTE_FEATURE,
     call: rentalNoteCall(note.note),

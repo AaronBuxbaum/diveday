@@ -6,7 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { listDiverMergeDuplicateIds } from "@/db/diver-merge";
 import { isDiverFilter, isDiverSort, listDiverSummaries } from "@/db/divers";
@@ -126,7 +126,7 @@ export default async function DiversPage({
       now,
     }),
     canMerge ? listDiverMergeDuplicateIds(db, shop.id) : Promise.resolve([]),
-    shopAssistsAvailable(db, shop.id),
+    assistsAvailable(db, shop.id),
   ]);
   // Second, because it takes the ids the first one just returned: the four
   // roster facts are all `inArray`-bounded to this page rather than read over

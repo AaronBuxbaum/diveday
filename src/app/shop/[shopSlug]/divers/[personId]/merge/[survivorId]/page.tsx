@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { AssistReadButton } from "@/components/assists/AssistReadButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import { canPersonMergeDiver } from "@/db/authz";
 import { readUnsurePair } from "@/db/desk-assists";
 import { getDiverMergePreview } from "@/db/diver-merge";
@@ -85,7 +85,7 @@ export default async function MergeDiverPage({
   // once a refusal already says the merge cannot happen.
   const canAssist =
     !preview.refusal &&
-    (await shopAssistsAvailable(db, shop.id)) &&
+    (await assistsAvailable(db, shop.id)) &&
     (await readUnsurePair(db, shop.id, personId, survivorId)) !== null;
 
   return (

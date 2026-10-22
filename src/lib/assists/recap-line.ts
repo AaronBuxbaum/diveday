@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { StructuredCall } from "@/lib/claude/structured";
-import { fillFacts, hasNumberWord, languageName, VOICE_RULES } from "./facts";
+import { fillFacts, hasNumberWord, promptLanguage, VOICE_RULES } from "./facts";
 
 /**
  * **recap**: from the crew's logged sightings and the sites and conditions they
@@ -48,7 +48,7 @@ export function recapLineCall(log: RecapLog): StructuredCall<typeof Line> {
     model: "quick",
     system: RECAP_LINE_SYSTEM,
     content: JSON.stringify({
-      language: languageName(log.locale),
+      language: promptLanguage(log.locale),
       sites: log.sites.map((site, index) => ({
         placeholder: `{site${index + 1}}`,
         name: site.name,

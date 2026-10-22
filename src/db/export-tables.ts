@@ -576,6 +576,8 @@ export const EXPORT_TABLES = {
       asc(shopTextTranslations.subjectKind),
       asc(shopTextTranslations.subjectId),
       asc(shopTextTranslations.field),
+      asc(shopTextTranslations.locale),
+      asc(shopTextTranslations.id),
     ],
     scope: { shopColumn: shopTextTranslations.shopId },
   },

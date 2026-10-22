@@ -578,6 +578,12 @@ export async function offsetUpcomingTripsWithCounts(
     includeDepartureBuffer?: boolean;
     /** "fun_dive" for no linked course, "course" for a course session. */
     tripType?: "fun_dive" | "course";
+    /**
+     * Only what a diver could be told about: no private charter and no
+     * rehearsal (ADR 20261012-rehearsal-departures). For a read that leaves
+     * the shop, such as the facts a reply draft quotes.
+     */
+    outward?: boolean;
   } = {},
 ): Promise<UpcomingTripOffsetPage> {
   const now = options.now ?? nowDate();
@@ -587,7 +593,9 @@ export async function offsetUpcomingTripsWithCounts(
       from: options.includeDepartureBuffer ? new Date(now.getTime() - DEPARTURE_BUFFER_MS) : now,
       monthEnd: options.monthEnd,
       tripType: options.tripType,
+      publicOnly: options.outward,
     }),
+    options.outward ? notRehearsal() : undefined,
     // Applied before LIMIT, to both rows and count. A cancelled booking and a
     // future no-show can be reactivated (`rowCanBeReactivated`, issue #2484);
     // the booking transaction still rechecks that lifecycle and every gate.

@@ -64,6 +64,10 @@ export function ImportWizard({
   const [mapNothing, setMapNothing] = useState(false);
   const [mapping, startMapping] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
+  // Bumped whenever the file in hand changes. An answer for an older file (a
+  // mapping still running when the staffer picks another) is dropped, so the
+  // preview never shows one file while the hidden `csv` posts another.
+  const fileGeneration = useRef(0);
   // The whole preview runs in the browser off this input's change event, so a
   // file chosen before hydration is silently dropped. Marked here so a test can
   // wait for the real thing rather than race it (same pattern as the booking
@@ -82,6 +86,7 @@ export function ImportWizard({
   const pathname = usePathname();
   // biome-ignore lint/correctness/useExhaustiveDependencies: `pathname` is a trigger, not a value the effect body reads — any change clears the preview, which is the point.
   useEffect(() => {
+    fileGeneration.current += 1;
     setFileName(null);
     setCsvText("");
     setPrepared(null);
@@ -92,7 +97,9 @@ export function ImportWizard({
 
   async function onFile(file: File | undefined) {
     if (!file) return;
+    const generation = ++fileGeneration.current;
     const text = await file.text();
+    if (generation !== fileGeneration.current) return;
     setFileName(file.name);
     setCsvText(text);
     // The preview's today; the commit re-reads it on the server.
@@ -113,6 +120,7 @@ export function ImportWizard({
   function mapColumns() {
     if (!assist) return;
     const text = csvText;
+    const generation = fileGeneration.current;
     startMapping(async () => {
       let answer: ImportAssist | null = null;
       try {
@@ -120,6 +128,7 @@ export function ImportWizard({
       } catch {
         answer = null;
       }
+      if (generation !== fileGeneration.current) return;
       const useful =
         answer && (Object.keys(answer.headers).length > 0 || Object.keys(answer.levels).length > 0);
       if (!answer || !useful) {

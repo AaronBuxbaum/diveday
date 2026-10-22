@@ -8,7 +8,7 @@ import {
   FORM_DRAFT_TTL_MS,
   type FormDraftKind,
 } from "@/lib/form-drafts";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { formDrafts } from "./schema";
 
 /**
@@ -20,7 +20,7 @@ import { formDrafts } from "./schema";
 export type FormDraft = { form: FormDraftKind; fields: DraftFields; savedAt: Date };
 
 export async function saveFormDraft(
-  db: AppDb,
+  db: DbExecutor,
   input: {
     shopId: string;
     personId: string;
@@ -69,7 +69,7 @@ export async function readFormDraft(
 }
 
 export async function discardFormDraft(
-  db: AppDb,
+  db: DbExecutor,
   shopId: string,
   personId: string,
   form: FormDraftKind,

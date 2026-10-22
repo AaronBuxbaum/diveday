@@ -1,5 +1,5 @@
 import { AssistFillButton } from "@/components/assists/AssistFillButton";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import type { AppDb } from "@/db/client";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
@@ -24,7 +24,7 @@ export async function loadSiteAssists(
   shop: { id: string; defaultLocale: string },
   site: { id: string; description: string | null; marineLifeDescription: string | null } | null,
 ): Promise<SiteAssists> {
-  const canAssist = await shopAssistsAvailable(db, shop.id);
+  const canAssist = await assistsAvailable(db, shop.id);
   if (!site) return { canAssist, description: null, marineLife: null };
   const [description, marineLife] = await Promise.all(
     (["description", "marineLifeDescription"] as const).map((field) =>
@@ -41,6 +41,7 @@ export function siteBriefAssist(shopSlug: string, canAssist: boolean, t: StaffTr
       draft={draftSiteBriefAction.bind(null, shopSlug)}
       label={t("deskAssists.siteBrief.draft")}
       pendingLabel={t("deskAssists.drafting")}
+      emptyLabel={t("deskAssists.nothing")}
     />
   ) : undefined;
 }

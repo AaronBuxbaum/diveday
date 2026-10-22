@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { GroupLabel } from "@/components/ui/group-label";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import type { AppDb } from "@/db/client";
 import {
   flagWaitingReviews,
@@ -31,7 +31,7 @@ export async function loadReviewAssists(
   canManageSettings: boolean,
 ): Promise<ReviewAssists> {
   const shopId = shop.id;
-  if (!(await shopAssistsAvailable(db, shopId))) return { flags: new Map(), themes: [] };
+  if (!(await assistsAvailable(db, shopId))) return { flags: new Map(), themes: [] };
   const [flags, themes] = await Promise.all([
     readReviewFlags(db, shopId, waiting),
     canManageSettings ? readReviewThemes(db, shopId) : Promise.resolve([]),

@@ -6,7 +6,7 @@ import {
   toggleRecapAutoSendPauseAction,
   uploadCrewRecapPhotoAction,
 } from "@/app/shop/[shopSlug]/actions";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import type { AppDb } from "@/db/client";
 import type { getDayCloseout } from "@/db/closeout";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -44,7 +44,7 @@ export async function recapEditorsFor({
   // Claude's "Draft it" on the highlight (`recap`): only once a boat is back,
   // and only while assists are not dark.
   const canAssist =
-    departures.some((departure) => departure.ended) && (await shopAssistsAvailable(db, shop.id));
+    departures.some((departure) => departure.ended) && (await assistsAvailable(db, shop.id));
   const recapEditors = new Map<string, React.ReactNode>();
   for (const departure of departures) {
     // Only a returned boat: a trip still out has no day to write about yet,

@@ -2,7 +2,12 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { IMPORT_FIELDS, type ImportField, type ImportIssueCode } from "@/lib/import";
+import {
+  IMPORT_FIELDS,
+  type ImportAssist,
+  type ImportField,
+  type ImportIssueCode,
+} from "@/lib/import";
 import type { ImportActionErrorCode } from "./actions";
 import { ImportWizard } from "./ImportWizard";
 
@@ -326,5 +331,55 @@ describe("bookings after today", () => {
     );
     await waitFor(() => expect(screen.getByText("Divers in file")).toBeInTheDocument());
     expect(screen.queryByText(/after today/)).not.toBeInTheDocument();
+  });
+});
+
+describe("a Claude mapping that comes back after the file changed", () => {
+  it("is dropped, so the preview and the posted csv are the same file", async () => {
+    let answer: (value: ImportAssist) => void = () => {};
+    const map = vi.fn(
+      (_csv: string) =>
+        new Promise<ImportAssist>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const { container } = render(
+      <ImportWizard
+        diversHref="/shop/blue-mantis/divers"
+        intro="Upload contacts.csv"
+        copy={COPY}
+        locale="en-US"
+        timeZone="America/New_York"
+        assist={{
+          map,
+          words: {
+            map: "Map the rest",
+            mapping: "Mapping…",
+            mapHint: "Claude reads a sample",
+            mapNothing: "Nothing to map",
+            suggested: "{field}, suggested",
+            pendingCards: "Cards import for review",
+          },
+        }}
+      />,
+    );
+    const input = screen.getByLabelText(/choose a file/i, { selector: "input" });
+    const first = "full_name,email,Neopreno\nAna Old,ana@example.com,M\n";
+    const second = "full_name,email,Neopreno\nBea New,bea@example.com,L\n";
+
+    await chooseFile(input, first, "first.csv");
+    await userEvent.click(await screen.findByRole("button", { name: "Map the rest" }));
+    expect(map).toHaveBeenCalledWith(first);
+
+    await chooseFile(input, second, "second.csv");
+    await waitFor(() => expect(screen.getByText("Bea New")).toBeInTheDocument());
+
+    answer({ headers: { Neopreno: "wetsuit_size" }, levels: {} });
+    await waitFor(() => expect(screen.queryByText("Mapping…")).not.toBeInTheDocument());
+
+    expect(screen.getByText("Bea New")).toBeInTheDocument();
+    expect(screen.queryByText("Ana Old")).not.toBeInTheDocument();
+    expect(container.querySelector<HTMLInputElement>('input[name="csv"]')?.value).toBe(second);
+    expect(container.querySelector('input[name="assist"]')).toBeNull();
   });
 });

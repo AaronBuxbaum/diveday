@@ -972,14 +972,17 @@ export function helpRequestDetailText(
   );
 }
 
+/** The label `HelpRequestControl` opens its crew choice with; the row hands it over. */
 export function helpRequestActionText(
   t: StaffTranslator,
-  status: "requested" | "acknowledged",
-  helperPersonName?: string | null,
+  helperPersonName: string | null | undefined,
 ): string {
-  return status === "acknowledged" && helperPersonName
-    ? t("today.helpRequest.markHandled")
-    : t(helperPersonName ? "today.helpRequest.changeHelper" : "today.helpRequest.arrangeHelp");
+  return t(helperPersonName ? "today.helpRequest.changeHelper" : "today.helpRequest.arrangeHelp");
+}
+
+/** Where the departure meets, as one bundle sentence the translator controls. */
+export function helpRequestMeetingText(t: StaffTranslator, where: string): string {
+  return t("today.helpRequest.meetingLine", { where });
 }
 
 export function openTripActionText(t: StaffTranslator): string {

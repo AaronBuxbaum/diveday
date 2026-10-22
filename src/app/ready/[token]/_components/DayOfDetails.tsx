@@ -253,24 +253,12 @@ export function DayOfDetails({
         <div className="py-5">
           <h3 className="text-base font-semibold">{t("ready.helpHeading")}</h3>
           <p className="mt-1 text-sm text-muted">{t("ready.helpBody")}</p>
+          {/* A handled request names nobody: "{name} will help you" is a
+              promise, and the helper may have left the boat since. */}
           {data.helpRequest?.status === "handled" ? (
-            <>
-              {data.helpRequest.helperPersonName ? (
-                <p className="mt-3 text-base font-medium text-success-strong">
-                  {meetingInfo.length > 0
-                    ? t("ready.helpAcknowledged", {
-                        name: data.helpRequest.helperPersonName,
-                        meeting: meetingInfo.join(" · "),
-                      })
-                    : t("ready.helpAssignedFallback", {
-                        name: data.helpRequest.helperPersonName,
-                      })}
-                </p>
-              ) : null}
-              <p className="mt-3 text-base font-medium text-success-strong">
-                {t("ready.helpHandled")}
-              </p>
-            </>
+            <p className="mt-3 text-base font-medium text-success-strong">
+              {t("ready.helpHandled")}
+            </p>
           ) : (
             <>
               <fieldset className="mt-3 flex flex-col gap-2">
@@ -302,7 +290,7 @@ export function DayOfDetails({
               </fieldset>
               {data.helpRequest ? (
                 <p className="mt-3 text-base font-medium text-success-strong">
-                  {data.helpRequest.status !== "requested" && data.helpRequest.helperPersonName
+                  {data.helpRequest.status === "acknowledged" && data.helpRequest.helperPersonName
                     ? meetingInfo.length > 0
                       ? t("ready.helpAcknowledged", {
                           name: data.helpRequest.helperPersonName,

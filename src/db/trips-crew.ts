@@ -1254,6 +1254,12 @@ export async function changeTripCrewOutcome(
   return outcome;
 }
 
+/**
+ * A crew member taken off the departure can no longer be the promised helper:
+ * an acknowledged request goes back to the desk. A handled request keeps who
+ * helped, because that is the record; undoing it with the helper off the
+ * crew sends the request back to the desk (`undoHelpRequestCompletion`).
+ */
 async function clearHelpRequestHelpers(
   tx: DbExecutor,
   shopId: string,
@@ -1262,11 +1268,6 @@ async function clearHelpRequestHelpers(
   now?: Date,
 ): Promise<void> {
   if (personIds.length === 0) return;
-  const base = and(
-    eq(tripHelpRequests.shopId, shopId),
-    eq(tripHelpRequests.tripId, tripId),
-    inArray(tripHelpRequests.helperPersonId, [...personIds]),
-  );
   await tx
     .update(tripHelpRequests)
     .set({
@@ -1278,15 +1279,14 @@ async function clearHelpRequestHelpers(
       resolvedByPersonId: null,
       updatedAt: now ?? nowDate(),
     })
-    .where(and(base, eq(tripHelpRequests.status, "acknowledged")));
-  await tx
-    .update(tripHelpRequests)
-    .set({
-      revision: sql`${tripHelpRequests.revision} + 1`,
-      helperPersonId: null,
-      updatedAt: now ?? nowDate(),
-    })
-    .where(and(base, eq(tripHelpRequests.status, "handled")));
+    .where(
+      and(
+        eq(tripHelpRequests.shopId, shopId),
+        eq(tripHelpRequests.tripId, tripId),
+        inArray(tripHelpRequests.helperPersonId, [...personIds]),
+        eq(tripHelpRequests.status, "acknowledged"),
+      ),
+    );
 }
 
 /**

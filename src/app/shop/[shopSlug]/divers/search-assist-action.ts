@@ -1,6 +1,6 @@
 "use server";
 
-import { shopAssist } from "@/db/assist-shop";
+import { runAssist } from "@/db/assists";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { DIVER_FILTERS } from "@/db/divers";
 import {
@@ -30,7 +30,7 @@ export async function askRosterAction(shopSlug: string, rawAsk: string): Promise
     (typeof DIVER_FILTERS)[number],
     ...(typeof DIVER_FILTERS)[number][],
   ];
-  const value = await shopAssist(db, {
+  const value = await runAssist(db, {
     shopId: shop.id,
     feature: DIVER_SEARCH_FEATURE,
     call: diverSearchCall(ask, views),
