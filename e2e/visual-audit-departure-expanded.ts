@@ -86,8 +86,12 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     test("a boat check opens the problem note beside its equipment item", async ({ page }) => {
       await reefManifest(page);
       await openBoatCheck(page);
+      // The checklist button names its item and its screen-reader state instruction.
       const radio = page.getByRole("listitem").filter({
-        has: page.getByRole("button", { name: "VHF radio checked", exact: true }),
+        has: page.getByRole("button", {
+          name: `VHF radio checked ${staff("trips.preDepartureCheck.uncheckedLabel")}`,
+          exact: true,
+        }),
       });
       const editor = radio.locator("details");
       await openIfClosed(editor);
@@ -95,7 +99,10 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
         .getByLabel(staff("trips.preDepartureCheck.noteLabel"))
         .fill("VHF crackles on 16");
       await expect(
-        editor.getByRole("button", { name: staff("trips.preDepartureCheck.noteSave") }),
+        editor.getByRole("button", {
+          name: staff("trips.preDepartureCheck.noteSave"),
+          exact: true,
+        }),
       ).toBeVisible();
       await capture(page, "manifest-boat-snag-note-editor", "light");
     });
