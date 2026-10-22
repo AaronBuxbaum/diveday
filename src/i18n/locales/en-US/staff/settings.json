@@ -779,7 +779,7 @@
       },
       "pastVisits": {
         "what": "Past visits (what they booked, when)",
-        "detail": "One row per booking becomes visit history. It is not a dive, and it never appears on your schedule or counts toward capacity."
+        "detail": "One row per booking up to today becomes visit history. It is not a dive, and it never appears on your schedule or counts toward capacity."
       },
       "paymentHistory": {
         "what": "Payment & receipt history",
@@ -851,6 +851,11 @@
       "visitRowsNoticeOther": "{count} rows record a past visit. See “What comes across” above for what that does and doesn’t mean.",
       "paymentHistoryRowsNoticeOne": "{count} payment, refund, or receipt source row will be imported as unverified history. They never create Stripe orders or charges.",
       "paymentHistoryRowsNoticeOther": "{count} payment, refund, or receipt source rows will be imported as unverified history. They never create Stripe orders or charges.",
+      "bookingsAfterTodayOne": "{count} booking is after today. It isn’t a seat here. Add it on the board, or keep it in {system} until it sails.",
+      "bookingsAfterTodayOther": "{count} bookings are after today. They aren’t seats here. Add them on the board, or keep them in {system} until they sail.",
+      "bookingsAfterTodayMoreOne": "And {count} more.",
+      "bookingsAfterTodayMoreOther": "And {count} more.",
+      "oldSystem": "your old system",
       "stats": {
         "diversInFile": "Divers in file",
         "extraCardRows": "Extra certification rows",

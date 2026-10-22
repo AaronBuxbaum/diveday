@@ -38,9 +38,9 @@ export function reviewedBy(personId: string): {
   // log read "reviewed by Marcus Webb" hours after that boat sailed with the
   // card aboard, on the document a shop hands an insurer. The card was
   // checked when the diver first came in, which in this demo is before its
-  // oldest sailing (`seed-history.ts`, 270 days back).
+  // oldest sailing (`seed-last-year.ts`, 436 days back).
   return { reviewedAt: at(-DEMO_CARDS_REVIEWED_DAYS_AGO, 16, 0), reviewedByPersonId: personId };
 }
 
 /** How long before the seeded clock every demo card was checked: before its oldest sailing. */
-const DEMO_CARDS_REVIEWED_DAYS_AGO = 280;
+const DEMO_CARDS_REVIEWED_DAYS_AGO = 450;

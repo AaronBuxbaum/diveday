@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { redirectedTo, staffSession } from "@/test/staff-session";
 
@@ -32,11 +32,13 @@ vi.mock("@/db/import", async (importOriginal) => {
 vi.mock("@/db/gear-import", () => ({ commitGearImport: vi.fn() }));
 vi.mock("@/db/dive-site-import", () => ({ commitDiveSiteImport: vi.fn() }));
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/db/shops", () => ({ getShopById: vi.fn() }));
 
 const { requireStaffSession } = await import("@/lib/session");
 const { commitContactImport } = await import("@/db/import");
 const { commitGearImport } = await import("@/db/gear-import");
 const { commitDiveSiteImport } = await import("@/db/dive-site-import");
+const { getShopById } = await import("@/db/shops");
 const { importContactsAction } = await import("./actions");
 const { importGearServiceHistoryAction } = await import("./gear-actions");
 const { restoreDiveSitesAction } = await import("./dive-site-actions");
@@ -89,5 +91,41 @@ describe("the contacts importer", () => {
       });
     }
     expect(commitContactImport).not.toHaveBeenCalled();
+  });
+});
+
+describe("the contacts importer's today", () => {
+  // 20:00 UTC on Oct 22 is still Oct 22 in Key Largo and already Oct 23 on
+  // Kiritimati: the same file splits differently by the shop's own day.
+  const csv = [
+    "customer_name,email,booking_date,tour_name,booking_id",
+    "Hana Kobayashi,hana@example.com,2026-10-23,Two-tank Molasses Reef,FH-1",
+  ].join("\n");
+
+  beforeEach(() => {
+    vi.stubEnv("DIVEDAY_CLOCK", "2026-10-22T20:00:00Z");
+    vi.mocked(commitContactImport).mockResolvedValue({} as never);
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  async function committedRow(timezone: string) {
+    vi.mocked(getShopById).mockResolvedValue({ timezone } as never);
+    const data = new FormData();
+    data.set("csv", csv);
+    await importContactsAction({ status: "idle" }, data);
+    const prepared = vi.mocked(commitContactImport).mock.calls.at(-1)?.[2];
+    return prepared?.rows[0];
+  }
+
+  it("files nothing for a booking after the shop's today", async () => {
+    const row = await committedRow("America/New_York");
+    expect(row?.visit).toBeNull();
+    expect(row?.bookingAfterToday?.bookedFor).toBe("2026-10-23");
+  });
+
+  it("reads today in the shop's zone, not the server's", async () => {
+    const row = await committedRow("Pacific/Kiritimati");
+    expect(row?.visit?.visitedOn).toBe("2026-10-23");
+    expect(row?.bookingAfterToday).toBeNull();
   });
 });

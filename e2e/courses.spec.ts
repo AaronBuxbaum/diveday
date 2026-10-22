@@ -275,8 +275,12 @@ test.describe("staff", () => {
       pageCount = Number(position?.[2]);
       visited += 1;
 
-      rows.push(...(await page.locator("main ul > li").allInnerTexts()));
-      headings.push(...(await page.locator("main h2").allInnerTexts()));
+      // The roster's own agency groups only: the follow-ups below it ("Cards to
+      // process", "Next steps") are h2s and lists too, and the demo seeds both.
+      rows.push(
+        ...(await page.locator('main ul[aria-labelledby^="agency-"] > li').allInnerTexts()),
+      );
+      headings.push(...(await page.locator('main h2[id^="agency-"]').allInnerTexts()));
 
       const next = pager.getByRole("link", { name: "Next" });
       if ((await next.count()) === 0) break;

@@ -113,6 +113,18 @@ Deliberately not a scenario module called from `seed.ts`'s orchestrator. A seed 
 boat that has not sailed yet, and that is precisely the row that goes missing later — this is a keeper,
 like the today nudge, not a gap in the seed.
 
+### 2026-10-22 amendment — the boat at sea comes home
+
+The demo seeds a boat at sea mid roll call (`seedBoatAtSea`): dive 2's count open, a buddy pair and a
+guide still down, as of the instant the seed ran. Nothing closed it, so a demo seeded at 10 AM showed
+two divers and a guide never counted back at 3 PM and on every later day, the miscount roll call exists
+to catch (dive-domain review of the demo reseed, item 3). `bringDemoBoatsAtSeaHome`
+(`src/db/seed-boat-at-sea.ts`) runs first on the same tick, over **every** `isDemo` shop, the visitors'
+own included: for a boat at sea past her `endsAt` with dive 2 not in the log, it writes the missing
+`after_dive_2` marks a few minutes after the last count, and dive 2's log. A boat with dive 2 logged is
+left alone, so a second run writes nothing. The tick is daily, so between her return and the next run
+the count still reads open; it is not reported on the `pass_complete` line, for the recap pass's reason.
+
 ## Alternatives considered
 
 - **Point the homepage link at a freshly minted demo instead** (reuse `enterDemoAction`'s

@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
@@ -12,10 +12,14 @@ import {
   refreshCanonicalDemoSchedule,
 } from "./demo-refresh";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
+import { getTripManifest } from "./manifests";
 import {
   departureBoatSafetySnapshots,
+  executedDives,
   people,
   personRoles,
+  rollCallCrewEvents,
+  rollCallEvents,
   shops,
   staffCredentials,
   staffShifts,
@@ -24,6 +28,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
+import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed-boat-at-sea";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
@@ -103,16 +108,22 @@ async function pushTheBoardLater(db: AppDb, shopId: string, days: number): Promi
     })
     .where(and(eq(trips.shopId, shopId), gte(trips.startsAt, nowDate())));
 
-  // The close-out fixture is an ended departure on today's calendar day. Move
-  // it out of the way for tests whose premise is an empty day; production
-  // refresh still treats an ended same-day trip as a real boat.
+  // The close-out fixture is an ended departure on today's calendar day, and
+  // the boat at sea sailed earlier today. Move both out of the way for tests
+  // whose premise is an empty day; production refresh still treats a boat
+  // that sailed today as a real boat.
   await db
     .update(trips)
     .set({
       startsAt: sql`${trips.startsAt} - interval '1 day'`,
       endsAt: sql`${trips.endsAt} - interval '1 day'`,
     })
-    .where(and(eq(trips.shopId, shopId), eq(trips.title, DEMO_COMPLETED_TRIP_TITLE)));
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        inArray(trips.title, [DEMO_COMPLETED_TRIP_TITLE, AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE]),
+      ),
+    );
 }
 
 /** Every scheduled departure, oldest first — ids and times, to prove what moved. */
@@ -210,6 +221,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // A shop as it looks when it was seeded by a version of this code that had
     // never heard of her.
     await db.delete(tripAssignments).where(eq(tripAssignments.personId, relief[0].id));
+    await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.personId, relief[0].id));
     await db.delete(staffShifts).where(eq(staffShifts.personId, relief[0].id));
     await db.delete(staffCredentials).where(eq(staffCredentials.personId, relief[0].id));
     await db.delete(personRoles).where(eq(personRoles.personId, relief[0].id));
@@ -469,5 +481,89 @@ describe("refreshCanonicalDemoSchedule", () => {
     expect((await upcomingTripsWithCounts(db, shop.id)).map((trip) => trip.id)).toEqual(
       before.map((trip) => trip.id),
     );
+  });
+
+  /**
+   * **The boat at sea's open count closes once she is past her return**
+   * (dive-domain review of the demo reseed, item 3). The seed leaves dive 2's
+   * count at nine of eleven with a pair and a guide down, as of the instant it
+   * ran; left like that past `endsAt` it reads as two divers and a guide lost
+   * hours ago with nobody marked missing.
+   */
+  describe("the boat at sea", () => {
+    async function boatAtSea(db: AppDb, shopId: string) {
+      const [boat] = await db
+        .select()
+        .from(trips)
+        .where(and(eq(trips.shopId, shopId), eq(trips.title, AT_SEA_DAY_TITLE)));
+      if (!boat) throw new Error("expected the boat at sea");
+      return boat;
+    }
+    async function marks(db: AppDb, tripId: string) {
+      const divers = await db
+        .select({ at: rollCallEvents.occurredAt })
+        .from(rollCallEvents)
+        .where(eq(rollCallEvents.tripId, tripId));
+      const crew = await db
+        .select({ at: rollCallCrewEvents.occurredAt })
+        .from(rollCallCrewEvents)
+        .where(eq(rollCallCrewEvents.tripId, tripId));
+      return [...divers, ...crew].map((row) => row.at.getTime());
+    }
+
+    it("leaves her count open while she is still due out", async () => {
+      const { db, shop } = historyCtx;
+      const boat = await boatAtSea(db, shop.id);
+      const before = await marks(db, boat.id);
+
+      await refreshCanonicalDemoSchedule(db);
+
+      expect(await marks(db, boat.id)).toEqual(before);
+      const afterDiveTwo = await getTripManifest(db, shop.id, boat.id, "after_dive_2");
+      expect(afterDiveTwo?.summary.awaiting).toBe(2);
+    });
+
+    it("counts every diver and both guides back after dive 2, and logs it, once she is past her return", async () => {
+      const { db, shop } = historyCtx;
+      const boat = await boatAtSea(db, shop.id);
+      const later = new Date(boat.endsAt.getTime() + 5 * 60 * 60_000);
+
+      await refreshCanonicalDemoSchedule(db, { now: later });
+
+      const afterDiveTwo = await getTripManifest(db, shop.id, boat.id, "after_dive_2");
+      expect(afterDiveTwo?.summary.awaiting).toBe(0);
+      expect(afterDiveTwo?.summary.notBackAboard).toBe(0);
+      expect(afterDiveTwo?.summary.boarded).toBe(afterDiveTwo?.summary.totalDivers);
+      const crewBack = await db
+        .select({ personId: rollCallCrewEvents.personId })
+        .from(rollCallCrewEvents)
+        .where(
+          and(
+            eq(rollCallCrewEvents.tripId, boat.id),
+            eq(rollCallCrewEvents.checkpoint, "after_dive_2"),
+          ),
+        );
+      const crew = await db
+        .select({ personId: tripAssignments.personId })
+        .from(tripAssignments)
+        .where(eq(tripAssignments.tripId, boat.id));
+      expect(new Set(crewBack.map((row) => row.personId))).toEqual(
+        new Set(crew.map((row) => row.personId)),
+      );
+      const [diveTwo] = await db
+        .select()
+        .from(executedDives)
+        .where(and(eq(executedDives.tripId, boat.id), eq(executedDives.diveNumber, 2)));
+      expect(diveTwo?.exitedAt?.getTime()).toBeLessThanOrEqual(boat.endsAt.getTime());
+      expect(diveTwo?.maxDepthMeters).toBeGreaterThan(0);
+      for (const at of await marks(db, boat.id)) {
+        expect(at).toBeLessThanOrEqual(boat.endsAt.getTime());
+      }
+
+      // A second pass finds her home and writes nothing.
+      const settled = await marks(db, boat.id);
+      await refreshCanonicalDemoSchedule(db, { now: later });
+      expect(await marks(db, boat.id)).toEqual(settled);
+    });
   });
 });

@@ -18,6 +18,7 @@ import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { GEAR_KIND_ORDER, GEAR_SERVICE_KINDS } from "@/lib/gear";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
 import { MEETING_POINT_LIMITS } from "@/lib/meeting-point";
+import { getMigrationGuide } from "@/lib/migration-guides";
 import { DIVER_EMAIL_MAX } from "@/lib/person-fields";
 import {
   isSingleLineText,
@@ -957,6 +958,11 @@ const setupRequestAlertSchema = z.object({
   region: setupAnswerSchema(SETUP_TEXT_MAX),
   runsBoat: z.boolean(),
   currentSystem: z.enum(SETUP_CURRENT_SYSTEMS),
+  /** Which system, as a switching guide's slug, when the requester named one. */
+  currentSystemGuide: z
+    .string()
+    .refine((slug) => getMigrationGuide(slug) !== null, "unknown guide")
+    .optional(),
   contactName: setupAnswerSchema(SETUP_TEXT_MAX),
   contactEmail: emailAddressSchema,
   contactPhone: setupAnswerSchema(SETUP_PHONE_MAX).optional(),

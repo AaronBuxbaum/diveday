@@ -11,3 +11,7 @@ export const LISTED_SHOP_SLUGS = ["reef-line-divers", "keys-current-charters"] a
 
 /** Mantis green, used only when a minted shop requests the brand fixture. */
 export const MINTED_DEMO_BRAND_COLOR = "#158462";
+
+/** The boat at sea's names, by day and at dusk (`seed-boat-at-sea.ts`). */
+export const AT_SEA_DAY_TITLE = "Two-Tank Reef — Molasses & Pickles";
+export const AT_SEA_DUSK_TITLE = "Dusk & Night Two-Tank — French Reef";

@@ -5,6 +5,7 @@ import { rebindDepartureBoatSafetyTime } from "./boat-safety";
 import type { AppDb } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops, trips } from "./schema";
+import { bringDemoBoatsAtSeaHome } from "./seed-boat-at-sea";
 import { demoTodayDepartureStart } from "./seed-clock";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { syncDemoStripeAccount } from "./stripe-accounts";
@@ -48,6 +49,12 @@ import { liveTrip } from "./trips-live";
  *    month carries none of either and "How's your month" reads "Tips $0" beside
  *    a full trips table. Writes them onto the departures that have already
  *    sailed this month, and only when the month has none.
+ *
+ * Before any of them, every demo shop's boat at sea that is past her return
+ * gets the count and the log her crew would have written
+ * (`bringDemoBoatsAtSeaHome`, `src/db/seed-boat-at-sea.ts`): the seed leaves
+ * dive 2's count open as of the instant it ran, and a count left open past
+ * `endsAt` reads as divers lost at sea.
  *
  * It is deliberately **not** re-exported from `@/db/seed` the way the demo
  * lifecycle helpers are: it imports `resetDemoSchedule` from there, and
@@ -112,6 +119,10 @@ export async function refreshCanonicalDemoSchedule(
 ): Promise<DemoScheduleRefresh> {
   const now = opts.now ?? nowDate();
   const minRunwayDays = opts.minRunwayDays ?? DEMO_SCHEDULE_MIN_RUNWAY_DAYS;
+
+  // Every demo shop, the visitors' own included: theirs keep the seed's open
+  // count for as long as they live.
+  await bringDemoBoatsAtSeaHome(db, now);
 
   const [shop] = await db
     .select({ id: shops.id, timezone: shops.timezone })

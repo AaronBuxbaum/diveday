@@ -44,7 +44,7 @@ function listItems(node: unknown, found: ReactElement<HostProps>[] = []) {
   return found;
 }
 
-async function renderImport(what?: string) {
+async function renderImport(what?: string, from?: string) {
   const db: AppDb = ctx.db;
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
@@ -62,7 +62,7 @@ async function renderImport(what?: string) {
   });
   return ImportPage({
     params: Promise.resolve({ shopSlug: "blue-mantis" }),
-    searchParams: Promise.resolve({ what }),
+    searchParams: Promise.resolve({ what, from }),
   });
 }
 
@@ -152,5 +152,37 @@ describe("the import tabs", () => {
     const sites = await renderImport("dive-sites");
     expect(elementsOf(sites, DiveSiteImportPanel)).toHaveLength(1);
     expect(elementsOf(await renderImport("nonsense"), GearImportPanel)).toHaveLength(0);
+  });
+});
+
+/**
+ * Bookings after today name the system they were sold in, when the shop came
+ * here from that system's switching guide (`?from=`). Only a registered guide
+ * names one; anything else reads "your old system", never the raw parameter.
+ */
+describe("the system a file came from", () => {
+  async function sourceSystem(from?: string) {
+    const { ImportWizard } = await import("./ImportWizard");
+    const [wizard] = elementsOf(await renderImport(undefined, from), ImportWizard) as ReactElement<{
+      copy: { sourceSystem: string };
+      timeZone: string;
+    }>[];
+    return wizard?.props;
+  }
+
+  it("names the guide's system", async () => {
+    expect((await sourceSystem("fareharbor"))?.copy.sourceSystem).toBe("FareHarbor");
+    expect((await sourceSystem("rezdy"))?.copy.sourceSystem).toBe("Rezdy");
+  });
+
+  it("says “your old system” for no guide, or one it does not know", async () => {
+    for (const from of [undefined, "", "<script>", "FareHarbor Inc"]) {
+      expect((await sourceSystem(from))?.copy.sourceSystem).toBe("your old system");
+    }
+  });
+
+  it("hands the wizard the shop's timezone for its today", async () => {
+    const shop = await getShopBySlug(ctx.db, "blue-mantis");
+    expect((await sourceSystem())?.timeZone).toBe(shop?.timezone);
   });
 });

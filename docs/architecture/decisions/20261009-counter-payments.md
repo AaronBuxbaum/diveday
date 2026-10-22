@@ -136,3 +136,13 @@ the counter took money in that window: `counterTaxIncludedCents` in `getMonthMon
 collection but `stripe_invoice`, paid in the month, with no tax of their own. No schema. A per-shop
 counter tax rate (option b) waits until a shop asks; reading a rate from Stripe Tax for an
 off-Stripe sale stays out (ADR 20260826-stripe-tax-is-opt-in-and-provider-owned).
+
+## Amendment 2026-10-22: Record payment on a demo order (market sheet, item 6)
+
+A demo shop's invoices carry made-up Stripe ids, so Record payment was disabled there with Refresh
+and Void. Cash and the card machine never needed Stripe, so a demo order now records them:
+`recordPaymentAction` sends a demo shop to `recordDemoPaymentOnOpenOrder`, which takes no invoicing
+provider, reads `shops.is_demo` under a lock in the transaction that writes, matches the order on
+its id and that shop, and settles through the same `settleCounterClaim` a real counter payment
+uses. A real shop never reaches it (`not_demo`), and a room charge on a demo shop stays refused with
+the demo note. Refresh, Void and Refund stay disabled on a demo order.

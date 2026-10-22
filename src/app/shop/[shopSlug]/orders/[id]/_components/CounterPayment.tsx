@@ -66,7 +66,16 @@ export function VoidCounterOrderForm({ orderId, t }: { orderId: string; t: Staff
  * item 57) opens to ask which room, and which hotel where the shop serves more
  * than one.
  */
-export function RecordPaymentForm({ orderId, t }: { orderId: string; t: StaffTranslator }) {
+export function RecordPaymentForm({
+  orderId,
+  t,
+  roomCharge = true,
+}: {
+  orderId: string;
+  t: StaffTranslator;
+  /** False on a demo shop: only cash and the card machine are recorded there. */
+  roomCharge?: boolean;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm font-medium">{t("orders.detail.recordPayment.label")}</span>
@@ -82,48 +91,50 @@ export function RecordPaymentForm({ orderId, t }: { orderId: string; t: StaffTra
           </SubmitButton>
         </form>
       ))}
-      <details className="w-full">
-        <summary
-          className={buttonClass({ variant: "secondary", className: "cursor-pointer list-none" })}
-        >
-          {t("orders.detail.recordPayment.roomCharge")}
-        </summary>
-        <FieldGrid
-          as="form"
-          action={recordPaymentAction}
-          columns={1}
-          className="mt-2 gap-y-3 sm:w-72"
-        >
-          <input type="hidden" name="orderId" value={orderId} />
-          <input type="hidden" name="collection" value="room_charge" />
-          <Field label={t("orders.detail.recordPayment.roomNumber")}>
-            <input
-              name="roomNumber"
-              required
-              maxLength={ROOM_NUMBER_MAX}
-              autoComplete="off"
-              className={controlClass}
-            />
-          </Field>
-          <Field
-            label={t("orders.detail.recordPayment.roomHotel")}
-            description={t("orders.detail.recordPayment.roomHotelHint")}
+      {roomCharge ? (
+        <details className="w-full">
+          <summary
+            className={buttonClass({ variant: "secondary", className: "cursor-pointer list-none" })}
           >
-            <input
-              name="roomHotel"
-              maxLength={ROOM_HOTEL_MAX}
-              autoComplete="off"
-              className={controlClass}
-            />
-          </Field>
-          <SubmitButton
-            pendingLabel={t("orders.detail.recordPayment.recording")}
-            className={buttonClass({ variant: "secondary" })}
+            {t("orders.detail.recordPayment.roomCharge")}
+          </summary>
+          <FieldGrid
+            as="form"
+            action={recordPaymentAction}
+            columns={1}
+            className="mt-2 gap-y-3 sm:w-72"
           >
-            {t("orders.detail.recordPayment.roomConfirm")}
-          </SubmitButton>
-        </FieldGrid>
-      </details>
+            <input type="hidden" name="orderId" value={orderId} />
+            <input type="hidden" name="collection" value="room_charge" />
+            <Field label={t("orders.detail.recordPayment.roomNumber")}>
+              <input
+                name="roomNumber"
+                required
+                maxLength={ROOM_NUMBER_MAX}
+                autoComplete="off"
+                className={controlClass}
+              />
+            </Field>
+            <Field
+              label={t("orders.detail.recordPayment.roomHotel")}
+              description={t("orders.detail.recordPayment.roomHotelHint")}
+            >
+              <input
+                name="roomHotel"
+                maxLength={ROOM_HOTEL_MAX}
+                autoComplete="off"
+                className={controlClass}
+              />
+            </Field>
+            <SubmitButton
+              pendingLabel={t("orders.detail.recordPayment.recording")}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("orders.detail.recordPayment.roomConfirm")}
+            </SubmitButton>
+          </FieldGrid>
+        </details>
+      ) : null}
     </div>
   );
 }

@@ -37,7 +37,9 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   // trip's capacity it names, so a page-wide match legitimately finds two.
   const tripList = page.getByRole("list", { name: "Upcoming trips" });
   await expect(tripList.getByText("3 seats left")).toHaveCount(1); // 11 of 14 booked, two of them not diving
-  await expect(tripList.getByText("Full")).toHaveCount(1); // sold-out wreck trip
+  // The sold-out wreck trip, and the weekly Saturday run sold out on its next
+  // date (src/db/seed-booth.ts).
+  await expect(tripList.getByText("Full")).toHaveCount(2);
   await expect(page.getByRole("link", { name: "Full trip form" })).toHaveCount(0);
   await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
   // The hero says only what the shop wrote. DiveDay's own "find your next day

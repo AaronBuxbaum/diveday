@@ -175,7 +175,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   personal, bidirectional help switching — a person will help a shop bring its data *in* (map any
   export or spreadsheet, migrate the roster with them) and, if DiveDay is ever not right, take its
   data back *out* just as personally.** It lives on **every** `/switching` page as the shared
-  `SwitchingConcierge` block, routed to the `switch@dive.day` inbox. Phrase these as a human
+  `SwitchingConcierge` block, whose door is the Get set up form tagged per page (2026-10-22; until then a `switch@dive.day` mail link). Phrase these as a human
   commitment ("we'll map it with you", "we'll help you carry it out"), never as an automated product
   capability, and never promise a turnaround time. **It is offered twice on a guide, and the compressed
   form comes first** (2026-08-28): `switching.common.moveIntro`, the line that opens
@@ -502,16 +502,11 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   at the moment of maximum impulse. The note stands under `about-rules` now, in `/product`'s hero
   shape, and the closing band repeats the door and not the note. The spec asserts both halves there:
   present in the rules band, and exactly once in `<main>`.
-  **This rule governs `demoNote` only, and `/pricing`'s trial note diverges from it deliberately
-  (2026-08-28).** `marketing.pricing.trialNote` — free, three weeks, no card, and the soft expiry
-  `src/lib/trial.ts` implements — stands at *both* of that page's CTA pairs, the price hero and the
-  `pricing-close` band. The demo note's argument does not carry across: it answers a question the
-  reader has already answered by the time they scroll, whereas the trial's terms are the objection
-  itself, and the closing band is a second point of decision rather than a repetition of the first —
-  a reader who has just read five thousand pixels of objections is being asked to commit *there*,
-  and that band carried no terms at all until this landed. It stays a sentence at both positions,
-  never a third door (the budget note below). A third placement would be a new divergence and needs
-  its own line here.
+  **`/pricing` states the trial once beside the price, plus its FAQ answer** (2026-10-22, the
+  market sheet's item 8). `marketing.pricing.trialNote` — free, three weeks, no card, and the soft
+  expiry `src/lib/trial.ts` implements — stands under the hero's pair only. The invoice's trial row,
+  the margin note about day 22 and the closing band's copy were deleted: the page said the trial five
+  times. Card fees are the invoice's "Card processing" row and nowhere else on the page.
   **Both notes at a door carry the same weight** (`font-medium`), which on `/pricing` means the
   trial note matches the demo note rather than sitting a step under it. They are one kind of object
   — terms at a door — and the trial is the door with the higher friction, so setting only the demo's

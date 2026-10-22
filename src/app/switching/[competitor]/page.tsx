@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { SWITCH_EMAIL, SwitchingConcierge } from "@/components/SwitchingConcierge";
+import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/group-label";
@@ -18,7 +18,7 @@ import {
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
-import { guideSource } from "@/lib/funnel";
+import { guideSource, setUpHref } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import {
   getMigrationGuide,
@@ -162,13 +162,9 @@ async function GuideRoute({ params }: { params: Promise<{ competitor: string }> 
 async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
   const locale = await requestLocale();
   const t = diverTranslator(locale);
-  return (
-    <GuideBody
-      locale={locale}
-      guide={guide}
-      importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
-    />
-  );
+  const label = t("switching.common.openImportCta");
+  const importCta = <SwitchingImportCta label={label} from={guide.slug} />;
+  return <GuideBody locale={locale} guide={guide} importCta={importCta} />;
 }
 
 /**
@@ -322,12 +318,15 @@ async function GuideBody({
                 {t(guide.website.offer.heading)}
               </h3>
               <p className="mt-2 leading-7 text-muted">{t(guide.website.offer.body)}</p>
-              {/* The concierge's own door, reused word for word: one address
+              {/* The concierge's own door, reused word for word: one form
                   for the switch and the website, said the same way twice. */}
               <p className="mt-4 flex h-6 items-center">
-                <a href={`mailto:${SWITCH_EMAIL}`} className={CALLOUT_LINK_CLASS}>
-                  {t("switching.concierge.emailCta", { email: SWITCH_EMAIL })}
-                </a>
+                <Link
+                  href={setUpHref(guideSource(guide.slug, "concierge"))}
+                  className={CALLOUT_LINK_CLASS}
+                >
+                  {t("marketing.common.getSetUp")}
+                </Link>
               </p>
             </div>
           </div>
@@ -379,7 +378,7 @@ async function GuideBody({
       </MovePath>
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}
-      <SwitchingConcierge locale={locale} />
+      <SwitchingConcierge locale={locale} source={guideSource(guide.slug, "concierge")} />
 
       <ClosingCta
         locale={locale}

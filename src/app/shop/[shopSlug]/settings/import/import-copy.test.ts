@@ -105,6 +105,35 @@ describe("the import wizard's client-composed copy", () => {
     }
   }
 
+  for (const locale of DIVER_LOCALES) {
+    for (const count of [1, 3]) {
+      it(`says how many bookings are after today, and where they were sold, in ${locale} at ${count}`, () => {
+        for (const key of ["wizard.bookingsAfterToday", "wizard.bookingsAfterTodayMore"]) {
+          const rendered = fill(
+            pluralForm(count, {
+              one: importMessage(locale, `${key}One`),
+              other: importMessage(locale, `${key}Other`),
+            }),
+            { count, system: "FareHarbor" },
+          );
+          expect(rendered, `${locale} ${key} at ${count}`).not.toContain("{");
+          expect(rendered).toContain(String(count));
+        }
+        expect(importMessage(locale, "wizard.oldSystem").length).toBeGreaterThan(0);
+      });
+    }
+  }
+
+  it("reads the bookings-after-today sentence the way the sheet asked for it", () => {
+    const rendered = fill(importMessage("en-US", "wizard.bookingsAfterTodayOther"), {
+      count: 14,
+      system: "FareHarbor",
+    });
+    expect(rendered).toBe(
+      "14 bookings are after today. They aren’t seats here. Add them on the board, or keep them in FareHarbor until they sail.",
+    );
+  });
+
   it("mixes counts in the cards line rather than forcing them to agree", () => {
     // The shape the old single-pair fix could not express, and the reason this
     // one is three fragments: 1 certification, 2 specialties, 0 nitrox is an

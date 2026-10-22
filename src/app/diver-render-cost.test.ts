@@ -286,11 +286,17 @@ describe("how many round trips a diver's page waits for, one after another", () 
 // "You're booked" line, and only on a delivered link. The layer's other reads
 // went into ones already here: the boat's shared photos ride the diver's own
 // photo read, and this page asks the welcome reader for no dive-day count.
-const READY_AFTER_CEILING = 61;
+// 61 → 63, and the recap's 29 → 31 (market sheet 2026-10-22, item 4): no
+// code changed, the seat did. The seeded diver after the dive is now a
+// regular who comes back (a seat on a later boat, a mask left aboard), and a
+// seat like that reads two statements more on each page than a one-off
+// diver's, which stays under both. Measured, not designed: worth a look if
+// either page is tightened again.
+const READY_AFTER_CEILING = 63;
 const READY_AFTER_PHASE_CEILING = 12;
 // `/recap/[token]`, replayed from item 32: the recap's 3 and the after-state's
 // next-dive read, with no handoff. Before item 32 the same reads were 7 + 2.
-const RECAP_CEILING = 29;
+const RECAP_CEILING = 31;
 const RECAP_PHASE_CEILING = 5;
 // The shop, `readSchedulePage`'s batch with its chained reads, then the
 // board's-end read. 16 → 14 statements and 7 → 5 phases (item 29): the

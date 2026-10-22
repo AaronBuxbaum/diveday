@@ -55,6 +55,8 @@ export const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }>
   "dispute-not-authorized": { tone: "danger", key: "orders.detail.notice.disputeNotAuthorized" },
   "demo-disabled": { tone: "neutral", key: "orders.detail.notice.demoDisabled" },
   "payment-recorded": { tone: "success", key: "orders.detail.notice.paymentRecorded" },
+  // A demo order has no Stripe invoice to stop, so its line says only what happened.
+  "payment-recorded-demo": { tone: "success", key: "orders.detail.notice.paymentRecordedDemo" },
   "payment-stripe-refused": { tone: "warning", key: "orders.detail.notice.paymentStripeRefused" },
   "payment-record-failed": { tone: "danger", key: "orders.detail.notice.paymentRecordFailed" },
   // Another tap's claim is still with Stripe, or Stripe never answered this
@@ -63,8 +65,11 @@ export const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }>
 };
 
 /** The `?notice=` code a Record payment outcome redirects with. */
-export function recordPaymentNotice(outcome: RecordPaymentOnOrderOutcome | null): string {
-  if (outcome?.ok) return "payment-recorded";
+export function recordPaymentNotice(
+  outcome: RecordPaymentOnOrderOutcome | null,
+  { demo = false }: { demo?: boolean } = {},
+): string {
+  if (outcome?.ok) return demo ? "payment-recorded-demo" : "payment-recorded";
   switch (outcome?.reason) {
     case "stripe_refused":
       return "payment-stripe-refused";

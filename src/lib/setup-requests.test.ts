@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { guideSource } from "./funnel";
+import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
 import {
+  asksWhichSystem,
   parseSetupRequest,
   SETUP_CURRENT_SYSTEM_KEYS,
   SETUP_CURRENT_SYSTEMS,
   SETUP_TEXT_MAX,
+  setupPreselection,
   setupSentAdvice,
+  setupSentPath,
   trippedHoneypot,
 } from "./setup-requests";
 
@@ -30,6 +35,7 @@ describe("parseSetupRequest", () => {
         contactName: "Ana Ruiz",
         email: "ana@reefline.example",
         phone: null,
+        currentSystemGuide: null,
       },
     });
   });
@@ -124,6 +130,65 @@ describe("parseSetupRequest", () => {
   });
 });
 
+describe("which booking system or shop software", () => {
+  it("asks only after a booking system or dive-shop software", () => {
+    expect(asksWhichSystem("booking_system")).toBe(true);
+    expect(asksWhichSystem("shop_software")).toBe(true);
+    for (const answer of ["paper", "spreadsheet", "other", "", undefined]) {
+      expect(asksWhichSystem(answer)).toBe(false);
+    }
+  });
+
+  it("keeps the system named after one of those two answers", () => {
+    const parsed = parseSetupRequest({
+      ...complete,
+      currentSystem: "booking_system",
+      currentSystemGuide: "fareharbor",
+    });
+    expect(parsed.ok && parsed.data.currentSystemGuide).toBe("fareharbor");
+  });
+
+  it("drops it after any other answer, and drops a system with no guide", () => {
+    const afterPaper = parseSetupRequest({
+      ...complete,
+      currentSystem: "paper",
+      currentSystemGuide: "fareharbor",
+    });
+    expect(afterPaper.ok && afterPaper.data.currentSystemGuide).toBeNull();
+    for (const crafted of ["", "constructor", "FareHarbor", ["eve"], 7]) {
+      const parsed = parseSetupRequest({
+        ...complete,
+        currentSystem: "shop_software",
+        currentSystemGuide: crafted,
+      });
+      expect(parsed.ok && parsed.data.currentSystemGuide).toBeNull();
+    }
+  });
+
+  it("preselects the system a reader came from on any guide's door", () => {
+    expect(setupPreselection(guideSource("fareharbor", "close"))).toEqual({
+      currentSystem: "booking_system",
+      currentSystemGuide: "fareharbor",
+    });
+    expect(setupPreselection(guideSource("eve", "concierge"))).toEqual({
+      currentSystem: "shop_software",
+      currentSystemGuide: "eve",
+    });
+    for (const slug of MIGRATION_GUIDE_SLUGS) {
+      const preselected = setupPreselection(guideSource(slug));
+      expect(preselected?.currentSystemGuide).toBe(slug);
+      expect(asksWhichSystem(preselected?.currentSystem)).toBe(true);
+    }
+  });
+
+  it("preselects nothing from any other door", () => {
+    for (const source of ["pricing", "switching-hub-concierge", "switching-spreadsheet", "x"]) {
+      expect(setupPreselection(source)).toBeNull();
+    }
+    expect(setupPreselection(undefined)).toBeNull();
+  });
+});
+
 describe("trippedHoneypot", () => {
   it("is tripped by any non-blank value and by nothing else", () => {
     expect(trippedHoneypot("https://spam.example")).toBe(true);
@@ -144,8 +209,10 @@ describe("SETUP_CURRENT_SYSTEM_KEYS", () => {
 describe("setupSentAdvice", () => {
   it("answers paper, a spreadsheet and another system each with its own first step", () => {
     expect(setupSentAdvice("paper")).toEqual({ key: "marketing.setUp.sent.paper" });
-    expect(setupSentAdvice("spreadsheet")?.link?.destination).toBe("/switching/spreadsheet");
-    expect(setupSentAdvice("booking_system")?.link?.destination).toBe("/switching");
+    expect(setupSentAdvice("spreadsheet")?.link?.href).toBe(
+      "/switching/spreadsheet?from=setup-sent",
+    );
+    expect(setupSentAdvice("booking_system")?.link?.href).toBe("/switching?from=setup-sent");
     expect(setupSentAdvice("shop_software")?.key).toBe("marketing.setUp.sent.system");
   });
 
@@ -154,5 +221,41 @@ describe("setupSentAdvice", () => {
     expect(setupSentAdvice(undefined)).toBeNull();
     expect(setupSentAdvice(["paper", "paper"])).toBeNull();
     expect(setupSentAdvice("constructor")).toBeNull();
+  });
+
+  it("links the named system's own guide", () => {
+    expect(setupSentAdvice("booking_system", "fareharbor")).toEqual({
+      key: "marketing.setUp.sent.system",
+      link: {
+        href: "/switching/fareharbor?from=setup-sent",
+        key: "marketing.setUp.sent.systemGuideLink",
+        competitor: "FareHarbor",
+      },
+    });
+    expect(setupSentAdvice("shop_software", "eve")?.link?.href).toBe(
+      "/switching/eve?from=setup-sent",
+    );
+  });
+
+  it("falls back to every guide for an unknown system, and ignores one after paper", () => {
+    expect(setupSentAdvice("booking_system", "constructor")?.link?.href).toBe(
+      "/switching?from=setup-sent",
+    );
+    expect(setupSentAdvice("booking_system", ["eve", "eve"])?.link?.href).toBe(
+      "/switching?from=setup-sent",
+    );
+    expect(setupSentAdvice("paper", "eve")).toEqual({ key: "marketing.setUp.sent.paper" });
+  });
+});
+
+describe("setupSentPath", () => {
+  it("carries what they use, and the system's guide only after a system", () => {
+    expect(setupSentPath("/get-set-up/sent", "booking_system", "rezdy")).toBe(
+      "/get-set-up/sent?uses=booking_system&guide=rezdy",
+    );
+    expect(setupSentPath("/get-set-up/sent", "booking_system", null)).toBe(
+      "/get-set-up/sent?uses=booking_system",
+    );
+    expect(setupSentPath("/get-set-up/sent", "paper", "rezdy")).toBe("/get-set-up/sent?uses=paper");
   });
 });

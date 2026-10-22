@@ -4,7 +4,11 @@ import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { DEMO_SHOP_TIMEZONE } from "../src/db/seed-clock";
-import { DEMO_RECAP_BOOKING_ID, LISTED_SHOP_SLUGS } from "../src/db/seed-identifiers";
+import {
+  AT_SEA_DAY_TITLE,
+  DEMO_RECAP_BOOKING_ID,
+  LISTED_SHOP_SLUGS,
+} from "../src/db/seed-identifiers";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffPassengerCount } from "../src/i18n/participant-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
@@ -2443,6 +2447,15 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/get-set-up?from=pricing");
         await page.locator("h1").first().waitFor();
         await capture(page, "get-set-up", scheme);
+      });
+
+      // The form as a FareHarbor guide's concierge door opens it (2026-10-22):
+      // "A booking system" answered, and "Which one?" asked and answered.
+      test(`the set-up form asks which system (${scheme})`, async ({ page }) => {
+        await page.goto("/get-set-up?from=switching-fareharbor-concierge");
+        await page.locator("h1").first().waitFor();
+        await page.getByRole("radio", { name: "FareHarbor" }).waitFor();
+        await capture(page, "get-set-up-which-system", scheme);
       });
 
       // The thank-you page a sent request lands on, with the demo door.
@@ -7884,6 +7897,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "order-detail", scheme);
       });
 
+      // An open demo order (market sheet 2026-10-22, item 6): Record payment
+      // offers cash and the card machine as live buttons; Refresh and Void
+      // stay disabled beside the demo note.
+      test(`an open demo order's Record payment renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/orders?status=open&range=all");
+        const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
+        await ledgerRow.filter({ visible: true }).first().waitFor();
+        await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
+        await page.getByRole("button", { name: "Card machine", exact: true }).waitFor();
+        await capture(page, "order-detail-open-demo", scheme);
+      });
+
       // **The dispute sheet on screen** (issue #2390): a seat's order, the
       // signed release, the check-in and the roll call, reached the way an
       // owner reaches it, from the order's own "Dispute sheet" door.
@@ -7949,6 +7976,35 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/import");
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
+      });
+
+      // A bookings export that holds seats sold for after today (market sheet
+      // 2026-10-22, item 3): the preview counts them, names the system the
+      // guide came from, and lists them. The browser's clock is the frozen
+      // one, so "today" is the seed's day and the list never moves.
+      test(`the import preview lists bookings after today (${scheme})`, async ({ page }) => {
+        await page.clock.install({ time: E2E_FROZEN_CLOCK });
+        await page.goto("/shop/blue-mantis/settings/import?from=fareharbor");
+        await page
+          .locator('input[type="file"][data-hydrated="true"]')
+          .filter({ visible: true })
+          .waitFor({ state: "attached" });
+        await page.setInputFiles('input[type="file"]', {
+          name: "bookings.csv",
+          mimeType: "text/csv",
+          buffer: Buffer.from(
+            [
+              "Customer Name,Email,Booking Date,Tour Name,Booking Status,Total,Booking ID",
+              "Hana Kobayashi,hana.k@example.com,2026-06-12,Two-tank Molasses Reef,Completed,$165.00,FH-1",
+              "Hana Kobayashi,hana.k@example.com,2026-08-14,Night dive Benwood,Booked,$95.00,FH-2",
+              "Sam Reed,sam.r@example.com,2026-08-29,Discover Scuba,Booked,$120.00,FH-3",
+              "Ada Brooks,ada.b@example.com,2026-09-05,Two-tank Molasses Reef,Booked,$165.00,FH-4",
+            ].join("\n"),
+            "utf-8",
+          ),
+        });
+        await page.getByRole("list", { name: /bookings are after today/ }).waitFor();
+        await capture(page, "settings-import-bookings-after-today", scheme);
       });
 
       // Import's "Gear history" tab: the gear CSV importer.
@@ -8141,7 +8197,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/courses");
         const earlier = page.locator("#cards-to-process-earlier > summary");
         await earlier.waitFor();
-        const people = page.getByText("See who", { exact: true });
+        // The first ladder row: the demo now seeds two shop-certified cards
+        // of its own (H-148), so "See who" is on more than one step.
+        const people = page.getByText("See who", { exact: true }).first();
         await people.waitFor();
         await capture(page, "course-follow-ups-closed", scheme);
         await earlier.click();
@@ -8748,6 +8806,31 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-not-back-aboard", scheme);
+      });
+
+      /**
+       * **The boat at sea, mid roll call** (market sheet 2026-10-22, item 1):
+       * the demo always has one underway, dive 1 counted and dive 2's count
+       * at "9 of 11 back aboard" with one buddy pair still to surface. Read
+       * only, so it needs no reset of its own.
+       */
+      test(`the boat at sea's open after-dive count renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        // The day's spine carries the departure's title as its door, like the
+        // dawn boat's (`openSailedTrip`).
+        await page.goto("/shop/blue-mantis");
+        await page.getByRole("link", { name: AT_SEA_DAY_TITLE, exact: true }).first().click();
+        await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        await page
+          .getByRole("link", { name: "After dive 2" })
+          .evaluate((link: HTMLElement) => link.click());
+        await page.waitForURL(/checkpoint=after_dive_2/);
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-at-sea-mid-roll-call", scheme);
       });
 
       /**

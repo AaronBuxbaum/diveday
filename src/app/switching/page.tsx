@@ -218,7 +218,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
       </section>
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}
-      <SwitchingConcierge locale={locale} />
+      <SwitchingConcierge locale={locale} source="switching-hub-concierge" />
     </main>
   );
 }

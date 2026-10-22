@@ -322,8 +322,9 @@ screen, with short notes from the person who built it pointing at specific thing
   is re-read whenever the screen it annotates changes.
 - What is deliberately missing gets a note too ("There is no percentage bar; the count is the
   count").
-- First person is allowed, and a fact only the builder would know is the kind of note worth
-  writing ("I tried a spinner here and the captain read it as the phone thinking").
+- The first person is "we", and a fact only the builders would know is the kind of note worth
+  writing ("We tried a spinner here and the captain read it as the phone thinking"). The site says
+  "we" and names no person (H-146).
 - Every screen a visitor could open leads to **one door into the demo as that role**, and the
   page's one primary stays the shared pair. On a feature page that door is the hero's; under a
   screen on a page that argues something else it is the screen's own (`ScreenDoor`, link-weight,

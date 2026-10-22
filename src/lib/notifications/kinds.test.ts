@@ -282,6 +282,16 @@ describe("operator_alert setup_request", () => {
       expect(notificationSchema.safeParse({ ...alert, shopName }).success).toBe(false);
     }
   });
+
+  it("names a system only by a switching guide's slug", () => {
+    const named = { ...alert, currentSystem: "booking_system" };
+    expect(
+      notificationSchema.safeParse({ ...named, currentSystemGuide: "fareharbor" }).success,
+    ).toBe(true);
+    for (const currentSystemGuide of ["FareHarbor\r\nBcc: x@example.com", "constructor", ""]) {
+      expect(notificationSchema.safeParse({ ...named, currentSystemGuide }).success).toBe(false);
+    }
+  });
 });
 
 /**
