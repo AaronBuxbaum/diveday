@@ -210,7 +210,7 @@ export function waiverBatchLabelText(t: StaffTranslator, code: WaiverBatchCode):
 const BLOCKER_ITEM_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   requirements_not_configured: "today.diverItem.requirements",
   identity_unconfirmed: "today.diverItem.identity",
-  under_minimum_age: "today.diverItem.minimumAge",
+  under_minimum_age: "today.diverItem.underMinimumAge",
   waiver_not_sent: "today.diverItem.waiver",
   waiver_lapsed: "today.diverItem.waiver",
   waiver_runs_out: "today.diverItem.waiver",
@@ -222,12 +222,12 @@ const BLOCKER_ITEM_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   training_mark_invalid: "today.diverItem.trainingMark",
   medical_review: "today.diverItem.medicalReview",
   medical_not_cleared: "today.diverItem.medicalNotCleared",
-  certification_missing: "today.diverItem.certification",
-  certification_pending: "today.diverItem.certification",
-  certification_self_declared: "today.diverItem.certification",
-  certification_insufficient: "today.diverItem.certification",
-  certification_not_yet: "today.diverItem.certification",
-  certification_in_training: "today.diverItem.certification",
+  certification_missing: "today.diverItem.certificationMissing",
+  certification_pending: "today.diverItem.certificationUnverified",
+  certification_self_declared: "today.diverItem.certificationUnverified",
+  certification_insufficient: "today.diverItem.certificationInsufficient",
+  certification_not_yet: "today.diverItem.certificationNotYet",
+  certification_in_training: "today.diverItem.certificationInTraining",
   specialty_missing: "today.diverItem.specialty",
   specialty_pending: "today.diverItem.specialty",
   specialty_import_unconfirmed: "today.diverItem.specialty",
@@ -271,6 +271,18 @@ export function boatWorkItemText(
  */
 export function diverItemsText(items: readonly string[]): string {
   return items.join(", ");
+}
+
+/**
+ * A readiness blocker's own sentence, then every other gap open for the diver:
+ * "Not cleared to dive by a physician; also waiver, emergency contact". The
+ * blocker keeps its words because they say the state, which a topic cannot.
+ */
+export function diverAlsoText(t: StaffTranslator, lead: string, others: readonly string[]): string {
+  return t("today.diverItem.also", {
+    lead: lead.replace(/\.$/, ""),
+    items: diverItemsText(others),
+  });
 }
 
 /**

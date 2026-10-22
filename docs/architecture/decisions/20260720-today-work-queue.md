@@ -41,7 +41,8 @@ Rules that define the queue, encoded in [`src/lib/today.ts`](../../../src/lib/to
   boat row above them that sends every one ("3 waivers not signed · Send waivers",
   `waiverBatchActions`). A busy departure still cannot bury the others: its
   group shows five rows and folds the rest behind "and N more" (`foldBoatRows`), never a danger
-  row.
+  row or a readiness blocker. A readiness blocker leads its diver's row with its own fix and
+  sentence, the other gaps after it ("Not cleared to dive by a physician; also waiver").
 - **Chronological, then severity.** The 07:00 boat's problems outrank the 14:00 boat's. Severity
   ranks by how long a fix takes to land — evidence that must come from a diver or a physician
   outranks anything staff can settle at the dock — and only breaks ties inside one departure.

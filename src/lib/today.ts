@@ -3,6 +3,7 @@ import {
   blockerActionLabelText,
   blockerItemText,
   blockerRowText,
+  diverAlsoText,
   diverItemsText,
   emailDeliveryDetailText,
   emailResendActionText,
@@ -975,7 +976,17 @@ export type TodayAction = {
    * row about one diver's own gap on one boat, so `oneRowPerDiver` can name
    * each diver once under their boat with every item open for them.
    */
-  diver?: { personId: string; items: readonly string[] };
+  diver?: {
+    personId: string;
+    items: readonly string[];
+    /** Raised from a readiness blocker: it leads a merged row and keeps its own fix and sentence. */
+    readiness?: true;
+  };
+  /**
+   * A row that acts on divers already named in rows of their own (the boat's
+   * one-tap waiver send): it is not counted again as a job.
+   */
+  batch?: true;
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };
@@ -1207,6 +1218,12 @@ export function blockerDestination(
   };
 }
 
+/** A diver's other blockers, the one that takes longest to clear first (`KIND_SEVERITY`). */
+function worstFirst(blockers: readonly ReadinessBlocker[]): ReadinessBlocker[] {
+  const rank = (blocker: ReadinessBlocker) => KIND_SEVERITY[BLOCKER_ACTIONS[blocker.code].kind];
+  return [...blockers].sort((a, b) => rank(a) - rank(b));
+}
+
 export type DiverBlockerInput = {
   bookingId: string;
   personId: string;
@@ -1271,9 +1288,10 @@ export function diverBlockerAction(
     // names them under their boat can say all of it (`oneRowPerDiver`).
     diver: {
       personId: input.personId,
-      items: [blocker, ...input.blockers.filter((each) => each !== blocker)].map((each) =>
-        blockerItemText(t, each),
+      items: [blocker, ...worstFirst(input.blockers.filter((each) => each !== blocker))].map(
+        (each) => blockerItemText(t, each),
       ),
+      readiness: true,
     },
     // Never on a held seat (H-13): the human on this booking may not be the
     // one whose cards are on file, so nobody checks that person's card from
@@ -1340,11 +1358,14 @@ export function waiverBatchActions(
         id: `waivers:${key}`,
         kind: "waiver" as const,
         urgency: urgencyFor(first.startsAt, now),
-        subject: blockerRowText(t, { code }, rows.length),
+        // Built like the open-orders row: a row about the departure renders
+        // its detail, never its subject (layer 3 auditor review, B1).
+        subject: first.tripTitle,
         context: first.tripTitle,
         departure: { tripId: first.tripId, label: first.tripTitle },
         aboutDeparture: true,
-        detail: "",
+        batch: true as const,
+        detail: blockerRowText(t, { code }, rows.length),
         actionLabel: waiverBatchLabelText(t, code),
         href: `/shop/${shopSlug}/trips/${first.tripId}`,
         waiver: { bookingIds: rows.map((row) => row.bookingId) },
@@ -1369,7 +1390,10 @@ export function waiverBatchActions(
  * Runs after `filterActionsForRoles`, so a row names only the items its reader
  * may see. The merged row sits where the diver's first row stood.
  */
-export function oneRowPerDiver(actions: readonly TodayAction[]): TodayAction[] {
+export function oneRowPerDiver(
+  actions: readonly TodayAction[],
+  t: StaffTranslator = staffTranslator("en-US"),
+): TodayAction[] {
   const keyOf = (action: TodayAction) =>
     action.diver && action.departure ? `${action.departure.tripId}:${action.diver.personId}` : null;
   const byDiver = new Map<string, TodayAction[]>();
@@ -1391,25 +1415,37 @@ export function oneRowPerDiver(actions: readonly TodayAction[]): TodayAction[] {
     // The group is written where its first row stood, then forgotten.
     if (!rows) continue;
     byDiver.delete(key);
-    out.push(diverRow(rows));
+    out.push(diverRow(rows, t));
   }
   return out;
 }
 
-/** One diver's rows on one boat as the one row that names every item. */
-function diverRow(rows: readonly TodayAction[]): TodayAction {
-  const [lead] = sortStationRows(rows);
+/**
+ * One diver's rows on one boat as the one row that names every item.
+ *
+ * **A readiness blocker leads** whatever the list's rank says (layer 3 desk
+ * review, B1): a payment blocker under a rental size lost its invoice control
+ * and its door. And **it keeps its own sentence**, the other gaps after it
+ * (auditor review, B2): "Not cleared to dive by a physician; also waiver" —
+ * never a list of topics that reads a physician's no as paperwork. A row of
+ * boat work alone says its items: "rental size, emergency contact".
+ */
+function diverRow(rows: readonly TodayAction[], t: StaffTranslator): TodayAction {
+  const sorted = sortStationRows(rows);
+  const lead = sorted.find((row) => row.diver?.readiness) ?? sorted[0];
   if (!lead?.diver) throw new Error("diverRow takes rows about one diver");
   const items = [
     ...new Set(
-      [lead, ...rows.filter((row) => row !== lead)].flatMap((row) => row.diver?.items ?? []),
+      [lead, ...sorted.filter((row) => row !== lead)].flatMap((row) => row.diver?.items ?? []),
     ),
   ];
   if (items.length <= 1) return lead;
+  const diver = { ...lead.diver, items };
+  if (!lead.diver.readiness) return { ...lead, detail: diverItemsText(items), diver };
   return {
     ...lead,
-    detail: diverItemsText(items),
-    diver: { personId: lead.diver.personId, items },
+    detail: diverAlsoText(t, lead.detail, items.slice(1)),
+    diver,
   };
 }
 
@@ -1907,9 +1943,12 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
     desk: sortStationRows(desk),
     tomorrow: {
       stations: tomorrowStations,
-      jobs: tomorrowStations.reduce((total, station) => total + station.rows.length, 0),
+      jobs: tomorrowStations.reduce(
+        (total, station) => total + station.rows.filter(countsAsJob).length,
+        0,
+      ),
     },
-    week: { jobs: weekRows.length, rows: sortStationRows(weekRows) },
+    week: { jobs: weekRows.filter(countsAsJob).length, rows: sortStationRows(weekRows) },
   };
 }
 
@@ -1935,10 +1974,15 @@ export function weekCrewAway(
   return { people: people.size, firstDay: calendarDateInTimezone(soonest, timeZone) };
 }
 
+/** Whether a row is a job of its own: a batch acts on divers already counted (`batch`). */
+export function countsAsJob(action: TodayAction): boolean {
+  return !action.batch;
+}
+
 /** Every row the spine holds, wherever it filed. */
 export function spineJobCount(spine: DaySpine): number {
   return (
-    spine.stations.reduce((total, station) => total + station.rows.length, 0) +
+    spine.stations.reduce((total, station) => total + station.rows.filter(countsAsJob).length, 0) +
     spine.desk.length +
     spine.tomorrow.jobs +
     spine.week.jobs
@@ -2097,7 +2141,7 @@ export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReadi
   const rest = all.filter((action) => !leads(action));
   const paymentsRows = lens.paymentsRow ? 1 : 0;
   const folded = crewsToday && (rest.length > 0 || paymentsRows > 0) ? rest : null;
-  const count = lead.length + (lens.drafts ?? 0) + (folded ? 0 : paymentsRows);
+  const count = lead.filter(countsAsJob).length + (lens.drafts ?? 0) + (folded ? 0 : paymentsRows);
   const next = spine.stations.find((station) => !hasSailed(station.startsAt, lens.now)) ?? null;
   // The sentence names a time, not a boat: every boat leaving at that minute
   // is "the 2:30 PM", so the count is theirs together and cannot change with
@@ -2110,8 +2154,12 @@ export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReadi
       : [],
   );
   const dueBeforeNext = next
-    ? lead.filter((action) => action.departure != null && nextTripIds.has(action.departure.tripId))
-        .length
+    ? lead.filter(
+        (action) =>
+          countsAsJob(action) &&
+          action.departure != null &&
+          nextTripIds.has(action.departure.tripId),
+      ).length
     : count;
   return {
     lead,
@@ -2229,20 +2277,28 @@ export function groupByDeparture(rows: readonly TodayAction[]): NeedsYouGroup[] 
  * which opens the full list in place. Nobody is dropped: `shown` and `more`
  * together are every row, in the ranked order.
  *
- * **A danger row never folds**: a diver not back aboard or a medical hold is
- * everyone's to see, so the fold starts after the last of them however many
- * there are. A list only one longer than the cap shows whole, because "and 1
+ * **A danger row or a readiness blocker never folds**: a diver not back
+ * aboard, a medical hold or an unsigned waiver is everyone's to see, however
+ * many there are. A list only one longer than the cap shows whole, because "and 1
  * more" costs the room of the row it hides (`nameListText`'s rule).
  */
 export const BOAT_ROWS_SHOWN = 5;
+
+/** Every kind a readiness blocker raises, aboard or ashore: none of them folds. */
+const READINESS_KINDS: ReadonlySet<TodayActionKind> = new Set([
+  "blocked_aboard",
+  ...Object.values(BLOCKER_ACTIONS).map((action) => action.kind),
+]);
 
 export function foldBoatRows(rows: readonly TodayAction[]): {
   shown: TodayAction[];
   more: TodayAction[];
 } {
-  // Danger rows lead a ranked list, but are kept wherever they sit: a fold
-  // that hid one would be the grouping dropping the loudest row there is.
-  const danger = (row: TodayAction) => ACTION_KIND_META[row.kind].tone === "danger";
+  // Danger and readiness rows are kept wherever they sit: a fold that hid one
+  // would be the grouping hiding a diver who cannot board (layer 3 auditor
+  // review, note 1). Only boat work and the boat's other chores fold.
+  const danger = (row: TodayAction) =>
+    ACTION_KIND_META[row.kind].tone === "danger" || READINESS_KINDS.has(row.kind);
   const shown = rows.filter((row, index) => index < BOAT_ROWS_SHOWN || danger(row));
   const more = rows.filter((row, index) => index >= BOAT_ROWS_SHOWN && !danger(row));
   return more.length <= 1 ? { shown: [...rows], more: [] } : { shown, more };

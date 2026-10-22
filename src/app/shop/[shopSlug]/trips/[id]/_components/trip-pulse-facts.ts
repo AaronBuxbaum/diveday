@@ -5,7 +5,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { shopPath } from "@/lib/staff-notices";
-import type { TodayAction } from "@/lib/today";
+import { countsAsJob, type TodayAction } from "@/lib/today";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -146,7 +146,8 @@ export function tripPulseFacts({
         // the same items, counts and words, except nitrox asked for with no
         // verified card, which carries its warning tone.
         ...(needs
-          ? needs.map((action) => ({
+          ? // The boat's one-tap waiver row acts on divers already listed here.
+            needs.filter(countsAsJob).map((action) => ({
               key: action.id,
               text: todayRowText(action),
               href: awayFromThisPage(action.href, shopPath(shopSlug, "trips", tripId)),

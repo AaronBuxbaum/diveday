@@ -139,7 +139,7 @@ describe("pushDepartureRows", () => {
     ]);
     // Ana and Ben share an unsent waiver: one tap above them sends both.
     const batch = actions.find((action) => !action.diver);
-    expect(batch?.subject).toBe("2 waivers not signed, not sent yet");
+    expect(batch?.detail).toBe("2 waivers not signed, not sent yet");
     expect(batch?.waiver).toEqual({ bookingIds: ["b-ana", "b-ben"] });
     expect(actions.find((action) => action.subject === "Cara Diaz")?.diver?.items).toHaveLength(5);
   });

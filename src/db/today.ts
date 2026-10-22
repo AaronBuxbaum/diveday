@@ -2251,6 +2251,7 @@ export async function getTodayWork(
   // after the role filter, so a row names only the gaps its reader may see.
   const visibleActions = oneRowPerDiver(
     attachAgencyChecks(filterActionsForRoles(actions, roles), agencyCheckCards),
+    t,
   );
 
   return {

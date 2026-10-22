@@ -21,11 +21,13 @@
   emergency reference, is filed under that boat so it keeps its rank. It sits under the day's
   departures, which carry no rows of their own. A status list, not a page: an empty one is not drawn. Each diver is named
   once under each boat they are on: one row with their name over what is wrong in a few words
-  ("Waiver not signed, not sent yet."), or, when several things are open for them, over every item
-  ("Priya Sharma · waiver, emergency contact"), with one button for the first fix. Counts stay only
+  ("Waiver not signed, not sent yet."), or, when several things are open for them, over that sentence and every other
+  item ("Priya Sharma · Waiver not signed, not sent yet; also emergency contact"). A readiness
+  blocker always leads and keeps its own button and its own words. Counts stay only
   for what cannot name a person, such as a boat's open orders, and for a batch fix: two or more
   divers on a boat sharing a waiver gap get one row above them that sends every waiver at once. A boat with many rows shows its
-  first five and folds the rest behind "and N more"; a danger row never folds. No row carries the
+  first five and folds the rest behind "and N more"; a danger row or a readiness blocker never
+  folds. No row carries the
   levels — the roster and the diver record carry the full sentence. Failed emails of one kind and one cause are one row with one resend, however
   many people they missed. **A crew reader's lens** (UX audit 2026-10-07, item 7): for a captain or
   divemaster who crews one of today's boats, the list leads with that boat's rows, every
