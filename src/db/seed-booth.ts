@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gt, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
+import { rollCallCheckpoints } from "@/lib/roll-call";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import {
@@ -18,6 +19,8 @@ import {
   orderLineItems,
   orders,
   people,
+  rollCallCrewEvents,
+  rollCallEvents,
   tripAssignments,
   tripBlowoutDivers,
   tripBlowouts,
@@ -735,22 +738,21 @@ async function seedShopCertified(
     })),
   );
   // Every session in the log, with its depth.
-  await db.insert(executedDives).values(
-    SHOP_CERTIFIED_DIVES.map((dive, index) => {
-      const dayStarts = (days[dive.day] ?? days[0])?.startsAt ?? window.startsAt;
-      const enteredAt = new Date(dayStarts.getTime() + dive.enteredAfterMin * 60_000);
-      return {
-        shopId,
-        tripId: trip.id,
-        diveNumber: index + 1,
-        actualSiteId: siteIds.get(dive.site) ?? null,
-        enteredAt,
-        exitedAt: new Date(enteredAt.getTime() + dive.minutes * 60_000),
-        maxDepthMeters: dive.maxDepthMeters,
-        recordedByPersonId: ctx.instructorId,
-      };
-    }),
-  );
+  const logged = SHOP_CERTIFIED_DIVES.map((dive, index) => {
+    const dayStarts = (days[dive.day] ?? days[0])?.startsAt ?? window.startsAt;
+    const enteredAt = new Date(dayStarts.getTime() + dive.enteredAfterMin * 60_000);
+    return {
+      shopId,
+      tripId: trip.id,
+      diveNumber: index + 1,
+      actualSiteId: siteIds.get(dive.site) ?? null,
+      enteredAt,
+      exitedAt: new Date(enteredAt.getTime() + dive.minutes * 60_000),
+      maxDepthMeters: dive.maxDepthMeters,
+      recordedByPersonId: ctx.instructorId,
+    };
+  });
+  await db.insert(executedDives).values(logged);
   await db.insert(tripRequirements).values({
     tripId: trip.id,
     shopId,
@@ -767,6 +769,7 @@ async function seedShopCertified(
   });
 
   const issuedAt = at(-back + 1, 15, 40);
+  const seated: string[] = [];
   for (const lead of [16, 9]) {
     const student = await firstFree(
       db,
@@ -790,6 +793,7 @@ async function seedShopCertified(
       })
       .returning({ id: bookings.id });
     if (!booking) continue;
+    seated.push(booking.id);
     // Paid at the desk on the first morning, so the course's money falls in
     // the month it ran, where Reports' "By kind" counts it too.
     const paidAt = new Date(window.startsAt.getTime() - (lead + 20) * 60_000);
@@ -817,6 +821,46 @@ async function seedShopCertified(
       createdAt: issuedAt,
     });
   }
+
+  // The instructor's head count (visual triage of PR #2918, item 1c): both
+  // students and herself counted aboard at the dock on the first morning, and
+  // back aboard a few minutes after each session's exit. Without it the
+  // Safety tab listed a hull that sailed with nobody counted.
+  const counts = rollCallCheckpoints(trip.plannedDives).map((checkpoint, index) => ({
+    checkpoint,
+    occurredAt:
+      index === 0
+        ? new Date(window.startsAt.getTime() + 20 * 60_000)
+        : new Date((logged[index - 1]?.exitedAt ?? window.startsAt).getTime() + 5 * 60_000),
+  }));
+  if (seated.length > 0) {
+    await db.insert(rollCallEvents).values(
+      seated.flatMap((bookingId, seat) =>
+        counts.map(({ checkpoint, occurredAt }) => ({
+          shopId,
+          tripId: trip.id,
+          bookingId,
+          recordedByPersonId: ctx.instructorId,
+          status: "boarded" as const,
+          checkpoint,
+          source: "live" as const,
+          occurredAt: new Date(occurredAt.getTime() + seat * 1_000),
+        })),
+      ),
+    );
+  }
+  await db.insert(rollCallCrewEvents).values(
+    counts.map(({ checkpoint, occurredAt }) => ({
+      shopId,
+      tripId: trip.id,
+      personId: ctx.instructorId,
+      recordedByPersonId: ctx.instructorId,
+      status: "boarded" as const,
+      checkpoint,
+      source: "live" as const,
+      occurredAt: new Date(occurredAt.getTime() + seated.length * 1_000),
+    })),
+  );
 }
 
 /**

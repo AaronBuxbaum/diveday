@@ -11,6 +11,7 @@ import { openLostItemsByPerson } from "./lost-items";
 import { listTripReadiness } from "./readiness";
 import { getMonthMoneyDetail } from "./report-lines";
 import { bookingLeadTimes, certifiedHere, getMonthlyReport, getShopYear } from "./reporting";
+import { getSafetyMonth } from "./safety-report";
 import {
   bookingPayments,
   bookings,
@@ -199,6 +200,34 @@ describe("the demo's booth stories", () => {
         .filter((row) => row.readiness.status !== "ready")
         .map((row) => JSON.stringify(row.readiness)),
     ).toEqual([]);
+  });
+
+  /**
+   * **The month's safety record reads clean** (visual triage of PR #2918,
+   * item 1c). The course session sailed a hull with two students and an
+   * instructor and wrote no head count at all, so the Safety tab read
+   * "Roll calls closed 7 of 8" and "2 seats never marked at the dock" over a
+   * seed whose every boat came home counted. A boat still at sea is not in
+   * the figure (`getSafetyMonth` reads only boats home).
+   */
+  it("counts the course session at the dock and after every dive, so the safety month reads clean", async () => {
+    const { db, shop } = context;
+    const [session] = await db
+      .select({ startsAt: trips.startsAt })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, SHOP_CERTIFIED_TITLE)));
+    if (!session) throw new Error("expected the certified course session");
+    const wall = utcToWallTime(session.startsAt, TZ);
+    for (const month of [
+      thisMonth(),
+      shopMonthBounds({ year: wall.year, month: wall.month }, TZ),
+    ]) {
+      const safety = await getSafetyMonth(db, shop.id, month.from, month.to, TZ);
+      expect(safety.departuresBack).toBeGreaterThan(0);
+      expect(safety.openRollCalls).toEqual([]);
+      expect(safety.rollCallsClosed).toBe(safety.departuresBack);
+      expect(safety.unmarkedAtDock).toBe(0);
+    }
   });
 
   it("holds a mask for a diver who is back tomorrow", async () => {

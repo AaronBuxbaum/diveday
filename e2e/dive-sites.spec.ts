@@ -653,16 +653,20 @@ test.describe("staff", () => {
       page.getByText("The mooring ball moved south. Brief the swim-through first."),
     ).toBeVisible();
 
-    // And nowhere a diver looks. The public briefing reads the same row.
-    await page.goto("/s/blue-mantis");
-    await expect(
-      page.getByText("The mooring ball moved south. Brief the swim-through first."),
-    ).toHaveCount(0);
+    // And nowhere a diver looks. The public briefing reads the same row. Read
+    // as the response body rather than a rendered page: stricter (the note
+    // must not ride the payload either, not just stay off the screen) and a
+    // second off the run, which kept this test at its budget's edge on a
+    // loaded runner (Playwright shard 6/6, PR #2918).
+    const publicPage = await page.request.get("/s/blue-mantis");
+    expect(publicPage.ok()).toBe(true);
+    expect(await publicPage.text()).not.toContain("The mooring ball moved south");
 
-    // Taking it back takes it off the row. Straight to the site: the library's
-    // link to it was proven above, and a second walk through it was budget
-    // spent on nothing new (issue #2366).
-    await page.goto(site);
+    // Taking it back takes it off the row. The library is still the page on
+    // screen (the public check above was a request, not a navigation), so its
+    // link is the cheapest way back to the site (issue #2366).
+    await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
+    await page.waitForURL((url) => url.pathname === site);
     await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
     const cleared = page.getByLabel("What to remember about running this site");
     await expect(page.locator("form[data-hydrated]")).toHaveCount(1);
@@ -672,11 +676,13 @@ test.describe("staff", () => {
     // this is the assertion that raced.
     await page.waitForURL(/[?&]notice=saved/);
     await expect(cleared).toHaveValue("");
-    await page.goto("/shop/blue-mantis/dive-sites");
-    await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
-    await expect(
-      page.getByText("The mooring ball moved south. Brief the swim-through first."),
-    ).toHaveCount(0);
+    // The library row no longer carries it, read the same way as the public
+    // page above: the row was proven on screen once already.
+    const library = await page.request.get("/shop/blue-mantis/dive-sites");
+    expect(library.ok()).toBe(true);
+    const libraryHtml = await library.text();
+    expect(libraryHtml).toContain("Dive-site library");
+    expect(libraryHtml).not.toContain("The mooring ball moved south");
   });
 
   test("a second tab's save is refused rather than reverting the first", async ({

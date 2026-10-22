@@ -79,4 +79,33 @@ describe("CardsToProcess", () => {
     );
     expect(screen.queryByTestId("cards-to-process-earlier")).toBeNull();
   });
+
+  /**
+   * **A clock from before the stamp existed names no date ahead of it**
+   * (visual triage of PR #2918, item 1d). Under the frozen Jul 21 clock the
+   * cut was the fixed Oct 16 migration instant, so every card read
+   * "certified before Fri, Oct 16", a day the clock had not reached. A world
+   * whose clock predates the migration already has the stamp, so every card
+   * has a known wait and none is set apart.
+   */
+  it("sets nothing apart under a clock from before the stamp existed", () => {
+    const before = new Date(since - 90 * DAY_MS);
+    render(
+      <CardsToProcess
+        cards={[
+          card("recent", "Eve Recent", new Date(before.getTime() - 9 * DAY_MS)),
+          card("waiting", "Fay Waiting", new Date(before.getTime() - 31 * DAY_MS)),
+        ]}
+        markProcessed={() => {}}
+        now={before}
+        locale="en-US"
+        timeZone="UTC"
+        t={t}
+      />,
+    );
+    expect(document.getElementById("cards-to-process-earlier")).toBeNull();
+    expect(screen.queryByText(/certified before/)).toBeNull();
+    expect(screen.getByText("Eve Recent")).toBeTruthy();
+    expect(screen.getAllByText(t("courses.processing.late"))).toHaveLength(1);
+  });
 });

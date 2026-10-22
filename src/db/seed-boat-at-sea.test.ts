@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
+import { getDayCloseout } from "./closeout";
 import { getTripManifest } from "./manifests";
 import { listTripReadiness } from "./readiness";
 import {
@@ -188,6 +189,35 @@ describe("the boat at sea", () => {
   it("puts nobody on two hulls at once", async () => {
     const { db, shop, trip } = await boatAtSea();
     expect(await crewClashes(db, shop.id, trip.id, nowDate())).toEqual([]);
+  });
+  /**
+   * The close-out plumbing for a count still being taken (dive-domain review
+   * of 56ba7c1): the station reads still out at dive 2's open count, so its
+   * Open roll call link goes to after_dive_2, and the same boat read as a past
+   * day's record never softens.
+   */
+  it("reads still out at her open dive 2 count today, and loud on the record", async () => {
+    const { db, shop, trip } = await boatAtSea();
+    const today = await getDayCloseout(db, shop.id, shop.timezone, nowDate());
+    expect(today.departures.find((d) => d.tripId === trip.id)).toMatchObject({
+      status: "still_out",
+      gapReason: null,
+      diveNumber: 2,
+      uncounted: AT_SEA_STILL_DOWN,
+    });
+    const record = await getDayCloseout(
+      db,
+      shop.id,
+      shop.timezone,
+      nowDate(),
+      undefined,
+      today.shopDay,
+    );
+    expect(record.departures.find((d) => d.tripId === trip.id)).toMatchObject({
+      status: "unreconciled",
+      gapReason: "after_dive_uncounted",
+      diveNumber: 2,
+    });
   });
 });
 

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, max, ne } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
@@ -122,6 +122,7 @@ async function dayTrips(
     crewRoster,
     crewResults,
     planChangeRows,
+    loggedDiveRows,
     stagesByTrip,
   ] = await Promise.all([
     // **Two counts off one roster, because the evening and the shelf ask
@@ -267,6 +268,23 @@ async function dayTrips(
         ),
       )
       .orderBy(asc(executedDives.diveNumber)),
+    // The highest dive the crew logged, so an open count on an earlier dive
+    // never reads as a count still being taken (dive-domain review of
+    // 56ba7c1, auditor F2).
+    db
+      .select({
+        tripId: executedDives.tripId,
+        loggedDives: max(executedDives.diveNumber),
+      })
+      .from(executedDives)
+      .where(
+        and(
+          eq(executedDives.shopId, shopId),
+          inArray(executedDives.tripId, tripIds),
+          isNull(executedDives.deletedAt),
+        ),
+      )
+      .groupBy(executedDives.tripId),
     // **#1480** — the crew's last tap, so a Home at the rail can settle a
     // station the return buffer still calls "still out". One batched query for
     // the whole day, never one per boat.
@@ -339,6 +357,9 @@ async function dayTrips(
     if (event.status === "cleared") standingCrewResult.delete(key);
     else standingCrewResult.set(key, event.status);
   }
+  const loggedDivesByTrip = new Map(
+    loggedDiveRows.map((row) => [row.tripId, row.loggedDives ?? 0] as const),
+  );
   const planChangesByTrip = new Map<string, typeof planChangeRows>();
   for (const change of planChangeRows) {
     const list = planChangesByTrip.get(change.tripId) ?? [];
@@ -361,6 +382,7 @@ async function dayTrips(
       crewByTrip.get(row.id) ?? [],
       (personId, checkpoint) => standingCrewResult.get(`${row.id}\0${personId}\0${checkpoint}`),
     ),
+    loggedDives: loggedDivesByTrip.get(row.id) ?? 0,
     planChanges: (planChangesByTrip.get(row.id) ?? []).map((change) => ({
       diveNumber: change.diveNumber,
       siteName: change.siteName,
@@ -448,7 +470,14 @@ async function pastDayCloseout(
     departures.map((trip) => trip.tripId),
     { historical: true },
   );
-  return assembleDayCloseout({ trips: departures, gaps, timeZone, now, shopDay: day });
+  return assembleDayCloseout({
+    trips: departures,
+    gaps,
+    timeZone,
+    now,
+    shopDay: day,
+    historical: true,
+  });
 }
 
 /**
