@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { DAY_MS } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { demoEmail } from "@/lib/simulator-email";
@@ -263,7 +263,7 @@ export async function seedHistory(
     {
       daysAgo: 4,
       hour: 8,
-      title: "Wreck Trip — Duane",
+      title: "Wreck Trip — Benwood & City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 10,
@@ -303,7 +303,7 @@ export async function seedHistory(
     {
       daysAgo: 25,
       hour: 8,
-      title: "Wreck Trip — Spiegel Grove",
+      title: "Wreck Trip — City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 9,
@@ -351,7 +351,7 @@ export async function seedHistory(
     {
       daysAgo: 53,
       hour: 8,
-      title: "Wreck Trip — Duane & Bibb",
+      title: "Wreck Trip — Benwood & City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 8,
@@ -410,7 +410,7 @@ export async function seedHistory(
     {
       daysAgo: 92,
       hour: 8,
-      title: "Wreck Trip — USCGC Duane",
+      title: "Wreck Trip — Benwood",
       capacity: 10,
       priceCents: 18500,
       booked: 9,
@@ -442,7 +442,7 @@ export async function seedHistory(
     {
       daysAgo: 115,
       hour: 8,
-      title: "Wreck Trip — Spiegel Grove",
+      title: "Wreck Trip — City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 10,
@@ -482,7 +482,7 @@ export async function seedHistory(
     {
       daysAgo: 146,
       hour: 8,
-      title: "Wreck Trip — Duane & Bibb",
+      title: "Wreck Trip — Benwood & City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 7,
@@ -522,7 +522,7 @@ export async function seedHistory(
     {
       daysAgo: 181,
       hour: 8,
-      title: "Wreck Trip — Duane",
+      title: "Wreck Trip — Benwood & City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 8,
@@ -546,7 +546,7 @@ export async function seedHistory(
     {
       daysAgo: 204,
       hour: 8,
-      title: "Wreck Trip — Spiegel Grove",
+      title: "Wreck Trip — City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 9,
@@ -578,7 +578,7 @@ export async function seedHistory(
     {
       daysAgo: 239,
       hour: 8,
-      title: "Wreck Trip — Duane & Bibb",
+      title: "Wreck Trip — Benwood & City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 10,
@@ -602,7 +602,7 @@ export async function seedHistory(
     {
       daysAgo: 270,
       hour: 8,
-      title: "Wreck Trip — USCGC Duane",
+      title: "Wreck Trip — Benwood",
       capacity: 10,
       priceCents: 18500,
       booked: 7,
@@ -1068,9 +1068,6 @@ const SITE_BY_PLACE: readonly (readonly [string, string])[] = [
   ["Elbow", "City of Washington"],
   ["City of Washington", "City of Washington"],
   ["Christ", "Christ of the Abyss"],
-  ["Spiegel", "Spiegel Grove"],
-  ["USCGC Duane", "USCGC Duane"],
-  ["Duane", "USCGC Duane"],
 ];
 
 /** The shop's hulls, sites and kinds by name, as columns for a sailed departure. */
@@ -1082,20 +1079,15 @@ export async function sailedTripPlaces(
 > {
   const [hulls, sites, lenses] = [
     await db.select({ id: boats.id, name: boats.name }).from(boats).where(eq(boats.shopId, shopId)),
-    // A gated site (the deep wrecks: Advanced Open Water and Deep) is left
-    // off: the back-fill seats a mixed Open Water and Advanced cohort, and a
-    // gate on the day would put "boarded" beside a refusal on its record.
+    // Every site, gated or not: the back-fill seats a mixed Open Water and
+    // Advanced cohort, so it sails only the shallow sites (no title names the
+    // Duane, the Bibb or the Spiegel Grove), and a deep wreck added to a title
+    // shows its refusal on the record (`seed-history.test.ts`) rather than
+    // hiding behind a blank site.
     await db
       .select({ id: diveSites.id, name: diveSites.name })
       .from(diveSites)
-      .where(
-        and(
-          eq(diveSites.shopId, shopId),
-          isNull(diveSites.minimumCertificationLevel),
-          eq(diveSites.requiresNitrox, false),
-          sql`jsonb_array_length(${diveSites.requiredSpecialties}) = 0`,
-        ),
-      ),
+      .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt))),
     await db
       .select({ id: tripLenses.id, name: tripLenses.name })
       .from(tripLenses)

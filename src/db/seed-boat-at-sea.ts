@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNull, notInArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lte, notInArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { depthToMeters } from "@/lib/depth-units";
 import { shopDayBounds } from "@/lib/zoned";
@@ -53,7 +53,7 @@ export const AT_SEA_CREW: readonly { fullName: string; tripRole: TripAssignmentR
 ];
 
 /** The boat at sea's names, by day and at dusk. */
-export const AT_SEA_DAY_TITLE = "Two-Tank Reef — Pickles & Molasses";
+export const AT_SEA_DAY_TITLE = "Two-Tank Reef — Molasses & Pickles";
 export const AT_SEA_DUSK_TITLE = "Dusk & Night Two-Tank — French Reef";
 
 /** Divers aboard, and how many are still to come up from dive 2. */
@@ -80,6 +80,13 @@ const TEAMS: readonly (readonly number[])[] = [
 
 /** Minutes before `now` each team of dive 2 was counted back aboard; the last is still down. */
 const SURFACED_BEFORE_NOW_MIN = [12, 9, 6, 3] as const;
+
+/**
+ * How many teams the first guide leads: the first three, six divers at the
+ * shop's six to one. She surfaces with the third; the trio and the last pair
+ * are the second guide's five, the trio sent up ahead of her.
+ */
+const FIRST_GUIDE_TEAMS = 3;
 
 /**
  * **A boat at sea, halfway through her roll call** (market sheet 2026-10-22,
@@ -120,37 +127,7 @@ export async function seedBoatAtSea(db: DbExecutor, shopId: string): Promise<voi
         .where(eq(diveSites.shopId, shopId))
     ).map((site) => [site.name, site.id]),
   );
-  const dives = plan.afterDark
-    ? [
-        {
-          title: "French Reef at dusk",
-          site: "French Reef",
-          description:
-            "In before the light goes, along the ledges, so the second tank starts on known ground.",
-          maxDepth: { feet: 35, meters: 11 },
-        },
-        {
-          title: "Full dark",
-          site: "French Reef",
-          description:
-            "Torches on the swim-throughs, and a minute with them off at the safety stop.",
-          maxDepth: { feet: 30, meters: 9 },
-        },
-      ]
-    : [
-        {
-          title: "Pickles Reef",
-          site: "Pickles Reef",
-          description: "Barrel coral heads and the old anchor chain, a gentle first tank.",
-          maxDepth: { feet: 25, meters: 8 },
-        },
-        {
-          title: "Molasses Reef",
-          site: "Molasses Reef",
-          description: "Spur and groove on the outer reef, out along the mooring line and back.",
-          maxDepth: { feet: 40, meters: 12 },
-        },
-      ];
+  const dives = atSeaDives(plan.afterDark);
   const [shop] = await db
     .select({ depthUnit: shops.depthUnit })
     .from(shops)
@@ -226,6 +203,47 @@ export async function seedBoatAtSea(db: DbExecutor, shopId: string): Promise<voi
     throw new Error(`seed: only ${divers.length} divers are free and ready for the boat at sea`);
   }
   await writeTheRecord(db, shopId, { trip, plan, divers, crew, captainId, depthOf, dives });
+}
+
+/** The boat at sea's two dives: the day boat's, or the dusk boat's. */
+function atSeaDives(afterDark: boolean): {
+  title: string;
+  site: string;
+  description: string;
+  maxDepth: { feet: number; meters: number };
+}[] {
+  return afterDark
+    ? [
+        {
+          title: "French Reef at dusk",
+          site: "French Reef",
+          description:
+            "In before the light goes, along the ledges, so the second tank starts on known ground.",
+          maxDepth: { feet: 35, meters: 11 },
+        },
+        {
+          title: "Full dark",
+          site: "French Reef",
+          description:
+            "Torches along the ledges, and a minute with them covered on the sand for the bioluminescence.",
+          maxDepth: { feet: 30, meters: 9 },
+        },
+      ]
+    : // Deepest dive first, the way a captain briefs a two-tank.
+      [
+        {
+          title: "Molasses Reef",
+          site: "Molasses Reef",
+          description: "Spur and groove on the outer reef, out along the mooring line and back.",
+          maxDepth: { feet: 40, meters: 12 },
+        },
+        {
+          title: "Pickles Reef",
+          site: "Pickles Reef",
+          description: "Barrel coral heads and the old anchor chain, a shallower second tank.",
+          maxDepth: { feet: 25, meters: 8 },
+        },
+      ];
 }
 
 /** The crew by name, in `AT_SEA_CREW`'s order; empty when the cast is missing one. */
@@ -496,10 +514,12 @@ async function writeTheRecord(
   await db.insert(rollCallEvents).values(diverRows);
 
   // The crew counted at the same checkpoints. The skipper never left the
-  // boat and the first guide came up with her group; the second guide is
-  // still down with the last pair, so a pair is never left in the water
-  // unguided, and her own count stays open beside theirs.
-  const firstGuideBack = new Date(now.getTime() - (SURFACED_BEFORE_NOW_MIN.at(-1) ?? 3) * minute);
+  // boat and the first guide came up with the last of her six; the second
+  // guide is still down with the last pair, so a pair is never left in the
+  // water unguided, and her own count stays open beside theirs.
+  const firstGuideBack = new Date(
+    now.getTime() - (SURFACED_BEFORE_NOW_MIN[FIRST_GUIDE_TEAMS - 1] ?? 6) * minute,
+  );
   const lastGuideId = crew.filter((member) => member.tripRole === "divemaster").at(-1)?.personId;
   await db.insert(rollCallCrewEvents).values(
     crew.flatMap((member, index) =>
@@ -534,4 +554,155 @@ async function writeTheRecord(
     maxDepthMeters: firstDive ? ctx.depthOf(firstDive.maxDepth) : null,
     recordedByPersonId: captainId,
   });
+}
+
+/** How long after the last count the last pair and their guide come up the ladder. */
+const LAST_PAIR_UP_AFTER_LAST_COUNT_MIN = 4;
+/** How long dive 2 ran, from going in to the last diver up. */
+const DIVE_TWO_RAN_MIN = 55;
+
+/**
+ * **The boat at sea comes home** (dive-domain review of the demo reseed, item
+ * 3). The seed writes her record as of the instant it ran, dive 2's count
+ * open with the last pair and a guide still down, and nothing else ever
+ * closes it: a demo seeded at 10 AM still showed two divers and a guide never
+ * counted back at 3 PM, and on every later day. A captain reads that as people
+ * lost hours ago with nobody raising the alarm.
+ *
+ * For every demo shop's boat at sea past her `endsAt` with dive 2 not yet in
+ * the log, this writes what the crew would have: the last pair's and the
+ * guide's `after_dive_2` marks, a few minutes after the last count, and dive
+ * 2's log. Never a mark ahead of `now`, never on a shop that is not a demo,
+ * and a boat whose dive 2 is logged is left alone, so a second pass writes
+ * nothing. Returns how many boats it brought home.
+ */
+export async function bringDemoBoatsAtSeaHome(
+  db: DbExecutor,
+  now: Date = nowDate(),
+): Promise<number> {
+  const due = await db
+    .select({
+      id: trips.id,
+      shopId: trips.shopId,
+      title: trips.title,
+      endsAt: trips.endsAt,
+      depthUnit: shops.depthUnit,
+    })
+    .from(trips)
+    .innerJoin(shops, eq(shops.id, trips.shopId))
+    .where(
+      and(
+        eq(shops.isDemo, true),
+        inArray(trips.title, [AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE]),
+        lte(trips.endsAt, now),
+        liveTrip(),
+      ),
+    );
+  let home = 0;
+  for (const trip of due) {
+    const [logged] = await db
+      .select({ id: executedDives.id })
+      .from(executedDives)
+      .where(and(eq(executedDives.tripId, trip.id), eq(executedDives.diveNumber, 2)))
+      .limit(1);
+    if (logged) continue;
+
+    const [captain] = await db
+      .select({ personId: tripAssignments.personId })
+      .from(tripAssignments)
+      .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.tripRole, "captain")))
+      .limit(1);
+    if (!captain) continue;
+
+    const divers = await db
+      .select({
+        bookingId: rollCallEvents.bookingId,
+        checkpoint: rollCallEvents.checkpoint,
+        occurredAt: rollCallEvents.occurredAt,
+      })
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.tripId, trip.id));
+    const crew = await db
+      .select({
+        personId: rollCallCrewEvents.personId,
+        checkpoint: rollCallCrewEvents.checkpoint,
+        occurredAt: rollCallCrewEvents.occurredAt,
+      })
+      .from(rollCallCrewEvents)
+      .where(eq(rollCallCrewEvents.tripId, trip.id));
+
+    const lastCount = [...divers, ...crew]
+      .filter((row) => row.checkpoint === "after_dive_2")
+      .reduce((latest, row) => Math.max(latest, row.occurredAt.getTime()), 0);
+    if (lastCount === 0) continue;
+    const upAt = new Date(
+      Math.min(lastCount + LAST_PAIR_UP_AFTER_LAST_COUNT_MIN * 60_000, now.getTime()),
+    );
+
+    const countedBack = (rows: { checkpoint: string }[]) =>
+      rows.some((row) => row.checkpoint === "after_dive_2");
+    const stillDown = [...new Set(divers.map((row) => row.bookingId))].filter(
+      (bookingId) =>
+        divers.some((row) => row.bookingId === bookingId && row.checkpoint === "after_dive_1") &&
+        !countedBack(divers.filter((row) => row.bookingId === bookingId)),
+    );
+    const crewDown = [...new Set(crew.map((row) => row.personId))].filter(
+      (personId) =>
+        crew.some((row) => row.personId === personId && row.checkpoint === "after_dive_1") &&
+        !countedBack(crew.filter((row) => row.personId === personId)),
+    );
+    if (stillDown.length > 0) {
+      await db.insert(rollCallEvents).values(
+        stillDown.map((bookingId, index) => ({
+          shopId: trip.shopId,
+          tripId: trip.id,
+          bookingId,
+          recordedByPersonId: captain.personId,
+          status: "boarded" as const,
+          checkpoint: "after_dive_2",
+          source: "live" as const,
+          occurredAt: new Date(upAt.getTime() - (stillDown.length - index) * 1_000),
+        })),
+      );
+    }
+    if (crewDown.length > 0) {
+      await db.insert(rollCallCrewEvents).values(
+        crewDown.map((personId) => ({
+          shopId: trip.shopId,
+          tripId: trip.id,
+          personId,
+          recordedByPersonId: captain.personId,
+          status: "boarded" as const,
+          checkpoint: "after_dive_2",
+          source: "live" as const,
+          occurredAt: upAt,
+        })),
+      );
+    }
+
+    const [planned] = await db
+      .select({ diveSiteId: tripDives.diveSiteId })
+      .from(tripDives)
+      .where(and(eq(tripDives.tripId, trip.id), eq(tripDives.diveNumber, 2)))
+      .limit(1);
+    const secondDive = atSeaDives(trip.title === AT_SEA_DUSK_TITLE)[1];
+    const unit = trip.depthUnit ?? "meters";
+    await db.insert(executedDives).values({
+      shopId: trip.shopId,
+      tripId: trip.id,
+      diveNumber: 2,
+      actualSiteId: planned?.diveSiteId ?? null,
+      enteredAt: new Date(upAt.getTime() - DIVE_TWO_RAN_MIN * 60_000),
+      exitedAt: upAt,
+      maxDepthMeters: secondDive
+        ? depthToMeters(
+            unit === "feet" ? secondDive.maxDepth.feet : secondDive.maxDepth.meters,
+            unit,
+          )
+        : null,
+      recordedByPersonId: captain.personId,
+    });
+    home++;
+  }
+  return home;
 }

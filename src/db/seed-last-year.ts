@@ -26,7 +26,7 @@ export const LAST_YEAR_SAILINGS: readonly {
   {
     daysAgo: 373,
     hour: 8,
-    title: "Wreck Trip — Duane",
+    title: "Wreck Trip — Benwood & City of Washington",
     capacity: 10,
     priceCents: 17000,
     booked: 5,

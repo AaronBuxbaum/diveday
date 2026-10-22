@@ -270,13 +270,60 @@ function mergeShifts(
 const AT_SEA_DIVE_ONE = { entered: 25, exited: 70, counted: 75 } as const;
 /** How long before `now` the boat at sea's second dive went in. */
 const AT_SEA_DIVE_TWO_ENTERED_BEFORE_NOW_MIN = 50;
+/** How long after dive 2 went in the last pair is planned to be up. */
+const AT_SEA_DIVE_TWO_LAST_UP_MIN = 60;
 /** How far behind `now` her sailing is placed, before rounding down to a half hour. */
 const AT_SEA_SAILED_BEFORE_NOW_MIN = 165;
-/** The earliest and latest local times the boat at sea sails. */
+/** The earliest local time the boat at sea sails. */
 const AT_SEA_EARLIEST_SAILING = { hour: 6, minute: 30 } as const;
-const AT_SEA_LATEST_SAILING = { hour: 19, minute: 30 } as const;
-/** From this local time on, the boat at sea is the dusk-and-night two-tank. */
-const AT_SEA_DUSK_SAILING_MINUTE = 17 * 60 + 30;
+/** A day boat's last diver is up at least this long before sunset. */
+const DAY_BOAT_UP_BEFORE_SUNSET_MIN = 30;
+/** The dusk boat's first dive goes in within this long either side of sunset. */
+const DUSK_ENTRY_WITHIN_SUNSET_MIN = 20;
+
+/** The demo shop's dock, Key Largo, for its sunset. */
+const DEMO_SHOP_LATITUDE = 25.09;
+const DEMO_SHOP_LONGITUDE = -80.44;
+
+/**
+ * **Sunset at the demo shop's dock** on the shop-local day containing
+ * `instant`, from NOAA's general solar position formulas (good to a couple
+ * of minutes). The boat at sea is a day boat or the dusk boat by this, not by
+ * a fixed clock: Key Largo's sunset moves from about 5:40 PM in December to
+ * about 8:15 PM in June (dive-domain review of the demo reseed, item 2).
+ */
+export function demoSunset(instant: Date, timeZone: string = DEMO_SHOP_TIMEZONE): Date {
+  const day = utcToWallTime(instant, timeZone);
+  const midnightUtc = Date.UTC(day.year, day.month - 1, day.day);
+  const dayOfYear = Math.round((midnightUtc - Date.UTC(day.year, 0, 1)) / DAY_MS) + 1;
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  const g = ((2 * Math.PI) / 365) * (dayOfYear - 1);
+  const equationOfTimeMin =
+    229.18 *
+    (0.000075 +
+      0.001868 * Math.cos(g) -
+      0.032077 * Math.sin(g) -
+      0.014615 * Math.cos(2 * g) -
+      0.040849 * Math.sin(2 * g));
+  const declination =
+    0.006918 -
+    0.399912 * Math.cos(g) +
+    0.070257 * Math.sin(g) -
+    0.006758 * Math.cos(2 * g) +
+    0.000907 * Math.sin(2 * g) -
+    0.002697 * Math.cos(3 * g) +
+    0.00148 * Math.sin(3 * g);
+  const latitude = radians(DEMO_SHOP_LATITUDE);
+  const hourAngleDeg =
+    (Math.acos(
+      Math.cos(radians(90.833)) / (Math.cos(latitude) * Math.cos(declination)) -
+        Math.tan(latitude) * Math.tan(declination),
+    ) *
+      180) /
+    Math.PI;
+  const sunsetUtcMin = 720 - 4 * (DEMO_SHOP_LONGITUDE - hourAngleDeg) - equationOfTimeMin;
+  return new Date(midnightUtc + Math.round(sunsetUtcMin * 60_000));
+}
 
 /** The boat at sea's hours and the moments her record is written at. */
 export type DemoAtSeaDeparture = {
@@ -305,10 +352,16 @@ export type DemoAtSeaDeparture = {
  * - she is due back three and a half hours after sailing, at least a quarter
  *   of an hour from now.
  *
- * From a 5:30 PM sailing she is the dusk-and-night two-tank (`afterDark`).
- * **Null outside the hours a boat is plausibly mid-dive**: she never sails
- * before 6:30 AM or after 7:30 PM, so a demo opened before about 9:15 AM or
- * after about 10:45 PM has nobody at sea, as no shop would at that hour.
+ * Whether she is a day boat or the dusk-and-night two-tank (`afterDark`) is
+ * read off that day's sunset (`demoSunset`), never a fixed clock:
+ *
+ * - a day boat's last pair is up from dive 2 at least half an hour before
+ *   sunset, so no second tank turns into an unplanned night dive;
+ * - the dusk boat's dive 1 goes in within twenty minutes of sunset, so "at
+ *   dusk" is dusk and dive 2 is in the dark.
+ *
+ * **Null outside the hours a boat is plausibly mid-dive**: before a 6:30 AM
+ * sailing, in the evening gap between the two windows, and late at night.
  */
 export function demoAtSeaDeparture(
   now = nowDate(),
@@ -322,9 +375,18 @@ export function demoAtSeaDeparture(
   const wall = utcToWallTime(startsAt, timeZone);
   const sailsAt = wall.hour * 60 + wall.minute;
   const earliest = AT_SEA_EARLIEST_SAILING.hour * 60 + AT_SEA_EARLIEST_SAILING.minute;
-  const latest = AT_SEA_LATEST_SAILING.hour * 60 + AT_SEA_LATEST_SAILING.minute;
-  if (sailsAt < earliest || sailsAt > latest) return null;
+  if (sailsAt < earliest) return null;
   const after = (minutes: number) => new Date(startsAt.getTime() + minutes * minute);
+  const diveTwoEnteredAt = new Date(
+    now.getTime() - AT_SEA_DIVE_TWO_ENTERED_BEFORE_NOW_MIN * minute,
+  );
+  const sunset = demoSunset(startsAt, timeZone).getTime();
+  const lastUpFromDiveTwo = diveTwoEnteredAt.getTime() + AT_SEA_DIVE_TWO_LAST_UP_MIN * minute;
+  const dayBoat = lastUpFromDiveTwo <= sunset - DAY_BOAT_UP_BEFORE_SUNSET_MIN * minute;
+  const duskBoat =
+    Math.abs(after(AT_SEA_DIVE_ONE.entered).getTime() - sunset) <=
+    DUSK_ENTRY_WITHIN_SUNSET_MIN * minute;
+  if (!dayBoat && !duskBoat) return null;
   return {
     startsAt,
     endsAt: new Date(startsAt.getTime() + DEMO_TODAY_DEPARTURE_MS),
@@ -333,8 +395,8 @@ export function demoAtSeaDeparture(
       exitedAt: after(AT_SEA_DIVE_ONE.exited),
       countedAt: after(AT_SEA_DIVE_ONE.counted),
     },
-    diveTwoEnteredAt: new Date(now.getTime() - AT_SEA_DIVE_TWO_ENTERED_BEFORE_NOW_MIN * minute),
-    afterDark: sailsAt >= AT_SEA_DUSK_SAILING_MINUTE,
+    diveTwoEnteredAt,
+    afterDark: !dayBoat,
   };
 }
 

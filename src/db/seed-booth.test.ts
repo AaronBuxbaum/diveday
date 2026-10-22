@@ -8,12 +8,15 @@ import { fileScopedShopContext } from "@/test/db";
 import { weatherCallsInWindow } from "./blowouts";
 import { diverPackageBalance } from "./dive-packages";
 import { openLostItemsByPerson } from "./lost-items";
+import { listTripReadiness } from "./readiness";
 import { getMonthMoneyDetail } from "./report-lines";
 import { bookingLeadTimes, certifiedHere, getMonthlyReport, getShopYear } from "./reporting";
 import {
   bookingPayments,
   bookings,
   certifications,
+  diveSites,
+  executedDives,
   orders,
   tripBlowouts,
   trips,
@@ -133,7 +136,7 @@ describe("the demo's booth stories", () => {
     const fromSession = rows.filter((row) => row.title === SHOP_CERTIFIED_TITLE);
     expect(fromSession).toHaveLength(2);
     for (const row of fromSession) {
-      expect(row.level).toBe("advanced_open_water");
+      expect(row.level).toBe("rescue");
       expect(row.issuedAt?.getTime()).toBeLessThanOrEqual(row.tripEnds.getTime());
       expect(row.issuedAt?.getTime()).toBeLessThan(nowDate().getTime());
     }
@@ -149,6 +152,53 @@ describe("the demo's booth stories", () => {
       endUtc: nowDate(),
     });
     expect(here.total).toBeGreaterThanOrEqual(2);
+  });
+
+  /**
+   * **A card the shop issued has the training behind it** (dive-domain review
+   * of the demo reseed, item 4). The session was an Advanced Open Water
+   * course of three planned dives at a 12 m reef with no boat and nothing in
+   * the log, and the instructor issued the cards anyway; AOW is five
+   * adventure dives with a Deep dive past 18 m, which the demo cannot seat.
+   * It is now a Rescue Diver weekend: four sessions in the log, from a hull,
+   * every one within its site's depth, both students cleared by the gate.
+   */
+  it("logs every session behind the cards, from a hull, within each site's depth", async () => {
+    const { db, shop } = context;
+    const [session] = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, SHOP_CERTIFIED_TITLE)));
+    if (!session) throw new Error("expected the certified course session");
+    expect(session.boatId).not.toBeNull();
+    const logged = await db
+      .select({
+        number: executedDives.diveNumber,
+        depth: executedDives.maxDepthMeters,
+        siteDepth: diveSites.maxDepthMeters,
+        enteredAt: executedDives.enteredAt,
+        exitedAt: executedDives.exitedAt,
+      })
+      .from(executedDives)
+      .innerJoin(diveSites, eq(diveSites.id, executedDives.actualSiteId))
+      .where(eq(executedDives.tripId, session.id))
+      .orderBy(asc(executedDives.diveNumber));
+    expect(logged.map((dive) => dive.number)).toEqual(
+      Array.from({ length: session.plannedDives }, (_, index) => index + 1),
+    );
+    for (const dive of logged) {
+      expect(dive.depth).toBeGreaterThan(0);
+      expect(dive.depth).toBeLessThanOrEqual(dive.siteDepth ?? 0);
+      expect(dive.enteredAt?.getTime()).toBeGreaterThanOrEqual(session.startsAt.getTime());
+      expect(dive.exitedAt?.getTime()).toBeLessThanOrEqual(session.endsAt.getTime());
+    }
+    const readiness = await listTripReadiness(db, shop.id, session.id);
+    expect(readiness).toHaveLength(2);
+    expect(
+      readiness
+        .filter((row) => row.readiness.status !== "ready")
+        .map((row) => JSON.stringify(row.readiness)),
+    ).toEqual([]);
   });
 
   it("holds a mask for a diver who is back tomorrow", async () => {

@@ -72,7 +72,7 @@ const LENS_BY_TRIP_TITLE: Record<string, (typeof DEMO_LENSES)[number]> = {
   "Two-Tank Reef — Benwood & Elbow": "Easygoing reef",
   "Afternoon Two-Tank — French Reef": "Easygoing reef",
   "Two-Tank Reef — Christ of the Abyss": "Easygoing reef",
-  "Two-Tank Reef — Pickles & Molasses": "Easygoing reef",
+  "Two-Tank Reef — Molasses & Pickles": "Easygoing reef",
   "Saturday Two-Tank — Benwood & Christ of the Abyss": "Easygoing reef",
   "Long-Range Day — Duane & Outer Reef": "Wrecks",
   "Deep Wreck Charter — the Duane on EANx": "Wrecks",

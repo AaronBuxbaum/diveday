@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import {
   demoAtSeaDeparture,
+  demoSunset,
   demoTodayDepartureStart,
   demoTodayShift,
   demoTodayShifts,
@@ -128,11 +129,12 @@ describe("demoTodayShifts", () => {
       "05:30-11:00",
       "13:30-19:00",
     ]);
-    // 8:45 PM EDT: the dusk boat sailed at 6:00 and is due at 9:30; the
-    // desk's day runs straight into her shift.
-    const evening = new Date("2026-10-22T00:45:00Z");
+    // 9:30 PM EDT on 22 October: the dusk boat sailed at 6:30 and is due at
+    // 10:00, a shift of its own after the desk's day.
+    const evening = new Date("2026-10-23T01:30:00Z");
     expect(spans(demoTodayShifts(evening, TZ, { crew: false, atSea: true }))).toEqual([
-      "09:00-22:30",
+      "09:00-17:00",
+      "17:30-23:00",
     ]);
   });
 
@@ -191,10 +193,51 @@ describe("demoAtSeaDeparture", () => {
     expect(boat?.afterDark).toBe(false);
   });
 
-  it("is the dusk boat that sailed at 6:00 when the demo is opened at 8:45 PM", () => {
-    const boat = demoAtSeaDeparture(new Date("2026-10-22T00:45:00Z"), TZ);
-    expect(boat && wall(boat.startsAt)).toBe("18:00");
+  it("is the dusk boat that sailed at 6:30 when the demo is opened at 9:30 PM on 22 October", () => {
+    const boat = demoAtSeaDeparture(new Date("2026-10-23T01:30:00Z"), TZ);
+    expect(boat && wall(boat.startsAt)).toBe("18:30");
     expect(boat?.afterDark).toBe(true);
+  });
+
+  /**
+   * **A day boat's second tank is never an unplanned night dive** (dive-domain
+   * review of the demo reseed, item 2). Sunset in Key Largo on 22 October is
+   * about 6:50 PM EDT; at 7:50 PM a 5:00 PM day boat's dive 2 went in at 7:00,
+   * after sunset, so the demo has no boat at sea rather than that one.
+   */
+  it("puts no day boat in the water after sunset: nobody at sea at 7:50 PM on 22 October", () => {
+    expect(wall(demoSunset(new Date("2026-10-22T16:00:00Z"), TZ))).toBe("18:49");
+    const boat = demoAtSeaDeparture(new Date("2026-10-22T23:50:00Z"), TZ);
+    expect(boat === null || boat.afterDark).toBe(true);
+  });
+
+  it("sets the day and dusk boats by that day's sunset, in every season", () => {
+    for (let month = 0; month < 12; month++) {
+      for (const dayOfMonth of [1, 15]) {
+        for (let quarter = 0; quarter < 96; quarter++) {
+          const now = new Date(Date.UTC(2026, month, dayOfMonth, 4) + quarter * 15 * 60_000);
+          const boat = demoAtSeaDeparture(now, TZ);
+          if (!boat) continue;
+          const sunset = demoSunset(boat.startsAt, TZ);
+          const label = `${now.toISOString()} sunset ${wall(sunset)}`;
+          if (boat.afterDark) {
+            // In at dusk, within twenty minutes of sunset.
+            expect(Math.abs(minutes(sunset, boat.diveOne.enteredAt)), label).toBeLessThanOrEqual(
+              20,
+            );
+          } else {
+            // The last pair is up from dive 2 half an hour before sunset.
+            const lastUp = new Date(boat.diveTwoEnteredAt.getTime() + 60 * 60_000);
+            expect(minutes(lastUp, sunset), label).toBeGreaterThanOrEqual(30);
+          }
+        }
+      }
+    }
+  });
+
+  it("sets sunset by the season: early in December, late in June", () => {
+    expect(wall(demoSunset(new Date("2026-12-21T16:00:00Z"), TZ))).toBe("17:36");
+    expect(wall(demoSunset(new Date("2026-06-21T16:00:00Z"), TZ))).toBe("20:14");
   });
 
   it("keeps every moment of the record behind the clock and in a crew's order", () => {
@@ -218,18 +261,18 @@ describe("demoAtSeaDeparture", () => {
       expect(minutes(now, boat.endsAt)).toBeGreaterThanOrEqual(15);
       const sails = utcToWallTime(boat.startsAt, TZ);
       expect(sails.hour * 60 + sails.minute).toBeGreaterThanOrEqual(6 * 60 + 30);
-      expect(sails.hour * 60 + sails.minute).toBeLessThanOrEqual(19 * 60 + 30);
       expect(sails.minute % 30).toBe(0);
     }
   });
 
-  it("puts a boat at sea from mid-morning until late evening, and none in the small hours", () => {
+  it("puts a day boat at sea from mid-morning until before sunset, the dusk boat after, and none in the small hours", () => {
     const at = (hour: number, minute: number) =>
       demoAtSeaDeparture(new Date(Date.UTC(2026, 9, 22, hour + 4, minute)), TZ);
-    expect(at(9, 15)).not.toBeNull();
-    expect(at(13, 0)).not.toBeNull();
-    expect(at(20, 45)).not.toBeNull();
-    expect(at(22, 30)).not.toBeNull();
+    expect(at(9, 15)?.afterDark).toBe(false);
+    expect(at(13, 0)?.afterDark).toBe(false);
+    expect(at(18, 0)?.afterDark).toBe(false);
+    expect(at(19, 50)).toBeNull();
+    expect(at(21, 30)?.afterDark).toBe(true);
     expect(at(23, 30)).toBeNull();
     expect(at(2, 0)).toBeNull();
     expect(at(8, 0)).toBeNull();

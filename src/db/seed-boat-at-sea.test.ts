@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
@@ -11,6 +11,7 @@ import {
   rollCallCrewEvents,
   rollCallEvents,
   tripAssignments,
+  tripDives,
   tripLenses,
   tripStageEvents,
   trips,
@@ -122,6 +123,52 @@ describe("the boat at sea", () => {
       (guide) => !counted.some((row) => row.personId === guide.personId),
     );
     expect(stillDown).toHaveLength(1);
+  });
+
+  /**
+   * **Deepest dive first, and a guide never reads as leading nine** (dive-domain
+   * review of the demo reseed, item 5): Molasses at 12 m before Pickles at
+   * 8 m, and the first guide surfaces with the last of her six divers, the
+   * shop's six to one, not after the trio that is the second guide's group.
+   */
+  it("dives the deeper reef first", async () => {
+    const { db, trip } = await boatAtSea();
+    const plan = await db
+      .select({ title: tripDives.title })
+      .from(tripDives)
+      .where(eq(tripDives.tripId, trip.id))
+      .orderBy(asc(tripDives.diveNumber));
+    expect(plan.map((dive) => dive.title)).toEqual(["Molasses Reef", "Pickles Reef"]);
+  });
+
+  it("brings the first guide up with her six, before the second guide's trio", async () => {
+    const { db, trip } = await boatAtSea();
+    const guides = await db
+      .select({ personId: tripAssignments.personId })
+      .from(tripAssignments)
+      .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.tripRole, "divemaster")));
+    const [guideBack] = await db
+      .select({ at: rollCallCrewEvents.occurredAt })
+      .from(rollCallCrewEvents)
+      .where(
+        and(
+          eq(rollCallCrewEvents.tripId, trip.id),
+          eq(rollCallCrewEvents.checkpoint, "after_dive_2"),
+          inArray(
+            rollCallCrewEvents.personId,
+            guides.map((guide) => guide.personId),
+          ),
+        ),
+      );
+    if (!guideBack) throw new Error("expected the first guide counted back");
+    const divers = await db
+      .select({ at: rollCallEvents.occurredAt })
+      .from(rollCallEvents)
+      .where(
+        and(eq(rollCallEvents.tripId, trip.id), eq(rollCallEvents.checkpoint, "after_dive_2")),
+      );
+    const upWithOrBefore = divers.filter((row) => row.at.getTime() <= guideBack.at.getTime());
+    expect(upWithOrBefore).toHaveLength(6);
   });
 
   it("writes no word ahead of the clock", async () => {

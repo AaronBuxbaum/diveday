@@ -12,6 +12,7 @@ import {
   divePackageEntitlements,
   divePackages,
   diveSites,
+  executedDives,
   lostItems,
   orderLineItems,
   orders,
@@ -43,7 +44,7 @@ import { liveTrip } from "./trips-live";
  *    (`LAST_YEAR_SAILINGS` in `seed-last-year.ts`, sailed by `seedHistory`).
  * 3. Last Saturday's boat, called off for weather, its divers refunded and two
  *    of them moved to this Saturday (`seedWeatherCall`).
- * 4. Two students certified Advanced Open Water by the shop, so their recap
+ * 4. Two students certified Rescue Diver by the shop, so their recap
  *    carries the card (`seedShopCertified`).
  * 5. A mask left on a recent boat by a diver who is back tomorrow
  *    (`seedLostMask`).
@@ -62,7 +63,7 @@ export const LOST_MASK = "Blue mask in a yellow box, left in the rinse tank";
 /** Last Saturday's boat, which the weather kept in. */
 export const WEATHER_CALLED_TITLE = "Saturday Two-Tank — Molasses & French";
 /** The session two students finished, and the shop certified. */
-export const SHOP_CERTIFIED_TITLE = "Advanced Open Water Diver — weekend course";
+export const SHOP_CERTIFIED_TITLE = "Rescue Diver — weekend course";
 /** Of the weather call's divers, how many rebooked onto the next Saturday. */
 export const WEATHER_MOVED = 2;
 /** Divers on the weekly run's wait list for its next date. */
@@ -584,8 +585,65 @@ async function seedWeatherCall(
   }
 }
 
+/** The hull the weekend course sails on: the small boat, for the inside reefs. */
+const SHOP_CERTIFIED_HULL = "Mantis I";
+
 /**
- * **Two cards the shop issued**: a weekend Advanced Open Water course that
+ * The course's four sessions in the water, two a day, all on the shallow
+ * inside reefs a rescue course works from: the exercises at the surface and
+ * the self-rescue on Saturday, the unresponsive diver brought up from the
+ * bottom and the missing-diver search on Sunday. `day` counts from 0.
+ *
+ * A Rescue Diver course, not Advanced Open Water: AOW is five adventure dives,
+ * one of them a Deep dive past 18 m, and the demo can seat neither (a trip
+ * plans at most four dives, and its only sites past 18 m ask a Deep card no
+ * student holds), so a shop-issued AOW card would be a standards gap on
+ * screen (dive-domain review of the demo reseed, item 4).
+ */
+const SHOP_CERTIFIED_DIVES: readonly {
+  title: string;
+  site: string;
+  day: number;
+  enteredAfterMin: number;
+  minutes: number;
+  maxDepthMeters: number;
+}[] = [
+  {
+    title: "Self-rescue and the tired diver",
+    site: "Pickles Reef",
+    day: 0,
+    enteredAfterMin: 75,
+    minutes: 40,
+    maxDepthMeters: 6,
+  },
+  {
+    title: "Panicked and responsive divers at the surface",
+    site: "Pickles Reef",
+    day: 0,
+    enteredAfterMin: 190,
+    minutes: 45,
+    maxDepthMeters: 5,
+  },
+  {
+    title: "Unresponsive diver brought up from the bottom",
+    site: "Christ of the Abyss",
+    day: 1,
+    enteredAfterMin: 75,
+    minutes: 45,
+    maxDepthMeters: 7,
+  },
+  {
+    title: "Missing-diver search and the final scenario",
+    site: "Christ of the Abyss",
+    day: 1,
+    enteredAfterMin: 190,
+    minutes: 50,
+    maxDepthMeters: 8,
+  },
+];
+
+/**
+ * **Two cards the shop issued**: a weekend Rescue Diver course that
  * finished in the last fortnight, both students certified by the instructor
  * on the second afternoon, the way `issueShopCertification` writes it, so
  * their recaps carry the card and Reports counts them as certified here.
@@ -598,28 +656,37 @@ async function seedShopCertified(
   const [course] = await db
     .select()
     .from(courses)
-    .where(and(eq(courses.shopId, shopId), eq(courses.title, "Advanced Open Water Diver")))
+    .where(and(eq(courses.shopId, shopId), eq(courses.title, "Rescue Diver")))
     .limit(1);
   if (!course) return;
-  // The latest weekend the instructor had free, at least a week back.
+  const [hull] = await db
+    .select({ id: boats.id })
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), eq(boats.name, SHOP_CERTIFIED_HULL)))
+    .limit(1);
+  if (!hull) return;
+  // The latest weekend the instructor and the hull had free, at least a week back.
   let back = 0;
   for (let candidate = 9; candidate <= 40; candidate += 1) {
     const span = { startsAt: at(-candidate, 8, 0), endsAt: at(-candidate + 1, 16, 0) };
+    const overlapping = and(
+      eq(trips.shopId, shopId),
+      liveTrip(),
+      lt(trips.startsAt, span.endsAt),
+      gt(trips.endsAt, span.startsAt),
+    );
     const [clash] = await db
       .select({ id: trips.id })
       .from(tripAssignments)
       .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
-      .where(
-        and(
-          eq(tripAssignments.personId, ctx.instructorId),
-          eq(trips.shopId, shopId),
-          liveTrip(),
-          lt(trips.startsAt, span.endsAt),
-          gt(trips.endsAt, span.startsAt),
-        ),
-      )
+      .where(and(eq(tripAssignments.personId, ctx.instructorId), overlapping))
       .limit(1);
-    if (!clash) {
+    const [hullOut] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.boatId, hull.id), overlapping))
+      .limit(1);
+    if (!clash && !hullOut) {
       back = candidate;
       break;
     }
@@ -630,19 +697,28 @@ async function seedShopCertified(
     { startsAt: at(-back + 1, 8, 0), endsAt: at(-back + 1, 16, 0) },
   ];
   const window = { startsAt: days[0]?.startsAt as Date, endsAt: days[1]?.endsAt as Date };
+  const siteIds = new Map(
+    (
+      await db
+        .select({ id: diveSites.id, name: diveSites.name })
+        .from(diveSites)
+        .where(eq(diveSites.shopId, shopId))
+    ).map((row) => [row.name, row.id]),
+  );
   const [trip] = await db
     .insert(trips)
     .values({
       shopId,
       courseId: course.id,
       title: SHOP_CERTIFIED_TITLE,
-      description: "Five adventure dives over a weekend: deep, navigation, and three on the reef.",
+      description:
+        "Surface rescues and self-rescue on Saturday; an unresponsive diver and a missing-diver search on Sunday.",
       ...window,
       capacity: 4,
-      plannedDives: 3,
+      plannedDives: SHOP_CERTIFIED_DIVES.length,
       priceCents: course.priceCents,
-      boatId: null,
-      ...(await siteAndLens(db, shopId, "Molasses Reef", "Learning")),
+      boatId: hull.id,
+      ...(await siteAndLens(db, shopId, SHOP_CERTIFIED_DIVES[0]?.site ?? "", "Learning")),
       createdAt: at(-back - 40, 10, 0),
     })
     .returning();
@@ -651,11 +727,29 @@ async function seedShopCertified(
     .insert(tripScheduleDays)
     .values(days.map((day, index) => ({ tripId: trip.id, dayNumber: index + 1, ...day })));
   await db.insert(tripDives).values(
-    Array.from({ length: trip.plannedDives }, (_, index) => ({
+    SHOP_CERTIFIED_DIVES.map((dive, index) => ({
       tripId: trip.id,
       diveNumber: index + 1,
-      diveSiteId: index === 0 ? trip.diveSiteId : null,
+      title: dive.title,
+      diveSiteId: siteIds.get(dive.site) ?? null,
     })),
+  );
+  // Every session in the log, with its depth.
+  await db.insert(executedDives).values(
+    SHOP_CERTIFIED_DIVES.map((dive, index) => {
+      const dayStarts = (days[dive.day] ?? days[0])?.startsAt ?? window.startsAt;
+      const enteredAt = new Date(dayStarts.getTime() + dive.enteredAfterMin * 60_000);
+      return {
+        shopId,
+        tripId: trip.id,
+        diveNumber: index + 1,
+        actualSiteId: siteIds.get(dive.site) ?? null,
+        enteredAt,
+        exitedAt: new Date(enteredAt.getTime() + dive.minutes * 60_000),
+        maxDepthMeters: dive.maxDepthMeters,
+        recordedByPersonId: ctx.instructorId,
+      };
+    }),
   );
   await db.insert(tripRequirements).values({
     tripId: trip.id,
@@ -680,7 +774,7 @@ async function seedShopCertified(
       ctx.cohort,
       ctx.used,
       window,
-      (diver) => diver.level === "open_water",
+      (diver) => diver.level === "advanced_open_water",
     );
     if (!student) break;
     const bookedAt = new Date(window.startsAt.getTime() - lead * DAY_MS);
@@ -712,7 +806,7 @@ async function seedShopCertified(
       shopId,
       personId: student.id,
       agency: course.agency === "ssi" ? "ssi" : "padi",
-      level: "advanced_open_water",
+      level: "rescue",
       identifier: null,
       status: "verified",
       issuedByShopAt: issuedAt,
