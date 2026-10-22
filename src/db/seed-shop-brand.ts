@@ -13,7 +13,7 @@ const bundled = (file: string) => `/dive-sites/${encodeURIComponent(file)}`;
  * profile page with half its fields blank told them the shop had not finished
  * setting up (Aaron, 2026-10-22).
  *
- * The logo is a drawn mark served from `public/demo/`, not a photograph, so it
+ * The logo is a drawn mark served from `public/demo-shop/`, not a photograph, so it
  * repeats no picture on the storefront (`seed-brand-photos.test.ts`). Every
  * photo is a bundled, credited Commons frame (`public/dive-sites/README.md`):
  * the fleet configures no media storage, and a demo that renders broken images
@@ -25,7 +25,7 @@ export const DEMO_SHOP_BRAND = {
   // i18n-exempt: shop-authored, as above.
   description:
     "Two boats, fourteen divers at most, and a crew that has dived these reefs since 1998. We sail twice a day to Molasses, French and Pickles, and to the Spiegel Grove and the Duane when the current allows.",
-  logoUrl: "/demo/blue-mantis-logo.svg",
+  logoUrl: "/demo-shop/blue-mantis-logo.png",
   brandColor: "#1d5fa3",
   brandDisplayFont: "outfit",
   brandHeroImageUrl: bundled("Elkhorn coral 8 Molasses Reef 20080309.jpg"),

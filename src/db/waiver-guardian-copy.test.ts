@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { escapeHtml } from "@/lib/html";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { messageFor } from "@/lib/notifications/render";
 import { fileScopedShopContext } from "@/test/db";
@@ -38,6 +39,16 @@ async function context() {
     .set({ dateOfBirth: "2014-05-01" })
     .where(eq(people.id, rosterEntry.person.id));
   return { db, shop, booking: rosterEntry.booking, person: rosterEntry.person };
+}
+
+/**
+ * The rendered bytes less the shop's own logo, the one `http` a branded shop's
+ * header carries: a public image on DiveDay's own host, holding no token and
+ * naming nobody. Every other `http` in the message is still refused.
+ */
+function withoutShopLogo(body: string, sent: { sender?: { logoUrl?: string } }): string {
+  const logo = sent.sender?.logoUrl;
+  return logo ? body.replaceAll(escapeHtml(logo), "").replaceAll(logo, "") : body;
 }
 
 async function signOnline(
@@ -133,7 +144,7 @@ describe("the guardian's copy of a signed release", () => {
     // **The message itself.** Rendered rather than inspected as a payload,
     // because the thing being promised is what lands in a parent's inbox.
     const rendered = messageFor(sent);
-    const body = `${rendered.subject}\n${rendered.text}\n${rendered.html}`;
+    const body = withoutShopLogo(`${rendered.subject}\n${rendered.text}\n${rendered.html}`, sent);
     expect(body).not.toContain("http");
     expect(body).not.toContain("<a ");
     expect(rendered.text).toContain(ctx.person.fullName);
@@ -170,7 +181,7 @@ describe("the guardian's copy of a signed release", () => {
     expect(sent.medicalReviewPending).toBe(true);
 
     const rendered = messageFor(sent);
-    const body = `${rendered.subject}\n${rendered.text}\n${rendered.html}`;
+    const body = withoutShopLogo(`${rendered.subject}\n${rendered.text}\n${rendered.html}`, sent);
     expect(rendered.text).toContain("physician");
     expect(body).not.toContain("nothing to do");
     // Still a courtesy copy: no link, no token, and no medical answer naming
