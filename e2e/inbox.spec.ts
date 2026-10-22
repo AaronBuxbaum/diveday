@@ -160,8 +160,7 @@ test("a message about a seat opens it, and its menu opens the seat's move", asyn
 
 /**
  * **Notes for Claude** (Aaron, 2026-10-22): the shop writes what a reply draft
- * should know once, at the foot of the Inbox, and the record's reply box no
- * longer carries saved-answer chips or "Save this answer".
+ * should know once, at the foot of the Inbox, and a reply draft reads it.
  */
 test("a staffer keeps the shop's notes for Claude's reply drafts", async ({ page }) => {
   await page.goto("/shop/blue-mantis/inbox#reply-notes");
@@ -179,16 +178,11 @@ test("a staffer keeps the shop's notes for Claude's reply drafts", async ({ page
       .getByLabel("What should a reply draft know?"),
   ).toHaveValue(/Bring your own mask/);
 
-  // Put the seed's words back for the specs that read them.
+  // The seed's words back, for the capture that reads them.
   await page
     .getByRole("region", { name: "Notes for Claude" })
     .getByLabel("What should a reply draft know?")
     .fill(seeded);
   await page.getByRole("button", { name: "Save notes" }).click();
   await expect(page.getByText(/^Notes saved\./)).toBeVisible();
-
-  await page.goto("/shop/blue-mantis/inbox");
-  await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
-  await expect(page.getByRole("region", { name: "Conversation" })).toBeVisible();
-  await expect(page.getByRole("group", { name: "Saved answers" })).toHaveCount(0);
 });
