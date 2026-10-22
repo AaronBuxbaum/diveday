@@ -2304,7 +2304,9 @@ export function groupByDeparture(rows: readonly TodayAction[]): NeedsYouGroup[] 
  *
  * **A danger row or a readiness blocker never folds**: a diver not back
  * aboard, a medical hold or an unsigned waiver is everyone's to see, however
- * many there are. A list only one longer than the cap shows whole, because "and 1
+ * many there are. **Nor does a diver's own help request**: it is their ask,
+ * waiting on a staffer to arrange help, and a neutral row ranks last, so a
+ * fold would hide the one row a diver is waiting on. A list only one longer than the cap shows whole, because "and 1
  * more" costs the room of the row it hides (`nameListText`'s rule).
  */
 export const BOAT_ROWS_SHOWN = 5;
@@ -2321,10 +2323,12 @@ export function foldBoatRows(rows: readonly TodayAction[]): {
 } {
   // Danger and readiness rows are kept wherever they sit: a fold that hid one
   // would be the grouping hiding a diver who cannot board (layer 3 auditor
-  // review, note 1). Only boat work and the boat's other chores fold.
-  const danger = (row: TodayAction) => rowTone(row) === "danger" || READINESS_KINDS.has(row.kind);
-  const shown = rows.filter((row, index) => index < BOAT_ROWS_SHOWN || danger(row));
-  const more = rows.filter((row, index) => index >= BOAT_ROWS_SHOWN && !danger(row));
+  // review, note 1). A diver's help request is their ask, not a chore: it
+  // keeps Arrange help in reach. Only boat work and the boat's other chores fold.
+  const neverFolds = (row: TodayAction) =>
+    rowTone(row) === "danger" || READINESS_KINDS.has(row.kind) || row.kind === "help_request";
+  const shown = rows.filter((row, index) => index < BOAT_ROWS_SHOWN || neverFolds(row));
+  const more = rows.filter((row, index) => index >= BOAT_ROWS_SHOWN && !neverFolds(row));
   return more.length <= 1 ? { shown: [...rows], more: [] } : { shown, more };
 }
 

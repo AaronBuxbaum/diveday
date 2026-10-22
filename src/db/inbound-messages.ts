@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, isNull, ne, notLike, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNull, ne, notLike, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type InboundChannel,
@@ -287,6 +287,7 @@ export async function recordMoveAsk(
         phone: people.phone,
         tripId: bookings.tripId,
         startsAt: trips.startsAt,
+        cancelledAt: trips.cancelledAt,
       })
       .from(bookings)
       .innerJoin(
@@ -326,6 +327,7 @@ export async function recordMoveAsk(
         id: inboundMessages.id,
         answeredAt: inboundMessages.answeredAt,
         deletedAt: inboundMessages.deletedAt,
+        receivedAt: inboundMessages.receivedAt,
       })
       .from(inboundMessages)
       .where(
@@ -338,12 +340,24 @@ export async function recordMoveAsk(
       .limit(1)
       .for("update");
     if (previous) {
-      if (!previous.answeredAt && !previous.deletedAt) return { status: "already" };
+      const open = !previous.answeredAt && !previous.deletedAt;
+      // On the called-off card, an ask the diver sent while the boat was still
+      // going was about a departure that no longer sails: it has lapsed, and
+      // this ask replaces it (`askLapsedByCallOff`).
+      const lapsed =
+        open &&
+        input.calledOff === true &&
+        askLapsedByCallOff(previous.receivedAt, seat.cancelledAt);
+      if (open && !lapsed) return { status: "already" };
       // Keep the original identity/body and any reply foreign keys. Only the
-      // current request owns the canonical key used by the pending reader.
+      // current request owns the canonical key used by the pending reader. A
+      // lapsed ask stops waiting in the Inbox the way a move answers one.
       await tx
         .update(inboundMessages)
-        .set({ providerMessageId: `${providerMessageId}:superseded:${previous.id}` })
+        .set({
+          providerMessageId: `${providerMessageId}:superseded:${previous.id}`,
+          ...(lapsed ? { answeredAt: input.now } : {}),
+        })
         .where(and(eq(inboundMessages.shopId, input.shopId), eq(inboundMessages.id, previous.id)));
     }
     const [filed] = await tx
@@ -364,6 +378,17 @@ export async function recordMoveAsk(
       .returning({ id: inboundMessages.id });
     return filed ? { status: "recorded", id: filed.id } : { status: "already" };
   });
+}
+
+/**
+ * Whether an ask sent at `receivedAt` predates the call-off at `cancelledAt`,
+ * so it was about a boat that was still going (H-151). A cancelled departure
+ * with no recorded time (`trips.cancelled_at` is null only for trips cancelled
+ * before the column existed, long sailed) gives nothing to compare: the ask
+ * stands, rather than every tap filing another Inbox row.
+ */
+function askLapsedByCallOff(receivedAt: Date, cancelledAt: Date | null): boolean {
+  return cancelledAt !== null && receivedAt.getTime() < cancelledAt.getTime();
 }
 
 /** The diver's own words and send time, never a staff reply or contact details. */
@@ -425,7 +450,13 @@ export async function getPendingMoveAsk(
         eq(inboundMessages.providerMessageId, moveAskProviderId(bookingId, tripId)),
         isNull(inboundMessages.answeredAt),
         isNull(inboundMessages.deletedAt),
-        options.calledOff ? eq(trips.status, "cancelled") : ne(trips.status, "cancelled"),
+        options.calledOff
+          ? and(
+              eq(trips.status, "cancelled"),
+              // `askLapsedByCallOff`, in SQL: an ask from before the call-off does not stand.
+              or(isNull(trips.cancelledAt), gte(inboundMessages.receivedAt, trips.cancelledAt)),
+            )
+          : ne(trips.status, "cancelled"),
         liveTrip(),
         notRehearsal(),
       ),

@@ -295,6 +295,22 @@ describe("SiteMap labels through Leaflet", () => {
     }
   });
 
+  it("keeps no camera for an overview nobody moved, so the next visit fits its own size", async () => {
+    // The fit is the map's, not the reader's: kept, it came back at a phone
+    // width as a desktop's zoom and hid most of the shop's sites.
+    const key = "test-map-untouched";
+    sessionStorage.clear();
+    const first = render(
+      <SiteMap center={CENTER} pins={[PIN]} clusterLabel="dive sites" viewportStorageKey={key} />,
+    );
+    await markerButton(first.container);
+    // Nothing kept while it is open either: a reload unmounts nothing.
+    expect(sessionStorage.getItem(`diveday:map:${key}`)).toBeNull();
+    first.unmount();
+    expect(sessionStorage.getItem(`diveday:map:${key}`)).toBeNull();
+    sessionStorage.clear();
+  });
+
   it("restores the settled camera after unmount without fitting the overview again", async () => {
     const L = await import("leaflet");
     const getContainer = vi.spyOn(L.Map.prototype, "getContainer");
@@ -320,33 +336,6 @@ describe("SiteMap labels through Leaflet", () => {
     expect(restored.getZoom()).toBe(7);
     expect(restored.getCenter().lat).toBeCloseTo(26);
     expect(restored.getCenter().lng).toBeCloseTo(-81);
-    sessionStorage.clear();
-  });
-
-  it("fits the changed pins instead of restoring a camera saved against other pins", async () => {
-    const L = await import("leaflet");
-    const getContainer = vi.spyOn(L.Map.prototype, "getContainer");
-    const key = "test-map-camera-pins";
-    sessionStorage.clear();
-    const first = render(
-      <SiteMap center={CENTER} pins={[PIN]} clusterLabel="dive sites" viewportStorageKey={key} />,
-    );
-    await markerButton(first.container);
-    const map = getContainer.mock.contexts[0];
-    if (!(map instanceof L.Map)) throw new Error("Map did not mount");
-    map.setView([26, -81], 7, { animate: false });
-    first.unmount();
-    getContainer.mockClear();
-    // A new site saved elsewhere: the library reopens on a different pin set.
-    const moved: MapPin = { ...PIN, id: "wreck", latitude: 24.46, longitude: -81.88 };
-    const second = render(
-      <SiteMap center={CENTER} pins={[moved]} clusterLabel="dive sites" viewportStorageKey={key} />,
-    );
-    await markerButton(second.container);
-    const refit = getContainer.mock.contexts[0];
-    if (!(refit instanceof L.Map)) throw new Error("Refit map did not mount");
-    expect(refit.getCenter().lat).toBeCloseTo(moved.latitude);
-    expect(refit.getCenter().lng).toBeCloseTo(moved.longitude);
     sessionStorage.clear();
   });
 
