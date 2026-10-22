@@ -1,5 +1,6 @@
 import { nowDate } from "@/lib/clock";
 import type { UsageSample } from "@/lib/cost-guardrails";
+import { type AnthropicSpendReader, readAnthropicSpend } from "./anthropic";
 import { fetchNeonUsage } from "./neon";
 import type { ProbeOptions } from "./probe";
 import { fetchVercelSpend } from "./vercel";
@@ -20,12 +21,15 @@ import { fetchVercelSpend } from "./vercel";
  * stops watching exactly when something unexpected is happening.
  */
 export async function collectUsageSamples(
-  options: ProbeOptions = {},
+  options: ProbeOptions & {
+    /** Claude's spend comes from DiveDay's own ledger; the cron passes the db read in. */
+    readonly readAnthropicSpendUsd?: AnthropicSpendReader;
+  } = {},
 ): Promise<Record<string, UsageSample>> {
   const now = options.now ?? nowDate();
   const probeOptions = { ...options, now };
 
-  const [vercel, neon] = await Promise.all([
+  const [vercel, neon, anthropic] = await Promise.all([
     fetchVercelSpend(probeOptions).catch((): { sample: UsageSample } => ({
       sample: { status: "unavailable", reason: "probe_threw" },
     })),
@@ -33,6 +37,11 @@ export async function collectUsageSamples(
       const sample: UsageSample = { status: "unavailable", reason: "probe_threw" };
       return { compute: sample, storage: sample, egress: sample, projects: 0 };
     }),
+    readAnthropicSpend({
+      env: options.env ?? process.env,
+      now,
+      readSpendUsd: options.readAnthropicSpendUsd,
+    }).catch((): UsageSample => ({ status: "unavailable", reason: "probe_threw" })),
   ]);
 
   return {
@@ -40,5 +49,6 @@ export async function collectUsageSamples(
     neon_compute: neon.compute,
     neon_storage: neon.storage,
     neon_egress: neon.egress,
+    anthropic_spend: anthropic,
   };
 }

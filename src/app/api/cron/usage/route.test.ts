@@ -48,6 +48,7 @@ function samples(overrides: Record<string, UsageSample> = {}) {
     neon_compute: { status: "measured", value: 1 },
     neon_storage: { status: "measured", value: 1 },
     neon_egress: { status: "measured", value: 1 },
+    anthropic_spend: { status: "measured", value: 1 },
     ...overrides,
   } as Record<string, UsageSample>;
 }

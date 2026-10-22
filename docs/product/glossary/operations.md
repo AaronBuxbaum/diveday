@@ -1959,3 +1959,10 @@
   fifth loop, item 32). Boats only: a shore day or a pool session is a day on the schedule, not at
   sea (dive-domain review N1). It reads the crew list, not crew roll call, so a crew member listed
   but recorded ashore still counts.
+- **Assist** — a suggestion Claude makes to staff (a drafted reply, a sorted message, a value read
+  off a card or a website), which a person accepts, edits or ignores (ADR 20261018-claude-assists).
+  An assist never sends, publishes, saves or clears anything on its own, and it is **dark** (offers
+  nothing, says nothing) when there is no API key, external HTTP is off, the shop switched
+  "Claude suggestions" off in Features, the shop is a demo, or the shop reached its monthly cap. Every feature with an
+  assist works the same without it. Code: `runAssist` in `src/db/assists.ts`; on screen,
+  `AssistDraftButton`. Not "AI": the copy names Claude.

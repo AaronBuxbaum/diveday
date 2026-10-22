@@ -404,6 +404,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
   shop_backup_deliveries: "whether one of those bundles arrived: a period key, byte count, status",
   boats: "the shop’s vessels",
+  claude_usage:
+    "one row per Claude call: a feature code, a model, token counts and a cost, with no person and no words",
   courses: "the shop’s course catalog, copied from a template and then its own",
   waiver_templates:
     "the text a shop asks people to sign, versioned. The *signatures* are `waiver_records`, which the erasure strips and re-seals",
