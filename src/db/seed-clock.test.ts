@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import {
+  demoAtSeaDeparture,
   demoTodayDepartureStart,
   demoTodayShift,
   demoTodayShifts,
@@ -27,35 +28,23 @@ describe("demoTodayDepartureStart", () => {
     expect(localDay(start)).toBe(localDay(now));
   });
 
-  it("still sails today when now+5h would round past local midnight", () => {
-    // Regression: seeding at 6:34 PM EDT put the "sails today" trip at
-    // midnight — tomorrow in shop time — emptying the departure board that
-    // the Today queue tests and the demo lead with.
-    const now = new Date("2026-07-20T22:34:00Z"); // 6:34 PM EDT
-    const start = demoTodayDepartureStart(now, TZ);
-    expect(localDay(start)).toBe(localDay(now));
-    expect(start.getTime()).toBeGreaterThan(now.getTime());
-    expect(start.toISOString()).toBe("2026-07-21T03:30:00.000Z"); // 11:30 PM EDT
+  it("sails tomorrow morning, after the 7:00 boat is back, once the day boats are done", () => {
+    // Market sheet 2026-10-22, item 1: seeded at 6:34 PM EDT this clamped to
+    // 11:30 PM, and the public page led with an "11:30 PM – 3:00 AM" night dive.
+    for (const now of [
+      new Date("2026-07-20T22:34:00Z"), // 6:34 PM EDT
+      new Date("2026-07-21T03:45:00Z"), // 11:45 PM EDT
+      new Date("2026-07-21T03:59:30Z"), // 11:59:30 PM EDT
+    ]) {
+      const start = demoTodayDepartureStart(now, TZ);
+      expect(start.toISOString()).toBe("2026-07-21T15:30:00.000Z"); // 11:30 AM EDT tomorrow
+    }
   });
 
-  it("still sails today even when no future half-hour slot is left before midnight", () => {
-    // "Today always has a board" has no exception: with less than thirty
-    // minutes of the local day left, a half-hour-rounded slot no longer fits,
-    // so this falls back to the earliest still-future moment instead of
-    // rolling the trip into tomorrow.
-    const now = new Date("2026-07-21T03:45:00Z"); // 11:45 PM EDT
+  it("keeps a boat that can still leave by 8 PM on today's board", () => {
+    const now = new Date("2026-07-20T19:00:00Z"); // 3:00 PM EDT → 8:00 PM
     const start = demoTodayDepartureStart(now, TZ);
-    expect(start.getTime()).toBeGreaterThan(now.getTime());
-    expect(localDay(start)).toBe(localDay(now));
-    expect(start.toISOString()).toBe("2026-07-21T03:46:00.000Z"); // 11:46 PM EDT
-  });
-
-  it("never lets the same-day fallback cross into tomorrow", () => {
-    // The last minute before local midnight: even "now + 1 minute" would
-    // roll into tomorrow, so this clamps to just before midnight instead.
-    const now = new Date("2026-07-21T03:59:30Z"); // 11:59:30 PM EDT
-    const start = demoTodayDepartureStart(now, TZ);
-    expect(start.getTime()).toBeGreaterThan(now.getTime());
+    expect(start.toISOString()).toBe("2026-07-21T00:00:00.000Z");
     expect(localDay(start)).toBe(localDay(now));
   });
 });
@@ -89,11 +78,11 @@ describe("demoTodayShift", () => {
   });
 
   it("never runs a shift past the shop's midnight", () => {
-    const now = new Date("2026-07-20T22:34:00Z"); // 6:34 PM EDT → the 11:30 PM boat
+    const now = new Date("2026-07-20T19:00:00Z"); // 3:00 PM EDT → the 8:00 PM boat
     const shift = demoTodayShift(now, TZ);
     expect(localDay(shift.startsAt)).toBe(localDay(now));
     expect(localDay(new Date(shift.endsAt.getTime() - 1))).toBe(localDay(now));
-    expect(shift.endsAt.getTime()).toBeGreaterThan(shift.startsAt.getTime());
+    expect(wall(shift.endsAt)).toBe("00:00");
   });
 });
 
@@ -123,13 +112,28 @@ describe("demoTodayShifts", () => {
     expect(spans(demoTodayShifts(now, TZ, { crew: true }))).toEqual(["04:30-13:30"]);
   });
 
-  it("gives only the crew a night boat's hours, and everyone else the desk's day", () => {
-    // UX review 2026-10-13, item 40: seeded at 6:30 PM EDT, today's boat
-    // sails at 11:30 PM, and the owner and both instructors held a
-    // "10:30 PM – 12:00 AM" shift beside the crew.
-    const now = new Date("2026-10-12T22:30:00Z"); // 6:30 PM EDT → the 11:30 PM boat
+  it("gives everyone else the desk's day when the readiness boat sails tomorrow", () => {
+    // UX review 2026-10-13, item 40: the owner and both instructors held a
+    // "10:30 PM – 12:00 AM" shift beside the crew of a late boat.
+    const now = new Date("2026-10-12T22:30:00Z"); // 6:30 PM EDT → tomorrow's 11:30 AM boat
     expect(spans(demoTodayShifts(now, TZ, { crew: false }))).toEqual(["09:00-17:00"]);
-    expect(spans(demoTodayShifts(now, TZ, { crew: true }))).toEqual(["04:30-09:30", "22:30-00:00"]);
+    // The crew's dawn shift today, and tomorrow's around the readiness boat.
+    expect(spans(demoTodayShifts(now, TZ, { crew: true }))).toEqual(["04:30-09:30", "10:30-16:00"]);
+  });
+
+  it("puts the boat at sea's crew on from an hour before she sailed until an hour after she is due", () => {
+    // 9:30 AM EDT: she sailed at 6:30 and is due back at 10:00.
+    const now = new Date("2026-07-21T13:30:00Z");
+    expect(spans(demoTodayShifts(now, TZ, { crew: false, atSea: true }))).toEqual([
+      "05:30-11:00",
+      "13:30-19:00",
+    ]);
+    // 8:45 PM EDT: the dusk boat sailed at 6:00 and is due at 9:30; the
+    // desk's day runs straight into her shift.
+    const evening = new Date("2026-10-22T00:45:00Z");
+    expect(spans(demoTodayShifts(evening, TZ, { crew: false, atSea: true }))).toEqual([
+      "09:00-22:30",
+    ]);
   });
 
   it("gives the dawn crew a 4:30 to 9:30 shift of its own when today's boat sails in the evening", () => {
@@ -157,10 +161,77 @@ describe("sailsAfterDayBoats", () => {
     expect(sailsAfterDayBoats(new Date("2026-10-12T22:30:00Z"), TZ)).toBe(false); // 6:30 PM EDT
   });
 
-  it("names the evening seed's 11:30 PM slot as the night boat it is", () => {
-    const start = demoTodayDepartureStart(new Date("2026-07-20T22:34:00Z"), TZ); // 6:34 PM EDT
-    expect(sailsAfterDayBoats(start, TZ)).toBe(true);
-    const morning = demoTodayDepartureStart(new Date("2026-07-20T15:04:00Z"), TZ); // 11:04 AM EDT
-    expect(sailsAfterDayBoats(morning, TZ)).toBe(false);
+  it("never applies to the readiness departure, at any hour the demo is seeded", () => {
+    for (let quarter = 0; quarter < 96; quarter++) {
+      const now = new Date(Date.UTC(2026, 6, 20, 4) + quarter * 15 * 60_000);
+      expect(sailsAfterDayBoats(demoTodayDepartureStart(now, TZ), TZ)).toBe(false);
+    }
+  });
+});
+
+/**
+ * **The boat at sea, halfway through her roll call** (market sheet
+ * 2026-10-22, item 1): every moment of her record sits in the past of the
+ * instant the demo is seeded, in the order a crew would make it, and she
+ * sails at an hour a shop sails.
+ */
+describe("demoAtSeaDeparture", () => {
+  const TZ = "America/New_York";
+  const wall = (date: Date) => {
+    const w = utcToWallTime(date, TZ);
+    return `${String(w.hour).padStart(2, "0")}:${String(w.minute).padStart(2, "0")}`;
+  };
+  const minutes = (from: Date, to: Date) => (to.getTime() - from.getTime()) / 60_000;
+
+  it("has her out since 6:30 at the frozen 9:30 AM clock, dive 2 in the water", () => {
+    const now = new Date("2026-07-21T13:30:00Z");
+    const boat = demoAtSeaDeparture(now, TZ);
+    expect(boat && wall(boat.startsAt)).toBe("06:30");
+    expect(boat && wall(boat.endsAt)).toBe("10:00");
+    expect(boat?.afterDark).toBe(false);
+  });
+
+  it("is the dusk boat that sailed at 6:00 when the demo is opened at 8:45 PM", () => {
+    const boat = demoAtSeaDeparture(new Date("2026-10-22T00:45:00Z"), TZ);
+    expect(boat && wall(boat.startsAt)).toBe("18:00");
+    expect(boat?.afterDark).toBe(true);
+  });
+
+  it("keeps every moment of the record behind the clock and in a crew's order", () => {
+    for (let quarter = 0; quarter < 96; quarter++) {
+      const now = new Date(Date.UTC(2026, 9, 22, 4) + quarter * 5 * 60_000 * 3);
+      const boat = demoAtSeaDeparture(now, TZ);
+      if (!boat) continue;
+      const moments = [
+        boat.startsAt,
+        boat.diveOne.enteredAt,
+        boat.diveOne.exitedAt,
+        boat.diveOne.countedAt,
+        boat.diveTwoEnteredAt,
+      ];
+      expect([...moments].sort((a, b) => a.getTime() - b.getTime())).toEqual(moments);
+      expect(boat.diveTwoEnteredAt.getTime()).toBeLessThan(now.getTime());
+      // A surface interval a crew would run, and a boat not yet due home.
+      const surface = minutes(boat.diveOne.countedAt, boat.diveTwoEnteredAt);
+      expect(surface).toBeGreaterThanOrEqual(40);
+      expect(surface).toBeLessThan(70);
+      expect(minutes(now, boat.endsAt)).toBeGreaterThanOrEqual(15);
+      const sails = utcToWallTime(boat.startsAt, TZ);
+      expect(sails.hour * 60 + sails.minute).toBeGreaterThanOrEqual(6 * 60 + 30);
+      expect(sails.hour * 60 + sails.minute).toBeLessThanOrEqual(19 * 60 + 30);
+      expect(sails.minute % 30).toBe(0);
+    }
+  });
+
+  it("puts a boat at sea from mid-morning until late evening, and none in the small hours", () => {
+    const at = (hour: number, minute: number) =>
+      demoAtSeaDeparture(new Date(Date.UTC(2026, 9, 22, hour + 4, minute)), TZ);
+    expect(at(9, 15)).not.toBeNull();
+    expect(at(13, 0)).not.toBeNull();
+    expect(at(20, 45)).not.toBeNull();
+    expect(at(22, 30)).not.toBeNull();
+    expect(at(23, 30)).toBeNull();
+    expect(at(2, 0)).toBeNull();
+    expect(at(8, 0)).toBeNull();
   });
 });

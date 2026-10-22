@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
@@ -13,6 +13,7 @@ import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
   people,
   personRoles,
+  rollCallCrewEvents,
   shops,
   staffCredentials,
   staffShifts,
@@ -21,6 +22,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
+import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed-boat-at-sea";
 import { LEAD_INSTRUCTOR_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
@@ -69,16 +71,22 @@ async function pushTheBoardLater(db: AppDb, shopId: string, days: number): Promi
     })
     .where(and(eq(trips.shopId, shopId), gte(trips.startsAt, nowDate())));
 
-  // The close-out fixture is an ended departure on today's calendar day. Move
-  // it out of the way for tests whose premise is an empty day; production
-  // refresh still treats an ended same-day trip as a real boat.
+  // The close-out fixture is an ended departure on today's calendar day, and
+  // the boat at sea sailed earlier today. Move both out of the way for tests
+  // whose premise is an empty day; production refresh still treats a boat
+  // that sailed today as a real boat.
   await db
     .update(trips)
     .set({
       startsAt: sql`${trips.startsAt} - interval '1 day'`,
       endsAt: sql`${trips.endsAt} - interval '1 day'`,
     })
-    .where(and(eq(trips.shopId, shopId), eq(trips.title, DEMO_COMPLETED_TRIP_TITLE)));
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        inArray(trips.title, [DEMO_COMPLETED_TRIP_TITLE, AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE]),
+      ),
+    );
 }
 
 /** Every scheduled departure, oldest first — ids and times, to prove what moved. */
@@ -176,6 +184,7 @@ describe("refreshCanonicalDemoSchedule", () => {
     // A shop as it looks when it was seeded by a version of this code that had
     // never heard of her.
     await db.delete(tripAssignments).where(eq(tripAssignments.personId, relief[0].id));
+    await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.personId, relief[0].id));
     await db.delete(staffShifts).where(eq(staffShifts.personId, relief[0].id));
     await db.delete(staffCredentials).where(eq(staffCredentials.personId, relief[0].id));
     await db.delete(personRoles).where(eq(personRoles.personId, relief[0].id));

@@ -17,46 +17,10 @@ import {
   trips,
 } from "./schema";
 import { CAPTAIN_NAME } from "./seed-cast";
-import {
-  at,
-  DEMO_TODAY_DEPARTURE_MS,
-  demoTodayDepartureStart,
-  sailsAfterDayBoats,
-} from "./seed-clock";
+import { at, DEMO_TODAY_DEPARTURE_MS, demoTodayDepartureStart } from "./seed-clock";
 
 /** Today's departure's name, which the other seed modules look it up by. */
 export const DEMO_TODAY_TRIP_TITLE = "Two-Tank Reef — Molasses & French";
-
-/**
- * **Today's departure, named for the hour it sails** (issue #2440). Seeded in
- * the shop's evening, the one boat that must sail today can only leave late
- * (`demoTodayDepartureStart`), and a two-tank reef trip at 11:30 PM reads as a
- * bug. Past the day boats' last slot it becomes the night dive it would be.
- * Run once every scenario has found the trip by its day name: a rename, and
- * nothing else about the departure changes.
- */
-export async function nameDemoNightDeparture(
-  db: DbExecutor,
-  shopId: string,
-  startsAt: Date = demoTodayDepartureStart(),
-): Promise<void> {
-  if (!sailsAfterDayBoats(startsAt)) return;
-  // No night gate on purpose (#2574): many shops take open-water divers on
-  // guided night dives, and a real trip can require the night specialty.
-  await db
-    .update(trips)
-    .set({
-      title: "Night Dive — Molasses & French",
-      description: "Torches and tarpon on the outer reef.",
-    })
-    .where(
-      and(
-        eq(trips.shopId, shopId),
-        eq(trips.startsAt, startsAt),
-        eq(trips.title, DEMO_TODAY_TRIP_TITLE),
-      ),
-    );
-}
 
 /**
  * Who holds each crew role, last-wins over an unordered select, so only safe for

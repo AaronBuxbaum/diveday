@@ -4,6 +4,7 @@ import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { AT_SEA_DAY_TITLE } from "../src/db/seed-boat-at-sea";
 import { LISTED_SHOP_SLUGS } from "../src/db/seed-listed-shops";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
@@ -8594,6 +8595,31 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-not-back-aboard", scheme);
+      });
+
+      /**
+       * **The boat at sea, mid roll call** (market sheet 2026-10-22, item 1):
+       * the demo always has one underway, dive 1 counted and dive 2's count
+       * at "9 of 11 back aboard" with one buddy pair still to surface. Read
+       * only, so it needs no reset of its own.
+       */
+      test(`the boat at sea's open after-dive count renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        // The day's spine carries the departure's title as its door, like the
+        // dawn boat's (`openSailedTrip`).
+        await page.goto("/shop/blue-mantis");
+        await page.getByRole("link", { name: AT_SEA_DAY_TITLE, exact: true }).first().click();
+        await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        await page
+          .getByRole("link", { name: "After dive 2" })
+          .evaluate((link: HTMLElement) => link.click());
+        await page.waitForURL(/checkpoint=after_dive_2/);
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-at-sea-mid-roll-call", scheme);
       });
 
       /**

@@ -64,6 +64,22 @@ const LENS_BY_TRIP_TITLE: Record<string, (typeof DEMO_LENSES)[number]> = {
   "Diver Stress & Rescue — SSI two-day": "Learning",
   "Nitrox 40 — SSI one day": "Learning",
   "Peak Performance Buoyancy — weekend": "Small life & cameras",
+  // Every other departure that takes money in the demo's month, so Reports'
+  // "By kind of trip" adds up to the departures rather than to "Other"
+  // (market sheet 2026-10-22, item 2). The sailed back-fill takes its word
+  // from `sailedTripShape` (`seed-history.ts`).
+  "Dawn Two-Tank — Molasses Reef": "Easygoing reef",
+  "Two-Tank Reef — Benwood & Elbow": "Easygoing reef",
+  "Afternoon Two-Tank — French Reef": "Easygoing reef",
+  "Two-Tank Reef — Christ of the Abyss": "Easygoing reef",
+  "Two-Tank Reef — Pickles & Molasses": "Easygoing reef",
+  "Saturday Two-Tank — Benwood & Christ of the Abyss": "Easygoing reef",
+  "Long-Range Day — Duane & Outer Reef": "Wrecks",
+  "Deep Wreck Charter — the Duane on EANx": "Wrecks",
+  "Night Dive — City of Washington": "After dark",
+  "Dusk & Night Two-Tank — French Reef": "After dark",
+  "Discover Scuba — Pool & Reef": "Learning",
+  "Nitrox Diver — classroom & two dives": "Learning",
 };
 
 /**
@@ -82,8 +98,9 @@ const LENS_BY_TRIP_TITLE: Record<string, (typeof DEMO_LENSES)[number]> = {
  * orders by `created_at`, so an unspaced insert would render the rail in an
  * arbitrary order instead of the one the shop wrote.
  *
- * Runs after `seedMoreTrips` so every title it names exists; a title the seed no
- * longer carries simply matches nothing, which is the right failure for a demo
+ * Runs after `seedMoreTrips` so every title it names exists, and once more at
+ * the end of the schedule for the departures seeded after it (the weekly run);
+ * a title the seed no longer carries simply matches nothing, which is the right failure for a demo
  * fixture — a throw here would break every seeded shop over a renamed trip.
  */
 export async function seedLenses(db: DbExecutor, shopId: string): Promise<void> {

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { and, eq, gt, isNotNull, isNull, lt, ne } from "drizzle-orm";
+import { and, eq, gt, gte, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
@@ -84,6 +84,9 @@ describe("the seeded shop's verified cards", () => {
             ne(bookings.status, "cancelled"),
             lt(trips.startsAt, nowDate()),
             gt(table.reviewedAt, trips.startsAt),
+            // A card the shop issued did not exist before its course ended:
+            // the boats before it sailed on the card the diver held then.
+            or(isNull(table.issuedByShopAt), gte(trips.startsAt, table.issuedByShopAt)),
           ),
         );
       expect(late, `${name} reviewed after the diver sailed`).toEqual([]);
