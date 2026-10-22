@@ -93,7 +93,7 @@ describe("YourWeekList", () => {
  * (dive-domain review of layer r5-4, fix 4).
  */
 describe("YourWeekList's dock time", () => {
-  const line = (crewCall: { at: Date; source: "shift" | "divers" }) => ({
+  const line = (crewCall: { at: Date; source: "shift" | "crew" | "divers" }) => ({
     tripId: "t-1",
     title: "Morning reef",
     startsAt: new Date("2026-10-15T11:00:00.000Z"),
@@ -102,7 +102,7 @@ describe("YourWeekList's dock time", () => {
     gap: null,
     crewCall,
   });
-  const show = (crewCall: { at: Date; source: "shift" | "divers" }) =>
+  const show = (crewCall: { at: Date; source: "shift" | "crew" | "divers" }) =>
     render(
       <YourWeekList
         lines={[line(crewCall)]}
@@ -117,6 +117,13 @@ describe("YourWeekList's dock time", () => {
     show({ at: new Date("2026-10-15T10:15:00.000Z"), source: "shift" });
     expect(
       screen.getByText(/(?<!Divers )At the dock 6:15\sAM · leaves 7:00\sAM · Divemaster/),
+    ).toBeInTheDocument();
+  });
+
+  it("says the shop's crew time as the crew's own (H-149)", () => {
+    show({ at: new Date("2026-10-15T10:00:00.000Z"), source: "crew" });
+    expect(
+      screen.getByText(/(?<!Divers )At the dock 6:00\sAM · leaves 7:00\sAM · Divemaster/),
     ).toBeInTheDocument();
   });
 

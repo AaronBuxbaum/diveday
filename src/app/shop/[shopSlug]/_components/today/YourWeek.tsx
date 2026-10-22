@@ -101,9 +101,11 @@ export function YourWeekList({
                 {formatShortDate(line.startsAt, locale, timeZone)} ·{" "}
                 {line.crewCall
                   ? t(
-                      line.crewCall.source === "shift"
-                        ? "today.yourWeek.atTheDock"
-                        : "today.yourWeek.diversAtTheDock",
+                      // Their own shift or the shop's crew time (H-149) is
+                      // theirs; the divers' call is named as the divers'.
+                      line.crewCall.source === "divers"
+                        ? "today.yourWeek.diversAtTheDock"
+                        : "today.yourWeek.atTheDock",
                       {
                         dock: formatTime(line.crewCall.at, locale, timeZone),
                         leaves: formatTime(line.startsAt, locale, timeZone),

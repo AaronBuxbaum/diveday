@@ -551,6 +551,10 @@
   shop in settings because real muster times vary; it drives the arrival copy on booking
   confirmations, the diver's dock-day rhythm, and every pre-trip reminder, so no surface hardcodes
   "30 minutes".
+- **Crew dock time** — when a crew member should be at the dock for a departure (`crewCallAt`,
+  `src/lib/dock-call.ts`): their own shift when one covers the departure, else the shop's crew time
+  ("Crew arrive N minutes before divers", `shops.crew_lead_minutes`, default 30, H-149) before the
+  divers' dock call time, else the divers' dock call time, which the line names as the divers'.
 - **Export bundle** — the self-serve ZIP of the shop's records as documented RFC-4180 CSVs plus a
   README manifest: people and roles, all certification kinds, trips with their boarding gates and
   crew, series, bookings with payment state, wait lists, the roll-call ledger, waiver templates

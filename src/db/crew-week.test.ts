@@ -93,7 +93,7 @@ describe("crewWeekFor", () => {
     expect(lines.map((line) => line.title)).toEqual(["Rostered 0", "Rostered 1", "Rostered 2"]);
   });
 
-  it("says when to be at the dock: their own covering shift, else the divers' call named as theirs", async () => {
+  it("says when to be at the dock: their own shift, else the shop's crew time, else the divers' call", async () => {
     const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const captain = staff.find((entry) => entry.roles.includes("captain"));
@@ -104,22 +104,28 @@ describe("crewWeekFor", () => {
     const read = async () =>
       (await crewWeekFor(db, { shopId: shop.id, personId: captain.person.id, ...window() }))[0]
         ?.crewCall;
+    const minutesBefore = (minutes: number) => new Date(reef.startsAt.getTime() - minutes * 60_000);
 
-    expect(await read()).toEqual({
-      at: new Date(reef.startsAt.getTime() - 30 * 60 * 1000),
-      source: "divers",
-    });
+    // The column's default (H-149): crew 30 minutes before the divers' 30.
+    expect(await read()).toEqual({ at: minutesBefore(60), source: "crew" });
 
+    await db.update(shops).set({ crewLeadMinutes: 45 }).where(eq(shops.id, shop.id));
+    expect(await read()).toEqual({ at: minutesBefore(75), source: "crew" });
+
+    // Nothing set: the divers' time, named as theirs.
+    await db.update(shops).set({ crewLeadMinutes: null }).where(eq(shops.id, shop.id));
+    expect(await read()).toEqual({ at: minutesBefore(30), source: "divers" });
+
+    // An entered shift wins over the crew time, set or not.
     await db.insert(staffShifts).values({
       shopId: shop.id,
       personId: captain.person.id,
-      startsAt: new Date(reef.startsAt.getTime() - 45 * 60 * 1000),
+      startsAt: minutesBefore(45),
       endsAt: new Date(reef.startsAt.getTime() + 6 * HOUR_MS),
     });
-    expect(await read()).toEqual({
-      at: new Date(reef.startsAt.getTime() - 45 * 60 * 1000),
-      source: "shift",
-    });
+    expect(await read()).toEqual({ at: minutesBefore(45), source: "shift" });
+    await db.update(shops).set({ crewLeadMinutes: 30 }).where(eq(shops.id, shop.id));
+    expect(await read()).toEqual({ at: minutesBefore(45), source: "shift" });
   });
 
   it("reads nothing for somebody rostered on nothing", async () => {

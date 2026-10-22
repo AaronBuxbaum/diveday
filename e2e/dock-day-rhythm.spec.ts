@@ -118,6 +118,20 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   await page.getByRole("button", { name: "Save how divers pay" }).click();
   await expect(page.getByRole("status")).toContainText("says how to pay");
   await expect(page.getByRole("radio", { name: "Cash", exact: true })).toBeChecked();
+
+  // **Crew arrive before divers** (ux-delight sheet 2026-10-22, item 2;
+  // H-149): shop-wide, 30 until the shop changes it, and empty clears it so
+  // crew read the divers' time.
+  const crewLead = page.getByLabel("Crew arrive before divers");
+  await expect(crewLead).toHaveValue("30");
+  await crewLead.fill("45");
+  await page.getByRole("button", { name: "Save crew time" }).click();
+  await expect(page.getByRole("status")).toContainText("Crew time saved");
+  await expect(page.getByLabel("Crew arrive before divers")).toHaveValue("45");
+  await page.getByLabel("Crew arrive before divers").fill("");
+  await page.getByRole("button", { name: "Save crew time" }).click();
+  await expect(page.getByRole("status")).toContainText("Crew time saved");
+  await expect(page.getByLabel("Crew arrive before divers")).toHaveValue("");
 });
 
 /**

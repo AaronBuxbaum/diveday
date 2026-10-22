@@ -465,6 +465,15 @@ export const shops = pgTable(
      */
     minTurnaroundMinutes: integer("min_turnaround_minutes").notNull().default(30),
     /**
+     * How many minutes before the divers' dock call the crew are asked to be
+     * at the dock (ux-delight sheet 2026-10-22, item 2; H-149: shop-wide,
+     * default 30). Crew who arrive with the customers leave tanks unloaded and
+     * the O2 unchecked. A crew member's own shift covering the departure still
+     * wins; null means the shop set none, and crew read the divers' time,
+     * named as theirs (`crewCallAt`, src/lib/dock-call.ts).
+     */
+    crewLeadMinutes: integer("crew_lead_minutes").default(30),
+    /**
      * Where the shop's season starts — the denominator behind the home's one
      * fact of scale (ADR 20260904-reef-all-the-way-down, decision 2, Budget
      * rule 3). "Your 400th diver of the season" is a claim about a count from
@@ -657,6 +666,11 @@ export const shops = pgTable(
     check(
       "shops_min_turnaround_minutes_range",
       sql`${table.minTurnaroundMinutes} >= 0 and ${table.minTurnaroundMinutes} <= 240`,
+    ),
+    // The same bounds as `CREW_LEAD_LIMITS` (src/lib/dock-call.ts) and the form.
+    check(
+      "shops_crew_lead_minutes_range",
+      sql`${table.crewLeadMinutes} IS NULL OR (${table.crewLeadMinutes} >= 5 and ${table.crewLeadMinutes} <= 180)`,
     ),
     // Bounded at both ends, matching `parseDiversPerDivemaster` in the settings
     // action. A DB constraint looser than the action it backs lets any other
