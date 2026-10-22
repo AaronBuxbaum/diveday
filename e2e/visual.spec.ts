@@ -5873,11 +5873,12 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the team settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/team");
         await page.getByRole("heading", { level: 1, name: "Team" }).waitFor();
-        await capture(page, "settings-team", scheme);
+        await capture(page, "settings-team", scheme, { darkPhone: true });
         const credentials = page.locator('details[id^="credentials-"]').first();
         await expect(credentials).toBeVisible();
         await credentials.locator("summary").click();
         await capture(page, "team-member-credentials-open", scheme, {
+          darkPhone: true,
           beforeShot: async () => {
             const summary = credentials.locator("summary");
             const label = summary.getByText(staffCopy("staffing.credentials.heading"), {

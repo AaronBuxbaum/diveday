@@ -19,6 +19,9 @@ import { expect, makeActivitySafe, test } from "./fixtures";
 import { offlineCopySaved, openTripFromBoard, openTripTab, seededTripId } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { auditInitialPaint, INITIAL_PAINT_FALLBACK } from "./visual-audit-initial-paint";
+import { PHONE_VIEWPORT, schemeViewports, VIEWPORTS } from "./visual-viewports";
+
+export { PHONE_VIEWPORT, VIEWPORTS } from "./visual-viewports";
 
 export const staffCopy = staffTranslator("en-US");
 export const diverCopy = diverTranslator("en-US");
@@ -213,55 +216,6 @@ export async function waitForSiteLibrary(page: Page) {
  * interesting part is client-rendered: `course-edit` waited on a <legend> that
  * precedes its editor's mount.
  */
-
-// Phone first, then desktop — matches scripts/screenshot.mjs. Navigation and
-// clicks happen at the desktop base viewport (see viewport in test.use below);
-// these only resize the page for the capture itself.
-export const VIEWPORTS = [
-  { width: 390, height: 844 }, // phone
-  { width: 1280, height: 800 }, // desktop
-] as const;
-
-/**
- * **A portrait tablet — the device the shop is actually holding.**
- *
- * `VIEWPORTS` above is the standard responsive pair, and it is the right
- * default for a marketing page, a booking page and a diver's `/ready`. It is
- * the wrong device for the surfaces a dive shop works from: a departure's Divers
- * tab is the counter while its arrivals are open, and a counter device is an
- * iPad on a stand; the
- * manifest is read at the rail, often through a dry case.
- *
- * 768-1024px is also where Tailwind's `sm:`/`md:` breakpoints change a
- * layout's *shape* — where a two-column `FieldGrid` stands in columns while
- * the staff bar is still folded, its Today/Week/Season pills (`hidden
- * lg:flex`) and the calendar menu they fold into (`lg:hidden`) swapping
- * together at `lg`. Every one of those transitions was unphotographed, so a
- * regression there reached a shop before it reached CI.
- *
- * Portrait rather than landscape because portrait is the harder layout and the
- * posture a stand holds. A crew member holding a phone sideways at the rail is
- * a real posture too; it is not photographed here, and should not be until
- * something other than a hunch says it needs to be.
- */
-/** The phone of `VIEWPORTS`, named — the fold is a phone behaviour and shoots there alone. */
-export const PHONE_VIEWPORT = VIEWPORTS[0];
-
-/**
- * **Dark mode is photographed at the desktop width only** (owner decision 1 of
- * the 2026-10-14 test review; ADR 20260729-reg-suit-visual-regression,
- * amendment 2026-10-15). Light keeps every width. The two schemes share one
- * layout and differ only in tokens, so a dark capture at a second width mostly
- * re-photographed the light one's geometry: about 300 of the suite's 1,220
- * images, a quarter of its capture minutes and of every UI pull request's
- * review. The price is a dark-only bug that shows at phone width alone.
- */
-const DARK_VIEWPORTS = [VIEWPORTS[1]] as const;
-
-/** The widths a capture in `scheme` is shot at, before any per-surface extra. */
-function schemeViewports(scheme: "light" | "dark") {
-  return scheme === "dark" ? DARK_VIEWPORTS : VIEWPORTS;
-}
 
 const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
 
@@ -1626,6 +1580,8 @@ export async function capture(
     locale?: typeof SPANISH;
     /** One-off audit of actual SSR fallbacks with application JavaScript off. */
     initialPaint?: true;
+    /** Explicit acceptance coverage at phone width in dark, leaving the default matrix unchanged. */
+    darkPhone?: true;
     /**
      * Run after each width is set and before it is shot, for a mark that does
      * not survive a resize: a focus ring on a field that a narrower width
@@ -1725,11 +1681,11 @@ export async function capture(
   // rather than inheriting a third width: those sets are about the *device* a
   // surface runs on, and a second language has nothing new to say at 820px
   // that it does not say louder at 390.
-  // Dark takes the desktop width alone, tablet included (`DARK_VIEWPORTS`).
-  const viewports =
-    scheme === "dark"
-      ? [...DARK_VIEWPORTS]
-      : [...VIEWPORTS, ...(TABLET_SURFACES.has(baseline) ? [TABLET_VIEWPORT] : [])];
+  // Dark takes desktop alone unless this capture explicitly needs dark phone acceptance.
+  const viewports = [
+    ...schemeViewports(scheme, options.darkPhone),
+    ...(scheme === "light" && TABLET_SURFACES.has(baseline) ? [TABLET_VIEWPORT] : []),
+  ];
   // Light only: geometry does not change with the scheme, and checking one
   // scheme is the owner's standing rule for anything that is not colour work.
   // The import happens here, inside the flag, so an unset flag loads nothing.
