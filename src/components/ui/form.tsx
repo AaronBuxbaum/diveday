@@ -888,13 +888,13 @@ export function ChoicePill({
   className = "",
   children,
   ...input
-}: ChoiceProps & { size?: "sm" | "md"; aside?: ReactNode }) {
-  const pill = `rounded-lg border border-border bg-surface transition-colors ${CHOICE_PILL_HOVER} ${CHOICE_PILL_CHOSEN} ${size === "md" ? "text-base" : "text-sm"}`;
+}: ChoiceProps & { size?: "sm" | "md" | "field"; aside?: ReactNode }) {
+  const pill = `rounded-lg border ${size === "field" ? "min-h-12 border-border-strong" : "min-h-11 border-border"} bg-surface transition-colors ${CHOICE_PILL_HOVER} ${CHOICE_PILL_CHOSEN} ${size === "sm" ? "text-sm" : "text-base"}`;
   const row = "grid cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-2 py-2";
   const ring = type === "radio" ? ` ${radioRingClass}` : "";
   if (aside === undefined || aside === null || aside === false) {
     return (
-      <label className={`${row} min-h-11 ${pill}${ring} px-4 ${className}`.trim()}>
+      <label className={`${row} ${pill}${ring} px-4 ${className}`.trim()}>
         <span className={CHOICE_BOX_LINE}>
           <input type={type} {...input} className={boxClass(type)} />
         </span>
@@ -914,7 +914,7 @@ export function ChoicePill({
   // and bottom makes its border box the pill's full 44px. Not across the start
   // border: that would move the box 1px off the plain pills' column.
   return (
-    <div className={`flex min-h-11 items-center gap-2 ${pill}${ring} pe-4 ${className}`.trim()}>
+    <div className={`flex items-center gap-2 ${pill}${ring} pe-4 ${className}`.trim()}>
       <label className={`${row} -my-px flex-1 self-stretch ps-4`}>
         <span className={CHOICE_BOX_LINE}>
           <input type={type} {...input} className={boxClass(type)} />

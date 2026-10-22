@@ -872,13 +872,14 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
  * This used to skip every path ending `.svg`/`.png`/`.jpg`/`.ico`, which took
  * `/product/kiosk.png`, `/switching/eve.png` and `/s/<shop>/trips/x.jpg` past
  * `publicRouteShape` and served each as a soft 404. So the exclusions name the
- * places static images live — `public/dive-sites/`, `public/marine-life/`, the
+ * places static images live — `public/dive-sites/`, `public/marine-life/`,
+ * the demo shop's logo in `public/demo-shop/`, the
  * two PWA icons and the app's own `icon.png`/`apple-icon.png` — and
  * `src/app/edge-refusal-coverage.test.ts` walks `public/` to keep this list
  * honest in both directions. Next reads this statically: it stays a literal.
  */
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon\\.ico$|icon\\.png$|apple-icon\\.png$|icon-192\\.png$|icon-512\\.png$|dive-sites/|marine-life/).*)",
+    "/((?!api|_next/static|_next/image|favicon\\.ico$|icon\\.png$|apple-icon\\.png$|icon-192\\.png$|icon-512\\.png$|dive-sites/|marine-life/|demo-shop/).*)",
   ],
 };
