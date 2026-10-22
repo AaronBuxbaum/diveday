@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { PRIMARY_REGION } from "../config/aws-regions.mjs";
-import { ENV_KEYS, isManual, isStackProduced } from "../config/env-registry.mjs";
+import { duplicateKeys, ENV_KEYS, isManual, isStackProduced } from "../config/env-registry.mjs";
 
 const temporaryDirectories = [];
 
@@ -204,6 +204,25 @@ describe("the registry every one of those files reads", () => {
     for (const key of ENV_KEYS) {
       expect(isManual(key) && isStackProduced(key)).toBe(false);
     }
+  });
+
+  it("registers each key once", () => {
+    // A key in two rows is written twice to every target, and the Vercel upload
+    // refuses a file that repeats a key (scripts/import-vercel-env.mjs).
+    expect(duplicateKeys()).toEqual([]);
+    expect(duplicateKeys(["A", "B", "A", "C", "A"])).toEqual(["A"]);
+  });
+
+  it("writes each key once to .env.vercel", () => {
+    const cwd = workspace();
+    writeFileSync(join(cwd, ".env.manual"), "ANTHROPIC_API_KEY=sk-ant-test\n");
+    const { status, output } = distribute("vercel", cwd, source);
+    expect(status).toBe(0);
+    const keys = output
+      .split("\n")
+      .flatMap((line) => line.match(/^([A-Z][A-Z0-9_]*)=/)?.slice(1) ?? []);
+    expect(keys).toContain("ANTHROPIC_API_KEY");
+    expect(duplicateKeys(keys)).toEqual([]);
   });
 
   it("declares every value the CDK stack writes", async () => {
