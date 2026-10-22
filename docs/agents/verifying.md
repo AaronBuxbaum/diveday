@@ -292,6 +292,28 @@ find out, never to walk away. A pull request left red with nobody working it is 
 rule must not become — see AGENTS.md's rules on visual diffs and review threads, which apply from
 the moment it is open.
 
+### The fast lane: an early browser answer
+
+On a pull request, CI's `Fast lane` job starts when the build's artifact exists and runs, on one
+runner, what is most likely to be red: the spec files and capture titles the branch's latest
+finished red CI run named (`scripts/own-ci.mjs`, the reading `verify:push` replays), then the
+`strong` tier of `scripts/e2e-affected.mjs` against the pull request's base, capped at about four
+recorded CI-minutes (`scripts/fast-lane.mjs`; its job summary names both lists and what the cap
+left out). It reports under its own check in a few minutes rather than the ~22 a full run took
+(2026-10-22). It decides nothing: `continue-on-error` keeps it from failing the run, and the
+Playwright and visual capture shards run every one of its tests again and still decide green. A
+red `Fast lane` is the same failure the shards will report; start on it without waiting for them.
+
+### The weekly CI health check
+
+`.github/workflows/ci-health.yml` runs `node scripts/ci-health.mjs` every Monday over the pull
+requests merged or updated in the last seven days, and writes to its job summary: red CI runs per
+pull request, the share green on their first run, the repeat-red rate (of the pushes that
+followed a red run, how many were red again on a test that run had named), the median and p90 CI
+run, and the failing jobs ranked. A week over 1.0 red runs per pull request or 25% repeat red
+opens one `needs-triage` issue, or comments the week on the one already open. Run it by hand the
+same way (`--days <n>`; add `--file-issue --dry-run` to see what it would file).
+
 ## Neither: the tracker scan
 
 `pnpm check:follow-ups` reads the live issue tracker, not your branch, so no pull request runs it:

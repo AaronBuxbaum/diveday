@@ -592,6 +592,103 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  # An early browser answer on a pull request, not a gate (2026-10-22 CI
+  # review). The first browser verdict used to arrive with the full shards:
+  # the build, then ~10 minutes a Playwright shard and ~10 a visual capture
+  # shard, ~22 minutes for the median run and 37 at p90. Yet the specs most
+  # likely to be red were known before any shard started. Of the 18 pushes
+  # that followed a red run and came back red, 14 were red again on a test
+  # that run had already named; and a spec the diff edits, or one quoting text
+  # it removed, is the `strong` tier `scripts/e2e-affected.mjs` already names
+  # for `verify:push`.
+  #
+  # So on one runner, once the build's artifact exists, `scripts/fast-lane.mjs`
+  # picks two short lists: the spec files and capture titles the branch's
+  # latest finished red CI run named (`scripts/own-ci.mjs`, the reading
+  # `verify:push` replays), and the strong specs against the pull request's
+  # base, capped at about four recorded CI-minutes (`scripts/e2e-durations.json`).
+  # The job summary names both lists and what the cap left to the shards.
+  #
+  # It decides nothing. `continue-on-error` keeps a red fast lane from failing
+  # the run, so `needs.fast-lane.result` reads success for `ci-result` below
+  # (which lists every job, scripts/ci-result-job.test.mjs) and the six
+  # Playwright shards and the capture shards, which run every one of these
+  # tests again, still decide green. Its own check, "Fast lane", is the early
+  # red. Pull requests only: main runs every shard anyway and has no previous
+  # red run to replay. It costs one runner against the twenty-concurrent-job
+  # cap, and nothing at all when both lists are empty: the plan step runs
+  # before the build download, and every later step is skipped.
+  #
+  # Workers follow the shards they shadow: the specs at the Playwright job's
+  # default two, the captures at the visual job's `E2E_WORKERS=1`.
+  fast-lane:
+    name: Fast lane
+    needs: [build, changes]
+    if: github.event_name == 'pull_request'
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # Reading the branch's previous run, its jobs and their annotations.
+      actions: read
+      checks: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The fork point from the base branch is in history, not in a
+          # depth-1 checkout.
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      # The base by *ref*, never `base.sha`, for the reason the `changes` job
+      # gives (issue #1295). A base or a CI history it cannot read leaves that
+      # list empty; the script never fails the step on missing evidence.
+      - name: Choose the fast lane
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          REPO: ${{ github.repository }}
+        run: |
+          git fetch --no-tags origin "${BASE_REF}" > /dev/null 2>&1 || true
+          node scripts/fast-lane.mjs --base "origin/${BASE_REF}" --branch "${HEAD_REF}" --repo "${REPO}" --out fast-lane --summary "$GITHUB_STEP_SUMMARY" --github-output
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: steps.plan.outputs.run == 'true'
+        with:
+          name: next-build
+          path: .next
+      # The generated service worker, as in the playwright job above.
+      - if: steps.plan.outputs.run == 'true'
+        run: pnpm build:sw
+      - if: steps.plan.outputs.run == 'true'
+        uses: ./.github/actions/playwright-shell
+      - name: Run the fast lane's specs
+        if: steps.plan.outputs.specs == 'true'
+        run: |
+          set -o pipefail
+          mapfile -t spec_files < fast-lane/specs.txt
+          # The cert-check extension spec needs the full Chromium (the
+          # playwright job above says why).
+          if printf '%s\n' "${spec_files[@]}" | grep -q '^e2e/agency-check-extension.spec.ts'; then
+            pnpm exec playwright install chromium
+          fi
+          pnpm exec playwright test "${spec_files[@]}"
+      - name: Run the fast lane's captures
+        if: ${{ !cancelled() && steps.plan.outputs.captures == 'true' }}
+        run: |
+          set -o pipefail
+          pnpm exec playwright test e2e/visual -g "$(cat fast-lane/grep.txt)"
+        env:
+          E2E_WORKERS: "1"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-report-fast-lane
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
   # Which captures this run takes, and on how many shards (code re-review
   # 2026-10-13, item 22). A green pull request run was 47% visual capture by
   # job-minutes, and a stack re-captured all 1,158 surfaces on every layer. So:
@@ -1444,6 +1541,7 @@ jobs:
       - unit-tests-docs
       - build
       - playwright
+      - fast-lane
       - visual-plan
       - visual
       - visual-report
