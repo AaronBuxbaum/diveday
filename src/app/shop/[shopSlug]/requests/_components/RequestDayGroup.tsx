@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RequestAdvice } from "@/lib/request-advisor";
@@ -111,7 +111,10 @@ export function RequestDayGroup({
           // control (`schedule.builder.addDeparture`): one act, one name,
           // wherever a staffer meets it. The `+` is aria-hidden decoration —
           // it never enters a translated string.
-          <Link href={add.href} className={buttonClass({ variant: "secondary", size: "sm" })}>
+          <Link
+            href={add.href}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
             {add.label}
           </Link>
         ) : null}
@@ -122,13 +125,19 @@ export function RequestDayGroup({
       {advice.length > 0 ? (
         <p
           className={`mt-2 text-sm text-muted tabular-nums ${
-            advice.some((line) => line.tone === "warning") ? "" : "max-sm:hidden"
+            advice.some((line) => line.tone === "warning")
+              ? ""
+              : "max-sm:hidden"
           }`}
         >
           {advice.map((line, index) => (
             <Fragment key={line.text}>
               {index > 0 ? " · " : null}
-              <span className={line.tone === "warning" ? "text-warning-strong" : undefined}>
+              <span
+                className={
+                  line.tone === "warning" ? "text-warning-strong" : undefined
+                }
+              >
                 {line.text}
               </span>
             </Fragment>
@@ -139,7 +148,10 @@ export function RequestDayGroup({
         <ul className="mt-2 text-sm tabular-nums">
           {onBoard.map((departure) => (
             <li key={departure.href}>
-              <Link href={departure.href} className="underline underline-offset-2">
+              <Link
+                href={departure.href}
+                className={`${tapTargetLinkClass} underline underline-offset-2`}
+              >
                 {departure.label}
               </Link>
             </li>
