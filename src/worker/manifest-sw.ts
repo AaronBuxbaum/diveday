@@ -207,11 +207,13 @@ self.addEventListener("message", (event) => {
     // that asked (its own path), and only a readiness link.
     const port = event.ports[0];
     const source = event.source as Client | null;
-    const sourcePath = source?.url ? new URL(source.url).pathname : null;
-    const path = sourcePath
-      ? readyPagePath(new URL(sourcePath, self.location.origin), self.location.origin)
+    const sourceUrl = source?.url ? new URL(source.url) : null;
+    const path = sourceUrl
+      ? readyPagePath(new URL(sourceUrl.pathname, self.location.origin), self.location.origin)
       : null;
-    if (!inReadyScope() || !path) {
+    // A `?cancelled=` landing forgets the copy on its way in (below); its own
+    // keep request must not put it back.
+    if (!inReadyScope() || !path || sourceUrl?.searchParams.has("cancelled")) {
       port?.postMessage({ ok: false });
       return;
     }

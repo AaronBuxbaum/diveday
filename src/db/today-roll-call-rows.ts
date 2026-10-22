@@ -10,7 +10,7 @@ import {
 } from "@/i18n/today-labels";
 import { formatDateTimeTz } from "@/lib/format";
 import {
-  collapseDiverActions,
+  blockedDiverActions,
   crewClashPhase,
   departureClockOrder,
   ROLL_CALL_GAP_KINDS,
@@ -50,10 +50,10 @@ export function pushRollCallRows(actions: TodayAction[], ctx: TodayRowsContext):
         aboard: true,
       }));
     // A diver whose only open blocker is money keeps no row here: that is the
-    // one blocker that changes nothing in the water, and `collapseDiverActions`
+    // one blocker that changes nothing in the water, and `blockedDiverActions`
     // would file it as an ordinary payment row for a boat nobody can reach.
     actions.push(
-      ...collapseDiverActions(aboard, shopSlug, now, t).filter(
+      ...blockedDiverActions(aboard, shopSlug, now, t).filter(
         (action) => action.kind === "blocked_aboard",
       ),
     );
