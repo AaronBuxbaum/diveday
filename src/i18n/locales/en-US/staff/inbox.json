@@ -96,7 +96,7 @@
   "replyNotes": {
     "heading": "Notes for Claude",
     "label": "What should a reply draft know?",
-    "hint": "Parking, rentals, what to bring. Claude reads these with your schedule, prices and desk hours when it drafts a reply on a diver’s record. Nothing goes out until someone sends it.",
+    "hint": "Parking, rentals, what to bring. Claude reads these with your schedule, prices and desk hours when it drafts a reply on a diver’s record. Leave out divers’ names and numbers. Nothing goes out until someone sends it.",
     "placeholder": "Park behind the shop by the tank racks. The gate opens at 7:15.",
     "off": "Claude suggestions are off for this shop.",
     "turnOn": "Turn them on in Settings",

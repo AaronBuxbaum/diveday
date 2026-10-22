@@ -96,7 +96,7 @@
   "replyNotes": {
     "heading": "Notas para Claude",
     "label": "¿Qué debe saber un borrador de respuesta?",
-    "hint": "Estacionamiento, alquiler, qué traer. Claude las lee junto con tu calendario, precios y horario del mostrador cuando redacta una respuesta en la ficha de un buceador. Nada sale hasta que alguien lo envía.",
+    "hint": "Estacionamiento, alquiler, qué traer. Claude las lee junto con tu calendario, precios y horario del mostrador cuando redacta una respuesta en la ficha de un buceador. No incluyas nombres ni números de buceadores. Nada sale hasta que alguien lo envía.",
     "placeholder": "Estaciona detrás del centro, junto a los tanques. El portón abre a las 7:15.",
     "off": "Las sugerencias de Claude están desactivadas en este centro.",
     "turnOn": "Actívalas en Ajustes",
