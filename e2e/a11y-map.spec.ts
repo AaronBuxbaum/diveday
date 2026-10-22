@@ -193,8 +193,10 @@ test("an intrinsically undersized geographic pin still fails target-size", async
   await openLibraryMap(page);
   await overlapNativePinPair(page);
   const pair = page.locator(".leaflet-site-marker button");
-  // Shrink both real targets: a 44px neighbor moves its center far enough
-  // away that axe can correctly accept a lone 16px target via spacing.
+  // Keep two genuinely small targets close together, including their glyphs.
+  // axe marks an undersized target with overflowing content as incomplete,
+  // so shrinking only the button while retaining its 20px SVG tests that
+  // separate ambiguity instead of an intrinsically small reachable target.
   await pair.evaluateAll((buttons) => {
     for (const [index, button] of buttons.slice(0, 2).entries()) {
       if (!(button instanceof HTMLElement)) throw new Error("Site target did not mount");
@@ -205,6 +207,9 @@ test("an intrinsically undersized geographic pin still fails target-size", async
         minWidth: "16px",
         minHeight: "16px",
       });
+      const glyph = button.querySelector("svg");
+      if (!glyph) throw new Error("Site glyph did not mount");
+      Object.assign(glyph.style, { width: "12px", height: "12px" });
     }
   });
   const pin = page.locator("#tiny-pin-target");
@@ -224,5 +229,32 @@ test("an intrinsically undersized geographic pin still fails target-size", async
       targetBox.y + targetBox.height / 2 - neighborBox.y - neighborBox.height / 2,
     ),
   ).toBeLessThan(24);
+  for (const target of [pin, neighbor]) {
+    expect(
+      await target.evaluate((button) => {
+        const bounds = button.getBoundingClientRect();
+        return [...button.querySelectorAll("svg, svg *")].every((glyph) => {
+          const content = glyph.getBoundingClientRect();
+          return (
+            content.left >= bounds.left &&
+            content.top >= bounds.top &&
+            content.right <= bounds.right &&
+            content.bottom <= bounds.bottom
+          );
+        });
+      }),
+    ).toBe(true);
+  }
+  await pin.focus();
+  await expect(pin).toBeFocused();
+  const raw = await new AxeBuilder({ page }).withRules(["target-size"]).analyze();
+  expect(
+    raw.violations.some(
+      (violation) =>
+        violation.id === "target-size" &&
+        violation.nodes.some((node) => node.target.includes("#tiny-pin-target")),
+    ),
+    JSON.stringify({ violations: raw.violations, incomplete: raw.incomplete }, null, 2),
+  ).toBe(true);
   await expect(expectNoA11yViolations(page)).rejects.toThrow("tiny-pin-target");
 });
