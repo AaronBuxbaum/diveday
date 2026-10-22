@@ -96,12 +96,13 @@ describe("founderDigestEmail (ADR 20261007-founder-metrics)", () => {
     });
     expect(email.text).toContain("Bounced or complained email: 3");
     expect(email.text).toContain(
-      "2026-10-07 14:03 UTC: nora@example.com, Permanent / General, 550 5.1.1. waiver_request, Reef & Wreck (/shop/reef-wreck), sent by Sam Rivera",
+      "2026-10-07 14:03 UTC: no***@example.com, Permanent / General, 550 5.1.1. waiver_request, Reef & Wreck (/shop/reef-wreck), sent by Sam Rivera",
     );
     expect(email.text).toContain(
-      "ida@example.com, complaint (abuse). address_confirmation (account), no shop, sent automatically",
+      "id***@example.com, complaint (abuse). address_confirmation (account), no shop, sent automatically",
     );
     expect(email.text).toContain("and 1 more; read email_bounces");
+    expect(email.text).not.toContain("nora@");
   });
 
   it("names set-up requests whose mail never reached the inbox", () => {

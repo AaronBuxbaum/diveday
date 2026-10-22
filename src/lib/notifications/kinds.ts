@@ -1021,7 +1021,7 @@ const founderDigestSchema = z.object({
     .max(500),
   /**
    * Last week's bounces and complaints (`email_bounces`), newest first: the
-   * address, why, which email, the shop and who sent it. `total` counts them
+   * address (masked when rendered), why, which email, the shop and who sent it. `total` counts them
    * all; `lines` is the first fifty.
    */
   bounces: z.object({

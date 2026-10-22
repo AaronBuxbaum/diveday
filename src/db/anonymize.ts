@@ -1075,6 +1075,17 @@ async function scrubDiverLogin(
           ...new Set([account.id, account.email, ctx.email].filter((value) => value !== null)),
         ]),
       );
+    // Mail to the login address bounces into `email_bounces` too, and that
+    // address can differ from `people.email` (the address sweep in
+    // `scrubPiiBlob` covers that one). This shop's rows only, as there.
+    await tx
+      .delete(emailBounces)
+      .where(
+        and(
+          eq(emailBounces.shopId, ctx.shopId),
+          sql`lower(${emailBounces.recipient}) = ${account.email.toLowerCase()}`,
+        ),
+      );
     // Revoke any session issued before this instant — status alone
     // (`disabled` below) is not read by the session lookup itself, so a
     // live sign-in would otherwise keep working until it naturally expires.

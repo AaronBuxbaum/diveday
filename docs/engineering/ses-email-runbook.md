@@ -521,8 +521,9 @@ member's action sent it. `diveday_sender` is the signed-in staff member at the m
 (`currentSendActor`, `src/lib/notifications/send-actor.ts`) when the mail is for that staff member's
 own shop, carried into a queued retry, and absent on mail nobody pressed a button for. Each also logs `ses_webhook.bounce_recorded` with the
 same facts and the recipient's domain, never the address. The founder's Monday digest lists last
-week's rows, newest first. Rows are kept 90 days (`RETENTION_DAYS.email_bounces`) and an erasure
-deletes a diver's rows for that shop by address. A report that arrives after the erasure is kept
+week's rows, newest first, with each address masked (`no***@example.com`): a mailbox outlives the
+retention window and any erasure, so the full address is read from the table. Rows are kept 90 days (`RETENTION_DAYS.email_bounces`) and an erasure
+deletes a diver's rows for that shop by their address and their login address. A report that arrives after the erasure is kept
 until the 90 days run out.
 
 This is the place to look when the console shows a bounce rate but the suppression list is empty:

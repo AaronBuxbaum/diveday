@@ -120,9 +120,25 @@ export async function listEmailBounces(
     .limit(limit);
   return {
     total,
+    // Cut to the digest schema's caps: SES writes these, and one long value
+    // must not cost the founder the whole Monday mail.
     lines: rows.map((row) => ({
-      ...row,
+      occurredAt: row.occurredAt,
       event: row.event === "complaint" ? "complaint" : "bounce",
+      recipient: row.recipient.slice(0, 320),
+      bounceType: cut(row.bounceType, 120),
+      bounceSubType: cut(row.bounceSubType, 120),
+      smtpStatus: cut(row.smtpStatus, 40),
+      complaintType: cut(row.complaintType, 120),
+      kind: cut(row.kind, 120),
+      purpose: cut(row.purpose, 120),
+      shopName: cut(row.shopName, 120),
+      shopSlug: cut(row.shopSlug, 120),
+      sentByName: cut(row.sentByName, 200),
     })),
   };
+}
+
+function cut(value: string | null, max: number): string | null {
+  return value === null ? null : value.slice(0, max);
 }

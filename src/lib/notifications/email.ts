@@ -1385,8 +1385,8 @@ type FounderDigestEmailInput = {
 };
 
 /**
- * One bounce as the founder reads it: when (UTC), the address, why, which
- * email, the shop, who sent it.
+ * One bounce as the founder reads it: when (UTC), the masked address, why,
+ * which email, the shop, who sent it.
  */
 function bounceLine(line: FounderDigestEmailInput["bounces"]["lines"][number]): string {
   const why =
@@ -1404,7 +1404,18 @@ function bounceLine(line: FounderDigestEmailInput["bounces"]["lines"][number]): 
   const shop = line.shopName ? `${line.shopName} (/shop/${line.shopSlug})` : "no shop";
   const by = line.sentByName ? `sent by ${line.sentByName}` : "sent automatically";
   const at = `${line.occurredAt.toISOString().slice(0, 16).replace("T", " ")} UTC`;
-  return `${at}: ${line.recipient}, ${why}. ${email}, ${shop}, ${by}`;
+  return `${at}: ${maskedAddress(line.recipient)}, ${why}. ${email}, ${shop}, ${by}`;
+}
+
+/**
+ * `no***@example.com`: enough to recognize a typo'd domain or a pattern, not
+ * the address itself. A mailbox outlives the table's 90 days and any erasure,
+ * so the full address stays in `email_bounces`, where both reach it.
+ */
+export function maskedAddress(address: string): string {
+  const at = address.lastIndexOf("@");
+  if (at <= 0) return "***";
+  return `${address.slice(0, Math.min(2, at))}***${address.slice(at)}`;
 }
 
 /** Each activation step as the founder reads it. */
