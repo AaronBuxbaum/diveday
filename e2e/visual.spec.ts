@@ -8191,20 +8191,22 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        // The existing recap fixture issues a real shop AOW card. Its frozen
-        // issue date predates the processing cut, and the diver has not taken
-        // the next course, so both of the follow-up disclosures are populated.
+        // The existing recap fixture issues a real shop AOW card, and the
+        // diver has not taken the next course, so the ladder's follow-up
+        // disclosure is populated. The fleet's frozen July clock is before the
+        // card-processing stamp's migration, so no card is set apart as
+        // "certified before" it (`cardProcessingSince`, PR #2918 item 1d):
+        // that disclosure is absent here, and its grammar is held by
+        // CardsToProcess.test.tsx under a clock past the cut.
         const seeded = await request.post("/api/test/seed-certified-recap");
         expect(seeded.ok(), await seeded.text()).toBe(true);
         await page.goto("/shop/blue-mantis/courses");
-        const earlier = page.locator("#cards-to-process-earlier > summary");
-        await earlier.waitFor();
         // The first ladder row: the demo now seeds two shop-certified cards
         // of its own (H-148), so "See who" is on more than one step.
         const people = page.getByText("See who", { exact: true }).first();
         await people.waitFor();
+        await expect(page.locator("#cards-to-process-earlier")).toHaveCount(0);
         await capture(page, "course-follow-ups-closed", scheme);
-        await earlier.click();
         await people.click();
         await capture(page, "course-follow-ups-open", scheme);
       });

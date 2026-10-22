@@ -3,10 +3,10 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import {
-  CARD_PROCESSING_SINCE,
   type CardToProcess,
   type CardWhat,
   cardIsLate,
+  cardProcessingSince,
   splitCardsToProcess,
 } from "@/db/agency-processing";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
@@ -44,7 +44,8 @@ export function CardsToProcess({
   t: StaffTranslator;
 }) {
   if (cards.length === 0) return null;
-  const { current, earlier } = splitCardsToProcess(cards);
+  const { current, earlier } = splitCardsToProcess(cards, now);
+  const since = cardProcessingSince(now);
   const byAgency = new Map<CardToProcess["agency"], CardToProcess[]>();
   for (const card of current) {
     byAgency.set(card.agency, [...(byAgency.get(card.agency) ?? []), card]);
@@ -108,12 +109,12 @@ export function CardsToProcess({
           </ul>
         </div>
       ))}
-      {earlier.length > 0 ? (
+      {since && earlier.length > 0 ? (
         <CompactDisclosureRow
           id="cards-to-process-earlier"
           label={t("courses.processing.earlier", {
             count: earlier.length,
-            date: formatShortDate(CARD_PROCESSING_SINCE, locale, timeZone),
+            date: formatShortDate(since, locale, timeZone),
           })}
           bodyClassName="mt-2"
         >

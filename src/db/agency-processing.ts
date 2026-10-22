@@ -274,9 +274,21 @@ export async function listCardsToProcess(db: DbExecutor, shopId: string): Promis
  */
 export const CARD_PROCESSING_SINCE = new Date("2026-10-16T23:42:42Z");
 
-/** Whether a card was issued before {@link CARD_PROCESSING_SINCE}. */
-export function cardPredatesProcessing(issuedAt: Date): boolean {
-  return issuedAt.getTime() < CARD_PROCESSING_SINCE.getTime();
+/**
+ * The cut, read against the clock (visual triage of PR #2918, item 1d): the
+ * migration instant once the clock has passed it, and none under a clock from
+ * before it. Such a clock is a fixture's (the e2e fleet freezes Jul 21) whose
+ * database already has the stamp, so every card's wait is known; a cut ahead
+ * of the clock named a day nobody had reached ("certified before Fri, Oct 16").
+ */
+export function cardProcessingSince(now: Date): Date | null {
+  return now.getTime() >= CARD_PROCESSING_SINCE.getTime() ? CARD_PROCESSING_SINCE : null;
+}
+
+/** Whether a card was issued before the cut {@link cardProcessingSince} reads at `now`. */
+export function cardPredatesProcessing(issuedAt: Date, now: Date): boolean {
+  const since = cardProcessingSince(now);
+  return since !== null && issuedAt.getTime() < since.getTime();
 }
 
 /**
@@ -284,16 +296,19 @@ export function cardPredatesProcessing(issuedAt: Date): boolean {
  * from before the stamp existed is never late: its wait is not known.
  */
 export function cardIsLate(issuedAt: Date, now: Date): boolean {
-  if (cardPredatesProcessing(issuedAt)) return false;
+  if (cardPredatesProcessing(issuedAt, now)) return false;
   return now.getTime() - issuedAt.getTime() > CARD_TO_PROCESS_LATE_DAYS * DAY_MS;
 }
 
-/** The list split at {@link CARD_PROCESSING_SINCE}, each part still oldest first. */
+/** The list split at {@link cardProcessingSince}, each part still oldest first. */
 export function splitCardsToProcess<T extends { issuedAt: Date }>(
   cards: readonly T[],
+  now: Date,
 ): { current: T[]; earlier: T[] } {
   const current: T[] = [];
   const earlier: T[] = [];
-  for (const card of cards) (cardPredatesProcessing(card.issuedAt) ? earlier : current).push(card);
+  for (const card of cards) {
+    (cardPredatesProcessing(card.issuedAt, now) ? earlier : current).push(card);
+  }
   return { current, earlier };
 }
