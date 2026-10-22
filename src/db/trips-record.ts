@@ -27,6 +27,12 @@ import {
 } from "@/lib/trip-change-events";
 import type { TripDiveMode } from "@/lib/trip-details";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
+import { hasSailed } from "@/lib/trips";
+import {
+  captureDepartureBoatSafety,
+  departureBoatSafetySnapshot,
+  rebindDepartureBoatSafetyTime,
+} from "./boat-safety";
 import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewCalledOff, recordCrewTimeMoved } from "./crew-notices";
@@ -568,6 +574,7 @@ export async function updateTrip(
         // is fixed at creation and `UpdateTripPatch` carries no `courseId`, so
         // the row's own value is the only place to learn it.
         courseId: trips.courseId,
+        boatId: trips.boatId,
         // Both read for the revision rule below (issue #1165): the two facts a
         // calendar client re-alerts on are when the boat leaves and where it
         // goes, so both have to be compared against what the patch asks for.
@@ -626,13 +633,15 @@ export async function updateTrip(
     // cross-tenant door `createTrip` closes (issue #679, PR #709). Written
     // here rather than imported because that PR is still open; once it lands
     // this is `validateBoat(tx, shopId, patch.boatId)` and the query goes.
+    let replacementBoatName: string | null = null;
     if (patch.boatId !== undefined && patch.boatId !== null) {
       const [hull] = await tx
-        .select({ id: boats.id })
+        .select({ id: boats.id, name: boats.name })
         .from(boats)
         .where(and(eq(boats.shopId, shopId), eq(boats.id, patch.boatId), isNull(boats.deletedAt)))
         .limit(1);
       if (!hull) return { ok: false, reason: "boat_not_found" };
+      replacementBoatName = hull.name;
     }
     const changedAt = nowDate();
     const beforeArrival = tripArrivalSnapshot(existing);
@@ -741,6 +750,48 @@ export async function updateTrip(
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
     if (!trip) return { ok: false, reason: "not_found" };
+    if (startMoved) {
+      await rebindDepartureBoatSafetyTime(
+        tx,
+        shopId,
+        tripId,
+        existing.startsAt,
+        trip.startsAt,
+        changedAt,
+      );
+    }
+    // The existing snapshot is mutable until sailing. Keep the replacement
+    // hull under the same trip lock as the swap, without deleting evidence.
+    // Clearing the boat retains its named record; the log labels the mismatch.
+    if (patch.boatId !== undefined && patch.boatId !== existing.boatId) {
+      const kept = await departureBoatSafetySnapshot(tx, shopId, tripId);
+      let snapshot: "refreshed" | "kept" | "none" = kept ? "kept" : "none";
+      if (kept && patch.boatId !== null && !hasSailed(existing.startsAt, changedAt)) {
+        const captured = await captureDepartureBoatSafety(tx, shopId, tripId, changedAt);
+        if (captured === "captured") snapshot = "refreshed";
+      }
+      if (patch.changeActorPersonId) {
+        // Historical identity, including a hull the center has since deleted.
+        const [previousBoat] = existing.boatId
+          ? await tx
+              .select({ name: boats.name })
+              .from(boats)
+              .where(and(eq(boats.shopId, shopId), eq(boats.id, existing.boatId)))
+              .limit(1)
+          : [];
+        await recordShopActivityWithin(tx, {
+          shopId,
+          actorPersonId: patch.changeActorPersonId,
+          write: {
+            code: "departure_boat_changed",
+            tripId,
+            fromBoat: previousBoat?.name ?? null,
+            toBoat: replacementBoatName,
+            snapshot,
+          },
+        });
+      }
+    }
     if (drafts) await replaceTripDives(tx, tripId, drafts);
     let scheduleDaysMoved = false;
     if (patch.scheduleDays) {

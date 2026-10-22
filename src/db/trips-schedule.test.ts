@@ -1,9 +1,19 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { courses, rollCallCrewEvents, tripDives, trips } from "./schema";
+import { captureDepartureBoatSafety } from "./boat-safety";
+import { createBoat } from "./boats";
+import {
+  courses,
+  departureBoatSafetySnapshots,
+  rollCallCrewEvents,
+  tripDives,
+  trips,
+} from "./schema";
 import { createTripLens, deleteTripLens } from "./trip-lenses";
 import {
   createTrip,
@@ -20,6 +30,31 @@ import {
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
+
+it("rebinds known-unsailed boat provenance when the schedule builder moves a departure", async () => {
+  const { db, shop } = ctx;
+  const boat = await createBoat(db, shop.id, "Provenance Hull", 12);
+  const startsAt = new Date(nowDate().getTime() + 3_600_000);
+  const trip = await createTrip(db, {
+    shopId: shop.id,
+    title: "Move provenance",
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+    capacity: 10,
+    boatId: boat.id,
+  });
+  if (!trip) throw new Error("trip missing");
+  expect(await captureDepartureBoatSafety(db, shop.id, trip.id)).toBe("captured");
+  const movedStart = new Date(startsAt.getTime() + 24 * 3_600_000);
+  expect((await moveTrip(db, shop.id, trip.id, movedStart)).ok).toBe(true);
+  const [row] = await db
+    .select()
+    .from(departureBoatSafetySnapshots)
+    .where(eq(departureBoatSafetySnapshots.tripId, trip.id));
+  expect(row?.departureStartsAt).toEqual(movedStart);
+  advanceClock(3 * 3_600_000);
+  expect(await captureDepartureBoatSafety(db, shop.id, trip.id)).toBe("captured");
+});
 
 describe("moveTrip / duplicateTrip across a DST transition", () => {
   // The seeded blue-mantis shop is America/New_York. Spring-forward in 2026

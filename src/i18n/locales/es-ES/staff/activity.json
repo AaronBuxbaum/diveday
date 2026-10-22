@@ -69,6 +69,7 @@
     "departure_added": "{actor} puso la salida en el calendario",
     "series_added": "{actor} puso una salida recurrente en el calendario",
     "departure_moved": "{actor} movió la salida",
+    "departure_boat_changed": "{actor} cambió la embarcación de la salida de {hasFromBoat, select, yes {{fromBoat}} other {ninguna embarcación}} a {hasToBoat, select, yes {{toBoat}} other {ninguna embarcación}}.{snapshot, select, refreshed { Registro guardado de la embarcación actualizado.} kept { Registro guardado de la embarcación sin cambios.} other {}}",
     "departure_copied": "{actor} copió una salida en esta",
     "departure_deleted": "{actor} eliminó la salida",
     "departure_retitled_by_erasure": "{actor} cambió el nombre de la salida al borrar los datos de un buceador",

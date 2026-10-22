@@ -40,6 +40,7 @@
   "headCountBlockedAboard": "{count, plural, one {# persona bloqueada a bordo} other {# personas bloqueadas a bordo}}",
   "headCountOverCertificate": "{limit, plural, one {El certificado permite # pasajero} other {El certificado permite # pasajeros}}",
   "headCountOverTotalPersons": "{limit, plural, one {El certificado permite # persona, tripulación incluida} other {El certificado permite # personas, tripulación incluida}}",
+  "headCountOverTotalPersonsAboard": "{aboard, plural, one {# persona a bordo, incluida la tripulación} other {# personas a bordo, incluida la tripulación}}; el certificado permite {limit} en total.",
   "progressAriaLabel": "Progreso del pase de lista",
   "ofTotalAboard": "de {total, plural, one {# buceador} other {# buceadores}} a bordo",
   "allAccountedFor": "Todos contabilizados, buceadores y tripulación. Listo para el siguiente control.",
@@ -163,6 +164,8 @@
     "junior_without_adult": "un junior sin adulto certificado registrado"
   },
   "buddyTeamLabel": "Pareja {number, number, ::00}",
+  "buddyTeamCaution": "Revisa la pareja: {reason}.",
+  "buddyTeamNotCleared": "La pareja incluye a un buceador sin autorización para embarcar.",
   "buddyCancelledName": "{name} (plaza cancelada)",
   "buddyCrewName": "{name} (tripulación)",
   "buddyRecordedBy": "Registrado por {name}",

@@ -786,10 +786,16 @@
   never blocks a departure (H-136). `boat_safety_expired` is the safety kit's row, not the papers'.
 - **Boat at departure** — the boat's papers and its papers-and-kit notices as they stood when the
   boat left, kept for the departure log (`departure_boat_safety_snapshots`, issue 2300). Written by
-  each departure roll-call tap, diver or crew, live or synced, as of the tap: a tap made before the
-  departure sailed keeps the boat however late it syncs, one made after keeps nothing, and an older
-  tap never overwrites a newer one. Judged on the departure's own local day; a deleted hull keeps
-  nothing. Head-count lines are left out because the roll call records them. The log says when
+  each departure roll-call tap, diver or crew, live or synced, as of the tap. The record carries its
+  scheduled departure instant. With known-unsailed provenance, a departure roll-call tap or boat
+  change can refresh the record; an unsailed reschedule rebinds that instant under the trip lock.
+  Unknown departure-time provenance keeps the existing evidence unchanged rather than guessing it
+  may be rewritten. Once the saved departure instant has sailed, a kept record is never rewritten,
+  including by a delayed offline tap; the first late sync may fill an absent record when its tap
+  was before sailing. Later time edits and hull changes cannot reopen sailed evidence. An older
+  tap never overwrites a newer record. Judged on the departure's own
+  local day; a deleted hull supplies no fresh evidence and does not remove kept history.
+  Head-count lines are left out because the roll call records them. The log says when
   nothing was kept or the departure names no boat, and when the departure has moved to another
   boat since.
 - **Safety kit** — the boat's own emergency equipment kept on the **gear register** as units:
@@ -1131,7 +1137,10 @@
   never "unaccounted for", which undersold a statement a human made. At the dock the heads-up reads
   "Buddy not aboard yet" (es "Compañero aún no a bordo"): there the crew is *assembling* a boat, so a
   teammate with no result yet is genuinely still to gather, and a teammate the crew recorded staying
-  ashore (`isRecordedAshore`) raises nothing, because that is a decision already made. The offline manifest shows teams read-only by name and states that the split-team read
+  ashore (`isRecordedAshore`) prompts the remaining team to re-pair, including when that absence is
+  carried to a later checkpoint. It is an informational heads-up, never the missing-person alarm;
+  an actual recorded non-return always takes priority. All-ashore teams have no re-pairing prompt.
+  The offline manifest shows teams read-only by name and states that the split-team read
   belongs to the live roll call — a saved snapshot cannot know who came back.
   Buddy teams are **divers only**: a snorkeler or a rider on a departure can be on no team, and a
   booking that is on one cannot be changed away from diving until it leaves the team.
@@ -1150,8 +1159,12 @@
   Ages are taken on the departure's own local date; the bands are PADI's and SSI's, kept once in
   `src/lib/age.ts` (`partyLeftReason` in `src/lib/party-teams.ts`, read against **Junior
   certification**). Only booked and checked-in diver seats that are not held count, and every line
-  on the panel and the button's number are drawn from that one plan. A team built by hand has no
-  such check.
+  on the panel and the button's number are drawn from that one plan. A team built by hand carries
+  the same age and course reason as a caution, including when crew are deliberately accompanying
+  a child or student; crew membership alone proves neither the adult's age nor a verified card.
+  A team with a diver not cleared to board also carries an informational warning from the roster's
+  readiness result, without repeating private medical details. Neither warning refuses a team,
+  changes readiness, or prevents recording what happened.
 - **Participant type** — what a booked person is doing on a departure: a **diver**, a
   **snorkeler**, or a **rider** (`bookings.participant_type`, codes in
   `src/lib/participant-types.ts`). Every booking has exactly one, and it defaults to diver. All

@@ -349,10 +349,10 @@ export async function departureKitRecord(
  * **Keep the boat's papers and kit notices as they stand at the departure
  * checkpoint** (#2300). Called after every departure-checkpoint roll-call
  * write, diver or crew, live or offline, with that tap's own `occurredAt` as
- * `asOf`: a tap made before the departure sailed (`hasSailed`) keeps the boat,
- * however late it syncs, and one made after keeps nothing. An older tap never
- * overwrites a newer one, so the log reads the boat as of the last count
- * before it left. A deleted hull keeps nothing.
+ * `asOf`. Before sailing, taps and a hull swap may refresh the record. A kept
+ * sailed record is immutable; a first late offline tap may fill an absent
+ * record only when its tap was before sailing (`hasSailed`). An older tap
+ * never overwrites a newer one. A deleted hull supplies no fresh evidence.
  *
  * Never throws. The roll call it follows is already committed, and a missing
  * snapshot is stated on the log as missing; a failure is logged, not raised
@@ -363,7 +363,7 @@ export async function captureDepartureBoatSafety(
   shopId: string,
   tripId: string,
   asOf: Date = nowDate(),
-): Promise<"captured" | "kept_newer" | "sailed" | "no_boat" | "failed"> {
+): Promise<"captured" | "kept_newer" | "kept_unknown" | "sailed" | "no_boat" | "failed"> {
   try {
     // Its own transaction (a savepoint when the caller holds one), so a failed
     // statement here never aborts the caller's.
@@ -381,15 +381,35 @@ async function captureInTransaction(
   shopId: string,
   tripId: string,
   asOf: Date,
-): Promise<"captured" | "kept_newer" | "sailed" | "no_boat"> {
+): Promise<"captured" | "kept_newer" | "kept_unknown" | "sailed" | "no_boat"> {
   const [trip] = await db
     .select({ startsAt: trips.startsAt, boatId: trips.boatId, timeZone: shops.timezone })
     .from(trips)
     .innerJoin(shops, eq(shops.id, trips.shopId))
     .where(and(eq(trips.shopId, shopId), eq(trips.id, tripId), liveTrip()))
-    .limit(1);
+    .limit(1)
+    .for("update", { of: trips });
   if (!trip?.boatId) return "no_boat";
   if (hasSailed(trip.startsAt, asOf)) return "sailed";
+  // Share updateTrip's lock: a capture cannot read hull A, wait on the
+  // snapshot, then overwrite the evidence a swap has just kept for hull B.
+  // A first late offline tap may fill an absent record, but never rewrite
+  // evidence already kept for a departure that has sailed.
+  const [kept] = await db
+    .select({ departureStartsAt: departureBoatSafetySnapshots.departureStartsAt })
+    .from(departureBoatSafetySnapshots)
+    .where(
+      and(
+        eq(departureBoatSafetySnapshots.shopId, shopId),
+        eq(departureBoatSafetySnapshots.tripId, tripId),
+      ),
+    )
+    .limit(1);
+  if (kept) {
+    if (kept.departureStartsAt === null) return "kept_unknown";
+    const now = nowDate();
+    if (hasSailed(kept.departureStartsAt, now) || hasSailed(trip.startsAt, now)) return "sailed";
+  }
   const [boat] = await db
     .select({
       ...boatPaperColumns,
@@ -432,6 +452,7 @@ async function captureInTransaction(
     boatId: boat.id,
     boatName: boat.name,
     judgedOn,
+    departureStartsAt: trip.startsAt,
     papers,
     radio,
     notices,
@@ -448,6 +469,42 @@ async function captureInTransaction(
     })
     .returning({ id: departureBoatSafetySnapshots.id });
   return written.length > 0 ? "captured" : "kept_newer";
+}
+
+/**
+ * Rebind known-unsailed safety provenance when the schedule changes. The
+ * caller owns the trip row lock and writes its new start in this transaction.
+ * Unknown provenance and already-sailed evidence remain unchanged.
+ */
+export async function rebindDepartureBoatSafetyTime(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  previousStartsAt: Date,
+  nextStartsAt: Date,
+  asOf: Date = nowDate(),
+): Promise<void> {
+  if (hasSailed(previousStartsAt, asOf)) return;
+  const [kept] = await db
+    .select({ departureStartsAt: departureBoatSafetySnapshots.departureStartsAt })
+    .from(departureBoatSafetySnapshots)
+    .where(
+      and(
+        eq(departureBoatSafetySnapshots.shopId, shopId),
+        eq(departureBoatSafetySnapshots.tripId, tripId),
+      ),
+    )
+    .limit(1);
+  if (!kept?.departureStartsAt || hasSailed(kept.departureStartsAt, asOf)) return;
+  await db
+    .update(departureBoatSafetySnapshots)
+    .set({ departureStartsAt: nextStartsAt })
+    .where(
+      and(
+        eq(departureBoatSafetySnapshots.shopId, shopId),
+        eq(departureBoatSafetySnapshots.tripId, tripId),
+      ),
+    );
 }
 
 /** The departure-checkpoint snapshot of this departure's boat, or null if none was taken. */
