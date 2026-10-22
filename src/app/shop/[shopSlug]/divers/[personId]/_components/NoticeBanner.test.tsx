@@ -63,7 +63,7 @@ describe("NoticeBanner", () => {
         locale: "en-US",
         canRaiseInvoice: false,
       })?.text,
-    ).toBe("Booked.");
+    ).toBe("Booked");
   });
 
   it("renders a known notice", () => {

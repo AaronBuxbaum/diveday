@@ -126,13 +126,13 @@ test("staff adds a walk-in diver, and keeps a private note about them", async ({
   // §7): no confirm dialog — the delete lands immediately and a toast offers
   // a one-tap undo instead.
   await page.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Private note deleted." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Private note deleted" })).toBeVisible();
   await expect(page.getByText("Add a private note").first()).toBeVisible();
   await expect(page.getByText("Needs a small wetsuit staged.")).toHaveCount(0);
 
   // Undo recreates a fresh note carrying the same text, staff-attributed.
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByRole("status")).toContainText("Private staff note added.");
+  await expect(page.getByRole("status")).toContainText("Private staff note added");
   await openPrivateNotes(page);
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
 
@@ -159,31 +159,30 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
   await openNewTripWithWalkIn(page, "Wait-list Test Trip");
 
   // Trip is now full — the same section switches to wait-listing.
-  await expect(page.getByRole("link", { name: "Add to wait list" })).toBeVisible();
-  await page.getByRole("link", { name: "Add to wait list" }).click();
+  await expect(page.getByRole("link", { name: "Add to who’s waiting" })).toBeVisible();
+  await page.getByRole("link", { name: "Add to who’s waiting" }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Waitlist Wally");
   await page.getByLabel("Email").fill(`wally-${e2eNow().getTime()}@example.com`);
-  await page.getByRole("button", { name: "Add to wait list" }).click();
+  await page.getByRole("button", { name: "Add to who’s waiting" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
-  await expect(page.getByRole("status")).toContainText("Diver added to the wait list.");
-  // The ledger's "Waiting for a seat" group (slice 5d) owns the state word.
-  await expect(page.getByRole("heading", { name: /Waiting for a seat/ })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Diver added to the wait list");
+  // The ledger's "Who wants in" panel owns the state word.
+  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
   await expect(page.getByText("Waitlist Wally")).toBeVisible();
 
-  // One-tap seat recovery: inviting the next-in-line stamps the entry so a
-  // second staffer sees it's already handled. The button opens the mail
-  // composer (mailto:) which the test can't follow, so we only assert the
-  // recorded state lands.
-  const waitRow = rosterRow(page, "Waitlist Wally");
-  await waitRow.getByRole("button", { name: /Email .* an invite/ }).click();
-  // The invite holds eight seconds with Undo first (ADR 20260906-before-you-ask,
+  // One act on who wants in: tick the diver and offer a seat, which stamps the
+  // lead so a second staffer sees it is already handled. The send may fall back
+  // to the mail composer (mailto:) which the test can't follow, so we only
+  // assert the recorded state lands.
+  await page.getByLabel("Offer Waitlist Wally a seat").check();
+  await page.getByRole("button", { name: "Offer a seat to 1" }).click();
+  // The offer holds eight seconds with Undo first (ADR 20260906-before-you-ask,
   // decision 2), so the recorded state is allowed the hold before it shows.
-  await expect(waitRow.getByText(/Invited/).filter({ visible: true })).toBeVisible({
+  await expect(page.getByText(/offered /).filter({ visible: true })).toBeVisible({
     timeout: HELD_SEND_TIMEOUT_MS,
   });
-  await expect(waitRow.getByRole("button", { name: "Re-send invite" })).toBeVisible();
 });
 
 test("staff adds a returning diver by picking them, no re-entry", async ({ page }) => {

@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import { courseInquiries, people } from "./schema";
+import { leads, people } from "./schema";
 import { at, dateAt } from "./seed-clock";
 
 /**
@@ -23,11 +23,11 @@ import { at, dateAt } from "./seed-clock";
  *   and closing that needs a human saying "this lead is that diver".
  *
  * Until this scenario existed all three states were unrepresented, which meant
- * `course_inquiries.csv` in the export bundle was a header row with nothing
+ * `leads.csv` in the export bundle was a header row with nothing
  * under it on every demo (DATA-A10).
  *
- * The rows are written directly rather than through `recordCourseInquiry`
- * (src/db/course-inquiries.ts) because that helper takes the app's `AppDb` and
+ * The rows are written directly rather than through `askForDate`
+ * (src/db/leads.ts) because that helper takes the app's `AppDb` and
  * the seed runs on a plain executor. The matching rule is reproduced here on
  * exactly one row, by looking the diver up by the address the seed itself gave
  * them — never by re-implementing the fuzzy version the helper deliberately
@@ -59,6 +59,8 @@ export async function seedCourseInquiries(
       ? [
           {
             shopId,
+            scope: "date" as const,
+            askedBy: "diver" as const,
             courseId: advancedCourseId,
             personId: regular.id,
             name: "Priya Sharma",
@@ -71,10 +73,10 @@ export async function seedCourseInquiries(
             preferredDate: dateAt(12),
             alternateDate: null,
             dateFlexible: true,
-            divers: 1,
+            partySize: 1,
             // i18n-exempt: what a diver typed into the shop's own inquiry form, stored verbatim — a fixture value, not product copy
             message: "Loved the Benwood boat. Ready for the deep dives whenever you have space.",
-            createdAt: at(-6, 19, 12),
+            askedAt: at(-6, 19, 12),
           },
         ]
       : []),
@@ -82,6 +84,8 @@ export async function seedCourseInquiries(
       ? [
           {
             shopId,
+            scope: "date" as const,
+            askedBy: "diver" as const,
             courseId: openWaterCourseId,
             personId: null,
             name: "Marisol Vega",
@@ -94,11 +98,11 @@ export async function seedCourseInquiries(
             preferredDate: dateAt(26),
             alternateDate: dateAt(33),
             dateFlexible: false,
-            divers: 2,
+            partySize: 2,
             // i18n-exempt: what a diver typed into the shop's own inquiry form, stored verbatim — a fixture value, not product copy
             message:
               "My partner and I have never dived. Is the three-day course beginner-friendly?",
-            createdAt: at(-3, 21, 41),
+            askedAt: at(-3, 21, 41),
           },
         ]
       : []),
@@ -106,6 +110,8 @@ export async function seedCourseInquiries(
       ? [
           {
             shopId,
+            scope: "date" as const,
+            askedBy: "diver" as const,
             courseId: nitroxCourseId,
             personId: null,
             // No name and no address: a phone number typed on a dock in a
@@ -115,14 +121,14 @@ export async function seedCourseInquiries(
             phone: "+1-786-555-0411",
             experienceLevel: "lapsed" as const,
             timing: null,
-            divers: null,
+            partySize: null,
             // i18n-exempt: what a diver typed into the shop's own inquiry form, stored verbatim — a fixture value, not product copy
             message: "Certified in 2014, haven't dived since. Call me?",
-            createdAt: at(-1, 8, 5),
+            askedAt: at(-1, 8, 5),
           },
         ]
       : []),
   ];
 
-  if (rows.length > 0) await db.insert(courseInquiries).values(rows);
+  if (rows.length > 0) await db.insert(leads).values(rows);
 }

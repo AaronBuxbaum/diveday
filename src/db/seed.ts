@@ -39,7 +39,6 @@ import {
   courseFormRequirements,
   courseForms,
   courseFormVersions,
-  courseInquiries,
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
@@ -60,8 +59,8 @@ import {
   integrationEvents,
   integrationOauthStates,
   internalNotes,
-  lastMinuteListEntries,
-  lastMinuteListUnsubscribeTokens,
+  leads,
+  leadUnsubscribeTokens,
   marineLifeRequests,
   mediaDeletionAttempts,
   nitroxCertifications,
@@ -102,8 +101,6 @@ import {
   tripChangeEvents,
   tripDives,
   tripHelpRequests,
-  tripInvitations,
-  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   tripRecapPhotos,
   tripRequirements,
@@ -114,7 +111,6 @@ import {
   tripSightings,
   tripStageEvents,
   trips,
-  tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
   waiverMaterialityDecisions,
@@ -209,7 +205,7 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
  * | `./seed-nitrox.ts` | EANx cards and the per-dive gas the wreck charter gates on |
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
  * | `./seed-gear.ts` | the rental fleet on the wall — tagged units, service clocks, a few reserved for the wreck trip |
- * | `./seed-course-inquiries.ts` | course leads off the public pages, in all three `person_id` states |
+ * | `./seed-course-inquiries.ts` | date leads for courses off the public pages, in all three `person_id` states |
  * | `./seed-course-materials.ts` | the links behind two courses' learning materials, and one student marked done |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-course-photos.ts` | a species photo of its own on every course, so the storefront reads as a shop and not a template |
@@ -1575,26 +1571,19 @@ export async function resetDemoSchedule(
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
-  await db.delete(tripInvitations).where(eq(tripInvitations.shopId, shopId));
-  await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
-  // References trips (last-minute-deal blasts) and people (the last-minute
-  // list itself), so both must go before the trips/people deletes below or
-  // this FK-violates and aborts the whole reset mid-run (docs ADR
-  // 20260727-last-minute-fill-promos; same class of bug the tripWaitlistEntries
-  // comment above already walks).
-  await db
-    .delete(tripLastMinutePromoRecipients)
-    .where(eq(tripLastMinutePromoRecipients.shopId, shopId));
-  await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
-  // Before the entries they point at. Added with Leo's self-serve unsubscribe
-  // (docs ADR 20260731-self-serve-unsubscribe) but not to this ordering, which
-  // made every `/api/test/reset` throw 23503 mid-run and leave the demo shop
+  // The last-minute list's unsubscribe links name a lead by foreign key, so
+  // they go before the leads. Added with Leo's self-serve unsubscribe (docs ADR
+  // 20260731-self-serve-unsubscribe) but not to this ordering once, which made
+  // every `/api/test/reset` throw 23503 mid-run and leave the demo shop
   // half-reset — the e2e fleet then failed in whichever spec happened to read
   // the wreckage next, which is why the flake moved around between runs.
-  await db
-    .delete(lastMinuteListUnsubscribeTokens)
-    .where(eq(lastMinuteListUnsubscribeTokens.shopId, shopId));
-  await db.delete(lastMinuteListEntries).where(eq(lastMinuteListEntries.shopId, shopId));
+  await db.delete(leadUnsubscribeTokens).where(eq(leadUnsubscribeTokens.shopId, shopId));
+  await db.delete(leads).where(eq(leads.shopId, shopId));
+  // References trips (last-minute-deal blasts) and the leads that carry a deal's
+  // `promo_id`, so it goes after them and before the trips/people deletes below
+  // or this FK-violates and aborts the whole reset mid-run (docs ADR
+  // 20260727-last-minute-fill-promos).
+  await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
   // References people (courtesy-email opt-out tokens minted for waitlist
   // invites and trip recaps), so it must go before the people deletes below
   // or this FK-violates and aborts the whole reset mid-run — the same class
@@ -1650,11 +1639,6 @@ export async function resetDemoSchedule(
   // time it exercises the picker's refusal.
   await db.delete(marineLifeRequests).where(eq(marineLifeRequests.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
-  // A course inquiry references its course without cascade (a lead is
-  // evidence, not something a schedule reset should silently vanish), so it
-  // must go before the courses delete or this FK-violates and aborts the whole
-  // reset mid-run — the same class of bug the comment above already walks.
-  await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));

@@ -19,7 +19,7 @@
   },
   "paymentAction": {
     "copyLink": "Copy payment link",
-    "linkCopied": "Link copied.",
+    "linkCopied": "Link copied",
     "copyFailed": "Couldn’t copy. Copy it from the invoice instead.",
     "resendInvoice": "Resend invoice",
     "resending": "Resending…",
@@ -88,8 +88,7 @@
     "divePrep": "Prep",
     "payment": "Payment",
     "emailDelivery": "Email",
-    "waitlistSeat": "Wait list",
-    "lastMinuteFill": "Fill seats",
+    "seatWanted": "Wants in",
     "emergencyContact": "Contact",
     "crewBelowTarget": "Under target",
     "stuckPaymentOperation": "Stripe",
@@ -206,8 +205,7 @@
     "crewBelowTarget": "{divers, plural, one {# diver} other {# divers}}, {divemasterCount, plural, one {# supervisor} other {# supervisors}}. Your target is {ratio}:1.",
     "ratingLapsed": "{names} {count, plural, one {has a rating that isn’t current} other {have ratings that aren’t current}} for this departure.",
     "missingContactNamed": "No emergency contact.",
-    "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open, no last-minute deal sent.",
-    "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} open, {waiting} on the wait list.",
+    "seatWanted": "{seats, plural, one {# seat} other {# seats}} open, {waiting} want in.",
     "crewAway": "{name} is away {dates}.",
     "rollCallAlerted": "Owners alerted: {time}.",
     "rollCallAlertedWithShore": "Owners and shore contact alerted: {time}.",
@@ -220,8 +218,7 @@
     "openPrepList": "Open prep list",
     "openTrip": "Open trip",
     "openCrew": "Open crew",
-    "openLastMinuteDeal": "Open last-minute deal",
-    "inviteFromWaitlist": "Invite from wait list",
+    "offerSeat": "Offer a seat",
     "resendWaiverLink": "Resend waiver link",
     "resendConfirmation": "Resend confirmation",
     "openOrders": "Review in Orders",
@@ -271,7 +268,7 @@
     "restrictedDetail": "Stripe paused them on {when}. Divers pay at the shop until Stripe turns them back on."
   },
   "incidentReportUnfiled": {
-    "subject": "{count, plural, one {# incident report not filed, started {day, select, date {on {when}} other {{when}}} by {name}.} other {# incident reports not filed, the oldest started {day, select, date {on {when}} other {{when}}} by {name}.}}"
+    "subject": "{count, plural, one {# incident report not filed, started {day, select, date {on {when}} other {{when}}} by {name}} other {# incident reports not filed, the oldest started {day, select, date {on {when}} other {{when}}} by {name}}}"
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# review is} other {# reviews are}} waiting on you."
@@ -307,7 +304,7 @@
     "neverPickedUpDetail": "{units} {count, plural, one {was} other {were}} reserved until {dueOn} and never picked up.",
     "fitConfirmDetail": "{name}’s {unitLabel} went out as {size}. Keep that as the fit next time?",
     "fitConfirmKeep": "Keep it",
-    "fitConfirmSaving": "Keeping"
+    "fitConfirmSaving": "Keeping…"
   },
   "staffCredential": {
     "dueDetail": "{credential} renews {dueOn}.",
@@ -339,33 +336,33 @@
     "resendConfirmations": "Resend confirmations"
   },
   "blockerRow": {
-    "requirementsNotConfigured": "{count, plural, one {Trip requirements not set.} other {Trip requirements not set for # divers.}}",
+    "requirementsNotConfigured": "{count, plural, one {Trip requirements not set} other {Trip requirements not set for # divers}}",
     "identityUnconfirmed": "{count, plural, one {Booking matched on a guess. Confirm who this is before the waiver goes out.} other {# bookings matched on a guess. Confirm who each one is before the waivers go out.}}",
-    "waiverNotSent": "{count, plural, one {Waiver not signed, not sent yet.} other {# waivers not signed, not sent yet.}}",
-    "waiverPending": "{count, plural, one {Waiver not signed, link sent.} other {# waivers not signed, links sent.}}",
-    "waiverExpired": "{count, plural, one {Waiver link expired.} other {# waiver links expired.}}",
-    "waiverLapsed": "{count, plural, one {Signed waiver lapsed.} other {# signed waivers lapsed.}}",
+    "waiverNotSent": "{count, plural, one {Waiver not signed, not sent yet} other {# waivers not signed, not sent yet}}",
+    "waiverPending": "{count, plural, one {Waiver not signed, link sent} other {# waivers not signed, links sent}}",
+    "waiverExpired": "{count, plural, one {Waiver link expired} other {# waiver links expired}}",
+    "waiverLapsed": "{count, plural, one {Signed waiver lapsed} other {# signed waivers lapsed}}",
     "waiverRunsOut": "{count, plural, one {Waiver runs out before the trip.} other {# waivers run out before the trip.}}",
     "medicalReview": "{count, plural, one {Medical answer needs a doctor’s sign-off.} other {# medical answers need a doctor’s sign-off.}}",
-    "medicalNotCleared": "{count, plural, one {Not cleared to dive by a physician.} other {# divers not cleared to dive by a physician.}}",
+    "medicalNotCleared": "{count, plural, one {Not cleared to dive by a physician} other {# divers not cleared to dive by a physician}}",
     "guardianSignatureMissing": "{count, plural, one {Waiver needs a guardian’s signature.} other {# waivers need a guardian’s signature.}}",
-    "certificationMissing": "{count, plural, one {No certification on file.} other {# divers with no certification on file.}}",
-    "certificationPending": "{count, plural, one {Certification not verified yet.} other {# certifications not verified yet.}}",
-    "certificationSelfDeclared": "{count, plural, one {Certification self-declared, not verified.} other {# self-declared certifications, not verified.}}",
-    "certificationInsufficient": "{count, plural, one {Not certified for this trip.} other {# divers not certified for this trip.}}",
-    "certificationInTraining": "{count, plural, one {Still in training for this trip’s level.} other {# divers still in training for this trip’s level.}}",
+    "certificationMissing": "{count, plural, one {No certification on file} other {# divers with no certification on file}}",
+    "certificationPending": "{count, plural, one {Certification not verified yet} other {# certifications not verified yet}}",
+    "certificationSelfDeclared": "{count, plural, one {Certification self-declared, not verified} other {# self-declared certifications, not verified}}",
+    "certificationInsufficient": "{count, plural, one {Not certified for this trip} other {# divers not certified for this trip}}",
+    "certificationInTraining": "{count, plural, one {Still in training for this trip’s level} other {# divers still in training for this trip’s level}}",
     "certificationNotYet": "{count, plural, one {Says not certified yet.} other {# divers say they’re not certified yet.}}",
-    "specialtyMissing": "{count, plural, one {No {specialty} certification on file.} other {# divers with no {specialty} certification on file.}}",
-    "specialtyPending": "{count, plural, one {{specialty} certification not verified yet.} other {# {specialty} certifications not verified yet.}}",
-    "specialtyImportUnconfirmed": "{count, plural, one {Imported {specialty} certification not confirmed.} other {# imported {specialty} certifications not confirmed.}}",
-    "nitroxMissing": "{count, plural, one {No nitrox certification on file.} other {# divers with no nitrox certification on file.}}",
-    "nitroxPending": "{count, plural, one {Nitrox certification not verified yet.} other {# nitrox certifications not verified yet.}}",
-    "nitroxSelfDeclared": "{count, plural, one {Nitrox self-declared, not verified.} other {# divers self-declared nitrox, not verified.}}",
-    "underMinimumAge": "{count, plural, one {Under this course’s minimum age.} other {# divers under this course’s minimum age.}}",
-    "paymentDue": "{count, plural, one {Payment due.} other {# payments due.}}",
+    "specialtyMissing": "{count, plural, one {No {specialty} certification on file} other {# divers with no {specialty} certification on file}}",
+    "specialtyPending": "{count, plural, one {{specialty} certification not verified yet} other {# {specialty} certifications not verified yet}}",
+    "specialtyImportUnconfirmed": "{count, plural, one {Imported {specialty} certification not confirmed} other {# imported {specialty} certifications not confirmed}}",
+    "nitroxMissing": "{count, plural, one {No nitrox certification on file} other {# divers with no nitrox certification on file}}",
+    "nitroxPending": "{count, plural, one {Nitrox certification not verified yet} other {# nitrox certifications not verified yet}}",
+    "nitroxSelfDeclared": "{count, plural, one {Nitrox self-declared, not verified} other {# divers self-declared nitrox, not verified}}",
+    "underMinimumAge": "{count, plural, one {Under this course’s minimum age} other {# divers under this course’s minimum age}}",
+    "paymentDue": "{count, plural, one {Payment due} other {# payments due}}",
     "paymentRefunded": "{count, plural, one {Refunded, so payment is due again.} other {# divers refunded, so payment is due again.}}",
     "readinessUnavailable": "{count, plural, one {Readiness couldn’t be checked.} other {Readiness couldn’t be checked for # divers.}}",
-    "courseFormUnsigned": "{count, plural, one {Course form not signed.} other {# course forms not signed.}}",
+    "courseFormUnsigned": "{count, plural, one {Course form not signed} other {# course forms not signed}}",
     "trainingMarkInvalid": "{count, plural, one {Training mark no longer fits its course seat.} other {# training marks no longer fit their course seats.}}"
   }
 }

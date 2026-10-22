@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   bookingCancelledEmail,
   bookingConfirmationEmail,
-  courseInquiryEmail,
   demoStartedAlertEmail,
   emailButton,
   emailPanel,
   founderDigestEmail,
   guardianReleaseCopyEmail,
   lastMinuteDealEmail,
+  leadReceivedEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
   passwordResetEmail,
@@ -620,7 +620,7 @@ describe("lastMinuteDealEmail", () => {
   });
 });
 
-describe("courseInquiryEmail", () => {
+describe("leadReceivedEmail", () => {
   const inquiry = {
     locale: "en-US" as const,
     shopName: "Blue Mantis",
@@ -632,7 +632,7 @@ describe("courseInquiryEmail", () => {
   };
 
   it("puts the facts the desk reads in a fixed order, with no blank lines", () => {
-    const email = courseInquiryEmail(inquiry);
+    const email = leadReceivedEmail(inquiry);
     expect(email.text).toContain("When: the week of 12 August");
     expect(email.text.indexOf("When:")).toBeLessThan(email.text.indexOf("How many divers:"));
     // No stray separator where the retired "date asked for" line used to sit.
@@ -640,7 +640,7 @@ describe("courseInquiryEmail", () => {
   });
 
   it("names the dates the diver asked for, ahead of their own words about timing", () => {
-    const email = courseInquiryEmail({
+    const email = leadReceivedEmail({
       ...inquiry,
       preferredDate: "2026-08-06",
       alternateDate: "2026-08-13",
@@ -651,7 +651,7 @@ describe("courseInquiryEmail", () => {
   });
 
   it("says so when the diver can move a few days", () => {
-    const email = courseInquiryEmail({
+    const email = leadReceivedEmail({
       ...inquiry,
       preferredDate: "2026-08-06",
       dateFlexible: true,
@@ -662,7 +662,7 @@ describe("courseInquiryEmail", () => {
   });
 
   it("renders no date line at all when the diver named none", () => {
-    const email = courseInquiryEmail(inquiry);
+    const email = leadReceivedEmail(inquiry);
     expect(email.text).not.toContain("Dates asked for");
     // Never "Not said" here: the free-text "When:" line already answered.
     expect(email.text).toContain("When: the week of 12 August");
@@ -671,7 +671,7 @@ describe("courseInquiryEmail", () => {
   it("reads a calendar date through UTC, so the server's zone cannot shift the day", () => {
     // 2026-08-06 is a date, not an instant. A renderer that went through a
     // negative-offset zone would print Aug 5 for every shop west of Greenwich.
-    const email = courseInquiryEmail({ ...inquiry, preferredDate: "2026-08-06" });
+    const email = leadReceivedEmail({ ...inquiry, preferredDate: "2026-08-06" });
     expect(email.text).toContain("Aug\u00A06, 2026");
     expect(email.text).not.toContain("Aug\u00A05, 2026");
   });

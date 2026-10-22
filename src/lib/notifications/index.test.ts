@@ -35,8 +35,8 @@ const booking = {
 };
 
 const tripInvitation = {
-  kind: "trip_invitation" as const,
-  invitationId: "00000000-0000-4000-8000-000000000002",
+  kind: "seat_offer" as const,
+  leadId: "00000000-0000-4000-8000-000000000002",
   shopId: "00000000-0000-4000-8000-000000000010",
   to: "delivered+invitation@dive.day",
   locale: "en-US" as const,
@@ -47,8 +47,26 @@ const tripInvitation = {
   endsAt: new Date("2026-08-01T15:00:00.000Z"),
   timezone: "America/New_York",
   bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
-  invitedAt: new Date("2026-07-30T12:00:00.000Z"),
+  offeredAt: new Date("2026-07-30T12:00:00.000Z"),
 };
+
+const commercialOffer = {
+  kind: "seat_offer_commercial",
+  askedBy: "diver",
+  leadId: "00000000-0000-4000-8000-000000000003",
+  shopId: "00000000-0000-4000-8000-000000000010",
+  to: "delivered+waitlist@dive.day",
+  locale: "en-US",
+  diverName: "Nora Quinn",
+  shopName: "Blue Mantis",
+  tripTitle: "Two-Tank Reef",
+  startsAt: new Date("2026-08-01T12:00:00.000Z"),
+  endsAt: new Date("2026-08-01T15:00:00.000Z"),
+  timezone: "America/New_York",
+  bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
+  offeredAt: new Date("2026-07-21T10:00:00.000Z"),
+  unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
+} as const;
 
 describe("bookingConfirmationEmail", () => {
   it("folds the readiness link into the confirmation when one is supplied", () => {
@@ -213,25 +231,10 @@ describe("notificationIdempotencyKey", () => {
     ).toBe("waiver-request/00000000-0000-4000-8000-000000000002");
   });
 
-  it("keys a wait-list invite by its stamp so a genuine re-invite is a fresh send", () => {
-    expect(
-      notificationIdempotencyKey({
-        kind: "waitlist_invite",
-        waitlistEntryId: "00000000-0000-4000-8000-000000000003",
-        shopId: "00000000-0000-4000-8000-000000000010",
-        to: "delivered+waitlist@dive.day",
-        locale: "en-US",
-        diverName: "Nora Quinn",
-        shopName: "Blue Mantis",
-        tripTitle: "Two-Tank Reef",
-        startsAt: new Date("2026-08-01T12:00:00.000Z"),
-        endsAt: new Date("2026-08-01T15:00:00.000Z"),
-        timezone: "America/New_York",
-        bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
-        invitedAt: new Date("2026-07-21T10:00:00.000Z"),
-        unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
-      }),
-    ).toBe("waitlist-invite/00000000-0000-4000-8000-000000000003/2026-07-21T10:00:00.000Z");
+  it("keys a seat offer by its stamp so a genuine re-invite is a fresh send", () => {
+    expect(notificationIdempotencyKey(commercialOffer)).toBe(
+      "seat-offer/00000000-0000-4000-8000-000000000003/2026-07-21T10:00:00.000Z",
+    );
   });
 
   it("keys a welcome email by the account, once ever", () => {
@@ -351,11 +354,11 @@ describe("the demo-try alert's schema (docs ADR 20260805-demo-try-alerts)", () =
   });
 });
 
-describe("the trip invitation notification schema", () => {
+describe("the seat offer notification schema", () => {
   it("accepts a shop-scoped invitation payload for SES delivery", () => {
     const notification = {
-      kind: "trip_invitation" as const,
-      invitationId: "00000000-0000-4000-8000-000000000002",
+      kind: "seat_offer" as const,
+      leadId: "00000000-0000-4000-8000-000000000002",
       shopId: "00000000-0000-4000-8000-000000000010",
       to: "nora@dive.day",
       locale: "en-US" as const,
@@ -366,7 +369,7 @@ describe("the trip invitation notification schema", () => {
       endsAt: new Date("2026-08-01T15:00:00.000Z"),
       timezone: "America/New_York",
       bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
-      invitedAt: new Date("2026-07-30T12:00:00.000Z"),
+      offeredAt: new Date("2026-07-30T12:00:00.000Z"),
     };
 
     expect(notificationSchema.parse(notification)).toMatchObject(notification);
@@ -402,25 +405,7 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
     const provider = sesNotificationProvider(sesConfig, { client });
 
-    await notify(
-      {
-        kind: "waitlist_invite",
-        waitlistEntryId: "00000000-0000-4000-8000-000000000003",
-        shopId: "00000000-0000-4000-8000-000000000010",
-        to: "delivered+waitlist@dive.day",
-        locale: "en-US",
-        diverName: "Nora Quinn",
-        shopName: "Blue Mantis",
-        tripTitle: "Two-Tank Reef",
-        startsAt: new Date("2026-08-01T12:00:00.000Z"),
-        endsAt: new Date("2026-08-01T15:00:00.000Z"),
-        timezone: "America/New_York",
-        bookingUrl: "https://diveday.example/s/blue-mantis/trips/trip-1",
-        invitedAt: new Date("2026-07-21T10:00:00.000Z"),
-        unsubscribeUrl: "https://diveday.example/unsubscribe/tok_abc123",
-      },
-      provider,
-    );
+    await notify(commercialOffer, provider);
 
     const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
     expect(command.input.Content?.Simple?.Headers).toEqual([

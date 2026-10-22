@@ -7,7 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
 import { controlClass, DateField, Field, FieldGrid, FormStatus } from "@/components/ui/form";
-import { joinLastMinuteListAction, type LastMinuteListFormState } from "../actions";
+import { askAnytimeAction, type LastMinuteListFormState } from "../actions";
 
 const INITIAL_STATE: LastMinuteListFormState = {};
 
@@ -21,10 +21,7 @@ const INITIAL_STATE: LastMinuteListFormState = {};
  */
 export function LastMinuteListForm({ shopSlug }: { shopSlug: string }) {
   const t = useTranslations();
-  const [state, formAction] = useActionState(
-    joinLastMinuteListAction.bind(null, shopSlug),
-    INITIAL_STATE,
-  );
+  const [state, formAction] = useActionState(askAnytimeAction.bind(null, shopSlug), INITIAL_STATE);
 
   if (state.success) {
     return (

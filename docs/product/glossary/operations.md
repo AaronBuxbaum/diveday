@@ -480,26 +480,43 @@
   non-cancelled booking, and must. A few counts stay deliberately looser and treat a released seat
   as still held — crew sizing, the minimum-decision sweep, blow-out candidates — each conservative
   in the direction its own question needs, and none of them can oversell.
-- **Wait list** — a record of divers who asked to hear if a full trip frees a seat. It is not a
+- **Lead** — a person who asked for a seat, one row in `leads` with a **scope**: `departure` (asked
+  for this boat: the wait list, a cold invitation, an offer), `date` (asked for a day that is not on
+  the board: a date request, which may live on a name and email alone, H-13) or `anytime` (the
+  last-minute list: "I'm around, tell me if something opens"). It runs asked, offered, closed
+  (`booked`, `done` or `unsubscribed`). A lead reserves nothing and never reaches a manifest;
+  "booked" is derived from the bookings for a departure lead. Not a **party lead** (a booking's
+  organizer, money.md): staff never see the word "lead", they see **Who wants in**
+  (ADR 20261017-one-lead-with-a-scope, H-145).
+- **Who wants in** — the one panel on a departure's Divers tab that lists every lead that could fill
+  it, in three groups that keep the order people asked in and are never ranked by fit: asked for this
+  departure, asked for this date, and around these dates. It renders only when a group has someone.
+- **Offer a seat** — the one staff act on a lead: tick people in Who wants in and send, always held
+  8 s with Undo. It writes a departure lead for each person (copied from a date or anytime lead,
+  with `parent_lead_id`), sends one email, and may carry a **last-minute deal**. It reserves
+  nothing: the diver books like anyone else. A ticked row below the bar may be offered with a
+  warning; "everyone who fits" sends only to rows that fit; the counter's "Email them this date"
+  stays immediate and refuses what `departureOpenToDiver` refuses.
+- **Wait list** — the diver-facing name of a departure **lead**: divers who asked to hear if a full trip frees a seat. It is not a
   booking, does not consume capacity, and never appears on a manifest. It is also **not a queue**:
   joining buys no standing, and staff invite whoever fits the departure. The join date is kept and
   shown to staff, so the longest wait is visible without being owed anything
   (ADR 20260813-wait-list-is-a-lead-list).
 - **Wait-list party** — the people one wait-list entry waits for: the joiner and whoever dives with
-  them, held as a count on the entry (`trip_waitlist_entries.party_size`, 1 to 20 and never more than the departure's seats), with only the
+  them, held as a count on the entry (`leads.party_size`, 1 to 20 and never more than the departure's seats), with only the
   joiner's own details. A party waits until the whole party fits: the join is refused as
   "go and book" only when that many diver seats are free, an invitation is sent only when that many
   seats are free, and an invitation out holds that many seats against the next. A couple is never
   split across dates. Staff read "Party of 2" on the row; the demand count adds parties, not rows
   (ADR 20260719-trip-waitlist, amended 2026-10-15).
-- **Wait-list roll** — the wait list following the divers rather than staying on a day that is gone or full. Nightly, beside the series roll, a series date that sailed hands every lead nobody invited to the next public date of the run that takes a seat (a date on a conditions hold or made private is passed over). The existing wait-list invite then goes out to that date's whole queue in the order people asked, while it has seats nobody has been invited to, measured as a sale would measure them (sellable seats, the divers-only limit, a course's instructor and ratio); a **wait-list party** is invited only when its whole party fits, and a smaller lead behind it may still be. The rolled invite says so in its own sentence ("Sat, Oct 17 has sailed. Sat, Oct 24 has room": a date can sail with a seat free), never as though the diver had asked for the new date. A lead staff already invited stays where they left it. From a full departure's demand banner, or under the wait list of a full departure with even one lead, "Carry the wait list" hands every lead to a departure staff choose (each offered with the seats it has left), with no message until staff invite. Entries are copied, keep the time the diver first asked and their party, skip anyone already seated there, and never rank anybody. `src/db/waitlist-roll.ts`.
-- **Last-minute list** — a shop-wide (not per-trip) opt-in of divers who want to hear about
+- **Wait-list roll** — the wait list following the divers rather than staying on a day that is gone or full. Nightly, beside the series roll, a series date that sailed hands every lead nobody invited to the next public date of the run that takes a seat (a date on a conditions hold or made private is passed over). The existing wait-list invite then goes out to that date's whole queue in the order people asked, while it has seats nobody has been invited to, measured as a sale would measure them (sellable seats, the divers-only limit, a course's instructor and ratio); a **wait-list party** is invited only when its whole party fits, and a smaller lead behind it may still be. The rolled invite says so in its own sentence ("Sat, Oct 17 has sailed. Sat, Oct 24 has room": a date can sail with a seat free), never as though the diver had asked for the new date. A lead staff already invited stays where they left it. From a full departure's demand banner, or under the wait list of a full departure with even one lead, "Carry the wait list" hands every lead to a departure staff choose (each offered with the seats it has left), with no message until staff invite. Entries are copied, keep the time the diver first asked and their party, skip anyone already seated there, and never rank anybody. `src/db/lead-roll.ts`.
+- **Last-minute list** — the diver-facing name of an `anytime` **lead**: a shop-wide (not per-trip) opt-in of divers who want to hear about
   last-minute deals, each with an optional date range they said they're around. Distinct from the
   **wait list**: the wait list is per-trip interest in a charter that's already *full*; the
   last-minute list is a general "I'm around, tell me if something opens at a discount" signal used
   to fill a trip that is *under* capacity. See
   [20260727-last-minute-fill-promos](../../architecture/decisions/20260727-last-minute-fill-promos.md).
-- **Last-minute deal** — a staff-sent, time-boxed discount on one under-capacity trip: a real Stripe
+- **Last-minute deal** — an **offer** that carries a discount: a staff-sent, time-boxed discount on one under-capacity trip: a real Stripe
   `Coupon` + `PromotionCode` created on the shop's connected account (percent off, expiring at the
   trip's departure, capped at the trip's open-seat count), emailed to every last-minute-list entry
   whose date range covers the trip. The diver redeems it by typing the code on the booking form; it

@@ -67,7 +67,7 @@ describe("callRefusal", () => {
     expect(callRefusal("date-request", { ...complete(), tripId: null })).toBeNull();
   });
 
-  /** `course_inquiries`' own check constraint, said before the database says it. */
+  /** `leads_scope_columns`, the check constraint, said before the database says it. */
   it("insists a date request is about something", () => {
     expect(callRefusal("date-request", { ...complete(), interest: "  " })).toBe("interest");
     expect(callRefusal("waitlist", { ...complete(), interest: null })).toBeNull();

@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { describePostgres, postgresTestDb } from "@/test/postgres";
 import { createInvitationUnderCooldown } from "./invite-suggestions";
-import { people, personRoles, shops, tripInvitations, trips } from "./schema";
+import { leads, people, personRoles, shops, trips } from "./schema";
 
 /**
  * **The 30-day invite cooldown under real concurrency** (H-130; security
@@ -58,11 +58,11 @@ describePostgres("createInvitationUnderCooldown under real concurrency", () => {
       createInvitationUnderCooldown(db, { ...input, tripId: second.id }),
     ]);
 
-    expect(outcomes.sort()).toEqual(["cooldown", "created"]);
+    expect(outcomes.map((outcome) => outcome.status).sort()).toEqual(["cooldown", "created"]);
     const rows = await db
-      .select({ id: tripInvitations.id })
-      .from(tripInvitations)
-      .where(and(eq(tripInvitations.shopId, shop.id), eq(tripInvitations.personId, diver.id)));
+      .select({ id: leads.id })
+      .from(leads)
+      .where(and(eq(leads.shopId, shop.id), eq(leads.personId, diver.id)));
     expect(rows).toHaveLength(1);
   });
 });

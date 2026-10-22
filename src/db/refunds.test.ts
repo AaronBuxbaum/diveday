@@ -3,10 +3,11 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import type { CheckoutProvider, RefundCheckoutResult } from "@/lib/payments/checkout";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
+import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
-import { joinLastMinuteList } from "./last-minute-list";
+import { askAnytime } from "./leads";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, listBookingPaymentEvents, setBookingPayment } from "./payments";
 import {
@@ -21,7 +22,7 @@ import { bookingPayments, paymentOperationIntents, trips } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
+import { getActiveTripPromoByCode } from "./trip-promos";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -174,26 +175,22 @@ async function paidBookingContext(
   if (promo && !promo.ok) throw new Error(`promo creation failed: ${promo.reason}`);
   const shopPromo = promo?.ok ? promo.promo : null;
 
-  // A trip-scoped last-minute deal, minted the way a shop really mints one:
-  // someone on the last-minute list, a real blast, then the diver typing the
-  // code back in and `getActiveTripPromoByCode` resolving it — the exact path
-  // that leaves both shop-promo columns null on the checkout.
+  // A trip-scoped last-minute deal, minted the way a shop really mints one: someone
+  // on the last-minute list, a real offer, then the diver typing the code back in
+  // and `getActiveTripPromoByCode` resolving it — the path that leaves both
+  // shop-promo columns null on the checkout.
   let tripPromo: Awaited<ReturnType<typeof getActiveTripPromoByCode>> = null;
   if (options.tripDiscountPercent) {
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
       declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
-    const blast = await sendLastMinuteDealBlast(
+    const discountPercent = options.tripDiscountPercent;
+    const blast = await sendDeal(
       db,
-      {
-        shopId: shop.id,
-        shopSlug: "blue-mantis",
-        tripId: reef.id,
-        discountPercent: options.tripDiscountPercent,
-      },
+      { shopId: shop.id, shopSlug: "blue-mantis", tripId: reef.id, discountPercent },
       fakePromotions(),
     );
     if (!blast.ok) throw new Error(`last-minute blast failed: ${blast.reason}`);

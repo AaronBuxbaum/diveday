@@ -17,10 +17,10 @@ import {
   certifications,
   diveSites,
   executedDives,
+  leads,
   orders,
   tripBlowouts,
   trips,
-  tripWaitlistEntries,
 } from "./schema";
 import {
   LOST_MASK,
@@ -249,9 +249,9 @@ describe("the demo's booth stories", () => {
     expect(seated).toHaveLength(run.capacity);
     for (const seat of seated) expect(seat.createdAt.getTime()).toBeLessThan(nowDate().getTime());
     const waiting = await db
-      .select({ personId: tripWaitlistEntries.personId })
-      .from(tripWaitlistEntries)
-      .where(eq(tripWaitlistEntries.tripId, run.id));
+      .select({ personId: leads.personId })
+      .from(leads)
+      .where(and(eq(leads.tripId, run.id), eq(leads.scope, "departure")));
     expect(waiting).toHaveLength(WEEKLY_RUN_WAITING);
   });
 });

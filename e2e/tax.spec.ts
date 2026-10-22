@@ -46,7 +46,7 @@ async function setTax(page: Page, shopSlug: string, enabled: boolean) {
   await page.goto(`/shop/${shopSlug}/settings/features`);
   await taxRow(page).getByLabel(TAX_LABEL).setChecked(enabled);
   await taxRow(page).getByRole("button", { name: "Save" }).click();
-  await expect(taxRow(page).getByText("Saved.")).toBeVisible();
+  await expect(taxRow(page).getByText("Saved")).toBeVisible();
 }
 
 test.describe("Stripe Tax opt-in", () => {

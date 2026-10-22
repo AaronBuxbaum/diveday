@@ -39,7 +39,7 @@ test.describe("as owner", () => {
     // Not a URL assertion: FlashParams strips `?notice=invited` via
     // history.replaceState shortly after mount (same reasoning as
     // e2e/account-lifecycle.spec.ts) — the rendered banner is the stable signal.
-    await expect(page.getByText("Invite sent.")).toBeVisible();
+    await expect(page.getByText("Invite sent")).toBeVisible();
     const row = page.locator("li").filter({ hasText: "Priya Nair" }).filter({ visible: true });
     await expect(row.getByText("Invited")).toBeVisible();
 
@@ -86,7 +86,7 @@ test.describe("as owner", () => {
     await inviteSection.getByLabel("Email").fill(email);
     await inviteSection.getByLabel("Instructor", { exact: true }).check();
     await inviteSection.getByRole("button", { name: "Send invite" }).click();
-    await expect(page.getByText("Invite sent.")).toBeVisible();
+    await expect(page.getByText("Invite sent")).toBeVisible();
 
     const seeded = await request.post("/api/test/seed-account-token", {
       data: { email, purpose: "invite" },
@@ -153,7 +153,7 @@ test.describe("as owner", () => {
     await inviteSection.getByLabel("Email").fill(email);
     await inviteSection.getByLabel("Instructor", { exact: true }).check();
     await inviteSection.getByRole("button", { name: "Send invite" }).click();
-    await expect(page.getByText("Invite sent.")).toBeVisible();
+    await expect(page.getByText("Invite sent")).toBeVisible();
 
     const row = page.locator("li").filter({ hasText: "Rosa Delgado" }).filter({ visible: true });
     const roles = row.getByRole("button", { name: "Edit roles for Rosa Delgado" });
@@ -164,7 +164,7 @@ test.describe("as owner", () => {
     await row.getByLabel("Divemaster").check();
     await roles.click();
     await expect(roles).toContainText("Divemaster");
-    await expect(row.getByText("Team changes saved.")).toBeVisible();
+    await expect(row.getByText("Team changes saved")).toBeVisible();
 
     // Undo is one re-save, and offers nothing to undo back.
     await row.getByRole("button", { name: "Undo the role change for Rosa Delgado" }).click();

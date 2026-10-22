@@ -332,7 +332,7 @@ describe("the pricing FAQ points at the set-up form", () => {
 });
 
 /**
- * The site speaks as the company: "we", and no person named (H-145). The
+ * The site speaks as the company: "we", and no person named (H-146). The
  * builder's notes under the screens were the last first-person singular
  * lines ("I left it out on purpose", "I wrote the trial…").
  */

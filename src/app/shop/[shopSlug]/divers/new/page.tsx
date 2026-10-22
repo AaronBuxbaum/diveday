@@ -225,7 +225,7 @@ export default async function NewDiverPage({
                       {/* The *matched* diver's details, not the spelling the
                           staffer just typed: a tap here says "this is the same
                           person", and `addToWaitlistAction` ignores `personId`
-                          — `joinTripWaitlist` resolves the person from the name
+                          — `askForDeparture` resolves the person from the name
                           and email it is handed, so the typed spelling would
                           spawn the second person row this prompt exists to
                           prevent. The seating arm reaches the same record by

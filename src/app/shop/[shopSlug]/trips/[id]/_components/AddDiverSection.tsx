@@ -24,7 +24,7 @@ export type AddDiverContext = {
   addBookingAction: (formData: FormData) => void;
   addToWaitlistAction: (formData: FormData) => void;
   addExistingDiverAction: (formData: FormData) => void;
-  inviteAction?: (formData: FormData) => void;
+  offerAction?: (formData: FormData) => void;
   /**
    * What the last seating attempt did — sat them, wait-listed them, or refused
    * on a cert gate. Section-level rather than on one of the three forms below,
@@ -90,7 +90,7 @@ export function AddDiverSection({
     addBookingAction,
     addToWaitlistAction,
     addExistingDiverAction,
-    inviteAction,
+    offerAction,
     status,
     locale,
     timeZone,
@@ -211,13 +211,12 @@ export function AddDiverSection({
                     candidates,
                     tripId,
                     seatAction: addExistingDiverAction,
-                    invite: inviteAction
+                    invite: offerAction
                       ? {
-                          action: inviteAction,
-                          label: t("trips.invitations.directInvite"),
-                          pendingLabel: t("trips.invitations.directInviting"),
-                          personAriaLabel: (name) =>
-                            t("trips.invitations.directInviteAria", { name }),
+                          action: offerAction,
+                          label: t("trips.addDiver.offerSeat"),
+                          pendingLabel: t("trips.addDiver.offerSeating"),
+                          personAriaLabel: (name) => t("trips.addDiver.offerSeatAria", { name }),
                         }
                       : undefined,
                     personHref: (personId) => `/shop/${shopSlug}/divers/${personId}`,

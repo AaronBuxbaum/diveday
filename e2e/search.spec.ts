@@ -223,7 +223,7 @@ test("the divers list filters live as you type, no submit", { tag: READ_ONLY }, 
   await expect(page.getByRole("link", { name: "Adaeze Nwosu", exact: true })).toBeVisible();
 
   await search.fill("zzz-no-such-diver");
-  await expect(page.getByText("No divers match this view.")).toBeVisible();
+  await expect(page.getByText("No divers match this view")).toBeVisible();
 
   await search.fill("Priya");
   await expect(page.getByRole("link", { name: "Priya Sharma", exact: true })).toBeVisible();

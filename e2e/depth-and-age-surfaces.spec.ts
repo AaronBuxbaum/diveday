@@ -38,7 +38,7 @@ async function setSiteDepth(page: Page, siteName: string, depth: string, unitLab
   await page.goto(href);
   await page.getByLabel(unitLabel).fill(depth);
   await page.getByRole("button", { name: "Save dive site" }).click();
-  await expect(page.getByText("Dive site saved.")).toBeVisible();
+  await expect(page.getByText("Dive site saved")).toBeVisible();
   return href;
 }
 
@@ -177,7 +177,7 @@ test.describe("staff", () => {
     // A number typed in metres round-trips exactly too.
     await metersField.fill("18");
     await page.getByRole("button", { name: "Save dive site" }).click();
-    await expect(page.getByText("Dive site saved.")).toBeVisible();
+    await expect(page.getByText("Dive site saved")).toBeVisible();
     await page.goto(siteHref);
     await expect(page.getByLabel(/Maximum depth \(meters\)/)).toHaveValue("18");
   });

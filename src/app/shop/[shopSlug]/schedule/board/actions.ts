@@ -11,7 +11,6 @@ import { discardFormDraft } from "@/db/form-drafts";
 import { getMovePreflight } from "@/db/move-preflight";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
-import { createTripRequestInvitations } from "@/db/trip-invitations";
 import { getTripLens, listTripLenses } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
@@ -54,6 +53,7 @@ import { uuidParam } from "@/lib/uuid";
 import type { PatternDeparture } from "@/lib/weekday-pattern";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { BuilderPattern, BuilderTideWindowInput } from "./_components/ScheduleBuilder";
+import { attachRequestedLeads } from "./attach-leads";
 import { copyCrewIfAsked, duplicateSchema } from "./copy-departure";
 
 const removeDepartureForm = z.object({ tripId: z.uuid() });
@@ -398,17 +398,9 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   };
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return await invalid();
-  const requestIds = z.array(z.uuid()).safeParse(formData.getAll("inquiryId"));
-  if (!requestIds.success) return await invalid();
-  // No role check on the ids beyond the shape above, since 2026-09-16 (issue
-  // #1679). This refused a submit carrying `inquiryId`s unless the staffer
-  // passed `canPersonViewShopReports`, on the ground that "a staffer who can
-  // create a departure is not automatically allowed to read the private lead
-  // details" — which stopped being true when `/requests` was opened to every
-  // live staff role, and would now turn the day group's own hand-off into an
-  // unexplained `?builder=invalid`. What still contains these ids is the
-  // scope, not the role: every read of them is `and(eq(shopId), inArray(id))`,
-  // so a shareable URL or a hand-built POST reaches nothing outside this shop.
+  // The lead ids a Requests link carried are navigation context, not authority:
+  // the writer reads each one inside this shop's date leads, so a shareable URL
+  // or a hand-built POST reaches nothing outside it (issue #1679).
   const {
     title,
     description,
@@ -598,12 +590,7 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       actorPersonId: session.user.personId,
       write: { code: "series_added", tripId: firstTrip.id },
     });
-    await createTripRequestInvitations(db, {
-      shopId: shop.id,
-      tripId: firstTrip.id,
-      requestIds: requestIds.data,
-      createdByPersonId: session.user.personId,
-    });
+    await attachRequestedLeads(db, shop.id, firstTrip.id, session.user.personId, formData);
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
     await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
     return await landAfterAdd(db, shop, shopSlug, title, series.trips.length);
@@ -627,16 +614,8 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       actorPersonId: session.user.personId,
     });
   }
-  // A rehearsal answers nobody's request: an invitation is a message, and a
-  // rehearsal sends none (ADR 20261012-rehearsal-departures).
-  if (!isRehearsal) {
-    await createTripRequestInvitations(db, {
-      shopId: shop.id,
-      tripId: created.id,
-      requestIds: requestIds.data,
-      createdByPersonId: session.user.personId,
-    });
-  }
+  // A rehearsal answers nobody's request, and the writer skips it.
+  await attachRequestedLeads(db, shop.id, created.id, session.user.personId, formData);
   // "Add it as well": the pattern's second departure, read back off the board
   // here rather than taken from the form, so what goes up is what the shop
   // actually ran. Its own fields where the days agreed; this submission's

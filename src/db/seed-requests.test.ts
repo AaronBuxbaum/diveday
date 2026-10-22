@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { groupDateRequests } from "@/lib/date-requests";
 import { seededShopContext } from "@/test/db";
-import { listDateRequestsForStaff } from "./course-inquiries";
+import { listOpenDateLeads } from "./lead-dates";
 import { dateAt } from "./seed-clock";
 
 /**
@@ -14,7 +14,7 @@ import { dateAt } from "./seed-clock";
 describe("seeded requests", () => {
   it("keeps a believable mix of leads and date-grouping states", async () => {
     const { db, shop } = await seededShopContext();
-    const page = await listDateRequestsForStaff(db, shop.id);
+    const page = await listOpenDateLeads(db, shop.id);
 
     expect(page.total).toBe(7);
     expect(page.pageCount).toBe(1);
@@ -25,7 +25,7 @@ describe("seeded requests", () => {
     expect(courseRequests).toHaveLength(3);
     expect(diveRequests).toHaveLength(4);
     expect(page.rows.every((row) => row.courseTitle || row.interest)).toBe(true);
-    expect(page.rows.every((row) => row.divers === null || row.divers >= 1)).toBe(true);
+    expect(page.rows.every((row) => row.partySize === null || row.partySize >= 1)).toBe(true);
 
     expect(page.rows.find((row) => row.name === "Priya Sharma")).toMatchObject({
       courseTitle: "Advanced Open Water Diver",

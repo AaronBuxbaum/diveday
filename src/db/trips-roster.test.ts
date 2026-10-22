@@ -3,13 +3,9 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { bookings, people, trips, tripWaitlistEntries } from "./schema";
-import {
-  getTripRoster,
-  getTripWaitlist,
-  getWaitlistEntryForTrip,
-  listTripDiverContacts,
-} from "./trips-roster";
+import { getDepartureLeadForTrip, listDepartureLeads } from "./leads";
+import { bookings, leads, people, trips } from "./schema";
+import { getTripRoster, listTripDiverContacts } from "./trips-roster";
 
 const OTHER_SHOP = "00000000-0000-0000-0000-000000000000";
 
@@ -311,43 +307,50 @@ describe("listTripDiverContacts", () => {
   });
 });
 
-describe("the wait list", () => {
+describe("the departure leads", () => {
+  const ask = (shopId: string, tripId: string, personId: string, askedAt?: Date) =>
+    ({
+      shopId,
+      tripId,
+      personId,
+      scope: "departure",
+      askedBy: "diver",
+      partySize: 1,
+      askedAt,
+    }) as const;
+
   it("stays outside the roster and reads oldest first", async () => {
     const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     const first = await makeDiver(db, shop.id);
     const second = await makeDiver(db, shop.id);
-    await db
-      .insert(tripWaitlistEntries)
-      .values({ shopId: shop.id, tripId: trip, personId: first.id });
-    await db
-      .insert(tripWaitlistEntries)
-      .values({ shopId: shop.id, tripId: trip, personId: second.id });
+    await db.insert(leads).values(ask(shop.id, trip, first.id, new Date("2020-01-01T00:00:00Z")));
+    await db.insert(leads).values(ask(shop.id, trip, second.id, new Date("2020-02-01T00:00:00Z")));
 
-    const waiting = (await getTripWaitlist(db, shop.id, trip)).filter((row) =>
-      [first.id, second.id].includes(row.person.id),
+    const waiting = (await listDepartureLeads(db, shop.id, trip)).filter((row) =>
+      [first.id, second.id].includes(row.person?.id ?? ""),
     );
-    expect(waiting.map((row) => row.person.id)).toEqual([first.id, second.id]);
+    expect(waiting.map((row) => row.person?.id)).toEqual([first.id, second.id]);
     const rosterIds = (await getTripRoster(db, shop.id, trip)).map((row) => row.person.id);
     expect(rosterIds).not.toContain(first.id);
-    expect(await getTripWaitlist(db, OTHER_SHOP, trip)).toEqual([]);
+    expect(await listDepartureLeads(db, OTHER_SHOP, trip)).toEqual([]);
   });
 
-  it("resolves one entry only under its own trip and shop", async () => {
+  it("resolves one lead only under its own trip and shop", async () => {
     const { db, shop } = ctx;
     const [trip, otherTrip] = await twoTrips(db, shop.id);
     const diver = await makeDiver(db, shop.id);
-    const [entry] = await db
-      .insert(tripWaitlistEntries)
-      .values({ shopId: shop.id, tripId: trip, personId: diver.id })
-      .returning({ id: tripWaitlistEntries.id });
-    if (!entry) throw new Error("failed to insert wait-list entry");
+    const [lead] = await db
+      .insert(leads)
+      .values(ask(shop.id, trip, diver.id))
+      .returning({ id: leads.id });
+    if (!lead) throw new Error("failed to insert lead");
 
-    const found = await getWaitlistEntryForTrip(db, shop.id, trip, entry.id);
-    expect(found?.entry.id).toBe(entry.id);
-    expect(found?.person.id).toBe(diver.id);
-    expect(await getWaitlistEntryForTrip(db, shop.id, otherTrip, entry.id)).toBeNull();
-    expect(await getWaitlistEntryForTrip(db, OTHER_SHOP, trip, entry.id)).toBeNull();
-    expect(await getWaitlistEntryForTrip(db, shop.id, trip, OTHER_SHOP)).toBeNull();
+    const found = await getDepartureLeadForTrip(db, shop.id, trip, lead.id);
+    expect(found?.lead.id).toBe(lead.id);
+    expect(found?.person?.id).toBe(diver.id);
+    expect(await getDepartureLeadForTrip(db, shop.id, otherTrip, lead.id)).toBeNull();
+    expect(await getDepartureLeadForTrip(db, OTHER_SHOP, trip, lead.id)).toBeNull();
+    expect(await getDepartureLeadForTrip(db, shop.id, trip, OTHER_SHOP)).toBeNull();
   });
 });

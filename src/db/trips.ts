@@ -140,12 +140,7 @@ export {
   updateTrip,
   updateTripConditions,
 } from "./trips-record";
-export {
-  getTripRoster,
-  getTripWaitlist,
-  getWaitlistEntryForTrip,
-  listTripDiverContacts,
-} from "./trips-roster";
+export { getTripRoster, listTripDiverContacts } from "./trips-roster";
 export {
   type CopyWeekOutcome,
   copyWeekFromYearBefore,

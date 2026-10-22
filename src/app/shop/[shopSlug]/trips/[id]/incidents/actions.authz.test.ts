@@ -185,7 +185,7 @@ describe("incident report actions refuse staff who may not write", () => {
       null,
       missingForm({ bookingId }),
     );
-    expect(answer?.message).toMatch(/^Already started by .+\.$/);
+    expect(answer?.message).toBe("Already started by Dana Reyes");
     expect(await reportCount(db, tripId)).toBe(before);
   });
 
@@ -213,7 +213,7 @@ describe("incident report actions refuse staff who may not write", () => {
       null,
       missingForm({ bookingId }),
     );
-    expect(answer?.message).toMatch(/^Already filed by .+\.$/);
+    expect(answer?.message).toBe("Already filed by Dana Reyes");
     expect(await reportCount(db, tripId)).toBe(before);
   });
 
@@ -233,7 +233,7 @@ describe("incident report actions refuse staff who may not write", () => {
         null,
         missingForm({ bookingId: seat.id }),
       ),
-    ).toEqual({ message: "No longer marked not back aboard." });
+    ).toEqual({ message: "No longer marked not back aboard" });
     // A failure the database throws is a sentence beside the button, never
     // the manifest swapped for an error page.
     vi.mocked(getDb).mockRejectedValueOnce(new Error("connection reset"));

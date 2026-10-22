@@ -1,3 +1,4 @@
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildReport,
@@ -44,6 +45,56 @@ describe("the re-run command", () => {
   it("points a dev-server probe at screenshot.mjs instead", () => {
     expect(rerunCommand({ source: "dev", path: "/shop/blue-mantis/settings/security" })).toBe(
       "node scripts/screenshot.mjs /shop/blue-mantis/settings/security --probe",
+    );
+  });
+
+  it.each(["e2e/visual.spec.ts", path.resolve("e2e/visual.spec.ts")])(
+    "reruns an imported capture through its explicit entry file %s",
+    (entryFile) => {
+      const command = rerunCommand({
+        titlePath: TITLE,
+        testFile: path.resolve("e2e/visual-audit-account-states.ts"),
+        entryFile,
+      });
+      expect(command).toContain("pnpm e2e:run e2e/visual.spec.ts --grep");
+      expect(command).not.toContain("visual-audit-account-states.ts");
+    },
+  );
+
+  it("recovers an older imported visual record only when its title confirms the entry file", () => {
+    const record = {
+      titlePath: TITLE,
+      testFile: path.resolve("e2e/visual-audit-account-states.ts"),
+    };
+    expect(rerunCommand(record)).toContain("pnpm e2e:run e2e/visual.spec.ts --grep");
+    expect(rerunCommand({ ...record, titlePath: ["other.spec.ts", "an imported test"] })).toContain(
+      "pnpm e2e:run e2e/visual-audit-account-states.ts --grep",
+    );
+  });
+
+  it("keeps a legacy direct-spec rerun on its original file without audit flags", () => {
+    const command = rerunCommand({
+      titlePath: ["pixel-probe.spec.ts", "the probe fixture"],
+      testFile: path.resolve("e2e/pixel-probe.spec.ts"),
+    });
+    expect(command).toBe(
+      "PIXEL_PROBE=1 pnpm e2e:run e2e/pixel-probe.spec.ts --grep 'the probe fixture' --reporter=line",
+    );
+  });
+
+  it("retains the opt-in modes needed to reproduce an audit capture", () => {
+    const base = { titlePath: TITLE, entryFile: "e2e/visual.spec.ts" };
+    expect(rerunCommand({ ...base, exhaustiveAudit: true })).toMatch(
+      /^PIXEL_PROBE=1 VISUAL_EXHAUSTIVE_AUDIT=1 pnpm e2e:run /,
+    );
+    expect(rerunCommand({ ...base, initialPaintAudit: true })).toMatch(
+      /^PIXEL_PROBE=1 VISUAL_AUDIT_INITIAL_PAINT=1 pnpm e2e:run /,
+    );
+    expect(rerunCommand({ ...base, exhaustiveAudit: true, initialPaintAudit: true })).toMatch(
+      /^PIXEL_PROBE=1 VISUAL_EXHAUSTIVE_AUDIT=1 VISUAL_AUDIT_INITIAL_PAINT=1 pnpm e2e:run /,
+    );
+    expect(rerunCommand({ ...base, exhaustiveAudit: false, initialPaintAudit: false })).toMatch(
+      /^PIXEL_PROBE=1 pnpm e2e:run /,
     );
   });
 });
@@ -146,6 +197,49 @@ describe("the report", () => {
     expect(report.clusters).toEqual([]);
     expect(report.settled).toHaveLength(1);
     expect(renderMarkdown(report)).toContain("deliberate (Rows.tsx:12)");
+  });
+
+  it("passes capture evidence to contextual settlements and leaves old records open", () => {
+    const contextual = {
+      ...flag,
+      el: 12,
+      check: "ragged-edges",
+      sig: "p.conditions",
+      csig: "section.conditions",
+      measure: { lefts: [4, 16, 16], mode: 16, strays: [{ sig: "p.conditions", off: -12 }] },
+    };
+    const settled = [
+      {
+        check: "ragged-edges",
+        signature: "p.conditions",
+        captures: ["site-briefing"],
+        context: "conditions-line-separator",
+        reason: "clip",
+        pointer: "x",
+      },
+    ];
+    const base = {
+      capture: "site-briefing",
+      width: 390,
+      probed: true,
+      path: "/s/x/trips/9",
+      flags: [contextual],
+    };
+    expect(buildReport([base], { settled }).clusters).toHaveLength(1);
+    const report = buildReport(
+      [
+        {
+          ...base,
+          settlementContext: {
+            version: 1,
+            conditionsLine: [{ el: 12, mode: 16 }],
+          },
+        },
+      ],
+      { settled },
+    );
+    expect(report.clusters).toEqual([]);
+    expect(report.settled).toHaveLength(1);
   });
 });
 

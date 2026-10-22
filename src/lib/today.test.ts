@@ -215,7 +215,7 @@ describe("diverBlockerAction", () => {
       "blue-reef",
       NOW,
     );
-    expect(result?.detail).toBe("Not certified for this trip.");
+    expect(result?.detail).toBe("Not certified for this trip");
   });
 
   it("leads an aboard diver's row with the missing waiver, not the card", () => {
@@ -223,11 +223,11 @@ describe("diverBlockerAction", () => {
     // card ranks first because it takes longer to fix (dive-domain-expert).
     const blockers = [blocker("certification_insufficient"), blocker("waiver_pending")];
     expect(diverBlockerAction({ ...input, blockers }, "blue-reef", NOW)?.detail).toBe(
-      "Not certified for this trip.",
+      "Not certified for this trip",
     );
     const aboard = diverBlockerAction({ ...input, blockers, aboard: true }, "blue-reef", NOW);
     expect(aboard?.kind).toBe("blocked_aboard");
-    expect(aboard?.detail).toBe("Waiver not signed, link sent.");
+    expect(aboard?.detail).toBe("Waiver not signed, link sent");
   });
 
   it("never makes an Aboard row out of money owed", () => {
@@ -257,7 +257,7 @@ describe("diverBlockerAction", () => {
   it("takes the aboard kind once the diver is on the boat, keeping the fix", () => {
     const result = diverBlockerAction({ ...input, aboard: true }, "blue-reef", NOW);
     expect(result?.kind).toBe("blocked_aboard");
-    expect(result?.detail).toBe("Waiver not signed, not sent yet.");
+    expect(result?.detail).toBe("Waiver not signed, not sent yet");
     expect(result?.waiver).toEqual({ bookingIds: ["b1"] });
   });
 
@@ -311,7 +311,7 @@ describe("collapseDiverActions", () => {
     );
 
     expect(result).toHaveLength(1);
-    expect(result[0]?.subject).toBe("3 waivers not signed, not sent yet.");
+    expect(result[0]?.subject).toBe("3 waivers not signed, not sent yet");
     expect(result[0]?.actionLabel).toBe("Send waivers");
     // A batch send carries every diver's booking, so one tap sends all three.
     expect(result[0]?.waiver).toEqual({
@@ -355,7 +355,7 @@ describe("collapseDiverActions", () => {
       NOW,
     );
 
-    expect(result[0]?.subject).toBe("9 divers not certified for this trip.");
+    expect(result[0]?.subject).toBe("9 divers not certified for this trip");
     expect(result[0]?.detail).toBe("");
   });
 
@@ -373,9 +373,9 @@ describe("collapseDiverActions", () => {
     expect(result).toHaveLength(2);
     const aboard = result.find((entry) => entry.kind === "blocked_aboard");
     expect(aboard?.subject).toBe("Cara");
-    expect(aboard?.detail).toBe("Waiver not signed, not sent yet.");
+    expect(aboard?.detail).toBe("Waiver not signed, not sent yet");
     expect(result.find((entry) => entry.kind === "waiver")?.subject).toBe(
-      "2 waivers not signed, not sent yet.",
+      "2 waivers not signed, not sent yet",
     );
   });
 
@@ -406,7 +406,7 @@ describe("collapseDiverActions", () => {
 
     expect(result).toHaveLength(3);
     expect(
-      result.filter((entry) => entry.subject === "2 waivers not signed, not sent yet."),
+      result.filter((entry) => entry.subject === "2 waivers not signed, not sent yet"),
     ).toHaveLength(2);
     expect(result.filter((entry) => entry.subject === "Cara")).toHaveLength(1);
   });
@@ -513,7 +513,7 @@ describe("filterActionsForRoles", () => {
     action({ id: "4", kind: "certification" }),
     action({ id: "5", kind: "waiver" }),
     action({ id: "6", kind: "payment" }),
-    action({ id: "7", kind: "last_minute_fill" }),
+    action({ id: "7", kind: "seat_wanted" }),
     action({ id: "8", kind: "gear_due_back" }),
   ];
 
@@ -1084,7 +1084,7 @@ describe("readNeedsYou, one reading for every role", () => {
     // The blocked diver's fix: the desk's, withheld from a captain's lens.
     action({ id: "waiver", kind: "waiver", subject: "Priya", departure: boat("t1") }),
     action({ id: "prep", kind: "dive_prep", subject: "4 sizes", departure: boat("t1") }),
-    action({ id: "fill", kind: "last_minute_fill", subject: "3 seats", departure: boat("t1") }),
+    action({ id: "fill", kind: "seat_wanted", subject: "3 seats", departure: boat("t1") }),
     action({ id: "messages", kind: "unanswered_messages", subject: "3", departure: undefined }),
   ];
   const ROLES = [

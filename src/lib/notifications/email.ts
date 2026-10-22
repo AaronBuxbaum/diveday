@@ -132,7 +132,7 @@ type WaitlistInviteEmailInput = {
   timezone: string;
   /** The public trip page where the freed seat can be claimed. */
   bookingUrl: string;
-  /** Self-serve opt-out of `waitlist_invite`/`trip_recap` courtesy email. */
+  /** Self-serve opt-out of `seat_offer_commercial`/`trip_recap` courtesy email. */
   unsubscribeUrl: string;
   /** How many seats the waiting party asked for (fourth review, item 34); one when absent. */
   partySize?: number;
@@ -153,7 +153,7 @@ type TripInvitationEmailInput = {
   endsAt: Date;
   timezone: string;
   bookingUrl: string;
-  /** Present on the cold, staff-initiated invitation only (`direct_trip_invitation`). */
+  /** Present on the commercial offer only (`seat_offer_commercial`). */
   unsubscribeUrl?: string;
   /** A course session's prerequisite note, in the shop's words. */
   prerequisiteNote?: string;
@@ -937,7 +937,7 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
   const greetingHtml = t("notifications.common.greeting", {
     firstName: escapeHtml(firstName),
   });
-  // Only the cold invitation carries a way out (`direct_trip_invitation`,
+  // Only the commercial offer carries a way out (`seat_offer_commercial`,
   // issue #1953): the reply to a diver's own date request is service mail.
   // The schema decides which, by requiring the field on one kind and not
   // having it on the other; this only draws what it was given.
@@ -1834,7 +1834,7 @@ type CourseInquiryEmailInput = {
  * send (staffInviteEmail), not English-only like the founder-only
  * the new_account operator alert.
  */
-export function courseInquiryEmail(input: CourseInquiryEmailInput): NotificationEmail {
+export function leadReceivedEmail(input: CourseInquiryEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const notSaid = t("inquiry.notSaid");
   const name = input.inquirerName?.trim() || t("notifications.courseInquiry.anonymous");

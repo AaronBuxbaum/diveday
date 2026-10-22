@@ -1,6 +1,7 @@
 import { AGENCY_KEYS } from "@/app/shop/[shopSlug]/divers/[personId]/_components/shared";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import {
   CARD_PROCESSING_SINCE,
   type CardToProcess,
@@ -108,18 +109,19 @@ export function CardsToProcess({
         </div>
       ))}
       {earlier.length > 0 ? (
-        <details className="space-y-2" data-testid="cards-to-process-earlier">
-          <summary className="cursor-pointer text-sm text-muted">
-            {t("courses.processing.earlier", {
-              count: earlier.length,
-              date: formatShortDate(CARD_PROCESSING_SINCE, locale, timeZone),
-            })}
-          </summary>
-          <p className="mt-2 text-sm text-muted">{t("courses.processing.earlierHint")}</p>
+        <CompactDisclosureRow
+          id="cards-to-process-earlier"
+          label={t("courses.processing.earlier", {
+            count: earlier.length,
+            date: formatShortDate(CARD_PROCESSING_SINCE, locale, timeZone),
+          })}
+          bodyClassName="mt-2"
+        >
+          <p className="text-sm text-muted">{t("courses.processing.earlierHint")}</p>
           <ul className="mt-2 divide-y divide-border rounded-panel border border-border">
             {earlier.map(row)}
           </ul>
-        </details>
+        </CompactDisclosureRow>
       ) : null}
     </section>
   );

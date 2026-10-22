@@ -14,7 +14,7 @@ if (!url) {
 
 export default defineConfig({
   // One module per domain under src/db/schema/; index.ts re-exports them all.
-  schema: "./src/db/schema/index.ts",
+  schema: ["./src/db/schema/index.ts", "./src/db/schema/retired.ts"],
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: { url: withExplicitSslMode(url) },

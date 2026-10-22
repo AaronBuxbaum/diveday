@@ -19,7 +19,7 @@
     "revenueLabel": "Ingresos netos",
     "revenueBasis": "De las salidas de este mes",
     "revenueBasisWithCounter": "De las salidas de este mes, más {amount} en el mostrador",
-    "revenueCounter": "Más {amount} en el mostrador.",
+    "revenueCounter": "Más {amount} en el mostrador",
     "revenueDetailWithImported": "Pagos y depósitos de salidas actuales después del impuesto de Stripe, más {count, plural, one {# registro importado del origen sin verificar} other {# registros importados del origen sin verificar}}: {payments} en pagos y {refunds} en reembolsos.",
     "bookingsLabel": "Plazas",
     "bookingsThisMonth": "{count, plural, one {# salida} other {# salidas}} en el calendario hasta ahora",
@@ -34,9 +34,9 @@
     "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina, para que el centro la pase a la tripulación} other {# propinas, para que el centro las pase a la tripulación}}",
     "split": "Zarpado {sailed} · Por zarpar {toSail}"
   },
-  "noTripsFuture": "Todavía no hay nada reservado para este mes.",
-  "noTripsPast": "Ninguna salida zarpó este mes.",
-  "noTripsWithImportedHistory": "No hubo salidas de DiveDay registradas este mes.",
+  "noTripsFuture": "Todavía no hay nada reservado para este mes",
+  "noTripsPast": "Ninguna salida zarpó este mes",
+  "noTripsWithImportedHistory": "No hubo salidas de DiveDay registradas este mes",
   "importedHistory": {
     "sectionLabel": "Historial importado sin verificar",
     "heading": "Historial importado sin verificar",
@@ -81,7 +81,7 @@
     "sitesCount": "{count, plural, one {# sitio} other {# sitios}}",
     "siteTimes": "{count, plural, one {# vez} other {# veces}}",
     "sitesRest": "{count, plural, one {# sitio más} other {# sitios más}} · {dives, plural, one {# inmersión entre todos} other {# inmersiones entre todos}}",
-    "empty": "Todavía no ha zarpado ninguna salida este año.",
+    "empty": "Todavía no ha zarpado ninguna salida este año",
     "money": {
       "label": "El dinero del año",
       "taxLabel": "Impuestos cobrados",
@@ -156,8 +156,8 @@
     "invalid": "Eso no es un correo electrónico. Revísalo y guarda de nuevo.",
     "confirmationSent": "Guardado. Enviamos un enlace de confirmación a esa dirección; no se envía nada hasta que se use.",
     "confirmationNotSent": "Guardado, pero el enlace de confirmación no se pudo enviar ahora. Guarda de nuevo más tarde para reenviarlo.",
-    "setBy": "Puesto por {name}, {date}.",
-    "setByGone": "Puesto el {date} por alguien que ya no está en el equipo.",
+    "setBy": "Puesto por {name}, {date}",
+    "setByGone": "Puesto el {date} por alguien que ya no está en el equipo",
     "waiting": "Esperando a que {email} confirme; no se envía nada hasta entonces.",
     "setterLapsed": "Esa persona ya no puede exportar los datos del centro, así que no se envía nada. Guarda la dirección de nuevo para mantenerla, o cámbiala."
   },

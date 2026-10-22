@@ -209,6 +209,10 @@ export function CertCheckTry({
       >
         {running ? copy.running : copy.run}
       </button>
+      {/* Nested-step status alignment (#2887): Extension and PADI badges
+          answer their outer steps; sample badges answer each nested agency.
+          Its 64px label and 12px gap place that mark 76px deeper. Each pill
+          centers its own mark; the outer steps do not share an icon column. */}
       <ol className="mt-4 divide-y divide-border">
         <Step number={1} heading={copy.extension}>
           {presence.state === "current"

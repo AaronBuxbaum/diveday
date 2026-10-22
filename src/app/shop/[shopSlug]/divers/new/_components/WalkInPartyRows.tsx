@@ -106,7 +106,7 @@ export function WalkInPartyRows({
               type="button"
               onClick={() => setRows((current) => current.filter((row) => row !== number))}
               aria-label={fill(copy.removeFor, { n: String(index + 2) })}
-              className={buttonClass({ variant: "ghost", size: "sm" })}
+              className={buttonClass({ variant: "ghost" })}
             >
               {copy.remove}
             </button>

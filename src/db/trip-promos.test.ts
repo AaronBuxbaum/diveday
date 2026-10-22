@@ -1,18 +1,21 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { heldSendPayloadSchema } from "@/lib/held-sends";
+import { lastMinuteDealDiscount } from "@/lib/last-minute-list";
 import { fileScopedShopContext } from "@/test/db";
+import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
-import { joinLastMinuteList } from "./last-minute-list";
+import { askAnytime, askForDeparture } from "./leads";
+import { people, specialtyCertifications } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   getActiveTripPromoByCode,
   listOutstandingLastMinutePromos,
   listTripLastMinutePromos,
-  sendLastMinuteDealBlast,
   tripIdsNeverSentLastMinuteDeal,
 } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
-import { joinTripWaitlist } from "./waitlist";
 
 const visitor = {
   fullName: "Nora Quinn",
@@ -42,12 +45,12 @@ async function connectStripe(db: Awaited<ReturnType<typeof context>>["db"], shop
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
 
-describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
+describe("the deal: an offer with a discount (in-memory PGlite)", () => {
   it("refuses an out-of-range discount before touching Stripe or the last-minute list", async () => {
     const { db, shop, openTrip } = await context();
     const provider = fakePromotions();
     await expect(
-      sendLastMinuteDealBlast(
+      sendDeal(
         db,
         { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 4 },
         provider,
@@ -58,8 +61,8 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   it("refuses a full trip — there is nothing to fill", async () => {
     const { db, shop, fullTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    const outcome = await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: fullTrip.id, discountPercent: 25 },
       fakePromotions(),
@@ -69,8 +72,8 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
 
   it("refuses when the shop can't accept payments", async () => {
     const { db, shop, openTrip } = await context();
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    const outcome = await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions(),
@@ -81,7 +84,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   it("refuses when no one on the last-minute list is around for this date", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    const outcome = await sendLastMinuteDealBlast(
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions(),
@@ -92,13 +95,13 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   it("skips a last-minute-list entry whose date range doesn't cover the trip", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       ...visitor,
       availableFrom: "2099-01-01",
       availableUntil: "2099-01-10",
     });
-    const outcome = await sendLastMinuteDealBlast(
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions(),
@@ -109,8 +112,8 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   it("creates a Stripe coupon + promotion code and emails every matching entry", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    await joinLastMinuteList(db, {
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Priya Shah",
       email: "priya@example.com",
@@ -118,7 +121,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
     });
 
     const provider = fakePromotions();
-    const outcome = await sendLastMinuteDealBlast(
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 50 },
       provider,
@@ -145,9 +148,9 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   it("sends a fixed-amount deal as amount_off in the shop's currency, storing no percent", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    await askAnytime(db, { shopId: shop.id, ...visitor });
     const minted: unknown[] = [];
-    const outcome = await sendLastMinuteDealBlast(
+    const outcome = await sendDeal(
       db,
       {
         shopId: shop.id,
@@ -175,20 +178,19 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   });
 
   it("refuses a deal that asks for both a percent and an amount", async () => {
-    const { db, shop, openTrip } = await context();
-    await expect(
-      sendLastMinuteDealBlast(
-        db,
-        {
-          shopId: shop.id,
-          shopSlug: "blue-mantis",
-          tripId: openTrip.id,
-          discountPercent: 25,
-          discountAmountCents: 2_000,
-        },
-        fakePromotions(),
-      ),
-    ).resolves.toEqual({ ok: false, reason: "invalid_discount" });
+    // The held send's payload cannot spell it, so it is refused before any row
+    // is held; the executor's own check (`lastMinuteDealDiscount`) is the
+    // second line.
+    const { openTrip } = await context();
+    expect(
+      heldSendPayloadSchema.safeParse({
+        kind: "seat_offer",
+        tripId: openTrip.id,
+        leadIds: [openTrip.id],
+        discount: { percent: 25, amountCents: 2_000 },
+      }).success,
+    ).toBe(false);
+    expect(lastMinuteDealDiscount({ discountPercent: 25, discountAmountCents: 2_000 })).toBeNull();
   });
 
   it("still finds every matching recipient once a wait-listed diver's trip has an open seat", async () => {
@@ -197,7 +199,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
     // to advertise to everyone else who's merely around that week too.
     const { db, shop, fullTrip } = await context();
     await connectStripe(db, shop.id);
-    const waitlisted = await joinTripWaitlist(db, {
+    const waitlisted = await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       fullName: "Wren Ostrowski",
@@ -209,14 +211,26 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
     if (!toCancel) throw new Error("expected an existing booking to free a seat");
     await cancelBooking(db, shop.id, toCancel.booking.id);
 
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Wren Ostrowski",
       email: "wren@example.com",
-      declaration: { level: "advanced_open_water" as const, noCertification: false, nitrox: false },
+      declaration: { level: "advanced_open_water" as const, noCertification: false, nitrox: true },
+    });
+    // The Spiegel Grove asks for a Deep card and an enriched-air card as well
+    // as the rung, and the deal reaches only a diver who holds them
+    // (dive-domain review of #2656, m1).
+    const [wren] = await db.select().from(people).where(eq(people.email, "wren@example.com"));
+    if (!wren) throw new Error("expected Wren's record");
+    await db.insert(specialtyCertifications).values({
+      shopId: shop.id,
+      personId: wren.id,
+      agency: "padi",
+      specialty: "deep",
+      identifier: "DEEP-1",
     });
 
-    const outcome = await sendLastMinuteDealBlast(
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: fullTrip.id, discountPercent: 25 },
       fakePromotions(),
@@ -228,7 +242,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   it("caps max_redemptions at the trip's open-seat count", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    await askAnytime(db, { shopId: shop.id, ...visitor });
     let seenMaxRedemptions: number | undefined;
     const provider = fakePromotions({
       async createTripPromotion(request) {
@@ -236,7 +250,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
         return { status: "created", stripeCouponId: "c1", stripePromotionCodeId: "p1" };
       },
     });
-    await sendLastMinuteDealBlast(
+    await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       provider,
@@ -247,8 +261,8 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   it("marks the row failed and sends no email when Stripe rejects the request", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    const outcome = await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions({
@@ -265,13 +279,13 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   it("refuses when matching recipients are below the departure's minimum", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Uncertified Diver",
       email: "uncertified@example.com",
       declaration: { noCertification: true, nitrox: false },
     });
-    const outcome = await sendLastMinuteDealBlast(
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions(),
@@ -282,13 +296,13 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   it("supports recipientPersonIds filter to send deals to only selected people", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Selected Diver",
       email: "selected@example.com",
       declaration: { level: "open_water", noCertification: false, nitrox: false },
     });
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Unselected Diver",
       email: "unselected@example.com",
@@ -302,7 +316,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
       .from(people)
       .where(eq(people.email, "selected@example.com"));
 
-    const outcome = await sendLastMinuteDealBlast(
+    const outcome = await sendDeal(
       db,
       {
         shopId: shop.id,
@@ -324,8 +338,8 @@ describe("getActiveTripPromoByCode", () => {
   it("resolves a live code scoped to its exact trip", async () => {
     const { db, shop, openTrip, fullTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    const outcome = await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions(),
@@ -352,8 +366,8 @@ describe("getActiveTripPromoByCode", () => {
   it("does not resolve an expired code", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    const outcome = await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions(),
@@ -375,8 +389,8 @@ describe("listOutstandingLastMinutePromos", () => {
   it("surfaces a sent, unexpired code with its trip so the shop-wide promos page can list it", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    const outcome = await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    const outcome = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 30 },
       fakePromotions(),
@@ -402,8 +416,8 @@ describe("listOutstandingLastMinutePromos", () => {
   it("excludes a failed send — it never discounted anything and has nothing to list", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions({
@@ -420,8 +434,8 @@ describe("listOutstandingLastMinutePromos", () => {
   it("excludes a sent code once it has expired — it can no longer discount anything", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions(),
@@ -442,8 +456,8 @@ describe("listOutstandingLastMinutePromos", () => {
   it("pages by number and never repeats or skips a deal", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 30 },
       fakePromotions(),
@@ -475,8 +489,8 @@ describe("listOutstandingLastMinutePromos", () => {
   it("counts only the deals it lists, so an expired one cannot invent a page", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 30 },
       fakePromotions(),
@@ -495,8 +509,8 @@ describe("listOutstandingLastMinutePromos", () => {
   it("clamps a nonsensical or out-of-range page rather than showing an empty list", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
-    await sendLastMinuteDealBlast(
+    await askAnytime(db, { shopId: shop.id, ...visitor });
+    await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 30 },
       fakePromotions(),
@@ -528,13 +542,13 @@ describe("tripIdsNeverSentLastMinuteDeal", () => {
   it("includes a trip until a blast is actually sent for it", async () => {
     const { db, shop, openTrip } = await context();
     await connectStripe(db, shop.id);
-    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    await askAnytime(db, { shopId: shop.id, ...visitor });
 
     expect(await tripIdsNeverSentLastMinuteDeal(db, shop.id, [openTrip.id])).toEqual(
       new Set([openTrip.id]),
     );
 
-    await sendLastMinuteDealBlast(
+    await sendDeal(
       db,
       { shopId: shop.id, shopSlug: "blue-mantis", tripId: openTrip.id, discountPercent: 25 },
       fakePromotions(),

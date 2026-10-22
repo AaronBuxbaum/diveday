@@ -19,16 +19,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/db/authz", () => ({ canPersonConfigureTrips: vi.fn() }));
 vi.mock("@/db/boats", () => ({ listBoats: vi.fn(async () => []) }));
-vi.mock("@/db/course-inquiries", () => ({
-  listDateRequestsForStaff: vi.fn(),
-  listHandledDateRequests: vi.fn(async () => []),
+vi.mock("@/db/lead-dates", () => ({
+  listOpenDateLeads: vi.fn(),
+  listClosedDateLeads: vi.fn(async () => []),
+  listDeparturesOnDates: vi.fn(async () => []),
 }));
 vi.mock("./actions", () => ({ setRequestOutcomeAction: vi.fn() }));
 vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }));
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { canPersonConfigureTrips } = await import("@/db/authz");
-const { listDateRequestsForStaff, listHandledDateRequests } = await import("@/db/course-inquiries");
+const { listOpenDateLeads, listClosedDateLeads } = await import("@/db/lead-dates");
 const { requireShopSurface } = await import("@/lib/session");
 const { default: RequestsPage } = await import("./page");
 
@@ -48,11 +49,11 @@ const REQUEST = {
   preferredDate: "2027-03-06",
   alternateDate: null,
   dateFlexible: false,
-  divers: 2,
+  partySize: 2,
   message: null,
-  createdAt: new Date("2026-09-01T12:00:00Z"),
-  handledAt: null,
-  handledAs: null,
+  askedAt: new Date("2026-09-01T12:00:00Z"),
+  closedAt: null,
+  closedAs: null,
 };
 
 async function renderPage() {
@@ -78,7 +79,7 @@ beforeEach(() => {
       name: "Blue Mantis Divers",
     },
   } as never);
-  vi.mocked(listDateRequestsForStaff).mockResolvedValue({
+  vi.mocked(listOpenDateLeads).mockResolvedValue({
     rows: [REQUEST],
     total: 1,
     page: 1,
@@ -125,13 +126,13 @@ describe("a day's Add a departure", () => {
 describe("closed requests", () => {
   it("lists a booked request under Done, with Reopen", async () => {
     vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
-    vi.mocked(listHandledDateRequests).mockResolvedValue([
+    vi.mocked(listClosedDateLeads).mockResolvedValue([
       {
         ...REQUEST,
         id: "44444444-4444-4444-8444-444444444444",
         name: "Dee Whitlock",
-        handledAt: new Date("2026-10-14T15:00:00Z"),
-        handledAs: "booked",
+        closedAt: new Date("2026-10-14T15:00:00Z"),
+        closedAs: "booked",
       },
     ] as never);
     await renderPage();
@@ -157,14 +158,14 @@ describe("closed requests", () => {
 
   it("says nothing is open without claiming nobody ever asked", async () => {
     vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
-    vi.mocked(listDateRequestsForStaff).mockResolvedValue({
+    vi.mocked(listOpenDateLeads).mockResolvedValue({
       rows: [],
       total: 0,
       page: 1,
       pageCount: 1,
     } as never);
-    vi.mocked(listHandledDateRequests).mockResolvedValue([
-      { ...REQUEST, handledAt: new Date("2026-10-14T15:00:00Z"), handledAs: "done" },
+    vi.mocked(listClosedDateLeads).mockResolvedValue([
+      { ...REQUEST, closedAt: new Date("2026-10-14T15:00:00Z"), closedAs: "done" },
     ] as never);
     await renderPage();
 

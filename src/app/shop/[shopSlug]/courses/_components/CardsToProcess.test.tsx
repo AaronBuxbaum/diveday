@@ -50,7 +50,8 @@ describe("CardsToProcess", () => {
         t={t}
       />,
     );
-    const earlier = screen.getByTestId("cards-to-process-earlier");
+    const earlier = document.getElementById("cards-to-process-earlier");
+    if (!earlier) throw new Error("Earlier cards disclosure is missing");
     expect(earlier.tagName).toBe("DETAILS");
     expect(earlier.hasAttribute("open")).toBe(false);
     expect(within(earlier).getByText(/2 cards certified before/)).toBeTruthy();

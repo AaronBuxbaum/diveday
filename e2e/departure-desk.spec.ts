@@ -112,7 +112,7 @@ test("the crew records something left aboard and the shop hands it back", async 
   const row = page.getByTestId("lost-item").filter({ hasText: "Blue mask, seat 4" });
   await expect(row).toContainText(SAILED);
   await row.getByRole("button", { name: "Returned" }).click();
-  await expect(page.getByText("Nothing is waiting to go home.")).toBeVisible();
+  await expect(page.getByText("Nothing is waiting to go home")).toBeVisible();
 });
 
 /**

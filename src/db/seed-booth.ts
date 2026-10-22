@@ -13,6 +13,7 @@ import {
   divePackages,
   diveSites,
   executedDives,
+  leads,
   lostItems,
   orderLineItems,
   orders,
@@ -25,7 +26,6 @@ import {
   tripRequirements,
   tripScheduleDays,
   trips,
-  tripWaitlistEntries,
 } from "./schema";
 import { CAPTAIN_NAME, LEAD_INSTRUCTOR_NAME, OWNER_NAME } from "./seed-cast";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
@@ -927,14 +927,16 @@ export async function fillWeeklyRun(db: DbExecutor, shopId: string): Promise<voi
     if (diver) waiting.push(diver);
   }
   if (waiting.length > 0) {
-    await db.insert(tripWaitlistEntries).values(
+    await db.insert(leads).values(
       waiting.map((diver, index) => ({
         shopId,
+        scope: "departure" as const,
+        askedBy: "diver" as const,
         tripId: run.id,
         personId: diver.id,
         // The second is a pair: a diver and the buddy they dive with.
         partySize: index === 1 ? 2 : 1,
-        createdAt: new Date(now.getTime() - (20 - index * 14) * 60 * 60_000),
+        askedAt: new Date(now.getTime() - (20 - index * 14) * 60 * 60_000),
       })),
     );
   }

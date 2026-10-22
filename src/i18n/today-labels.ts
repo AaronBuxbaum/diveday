@@ -41,8 +41,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   payment: "today.actionKind.payment",
   email_delivery: "today.actionKind.emailDelivery",
   blocked_aboard: "today.actionKind.blockedAboard",
-  waitlist_seat: "today.actionKind.waitlistSeat",
-  last_minute_fill: "today.actionKind.lastMinuteFill",
+  seat_wanted: "today.actionKind.seatWanted",
   emergency_contact: "today.actionKind.emergencyContact",
   crew_below_target: "today.actionKind.crewBelowTarget",
   stuck_payment_operation: "today.actionKind.stuckPaymentOperation",
@@ -558,12 +557,8 @@ export function missingContactNamedDetailText(t: StaffTranslator): string {
   return t("today.detail.missingContactNamed");
 }
 
-export function lastMinuteFillDetailText(t: StaffTranslator, seats: number): string {
-  return t("today.detail.lastMinuteFill", { seats });
-}
-
-export function waitlistSeatDetailText(t: StaffTranslator, seats: number, waiting: number): string {
-  return t("today.detail.waitlistSeat", { seats, waiting });
+export function seatWantedDetailText(t: StaffTranslator, seats: number, waiting: number): string {
+  return t("today.detail.seatWanted", { seats, waiting });
 }
 
 /**
@@ -948,13 +943,8 @@ export function openCrewActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openCrew");
 }
 
-/** See {@link openCrewActionText}. */
-export function openLastMinuteDealActionText(t: StaffTranslator): string {
-  return t("today.actionLabel.openLastMinuteDeal");
-}
-
-export function inviteFromWaitlistActionText(t: StaffTranslator): string {
-  return t("today.actionLabel.inviteFromWaitlist");
+export function offerSeatActionText(t: StaffTranslator): string {
+  return t("today.actionLabel.offerSeat");
 }
 
 export function emailResendActionText(
@@ -1187,6 +1177,8 @@ export function daySpineSummaryText(
         time: summary.nextDepartureTime,
       })
     : t("shopHome.spine.summaryAfter", { count: summary.jobs });
+  // The boat count is a clause of this paragraph, not a standalone status.
+  // Its bundle period separates it from the job sentence in both locales.
   return `${boats} ${jobs}`;
 }
 

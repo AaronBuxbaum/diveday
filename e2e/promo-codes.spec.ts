@@ -200,7 +200,7 @@ test.describe("as owner", () => {
       page.locator("li").filter({ hasText: "E2EUNDO" }).filter({ visible: true }),
     ).toHaveCount(0);
     const toast = page.getByRole("status");
-    await expect(toast.getByText("Code deleted.")).toBeVisible();
+    await expect(toast.getByText("Code deleted")).toBeVisible();
 
     // Undo re-runs Stripe creation with the same code, discount, and scope —
     // the same path an ordinary "create a promo" takes, so it fails here for

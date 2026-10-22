@@ -42,7 +42,7 @@ describe("StatusReport", () => {
   it("answers the question in the heading when everything is up", () => {
     renderReport("ok", HEALTHY);
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Everything is running.");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Everything is running");
   });
 
   it("says the app is serving and the database is not, rather than one blended verdict", () => {
@@ -52,7 +52,7 @@ describe("StatusReport", () => {
     renderReport("degraded", DB_GONE);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "Part of DiveDay is not working.",
+      "Part of DiveDay is not working",
     );
     const rows = screen.getAllByRole("listitem");
     expect(rows[0]).toHaveTextContent("The app");

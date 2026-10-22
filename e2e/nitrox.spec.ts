@@ -52,7 +52,7 @@ test.describe("staff", () => {
 
     const card = page.locator("li").filter({ hasText: cardNo });
     await card.getByRole("button", { name: "Mark certified" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Marked certified." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Marked certified" })).toBeVisible();
 
     await openWreckTrip(page);
     await openTripTab(page, "Prep");
@@ -153,7 +153,7 @@ test.describe("a shop that stops filling nitrox", () => {
     await page.goto(`/shop/${SHOP}/settings/rentals`);
     await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
     await page.getByRole("button", { name: "Save rentals" }).click();
-    await expect(page.getByText("Rentals saved.")).toBeVisible();
+    await expect(page.getByText("Rentals saved")).toBeVisible();
 
     // The diver comes back and resaves their gear for any reason at all. The
     // nitrox fieldset is gone (the shop doesn't fill it any more), but saving
@@ -197,7 +197,7 @@ test.describe("a shop that stops filling nitrox", () => {
     await page.goto(`/shop/${SHOP}/settings/rentals`);
     await page.getByRole("checkbox", { name: "Nitrox fills" }).uncheck();
     await page.getByRole("button", { name: "Save rentals" }).click();
-    await expect(page.getByText("Rentals saved.")).toBeVisible();
+    await expect(page.getByText("Rentals saved")).toBeVisible();
 
     // Two-Tank Reef never had a nitrox request seeded onto it (unlike the
     // wreck charter above), so with the catalog off there is no live data
@@ -257,7 +257,7 @@ test("a freshly onboarded shop starts without nitrox, and turning it on unlocks 
   await expect(nitroxCheckbox).not.toBeChecked();
   await nitroxCheckbox.check();
   await page.getByRole("button", { name: "Save rentals" }).click();
-  await expect(page.getByText("Rentals saved.")).toBeVisible();
+  await expect(page.getByText("Rentals saved")).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Nitrox fills" })).toBeChecked();
   await expect(page.locator('input[data-draft-for="nitroxPrice"]')).toHaveCount(1);
 });

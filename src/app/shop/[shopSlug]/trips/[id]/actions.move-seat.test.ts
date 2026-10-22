@@ -26,7 +26,7 @@ vi.mock("@/db/seat-diver", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/seat-diver")>();
   return { ...actual, moveSeat: vi.fn() };
 });
-vi.mock("@/db/waitlist-roll", () => ({ carryWaitlist: vi.fn() }));
+vi.mock("@/db/lead-roll", () => ({ carryLeads: vi.fn() }));
 vi.mock("./roster-booking", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./roster-booking")>();
   return { ...actual, requireRosterBooking: vi.fn() };
@@ -36,7 +36,7 @@ const { getDb } = await import("@/db/client");
 const { moveSeat } = await import("@/db/seat-diver");
 const { requireShopSurface } = await import("@/lib/session");
 const { requireRosterBooking } = await import("./roster-booking");
-const { carryWaitlist } = await import("@/db/waitlist-roll");
+const { carryLeads } = await import("@/db/lead-roll");
 const { carryWaitlistAction, moveSeatAction } = await import("./roster-seating-actions");
 
 const SHOP_SLUG = "reef-life";
@@ -142,12 +142,12 @@ describe("carryWaitlistAction", () => {
 
   it("lands on the departure the leads went to, saying how many", async () => {
     signIn();
-    vi.mocked(carryWaitlist).mockResolvedValue({ ok: true, carried: 3 });
+    vi.mocked(carryLeads).mockResolvedValue({ ok: true, carried: 3 });
     const landing = shopPath(SHOP_SLUG, "trips", TO_TRIP_ID);
     expect(await redirectedTo(() => carryWaitlistAction(SHOP_SLUG, TRIP_ID, carryForm()))).toBe(
       noticeUrl(landing, "waitlist-carried", { count: 3 }),
     );
-    expect(carryWaitlist).toHaveBeenCalledWith(
+    expect(carryLeads).toHaveBeenCalledWith(
       {},
       { shopId: SHOP_ID, fromTripId: TRIP_ID, toTripId: TO_TRIP_ID },
     );
@@ -155,7 +155,7 @@ describe("carryWaitlistAction", () => {
 
   it("stays put and says so when the departure takes nobody", async () => {
     signIn();
-    vi.mocked(carryWaitlist).mockResolvedValue({ ok: false, reason: "target_unavailable" });
+    vi.mocked(carryLeads).mockResolvedValue({ ok: false, reason: "target_unavailable" });
     expect(await redirectedTo(() => carryWaitlistAction(SHOP_SLUG, TRIP_ID, carryForm()))).toBe(
       noticeUrl(back, "waitlist-carry-unavailable"),
     );

@@ -92,18 +92,6 @@ export function diverFile<Row>(spec: SharedExportFile<Row>): ExportFileSpec<Dive
   };
 }
 
-/**
- * Who an invitation is for: the person it names, or — for one raised from a
- * course inquiry by someone with no record yet — the inquiry's own person.
- */
-function invitee(
-  row: { personId: string | null; courseInquiryId: string | null },
-  inquiryById: ShopExportContext["inquiryById"],
-) {
-  const inquiry = row.courseInquiryId ? inquiryById.get(row.courseInquiryId) : undefined;
-  return { personId: row.personId ?? inquiry?.personId ?? null, inquiry };
-}
-
 /** A person's name when there is a person, and nothing when there is not. */
 function nameOf(personName: ReadonlyMap<string, string>, personId: string | null | undefined) {
   return personId ? personName.get(personId) : null;
@@ -480,132 +468,87 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
   },
 });
 
-export const WAITLIST_ENTRIES_CSV = sharedFile<ShopRow<"waitlistRows">>({
-  file: "waitlist_entries.csv",
+/**
+ * **Everyone who wanted a seat**, every scope in one file (ADR
+ * 20261017-one-lead-with-a-scope; H-02's portability promise holds, the file set
+ * changed). `scope` says what the row asked for: `departure` (a wait-list entry
+ * or an offer, with its trip), `date` (a day that was not on the board) or
+ * `anytime` (the last-minute list). The contact snapshot a person-less date lead
+ * kept is the shop's alone.
+ */
+export const LEADS_CSV = sharedFile<ShopRow<"leadRows">>({
+  file: "leads.csv",
   columns: [
     { header: "id", in: "both", value: (row) => row.id },
+    { header: "scope", in: "both", value: (row) => row.scope },
+    { header: "asked_by", in: "both", value: (row) => row.askedBy },
+    { header: "parent_lead_id", in: "shop", value: (row) => row.parentLeadId },
     { header: "trip_id", in: "shop", value: (row) => row.tripId },
-    { header: "trip_title", in: "both", value: (row, { tripTitle }) => tripTitle.get(row.tripId) },
+    {
+      header: "trip_title",
+      in: "both",
+      value: (row, { tripTitle }) => (row.tripId ? tripTitle.get(row.tripId) : null),
+    },
     {
       header: "trip_starts_at",
       in: "both",
-      value: (row, { tripStartsAt }) => tripStartsAt.get(row.tripId),
+      value: (row, { tripStartsAt }) => (row.tripId ? tripStartsAt.get(row.tripId) : null),
     },
     { header: "person_id", in: "shop", value: (row) => row.personId },
+    // Resolved at capture time by exact email match against a live diver for a
+    // date lead, never back-filled: a null here is a lead nobody could tie to a
+    // person, not a lookup this export skipped.
     {
       header: "person_name",
       in: "shop",
-      value: (row, { personName }) => personName.get(row.personId),
+      value: (row, { personName }) => nameOf(personName, row.personId),
     },
+    { header: "name", in: "shop", value: (row) => row.name },
+    { header: "email", in: "shop", value: (row) => row.email },
+    { header: "phone", in: "shop", value: (row) => row.phone },
+    { header: "course_id", in: "shop", value: (row) => row.courseId },
+    // Null for a request that names no course: it says what it is about in
+    // `interest`, the column beside this one.
+    {
+      header: "course_title",
+      in: "both",
+      value: (row, { courseTitle }) => (row.courseId ? courseTitle.get(row.courseId) : null),
+    },
+    { header: "interest", in: "both", value: (row) => row.interest },
+    { header: "experience_level", in: "both", value: (row) => row.experienceLevel },
+    { header: "timing", in: "both", value: (row) => row.timing },
+    { header: "preferred_date", in: "shop", value: (row) => row.preferredDate },
+    { header: "alternate_date", in: "shop", value: (row) => row.alternateDate },
+    { header: "date_flexible", in: "shop", value: (row) => row.dateFlexible },
+    { header: "available_from", in: "both", value: (row) => row.availableFrom },
+    { header: "available_until", in: "both", value: (row) => row.availableUntil },
     // The seats this lead waits for, themselves included (fourth review, item 34).
     { header: "party_size", in: "both", value: (row) => row.partySize },
-    { header: "invited_at", in: "both", value: (row) => row.invitedAt },
-    { header: "created_at", in: "both", value: (row) => row.createdAt },
-  ],
-  shop: {
-    rows: ({ waitlistRows }) => waitlistRows,
-    note: EXPORT_FILE_NOTES["waitlist_entries.csv"],
-  },
-  diver: {
-    rows: ({ waitlistRows }) => waitlistRows,
-    note: "Full trips this diver joined the wait list for.",
-  },
-});
-
-export const TRIP_INVITATIONS_CSV = sharedFile<ShopRow<"invitationRows">>({
-  file: "trip_invitations.csv",
-  columns: [
-    { header: "id", in: "both", value: (row) => row.id },
-    { header: "trip_id", in: "shop", value: (row) => row.tripId },
-    { header: "trip_title", in: "both", value: (row, { tripTitle }) => tripTitle.get(row.tripId) },
-    {
-      header: "trip_starts_at",
-      in: "both",
-      value: (row, { tripStartsAt }) => tripStartsAt.get(row.tripId),
-    },
-    { header: "source", in: "both", value: (row) => row.source },
-    { header: "course_inquiry_id", in: "shop", value: (row) => row.courseInquiryId },
-    {
-      header: "person_id",
-      in: "shop",
-      value: (row, { inquiryById }) => invitee(row, inquiryById).personId,
-    },
-    {
-      header: "person_name",
-      in: "shop",
-      value: (row, { inquiryById, personName }) => {
-        const { personId, inquiry } = invitee(row, inquiryById);
-        return personId ? personName.get(personId) : inquiry?.name;
-      },
-    },
+    { header: "message", in: "both", value: (row) => row.message },
+    { header: "asked_at", in: "both", value: (row) => row.askedAt },
     { header: "created_by_person_id", in: "shop", value: (row) => row.createdByPersonId },
     {
       header: "created_by_name",
       in: "shop",
-      value: (row, { personName }) => personName.get(row.createdByPersonId),
+      value: (row, { personName }) => nameOf(personName, row.createdByPersonId),
     },
-    { header: "invited_at", in: "both", value: (row) => row.invitedAt },
+    { header: "offered_at", in: "both", value: (row) => row.offeredAt },
     { header: "emailed_at", in: "both", value: (row) => row.emailedAt },
-    { header: "created_at", in: "both", value: (row) => row.createdAt },
+    { header: "promo_id", in: "shop", value: (row) => row.promoId },
+    // When the shop closed the lead, and how: `booked` when a seat answered it,
+    // `done` when staff marked it, `unsubscribed` when the diver left the list.
+    // The shop's bookkeeping, not the diver's, as `handled_as` was on main
+    // (security review of #2656, minor 4).
+    { header: "closed_at", in: "shop", value: (row) => row.closedAt },
+    { header: "closed_as", in: "shop", value: (row) => row.closedAs },
   ],
   shop: {
-    rows: ({ invitationRows }) => invitationRows,
-    note: EXPORT_FILE_NOTES["trip_invitations.csv"],
+    rows: ({ leadRows }) => leadRows,
+    note: EXPORT_FILE_NOTES["leads.csv"],
   },
   diver: {
-    rows: ({ invitationRows }) => invitationRows,
-    note: "Staff outreach inviting this diver to a departure without claiming a seat.",
-  },
-});
-
-export const LAST_MINUTE_LIST_CSV = sharedFile<ShopRow<"lastMinuteListRows">>({
-  file: "last_minute_list.csv",
-  columns: [
-    { header: "id", in: "both", value: (row) => row.id },
-    { header: "person_id", in: "shop", value: (row) => row.personId },
-    {
-      header: "person_name",
-      in: "shop",
-      value: (row, { personName }) => personName.get(row.personId),
-    },
-    { header: "available_from", in: "both", value: (row) => row.availableFrom },
-    { header: "available_until", in: "both", value: (row) => row.availableUntil },
-    { header: "unsubscribed_at", in: "both", value: (row) => row.unsubscribedAt },
-    { header: "created_at", in: "both", value: (row) => row.createdAt },
-  ],
-  shop: {
-    rows: ({ lastMinuteListRows }) => lastMinuteListRows,
-    note: EXPORT_FILE_NOTES["last_minute_list.csv"],
-  },
-  diver: {
-    rows: ({ lastMinuteListRows }) => lastMinuteListRows,
-    note: "This diver's opt-in to hear about last-minute deals shop-wide, and the date range they gave.",
-  },
-});
-
-export const TRIP_LAST_MINUTE_PROMO_RECIPIENTS_CSV = sharedFile<
-  ShopRow<"lastMinutePromoRecipientRows">
->({
-  file: "trip_last_minute_promo_recipients.csv",
-  columns: [
-    { header: "id", in: "both", value: (row) => row.id },
-    { header: "trip_promo_id", in: "both", value: (row) => row.tripPromoId },
-    { header: "person_id", in: "shop", value: (row) => row.personId },
-    {
-      header: "person_name",
-      in: "shop",
-      value: (row, { personName }) => personName.get(row.personId),
-    },
-    { header: "email", in: "both", value: (row) => row.email },
-    { header: "created_at", in: "both", value: (row) => row.createdAt },
-  ],
-  shop: {
-    rows: ({ lastMinutePromoRecipientRows }) => lastMinutePromoRecipientRows,
-    note: EXPORT_FILE_NOTES["trip_last_minute_promo_recipients.csv"],
-  },
-  diver: {
-    rows: ({ lastMinutePromoRecipientRows }) => lastMinutePromoRecipientRows,
-    note: "Last-minute deal blasts this diver was sent.",
+    rows: ({ leadRows }) => leadRows,
+    note: "Every time this diver asked the shop for a seat, or the shop offered one: a wait list, a date they asked for, the last-minute list.",
   },
 });
 
@@ -1640,50 +1583,5 @@ export const DIVE_PACKAGE_ENTITLEMENTS_CSV = sharedFile<ShopRow<"entitlementRows
   diver: {
     rows: ({ entitlementRows }) => entitlementRows,
     note: "Prepaid dives this diver bought — spent and still owed.",
-  },
-});
-
-export const COURSE_INQUIRIES_CSV = sharedFile<ShopRow<"inquiryRows">>({
-  file: "course_inquiries.csv",
-  columns: [
-    { header: "id", in: "both", value: (row) => row.id },
-    { header: "course_id", in: "shop", value: (row) => row.courseId },
-    // Null for a request that names no course — it says what it is
-    // about in `interest` instead, the column beside this one.
-    {
-      header: "course_title",
-      in: "both",
-      value: (row, { courseTitle }) => (row.courseId ? courseTitle.get(row.courseId) : null),
-    },
-    { header: "interest", in: "both", value: (row) => row.interest },
-    { header: "person_id", in: "shop", value: (row) => row.personId },
-    // Resolved at capture time by exact email match against a live
-    // diver, never back-filled — so a null here is a lead nobody could
-    // tie to a person, not a lookup this export skipped.
-    {
-      header: "person_name",
-      in: "shop",
-      value: (row, { personName }) => (row.personId ? personName.get(row.personId) : null),
-    },
-    { header: "name", in: "shop", value: (row) => row.name },
-    { header: "email", in: "shop", value: (row) => row.email },
-    { header: "phone", in: "shop", value: (row) => row.phone },
-    { header: "experience_level", in: "both", value: (row) => row.experienceLevel },
-    { header: "timing", in: "both", value: (row) => row.timing },
-    { header: "preferred_date", in: "shop", value: (row) => row.preferredDate },
-    { header: "alternate_date", in: "shop", value: (row) => row.alternateDate },
-    { header: "date_flexible", in: "shop", value: (row) => row.dateFlexible },
-    { header: "divers", in: "shop", value: (row) => row.divers },
-    { header: "message", in: "both", value: (row) => row.message },
-    { header: "created_at", in: "both", value: (row) => row.createdAt },
-    // When the shop closed the request, and how: `booked` when a seat answered
-    // it, `done` when staff marked it. The shop's bookkeeping, not the diver's.
-    { header: "handled_at", in: "shop", value: (row) => row.handledAt },
-    { header: "handled_as", in: "shop", value: (row) => row.handledAs },
-  ],
-  shop: { rows: ({ inquiryRows }) => inquiryRows, note: EXPORT_FILE_NOTES["course_inquiries.csv"] },
-  diver: {
-    rows: ({ inquiryRows }) => inquiryRows,
-    note: "Course leads this diver submitted through the shop's public page.",
   },
 });

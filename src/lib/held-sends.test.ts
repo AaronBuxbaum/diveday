@@ -74,33 +74,34 @@ describe("heldSendPayloadSchema", () => {
   it("refuses a deal with nobody to send to, or a discount off the scale", () => {
     expect(
       heldSendPayloadSchema.safeParse({
-        kind: "last_minute_deal",
+        kind: "seat_offer",
         tripId: booking,
-        discountPercent: 20,
-        recipientPersonIds: [],
+        discount: { percent: 20 },
+        leadIds: [],
       }).success,
     ).toBe(false);
     expect(
       heldSendPayloadSchema.safeParse({
-        kind: "last_minute_deal",
+        kind: "seat_offer",
         tripId: booking,
-        discountPercent: 120,
-        recipientPersonIds: [booking],
+        discount: { percent: 120 },
+        leadIds: [booking],
       }).success,
     ).toBe(false);
   });
 
   it("holds a deal at a percent or a fixed amount, never both and never neither", () => {
-    const deal = { kind: "last_minute_deal", tripId: booking, recipientPersonIds: [booking] };
-    expect(heldSendPayloadSchema.safeParse({ ...deal, discountAmountCents: 2_000 }).success).toBe(
-      true,
-    );
+    const deal = { kind: "seat_offer", tripId: booking, leadIds: [booking] };
     expect(
-      heldSendPayloadSchema.safeParse({ ...deal, discountPercent: 20, discountAmountCents: 2_000 })
+      heldSendPayloadSchema.safeParse({ ...deal, discount: { amountCents: 2_000 } }).success,
+    ).toBe(true);
+    expect(
+      heldSendPayloadSchema.safeParse({ ...deal, discount: { percent: 20, amountCents: 2_000 } })
         .success,
     ).toBe(false);
-    expect(heldSendPayloadSchema.safeParse(deal).success).toBe(false);
-    expect(heldSendPayloadSchema.safeParse({ ...deal, discountAmountCents: 0 }).success).toBe(
+    // No discount is an ordinary offer, not a deal.
+    expect(heldSendPayloadSchema.safeParse(deal).success).toBe(true);
+    expect(heldSendPayloadSchema.safeParse({ ...deal, discount: { amountCents: 0 } }).success).toBe(
       false,
     );
   });

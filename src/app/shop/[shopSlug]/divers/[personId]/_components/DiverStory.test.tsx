@@ -289,7 +289,7 @@ describe("what came across from the old system", () => {
 describe("the story's bounds and its foot", () => {
   it("says so plainly when a diver has been nowhere yet", () => {
     renderStory(diver());
-    expect(screen.getByText("No visits yet.")).toBeInTheDocument();
+    expect(screen.getByText("No visits yet")).toBeInTheDocument();
   });
 
   it("folds everything past the tenth entry behind one disclosure", () => {

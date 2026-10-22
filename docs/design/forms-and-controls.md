@@ -795,6 +795,12 @@ the same reason (`FILL_ROOM` in `src/components/ui/ledger.tsx`). The variants pa
 (`primary`, `secondary`, `outline`, `danger`, `danger-solid`, `sky`) are boxes, and a box lines up
 by its edge, not its label, so the type refuses `flush` on them.
 
+**A short unpainted label can use `flush: "padded"`.** On `link` and `bare`, this keeps
+symmetric 8px padding and an equal `-mx-2` outdent. The manifest's "Got it" then clears the
+44px target floor with its label centred in the target and its trailing text on the panel's
+16px inset. Ordinary `flush: true` keeps its existing padless behavior. The padded mode adds no
+hover fill; its target and 5px focus ring extend 13px past the words, fitting inside a 16px gutter.
+
 **`flush` is for the button that starts or ends a line, and the row gives back what it gave up.**
 Mid-row, among other words, a quiet button keeps its padding: that is what keeps its hover fill
 off its neighbours. Where it starts a line, its padding was part of the space to the next control,

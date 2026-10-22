@@ -31,20 +31,20 @@
     "recording": "Registrando…"
   },
   "notice": {
-    "readySent": "Aviso de recogida enviado.",
+    "readySent": "Aviso de recogida enviado",
     "readyNoContact": "No hay correo ni teléfono en la ficha, así que no se envió nada.",
     "readyNotConfigured": "Este centro no tiene los mensajes configurados, así que no se envió nada.",
     "readyFailed": "El aviso de recogida no se pudo enviar.",
     "readyNotReady": "El trabajo no está listo, así que no se envió nada.",
-    "billSent": "Factura enviada.",
+    "billSent": "Factura enviada",
     "billAlready": "Esta orden ya tiene una factura.",
     "billNotConnected": "Conecta Stripe en Ajustes para enviar facturas.",
     "billInvalid": "Estas líneas no pueden ir en una factura. Revisa cada importe y cantidad.",
     "billTaxLocation": "Los impuestos están activados, así que esta factura necesita la dirección de facturación del cliente. Envíala desde Pedidos.",
     "billStripeFailed": "Stripe no pudo crear esa factura. Inténtalo de nuevo en un momento.",
     "billNoLines": "Agrega primero repuestos o mano de obra.",
-    "remindersOff": "Recordatorios de mantenimiento desactivados para esa pieza.",
-    "remindersOn": "Recordatorios de mantenimiento activados para esa pieza.",
+    "remindersOff": "Recordatorios de mantenimiento desactivados para esa pieza",
+    "remindersOn": "Recordatorios de mantenimiento activados para esa pieza",
     "billPaidCounter": "Pago registrado. La orden está pagada."
   },
   "reminders": {
@@ -58,7 +58,7 @@
   },
   "today": {
     "pastPromise": "Prometida para el {date}, todavía no está lista.",
-    "uncollected": "Listo desde el {date} y sin recoger.",
+    "uncollected": "Listo desde el {date} y sin recoger",
     "openTicket": "Ver orden"
   }
 }

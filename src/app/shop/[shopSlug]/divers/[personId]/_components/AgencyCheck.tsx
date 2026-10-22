@@ -18,6 +18,7 @@ import {
 } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-outcome";
 import { reportFailedCheck } from "@/app/shop/[shopSlug]/_components/agency-check/report-failed-check";
 import { UndoToast } from "@/components/UndoToast";
+import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { requestAgencyPage, useCertCheckExtension } from "@/components/useCertCheckExtension";
 import type { AgencyCheckQuery } from "@/lib/agency-check";
@@ -25,8 +26,13 @@ import type { AgencyCheckResult, AgencyListedAddResult } from "../agency-check-a
 
 export type { AgencyCheckCopy };
 
-const LINK_CLASS =
-  "mt-1 block w-fit text-sm font-semibold text-primary hover:underline print:hidden";
+const LINK_CLASS = buttonClass({
+  variant: "link",
+  size: "sm",
+  flush: true,
+  busy: true,
+  className: "mt-1 print:hidden",
+});
 
 /**
  * **"Check with SSI", done for the staffer when the DiveDay extension is here**
@@ -112,9 +118,13 @@ export function AgencyCheck({
   }
 
   const link = (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
-      {copy.link}
-    </a>
+    // buttonClass owns the target's size and inline-flex centering; this row
+    // keeps that target below the credential instead of running into its text.
+    <span className="flex">
+      <a href={href} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
+        {copy.link}
+      </a>
+    </span>
   );
   const match = result?.ok && result.verdict === "match" ? result : null;
   const undo = match?.undo;
@@ -130,15 +140,17 @@ export function AgencyCheck({
   return (
     <>
       {!awaiting ? null : hasExtension && query && !sendsToAgency ? (
-        <button
-          type="button"
-          onClick={check}
-          disabled={busy}
-          aria-busy={busy}
-          className={`${LINK_CLASS} disabled:cursor-progress disabled:opacity-70`}
-        >
-          {busy ? copy.checking : copy.check}
-        </button>
+        <span className="flex">
+          <button
+            type="button"
+            onClick={check}
+            disabled={busy}
+            aria-busy={busy}
+            className={LINK_CLASS}
+          >
+            {busy ? copy.checking : copy.check}
+          </button>
+        </span>
       ) : hasExtension && query && outcome ? null : (
         link
       )}

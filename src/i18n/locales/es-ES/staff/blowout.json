@@ -5,7 +5,7 @@
     "moneyNote": "Los pagos con tarjeta se devuelven automáticamente. Lo que se haya cobrado en el mostrador, o con una tarjeta que DiveDay no pueda alcanzar, queda en tus manos, y a esos buceadores se les avisa de que se les debe un reembolso.",
     "diversHeading": "{count, plural, one {Se enviará el mensaje a # buceador} other {Se enviará el mensaje a # buceadores}}",
     "noEmail": "Sin correo — marcado para llamar",
-    "noDivers": "No hay nadie reservado en esta salida. Llamarla cancela la salida.",
+    "noDivers": "No hay nadie reservado en esta salida. Llamarla cancela la salida",
     "departed": "Esta salida está en curso o ya zarpó, así que no hay nada que cancelar.",
     "moneyNoteHeld": "Desde aquí no se devuelven los pagos con tarjeta: un propietario o gerente libera los reembolsos, y a esos buceadores se les avisa de que se les debe uno. Lo que se haya cobrado en el mostrador queda en tus manos.",
     "button": "Cancelar por mal tiempo",
@@ -46,7 +46,7 @@
     "releasing": "Enviando…",
     "resend": "Reintentar los mensajes no enviados",
     "resending": "Reintentando…",
-    "empty": "No había nadie reservado cuando se llamó la cancelación."
+    "empty": "No había nadie reservado cuando se llamó la cancelación"
   },
   "notices": {
     "called": "Cancelación llamada. La salida queda cancelada y el mensaje de cada buceador está en camino.",
@@ -73,7 +73,7 @@
     "unsent": "Mensajes sin enviar",
     "resume": "Terminar de enviar",
     "openRecord": "Abrir la cascada",
-    "empty": "No hay salidas este día.",
+    "empty": "No hay salidas este día",
     "nothingToCall": "No queda nada que cancelar este día.",
     "instead": "¿Se cae todo el día? Cancela varias salidas a la vez",
     "crew": "Equipo: {names}",

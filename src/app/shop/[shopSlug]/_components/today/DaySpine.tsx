@@ -13,20 +13,24 @@ import {
   agencyCheckAction,
 } from "@/app/shop/[shopSlug]/divers/[personId]/agency-check-actions";
 import {
-  WaitlistInvite,
-  type WaitlistInviteCopy,
-} from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
+  OfferSeat,
+  type OfferSeatCopy,
+} from "@/app/shop/[shopSlug]/trips/[id]/_components/OfferSeat";
+import {
+  offeredAgoText,
+  offerSeatCopy,
+} from "@/app/shop/[shopSlug]/trips/[id]/_components/offer-seat-copy";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
-import { sendHoldCopy } from "@/components/send-hold-copy";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS } from "@/i18n/today-labels";
+import { nowDate } from "@/lib/clock";
 import type { DayTakings as DayTakingsReading, EveningClose } from "@/lib/closeout";
 import { FORM_DRAFT_LABEL_KEYS, type FormDraftKind } from "@/lib/form-drafts";
 import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
@@ -125,7 +129,7 @@ type RowControls = {
   shopName: string;
   waiverCopy: WaiverSendCopy;
   resendCopy: ResendConfirmationCopy;
-  inviteCopy: WaitlistInviteCopy;
+  offerCopy: OfferSeatCopy;
   paymentCopy: PaymentActionCopy;
   helpRequestAction?: SpineHelpRequestAction;
   /** The signed-in staffer: the "working it" tap is never offered about them (#2678). */
@@ -155,25 +159,7 @@ function rowControls(
         failed: t("today.resendConfirmation.errors.failed"),
       },
     },
-    // Same keys `WaitlistSection.tsx` uses — `WaitlistInvite` is a Client
-    // Component, so the full copy object is composed here rather than passing
-    // a translator across the boundary.
-    inviteCopy: {
-      hold: sendHoldCopy(t),
-      invitedRelative: t.raw("trips.waitlist.invitedRelative"),
-      inviteEmailed: t("trips.waitlist.inviteEmailed"),
-      reSendInvite: t("trips.waitlist.reSendInvite"),
-      emailAnInvite: t.raw("trips.waitlist.emailAnInvite"),
-      copied: t("trips.waitlist.copied"),
-      copyInviteMessage: t("trips.waitlist.copyInviteMessage"),
-      copyFailed: t("trips.waitlist.copyFailed"),
-      justNow: t("trips.waitlist.justNow"),
-      minutesAgo: t.raw("trips.waitlist.minutesAgo"),
-      hoursAgo: t.raw("trips.waitlist.hoursAgo"),
-      daysAgo: t.raw("trips.waitlist.daysAgo"),
-      emailSubject: t.raw("trips.waitlist.emailSubject"),
-      emailBody: t.raw("trips.waitlist.emailBody"),
-    },
+    offerCopy: offerSeatCopy(t),
     paymentCopy: paymentActionCopy(t),
   };
 }
@@ -236,8 +222,7 @@ const QUIET_ROW_ICON: Record<QuietKind, RowIconName> = {
   help_request: "inbox",
   payment: "orders",
   email_delivery: "inbox",
-  waitlist_seat: "divers",
-  last_minute_fill: "board",
+  seat_wanted: "divers",
   emergency_contact: "divers",
   crew_below_target: "staffing",
   reviews_pending: "reviews",
@@ -381,7 +366,7 @@ function StationRow({
   const performs = Boolean(
     action.waiver ||
       action.resend ||
-      action.invite ||
+      action.offer ||
       action.payment?.orderId ||
       action.helpRequest ||
       action.rentalFit,
@@ -430,18 +415,31 @@ function StationRow({
       label={action.actionLabel}
       copy={controls.resendCopy}
     />
-  ) : action.invite ? (
-    <WaitlistInvite
-      entryId={action.invite.entryId}
-      personName={action.invite.personName}
-      personEmail={action.invite.personEmail}
-      invitedAt={action.invite.invitedAt}
-      bookingPath={action.invite.bookingPath}
+  ) : action.offer ? (
+    <OfferSeat
+      formId={`offer-seat-${action.offer.tripId}`}
+      tripId={action.offer.tripId}
+      leads={[
+        {
+          leadId: action.offer.leadId,
+          name: action.offer.personName,
+          email: action.offer.personEmail,
+        },
+      ]}
+      chooseByTick={false}
+      label={t("trips.whoWantsIn.offerSeatToName", { name: action.offer.personName })}
+      offeredLabel={
+        action.offer.offeredAt
+          ? t("trips.whoWantsIn.offeredAgo", {
+              time: offeredAgoText(t, action.offer.offeredAt, nowDate()),
+            })
+          : undefined
+      }
+      bookingPath={action.offer.bookingPath}
       shopName={controls.shopName}
-      tripTitle={action.invite.tripTitle}
-      tripWhen={action.invite.tripWhen}
-      tripId={action.invite.tripId}
-      copy={controls.inviteCopy}
+      tripTitle={action.offer.tripTitle}
+      tripWhen={action.offer.tripWhen}
+      copy={controls.offerCopy}
     />
   ) : action.payment?.orderId ? (
     <PaymentActionControl

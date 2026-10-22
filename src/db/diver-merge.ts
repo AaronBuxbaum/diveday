@@ -136,22 +136,12 @@ export type DiverMergeResult =
  * The survivor is the record the shop chose to keep, so the survivor's row
  * wins and the source's is dropped. Both are current-state rows a staffer can
  * re-enter, not history: a fit profile is the diver's sizes today, and a
- * last-minute-list entry is a standing "tell me when a seat frees".
+ * last-minute-list lead is a standing "tell me when a seat frees" (it is
+ * handled with the other leads below, because it shares their table).
  */
-const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_entries"] as const;
-
-/**
- * Tables unique on `(trip_id, person_id)` besides `bookings`. Both records on
- * one departure's wait list, or both invited to it, would collide on the
- * repoint; the kept record's row stands and the merged-away duplicate goes,
- * as `SINGLETON_PER_PERSON_TABLES` does per person. Now reachable, because a
- * cancelled seat no longer refuses a merge on a departure both records share
- * (issue #2177).
- */
-const ONE_PER_DEPARTURE_PER_PERSON_TABLES = ["trip_waitlist_entries", "trip_invitations"] as const;
+const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles"] as const;
 
 export const DIVER_HISTORY_TABLES = [
-  "course_inquiries",
   // What the bench told this diver about their own gear (ADR
   // 20261008-work-order-follow-up). It follows the gear and the tickets to the
   // survivor, or the survivor's ticket would read as never announced and the
@@ -159,11 +149,8 @@ export const DIVER_HISTORY_TABLES = [
   "customer_gear_notices",
   "bookings",
   "internal_notes",
-  "trip_waitlist_entries",
-  "trip_invitations",
-  "last_minute_list_entries",
+  "leads",
   "person_courtesy_email_unsubscribe_tokens",
-  "trip_last_minute_promo_recipients",
   "dive_package_entitlements",
   "orders",
   "waiver_records",
@@ -364,7 +351,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "trip_desk_events.actor_person_id": "who did it at the desk",
   "trip_desk_events.subject_person_id": "an event trail records who it happened to at the time",
   "trip_help_requests.resolved_by_person_id": "who answered the ask",
-  "trip_invitations.created_by_person_id": "who sent the invitation",
+  "leads.created_by_person_id": "who raised the lead or sent the offer",
   "trip_last_minute_promos.created_by_person_id": "who wrote the deal",
   "trip_recap_photos.uploaded_by_person_id": "who uploaded the photo",
   "trip_sightings.deleted_by_person_id": "who took the mis-tapped sighting back",
@@ -976,15 +963,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "lost_items",
   ],
   history: ["prior_visits"],
-  lists: [
-    "course_inquiries",
-    "trip_waitlist_entries",
-    "trip_invitations",
-    "last_minute_list_entries",
-    "person_courtesy_email_unsubscribe_tokens",
-    "trip_last_minute_promo_recipients",
-    "trip_blowout_divers",
-  ],
+  lists: ["leads", "person_courtesy_email_unsubscribe_tokens", "trip_blowout_divers"],
 } as const satisfies Record<string, readonly (typeof DIVER_HISTORY_TABLES)[number][]>;
 export type DiverMergeCountGroup = keyof typeof DIVER_MERGE_COUNT_GROUPS;
 
@@ -1348,12 +1327,36 @@ export async function mergeDiverRecords(input: {
         );
       }
 
-      for (const tableName of ONE_PER_DEPARTURE_PER_PERSON_TABLES) {
-        const table = sql.raw(quotedTable(tableName));
-        await tx.execute(
-          sql`delete from ${table} where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "trip_id" in (select "trip_id" from ${table} where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id})`,
-        );
-      }
+      // Leads are unique per person per departure (both records on one
+      // departure's wait list, or both offered it, would collide on the
+      // repoint) and per person for the last-minute list. The kept record's row
+      // stands and the merged-away duplicate goes, as the singletons above.
+      // Now reachable, because a cancelled seat no longer refuses a merge on a
+      // departure both records share (issue #2177).
+      await tx.execute(
+        sql`delete from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'departure' and "trip_id" in (select "trip_id" from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'departure')`,
+      );
+      // The last-minute list is one lead per person: the source's goes. Before
+      // it does, what it carries moves to the kept record's lead (security
+      // review of #2656, minor 5). Both records are one person, so an
+      // unsubscribe either made is that person's and stands: the kept lead takes
+      // the source's `unsubscribed` close unless it is unsubscribed already. The
+      // links already mailed, and the offer rows the list made, point at the
+      // kept lead, so an old link still unsubscribes and still stops them.
+      const survivorList = sql`(select "id" from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'anytime')`;
+      const sourceList = sql`(select "id" from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'anytime')`;
+      await tx.execute(
+        sql`update "leads" as kept set "closed_at" = gone."closed_at", "closed_as" = 'unsubscribed' from "leads" as gone where kept."id" = ${survivorList} and gone."id" = ${sourceList} and gone."closed_as" = 'unsubscribed' and kept."closed_as" is distinct from 'unsubscribed'`,
+      );
+      await tx.execute(
+        sql`update "lead_unsubscribe_tokens" set "lead_id" = ${survivorList} where "lead_id" = ${sourceList} and exists ${survivorList}`,
+      );
+      await tx.execute(
+        sql`update "leads" set "parent_lead_id" = ${survivorList} where "shop_id" = ${input.shopId} and "parent_lead_id" = ${sourceList} and exists ${survivorList}`,
+      );
+      await tx.execute(
+        sql`delete from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'anytime' and exists (select 1 from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'anytime')`,
+      );
 
       // Releases through the one path that keeps their seals honest: a bare
       // repoint would make every sealed release read as tampered, `person_id`

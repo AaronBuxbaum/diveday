@@ -205,7 +205,7 @@ describe("the course-form page", () => {
       signerName: ctx.seat.fullName,
       acknowledged: "on",
     });
-    expect(await rendered(ctx.token)).toContain("Nothing left to sign for this course.");
+    expect(await rendered(ctx.token)).toContain("Nothing left to sign for this course");
   });
 });
 
@@ -416,7 +416,7 @@ describe("the forms-only link", () => {
     ).toBe(`/ready/${token}/forms`);
     expect(await owed(ctx)).toEqual([]);
     const html = await rendered(token);
-    expect(html).toContain("Nothing left to sign for this course.");
+    expect(html).toContain("Nothing left to sign for this course");
     expect(html).not.toContain("Back to your trip prep");
   });
 

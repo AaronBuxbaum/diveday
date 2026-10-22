@@ -124,8 +124,8 @@ describe("the day-of step saves as one", () => {
     expect(container.querySelectorAll('input[name="welcomeHello"]')).toHaveLength(0);
   });
 
-  it("says Saved. in the step itself after a save", () => {
+  it("shows the saved confirmation in the step itself after a save", () => {
     render(<DayOfDetails token="tok" data={data("diver")} saved t={t} />);
-    expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    expect(screen.getByRole("status").textContent).toBe(t("rental.savedNote"));
   });
 });

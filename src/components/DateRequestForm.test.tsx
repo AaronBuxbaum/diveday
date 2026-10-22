@@ -302,7 +302,7 @@ describe("DateRequestForm — one way out of the form", () => {
    * The whole form used to be gated on the shop having an email, which is the
    * exact inverse of useful: a shop with no departures at all is the one whose
    * only public conversion is "tell me what you want and when", and it was
-   * switched off. The request lands in `course_inquiries` and staff read it on
+   * switched off. The request lands as a date lead and staff read it on
    * the Requests page — the email only ever fed the notification, which the
    * action already skips when there is none (issue #710).
    */

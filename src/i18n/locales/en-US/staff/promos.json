@@ -1,8 +1,8 @@
 {
   "notice": {
-    "created": "Code created and live on your Stripe account.",
-    "enabled": "Code switched on.",
-    "disabled": "Code switched off.",
+    "created": "Code created and live on your Stripe account",
+    "enabled": "Code switched on",
+    "disabled": "Code switched off",
     "invalid": "Check the code, discount, and dates and try again.",
     "invalidCode": "A code can use letters, numbers, hyphens, and underscores only.",
     "invalidDiscount": "Pick a percent from {min} to {max}, or an amount above zero.",
@@ -11,9 +11,9 @@
     "notConnected": "Connect your Stripe account in Settings first.",
     "stripeFailed": "Stripe didn’t create that code. It’s saved as failed here and can’t discount anything.",
     "notAuthorized": "Promo codes are limited to owners and managers.",
-    "deleted": "Code deleted.",
-    "deletedToast": "Code deleted.",
-    "restored": "Code re-created and live again on your Stripe account.",
+    "deleted": "Code deleted",
+    "deletedToast": "Code deleted",
+    "restored": "Code re-created and live again on your Stripe account",
     "restoreFailed": "Couldn’t restore that code. Create it again below."
   },
   "connectBanner": "Connect your Stripe account in <settingsLink>Settings</settingsLink> before creating a code.",
@@ -88,7 +88,7 @@
   "tripDeals": {
     "heading": "Trip deals",
     "description": "One-trip discounts sent from a departure’s page.",
-    "empty": "No trip deals are outstanding right now.",
+    "empty": "No trip deals are outstanding right now",
     "emptyAction": "Open the schedule",
     "recipients": "{count, plural, one {Sent to # diver} other {Sent to # divers}}",
     "expiresAt": "Expires {date}",

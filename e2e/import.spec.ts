@@ -8,6 +8,7 @@ import {
   openTripFromBoard,
   openTripTab,
 } from "./helpers";
+import { PAYMENT_HISTORY_CSV } from "./payment-history-fixture";
 
 /**
  * The contact importer (ADR 20260723-contact-importer, ADR
@@ -319,18 +320,6 @@ test.describe("contact import — prior visits", () => {
 });
 
 /**
- * Payment history is useful migration evidence but deliberately does not
- * manufacture a DiveDay order, booking payment, or Stripe confirmation. This
- * walks the staff path from a source export through the visible unverified
- * rows and the separately-labelled revenue/refund contribution.
- */
-const PAYMENT_HISTORY_CSV = [
-  "Full Name,Email,Payment Date,Payment Status,Payment Amount,Payment Currency,Payment Direction,Payment ID,Receipt Number,Receipt URL,Stripe Payment Intent ID",
-  "Source Sloane,source.sloane@example.com,2026-03-04,Paid,USD 165.00,USD,Payment,legacy-pay-1001,REC-1001,/import-receipts/rec-1001.pdf,pi_legacy_1001",
-  "Source Sloane,source.sloane@example.com,2026-03-05,Refunded,USD 25.00,USD,Refund,legacy-refund-1001,REC-1002,,pi_legacy_1002",
-].join("\n");
-
-/**
  * **Seats sold in the old system are named, not filed** (market sheet
  * 2026-10-22, item 3). A booking after the shop's today is not a visit: the
  * preview counts and lists it, and the "Past visits" tile leaves it out.
@@ -371,6 +360,12 @@ test.describe("contact import — bookings after today", () => {
   });
 });
 
+/**
+ * Payment history is useful migration evidence but deliberately does not
+ * manufacture a DiveDay order, booking payment, or Stripe confirmation. This
+ * walks the staff path from a source export through the visible unverified
+ * rows and the separately-labelled revenue/refund contribution.
+ */
 test.describe("contact import — payment and receipt history", () => {
   signedInAsOwner();
 
@@ -437,7 +432,37 @@ test.describe("contact import — payment and receipt history", () => {
     const importedNotice = page.getByRole("region", { name: "Unverified imported history" });
     await expect(importedNotice).toContainText("source payments");
     await expect(importedNotice).toContainText("source refunds");
-    await importedNotice.getByRole("link", { name: "Review imported history in Orders" }).click();
+    const historyLink = importedNotice.getByRole("link", {
+      name: "Review imported history in Orders",
+    });
+    const historyLinkBox = await historyLink.boundingBox();
+    if (!historyLinkBox) throw new Error("Imported-history review link is missing");
+    expect(historyLinkBox.height).toBeGreaterThanOrEqual(44);
+    const emptySeatLinks = page
+      .getByRole("region", { name: "Departures that left with empty seats" })
+      .getByRole("link");
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      const targets = await emptySeatLinks.evaluateAll((links) =>
+        links.map((link) => {
+          const box = link.getBoundingClientRect();
+          return {
+            width: box.width,
+            height: box.height,
+            fontSize: Number.parseFloat(getComputedStyle(link).fontSize),
+            href: link.getAttribute("href"),
+          };
+        }),
+      );
+      expect(targets.length).toBeGreaterThan(0);
+      for (const target of targets) {
+        expect(target.width).toBeGreaterThanOrEqual(44);
+        expect(target.height).toBeGreaterThanOrEqual(44);
+        expect(target.fontSize).toBeGreaterThanOrEqual(16);
+        expect(target.href).toMatch(/^\/shop\/blue-mantis\/trips\//);
+      }
+    }
+    await historyLink.click();
     await expect(page).toHaveURL(
       /\/shop\/blue-mantis\/orders\?from=2026-03-01&to=2026-03-31&range=custom/,
     );

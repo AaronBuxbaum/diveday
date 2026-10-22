@@ -54,7 +54,7 @@ async function saveDestination(page: Page, shopSlug: string) {
   await page.getByRole("textbox", { name: "Access key ID" }).fill(DESTINATION.accessKeyId);
   await page.getByLabel("Secret access key").fill(DESTINATION.secret);
   await page.getByRole("button", { name: "Save destination" }).click();
-  await expect(page.getByText("Backup destination saved.")).toBeVisible();
+  await expect(page.getByText("Backup destination saved")).toBeVisible();
 }
 
 test.describe("backup settings", () => {
@@ -204,7 +204,7 @@ test.describe("backup settings, writing to a shop of the test's own", () => {
     // Re-save with a changed bucket and no secret.
     await page.getByRole("textbox", { name: "Bucket", exact: true }).fill("renamed-bucket");
     await page.getByRole("button", { name: "Save destination" }).click();
-    await expect(page.getByText("Backup destination saved.")).toBeVisible();
+    await expect(page.getByText("Backup destination saved")).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Bucket", exact: true })).toHaveValue(
       "renamed-bucket",
     );

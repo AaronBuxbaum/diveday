@@ -87,7 +87,7 @@ describe("AddDiverSection", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "Add to wait list" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Add to who’s waiting" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers/new?surface=departure&tripId=trip-1&waitlist=true",
     );
@@ -206,7 +206,7 @@ describe("AddDiverSection name-match prompt", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person.",
+        name: "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person",
       }),
     ).toBeInTheDocument();
   });

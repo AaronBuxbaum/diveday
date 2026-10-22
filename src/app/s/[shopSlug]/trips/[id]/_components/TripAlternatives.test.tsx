@@ -71,7 +71,7 @@ describe("TripAlternatives", () => {
       />,
     );
     expect(screen.getByText("Benwood & French")).toBeInTheDocument();
-    expect(screen.getByText("The same site, another day.")).toBeInTheDocument();
+    expect(screen.getByText("The same site, another day")).toBeInTheDocument();
     expect(screen.getByText("7 seats left")).toBeInTheDocument();
     expect(screen.getByText("Macro Afternoon")).toBeInTheDocument();
     expect(screen.getByText("The shop rates this site for beginners.")).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe("TripAlternatives", () => {
         locale={DEFAULT_DIVER_LOCALE}
       />,
     );
-    expect(screen.getByText("Also an afternoon boat.")).toBeInTheDocument();
+    expect(screen.getByText("Also an afternoon boat")).toBeInTheDocument();
   });
 
   it("carries the frame through to the departure it offers", () => {

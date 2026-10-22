@@ -78,6 +78,7 @@ export function RequestDayGroup({
   label,
   advice = [],
   add,
+  onBoard = [],
   children,
 }: {
   id: string;
@@ -86,6 +87,12 @@ export function RequestDayGroup({
   advice?: readonly RequestAdviceLine[];
   /** The same departure action on every dated group. */
   add?: { href: string; label: string };
+  /**
+   * Departures already on the board for this day, each a link to its
+   * `#who-wants-in` (ADR 20261017-one-lead-with-a-scope). "Add a departure"
+   * stays for the days with none.
+   */
+  onBoard?: readonly { href: string; label: string }[];
   children: ReactNode;
 }) {
   return (
@@ -127,6 +134,17 @@ export function RequestDayGroup({
             </Fragment>
           ))}
         </p>
+      ) : null}
+      {onBoard.length > 0 ? (
+        <ul className="mt-2 text-sm tabular-nums">
+          {onBoard.map((departure) => (
+            <li key={departure.href}>
+              <Link href={departure.href} className="underline underline-offset-2">
+                {departure.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       ) : null}
       <ul className="mt-2">{children}</ul>
     </section>

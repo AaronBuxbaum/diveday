@@ -7,7 +7,7 @@ import { dbNow, fileScopedShopContext, type seededShopContext } from "@/test/db"
 import { readOwed } from "./owed";
 import {
   bookings,
-  courseInquiries,
+  leads,
   orders,
   paymentOperationIntents,
   people,
@@ -442,7 +442,7 @@ describe("previewWeeklyDigest", () => {
 
   /**
    * **A request marked done is not waiting** (fourth UX review, item 24): the
-   * digest filters on `handledAt` like every staff reader of requests.
+   * digest filters on `closedAt` like every staff reader of requests.
    */
   it("counts only the date requests nobody has marked done", async () => {
     const { db, shop, monday } = await context();
@@ -450,15 +450,24 @@ describe("previewWeeklyDigest", () => {
     const waitingOf = async () =>
       (await readWeeklyDigestFacts(db, shop, monday)).grades.reports.dateRequestsWaiting;
     const before = await waitingOf();
-    await db.insert(courseInquiries).values([
-      { shopId: shop.id, interest: "Night dive", name: "Waiting", preferredDate: day },
+    await db.insert(leads).values([
       {
         shopId: shop.id,
+        scope: "date",
+        askedBy: "diver",
+        interest: "Night dive",
+        name: "Waiting",
+        preferredDate: day,
+      },
+      {
+        shopId: shop.id,
+        scope: "date",
+        askedBy: "diver",
         interest: "Night dive",
         name: "Done",
         preferredDate: day,
-        handledAt: monday,
-        handledAs: "done",
+        closedAt: monday,
+        closedAs: "done",
       },
     ]);
     expect(await waitingOf()).toBe(before + 1);

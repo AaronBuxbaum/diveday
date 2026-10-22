@@ -17,7 +17,7 @@
 //   - every hand-written entry still names a real route;
 //   - every spec file it names exists under `e2e/`;
 //   - every capture name it names appears as `capture(page, "<name>"` in
-//     `e2e/visual.spec.ts`.
+//     `e2e/visual.spec.ts` or a visual registration module it imports.
 //
 // That first one used to read "a route with *neither* carries a written reason",
 // which left a fourth state the ledger tolerated in silence: a spec, no capture,
@@ -166,28 +166,70 @@ export async function collectSpecFiles(root) {
 }
 
 /**
- * The capture names `e2e/visual.spec.ts` actually shoots.
+ * Blank comments while preserving source offsets and quoted paths. The small
+ * source reader below deliberately recognises static names, not expressions.
+ */
+function withoutComments(source) {
+  return source.replace(
+    /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/g,
+    (match, quoted) => quoted ?? match.replace(/[^\n]/g, " "),
+  );
+}
+
+function captureCalls(source) {
+  return [
+    ...withoutComments(source).matchAll(
+      /\b(?:capture|capturePrint)\(\s*page\s*,\s*(["'`])([^"'`\r\n]+)\1/g,
+    ),
+  ]
+    .filter((match) => match[1] !== "`" || !match[2].includes("${"))
+    .map((match) => ({ name: match[2], index: match.index }));
+}
+
+/**
+ * The static capture names the visual spec and its registration modules shoot.
  *
  * Print-only surfaces use `capturePrint()` because they are rendered with print
  * media. Both helpers produce a baseline name that belongs in the same ledger.
  */
 export function parseCaptureNames(source) {
-  const names = new Set();
-  for (const match of source.matchAll(
-    /\b(?:capture|capturePrint)\(\s*page\s*,\s*["'`]([^"'`]+)["'`]/g,
-  )) {
-    names.add(match[1]);
+  return new Set(captureCalls(source).map(({ name }) => name));
+}
+
+/**
+ * Only statically imported `./visual-*.ts` modules belong to the visual suite.
+ * Scanning every helper would credit orphaned captures that never register a
+ * test; treating these as functional specs would invent a different kind of
+ * coverage. Cycles are harmless, but a missing imported module remains loud.
+ */
+export async function collectVisualSources(root) {
+  const sources = new Map();
+  async function visit(file) {
+    if (sources.has(file)) return;
+    let source;
+    try {
+      source = await readFile(path.join(root, E2E_DIR, file), "utf8");
+    } catch (error) {
+      if (file === path.basename(VISUAL_SPEC) && error?.code === "ENOENT") return;
+      throw error;
+    }
+    sources.set(file, source);
+    for (const match of withoutComments(source).matchAll(
+      /^\s*import\s+(?:type\s+)?[^;]*?\s+from\s*["']\.\/(visual-[a-z0-9-]+)(?:\.ts)?["']/gm,
+    )) {
+      await visit(`${match[1]}.ts`);
+    }
   }
-  return names;
+  await visit(path.basename(VISUAL_SPEC));
+  return sources;
+}
+
+function capturesFrom(sources) {
+  return new Set([...sources.values()].flatMap((source) => [...parseCaptureNames(source)]));
 }
 
 export async function collectCaptureNames(root) {
-  try {
-    return parseCaptureNames(await readFile(path.join(root, VISUAL_SPEC), "utf8"));
-  } catch (error) {
-    if (error?.code === "ENOENT") return new Set();
-    throw error;
-  }
+  return capturesFrom(await collectVisualSources(root));
 }
 
 export async function readLedger(root) {
@@ -212,14 +254,21 @@ export async function collectSpecSources(root, specs) {
 
 /** Everything the audit and the writer reason over, read from one directory. */
 export async function collectWorld(root) {
-  const [routes, specs, captures, ledger] = await Promise.all([
+  const [routes, specs, visualSources, ledger] = await Promise.all([
     collectRoutes(root),
     collectSpecFiles(root),
-    collectCaptureNames(root),
+    collectVisualSources(root),
     readLedger(root),
   ]);
   const specSources = await collectSpecSources(root, specs);
-  return { routes, specs, captures, ledger, specSources };
+  return {
+    routes,
+    specs,
+    captures: capturesFrom(visualSources),
+    ledger,
+    specSources,
+    visualSources,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -301,7 +350,7 @@ export function routesForPath(routes, shape) {
  * reaches it, the captures shot after reaching it within one test, and the
  * scans run on it.
  */
-export function deriveCoverage({ routes, specSources = new Map() }) {
+export function deriveCoverage({ routes, specSources = new Map(), visualSources }) {
   const derived = new Map(
     routes.map((route) => [route, { e2e: new Set(), visual: new Set(), a11y: new Set() }]),
   );
@@ -332,14 +381,16 @@ export function deriveCoverage({ routes, specSources = new Map() }) {
       }
     }
   }
-  const visual = specSources.get(path.basename(VISUAL_SPEC));
-  if (visual !== undefined) {
+  const visuals =
+    visualSources ??
+    new Map([[path.basename(VISUAL_SPEC), specSources.get(path.basename(VISUAL_SPEC))]]);
+  for (const visual of visuals.values()) {
+    if (visual === undefined) continue;
+    const code = withoutComments(visual);
     const events = [
-      ...[...visual.matchAll(TEST_START)].map((match) => ({ kind: "test", index: match.index })),
-      ...pathLiterals(visual).map((literal) => ({ kind: "path", ...literal })),
-      ...[...visual.matchAll(/\b(?:capture|capturePrint)\(\s*page\s*,\s*["'`]([^"'`]+)["'`]/g)].map(
-        (match) => ({ kind: "capture", name: match[1], index: match.index }),
-      ),
+      ...[...code.matchAll(TEST_START)].map((match) => ({ kind: "test", index: match.index })),
+      ...pathLiterals(code).map((literal) => ({ kind: "path", ...literal })),
+      ...captureCalls(code).map((call) => ({ kind: "capture", ...call })),
     ].sort((a, b) => a.index - b.index);
     let last = null;
     for (const event of events) {
