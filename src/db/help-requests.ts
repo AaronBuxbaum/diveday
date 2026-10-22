@@ -1,9 +1,9 @@
-import { and, asc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, exists, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { isStaff, STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { loadActiveStaffRoles } from "./authz";
-import type { AppDb, AppTransaction } from "./client";
+import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { lockHelpRequestDeparture } from "./help-request-lock";
 import { bookings, people, personRoles, tripAssignments, tripHelpRequests, trips } from "./schema";
@@ -13,6 +13,41 @@ export type HelpRequestKind = (typeof tripHelpRequests.kind.enumValues)[number];
 export type HelpRequestStatus = (typeof tripHelpRequests.status.enumValues)[number];
 const activeStatuses = ["requested", "acknowledged"] as const;
 const helperPerson = alias(people, "help_request_helper");
+
+/**
+ * The recorded helper is named only while they still serve this departure:
+ * this shop's live person, a staff role, and a place on its crew. Writers
+ * clear a helper who stops serving; this keeps every read honest if one is
+ * missed, so no page names someone who is not there to help.
+ */
+function helperStillServes(db: DbExecutor) {
+  return and(
+    eq(helperPerson.id, tripHelpRequests.helperPersonId),
+    isNull(helperPerson.deletedAt),
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(personRoles)
+        .where(
+          and(
+            eq(personRoles.personId, helperPerson.id),
+            inArray(personRoles.role, [...STAFF_ROLES]),
+          ),
+        ),
+    ),
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(tripAssignments)
+        .where(
+          and(
+            eq(tripAssignments.personId, helperPerson.id),
+            eq(tripAssignments.tripId, tripHelpRequests.tripId),
+          ),
+        ),
+    ),
+  );
+}
 
 export type HelpRequest = {
   id: string;
@@ -51,14 +86,7 @@ export async function getHelpRequestForBooking(
     .from(tripHelpRequests)
     .innerJoin(bookings, eq(bookings.id, tripHelpRequests.bookingId))
     .innerJoin(trips, eq(trips.id, tripHelpRequests.tripId))
-    .leftJoin(
-      helperPerson,
-      and(
-        eq(helperPerson.id, tripHelpRequests.helperPersonId),
-        eq(helperPerson.shopId, shopId),
-        isNull(helperPerson.deletedAt),
-      ),
-    )
+    .leftJoin(helperPerson, and(eq(helperPerson.shopId, shopId), helperStillServes(db)))
     .where(
       and(
         eq(tripHelpRequests.shopId, shopId),
@@ -96,14 +124,7 @@ export async function listTodayHelpRequests(
     .innerJoin(bookings, eq(bookings.id, tripHelpRequests.bookingId))
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, tripHelpRequests.tripId))
-    .leftJoin(
-      helperPerson,
-      and(
-        eq(helperPerson.id, tripHelpRequests.helperPersonId),
-        eq(helperPerson.shopId, shopId),
-        isNull(helperPerson.deletedAt),
-      ),
-    )
+    .leftJoin(helperPerson, and(eq(helperPerson.shopId, shopId), helperStillServes(db)))
     .where(
       and(
         eq(tripHelpRequests.shopId, shopId),
@@ -455,6 +476,18 @@ export async function completeHelpRequest(
     if (!(await isActiveStaff(tx, input.shopId, input.actorPersonId))) {
       return { ok: false, reason: "unavailable" };
     }
+    // Only someone who still serves this departure can be recorded as having
+    // helped, the same check assignment and undo make.
+    if (
+      !(await isEligibleHelper(
+        tx,
+        input.shopId,
+        existing.request.tripId,
+        input.expectedHelperPersonId,
+      ))
+    ) {
+      return { ok: false, reason: "invalid_helper" };
+    }
     const [request] = await tx
       .update(tripHelpRequests)
       .set({
@@ -479,9 +512,13 @@ export async function completeHelpRequest(
 }
 
 /**
- * Restore the assigned state only while the same helper is still recorded and
- * everything completion checks still holds: a scheduled, unfinished departure,
- * a booking that is not cancelled, and a helper still on the crew.
+ * Undo a completion while the same helper is still recorded and the request
+ * can still be acted on: a scheduled, unfinished departure and a booking that
+ * is not cancelled. A helper who still serves the departure gets the assigned
+ * state back. A helper who no longer does (off the crew, no staff role, or
+ * deleted) cannot be promised again, so the request goes back to the desk as
+ * `requested` with no helper, as crew removal does to an acknowledged one. A
+ * mis-tapped "Help completed" is never closed for good.
  */
 export async function undoHelpRequestCompletion(
   db: AppDb,
@@ -526,25 +563,33 @@ export async function undoHelpRequestCompletion(
     if (!(await isActiveStaff(tx, input.shopId, input.actorPersonId))) {
       return { ok: false, reason: "unavailable" };
     }
-    if (
-      !(await isEligibleHelper(
-        tx,
-        input.shopId,
-        existing.request.tripId,
-        input.expectedHelperPersonId,
-      ))
-    ) {
-      return { ok: false, reason: "invalid_helper" };
-    }
+    const helperServes = await isEligibleHelper(
+      tx,
+      input.shopId,
+      existing.request.tripId,
+      input.expectedHelperPersonId,
+    );
     const [request] = await tx
       .update(tripHelpRequests)
-      .set({
-        revision: sql`${tripHelpRequests.revision} + 1`,
-        status: "acknowledged",
-        handledAt: null,
-        updatedAt: now,
-        resolvedByPersonId: input.actorPersonId,
-      })
+      .set(
+        helperServes
+          ? {
+              revision: sql`${tripHelpRequests.revision} + 1`,
+              status: "acknowledged",
+              handledAt: null,
+              updatedAt: now,
+              resolvedByPersonId: input.actorPersonId,
+            }
+          : {
+              revision: sql`${tripHelpRequests.revision} + 1`,
+              status: "requested",
+              acknowledgedAt: null,
+              handledAt: null,
+              helperPersonId: null,
+              updatedAt: now,
+              resolvedByPersonId: null,
+            },
+      )
       .where(
         and(
           eq(tripHelpRequests.id, input.requestId),
@@ -557,4 +602,83 @@ export async function undoHelpRequestCompletion(
       .returning();
     return request ? { ok: true, request } : { ok: false, reason: "invalid_transition" };
   });
+}
+
+/**
+ * A person who stops being live staff (removed from the team, every staff role
+ * taken away, or deleted) can no longer be the promised helper. Every
+ * acknowledged request naming them on a live, unfinished departure goes back
+ * to the desk as `requested`, as crew removal does (`clearHelpRequestHelpers`
+ * in `trips-crew.ts`). A handled request keeps who helped: that is the record.
+ *
+ * Call it inside the transaction that takes the role away, before the role
+ * rows change. It locks each departure the person crews or helps on, in id
+ * order, the lock every help-request writer takes first. An assignment that
+ * is running at the same time either commits first and is released here, or
+ * waits for this transaction and then finds no staff role.
+ */
+export async function releaseHelpRequestsOfPerson(
+  tx: AppTransaction,
+  input: { shopId: string; personId: string; now?: Date },
+): Promise<void> {
+  const now = input.now ?? nowDate();
+  const departures = await tx
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, input.shopId),
+        liveTrip(),
+        gt(trips.endsAt, now),
+        or(
+          exists(
+            tx
+              .select({ one: sql`1` })
+              .from(tripAssignments)
+              .where(
+                and(
+                  eq(tripAssignments.tripId, trips.id),
+                  eq(tripAssignments.personId, input.personId),
+                ),
+              ),
+          ),
+          exists(
+            tx
+              .select({ one: sql`1` })
+              .from(tripHelpRequests)
+              .where(
+                and(
+                  eq(tripHelpRequests.tripId, trips.id),
+                  eq(tripHelpRequests.helperPersonId, input.personId),
+                ),
+              ),
+          ),
+        ),
+      ),
+    )
+    .orderBy(asc(trips.id))
+    .for("update");
+  if (departures.length === 0) return;
+  await tx
+    .update(tripHelpRequests)
+    .set({
+      revision: sql`${tripHelpRequests.revision} + 1`,
+      status: "requested",
+      acknowledgedAt: null,
+      handledAt: null,
+      helperPersonId: null,
+      resolvedByPersonId: null,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(tripHelpRequests.shopId, input.shopId),
+        inArray(
+          tripHelpRequests.tripId,
+          departures.map((departure) => departure.id),
+        ),
+        eq(tripHelpRequests.helperPersonId, input.personId),
+        eq(tripHelpRequests.status, "acknowledged"),
+      ),
+    );
 }

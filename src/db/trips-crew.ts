@@ -1257,7 +1257,8 @@ export async function changeTripCrewOutcome(
 /**
  * A crew member taken off the departure can no longer be the promised helper:
  * an acknowledged request goes back to the desk. A handled request keeps who
- * helped, because that is the record; undo refuses a helper off the crew.
+ * helped, because that is the record; undoing it with the helper off the
+ * crew sends the request back to the desk (`undoHelpRequestCompletion`).
  */
 async function clearHelpRequestHelpers(
   tx: DbExecutor,

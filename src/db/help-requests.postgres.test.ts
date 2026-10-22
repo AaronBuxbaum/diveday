@@ -14,6 +14,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
+import { removeStaffMember } from "./staff-accounts";
 import { setTripCrew } from "./trips";
 
 /** A statement trigger parks removal after request cleanup but before assignment tuple locks. */
@@ -176,5 +177,65 @@ describePostgres("diver request edits against named helper assignment", () => {
       ];
     });
     expect(errors).toEqual([]);
+  });
+});
+
+/** A row trigger parks an assignment at its write, after every check has passed. */
+const assignmentGate = sql`select pg_advisory_xact_lock(2852)`;
+
+describePostgres("named help assignment against the helper's removal from the team", () => {
+  it("never keeps a helper promised once their staff role is gone", async () => {
+    const pg = await postgresTestDb();
+    const { shop, helper, saved, now } = await requestedHelp(pg.db);
+    const [account] = await pg.db
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .where(eq(userAccounts.personId, helper.id));
+    if (!account) throw new Error("helper account missing");
+    await pg.db.execute(sql`
+      create function gate_help_assignment() returns trigger language plpgsql as $$
+      begin
+        perform pg_advisory_xact_lock(2852);
+        return new;
+      end;
+      $$
+    `);
+    await pg.db.execute(sql`
+      create trigger gate_help_assignment before update on trip_help_requests
+      for each row when (new.status = 'acknowledged') execute function gate_help_assignment()
+    `);
+    const gate = await holdRowLock(pg, assignmentGate);
+    let removing: ReturnType<typeof removeStaffMember> | undefined;
+    const assigning = assignHelpRequestHelper(pg.connect(), {
+      shopId: shop.id,
+      requestId: saved.request.id,
+      expectedRevision: saved.request.revision,
+      helperPersonId: helper.id,
+      actorPersonId: helper.id,
+      expectedStatus: "requested",
+      now,
+    });
+    try {
+      // The assignment holds the departure and has passed its helper check.
+      await waitForLockWaiters(pg.db, 1);
+      removing = removeStaffMember(pg.connect(), {
+        shopId: shop.id,
+        personId: helper.id,
+        userAccountId: account.id,
+      });
+      // Without the departure lock the removal commits here, before the
+      // assignment writes, and the helper it just removed stays promised.
+      await withinOrParked(removing, 1_000);
+    } finally {
+      await gate.release();
+    }
+    expect(await assigning).toMatchObject({ ok: true });
+    if (!removing) throw new Error("removal was not started");
+    expect(await removing).toEqual({ ok: true });
+    const [after] = await pg.db
+      .select()
+      .from(tripHelpRequests)
+      .where(eq(tripHelpRequests.id, saved.request.id));
+    expect(after).toMatchObject({ status: "requested", helperPersonId: null });
   });
 });

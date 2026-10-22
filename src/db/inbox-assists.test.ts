@@ -1,8 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { REDACTED_TEXT } from "@/lib/anonymization";
 import type { ClaudeProvider, ClaudeRequest } from "@/lib/claude/provider";
-import { nowMs } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
+import { formatShortDate } from "@/lib/format";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import { anonymizeDiver } from "./anonymize";
@@ -231,9 +232,39 @@ describe("awaitsTriage", () => {
 
 describe("replyFacts", () => {
   it("quotes the shop's departures with their open seats and prices from the database", async () => {
-    const facts = await replyFacts(ctx.db, ctx.shop.id);
+    const { lines: facts } = await replyFacts(ctx.db, ctx.shop.id);
     expect(facts[0]).toContain(ctx.shop.name);
     expect(facts.some((line) => /seats open|full/.test(line))).toBe(true);
+  });
+
+  it("names the window and today's date in the shop's zone, apart from what a draft may quote", async () => {
+    const [shop] = await ctx.db
+      .select({ timezone: shops.timezone, locale: shops.defaultLocale })
+      .from(shops)
+      .where(eq(shops.id, ctx.shop.id));
+    if (!shop) throw new Error("shop missing");
+    const now = nowDate();
+    const { window, lines } = await replyFacts(ctx.db, ctx.shop.id, now);
+    expect(window).toContain(`Today is ${formatShortDate(now, shop.locale, shop.timezone)}`);
+    expect(window).toContain(shop.timezone);
+    expect(window).toContain("the next 14 days");
+    expect(window).toContain("at most 30 departures");
+    expect(lines.join("\n")).not.toContain("Today is");
+  });
+
+  it("says when the list stopped at its limit", async () => {
+    const soon = new Date(nowMs() + 2 * 24 * 60 * 60 * 1000);
+    await ctx.db.insert(trips).values(
+      Array.from({ length: 31 }, (_, index) => ({
+        shopId: ctx.shop.id,
+        title: `Extra boat ${index}`,
+        startsAt: new Date(soon.getTime() + index * 60_000),
+        endsAt: new Date(soon.getTime() + index * 60_000 + 3 * 60 * 60 * 1000),
+        capacity: 8,
+      })),
+    );
+    const { window } = await replyFacts(ctx.db, ctx.shop.id);
+    expect(window).toContain("The list stops at that limit");
   });
 
   it("never quotes a private charter or a rehearsal departure", async () => {
@@ -255,17 +286,38 @@ describe("replyFacts", () => {
         departure("Crew rehearsal run", true, true),
         departure("Open reef morning", false, false),
       ]);
-    const facts = (await replyFacts(ctx.db, ctx.shop.id)).join("\n");
+    const facts = (await replyFacts(ctx.db, ctx.shop.id)).lines.join("\n");
     expect(facts).toContain("Open reef morning");
     expect(facts).not.toContain("Okafor family charter");
     expect(facts).not.toContain("Crew rehearsal run");
+  });
+
+  it("leaves out a rehearsal by its own flag, even one that is not private", async () => {
+    // `trips_rehearsal_is_private` makes a public rehearsal impossible today.
+    // This drops it inside the test's own transaction, which is rolled back,
+    // so the read's `notRehearsal()` clause is tested on its own: if the
+    // constraint ever goes, the clause still keeps a rehearsal out.
+    await ctx.db.execute(sql`alter table trips drop constraint trips_rehearsal_is_private`);
+    const soon = new Date(nowMs() + 2 * 24 * 60 * 60 * 1000);
+    await ctx.db.insert(trips).values({
+      shopId: ctx.shop.id,
+      title: "Public rehearsal run",
+      startsAt: soon,
+      endsAt: new Date(soon.getTime() + 3 * 60 * 60 * 1000),
+      capacity: 8,
+      isPrivate: false,
+      isRehearsal: true,
+      priceCents: 43_210,
+    });
+    const facts = (await replyFacts(ctx.db, ctx.shop.id)).lines.join("\n");
+    expect(facts).not.toContain("Public rehearsal run");
   });
 });
 
 describe("draftReplyFor", () => {
   it("drafts a reply that quotes only numbers the facts or the thread gave it", async () => {
     const { personId } = await diverWithMessage("Is there room for 2 on Saturday?");
-    const facts = await replyFacts(ctx.db, ctx.shop.id);
+    const { lines: facts } = await replyFacts(ctx.db, ctx.shop.id);
     const quoted = facts.find((line) => line.includes("seats open")) ?? facts[0] ?? "";
     const draft = await draftReplyFor(ctx.db, {
       shopId: ctx.shop.id,

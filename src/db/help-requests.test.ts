@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
+import { deleteDiver } from "./divers";
 import {
   assignHelpRequestHelper,
   completeHelpRequest,
@@ -12,6 +13,7 @@ import {
 } from "./help-requests";
 import { getReadyPageData } from "./ready";
 import { bookings, people, personRoles, tripHelpRequests, trips, userAccounts } from "./schema";
+import { removeStaffMember, setStaffRoles } from "./staff-accounts";
 import {
   changeTripCrew,
   getTripCrewAssignments,
@@ -32,6 +34,18 @@ async function withActiveAccount(db: AppDb, personId: string): Promise<void> {
     .returning({ id: userAccounts.id });
   if (account) return;
   await db.insert(userAccounts).values({ personId, email: `${personId}@example.invalid` });
+}
+
+/** The helper's sign-in account, made active, with another owner kept so a removal is allowed. */
+async function removableHelper(db: AppDb, helperId: string, actorId: string): Promise<string> {
+  await withActiveAccount(db, helperId);
+  await db.insert(personRoles).values({ personId: actorId, role: "owner" }).onConflictDoNothing();
+  const [account] = await db
+    .select({ id: userAccounts.id })
+    .from(userAccounts)
+    .where(eq(userAccounts.personId, helperId));
+  if (!account) throw new Error("expected helper account");
+  return account.id;
 }
 
 async function setAccountStatus(
@@ -559,6 +573,114 @@ describe("day-of help requests", () => {
     });
   });
 
+  describe("a helper who stops being live staff", () => {
+    async function expectBackAtTheDesk(
+      db: AppDb,
+      shopId: string,
+      setup: Awaited<ReturnType<typeof assignedRequest>>,
+    ) {
+      expect(await storedRequest(db, setup.assigned.id)).toMatchObject({
+        status: "requested",
+        helperPersonId: null,
+        acknowledgedAt: null,
+      });
+      expect(await listTodayHelpRequests(db, shopId, [setup.trip.id], setup.now)).toMatchObject([
+        { id: setup.assigned.id, status: "requested", helperPersonName: null },
+      ]);
+      expect(
+        (await getHelpRequestForBooking(db, shopId, setup.seat.booking.id, setup.now))
+          ?.helperPersonName,
+      ).toBeNull();
+    }
+
+    it("returns the request to the desk when the helper is removed from the team", async () => {
+      const { db, shop } = ctx;
+      const setup = await assignedRequest(db, shop.id);
+      const userAccountId = await removableHelper(db, setup.helper.id, setup.actor.id);
+      expect(
+        await removeStaffMember(db, { shopId: shop.id, personId: setup.helper.id, userAccountId }),
+      ).toEqual({ ok: true });
+      await expectBackAtTheDesk(db, shop.id, setup);
+    });
+
+    it("returns the request to the desk when every staff role is taken away", async () => {
+      const { db, shop } = ctx;
+      const setup = await assignedRequest(db, shop.id);
+      await removableHelper(db, setup.helper.id, setup.actor.id);
+      expect(
+        await setStaffRoles(db, { shopId: shop.id, personId: setup.helper.id, roles: [] }),
+      ).toEqual({ ok: true });
+      await expectBackAtTheDesk(db, shop.id, setup);
+    });
+
+    it("keeps the helper when a role change still leaves them staff", async () => {
+      const { db, shop } = ctx;
+      const setup = await assignedRequest(db, shop.id);
+      await removableHelper(db, setup.helper.id, setup.actor.id);
+      expect(
+        await setStaffRoles(db, { shopId: shop.id, personId: setup.helper.id, roles: ["crew"] }),
+      ).toEqual({ ok: true });
+      expect(await storedRequest(db, setup.assigned.id)).toMatchObject({
+        status: "acknowledged",
+        helperPersonId: setup.helper.id,
+      });
+    });
+
+    it("returns the request to the desk when the helper is deleted", async () => {
+      const { db, shop } = ctx;
+      const setup = await assignedRequest(db, shop.id);
+      expect(await deleteDiver(db, shop.id, setup.helper.id)).toBe(true);
+      await expectBackAtTheDesk(db, shop.id, setup);
+    });
+
+    it("leaves a request on a departure that has already ended", async () => {
+      const { db, shop } = ctx;
+      const setup = await assignedRequest(db, shop.id);
+      const [row] = await db
+        .select({ endsAt: trips.endsAt })
+        .from(trips)
+        .where(eq(trips.id, setup.trip.id));
+      if (!row) throw new Error("trip missing");
+      vi.stubEnv("DIVEDAY_CLOCK", new Date(row.endsAt.getTime() + 1).toISOString());
+      expect(await deleteDiver(db, shop.id, setup.helper.id)).toBe(true);
+      vi.unstubAllEnvs();
+      expect(await storedRequest(db, setup.assigned.id)).toMatchObject({
+        status: "acknowledged",
+        helperPersonId: setup.helper.id,
+      });
+    });
+
+    it("names nobody, on Today or the diver page, once the helper lost their roles some other way", async () => {
+      const { db, shop } = ctx;
+      const setup = await assignedRequest(db, shop.id);
+      await db.delete(personRoles).where(eq(personRoles.personId, setup.helper.id));
+      expect(await listTodayHelpRequests(db, shop.id, [setup.trip.id], setup.now)).toMatchObject([
+        { id: setup.assigned.id, helperPersonName: null },
+      ]);
+      expect(
+        (await getHelpRequestForBooking(db, shop.id, setup.seat.booking.id, setup.now))
+          ?.helperPersonName,
+      ).toBeNull();
+    });
+
+    it("refuses to complete a request whose helper is no longer eligible", async () => {
+      const { db, shop } = ctx;
+      const setup = await assignedRequest(db, shop.id);
+      await db.delete(personRoles).where(eq(personRoles.personId, setup.helper.id));
+      expect(
+        await completeHelpRequest(db, {
+          shopId: shop.id,
+          requestId: setup.assigned.id,
+          expectedRevision: setup.assigned.revision,
+          actorPersonId: setup.actor.id,
+          expectedHelperPersonId: setup.helper.id,
+          now: setup.now,
+        }),
+      ).toEqual({ ok: false, reason: "invalid_helper" });
+      expect((await storedRequest(db, setup.assigned.id))?.status).toBe("acknowledged");
+    });
+  });
+
   describe("undoing a completion", () => {
     async function undo(
       db: AppDb,
@@ -610,7 +732,27 @@ describe("day-of help requests", () => {
       expect((await storedRequest(db, setup.handled.id))?.status).toBe("handled");
     });
 
-    it("refuses when the recorded helper is no longer on the crew", async () => {
+    async function expectReopened(
+      db: AppDb,
+      shopId: string,
+      setup: Awaited<ReturnType<typeof handledRequest>>,
+    ) {
+      expect(await undo(db, shopId, setup)).toMatchObject({
+        ok: true,
+        request: { status: "requested", helperPersonId: null, handledAt: null },
+      });
+      expect(await storedRequest(db, setup.handled.id)).toMatchObject({
+        status: "requested",
+        helperPersonId: null,
+        acknowledgedAt: null,
+        handledAt: null,
+      });
+      expect(await listTodayHelpRequests(db, shopId, [setup.trip.id], setup.now)).toMatchObject([
+        { id: setup.handled.id, status: "requested", helperPersonName: null },
+      ]);
+    }
+
+    it("reopens the request for the desk when the recorded helper is off the crew", async () => {
       const { db, shop } = ctx;
       const setup = await handledRequest(db, shop.id);
       expect(
@@ -619,23 +761,49 @@ describe("day-of help requests", () => {
           operation: "unassign",
         }),
       ).toBe(true);
-      expect(await undo(db, shop.id, setup)).toEqual({ ok: false, reason: "invalid_helper" });
-      expect((await storedRequest(db, setup.handled.id))?.status).toBe("handled");
+      await expectReopened(db, shop.id, setup);
     });
 
-    it("refuses when the recorded helper has lost every staff role", async () => {
+    it("reopens the request for the desk when the recorded helper lost every staff role", async () => {
       const { db, shop } = ctx;
       const setup = await handledRequest(db, shop.id);
       await db.delete(personRoles).where(eq(personRoles.personId, setup.helper.id));
-      expect(await undo(db, shop.id, setup)).toEqual({ ok: false, reason: "invalid_helper" });
-      expect((await storedRequest(db, setup.handled.id))?.status).toBe("handled");
+      await expectReopened(db, shop.id, setup);
     });
 
-    it("refuses when the recorded helper was deleted", async () => {
+    it("reopens the request for the desk when the recorded helper was deleted", async () => {
       const { db, shop } = ctx;
       const setup = await handledRequest(db, shop.id);
       await db.update(people).set({ deletedAt: setup.now }).where(eq(people.id, setup.helper.id));
-      expect(await undo(db, shop.id, setup)).toEqual({ ok: false, reason: "invalid_helper" });
+      await expectReopened(db, shop.id, setup);
+    });
+
+    it("still refuses a stale revision, even with the helper gone", async () => {
+      const { db, shop } = ctx;
+      const setup = await handledRequest(db, shop.id);
+      await db.delete(personRoles).where(eq(personRoles.personId, setup.helper.id));
+      expect(
+        await undoHelpRequestCompletion(db, {
+          shopId: shop.id,
+          requestId: setup.handled.id,
+          expectedRevision: setup.handled.revision - 1,
+          actorPersonId: setup.actor.id,
+          expectedHelperPersonId: setup.helper.id,
+          now: setup.now,
+        }),
+      ).toEqual({ ok: false, reason: "invalid_transition" });
+      expect((await storedRequest(db, setup.handled.id))?.status).toBe("handled");
+    });
+
+    it("still refuses a cancelled booking when the helper is gone too", async () => {
+      const { db, shop } = ctx;
+      const setup = await handledRequest(db, shop.id);
+      await db.delete(personRoles).where(eq(personRoles.personId, setup.helper.id));
+      await db
+        .update(bookings)
+        .set({ status: "cancelled" })
+        .where(eq(bookings.id, setup.seat.booking.id));
+      expect(await undo(db, shop.id, setup)).toEqual({ ok: false, reason: "invalid_transition" });
       expect((await storedRequest(db, setup.handled.id))?.status).toBe("handled");
     });
 

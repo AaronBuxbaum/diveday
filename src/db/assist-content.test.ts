@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CERT_SCAN_FEATURE, certScanCall, certScanFields, scanCard } from "@/lib/assists/cert-scan";
 import { sourceDigest } from "@/lib/assists/shop-translate";
+import type { ClaudeProvider } from "@/lib/claude/provider";
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
@@ -525,6 +526,35 @@ describe("the recap highlight", () => {
     expect(await draftRecapLine(ctx.db, ctx.shop.id, tripId, { provider, env, now })).toMatch(
       /turtle/i,
     );
+    await ctx.db.delete(incidentReports).where(eq(incidentReports.tripId, tripId));
+  });
+
+  it("writes no line when an incident report is filed while Claude is answering", async () => {
+    const { tripId, personId } = await tripWithSightings(["green-sea-turtle"]);
+    // The check before the call passes; the report lands during the call.
+    const provider: ClaudeProvider = {
+      async createMessage() {
+        await ctx.db
+          .insert(incidentReports)
+          .values({ shopId: ctx.shop.id, tripId, createdByPersonId: personId });
+        return fakeClaudeMessage({
+          text: JSON.stringify({ text: "{species:1:green-sea-turtle} at {site1}." }),
+        });
+      },
+    };
+    expect(
+      await autoFillRecapLine(
+        ctx.db,
+        { id: tripId, shopId: ctx.shop.id, recapShoutout: null },
+        { recapAssistAutoApprove: true },
+        { provider, env, now },
+      ),
+    ).toBe(false);
+    const [row] = await ctx.db
+      .select({ line: trips.recapShoutout })
+      .from(trips)
+      .where(eq(trips.id, tripId));
+    expect(row?.line).toBeNull();
     await ctx.db.delete(incidentReports).where(eq(incidentReports.tripId, tripId));
   });
 

@@ -199,7 +199,7 @@ describe("the day-of help request promise", () => {
     expect(screen.getByText("Sam will help you on this departure.")).toBeVisible();
   });
 
-  it("keeps the named helper visible after staff mark the request complete", () => {
+  it("never promises future help once staff mark the request complete", () => {
     render(
       <DayOfDetails
         token="tok"
@@ -214,6 +214,8 @@ describe("the day-of help request promise", () => {
         t={t}
       />,
     );
-    expect(screen.getByText("Sam will help you at North dock.")).toBeVisible();
+    expect(screen.getByText("The crew handled this request.")).toBeVisible();
+    expect(screen.queryByText(/will help you/)).toBeNull();
+    expect(screen.queryByText(/Sam/)).toBeNull();
   });
 });

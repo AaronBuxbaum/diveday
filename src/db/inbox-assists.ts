@@ -161,12 +161,23 @@ export async function triageInboundMessagesSafely(
   }
 }
 
-/** The shop's facts a reply may quote, one line each, in the shop's own words and currency. */
+export type ReplyFacts = {
+  /**
+   * Today's date in the shop's zone and the span `lines` covers, so a draft
+   * can tell "not listed" from "no trip". Its numbers are never a source a
+   * draft may quote (`groundedReply` reads `lines` only).
+   */
+  window: string;
+  /** The shop's facts a reply may quote, one line each, in the shop's own words and currency. */
+  lines: string[];
+};
+
+/** The shop's facts a reply may quote, and the window they cover. */
 export async function replyFacts(
   db: AppDb,
   shopId: string,
   now: Date = nowDate(),
-): Promise<string[]> {
+): Promise<ReplyFacts> {
   const [shop] = await db
     .select({
       name: shops.name,
@@ -181,7 +192,7 @@ export async function replyFacts(
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
-  if (!shop) return [];
+  if (!shop) return { window: "", lines: [] };
   const horizon = new Date(now.getTime() + FACT_HORIZON_DAYS * 24 * 60 * 60 * 1000);
   const [upcoming, courses] = await Promise.all([
     offsetUpcomingTripsWithCounts(db, shopId, {
@@ -214,7 +225,16 @@ export async function replyFacts(
     for (const course of courses) lines.push(`- ${course.title}: ${money(course.priceCents)}`);
   }
   if (shop.rentalTerms?.trim()) lines.push(`Rental terms: ${shop.rentalTerms.trim()}`);
-  return lines;
+  const window = [
+    `Today is ${formatShortDate(now, shop.locale, shop.timezone)} (${shop.timezone}).`,
+    `The departures in <facts> are the shop's public departures in the next ${FACT_HORIZON_DAYS} days, through ${formatShortDate(horizon, shop.locale, shop.timezone)}, at most ${FACT_DEPARTURES} departures.`,
+    upcoming.total > upcoming.trips.length
+      ? "The list stops at that limit: there are more departures in those days than it shows."
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return { window, lines };
 }
 
 /**
@@ -239,11 +259,11 @@ export async function draftReplyFor(
     .filter((line) => line.text.trim())
     .slice(-DRAFT_THREAD_LINES);
   if (thread.at(-1)?.from !== "diver") return null;
-  const facts = await replyFacts(db, shopId, input.now);
+  const { window, lines: facts } = await replyFacts(db, shopId, input.now);
   const value = await runAssist(db, {
     ...input,
     feature: "inbox_draft",
-    call: replyDraftCall({ facts, thread }),
+    call: replyDraftCall({ window, facts, thread }),
   });
   return value ? groundedReply(value, { facts, thread }) : null;
 }

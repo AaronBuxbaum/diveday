@@ -17,9 +17,11 @@ export type HelpRequestCopy = {
   assigned: string;
   completed: string;
   undone: string;
+  reopened: string;
   stale: string;
   invalidHelper: string;
   failed: string;
+  undoRefused: string;
   undo: string;
   undoPending: string;
   dismiss: string;
@@ -43,8 +45,21 @@ export function HelpRequestProvider({
 }) {
   const [result, run] = useActionState(helpRequestAction, null);
   const completed = result?.ok && result.effect === "completed" ? result : null;
+  // A handled request has no row on Today, so a refused undo is said here,
+  // where its toast was. Without it the desk would think the request was back.
+  const refusedUndo =
+    result && !result.ok && result.intent === "undo"
+      ? result.reason === "stale"
+        ? copy.undoRefused
+        : copy.failed
+      : null;
   return (
     <HelpRequestContext.Provider value={{ result, run, copy }}>
+      {refusedUndo ? (
+        <p role="alert" className="text-sm font-medium text-danger">
+          {refusedUndo}
+        </p>
+      ) : null}
       {completed ? (
         <UndoToast
           message={copy.completed}
@@ -95,16 +110,26 @@ export function HelpRequestControl({
   const { result, run, copy } = useHelpRequest();
   const [open, setOpen] = useState(false);
   const assigned = Boolean(helperPersonId && helperPersonName);
+  // The picker starts on the saved helper only while they are still on the
+  // crew list. A helper who left would otherwise fall through to whoever is
+  // listed first, and Confirm would promise the diver the wrong person.
+  const preselected =
+    assigned && crew.some((member) => member.personId === helperPersonId)
+      ? (helperPersonId ?? "")
+      : "";
   const ownResult = result?.requestId === requestId ? result : null;
   const success = ownResult?.ok
     ? ownResult.effect === "assigned"
       ? copy.assigned
       : ownResult.effect === "undone"
         ? copy.undone
-        : null
+        : ownResult.effect === "reopened"
+          ? copy.reopened
+          : null
     : null;
+  // A refused undo is the provider's to say (`HelpRequestProvider`).
   const error =
-    ownResult && !ownResult.ok
+    ownResult && !ownResult.ok && ownResult.intent !== "undo"
       ? ownResult.reason === "helper"
         ? copy.invalidHelper
         : ownResult.reason === "stale"
@@ -161,7 +186,7 @@ export function HelpRequestControl({
             <select
               name="helperPersonId"
               required
-              defaultValue={helperPersonId ?? ""}
+              defaultValue={preselected}
               className={controlClass}
             >
               <option value="" disabled>

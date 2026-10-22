@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, notExists } from "drizzle-orm";
 import { marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import {
@@ -172,10 +172,30 @@ export async function autoFillRecapLine(
       });
       return false;
     }
+    // Asked again in the write itself: the call above takes seconds, and a
+    // report filed meanwhile must still keep the line off this departure.
     const [written] = await db
       .update(trips)
       .set({ recapShoutout: line })
-      .where(and(eq(trips.id, trip.id), eq(trips.shopId, trip.shopId), isNull(trips.recapShoutout)))
+      .where(
+        and(
+          eq(trips.id, trip.id),
+          eq(trips.shopId, trip.shopId),
+          isNull(trips.recapShoutout),
+          notExists(
+            db
+              .select({ id: incidentReports.id })
+              .from(incidentReports)
+              .where(
+                and(
+                  eq(incidentReports.shopId, trip.shopId),
+                  eq(incidentReports.tripId, trip.id),
+                  isNull(incidentReports.deletedAt),
+                ),
+              ),
+          ),
+        ),
+      )
       .returning({ id: trips.id });
     return Boolean(written);
   } catch {

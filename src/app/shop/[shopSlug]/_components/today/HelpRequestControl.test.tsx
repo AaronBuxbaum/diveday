@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { HelpRequestActionResult } from "@/app/shop/[shopSlug]/actions";
 
-vi.mock("@/app/shop/[shopSlug]/actions", () => ({ helpRequestAction: vi.fn() }));
+const { helpRequestAction } = vi.hoisted(() => ({ helpRequestAction: vi.fn() }));
+vi.mock("@/app/shop/[shopSlug]/actions", () => ({ helpRequestAction }));
 
 import {
   HelpRequestControl,
@@ -23,9 +25,12 @@ const copy: HelpRequestCopy = {
   assigned: "Helper saved.",
   completed: "Help marked complete.",
   undone: "Assignment restored.",
+  reopened: "The helper is off this departure, so the request is back on the list.",
   stale: "This request changed. Refresh the page and check it again.",
   invalidHelper: "That crew member is no longer assigned to this departure.",
   failed: "Couldn’t save this change. Try again.",
+  undoRefused:
+    "Undo didn’t go through: the request, its booking or its departure changed. It stays complete.",
   undo: "Undo",
   undoPending: "Restoring…",
   dismiss: "Dismiss",
@@ -82,5 +87,89 @@ describe("HelpRequestControl", () => {
     );
     expect(screen.getByRole("button", { name: "Arrange help" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Help completed" })).toBeNull();
+  });
+
+  it("does not preselect another crew member when the saved helper is gone", () => {
+    render(
+      <HelpRequestProvider copy={copy}>
+        <HelpRequestControl
+          requestId="request-1"
+          revision={7}
+          status="acknowledged"
+          helperPersonId="person-gone"
+          helperPersonName={null}
+          label="Arrange help"
+          crew={[
+            { personId: "person-1", fullName: "Sam Rivera" },
+            { personId: "person-2", fullName: "Ana Lopez" },
+          ]}
+          meetingLine={null}
+        />
+      </HelpRequestProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Arrange help" }));
+    expect(screen.getByLabelText("Crew member")).toHaveValue("");
+  });
+
+  it("keeps the saved helper selected while they are still on the crew", () => {
+    renderControl("acknowledged", true);
+    fireEvent.click(screen.getByRole("button", { name: "Change helper" }));
+    expect(screen.getByLabelText("Crew member")).toHaveValue("person-1");
+  });
+});
+
+describe("HelpRequestProvider", () => {
+  async function submitUndo(result: HelpRequestActionResult) {
+    helpRequestAction.mockResolvedValueOnce({
+      ok: true,
+      requestId: "request-9",
+      effect: "completed",
+      helperPersonId: "person-1",
+      revision: 8,
+    } satisfies HelpRequestActionResult);
+    helpRequestAction.mockResolvedValueOnce(result);
+    render(
+      <HelpRequestProvider copy={copy}>
+        <HelpRequestControl
+          requestId="request-9"
+          revision={7}
+          status="acknowledged"
+          helperPersonId="person-1"
+          helperPersonName="Sam Rivera"
+          label="Change helper"
+          crew={[{ personId: "person-1", fullName: "Sam Rivera" }]}
+          meetingLine={null}
+        />
+      </HelpRequestProvider>,
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Help completed" }));
+    });
+    expect(await screen.findByText("Help marked complete.")).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    });
+  }
+
+  it("shows why an undo was refused, though the handled request has no row", async () => {
+    await submitUndo({ ok: false, requestId: "request-9", intent: "undo", reason: "stale" });
+    expect((await screen.findByRole("alert")).textContent).toBe(copy.undoRefused);
+    expect(screen.queryByText("Help marked complete.")).toBeNull();
+  });
+
+  it("shows a failed undo that was not a refusal as a plain failure", async () => {
+    await submitUndo({ ok: false, requestId: "request-9", intent: "undo", reason: "error" });
+    expect((await screen.findByRole("alert")).textContent).toBe(copy.failed);
+  });
+
+  it("says the request went back to the desk when undo reopened it", async () => {
+    await submitUndo({
+      ok: true,
+      requestId: "request-9",
+      effect: "reopened",
+      helperPersonId: "person-1",
+      revision: 9,
+    });
+    expect((await screen.findByRole("status")).textContent).toBe(copy.reopened);
   });
 });

@@ -1,7 +1,7 @@
 // i18n-exempt-file: model instructions, sent to Claude and never shown to a reader
 import { z } from "zod";
 import type { StructuredCall } from "@/lib/claude/structured";
-import { hasNumberWord, numbersCameFrom } from "./facts";
+import { hasNumberWord, numbersCameFrom, sameNumberWords } from "./facts";
 
 /**
  * **The inbox assists** (ADR 20261018-claude-assists): inbox-sort, translate
@@ -151,6 +151,7 @@ export const DRAFT_SYSTEM = `You draft replies for the staff of a scuba diving s
 Rules:
 - Answer the diver's latest message in <thread>, in the language it is written in, warmly and briefly, the way a person at the shop's desk writes. No subject line, no signature block, no placeholders in brackets.
 - Every date, time, seat count and price you mention must be copied exactly from <facts>, in digits as the facts write them. A number only the diver wrote is not a fact. If the facts do not answer the question, say a staff member will confirm, and do not guess. Never promise a seat: say how many are open.
+- <window> says today's date and which departures <facts> covers. For a date outside it, or a departure <facts> does not list, say a staff member will confirm: never say there is no trip.
 - Never confirm a cancellation, a refund or a change to a booking. Say the staff will take care of it.
 - If the diver asks about their health, a medical condition, medication, pregnancy or whether they are fit to dive, set medical to true and leave reply empty: those questions are answered by a person.
 - Never say whether a certification, experience, age or nitrox card qualifies anyone for a dive or course, and never state a depth, a limit, a prerequisite or that one agency's card equals another's. Say a staff member will check their card against that dive.
@@ -160,6 +161,11 @@ Rules:
 
 /** A reply draft for the latest message in a thread, grounded in the shop's facts. */
 export function replyDraftCall(input: {
+  /**
+   * Today's date and the span the facts cover. Kept apart from the facts:
+   * its numbers say what the list is, so a draft may never quote them.
+   */
+  window: string;
   /** The shop's public facts, one per line, already worded by the caller. */
   facts: readonly string[];
   thread: readonly ThreadLine[];
@@ -173,7 +179,7 @@ export function replyDraftCall(input: {
   return {
     model: "draft",
     system: DRAFT_SYSTEM,
-    context: `<facts>\n${input.facts.join("\n")}\n</facts>`,
+    context: `<window>\n${input.window}\n</window>\n<facts>\n${input.facts.join("\n")}\n</facts>`,
     content: `<thread>\n${lines.join("\n\n")}\n</thread>`,
     schema: ReplyDraft,
     maxTokens: 2_000,
@@ -186,12 +192,17 @@ export function replyDraftCall(input: {
  * The draft, or null when it must not reach the reply box: the diver asked a
  * medical question, the draft judges eligibility (`ReplyDraft.eligibility`),
  * or the draft names a number (a seat count, a price, a time) the facts did
- * not give it, in digits or in words. That last rule is what "seat counts and
- * prices come from the database" means in code: every number is a whole token
- * of the facts, quoted no more often than the facts give it, and the diver's
- * own words are never a source ("is it $40?" does not make $40 a price). A
- * number the model made up throws the whole draft away rather than leaving a
- * staffer to spot it.
+ * not give it, in digits or in words. Each number is matched by kind as a
+ * whole token (`numbersCameFrom`): a time against the facts' times, a date
+ * against their dates, a price against their prices, a plain count against
+ * their plain counts, each used no more often than the facts give it. The
+ * diver's own words are never a source ("is it $40?" does not make $40 a
+ * price). A doubtful number throws the whole draft away rather than leaving
+ * a staffer to spot it.
+ *
+ * What this does not check: that a number belongs to the departure its
+ * sentence names. "3 seats" on a full wreck passes when the reef has 3 open.
+ * The staffer reads every draft before it is sent.
  */
 export function groundedReply(
   value: z.infer<typeof ReplyDraft>,
@@ -225,11 +236,16 @@ export function replyTranslationCall(input: {
 
 /**
  * The translation, or null when it is not one: empty, or its numbers are not
- * exactly the staffer's (a translation that changed "10:30" to "11:30", or
- * added a time, is worse than none).
+ * exactly the staffer's, in figures or in count words (a translation that
+ * changed "10:30" to "11:30", "two seats" to "tres plazas", or added a time,
+ * is worse than none).
  */
 export function checkedTranslation(original: string, translation: string): string | null {
   const text = translation.trim();
   if (!text || text === original.trim()) return null;
-  return numbersCameFrom(text, original) && numbersCameFrom(original, text) ? text : null;
+  return numbersCameFrom(text, original) &&
+    numbersCameFrom(original, text) &&
+    sameNumberWords(original, text)
+    ? text
+    : null;
 }
