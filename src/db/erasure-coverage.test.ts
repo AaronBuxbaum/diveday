@@ -329,7 +329,6 @@ const ERASURE_KEEPS: Record<string, string> = {
     "the wording of a course form as the shop saved it, and the staffer who saved it. The signed copy is `course_form_records`, which the erasure redacts",
   waiver_materiality_decisions:
     "an owner's ruling on whether a template change was material — a decision about the shop’s text, not about any signer",
-
   // --- the staffer who acted is the only person on the row -----------------
   crew_assignment_requests: "a crew member asking for a departure, and the answer",
   crew_availability_blocks: "a crew member’s own unavailable dates and their note about them",
@@ -351,7 +350,6 @@ const ERASURE_KEEPS: Record<string, string> = {
   held_sends:
     "an eight-second undo window. Its `payload` carries ids only (and, for a departure note, the staffer's one line, which is addressed to a departure, not to a diver) — never a name or an address, which the table's own docblock states and `src/lib/held-sends.ts` holds to — and nothing lingers, so nothing prunes it",
 };
-
 /**
  * The narrow complement: every table **outside** the person closure that
  * carries a contact-shaped column, and what the erasure does about it. This is
@@ -378,6 +376,8 @@ const ERASURE_KEEPS: Record<string, string> = {
  * only way past it is to write a sentence a reviewer can disagree with.
  */
 const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
+  retention_prune_state:
+    "global scheduler machinery containing only a table code, no personal data",
   // Reached by text rather than by a key, and swept that way. These two are the
   // worked examples of limit 3: no foreign key ties either to a person, and the
   // erasure finds them anyway because someone knew to look.
@@ -411,6 +411,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   shop_text_translations:
     "the shop's own descriptions and briefings in Spanish, about its trips, courses and sites. No person",
   courses: "the shop’s course catalog, copied from a template and then its own",
+  website_setup_drafts:
+    "lines Claude read off the shop’s own public website for the owner to accept: shop facts, prices and policies, never a diver",
   waiver_templates:
     "the text a shop asks people to sign, versioned. The *signatures* are `waiver_records`, which the erasure strips and re-seals",
   course_forms: "the course forms a shop asks students to sign, by title and agency code",
@@ -748,6 +750,10 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     why: '"stripe", or null for a manual mark: which system moved the money, not a handle on anything it holds',
   },
   "booking_payment_events.provider": { held: "none", why: "as booking_payments.provider" },
+  "inbound_messages.assist_intent": {
+    held: "none",
+    why: "Claude's code for what a message asks (cancel, move, question…): a tag from a fixed list, not a handle on anything",
+  },
   "auth_provider_accounts.provider_id": {
     held: "none",
     why: "better-auth's name for a login provider, on a table no sign-in path in this repo writes. A provider's *name*, and no payment anywhere near it",

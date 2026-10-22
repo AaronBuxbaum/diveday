@@ -4,13 +4,20 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { canPersonImportShopData, commitContactImport, type ImportSummary } from "@/db/import";
+import { parseImportAssist } from "@/lib/assists/import-mapping";
 import { parseForm } from "@/lib/form-parse";
 import type { ImportFatalCode, ImportFatalParams } from "@/lib/import";
 import { prepareContactImport } from "@/lib/import";
 import { requireStaffSession } from "@/lib/session";
 
 /** The pasted or uploaded CSV, as text the client read off the file. */
-const contactsForm = z.object({ csv: z.string().default("") });
+const contactsForm = z.object({
+  csv: z.string().default(""),
+  // Claude's mapping as the preview showed it (the `import` assist): re-read
+  // through its own schema below and never trusted further than the importer
+  // trusts any header.
+  assist: z.string().max(20_000).optional(),
+});
 
 export type ImportActionErrorCode =
   | ImportFatalCode
@@ -44,7 +51,10 @@ export async function importContactsAction(
   const csv = parsed.ok ? parsed.data.csv : "";
   if (!csv.trim()) return { status: "error", code: "csv_required" };
 
-  const prepared = prepareContactImport(csv);
+  const prepared = prepareContactImport(
+    csv,
+    parseImportAssist(parsed.ok ? parsed.data.assist : null),
+  );
   if (prepared.fatal) {
     return { status: "error", code: prepared.fatal.code, params: prepared.fatal.params };
   }

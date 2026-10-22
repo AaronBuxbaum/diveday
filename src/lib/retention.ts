@@ -168,6 +168,7 @@ export type RetainedTable =
   | "weekly_digest_sends"
   | "claude_usage"
   | "assist_results"
+  | "website_setup_drafts"
   | "crew_notices"
   | "notification_send_queue"
   | "waiver_deliveries"
@@ -404,6 +405,14 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * reviews; a year and a season keeps last year's same month to compare.
    */
   assist_results: 400,
+  /**
+   * 90 days, measured on `read_at`. A row is the lines Claude read off the
+   * shop's own website for the owner to accept or dismiss (the `setup`
+   * assist): shop facts, never a diver. What the owner accepts lives on in the
+   * shop's own settings; a reading nobody came back to for a season is stale
+   * against the site it came from.
+   */
+  website_setup_drafts: 90,
   /**
    * 30 days, measured on `created_at`. A row is crew news waiting for the
    * hourly pass (ADR 20261009-crew-hear-about-their-boats), and it is spent

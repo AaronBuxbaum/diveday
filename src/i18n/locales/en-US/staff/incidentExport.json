@@ -4,7 +4,7 @@
   "boatNotRecorded": "Not recorded",
   "boatNoNotices": "The papers and the gear register showed nothing lapsed or missing.",
   "boatNoticesLabel": "What the papers and the gear register showed",
-  "boatChanged": "The departure has moved to another boat since, or names none now.",
+  "boatChanged": "The departure now names another boat or none. This record still describes {boatName}.",
   "boatNoBoat": "This departure names no boat.",
   "boatNotKept": "No record of the boat’s papers and safety kit was kept for this departure.",
   "actionCleared": "Entry cleared (correction)",

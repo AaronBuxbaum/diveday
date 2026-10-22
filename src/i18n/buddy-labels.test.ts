@@ -11,6 +11,19 @@ describe("buddyAlertText (#2403)", () => {
     expect(buddyAlertText(en, "separated_after_dive", [])).toBe("Buddy not back aboard");
   });
 
+  it("makes an ashore teammate a re-pairing instruction in both languages", () => {
+    expect(buddyAlertText(en, "teammate_ashore")).toBe("Buddy staying ashore. Re-pair.");
+    expect(buddyAlertText(es, "teammate_ashore")).toBe(
+      "Compañero en tierra. Reorganiza la pareja.",
+    );
+    expect(buddyAlertText(en, "teammate_ashore", ["Ravi Patel"])).toBe(
+      "Ravi staying ashore. Re-pair.",
+    );
+    expect(buddyAlertText(es, "teammate_ashore", ["Ravi Patel"])).toBe(
+      "Ravi en tierra. Reorganiza la pareja.",
+    );
+  });
+
   it("names one missing teammate by first name, in both languages", () => {
     expect(buddyAlertText(en, "separated_dock", ["Ravi Patel"])).toBe("Ravi not aboard yet");
     expect(buddyAlertText(en, "separated_after_dive", ["Ravi Patel"])).toBe("Ravi not back aboard");

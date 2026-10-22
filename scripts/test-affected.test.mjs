@@ -8,6 +8,33 @@ const reader = "src/features/contracts.test.ts";
 const options = { readers: [reader], existing: () => true, isSharedTest: () => false };
 
 describe("local unit selection", () => {
+  it.each(
+    [[], ["package.json"], ["unknown.yaml"], ["src/lib/a.test.ts"]].map((changed) => ({ changed })),
+  )("does not scan source contracts for a decisive diff $changed", ({ changed }) => {
+    const readers = () => {
+      throw new Error("unnecessary whole-tree scan");
+    };
+    expect(() => testPlan({ ...options, readers, changed })).not.toThrow();
+  });
+  it.each([
+    { changed: ["src/lib/a.ts"], isSharedTest: () => false },
+    { changed: ["docs/a.md"], isSharedTest: () => false },
+    { changed: ["src/lib/shared.test.ts"], isSharedTest: () => true },
+    { changed: ["src/lib/a.test.ts", "docs/a.md"], isSharedTest: () => false },
+  ])("preserves eager selection when contracts are required: $changed", (input) => {
+    let calls = 0;
+    const readers = () => {
+      calls++;
+      return options.readers;
+    };
+    expect(testPlan({ ...options, ...input, readers })).toEqual(testPlan({ ...options, ...input }));
+    expect(calls).toBe(1);
+  });
+  it("retains the broad fallback when deferred discovery fails", () => {
+    expect(testPlan({ ...options, changed: ["src/lib/a.ts"], readers: () => null }).mode).toBe(
+      "all",
+    );
+  });
   it("lets directly selected guard files run in their matching project", () => {
     const files = ["src/app/_fonts/fonts.test.ts"];
     expect(testArgs({ mode: "direct", files })).toEqual([

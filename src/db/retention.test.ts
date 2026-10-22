@@ -811,6 +811,14 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.assistResults.id }),
     ),
+  website_setup_drafts: async ({ db, shop }, at) =>
+    idOf(
+      await db
+        .insert(schema.websiteSetupDrafts)
+        .values({ shopId: shop.id, host: "example.com", lines: [], readAt: at })
+        .onConflictDoUpdate({ target: schema.websiteSetupDrafts.shopId, set: { readAt: at } })
+        .returning({ id: schema.websiteSetupDrafts.shopId }),
+    ),
   weekly_digest_sends: async ({ db, shop, people }, at, n) =>
     idOf(
       await db
@@ -959,7 +967,6 @@ describe("every retention window deletes", () => {
     },
   );
 });
-
 /**
  * Tables retention does not govern — and a list that has to be edited by hand
  * for every table added to the schema, which is the price of the guard below.
@@ -979,6 +986,7 @@ describe("every retention window deletes", () => {
  * than a reason to add a name below.
  */
 const OUTSIDE_RETENTION: readonly string[] = [
+  "retention_prune_state", // one mutable scheduler cursor, never an age-pruned trail
   // The shop's own catalogue and configuration: what a shop sets up, edits,
   // and deletes when it stops being true. Nothing here ages.
   "shops",

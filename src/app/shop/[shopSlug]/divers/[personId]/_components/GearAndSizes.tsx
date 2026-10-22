@@ -20,7 +20,7 @@ import {
   SUIT_KINDS,
 } from "@/lib/rentals";
 import { shopPath } from "@/lib/staff-notices";
-import { readGearNoteAction } from "../assist-actions";
+import { readGearNoteAction } from "../card-assist-actions";
 import { saveProfileAction, setNeedsStaffFitAction } from "../fit-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";

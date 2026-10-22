@@ -44,6 +44,11 @@ export type StructuredCall<S extends z.ZodType> = {
   readonly confidence?: (value: z.infer<S>) => number;
   /** Below this the value is dropped. Defaults to 0.6. */
   readonly minConfidence?: number;
+  /**
+   * The prompt's likely size in tokens, when it is far from the usual (a PDF):
+   * what the cap reserves before the call is sent. Never sent to the API.
+   */
+  readonly inputTokens?: number;
 };
 
 export const STRUCTURED_OUTCOMES = [

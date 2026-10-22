@@ -12,6 +12,7 @@ import {
   removeBuddyTeamMember,
   sortBuddyMemberRowsByTeam,
 } from "./buddy-pairs";
+import { loadBuddyContext } from "./buddy-pairs-test-fixtures";
 import { getTripManifest, getTripManifests, recordCrewRollCall, recordRollCall } from "./manifests";
 import {
   bookings,
@@ -29,23 +30,7 @@ import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 // (src/test/db.ts, `fileScopedShopContext`).
 const ctx = fileScopedShopContext();
 
-/**
- * The Benwood reef trip: three booked divers and — unlike today's Molasses
- * boat — no seeded buddy teams, so every test starts from an unteamed roster
- * with an odd count (odd counts are normal, never an error).
- */
-async function buddyContext() {
-  const { db, shop } = ctx;
-  const tripRows = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-  const trip = tripRows.find((row) => row.title.startsWith("Two-Tank Reef — Benwood"));
-  if (!trip) throw new Error("demo Benwood trip missing");
-  const roster = await getTripRoster(db, shop.id, trip.id);
-  const [a, b, c] = roster;
-  if (!a || !b || !c) throw new Error("expected three Benwood bookings");
-  const [staff] = await listStaff(db, shop.id);
-  if (!staff) throw new Error("demo staff missing");
-  return { db, shop, trip, a, b, c, staff: staff.person };
-}
+const buddyContext = () => loadBuddyContext(ctx);
 
 /** Put a named staff member on this trip's crew list, so they can join a team. */
 async function assignCrew(

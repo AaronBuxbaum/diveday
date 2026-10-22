@@ -1,9 +1,10 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "77c6ca10-76c5-4ebe-9b81-3635ec109919",
+  "id": "9552bffa-9b21-4573-8f4a-e99257a6e30a",
   "prevIds": [
-    "81237baa-963e-4e1b-8547-9281ca41eb65"
+    "62ed9441-c585-46f1-b7f2-a8c017211bfd",
+    "e235fb59-5d4d-4c29-bb90-3567adc8d614"
   ],
   "ddl": [
     {
@@ -1965,6 +1966,12 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "retention_prune_state",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "recap_photos",
       "entityType": "tables",
       "schema": "public"
@@ -2080,6 +2087,12 @@
     {
       "isRlsEnabled": false,
       "name": "waiver_templates",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "website_setup_drafts",
       "entityType": "tables",
       "schema": "public"
     },
@@ -11751,6 +11764,19 @@
       "table": "departure_boat_safety_snapshots"
     },
     {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "departure_starts_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "departure_boat_safety_snapshots"
+    },
+    {
       "type": "jsonb",
       "typeSchema": null,
       "notNull": true,
@@ -17237,6 +17263,84 @@
       "table": "inbound_messages"
     },
     {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "assist_intent",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "assist_urgent",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "assist_language",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "assist_translation",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "assist_translated_to",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "assisted_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "inbound_messages"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
@@ -22203,6 +22307,32 @@
       "table": "tips"
     },
     {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "retention_prune_state"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "next_table",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "retention_prune_state"
+    },
+    {
       "type": "uuid",
       "typeSchema": null,
       "notNull": true,
@@ -25893,6 +26023,71 @@
       "entityType": "columns",
       "schema": "public",
       "table": "waiver_templates"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "shop_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "website_setup_drafts"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "host",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "website_setup_drafts"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "lines",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "website_setup_drafts"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "read_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "website_setup_drafts"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "website_setup_drafts"
     },
     {
       "type": "uuid",
@@ -43919,6 +44114,23 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
+      "name": "website_setup_drafts_shop_id_shops_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "website_setup_drafts"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "shop_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "shops",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
       "name": "weekly_digest_sends_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -45738,6 +45950,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "retention_prune_state_pkey",
+      "schema": "public",
+      "table": "retention_prune_state",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "recap_photos_pkey",
       "schema": "public",
       "table": "recap_photos",
@@ -45931,6 +46153,16 @@
       "name": "waiver_templates_pkey",
       "schema": "public",
       "table": "waiver_templates",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "shop_id"
+      ],
+      "nameExplicit": false,
+      "name": "website_setup_drafts_pkey",
+      "schema": "public",
+      "table": "website_setup_drafts",
       "entityType": "pks"
     },
     {
@@ -47313,6 +47545,13 @@
       "entityType": "checks",
       "schema": "public",
       "table": "tips"
+    },
+    {
+      "value": "\"id\" = 'weekly'",
+      "name": "retention_prune_state_singleton",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "retention_prune_state"
     },
     {
       "value": "\"deleted_at\" is not null or jsonb_array_length(\"categories\") > 0",

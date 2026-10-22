@@ -1,0 +1,92 @@
+{
+  "inbox": {
+    "intent": {
+      "cancel": "Quiere cancelar",
+      "move": "Quiere cambiar de fecha",
+      "question": "Hace una pregunta",
+      "payment": "Sobre un pago",
+      "waiver": "Sobre una exención",
+      "late": "Llega tarde"
+    },
+    "urgent": "Urgente",
+    "translation": "En {language}: {text}",
+    "makeRequest": "Crear una solicitud",
+    "makeRequestFor": "Crear una solicitud con el mensaje de {name}",
+    "makingRequest": "Leyendo…",
+    "requestNothing": "Nada en ese mensaje se lee como una reserva."
+  },
+  "conversation": {
+    "translatedFrom": "Traducido del {language}",
+    "draft": "Redactar una respuesta",
+    "drafting": "Redactando…",
+    "translate": "Traducir al {language}",
+    "translating": "Traduciendo…",
+    "yourWords": "Lo que escribiste: {text}"
+  },
+  "callNote": {
+    "label": "Notas de la llamada",
+    "hint": "Escríbelo como llegó. Rellenar lo pasa al formulario, y la nota guarda tus palabras.",
+    "fill": "Rellenar el formulario",
+    "filling": "Leyendo…",
+    "callback": "Devolver la llamada: {when}",
+    "onFile": "En el registro: {name}",
+    "nothing": "Nada en la nota rellena un campo."
+  },
+  "import": {
+    "map": "Asignar las otras columnas",
+    "mapping": "Leyendo las columnas…",
+    "mapHint": "Envía los nombres de las columnas y algunos valores enmascarados de las primeras 50 filas. Una columna que menciona la salud nunca se envía.",
+    "mapNothing": "No se pudo asignar ninguna otra columna. Cambia el nombre de un encabezado y vuelve a elegir el archivo.",
+    "suggested": "{field}, sugerido",
+    "pendingCards": "Las tarjetas leídas de una columna sugerida entran para revisar, sin verificar."
+  },
+  "waiver": {
+    "label": "Empieza con tu exención actual",
+    "hint": "Elige su PDF y el texto aparece en el cuadro de arriba. Compáralo línea por línea con el PDF antes de publicarlo: Claude puede leer mal una cláusula. Las líneas de firma y las preguntas médicas se omiten porque el formulario en línea las pide. Esto no es asesoría legal.",
+    "draft": "Redactar desde el PDF",
+    "drafting": "Leyendo el PDF…",
+    "failed": "Ese archivo no se pudo leer como una exención. Elige un PDF de tu exención, de menos de 5 MB."
+  },
+  "setup": {
+    "tab": "Sitio web",
+    "heading": "Configura con tu sitio web",
+    "intro": "Pega tu sitio y Claude lo lee para encontrar tu lema, teléfono, horario, precios y salidas. Nada cambia hasta que aceptes una línea.",
+    "siteLabel": "Tu sitio web",
+    "read": "Leer el sitio",
+    "reading": "Leyendo el sitio…",
+    "readFrom": "Leído de {host}, {date}",
+    "kind": {
+      "tagline": "Lema",
+      "description": "Sobre el centro",
+      "phone": "Teléfono",
+      "deskHours": "Horario de atención",
+      "coursePrice": "Precio del curso",
+      "departure": "Salida",
+      "policy": "Política"
+    },
+    "deskHoursValue": "De {opens} a {closes}",
+    "coursePriceValue": "{course}: {price}",
+    "departureValue": "{title}, {time}",
+    "departurePriceValue": "{title}, {time}, {price}",
+    "source": "En el sitio: “{source}”",
+    "accept": "Aceptar",
+    "acceptFor": "Aceptar {kind}",
+    "addDeparture": "Agregar al tablero",
+    "dismiss": "Descartar",
+    "dismissFor": "Descartar {kind}",
+    "accepted": "Aceptado",
+    "dismissed": "Descartado",
+    "policyHint": "Cópialo donde tus buceadores leen las políticas.",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "copyFailed": "Inténtalo de nuevo",
+    "notices": {
+      "read": "Leído. Acepta las líneas correctas.",
+      "nothing": "No se pudo usar nada de ese sitio. Revisa la dirección e inténtalo de nuevo.",
+      "badSite": "Esa dirección no se puede leer. Pega el sitio web de tu centro, empezando por https://.",
+      "dark": "Las sugerencias de Claude están desactivadas en este centro.",
+      "saved": "Guardado.",
+      "gone": "Esa línea ya se resolvió."
+    }
+  }
+}

@@ -134,6 +134,8 @@ function allTableNames(): string[] {
  * place it can fail — see the note above.
  */
 const UNSCOPED_REASONS: Record<string, string> = {
+  retention_prune_state:
+    "global scheduler cursor holding only a table code, with no shop or person key",
   auth_verifications:
     "better-auth's `verification` model: no foreign key, names its person as text in `identifier`. Both paths sweep it by that column, and so does the erasure (src/db/anonymize.ts) — a pending row holds an address and a live token",
   global_dive_sites: "DiveDay’s own catalog of sites, shared by every shop and owned by none",
@@ -234,6 +236,8 @@ const RESET_KEEPS: Record<string, string> = {
   // What the shop's assists answered (review chips, themes, the Monday read):
   // configuration-shaped, nothing seeds it.
   assist_results: "derived answers about the shop's reviews and week; a reset must not re-ask",
+  // The website setup's proposals: the shop's own site read once, not schedule.
+  website_setup_drafts: "the shop's website reading, which a schedule reset does not touch",
   // Crew news waiting to be told (ADR 20261009-crew-hear-about-their-boats):
   // it hangs off a departure, so the reset's trip delete clears it.
   crew_notices: "ON DELETE CASCADE from trips clears it",
@@ -287,6 +291,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   weekly_digest_sends: "ON DELETE CASCADE from shops and people clears it",
   claude_usage: "ON DELETE CASCADE from shops clears it",
   assist_results: "ON DELETE CASCADE from shops clears it",
+  website_setup_drafts: "ON DELETE CASCADE from shops clears it",
   crew_notices: "ON DELETE CASCADE from shops, people and trips clears it",
   crew_away_acknowledgements: "ON DELETE CASCADE from shops, people and trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",

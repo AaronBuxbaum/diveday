@@ -25,11 +25,37 @@ const PRIVATE_SUFFIXES = [
 ];
 
 /**
+ * Hosts that are a registry or a builder's shared root, never one shop's
+ * site. `allowed_domains` covers every subdomain of what it names, so pasting
+ * one of these would let the call read any tenant's pages under it (security
+ * review N4): `co.uk` is every British company, `wixsite.com` every Wix site.
+ * A shop's own subdomain of a builder (`bluereef.wixsite.com`) is still fine.
+ *
+ * A short list, not the Public Suffix List: what is refused here is the shape
+ * an owner might actually paste, and the cost of a miss is a wider allowance
+ * of public pages, not a request from our network.
+ */
+export const SHARED_HOST_ROOTS: ReadonlySet<string> = new Set([
+  // Second-level registries.
+  ..."co.uk org.uk me.uk ltd.uk plc.uk net.uk ac.uk gov.uk".split(" "),
+  ..."com.au net.au org.au co.nz org.nz co.za co.jp ne.jp or.jp co.kr".split(" "),
+  ..."com.br com.mx com.ar com.co com.pe com.ph com.my com.sg com.hk com.tw com.cn".split(" "),
+  ..."co.id co.th com.tr com.eg com.ec com.do com.pa com.gt co.cr co.il co.in".split(" "),
+  ..."com.es com.pt com.fj com.vn com.mt com.cy gr.com".split(" "),
+  // Website builders and shared hosting.
+  ..."wixsite.com wix.com squarespace.com square.site weebly.com wordpress.com".split(" "),
+  ..."blogspot.com blogger.com github.io gitlab.io netlify.app vercel.app pages.dev".split(" "),
+  ..."webflow.io godaddysites.com carrd.co myshopify.com herokuapp.com web.app".split(" "),
+  ..."firebaseapp.com azurewebsites.net cloudfront.net amazonaws.com sites.google.com".split(" "),
+  ..."google.com facebook.com instagram.com linktr.ee wa.me tripadvisor.com".split(" "),
+]);
+
+/**
  * The host to allow, read from what an owner pasted, or null when it is not a
- * public web host. A leading `www.` is dropped (the allowance covers
- * subdomains); anything else stays whole, so `bluereef.wixsite.com` never
- * widens to all of `wixsite.com`. IP addresses, single labels, ports, userinfo
- * and non-web schemes are refused.
+ * public web host. The host is kept exactly as pasted, `www.` included, so
+ * the allowance is that host and its subdomains and nothing beside it. IP
+ * addresses, single labels, ports, userinfo, non-web schemes, registries and
+ * builders' shared roots ({@link SHARED_HOST_ROOTS}) are refused.
  */
 export function allowedFetchHost(pasted: string): string | null {
   const trimmed = pasted.trim();
@@ -50,7 +76,8 @@ export function allowedFetchHost(pasted: string): string | null {
   if (labels.length < 2 || labels.some((label) => !/^[a-z0-9-]+$/.test(label))) return null;
   if (host === "localhost" || PRIVATE_SUFFIXES.some((suffix) => host.endsWith(suffix))) return null;
   const bare = host.startsWith("www.") ? host.slice(4) : host;
-  return bare.split(".").length >= 2 ? bare : null;
+  if (SHARED_HOST_ROOTS.has(bare) || bare.split(".").length < 2) return null;
+  return host;
 }
 
 export type WebFetchLimits = {

@@ -213,7 +213,6 @@ const FOLDED_TABLES = [
   "booking_referrals", // bookings.csv `referred_by_booking_id`
   "review_replies", // trip_reviews.csv `shop_reply`, the one live reply per review
 ];
-
 /**
  * Deliberate exclusions — each must be defensible in the bundle README and on
  * the export page, and as of ADR 20260806-export-operational-records each must
@@ -225,6 +224,7 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
+  "retention_prune_state", // global scheduler cursor, no tenant or personal data
   // record, mirrored here only so an owner sees an open one on Today and on
   // the order; every field is Stripe's, kept current from Stripe's events, and
   // the shop's Stripe dashboard is where a dispute is answered and exported.
@@ -330,6 +330,7 @@ const EXCLUDED_TABLES = [
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
+  "website_setup_drafts", // proposals read off the shop's public website, waiting for the owner's tap — a working draft, and what it accepts is exported where it lands
   "claude_usage", // token counts and cost codes for Claude calls — DiveDay's billing ledger, not the shop's records
   "assist_results", // what an assist answered (review chips, themes, the Monday read): derived, and asked again on demand
   "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported

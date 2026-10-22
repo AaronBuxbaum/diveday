@@ -1,3 +1,6 @@
+import { AssistDraftButton } from "@/components/assists/AssistDraftButton";
+import { languageName } from "@/components/assists/language-name";
+import { TranslateReplyButton } from "@/components/assists/TranslateReplyButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { Field, FieldActions, textareaClassFor } from "@/components/ui/form";
@@ -19,6 +22,24 @@ import { SaveThisAnswer } from "../../../inbox/_components/SaveThisAnswer";
 import { replyToDiverAction } from "../details-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
+
+/** The reply box's id, for the assists that fill it. */
+const REPLY_FIELD_ID = "reply-body";
+
+/**
+ * What Claude adds to the conversation when the shop's assists are on (ADR
+ * 20261018-claude-assists). Absent, the section is exactly what it was.
+ */
+export type ConversationAssist = {
+  /** Drafts a reply to the latest message (`inbox-draft`). */
+  draft: () => Promise<string | null>;
+  /** Translates the reply into the diver's language, when they write in another one. */
+  translate: ((text: string) => Promise<string | null>) | null;
+  /** The diver's language in the reader's words, for the Translate button. */
+  diverLanguage: string | null;
+  /** Reads the latest message into a booking request (`request`). */
+  requestAction: (formData: FormData) => Promise<void>;
+};
 
 /** The answers to a send that left a reply on the record (`sendStaffReply`). */
 const RECORDED_SEND_CODES = new Set(["reply-sent", "reply-send-failed", "reply-not-configured"]);
@@ -53,6 +74,7 @@ export function ConversationSection({
   savedAnswers = [],
   fill = { name: null, trip: null },
   saveAnswerAction,
+  assist,
 }: {
   entries: ThreadEntry[];
   diverName: string;
@@ -76,6 +98,7 @@ export function ConversationSection({
   fill?: { name: string | null; trip: string | null };
   /** "Save this answer", offered under a reply that just went out. */
   saveAnswerAction?: (formData: FormData) => Promise<void>;
+  assist?: ConversationAssist;
 }) {
   if (entries.length === 0) return null;
 
@@ -154,6 +177,14 @@ export function ConversationSection({
                     date: formatDateTimeTz(entry.reply.sentAt, locale, timezone),
                   });
           const body = entry.direction === "inbound" ? entry.message.body : entry.reply.body;
+          // Claude's translation sits under the diver's own words, never in
+          // place of them, and only while the shop's assists are on.
+          const translation =
+            assist && entry.direction === "inbound" ? entry.message.assistTranslation : null;
+          const translatedFrom =
+            translation && entry.direction === "inbound"
+              ? languageName(entry.message.assistLanguage, locale)
+              : null;
           return (
             // An inbound message answers to its own fragment, so the inbox's
             // door lands on it (`inboxMessageAnchor`) rather than on the top
@@ -171,6 +202,14 @@ export function ConversationSection({
                 >
                   {body}
                 </p>
+              ) : null}
+              {translation && translatedFrom ? (
+                <div className="mt-2 border-s-2 border-border ps-3">
+                  <p className="text-sm text-muted">
+                    {t("assistsFront.conversation.translatedFrom", { language: translatedFrom })}
+                  </p>
+                  <p className="mt-0.5 whitespace-pre-wrap">{translation}</p>
+                </div>
               ) : null}
               {entry.direction === "outbound" && entry.reply.status !== "sent" ? (
                 <p className="mt-1 text-sm text-danger">{t("inbox.thread.sendFailed")}</p>
@@ -201,6 +240,7 @@ export function ConversationSection({
                 )}
               >
                 <textarea
+                  id={REPLY_FIELD_ID}
                   name="body"
                   required
                   rows={4}
@@ -209,6 +249,27 @@ export function ConversationSection({
                   className={textareaClassFor(4)}
                 />
               </Field>
+              {assist ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <AssistDraftButton
+                    draft={assist.draft}
+                    fieldId={REPLY_FIELD_ID}
+                    label={t("assistsFront.conversation.draft")}
+                    pendingLabel={t("assistsFront.conversation.drafting")}
+                  />
+                  {assist.translate && assist.diverLanguage ? (
+                    <TranslateReplyButton
+                      fieldId={REPLY_FIELD_ID}
+                      translate={assist.translate}
+                      label={t("assistsFront.conversation.translate", {
+                        language: assist.diverLanguage,
+                      })}
+                      pendingLabel={t("assistsFront.conversation.translating")}
+                      yourWords={t.raw("assistsFront.conversation.yourWords")}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
               <SubmitButton
                 pendingLabel={t("inbox.reply.sending")}
                 className={buttonClass({
@@ -226,6 +287,19 @@ export function ConversationSection({
             <p className="text-sm text-muted">{t("inbox.reply.diverRemoved")}</p>
           ) : closedWhatsApp ? (
             <p className="text-sm text-muted">{t("inbox.reply.windowClosed")}</p>
+          ) : null}
+          {/* A booking ask in the latest message, read into the call form for
+              a staffer to check: the request is recorded there, not here. */}
+          {assist && latest && !removed ? (
+            <form action={assist.requestAction} className="mt-3">
+              <input type="hidden" name="messageId" value={latest.message.id} />
+              <SubmitButton
+                pendingLabel={t("assistsFront.inbox.makingRequest")}
+                className={buttonClass({ variant: "ghost", size: "sm" })}
+              >
+                {t("assistsFront.inbox.makeRequest")}
+              </SubmitButton>
+            </form>
           ) : null}
           {justSent?.direction === "outbound" && saveAnswerAction ? (
             <div className="mt-3">

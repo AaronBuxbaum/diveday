@@ -32,6 +32,7 @@
  */
 
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { rentalItemLabel } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -229,6 +230,11 @@ function hasSize(row: PreparedRow): boolean {
   return Boolean(bcdSize || wetsuitSize || bootSize || finSize);
 }
 
+/** The stored value when there is one, otherwise `value`: an assisted cell only fills a blank. */
+function fillBlank(column: AnyPgColumn, value: string) {
+  return sql<string>`coalesce(nullif(btrim(${column}), ''), ${value})`;
+}
+
 /**
  * Write the importable rows of a prepared plan. Returns a per-family tally the
  * UI reports verbatim — the honest record of what a click actually did.
@@ -242,6 +248,12 @@ export async function commitContactImport(
   // `merge` rows are written too — they are the second and third cards of a
   // diver an earlier row brought in (ADR 20260725-import-specialty-cards).
   const preparedRows = prepared.rows.filter((row) => row.action !== "skip");
+  // A column a Claude assist matched is not the shop's own header: it may
+  // fill an emergency contact the record lacks, never replace one on file
+  // (ADR 20261018-claude-assists).
+  const assistedContact = new Set(
+    prepared.mapping.filter((entry) => entry.assisted).map((entry) => entry.field),
+  );
   const summary: ImportSummary = {
     peopleCreated: 0,
     peopleUpdated: 0,
@@ -427,9 +439,19 @@ export async function commitContactImport(
             fullName: row.fullName,
             ...(phone ? { phone } : {}),
             ...(row.dateOfBirth ? { dateOfBirth: row.dateOfBirth } : {}),
-            ...(row.emergencyContactName ? { emergencyContactName: row.emergencyContactName } : {}),
+            ...(row.emergencyContactName
+              ? {
+                  emergencyContactName: assistedContact.has("emergency_contact_name")
+                    ? fillBlank(people.emergencyContactName, row.emergencyContactName)
+                    : row.emergencyContactName,
+                }
+              : {}),
             ...(row.emergencyContactPhone
-              ? { emergencyContactPhone: row.emergencyContactPhone }
+              ? {
+                  emergencyContactPhone: assistedContact.has("emergency_contact_phone")
+                    ? fillBlank(people.emergencyContactPhone, row.emergencyContactPhone)
+                    : row.emergencyContactPhone,
+                }
               : {}),
             ...(row.diveInsurance ? { diveInsurance: row.diveInsurance } : {}),
           })

@@ -530,10 +530,26 @@
         "files": {
           "src/db/export.test.ts": "1568 -> 1571"
         }
+      },
+      {
+        "why": "website_setup_drafts table and inbound_messages.assist_intent (ADR 20261018-claude-assists, front-of-house assists): their rows in the schema guards' classification lists (retention fixture, export exclusion, erasure closure and outside-handle census); none can live in a sibling",
+        "files": {
+          "src/db/erasure-coverage.test.ts": "1167 -> 1173",
+          "src/db/export.test.ts": "1566 -> 1567",
+          "src/db/retention.test.ts": "1263 -> 1271"
+        }
+      },
+      {
+        "why": "merge of L2 (claude-assists front) into L3: both layers add their tables to the same coverage registries",
+        "files": {
+          "src/db/erasure-coverage.test.ts": "1173 -> 1177",
+          "src/db/export.test.ts": "1571 -> 1572",
+          "src/db/retention.test.ts": "1279 -> 1287"
+        }
       }
     ],
     "src/app/api/offline-manifests/sync/route.test.ts": 955,
-    "src/app/api/test/seed-trouble-states/route.ts": 2040,
+    "src/app/api/test/seed-trouble-states/route.ts": 2039,
     "src/app/api/webhooks/stripe/route.replay.test.ts": 1308,
     "src/app/api/webhooks/stripe/route.test.ts": 1873,
     "src/app/api/webhooks/stripe/route.ts": 923,
@@ -553,7 +569,7 @@
     "src/components/ui/form.tsx": 1203,
     "src/db/anonymize.test.ts": 1695,
     "src/db/bookings.test.ts": 3540,
-    "src/db/buddy-pairs.test.ts": 990,
+    "src/db/buddy-pairs.test.ts": 975,
     "src/db/check-in.test.ts": 1212,
     "src/db/checkouts.test.ts": 2973,
     "src/db/closeout.test.ts": 903,
@@ -562,9 +578,9 @@
     "src/db/dive-sites.test.ts": 1156,
     "src/db/diver-merge.test.ts": 1285,
     "src/db/divers.test.ts": 3077,
-    "src/db/erasure-coverage.test.ts": 1171,
+    "src/db/erasure-coverage.test.ts": 1177,
     "src/db/executed-dives.test.ts": 1085,
-    "src/db/export.test.ts": 1571,
+    "src/db/export.test.ts": 1572,
     "src/db/import.test.ts": 1074,
     "src/db/incident-reports.test.ts": 1011,
     "src/db/manifests.test.ts": 3692,
@@ -578,7 +594,7 @@
     "src/db/reminders.test.ts": 981,
     "src/db/rental-fit.test.ts": 1227,
     "src/db/reporting.test.ts": 1379,
-    "src/db/retention.test.ts": 1279,
+    "src/db/retention.test.ts": 1287,
     "src/db/reviews.test.ts": 1034,
     "src/db/seat-claims.test.ts": 1525,
     "src/db/self-declared-cards.test.ts": 1865,
@@ -590,12 +606,12 @@
     "src/db/waivers-medical.test.ts": 1004,
     "src/db/work-order-follow-up.test.ts": 1213,
     "src/db/work-orders.test.ts": 1408,
-    "src/i18n/label-maps.test.ts": 1348,
+    "src/i18n/label-maps.test.ts": 1273,
     "src/lib/agency-check.test.ts": 930,
     "src/lib/dive-prep.test.ts": 1978,
     "src/lib/import.test.ts": 1423,
     "src/lib/incident-export.test.ts": 1067,
-    "src/lib/manifests.test.ts": 1320,
+    "src/lib/manifests.test.ts": 1053,
     "src/lib/notifications/email.test.ts": 1157,
     "src/lib/notifications/index.test.ts": 915,
     "src/lib/offline-manifest-store.test.ts": 1018,
@@ -716,7 +732,7 @@
     "src/db/seed-history.ts#seedHistory": 720,
     "src/db/seed-more-trips.ts#seedMoreTrips": 633,
     "src/db/seed-trips.ts#seedTrips": 384,
-    "src/lib/import.ts#prepareContactImport": 500
+    "src/lib/import.ts#prepareContactImport": 483
   },
   "live-people": {
     "//": "Reads of `people` written before scripts/check-live-people.mjs that carry no `livePerson()`, per file. Most are right (a by-id read in a transaction, a name for an activity line); a count may only fall. Written by `node scripts/check-live-people.mjs --write`."
@@ -814,7 +830,7 @@
     "src/app/shop/[shopSlug]/reports/page.tsx": 499,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 435,
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 415,
-    "src/app/shop/[shopSlug]/settings/import/page.tsx": 498,
+    "src/app/shop/[shopSlug]/settings/import/page.tsx": 494,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 714,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 592,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 537,

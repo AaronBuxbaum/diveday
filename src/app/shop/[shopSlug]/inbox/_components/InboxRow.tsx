@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
+import { languageName } from "@/components/assists/language-name";
 import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
 import { tapTargetLinkClass } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { menuRowClass } from "@/components/ui/menu";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { InboxSeat } from "@/db/inbox-seats";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import { type InboxIntent, isInboxIntent } from "@/lib/assists/inbox";
 import {
   formatDateTimeTz,
   formatNearDay,
@@ -41,6 +43,21 @@ const KEYWORD_KEYS: Record<"cancel" | "move" | "confirm" | "late", StaffMessageK
   move: "inbox.keyword.move",
   confirm: "inbox.keyword.confirm",
   late: "inbox.keyword.late",
+};
+
+/**
+ * What Claude read a message as asking (ADR 20261018-claude-assists; the
+ * `inbox-sort` assist). "other" says nothing a staffer can use, so it has no
+ * words and no fact. A tag is a hint for the eye, never an act: a cancellation
+ * still goes through the reply keyword's confirm or a staffer's own tap.
+ */
+const INTENT_KEYS: Record<Exclude<InboxIntent, "other">, StaffMessageKey> = {
+  cancel: "assistsFront.inbox.intent.cancel",
+  move: "assistsFront.inbox.intent.move",
+  question: "assistsFront.inbox.intent.question",
+  payment: "assistsFront.inbox.intent.payment",
+  waiver: "assistsFront.inbox.intent.waiver",
+  late: "assistsFront.inbox.intent.late",
 };
 
 /** A row of the "⋯" list: a list of acts, so no tick gutter. */
@@ -131,6 +148,7 @@ export function InboxRow({
   doneAction,
   seats = [],
   lateAction,
+  requestAction,
 }: {
   row: InboxMessageRow;
   shopSlug: string;
@@ -147,6 +165,12 @@ export function InboxRow({
   seats?: readonly InboxSeat[];
   /** Puts the running-late mark on the chosen late-window seat; required whenever `seats` is passed. */
   lateAction?: (formData: FormData) => Promise<void>;
+  /**
+   * Reads the message into a booking request (the `request` assist). Passed
+   * only while the shop's assists are on, and with it the row shows what
+   * Claude read the message as and its translation.
+   */
+  requestAction?: (formData: FormData) => Promise<void>;
 }) {
   const { message, personName } = row;
   const done = message.answeredAt !== null;
@@ -178,6 +202,17 @@ export function InboxRow({
   // mark names its departure so the desk chooses (issue #2551).
   const lateSeats = seats.filter((seat) => seat.lateWindow);
   const severalLate = lateSeats.length > 1;
+  const assisted = requestAction !== undefined;
+  // A keyword reply already says what it asked; Claude's tag would repeat it.
+  const intent =
+    assisted &&
+    !message.keywordIntent &&
+    isInboxIntent(message.assistIntent) &&
+    message.assistIntent !== "other"
+      ? message.assistIntent
+      : null;
+  const translation = assisted ? message.assistTranslation : null;
+  const translatedFrom = translation ? languageName(message.assistLanguage, locale) : null;
   type Fact = { key: string; node: ReactNode };
   const facts = (
     [
@@ -188,6 +223,13 @@ export function InboxRow({
       message.keywordIntent && !(message.keywordIntent === "late" && seats.some(marked))
         ? { key: "keyword", node: t(KEYWORD_KEYS[message.keywordIntent]) }
         : null,
+      assisted && message.assistUrgent && !done
+        ? {
+            key: "urgent",
+            node: <span className="font-medium text-danger">{t("assistsFront.inbox.urgent")}</span>,
+          }
+        : null,
+      intent ? { key: "intent", node: t(INTENT_KEYS[intent]) } : null,
       ...seats.flatMap((seat): (Fact | null)[] => [
         {
           key: `seat-${seat.bookingId}`,
@@ -277,6 +319,18 @@ export function InboxRow({
                     </form>
                   ))
               : null}
+            {requestAction && message.channel !== "page" ? (
+              <form action={requestAction}>
+                <input type="hidden" name="messageId" value={message.id} />
+                <SubmitButton
+                  pendingLabel={t("assistsFront.inbox.makingRequest")}
+                  className={MENU_ROW_CLASS}
+                  ariaLabel={t("assistsFront.inbox.makeRequestFor", { name })}
+                >
+                  {t("assistsFront.inbox.makeRequest")}
+                </SubmitButton>
+              </form>
+            ) : null}
             {seats.map((seat) => (
               <Link
                 key={seat.bookingId}
@@ -336,6 +390,15 @@ export function InboxRow({
           {message.body.trim() ? (
             <p className={subject ? `mt-0.5 ${wordsCut} text-sm text-muted` : wordsCut}>
               {excerpt(message.body)}
+            </p>
+          ) : null}
+          {/* Claude's translation, under their words and never instead of them. */}
+          {translation && translatedFrom ? (
+            <p className={`mt-0.5 ${wordsCut} text-sm text-muted`}>
+              {t("assistsFront.inbox.translation", {
+                language: translatedFrom,
+                text: excerpt(translation),
+              })}
             </p>
           ) : null}
           {/* `wrap-anywhere`: a stranger's address has no break in it, and at

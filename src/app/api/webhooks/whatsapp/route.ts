@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { getDb } from "@/db/client";
 import { pingDeskAfterHoursSafely } from "@/db/desk-pings";
 import { recordInboundMessage } from "@/db/inbound-messages";
+import { triageInboundMessagesSafely } from "@/db/inbox-assists";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { handleInboundReplyKeyword } from "@/db/reply-keywords";
 import { shopIdForWhatsAppEvent } from "@/db/whatsapp-accounts";
@@ -137,6 +138,10 @@ export async function POST(request: Request) {
       // open and earn a retry.
       const receivedAt = message.receivedAt;
       after(() => pingDeskAfterHoursSafely(db, { shopId, receivedAt }));
+      // Claude's intent, urgency and translation for the inbox; a keyword reply
+      // and a dark shop are skipped inside, and nothing here can fail the webhook.
+      const messageId = result.id;
+      after(() => triageInboundMessagesSafely(db, shopId, [messageId]));
     }
   }
 

@@ -2748,11 +2748,15 @@ async function scrubInbox(
   // wrote, and many clients build it from the local part of the sender's
   // address, so leaving it behind hands back the address the line above just
   // redacted.
+  // A Claude translation of the message is the diver's words in another
+  // language (ADR 20261018-claude-assists), so it goes with the body; the tag
+  // beside it says what kind of message it was and names nobody.
   const blankMessage = {
     body: REDACTED_TEXT,
     subject: null,
     fromAddress: REDACTED_TEXT,
     emailMessageId: null,
+    assistTranslation: null,
   };
   await tx
     .update(inboundMessages)

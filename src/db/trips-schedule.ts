@@ -11,6 +11,7 @@ import {
   wallTimeDeltaMs,
   wallTimeToUtc,
 } from "@/lib/zoned";
+import { rebindDepartureBoatSafetyTime } from "./boat-safety";
 import type { AppDb, DbExecutor } from "./client";
 import { clearCrewAwayAcknowledgements } from "./crew-away-acknowledgements";
 import { flushUrgentCrewNotices, recordCrewTimeMoved } from "./crew-notices";
@@ -214,6 +215,8 @@ export async function moveTrip(
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
     if (!trip) return { ok: false, reason: "not_found" };
+
+    await rebindDepartureBoatSafetyTime(tx, shopId, tripId, existing.startsAt, trip.startsAt, now);
 
     const days = await tx
       .select()
