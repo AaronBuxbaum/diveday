@@ -52,7 +52,8 @@ export const DEMO_SHOP_BRAND = {
  * once per database and never again (`demo-refresh.ts`), so a database seeded
  * before the brand existed would never wear it. Matched on `isDemo` as well as
  * the slug, so it can never touch a real tenant; keyed on a blank logo, so it
- * runs once and leaves the shop alone afterwards.
+ * runs once and leaves the shop alone afterwards. Taking the demo's logo off
+ * brings the whole profile back the next night, tagline and about line too.
  */
 export async function syncDemoShopBrand(db: DbExecutor): Promise<void> {
   await db

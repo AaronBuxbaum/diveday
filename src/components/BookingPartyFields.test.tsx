@@ -58,6 +58,16 @@ describe("BookingPartyFields", () => {
     expect(screen.getByText("A parent or guardian signs the waiver too.")).toBeInTheDocument();
   });
 
+  it("asks 'Under 18' before the ticked email box, so a skimming parent meets it first", () => {
+    renderDiver(<BookingPartyFields maxPartySize={2} />);
+    fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
+    const under18 = screen.getAllByRole("checkbox", { name: /^Under 18/ })[1] as HTMLElement;
+    const leadEmail = screen.getByRole("checkbox", { name: /use the main contact’s email/i });
+    expect(
+      under18.compareDocumentPosition(leadEmail) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("asks nothing about anybody's diving", () => {
     // The per-diver certification question lived here between 2026-08-20 and
     // 2026-08-27; `/ready/<token>` asks the diver whose booking it is instead

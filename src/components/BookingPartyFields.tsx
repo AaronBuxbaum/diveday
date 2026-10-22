@@ -468,7 +468,8 @@ export function BookingPartyFields({
  * **The boxes close the diver's block, together.** "Under 18" stood between
  * Joining as and Email, a 44px row with the grid's 16px either side, so it read
  * as a gap in the person's details rather than a question about them. Stacked
- * without a gap, each row's own 44px is the rhythm.
+ * without a gap, each row's own 44px is the rhythm. "Under 18" leads: below a
+ * box that arrives ticked, a skimming parent stops before reaching it.
  */
 function MemberBoxes({
   index,
@@ -482,6 +483,7 @@ function MemberBoxes({
   const t = useTranslations();
   return (
     <div className="grid">
+      <UnderEighteenChoice index={index} last={index === 0} />
       {index > 0 ? (
         <ChoiceRow
           type="checkbox"
@@ -492,7 +494,6 @@ function MemberBoxes({
           {t("party.useMainContactEmail")}
         </ChoiceRow>
       ) : null}
-      <UnderEighteenChoice index={index} />
     </div>
   );
 }
@@ -505,14 +506,14 @@ function MemberBoxes({
  * tick, and never remembered with the diver: a child grows up, and the next
  * booking asks again.
  */
-function UnderEighteenChoice({ index }: { index: number }) {
+function UnderEighteenChoice({ index, last }: { index: number; last: boolean }) {
   const t = useTranslations();
   const [checked, setChecked] = useState(false);
   return (
     <ChoiceRow
       type="checkbox"
       name={`minor-${index}`}
-      outdent="block-end"
+      outdent={last ? "block-end" : undefined}
       checked={checked}
       onChange={(event) => setChecked(event.target.checked)}
       className="text-sm"
