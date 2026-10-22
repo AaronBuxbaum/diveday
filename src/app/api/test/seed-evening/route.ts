@@ -15,6 +15,7 @@ import {
   tripDives,
   trips,
 } from "@/db/schema";
+import { bringDemoBoatsAtSeaHome } from "@/db/seed-boat-at-sea";
 import { getShopBySlug } from "@/db/shops";
 import { listStaff, liveTrip } from "@/db/trips";
 import { HOUR_MS, nowDate } from "@/lib/clock";
@@ -161,6 +162,13 @@ export async function POST(request: Request) {
     moved.push({ id: trip.id, plannedDives: trip.plannedDives, startsAt, endsAt });
   }
   moved.reverse();
+
+  // The boat at sea was moved with the rest, her dive 2 count still open as
+  // the seed left it. Every boat of this evening is home, so she comes home
+  // the way the nightly refresh brings her: the last pair and their guide
+  // counted back, dive 2 in the log (visual triage of PR #2918, item 1a).
+  // One she was too early in the day to be moved is still out, and is left so.
+  await bringDemoBoatsAtSeaHome(db, now);
 
   // Two evening facts the closing surfaces can only draw if the day contains
   // them (ADR 20260904-reef-all-the-way-down, slice 16h). Both are ordinary

@@ -44,9 +44,11 @@ import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "./zoned";
  * the water are never toned or worded like paperwork.
  *
  * - `unreconciled` — the departure carries an after-dive gap (missing diver or
- *   crew, or an unfinished after-dive count). Loudest state on the page.
- * - `still_out` — the boat has left and is not due back yet. Not an alarm, but
- *   a day cannot quietly read "everyone is home" while it isn't.
+ *   crew, or an unfinished after-dive count on a boat that is home). Loudest
+ *   state on the page.
+ * - `still_out` — the boat has left and is not due back yet, an after-dive
+ *   count still being taken included. Not an alarm, but a day cannot quietly
+ *   read "everyone is home" while it isn't.
  * - `count_open` — a dock-count gap (`departure_uncounted` / `no_roll_call`).
  *   Paperwork, toned as such — see DOM-H3's wallpaper lesson in
  *   `src/lib/today.ts`.
@@ -373,6 +375,15 @@ function departureStatus(
   now: Date,
 ): Pick<CloseoutDeparture, "status" | "gapReason" | "diveNumber" | "uncounted"> {
   if (gap) {
+    // **A count still being taken at sea is not a count never closed**
+    // (visual triage of PR #2918, item 1b). `listRollCallGaps` raises an
+    // after-dive count started and left open while the boat is out, and
+    // Needs-you words it as exactly that; the station reads still out until
+    // the clock or the crew says she is home, and the gap's own reading
+    // from then on. A person recorded not back aboard never waits for that.
+    if (UNFINISHED_COUNT_REASONS.has(gap.reason) && boatIsOut(trip, now)) {
+      return { status: "still_out", gapReason: null, diveNumber: 0, uncounted: 0 };
+    }
     return {
       status: AFTER_DIVE_GAP_REASONS.has(gap.reason) ? "unreconciled" : "count_open",
       gapReason: gap.reason,
@@ -417,6 +428,22 @@ function departureStatus(
     }
   }
   return { status: "all_home", ...none };
+}
+
+/** The after-dive gaps that are an unfinished count, not a person recorded not back aboard. */
+const UNFINISHED_COUNT_REASONS: ReadonlySet<RollCallGapReason> = new Set([
+  "after_dive_uncounted",
+  "crew_uncounted",
+]);
+
+/**
+ * Whether the boat is out by the same reading `departureStatus` gives a
+ * departure with no gap: sailed, not yet `hasReturned`, and no live `home`
+ * tap from the crew.
+ */
+function boatIsOut(trip: CloseoutTripInput, now: Date): boolean {
+  if (!hasSailed(trip.startsAt, now) || hasReturned(trip.endsAt, now)) return false;
+  return liveStageOf(trip.stage ?? null, trip.endsAt, now)?.stage !== "home";
 }
 
 /**
