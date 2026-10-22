@@ -25,7 +25,6 @@ const emptyWave = {
   seatWanted: new Map(),
   courseCrewCounts: new Map(),
   deliveryIssues: [],
-  neverSentLastMinuteDeal: new Set(),
   lastMinuteWindows: [],
   boardedAnywhere: new Map(),
   sharedWelcomeSeats: new Map(),
@@ -147,7 +146,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(row?.offer?.personName).toBe("Omar Waiting");
   });
 
-  it("nudges an under-capacity trip departing soon that has never had a last-minute deal sent", async () => {
+  it("folds the last-minute list into the one seat_wanted row: N want in, with the panel as its door", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -164,9 +163,15 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const row = work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`);
-    expect(row?.kind).toBe("last_minute_fill");
+    const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
+    expect(row?.kind).toBe("seat_wanted");
     expect(row?.detail).toContain(`${reef.capacity - reef.booked} seats open`);
+    expect(row?.detail).toMatch(/\d+ want in/);
+    // Nobody waits for this boat itself, so there is no one to offer in place:
+    // the tap opens the panel, where the list is offered a seat together.
+    expect(row?.offer).toBeUndefined();
+    expect(row?.href).toContain("#who-wants-in");
+    expect(work.actions.some((action) => action.id.startsWith("last-minute-fill"))).toBe(false);
   });
 
   /** The seats to fill are the seats on sale (H-107, #2388), not the stated number. */
@@ -188,7 +193,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const row = work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`);
+    const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
     expect(row?.detail).toMatch(/^1 seat open/);
   });
 
@@ -215,12 +220,10 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(
-      work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`),
-    ).toBeUndefined();
+    expect(work.actions.find((action) => action.id === `seat-wanted:${reef.id}`)).toBeUndefined();
   });
 
-  it("stops nudging once a last-minute deal has actually been sent for that trip", async () => {
+  it("keeps the row after a deal went out: the list still wants in, and the panel says who was offered", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -245,10 +248,10 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     );
     expect(sent.ok).toBe(true);
 
+    // One item for everyone who wants in, so a sent deal no longer retires it
+    // (the one-shot "no deal sent yet" rule went with `last_minute_fill`).
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(
-      work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`),
-    ).toBeUndefined();
+    expect(work.actions.find((action) => action.id === `seat-wanted:${reef.id}`)).toBeDefined();
   });
 
   it("raises a nitrox request whose card stopped being verified", async () => {

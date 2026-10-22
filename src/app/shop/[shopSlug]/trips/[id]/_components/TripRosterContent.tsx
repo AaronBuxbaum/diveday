@@ -16,7 +16,7 @@ import { activityLine } from "@/i18n/activity-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
-import { toShopCurrency } from "@/lib/money";
+import { currencySymbol, toShopCurrency } from "@/lib/money";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import type { MarkRetry } from "@/lib/payment-marks";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
@@ -33,7 +33,7 @@ import { type RosterArrival, RosterSection } from "./RosterSection";
 import type { PartyPreview, RosterActions, RosterRecord, SeatMove } from "./roster-model";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WhoWantsInPanel } from "./WhoWantsInPanel";
-import { departureLeadRows } from "./who-wants-in-rows";
+import { whoWantsInGroupsOf } from "./who-wants-in-rows";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 
@@ -134,6 +134,10 @@ export type TripRosterContentContext = {
   acceptsDivers: boolean;
   /** The live roles may send a wait-list invite (`seat_wanted`'s audience), as the action will. */
   mayInviteFromWaitlist: boolean;
+  /** The role may discount (`canPersonManagePaymentSettings`): "with a discount" on the Offer. */
+  mayDiscount: boolean;
+  /** The shop's currency, for a fixed-amount discount. */
+  currency: string | null;
   actions: TripRosterActions;
 };
 
@@ -172,6 +176,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     walkInOpen = false,
     acceptsDivers,
     mayInviteFromWaitlist,
+    mayDiscount,
+    currency,
     actions,
   } = context;
   const t = staffTranslator(locale);
@@ -179,18 +185,15 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     trip,
     roster,
     requirement,
-    leads,
     confirmMatches,
     diverCandidates,
     notesByBooking,
     courseNextStepByBooking,
     paymentsConnected,
     demand,
-    certificationSummaries,
     byBooking,
     diverQuery,
     tripDateIso,
-    dealRequirement,
   } = guests;
   const {
     rentalFit: rentalFitByBooking,
@@ -198,6 +201,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
     readiness: readinessByBooking,
     waiver: waiverByBooking,
   } = byBooking;
+
+  const whoWantsInGroups = whoWantsInGroupsOf({ guests, t, locale, timezone });
 
   return (
     // `contents`, so these blocks lie in the page's flow; `space-y-10` is the
@@ -349,50 +354,46 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         slots={{
           arrival,
           record,
-          whoWantsInGroup:
-            leads.length > 0 ? (
-              <WhoWantsInPanel
-                groups={[
-                  {
-                    id: "departure",
-                    heading: t("trips.whoWantsIn.groupDeparture"),
-                    rows: departureLeadRows({
-                      leads,
-                      certificationSummaries,
-                      departureRequirement: dealRequirement,
-                      t,
-                      locale,
-                      timezone,
-                    }),
-                  },
-                ]}
-                tripId={trip.id}
-                shopSlug={shopSlug}
-                shopName={shopName}
-                tripTitle={trip.title}
-                tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
-                seatsOpen={spotsRemaining(seatsOnSale(trip))}
-                canOffer={acceptsDivers && mayInviteFromWaitlist}
-                locale={locale}
-                // **One waiting diver is worth carrying too** (fourth review,
-                // item 31). The demand banner, and the carry door inside it,
-                // wait for a cluster; a full boat with one lead offered staff
-                // only an offer of a boat with no seat. Under the list it is
-                // about, whenever the banner is not standing.
-                carry={
-                  !demand &&
-                  isFull(seatsOnSale(trip)) &&
-                  actions.carryWaitlistAction &&
-                  actions.moveSeat?.targets.length ? (
-                    <CarryWaitlistForm
-                      action={actions.carryWaitlistAction}
-                      targets={actions.moveSeat.targets}
-                      t={t}
-                    />
-                  ) : null
-                }
-              />
-            ) : null,
+          whoWantsInGroup: (
+            <WhoWantsInPanel
+              groups={whoWantsInGroups}
+              tripId={trip.id}
+              shopSlug={shopSlug}
+              shopName={shopName}
+              tripTitle={trip.title}
+              tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
+              seatsOpen={spotsRemaining(seatsOnSale(trip))}
+              canOffer={acceptsDivers && mayInviteFromWaitlist}
+              discount={
+                mayDiscount
+                  ? {
+                      toggle: t("trips.whoWantsIn.withDiscount"),
+                      amountAriaLabel: t("trips.lastMinute.discountPercentAriaLabel"),
+                      kindAriaLabel: t("trips.lastMinute.discountKindAriaLabel"),
+                      currencySymbol: currencySymbol(toShopCurrency(currency), locale),
+                    }
+                  : null
+              }
+              locale={locale}
+              // **One waiting diver is worth carrying too** (fourth review,
+              // item 31). The demand banner, and the carry door inside it,
+              // wait for a cluster; a full boat with one lead offered staff
+              // only an offer of a boat with no seat. Under the list it is
+              // about, whenever the banner is not standing.
+              carry={
+                !demand &&
+                isFull(seatsOnSale(trip)) &&
+                actions.carryWaitlistAction &&
+                actions.moveSeat?.targets.length ? (
+                  <CarryWaitlistForm
+                    action={actions.carryWaitlistAction}
+                    targets={actions.moveSeat.targets}
+                    t={t}
+                  />
+                ) : null
+              }
+            />
+          ),
           suggestionsGroup:
             acceptsDivers && guests.inviteSuggestions ? (
               <InviteSuggestionsGroup
@@ -468,20 +469,13 @@ export function TripPromoteAndActivity({
   const t = staffTranslator(locale);
   const timezone = shop.timezone;
   const currency = toShopCurrency(shop.currency);
-  const {
-    trip,
-    cancelled,
-    waitlist,
-    activity,
-    lastMinute,
-    certificationSummaries,
-    dealRequirement,
-    courseTarget,
-  } = guests;
+  const { trip, cancelled, activity, lastMinute } = guests;
   // The value is supplied by the page after the session gate. Keeping the role
   // check at the page boundary prevents a client-rendered roster from ever
   // deciding whether money controls should exist.
-  const showPromote = lastMinute.showPromote && mayDiscount;
+  // Deals sent stay as history; the sender is the Divers tab's panel.
+  const showPromote = lastMinute.promos.length > 0 && mayDiscount;
+  const canOffer = !cancelled && spotsRemaining(seatsOnSale(trip)) > 0;
   return (
     // A shop's taps and its audit trail, not the departure a staffer prints.
     <div className="print:hidden">
@@ -493,33 +487,19 @@ export function TripPromoteAndActivity({
           <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
             <span>{t("trips.guests.promoteHeading")}</span>
             <span className="flex items-center gap-2">
-              {lastMinute.promos.length > 0
-                ? t("trips.guests.promoteSentCount", { count: lastMinute.promos.length })
-                : null}
+              {t("trips.guests.promoteSentCount", { count: lastMinute.promos.length })}
               <DisclosureCaret direction="down" className="size-4 group-open/promote:rotate-180" />
             </span>
           </summary>
           <div className="pb-5">
             <LastMinuteDealSection
-              shopSlug={shopSlug}
               locale={locale}
-              recipients={lastMinute.recipients.map(({ lead, person }) => ({
-                leadId: lead.id,
-                personId: person.id,
-                fullName: person.fullName,
-                certification: certificationSummaries.get(person.id) ?? null,
-              }))}
-              requirement={dealRequirement}
-              course={courseTarget}
-              openSeats={spotsRemaining(seatsOnSale(trip))}
-              hasWaitlist={waitlist.length > 0}
-              cancelled={cancelled}
+              tripPath={canOffer ? shopPath(shopSlug, "trips", trip.id) : null}
               promos={lastMinute.promos}
               promoRecipients={lastMinute.promoRecipients}
               timezone={timezone}
               currency={currency}
               status={noticeForForm(tripNotice, "last-minute-deal")}
-              tripId={trip.id}
               leadTime={
                 <Suspense fallback={null}>
                   <DealLeadTime

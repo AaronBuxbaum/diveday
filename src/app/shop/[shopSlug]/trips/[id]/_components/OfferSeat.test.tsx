@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { OfferSeat } from "./OfferSeat";
 import { offerSeatCopy } from "./offer-seat-copy";
+
+// The held send reaches the router once a deal's outcome carries a notice.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 afterEach(cleanup);
 

@@ -42,7 +42,6 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   email_delivery: "today.actionKind.emailDelivery",
   blocked_aboard: "today.actionKind.blockedAboard",
   seat_wanted: "today.actionKind.seatWanted",
-  last_minute_fill: "today.actionKind.lastMinuteFill",
   emergency_contact: "today.actionKind.emergencyContact",
   crew_below_target: "today.actionKind.crewBelowTarget",
   stuck_payment_operation: "today.actionKind.stuckPaymentOperation",
@@ -558,10 +557,6 @@ export function missingContactNamedDetailText(t: StaffTranslator): string {
   return t("today.detail.missingContactNamed");
 }
 
-export function lastMinuteFillDetailText(t: StaffTranslator, seats: number): string {
-  return t("today.detail.lastMinuteFill", { seats });
-}
-
 export function seatWantedDetailText(t: StaffTranslator, seats: number, waiting: number): string {
   return t("today.detail.seatWanted", { seats, waiting });
 }
@@ -946,11 +941,6 @@ export function openTripActionText(t: StaffTranslator): string {
  */
 export function openCrewActionText(t: StaffTranslator): string {
   return t("today.actionLabel.openCrew");
-}
-
-/** See {@link openCrewActionText}. */
-export function openLastMinuteDealActionText(t: StaffTranslator): string {
-  return t("today.actionLabel.openLastMinuteDeal");
 }
 
 export function offerSeatActionText(t: StaffTranslator): string {

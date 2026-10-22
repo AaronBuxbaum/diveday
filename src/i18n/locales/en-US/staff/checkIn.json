@@ -23,7 +23,7 @@
     "undoing": "Putting back…",
     "undoAriaLabel": "Put {name} back on this boat’s list",
     "waiting": "{count, plural, one {# diver is waiting for this seat} other {# divers are waiting for this seat}}",
-    "waitingDoor": "Open the wait list",
+    "waitingDoor": "See who wants in",
     "rebook": "Nobody is waiting. Offer {name} another day.",
     "rebookDoor": "Add them to {title}, {when}",
     "offerSend": "Email them this date",

@@ -90,7 +90,6 @@ export type TodayActionKind =
   | "crew_away"
   | "crew_below_target"
   | "seat_wanted"
-  | "last_minute_fill"
   | "email_delivery"
   | "emergency_contact"
   | "stuck_payment_operation"
@@ -248,10 +247,9 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   help_request: 18,
   payment: 18,
   email_delivery: 19,
+  // A revenue opportunity (the wait list and the last-minute list as one row),
+  // not anything blocking or dock-settleable.
   seat_wanted: 20,
-  // A revenue opportunity, not anything blocking or dock-settleable — ranks
-  // with the other purely-commercial rows.
-  last_minute_fill: 21,
   // Dock-settleable and never a boarding blocker, so it rides near the bottom.
   emergency_contact: 22,
   // Below-target crewing (issue #732): `divemasterRatioGap`'s own docblock
@@ -495,7 +493,6 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   payment: ["owner", "manager"],
   readiness_unavailable: ["owner", "manager"],
   seat_wanted: ["owner", "manager"],
-  last_minute_fill: ["owner", "manager"],
   // Every staff role (issue #2066, decided 2026-10-05). The resend retries only
   // mail already on the failed-delivery list, so it puts nothing new in front of
   // anyone — the same reasoning that leaves the invoice and waiver resends open
@@ -699,7 +696,6 @@ export const ACTION_KIND_META = {
   payment: { tone: "neutral" },
   email_delivery: { tone: "neutral" },
   seat_wanted: { tone: "neutral" },
-  last_minute_fill: { tone: "neutral" },
   emergency_contact: { tone: "neutral" },
   // Neutral, not warning: the target binds nothing and this is advice, not a
   // problem (src/lib/divemaster-ratio.ts).

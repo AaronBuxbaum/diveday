@@ -6455,8 +6455,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **The list, before the send** (FU-20260813,
        * ADR 20260814-self-declared-cards).
        *
-       * `trip-guests` above can never show this: the deal panel lives behind a
-       * collapsed disclosure, and it renders nothing at all until somebody is
+       * `trip-guests` above can never show this: the "Who wants in" panel renders nothing at all until somebody is
        * on the shop's last-minute list. What it photographs is the one thing
        * standing between a shop and a discount emailed to a diver who cannot
        * board — the recipient's level, marked self-declared, in the row above
@@ -6489,8 +6488,8 @@ for (const scheme of ["light", "dark"] as const) {
         // block, which is also why the public form above renders with the staff
         // preview bar. Neither affects the surface being photographed.
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
-        // The `#last-minute-deal` anchor is what auto-opens the disclosure.
-        await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
+        // The Divers tab's "Who wants in" panel is where the list is offered a seat.
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
         await page.getByText("Open Water — unverified").waitFor();
         await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-recipients", scheme);
@@ -6541,9 +6540,10 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
-        await page.getByRole("heading", { name: "Nobody to send this to yet" }).waitFor();
-        await waitForHashLanding(page);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        // Nobody on the list clears the Rescue bar, so the panel is not drawn at all.
+        await page.locator("#roster").waitFor();
+        await expect(page.locator("#who-wants-in")).toHaveCount(0);
         await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
 
@@ -6573,7 +6573,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the deal panel carries the demo's own declarations (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
         // Both seeded joiners now read unverified (#2428: a staff-typed card
         // nobody checked is not vouched for), so wait on the first of them.
         await page

@@ -25,6 +25,7 @@ import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
 import { otherSameNamePeople } from "./identity-repoint";
 import { listInviteSuggestions } from "./invite-suggestions";
+import { listDateLeadsInReach } from "./lead-dates";
 import { listDepartureLeads, listOpenAnytimeLeads } from "./leads";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRosterWithPaymentMarks } from "./payment-marks";
@@ -91,6 +92,7 @@ export async function getTripGuests(
     readinessRows,
     prepDivers,
     departureLeads,
+    dateLeadsInReach,
     inviteSuggestions,
     lastMinuteList,
     lastMinutePromos,
@@ -117,6 +119,8 @@ export async function getTripGuests(
     shared ? shared.readiness : listTripReadiness(db, shop.id, tripId),
     shared ? shared.prepDivers : listTripPrepDivers(db, shop.id, tripId),
     listDepartureLeads(db, shop.id, tripId),
+    // Open date requests that could make this day, for the panel's second group.
+    listDateLeadsInReach(db, shop.id, { tripId }),
     // Past divers of this departure's site worth asking (H-130), only while
     // it has a seat to offer.
     isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
@@ -157,6 +161,7 @@ export async function getTripGuests(
   const leads = departureLeads.filter(
     ({ lead }) => lead.personId === null || !seatedPersonIds.has(lead.personId),
   );
+  const dateLeads = dateLeadsInReach.filter((r) => !r.personId || !seatedPersonIds.has(r.personId));
   // The leads the diver asked for: what the demand banner counts and the deal
   // list orders by. The shop's own outreach (`asked_by`) is in `leads` too.
   const waitlist = leads.filter(({ lead }) => lead.askedBy === "diver");
@@ -228,7 +233,11 @@ export async function getTripGuests(
       },
     ),
     listCertificationSummaries(db, shop.id, [
-      ...new Set([...lastMinuteMatched.map(({ person }) => person.id), ...waitlistPersonIds]),
+      ...new Set([
+        ...lastMinuteMatched.map(({ person }) => person.id),
+        ...waitlistPersonIds,
+        ...dateLeads.flatMap((row) => (row.personId ? [row.personId] : [])),
+      ]),
     ]),
     // Who finished the course's materials, read across every departure of the
     // course, so a tick on the pool weekend shows on the open-water one (ADR
@@ -339,10 +348,13 @@ export async function getTripGuests(
     : null;
   const lastMinuteRecipients = orderLastMinuteRecipients(
     filterEligibleLastMinuteRecipients(
-      lastMinuteMatched.map((match) => ({
-        ...match,
-        certification: certificationSummaries.get(match.person.id) ?? null,
-      })),
+      // Seated means hidden here too: nobody on the roster is offered a seat.
+      lastMinuteMatched
+        .filter(({ person }) => !seatedPersonIds.has(person.id))
+        .map((match) => ({
+          ...match,
+          certification: certificationSummaries.get(match.person.id) ?? null,
+        })),
       dealRequirement,
       courseTarget,
     ),
@@ -465,6 +477,7 @@ export async function getTripGuests(
       // Seats wanted, not leads: a waiting couple is two (fourth review, item 34).
       waitlisted: waitlist.reduce((seats, { lead }) => seats + (lead.partySize ?? 1), 0),
     }),
+    dateLeads,
     lastMinute: {
       matched: lastMinuteMatched,
       dateIso: tripDateIso,

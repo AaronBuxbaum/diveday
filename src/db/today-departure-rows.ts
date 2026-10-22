@@ -3,11 +3,9 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   helpRequestActionText,
   helpRequestDetailText,
-  lastMinuteFillDetailText,
   missingContactNamedDetailText,
   missingFitNamedDetailText,
   offerSeatActionText,
-  openLastMinuteDealActionText,
   openOrdersActionText,
   openPrepListActionText,
   openTripActionText,
@@ -35,14 +33,7 @@ import { at, shopDay } from "./today-shared";
  */
 export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext): void {
   const { inWindow, readinessByTrip, shopSlug, timeZone, locale, t, now, helpRequestsByTrip } = ctx;
-  const {
-    boatWork,
-    seatWanted,
-    deliveryIssues,
-    neverSentLastMinuteDeal,
-    lastMinuteWindows,
-    boardedAnywhere,
-  } = ctx.wave;
+  const { boatWork, seatWanted, deliveryIssues, lastMinuteWindows, boardedAnywhere } = ctx.wave;
   for (const trip of inWindow) {
     const tripHref = `/shop/${shopSlug}/trips/${trip.id}`;
     const when = at(trip.startsAt, timeZone, locale);
@@ -121,50 +112,23 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
 
     pushCrewGapRows(actions, ctx, { trip, when, departure, tripHref });
 
-    // A trip within 3 days that's under capacity and has never had a
-    // last-minute deal sent is lost revenue staff can still act on. One-shot
-    // per trip: once any blast has gone out, Today stops nudging even if
-    // seats are still open — a shop that's already tried isn't nagged, but
-    // can always resend from the trip page itself (docs ADR
-    // 20260727-last-minute-fill-promos).
     // Against the seats on sale, as the booking transaction counts (#2388).
     const openSeats = Math.max(0, trip.sellableCapacity - trip.booked);
-    // The reach test goes last on purpose: it is the only clause that scans a
-    // list, and the three before it rule out most departures for free.
-    //
-    // Why it is there at all — a shop with an empty last-minute list, or one
-    // whose members all stated dates that miss this departure, was being told
-    // to "fill these seats" and handed a panel whose only content was an empty
-    // state. The Trip surface now hides that panel outright when nobody
-    // matches, so this row's own `#last-minute-deal` anchor would land on
-    // nothing. A queue row must be work someone can actually do
-    // (design/principles.md #10).
-    if (
-      openSeats > 0 &&
-      urgencyFor(trip.startsAt, now) !== "later" &&
-      neverSentLastMinuteDeal.has(trip.id) &&
-      lastMinuteWindows.some((entry) =>
-        lastMinuteEntryMatchesTripDate(entry, shopDay(trip.startsAt, timeZone)),
-      )
-    ) {
-      actions.push({
-        id: `last-minute-fill:${trip.id}`,
-        kind: "last_minute_fill",
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: trip.title,
-        context: when,
-        departure,
-        aboutDeparture: true,
-        detail: lastMinuteFillDetailText(t, openSeats),
-        actionLabel: openLastMinuteDealActionText(t),
-        href: `${tripHref}?view=details#last-minute-deal`,
-        dueAt: trip.startsAt,
-      });
-    }
-
     const front = seatWanted.get(trip.id);
+    // **One item for everyone who wants in** (ADR 20261017-one-lead-with-a-scope):
+    // the divers who asked for this boat, and, within three days, the
+    // last-minute list divers whose window covers it. The reach test is the
+    // only clause that scans a list, so it goes last. A row is work someone can
+    // do (design/principles.md #10): with only the list to offer to, the tap is
+    // the panel's door; with someone waiting it offers the seat in place.
     const waiting = front?.count ?? 0;
-    if (front && waiting > 0 && openSeats > 0) {
+    const around =
+      openSeats > 0 && urgencyFor(trip.startsAt, now) !== "later"
+        ? lastMinuteWindows.filter((entry) =>
+            lastMinuteEntryMatchesTripDate(entry, shopDay(trip.startsAt, timeZone)),
+          ).length
+        : 0;
+    if (openSeats > 0 && waiting + around > 0) {
       actions.push({
         id: `seat-wanted:${trip.id}`,
         kind: "seat_wanted",
@@ -173,22 +137,26 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         context: when,
         departure,
         aboutDeparture: true,
-        detail: seatWantedDetailText(t, openSeats, waiting),
+        detail: seatWantedDetailText(t, openSeats, waiting + around),
         // One tap offers the seat to whoever asked first without leaving Today;
         // the href stays the row's real destination — a pre-hydration tap, a
         // middle-click or an open-in-new-tab lands on the trip's panel.
         actionLabel: offerSeatActionText(t),
         href: `${tripHref}#who-wants-in`,
-        offer: {
-          tripId: trip.id,
-          leadId: front.leadId,
-          personName: front.personName,
-          personEmail: front.personEmail,
-          offeredAt: front.invitedAt,
-          bookingPath: publicTripPath(shopSlug, trip.id),
-          tripTitle: trip.title,
-          tripWhen: when,
-        },
+        ...(front
+          ? {
+              offer: {
+                tripId: trip.id,
+                leadId: front.leadId,
+                personName: front.personName,
+                personEmail: front.personEmail,
+                offeredAt: front.invitedAt,
+                bookingPath: publicTripPath(shopSlug, trip.id),
+                tripTitle: trip.title,
+                tripWhen: when,
+              },
+            }
+          : {}),
         dueAt: trip.startsAt,
       });
     }

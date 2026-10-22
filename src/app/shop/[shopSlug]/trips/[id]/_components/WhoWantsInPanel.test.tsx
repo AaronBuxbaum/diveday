@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { type WhoWantsInGroup, WhoWantsInPanel } from "./WhoWantsInPanel";
 import type { WhoWantsInRow } from "./who-wants-in-rows";
+
+// The held send reaches the router once a deal's outcome carries a notice.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 afterEach(cleanup);
 
@@ -26,7 +29,17 @@ const departure = (rows: WhoWantsInRow[]): WhoWantsInGroup => ({
   rows,
 });
 
-function renderPanel(groups: WhoWantsInGroup[], props: { canOffer?: boolean } = {}) {
+const discount = {
+  toggle: "With a discount",
+  amountAriaLabel: "Discount",
+  kindAriaLabel: "Discount type",
+  currencySymbol: "$",
+};
+
+function renderPanel(
+  groups: WhoWantsInGroup[],
+  props: { canOffer?: boolean; discount?: typeof discount | null } = {},
+) {
   return render(
     <WhoWantsInPanel
       groups={groups}
@@ -37,6 +50,7 @@ function renderPanel(groups: WhoWantsInGroup[], props: { canOffer?: boolean } = 
       tripWhen="Sat 15 Aug"
       seatsOpen={3}
       canOffer={props.canOffer ?? true}
+      discount={props.discount ?? null}
       locale="en-US"
     />,
   );
@@ -150,5 +164,82 @@ describe("WhoWantsInPanel", () => {
     expect(
       within(panel as HTMLElement).getByRole("button", { name: "Carry who’s waiting" }),
     ).toBeVisible();
+  });
+
+  it("draws the date and anytime groups under their own headings, in one count", () => {
+    renderPanel([
+      departure([row("a", "Nora Quinn")]),
+      { id: "date", heading: "Asked for this date", rows: [row("d", "Eli Moss")] },
+      { id: "anytime", heading: "Around these dates", rows: [row("z", "Fay Ng")] },
+    ]);
+    expect(screen.getByRole("heading", { name: "Who wants in · 3" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Asked for this date" })).toBeVisible();
+    // One Offer for all three groups.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
+    expect(screen.getAllByRole("button", { name: "Offer a seat" })).toHaveLength(1);
+  });
+
+  it("keeps rows past the preview cap behind Show N more, still counted and tickable", () => {
+    renderPanel([
+      {
+        id: "anytime",
+        heading: "Around these dates",
+        rows: [row("a", "Fay Ng")],
+        more: [row("b", "Gus Ode"), row("c", "Hana Lu")],
+      },
+    ]);
+    expect(screen.getByRole("heading", { name: "Who wants in · 3" })).toBeVisible();
+    const summary = screen.getByText("Show 2 more");
+    const details = summary.closest("details") as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    expect(within(details).getAllByRole("checkbox", { hidden: true })).toHaveLength(2);
+    // Every box, shown or not, joins the one offer form.
+    expect(
+      screen.getAllByRole("checkbox", { hidden: true }).map((box) => box.getAttribute("form")),
+    ).toEqual(["offer-seat", "offer-seat", "offer-seat"]);
+  });
+
+  it("draws the discount only when it is handed the words, which is for mayDiscount roles", () => {
+    renderPanel([departure([row("a", "Nora Quinn")])]);
+    expect(screen.queryByLabelText("With a discount")).toBeNull();
+    cleanup();
+
+    renderPanel([departure([row("a", "Nora Quinn")])], { discount });
+    // Off by default: nothing is posted, so an ordinary offer carries no discount.
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+    fireEvent.click(screen.getByLabelText("With a discount"));
+    expect(screen.getByRole("spinbutton", { name: "Discount" })).toHaveAttribute(
+      "name",
+      "discount",
+    );
+    expect(screen.getByRole("combobox", { name: "Discount type" })).toHaveAttribute(
+      "name",
+      "discountKind",
+    );
+    fireEvent.click(screen.getByLabelText("With a discount"));
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+  });
+
+  it("never ticks a row under the bar from the bulk tick, and still lets a hand tick it", () => {
+    renderPanel([
+      departure([
+        row("a", "Nora Quinn", { belowBar: true }),
+        row("b", "Rafa Ortiz"),
+        row("c", "Cleo Park"),
+      ]),
+    ]);
+    const box = (name: string) =>
+      screen.getByRole("checkbox", { name: `Offer ${name} a seat` }) as HTMLInputElement;
+    fireEvent.click(screen.getByRole("button", { name: "Tick everyone who fits" }));
+    expect(box("Rafa Ortiz").checked).toBe(true);
+    expect(box("Cleo Park").checked).toBe(true);
+    expect(box("Nora Quinn").checked).toBe(false);
+    fireEvent.click(box("Nora Quinn"));
+    expect(box("Nora Quinn").checked).toBe(true);
+  });
+
+  it("draws no bulk tick for a single row that fits", () => {
+    renderPanel([departure([row("a", "Nora Quinn")])]);
+    expect(screen.queryByRole("button", { name: "Tick everyone who fits" })).toBeNull();
   });
 });

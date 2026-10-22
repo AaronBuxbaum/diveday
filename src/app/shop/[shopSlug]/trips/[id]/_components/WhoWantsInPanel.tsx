@@ -4,9 +4,11 @@ import { GroupLabel } from "@/components/ui/group-label";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { publicTripPath } from "@/lib/public-routes";
+import { type OfferDiscountCopy, OfferDiscountFields } from "./OfferDiscountFields";
 import { OfferSeat } from "./OfferSeat";
 import { offeredAgoText, offerSeatCopy } from "./offer-seat-copy";
 import { RosterGroup } from "./RosterGroupBand";
+import { TickAllThatFit } from "./TickAllThatFit";
 import type { WhoWantsInRow } from "./who-wants-in-rows";
 
 /** The element id the Today row, the held send and the Details tab link to. */
@@ -19,6 +21,8 @@ export type WhoWantsInGroup = {
   id: string;
   heading: string;
   rows: WhoWantsInRow[];
+  /** Rows past the preview cap, behind "Show N more". They are still in the Offer. */
+  more?: WhoWantsInRow[];
 };
 
 /**
@@ -43,6 +47,7 @@ export function WhoWantsInPanel({
   seatsOpen,
   canOffer,
   carry = null,
+  discount = null,
   locale,
 }: {
   groups: WhoWantsInGroup[];
@@ -55,18 +60,73 @@ export function WhoWantsInPanel({
   canOffer: boolean;
   /** "Carry who’s waiting": a form the page binds to its action, when there is a departure to carry to. */
   carry?: ReactNode;
+  /**
+   * "With a discount" on the Offer: given only to a role that may discount
+   * (`mayDiscount`), absent for everyone else, who then see no money control.
+   */
+  discount?: OfferDiscountCopy | null;
   locale: string;
 }) {
-  const shown = groups.filter((group) => group.rows.length > 0);
+  const shown = groups.filter((group) => group.rows.length + (group.more?.length ?? 0) > 0);
   if (shown.length === 0) return null;
   const t = staffTranslator(locale);
   const now = nowDate();
-  const rows = shown.flatMap((group) => group.rows);
+  const rows = shown.flatMap((group) => [...group.rows, ...(group.more ?? [])]);
   const offered = rows.filter((row) => row.offeredAt).length;
+  const fitCount = rows.filter((row) => !row.belowBar).length;
   const facts = [
     t("trips.whoWantsIn.seatsOpen", { count: seatsOpen }),
     offered > 0 ? t("trips.whoWantsIn.alreadyOffered", { count: offered }) : null,
   ].filter(Boolean);
+
+  const renderRow = (row: WhoWantsInRow) => {
+    const body = (
+      <div className="min-w-0 text-sm">
+        <p className="font-medium text-base">{row.name}</p>
+        <p className="text-muted wrap-anywhere">
+          {row.facts}
+          {row.offeredAt ? (
+            <>
+              {" · "}
+              <span className="font-medium text-foreground">
+                {t("trips.whoWantsIn.offeredAgo", {
+                  time: offeredAgoText(t, row.offeredAt, now),
+                })}
+              </span>
+            </>
+          ) : null}
+        </p>
+        {/* The fact that decides whether the offer is a good idea,
+                    on its own line; warning-toned while any of it is
+                    unverified (ADR 20260814-self-declared-cards). */}
+        {row.certification ? (
+          <p className={row.certification.unchecked ? "text-warning-strong" : "text-muted"}>
+            {row.certification.text}
+          </p>
+        ) : null}
+      </div>
+    );
+    return (
+      <li key={row.leadId} className="py-2.5">
+        {canOffer ? (
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              form={OFFER_FORM_ID}
+              name="leadId"
+              value={row.leadId}
+              data-below-bar={row.belowBar ? "true" : undefined}
+              aria-label={t("trips.whoWantsIn.tickLabel", { name: row.name })}
+              className={`${choiceClass} mt-1.5`}
+            />
+            {body}
+          </label>
+        ) : (
+          body
+        )}
+      </li>
+    );
+  };
 
   return (
     <RosterGroup
@@ -85,62 +145,20 @@ export function WhoWantsInPanel({
             <GroupLabel as="h3" id={`who-wants-in-${group.id}`}>
               {group.heading}
             </GroupLabel>
-            <ul className="mt-1 divide-y divide-border">
-              {group.rows.map((row) => {
-                const body = (
-                  <div className="min-w-0 text-sm">
-                    <p className="font-medium text-base">{row.name}</p>
-                    <p className="text-muted wrap-anywhere">
-                      {row.facts}
-                      {row.offeredAt ? (
-                        <>
-                          {" · "}
-                          <span className="font-medium text-foreground">
-                            {t("trips.whoWantsIn.offeredAgo", {
-                              time: offeredAgoText(t, row.offeredAt, now),
-                            })}
-                          </span>
-                        </>
-                      ) : null}
-                    </p>
-                    {/* The fact that decides whether the offer is a good idea,
-                        on its own line; warning-toned while any of it is
-                        unverified (ADR 20260814-self-declared-cards). */}
-                    {row.certification ? (
-                      <p
-                        className={
-                          row.certification.unchecked ? "text-warning-strong" : "text-muted"
-                        }
-                      >
-                        {row.certification.text}
-                      </p>
-                    ) : null}
-                  </div>
-                );
-                return (
-                  <li key={row.leadId} className="py-2.5">
-                    {canOffer ? (
-                      <label className="flex cursor-pointer items-start gap-3">
-                        <input
-                          type="checkbox"
-                          form={OFFER_FORM_ID}
-                          name="leadId"
-                          value={row.leadId}
-                          data-below-bar={row.belowBar ? "true" : undefined}
-                          aria-label={t("trips.whoWantsIn.tickLabel", { name: row.name })}
-                          className={`${choiceClass} mt-1.5`}
-                        />
-                        {body}
-                      </label>
-                    ) : (
-                      body
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            <ul className="mt-1 divide-y divide-border">{group.rows.map(renderRow)}</ul>
+            {group.more && group.more.length > 0 ? (
+              <details className="group/more mt-1">
+                <summary className="min-h-11 cursor-pointer list-none py-2.5 text-sm text-muted underline [&::-webkit-details-marker]:hidden group-open/more:hidden">
+                  {t("trips.whoWantsIn.showMore", { count: group.more.length })}
+                </summary>
+                <ul className="divide-y divide-border">{group.more.map(renderRow)}</ul>
+              </details>
+            ) : null}
           </section>
         ))}
+        {canOffer && fitCount > 1 ? (
+          <TickAllThatFit formId={OFFER_FORM_ID} label={t("trips.whoWantsIn.tickAllFit")} />
+        ) : null}
         {canOffer ? (
           <OfferSeat
             formId={OFFER_FORM_ID}
@@ -152,6 +170,7 @@ export function WhoWantsInPanel({
             tripTitle={tripTitle}
             tripWhen={tripWhen}
             copy={offerSeatCopy(t)}
+            discountFields={discount ? <OfferDiscountFields copy={discount} /> : null}
           />
         ) : null}
         {carry}

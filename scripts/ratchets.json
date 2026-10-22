@@ -517,7 +517,7 @@
     "src/app/api/webhooks/stripe/route.ts": 923,
     "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.test.tsx": 934,
     "src/app/s/[shopSlug]/trips/[id]/actions.ts": 1099,
-    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1289,
+    "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": 1288,
     "src/app/shop/[shopSlug]/orders/page.test.tsx": 926,
     "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": 1065,
     "src/app/shop/[shopSlug]/schedule/board/actions.ts": 923,
@@ -684,7 +684,7 @@
     "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx#StaffingWeek": 329,
     "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": 310,
     "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": 315,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 368,
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": 367,
     "src/db/checkouts.ts#startBookingCheckout": 303,
     "src/db/export.ts#loadShopExportContext": 313,
     "src/db/readiness.ts#listTripsReadiness": 305,
@@ -798,7 +798,7 @@
     "src/app/shop/[shopSlug]/staffing/page.tsx": 592,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 537,
     "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 496,
-    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 519
+    "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 514
   },
   "tokens": {
     "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."

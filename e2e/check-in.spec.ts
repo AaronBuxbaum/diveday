@@ -690,7 +690,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
 
   // The door goes to the shipped control rather than growing a second sender
   // beside it.
-  await released.getByRole("link", { name: "Open the wait list" }).click();
+  await released.getByRole("link", { name: "See who wants in" }).click();
   await page.waitForURL(new RegExp(`/shop/blue-mantis/trips/${tripId}#who-wants-in$`));
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { type ReactNode, useEffect, useState } from "react";
 import {
   holdSendAction,
   releaseHeldSendAction,
@@ -74,6 +75,7 @@ export function OfferSeat({
   tripTitle,
   tripWhen,
   copy,
+  discountFields = null,
 }: {
   /** Unique on the page: the tick boxes name it. */
   formId: string;
@@ -89,7 +91,10 @@ export function OfferSeat({
   tripTitle: string;
   tripWhen: string;
   copy: OfferSeatCopy;
+  /** "With a discount" (`OfferDiscountFields`), for a role that may discount. */
+  discountFields?: ReactNode;
 }) {
+  const router = useRouter();
   const [ticked, setTicked] = useState({ count: 0, below: 0 });
   const [emailed, setEmailed] = useState(false);
   const [fallbacks, setFallbacks] = useState<Fallback[]>([]);
@@ -137,7 +142,7 @@ export function OfferSeat({
     );
   }
 
-  function onOutcome(outcome: HeldSendOutcome) {
+  function onOutcome(outcome: HeldSendOutcome & { redirectTo?: string }) {
     const results = outcome.kind === "seat_offer" ? outcome.results : [];
     const failed = results
       .filter((result) => result.delivery !== "sent")
@@ -154,6 +159,9 @@ export function OfferSeat({
       setEmailed(true);
       setTimeout(() => setEmailed(false), 4000);
     }
+    // A deal's outcome carries the notice the shop answers it with (sent, or
+    // why not), on the Details history; follow it unless a composer is open.
+    if (outcome.redirectTo && next.length === 0) router.push(outcome.redirectTo);
     const only = next.length === 1 ? next[0] : undefined;
     if (only?.mailto) window.location.href = only.mailto;
     else if (only) void copyMessage(only);
@@ -185,6 +193,7 @@ export function OfferSeat({
           : leads.map((lead) => (
               <input key={lead.leadId} type="hidden" name="leadId" value={lead.leadId} />
             ))}
+        {discountFields}
         <button
           type="submit"
           disabled={count === 0}

@@ -8,6 +8,7 @@ import {
   ne,
   notExists,
   notInArray,
+  or,
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -31,6 +32,7 @@ import { spotsRemaining } from "@/lib/trips";
 import { courseStudentSeatCap, tripAdmissionFor, tripCourseCrewCounts } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
+import { listDateLeadsInReach } from "./lead-dates";
 import { ensureDepartureLead, issueLeadUnsubscribeToken, listAnytimeLeadsCovering } from "./leads";
 import { sendNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
@@ -263,10 +265,19 @@ export async function offerSeats(
     });
     for (const { lead } of covering.eligible) eligibleAnytime.add(lead.id);
   }
+  // A date lead is offered only while it is open and within reach of this
+  // departure's day (`listDateLeadsInReach`, the panel's own read).
+  const inReachDate = new Set<string>();
+  if (tripRow && found.some((lead) => lead.scope === "date")) {
+    for (const row of await listDateLeadsInReach(db, input.shopId, { tripId: tripRow.id })) {
+      inReachDate.add(row.id);
+    }
+  }
   const targets = leadIds.filter((id) => {
     const lead = byId.get(id);
     if (!lead) return false;
     if (lead.scope === "anytime") return eligibleAnytime.has(id);
+    if (lead.scope === "date") return inReachDate.has(id);
     return lead.scope === "departure" && lead.tripId === input.tripId;
   });
 
@@ -447,8 +458,11 @@ async function departureRowToOffer(
     }
     return source.id;
   }
-  if (source.scope !== "anytime" || !source.personId) return null;
+  if (source.scope === "anytime" && !source.personId) return null;
+  if (source.scope !== "anytime" && source.scope !== "date") return null;
 
+  // The row this lead already has on the trip: a person's one row, else the
+  // copy of this very lead (a date lead attached from the schedule builder).
   const find = () =>
     db
       .select()
@@ -458,21 +472,30 @@ async function departureRowToOffer(
           eq(leads.scope, "departure"),
           eq(leads.shopId, source.shopId),
           eq(leads.tripId, input.tripId),
-          eq(leads.personId, source.personId as string),
+          source.personId
+            ? or(eq(leads.personId, source.personId), eq(leads.parentLeadId, source.id))
+            : eq(leads.parentLeadId, source.id),
         ),
       )
       .limit(1);
+  // A date lead is a diver's own ask (the offer is the reply to it); an
+  // anytime lead is outreach. A date lead with no person keeps its snapshot.
+  const fromDate = source.scope === "date";
   const [inserted] = await db
     .insert(leads)
     .values({
       shopId: source.shopId,
       scope: "departure",
-      askedBy: "shop",
+      askedBy: fromDate ? "diver" : "shop",
       tripId: input.tripId,
       personId: source.personId,
+      ...(fromDate && !source.personId
+        ? { name: source.name, email: source.email, phone: source.phone }
+        : {}),
       parentLeadId: source.id,
       createdByPersonId: input.createdByPersonId,
-      partySize: 1,
+      partySize: fromDate ? Math.min(20, Math.max(1, source.partySize ?? 1)) : 1,
+      ...(fromDate ? { askedAt: source.askedAt } : {}),
       promoId: input.promoId,
     })
     .onConflictDoNothing()

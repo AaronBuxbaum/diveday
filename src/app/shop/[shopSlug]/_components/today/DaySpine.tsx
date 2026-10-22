@@ -223,7 +223,6 @@ const QUIET_ROW_ICON: Record<QuietKind, RowIconName> = {
   payment: "orders",
   email_delivery: "inbox",
   seat_wanted: "divers",
-  last_minute_fill: "board",
   emergency_contact: "divers",
   crew_below_target: "staffing",
   reviews_pending: "reviews",

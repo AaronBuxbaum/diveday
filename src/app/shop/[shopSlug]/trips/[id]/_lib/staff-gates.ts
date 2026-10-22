@@ -1,4 +1,9 @@
-import { canPersonActOnKind, canPersonManageOrders, canPersonOverrideCertBlock } from "@/db/authz";
+import {
+  canPersonActOnKind,
+  canPersonManageOrders,
+  canPersonManagePaymentSettings,
+  canPersonOverrideCertBlock,
+} from "@/db/authz";
 import type { AppDb } from "@/db/client";
 
 /**
@@ -10,12 +15,16 @@ import type { AppDb } from "@/db/client";
  * - `mayOverrideCertBlock`: who is offered "Change anyway" past a missing card.
  * - `mayInviteFromWaitlist`: who is offered Invite, the audience of Today's
  *   wait-list row, which `holdSendAction` holds the same line on (issue #2134).
+ * - `mayDiscount`: who is offered "with a discount" on the Offer, and the deals
+ *   sent (money work, `canPersonManagePaymentSettings`).
  */
 export async function readStaffGates(db: AppDb, shopId: string, personId: string) {
-  const [canManageOrders, mayOverrideCertBlock, mayInviteFromWaitlist] = await Promise.all([
-    canPersonManageOrders(db, shopId, personId),
-    canPersonOverrideCertBlock(db, shopId, personId),
-    canPersonActOnKind(db, shopId, personId, "seat_wanted"),
-  ]);
-  return { canManageOrders, mayOverrideCertBlock, mayInviteFromWaitlist };
+  const [canManageOrders, mayOverrideCertBlock, mayInviteFromWaitlist, mayDiscount] =
+    await Promise.all([
+      canPersonManageOrders(db, shopId, personId),
+      canPersonOverrideCertBlock(db, shopId, personId),
+      canPersonActOnKind(db, shopId, personId, "seat_wanted"),
+      canPersonManagePaymentSettings(db, shopId, personId),
+    ]);
+  return { canManageOrders, mayOverrideCertBlock, mayInviteFromWaitlist, mayDiscount };
 }

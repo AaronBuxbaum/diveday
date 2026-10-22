@@ -109,7 +109,6 @@ import { at, shopDay } from "./today-shared";
 import { pushShopRows } from "./today-shop-rows";
 import { pushBoatSnagRows } from "./today-snag-rows";
 import { meetingWindowsByTrip } from "./trip-meeting-windows";
-import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { boatClashesByTrip, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
@@ -1678,7 +1677,6 @@ async function readTodayWave(
     seatWanted,
     courseCrewCounts,
     deliveryIssues,
-    neverSentLastMinuteDeal,
     lastMinuteWindows,
     rollCallGaps,
     stagesByTrip,
@@ -1742,11 +1740,6 @@ async function readTodayWave(
       inWindow.map((trip) => trip.id),
     ),
     listNotificationDeliveryIssues(db, shopId, { from: now, until: horizon }),
-    tripIdsNeverSentLastMinuteDeal(
-      db,
-      shopId,
-      inWindow.map((trip) => trip.id),
-    ),
     // Who is even reachable by a blast. Not scoped to a trip: an entry is a
     // standing "I'm around these dates" preference, and which departures it
     // covers is arithmetic (`lastMinuteEntryMatchesTripDate`), done per trip
@@ -1883,7 +1876,6 @@ async function readTodayWave(
     seatWanted,
     courseCrewCounts,
     deliveryIssues,
-    neverSentLastMinuteDeal,
     lastMinuteWindows,
     rollCallGaps,
     stagesByTrip,
