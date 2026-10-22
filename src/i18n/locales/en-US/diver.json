@@ -249,6 +249,7 @@
     "diveNumber": "Dive {number}",
     "siteToBeConfirmed": "Site to be confirmed",
     "sitesToBeConfirmed": "{count, plural, one {One dive · site to be confirmed} other {# dives · sites to be confirmed}}",
+    "courseGearIncluded": "Gear is included.",
     "seen": {
       "heading": "Seen here this month",
       "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}}",

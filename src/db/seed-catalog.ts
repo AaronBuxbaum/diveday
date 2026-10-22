@@ -293,6 +293,9 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
           // cannot give. Everything above that rung keeps the column's `true`
           // default, and a shop turns one off on the course page.
           nitroxCompatible: !(isIntroCourse || minimumCertificationLevel === null),
+          // Discover Scuba's page says "Complete rental gear", so its session's
+          // trip page says "Gear is included." (UX sheet 2026-10-22, item 3).
+          gearIncluded: template?.slug === "discover-scuba-diving",
         };
       }),
     )
