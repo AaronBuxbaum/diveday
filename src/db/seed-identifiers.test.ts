@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -19,13 +19,17 @@ describe("browser seed identifiers", () => {
   it("keeps browser discovery from loading the seed graph for constants", () => {
     const identifiers = readFileSync(path.join(__dirname, "seed-identifiers.ts"), "utf8");
     expect(identifiers).not.toMatch(/^\s*import\b|\bfrom\s+["']|\bimport\s*\(/m);
+    const visualSpecs = readdirSync(path.join(root, "e2e"))
+      .filter((file) => /^visual-.+\.spec\.ts$/.test(file))
+      .map((file) => file.replace(/\.spec\.ts$/, ""));
+    expect(visualSpecs.length).toBeGreaterThan(0);
     for (const spec of [
       "a11y",
       "recap",
       "reviews",
       "review-replies",
       "storefront-brand",
-      "visual",
+      ...visualSpecs,
     ]) {
       const source = readFileSync(path.join(root, "e2e", `${spec}.spec.ts`), "utf8");
       expect(source, spec).not.toMatch(/from\s+["']\.\.\/src\/db\/(?:seed|seed-listed-shops)["']/);
