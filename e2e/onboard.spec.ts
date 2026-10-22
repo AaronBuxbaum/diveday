@@ -1,9 +1,11 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
 import { E2E_APP_HOST } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 
 /** The origin the fleet advertises, as the shop-link hint prints it: no scheme. */
 const STOREFRONT_HOST = new URL(E2E_APP_HOST).host;
+const staffCopy = staffTranslator("en-US");
 
 // A freshly onboarded shop is the real "empty shop" scenario the first-run
 // checklist exists for — the seeded demo shop never reaches this state, so
@@ -78,10 +80,12 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}/settings#contact$`));
   await page.getByLabel("Contact email").fill("hello@firstrun.example.com");
   await page.getByRole("button", { name: "Save contact details" }).click();
-  await expect(page.getByText("Contact details saved.")).toBeVisible();
+  await expect(page.getByText("Contact details saved")).toBeVisible();
 
   await page.goto(`/shop/${unique}`);
-  await expect(page.getByText("Contact details on file.")).toBeVisible();
+  await expect(
+    page.getByText(staffCopy("shopHome.firstRun.contactDone"), { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("1 of 7 done")).toBeVisible();
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveText("Set up profile");
@@ -199,7 +203,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   // Divers: nobody on file. The roster's search is also the quick-add door;
   // typing a name and choosing Add diver creates the record and opens it.
   await page.goto(`/shop/${unique}/divers`);
-  await expect(page.getByText("No divers on file yet.")).toBeVisible();
+  await expect(page.getByText("No divers on file yet")).toBeVisible();
   await expect(page.getByRole("link", { name: "Import your roster" })).toHaveAttribute(
     "href",
     `/shop/${unique}/settings/import`,
@@ -216,7 +220,7 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   // so it is a card above the list rather than the page's standing primary
   // (UX audit item 20), and the empty state says only what is true.
   await page.goto(`/shop/${unique}/orders`);
-  await expect(page.getByText("No orders yet.", { exact: true })).toBeVisible();
+  await expect(page.getByText("No orders yet", { exact: true })).toBeVisible();
   // One door, once: the header holds no primary without an account to send
   // an order from, and the empty state does not repeat the card's door
   // (docs/design/principles.md #8).

@@ -102,13 +102,13 @@ describe("a buddy team's member chips", () => {
 describe("a buddy team's row", () => {
   it("keeps an informational caution beside its team and leaves dissolve available", () => {
     renderPanel([team(["Ana Ruiz", "Ben Okafor"])], null, {
-      "team-2": ["Check pairing: a diver under 12.", "Teamed with a diver not cleared to board."],
+      "team-2": ["Check pairing: a diver under 12.", "Teamed with a diver not cleared to board"],
     });
     const caution = screen.getByText("Check pairing: a diver under 12.");
     expect(caution.closest("li")).toContainElement(
       screen.getByRole("button", { name: "manifest.buddyDissolve" }),
     );
-    expect(screen.getByText("Teamed with a diver not cleared to board.")).toBeInTheDocument();
+    expect(screen.getByText("Teamed with a diver not cleared to board")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "manifest.buddyDissolve" })).toBeEnabled();
   });
   /**

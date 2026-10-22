@@ -77,7 +77,7 @@
     "observedSpecies": "Visto en esta inmersión",
     "observedSpeciesNone": "Nada que destacar",
     "save": "Guardar registro de inmersión",
-    "saved": "Registro de la inmersión guardado.",
+    "saved": "Registro de la inmersión guardado",
     "refusal": {
       "timesTransposed": "La hora de salida debe ser posterior a la de entrada. Revisa las dos horas y guarda de nuevo.",
       "depthOutOfRange": "Esa profundidad está fuera de lo que admite este formulario. Revisa la cifra y guarda de nuevo.",
@@ -183,7 +183,7 @@
   "buddyDragOver": "Suelta para emparejar a {a} con {b}.",
   "buddyFormSubmit": "Crear pareja de buceo",
   "buddyUnteamedOne": "{name} no tiene pareja de buceo, lo que es normal con un número impar.",
-  "buddyEveryoneTeamed": "Todas las personas de esta salida ya tienen pareja de buceo.",
+  "buddyEveryoneTeamed": "Todas las personas de esta salida ya tienen pareja de buceo",
   "overCapacityLine": "{count, plural, one {# persona está a bordo por encima de las plazas del barco.} other {# personas están a bordo por encima de las plazas del barco.}} Aquí nada rechaza a una persona que la tripulación ya ha contado.",
   "buddySeparatedLine": "{count, plural, one {# pareja de buceo está dividida.} other {# parejas de buceo están divididas.}} Alguien está a bordo y alguien no.",
   "buddyErrorDuplicate": "Elige personas distintas. Nadie es su propio compañero.",

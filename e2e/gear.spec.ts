@@ -48,7 +48,7 @@ test.describe("staff", () => {
     await page.getByLabel("Size").first().fill("M");
     await page.getByRole("button", { name: "Add to the register" }).click();
 
-    await expect(page.getByRole("status").filter({ hasText: "On the register." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "On the register" })).toBeVisible();
     await expect(page.getByRole("link", { name: tag })).toBeVisible();
   });
 
@@ -81,7 +81,7 @@ test.describe("staff", () => {
     await openAddGear(page);
     await page.getByLabel("Tag").fill(tag);
     await page.getByRole("button", { name: "Add to the register" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "On the register." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "On the register" })).toBeVisible();
     // **The unit's own row, before touching the page again.** The status banner
     // is rendered by the redirect's *destination*, but the register list behind
     // it is what proves the navigation has fully landed — and until it has, the
@@ -123,11 +123,11 @@ test.describe("staff", () => {
     await expect(page.getByText("Wreck Trip — Spiegel Grove")).toBeVisible();
 
     await page.getByRole("button", { name: "Check out" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Checked out." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Checked out" })).toBeVisible();
 
     await page.getByRole("button", { name: "Mark returned" }).click();
     await expect(page.getByRole("status").filter({ hasText: "the unit is home" })).toBeVisible();
-    await expect(page.getByText("In the shop, nothing reserved.")).toBeVisible();
+    await expect(page.getByText("In the shop, nothing reserved")).toBeVisible();
   });
 
   /**
@@ -254,9 +254,7 @@ test.describe("staff", () => {
     // the whole diver row it sits in (which also holds seeded assignments).
     const assignedChip = assignments.locator("li").filter({ hasText: suggestedTag }).last();
     await assignedChip.getByRole("button", { name: "Release" }).click();
-    await expect(
-      page.getByRole("status").filter({ hasText: "Assignment released." }),
-    ).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Assignment released" })).toBeVisible();
   });
 
   /**
@@ -294,7 +292,7 @@ test.describe("staff", () => {
     // the tag just assigned.
     const row = assignments.locator("li").filter({ hasText: tag }).last();
     await row.getByRole("button", { name: "Hand over" }).first().click();
-    await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Handed over" })).toBeVisible();
 
     // The register is the other reader of the same stamp, and it has to agree
     // that the unit is off the wall.
@@ -367,7 +365,7 @@ test.describe("staff", () => {
     await assignments.getByRole("button", { name: "Cancel" }).click();
     await expect(note).toHaveCount(0);
     await allGood.click();
-    await expect(page.getByRole("status").filter({ hasText: "Back on the wall." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Back on the wall" })).toBeVisible();
     // Gone, because nothing is out any more.
     await expect(assignments.getByRole("button", { name: "All good" })).toHaveCount(0);
   });
@@ -423,7 +421,7 @@ test.describe("staff", () => {
     // Field hint rides inside the label element.
     await service.getByLabel("Note").fill("Second stage rebuilt on the bench");
     await page.getByRole("button", { name: "Log it" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Logged." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Logged" })).toBeVisible();
     // The paper trail folds under the Service card at rest — open it.
     await page.locator("summary").filter({ hasText: "History" }).click();
     await expect(
@@ -448,7 +446,7 @@ test.describe("staff", () => {
     expect(clock.length).toBeGreaterThan(0);
 
     await page.getByRole("button", { name: "Delete unit" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Unit deleted." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Unit deleted" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Reg #5", exact: true })).toHaveCount(0);
 
     // The way back: the register's own Deleted view, not just the toast.
@@ -456,7 +454,7 @@ test.describe("staff", () => {
     const deleted = page.getByRole("region", { name: "Deleted" });
     await expect(deleted.getByText("Reg #5", { exact: true })).toBeVisible();
     await deleted.getByRole("button", { name: "Restore Reg #5" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Unit restored." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Unit restored" })).toBeVisible();
 
     await page.getByRole("link", { name: "Reg #5", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Reg #5" })).toBeVisible();
@@ -483,7 +481,7 @@ test.describe("staff", () => {
     ).trim();
     expect(clock.length).toBeGreaterThan(0);
     await page.getByRole("button", { name: "Delete unit" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Unit deleted." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Unit deleted" })).toBeVisible();
 
     // Reached the way a staffer would, from the register's Deleted view.
     await page.goto("/shop/blue-mantis/gear?view=deleted");
@@ -518,7 +516,7 @@ test.describe("staff", () => {
 
     // One act, and it lands back on the register with the unit on it.
     await page.getByRole("button", { name: "Restore unit" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Unit restored." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Unit restored" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Reg #5", exact: true })).toBeVisible();
   });
 
@@ -554,7 +552,7 @@ test.describe("staff", () => {
     const dialog = page.getByRole("dialog", { name: "Pull for service" });
     await dialog.getByLabel("Why it’s coming off the wall").fill("Dump valve leaks");
     await dialog.getByRole("button", { name: "Pull for service" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
     await expect(page.getByText("Needs service").first()).toBeVisible();
 
     // Back on the register, the row wears the pulled state — and only the
@@ -577,7 +575,7 @@ test.describe("staff", () => {
     await notes.locator("summary").filter({ hasText: "Add a note" }).click();
     await notes.getByLabel("Add a note").fill("Diver mentioned the mouthpiece tastes off");
     await notes.getByRole("button", { name: "Add note" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Logged." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Logged" })).toBeVisible();
     await expect(page.getByText("Diver mentioned the mouthpiece tastes off")).toBeVisible();
   });
 

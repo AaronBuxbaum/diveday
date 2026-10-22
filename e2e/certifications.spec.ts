@@ -77,7 +77,7 @@ test("staff captures and verifies level and specialty certifications before eith
   // Filtered rather than a bare `getByRole("status")`: this toast lives for a
   // few seconds and the delete below raises a second one, so naming the toast
   // is what keeps either assertion from depending on the other's timing.
-  const certifiedToast = page.getByRole("status").filter({ hasText: "Marked certified." });
+  const certifiedToast = page.getByRole("status").filter({ hasText: "Marked certified" });
   await expect(certifiedToast).toBeVisible();
   await expect(certifiedToast.getByRole("button", { name: "Undo" })).toBeVisible();
 
@@ -229,7 +229,7 @@ test("an instructor writes a student's next step on the course session's own ros
   const note = page.getByLabel("What this student does next").first();
   await note.fill("Book your deep dive with Marcus before the card arrives.");
   await page.getByRole("button", { name: "Save next step" }).first().click();
-  await expect(page.getByText("Next step saved.")).toBeVisible();
+  await expect(page.getByText("Next step saved")).toBeVisible();
 
   // It comes back in the box rather than as a blank field somebody has to
   // retype — an instructor editing what they said is the ordinary case.

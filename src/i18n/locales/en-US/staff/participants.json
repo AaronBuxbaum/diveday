@@ -5,7 +5,7 @@
     "typeUnavailable": "On a course session, students stay divers and nobody else becomes one. Snorkelers and riders need a price on the session.",
     "restoreDiversFull": "Couldn’t undo. Every diver’s seat has been taken since.",
     "noShowDiversFull": "Couldn’t put them back. Every diver’s seat has been taken since.",
-    "typeSet": "Saved.",
+    "typeSet": "Saved",
     "onBuddyTeam": "Take them off their buddy team first. A buddy team is divers only.",
     "certBlocked": "Their card for this trip isn’t on file. Check it first, or change anyway.",
     "closed": "Too late for that change. Nothing changes once the boat is home.",
@@ -13,7 +13,7 @@
     "owed": "Saved. Their seat costs more now, so they owe the difference."
   },
   "terms": {
-    "saved": "Saved.",
+    "saved": "Saved",
     "invalid": "Check the prices and the diver seats. Diver seats can’t be more than the boat holds.",
     "heading": "Snorkelers and riders",
     "description": "Leave a price blank to keep that seat off the public booking form. Staff can still seat anyone from the trip page.",

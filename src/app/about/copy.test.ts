@@ -102,10 +102,9 @@ describe("the rest of /about", () => {
   it.each(LOCALES)("heads every band with a statement, not a question, in %s", (_l, messages) => {
     const { peopleTitle, buildTitle, workTitle, closingTitle } = messages.marketing.about;
     for (const title of [peopleTitle, buildTitle, workTitle, closingTitle]) {
-      // A statement the band beneath it can be checked against: it ends like a
-      // sentence, asks nothing, and fits on a phone without turning into a
-      // paragraph.
-      expect(title.trim()).toMatch(/\.$/);
+      // A statement the band beneath it can be checked against: no final
+      // period in a heading, no question, and short enough for a phone.
+      expect(title.trim()).not.toMatch(/\.$/);
       expect(title).not.toMatch(/[?¿]/);
       expect(title.split(/\s+/).length).toBeLessThanOrEqual(14);
     }

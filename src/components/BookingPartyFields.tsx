@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { SmsConsentNote } from "@/components/SmsConsentNote";
+import { buttonClass } from "@/components/ui/button";
 import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
 import { mailtoHref, telHref } from "@/lib/contact-links";
@@ -386,7 +387,12 @@ export function BookingPartyFields({
                           <button
                             type="button"
                             onClick={() => updateMember(index, { email: suggestion })}
-                            className="justify-self-start text-xs font-medium text-primary hover:underline"
+                            className={buttonClass({
+                              variant: "link",
+                              size: "sm",
+                              flush: true,
+                              className: "justify-self-start",
+                            })}
                           >
                             {t("party.didYouMeanEmail", { email: suggestion })}
                           </button>

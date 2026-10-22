@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
@@ -10,6 +11,8 @@ import {
   openTripMore,
   seededTripId,
 } from "./helpers";
+
+const staffCopy = staffTranslator("en-US");
 
 test("the public schedule lists seeded trips with capacity states, a month rail, and per-dive briefings", async ({
   page,
@@ -248,6 +251,9 @@ test.describe("trip pulse", () => {
     page,
   }) => {
     const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+    const filteredByTrip = staffCopy("orders.index.filteredByTrip", {
+      title: "Two-Tank Reef — Molasses & French",
+    });
 
     // Unfiltered — every open invoice the shop is carrying, which is what the
     // pulse's link used to land on. A row's presence is the barrier: the day
@@ -269,9 +275,7 @@ test.describe("trip pulse", () => {
     await expect(page).toHaveURL(new RegExp(`tripId=${tripId}`));
     // Narrowed, and it says so with the departure's own name rather than
     // leaving a staffer to wonder which boat an empty list is about.
-    await expect(
-      page.getByText("Showing orders for Two-Tank Reef — Molasses & French."),
-    ).toBeVisible();
+    await expect(page.getByText(filteredByTrip, { exact: true })).toBeVisible();
     expect(await rows.count()).toBeLessThan(shopWide);
     // The way back to the departure, and the way back out of the filter.
     await expect(page.getByRole("link", { name: "Open the departure" })).toHaveAttribute(
@@ -287,9 +291,7 @@ test.describe("trip pulse", () => {
     await page.locator('#orders-search[data-hydrated="true"]').waitFor();
     await page.getByLabel("Date range").selectOption("recent");
     await expect(page).toHaveURL(new RegExp(`tripId=${tripId}`));
-    await expect(
-      page.getByText("Showing orders for Two-Tank Reef — Molasses & French."),
-    ).toBeVisible();
+    await expect(page.getByText(filteredByTrip, { exact: true })).toBeVisible();
   });
 });
 

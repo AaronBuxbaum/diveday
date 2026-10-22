@@ -2,62 +2,62 @@
   "main": {
     "eyebrow": "Settings",
     "notice": {
-      "packingSaved": "Packing checklist saved for every trip.",
+      "packingSaved": "Packing checklist saved for every trip",
       "packingInvalid": "Add between one and twelve packing items.",
-      "dockSaved": "Dock call time saved for every confirmation and reminder.",
+      "dockSaved": "Dock call time saved for every confirmation and reminder",
       "pickupSaved": "Saved. Divers are asked about a pickup only when this is on.",
       "deskPaymentSaved": "Saved. Every seat due at the shop says how to pay.",
       "deskPaymentInvalid": "Nothing changed: choose card, cash, card and cash, or don’t say.",
       "dockInvalid": "Enter a dock call time between 5 and 180 minutes.",
-      "turnaroundSaved": "Turnaround saved.",
+      "turnaroundSaved": "Turnaround saved",
       "turnaroundInvalid": "Enter a turnaround between 0 and 240 minutes.",
-      "unitsSaved": "Units saved.",
+      "unitsSaved": "Units saved",
       "unitsSavedSitesLeft": "Units saved. {count, plural, one {# dive site was} other {# dive sites were}} left alone, whole, and still {count, plural, one {reads} other {read}} in {from, select, feet {feet} other {meters}}: {sites}{more, plural, =0 {} other { and # more}}. Check {count, plural, one {it} other {them}} by hand in Dive sites.",
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
-      "passThroughSaved": "Pass-through fee saved.",
+      "passThroughSaved": "Pass-through fee saved",
       "passThroughInvalid": "Enter both a fee name and a positive amount, or leave both blank to disable it.",
-      "rentalsSaved": "Rentals saved.",
+      "rentalsSaved": "Rentals saved",
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
       "rentalTermsInvalid": "Keep rental terms under 1,500 characters.",
       "regulatorServiceInvalid": "Choose 12 or 24 months.",
-      "contactSaved": "Contact details saved.",
+      "contactSaved": "Contact details saved",
       "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers’ replies reach it.",
       "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
-      "profileSaved": "Shop profile and branding saved.",
+      "profileSaved": "Shop profile and branding saved",
       "profileInvalid": "Check your tagline, description, and logo file.",
-      "shopPhotosSaved": "Shop photos saved.",
+      "shopPhotosSaved": "Shop photos saved",
       "shopPhotosInvalid": "Those photos didn’t save. Use JPG, PNG, WebP, or HEIC under {maxMb} MB, and keep to {max} in all.",
-      "addressSaved": "Shop address saved.",
-      "addressRemoved": "Shop address removed.",
+      "addressSaved": "Shop address saved",
+      "addressRemoved": "Shop address removed",
       "addressInvalid": "That address couldn’t be saved. Search again and pick your shop from the list.",
-      "reviewUrlSaved": "Review link saved.",
+      "reviewUrlSaved": "Review link saved",
       "reviewUrlInvalid": "Enter a full https:// link, or empty the box to stop asking for reviews.",
-      "deskHoursSaved": "Desk hours saved.",
+      "deskHoursSaved": "Desk hours saved",
       "deskHoursInvalid": "Pick an opening time before the closing time.",
       "searchListingOn": "Your public pages are listed in search engines.",
       "searchListingOff": "Your public pages are hidden from search engines. Anything already indexed can take a few weeks to drop out.",
-      "connected": "Stripe account connected.",
+      "connected": "Stripe account connected",
       "connectFailed": "The Stripe connection didn’t complete. Try connecting again.",
       "notConfigured": "Online payments aren’t switched on for this DiveDay setup yet.",
-      "disconnected": "Stripe account disconnected.",
-      "refreshed": "Payment status refreshed from Stripe.",
+      "disconnected": "Stripe account disconnected",
+      "refreshed": "Payment status refreshed from Stripe",
       "demoStripe": "The demo stays connected to Stripe in test mode.",
       "notAuthorized": "The rental catalog, rental prices, and Stripe connection are payment settings, limited to owners and managers.",
-      "timezoneSaved": "Timezone saved.",
-      "seasonSaved": "Season start saved.",
+      "timezoneSaved": "Timezone saved",
+      "seasonSaved": "Season start saved",
       "seasonInvalid": "Pick a day that month has.",
       "reopensSaved": "Saved. Your public page names this date while its schedule is quiet.",
       "reopensInvalid": "That date isn’t one we can post. Pick one within the next 18 months.",
       "timezoneInvalid": "That isn’t a timezone we recognize. Pick one from the list.",
-      "emergencySaved": "Emergency reference saved.",
+      "emergencySaved": "Emergency reference saved",
       "shoreAlertInvalid": "That shore contact email isn’t an address. Nothing was saved.",
       "shoreAlertConsentMissing": "Tick that the shore contact agreed to get roll-call alerts at this address; for a new address, tick it again. Nothing was saved.",
       "shoreAlertConfirmationSent": "Saved. We emailed the shore contact a link; alerts start once they confirm.",
       "shoreAlertConfirmationNotSent": "Saved, but the confirmation link didn’t go. Try “Send the link again” in a few minutes.",
       "shoreAlertSavedDemo": "Saved. Demo shops send nothing, so no link went.",
       "shoreAlertCleared": "Shore contact’s email removed. It gets no more roll-call alerts.",
-      "packageSaved": "Package added.",
-      "packageDeleted": "Package deleted.",
+      "packageSaved": "Package added",
+      "packageDeleted": "Package deleted",
       "packageInvalid": "That didn’t save. Check the number of dives, the price, and how long it stays usable."
     },
     "timezone": {
@@ -177,7 +177,7 @@
       "notConfigured": "Address search isn’t available here yet.",
       "suggestionsLabel": "Address suggestions",
       "currentLabel": "Saved address",
-      "noneSet": "No address saved yet.",
+      "noneSet": "No address saved yet",
       "remove": "Remove address",
       "removing": "Removing…"
     },
@@ -405,7 +405,7 @@
       "off": "Off",
       "save": "Save",
       "saving": "Saving…",
-      "saved": "Saved.",
+      "saved": "Saved",
       "reviews": {
         "heading": "Diver reviews",
         "label": "Ask divers to rate their day",
@@ -451,7 +451,7 @@
       "description": "Shifts, days away, and who works each departure. Course sessions name their instructor either way.",
       "save": "Save crew schedule",
       "saving": "Saving…",
-      "saved": "Crew schedule saved.",
+      "saved": "Crew schedule saved",
       "turnOn": "Turn on in Features"
     },
     "team": {
@@ -543,7 +543,7 @@
       "addContact": "Add contact",
       "responseHeading": "Response plan",
       "alertHeading": "Roll-call alerts",
-      "noContacts": "No emergency numbers yet."
+      "noContacts": "No emergency numbers yet"
     },
     "divePackages": {
       "heading": "Dive packages",
@@ -562,7 +562,7 @@
       "deleting": "Deleting…",
       "owed": "Dives owed on packages: {dives, number} ({value})",
       "createTitle": "Add package",
-      "empty": "No packages for sale yet."
+      "empty": "No packages for sale yet"
     },
     "yourData": {
       "heading": "Export, import, backups and integrations"
@@ -572,13 +572,13 @@
     "title": "Team",
     "unnamedInviter": "A teammate",
     "notice": {
-      "invited": "Invite sent.",
-      "inviteResent": "Invite resent.",
-      "changesSaved": "Team changes saved.",
-      "reactivated": "Account re-enabled.",
+      "invited": "Invite sent",
+      "inviteResent": "Invite resent",
+      "changesSaved": "Team changes saved",
+      "reactivated": "Account re-enabled",
       "disabled": "Account disabled. They can no longer sign in.",
       "removed": "Deleted. They’re off your team and can no longer sign in.",
-      "restored": "Team access restored.",
+      "restored": "Team access restored",
       "restoreFailed": "Couldn’t restore that person’s access. Check their account first.",
       "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
       "rolesInvalid": "Check at least one role before saving.",
@@ -589,9 +589,9 @@
       "lastOwner": "Can’t do that, because the shop needs at least one owner. Make someone else an owner first.",
       "notFound": "That person isn’t on this shop’s team.",
       "notAuthorized": "Team management is limited to owners and managers.",
-      "contactSaved": "Emergency contact saved.",
+      "contactSaved": "Emergency contact saved",
       "contactHalfFilled": "An emergency contact needs both a name and a number.",
-      "languagesSaved": "Languages saved."
+      "languagesSaved": "Languages saved"
     },
     "statusBadge": {
       "invited": "Invited",
@@ -627,7 +627,7 @@
     },
     "current": {
       "heading": "Current team",
-      "empty": "No staff invited yet.",
+      "empty": "No staff invited yet",
       "emptyAction": "Invite a teammate"
     },
     "staffRow": {
@@ -674,8 +674,8 @@
     "moveUp": "Move up",
     "moveDown": "Move down",
     "notice": {
-      "added": "Added to the checklist.",
-      "deleted": "Removed from the checklist.",
+      "added": "Added to the checklist",
+      "deleted": "Removed from the checklist",
       "invalid": "That didn’t save. Try it again.",
       "duplicateLabel": "That line is already on the list.",
       "notAuthorized": "You don’t have permission to change this.",
@@ -1005,9 +1005,9 @@
     "stepUpVerifying": "Verifying…",
     "notice": {
       "enrollmentStarted": "Enrollment started. Save the secret before enabling two-factor.",
-      "enabled": "Two-factor authentication enabled.",
-      "disabled": "Two-factor authentication disabled.",
-      "sessionRevoked": "Session revoked.",
+      "enabled": "Two-factor authentication enabled",
+      "disabled": "Two-factor authentication disabled",
+      "sessionRevoked": "Session revoked",
       "codeInvalid": "That code was not accepted.",
       "stepUpRequired": "Verify with your authenticator before continuing.",
       "unavailable": "Security setup is unavailable until the deployment encryption key is configured.",
@@ -1046,7 +1046,7 @@
       },
       "lightbox": {
         "name": "Lightbox",
-        "hint": "Booking opens over your page; paying opens DiveDay’s"
+        "hint": "Booking opens over your page; paying opens DiveDay’s."
       },
       "calendar": {
         "name": "Calendar",

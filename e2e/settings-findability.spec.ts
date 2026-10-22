@@ -183,7 +183,7 @@ test.describe("settings that change the shop", () => {
     // Saved, and the page comes back with its notice: the action's redirect
     // lands on the profile page rather than at the top of the hub.
     await expect(
-      page.getByRole("status").filter({ hasText: "Shop profile and branding saved." }),
+      page.getByRole("status").filter({ hasText: "Shop profile and branding saved" }),
     ).toBeVisible();
     await expect(page.getByLabel("Tagline")).toHaveValue(
       "Small-boat reef and wreck diving out of Key Largo.",
@@ -206,14 +206,14 @@ test.describe("settings that change the shop", () => {
 
     await zone.selectOption("America/Cancun");
     await page.getByRole("button", { name: "Save timezone" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Timezone saved." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Timezone saved" })).toBeVisible();
     await expect(page.getByLabel("Timezone", { exact: true })).toHaveValue("America/Cancun");
 
     // And back, which is the other half of the claim: the picker is not a
     // one-way door a shop can strand itself behind.
     await page.getByLabel("Timezone", { exact: true }).selectOption("America/New_York");
     await page.getByRole("button", { name: "Save timezone" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Timezone saved." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Timezone saved" })).toBeVisible();
   });
 });
 

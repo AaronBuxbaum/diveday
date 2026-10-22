@@ -104,7 +104,7 @@ test("a staffer deletes the message from a sender nobody on the roster holds", a
   // The action's own `?notice=` redirect is the wait: the click returns when
   // the request is sent, not when the write has landed.
   await page.waitForURL(/notice=deleted/);
-  await expect(page.getByText("Message deleted.")).toBeVisible();
+  await expect(page.getByText("Message deleted")).toBeVisible();
   await expect(page.getByText("marta.keller@mail.example")).toHaveCount(0);
 });
 
@@ -194,9 +194,9 @@ test("a staffer saves an answer, uses it as a chip, and deletes it softly", asyn
   await saved
     .getByRole("button", { name: "Delete Hi, the gate opens at 7:10 on dive days." })
     .click();
-  await expect(page.getByText("Saved answer deleted.")).toBeVisible();
+  await expect(page.getByText("Saved answer deleted")).toBeVisible();
   await page
     .getByRole("button", { name: "Put back Hi, the gate opens at 7:10 on dive days." })
     .click();
-  await expect(page.getByText("Saved answer put back.")).toBeVisible();
+  await expect(page.getByText("Saved answer put back")).toBeVisible();
 });

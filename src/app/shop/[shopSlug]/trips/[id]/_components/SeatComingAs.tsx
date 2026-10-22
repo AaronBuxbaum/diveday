@@ -50,7 +50,7 @@ export function SeatComingAs({
           </Field>
           <SubmitButton
             pendingLabel={t("trips.roster.saving")}
-            className={buttonClass({ variant: "secondary", size: "sm" })}
+            className={buttonClass({ variant: "secondary" })}
           >
             {t("participants.roster.save")}
           </SubmitButton>

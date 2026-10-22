@@ -59,9 +59,9 @@ import { appendFileSync, readdirSync, readFileSync, writeFileSync } from "node:f
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-
+import { collectVisualSources } from "./check-route-coverage.mjs";
 import { importersOf, importGraph, routeOf } from "./e2e-affected.mjs";
-import { listedTests } from "./e2e-shard.mjs";
+import { listedTests, testListLine } from "./e2e-shard.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { changedLinesByFile, moduleIndex, readModules, symbolReach } from "./symbol-reach.mjs";
 
@@ -542,19 +542,30 @@ export function changedLines(diffText) {
  * line to the next listed test's. Two captures made in one loop (light and dark) share a line and
  * so a span.
  */
-export function captureSpans(report, sourceLines) {
+export function captureSpans(report, sourceLines, visualSources = new Map()) {
   const tests = [];
   function walk(suite, titles, file) {
     for (const spec of suite.specs ?? []) {
-      tests.push({ line: [file, ...titles, spec.title].join(" › "), at: spec.line });
+      tests.push({
+        line: testListLine(spec.file ?? file, [...titles, spec.title]),
+        at: spec.line,
+        file: path.basename(spec.file ?? file),
+        rootFile: path.basename(file),
+      });
     }
     for (const child of suite.suites ?? []) walk(child, [...titles, child.title], file);
   }
   for (const suite of report?.suites ?? []) walk({ ...suite, specs: suite.specs }, [], suite.file);
-  const starts = [...new Set(tests.map((test) => test.at))].sort((a, b) => a - b);
   return tests.map((test) => {
-    const next = starts.find((start) => start > test.at) ?? sourceLines.length + 1;
-    return { ...test, text: sourceLines.slice(test.at - 1, next - 1).join("\n") };
+    const lines =
+      visualSources.get(test.file)?.split("\n") ??
+      (test.file === test.rootFile ? sourceLines : undefined);
+    if (!lines) return { ...test, text: "", sourceMissing: true };
+    const starts = [
+      ...new Set(tests.filter((other) => other.file === test.file).map((other) => other.at)),
+    ].sort((a, b) => a - b);
+    const next = starts.find((start) => start > test.at) ?? lines.length + 1;
+    return { ...test, text: lines.slice(test.at - 1, next - 1).join("\n") };
   });
 }
 
@@ -630,14 +641,22 @@ export function selectCaptures({
   visualLines,
   helperLines,
   helpersSource,
+  visualSources = new Map(),
 }) {
   const reach = changedRoutes(changed, graph, context);
   if (reach.all) return { mode: "all", why: reach.all };
-  const spans = captureSpans(report, source.split("\n"));
+  const spans = captureSpans(report, source.split("\n"), visualSources);
+  const missing = spans.find((span) => span.sourceMissing);
+  if (missing)
+    return { mode: "all", why: `${missing.file} was not read for its capture locations` };
   let edits = { at: new Set(), helpers: new Set() };
   if (reach.visualSpec) {
     if (!visualLines) return { mode: "all", why: "e2e/visual.spec.ts changed in lines not read" };
-    edits = editedCaptures(spans, source, visualLines);
+    edits = editedCaptures(
+      spans.filter((span) => span.file === span.rootFile),
+      source,
+      visualLines,
+    );
     if (edits.all) return { mode: "all", why: edits.all };
   }
   if (reach.helpersEdited) {
@@ -656,9 +675,10 @@ export function selectCaptures({
       why.set(span.line, "smoke");
       continue;
     }
-    const read = captureText(span.text, helpers);
+    const localHelpers = helperBodies(visualSources.get(span.file) ?? "");
+    const read = captureText(span.text, new Map([...helpers, ...localHelpers]));
     const helper = [...read.names].find((name) => edits.helpers.has(name));
-    if (edits.at.has(span.at) || helper) {
+    if ((span.file === span.rootFile && edits.at.has(span.at)) || helper) {
       lines.add(span.line);
       why.set(span.line, helper ? `calls ${helper}, which changed` : "its lines changed");
       continue;
@@ -704,7 +724,7 @@ export function selectCaptures({
 export function filterReport(report, keep) {
   function prune(suite, titles, file) {
     const specs = (suite.specs ?? []).filter((spec) =>
-      keep.has([file, ...titles, spec.title].join(" › ")),
+      keep.has(testListLine(spec.file ?? file, [...titles, spec.title])),
     );
     const suites = (suite.suites ?? [])
       .map((child) => prune(child, [...titles, child.title], file))
@@ -804,7 +824,7 @@ export function diffContext({ root = ROOT, git = gitReader(root), forkPoint }) {
  */
 export function lightGrep(lines) {
   const titles = [...lines]
-    .filter((line) => / › light mode › /.test(line))
+    .filter((line) => / › light mode(?: [^›]*)? › /.test(line))
     .map((line) =>
       line
         .split(" › ")
@@ -814,7 +834,7 @@ export function lightGrep(lines) {
   return titles.length === 0 ? null : `(?:${titles.join("|")})$`;
 }
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   const listFile = option(args, "list");
   const outFile = option(args, "out");
@@ -838,11 +858,13 @@ function main() {
       result = { mode: "all", why: `git could not diff against ${base}` };
     } else {
       const source = readFileSync(path.join(ROOT, "e2e/visual.spec.ts"), "utf8");
+      const visualSources = await collectVisualSources(ROOT);
       result = selectCaptures({
         ...diff,
         graph: importGraph(ROOT),
         report,
         source,
+        visualSources,
         helpers: new Map([
           ...helperBodies(readFileSync(path.join(ROOT, "e2e/helpers.ts"), "utf8")),
           ...helperBodies(source),
@@ -890,5 +912,5 @@ function main() {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main();
+  await main();
 }

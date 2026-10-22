@@ -76,6 +76,11 @@ describe("the diver's phone number", () => {
  * Book's own picker.
  */
 describe("DiverHeader actions", () => {
+  it("leaves only the identity header when no booking action is available", () => {
+    const { container } = renderHeader({ book: null });
+    expect(container.childElementCount).toBe(1);
+  });
+
   it("carries Add a booking and nothing beside it", () => {
     const book = (
       <BookActivity

@@ -143,7 +143,7 @@ describe("DiverList empty state", () => {
    */
   it("offers the full add-a-diver form while the search box is empty", () => {
     renderList();
-    expect(screen.getByText("No divers on file yet.")).toBeInTheDocument();
+    expect(screen.getByText("No divers on file yet")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers/new",
@@ -177,7 +177,7 @@ describe("DiverList empty state", () => {
 
   it("offers the way back out or to add the typed diver when search narrowed to nothing", () => {
     renderList({ query: "nobody" });
-    expect(screen.getByText("No divers match this view.")).toBeInTheDocument();
+    expect(screen.getByText("No divers match this view")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add diver" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Show all divers" })).toHaveAttribute(
       "href",
@@ -195,7 +195,7 @@ describe("DiverList empty state", () => {
     const topGap = (element: Element | null) =>
       [...(element?.classList ?? [])].filter((token) => /^m[ty]-/.test(token));
     renderList({ query: "nobody" });
-    const card = screen.getByRole("heading", { name: "No divers match this view." }).parentElement;
+    const card = screen.getByRole("heading", { name: "No divers match this view" }).parentElement;
     cleanup();
     renderList({ rows: [rosterRow()] });
     const ledger = screen.getByRole("list").closest(".flex-col");
@@ -216,7 +216,7 @@ describe("DiverList empty state", () => {
     expect(screen.queryByRole("list")).toBeNull();
     // The one heading that should be there, so this cannot pass by rendering
     // nothing at all.
-    expect(screen.getByRole("heading", { name: "No divers on file yet." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No divers on file yet" })).toBeInTheDocument();
   });
 
   /**
@@ -301,7 +301,7 @@ describe("DiverList empty state", () => {
 
   it("treats a built-in view chip as narrowing too, not as an empty roster", () => {
     renderList({ filter: "needs_attention" });
-    expect(screen.getByText("No divers match this view.")).toBeInTheDocument();
+    expect(screen.getByText("No divers match this view")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Show all divers" })).toBeInTheDocument();
   });
 });

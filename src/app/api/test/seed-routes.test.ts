@@ -95,6 +95,19 @@ const routes: SeedRoute[] = [
     expectPastTheGuard: expectInvalidBody,
   },
   {
+    slug: "seed-visual-links",
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
+    slug: "seed-payment-overlay",
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
+    slug: "seed-payment-overlay",
+    method: "DELETE",
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
     slug: "seed-last-minute-unsubscribe-token",
     expectPastTheGuard: expectInvalidBody,
   },

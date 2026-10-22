@@ -96,7 +96,7 @@ test.describe("staff", () => {
     // 34): its `<h1>`, in the Logbook register, with the next step leading the
     // thread under it and the log entry the day turns into at its foot.
     await expect(
-      page.getByRole("heading", { level: 1, name: "You’ve got a seat, Nora." }),
+      page.getByRole("heading", { level: 1, name: "You’ve got a seat, Nora" }),
     ).toBeVisible();
     await expect(threadStatus(page)).toContainText("Next: sign your waiver.");
     await expect(page.getByText(diver("ready.logEntryWaiting"))).toBeVisible();
@@ -358,9 +358,7 @@ test.describe("staff counts and intent", () => {
     const dayOf = await openThreadStep(page, "dayof");
     await expect(dayOf.getByText("Anything that would help?")).toBeVisible();
     await expect(dayOf.getByText(diver("booking.reEntry.noGate"))).toBeVisible();
-    await dayOf
-      .getByRole("radio", { name: "A word with the divemaster before we get in." })
-      .check();
+    await dayOf.getByRole("radio", { name: "A word with the divemaster before we get in" }).check();
     await dayOf.getByRole("button", { name: "Save day-of details" }).click();
     await expect(
       page.getByRole("status").filter({ hasText: "Saved. The crew will see your answers" }),

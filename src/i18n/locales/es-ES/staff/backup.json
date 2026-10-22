@@ -1,7 +1,7 @@
 {
   "title": "Respaldos",
   "notice": {
-    "saved": "Destino de respaldo guardado.",
+    "saved": "Destino de respaldo guardado",
     "invalid": "Revisa los datos del destino e inténtalo de nuevo.",
     "endpoint-invalid": "Ese endpoint no se lee como una dirección HTTPS simple. Usa el origen de la API S3 de tu proveedor, sin consulta, ruta ni credenciales.",
     "endpoint-not-https": "El endpoint debe empezar con https://",
@@ -55,7 +55,7 @@
   },
   "history": {
     "heading": "Historial de entregas",
-    "empty": "Todavía no hay entregas.",
+    "empty": "Todavía no hay entregas",
     "when": "Cuándo",
     "kind": "Tipo",
     "outcome": "Resultado",

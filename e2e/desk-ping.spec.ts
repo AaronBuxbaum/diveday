@@ -50,7 +50,7 @@ test.describe("the after-hours ping, on a shop of the test's own", () => {
     await page.getByLabel("Closes").fill("17:00");
     await page.getByRole("button", { name: "Save desk hours" }).click();
     // The notice is the wait: the hub strips `?notice=` once it has said it.
-    await expect(page.getByRole("status").filter({ hasText: "Desk hours saved." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Desk hours saved" })).toBeVisible();
 
     await page.getByLabel("Opens").fill("19:00");
     await page.getByRole("button", { name: "Save desk hours" }).click();

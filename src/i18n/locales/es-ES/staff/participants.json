@@ -5,7 +5,7 @@
     "typeUnavailable": "En una sesión de curso, los alumnos siguen buceando y nadie más pasa a bucear. Snorkel y acompañantes necesitan un precio en la sesión.",
     "restoreDiversFull": "No se pudo deshacer. Desde entonces se ocuparon todas las plazas de buceo.",
     "noShowDiversFull": "No se pudo volver a ponerlo. Desde entonces se ocuparon todas las plazas de buceo.",
-    "typeSet": "Guardado.",
+    "typeSet": "Guardado",
     "onBuddyTeam": "Primero sácalo de su pareja de buceo. Una pareja de buceo es solo de buceadores.",
     "certBlocked": "Su tarjeta para esta salida no está en el registro. Revísala primero o cámbialo de todos modos.",
     "closed": "Ya es tarde para ese cambio. Nada cambia cuando el barco ya volvió.",
@@ -13,7 +13,7 @@
     "owed": "Guardado. Su plaza ahora cuesta más, así que debe la diferencia."
   },
   "terms": {
-    "saved": "Guardado.",
+    "saved": "Guardado",
     "invalid": "Revisa los precios y las plazas de buceo. Las plazas de buceo no pueden superar lo que lleva el barco.",
     "heading": "Snorkel y acompañantes",
     "description": "Deja un precio en blanco para que esa plaza no aparezca en el formulario público de reservas. El equipo puede seguir agregando a cualquiera desde la página de la salida.",

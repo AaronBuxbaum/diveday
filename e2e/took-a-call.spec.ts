@@ -80,7 +80,7 @@ test.describe("took a call", () => {
 
     // Lands where the lead now lives, saying so once.
     await page.waitForURL(/\/shop\/blue-mantis\/requests\?notice=call-logged/);
-    await expect(page.getByText("Call logged.")).toBeVisible();
+    await expect(page.getByText("Call logged")).toBeVisible();
     await expect(page.getByText("Wants to dive: A night dive over the holidays")).toBeVisible();
     await expect(page.getByText("Marisol Cabrera E2E")).toBeVisible();
   });
@@ -107,7 +107,7 @@ test.describe("took a call", () => {
     await call.getByRole("button", { name: "Log the call" }).click();
 
     await page.waitForURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]{36}\?notice=diver-waitlisted/);
-    await expect(page.getByText("Diver added to the wait list.")).toBeVisible();
+    await expect(page.getByText("Diver added to the wait list")).toBeVisible();
     await expect(page.getByText("Tobias Fenn E2E").first()).toBeVisible();
   });
 

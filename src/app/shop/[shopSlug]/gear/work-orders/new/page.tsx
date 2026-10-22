@@ -6,8 +6,9 @@ import { keptTypedScope } from "@/components/kept-typed-scope";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { PersonSearchForm } from "@/components/seat-diver/PersonSearchForm";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import {
   ChoiceFieldset,
@@ -114,7 +115,7 @@ export default async function NewWorkOrderPage({
             <p className="mt-3">
               <Link
                 href={`${board}/new`}
-                className="font-medium text-primary text-sm hover:underline"
+                className={`${tapTargetLinkClass} font-medium text-primary text-sm hover:underline`}
               >
                 {t("workOrders.new.chooseAgain")}
               </Link>
@@ -314,7 +315,9 @@ function AddPieceForm({
   status: string | null;
 }) {
   return (
-    <details
+    <CompactDisclosureRow
+      id="add-piece"
+      label={t("workOrders.new.addPieceHeading")}
       className="mt-4"
       // Open when this form has an outcome to show: the save redirects and the
       // page re-renders with the disclosure shut, so the "On the record." it
@@ -323,9 +326,6 @@ function AddPieceForm({
       // render, never `false`, or the reader's own tap cannot open it.
       open={status ? true : undefined}
     >
-      <summary id="add-piece" className="cursor-pointer font-medium text-primary text-sm">
-        {t("workOrders.new.addPieceHeading")}
-      </summary>
       <FieldGrid as="form" action={addCustomerGearItemAction} columns={2} className="mt-4">
         <input type="hidden" name="personId" value={personId} />
         <input type="hidden" name="returnTo" value="new" />
@@ -386,6 +386,6 @@ function AddPieceForm({
           {status ? <FormStatus tone="success">{status}</FormStatus> : null}
         </FieldActions>
       </FieldGrid>
-    </details>
+    </CompactDisclosureRow>
   );
 }

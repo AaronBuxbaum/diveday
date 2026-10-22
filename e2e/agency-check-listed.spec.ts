@@ -9,7 +9,7 @@ const SHOP = "blue-mantis";
 const SEEDED_DIVER = "Tyler Brooks";
 const DEPARTURE = /Two-Tank Reef — French Reef/;
 const LEAD = "SSI also shows these certifications. Add them? Each waits for Mark certified.";
-const ADDED = "Added.";
+const ADDED = "Added";
 
 /**
  * **The other cards the agency's page lists, after a match** (layer 3 of ADR

@@ -10,9 +10,14 @@ import type { IncidentExportDocument } from "@/lib/incident-export";
 export function incidentSummaryRows(
   t: StaffTranslator,
   summary: IncidentExportDocument["departureSummary"],
-): [string, number | string][] {
+): [string, number, string?][] {
+  const passengerCount = staffPassengerCount(t, summary);
   return [
-    [t("incidentExport.summaryDivers"), staffPassengerCount(t, summary)],
+    [
+      t("incidentExport.summaryDivers"),
+      summary.totalDivers,
+      typeof passengerCount === "string" ? passengerCount : undefined,
+    ],
     [t("incidentExport.summaryBoarded"), summary.boarded],
     [t("incidentExport.summaryNotBoarded"), summary.notBoarded],
     [t("incidentExport.summaryAwaiting"), summary.awaiting],

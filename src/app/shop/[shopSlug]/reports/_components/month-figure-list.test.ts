@@ -47,10 +47,17 @@ describe("the net revenue tile's basis line", () => {
   });
 
   it("keeps the imported caveat and adds the counter after it", () => {
+    const t = staffTranslator("en-US");
     const detail = revenueDetail(
       month({ counterCents: 4_000, importedPaymentCents: 2_500, importedFinancialRecordCount: 1 }),
     );
     expect(detail).toMatch(/unverified imported source record/);
-    expect(detail).toMatch(/Plus \$40 at the counter\.$/);
+    expect(detail).toBe(
+      `${t("reports.metrics.revenueDetailWithImported", {
+        count: 1,
+        payments: "$25",
+        refunds: "$0",
+      })} ${t("reports.metrics.revenueCounter", { amount: "$40" })}`,
+    );
   });
 });

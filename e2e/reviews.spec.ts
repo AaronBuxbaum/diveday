@@ -129,7 +129,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   expect(scrolledTo).toBeGreaterThan(0);
 
   await card.getByRole("button", { name: "Publish" }).click();
-  await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
+  await expect(page.getByText("Review published to your schedule page")).toBeVisible();
   expect(await page.evaluate(() => window.scrollY)).toBe(scrolledTo);
   // And the outcome is not smuggled onto the URL either, which is the other
   // half of what the redirect used to do.
@@ -162,9 +162,9 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   const scrolledToStandout = await page.evaluate(() => window.scrollY);
   expect(scrolledToStandout).toBeGreaterThan(0);
   await standout.click();
-  await expect(page.getByText("Review marked as standout.")).toBeVisible();
+  await expect(page.getByText("Review marked as standout")).toBeVisible();
   expect(await page.evaluate(() => window.scrollY)).toBe(scrolledToStandout);
-  await expect(page.getByText("Review marked as standout.")).toBeHidden();
+  await expect(page.getByText("Review marked as standout")).toBeHidden();
 
   // Signed out again, the diver-facing schedule now carries it.
   await page.context().clearCookies();
@@ -202,7 +202,7 @@ test.describe("as owner, reviews list", () => {
     await expect(published.getByLabel("What happened")).toHaveCount(0);
     await published.getByLabel("Why are you taking it down?").selectOption("spam");
     await published.getByRole("button", { name: "Hide this review" }).click();
-    await expect(page.getByRole("status").getByText("Review hidden.")).toBeVisible();
+    await expect(page.getByRole("status").getByText("Review hidden")).toBeVisible();
     // The row leaves the Published group on the revalidate — no page bounce and
     // no badge, and the toast above is what says what happened.
     //
@@ -249,10 +249,10 @@ test.describe("as owner, reviews list", () => {
     await published.getByLabel("Why are you taking it down?").selectOption("wrong_subject");
     await published.getByRole("button", { name: "Hide this review" }).click();
     const toast = page.getByRole("status");
-    await expect(toast.getByText("Review hidden.")).toBeVisible();
+    await expect(toast.getByText("Review hidden")).toBeVisible();
 
     await toast.getByRole("button", { name: "Undo" }).click();
-    await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
+    await expect(page.getByText("Review published to your schedule page")).toBeVisible();
     // Back in the Published group, which is the only place this page writes
     // that word — asked of the group rather than of the row, because the row
     // deliberately says nothing about its own state.

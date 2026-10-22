@@ -66,7 +66,7 @@ test("the diver roster offers role-view chips that drive the filter", { tag: REA
   // On the roster, but not in this view — the assertion that fails if the page
   // ever decorates the URL and hands the unfiltered roster back anyway.
   await expect(rowFor(CONTACT_ON_FILE_DIVER)).toHaveCount(0);
-  await expect(page.getByText("No divers match this view.")).toBeVisible();
+  await expect(page.getByText("No divers match this view")).toBeVisible();
 
   await search.fill("");
   await expect(page).toHaveURL(/\/divers\?filter=missing_contact$/);
@@ -103,7 +103,7 @@ test("the roster narrows to today's divers and to whoever needs a staffer", {
   // A seat on a boat that sails another day is not today's work.
   await search.fill(DIVING_LATER_DIVER);
   await expect(rowFor(DIVING_LATER_DIVER)).toHaveCount(0);
-  await expect(page.getByText("No divers match this view.")).toBeVisible();
+  await expect(page.getByText("No divers match this view")).toBeVisible();
 
   // Clearing the box and tapping a chip straight after is the sequence that
   // used to race: the search drives the URL through a 250ms debounce, and the
@@ -129,7 +129,7 @@ test("the roster narrows to today's divers and to whoever needs a staffer", {
    */
   await search.fill(SETTLED_DIVER);
   await expect(rowFor(SETTLED_DIVER)).toHaveCount(0);
-  await expect(page.getByText("No divers match this view.")).toBeVisible();
+  await expect(page.getByText("No divers match this view")).toBeVisible();
 
   await views.getByRole("link", { name: "All divers" }).click();
   await expect(page).toHaveURL(/\/divers\?q=/);

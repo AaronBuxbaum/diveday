@@ -18,7 +18,7 @@ test("the status page answers an anonymous reader, with no session and no shop",
 }, async ({ page }) => {
   await page.goto("/status");
 
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Everything is running.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Everything is running");
 
   // Both rows, each answering for itself. Scoped to the list rather than the
   // page: the headline says "running" too, and a page-wide text match would
@@ -57,5 +57,5 @@ test("a reader who does not know the address can still get there", { tag: READ_O
   await page.getByRole("contentinfo").getByRole("link", { name: "Status" }).click();
 
   await expect(page).toHaveURL(/\/status$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Everything is running.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Everything is running");
 });

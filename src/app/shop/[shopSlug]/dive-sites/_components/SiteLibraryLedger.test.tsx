@@ -188,7 +188,9 @@ describe("the template provenance", () => {
       { sourceTemplateId: "tpl-1", sourceTemplateVersion: 1 },
       { currentTemplateVersion: new Map([["tpl-1", 3]]) },
     );
-    expect(container.querySelector(".rounded-full")?.textContent).toBe("Template update v3 ready.");
+    expect(container.querySelector(".rounded-full")?.textContent).toBe(
+      t("diveSites.list.templateUpdateReady", { version: 3 }),
+    );
   });
 });
 

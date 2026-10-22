@@ -3,9 +3,13 @@ import type { Browser, Locator, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
+import { DEMO_SHOP_TIMEZONE } from "../src/db/seed-clock";
 import { DEMO_RECAP_BOOKING_ID, LISTED_SHOP_SLUGS } from "../src/db/seed-identifiers";
 import { diverTranslator } from "../src/i18n/messages";
+import { staffPassengerCount } from "../src/i18n/participant-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { calendarDateInTimezone, formatCalendarDate } from "../src/lib/calendar-date";
+import { DAY_MS } from "../src/lib/clock";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
@@ -56,8 +60,20 @@ import {
   walkInFormPath,
   writeCourseForm,
 } from "./helpers";
+import { PAYMENT_HISTORY_CSV } from "./payment-history-fixture";
 import { E2E_FROZEN_CLOCK } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
+import { registerAccountAuditCaptures } from "./visual-audit-account-states";
+import { registerAdditionalAuditCaptures } from "./visual-audit-additional-states";
+import { registerDepartureExpandedAuditCaptures } from "./visual-audit-departure-expanded";
+import { registerDiverExpandedAuditCaptures } from "./visual-audit-diver-expanded";
+import { registerErrorAuditCaptures } from "./visual-audit-error-states";
+import { registerGearStaffOverlayAuditCaptures } from "./visual-audit-gear-staff-overlays";
+import { auditInitialPaint, INITIAL_PAINT_FALLBACK } from "./visual-audit-initial-paint";
+import { registerPrintAuditCaptures } from "./visual-audit-print-states";
+import { registerRemainingExpandedAuditCaptures } from "./visual-audit-remaining-expanded";
+import { registerRequestPaymentOverlayAuditCaptures } from "./visual-audit-request-payment-overlays";
+import { registerStaffAuditCaptures } from "./visual-audit-staff-states";
 
 const staffCopy = staffTranslator("en-US");
 const diverCopy = diverTranslator("en-US");
@@ -705,6 +721,9 @@ function probeContext(page: Page, capture: string, scheme: "light" | "dark", wid
     targets: width === VIEWPORTS[0].width || width === TABLET_VIEWPORT.width,
     titlePath: test.info().titlePath,
     testFile: test.info().file,
+    entryFile: "e2e/visual.spec.ts",
+    exhaustiveAudit: process.env.VISUAL_EXHAUSTIVE_AUDIT === "1",
+    initialPaintAudit: process.env.VISUAL_AUDIT_INITIAL_PAINT === "1",
     atlasSeen: PROBE_ATLAS_SEEN,
     bound: <T>(what: string, ms: number, work: Promise<T>, degraded: T) =>
       withRendererBound(page, what, ms, work, degraded),
@@ -1590,6 +1609,8 @@ async function capture(
   scheme: "light" | "dark",
   options: {
     locale?: typeof SPANISH;
+    /** One-off audit of actual SSR fallbacks with application JavaScript off. */
+    initialPaint?: true;
     /**
      * Run after each width is set and before it is shot, for a mark that does
      * not survive a resize: a focus ring on a field that a narrower width
@@ -1654,25 +1675,31 @@ async function capture(
   // stood photographed a header with no shop name. It is not hypothetical:
   // `public-schedule-new-shop-dark` came back with the placeholder at vw-390
   // and the real chrome at vw-1280 — the same page, one second apart.
-  await page.waitForFunction(
-    () =>
-      !document.querySelector(
-        "main .animate-pulse:not([data-live-pulse]), [data-suspense-placeholder]",
-      ),
-    undefined,
-    {
-      timeout: 15_000,
-    },
-  );
+  if (options.initialPaint) {
+    await expect(page.locator(INITIAL_PAINT_FALLBACK).filter({ visible: true })).not.toHaveCount(0);
+  } else {
+    await page.waitForFunction(
+      () =>
+        !document.querySelector(
+          "main .animate-pulse:not([data-live-pulse]), [data-suspense-placeholder]",
+        ),
+      undefined,
+      {
+        timeout: 15_000,
+      },
+    );
+  }
   // Settings' rail moves to the current row from an effect, after the page has
   // painted, so a capture could catch it at its top or on the row depending on
   // the run (`settings-embed`). The rail marks itself once it has moved.
-  await page.waitForFunction(
-    () => !document.querySelector("[data-settings-rail-scroller]:not([data-rail-settled])"),
-    undefined,
-    { timeout: 15_000 },
-  );
-  await waitForClientFills(page);
+  if (!options.initialPaint) {
+    await page.waitForFunction(
+      () => !document.querySelector("[data-settings-rail-scroller]:not([data-rail-settled])"),
+      undefined,
+      { timeout: 15_000 },
+    );
+    await waitForClientFills(page);
+  }
   // The standard pair, plus the portrait tablet for the five staff surfaces a
   // shop runs on one. Widest last is deliberate: the base viewport is restored
   // below either way, but a capture that fails mid-loop leaves the page at a
@@ -1696,6 +1723,11 @@ async function capture(
     for (const viewport of viewports) {
       await page.setViewportSize(viewport);
       await options.beforeShot?.();
+      if (options.initialPaint) {
+        await expect(
+          page.locator(INITIAL_PAINT_FALLBACK).filter({ visible: true }),
+        ).not.toHaveCount(0);
+      }
       await paintWholeDocument(page);
       const shot = `e2e/screenshots/${baseline}-${scheme}-vw-${viewport.width}.png`;
       await screenshotOrGiveUp(page, shot);
@@ -1717,6 +1749,11 @@ async function capture(
     // running into whatever the test does next.
     if (baseViewport) await page.setViewportSize(baseViewport);
   });
+  if (scheme === "light" && !options.initialPaint) {
+    await auditInitialPaint(page, baseline, withRendererBound, (initialPage, initialName) =>
+      capture(initialPage, initialName, "light", { initialPaint: true }),
+    );
+  }
 }
 
 /**
@@ -1842,6 +1879,17 @@ async function capturePrint(page: Page, name: string) {
   // that reason.
   await withTransitionsOff(page, async () => {
     await page.emulateMedia({ media: "print" });
+    if (process.env.VISUAL_EXHAUSTIVE_AUDIT === "1") {
+      // Save real pagination before the screenshot-only long-sheet rule.
+      // A6 documents keep their own CSS size; other documents use Letter.
+      await paintWholeDocument(page);
+      await page.pdf({
+        path: `e2e/screenshots/${name}-print.pdf`,
+        format: "Letter",
+        preferCSSPageSize: true,
+        printBackground: true,
+      });
+    }
     const statesItsOwnPaper = (await page.locator("style[data-print-sheet]").count()) > 0;
     if (!statesItsOwnPaper) {
       await page.addStyleTag({ content: "@page { size: 8.5in 200in; }" });
@@ -2757,6 +2805,10 @@ for (const scheme of ["light", "dark"] as const) {
         // the form mounting.
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing", scheme);
+        await page.getByLabel("Email", { exact: true }).fill("avery@gmial.com");
+        await page.getByLabel("Email", { exact: true }).press("Tab");
+        await page.getByRole("button", { name: /avery@gmail\.com/ }).waitFor();
+        await capture(page, "booking-email-correction", scheme);
       });
 
       /**
@@ -3005,10 +3057,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByLabel("Review link (optional)", { exact: true })
           .fill("https://g.page/r/blue-mantis/review");
         await reviewSettingsPage.getByRole("button", { name: "Save review link" }).click();
-        await reviewSettingsPage
-          .getByText("Review link saved.")
-          .filter({ visible: true })
-          .waitFor();
+        await reviewSettingsPage.getByText("Review link saved").filter({ visible: true }).waitFor();
         await reviewSettingsContext.close();
 
         await request.post("/api/test/seed-stripe-account");
@@ -3302,6 +3351,10 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByTestId("doctor-evaluation-form").waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "waiver-doctor", scheme);
+        if (scheme === "light") {
+          await page.setViewportSize({ width: 816, height: 1056 });
+          await capturePrint(page, "waiver-doctor-evaluation");
+        }
       });
 
       /**
@@ -3661,6 +3714,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Claim this seat" }).click();
         // Every claim lands on the static "check your email" page (#2381).
         await expect(page).toHaveURL(/\/claim\/[^/?#]+\?sent=1$/);
+        if (scheme === "light") await capture(page, "seat-claim-sent", scheme);
         await page.goto(claimPath ?? "/");
         await page.getByRole("heading", { name: /link isn.t available/ }).waitFor();
         await capture(page, "expired-link-claim", scheme);
@@ -3838,7 +3892,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the switching hub renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching");
         await page
-          .getByRole("heading", { name: "Every guide ends at the same import screen." })
+          .getByRole("heading", { name: "Every guide ends at the same import screen" })
           .waitFor();
         await capture(page, "switching-hub", scheme);
       });
@@ -3863,7 +3917,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/switching/spreadsheet");
-        await page.getByRole("heading", { name: "Bring the spreadsheet with you." }).waitFor();
+        await page.getByRole("heading", { name: "Bring the spreadsheet with you" }).waitFor();
         await capture(page, "switching-spreadsheet", scheme);
       });
 
@@ -3876,7 +3930,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/switching/fareharbor");
         await page
-          .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." })
+          .getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat" })
           .waitFor();
         await capture(page, "switching-fareharbor", scheme);
       });
@@ -3887,7 +3941,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the Rezdy switching guide renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching/rezdy");
         await page
-          .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." })
+          .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat" })
           .waitFor();
         await capture(page, "switching-rezdy", scheme);
       });
@@ -4151,7 +4205,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Returns").fill("12:30");
         await page.getByRole("button", { name: "Put it on the board" }).click();
         await page.waitForURL(new RegExp(`/shop/${unique}\\?created=`));
-        await page.getByRole("heading", { name: "Your shop is bookable." }).waitFor();
+        await page.getByRole("heading", { name: "Your shop is bookable" }).waitFor();
         await capture(page, "today-first-bookable", scheme);
 
         // The orientation's *other* form, on the same shop rather than a
@@ -4184,7 +4238,7 @@ for (const scheme of ["light", "dark"] as const) {
         // ...and proof it is the line and not the card: the two forms share
         // that link, so waiting on it alone would pass on either.
         await expect(
-          page.getByRole("heading", { name: "New here? A few pointers for your role." }),
+          page.getByRole("heading", { name: "New here? A few pointers for your role" }),
         ).toHaveCount(0);
         // **The coral morning, in the same frame** (the canvas's `FirstBooking`
         // board; ADR 20260827-first-light, decision 6). Marisol Vega is this
@@ -4461,7 +4515,7 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * `?blockedAboard=1` boards the first diver the gate clears, by name
        * (Diego Alvarez in the seed), then supersedes the release he signed, so
-       * the row reads "Signed waiver lapsed." — a signature that no longer
+       * the row reads "Signed waiver lapsed" — a signature that no longer
        * stands, never "not sent yet" (`waiver_lapsed`, which renamed it). The
        * reset restores the schedule before the next test, which is what makes
        * it safe to board him here.
@@ -4479,8 +4533,8 @@ for (const scheme of ["light", "dark"] as const) {
         // the capture exists for.
         await page
           .getByRole("listitem")
-          .filter({ hasText: "Aboard" })
-          .filter({ hasText: "Signed waiver lapsed." })
+          .filter({ hasText: staffCopy("today.actionKind.blockedAboard") })
+          .filter({ hasText: staffCopy("today.blockerRow.waiverLapsed", { count: 1 }) })
           .first()
           .waitFor();
         await capture(page, "today-blocked-aboard", scheme);
@@ -5548,6 +5602,11 @@ for (const scheme of ["light", "dark"] as const) {
         ).toBeVisible();
         await capture(page, "trip-roster-participant-types", scheme);
 
+        await page.locator(`summary[aria-label="Details for ${mixedBoat.rider}"]`).click();
+        await page.getByText("Coming as: Rider", { exact: true }).click();
+        await page.locator('select[name="participantType"]:visible').waitFor();
+        await capture(page, "trip-coming-as-editor", scheme);
+
         await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}?view=details`);
         await expect(page.locator("details#participant-terms")).toBeVisible();
         await capture(page, "trip-details-participant-terms", scheme);
@@ -5556,6 +5615,21 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Roll call" }).waitFor();
         await expect(page.getByText(/1 snorkeler · 1 rider/).first()).toBeVisible();
         await capture(page, "manifest-participant-types", scheme);
+        const dismiss = page.getByRole("button", {
+          name: staffCopy("manifest.catchUp.dismiss"),
+          exact: true,
+        });
+        await capture(page, "manifest-catchup-focused", scheme, {
+          // Re-establish real keyboard focus after every resize/probe so the
+          // full target's ring is photographed at both light widths.
+          beforeShot: async () => {
+            await dismiss.focus();
+            await page.keyboard.press("Shift+Tab");
+            await page.keyboard.press("Tab");
+            await expect(dismiss).toBeFocused();
+            expect(await dismiss.evaluate((button) => button.matches(":focus-visible"))).toBe(true);
+          },
+        });
       });
 
       // The add-a-departure form as a shop meets it all week: the quick path,
@@ -5836,6 +5910,36 @@ for (const scheme of ["light", "dark"] as const) {
         // record.
         await page.getByRole("region", { name: "The story" }).waitFor();
         await capture(page, "diver-profile", scheme);
+      });
+
+      test(`a diver's agency verification targets render true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Mateo Duarte", "Mateo Duarte");
+        await openDiverFileGroup(page, "Certification records");
+        await page.getByRole("link", { name: "Check with SSI", exact: true }).waitFor();
+        await capture(page, "diver-agency-verification-link", scheme);
+        await page.evaluate(() => {
+          document.documentElement.setAttribute("data-diveday-cert-check", "1.5.0");
+          window.dispatchEvent(new Event("diveday-cert-check-ready"));
+        });
+        await page.getByRole("button", { name: "Check with SSI", exact: true }).waitFor();
+        await capture(page, "diver-agency-verification-action", scheme);
+      });
+
+      test(`the drysuit observation form keeps its input and action level (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Priya", "Priya Sharma");
+        const gear = await openDiverFileGroup(page, "Gear and sizes");
+        await gear.getByText("Edit", { exact: true }).click();
+        await gear.getByRole("radio", { name: "Own drysuit", exact: true }).check();
+        await gear.getByRole("button", { name: "Save rental fit" }).click();
+        await page.getByText(staffCopy("divers.notices.profileSaved"), { exact: true }).waitFor();
+        await gear.locator(":scope > summary").click();
+        await openDiverFileGroup(page, "Certification records");
+        await page.getByLabel("What you saw").fill("Own drysuit, three shore dives with us");
+        await capture(page, "diver-drysuit-observation-form", scheme);
       });
 
       /**
@@ -6208,7 +6312,7 @@ for (const scheme of ["light", "dark"] as const) {
         const record = page.url().split("?")[0] ?? "";
         await page.getByText("Delete Felix Grant").click();
         await page.getByRole("button", { name: "Delete diver" }).click();
-        await page.getByText("Diver deleted.").waitFor();
+        await page.getByText("Diver deleted").waitFor();
         await page.goto(record);
         // The two ends of the page this capture exists for, waited on by name
         // so the shot can never land on a half-rendered record.
@@ -6233,7 +6337,7 @@ for (const scheme of ["light", "dark"] as const) {
         const record = page.url().split("?")[0] ?? "";
         await page.getByText("Delete Felix Grant").click();
         await page.getByRole("button", { name: "Delete diver" }).click();
-        await page.getByText("Diver deleted.").waitFor();
+        await page.getByText("Diver deleted").waitFor();
         await page.goto(record);
         await page.getByText("Erase Felix Grant’s personal data").click();
         await page.getByLabel("Type Felix Grant to confirm").fill("Felix Gr");
@@ -6482,7 +6586,7 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ visible: true })
           .fill("2020-01-01");
         await page.getByRole("button", { name: "Notify me" }).click();
-        await page.getByRole("heading", { name: "You’re on the list." }).waitFor();
+        await page.getByRole("heading", { name: "You’re on the list" }).waitFor();
 
         // Already signed in: `signedInAsOwner()` is describe-scoped over this
         // block, which is also why the public form above renders with the staff
@@ -6519,7 +6623,7 @@ for (const scheme of ["light", "dark"] as const) {
             .filter({ visible: true })
             .fill("2020-01-01");
           await page.getByRole("button", { name: "Notify me" }).click();
-          await page.getByRole("heading", { name: "You’re on the list." }).waitFor();
+          await page.getByRole("heading", { name: "You’re on the list" }).waitFor();
         };
         // The optional question, skipped — the common answer on a marketing
         // opt-in, and the one a shop can weigh least.
@@ -7955,7 +8059,7 @@ for (const scheme of ["light", "dark"] as const) {
         await inviteSection.getByLabel("Email").fill(email);
         await inviteSection.getByLabel("Instructor", { exact: true }).check();
         await inviteSection.getByRole("button", { name: "Send invite" }).click();
-        await expect(page.getByText("Invite sent.")).toBeVisible();
+        await expect(page.getByText("Invite sent")).toBeVisible();
 
         const seeded = await request.post("/api/test/seed-account-token", {
           data: { email, purpose: "invite" },
@@ -8016,6 +8120,26 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Courses" }).waitFor();
         await page.getByRole("heading", { level: 2, name: "PADI" }).waitFor();
         await capture(page, "courses-list", scheme);
+      });
+
+      test(`course follow-up disclosures share the compact row grammar (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        // The existing recap fixture issues a real shop AOW card. Its frozen
+        // issue date predates the processing cut, and the diver has not taken
+        // the next course, so both of the follow-up disclosures are populated.
+        const seeded = await request.post("/api/test/seed-certified-recap");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await page.goto("/shop/blue-mantis/courses");
+        const earlier = page.locator("#cards-to-process-earlier > summary");
+        await earlier.waitFor();
+        const people = page.getByText("See who", { exact: true });
+        await people.waitFor();
+        await capture(page, "course-follow-ups-closed", scheme);
+        await earlier.click();
+        await people.click();
+        await capture(page, "course-follow-ups-open", scheme);
       });
 
       // A later page of the same ledger: the group heading re-rendering on the
@@ -8104,6 +8228,30 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
         await capture(page, "reports", scheme);
+      });
+
+      test(`imported payment history keeps its report review door visible (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/settings/import");
+        await expect(page.locator('input[type="file"]:visible')).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
+        await page.setInputFiles('input[type="file"]', {
+          name: "payment-history.csv",
+          mimeType: "text/csv",
+          buffer: Buffer.from(PAYMENT_HISTORY_CSV, "utf-8"),
+        });
+        await page.getByRole("button", { name: "Import 1 contact" }).click();
+        await page
+          .getByText(
+            staffCopy("settings.import.wizard.result.paymentHistoryLineOther", { count: 2 }),
+          )
+          .waitFor();
+        await page.goto("/shop/blue-mantis/reports?month=2026-03");
+        await page.getByRole("region", { name: "Unverified imported history" }).waitFor();
+        await capture(page, "reports-imported-history", scheme);
       });
 
       /**
@@ -8820,7 +8968,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.waitForURL(/\/dive-sites\//);
         await page.getByLabel(/Maximum depth/).fill("105");
         await page.getByRole("button", { name: "Save dive site" }).click();
-        await page.getByText("Dive site saved.").waitFor();
+        await page.getByText("Dive site saved").waitFor();
 
         await openReefTrip(page);
         await openTripTab(page, "Trip");
@@ -8858,7 +9006,7 @@ for (const scheme of ["light", "dark"] as const) {
         // button it is about to press.
         await openRosterNotes(row);
         await row.getByRole("button", { name: "Delete" }).click();
-        await page.getByText("Private note deleted.").waitFor();
+        await page.getByText("Private note deleted").waitFor();
         await capture(page, "trip-guests-note-undo", scheme);
       });
 
@@ -9123,10 +9271,26 @@ for (const scheme of ["light", "dark"] as const) {
       test(`Today asks about the bench (${scheme})`, async ({ page, request }) => {
         await request.post("/api/test/seed-trouble-states?bench=1");
         await page.goto("/shop/blue-mantis");
-        await page.getByRole("listitem").filter({ hasText: "not ready yet." }).first().waitFor();
+        const benchDate = (daysAgo: number) =>
+          formatCalendarDate(
+            calendarDateInTimezone(
+              new Date(e2eNow().getTime() - daysAgo * DAY_MS),
+              DEMO_SHOP_TIMEZONE,
+            ),
+            "en-US",
+          );
         await page
           .getByRole("listitem")
-          .filter({ hasText: "and not collected." })
+          .filter({
+            hasText: staffCopy("benchFollowUp.today.pastPromise", { date: benchDate(2) }),
+          })
+          .first()
+          .waitFor();
+        await page
+          .getByRole("listitem")
+          .filter({
+            hasText: staffCopy("benchFollowUp.today.uncollected", { date: benchDate(9) }),
+          })
           .first()
           .waitFor();
         await capture(page, "today-bench", scheme);
@@ -9219,6 +9383,29 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "counter-rental-ticket", scheme);
       });
 
+      test(`a counter tank rental keeps its gas correction controls level (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/gear/rentals/new?q=Priya");
+        await page.getByRole("link", { name: "Rent to Priya Sharma" }).click();
+        await page
+          .getByRole("group", { name: "Kind of gear" })
+          .getByRole("button", { name: /^Tank\b/ })
+          .click();
+        const tank = page
+          .getByRole("button", { name: /^AL(?:80|63)-/ })
+          .and(page.locator(":enabled"))
+          .first();
+        await tank.click();
+        await expect(tank).toHaveAttribute("aria-pressed", "true");
+        await page.getByRole("combobox", { name: /^Fill for / }).selectOption("21");
+        await page.getByRole("radio", { name: /^No charge/ }).check();
+        await page.getByRole("button", { name: "Rent out", exact: true }).click();
+        await page.waitForURL(/\/gear\/rentals\/[0-9a-f-]{36}(?:[?#]|$)/);
+        await page.locator('[data-tank-gas] select[name="fill"]').waitFor();
+        await capture(page, "counter-rental-tank-gas-correction", scheme);
+      });
+
       // The way back to a deleted unit (ADR 20260820-every-delete-is-soft):
       // the Deleted chip in the filter band, and the list whose one act is
       // Restore. Photographed after deleting a unit rather than seeding one —
@@ -9231,7 +9418,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: "Reg #5", exact: true }).click();
         await page.getByRole("heading", { level: 1, name: "Reg #5" }).waitFor();
         await page.getByRole("button", { name: "Delete unit" }).click();
-        await page.getByRole("status").filter({ hasText: "Unit deleted." }).waitFor();
+        await page.getByRole("status").filter({ hasText: "Unit deleted" }).waitFor();
 
         await page.goto("/shop/blue-mantis/gear?view=deleted");
         await page.getByRole("button", { name: "Restore Reg #5" }).waitFor();
@@ -9250,7 +9437,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Reg #5" }).waitFor();
         const record = page.url();
         await page.getByRole("button", { name: "Delete unit" }).click();
-        await page.getByRole("status").filter({ hasText: "Unit deleted." }).waitFor();
+        await page.getByRole("status").filter({ hasText: "Unit deleted" }).waitFor();
 
         await page.goto(record);
         await page.getByRole("button", { name: "Restore unit" }).waitFor();
@@ -9590,6 +9777,62 @@ for (const scheme of ["light", "dark"] as const) {
       test.describe("read in Spanish", () => {
         test.use({ locale: SPANISH });
 
+        test(`a mixed-passenger departure log reads in Spanish without clipping (${scheme})`, async ({
+          page,
+          request,
+        }) => {
+          const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+          expect(seeded.ok()).toBe(true);
+          const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
+          if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
+
+          const copy = staffTranslator(SPANISH);
+          await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}/log`);
+          await page
+            .getByRole("heading", { name: copy("incidentExport.timelineHeading") })
+            .waitFor();
+          const passengerTotal = await page
+            .locator('section[aria-labelledby="incident-roster-heading"] tbody tr')
+            .count();
+          expect(passengerTotal).toBeGreaterThan(2);
+          const passengerTile = page
+            .locator('section[aria-labelledby="incident-summary-heading"] dl > div')
+            .filter({ has: page.getByText(copy("incidentExport.summaryDivers"), { exact: true }) });
+          const figure = passengerTile.locator("dd");
+          expect(await figure.evaluate((value) => value.firstChild?.textContent?.trim())).toBe(
+            String(passengerTotal),
+          );
+          await expect(figure.locator("span")).toHaveText(
+            String(
+              staffPassengerCount(copy, {
+                totalDivers: passengerTotal,
+                byType: { diver: passengerTotal - 2, snorkeler: 1, rider: 1 },
+              }),
+            ),
+          );
+          await capture(page, "departure-log-participant-types", scheme, {
+            locale: SPANISH,
+            beforeShot: async () => {
+              const fits = await passengerTile.evaluate(async (tile) => {
+                await document.fonts.ready;
+                const value = tile.querySelector("dd");
+                const detail = value?.querySelector("span");
+                if (!value || !detail) return false;
+                const bounds = tile.getBoundingClientRect();
+                const range = document.createRange();
+                range.selectNodeContents(detail);
+                return (
+                  value.scrollWidth <= value.clientWidth &&
+                  [...range.getClientRects()].every(
+                    (rect) => rect.left >= bounds.left && rect.right <= bounds.right,
+                  )
+                );
+              });
+              expect(fits, "the complete passenger breakdown fits within its tile").toBe(true);
+            },
+          });
+        });
+
         /**
          * **The missing-divers grid, whose chips are 80px wide.**
          *
@@ -9713,6 +9956,17 @@ for (const scheme of ["light", "dark"] as const) {
     });
   });
 }
+
+registerAccountAuditCaptures(capture, FLOW_TIMEOUT_MS);
+registerAdditionalAuditCaptures(capture);
+registerDepartureExpandedAuditCaptures(capture, FLOW_TIMEOUT_MS);
+registerDiverExpandedAuditCaptures(capture);
+registerErrorAuditCaptures(capture);
+registerGearStaffOverlayAuditCaptures(capture);
+registerStaffAuditCaptures(capture, FLOW_TIMEOUT_MS);
+registerPrintAuditCaptures(capturePrint);
+registerRemainingExpandedAuditCaptures(capture, FLOW_TIMEOUT_MS);
+registerRequestPaymentOverlayAuditCaptures(capture, FLOW_TIMEOUT_MS);
 
 /**
  * The capture harness's own escape hatch, exercised on purpose.
@@ -10139,7 +10393,7 @@ test.describe("print", () => {
   // the capture is deterministic without a pinned id.
   test("the counter card prints A6 with the register code", async ({ page }) => {
     await page.goto("/shop/blue-mantis/print/counter-card");
-    await page.getByRole("heading", { name: "New here? Scan this." }).waitFor();
+    await page.getByRole("heading", { name: "New here? Scan this" }).waitFor();
     await capturePrint(page, "paper-counter-card");
   });
 });
@@ -10399,7 +10653,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByLabel("Dives included").fill("10");
       await page.getByLabel("Price").fill("450");
       await page.getByRole("button", { name: "Add package" }).click();
-      await page.getByText("Package added.").waitFor();
+      await page.getByText("Package added").waitFor();
       await page.goto(`/s/${privateShop.slug}/packages`);
       await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
       await page.getByRole("button", { name: "Buy for $450" }).waitFor();
@@ -10465,7 +10719,7 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "Save rentals" }).click();
       // The page comes back with its saved notice — the destination's own
       // render, not a timing guess.
-      await page.getByText("Rentals saved.").waitFor();
+      await page.getByText("Rentals saved").waitFor();
 
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);

@@ -29,19 +29,19 @@ const say = (history: SiteHistory, locale = "en-US") =>
 describe("siteHistoryText", () => {
   it("says who dived it last and what they saw, in their words", () => {
     expect(say(last())).toBe(
-      "Molasses: last dived Mon, Oct 12 (Sal Moretti): visibility 40 ft, current light, to the north.",
+      "Molasses: last dived Mon, Oct 12 (Sal Moretti): visibility 40 ft, current light, to the north",
     );
     expect(say(last({ current: null, recordedByName: null }))).toBe(
-      "Molasses: last dived Mon, Oct 12: visibility 40 ft.",
+      "Molasses: last dived Mon, Oct 12: visibility 40 ft",
     );
     expect(say(last({ visibility: null, current: null }))).toBe(
-      "Molasses: last dived Mon, Oct 12 (Sal Moretti).",
+      "Molasses: last dived Mon, Oct 12 (Sal Moretti)",
     );
   });
 
   it("says where the boat went instead when the site was planned and moved", () => {
     expect(say(last({ kind: "moved", actualSiteName: "French Reef" }))).toBe(
-      "Molasses: moved to French Reef last time (Mon, Oct 12).",
+      "Molasses: moved to French Reef last time (Mon, Oct 12)",
     );
   });
 

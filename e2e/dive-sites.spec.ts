@@ -2,6 +2,8 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, openTripAbout, openTripMore } from "./helpers";
 
+const staffCopy = staffTranslator("en-US");
+
 test.describe("staff", () => {
   signedInAsOwner();
 
@@ -501,7 +503,9 @@ test.describe("staff", () => {
     // `◆`/`◇` glyph pair and the adopted-version line went back to the site
     // page. `.first()` stays because the assertion is "the library is offering
     // an update", not "exactly one row is".
-    const updateReady = library.getByText("Template update v3 ready.").first();
+    const updateReady = library
+      .getByText(staffCopy("diveSites.list.templateUpdateReady", { version: 3 }), { exact: true })
+      .first();
 
     await page.goto("/shop/blue-mantis/dive-sites");
     await expect(existing).toHaveCount(1);
@@ -695,7 +699,7 @@ test.describe("staff", () => {
 
     await first.getByLabel("What makes this site special?").fill("Written by the first tab");
     await first.getByRole("button", { name: "Save dive site" }).click();
-    await expect(first.getByText("Dive site saved.")).toBeVisible();
+    await expect(first.getByText("Dive site saved")).toBeVisible();
 
     // The second tab is still holding the generation it opened with.
     await secondNote.fill("Written by the second tab");
@@ -839,7 +843,7 @@ test.describe("an owner's own library", () => {
     await landmarks.getByLabel("What kind").last().selectOption("reefHistory");
 
     await page.getByRole("button", { name: "Save dive site" }).click();
-    await expect(page.getByText("Dive site saved.")).toBeVisible();
+    await expect(page.getByText("Dive site saved")).toBeVisible();
 
     // Round-trips: the chosen species and the landmark come back as the shop
     // left them, and the refused one never landed.
@@ -951,7 +955,7 @@ test.describe("a site whose station is nowhere near it", () => {
     // is about the pairing the row already holds.
     await page.getByRole("checkbox", { name: "This is the right station for this site" }).check();
     await page.getByRole("button", { name: "Save dive site" }).click();
-    await page.getByText("Dive site saved.").waitFor();
+    await page.getByText("Dive site saved").waitFor();
 
     // Gone — and the box stays on the page, ticked, so the shop can take the
     // answer back. A tick that hides its own control is an answer nobody can
@@ -965,7 +969,7 @@ test.describe("a site whose station is nowhere near it", () => {
     // over and the question is put again.
     await page.getByLabel("NOAA tide station").fill("8723583");
     await page.getByRole("button", { name: "Save dive site" }).click();
-    await page.getByText("Dive site saved.").waitFor();
+    await page.getByText("Dive site saved").waitFor();
     await expect(page.getByText(/so the turn it predicts can reach this water/)).toBeVisible();
     await expect(
       page.getByRole("checkbox", { name: "This is the right station for this site" }),

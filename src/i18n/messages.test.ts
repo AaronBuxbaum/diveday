@@ -87,10 +87,10 @@ describe("diverTranslator", () => {
 
   it("interpolates ICU arguments", () => {
     expect(diverTranslator("en-US")("booking.waitlistConfirmedHeading", { name: "Marta" })).toBe(
-      "You’re on the wait list, Marta.",
+      "You’re on the wait list, Marta",
     );
     expect(diverTranslator("es-ES")("booking.waitlistConfirmedHeading", { name: "Marta" })).toBe(
-      "Estás en la lista de espera, Marta.",
+      "Estás en la lista de espera, Marta",
     );
   });
 

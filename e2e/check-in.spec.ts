@@ -702,7 +702,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // row says it in both halves: the button becomes a re-send, and the line
   // under it dates the invite.
   await expect(page.getByRole("status").filter({ hasText: /Sending/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Re-send invite" })).toBeVisible({
+  await expect(page.getByRole("button", { name: "Resend invite" })).toBeVisible({
     timeout: HELD_SEND_TIMEOUT_MS,
   });
   await expect(page.getByText("Invited just now")).toBeVisible();
@@ -890,7 +890,7 @@ test("Today's arrival search says who is on file but not arriving today", async 
   await search.press("Enter");
 
   const elsewhere = page.getByTestId("arrival-elsewhere");
-  await expect(elsewhere.getByText("Not arriving today.")).toBeVisible();
+  await expect(elsewhere.getByText("Not arriving today")).toBeVisible();
   await expect(elsewhere.getByText("Zephyrine Quayside has nothing booked.")).toBeVisible();
   await elsewhere.getByRole("link", { name: "Open Zephyrine Quayside’s record" }).click();
   await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);

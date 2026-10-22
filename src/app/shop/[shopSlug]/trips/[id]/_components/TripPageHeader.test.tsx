@@ -89,6 +89,39 @@ describe("TripPageHeader", () => {
     const title = screen.getByRole("heading", { level: 1 });
     expect(title.parentElement?.children).toHaveLength(1);
   });
+
+  it("keeps a surface-only action in one slot beside the title", () => {
+    renderHeader(<button type="button">More</button>);
+
+    const titleRow = screen.getByRole("heading", { level: 1 }).parentElement;
+    const actionSlot = screen.getByRole("button", { name: "More" }).parentElement;
+    // The slot is the responsive hiding boundary; a second wrapper would
+    // reserve a title-row gap after the surface hides its action.
+    expect(actionSlot?.parentElement).toBe(titleRow);
+  });
+
+  it("keeps an aside fact separate from the surface's action slot", () => {
+    render(
+      <TripPageHeader
+        trip={{
+          title: "Two-Tank Reef",
+          startsAt: new Date("2026-07-21T18:30:00Z"),
+          endsAt: new Date("2026-07-21T22:00:00Z"),
+        }}
+        boardHref="/shop/blue-mantis/schedule/board"
+        backLabel="Schedule"
+        locale="en-US"
+        timeZone="America/New_York"
+        headerAside={<span>12 seats left</span>}
+        actionsClassName="lg:hidden"
+        actions={<button type="button">More</button>}
+      />,
+    );
+    const fact = screen.getByText("12 seats left");
+    const actionSlot = screen.getByRole("button", { name: "More" }).parentElement;
+    expect(actionSlot?.parentElement).toBe(fact.parentElement);
+    expect(actionSlot).not.toContainElement(fact);
+  });
 });
 
 function loadedHeader() {

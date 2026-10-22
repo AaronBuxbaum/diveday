@@ -5,8 +5,8 @@
     "recapHeld": "Los resúmenes quedan retenidos hasta que se corrija el pase de lista.",
     "recapNotReady": "Los resúmenes no se pueden enviar hasta cuatro horas después del final de la salida.",
     "recapLocked": "Este resumen ya se envió. Ya no se pueden cambiar la nota ni las fotos.",
-    "crewPhotoAdded": "Foto del equipo agregada a esta salida.",
-    "crewPhotoRemoved": "Foto del equipo eliminada.",
+    "crewPhotoAdded": "Foto del equipo agregada a esta salida",
+    "crewPhotoRemoved": "Foto del equipo eliminada",
     "crewPhotoLimit": "Esta salida ya tiene el máximo de fotos del equipo.",
     "crewPhotoUnsupported": "La carga de fotos todavía no está configurada para este centro.",
     "crewPhotoFailed": "No se pudo agregar esa foto. Revisa el archivo e inténtalo de nuevo.",
@@ -14,7 +14,7 @@
     "unknownPerson": "Ese buceador no está en los registros de este centro, así que no se guardó nada."
   },
   "pastDay": {
-    "empty": "Ese día no salió ningún barco.",
+    "empty": "Ese día no salió ningún barco",
     "countedLater": "contado más tarde, el {date}",
     "crewNotCounted": "La tripulación no se contó.",
     "resolvedNotBack": "Se registró que un buceador no volvió a bordo tras la inmersión {dive}; consulta el pase de lista."
@@ -77,8 +77,8 @@
   },
   "takings": {
     "heading": "Lo que hizo hoy",
-    "tips": "Y {amount} en propinas.",
-    "tipsOnBoat": "Y {amount} en propinas en {boat}.",
+    "tips": "Y {amount} en propinas",
+    "tipsOnBoat": "Y {amount} en propinas en {boat}",
     "imported": "{count, plural, one {Incluye # registro importado que Stripe no ha confirmado.} other {Incluye # registros importados que Stripe no ha confirmado.}}",
     "boatTips": "{time} {boat}: {amount}"
   },

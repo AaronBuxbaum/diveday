@@ -153,7 +153,7 @@ test.describe("weather blow-out cascade", () => {
     await expect(page.getByRole("status")).toContainText("Blow-out called");
     await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
     await expect(
-      page.getByText("No divers were booked when the blow-out was called."),
+      page.getByText("No divers were booked when the blow-out was called"),
     ).toBeVisible();
   });
 

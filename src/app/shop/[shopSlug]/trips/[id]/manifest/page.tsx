@@ -215,9 +215,9 @@ export default async function TripManifestPage({
         // every checkpoint" captioned a page its tab already names; the
         // checkpoint nav and the panel below say what to do, and the per-row
         // summaries carry the contacts (copy-restraint, 2026-08-21).
-        // Printing is an Overall-tab action. The manifest is the live dock
-        // surface; keeping a second current-page printer here made it unclear
-        // whether staff were getting the full packet or only this tab.
+        // Printing belongs to the trip's main tab; a second printer here
+        // obscured whether it printed the full packet or only this live tab.
+        actionsClassName="lg:hidden"
         actions={
           <ManifestMoreMenu
             variant="header"

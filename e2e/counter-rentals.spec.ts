@@ -96,7 +96,7 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
 
     // The ticket: who, what, and the one date that matters.
-    await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Rented out" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: CUSTOMER })).toBeVisible();
     const units = page.getByRole("list").filter({ hasText: "Mask #2" });
     await expect(units).toContainText("Fins #2");
@@ -114,9 +114,9 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Send waiver" })).toBeVisible();
 
     await page.getByRole("button", { name: "Hand over" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Handed over" })).toBeVisible();
     await page.getByRole("button", { name: "All good" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Back on the wall." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Back on the wall" })).toBeVisible();
     // Nothing is left to hand over or bring back.
     await expect(page.getByRole("button", { name: "All good" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Hand over" })).toHaveCount(0);
@@ -130,9 +130,9 @@ test.describe("staff", () => {
     await pickUnit(page, "Fins", "Fins #2");
     await payBy(page, "No charge");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Rented out" })).toBeVisible();
     await page.getByRole("button", { name: "Hand over" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Handed over" })).toBeVisible();
 
     await page.getByRole("button", { name: "Service concern" }).click();
     // An open concern hides the fast answers: "All good" would drop the note.
@@ -155,9 +155,9 @@ test.describe("staff", () => {
     await pickUnit(page, "Mask", "Mask #3");
     await payBy(page, "No charge");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Rented out" })).toBeVisible();
     await page.getByRole("button", { name: "Hand over" }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Handed over." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Handed over" })).toBeVisible();
 
     await page.goto("/shop/blue-mantis/gear");
     await expect(page.getByRole("heading", { level: 2, name: /^Out/ })).toBeVisible();
@@ -204,7 +204,7 @@ test.describe("staff", () => {
     await pickUnit(page, "Mask", "Mask #3");
     await payBy(page, "No charge");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Rented out" })).toBeVisible();
     await page.getByRole("button", { name: "Release" }).click();
     // Every unit let go leaves no ticket; the register says so.
     await expect(page.getByRole("heading", { level: 1, name: "Gear" })).toBeVisible();
@@ -216,7 +216,7 @@ test.describe("staff", () => {
     await pickUnit(page, "Fins", "Fins #3");
     await payBy(page, "No charge");
     await page.getByRole("button", { name: "Rent out", exact: true }).click();
-    await expect(page.getByRole("status").filter({ hasText: "Rented out." })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Rented out" })).toBeVisible();
     const ticket = page.url().split("?")[0];
 
     await page.goto(`/shop/blue-mantis/divers/${personId}`);
