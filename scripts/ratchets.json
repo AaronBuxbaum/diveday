@@ -700,7 +700,7 @@
     "src/db/reminders.ts#sendDueReminders": 312,
     "src/db/reporting.ts#getMonthlyReport": 333,
     "src/db/seed-dive-sites.ts#seedDiveSites": 440,
-    "src/db/seed-history.ts#seedHistory": 720,
+    "src/db/seed-history.ts#seedHistory": 680,
     "src/db/seed-more-trips.ts#seedMoreTrips": 633,
     "src/db/seed-trips.ts#seedTrips": 384,
     "src/lib/import.ts#prepareContactImport": 472

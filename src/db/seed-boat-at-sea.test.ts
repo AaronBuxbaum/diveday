@@ -1,0 +1,149 @@
+import { and, desc, eq, inArray } from "drizzle-orm";
+import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
+import { fileScopedShopContext } from "@/test/db";
+import { getTripManifest } from "./manifests";
+import { listTripReadiness } from "./readiness";
+import {
+  boats,
+  buddyPairMembers,
+  people,
+  rollCallCrewEvents,
+  rollCallEvents,
+  tripAssignments,
+  tripLenses,
+  tripStageEvents,
+  trips,
+} from "./schema";
+import { AT_SEA_ABOARD, AT_SEA_DAY_TITLE, AT_SEA_STILL_DOWN } from "./seed-boat-at-sea";
+import { OWNER_NAME } from "./seed-cast";
+import { crewClashes } from "./trips-crew";
+
+/**
+ * **The demo has a boat at sea, halfway through her roll call** (market sheet
+ * 2026-10-22, item 1): at the frozen 9:30 AM clock she sailed at 6:30, dive 1
+ * is counted, and dive 2's count reads nine of eleven back aboard with one
+ * buddy pair still down. Every word of the record is behind the clock.
+ */
+describe("the boat at sea", () => {
+  const context = fileScopedShopContext({ history: true });
+
+  async function boatAtSea() {
+    const { db, shop } = context;
+    const [trip] = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), eq(trips.title, AT_SEA_DAY_TITLE)));
+    if (!trip) throw new Error("expected the boat at sea");
+    return { db, shop, trip };
+  }
+
+  it("is underway, on a hull, with her owner skippering", async () => {
+    const { db, trip } = await boatAtSea();
+    const [stage] = await db
+      .select({ stage: tripStageEvents.stage, by: tripStageEvents.recordedByPersonId })
+      .from(tripStageEvents)
+      .where(eq(tripStageEvents.tripId, trip.id))
+      .orderBy(desc(tripStageEvents.recordedAt))
+      .limit(1);
+    expect(stage?.stage).toBe("underway");
+    expect(trip.startsAt.getTime()).toBeLessThan(nowDate().getTime());
+    expect(trip.endsAt.getTime()).toBeGreaterThan(nowDate().getTime());
+    const [hull] = await db
+      .select({ name: boats.name })
+      .from(boats)
+      .where(eq(boats.id, trip.boatId ?? ""));
+    expect(hull?.name).toBe("Mantis I");
+    const [skipper] = await db
+      .select({ fullName: people.fullName, id: people.id })
+      .from(tripAssignments)
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.tripRole, "captain")));
+    expect(skipper?.fullName).toBe(OWNER_NAME);
+    expect(stage?.by).toBe(skipper?.id);
+    const [lens] = await db
+      .select({ name: tripLenses.name })
+      .from(tripLenses)
+      .where(eq(tripLenses.id, trip.lensId ?? ""));
+    expect(lens?.name).toBe("Easygoing reef");
+  });
+
+  it("carries only divers the boarding gate clears", async () => {
+    const { db, shop, trip } = await boatAtSea();
+    const readiness = await listTripReadiness(db, shop.id, trip.id);
+    expect(readiness).toHaveLength(AT_SEA_ABOARD);
+    expect(readiness.every((row) => row.readiness.status === "ready")).toBe(true);
+  });
+
+  it("has dive 1 counted and dive 2 open: nine of eleven back aboard, one buddy pair down", async () => {
+    const { db, shop, trip } = await boatAtSea();
+    const afterDiveOne = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
+    expect(afterDiveOne?.summary.boarded).toBe(AT_SEA_ABOARD);
+    expect(afterDiveOne?.summary.awaiting).toBe(0);
+    const afterDiveTwo = await getTripManifest(db, shop.id, trip.id, "after_dive_2");
+    expect(afterDiveTwo?.summary.totalDivers).toBe(AT_SEA_ABOARD);
+    expect(afterDiveTwo?.summary.boarded).toBe(AT_SEA_ABOARD - AT_SEA_STILL_DOWN);
+    expect(afterDiveTwo?.summary.awaiting).toBe(AT_SEA_STILL_DOWN);
+    // Nobody is reported missing: two names are still to call, that is all.
+    expect(afterDiveTwo?.summary.notBackAboard).toBe(0);
+
+    const counted = await db
+      .select({ bookingId: rollCallEvents.bookingId })
+      .from(rollCallEvents)
+      .where(
+        and(eq(rollCallEvents.tripId, trip.id), eq(rollCallEvents.checkpoint, "after_dive_2")),
+      );
+    const roster = readinessIds(await listTripReadiness(db, shop.id, trip.id));
+    const down = roster.filter((id) => !counted.some((row) => row.bookingId === id));
+    expect(down).toHaveLength(AT_SEA_STILL_DOWN);
+    const teams = await db
+      .select({ pairId: buddyPairMembers.pairId })
+      .from(buddyPairMembers)
+      .where(inArray(buddyPairMembers.bookingId, down));
+    expect(new Set(teams.map((row) => row.pairId)).size).toBe(1);
+  });
+
+  it("keeps a guide down with the last pair, her own count still open", async () => {
+    const { db, trip } = await boatAtSea();
+    const counted = await db
+      .select({ personId: rollCallCrewEvents.personId })
+      .from(rollCallCrewEvents)
+      .where(
+        and(
+          eq(rollCallCrewEvents.tripId, trip.id),
+          eq(rollCallCrewEvents.checkpoint, "after_dive_2"),
+        ),
+      );
+    const guides = await db
+      .select({ personId: tripAssignments.personId })
+      .from(tripAssignments)
+      .where(and(eq(tripAssignments.tripId, trip.id), eq(tripAssignments.tripRole, "divemaster")));
+    const stillDown = guides.filter(
+      (guide) => !counted.some((row) => row.personId === guide.personId),
+    );
+    expect(stillDown).toHaveLength(1);
+  });
+
+  it("writes no word ahead of the clock", async () => {
+    const { db, trip } = await boatAtSea();
+    const now = nowDate().getTime();
+    const divers = await db
+      .select({ at: rollCallEvents.occurredAt })
+      .from(rollCallEvents)
+      .where(eq(rollCallEvents.tripId, trip.id));
+    const crew = await db
+      .select({ at: rollCallCrewEvents.occurredAt })
+      .from(rollCallCrewEvents)
+      .where(eq(rollCallCrewEvents.tripId, trip.id));
+    for (const row of [...divers, ...crew]) expect(row.at.getTime()).toBeLessThanOrEqual(now);
+  });
+
+  it("puts nobody on two hulls at once", async () => {
+    const { db, shop, trip } = await boatAtSea();
+    expect(await crewClashes(db, shop.id, trip.id, nowDate())).toEqual([]);
+  });
+});
+
+function readinessIds(rows: { booking: { id: string } }[]): string[] {
+  return rows.map((row) => row.booking.id);
+}

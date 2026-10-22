@@ -89,16 +89,6 @@ export function hoursFromNow(hours: number, from = nowDate()): Date {
   return new Date(Math.ceil(d.getTime() / step) * step);
 }
 
-/**
- * Start of the seeded departure that must sail *today in the shop's timezone*.
- * Within five hours of local midnight the plain now+5h offset rounds into
- * tomorrow, which empties the departure board the demo (and the Today tests)
- * are built around — so it clamps to the last half-hour slot that still sails
- * today. Even in the final half hour before local midnight, when no
- * half-hour-rounded slot is left, this still returns a same-day moment (the
- * earliest still-future instant) rather than concede to tomorrow: "today
- * always has a board" has no exception.
- */
 /** The earliest local hour today's seeded departure leaves: after the dawn boat docks. */
 export const DEMO_DAY_FIRST_SAILING_HOUR = 9;
 
@@ -118,15 +108,36 @@ export const DEMO_DAWN_BOAT = {
   docks: { hour: 8, minute: 30 },
 } as const;
 
+/**
+ * When the readiness departure sails once the day boats are done: tomorrow,
+ * after the shop's 7:00 morning boat (`seed-more-trips.ts`) is back at 10:30
+ * with the same crew aboard.
+ */
+export const DEMO_NEXT_MORNING_SAILING = { hour: 11, minute: 30 } as const;
+
+/**
+ * **Start of the demo's readiness departure**: the boat the Today queue, the
+ * arrivals desk and the manifest specs are built around, with one diver still
+ * to clear.
+ *
+ * Five hours out, rounded to a half-hour slot, and never before the dawn boat
+ * is back (`DEMO_DAY_FIRST_SAILING_HOUR`): the same captain and divemaster
+ * crew both, and a demo seeded in the small hours put them on two boats at
+ * once (UX audit 2026-10-07, item 4).
+ *
+ * **Never after the day boats** (market sheet 2026-10-22, item 1). Seeded in
+ * the shop's evening, this used to clamp to the last slot before midnight, so
+ * the public page led with "Next boat with space · 11:30 PM today" over an
+ * "11:30 PM – 3:00 AM" night dive. A shop's next boat after dark is tomorrow
+ * morning's, so that is where it sails; the boat at sea that evening is
+ * `demoAtSeaDeparture`'s, and the dawn boat keeps today's board from ever
+ * being empty.
+ */
 export function demoTodayDepartureStart(
   now = nowDate(),
   timeZone: string = DEMO_SHOP_TIMEZONE,
 ): Date {
   const localDay = (date: Date) => toDateInputValue(utcToWallTime(date, timeZone));
-  // Never before the dawn boat is back. The same captain and divemaster crew
-  // `DEMO_COMPLETED_TRIP_TITLE` (5:30 to 8:30 AM, `seed-more-trips.ts`), so a
-  // demo seeded in the small hours put them on two boats at once and opened
-  // Today on "Crew on two departures" (UX audit 2026-10-07, item 4).
   const firstSlotAfterDawnBoat = wallTimeToUtc(
     { ...utcToWallTime(now, timeZone), hour: DEMO_DAY_FIRST_SAILING_HOUR, minute: 0 },
     timeZone,
@@ -136,24 +147,17 @@ export function demoTodayDepartureStart(
     fiveHoursOut.getTime() < firstSlotAfterDawnBoat.getTime()
       ? firstSlotAfterDawnBoat
       : fiveHoursOut;
-  if (localDay(candidate) === localDay(now)) return candidate;
-  const lastSlotToday = wallTimeToUtc(
-    { ...utcToWallTime(now, timeZone), hour: 23, minute: 30 },
-    timeZone,
-  );
-  if (lastSlotToday.getTime() > now.getTime()) return lastSlotToday;
-  const wall = utcToWallTime(now, timeZone);
-  const midnight = wallTimeToUtc({ ...wall, day: wall.day + 1, hour: 0, minute: 0 }, timeZone);
-  return new Date(Math.min(now.getTime() + 60 * 1000, midnight.getTime() - 1000));
+  if (localDay(candidate) === localDay(now) && !sailsAfterDayBoats(candidate, timeZone)) {
+    return candidate;
+  }
+  const tomorrow = utcToWallTime(new Date(now.getTime() + DAY_MS), timeZone);
+  return wallTimeToUtc({ ...tomorrow, ...DEMO_NEXT_MORNING_SAILING }, timeZone);
 }
 
 /**
  * The latest local wall time a day boat leaves, in minutes after midnight
- * (issue #2440). A demo seeded in the shop's evening has no day-boat slot left
- * today, and `demoTodayDepartureStart` still has to put a boat on today's
- * board, so it sails late; past this time it is named as the night dive it
- * would be (`nameDemoNightDeparture`, `seed-trips.ts`) rather than read as a
- * two-tank reef trip leaving at 11:30 PM.
+ * (issue #2440). Past it, the readiness departure sails tomorrow morning
+ * instead (`demoTodayDepartureStart`).
  */
 export const DEMO_DAY_LAST_SAILING_MINUTE = 20 * 60;
 
@@ -190,52 +194,148 @@ export function demoTodayShift(
 /**
  * **Every shift one member of the demo cast works today.** The crew (`crew`:
  * the captain, the divemaster and the assistant, who crew both the dawn boat
- * and today's departure) work the shift around today's departure
+ * and the readiness departure) work the shift around that departure
  * (`demoTodayShift`), and from an hour before the dawn boat sails to an hour
  * after it docks, 4:30 to 9:30; the shared shift never starts before 8:00, so
  * without this the staffing week flagged the demo's own crew on a boat they
- * were not rostered for (dive-domain review of the demo layer). Where the two
- * touch or overlap they are one shift, because nobody clocks out at 8:00 to
- * clock back in at 8:00.
+ * were not rostered for (dive-domain review of the demo layer).
  *
- * Everyone else works the same shift around today's departure by day, and the
- * desk's own day when that departure is a night boat: a demo seeded in the
- * evening put the owner and both instructors, who crew nothing, on a
+ * Everyone else works the same shift around the readiness departure when it
+ * sails today, and the desk's own day when it sails tomorrow: a demo seeded in
+ * the evening put the owner and both instructors, who crew nothing, on a
  * "10:30 PM – 12:00 AM" shift beside the crew (UX review 2026-10-13, item 40).
+ *
+ * The boat at sea's crew (`atSea`) also work from an hour before she sailed
+ * to an hour after she is due back (`demoAtSeaDeparture`).
+ *
+ * Where two shifts touch or overlap they are one, because nobody clocks out
+ * at 8:00 to clock back in at 8:00.
  */
 export function demoTodayShifts(
   now = nowDate(),
   timeZone: string = DEMO_SHOP_TIMEZONE,
-  { crew }: { crew: boolean },
+  { crew, atSea = false }: { crew: boolean; atSea?: boolean },
 ): { startsAt: Date; endsAt: Date }[] {
+  const hour = 60 * 60 * 1000;
   const shared = demoTodayShift(now, timeZone);
   const sails = demoTodayDepartureStart(now, timeZone);
-  const day = utcToWallTime(sails, timeZone);
-  if (!crew) {
-    if (!sailsAfterDayBoats(sails, timeZone)) return [shared];
-    return [
-      {
-        startsAt: wallTimeToUtc({ ...day, ...DEMO_DESK_DAY.opens }, timeZone),
-        endsAt: wallTimeToUtc({ ...day, ...DEMO_DESK_DAY.closes }, timeZone),
-      },
-    ];
+  const today = utcToWallTime(now, timeZone);
+  const sailsToday = toDateInputValue(utcToWallTime(sails, timeZone)) === toDateInputValue(today);
+  const shifts: { startsAt: Date; endsAt: Date }[] = [];
+  if (crew) {
+    shifts.push(shared, {
+      startsAt: new Date(
+        wallTimeToUtc({ ...today, ...DEMO_DAWN_BOAT.sails }, timeZone).getTime() - hour,
+      ),
+      endsAt: new Date(
+        wallTimeToUtc({ ...today, ...DEMO_DAWN_BOAT.docks }, timeZone).getTime() + hour,
+      ),
+    });
+  } else if (sailsToday) {
+    shifts.push(shared);
+  } else {
+    shifts.push({
+      startsAt: wallTimeToUtc({ ...today, ...DEMO_DESK_DAY.opens }, timeZone),
+      endsAt: wallTimeToUtc({ ...today, ...DEMO_DESK_DAY.closes }, timeZone),
+    });
   }
-  const hour = 60 * 60 * 1000;
-  const dawn = {
-    startsAt: new Date(
-      wallTimeToUtc({ ...day, ...DEMO_DAWN_BOAT.sails }, timeZone).getTime() - hour,
-    ),
-    endsAt: new Date(wallTimeToUtc({ ...day, ...DEMO_DAWN_BOAT.docks }, timeZone).getTime() + hour),
+  const boat = atSea ? demoAtSeaDeparture(now, timeZone) : null;
+  if (boat) {
+    const dayEnds = shopDayBounds(boat.startsAt, timeZone).to;
+    shifts.push({
+      startsAt: new Date(boat.startsAt.getTime() - hour),
+      endsAt: new Date(Math.min(boat.endsAt.getTime() + hour, dayEnds.getTime())),
+    });
+  }
+  return mergeShifts(shifts);
+}
+
+/** Shifts in order, any two that touch or overlap made one. */
+function mergeShifts(
+  shifts: readonly { startsAt: Date; endsAt: Date }[],
+): { startsAt: Date; endsAt: Date }[] {
+  const merged: { startsAt: Date; endsAt: Date }[] = [];
+  for (const shift of [...shifts].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())) {
+    const last = merged.at(-1);
+    if (last && shift.startsAt.getTime() <= last.endsAt.getTime()) {
+      last.endsAt = new Date(Math.max(last.endsAt.getTime(), shift.endsAt.getTime()));
+    } else {
+      merged.push({ startsAt: shift.startsAt, endsAt: shift.endsAt });
+    }
+  }
+  return merged;
+}
+
+/** A dive's minutes in the water on the boat at sea, before its count. */
+const AT_SEA_DIVE_ONE = { entered: 25, exited: 70, counted: 75 } as const;
+/** How long before `now` the boat at sea's second dive went in. */
+const AT_SEA_DIVE_TWO_ENTERED_BEFORE_NOW_MIN = 50;
+/** How far behind `now` her sailing is placed, before rounding down to a half hour. */
+const AT_SEA_SAILED_BEFORE_NOW_MIN = 165;
+/** The earliest and latest local times the boat at sea sails. */
+const AT_SEA_EARLIEST_SAILING = { hour: 6, minute: 30 } as const;
+const AT_SEA_LATEST_SAILING = { hour: 19, minute: 30 } as const;
+/** From this local time on, the boat at sea is the dusk-and-night two-tank. */
+const AT_SEA_DUSK_SAILING_MINUTE = 17 * 60 + 30;
+
+/** The boat at sea's hours and the moments her record is written at. */
+export type DemoAtSeaDeparture = {
+  startsAt: Date;
+  endsAt: Date;
+  diveOne: { enteredAt: Date; exitedAt: Date; countedAt: Date };
+  /** When the second dive went in; its count is the one still open. */
+  diveTwoEnteredAt: Date;
+  /** Sails at dusk, so the second dive is in the dark. */
+  afterDark: boolean;
+};
+
+/**
+ * **The boat at sea, halfway through her roll call** (market sheet
+ * 2026-10-22, item 1). Whatever hour the demo is opened or reset, one boat is
+ * underway with dive 1 counted and dive 2's count open. Every moment is
+ * relative to `now`, the instant the demo is seeded, so nothing is written
+ * ahead of the clock:
+ *
+ * - she sailed on a half-hour slot about two and three quarter hours ago,
+ *   so the surface interval after dive 1 runs 40 to 70 minutes;
+ * - dive 1 went in 25 minutes after the lines came off, came up at 70, and was
+ *   counted at 75;
+ * - dive 2 went in fifty minutes ago, and most of the boat has surfaced from
+ *   it in the last few minutes;
+ * - she is due back three and a half hours after sailing, at least a quarter
+ *   of an hour from now.
+ *
+ * From a 5:30 PM sailing she is the dusk-and-night two-tank (`afterDark`).
+ * **Null outside the hours a boat is plausibly mid-dive**: she never sails
+ * before 6:30 AM or after 7:30 PM, so a demo opened before about 9:15 AM or
+ * after about 10:45 PM has nobody at sea, as no shop would at that hour.
+ */
+export function demoAtSeaDeparture(
+  now = nowDate(),
+  timeZone: string = DEMO_SHOP_TIMEZONE,
+): DemoAtSeaDeparture | null {
+  const minute = 60 * 1000;
+  const step = 30 * minute;
+  const startsAt = new Date(
+    Math.floor((now.getTime() - AT_SEA_SAILED_BEFORE_NOW_MIN * minute) / step) * step,
+  );
+  const wall = utcToWallTime(startsAt, timeZone);
+  const sailsAt = wall.hour * 60 + wall.minute;
+  const earliest = AT_SEA_EARLIEST_SAILING.hour * 60 + AT_SEA_EARLIEST_SAILING.minute;
+  const latest = AT_SEA_LATEST_SAILING.hour * 60 + AT_SEA_LATEST_SAILING.minute;
+  if (sailsAt < earliest || sailsAt > latest) return null;
+  const after = (minutes: number) => new Date(startsAt.getTime() + minutes * minute);
+  return {
+    startsAt,
+    endsAt: new Date(startsAt.getTime() + DEMO_TODAY_DEPARTURE_MS),
+    diveOne: {
+      enteredAt: after(AT_SEA_DIVE_ONE.entered),
+      exitedAt: after(AT_SEA_DIVE_ONE.exited),
+      countedAt: after(AT_SEA_DIVE_ONE.counted),
+    },
+    diveTwoEnteredAt: new Date(now.getTime() - AT_SEA_DIVE_TWO_ENTERED_BEFORE_NOW_MIN * minute),
+    afterDark: sailsAt >= AT_SEA_DUSK_SAILING_MINUTE,
   };
-  if (shared.startsAt.getTime() <= dawn.endsAt.getTime()) {
-    return [
-      {
-        startsAt: dawn.startsAt,
-        endsAt: new Date(Math.max(dawn.endsAt.getTime(), shared.endsAt.getTime())),
-      },
-    ];
-  }
-  return [dawn, shared];
 }
 
 /** The desk's day, shop-local: open at 8 AM, last signature by 6 PM. */

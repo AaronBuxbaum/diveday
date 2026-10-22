@@ -1,4 +1,6 @@
 import { eq } from "drizzle-orm";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
@@ -10,7 +12,7 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
-import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt, sailsAfterDayBoats } from "./seed-clock";
+import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt } from "./seed-clock";
 import { commonsImage } from "./seed-images";
 import { paperRelease, signingNames } from "./seed-paper-release";
 import { getCurrentWaiverTemplate } from "./waivers";
@@ -39,15 +41,12 @@ const DEMO_GUARDIANS: Record<string, { name: string; relationship: "parent" | "l
  * **Who sails on today's reef boat**, by position in `customerDefs`. Nine
  * divers, in the order every roster-indexed scenario reads them.
  *
- * The thirteen-year-old (Lena Fischer, 2) is aboard by day and not by night:
- * a demo seeded in the evening sails this boat at 11:30 PM, and a shop does
- * not put a child on a boat back at 3:00 AM (UX review 2026-10-13, item 40).
- * Ravi Menon (9), carded and already on the wreck charter, takes her seat, so
- * the boat keeps its count and its "3 spots left".
+ * The thirteen-year-old (Lena Fischer, 2) is among them: the reef boat is a
+ * day boat at every hour the demo is seeded (`demoTodayDepartureStart` never
+ * sails it after the day boats), so she is never aboard a night boat (UX
+ * review 2026-10-13, item 40).
  */
-export function demoReefDiverIndexes(reefSails: Date): number[] {
-  return [0, 1, sailsAfterDayBoats(reefSails) ? 9 : 2, 3, 4, 5, 6, 7, 8];
-}
+export const DEMO_REEF_DIVER_INDEXES: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 /**
  * A fixed booking id on the seeded reef trip, so a signed recap link can be
@@ -104,8 +103,7 @@ export async function seedBookings(
   const bookingRows = [
     // The first reef booking is pinned (canonical demo only) so a recap link can
     // be minted deterministically for the visual tests.
-    ...demoReefDiverIndexes(reef.startsAt)
-      .map((customerIndex) => customers[customerIndex])
+    ...DEMO_REEF_DIVER_INDEXES.map((customerIndex) => customers[customerIndex])
       .filter((c) => c !== undefined)
       .map((c, index) => ({
         tripId: reef.id,
@@ -239,8 +237,22 @@ export async function seedBookings(
       amountCents: 5_000,
     },
   ];
+  // A course seat for a session in a later month than this one is not paid
+  // yet: money taken this month on a course that sails next month put
+  // "Courses $340" under Money in by line beside "Courses $195" by kind of
+  // trip, two figures for one month's courses (market sheet 2026-10-22,
+  // item 2). The demo's course seats are paid in the month their session
+  // runs, so the two agree.
+  const thisMonth = calendarDateInTimezone(nowDate(), DEMO_SHOP_TIMEZONE).slice(0, 7);
+  const paidThisMonth = (booking: { tripId: string } | undefined) => {
+    const trip = tripRows.find((row) => row.id === booking?.tripId);
+    return (
+      !trip?.courseId ||
+      calendarDateInTimezone(trip.startsAt, DEMO_SHOP_TIMEZONE).slice(0, 7) <= thisMonth
+    );
+  };
   const paymentSeed = paymentPlan
-    .filter((row) => row.booking !== undefined)
+    .filter((row) => row.booking !== undefined && paidThisMonth(row.booking))
     .map((row) => ({
       bookingId: (row.booking as (typeof bookingRows_)[number]).id,
       status: row.status,
