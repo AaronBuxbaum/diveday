@@ -49,15 +49,6 @@ export async function DetailsEditor({
           ) : undefined,
         }}
       />
-      <div className="mt-5 max-w-2xl">
-        <ShopTextTranslation
-          shopSlug={shop.slug}
-          box={descriptionTranslation}
-          canAssist={canAssist}
-          t={t}
-          maxLength={500}
-        />
-      </div>
       {held ? (
         <div className="mt-3">
           <RescheduleNotice
@@ -69,6 +60,16 @@ export async function DetailsEditor({
           />
         </div>
       ) : null}
+      <div className="mt-5 max-w-2xl">
+        <ShopTextTranslation
+          shopSlug={shop.slug}
+          box={descriptionTranslation}
+          canAssist={canAssist}
+          t={t}
+          maxLength={500}
+          label={t("deskAssists.translate.descriptionLabel")}
+        />
+      </div>
     </>
   );
 }
