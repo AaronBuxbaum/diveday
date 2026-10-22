@@ -522,7 +522,7 @@ test.describe("a long shop name on a phone", () => {
  * **The title folds into the bar** — ADR 20260907-nothing-from-nowhere,
  * decision 5, slice 18e (issue #1422).
  *
- * `e2e/visual.spec.ts` photographs the folded bar; these are the two things a
+ * `e2e/visual-staff-divers.spec.ts` photographs the folded bar; these are the two things a
  * photograph cannot answer. First, whether the words are on screen twice for a
  * screen reader — the folded label is a copy of the page's `<h1>`, so the bar's
  * accessible name has to stay the shop's and the heading has to stay the only

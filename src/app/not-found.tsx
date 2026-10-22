@@ -128,7 +128,7 @@ type Locale = Parameters<typeof diverTranslator>[0];
 /**
  * DiveDay's own refusal, for a URL that names no shop — and the static shell
  * of this route, which is why `isShell` marks it. `capture()` in
- * `e2e/visual.spec.ts` waits for every `[data-suspense-placeholder]` to leave
+ * `e2e/visual-harness.ts` waits for every `[data-suspense-placeholder]` to leave
  * the page before it shoots, so the marker is what stops a visual run
  * photographing this standing in for the shop's frame.
  */

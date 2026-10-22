@@ -11,7 +11,9 @@ import {
   OVERRIDE,
   overrideReason,
   parsePush,
+  pushDirs,
   pushViolation,
+  redBelowWarning,
   verifiedFile,
 } from "./guard-push.mjs";
 
@@ -276,5 +278,33 @@ describe("a push that would fork a stack (#2587)", () => {
   it("does not look when the push is of some other branch", () => {
     const read = answers({ stamp: () => "bbb222", fork: () => "would fork" });
     expect(pushViolation("git push origin claude/other", read)).toBeNull();
+  });
+});
+
+describe("the directories a push leaves from, for the red-below warning", () => {
+  it("names the session's cwd, a `cd <dir> &&` and a `git -C <dir>`", () => {
+    expect(pushDirs("git push", "/work")).toEqual(["/work"]);
+    expect(pushDirs("cd /home/claude/wt-a && git push -u origin claude/a", "/work")).toEqual([
+      "/home/claude/wt-a",
+    ]);
+    expect(pushDirs("git -C ../wt-b push", "/work/x")).toEqual(["/work/wt-b"]);
+  });
+
+  it("leaves out a deletion, a tag push and a command that only mentions a push", () => {
+    expect(pushDirs("git push origin --delete claude/old", "/work")).toEqual([]);
+    expect(pushDirs("git push --tags", "/work")).toEqual([]);
+    expect(pushDirs("git push origin :claude/old", "/work")).toEqual([]);
+    expect(pushDirs("echo git push", "/work")).toEqual([]);
+  });
+});
+
+describe("the red-below warning", () => {
+  it("is null, never a throw, where there is no repository to read", () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "guard-push-red-"));
+    try {
+      expect(redBelowWarning(dir)).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

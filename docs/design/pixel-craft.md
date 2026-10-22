@@ -50,7 +50,7 @@ composition belong to [principles.md](principles.md), the **design-review** skil
 ## The pixel probe
 
 `scripts/pixel-probe/` measures every surface the visual suite reaches. With `PIXEL_PROBE=1`, the
-`capture()` function in `e2e/visual.spec.ts` probes each light capture after each viewport's
+`capture()` function in `e2e/visual-harness.ts` probes each light capture after each viewport's
 screenshot:
 
 - It collects one geometry snapshot of the whole document.
@@ -61,8 +61,8 @@ screenshot:
 CI never sets the flag. Flag-on runs produce baselines byte-identical to flag-off runs.
 
 ```sh
-PIXEL_PROBE=1 pnpm e2e:run e2e/visual.spec.ts --grep "light mode" --reporter=line   # everything, 20–40 min
-PIXEL_PROBE=1 pnpm e2e:run e2e/visual.spec.ts --grep '<test title>' --reporter=line  # one capture
+PIXEL_PROBE=1 pnpm e2e:run e2e/visual --grep "light mode" --reporter=line   # everything, 20–40 min
+PIXEL_PROBE=1 pnpm e2e:run e2e/visual --grep '<test title>' --reporter=line  # one capture
 node scripts/screenshot.mjs <path> --probe                                           # no capture: against pnpm dev
 node scripts/pixel-probe-report.mjs            # e2e/pixel-probe/REPORT.md, clusters.json
 node scripts/pixel-probe-report.mjs --tiles <capture>

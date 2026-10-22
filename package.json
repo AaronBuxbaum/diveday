@@ -19,6 +19,7 @@
     "test:affected": "node scripts/test-affected.mjs",
     "test:changed": "vitest run --changed origin/main --reporter=dot",
     "verify:push": "node scripts/verify-push.mjs",
+    "stack:sync": "node scripts/stack-sync.mjs",
     "e2e:affected": "node scripts/e2e-affected.mjs",
     "test:lib": "vitest run --project lib --reporter=dot",
     "coverage:floors": "vitest run --project '!guards' --reporter=dot --coverage.enabled && node scripts/coverage-floors.mjs",

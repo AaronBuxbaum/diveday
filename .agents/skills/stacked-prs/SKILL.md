@@ -22,6 +22,13 @@ push. **Merge the layer below once its CI is green**, not while it is red: a red
 a red run on every layer above, and `pnpm verify:push` refuses it unless your layer makes the
 base's red tests pass. The reasoning and the measured incidents are in [why.md](why.md).
 
+**`pnpm stack:sync`** does the merge: it reads the open chain from GitHub and merges this layer's
+base (`origin/main` for the bottom) into it, stops on a conflict with the files named, and pushes
+nothing; it prints the next commands (`pnpm regen`, `pnpm verify:push --quick`, `git push`) and
+what each layer above does after. `--plan` changes nothing; `--chain` walks every layer bottom
+first, only in local worktrees that already hold the branch and are clean. A red layer below gets
+a loud banner from `verify:push` and the push guard naming its branch: fix it there first.
+
 ## Building the chain
 
 A session builds the **shape** and only the shape: the chained branches and the pull requests on

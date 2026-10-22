@@ -4,15 +4,22 @@ import {
   captureGrep,
   captureMs,
   changedDiff,
+  changedLocaleKeys,
+  changedLocaleKeysIn,
   HUB_SPECS,
   importersOf,
+  localeKeyPrefix,
   overlapScores,
   parseDiff,
   readSpecs,
   removedText,
   routeOf,
   routePattern,
+  SEED_STRONG_SPECS,
   SMOKE,
+  seedConstantValues,
+  seedImports,
+  seedTouches,
   selectCaptures,
   selectSpecs,
   smokeTests,
@@ -499,4 +506,217 @@ it("selects edited captures in an extracted visual domain", () => {
     file: "e2e/visual-sites.spec.ts",
   });
   expect([...captures.keys()]).toEqual(["site renders true to the design"]);
+});
+
+/**
+ * The backtest of 2026-10-22: of 101 browser failures new in a push, the selector named 22. Two
+ * kinds of miss it can see from the diff alone: a spec reading copy through its key, whose value
+ * the diff changed (no removed literal matches a key), and a seed edit that moved a record a
+ * spec counts or names.
+ */
+describe("a locale value a spec reads by its key", () => {
+  const before = JSON.stringify({
+    blockerRow: { waiverLapsed: "Waiver lapsed", waiverLapsedSoon: "Waiver lapses soon" },
+    gone: "Old words",
+    same: "Unchanged",
+  });
+  const after = JSON.stringify({
+    blockerRow: { waiverLapsed: "Waiver expired", waiverLapsedSoon: "Waiver lapses soon" },
+    same: "Unchanged",
+    added: "Brand new",
+  });
+
+  it("names each changed or removed leaf by its full dotted key, never an added one", () => {
+    expect(changedLocaleKeys(before, after, "today.")).toEqual([
+      "today.blockerRow.waiverLapsed",
+      "today.gone",
+    ]);
+    expect(changedLocaleKeys(null, after)).toEqual([]);
+    expect(changedLocaleKeys("{not json", after)).toEqual([]);
+  });
+
+  it("prefixes a staff bundle's keys with its namespace and a diver key with nothing", () => {
+    expect(localeKeyPrefix("src/i18n/locales/en-US/staff/today.json")).toBe("today.");
+    expect(localeKeyPrefix("src/i18n/locales/en-US/diver.json")).toBe("");
+    expect(localeKeyPrefix("src/i18n/locales/es-ES/diver.json")).toBeNull();
+    expect(localeKeyPrefix("src/i18n/locales/en-US/staff/index.ts")).toBeNull();
+  });
+
+  it("reads both blobs of each changed bundle from git", () => {
+    const blobs = {
+      "show a:src/i18n/locales/en-US/staff/today.json": before,
+      "show b:src/i18n/locales/en-US/staff/today.json": after,
+    };
+    const keys = changedLocaleKeysIn(
+      (args) => blobs[args.join(" ")] ?? null,
+      ["src/i18n/locales/en-US/staff/today.json", "src/lib/clock.ts"],
+      "a",
+      "b",
+    );
+    expect(keys).toEqual(["today.blockerRow.waiverLapsed", "today.gone"]);
+  });
+
+  it("selects the spec and the capture that read the key, and not a sibling key's", () => {
+    const specs = new Map([
+      [
+        "e2e/today.spec.ts",
+        'await expect(row.getByText(staffCopy("today.blockerRow.waiverLapsed"))).toBeVisible();',
+      ],
+      [
+        "e2e/reminders.spec.ts",
+        'expect(body).toContain(diverTranslator("en-US")("notifications.tripReminder.flySafe"));',
+      ],
+      [
+        "e2e/soon.spec.ts",
+        'await expect(page.getByText(staff("today.blockerRow.waiverLapsedSoon"))).toBeVisible();',
+      ],
+    ]);
+    const localeKeys = ["today.blockerRow.waiverLapsed", "notifications.tripReminder.flySafe"];
+    const { strong } = selectSpecs({
+      changed: [],
+      diff: new Map(),
+      specs,
+      graph: null,
+      localeKeys,
+    });
+    expect([...strong.keys()].sort()).toEqual(["e2e/reminders.spec.ts", "e2e/today.spec.ts"]);
+    expect([...strong.get("e2e/today.spec.ts")]).toEqual(["reads today.blockerRow.waiverLapsed"]);
+
+    const source = [
+      '  test("the desk\'s blockers render true to the design", async ({ page }) => {',
+      '    await page.getByText(staffCopy("today.blockerRow.waiverLapsed")).waitFor();',
+      "  });",
+      '  test("the soon row renders", async ({ page }) => {',
+      '    await page.getByText(staffCopy("today.blockerRow.waiverLapsedSoon")).waitFor();',
+      "  });",
+    ].join("\n");
+    const picked = selectCaptures({ changed: [], diff: new Map(), source, localeKeys });
+    expect([...picked.keys()]).toEqual(["the desk's blockers render true to the design"]);
+  });
+
+  it("only ranks the readers of a key most of the suite reads", () => {
+    const specs = new Map(
+      Array.from({ length: HUB_SPECS + 1 }, (_, i) => [
+        `e2e/s${i}.spec.ts`,
+        'await page.getByRole("button", { name: staff("shared.actions.save") }).click();',
+      ]),
+    );
+    const { strong, reach } = selectSpecs({
+      changed: [],
+      diff: new Map(),
+      specs,
+      graph: null,
+      localeKeys: ["shared.actions.save"],
+    });
+    expect(strong.size).toBe(0);
+    expect(reach.size).toBe(HUB_SPECS + 1);
+  });
+});
+
+describe("a seed edit that moves what a spec names or counts", () => {
+  it("reads a removed seeded name too short for prose but two capitalised words", () => {
+    expect(
+      textOf("src/db/seed-cast.ts", 'export const LEAD_INSTRUCTOR_NAME = "Marcus Webb";'),
+    ).toEqual(["Marcus Webb"]);
+    expect(textOf("src/db/seed-cast.ts", '  status: "on hold",')).toEqual([]);
+    expect(textOf("src/content/guides.ts", '  name: "Marcus Webb",')).toEqual([]);
+    const diff = parseDiff(
+      diffOf(
+        "src/db/seed-cast.ts",
+        ['export const LEAD_INSTRUCTOR_NAME = "Marcus Webb";'],
+        ['export const LEAD_INSTRUCTOR_NAME = "Marcus Webber";'],
+      ),
+    );
+    const specs = new Map([
+      ["e2e/staffing.spec.ts", 'await expect(page.getByText("Marcus Webb")).toBeVisible();'],
+      ["e2e/booking.spec.ts", 'await page.goto("/s/blue-mantis");'],
+    ]);
+    const { strong } = selectSpecs({ changed: [], diff, specs, graph: null });
+    expect([...strong.keys()]).toEqual(["e2e/staffing.spec.ts"]);
+  });
+
+  it("selects the specs naming a record a changed seed line touches, by literal or by constant", () => {
+    const diff = parseDiff(
+      diffOf(
+        "src/db/seed-booth.ts",
+        [],
+        [
+          '  await addSeat(db, { hull: "Mantis II", diver: divers[3] });',
+          "  await addSeat(db, { trip: SHOP_CERTIFIED_TITLE, diver: divers[4] });",
+        ],
+      ),
+    );
+    const seedValues = seedConstantValues(
+      new Map([
+        [
+          "src/db/seed-booth.ts",
+          'export const SHOP_CERTIFIED_TITLE = "Rescue Diver — weekend course";',
+        ],
+      ]),
+    );
+    expect([...seedTouches(diff, seedValues).names]).toEqual([
+      "Mantis II",
+      "Rescue Diver — weekend course",
+    ]);
+    const specs = new Map([
+      [
+        "e2e/boat-safety.spec.ts",
+        'await expect(page.getByText("Mantis II · 6 aboard")).toBeVisible();',
+      ],
+      [
+        "e2e/courses.spec.ts",
+        'await page.getByRole("link", { name: "Rescue Diver — weekend course" }).click();',
+      ],
+      ["e2e/booking.spec.ts", 'await page.goto("/s/blue-mantis");'],
+    ]);
+    const { strong } = selectSpecs({ changed: [], diff, specs, graph: null, seedValues });
+    expect([...strong.keys()].sort()).toEqual(["e2e/boat-safety.spec.ts", "e2e/courses.spec.ts"]);
+  });
+
+  it("selects a spec importing a seed constant a changed line uses, and ignores import lines", () => {
+    const source =
+      'import { LOST_MASK, type Seeded as S } from "../src/db/seed-booth";\nawait expect(row.filter({ hasText: LOST_MASK })).toBeVisible();';
+    expect([...seedImports(source)]).toEqual(["LOST_MASK", "Seeded"]);
+    const specs = new Map([["e2e/departure-desk.spec.ts", source]]);
+    const used = parseDiff(
+      diffOf("src/db/seed-booth.ts", [], ["  await seedLostMask(db, LOST_MASK, tomorrow);"]),
+    );
+    expect([...selectSpecs({ changed: [], diff: used, specs, graph: null }).strong.keys()]).toEqual(
+      ["e2e/departure-desk.spec.ts"],
+    );
+    const imported = parseDiff(
+      diffOf("src/db/seed-trips.ts", [], ['import { LOST_MASK } from "./seed-booth";']),
+    );
+    expect(selectSpecs({ changed: [], diff: imported, specs, graph: null }).strong.size).toBe(0);
+  });
+
+  it("only ranks the specs of a record most of the suite passes through, and skips seed tests", () => {
+    const specs = new Map(
+      Array.from({ length: SEED_STRONG_SPECS + 1 }, (_, i) => [
+        `e2e/s${i}.spec.ts`,
+        'await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");',
+      ]),
+    );
+    const line = '  trip: "Two-Tank Reef — Molasses & French", seats: 8,';
+    const shared = parseDiff(diffOf("src/db/seed-trips.ts", [], [line]));
+    const { strong, reach } = selectSpecs({ changed: [], diff: shared, specs, graph: null });
+    expect(strong.size).toBe(0);
+    expect(reach.size).toBe(SEED_STRONG_SPECS + 1);
+    const tested = parseDiff(diffOf("src/db/seed-trips.test.ts", [line]));
+    expect(seedTouches(tested).names.size).toBe(0);
+  });
+
+  it("names the capture a changed seed line touches, when few captures name it", () => {
+    const source = [
+      '  test("the lost-and-found renders true to the design", async ({ page }) => {',
+      '    await page.getByText("Mantis II").waitFor();',
+      "  });",
+      '  test("the landing page renders", async ({ page }) => {',
+      '    await page.goto("/");',
+      "  });",
+    ].join("\n");
+    const diff = parseDiff(diffOf("src/db/seed-booth.ts", [], ['  hull: "Mantis II",']));
+    const picked = selectCaptures({ changed: [], diff, source });
+    expect([...picked.keys()]).toEqual(["the lost-and-found renders true to the design"]);
+  });
 });

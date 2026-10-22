@@ -32,7 +32,7 @@ const backupSettingsFor = (shopSlug: string) => `/shop/${shopSlug}/settings/expo
  * `shop_backup_deliveries` rows, which are seeded by the *stable* half
  * (`seedBackup`). Writing them here used to overwrite the seeded destination
  * for the rest of the worker — poisoning this file's own "shows the seeded
- * destination" test, and hitting `e2e/visual.spec.ts`'s data-export capture
+ * destination" test, and hitting `e2e/visual-staff-settings.spec.ts`'s data-export capture
  * with a strict-mode violation on two "Failed" cells where the seed ships one.
  */
 

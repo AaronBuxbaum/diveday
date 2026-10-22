@@ -171,6 +171,7 @@ export async function askToMoveFromCancelledAction(token: string, formData: Form
   const outcome = await recordMoveAsk(ctx.db, {
     shopId: ctx.shopId,
     bookingId: ctx.bookingId,
+    calledOff: true,
     note,
     now,
   });

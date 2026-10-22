@@ -26,7 +26,7 @@ The harness discipline that contains it, which any new capture code must keep:
   screenshot with `timeout: 15_000` hung 95+ seconds until the test's own ceiling killed it. So
   every such call goes through a driver-side `Promise.race` bound: `withRendererBound` for
   evaluates, `screenshotOrGiveUp` for screenshots. A new screenshot call site in
-  `e2e/visual.spec.ts` must use `screenshotOrGiveUp`, never bare `page.screenshot`.
+  `e2e/visual-*.spec.ts` must use `screenshotOrGiveUp`, never bare `page.screenshot`.
 - **On a stall, probe before blaming.** Both helpers ask the page `evaluate(() => true)` with a
   5s bound and word their message by the answer: alive means our wait leaked (investigate);
   "wedged, not slow" means the known wedge.

@@ -17,7 +17,6 @@ import {
   STAFF_DAY_HEADING,
   seededTripId,
   sendWaiverForFirstDiver,
-  signOut,
   threadStatus,
 } from "./helpers";
 import { mintOnboardFormPath } from "./setup-link";
@@ -296,7 +295,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     test.setTimeout(110_000);
     // The orders index only has rows to render (and `/orders/new` only exists
     // at all) for a shop that can take money. This is a pure DB write that
-    // never calls Stripe — the same door e2e/visual.spec.ts opens for the
+    // never calls Stripe — the same door e2e/visual-recap.spec.ts opens for the
     // recap tip section.
     await request.post("/api/test/seed-stripe-account");
     await scanStaticRoutes(page, [
@@ -684,7 +683,10 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
       capacity: 6,
       price: 110,
     });
-    await signOut(page);
+    // `clearCookies` rather than `signOut()`, as in the booking scan above: a
+    // visitor is anyone without the staff cookie, and the identity menu's
+    // sign-out would revoke the worker's cached staff session for the next test.
+    await page.context().clearCookies();
 
     // Two seats, because that is what puts an unclaimed seat — and therefore a
     // claim link — on the confirmation (ADR 20260804-seat-claim-links).

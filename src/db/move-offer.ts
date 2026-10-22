@@ -165,7 +165,9 @@ export async function strandedMoveAsk(
   db: AppDb,
   input: { shopId: string; bookingId: string; now: Date },
 ): Promise<StrandedMoveAsk | null> {
-  if (await hasMoveAsk(db, input.shopId, input.bookingId)) return { state: "asked" };
+  if (await hasMoveAsk(db, input.shopId, input.bookingId, undefined, { calledOff: true })) {
+    return { state: "asked" };
+  }
   const found = await strandedMoveOffer(db, input);
   return found ? { state: "open", offer: found } : null;
 }

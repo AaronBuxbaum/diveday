@@ -42,11 +42,11 @@ import { isVisualSpec } from "./visual-specs.mjs";
  *
  * ## The visual captures
  *
- * `e2e/visual.spec.ts` is one file of ~550 tests, so it is dealt by *test*
- * rather than by file: `--visual=<list.json>` reads Playwright's own
+ * The `e2e/visual-*.spec.ts` files hold ~830 tests between them, so they are dealt
+ * by *test* rather than by file: `--visual=<list.json>` reads Playwright's own
  * `--list --reporter=json` output (so every shard sees the same test list
  * Playwright will run) and prints this shard's tests as `--test-list` lines.
- * Playwright's index `--shard` cut it into eight equal-count slices that ran
+ * Playwright's index `--shard` cut the one file they once were into eight equal-count slices that ran
  * 287-529s on the same run. A capture with no recorded duration weighs the
  * mean of the recorded ones — a source estimate (captures per test, the
  * budget, the seeding calls) was tried against that run's eight shard times
@@ -56,7 +56,7 @@ import { isVisualSpec } from "./visual-specs.mjs";
 const SPEC_ROOT = "e2e";
 
 /**
- * Never a functional spec — `visual.spec.ts` is dealt by test onto its own
+ * Never a functional spec — a visual spec is dealt by test onto its own
  * eight shards (`--visual`) and has its own baseline plumbing.
  */
 

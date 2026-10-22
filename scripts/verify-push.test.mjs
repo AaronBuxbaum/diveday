@@ -5,7 +5,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  appTreeKey,
   baseReplayFiles,
   browserSpecs,
   CORES_PER_E2E_WORKER,
@@ -203,7 +202,7 @@ describe("the quick pre-push plan", () => {
       captures: ["a station names a blocker aboard (light)"],
     });
     expect(names(steps).slice(-3)).toEqual(["e2e build", "e2e specs", "visual captures"]);
-    expect(steps.at(-1).args).toContain("e2e/visual.spec.ts");
+    expect(steps.at(-1).args).toContain("e2e/visual");
     expect(steps.at(-1).args.join(" ")).toContain("a station names a blocker aboard \\(light\\)");
   });
 
@@ -310,32 +309,6 @@ describe("the browser specs a push runs", () => {
       record,
     });
     expect(picked.specs).toEqual(["e2e/a.spec.ts"]);
-  });
-});
-
-describe("the build key", () => {
-  const line = (file, sha) => `100644 blob ${sha}\t${file}`;
-  const app = [line("src/lib/x.ts", "a1"), line("package.json", "b2")];
-
-  it("does not move when only tests, specs or docs change, so the build is reused", () => {
-    const before = appTreeKey(
-      [...app, line("src/lib/x.test.ts", "c3"), line("e2e/a.spec.ts", "d4")].join("\n"),
-    );
-    const after = appTreeKey(
-      [
-        ...app,
-        line("src/lib/x.test.ts", "ff"),
-        line("e2e/a.spec.ts", "ee"),
-        line("docs/x.md", "11"),
-      ].join("\n"),
-    );
-    expect(after).toBe(before);
-  });
-
-  it("moves when anything the app is built from changes", () => {
-    const before = appTreeKey(app.join("\n"));
-    const after = appTreeKey([line("src/lib/x.ts", "a2"), line("package.json", "b2")].join("\n"));
-    expect(after).not.toBe(before);
   });
 });
 

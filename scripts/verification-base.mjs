@@ -1,6 +1,36 @@
 // One provider-neutral policy. Push upstream is never evidence of a PR parent.
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
+/**
+ * The layer this branch is stacked on when no PR or config names one: the remote branch HEAD
+ * contains that is furthest ahead of `origin/main`, excluding this branch's own remote and any
+ * branch main already holds. A layer that merges the one below holds it through a second
+ * parent, so "contains", not first-parent. Null when there is none.
+ */
+export function containedLayer(git) {
+  const head = git(["rev-parse", "HEAD"]);
+  if (!head) return null;
+  const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  const own = branch && branch !== "HEAD" ? `origin/${branch}` : null;
+  const listed =
+    git(["for-each-ref", "--format=%(refname:short)", "--merged", "HEAD", "refs/remotes/origin"]) ??
+    "";
+  let best = null;
+  for (const ref of listed.split("\n").filter(Boolean)) {
+    if (ref === own || ref === "origin/main" || ref === "origin/HEAD") continue;
+    if (git(["rev-parse", ref]) === head) continue;
+    const ahead = Number(git(["rev-list", "--count", `origin/main..${ref}`]));
+    if (!Number.isFinite(ahead) || ahead === 0) continue;
+    if (!best || ahead > best.ahead) best = { ref, ahead };
+  }
+  return best?.ref ?? null;
+}
+
+/**
+ * The base a verification diffs against, in order: the open PR's base (or `GITHUB_BASE_REF`),
+ * `--base` or `git config branch.<branch>.divedayBase <ref>`, the contained layer below
+ * ({@link containedLayer}, for a stacked branch with no PR yet), then `origin/main`.
+ */
 export function resolveVerificationBase(git, { prBase, explicitBase, env = process.env } = {}) {
   const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
   const configured =
@@ -10,6 +40,7 @@ export function resolveVerificationBase(git, { prBase, explicitBase, env = proce
   const candidates = [
     [actual, "pull-request"],
     [configured, "explicit-config"],
+    [actual || configured ? null : containedLayer(git), "stack"],
     ["origin/main", "conservative-fallback"],
   ];
   for (const [name, source] of candidates) {

@@ -581,7 +581,7 @@ same reason, and dimming a row with `opacity-*` dims its contrast ratio with it 
 
 ### Viewports — which devices are photographed
 
-`e2e/visual.spec.ts` captures every surface at a phone (390x844) and a desktop (1280x800), and
+The `e2e/visual-*.spec.ts` files capture every surface at a phone (390x844) and a desktop (1280x800), and
 `scripts/screenshot.mjs` defaults to the same pair on purpose, so a design review looks at the two
 widths CI checks. That pair is the standard responsive pair and it is right for a marketing page, a
 booking page and a diver's `/ready`.

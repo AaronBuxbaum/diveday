@@ -72,7 +72,7 @@ export async function seedOpenInvoice(
   // arbitrary. `seed-orders.ts` already raises an order one day back, and the
   // Orders index sorts on `created_at`, which is **not unique** across the seed
   // (its own paging comment says so). Dated yesterday this row tied with that
-  // one for the first row of the index — which is the row `e2e/visual.spec.ts`
+  // one for the first row of the index — which is the row `e2e/visual-staff-settings.spec.ts`
   // clicks through to build the `order-detail` capture. So it silently took that
   // capture over, replacing a *paid* counter sale showing "Refund payment" with
   // this open one, and left which of the two won resting on a minute value in a

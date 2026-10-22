@@ -12,7 +12,7 @@ is what keeps the run to one scheme:
 
 ```bash
 pnpm e2e:build
-pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*<name of the capture group>' --reporter=line
+pnpm e2e:run e2e/visual-<feature>.spec.ts -g 'light mode.*<name of the capture group>' --reporter=line
 ```
 
 Read the PNGs in `e2e/screenshots/` (gitignored) and check them against the checklist at the bottom of

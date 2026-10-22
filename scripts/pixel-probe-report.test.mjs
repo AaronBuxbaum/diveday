@@ -19,7 +19,7 @@ import {
  */
 
 const TITLE = [
-  "visual.spec.ts",
+  "visual-audit.spec.ts",
   "light mode",
   "public",
   "the shopfront's register form renders true to the design (light)",
@@ -37,9 +37,7 @@ describe("the re-run command", () => {
   it("quotes an apostrophe so the shell sees one argument", () => {
     const command = rerunCommand({ titlePath: TITLE, testFile: "" });
     expect(command).toContain("--grep 'light mode public the shopfront'\\''s register");
-    expect(command).toMatch(
-      /^PIXEL_PROBE=1 pnpm e2e:run e2e\/visual\.spec\.ts --grep '.*' --reporter=line$/,
-    );
+    expect(command).toMatch(/^PIXEL_PROBE=1 pnpm e2e:run e2e\/visual --grep '.*' --reporter=line$/);
   });
 
   it("points a dev-server probe at screenshot.mjs instead", () => {
@@ -48,7 +46,7 @@ describe("the re-run command", () => {
     );
   });
 
-  it.each(["e2e/visual.spec.ts", path.resolve("e2e/visual.spec.ts")])(
+  it.each(["e2e/visual-audit.spec.ts", path.resolve("e2e/visual-audit.spec.ts")])(
     "reruns an imported capture through its explicit entry file %s",
     (entryFile) => {
       const command = rerunCommand({
@@ -56,7 +54,7 @@ describe("the re-run command", () => {
         testFile: path.resolve("e2e/visual-audit-account-states.ts"),
         entryFile,
       });
-      expect(command).toContain("pnpm e2e:run e2e/visual.spec.ts --grep");
+      expect(command).toContain("pnpm e2e:run e2e/visual-audit.spec.ts --grep");
       expect(command).not.toContain("visual-audit-account-states.ts");
     },
   );
@@ -66,7 +64,7 @@ describe("the re-run command", () => {
       titlePath: TITLE,
       testFile: path.resolve("e2e/visual-audit-account-states.ts"),
     };
-    expect(rerunCommand(record)).toContain("pnpm e2e:run e2e/visual.spec.ts --grep");
+    expect(rerunCommand(record)).toContain("pnpm e2e:run e2e/visual-audit.spec.ts --grep");
     expect(rerunCommand({ ...record, titlePath: ["other.spec.ts", "an imported test"] })).toContain(
       "pnpm e2e:run e2e/visual-audit-account-states.ts --grep",
     );
@@ -83,7 +81,7 @@ describe("the re-run command", () => {
   });
 
   it("retains the opt-in modes needed to reproduce an audit capture", () => {
-    const base = { titlePath: TITLE, entryFile: "e2e/visual.spec.ts" };
+    const base = { titlePath: TITLE, entryFile: "e2e/visual-audit.spec.ts" };
     expect(rerunCommand({ ...base, exhaustiveAudit: true })).toMatch(
       /^PIXEL_PROBE=1 VISUAL_EXHAUSTIVE_AUDIT=1 pnpm e2e:run /,
     );
