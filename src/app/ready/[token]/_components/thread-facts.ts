@@ -201,6 +201,8 @@ export function readyStepLine(
   // "done" — a diver reading a settled step still wants to know what it
   // settled against (issue 627).
   if (step.item.category === "certification" && requiredLevel) {
+    // The detail and requirement are one paragraph. A settled fragment keeps
+    // its period here because it separates the requirement sentence after it.
     return `${checklistDetailText(t, step.item)} ${t("ready.certMinimumLevel", {
       level: t(DIVER_CERTIFICATION_LEVEL_KEYS[requiredLevel]),
     })}`;

@@ -1,17 +1,17 @@
 {
   "title": "Shop integrations",
   "notice": {
-    "connected": "Integration connected.",
-    "saved": "Integration settings saved.",
-    "disconnected": "Integration disconnected.",
+    "connected": "Integration connected",
+    "saved": "Integration settings saved",
+    "disconnected": "Integration disconnected",
     "sync-complete": "Shopify catalog synced: {count, plural, =0 {nothing was ready to publish} one {# product} other {# products}}.",
-    "test-sent": "Zapier test hook delivered.",
+    "test-sent": "Zapier test hook delivered",
     "invalid": "Check the details and choose at least one event.",
     "not-configured": "That integration isn’t available yet.",
     "failed": "The integration could not complete that request. Try again, or reconnect it.",
     "encryption-key-unset": "This DiveDay instance is not set up to store credentials securely yet, so nothing was saved.",
     "encryption-key-invalid": "This DiveDay instance’s encryption key is misconfigured, so nothing was saved.",
-    "earlier-sent": "{count, plural, one {# event} other {# events}} queued for delivery, oldest first.",
+    "earlier-sent": "{count, plural, one {# event} other {# events}} queued for delivery, oldest first",
     "earlier-partial": "Queued the first batch. {count, plural, one {# event is} other {# events are}} still waiting. Send again to queue them.",
     "earlier-none": "Nothing was left to send.",
     "earlier-not-owner": "Only the owner can send earlier checkouts.",
@@ -39,7 +39,7 @@
     "orderRefunded": "An order is refunded",
     "orderVoided": "An order is voided",
     "notAvailable": "Not available yet. Email {email} and we’ll switch it on.",
-    "notAvailableShort": "Not available yet.",
+    "notAvailableShort": "Not available yet",
     "notAvailableAsk": "Want one of these? Email {email} and we’ll switch it on."
   },
   "shopify": {

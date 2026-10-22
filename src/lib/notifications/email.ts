@@ -18,6 +18,7 @@ import {
 import type { ShopMilestone } from "@/lib/founder-metrics";
 import { escapeHtml } from "@/lib/html";
 import { openMapsUrl } from "@/lib/maps";
+import { getMigrationGuide } from "@/lib/migration-guides";
 import { firstNameOf } from "@/lib/person-name";
 import type { SetupCurrentSystem } from "@/lib/setup-requests";
 import { cachedListFormat } from "../intl-cache";
@@ -131,7 +132,7 @@ type WaitlistInviteEmailInput = {
   timezone: string;
   /** The public trip page where the freed seat can be claimed. */
   bookingUrl: string;
-  /** Self-serve opt-out of `waitlist_invite`/`trip_recap` courtesy email. */
+  /** Self-serve opt-out of `seat_offer_commercial`/`trip_recap` courtesy email. */
   unsubscribeUrl: string;
   /** How many seats the waiting party asked for (fourth review, item 34); one when absent. */
   partySize?: number;
@@ -152,7 +153,7 @@ type TripInvitationEmailInput = {
   endsAt: Date;
   timezone: string;
   bookingUrl: string;
-  /** Present on the cold, staff-initiated invitation only (`direct_trip_invitation`). */
+  /** Present on the commercial offer only (`seat_offer_commercial`). */
   unsubscribeUrl?: string;
   /** A course session's prerequisite note, in the shop's words. */
   prerequisiteNote?: string;
@@ -936,7 +937,7 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
   const greetingHtml = t("notifications.common.greeting", {
     firstName: escapeHtml(firstName),
   });
-  // Only the cold invitation carries a way out (`direct_trip_invitation`,
+  // Only the commercial offer carries a way out (`seat_offer_commercial`,
   // issue #1953): the reply to a diver's own date request is service mail.
   // The schema decides which, by requiring the field on one kind and not
   // having it on the other; this only draws what it was given.
@@ -1267,6 +1268,8 @@ type SetupRequestAlertEmailInput = {
   region: string;
   runsBoat: boolean;
   currentSystem: SetupCurrentSystem;
+  /** A switching guide's slug, when the requester named their system. */
+  currentSystemGuide?: string;
   contactName: string;
   contactEmail: string;
   contactPhone?: string;
@@ -1285,6 +1288,12 @@ const currentSystemWords: Record<SetupCurrentSystem, string> = {
   other: "something else",
 };
 
+/** "a booking system, FareHarbor": the answer, then the system when one was named. */
+function usesToday(system: SetupCurrentSystem, guide: string | undefined): string {
+  const named = guide ? getMigrationGuide(guide)?.competitor : undefined;
+  return named ? `${currentSystemWords[system]}, ${named}` : currentSystemWords[system];
+}
+
 /**
  * A shop asked to be set up (ADR 20261007-setup-request-form). To the
  * onboarding inbox, internal and English like the founder alerts above, laid
@@ -1296,7 +1305,7 @@ export function setupRequestAlertEmail(input: SetupRequestAlertEmailInput): Noti
     ["Shop", input.shopName],
     ["Where", input.region],
     ["Runs a boat", input.runsBoat ? "yes" : "no"],
-    ["Uses today", currentSystemWords[input.currentSystem]],
+    ["Uses today", usesToday(input.currentSystem, input.currentSystemGuide)],
     ["Name", input.contactName],
     // Typed by whoever filled the form; nothing has proved they own it.
     ["Email (unverified)", input.contactEmail],
@@ -1825,7 +1834,7 @@ type CourseInquiryEmailInput = {
  * send (staffInviteEmail), not English-only like the founder-only
  * the new_account operator alert.
  */
-export function courseInquiryEmail(input: CourseInquiryEmailInput): NotificationEmail {
+export function leadReceivedEmail(input: CourseInquiryEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const notSaid = t("inquiry.notSaid");
   const name = input.inquirerName?.trim() || t("notifications.courseInquiry.anonymous");

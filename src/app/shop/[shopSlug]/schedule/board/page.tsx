@@ -7,8 +7,8 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats, listBoatsForHistory } from "@/db/boats";
-import { listDateRequestsByIds, listDateRequestsForCalendarDates } from "@/db/course-inquiries";
 import { readFormDraft } from "@/db/form-drafts";
+import { listDateLeadsByIds, listOpenDateLeadsForDates } from "@/db/lead-dates";
 import { openAfterDiveRollCalls } from "@/db/today";
 import { upcomingScheduleRange, weekBoard } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
@@ -159,7 +159,7 @@ export default async function ScheduleBoardPage({
     // everything else here is: Tide files a thing under the hour it happens at, and a lead for a
     // day three weeks out is that week's business. `/shop/<slug>/requests` stays the unbounded
     // reading of the same rows.
-    listDateRequestsForCalendarDates(db, shop.id, weekDates(weekStartIso)),
+    listOpenDateLeadsForDates(db, shop.id, weekDates(weekStartIso)),
     // **Names come from every hull the shop has ever had, not just the live ones.** A departure
     // that sailed on a boat the shop has since deleted must still say which vessel — that is the
     // whole reason deleting one is a stamp rather than a delete (ADR
@@ -173,7 +173,7 @@ export default async function ScheduleBoardPage({
     // live report gate that protects /requests" — and that page is ungated now, so the check
     // protected nothing and only broke the day group's one act: a captain tapping "Add departure"
     // got a builder with no requests block and no explanation. `shop.id` is still the scope
-    // (`listDateRequestsByIds`), so a shareable URL still cannot pull another tenant's lead.
+    // (`listDateLeadsByIds`), so a shareable URL still cannot pull another tenant's lead.
     //
     // Read only for a reader the add panel renders for: the plan is drawn inside it and nowhere
     // else, so for anyone else these rows were loaded and shown to nobody. `/requests` no longer
@@ -181,7 +181,7 @@ export default async function ScheduleBoardPage({
     // nothing either.
     requestIds.length > 0
       ? canConfigureRead.then((allowed) =>
-          allowed ? listDateRequestsByIds(db, shop.id, requestIds) : [],
+          allowed ? listDateLeadsByIds(db, shop.id, requestIds) : [],
         )
       : [],
   ]);

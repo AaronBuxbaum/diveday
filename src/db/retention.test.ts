@@ -1030,8 +1030,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "prior_visits",
   "prior_gear_assignments",
   "imported_payment_history",
-  "last_minute_list_entries",
-  "course_inquiries",
   // The request's single-use setup link (ADR 20261009-single-use-setup-links):
   // a hash, an expiry and a spent instant, one per request, deleted with it.
   // Its own clock is the expiry, which closes it; there is nothing left in it
@@ -1060,10 +1058,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // the departure's crew, read with it, and gone when the person comes off it.
   "crew_away_acknowledgements",
   "trip_help_requests",
-  "trip_waitlist_entries",
-  "trip_invitations",
+  // Leads: contact data, kept until erasure (src/lib/retention.ts).
+  "leads",
   "trip_last_minute_promos",
-  "trip_last_minute_promo_recipients",
   "trip_blowouts",
   "trip_blowout_divers",
   // One row per departure, read as part of its departure log (#2300).
@@ -1143,7 +1140,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds",
-  "last_minute_list_unsubscribe_tokens",
+  "lead_unsubscribe_tokens",
   "person_courtesy_email_unsubscribe_tokens",
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.

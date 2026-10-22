@@ -8,6 +8,8 @@ import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
 import { importAssistSample } from "@/lib/assists/import-mapping";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { type ImportAssist, type PreparedImport, prepareContactImport } from "@/lib/import";
 import { type ImportActionState, importContactsAction } from "./actions";
 import { ImportPreview, PREVIEW_LIMIT } from "./ImportPreview";
@@ -34,6 +36,7 @@ export function ImportWizard({
   copy,
   locale,
   assist,
+  timeZone,
 }: {
   diversHref: string;
   /** Rendered on the server via `t.rich` for the embedded `contacts.csv` mono span. */
@@ -46,6 +49,8 @@ export function ImportWizard({
    */
   locale: string;
   assist?: ImportWizardAssist;
+  /** The shop's timezone: a booking after the shop's today is listed, never filed as a visit. */
+  timeZone: string;
 }) {
   const [state, formAction] = useActionState<ImportActionState, FormData>(importContactsAction, {
     status: "idle",
@@ -90,7 +95,8 @@ export function ImportWizard({
     const text = await file.text();
     setFileName(file.name);
     setCsvText(text);
-    setPrepared(prepareContactImport(text));
+    // The preview's today; the commit re-reads it on the server.
+    setPrepared(prepareContactImport(text, { today: calendarDateInTimezone(nowDate(), timeZone) }));
     setMapped(null);
     setMapNothing(false);
   }
@@ -122,7 +128,12 @@ export function ImportWizard({
       }
       setMapped(answer);
       // The same preparation the confirm re-runs on the server with this mapping.
-      setPrepared(prepareContactImport(text, answer));
+      setPrepared(
+        prepareContactImport(text, {
+          today: calendarDateInTimezone(nowDate(), timeZone),
+          assist: answer,
+        }),
+      );
     });
   }
 
@@ -195,6 +206,7 @@ export function ImportWizard({
                 }
               : undefined
           }
+          locale={locale}
         />
       ) : null}
 

@@ -63,7 +63,7 @@
   "hotelPickupsCount": "{count, plural, one {# recogida} other {# recogidas}}",
   "hotelPickupsDescription": "Orden de la furgoneta para las recogidas matinales.",
   "pickupTimeColumn": "Hora de recogida",
-  "pickupHotelColumn": "Hotel / Alojamiento",
+  "pickupHotelColumn": "Hotel / alojamiento",
   "pickupDiverColumn": "Buceador",
   "pickupTimeUnset": "Sin programar",
   "cancelledNothingToPack": "La salida está cancelada. No hay nada que preparar."

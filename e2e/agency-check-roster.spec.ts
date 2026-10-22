@@ -233,7 +233,7 @@ test("a certification-pending row on Today checks the card in place, with Undo",
     page
       .getByRole("listitem")
       .filter({ hasText: name })
-      .filter({ hasText: "Certification not verified yet." });
+      .filter({ hasText: "Certification not verified yet" });
   const row = cardRow();
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "Check with SSI" }).click();

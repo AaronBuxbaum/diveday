@@ -1,8 +1,8 @@
 {
   "notice": {
-    "created": "Código creado y activo en tu cuenta de Stripe.",
-    "enabled": "Código activado.",
-    "disabled": "Código desactivado.",
+    "created": "Código creado y activo en tu cuenta de Stripe",
+    "enabled": "Código activado",
+    "disabled": "Código desactivado",
     "invalid": "Revisa el código, el descuento y las fechas e inténtalo de nuevo.",
     "invalidCode": "Un código solo puede usar letras, números, guiones y guiones bajos.",
     "invalidDiscount": "Elige un porcentaje entre {min} y {max}, o un importe mayor que cero.",
@@ -11,9 +11,9 @@
     "notConnected": "Conecta tu cuenta de Stripe en Ajustes primero.",
     "stripeFailed": "Stripe no creó ese código. Se guarda aquí como fallido y no puede aplicar ningún descuento.",
     "notAuthorized": "Los códigos promocionales están limitados a propietarios y gerentes.",
-    "deleted": "Código eliminado.",
-    "deletedToast": "Código eliminado.",
-    "restored": "Código recreado y activo de nuevo en tu cuenta de Stripe.",
+    "deleted": "Código eliminado",
+    "deletedToast": "Código eliminado",
+    "restored": "Código recreado y activo de nuevo en tu cuenta de Stripe",
     "restoreFailed": "No se pudo restaurar ese código. Créalo de nuevo abajo."
   },
   "connectBanner": "Conecta tu cuenta de Stripe en <settingsLink>Ajustes</settingsLink> antes de crear un código.",
@@ -88,7 +88,7 @@
   "tripDeals": {
     "heading": "Ofertas por salida",
     "description": "Descuentos de una sola salida enviados desde la página de una salida.",
-    "empty": "No hay ofertas por salida activas ahora mismo.",
+    "empty": "No hay ofertas por salida activas ahora mismo",
     "emptyAction": "Abrir el calendario",
     "recipients": "{count, plural, one {Enviado a # buceador} other {Enviado a # buceadores}}",
     "expiresAt": "Caduca {date}",

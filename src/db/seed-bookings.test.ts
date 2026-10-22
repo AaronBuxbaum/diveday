@@ -2,8 +2,9 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { trips } from "./schema";
-import { demoReefDiverIndexes } from "./seed-bookings";
+import { DEMO_REEF_DIVER_INDEXES } from "./seed-bookings";
 import { customerDefs } from "./seed-cast";
+import { DEMO_SHOP_TIMEZONE, demoTodayDepartureStart, sailsAfterDayBoats } from "./seed-clock";
 
 /**
  * The seeded crew shout-out is prose the demo shop "wrote" about its own day,
@@ -44,20 +45,18 @@ describe("the seeded crew shout-out", () => {
 
 /**
  * **No child on a night boat** (UX review 2026-10-13, item 40). A demo seeded
- * in the evening sails today's reef boat at 11:30 PM, and its thirteen-year-old
- * with a birthday callout was aboard until 3:00 AM.
+ * in the evening sailed today's reef boat at 11:30 PM, with its
+ * thirteen-year-old aboard until 3:00 AM. The reef boat is a day boat at every
+ * hour now (market sheet 2026-10-22, item 1), so her seat is always hers.
  */
-describe("demoReefDiverIndexes", () => {
+describe("the reef boat's divers", () => {
   const LENA = customerDefs.findIndex((diver) => diver.fullName === "Lena Fischer");
 
-  it("seats the thirteen-year-old on a day boat", () => {
-    expect(demoReefDiverIndexes(new Date("2026-07-21T18:30:00Z"))).toContain(LENA); // 2:30 PM EDT
-  });
-
-  it("keeps her off a night boat, and keeps the boat's count", () => {
-    const night = demoReefDiverIndexes(new Date("2026-10-13T03:30:00Z")); // 11:30 PM EDT
-    expect(night).not.toContain(LENA);
-    expect(night).toHaveLength(9);
-    expect(new Set(night).size).toBe(9);
+  it("seats the thirteen-year-old on a boat that sails by day, whatever hour the demo is seeded", () => {
+    expect(DEMO_REEF_DIVER_INDEXES).toContain(LENA);
+    for (let hour = 0; hour < 24; hour++) {
+      const now = new Date(Date.UTC(2026, 9, 13, hour, 10));
+      expect(sailsAfterDayBoats(demoTodayDepartureStart(now, DEMO_SHOP_TIMEZONE))).toBe(false);
+    }
   });
 });

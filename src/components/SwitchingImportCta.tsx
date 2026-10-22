@@ -13,14 +13,21 @@ import { canImportShopData } from "@/lib/authz";
  * the role has since changed, so a stale token here only costs an extra
  * click, never a bypassed gate.
  */
-export async function SwitchingImportCta({ label }: { label: string }) {
+export async function SwitchingImportCta({
+  label,
+  from,
+}: {
+  label: string;
+  /** The guide's slug, so the importer can name the system bookings after today were sold in. */
+  from?: string;
+}) {
   const session = await auth();
   const shopSlug = session?.user?.shopSlug;
   if (!shopSlug || !canImportShopData(session.user.roles)) return null;
   return (
     <div className="mt-8">
       <Link
-        href={`/shop/${shopSlug}/settings/import`}
+        href={`/shop/${shopSlug}/settings/import${from ? `?from=${encodeURIComponent(from)}` : ""}`}
         className={buttonClass({ variant: "outline" })}
       >
         {label}

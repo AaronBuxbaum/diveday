@@ -58,7 +58,7 @@
     "createdBy": "by {name}",
     "boughtOnline": "bought online",
     "openTrip": "Open the departure",
-    "balanceOwed": "{amount} still owed on the seat.",
+    "balanceOwed": "{amount} still owed on the seat",
     "status": {
       "open": "Open — awaiting payment",
       "paid": "Paid",
@@ -99,9 +99,9 @@
       "room_charge_hotel": "Charged to room {room} · {hotel} {date}"
     },
     "notice": {
-      "refreshed": "Status refreshed from Stripe.",
+      "refreshed": "Status refreshed from Stripe",
       "refreshFailed": "Couldn’t reach Stripe to refresh this order.",
-      "voided": "Order voided.",
+      "voided": "Order voided",
       "voidFailed": "Couldn’t void this order.",
       "refunded": "Payment refunded. The trip now shows as unpaid for this diver.",
       "refundInvalidAmount": "That refund amount isn’t one this order can give back. Enter an amount up to what’s still held.",
@@ -115,6 +115,7 @@
       "disputeNotAuthorized": "Dispute sheets are limited to owners and managers. Ask one of them to print this one.",
       "fallback": "Something changed on this order. The details below are current.",
       "paymentRecorded": "Payment recorded. Stripe won’t ask the diver for it again.",
+      "paymentRecordedDemo": "Payment recorded.",
       "paymentStripeRefused": "Stripe wouldn’t mark this invoice paid. The diver may have just paid it online, so refresh before recording anything.",
       "paymentRecordFailed": "Couldn’t record this payment.",
       "paymentInFlight": "A payment for this order is being recorded. Check the order in a minute before trying again."
@@ -136,12 +137,12 @@
       "paymentNotConnected": "Payments aren’t connected yet, so there’s no account to invoice from. Connect one to start charging divers.",
       "notAuthorized": "Sending an invoice is limited to owners and managers. Ask one of them to bill this diver.",
       "notAuthorizedRefund": "Refunds are limited to owners and managers.",
-      "paidAfterCloseRefunded": "Refund sent.",
+      "paidAfterCloseRefunded": "Refund sent",
       "paidAfterCloseInProgress": "That refund is already on its way.",
       "paidAfterCloseNeedsCheck": "Stripe already reversed part of this payment. Check it under Payments that need a check first.",
       "paidAfterCloseNotConnected": "Your Stripe account isn’t taking payments, so the refund can’t go out. Refund it in Stripe.",
       "paidAfterCloseFailed": "Stripe didn’t take that refund. Try again, or refund it in Stripe.",
-      "stripeRefundMatched": "Refund matched to the seat.",
+      "stripeRefundMatched": "Refund matched to the seat",
       "stripeRefundPartlyMatched": "Matched. The rest of that refund is still waiting for a seat.",
       "stripeRefundNotMatched": "That seat can’t take this refund. It may already be matched, or the seat wasn’t paid through that checkout."
     },
@@ -158,8 +159,8 @@
       "toLabel": "To",
       "clear": "Clear filters"
     },
-    "filteredByDiver": "Showing orders for {name}.",
-    "filteredByTrip": "Showing orders for {title}.",
+    "filteredByDiver": "Showing orders for {name}",
+    "filteredByTrip": "Showing orders for {title}",
     "openFilteredTrip": "Open the departure",
     "cancelledSeatsOnly": "Showing the orders left on canceled seats. Each may still need a refund or a void.",
     "backToLiveSeats": "Back to the boat’s orders",
@@ -174,8 +175,8 @@
       "hotel": "{hotel} {amount} on {count, plural, one {# order} other {# orders}}",
       "unnamed": "{amount} on {count, plural, one {# order} other {# orders}}"
     },
-    "emptyAll": "No orders yet.",
-    "emptyFiltered": "No orders match these filters.",
+    "emptyAll": "No orders yet",
+    "emptyFiltered": "No orders match these filters",
     "ledger": {
       "today": "Today · {date}",
       "continued": "{day}, continued",

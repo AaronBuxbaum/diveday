@@ -139,7 +139,7 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   await expect(
     stepsBand.getByRole("heading", {
       level: 2,
-      name: "One booking, from your website to the boat and home again.",
+      name: "One booking, from your website to the boat and home again",
     }),
   ).toBeVisible();
   // Each step's own name, from the copy column that is every row's first
@@ -190,7 +190,7 @@ test("the homepage lists every feature page, filed by when its job falls", async
     .locator("section")
     .filter({
       has: page.getByRole("heading", {
-        name: "What the whiteboard, the clipboard and the three apps did, in one plan.",
+        name: "What the whiteboard, the clipboard and the three apps did, in one plan",
       }),
     });
   await expect(directory.getByRole("heading", { level: 3 })).toHaveText([
@@ -243,7 +243,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Every diver booked, signed, checked and accounted for.",
+      name: "Every diver booked, signed, checked and accounted for",
     }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Product" }).first()).toBeVisible();
@@ -253,7 +253,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // in both directions — records arrive cleanly and leave the same way, which
   // is the reason to join, not a goodbye.
   await expect(
-    page.getByRole("heading", { name: "How records arrive, and how they leave." }),
+    page.getByRole("heading", { name: "How records arrive, and how they leave" }),
   ).toBeVisible();
   // Both directions are shown, not just described: the importer's preview for
   // arriving, the export inventory for leaving. This band is the portability
@@ -273,7 +273,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "From the first booking to the roll call after the last dive.",
+      name: "From the first booking to the roll call after the last dive",
     }),
   ).toBeVisible();
   // The full capability index, the thing a buyer comparing DiveDay against
@@ -398,9 +398,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   ).toHaveAttribute("href", "/switching/spreadsheet?from=product-spreadsheet");
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
-  await expect(
-    page.getByRole("heading", { name: "What a shop pays, line by line." }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What a shop pays, line by line" })).toBeVisible();
   // The price as an invoice (2026-09-24): eight labelled lines under the
   // figure, beside the builder's notes on them, so the terms a buyer scans
   // for are on the first screen as a ledger rather than as prose.
@@ -419,14 +417,18 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByText("Today’s price, locked for two years for founding shops."),
   ).toBeVisible();
-  // The trial's own terms, at both decision points — free, three weeks, no
+  // The trial's own terms, once, beside the price — free, three weeks, no
   // card, and the soft expiry that src/lib/trial.ts actually implements. The
-  // demo note beside it answers only for the demo, so before this the trial
-  // button carried no terms at all.
+  // FAQ answer is the only other place the page states the trial (2026-10-22:
+  // the invoice row, the margin note and the closing copy were deleted), and
+  // card fees are the invoice's own row, nowhere else.
   const trialTerms = page.getByText(
     "The trial is a shop of your own: free for 3 weeks, no card, and nothing switches off when the window ends.",
   );
-  await expect(trialTerms).toHaveCount(2);
+  await expect(trialTerms).toHaveCount(1);
+  await expect(page.getByText("3 weeks, no card", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Stripe’s fee, paid to Stripe", { exact: true })).toHaveCount(1);
+  await expect(page.getByText(/Card fees are Stripe’s|Payment-processing fees/)).toHaveCount(0);
   // The offline row is gone from this page's FAQ, deliberately — the claim
   // lives on the boat manifest page, asserted above.
   await expect(page.getByRole("heading", { name: "Does the manifest work offline?" })).toHaveCount(
@@ -447,7 +449,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // guide that carries the citation. No claim about what a shop pays in
   // practice and no savings arithmetic: we have no customers to know either.
   await expect(
-    page.getByRole("heading", { name: "What two booking channels charge, in their own words." }),
+    page.getByRole("heading", { name: "What two booking channels charge, in their own words" }),
   ).toBeVisible();
   await expect(
     page.getByText(/monthly subscription plus 3% of every online booking/),
@@ -516,8 +518,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // (docs/product/marketing.md, "The budget binds controls, not facts") — and
   // this assertion is what stops the note growing a "See the terms" link that
   // would re-order the two above it.
-  await expect(trialTerms.first().locator("a, button")).toHaveCount(0);
-  await expect(trialTerms.last().locator("a, button")).toHaveCount(0);
+  await expect(trialTerms.locator("a, button")).toHaveCount(0);
 
   // The page closes on the number it opened with, and that closing door is
   // tagged apart from the hero's. Without it there was no second door below
@@ -525,7 +526,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // — so a reader who scrolled the objection layer had nothing left to act
   // on. Tagged for its position, so it can be shown to have earned its place
   // rather than folding into the page's own bucket (src/lib/funnel.ts).
-  await expect(page.getByRole("heading", { name: "That is the full price." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That is the full price" })).toBeVisible();
   const pricingMain = page.getByRole("main");
   // Visible, not merely present: `toHaveCount` passes on a `display:none`
   // anchor, and a closing door nobody can see is the bug this one exists to
@@ -726,7 +727,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // page's credibility, and the head count of the team are pinned out by
   // value, so none of them comes back under a new heading.
   await expect(
-    page.getByRole("heading", { name: "Divers who have shipped software to millions of people." }),
+    page.getByRole("heading", { name: "Divers who have shipped software to millions of people" }),
   ).toBeVisible();
   const rendered = await page.locator("body").innerText();
   expect(rendered).not.toMatch(/Aaron|Google|biotech|self-driving|two of us/);
@@ -734,17 +735,17 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // The four standards every screen is held to, as cards under a statement
   // heading. Each is a shipped behavior a visitor can reproduce in the demo.
   await expect(
-    page.getByRole("heading", { name: "The one job on a boat that can’t go wrong." }),
+    page.getByRole("heading", { name: "The one job on a boat that can’t go wrong" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "The roll call runs with no signal." }),
+    page.getByRole("heading", { name: "The roll call runs with no signal" }),
   ).toBeVisible();
   // The export terms are the shared claim, composed into the records card
   // rather than reworded there (src/lib/marketing.ts, `fullShopExport`).
   await expect(page.getByText(/No export fee, no support ticket/)).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "Gaps in a diver’s record show up at the desk, not on the boat.",
+      name: "Gaps in a diver’s record show up at the desk, not on the boat",
     }),
   ).toBeVisible();
 
@@ -757,11 +758,11 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   expect(headings.length).toBeGreaterThanOrEqual(4);
   for (const heading of headings)
     expect(heading, `a question heads a band: ${heading}`).not.toMatch(/\?/);
-  expect(headings.indexOf("Divers who have shipped software to millions of people.")).toBeLessThan(
-    headings.indexOf("The one job on a boat that can’t go wrong."),
+  expect(headings.indexOf("Divers who have shipped software to millions of people")).toBeLessThan(
+    headings.indexOf("The one job on a boat that can’t go wrong"),
   );
-  expect(headings.indexOf("The one job on a boat that can’t go wrong.")).toBeLessThan(
-    headings.indexOf("We set your shop up with you."),
+  expect(headings.indexOf("The one job on a boat that can’t go wrong")).toBeLessThan(
+    headings.indexOf("We set your shop up with you"),
   );
 
   // No fabricated proof anywhere on the page a buyer reads for credibility.
@@ -775,7 +776,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
   // its own demo button on every marketing page (#934).
   const aboutMain = page.getByRole("main");
   const standardsBand = aboutMain.locator("section").filter({
-    has: page.getByRole("heading", { name: "The one job on a boat that can’t go wrong." }),
+    has: page.getByRole("heading", { name: "The one job on a boat that can’t go wrong" }),
   });
   await expect(standardsBand.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
   await expect(standardsBand.locator(SET_UP_DOOR)).toHaveCount(1);
@@ -862,7 +863,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await page.getByRole("contentinfo").getByRole("link", { name: "Switch" }).click();
 
   await expect(
-    page.getByRole("heading", { name: "Every guide ends at the same import screen." }),
+    page.getByRole("heading", { name: "Every guide ends at the same import screen" }),
   ).toBeVisible();
 
   // The named incumbents each have a live guide (no coming-soon entries).
@@ -890,7 +891,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // the scope table has to read in both directions, so the block that says so
   // is part of the guide's contract, not decoration.
   await expect(
-    page.getByRole("heading", { name: "The same table, read the other way." }),
+    page.getByRole("heading", { name: "The same table, read the other way" }),
   ).toBeVisible();
   // Same guard as the spreadsheet guide: no shop session, no deep-link CTA —
   // and no second door in its place, since the concierge band already offers
@@ -959,28 +960,29 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // then the same export/scope/import mechanics every guide shares.
   await page.goto("/switching/fareharbor");
   await expect(
-    page.getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat." }),
+    page.getByRole("heading", { name: "FareHarbor fills the seats. DiveDay runs the boat" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Keep FareHarbor. Add the day it can’t run." }),
+    page.getByRole("heading", { name: "Keep FareHarbor. Add the day it can’t run" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Or leave the per-booking fee behind." }),
+    page.getByRole("heading", { name: "Or leave the per-booking fee behind" }),
   ).toBeVisible();
   // The website ledger (slice 13e): what the shop pasted from FareHarbor
   // beside the DiveDay twin, the hosted-site figure rendered from its one
   // source with its attribution, and the built-to-order offer as a mail door.
   await expect(
-    page.getByRole("heading", { name: "Leaving FareHarbor does not mean rebuilding your site." }),
+    page.getByRole("heading", { name: "Leaving FareHarbor does not mean rebuilding your site" }),
   ).toBeVisible();
   await expect(page.getByText("Lightframe", { exact: true })).toBeVisible();
   await expect(page.getByText(/third parties report \$5,000 a year/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Or have us build the website." })).toBeVisible();
-  // The concierge section further down carries the same words with a
-  // ?subject=, so the offer's door is picked by its bare href.
-  await expect(page.locator('a[href="mailto:switch@dive.day"]')).toHaveText(
-    /Email us at switch@dive\.day/,
-  );
+  await expect(page.getByRole("heading", { name: "Or have us build the website" })).toBeVisible();
+  // The offer's door and the concierge section's further down are the same
+  // set-up form, tagged as the concierge (2026-10-22; both were mail links).
+  await expect(
+    page.locator('a[href="/get-set-up?from=switching-fareharbor-concierge"]'),
+  ).toHaveText(["Get set up", "Get set up"]);
+  await expect(page.locator('a[href^="mailto:switch@"]')).toHaveCount(0);
   // It still renders the shared three-part promise and the honesty table.
   await expect(
     page.getByRole("heading", { name: "Get your data out of FareHarbor" }),
@@ -991,13 +993,13 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // copy (a monthly-plus-per-booking model rather than FareHarbor's fee).
   await page.goto("/switching/rezdy");
   await expect(
-    page.getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." }),
+    page.getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Keep Rezdy. Add the day it can’t run." }),
+    page.getByRole("heading", { name: "Keep Rezdy. Add the day it can’t run" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Or leave the monthly fee and the per-booking cut behind." }),
+    page.getByRole("heading", { name: "Or leave the monthly fee and the per-booking cut behind" }),
   ).toBeVisible();
   // No website ledger: Rezdy's footprint is a marketplace, not the shop's site.
   await expect(page.getByRole("heading", { name: /rebuilding your site/ })).toHaveCount(0);
@@ -1093,7 +1095,7 @@ test("a feature page lists all of its feature and leads on to the next question"
 }) => {
   await page.goto("/product/waivers");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Waivers and medical forms come back signed before the diver walks in.",
+    "Waivers and medical forms come back signed before the diver walks in",
   );
   await expect(
     page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Features" }),
@@ -1316,9 +1318,7 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   // Reachable from the hub — the largest under-served pool gets a front door.
   await page.goto("/switching");
   await page.getByRole("link", { name: /Coming from a spreadsheet/ }).click();
-  await expect(
-    page.getByRole("heading", { name: "Bring the spreadsheet with you." }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bring the spreadsheet with you" })).toBeVisible();
 
   // The three-part shape, reframed for a shop with no vendor to leave:
   // ready your own sheet, the shared scope table, the importer.
@@ -1357,14 +1357,13 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
 
   // The owner-authorized concierge switch offer lands, phrased as a human
-  // commitment, with a real handoff: an email link the shop can act on.
+  // commitment, with a real handoff: the set-up form, tagged as its door.
   await expect(
     page.getByRole("heading", { name: /switch you on, and off, ourselves/ }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: /Email us at/ })).toHaveAttribute(
-    "href",
-    /^mailto:switch@dive\.day/,
-  );
+  await expect(
+    page.locator('a[href="/get-set-up?from=switching-spreadsheet-concierge"]'),
+  ).toHaveText("Get set up");
 
   // Demo-before-trial funnel, same as every guide — and, same as every guide,
   // the first of those doors is in the hero rather than nine sections down.
@@ -1426,7 +1425,7 @@ test("the switching hub shows the import preview rather than describing it", asy
   await page.goto("/switching");
   await expect(
     page.getByRole("heading", {
-      name: "The preview reads your file back to you before a row is saved.",
+      name: "The preview reads your file back to you before a row is saved",
     }),
   ).toBeVisible();
   const preview = page.getByRole("img", { name: /import preview/i });
@@ -1544,16 +1543,16 @@ test.describe("with Accept-Language: es", () => {
   /** One phrase per page, unique to its body and absent from the chrome. */
   const bodyCopy = {
     "/": {
-      english: "Every diver booked, signed, checked and accounted for.",
-      spanish: "Cada buceador reservado, firmado, verificado y localizado.",
+      english: "Every diver booked, signed, checked and accounted for",
+      spanish: "Cada buceador reservado, firmado, verificado y localizado",
     },
     "/product": {
-      english: "From the first booking to the roll call after the last dive.",
-      spanish: "De la primera reserva al pase de lista después de la última inmersión.",
+      english: "From the first booking to the roll call after the last dive",
+      spanish: "De la primera reserva al pase de lista después de la última inmersión",
     },
     "/pricing": {
-      english: "What a shop pays, line by line.",
-      spanish: "Lo que paga un centro, línea por línea.",
+      english: "What a shop pays, line by line",
+      spanish: "Lo que paga un centro, línea por línea",
     },
     // The three that still carried the fallback-is-the-body shape on
     // 2026-08-14 (FU-20260814-remaining-fallback-is-the-body-marketing-pages).
@@ -1562,12 +1561,12 @@ test.describe("with Accept-Language: es", () => {
     // `/switching/[competitor]`; the guarantee this test checks is the same
     // either way.
     "/switching": {
-      english: "Every guide ends at the same import screen.",
-      spanish: "Todas las guías terminan en la misma pantalla de importación.",
+      english: "Every guide ends at the same import screen",
+      spanish: "Todas las guías terminan en la misma pantalla de importación",
     },
     "/switching/spreadsheet": {
-      english: "Bring the spreadsheet with you.",
-      spanish: "Trae la hoja de cálculo contigo.",
+      english: "Bring the spreadsheet with you",
+      spanish: "Trae la hoja de cálculo contigo",
     },
     // `/about`'s `h1` is its eyebrow, and the same words are the page's
     // `<title>`. Next streams metadata through the body and React hoists the
@@ -1645,7 +1644,7 @@ test.describe("with Accept-Language: es", () => {
     await expect(page).toHaveURL(/\/product\/boat-manifest$/);
     // In Spanish, in the one and only body the page renders.
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "Pasa lista por nombre a cada buceador después de cada inmersión, con o sin señal.",
+      "Pasa lista por nombre a cada buceador después de cada inmersión, con o sin señal",
     );
   });
 });

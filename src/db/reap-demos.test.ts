@@ -16,8 +16,8 @@ import {
   divePackageEntitlements,
   divePackages,
   globalDiveSites,
-  lastMinuteListEntries,
-  lastMinuteListUnsubscribeTokens,
+  leads,
+  leadUnsubscribeTokens,
   orders,
   people,
   personCourtesyEmailUnsubscribeTokens,
@@ -309,28 +309,28 @@ describe("deleteDemoShopCascade", () => {
 
   /**
    * The reset endpoint the whole e2e fleet depends on was throwing 23503 on
-   * this exact FK: `last_minute_list_unsubscribe_tokens` shipped with Leo's
+   * this exact FK: `last_minute_list_unsubscribe_tokens` (now `lead_unsubscribe_tokens`) shipped with Leo's
    * self-serve unsubscribe but was never added to either delete ordering. A
    * half-completed reset left the demo shop wrecked, and the browser suite then
    * failed in whichever spec read it next — which is why the flake appeared to
    * wander between `manifest`, `courses`, and `gear-fit-and-age`.
    */
-  it("deletes a last-minute unsubscribe token instead of FK-violating on its entry", async () => {
+  it("deletes a last-minute unsubscribe token instead of FK-violating on its lead", async () => {
     const db = await seededTestDb();
     const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
-    const [entry] = await db
-      .insert(lastMinuteListEntries)
-      .values({ shopId: shop.id, personId: person.id })
+    const [lead] = await db
+      .insert(leads)
+      .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId: person.id })
       .returning();
-    if (!entry) throw new Error("test setup: last-minute entry insert returned no row");
+    if (!lead) throw new Error("test setup: last-minute lead insert returned no row");
     await db
-      .insert(lastMinuteListUnsubscribeTokens)
-      .values({ shopId: shop.id, entryId: entry.id, tokenHash: `hash_${entry.id}` });
+      .insert(leadUnsubscribeTokens)
+      .values({ shopId: shop.id, leadId: lead.id, tokenHash: `hash_${lead.id}` });
 
-    // No FK violation here is the real assertion — tokens must go before entries.
+    // No FK violation here is the real assertion — tokens must go before leads.
     await deleteDemoShopCascade(db, shop.id);
 
     expect(await findShop(db, slug)).toBeUndefined();
@@ -338,8 +338,8 @@ describe("deleteDemoShopCascade", () => {
       (
         await db
           .select()
-          .from(lastMinuteListUnsubscribeTokens)
-          .where(eq(lastMinuteListUnsubscribeTokens.shopId, shop.id))
+          .from(leadUnsubscribeTokens)
+          .where(eq(leadUnsubscribeTokens.shopId, shop.id))
       ).length,
     ).toBe(0);
   });

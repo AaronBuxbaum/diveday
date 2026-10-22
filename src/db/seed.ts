@@ -39,7 +39,6 @@ import {
   courseFormRequirements,
   courseForms,
   courseFormVersions,
-  courseInquiries,
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
@@ -60,8 +59,8 @@ import {
   integrationEvents,
   integrationOauthStates,
   internalNotes,
-  lastMinuteListEntries,
-  lastMinuteListUnsubscribeTokens,
+  leads,
+  leadUnsubscribeTokens,
   marineLifeRequests,
   mediaDeletionAttempts,
   nitroxCertifications,
@@ -103,8 +102,6 @@ import {
   tripChangeEvents,
   tripDives,
   tripHelpRequests,
-  tripInvitations,
-  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   tripRecapPhotos,
   tripRequirements,
@@ -115,7 +112,6 @@ import {
   tripSightings,
   tripStageEvents,
   trips,
-  tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
   waiverMaterialityDecisions,
@@ -128,7 +124,9 @@ import {
   workOrders,
 } from "./schema";
 import { seedBackup } from "./seed-backup";
+import { AT_SEA_CREW, seedBoatAtSea } from "./seed-boat-at-sea";
 import { seedBookings } from "./seed-bookings";
+import { fillWeeklyRun, seedBoothStories } from "./seed-booth";
 import { seedBuddyPairs } from "./seed-buddy-pairs";
 import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { seedCatalog } from "./seed-catalog";
@@ -153,6 +151,7 @@ import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
+import { seedHulls } from "./seed-hulls";
 import { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 import { seedInbox } from "./seed-inbox";
 import { seedLenses } from "./seed-lenses";
@@ -176,7 +175,7 @@ import { seedSightings } from "./seed-sightings";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
-import { nameDemoNightDeparture, seedTrips } from "./seed-trips";
+import { seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
 import { seedWaiverVersions } from "./seed-waiver-versions";
 import { seedWeeklyRun } from "./seed-weekly-run";
@@ -207,7 +206,7 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
  * | `./seed-nitrox.ts` | EANx cards and the per-dive gas the wreck charter gates on |
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
  * | `./seed-gear.ts` | the rental fleet on the wall — tagged units, service clocks, a few reserved for the wreck trip |
- * | `./seed-course-inquiries.ts` | course leads off the public pages, in all three `person_id` states |
+ * | `./seed-course-inquiries.ts` | date leads for courses off the public pages, in all three `person_id` states |
  * | `./seed-course-materials.ts` | the links behind two courses' learning materials, and one student marked done |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-course-photos.ts` | a species photo of its own on every course, so the storefront reads as a shop and not a template |
@@ -277,16 +276,18 @@ const DEMO_SHOP_UNIT_COLUMNS = {
 async function seedStaffShifts(
   db: DbExecutor,
   shopId: string,
-  cast: { id: string; roles: readonly string[] }[],
+  cast: { id: string; fullName: string; roles: readonly string[] }[],
+  { boatAtSea }: { boatAtSea: boolean },
 ): Promise<void> {
   if (cast.length === 0) return;
   const now = nowDate();
   await db.insert(staffShifts).values(
     cast.flatMap((person) =>
-      // The boats' crew (`DEMO_DAWN_CREW_ROLES`) are on from 4:30 too, and
-      // only they work a night boat's hours.
+      // The boats' crew (`DEMO_DAWN_CREW_ROLES`) are on from 4:30 too; the boat
+      // at sea's crew (`AT_SEA_CREW`) work her hours, when the demo has her.
       demoTodayShifts(now, DEMO_SHOP_TIMEZONE, {
         crew: person.roles.some((role) => DEMO_DAWN_CREW_ROLES.has(role)),
+        atSea: boatAtSea && AT_SEA_CREW.some((member) => member.fullName === person.fullName),
       }).map(({ startsAt, endsAt }) => ({
         shopId,
         personId: person.id,
@@ -627,7 +628,12 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   await seedStaffShifts(
     db,
     shop.id,
-    staff.map((person, i) => ({ id: person.id, roles: staffDefs[i].roles })),
+    staff.map((person, i) => ({
+      id: person.id,
+      fullName: staffDefs[i].fullName,
+      roles: staffDefs[i].roles,
+    })),
+    { boatAtSea: opts.history !== false },
   );
   // The shop's own checklist items are settings, not schedule (ADR
   // 20260824-pre-departure-safety-check): seeded once here, never re-seeded by
@@ -635,6 +641,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // finished dawn boat can record its check against them (UX review
   // 2026-10-13, item 40).
   await seedPreDepartureChecklist(db, shop.id);
+  // Stable half: packages are shop configuration a reset leaves standing.
+  // Before the schedule, whose regular holds a card from one of them
+  // (src/db/seed-booth.ts).
+  await seedPackages(db, shop.id);
   await seedDemoSchedule(db, shop.id, opts);
   // Pay-at-booking in Stripe test mode, when configured (ADR
   // 20261009-demo-test-mode-payments); nothing otherwise.
@@ -644,8 +654,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // settings row a demo visitor cannot break, so it lives outside the
   // resettable schedule (ADR 20260804-shop-owned-backup-export).
   await seedBackup(db, shop.id);
-  // Same tier: packages are shop configuration a reset leaves standing.
-  await seedPackages(db, shop.id);
   // Two listed shops beside a demo no listing may show. Stable half: real
   // rows a reset never touches.
   await seedListedShops(db);
@@ -880,7 +888,12 @@ export async function createDemoShop(
   await seedStaffShifts(
     db,
     shop.id,
-    staff.map((person, i) => ({ id: person.id, roles: staffDefs[i].roles })),
+    staff.map((person, i) => ({
+      id: person.id,
+      fullName: staffDefs[i].fullName,
+      roles: staffDefs[i].roles,
+    })),
+    { boatAtSea: opts.history !== false },
   );
   // A visitor's demo should carry the same owner-facing story as the
   // canonical demo, including sailed trips, tips, and reviews. Test-only
@@ -889,11 +902,12 @@ export async function createDemoShop(
   // The same checklist the canonical demo keeps, for the same reason and in
   // the same place: before the schedule, whose dawn boat records against it.
   await seedPreDepartureChecklist(db, shop.id);
-  await seedDemoSchedule(db, shop.id, { history: opts.history !== false });
-  // The canonical demo's two packages, for a visitor's demo too. A private
-  // test shop mints without history and starts with nothing on sale, which is
-  // the state `e2e/package-purchase.spec.ts` begins from.
+  // The canonical demo's two packages, for a visitor's demo too, before the
+  // schedule whose regular holds a card. A private test shop mints without
+  // history and starts with nothing on sale, which is the state
+  // `e2e/package-purchase.spec.ts` begins from.
   if (opts.history !== false) await seedPackages(db, shop.id);
+  await seedDemoSchedule(db, shop.id, { history: opts.history !== false });
 
   return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }
@@ -1232,6 +1246,17 @@ export async function seedDemoSchedule(
   // its own departure (ADR 20260904-reef-all-the-way-down, Budget rule 4;
   // `demoStageTaps`) — after the trips exist and
   // their plans have sites on them, since the tap stamps the site it reads.
+  // The boat at sea, halfway through her roll call, whatever hour the demo is
+  // seeded (src/db/seed-boat-at-sea.ts, market sheet 2026-10-22, item 1):
+  // after every scenario that seats a diver, since she takes regulars with no
+  // seat from today on, and before the stage taps, which she carries too.
+  if (opts.history !== false) await seedBoatAtSea(db, shopId);
+  // What a booth visitor is shown (src/db/seed-booth.ts, market sheet
+  // 2026-10-22, item 4): a dive card, a weather call, two cards the shop
+  // issued, a mask left behind. After the boat at sea, which takes regulars
+  // with no seat from today on, and before the course forms are worded, which
+  // sign for every student already booked.
+  if (opts.history !== false) await seedBoothStories(db, shopId);
   if (captainId) await seedTripStage(db, shopId, captainId);
   await seedTripLegs(db, shopId, opts.history !== false);
 
@@ -1319,11 +1344,18 @@ export async function seedDemoSchedule(
       divemasterIds: standing,
       reliefs: reliefPool.filter((relief) => !standing.includes(relief.personId)),
     });
+    // Its next date sold out, with a wait list (src/db/seed-booth.ts).
+    await fillWeeklyRun(db, shopId);
   }
 
-  // Updates-only, and after every scenario that finds today's boat by its day
-  // name: an evening seed's late boat is named as a night dive (issue #2440).
-  await nameDemoNightDeparture(db, shopId);
+  // Updates-only, after every scenario that creates a departure: a hull on
+  // every boat day and the shop's word on the ones seeded after the first pass
+  // (src/db/seed-hulls.ts, src/db/seed-lenses.ts), so Reports' "By boat" and
+  // "By kind of trip" add up to the month (market sheet 2026-10-22, item 2).
+  if (opts.history !== false) {
+    await seedHulls(db, shopId);
+    await seedLenses(db, shopId);
+  }
 
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated
@@ -1540,26 +1572,19 @@ export async function resetDemoSchedule(
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
-  await db.delete(tripInvitations).where(eq(tripInvitations.shopId, shopId));
-  await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
-  // References trips (last-minute-deal blasts) and people (the last-minute
-  // list itself), so both must go before the trips/people deletes below or
-  // this FK-violates and aborts the whole reset mid-run (docs ADR
-  // 20260727-last-minute-fill-promos; same class of bug the tripWaitlistEntries
-  // comment above already walks).
-  await db
-    .delete(tripLastMinutePromoRecipients)
-    .where(eq(tripLastMinutePromoRecipients.shopId, shopId));
-  await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
-  // Before the entries they point at. Added with Leo's self-serve unsubscribe
-  // (docs ADR 20260731-self-serve-unsubscribe) but not to this ordering, which
-  // made every `/api/test/reset` throw 23503 mid-run and leave the demo shop
+  // The last-minute list's unsubscribe links name a lead by foreign key, so
+  // they go before the leads. Added with Leo's self-serve unsubscribe (docs ADR
+  // 20260731-self-serve-unsubscribe) but not to this ordering once, which made
+  // every `/api/test/reset` throw 23503 mid-run and leave the demo shop
   // half-reset — the e2e fleet then failed in whichever spec happened to read
   // the wreckage next, which is why the flake moved around between runs.
-  await db
-    .delete(lastMinuteListUnsubscribeTokens)
-    .where(eq(lastMinuteListUnsubscribeTokens.shopId, shopId));
-  await db.delete(lastMinuteListEntries).where(eq(lastMinuteListEntries.shopId, shopId));
+  await db.delete(leadUnsubscribeTokens).where(eq(leadUnsubscribeTokens.shopId, shopId));
+  await db.delete(leads).where(eq(leads.shopId, shopId));
+  // References trips (last-minute-deal blasts) and the leads that carry a deal's
+  // `promo_id`, so it goes after them and before the trips/people deletes below
+  // or this FK-violates and aborts the whole reset mid-run (docs ADR
+  // 20260727-last-minute-fill-promos).
+  await db.delete(tripLastMinutePromos).where(eq(tripLastMinutePromos.shopId, shopId));
   // References people (courtesy-email opt-out tokens minted for waitlist
   // invites and trip recaps), so it must go before the people deletes below
   // or this FK-violates and aborts the whole reset mid-run — the same class
@@ -1618,11 +1643,6 @@ export async function resetDemoSchedule(
   // time it exercises the picker's refusal.
   await db.delete(marineLifeRequests).where(eq(marineLifeRequests.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
-  // A course inquiry references its course without cascade (a lead is
-  // evidence, not something a schedule reset should silently vanish), so it
-  // must go before the courses delete or this FK-violates and aborts the whole
-  // reset mid-run — the same class of bug the comment above already walks.
-  await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
@@ -1928,7 +1948,12 @@ async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promis
     await seedStaffShifts(
       db,
       shopId,
-      restored.map((person, i) => ({ id: person.id, roles: missing[i]?.roles ?? [] })),
+      restored.map((person, i) => ({
+        id: person.id,
+        fullName: missing[i]?.fullName ?? "",
+        roles: missing[i]?.roles ?? [],
+      })),
+      { boatAtSea: true },
     );
   }
 

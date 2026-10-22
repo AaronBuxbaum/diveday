@@ -693,7 +693,7 @@ export const RATE_LIMITS = {
    * a public page, per that person rather than per IP.
    *
    * Two anonymous forms still do this: the shop-wide last-minute-deal list
-   * (`joinLastMinuteListAction`) and a full trip's wait list (`joinWaitlist`).
+   * (`askAnytimeAction`) and a full trip's wait list (`joinWaitlist`).
    * Both take a name, an email and a rung, and hand it to
    * `recordSelfDeclaredCards`, which resolves the person by address. Both carry
    * a per-IP bucket already (`lastMinuteListJoin`, `waitlistJoin`, 10/hour

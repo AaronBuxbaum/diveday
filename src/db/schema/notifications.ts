@@ -11,7 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { bookings, lastMinuteListEntries } from "./bookings";
+import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
@@ -23,48 +23,17 @@ import { trips } from "./trips";
  */
 
 /**
- * A diver-facing, self-serve bearer link to unsubscribe one last-minute-list
- * entry (docs features/story-backlog.md "Leo — self-serve email unsubscribe"). A fresh
- * token is minted for every deal blast rather than one stable token per entry
- * (mirrors `bookingCapabilities`, not `calendarFeeds`), so an old email's link
- * keeps working even after a later blast mints another — deliberately never
- * expires: an expired unsubscribe link would leave someone unable to opt out,
- * silently, the same reasoning `createBearerToken`'s calendar-feed case
- * documents. Consuming a token only ever sets `unsubscribedAt`, an idempotent
- * write, so unlike `bookingCapabilities`/`accountTokens` there is nothing to
- * mark used or revoke.
- */
-export const lastMinuteListUnsubscribeTokens = pgTable(
-  "last_minute_list_unsubscribe_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    entryId: uuid("entry_id")
-      .notNull()
-      .references(() => lastMinuteListEntries.id),
-    tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: appNowTimestamp("issued_at").notNull(),
-  },
-  (table) => [
-    index("last_minute_list_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
-    index("last_minute_list_unsubscribe_tokens_entry_idx").on(table.entryId),
-  ],
-);
-
-/**
  * A diver-facing, self-serve bearer link to opt one person out of courtesy
  * email, every courtesy kind `people.courtesyEmailOptOutAt` governs: wait-list
  * openings, post-trip recaps, checkout reminders and cold staff invitations, as
  * listed on `issuePersonCourtesyEmailUnsubscribeToken` in
  * `src/db/courtesy-email.ts` (docs features/story-backlog.md "Leo — self-serve
  * email unsubscribe"). Same
- * shape and reasoning as `lastMinuteListUnsubscribeTokens`: a fresh token per
+ * shape and reasoning as `leadUnsubscribeTokens`: a fresh token per
  * send rather than one stable token per person, never expires, and consuming
  * it is an idempotent write (only ever sets `courtesyEmailOptOutAt`) — kept as
- * a separate table rather than folded into `lastMinuteListUnsubscribeTokens`
- * because it resolves to a person, not a last-minute-list entry.
+ * a separate table rather than folded into `leadUnsubscribeTokens`
+ * because it resolves to a person, not an anytime lead.
  */
 export const personCourtesyEmailUnsubscribeTokens = pgTable(
   "person_courtesy_email_unsubscribe_tokens",
@@ -349,7 +318,7 @@ export const notificationSendQueue = pgTable(
      *
      * None is a new disclosure — every one of them is an address or a number
      * this same tenant already stores in a plaintext column of its own
-     * (`people`, `shops`, `course_inquiries`), unlike the payload, which held
+     * (`people`, `shops`, `leads`), unlike the payload, which held
      * raw bearer tokens that exist nowhere else un-hashed.
      *
      * **Cleared when a row is finished with, retained while it is only
@@ -383,7 +352,7 @@ export const notificationSendQueue = pgTable(
      * **`subject_email` and `subject_phone` are the person the message is
      * *about***, when that is not the person it is addressed to — and null when
      * the two are the same, which is almost every kind. Two are not:
-     * `course_inquiry` mails the shop's own front desk about a diver who used
+     * `lead_received` mails the shop's own front desk about a diver who used
      * the public composer and carries their name, address, phone and free-text
      * message; and the `new_account` operator alert mails DiveDay about a shop owner.
      * Before these a live row for either survived an erasure until it drained,
@@ -395,7 +364,7 @@ export const notificationSendQueue = pgTable(
      * leaves only a number produces a row a `subject_email` alone still could
      * not reach — the first version of this fix shipped that hole and a
      * `security-reviewer` pass found it. The phone match carries the same
-     * accepted over-reach the `course_inquiries.phone` sweep does, and for the
+     * accepted over-reach the the date-lead phone sweep does, and for the
      * same written reason.
      *
      * Both are written from `notificationSubjectEmail`/`notificationSubjectPhone`

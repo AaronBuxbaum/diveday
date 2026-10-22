@@ -1,4 +1,4 @@
-import type { listDateRequestsForCalendarDates } from "@/db/course-inquiries";
+import type { listOpenDateLeadsForDates } from "@/db/lead-dates";
 import type { openAfterDiveRollCalls } from "@/db/today";
 import type { weekBoard } from "@/db/trips";
 // `instant = true` asserts that navigating *into* this page paints
@@ -128,7 +128,7 @@ export function boardWeekView({
   todayIso: string;
   range: { first: Date | null };
   weekRows: Awaited<ReturnType<typeof weekBoard>>;
-  weekAsks: Awaited<ReturnType<typeof listDateRequestsForCalendarDates>>;
+  weekAsks: Awaited<ReturnType<typeof listOpenDateLeadsForDates>>;
   openRollCalls: Awaited<ReturnType<typeof openAfterDiveRollCalls>>;
   crewByTrip: Awaited<ReturnType<typeof weekCrewRead>>;
   boatMap: Map<string, string>;
@@ -333,7 +333,7 @@ export function boardWeekView({
     .map((group) => {
       const rows = group.entries.map((entry) => entry.request);
       // A lead who did not say how many is one person, not none.
-      const people = rows.reduce((total, row) => total + Math.max(1, row.divers ?? 1), 0);
+      const people = rows.reduce((total, row) => total + Math.max(1, row.partySize ?? 1), 0);
       // The reader's own list grammar, not a hard-coded comma: "A, B and C" is
       // English's, and `es-ES` writes it differently.
       const named = rows.map((row) => row.name).filter((name): name is string => Boolean(name));

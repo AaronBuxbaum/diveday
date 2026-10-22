@@ -23,7 +23,7 @@
     "undoing": "Poniéndolo…",
     "undoAriaLabel": "Volver a poner a {name} en la lista de esta salida",
     "waiting": "{count, plural, one {# buceador está esperando esta plaza} other {# buceadores están esperando esta plaza}}",
-    "waitingDoor": "Abrir la lista de espera",
+    "waitingDoor": "Ver quién quiere plaza",
     "rebook": "No hay nadie esperando. Ofrécele otro día a {name}.",
     "rebookDoor": "Agregarlo a {title}, {when}",
     "offerSend": "Enviarle esta fecha por correo",

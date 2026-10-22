@@ -591,7 +591,6 @@ describe("who may run each action on the trip page", () => {
     // by runs again inside `moveBooking`, nothing is charged or refunded (a
     // higher price is reported as owed), and both trips carry a trail naming the staffer.
     "moveSeatAction",
-    "recordTripInvitationAction",
     "createDirectTripInvitationAction",
     "invitePastDiverAction",
     "removeBookingAction",

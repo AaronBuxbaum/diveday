@@ -1,13 +1,16 @@
-import { and, eq, inArray, ne, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { DAY_MS } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/manifests";
 import { demoEmail } from "@/lib/simulator-email";
+import { utcToWallTime } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
 import {
+  boats,
   bookingPayments,
   bookings,
   certifications,
   type DiveSpecialty,
+  diveSites,
   orderLineItems,
   orders,
   people,
@@ -15,13 +18,15 @@ import {
   rollCallEvents,
   tips,
   tripAssignments,
+  tripLenses,
   tripRequirements,
   tripReviews,
   trips,
   waiverRecords,
 } from "./schema";
 import { CAPTAIN_NAME } from "./seed-cast";
-import { at, nextCreatedAt, withinDeskHours } from "./seed-clock";
+import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt, withinDeskHours } from "./seed-clock";
+import { LAST_YEAR_SAILINGS } from "./seed-last-year";
 import { paperRelease, signingNames } from "./seed-paper-release";
 import { reviewedBy } from "./seed-review";
 import { getCurrentWaiverTemplate } from "./waivers";
@@ -116,6 +121,65 @@ function historyPayment(
 }
 
 /**
+ * The divers who appear only in the shop's past: new faces, all certified,
+ * disjoint from the upcoming roster (see `seedHistory`). Other scenarios that
+ * need a regular from the shop's history read them by these names.
+ */
+export const HISTORY_DIVER_NAMES: readonly string[] = [
+  "Grace Halloran",
+  "Bjorn Aasen",
+  "Marisol Vega",
+  "Kenji Watanabe",
+  "Priscilla Adeyemi",
+  "Lars Petersen",
+  "Yara Halabi",
+  "Emmet O'Brien",
+  "Sofia Marchetti",
+  "Dominic Rossi",
+  "Aisha Bello",
+  "Henrik Nilsson",
+  "Camila Rojas",
+  "Tobias Berg",
+  "Noor Rahman",
+  "Diego Ferreira",
+  // A longer trailing history — nine months of churn, not three weeks —
+  // so the reporting page's older months have real regulars behind them
+  // too, not just the same sixteen names on repeat.
+  "Wendell Frost",
+  "Marguerite Dupont",
+  "Osric Bailey",
+  "Anjali Krishnan",
+  "Fabrizio Colombo",
+  "Ottilie Falk",
+  "Emeka Nnamdi",
+  "Perla Jimenez",
+  "Ragnar Solheim",
+  "Ismene Kostas",
+  "Baldur Magnusson",
+  "Cosima Weber",
+  "Talia Rosen",
+  "Ferdinand Braun",
+  "Winnie Achebe",
+  "Radoslav Petrov",
+  "Elowen Pascoe",
+  "Anzu Yamamoto",
+  "Corvin Albrecht",
+  "Nkechi Eze",
+  "Salome Girard",
+  "Torvald Eide",
+  "Beatrix Salazar",
+  "Jamal Farouk",
+  "Wilhelmina Kruger",
+  "Ottone Ricci",
+  "Marisela Ponce",
+  "Callan Doherty",
+  "Yolanda Marin",
+  "Quintus Herrera",
+  "Ines Beaumont",
+  "Dashiell Moon",
+];
+
+/**
  * The months behind today. Owner reporting ("how's your month") is hollow over a
  * shop that opened yesterday, so this back-fills a realistic trailing quarter:
  * past regulars plus a cohort of divers who only ever appear in history, booked
@@ -143,59 +207,7 @@ export async function seedHistory(
   // a current customer onto a sailed trip and signing their waiver would clear
   // today's boat's waiver gate and change the exactly-asserted readiness counts.
   // History-only divers keep the past fully isolated from today's board.
-  const historicalDivers: string[] = [
-    "Grace Halloran",
-    "Bjorn Aasen",
-    "Marisol Vega",
-    "Kenji Watanabe",
-    "Priscilla Adeyemi",
-    "Lars Petersen",
-    "Yara Halabi",
-    "Emmet O'Brien",
-    "Sofia Marchetti",
-    "Dominic Rossi",
-    "Aisha Bello",
-    "Henrik Nilsson",
-    "Camila Rojas",
-    "Tobias Berg",
-    "Noor Rahman",
-    "Diego Ferreira",
-    // A longer trailing history — nine months of churn, not three weeks —
-    // so the reporting page's older months have real regulars behind them
-    // too, not just the same sixteen names on repeat.
-    "Wendell Frost",
-    "Marguerite Dupont",
-    "Osric Bailey",
-    "Anjali Krishnan",
-    "Fabrizio Colombo",
-    "Ottilie Falk",
-    "Emeka Nnamdi",
-    "Perla Jimenez",
-    "Ragnar Solheim",
-    "Ismene Kostas",
-    "Baldur Magnusson",
-    "Cosima Weber",
-    "Talia Rosen",
-    "Ferdinand Braun",
-    "Winnie Achebe",
-    "Radoslav Petrov",
-    "Elowen Pascoe",
-    "Anzu Yamamoto",
-    "Corvin Albrecht",
-    "Nkechi Eze",
-    "Salome Girard",
-    "Torvald Eide",
-    "Beatrix Salazar",
-    "Jamal Farouk",
-    "Wilhelmina Kruger",
-    "Ottone Ricci",
-    "Marisela Ponce",
-    "Callan Doherty",
-    "Yolanda Marin",
-    "Quintus Herrera",
-    "Ines Beaumont",
-    "Dashiell Moon",
-  ];
+  const historicalDivers = HISTORY_DIVER_NAMES;
   const histPeople = await db
     .insert(people)
     .values(
@@ -251,7 +263,7 @@ export async function seedHistory(
     {
       daysAgo: 4,
       hour: 8,
-      title: "Wreck Trip — Duane",
+      title: "Wreck Trip — Benwood & City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 10,
@@ -291,7 +303,7 @@ export async function seedHistory(
     {
       daysAgo: 25,
       hour: 8,
-      title: "Wreck Trip — Spiegel Grove",
+      title: "Wreck Trip — City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 9,
@@ -339,7 +351,7 @@ export async function seedHistory(
     {
       daysAgo: 53,
       hour: 8,
-      title: "Wreck Trip — Bibb",
+      title: "Wreck Trip — Benwood & City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 8,
@@ -398,7 +410,7 @@ export async function seedHistory(
     {
       daysAgo: 92,
       hour: 8,
-      title: "Wreck Trip — USCGC Duane",
+      title: "Wreck Trip — Benwood",
       capacity: 10,
       priceCents: 18500,
       booked: 9,
@@ -430,7 +442,7 @@ export async function seedHistory(
     {
       daysAgo: 115,
       hour: 8,
-      title: "Wreck Trip — Spiegel Grove",
+      title: "Wreck Trip — City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 10,
@@ -470,7 +482,7 @@ export async function seedHistory(
     {
       daysAgo: 146,
       hour: 8,
-      title: "Wreck Trip — Bibb",
+      title: "Wreck Trip — Benwood & City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 7,
@@ -510,7 +522,7 @@ export async function seedHistory(
     {
       daysAgo: 181,
       hour: 8,
-      title: "Wreck Trip — Duane",
+      title: "Wreck Trip — Benwood & City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 8,
@@ -534,7 +546,7 @@ export async function seedHistory(
     {
       daysAgo: 204,
       hour: 8,
-      title: "Wreck Trip — Spiegel Grove",
+      title: "Wreck Trip — City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 9,
@@ -566,7 +578,7 @@ export async function seedHistory(
     {
       daysAgo: 239,
       hour: 8,
-      title: "Wreck Trip — Bibb",
+      title: "Wreck Trip — Benwood & City of Washington",
       capacity: 10,
       priceCents: 18000,
       booked: 10,
@@ -590,13 +602,17 @@ export async function seedHistory(
     {
       daysAgo: 270,
       hour: 8,
-      title: "Wreck Trip — USCGC Duane",
+      title: "Wreck Trip — Benwood",
       capacity: 10,
       priceCents: 18500,
       booked: 7,
     },
   ];
+  // A thin year before, so Reports has a last year to compare with
+  // (src/db/seed-last-year.ts, market sheet 2026-10-22, item 4).
+  tripPlan.push(...LAST_YEAR_SAILINGS);
 
+  const where = await sailedTripPlaces(db, shopId);
   const histTrips = await db
     .insert(trips)
     .values(
@@ -608,6 +624,7 @@ export async function seedHistory(
         endsAt: at(-plan.daysAgo, plan.hour + 4),
         capacity: plan.capacity,
         priceCents: plan.priceCents,
+        ...where(plan.title),
       })),
     )
     .returning();
@@ -627,6 +644,8 @@ export async function seedHistory(
     waiver: boolean;
     order: boolean;
     createdAt: Date;
+    /** When the seat was sold, which is when the booking row was written. */
+    bookedAt: Date;
   };
   const plans: BookingPlan[] = [];
   let k = 0;
@@ -658,6 +677,11 @@ export async function seedHistory(
         waiver: status === "checked_in" ? true : !cancelled && k % 9 !== 0,
         order: payment === "paid" || payment === "deposit_paid",
         createdAt: new Date(trip.startsAt.getTime() - (seat + 1) * 60 * 1000),
+        bookedAt: new Date(
+          trip.startsAt.getTime() -
+            daysBookedAhead(trip.startsAt, seat) * DAY_MS -
+            (seat + 1) * 60 * 1000,
+        ),
       });
       k++;
     }
@@ -672,7 +696,7 @@ export async function seedHistory(
         tripId: plan.tripId,
         personId: plan.personId,
         status: plan.status,
-        createdAt: plan.createdAt,
+        createdAt: plan.bookedAt,
       })),
     )
     .returning();
@@ -1010,3 +1034,98 @@ async function equipHistoryBoats(
       histTrips.flatMap((trip) => historyCrew.map((member) => ({ tripId: trip.id, ...member }))),
     );
 }
+
+/**
+ * **Where a sailed departure went, on what, and what kind of day it was**
+ * (market sheet 2026-10-22, item 2). The back-fill sailed with no hull, no
+ * site and no kind, so Reports' "By boat" summed to a fraction of the month,
+ * "By kind of trip" put most of it under Other, and a night dive's money sat
+ * beside "After dark $0". Read off the title, the way the shop named the day:
+ * a wreck charter takes the big boat, everything else the small one; the
+ * first site the title names is where the boat moored.
+ */
+export function sailedTripShape(title: string): { site: string; kind: string; hull: string } {
+  const [kindWords = "", places = ""] = title.split(" — ");
+  const firstPlace = places.split(" & ")[0] ?? "";
+  const site = SITE_BY_PLACE.find(([word]) => firstPlace.startsWith(word))?.[1] ?? "Molasses Reef";
+  const kind = kindWords.startsWith("Night Dive")
+    ? "After dark"
+    : kindWords.startsWith("Wreck Trip")
+      ? "Wrecks"
+      : kindWords.startsWith("Reef Refresh")
+        ? "First time back in a while"
+        : "Easygoing reef";
+  return { site, kind, hull: kind === "Wrecks" ? "Mantis II" : "Mantis I" };
+}
+
+/** The shop's own site for each place a sailed day's title names. */
+const SITE_BY_PLACE: readonly (readonly [string, string])[] = [
+  ["Molasses", "Molasses Reef"],
+  ["French", "French Reef"],
+  ["Pickles", "Pickles Reef"],
+  ["Benwood", "Benwood Wreck"],
+  // Elbow Reef is where the City of Washington lies.
+  ["Elbow", "City of Washington"],
+  ["City of Washington", "City of Washington"],
+  ["Christ", "Christ of the Abyss"],
+];
+
+/** The shop's hulls, sites and kinds by name, as columns for a sailed departure. */
+export async function sailedTripPlaces(
+  db: DbExecutor,
+  shopId: string,
+): Promise<
+  (title: string) => { boatId: string | null; diveSiteId: string | null; lensId: string | null }
+> {
+  const [hulls, sites, lenses] = [
+    await db.select({ id: boats.id, name: boats.name }).from(boats).where(eq(boats.shopId, shopId)),
+    // Every site, gated or not: the back-fill seats a mixed Open Water and
+    // Advanced cohort, so it sails only the shallow sites (no title names the
+    // Duane, the Bibb or the Spiegel Grove), and a deep wreck added to a title
+    // shows its refusal on the record (`seed-history.test.ts`) rather than
+    // hiding behind a blank site.
+    await db
+      .select({ id: diveSites.id, name: diveSites.name })
+      .from(diveSites)
+      .where(and(eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt))),
+    await db
+      .select({ id: tripLenses.id, name: tripLenses.name })
+      .from(tripLenses)
+      .where(and(eq(tripLenses.shopId, shopId), isNull(tripLenses.deletedAt))),
+  ];
+  const idOf = (rows: { id: string; name: string }[], name: string) =>
+    rows.find((row) => row.name === name)?.id ?? null;
+  return (title) => {
+    const shape = sailedTripShape(title);
+    return {
+      boatId: idOf(hulls, shape.hull),
+      diveSiteId: idOf(sites, shape.site),
+      lensId: idOf(lenses, shape.kind),
+    };
+  };
+}
+
+/**
+ * **How far ahead a sailed seat was sold** (market sheet 2026-10-22, item 2;
+ * glossary "Booking lead time"). Every back-fill seat was booked minutes
+ * before its boat left, so Reports said "half the seats sold on the day" of
+ * every weekday alike. A weekend boat sells weeks out, a Friday boat the week
+ * before, and a midweek boat to the people who decide the day before; the
+ * seat's place on the roster picks its day from its weekday's spread.
+ */
+export function daysBookedAhead(startsAt: Date, seat: number): number {
+  const weekday = utcToWallTime(startsAt, DEMO_SHOP_TIMEZONE);
+  const isoWeekday =
+    ((new Date(Date.UTC(weekday.year, weekday.month - 1, weekday.day)).getUTCDay() + 6) % 7) + 1;
+  const spread =
+    isoWeekday >= 6
+      ? WEEKEND_DAYS_AHEAD
+      : isoWeekday === 5
+        ? FRIDAY_DAYS_AHEAD
+        : MIDWEEK_DAYS_AHEAD;
+  return spread[seat % spread.length] ?? 0;
+}
+
+const WEEKEND_DAYS_AHEAD = [28, 21, 18, 14, 12, 10, 9, 7, 6, 5, 4, 3] as const;
+const FRIDAY_DAYS_AHEAD = [12, 9, 7, 6, 5, 4, 3, 2, 2, 1, 1, 0] as const;
+const MIDWEEK_DAYS_AHEAD = [6, 4, 3, 2, 1, 1, 1, 0, 0, 0, 0, 0] as const;

@@ -2,62 +2,62 @@
   "main": {
     "eyebrow": "Ajustes",
     "notice": {
-      "packingSaved": "Lista de equipo guardada para todas las salidas.",
+      "packingSaved": "Lista de equipo guardada para todas las salidas",
       "packingInvalid": "Agrega entre uno y doce artículos a la lista.",
-      "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios.",
+      "dockSaved": "Hora de presentación en el muelle guardada para todas las confirmaciones y recordatorios",
       "pickupSaved": "Guardado. A los buceadores solo se les pregunta por la recogida cuando esto está activado.",
       "deskPaymentSaved": "Guardado. Cada plaza a pagar en el centro dice cómo pagar.",
       "deskPaymentInvalid": "No cambió nada: elige tarjeta, efectivo, tarjeta y efectivo o no decirlo.",
       "dockInvalid": "Introduce una hora de presentación en el muelle de entre 5 y 180 minutos.",
-      "turnaroundSaved": "Margen entre salidas guardado.",
+      "turnaroundSaved": "Margen entre salidas guardado",
       "turnaroundInvalid": "Introduce un margen de entre 0 y 240 minutos.",
-      "unitsSaved": "Unidades guardadas.",
+      "unitsSaved": "Unidades guardadas",
       "unitsSavedSitesLeft": "Unidades guardadas. {count, plural, one {# sitio de buceo se dejó} other {# sitios de buceo se dejaron}} tal cual, y {count, plural, one {sigue} other {siguen}} en {from, select, feet {pies} other {metros}}: {sites}{more, plural, =0 {} other { y # más}}. Revisa{count, plural, one {lo} other {los}} a mano en Sitios de buceo.",
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
-      "passThroughSaved": "Cuota repercutida guardada.",
+      "passThroughSaved": "Cuota repercutida guardada",
       "passThroughInvalid": "Introduce el nombre y un importe positivo, o deja ambos vacíos para desactivarla.",
-      "rentalsSaved": "Alquiler guardado.",
+      "rentalsSaved": "Alquiler guardado",
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
       "rentalTermsInvalid": "Las condiciones de alquiler no pueden pasar de 1500 caracteres.",
       "regulatorServiceInvalid": "Elige 12 o 24 meses.",
-      "contactSaved": "Datos de contacto guardados.",
+      "contactSaved": "Datos de contacto guardados",
       "contactConfirmationSent": "Datos de contacto guardados. Abre el correo de confirmación que enviamos a esa dirección para que lleguen allí las respuestas de los buceadores.",
       "contactInvalid": "Usa una dirección de correo completa, o vacía el campo para quitarla de tus páginas públicas.",
-      "profileSaved": "Perfil y marca del centro guardados.",
+      "profileSaved": "Perfil y marca del centro guardados",
       "profileInvalid": "Revisa el lema, la descripción y el archivo del logotipo.",
-      "shopPhotosSaved": "Fotos del centro guardadas.",
+      "shopPhotosSaved": "Fotos del centro guardadas",
       "shopPhotosInvalid": "Esas fotos no se guardaron. Usa JPG, PNG, WebP o HEIC de menos de {maxMb} MB, y no pases de {max} en total.",
-      "addressSaved": "Dirección del centro guardada.",
-      "addressRemoved": "Dirección del centro quitada.",
+      "addressSaved": "Dirección del centro guardada",
+      "addressRemoved": "Dirección del centro quitada",
       "addressInvalid": "No se pudo guardar esa dirección. Busca otra vez y elige tu centro en la lista.",
-      "reviewUrlSaved": "Enlace de reseñas guardado.",
+      "reviewUrlSaved": "Enlace de reseñas guardado",
       "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
-      "deskHoursSaved": "Horario de atención guardado.",
+      "deskHoursSaved": "Horario de atención guardado",
       "deskHoursInvalid": "Elige una hora de apertura anterior a la de cierre.",
       "searchListingOn": "Tus páginas públicas aparecen en los buscadores.",
       "searchListingOff": "Tus páginas públicas están ocultas para los buscadores. Lo que ya esté indexado puede tardar unas semanas en desaparecer.",
-      "connected": "Cuenta de Stripe conectada.",
+      "connected": "Cuenta de Stripe conectada",
       "connectFailed": "La conexión con Stripe no se completó. Inténtalo de nuevo.",
       "notConfigured": "Los pagos en línea aún no están activos en esta instalación de DiveDay.",
-      "disconnected": "Cuenta de Stripe desconectada.",
-      "refreshed": "Estado de pagos actualizado desde Stripe.",
+      "disconnected": "Cuenta de Stripe desconectada",
+      "refreshed": "Estado de pagos actualizado desde Stripe",
       "demoStripe": "La demo sigue conectada a Stripe en modo de prueba.",
       "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
-      "timezoneSaved": "Zona horaria guardada.",
-      "seasonSaved": "Inicio de temporada guardado.",
+      "timezoneSaved": "Zona horaria guardada",
+      "seasonSaved": "Inicio de temporada guardado",
       "seasonInvalid": "Elige un día que ese mes tenga.",
       "reopensSaved": "Guardado. Tu página pública muestra esta fecha mientras su calendario esté tranquilo.",
       "reopensInvalid": "No podemos publicar esa fecha. Elige una dentro de los próximos 18 meses.",
       "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
-      "emergencySaved": "Referencia de emergencia guardada.",
+      "emergencySaved": "Referencia de emergencia guardada",
       "shoreAlertInvalid": "Ese correo del contacto en tierra no es una dirección válida. No se guardó nada.",
       "shoreAlertConsentMissing": "Marca que el contacto en tierra aceptó recibir los avisos del pase de lista en esta dirección; si la dirección es nueva, márcalo otra vez. No se guardó nada.",
       "shoreAlertConfirmationSent": "Guardado. Enviamos un enlace al contacto en tierra; los avisos empiezan cuando lo confirme.",
       "shoreAlertConfirmationNotSent": "Guardado, pero el enlace de confirmación no salió. Prueba “Enviar el enlace otra vez” dentro de unos minutos.",
       "shoreAlertSavedDemo": "Guardado. Los centros de demostración no envían nada, así que no salió ningún enlace.",
       "shoreAlertCleared": "Correo del contacto en tierra quitado. Ya no recibe avisos del pase de lista.",
-      "packageSaved": "Paquete agregado.",
-      "packageDeleted": "Paquete eliminado.",
+      "packageSaved": "Paquete agregado",
+      "packageDeleted": "Paquete eliminado",
       "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar."
     },
     "timezone": {
@@ -405,7 +405,7 @@
       "off": "Desactivado",
       "save": "Guardar",
       "saving": "Guardando…",
-      "saved": "Guardado.",
+      "saved": "Guardado",
       "reviews": {
         "heading": "Reseñas de buceadores",
         "label": "Pedir a los buceadores que valoren su día",
@@ -456,7 +456,7 @@
       "description": "Turnos, días fuera y quién trabaja en cada salida. Las sesiones de curso nombran a su instructor en cualquier caso.",
       "save": "Guardar turnos",
       "saving": "Guardando…",
-      "saved": "Turnos de la tripulación guardados.",
+      "saved": "Turnos de la tripulación guardados",
       "turnOn": "Activar en Funciones"
     },
     "team": {
@@ -567,7 +567,7 @@
       "deleting": "Eliminando…",
       "owed": "Inmersiones adeudadas en paquetes: {dives, number} ({value})",
       "createTitle": "Agregar paquete",
-      "empty": "Todavía no hay paquetes a la venta."
+      "empty": "Todavía no hay paquetes a la venta"
     },
     "yourData": {
       "heading": "Exportar, importar, respaldos e integraciones"
@@ -577,13 +577,13 @@
     "title": "Equipo",
     "unnamedInviter": "Un compañero",
     "notice": {
-      "invited": "Invitación enviada.",
-      "inviteResent": "Invitación reenviada.",
-      "changesSaved": "Cambios del equipo guardados.",
-      "reactivated": "Cuenta reactivada.",
+      "invited": "Invitación enviada",
+      "inviteResent": "Invitación reenviada",
+      "changesSaved": "Cambios del equipo guardados",
+      "reactivated": "Cuenta reactivada",
       "disabled": "Cuenta deshabilitada. Ya no puede iniciar sesión.",
       "removed": "Eliminado: está fuera de tu equipo y ya no puede iniciar sesión.",
-      "restored": "Acceso al equipo restaurado.",
+      "restored": "Acceso al equipo restaurado",
       "restoreFailed": "No se pudo restaurar el acceso de esa persona. Revisa su cuenta primero.",
       "inviteInvalid": "Introduce un nombre, un correo válido y marca al menos un rol.",
       "rolesInvalid": "Marca al menos un rol antes de guardar.",
@@ -594,9 +594,9 @@
       "lastOwner": "No se puede hacer eso, porque el centro necesita al menos un propietario. Convierte a otra persona en propietario primero.",
       "notFound": "Esa persona no está en el equipo de este centro.",
       "notAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
-      "contactSaved": "Contacto de emergencia guardado.",
+      "contactSaved": "Contacto de emergencia guardado",
       "contactHalfFilled": "Un contacto de emergencia necesita nombre y teléfono.",
-      "languagesSaved": "Idiomas guardados."
+      "languagesSaved": "Idiomas guardados"
     },
     "statusBadge": {
       "invited": "Invitado",
@@ -632,7 +632,7 @@
     },
     "current": {
       "heading": "Equipo actual",
-      "empty": "Todavía no se ha invitado a nadie.",
+      "empty": "Todavía no se ha invitado a nadie",
       "emptyAction": "Invitar a un compañero"
     },
     "staffRow": {
@@ -679,8 +679,8 @@
     "moveUp": "Subir",
     "moveDown": "Bajar",
     "notice": {
-      "added": "Agregado a la lista de verificación.",
-      "deleted": "Eliminado de la lista de verificación.",
+      "added": "Agregado a la lista de verificación",
+      "deleted": "Eliminado de la lista de verificación",
       "invalid": "Eso no se guardó. Inténtalo de nuevo.",
       "duplicateLabel": "Esa línea ya está en la lista.",
       "notAuthorized": "No tienes permiso para cambiar esto.",
@@ -784,7 +784,7 @@
       },
       "pastVisits": {
         "what": "Visitas pasadas (qué reservaron y cuándo)",
-        "detail": "Cada fila de reserva se convierte en historial de visitas. No es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
+        "detail": "Cada fila de reserva hasta hoy se convierte en historial de visitas. No es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
       },
       "paymentHistory": {
         "what": "Historial de pagos y recibos",
@@ -856,6 +856,11 @@
       "visitRowsNoticeOther": "{count} filas registran una visita anterior. Consulta “Qué se importa” arriba para ver qué significa eso y qué no.",
       "paymentHistoryRowsNoticeOne": "{count} fila de pago, reembolso o recibo del origen se importará como historial sin verificar. Nunca crea pedidos ni cargos en Stripe.",
       "paymentHistoryRowsNoticeOther": "{count} filas de pago, reembolso o recibo del origen se importarán como historial sin verificar. Nunca crean pedidos ni cargos en Stripe.",
+      "bookingsAfterTodayOne": "{count} reserva es posterior a hoy. No es una plaza aquí. Agrégala en el tablero o déjala en {system} hasta que zarpe.",
+      "bookingsAfterTodayOther": "{count} reservas son posteriores a hoy. No son plazas aquí. Agrégalas en el tablero o déjalas en {system} hasta que zarpen.",
+      "bookingsAfterTodayMoreOne": "Y {count} más.",
+      "bookingsAfterTodayMoreOther": "Y {count} más.",
+      "oldSystem": "tu sistema anterior",
       "stats": {
         "diversInFile": "Buceadores en el archivo",
         "extraCardRows": "Filas de certificación extra",
@@ -1010,9 +1015,9 @@
     "stepUpVerifying": "Verificando…",
     "notice": {
       "enrollmentStarted": "Configuración iniciada. Guarda el secreto antes de activar los dos pasos.",
-      "enabled": "Autenticación en dos pasos activada.",
-      "disabled": "Autenticación en dos pasos desactivada.",
-      "sessionRevoked": "Sesión revocada.",
+      "enabled": "Autenticación en dos pasos activada",
+      "disabled": "Autenticación en dos pasos desactivada",
+      "sessionRevoked": "Sesión revocada",
       "codeInvalid": "No se aceptó ese código.",
       "stepUpRequired": "Verifica con tu aplicación de autenticación para continuar.",
       "unavailable": "La configuración de seguridad no está disponible hasta configurar la clave de cifrado del despliegue.",
@@ -1051,7 +1056,7 @@
       },
       "lightbox": {
         "name": "Ventana",
-        "hint": "La reserva se abre sobre tu página; el pago, en la de DiveDay"
+        "hint": "La reserva se abre sobre tu página; el pago, en la de DiveDay."
       },
       "calendar": {
         "name": "Calendario",

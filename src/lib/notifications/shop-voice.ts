@@ -32,9 +32,8 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "guardian_release_copy":
     case "readiness_link":
     case "booking_handoff":
-    case "waitlist_invite":
-    case "trip_invitation":
-    case "direct_trip_invitation":
+    case "seat_offer":
+    case "seat_offer_commercial":
     case "trip_reminder_7d":
     case "trip_reminder_24h":
     case "trip_rescheduled":
@@ -46,7 +45,6 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "party_payment_receipt":
     case "seat_already_held":
     case "checkout_recovery":
-    case "last_minute_deal":
     case "staff_reply":
     case "work_order_ready":
     case "gear_service_due":
@@ -54,7 +52,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "departure_note":
     case "lost_item_found":
     case "course_certified":
-    case "course_inquiry_received":
+    case "lead_received_ack":
     // The shore contact is asked, and later told, by the shop it agreed to
     // hear from (H-118).
     case "roll_call_stale_shore":
@@ -67,7 +65,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "password_changed":
     case "staff_invite":
     case "operator_alert":
-    case "course_inquiry":
+    case "lead_received":
     case "weekly_digest":
     case "desk_after_hours":
     case "stripe_payments_restricted":

@@ -3,6 +3,8 @@ import { FEATURE_PAGE_SLUGS } from "./feature-pages";
 import {
   eventSource,
   featureSource,
+  guideHref,
+  guideOfSource,
   guideSource,
   scheduleAttributionHref,
   setUpHref,
@@ -56,6 +58,15 @@ describe("eventSource", () => {
     expect(eventSource("switching-eve-close")).toBe("switching-eve-close");
     expect(eventSource("switching-spreadsheet-mid")).toBe("switching-spreadsheet-mid");
     expect(eventSource("switching-spreadsheet-close")).toBe("switching-spreadsheet-close");
+  });
+
+  // The concierge offer's door on every switching page became the set-up form
+  // (2026-10-22); it sits a band above the closing pair, so it reads apart.
+  it("keeps the concierge's set-up door distinct on every switching page", () => {
+    expect(guideSource("eve", "concierge")).toBe("switching-eve-concierge");
+    expect(eventSource("switching-eve-concierge")).toBe("switching-eve-concierge");
+    expect(eventSource("switching-hub-concierge")).toBe("switching-hub-concierge");
+    expect(eventSource("switching-spreadsheet-concierge")).toBe("switching-spreadsheet-concierge");
   });
 
   it("keeps a tag for every feature page, its closing band apart", () => {
@@ -161,5 +172,32 @@ describe("setUpHref", () => {
     expect(setUpHref("pricing-close")).toBe("/get-set-up?from=pricing-close");
     const tag = new URL(setUpHref("about-work"), "https://dive.day").searchParams.get("from");
     expect(eventSource(tag)).toBe("about-work");
+  });
+});
+
+describe("guideOfSource", () => {
+  it("names the guide whose door a tag came from, at any position", () => {
+    for (const slug of MIGRATION_GUIDE_SLUGS) {
+      expect(guideOfSource(guideSource(slug))).toBe(slug);
+      expect(guideOfSource(guideSource(slug, "mid"))).toBe(slug);
+      expect(guideOfSource(guideSource(slug, "close"))).toBe(slug);
+      expect(guideOfSource(guideSource(slug, "concierge"))).toBe(slug);
+    }
+  });
+
+  it("names nothing for a page that is not a guide, or a crafted tag", () => {
+    expect(guideOfSource("switching-hub")).toBeNull();
+    expect(guideOfSource("switching-spreadsheet-close")).toBeNull();
+    expect(guideOfSource("pricing")).toBeNull();
+    expect(guideOfSource("switching-fareharbor-elsewhere")).toBeNull();
+    expect(guideOfSource("switching-constructor")).toBeNull();
+    expect(guideOfSource(undefined)).toBeNull();
+    expect(guideOfSource(["switching-eve"])).toBeNull();
+  });
+});
+
+describe("guideHref", () => {
+  it("opens one guide carrying the door's own tag", () => {
+    expect(guideHref("fareharbor", "setup-sent")).toBe("/switching/fareharbor?from=setup-sent");
   });
 });

@@ -59,7 +59,7 @@ export function TankGas({
                 </select>
                 <SubmitButton
                   pendingLabel={t("counterRentals.ticket.fillCorrecting")}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
+                  className={buttonClass({ variant: "secondary" })}
                 >
                   {t("counterRentals.ticket.fillCorrect")}
                 </SubmitButton>

@@ -10,10 +10,9 @@ import {
 import { log } from "@/lib/log";
 import type { AppDb } from "./client";
 import { type SendDepartureNoteOutcome, sendDepartureNote } from "./departure-notes";
+import type { SeatOffersOutcome } from "./lead-offers";
 import { heldSends } from "./schema";
-import { type SendLastMinuteDealOutcome, sendLastMinuteDealBlast } from "./trip-promos";
 import type { RescheduleNoticeOutcome } from "./trip-rescheduled";
-import { inviteWaitlistDiver } from "./waitlist";
 import { deliverWaiverBatch, type WaiverBatchOutcome } from "./waiver-issue";
 
 /**
@@ -37,8 +36,7 @@ export type HeldSendRow = {
 
 export type HeldSendOutcome =
   | ({ kind: "waiver_send" } & WaiverBatchOutcome)
-  | { kind: "last_minute_deal"; outcome: SendLastMinuteDealOutcome }
-  | { kind: "waitlist_invite"; result: "sent" | "fallback" }
+  | ({ kind: "seat_offer" } & SeatOffersOutcome)
   | ({ kind: "trip_rescheduled" } & RescheduleNoticeOutcome)
   | { kind: "departure_note"; outcome: SendDepartureNoteOutcome };
 
@@ -142,21 +140,36 @@ export async function claimHeldSend(
     .where(and(eq(heldSends.id, id), eq(heldSends.shopId, shopId)))
     .returning();
   if (!claimed) return { status: "gone" };
-  return { status: "claimed", row: toRow(claimed) };
+  const readable = toRow(claimed);
+  return readable ? { status: "claimed", row: readable } : { status: "gone" };
 }
 
-/** Every held send whose hold has drained, claimed for the cron sweep. */
+/**
+ * Every held send whose hold has drained, claimed for the cron sweep. A row
+ * this release cannot read (a payload the release before it held, such as a
+ * `waitlist_invite`) is claimed and dropped on its own, logged, and never
+ * costs the other due rows their send (security review of #2656, minor 2):
+ * the claim deletes every due row, so one throw here would lose them all.
+ */
 export async function claimDueHeldSends(db: AppDb, now = nowDate()): Promise<HeldSendRow[]> {
   const rows = await db.delete(heldSends).where(lte(heldSends.runAt, now)).returning();
-  return rows.map(toRow);
+  return rows.flatMap((row) => toRow(row) ?? []);
 }
 
-function toRow(row: typeof heldSends.$inferSelect): HeldSendRow {
+/** The row as this release reads it, or null (logged) for a payload it cannot read. */
+function toRow(row: typeof heldSends.$inferSelect): HeldSendRow | null {
+  const parsed = heldSendPayloadSchema.safeParse(row.payload);
+  if (!parsed.success) {
+    // The kind column, never the payload: it names people and bookings.
+    log("held_send.unreadable", "error", { kind: row.kind });
+    return null;
+  }
+  const payload = parsed.data;
   return {
     id: row.id,
     shopId: row.shopId,
-    kind: row.kind,
-    payload: heldSendPayloadSchema.parse(row.payload),
+    kind: payload.kind,
+    payload,
     actorPersonId: row.actorPersonId,
     runAt: row.runAt,
   };
@@ -174,18 +187,6 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
       });
       return { kind: "waiver_send", ...outcome };
     }
-    case "last_minute_deal": {
-      const outcome = await sendLastMinuteDealBlast(db, {
-        shopId: row.shopId,
-        shopSlug: await shopSlugOf(db, row.shopId),
-        tripId: payload.tripId,
-        discountPercent: payload.discountPercent,
-        discountAmountCents: payload.discountAmountCents,
-        createdByPersonId: row.actorPersonId ?? undefined,
-        recipientPersonIds: payload.recipientPersonIds,
-      });
-      return { kind: "last_minute_deal", outcome };
-    }
     // Checked again inside: a departure cancelled or sailed during the hold
     // is refused here and nobody is messaged (`sendDepartureNote`).
     case "departure_note": {
@@ -197,16 +198,17 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
       });
       return { kind: "departure_note", outcome };
     }
-    case "waitlist_invite": {
-      const result = await inviteWaitlistDiver(db, {
+    case "seat_offer": {
+      const { offerSeats } = await import("./lead-offers");
+      const outcome = await offerSeats(db, {
         shopId: row.shopId,
         shopSlug: await shopSlugOf(db, row.shopId),
-        entryId: payload.entryId,
+        tripId: payload.tripId,
+        leadIds: payload.leadIds,
+        discount: payload.discount,
+        createdByPersonId: row.actorPersonId ?? undefined,
       });
-      return {
-        kind: "waitlist_invite",
-        result: result.ok && result.delivery === "sent" ? "sent" : "fallback",
-      };
+      return { kind: "seat_offer", ...outcome };
     }
     case "trip_rescheduled": {
       // Imported at call time: `trip-rescheduled` holds through this module.

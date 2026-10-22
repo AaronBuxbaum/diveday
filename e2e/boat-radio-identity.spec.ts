@@ -48,7 +48,7 @@ test("a boat's call sign, MMSI and working channel reach the emergency card of t
   // The channel the boat works on (issue #2672), kept as the shop says it.
   await boatRow(page, BOAT).getByLabel("Working channel").fill(" 68 ");
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Boat updated" })).toBeVisible();
   await page.reload();
   await boatRow(page, BOAT).locator("summary").click();
   await expect(boatRow(page, BOAT).getByLabel("Call sign")).toHaveValue("WDM 3301");

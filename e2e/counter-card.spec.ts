@@ -18,7 +18,7 @@ test("the counter card in Settings opens its own printable sheet", async ({ page
   await expect(print).toHaveAttribute("href", "/shop/blue-mantis/print/counter-card");
 
   await page.goto("/shop/blue-mantis/print/counter-card");
-  await expect(page.getByRole("heading", { name: "New here? Scan this." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "New here? Scan this" })).toBeVisible();
   await expect(page.locator(".paper-sheet").getByRole("img")).toHaveCount(1);
   await expect(page.getByText(/\/s\/blue-mantis\//).first()).toBeVisible();
 });

@@ -16,7 +16,7 @@ import { getBookingPayment } from "@/db/payments";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getReadyPageData } from "@/db/ready";
 import { getShopReviewAggregate } from "@/db/reviews";
-import { bookings, people, personRoles, trips, tripWaitlistEntries } from "@/db/schema";
+import { bookings, leads, people, personRoles, trips } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
@@ -489,10 +489,13 @@ describe("the trip page on a course departure with a held seat and a waitlist", 
       )
       .limit(1);
     if (!waiting) throw new Error("no diver is free to wait-list");
-    await plain.insert(tripWaitlistEntries).values({
+    await plain.insert(leads).values({
       shopId: shop.id,
       tripId: trip.id,
+      scope: "departure",
+      askedBy: "diver",
       personId: waiting.id,
+      partySize: 1,
     });
     const { db, phases } = phaseCountingDb(plain.$client as PGlite);
     const shared = loadTripSharedReads(db, shop.id, trip.id);

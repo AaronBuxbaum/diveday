@@ -4,7 +4,15 @@ import { DAY_MS, nowDate } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { getTripManifest } from "./manifests";
 import { getMonthlyReport } from "./reporting";
-import { tripAssignments, tripRequirements, trips as tripsTable } from "./schema";
+import {
+  bookings,
+  certifications,
+  diveSites,
+  rollCallEvents,
+  tripAssignments,
+  tripRequirements,
+  trips as tripsTable,
+} from "./schema";
 import { resetDemoSchedule } from "./seed";
 import { DEMO_COMPLETED_TRIP_TITLE } from "./seed-more-trips";
 
@@ -22,9 +30,9 @@ const ctx = fileScopedShopContext();
  * create, because readiness gates boarding at departure. The demo was teaching
  * exactly what the boarding gate exists to prevent.
  */
-describe("seeded history manifests", () => {
-  const HISTORY_DESCRIPTION = "Sailed. Kept in the log for the shop's monthly numbers.";
+const HISTORY_DESCRIPTION = "Sailed. Kept in the log for the shop's monthly numbers.";
 
+describe("seeded history manifests", () => {
   it("never shows a boarded diver beside a blocked readiness result", async () => {
     const { db, shop } = ctx;
     await resetDemoSchedule(db, shop.id, { history: true });
@@ -52,6 +60,53 @@ describe("seeded history manifests", () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  /**
+   * **No Open Water diver logged on a deep wreck** (dive-domain review of the
+   * demo reseed, item 1). The back-fill seats a mixed Open Water and Advanced
+   * cohort with no Deep card, so it sails only sites an Open Water card
+   * clears: the Duane, the Bibb and the Spiegel Grove (30 to 40 m, gated
+   * Advanced Open Water and Deep) are named by no sailed day, and every sailed
+   * day carries its site, so a deep wreck added to a title shows its refusal
+   * beside "Boarded" in the test above instead of hiding behind a blank site.
+   */
+  it("seats no Open Water diver on a deep wreck, and blanks no site to hide one", async () => {
+    const { db, shop } = ctx;
+    await resetDemoSchedule(db, shop.id, { history: true });
+    const history = await db
+      .select({
+        id: tripsTable.id,
+        title: tripsTable.title,
+        siteId: tripsTable.diveSiteId,
+        siteMaxDepth: diveSites.maxDepthMeters,
+        siteGate: diveSites.minimumCertificationLevel,
+      })
+      .from(tripsTable)
+      .leftJoin(diveSites, eq(diveSites.id, tripsTable.diveSiteId))
+      .where(and(eq(tripsTable.shopId, shop.id), eq(tripsTable.description, HISTORY_DESCRIPTION)));
+    expect(history.length).toBeGreaterThan(0);
+    expect(history.filter((trip) => /Duane|Bibb|Spiegel/.test(trip.title))).toEqual([]);
+    expect(history.filter((trip) => trip.siteId === null).map((trip) => trip.title)).toEqual([]);
+
+    const boardedOpenWater = await db
+      .select({ title: tripsTable.title, maxDepth: diveSites.maxDepthMeters })
+      .from(rollCallEvents)
+      .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
+      .innerJoin(tripsTable, eq(tripsTable.id, rollCallEvents.tripId))
+      .innerJoin(diveSites, eq(diveSites.id, tripsTable.diveSiteId))
+      .innerJoin(certifications, eq(certifications.personId, bookings.personId))
+      .where(
+        and(
+          eq(tripsTable.shopId, shop.id),
+          eq(tripsTable.description, HISTORY_DESCRIPTION),
+          eq(rollCallEvents.status, "boarded"),
+          eq(certifications.level, "open_water"),
+        ),
+      );
+    expect(boardedOpenWater.length).toBeGreaterThan(0);
+    // Open Water is trained to 18 m.
+    expect(boardedOpenWater.filter((row) => (row.maxDepth ?? 0) > 18)).toEqual([]);
   });
 
   /**

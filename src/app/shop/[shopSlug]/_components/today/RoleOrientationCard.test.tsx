@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 const COPY: RoleOrientationCardCopy = {
-  heading: "New here? A few pointers for your role.",
+  heading: "New here? A few pointers for your role",
   tryLabel: "Try:",
   dismiss: "Got it",
   title: "You’re steering the whole shop",
@@ -35,7 +35,7 @@ describe("RoleOrientationCard", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: "New here? A few pointers for your role." }),
+      screen.getByRole("heading", { name: "New here? A few pointers for your role" }),
     ).toBeInTheDocument();
     expect(screen.getByText("You’re steering the whole shop")).toBeInTheDocument();
     expect(

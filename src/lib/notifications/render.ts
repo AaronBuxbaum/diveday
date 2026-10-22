@@ -7,7 +7,6 @@ import {
   bookkeeperNoticeEmail,
 } from "./bookkeeper-email";
 import { courseCertifiedEmail } from "./course-certified";
-import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 import { crewScheduleChangeEmail } from "./crew-emails";
 import {
   deskAfterHoursEmail,
@@ -22,12 +21,12 @@ import {
   bookingHandoffEmail,
   checkoutRecoveryEmail,
   contactEmailConfirmationEmail,
-  courseInquiryEmail,
   demoStartedAlertEmail,
   type EmailShopBrand,
   founderDigestEmail,
   guardianReleaseCopyEmail,
   lastMinuteDealEmail,
+  leadReceivedEmail,
   type NotificationEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
@@ -50,6 +49,7 @@ import {
 } from "./email";
 import { incidentMissingDiverEmail, incidentMissingDiverFoundEmail } from "./incident-emails";
 import type { Notification } from "./kinds";
+import { leadReceivedAckEmail } from "./lead-received-ack";
 import { partyPaymentReceiptEmail } from "./party-payment-receipt";
 import {
   rollCallStaleEmail,
@@ -153,9 +153,23 @@ function addressConfirmationEmail(
 
 function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
-  if (notification.kind === "waitlist_invite") return waitlistInviteEmail(notification);
-  if (notification.kind === "trip_invitation") return tripInvitationEmail(notification);
-  if (notification.kind === "direct_trip_invitation") return tripInvitationEmail(notification);
+  if (notification.kind === "seat_offer") return tripInvitationEmail(notification);
+  // A waiting diver hears "a seat opened"; anyone the shop reached out to hears
+  // that the shop is offering it. The words are the diver's, unchanged.
+  if (notification.kind === "seat_offer_commercial") {
+    // An offer that carries a deal says the deal: the code, the figure and the
+    // day the code stops working.
+    if (notification.code !== undefined && notification.expiresAt !== undefined) {
+      return lastMinuteDealEmail({
+        ...notification,
+        code: notification.code,
+        expiresAt: notification.expiresAt,
+      });
+    }
+    return notification.askedBy === "diver"
+      ? waitlistInviteEmail(notification)
+      : tripInvitationEmail(notification);
+  }
   if (notification.kind === "trip_reminder_7d") {
     return diverStateEmail({ ...notification, state: "week_out" });
   }
@@ -178,9 +192,8 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
-  if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
   if (notification.kind === "operator_alert") return operatorAlertEmail(notification);
-  if (notification.kind === "course_inquiry") return courseInquiryEmail(notification);
+  if (notification.kind === "lead_received") return leadReceivedEmail(notification);
   if (notification.kind === "staff_reply") return staffReplyEmail(notification);
   if (notification.kind === "weekly_digest") return weeklyDigestEmail(notification);
   if (notification.kind === "work_order_ready") return workOrderReadyEmail(notification);
@@ -209,8 +222,8 @@ function rawMessageFor(notification: Notification): NotificationEmail {
     return bookkeeperConfirmationEmail(notification);
   }
   if (notification.kind === "bookkeeper_notice") return bookkeeperNoticeEmail(notification);
-  if (notification.kind === "course_inquiry_received") {
-    return courseInquiryReceivedEmail(notification);
+  if (notification.kind === "lead_received_ack") {
+    return leadReceivedAckEmail(notification);
   }
   return passwordChangedEmail(notification);
 }

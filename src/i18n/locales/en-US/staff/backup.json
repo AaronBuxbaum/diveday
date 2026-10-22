@@ -1,7 +1,7 @@
 {
   "title": "Backups",
   "notice": {
-    "saved": "Backup destination saved.",
+    "saved": "Backup destination saved",
     "invalid": "Check the destination details and try again.",
     "endpoint-invalid": "That endpoint doesn’t read as a plain HTTPS address. Use your provider’s bare S3 API origin, with no query, path, or credentials in it.",
     "endpoint-not-https": "The endpoint must start with https://",
@@ -55,7 +55,7 @@
   },
   "history": {
     "heading": "Delivery history",
-    "empty": "No deliveries yet.",
+    "empty": "No deliveries yet",
     "when": "When",
     "kind": "Run",
     "outcome": "Outcome",

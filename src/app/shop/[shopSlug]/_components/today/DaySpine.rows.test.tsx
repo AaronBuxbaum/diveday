@@ -543,7 +543,7 @@ describe("a row that is only a door", () => {
           id: "blocker:b1:waiver_not_sent",
           kind: "waiver",
           subject: "Priya Sharma",
-          detail: "Waiver not signed, not sent yet.",
+          detail: "Waiver not signed, not sent yet",
           actionLabel: "Send waiver",
           href: "/shop/blue-mantis/trips/t1",
           waiver: { bookingIds: ["b1"] },
@@ -620,7 +620,7 @@ describe("what today made", () => {
     expect(screen.getByText("Still out")).toBeInTheDocument();
   });
 
-  it("prints tips as their own sentence and never inside the figure", () => {
+  it("prints tips as their own line and never inside the figure", () => {
     renderSpine({
       departures: [],
       evening: evening([closed({ tripId: "t1" })], {
@@ -631,7 +631,7 @@ describe("what today made", () => {
     // $1,240 and $85, not $1,325: a tip is its own Stripe charge and the month
     // keeps the two apart for that reason.
     expect(screen.getByText("$1,240")).toBeInTheDocument();
-    expect(screen.getByText("And $85 in tips.")).toBeInTheDocument();
+    expect(screen.getByText("And $85 in tips")).toBeInTheDocument();
     expect(screen.queryByText("$1,325")).toBeNull();
   });
 
@@ -649,7 +649,7 @@ describe("what today made", () => {
       }),
     });
 
-    expect(screen.getByText("And $140 in tips.")).toBeInTheDocument();
+    expect(screen.getByText("And $140 in tips")).toBeInTheDocument();
     expect(screen.getByText(/Manta: \$80/)).toBeInTheDocument();
     expect(screen.getByText(/Wreck run: \$60/)).toBeInTheDocument();
   });
@@ -665,8 +665,8 @@ describe("what today made", () => {
       }),
     });
 
-    expect(screen.getByText("And $80 in tips on Manta.")).toBeInTheDocument();
-    expect(screen.queryByText("And $80 in tips.")).toBeNull();
+    expect(screen.getByText("And $80 in tips on Manta")).toBeInTheDocument();
+    expect(screen.queryByText("And $80 in tips")).toBeNull();
     expect(screen.queryByText(/Manta:/)).toBeNull();
   });
 

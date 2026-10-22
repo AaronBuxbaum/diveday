@@ -86,7 +86,7 @@ export function DrysuitExperienceRow({
         </label>
         <SubmitButton
           pendingLabel={t("divers.certifications.recordingDrysuitSeen")}
-          className={buttonClass({ variant: "secondary", size: "sm" })}
+          className={buttonClass({ variant: "secondary" })}
         >
           {t("divers.certifications.recordDrysuitSeen")}
         </SubmitButton>

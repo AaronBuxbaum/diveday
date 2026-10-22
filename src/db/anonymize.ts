@@ -95,7 +95,6 @@ import {
   calendarFeeds,
   certifications,
   courseFormRecords,
-  courseInquiries,
   customerGearItems,
   formDrafts,
   gearReservations,
@@ -106,8 +105,8 @@ import {
   incidentReportPeople,
   incidentReports,
   internalNotes,
-  lastMinuteListEntries,
-  lastMinuteListUnsubscribeTokens,
+  leads,
+  leadUnsubscribeTokens,
   lostItems,
   nitroxCertifications,
   notificationDeliveries,
@@ -134,11 +133,9 @@ import {
   staffReplies,
   tips,
   tripChangeEvents,
-  tripLastMinutePromoRecipients,
   tripReviews,
   tripSeries,
   trips,
-  tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
   waiverRecords,
@@ -955,60 +952,30 @@ async function scrubPersonOnlyRows(
   await tx
     .delete(rentalFitProfiles)
     .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
-  await tx
-    .delete(tripWaitlistEntries)
-    .where(and(eq(tripWaitlistEntries.shopId, shopId), eq(tripWaitlistEntries.personId, personId)));
+  // An anytime lead's unsubscribe tokens name it by foreign key, so they go
+  // here, before `scrubLeads` deletes the lead, or that delete would raise
+  // 23503 and roll back every other redaction with it.
+  await tx.delete(leadUnsubscribeTokens).where(
+    and(
+      eq(leadUnsubscribeTokens.shopId, shopId),
+      inArray(
+        leadUnsubscribeTokens.leadId,
+        tx
+          .select({ id: leads.id })
+          .from(leads)
+          .where(and(eq(leads.shopId, shopId), eq(leads.personId, personId))),
+      ),
+    ),
+  );
   // Something found aboard with this diver's name on it (batch 4, J2). The
   // description is free text about their belongings, so the row goes whole.
   await tx
     .delete(lostItems)
     .where(and(eq(lostItems.shopId, shopId), eq(lostItems.personId, personId)));
 
-  const listEntries = await tx
-    .select({ id: lastMinuteListEntries.id })
-    .from(lastMinuteListEntries)
-    .where(
-      and(eq(lastMinuteListEntries.shopId, shopId), eq(lastMinuteListEntries.personId, personId)),
-    );
-  if (listEntries.length > 0) {
-    const entryIds = listEntries.map((row) => row.id);
-    await tx
-      .delete(lastMinuteListUnsubscribeTokens)
-      .where(inArray(lastMinuteListUnsubscribeTokens.entryId, entryIds));
-    await tx.delete(lastMinuteListEntries).where(inArray(lastMinuteListEntries.id, entryIds));
-  }
   await tx
     .delete(personCourtesyEmailUnsubscribeTokens)
     .where(eq(personCourtesyEmailUnsubscribeTokens.personId, personId));
-
-  // **The last-minute deal's recipient log keeps its row and loses its
-  // address.** `trip_last_minute_promo_recipients` records who was sent which
-  // deal, and it stores the address it went *to* — the diver's own email, as a
-  // NOT NULL column, keyed by `person_id`. Nothing here touched it, so an
-  // erased diver's address survived every deal they were ever offered, and
-  // `src/db/export.ts` carries that table out of the shop in the portable
-  // bundle (found by the sweep issue #1607 asks for).
-  //
-  // Redacted rather than deleted, the shape `user_accounts.email` above takes.
-  // What is left afterwards is a `person_id` pointing at a row that has itself
-  // been erased and nothing else, which is exactly what `course_inquiries`
-  // keeps and for the same reason: it is what makes a replayed erasure reach
-  // the same rows.
-  //
-  // Not "the count of who was mailed would move": it would not. The number a
-  // shop reads is `trip_last_minute_promos.recipient_count`, denormalized at
-  // send time from the messages that actually went out, while these rows are
-  // written for every *attempted* recipient — the two already disagree, and
-  // deleting these would not change either (security review, 2026-09-10).
-  await tx
-    .update(tripLastMinutePromoRecipients)
-    .set({ email: `${redactedUniqueValue("erased")}@invalid` })
-    .where(
-      and(
-        eq(tripLastMinutePromoRecipients.shopId, shopId),
-        eq(tripLastMinutePromoRecipients.personId, personId),
-      ),
-    );
 
   // Staff prose about a person is personal data end to end, and the body column
   // carries a non-blank check, so there is nothing to redact it *to*.
@@ -1875,46 +1842,6 @@ async function scrubImportedHistory(
   return [];
 }
 
-/** The erasure's "last-minute deals" sweep. */
-async function scrubLastMinuteDeals(
-  tx: AppTransaction,
-  ctx: ScrubSectionContext,
-): Promise<ProcessorErasureTargetInput[]> {
-  const { shopId } = ctx;
-  // The key sweep of `trip_last_minute_promo_recipients` is above, with the
-  // rest of this diver's addresses. This is its other half: the address sweep
-  // beside the key sweep, which every other durable address
-  // column here already has (issue #1622). `people_shop_email_unique` is
-  // partial on *live* rows, so a soft-deleted duplicate person legitimately
-  // shares this diver's address — and a duplicate that was never merged keeps
-  // their address on its own recipient rows, where `person_id` cannot reach it.
-  // The same case the send queue and `booking_checkouts` are swept for.
-  //
-  // Each row takes its own redacted value rather than one shared value: nothing
-  // here is unique-indexed today, but a shared sentinel across rows is what
-  // makes two erased people look like one, and `redactedUniqueValue` costs
-  // nothing to call per row.
-  if (ctx.email) {
-    const byAddress = await tx
-      .select({ id: tripLastMinutePromoRecipients.id })
-      .from(tripLastMinutePromoRecipients)
-      .where(
-        and(
-          eq(tripLastMinutePromoRecipients.shopId, shopId),
-          sql`lower(${tripLastMinutePromoRecipients.email}) = ${ctx.email.toLowerCase()}`,
-        ),
-      );
-    for (const row of byAddress) {
-      await tx
-        .update(tripLastMinutePromoRecipients)
-        .set({ email: `${redactedUniqueValue("erased")}@invalid` })
-        .where(eq(tripLastMinutePromoRecipients.id, row.id));
-    }
-    logFuzzyMatch(ctx, "last_minute_recipient_address", byAddress.length);
-  }
-  return [];
-}
-
 /** The erasure's "hosted processor pages" sweep. */
 async function scrubHostedProcessorPages(
   tx: AppTransaction,
@@ -2357,7 +2284,7 @@ async function scrubPiiBlob(
   //
   // **Both address handles, not just the recipient's.** A kind whose *subject*
   // is not the person it is addressed to used to be out of reach entirely:
-  // `course_inquiry` mails the shop's own front desk about a diver who used
+  // `lead_received` mails the shop's own front desk about a diver who used
   // the public composer and carries their name, address, phone and free-text
   // message, and the `new_account` operator alert is the same shape about an owner. A
   // retryable failure plus an erasure before the retry drained left all of
@@ -2418,10 +2345,10 @@ async function scrubPiiBlob(
   }
   // The number, for the lead that gave one and no address. Runs after the
   // address sweep so the count is the rows the number reached that the address
-  // did not — the over-reach, isolated, exactly as the `course_inquiries`
-  // statements below split theirs. It exists because the public composer takes
+  // did not — the over-reach, isolated, exactly as the date-lead
+  // statements split theirs. It exists because the public composer takes
   // an address *or* a number (`hasReplyPath`, src/app/actions/inquiry.ts): a
-  // diver who leaves only a number produces a `course_inquiry` carrying their
+  // diver who leaves only a number produces a `lead_received` carrying their
   // name, that number and up to 1,500 characters of free text, and no address
   // handle can see it. The first version of this fix shipped exactly that hole
   // (`security-reviewer`, issue #1298).
@@ -2429,7 +2356,7 @@ async function scrubPiiBlob(
   // Fuzzier than the address by the same distance, and accepted for the same
   // written reason: a household number is shared, so this can drop a partner's
   // queued lead. That costs a retry of a notification whose own
-  // `course_inquiries` row this transaction blanks anyway.
+  // date lead this transaction blanks anyway.
   const queuePhoneDigits = erasablePhoneDigits(ctx.phone);
   if (queuePhoneDigits) {
     const droppedByPhone = await tx
@@ -2488,7 +2415,7 @@ async function scrubUnfinishedForms(
   //
   // Each handle costs the over-reach it always costs here, and each is counted
   // separately so an owner can see which one fired: a household shares a phone
-  // (the reasoning `course_inquiries` records below), and a name reaches a
+  // (the reasoning the date-lead sweep records), and a name reaches a
   // namesake — which is why it goes through `buddyMemberNameMatch`, anchored on
   // word boundaries and refused below three word characters.
   const draftHandles: { predicate: string; match: SQL }[] = [];
@@ -2540,43 +2467,66 @@ async function scrubUnfinishedForms(
   return [];
 }
 
-/** The erasure's "course inquiries" sweep. */
-async function scrubCourseInquiries(
+/**
+ * The erasure's "leads" sweep: **one function with a `scope` branch** (ADR
+ * 20261017-one-lead-with-a-scope, R4), because the two modes live in one table.
+ *
+ * - **Departure and anytime leads** are a live intention of this person's alone
+ *   (a wait-list place, a "tell me if something opens"), so the row goes whole.
+ * - **Date leads** are a stranger's form that may live on a name and an address
+ *   with no person at all, so they are blanked, not deleted, and reached by
+ *   person, then address, then phone.
+ */
+async function scrubLeads(
   tx: AppTransaction,
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId } = ctx;
-  // Three statements, strongest handle first. `person_id` is deliberately left
-  // in place on every one of them: it points at a row that is itself already
-  // erased, so it discloses nothing, and keeping it makes a replayed erasure
-  // reach the same leads a second time.
+  // The scope branch: these rows have nothing worth keeping once the person is gone.
+  await tx
+    .delete(leads)
+    .where(
+      and(
+        eq(leads.shopId, shopId),
+        eq(leads.personId, personId),
+        inArray(leads.scope, ["departure", "anytime"]),
+      ),
+    );
+
+  // Three statements for the date scope, strongest handle first. `person_id` is
+  // deliberately left in place on every one of them: it points at a row that is
+  // itself already erased, so it discloses nothing, and keeping it makes a
+  // replayed erasure reach the same leads a second time.
   //
   // `interest` and the two date columns are deliberately *not* blanked. They
   // hold what the request was about and which days it asked for — no identity,
   // nothing that reaches back to a person once the name, address, phone, timing
   // prose and message above them are gone — and `interest` is what keeps a
-  // course-less row legal at all (`course_inquiries_subject_present`): blanking
-  // it would turn an erasure into a constraint violation.
-  const blankInquiry = { name: null, email: null, phone: null, timing: null, message: null };
+  // course-less row legal at all (`leads_scope_columns`): blanking it would turn
+  // an erasure into a constraint violation.
+  const blankLead = { name: null, email: null, phone: null, timing: null, message: null };
+  const dateLead = and(eq(leads.shopId, shopId), eq(leads.scope, "date"));
+  const reached: string[] = [];
 
   // 1. `person_id`, when the lead carries one. A public lead is still written
   //    before any person may exist, so the column stays nullable — but when the
   //    address on the form matched a live diver of this shop at capture time,
-  //    `recordCourseInquiry` (src/db/course-inquiries.ts) snapshotted the link,
-  //    and that snapshot is an exact foreign key rather than a match against
-  //    whatever the two rows happen to say today. It is the one handle that
-  //    survives the diver changing their email afterwards, which the address
-  //    sweep below cannot.
+  //    `askForDate` (src/db/leads.ts) snapshotted the link, and that snapshot is
+  //    an exact foreign key rather than a match against whatever the two rows
+  //    happen to say today. It is the one handle that survives the diver
+  //    changing their email afterwards, which the address sweep below cannot.
   //
   //    A lead written with no email, or with an address no diver of this shop
   //    held at the time, still has no link and is still reachable only by the
   //    two fuzzy handles after it. That residual is narrower than it was, not
   //    closed: see the ADR. Nothing back-fills this column from a later match —
   //    a link inferred after the fact would erase a bystander's lead.
-  await tx
-    .update(courseInquiries)
-    .set(blankInquiry)
-    .where(and(eq(courseInquiries.shopId, shopId), eq(courseInquiries.personId, personId)));
+  const byPerson = await tx
+    .update(leads)
+    .set(blankLead)
+    .where(and(dateLead, eq(leads.personId, personId)))
+    .returning({ id: leads.id });
+  reached.push(...byPerson.map((row) => row.id));
 
   // 2 and 3 match on the contact details the diver themselves supplied, for the
   // leads statement 1 cannot reach.
@@ -2585,36 +2535,51 @@ async function scrubCourseInquiries(
   // own. It is the fuzzier of the two by a distance: a household or family
   // number is genuinely shared, so this can blank a partner's or a child's
   // lead — name, message and all — and there is no way to tell from the row.
-  // It is not tightened (to "…and the inquiry carries no email", say) because
+  // It is not tightened (to "…and the lead carries no email", say) because
   // that would drop the real case it exists for: the diver who used a
-  // different address on the public lead form than the one on their record.
-  // The over-reach is accepted, owner-gated, and logged.
+  // different address on the public form than the one on their record. The
+  // over-reach is accepted, owner-gated, and logged.
   if (ctx.email) {
-    await tx
-      .update(courseInquiries)
-      .set(blankInquiry)
-      .where(
-        and(
-          eq(courseInquiries.shopId, shopId),
-          sql`lower(${courseInquiries.email}) = ${ctx.email.toLowerCase()}`,
-        ),
-      );
+    const byEmail = await tx
+      .update(leads)
+      .set(blankLead)
+      .where(and(dateLead, sql`lower(${leads.email}) = ${ctx.email.toLowerCase()}`))
+      .returning({ id: leads.id });
+    reached.push(...byEmail.map((row) => row.id));
   }
-  const inquiryPhoneDigits = erasablePhoneDigits(ctx.phone);
-  if (inquiryPhoneDigits) {
+  const leadPhoneDigits = erasablePhoneDigits(ctx.phone);
+  if (leadPhoneDigits) {
     // Runs after the address sweep, so the count is the rows the number
     // reached that the address did not — the over-reach, isolated.
     const byPhone = await tx
-      .update(courseInquiries)
-      .set(blankInquiry)
+      .update(leads)
+      .set(blankLead)
       .where(
         and(
-          eq(courseInquiries.shopId, shopId),
-          sql`regexp_replace(coalesce(${courseInquiries.phone}, ''), '\\D', '', 'g') = ${inquiryPhoneDigits}`,
+          dateLead,
+          sql`regexp_replace(coalesce(${leads.phone}, ''), '\\D', '', 'g') = ${leadPhoneDigits}`,
         ),
       )
-      .returning({ id: courseInquiries.id });
-    logFuzzyMatch(ctx, "course_inquiry_phone", byPhone.length);
+      .returning({ id: leads.id });
+    logFuzzyMatch(ctx, "date_lead_phone", byPhone.length);
+    reached.push(...byPhone.map((row) => row.id));
+  }
+
+  // A date lead attached to a departure left a person-less child that copied the
+  // contact snapshot. It is the same stranger's details, so it is blanked with
+  // its parent; a child that carries a person is already gone above.
+  if (reached.length > 0) {
+    await tx
+      .update(leads)
+      .set({ name: null, email: null, phone: null })
+      .where(
+        and(
+          eq(leads.shopId, shopId),
+          eq(leads.scope, "departure"),
+          isNull(leads.personId),
+          inArray(leads.parentLeadId, reached),
+        ),
+      );
   }
   return [];
 }
@@ -2909,7 +2874,6 @@ const SCRUB_SECTIONS = [
   scrubReviews,
   scrubPrivateWord,
   scrubImportedHistory,
-  scrubLastMinuteDeals,
   scrubHostedProcessorPages,
   scrubGearRegister,
   scrubBench,
@@ -2917,7 +2881,7 @@ const SCRUB_SECTIONS = [
   scrubCheckoutAddresses,
   scrubPiiBlob,
   scrubUnfinishedForms,
-  scrubCourseInquiries,
+  scrubLeads,
   scrubInbox,
   scrubIncidentReports,
 ] as const;

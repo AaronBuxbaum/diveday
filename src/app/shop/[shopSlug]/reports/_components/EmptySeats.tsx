@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
@@ -43,11 +44,11 @@ export function EmptySeats({
         {summary.list.slice(0, LISTED).map((departure) => (
           <li
             key={departure.tripId}
-            className="flex items-baseline justify-between gap-4 border-t border-border py-2 last:border-b"
+            className="flex items-baseline justify-between gap-4 border-t border-border py-1 last:border-b"
           >
             <Link
               href={`/shop/${shopSlug}/trips/${departure.tripId}`}
-              className="font-medium text-primary hover:underline"
+              className={`${tapTargetLinkClass} text-base font-medium text-primary hover:underline`}
             >
               {t("reports.emptySeats.row", {
                 title: departure.title,

@@ -389,7 +389,7 @@ export const bookedSnorkelersCount = () =>
  * `setBookingParticipantType`, `undoBookingNoShow`, `setTripParticipantTerms`),
  * which is what makes the answer a gate rather than advice. The ones that add
  * someone aboard (`createBookingRecord`, `restoreBooking`, `undoBookingNoShow`,
- * `joinTripWaitlist`) measure the boat against `sellableCapacity`.
+ * `askForDeparture`) measure the boat against `sellableCapacity`.
  */
 export async function heldSeatCounts(
   tx: DbExecutor,

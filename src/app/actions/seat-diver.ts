@@ -2,9 +2,9 @@
 
 import { z } from "zod";
 import { getDb } from "@/db/client";
-import { setDateRequestOutcome } from "@/db/course-inquiries";
 import { findSimilarDivers } from "@/db/divers";
 import { discardFormDraft } from "@/db/form-drafts";
+import { setDateLeadOutcome } from "@/db/leads";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import {
   type SeatDiverPerson,
@@ -235,9 +235,9 @@ async function seat(
   // leaves its day on the Requests page and stops counting there. A request
   // already closed keeps the answer it had.
   if (requestId) {
-    await setDateRequestOutcome(db, {
+    await setDateLeadOutcome(db, {
       shopId: actor.shopId,
-      requestId,
+      leadId: requestId,
       outcome: "booked",
       now: nowDate(),
     });

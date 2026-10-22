@@ -117,11 +117,12 @@ describe("messageFor", () => {
   // file, get nothing appended.
   describe("the postal footer", () => {
     const invite = {
-      kind: "waitlist_invite" as const,
-      waitlistEntryId: "3f2504e0-4f89-41d3-9a0c-0305e82c3304",
+      kind: "seat_offer_commercial" as const,
+      askedBy: "diver" as const,
+      leadId: "3f2504e0-4f89-41d3-9a0c-0305e82c3304",
       ...trip,
       bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
-      invitedAt: new Date("2026-07-30T12:00:00.000Z"),
+      offeredAt: new Date("2026-07-30T12:00:00.000Z"),
       unsubscribeUrl: "https://dive.day/unsubscribe/tok",
     };
     const sender = { postalAddress: "1 Harbor Rd, Key Largo, FL 33037, US" };
@@ -137,6 +138,23 @@ describe("messageFor", () => {
     it("escapes the shop's own words on the way into the HTML", () => {
       const email = messageFor({ ...invite, shopName: "Reef & Wreck", sender });
       expect(email.html).toContain("Reef &amp; Wreck · 1 Harbor Rd");
+    });
+
+    it("says the deal, with its code and the list's own way out, when the offer carries one", () => {
+      const email = messageFor({
+        ...invite,
+        askedBy: "shop",
+        code: "SAVE25-ABC123",
+        discountPercent: 25,
+        expiresAt: new Date("2026-08-01T12:00:00.000Z"),
+        sender,
+      });
+      expect(email.subject).toContain("25%");
+      expect(email.text).toContain("SAVE25-ABC123");
+      expect(email.text).toContain("https://dive.day/unsubscribe/tok");
+      expect(email.text.endsWith("\n\nBlue Mantis · 1 Harbor Rd, Key Largo, FL 33037, US\n")).toBe(
+        true,
+      );
     });
 
     it("appends nothing when the shop has no address on file", () => {
@@ -156,15 +174,16 @@ describe("messageFor", () => {
     describe("the two trip invitations", () => {
       const invitation = {
         ...trip,
-        invitationId: "3f2504e0-4f89-41d3-9a0c-0305e82c3305",
+        leadId: "3f2504e0-4f89-41d3-9a0c-0305e82c3305",
         bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
-        invitedAt: new Date("2026-07-30T12:00:00.000Z"),
+        offeredAt: new Date("2026-07-30T12:00:00.000Z"),
       };
 
       it("closes a cold invitation with the unsubscribe link and the shop's address", () => {
         const email = messageFor({
           ...invitation,
-          kind: "direct_trip_invitation",
+          kind: "seat_offer_commercial",
+          askedBy: "shop",
           unsubscribeUrl: "https://dive.day/unsubscribe/tok",
           sender,
         });
@@ -181,7 +200,7 @@ describe("messageFor", () => {
       });
 
       it("leaves the answer to a diver's own request without either", () => {
-        const email = messageFor({ ...invitation, kind: "trip_invitation", sender });
+        const email = messageFor({ ...invitation, kind: "seat_offer", sender });
         expect(email.text).not.toContain("unsubscribe");
         expect(email.html).not.toContain("unsubscribe");
         expect(email.text).not.toContain("1 Harbor Rd");

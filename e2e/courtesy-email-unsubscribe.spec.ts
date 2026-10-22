@@ -30,7 +30,7 @@ test("a diver can self-serve unsubscribe from courtesy email (wait-list openings
   await waitList.getByLabel("Name").fill("Priya Nair");
   await waitList.getByLabel("Email").fill("priya.courtesy.e2e@example.com");
   await page.getByRole("button", { name: "Notify me" }).click();
-  await expect(page.getByRole("heading", { name: "You’re on the list." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
   const seeded = await request.post("/api/test/seed-courtesy-email-unsubscribe-token", {
     data: { shopSlug: "blue-mantis", email: "priya.courtesy.e2e@example.com" },

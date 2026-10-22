@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
@@ -10,6 +11,8 @@ import {
   openTripMore,
   seededTripId,
 } from "./helpers";
+
+const staffCopy = staffTranslator("en-US");
 
 test("the public schedule lists seeded trips with capacity states, a month rail, and per-dive briefings", async ({
   page,
@@ -34,7 +37,9 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   // trip's capacity it names, so a page-wide match legitimately finds two.
   const tripList = page.getByRole("list", { name: "Upcoming trips" });
   await expect(tripList.getByText("3 seats left")).toHaveCount(1); // 11 of 14 booked, two of them not diving
-  await expect(tripList.getByText("Full")).toHaveCount(1); // sold-out wreck trip
+  // The sold-out wreck trip, and the weekly Saturday run sold out on its next
+  // date (src/db/seed-booth.ts).
+  await expect(tripList.getByText("Full")).toHaveCount(2);
   await expect(page.getByRole("link", { name: "Full trip form" })).toHaveCount(0);
   await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
   // The hero says only what the shop wrote. DiveDay's own "find your next day
@@ -248,6 +253,9 @@ test.describe("trip pulse", () => {
     page,
   }) => {
     const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
+    const filteredByTrip = staffCopy("orders.index.filteredByTrip", {
+      title: "Two-Tank Reef — Molasses & French",
+    });
 
     // Unfiltered — every open invoice the shop is carrying, which is what the
     // pulse's link used to land on. A row's presence is the barrier: the day
@@ -269,9 +277,7 @@ test.describe("trip pulse", () => {
     await expect(page).toHaveURL(new RegExp(`tripId=${tripId}`));
     // Narrowed, and it says so with the departure's own name rather than
     // leaving a staffer to wonder which boat an empty list is about.
-    await expect(
-      page.getByText("Showing orders for Two-Tank Reef — Molasses & French."),
-    ).toBeVisible();
+    await expect(page.getByText(filteredByTrip, { exact: true })).toBeVisible();
     expect(await rows.count()).toBeLessThan(shopWide);
     // The way back to the departure, and the way back out of the filter.
     await expect(page.getByRole("link", { name: "Open the departure" })).toHaveAttribute(
@@ -287,9 +293,7 @@ test.describe("trip pulse", () => {
     await page.locator('#orders-search[data-hydrated="true"]').waitFor();
     await page.getByLabel("Date range").selectOption("recent");
     await expect(page).toHaveURL(new RegExp(`tripId=${tripId}`));
-    await expect(
-      page.getByText("Showing orders for Two-Tank Reef — Molasses & French."),
-    ).toBeVisible();
+    await expect(page.getByText(filteredByTrip, { exact: true })).toBeVisible();
   });
 });
 

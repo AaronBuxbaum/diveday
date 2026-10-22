@@ -48,6 +48,7 @@ export function SendHold<Outcome>({
   copy,
   note,
   className,
+  formId,
   initialTicket,
   children,
 }: {
@@ -67,6 +68,12 @@ export function SendHold<Outcome>({
   /** The one clause a send keeps ("the old link stops working"), shown beside "Sending…". */
   note?: string;
   className?: string;
+  /**
+   * The form's `id`, for controls that sit outside it and belong to it through
+   * their `form` attribute (the offer panel's tick boxes). The hold row that
+   * replaces the form while a send drains leaves them standing.
+   */
+  formId?: string;
   /**
    * A send already held on the server before this rendered: the board's move
    * holds the reschedule notice itself, and the page it lands on shows the
@@ -170,7 +177,12 @@ export function SendHold<Outcome>({
   }
 
   return (
-    <form onSubmit={onSubmit} className={className} data-hydrated={hydrated ? "true" : undefined}>
+    <form
+      id={formId}
+      onSubmit={onSubmit}
+      className={className}
+      data-hydrated={hydrated ? "true" : undefined}
+    >
       {children}
     </form>
   );

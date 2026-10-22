@@ -3,6 +3,7 @@ import {
   agencyCheckCopy,
   agencyLinkLabel,
 } from "@/app/shop/[shopSlug]/_components/agency-check/agency-check-copy";
+import { buttonClass } from "@/components/ui/button";
 import type { CertificationAgency } from "@/db/schema";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { AgencyCheckQuery, AgencyListedKind } from "@/lib/agency-check";
@@ -49,14 +50,21 @@ export function AgencyCheckLink({
   if (!link) return null;
   if (!check) {
     return (
-      <a
-        href={link.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-1 block w-fit text-sm font-semibold text-primary hover:underline print:hidden"
-      >
-        {link.label}
-      </a>
+      <span className="flex">
+        <a
+          href={link.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={buttonClass({
+            variant: "link",
+            size: "sm",
+            flush: true,
+            className: "mt-1 print:hidden",
+          })}
+        >
+          {link.label}
+        </a>
+      </span>
     );
   }
   return (

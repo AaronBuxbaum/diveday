@@ -116,7 +116,7 @@ describe("NewDiverPage name-match prompt", () => {
 
   it("wait-lists the matched diver's own record, not the name that was typed", async () => {
     // The tap *means* "this is the same diver", and `addToWaitlistAction`
-    // ignores `personId`: `joinTripWaitlist` resolves the person from the name
+    // ignores `personId`: `askForDeparture` resolves the person from the name
     // and email it is handed. Sending the counter-typed spelling instead would
     // spawn the second person row this prompt exists to prevent, and put a
     // stranger's name on the list. The seating arm does the same thing by id.

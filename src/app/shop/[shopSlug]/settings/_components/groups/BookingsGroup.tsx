@@ -1,5 +1,6 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { Field, FieldActions, FieldGrid, textareaClassFor } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
 import { EXTENSION_STORE_URL } from "@/lib/cert-check-extension";
@@ -88,15 +89,16 @@ export function BookingsGroup({
           {/* The extension's own steps, sample pages only (no agency is
               looked up), for a staffer to run alone and send back (#2817:
               a disclosure on this row, not a page of its own). */}
-          <details className="mt-4 rounded-lg border border-border px-4 py-3">
-            <summary className="cursor-pointer text-sm font-medium">
-              {t("settings.main.certCheck.try")}
-            </summary>
-            <p className="mt-3 text-sm text-muted">{t("settings.certChecks.description")}</p>
+          <CompactDisclosureRow
+            label={t("settings.main.certCheck.try")}
+            className="mt-4"
+            bodyClassName="mt-2 mb-3"
+          >
+            <p className="text-sm text-muted">{t("settings.certChecks.description")}</p>
             <div className="mt-3">
               <CertCheckTryPanel t={t} padiOn={shop.padiChecksEnabled} />
             </div>
-          </details>
+          </CompactDisclosureRow>
         </SettingsRow>
 
         <SettingsRow

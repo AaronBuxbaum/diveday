@@ -7,10 +7,11 @@ import type { StaffTranslator } from "./staff-messages";
 const YEAR_SAYS_MORE_AFTER_MS = 180 * DAY_MS;
 
 /**
- * **One planned site's last visit, in a sentence** (fifth-loop ideas, item 6):
+ * **One planned site's last visit, as a row summary** (fifth-loop ideas, item 6):
  * "Molasses: last dived Mon, Oct 12 (Sal Moretti): visibility 40 ft, current
- * light, to the north." or "Molasses: moved to French Reef last time (Mon, Oct
- * 12)." The Details tab and the manifest's plan read the same words.
+ * light, to the north" or "Molasses: moved to French Reef last time (Mon, Oct
+ * 12)". The Details tab and the manifest's plan read the same words. These
+ * standalone fragments have no final period; they do not join another sentence.
  *
  * The visibility and current are the crew's own, as typed on the dive log.
  */

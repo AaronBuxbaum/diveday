@@ -75,16 +75,10 @@ export const EXPORT_FILE_NOTES = {
     "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified Nitrox card, checked at fill time. status no_show is a released seat: with turned_away_at set, the desk saw the diver and turned them away, for the reason in turned_away_reason (medical, waiver, card, age, identity or payment — the category only, never the answers or card details; blank after the diver's erasure); with turned_away_at blank, the diver did not arrive. A removed seat with turned_away_at set was turned away, then removed: the diver did not cancel it.",
   "trip_help_requests.csv":
     "One non-medical day-of help request per booking, with its visible hand-off status and timestamps. The request is retained with the trip history; resolved staff identity is included when available.",
-  "waitlist_entries.csv":
-    "Divers in line for full trips, and how many seats each waits for (party_size, themselves included). A wait-list entry never consumed a seat and never appears on a manifest.",
-  "trip_invitations.csv":
-    "Staff outreach attached to a departure without claiming a seat: the source request or diver, the contact snapshot, and whether staff recorded an invitation attempt. Invitations never become bookings, capacity, readiness or manifest state by themselves.",
-  "last_minute_list.csv":
-    "Divers who opted in, shop-wide, to hear about last-minute deals, with the date range they said they're around. Distinct from waitlist_entries.csv: this is a general availability signal, not interest in one specific full trip.",
+  "leads.csv":
+    "Everyone who wanted a seat, one row each, with a scope: departure (a wait-list entry or an offer for one trip, with party_size and offered_at), date (a day that was not on the board, with the contact the person left), anytime (the last-minute list, with the dates they are around). asked_by says whether the diver asked or the shop reached out; parent_lead_id names the row an offer was copied from. A lead never consumed a seat and never appears on a manifest. A date lead's person_id is filled in only where its address exactly matched a diver the shop already had at the time; otherwise it stays an unlinked name, email and phone, and was never back-filled.",
   "trip_last_minute_promos.csv":
-    "Discount blasts sent on under-capacity trips: the discount percent, the code, when it expires, and how many divers it went to. Stripe coupon/promotion-code ids are excluded — provider linkage, useless outside this Stripe account.",
-  "trip_last_minute_promo_recipients.csv":
-    "Per-diver recipient audit log for last-minute promo blasts: who was sent each deal, when, and their email on file.",
+    "Discount blasts sent on under-capacity trips: the discount percent, the code, when it expires, and how many divers it went to; who it went to is in leads.csv, the departure rows with that promo_id. Stripe coupon/promotion-code ids are excluded — provider linkage, useless outside this Stripe account.",
   "booking_payment_events.csv":
     "Every recorded change to a booking's payment state, oldest first — what it moved to, what it moved from, the amount and currency at that moment, and which operation caused it (a checkout settling, a staff mark, a refund). bookings.csv carries only where each booking's money stands *now*, and a refund overwrites that in place, so this is the file that says how it got there. It records transitions, not writes: a webhook redelivered twice appends nothing the second time, and a refused write appends nothing at all — so a row here always means the state genuinely changed.",
   "booking_checkouts.csv":
@@ -192,8 +186,6 @@ export const EXPORT_FILE_NOTES = {
   "shop_promo_redemptions.csv":
     "Every time one of those codes was actually spent: which code, which checkout attempt in booking_checkouts.csv, and what the shop took on that sale. Read amount_charged_cents as \"what this code was worth on this sale\" — Stripe's own settled total where Stripe reported one, and otherwise the asking price less this code's own discount. It is not a full order total: another discount stacked by Stripe, or a later refund, is not reflected here, so reconcile against orders.csv for revenue and use this file for how a code performed.",
   "courses.csv": "The course catalog with public-page content, hidden courses included.",
-  "course_inquiries.csv":
-    "Course leads: someone asked about a course through the shop's public page and left their details, their experience level, and when they were hoping to go. Not a booking and never a seat — a lead that never converted still has a row here, which is the point of taking it with you. person_id is filled in only where the address exactly matched a diver the shop already had at the time; a lead with no match stays an unlinked name and email, and was never back-filled.",
   "shop_text_translations.csv":
     "The shop's own Spanish for its trip descriptions, course summaries and dive-site briefings, as staff saved it. subject_kind says which file subject_id points into (trips.csv, courses.csv or dive_sites.csv) and field which column it translates. A row whose original has changed since it was saved is not shown to divers until staff save it again; an empty text is a translation the shop cleared.",
 } as const;

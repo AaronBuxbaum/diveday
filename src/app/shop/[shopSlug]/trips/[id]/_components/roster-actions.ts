@@ -17,7 +17,6 @@ import {
   carryWaitlistAction,
   createDirectTripInvitationAction,
   invitePastDiverAction,
-  recordTripInvitationAction,
   removeBookingAction,
   setParticipantTypeAction,
   undoRemoveBookingAction,
@@ -87,7 +86,6 @@ export async function tripRosterActions({
     saveRosterEmergencyContactAction: saveRosterEmergencyContactAction.bind(null, shopSlug, tripId),
     updateBookingPickupAction: updateBookingPickupAction.bind(null, shopSlug, tripId),
     updateBookingDietaryNoteAction: updateBookingDietaryNoteAction.bind(null, shopSlug, tripId),
-    recordTripInvitationAction: recordTripInvitationAction.bind(null, shopSlug, tripId),
     undoRemoveBookingAction: undoRemoveBookingAction.bind(null, shopSlug, tripId),
     carryWaitlistAction: carryWaitlistAction.bind(null, shopSlug, tripId),
     // The diver record's own check, bound to the shop only: each card names

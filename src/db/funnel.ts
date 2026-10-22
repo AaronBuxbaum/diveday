@@ -42,7 +42,12 @@ export async function countDemoEntriesBySource(
 /** Store one set-up request, exactly as the form validated it. */
 export async function recordSetupRequest(
   db: DbExecutor,
-  input: SetupRequestInput & { source: FunnelSource | "unknown"; locale: string; at?: Date },
+  input: Omit<SetupRequestInput, "currentSystemGuide"> & {
+    currentSystemGuide?: string | null;
+    source: FunnelSource | "unknown";
+    locale: string;
+    at?: Date;
+  },
 ): Promise<SetupRequest> {
   const [row] = await db
     .insert(setupRequests)
@@ -51,6 +56,7 @@ export async function recordSetupRequest(
       region: input.region,
       runsBoat: input.runsBoat,
       currentSystem: input.currentSystem,
+      currentSystemGuide: input.currentSystemGuide ?? null,
       contactName: input.contactName,
       email: input.email,
       phone: input.phone,

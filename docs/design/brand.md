@@ -170,6 +170,16 @@ Color rules:
 > reads as the same writer as the dock time above it; "See you on the boat!" does not. `pnpm check:voice`
 > refuses `!` and `¡` in `diver.json`, except the WhatsApp template body Meta reviews.
 
+> **Settled 2026-10-21 (#2887, Aaron):** headings have no final period, including complete
+> sentences and empty-state titles. Short status and summary fragments also have no final period:
+> "None yet", "Changes saved", "No orders yet". Complete body sentences keep theirs: "Check the
+> details and try again." Judge the rendered text and its role, including plural and select
+> branches, rather than stripping punctuation from every short string. Apply the same rules in
+> each language: an empty-state heading reads "Todavía no hay pedidos"; a complete Spanish body
+> sentence keeps its period. Preserve internal sentence boundaries in multi-sentence headings.
+> Pending control labels use the ellipsis (`Sending…`); headings and field labels use sentence
+> case (`Hotel pickup`, `Hotel / lodging`). Legal and medical bodies retain their exact wording.
+
 
 The current product type system is:
 
@@ -312,8 +322,9 @@ screen, with short notes from the person who built it pointing at specific thing
   is re-read whenever the screen it annotates changes.
 - What is deliberately missing gets a note too ("There is no percentage bar; the count is the
   count").
-- First person is allowed, and a fact only the builder would know is the kind of note worth
-  writing ("I tried a spinner here and the captain read it as the phone thinking").
+- The first person is "we", and a fact only the builders would know is the kind of note worth
+  writing ("We tried a spinner here and the captain read it as the phone thinking"). The site says
+  "we" and names no person (H-146).
 - Every screen a visitor could open leads to **one door into the demo as that role**, and the
   page's one primary stays the shared pair. On a feature page that door is the hero's; under a
   screen on a page that argues something else it is the screen's own (`ScreenDoor`, link-weight,

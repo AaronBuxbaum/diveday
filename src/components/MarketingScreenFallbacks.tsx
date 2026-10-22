@@ -583,7 +583,7 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
               // i18n-exempt: sample site used only in the marketing mockup
               [t("fallback.recap.sitesLabel"), "French Reef"],
               // i18n-exempt: sample conditions used only in the marketing mockup
-              [t("fallback.recap.conditionsLabel"), "27°C · 24 m"],
+              [t("fallback.recap.conditionsLabel"), "81°F · 60 ft"],
             ].map(([label, value]) => (
               <div key={label} className="flex items-baseline gap-3 py-1.5">
                 <dt className="w-20 shrink-0 text-muted">{label}</dt>

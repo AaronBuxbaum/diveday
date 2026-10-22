@@ -1,5 +1,8 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
+
+const staffCopy = staffTranslator("en-US");
 
 /**
  * READ_ONLY holds here: every one of these reads the orders index, its toolbar and its
@@ -232,6 +235,32 @@ test.describe("demo billing history", () => {
     }
   });
 
+  /**
+   * **Record payment works on a demo order** (market sheet 2026-10-22, item
+   * 6): cash and the card machine never touch Stripe, so they are live
+   * buttons; Refresh and Void stay disabled with the demo note. Asserted, not
+   * pressed: the seeded open invoice is the one other specs read.
+   */
+  test("an open demo order records cash and the card machine; only Stripe actions are disabled", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/orders?status=open&range=all");
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+    await ledgerRows(page)
+      .filter({ has: page.getByText("Open", { exact: true }) })
+      .first()
+      .getByRole("link")
+      .first()
+      .click();
+    await page.getByRole("link", { name: "Diver record" }).waitFor();
+    await expect(page.getByRole("button", { name: "Cash", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Card machine", exact: true })).toBeEnabled();
+    await expect(page.getByText("Charge to room", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Refresh status" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Void order" })).toBeDisabled();
+    await expect(page.getByText(/backed by a live Stripe invoice/i)).toBeVisible();
+  });
+
   test("an exceptional status wears the row's one pill", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders?status=open&range=all");
     await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
@@ -266,7 +295,11 @@ test.describe("demo billing history", () => {
     const personId = new URL(page.url()).pathname.split("/").pop() ?? "";
 
     await page.goto(`/shop/blue-mantis/orders?personId=${personId}&range=all`);
-    await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
+    await expect(
+      page.getByText(staffCopy("orders.index.filteredByDiver", { name: "Grace Halloran" }), {
+        exact: true,
+      }),
+    ).toBeVisible();
 
     await page.locator('#orders-search[data-hydrated="true"]').waitFor();
     await page.getByLabel("Status").selectOption("void");
@@ -275,8 +308,12 @@ test.describe("demo billing history", () => {
     // Grace has no voided orders, so this is also the empty-result case: the
     // sentence naming whose orders these are used to be read off the first row
     // and therefore vanished exactly here.
-    await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
-    await expect(page.getByText("No orders match these filters.")).toBeVisible();
+    await expect(
+      page.getByText(staffCopy("orders.index.filteredByDiver", { name: "Grace Halloran" }), {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText("No orders match these filters")).toBeVisible();
   });
 
   /** A filter has to survive paging, or page 2 quietly shows the unfiltered set. */

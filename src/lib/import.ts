@@ -57,7 +57,9 @@
  *     it is declined — a visit with no date can't be placed on a timeline, and
  *     no date is invented. The source's status word and money text are carried
  *     verbatim and un-mapped, because a booking is not a dive and the amount is
- *     display-only. Nothing here feeds a gate or capacity.
+ *     display-only. Nothing here feeds a gate or capacity. A booking dated
+ *     after the shop's today is not a visit: the preview lists it as a seat
+ *     sold elsewhere, and nothing is written for it.
  *   - A source payment/refund or receipt becomes separate, **unverified
  *     imported payment history** (ADR 20260816-imported-payment-history-is-evidence).
  *     It never creates an order, a Stripe charge, a booking payment, or a
@@ -1010,6 +1012,18 @@ export function priorVisitDedupeKey(visit: {
   return `row:${visit.visitedOn}|${title}|${amount}`;
 }
 
+/**
+ * A booking the old system sold for a day after the shop's today. It is not a
+ * visit (nobody has dived it), and it is not a seat here either: the preview
+ * lists it so the shop adds it on the board or keeps it where it was sold
+ * until it sails. Nothing is written for it.
+ */
+export type PreparedBookingAfterToday = {
+  bookedFor: CalendarDate;
+  title: string | null;
+  sourceReference: string | null;
+};
+
 export type PreparedRow = {
   /** 1-based row number in the file body (header is not counted). */
   rowNumber: number;
@@ -1062,6 +1076,8 @@ export type PreparedRow = {
    * (ADR 20260725-import-prior-visits).
    */
   visit: PreparedVisit | null;
+  /** A booking dated after the shop's today, which is listed and never filed as a visit. */
+  bookingAfterToday: PreparedBookingAfterToday | null;
   /** Unverified source payment/refund/receipt history, separate from live orders. */
   paymentHistory: PreparedImportedPaymentHistory | null;
   /** Internal / staff / diver notes imported into the diver's record. */
@@ -1132,6 +1148,8 @@ export type PreparedImport = {
     withWaiver: number;
     /** Prior visits this file records, across importable and merge rows. */
     withVisit: number;
+    /** Bookings dated after the shop's today, across importable and merge rows. */
+    bookingsAfterToday: number;
     /** Unverified payment/refund/receipt source rows this file records. */
     withPaymentHistory: number;
     withNotes: number;
@@ -1556,6 +1574,79 @@ function cardNumber(value: string | null): string | null {
 }
 
 /**
+ * What one row's booking files as: a prior visit when its date is the shop's
+ * today or earlier, a booking after today when it is later (listed in the
+ * preview, written nowhere), or nothing with an issue when the date is
+ * missing or unreadable. Issues are pushed onto the row's own list.
+ */
+function fileBooking(
+  booking: {
+    visitDateRaw: string | null;
+    visitTitle: string | null;
+    visitStatus: string | null;
+    visitAmount: string | null;
+    visitReference: string | null;
+    namesAVisit: boolean;
+  },
+  {
+    sourceLabel,
+    today,
+    issues,
+  }: { sourceLabel: string | null; today: CalendarDate; issues: ImportIssue[] },
+): { visit: PreparedVisit | null; bookingAfterToday: PreparedBookingAfterToday | null } {
+  const { visitDateRaw, visitTitle, visitStatus, visitAmount, visitReference, namesAVisit } =
+    booking;
+  let visit: PreparedVisit | null = null;
+  let bookingAfterToday: PreparedBookingAfterToday | null = null;
+  if (visitDateRaw) {
+    const parsed = parseCardDate(visitDateRaw);
+    if (!parsed) {
+      issues.push({
+        level: "warning",
+        code: "visit_date_unreadable",
+        params: { value: echoedCell(visitDateRaw) },
+      });
+    } else if (parsed.date > today) {
+      // Sold in the old system for a day that has not come: not a visit,
+      // and not a seat here. Listed in the preview, written nowhere.
+      bookingAfterToday = {
+        bookedFor: parsed.date,
+        title: visitTitle,
+        sourceReference: visitReference,
+      };
+    } else {
+      const visitedOn = parsed.date;
+      visit = {
+        visitedOn,
+        title: visitTitle,
+        statusLabel: visitStatus,
+        amountLabel: visitAmount,
+        sourceLabel,
+        sourceReference: visitReference,
+        dedupeKey: priorVisitDedupeKey({
+          visitedOn,
+          title: visitTitle,
+          amountLabel: visitAmount,
+          sourceReference: visitReference,
+        }),
+      };
+      if (!visitReference) {
+        issues.push({
+          level: "info",
+          code: "visit_no_reference",
+        });
+      }
+    }
+  } else if (namesAVisit) {
+    issues.push({
+      level: "warning",
+      code: "visit_no_date",
+    });
+  }
+  return { visit, bookingAfterToday };
+}
+
+/**
  * Turn raw CSV text into a validated, safety-normalized import plan. Pure: no
  * database, no clock, no framework — the browser preview and the server commit
  * both call this and must agree.
@@ -1709,7 +1800,16 @@ function mapImportHeaders(headers: readonly string[], assist: ImportAssist | und
   return { mapping, unmappedColumns, ignoredMedicalColumns, assistedCards };
 }
 
-export function prepareContactImport(text: string, assist?: ImportAssist): PreparedImport {
+export function prepareContactImport(
+  text: string,
+  /**
+   * `today` is the shop's calendar day, read from the clock in the shop's
+   * timezone by the caller: a booking dated after it has not sailed, so it is
+   * never filed as a visit. `assist` is a Claude assist's mapping for the
+   * headers no alias claims (see {@link ImportAssist}).
+   */
+  { today, assist }: { today: CalendarDate; assist?: ImportAssist },
+): PreparedImport {
   const grid = parseCsv(text).filter((row) => row.some((cell) => cell.trim() !== ""));
   const empty: PreparedImport = {
     mapping: [],
@@ -1726,6 +1826,7 @@ export function prepareContactImport(text: string, assist?: ImportAssist): Prepa
       withNitrox: 0,
       withWaiver: 0,
       withVisit: 0,
+      bookingsAfterToday: 0,
       withPaymentHistory: 0,
       withNotes: 0,
     },
@@ -2098,7 +2199,6 @@ export function prepareContactImport(text: string, assist?: ImportAssist): Prepa
     // water on a day nobody claimed. `parseCardDate` is reused deliberately, so
     // a shop's US-locale bookings export reads the same way its certification
     // export does rather than growing a second date dialect.
-    let visit: PreparedVisit | null = null;
     const visitDateRaw = clean(at(cells, "visit_date"));
     const visitTitle = freeText(clean(at(cells, "visit_title")));
     const visitStatus = freeText(clean(at(cells, "visit_status")));
@@ -2107,43 +2207,10 @@ export function prepareContactImport(text: string, assist?: ImportAssist): Prepa
     const namesAVisit = Boolean(
       visitDateRaw || visitTitle || visitStatus || visitAmount || visitReference,
     );
-    if (visitDateRaw) {
-      const parsed = parseCardDate(visitDateRaw);
-      if (!parsed) {
-        issues.push({
-          level: "warning",
-          code: "visit_date_unreadable",
-          params: { value: echoedCell(visitDateRaw) },
-        });
-      } else {
-        const visitedOn = parsed.date;
-        visit = {
-          visitedOn,
-          title: visitTitle,
-          statusLabel: visitStatus,
-          amountLabel: visitAmount,
-          sourceLabel,
-          sourceReference: visitReference,
-          dedupeKey: priorVisitDedupeKey({
-            visitedOn,
-            title: visitTitle,
-            amountLabel: visitAmount,
-            sourceReference: visitReference,
-          }),
-        };
-        if (!visitReference) {
-          issues.push({
-            level: "info",
-            code: "visit_no_reference",
-          });
-        }
-      }
-    } else if (namesAVisit) {
-      issues.push({
-        level: "warning",
-        code: "visit_no_date",
-      });
-    }
+    const { visit, bookingAfterToday } = fileBooking(
+      { visitDateRaw, visitTitle, visitStatus, visitAmount, visitReference, namesAVisit },
+      { sourceLabel, today, issues },
+    );
 
     // Financial source evidence is deliberately built separately from the
     // prior visit above. A booking can remain a useful visit even where no
@@ -2277,6 +2344,7 @@ export function prepareContactImport(text: string, assist?: ImportAssist): Prepa
       declinedSizes: action === "skip" ? [] : declinedSizes,
       waiver: action === "skip" ? null : waiver,
       visit: action === "skip" ? null : visit,
+      bookingAfterToday: action === "skip" ? null : bookingAfterToday,
       paymentHistory: action === "skip" ? null : paymentHistory,
       notes: action === "skip" ? null : clean(at(cells, "internal_notes")),
       action,
@@ -2304,6 +2372,7 @@ export function prepareContactImport(text: string, assist?: ImportAssist): Prepa
       withNitrox: written.filter((row) => row.nitrox).length,
       withWaiver: written.filter((row) => row.waiver).length,
       withVisit: written.filter((row) => row.visit).length,
+      bookingsAfterToday: written.filter((row) => row.bookingAfterToday).length,
       withPaymentHistory: written.filter((row) => row.paymentHistory).length,
       withNotes: written.filter((row) => Boolean(row.notes)).length,
     },

@@ -3,6 +3,7 @@ import { certificationAgency, certificationLevel } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { INTERNAL_VOCABULARY } from "@/test/copy";
+import { prepareContactImport } from "@/test/import-fixture";
 import {
   IMPORT_AGENCIES,
   IMPORT_FIELDS,
@@ -19,7 +20,6 @@ import {
   normalizeLevel,
   parseCsv,
   parseImportedMoney,
-  prepareContactImport,
   priorVisitDedupeKey,
 } from "./import";
 import { IMPORT_SCOPE_ROW_KEYS } from "./migration-guides";

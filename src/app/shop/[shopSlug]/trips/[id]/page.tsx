@@ -8,11 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
-import {
-  canPersonManagePaymentSettings,
-  canPersonRefund,
-  canPersonRetireMedicalRefusal,
-} from "@/db/authz";
+import { canPersonRefund, canPersonRetireMedicalRefusal } from "@/db/authz";
 import { listBoats } from "@/db/boats";
 import { getDepartureNeeds } from "@/db/today-departure-needs";
 import { listTripLenses } from "@/db/trip-lenses";
@@ -128,7 +124,6 @@ export default async function ManageTripPage({
     guests,
     shopBoats,
     shopLenses,
-    mayDiscount,
     mayWriteOffPayment,
     stageReading,
     mayRetireRefusal,
@@ -145,7 +140,6 @@ export default async function ManageTripPage({
     // The shop's trip tags, for the select beside the
     // hull (ADR 20260904-reef-all-the-way-down, decision 2).
     listTripLenses(db, shop.id),
-    canPersonManagePaymentSettings(db, shop.id, session.user.personId),
     canPersonRefund(db, shop.id, session.user.personId),
     latestTripStage(db, shop.id, tripId),
     // Who may give a refused seat a fresh release; the action re-checks.
@@ -420,7 +414,7 @@ export default async function ManageTripPage({
               locale={locale}
               shop={shop}
               tripNotice={tripNotice}
-              mayDiscount={mayDiscount}
+              mayDiscount={staffGates.mayDiscount}
               more={
                 cancelled ? undefined : (
                   <TripMoreActions
@@ -507,6 +501,7 @@ export default async function ManageTripPage({
                     ? bid
                     : undefined,
                 mayWriteOffPayment,
+                currency: shop.currency,
                 ...staffGates,
                 actions: rosterActions,
               }}

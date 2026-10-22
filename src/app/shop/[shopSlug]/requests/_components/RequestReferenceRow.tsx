@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { DateRequestRow } from "@/db/course-inquiries";
+import type { DateLeadRow } from "@/db/lead-dates";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import type { DateRequestMatch } from "@/lib/date-requests";
@@ -31,7 +31,7 @@ export function RequestReferenceRow({
   locale,
   t,
 }: {
-  request: DateRequestRow;
+  request: DateLeadRow;
   /** Never `preferred`: a first choice is where the full record renders. */
   match: Exclude<DateRequestMatch, "preferred">;
   /** The group holding the full record, and this row's link target. */
@@ -45,7 +45,7 @@ export function RequestReferenceRow({
     <LedgerRow as="li">
       <p className="min-w-0 text-sm text-muted">
         <span className="font-medium">{name}</span>
-        {request.divers ? ` · ${t("requests.divers", { count: request.divers })}` : null}
+        {request.partySize ? ` · ${t("requests.divers", { count: request.partySize })}` : null}
         {" · "}
         {/* **Underlined always, not on hover.** The link sits inside a run of
             text — the name and the head count beside it — where colour alone

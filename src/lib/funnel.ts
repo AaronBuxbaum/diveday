@@ -132,6 +132,9 @@ const FIXED_SOURCES = [
   // demo opened instead of asking.
   "setup-sent",
   "switching-hub",
+  // The concierge offer's door, the set-up form since 2026-10-22 (it was a
+  // mail link), a band above each switching page's closing pair.
+  "switching-hub-concierge",
   // The hub's annotated import-preview screen ends in one door into the demo
   // as the owner, the role that runs the import (docs/design/brand.md, "The
   // builder's note"). Its own tag because a reader who opened the demo from
@@ -141,6 +144,7 @@ const FIXED_SOURCES = [
   "switching-spreadsheet",
   "switching-spreadsheet-mid",
   "switching-spreadsheet-close",
+  "switching-spreadsheet-concierge",
   // Retired 2026-10-02 with the demo's three story doors (`/demo/<story>`,
   // issue #1215), one tag per story. Kept for history, not for reuse.
   "story-first-booking",
@@ -165,7 +169,14 @@ export type FunnelSource =
   | `switching-${string}`
   | `feature-${FeaturePageSlug}`
   | `feature-${FeaturePageSlug}-${FeaturePosition}`;
-export type GuidePosition = "mid" | "close";
+export type GuidePosition = "mid" | "close" | "concierge";
+
+const GUIDE_POSITIONS: readonly (GuidePosition | undefined)[] = [
+  undefined,
+  "mid",
+  "close",
+  "concierge",
+];
 
 /**
  * A feature page's doors, by position: the hero pair is the page's own tag,
@@ -199,15 +210,27 @@ const FEATURE_SOURCES = new Set<string>(
  */
 export function eventSource(value: unknown): FunnelSource | "unknown" {
   if (typeof value !== "string") return "unknown";
-  const known =
-    FIXED.has(value) ||
-    FEATURE_SOURCES.has(value) ||
-    MIGRATION_GUIDE_SLUGS.some((slug) =>
-      [guideSource(slug), guideSource(slug, "mid"), guideSource(slug, "close")].some(
-        (source) => source === value,
-      ),
-    );
+  const known = FIXED.has(value) || FEATURE_SOURCES.has(value) || guideOfSource(value) !== null;
   return known ? (value as FunnelSource) : "unknown";
+}
+
+/**
+ * The switching guide a tag came from, at any of its positions, or null. The
+ * set-up form reads it off `?from=` to preselect the system a reader arrived
+ * from (2026-10-22); only a registered guide's own tags match.
+ */
+export function guideOfSource(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  return (
+    MIGRATION_GUIDE_SLUGS.find((slug) =>
+      GUIDE_POSITIONS.some((position) => guideSource(slug, position) === value),
+    ) ?? null
+  );
+}
+
+/** One switching guide, carrying the tag of the door that opened it. */
+export function guideHref(slug: string, source: FunnelSource): string {
+  return `/switching/${slug}?from=${source}`;
 }
 
 /** Where the `/get-set-up` form lives. */

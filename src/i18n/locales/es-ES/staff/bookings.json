@@ -3,14 +3,14 @@
     "title": "Agregar una reserva",
     "tripHeading": "¿Qué salida?",
     "fullExcluded": "Las salidas completas no aparecen. Agrega plazas, u otra salida ese día, desde el tablero.",
-    "tripEmpty": "No queda ninguna plaza en las próximas salidas.",
+    "tripEmpty": "No queda ninguna plaza en las próximas salidas",
     "tripEmptyAction": "Abrir el calendario",
     "day": {
       "label": "Día",
       "show": "Mostrar",
       "earlier": "Días anteriores",
       "later": "Días siguientes",
-      "empty": "Ninguna salida de estos dos días tiene plazas libres.",
+      "empty": "Ninguna salida de estos dos días tiene plazas libres",
       "nextOpen": "Próxima plaza libre: {date}"
     },
     "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}",

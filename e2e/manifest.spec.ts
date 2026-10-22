@@ -958,7 +958,7 @@ test.describe("checklist configuration in a private shop", () => {
     await page.locator("#checklist-new summary").click();
     await page.getByLabel("New line").fill("Test kit checked");
     await page.getByRole("button", { name: "Add" }).click();
-    await expect(page.getByText("Added to the checklist.")).toBeVisible();
+    await expect(page.getByText("Added to the checklist")).toBeVisible();
     const newRow = page.getByRole("listitem").filter({ hasText: "Test kit checked" });
     await expect(newRow).toBeVisible();
     const ordered = page.getByRole("main").locator("ol").getByRole("listitem");
@@ -970,7 +970,7 @@ test.describe("checklist configuration in a private shop", () => {
     await expect(newRow.getByRole("button", { name: "Move down" })).toBeEnabled();
 
     await newRow.getByRole("button", { name: "Delete" }).click();
-    await expect(page.getByText("Removed from the checklist.")).toBeVisible();
+    await expect(page.getByText("Removed from the checklist")).toBeVisible();
     await expect(page.getByText("Test kit checked")).not.toBeVisible();
   });
 });
@@ -1119,7 +1119,7 @@ test("the crew records why the plan changed, and the plan itself does not move",
 
   await log.getByLabel("Why the plan changed").selectOption("current");
   await log.getByRole("button", { name: "Save dive record" }).click();
-  await expect(log.getByText("Dive record saved.")).toBeVisible();
+  await expect(log.getByText("Dive record saved")).toBeVisible();
 
   // The published plan is untouched: what happened lives in a different table.
   await page.getByRole("link", { name: "Before departure" }).click();
@@ -1158,7 +1158,7 @@ test("a transposed dive log entry is refused out loud and keeps what was typed",
   // Correcting the one wrong field is all it takes.
   await log.getByLabel("Exited the water").fill("2026-07-21T15:05");
   await log.getByRole("button", { name: "Save dive record" }).click();
-  await expect(log.getByText("Dive record saved.")).toBeVisible();
+  await expect(log.getByText("Dive record saved")).toBeVisible();
   // And the summary now states the record rather than its absence, which is
   // what the collapsed row is for.
   await expect(summary).not.toContainText("not recorded yet");

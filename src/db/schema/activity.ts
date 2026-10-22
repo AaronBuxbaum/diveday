@@ -313,12 +313,20 @@ export const formDrafts = pgTable(
   ],
 );
 
+/**
+ * `seat_offer` is every staff offer of a seat. `waitlist_invite` is retired
+ * (nothing writes it) and `last_minute_deal` follows when the deal folds into
+ * the offer; both values stay in the type until the release after the one that
+ * stopped writing them, when a serving release can no longer hold one (ADR
+ * 20261017-one-lead-with-a-scope).
+ */
 export const heldSendKind = pgEnum("held_send_kind", [
   "waiver_send",
   "last_minute_deal",
   "waitlist_invite",
   "trip_rescheduled",
   "departure_note",
+  "seat_offer",
 ]);
 
 /**

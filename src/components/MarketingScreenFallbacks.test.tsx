@@ -249,6 +249,19 @@ describe("MarketingScreenFallbacks", () => {
     it("renders in Spanish", () => {
       render(<RecapPageFallback locale="es-ES" />);
       expect(screen.getByText("De tu tripulación")).toBeInTheDocument();
+      expect(
+        screen.getByText("Arrecife de dos tanques · Sábado · 13 de junio"),
+      ).toBeInTheDocument();
+    });
+
+    // The demo shop is in Key Largo and its own recap reads Fahrenheit and
+    // feet; the mock read "27°C · 24 m" and "Saturday · Jun 14", a Sunday in
+    // 2026 (the market sheet of 2026-10-22, item 7).
+    it("pictures a Florida shop on a Saturday that is one", () => {
+      render(<RecapPageFallback locale="en-US" />);
+      expect(screen.getByText("81°F · 60 ft")).toBeInTheDocument();
+      expect(screen.getByText("Two-Tank Reef · Saturday · Jun 13")).toBeInTheDocument();
+      expect(new Date(Date.UTC(2026, 5, 13)).getUTCDay()).toBe(6);
     });
   });
 
@@ -272,7 +285,7 @@ describe("MarketingScreenFallbacks", () => {
     it("renders the import preview mockup in English", () => {
       render(<ImportPreviewFallback locale="en-US" />);
       expect(screen.getByText("Import preview")).toBeInTheDocument();
-      expect(screen.getByText("Nothing saves until you say so.")).toBeInTheDocument();
+      expect(screen.getByText("Nothing saves until you say so")).toBeInTheDocument();
     });
 
     it("renders the import preview mockup in Spanish", () => {

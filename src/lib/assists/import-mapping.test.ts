@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildStructuredRequest, callStructured } from "@/lib/claude/structured";
-import { prepareContactImport } from "@/lib/import";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
+import { prepareContactImport } from "@/test/import-fixture";
 import {
   importAssistFrom,
   importAssistSample,

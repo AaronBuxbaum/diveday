@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { prepareContactImport } from "@/lib/import";
 import { fileScopedShopContext } from "@/test/db";
+import { prepareContactImport } from "@/test/import-fixture";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { commitContactImport } from "./import";
 import { certifications, people, userAccounts, waiverRecords } from "./schema";

@@ -13,10 +13,10 @@ import {
   activityEvents,
   bookings,
   certifications,
-  courseInquiries,
   courses,
   diveSites,
   internalNotes,
+  leads,
   people,
   personRoles,
   shops,
@@ -53,11 +53,8 @@ const EXPECTED_FILES = [
   "staff_credentials.csv",
   "bookings.csv",
   "trip_help_requests.csv",
-  "waitlist_entries.csv",
-  "trip_invitations.csv",
-  "last_minute_list.csv",
+  "leads.csv",
   "trip_last_minute_promos.csv",
-  "trip_last_minute_promo_recipients.csv",
   "booking_payment_events.csv",
   "booking_checkouts.csv",
   "booking_checkout_bookings.csv",
@@ -113,7 +110,6 @@ const EXPECTED_FILES = [
   "shop_promo_codes.csv",
   "shop_promo_redemptions.csv",
   "courses.csv",
-  "course_inquiries.csv",
   "shop_text_translations.csv",
 ];
 /** Schema tables that get their own CSV in the bundle. */
@@ -156,13 +152,9 @@ const EXPORTED_TABLES = [
   "incident_report_addenda",
   "activity_events",
   "notification_deliveries",
-  "course_inquiries",
   "shop_promo_redemptions",
-  "trip_waitlist_entries",
-  "trip_invitations",
-  "last_minute_list_entries",
+  "leads",
   "trip_last_minute_promos",
-  "trip_last_minute_promo_recipients",
   "booking_arrival_events",
   "roll_call_events",
   "roll_call_crew_events",
@@ -327,7 +319,7 @@ const EXCLUDED_TABLES = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
-  "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "lead_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
   "website_setup_drafts", // proposals read off the shop's public website, waiting for the owner's tap — a working draft, and what it accepts is exported where it lands
@@ -730,7 +722,7 @@ describe("full-shop export dataset", () => {
       "trip_requirements.csv",
       "trip_assignments.csv",
       "bookings.csv",
-      "waitlist_entries.csv",
+      "leads.csv",
       "waiver_templates.csv",
       "dive_sites.csv",
       "dive_site_creatures.csv",
@@ -745,7 +737,6 @@ describe("full-shop export dataset", () => {
       "notification_deliveries.csv",
       "shop_promo_redemptions.csv",
       "imported_payment_history.csv",
-      "course_inquiries.csv",
     ]) {
       expect(table(input, file).rows.length, `${file} has no rows`).toBeGreaterThan(0);
     }
@@ -1289,8 +1280,10 @@ describe("full-shop export dataset", () => {
       code: "counter_check_in",
       params: { diver: "Erasable Esme" },
     });
-    await db.insert(courseInquiries).values({
+    await db.insert(leads).values({
       shopId: shop.id,
+      scope: "date",
+      askedBy: "diver",
       courseId: course.id,
       personId: diver.id,
       name: "Erasable Esme",

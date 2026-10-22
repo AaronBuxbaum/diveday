@@ -141,13 +141,13 @@ export function ReadyMastheadMeta({
  * **The booked card** (UX review 2026-10-10, items 7 and 34).
  *
  * After a booking POST this card *is* the top of the page, in place of the
- * masthead, the way the recap opens on "Welcome back, Priya.": the shop's name
- * over "You've got a seat, Priya.", then the departure, when, and when to be
+ * masthead, the way the recap opens on "Welcome back, Priya": the shop's name
+ * over "You've got a seat, Priya", then the departure, when, and when to be
  * at the dock. Every fact on it comes from the booking's own row, so it paints
  * in the first response while the thread streams in under it, and the thread
  * opens with the one next step directly below.
  *
- * The Logbook register: a period rather than an exclamation mark, no confetti,
+ * The Logbook register: no final period or exclamation mark, no confetti,
  * no emoji, and the thread's one coral moment (ADR 20260827-the-divers-thread,
  * decision 6) spent here rather than on a separate panel under a masthead that
  * already said the same date twice. It is the page's `<h1>`, because it is the

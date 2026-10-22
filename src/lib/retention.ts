@@ -22,8 +22,8 @@
  * that is a standing decision rather than an omission: DiveDay retains customer
  * and contact data
  * indefinitely and deletes it only when somebody explicitly asks it to
- * (product owner, 2026-08-14). So a dormancy clock on `people`,
- * `course_inquiries` or `trip_waitlist_entries` — expiring the record of
+ * (product owner, 2026-08-14). So a dormancy clock on `people` or
+ * `leads` — expiring the record of
  * someone who inquired once and never booked — is not something to add here.
  * It was proposed and declined: a lead who books eight months later is
  * ordinary dive-shop behaviour, and the erasure path that does exist is the
@@ -450,7 +450,7 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * single-use setup link is deleted with it (`on delete cascade`), and is long
    * expired by then. This reverses that ADR's "kept until someone asks" for
    * this one table (code review 2026-10-11, item 14); `people` and
-   * `course_inquiries` keep the product owner's 2026-08-14 decision above.
+   * `leads` keep the product owner's 2026-08-14 decision above.
    */
   setup_requests: 365,
   /**

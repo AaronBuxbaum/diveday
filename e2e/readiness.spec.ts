@@ -476,7 +476,7 @@ test("a returning diver is asked once, and answering one fact leaves the others 
   await expect(tanks).toHaveAttribute("open", "");
   await tanks.getByLabel("Air or nitrox?").selectOption("on");
   await tanks.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Tank choice saved.")).toBeVisible();
+  await expect(page.getByText("Tank choice saved")).toBeVisible();
 
   // The one fact that moved, and the two that did not.
   const after = await openThreadStep(page, "changes");

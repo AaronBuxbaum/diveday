@@ -50,11 +50,11 @@ export function InviteSuggestionsGroup({
             <form action={action}>
               <input type="hidden" name="personId" value={person.personId} />
               <SubmitButton
-                pendingLabel={t("trips.invitations.directInviting")}
-                ariaLabel={t("trips.invitations.directInviteAria", { name: person.fullName })}
+                pendingLabel={t("trips.addDiver.offerSeating")}
+                ariaLabel={t("trips.addDiver.offerSeatAria", { name: person.fullName })}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
               >
-                {t("trips.invitations.directInvite")}
+                {t("trips.addDiver.offerSeat")}
               </SubmitButton>
             </form>
           </li>

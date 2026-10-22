@@ -29,7 +29,7 @@ import {
  * only difference between the two is `askInterest` — with no course in the URL,
  * the form has to ask what the request is *about*, because a row that names
  * neither is a request nobody can act on (the check constraint on
- * `course_inquiries` says the same thing in SQL).
+ * `leads_scope_columns` says the same thing in SQL).
  *
  * The dates are real `<input type="date">` fields, grouped with the free-text
  * flexible-timing answer: "any weekend in the autumn" is still a true answer,
@@ -51,7 +51,7 @@ import {
  * not take it out of the form, so nothing about what the shop receives
  * changes.
  *
- * Submitting records the request server-side (a `course_inquiries` row, via
+ * Submitting records the request server-side (a date lead, via
  * `submitRequest`) and best-effort notifies the shop's own inbox, so a diver on
  * a phone with no mail client configured no longer loses the lead entirely
  * (docs/product/archive/ux-personas-20260730-findings.md task 7).
@@ -86,7 +86,7 @@ export function DateRequestForm({
   sectionId?: string;
   /**
    * Null for a shop that has not filled its contact details in yet. The form
-   * still renders and the request still lands in `course_inquiries` for staff
+   * still renders and the request still lands as a date lead for staff
    * to read on the Requests page — only this line stands down. Guarding the
    * whole form on it switched off the one public conversion available to a
    * shop with nothing on the books (issue #710).

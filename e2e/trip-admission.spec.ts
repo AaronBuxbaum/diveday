@@ -263,7 +263,7 @@ test.describe("as owner", () => {
     await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
     await page.getByRole("button", { name: "Save requirements" }).click();
-    await expect(page.getByRole("status")).toContainText("Trip readiness requirements updated.");
+    await expect(page.getByRole("status")).toContainText("Trip readiness requirements updated");
 
     // The counter is a mode of the departure door: the diver is typed on the
     // walk-in form, and the refusal speaks the boat's one vocabulary.

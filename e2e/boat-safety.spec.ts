@@ -90,7 +90,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await expect(
     boatRow(page, BOAT).getByLabel("Passengers allowed on the certificate (not crew)"),
   ).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "Boat updated" })).toHaveCount(0);
 
   //    …and so are fewer seats under it while today's departure still sells
   //    fourteen on this hull.
@@ -109,7 +109,7 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
     .fill("14");
   await boatRow(page, BOAT).getByLabel("Insurance expires").fill(daysFromNow(-3));
   await boatRow(page, BOAT).getByRole("button", { name: "Save boat" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Boat updated." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Boat updated" })).toBeVisible();
   await expect(boatRow(page, BOAT).getByText(/^Hull insurance ended /)).toBeVisible();
   await expect(boatRow(page, BOAT).getByRole("alert")).toHaveCount(0);
 
@@ -123,20 +123,20 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   await page.getByLabel("Kind", { exact: true }).selectOption({ label: "AED" });
   await page.getByLabel("Tag").fill("AED e2e");
   await page.getByRole("button", { name: "Add to the register" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "On the register." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "On the register" })).toBeVisible();
   await page.getByRole("link", { name: "AED e2e" }).click();
 
   await page.getByText("Edit details").click();
   await page.getByLabel("Aboard").selectOption({ label: BOAT });
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Saved" })).toBeVisible();
   await expect(page.getByText(`Aboard ${BOAT}`)).toBeVisible();
 
   await page.getByText("Log a service").click();
   await page.getByLabel("What was done").selectOption({ label: "Pads" });
   await page.getByLabel("Next due").fill(daysFromNow(12));
   await page.getByRole("button", { name: "Log it" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Logged." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Logged" })).toBeVisible();
 
   // 3. Today's reef departure on that boat says all of it, above the boat
   //    check — and on the printed sheet too.

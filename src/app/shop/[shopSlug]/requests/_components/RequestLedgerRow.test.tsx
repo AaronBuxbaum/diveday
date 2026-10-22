@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { DateRequestRow } from "@/db/course-inquiries";
+import type { DateLeadRow } from "@/db/lead-dates";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RequestLedgerRow } from "./RequestLedgerRow";
 
@@ -9,7 +9,7 @@ afterEach(cleanup);
 
 const t = staffTranslator("en-US");
 
-const BASE: DateRequestRow = {
+const BASE: DateLeadRow = {
   id: "8f000000-1111-4222-8333-444444444444",
   courseId: null,
   courseTitle: null,
@@ -23,14 +23,14 @@ const BASE: DateRequestRow = {
   preferredDate: "2027-03-06",
   alternateDate: "2027-03-13",
   dateFlexible: false,
-  divers: 2,
+  partySize: 2,
   message: null,
-  createdAt: new Date("2027-02-20T14:00:00.000Z"),
-  handledAt: null,
-  handledAs: null,
+  askedAt: new Date("2027-02-20T14:00:00.000Z"),
+  closedAt: null,
+  closedAs: null,
 };
 
-function row(request: Partial<DateRequestRow> = {}) {
+function row(request: Partial<DateLeadRow> = {}) {
   const { container } = render(
     <ul>
       <RequestLedgerRow
@@ -219,7 +219,7 @@ describe("what one request says", () => {
 /**
  * **The name is the door, and only when there is somewhere to go.** A lead is
  * tied to a diver on file by exact email match at capture time and never
- * back-filled (`src/db/course-inquiries.ts`), so most requests are strangers
+ * back-filled (`src/db/lead-dates.ts`), so most requests are strangers
  * with no record to open — and a row that looks tappable and is not is worse
  * than one that never claimed to be.
  */
