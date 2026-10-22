@@ -20,15 +20,41 @@ import { liveTrip } from "./trips-live";
  * DAN's preflight interval is about dives (issue #2383 asks the same of the
  * recap).
  */
+type PlannedFlySafeQuery = {
+  shop: { id: string };
+  person: { id: string };
+  participantType: ParticipantType;
+  detail: { shop: { timezone: string }; trip: { id: string; startsAt: Date } };
+};
+
 export async function readPlannedFlySafe(
   db: DbExecutor,
-  input: {
-    shop: { id: string };
-    person: { id: string };
-    participantType: ParticipantType;
-    detail: { shop: { timezone: string }; trip: { id: string; startsAt: Date } };
-  },
+  input: PlannedFlySafeQuery,
 ): Promise<PlannedFlySafe | null> {
+  return (await gatherPlannedFlySafe(db, input))?.plan ?? null;
+}
+
+/**
+ * **The night-before reminder's fly-safe hours** (ux-delight sheet
+ * 2026-10-22, item 1; H-150: the rule in hours, never a clock time). The
+ * same plan `/ready` reads, said only when this departure is the diver's
+ * last seat with the shop: a diver with any later boat reads it on that
+ * boat's reminder instead. Null whenever the plan is (a snorkeler or rider,
+ * past no-decompression limits, no scheduled end), as the recap is silent.
+ */
+export async function readReminderFlySafeHours(
+  db: DbExecutor,
+  input: PlannedFlySafeQuery,
+): Promise<number | null> {
+  const gathered = await gatherPlannedFlySafe(db, input);
+  if (!gathered?.plan || gathered.nextDiveStartsAt) return null;
+  return gathered.plan.hours;
+}
+
+async function gatherPlannedFlySafe(
+  db: DbExecutor,
+  input: PlannedFlySafeQuery,
+): Promise<{ plan: PlannedFlySafe | null; nextDiveStartsAt: Date | null } | null> {
   const shopId = input.shop.id;
   const personId = input.person.id;
   const trip = input.detail.trip;
@@ -69,13 +95,15 @@ export async function readPlannedFlySafe(
   const row = tripRows[0];
   if (!row) return null;
 
-  return plannedFlySafeFrom({
+  const nextDiveStartsAt = next[0]?.startsAt ?? null;
+  const plan = plannedFlySafeFrom({
     plannedDives: row.plannedDives,
     endsAt: row.endsAt,
     divedRecently: recent.dived.has(personId),
     exceedsNoDecoLimits: row.exceedsNoDecoLimits,
     decompressionRecently: recent.decompression.has(personId),
-    nextDiveStartsAt: next[0]?.startsAt ?? null,
+    nextDiveStartsAt,
     hours: DEFAULT_FLY_SAFE_HOURS,
   });
+  return { plan, nextDiveStartsAt };
 }

@@ -4,7 +4,7 @@ import { HOUR_MS } from "@/lib/clock";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
-import { readPlannedFlySafe } from "./fly-safe-plan";
+import { readPlannedFlySafe, readReminderFlySafeHours } from "./fly-safe-plan";
 import { trips } from "./schema";
 import { createTrip } from "./trips";
 
@@ -108,5 +108,56 @@ describe("readPlannedFlySafe", () => {
         detail: { shop: { timezone: ctx.shop.timezone }, trip },
       }),
     ).toBeNull();
+  });
+
+  /** Ux-delight sheet 2026-10-22, item 1 (H-150): the night-before reminder's hours. */
+  describe("readReminderFlySafeHours", () => {
+    const hoursFor = (trip: Awaited<ReturnType<typeof departure>>, personId: string) =>
+      readReminderFlySafeHours(ctx.db, {
+        shop: { id: ctx.shop.id },
+        person: { id: personId },
+        participantType: "diver",
+        detail: { shop: { timezone: ctx.shop.timezone }, trip },
+      });
+
+    it("says the hours on the diver's last boat, the repetitive wait for a two-tank plan", async () => {
+      const one = await departure("One tank", base);
+      const two = await departure("Two tank", new Date(base.getTime() - 96 * HOUR_MS), 2);
+      const onePerson = (await seat(one.id)).personId;
+      const twoPerson = (await seat(two.id, "two-tank-flyhome@example.com")).personId;
+      expect(await hoursFor(one, onePerson)).toBe(18);
+      expect(await hoursFor(two, twoPerson)).toBe(24);
+    });
+
+    it("says nothing when the diver has any later boat, even one after the wait", async () => {
+      const today = await departure("Today", base);
+      const nextWeek = await departure("Next week", new Date(base.getTime() + 7 * 24 * HOUR_MS));
+      const booking = await seat(today.id);
+      await seat(nextWeek.id);
+      // The plan itself still stands on /ready; the reminder waits for the last boat.
+      expect(await ask(today, booking.personId)).not.toBeNull();
+      expect(await hoursFor(today, booking.personId)).toBeNull();
+      expect(await hoursFor(nextWeek, booking.personId)).toBe(18);
+    });
+
+    it("falls silent where the recap does, past no-decompression limits (H-84)", async () => {
+      const deco = await departure("Deco", base);
+      const decoPerson = (await seat(deco.id)).personId;
+      await ctx.db.update(trips).set({ exceedsNoDecoLimits: true }).where(eq(trips.id, deco.id));
+      expect(await hoursFor(deco, decoPerson)).toBeNull();
+    });
+
+    it("says nothing to a snorkeler", async () => {
+      const trip = await departure("One tank", base);
+      const booking = await seat(trip.id);
+      expect(
+        await readReminderFlySafeHours(ctx.db, {
+          shop: { id: ctx.shop.id },
+          person: { id: booking.personId },
+          participantType: "snorkeler",
+          detail: { shop: { timezone: ctx.shop.timezone }, trip },
+        }),
+      ).toBeNull();
+    });
   });
 });

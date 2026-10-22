@@ -124,6 +124,47 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
     expect(tonight.text).toContain("sale mañana; preséntate en el muelle a las");
   });
 
+  // Ux-delight sheet 2026-10-22, item 1 (H-150): the rule in hours, never a clock time.
+  it("says the fly-safe rule in hours under the dock time, the night before a last boat", () => {
+    const email = diverStateEmail({
+      ...base,
+      state: "tonight",
+      now: night,
+      dockCallMinutes: 30,
+      flySafeHours: 24,
+    });
+    const lines = flat(email.text).split("\n");
+    expect(lines.slice(0, 3)).toEqual([
+      "Two-Tank Reef sails tomorrow; be at the dock by 8:30 AM EDT.",
+      "",
+      "Plan to fly no earlier than 24 hours after your last dive.",
+    ]);
+    expect(email.html).toContain(
+      "<p>Plan to fly no earlier than 24 hours after your last dive.</p>",
+    );
+    expect(email.html.indexOf("Plan to fly")).toBeLessThan(email.html.indexOf("href="));
+    // Hours only: no clock time rides on the line.
+    expect(lines[2]).not.toMatch(/\d:\d\d/);
+    const spanish = diverStateEmail({
+      ...base,
+      state: "tonight",
+      locale: "es-ES",
+      now: night,
+      flySafeHours: 18,
+    });
+    expect(spanish.text).toContain(
+      "Planea volar como mínimo 18 horas después de tu última inmersión.",
+    );
+  });
+
+  it("says nothing about flying without the hours, or on the week-out nudge", () => {
+    const tonight = diverStateEmail({ ...base, state: "tonight", now: night, dockCallMinutes: 30 });
+    expect(tonight.text).not.toMatch(/fly/i);
+    const week = diverStateEmail({ ...base, state: "week_out", flySafeHours: 24 });
+    expect(week.text).not.toMatch(/fly/i);
+    expect(week.html).not.toMatch(/fly/i);
+  });
+
   it("omits the link block when the thread link could not be minted", () => {
     const email = diverStateEmail({ ...base, state: "week_out", readinessUrl: undefined });
     expect(email.text).not.toContain("See what’s left");

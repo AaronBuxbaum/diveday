@@ -55,6 +55,8 @@ export type DiverStateEmailInput = {
       courseSession?: boolean;
       /** Whether the reply line is offered (ADR 20260909-reply-keywords): a fact about the channel. */
       replyKeywords?: boolean;
+      /** The fly-safe wait in hours, on the night before a diver's last boat (H-150); the line is absent without it. */
+      flySafeHours?: number;
     }
   | {
       state: "home";
@@ -127,6 +129,13 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
     day,
   };
   const sentence = t(`notifications.tripReminder.${key}Body${suffix}`, values);
+  // Under the dock time, the night before the diver's last boat: the rule in
+  // hours, never a clock time, because a late boat would make a time wrong
+  // (H-150). The exact time stays on the thread and the recap.
+  const flySafe =
+    tonight && input.flySafeHours !== undefined
+      ? t("notifications.tripReminder.flySafe", { count: input.flySafeHours })
+      : null;
   const label = t("notifications.common.seeWhatsLeft");
   // The reply line is a fact about the channel, not about the state, so it
   // stays under the link on both reminders and nowhere else.
@@ -138,7 +147,7 @@ export function diverStateEmail(input: DiverStateEmailInput): NotificationEmail 
       tripTitle: input.tripTitle,
       day,
     }),
-    text: `${sentence}${link ? `\n\n${label}:\n${link}` : ""}\n\n${input.shopName}\n${keywordOffer ? `\n${keywordOffer}\n` : ""}`,
-    html: `<p>${escapeHtml(sentence)}</p>${link ? emailButton(link, label) : ""}<p>${shop}</p>${keywordOffer ? `<p style="font-size: 13px; opacity: 0.8;">${escapeHtml(keywordOffer)}</p>` : ""}`,
+    text: `${sentence}${flySafe ? `\n\n${flySafe}` : ""}${link ? `\n\n${label}:\n${link}` : ""}\n\n${input.shopName}\n${keywordOffer ? `\n${keywordOffer}\n` : ""}`,
+    html: `<p>${escapeHtml(sentence)}</p>${flySafe ? `<p>${escapeHtml(flySafe)}</p>` : ""}${link ? emailButton(link, label) : ""}<p>${shop}</p>${keywordOffer ? `<p style="font-size: 13px; opacity: 0.8;">${escapeHtml(keywordOffer)}</p>` : ""}`,
   };
 }
