@@ -1,5 +1,6 @@
 import { and, eq, gt, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { MOVE_ASK_NOTE_MAX_LENGTH } from "@/lib/inbox";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   countUnansweredMessages,
@@ -399,7 +400,12 @@ describe("an Ask to move", () => {
     const { bookingId, tripId } = await aBooking();
     const askedAt = new Date(NOW.getTime() - 2 * 60 * 60 * 1000);
     const calledOffAt = new Date(NOW.getTime() - 60 * 60 * 1000);
-    const ordinary = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: askedAt });
+    const ordinary = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId,
+      note: "Must be back by Sunday.",
+      now: askedAt,
+    });
     expect(ordinary.status).toBe("recorded");
     await db
       .update(trips)
@@ -414,10 +420,19 @@ describe("an Ask to move", () => {
       shopId: shop.id,
       bookingId,
       calledOff: true,
+      note: "Please move me to Two-Tank Reef, Thu 12:00.",
       now: NOW,
     });
     expect(filed.status).toBe("recorded");
     if (ordinary.status !== "recorded" || filed.status !== "recorded") return;
+    // The diver's own words travel with the new ask, after the offer.
+    const [fresh] = await db
+      .select({ body: inboundMessages.body })
+      .from(inboundMessages)
+      .where(and(eq(inboundMessages.shopId, shop.id), eq(inboundMessages.id, filed.id)));
+    expect(fresh?.body).toBe(
+      "Please move me to Two-Tank Reef, Thu 12:00.\n\nMust be back by Sunday.",
+    );
     expect(filed.id).not.toBe(ordinary.id);
     const [lapsed] = await db
       .select({
@@ -434,6 +449,37 @@ describe("an Ask to move", () => {
     expect(
       await recordMoveAsk(db, { shopId: shop.id, bookingId, calledOff: true, now: NOW }),
     ).toEqual({ status: "already" });
+  });
+
+  it("keeps the offer first and the carried note within the length a note may have", async () => {
+    const { db, shop } = ctx;
+    const { bookingId, tripId } = await aBooking();
+    const ordinary = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId,
+      note: "x".repeat(MOVE_ASK_NOTE_MAX_LENGTH),
+      now: new Date(NOW.getTime() - 2 * 60 * 60 * 1000),
+    });
+    expect(ordinary.status).toBe("recorded");
+    await db
+      .update(trips)
+      .set({ status: "cancelled", cancelledAt: new Date(NOW.getTime() - 60 * 60 * 1000) })
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shop.id)));
+    const offer = "Please move me to Two-Tank Reef, Thu 12:00.";
+    const filed = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId,
+      calledOff: true,
+      note: offer,
+      now: NOW,
+    });
+    if (filed.status !== "recorded") throw new Error(`expected recorded, got ${filed.status}`);
+    const [fresh] = await db
+      .select({ body: inboundMessages.body })
+      .from(inboundMessages)
+      .where(and(eq(inboundMessages.shopId, shop.id), eq(inboundMessages.id, filed.id)));
+    expect(fresh?.body.startsWith(`${offer}\n\nx`)).toBe(true);
+    expect(fresh?.body).toHaveLength(MOVE_ASK_NOTE_MAX_LENGTH);
   });
 
   it("finds no booking from another shop", async () => {

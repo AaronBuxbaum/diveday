@@ -174,6 +174,10 @@ export async function askToMoveFromCancelledAction(token: string, formData: Form
     calledOff: true,
     note,
     now,
+  }).catch((error: unknown) => {
+    // A bounded lock wait is the same quiet notice as `askToMoveAction`'s.
+    if (isLockWaitRefusal(error)) return { status: "not_found" as const };
+    throw error;
   });
   if (outcome.status === "not_found") redirect(`${base(token)}?error=move-ask#move-ask`);
   if (outcome.status === "already") revalidateAndRedirect(base(token), `${base(token)}#move-ask`);

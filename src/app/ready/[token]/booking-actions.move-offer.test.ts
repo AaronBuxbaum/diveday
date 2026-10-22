@@ -134,6 +134,12 @@ describe("askToMoveFromCancelledAction", () => {
     expect(alertStaffToMoveAsk).not.toHaveBeenCalled();
   });
 
+  it("keeps a bounded lock refusal inline without claiming the request was sent", async () => {
+    vi.mocked(recordMoveAsk).mockRejectedValue(new Error("busy", { cause: { code: "55P03" } }));
+    await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}?error=move-ask#move-ask`);
+    expect(alertStaffToMoveAsk).not.toHaveBeenCalled();
+  });
+
   it("refuses a link the stranded check does not open, before reading the offer", async () => {
     vi.mocked(strandedContextFor).mockResolvedValue({ ok: false, reason: "invalid" });
     await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}`);

@@ -322,12 +322,14 @@ export async function recordMoveAsk(
     const fromAddress =
       normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "";
     const providerMessageId = moveAskProviderId(input.bookingId, seat.tripId);
+    let body = note;
     const [previous] = await tx
       .select({
         id: inboundMessages.id,
         answeredAt: inboundMessages.answeredAt,
         deletedAt: inboundMessages.deletedAt,
         receivedAt: inboundMessages.receivedAt,
+        body: inboundMessages.body,
       })
       .from(inboundMessages)
       .where(
@@ -349,6 +351,9 @@ export async function recordMoveAsk(
         input.calledOff === true &&
         askLapsedByCallOff(previous.receivedAt, seat.cancelledAt);
       if (open && !lapsed) return { status: "already" };
+      // The diver's own words from the lapsed ask ("must be back Sunday")
+      // still hold for the desk: they follow the offer in the new row.
+      if (lapsed) body = carriedMoveAskNote(note, previous.body);
       // Keep the original identity/body and any reply foreign keys. Only the
       // current request owns the canonical key used by the pending reader. A
       // lapsed ask stops waiting in the Inbox the way a move answers one.
@@ -367,7 +372,7 @@ export async function recordMoveAsk(
         personId: seat.personId,
         channel: "page",
         fromAddress,
-        body: note,
+        body,
         receivedAt: input.now,
         providerMessageId,
         keywordIntent: "move",
@@ -389,6 +394,14 @@ export async function recordMoveAsk(
  */
 function askLapsedByCallOff(receivedAt: Date, cancelledAt: Date | null): boolean {
   return cancelledAt !== null && receivedAt.getTime() < cancelledAt.getTime();
+}
+
+/** A new ask's note, then a lapsed ask's own words, within the length a note may have. */
+function carriedMoveAskNote(note: string, carried: string): string {
+  return [note, carried.trim()]
+    .filter((part) => part !== "")
+    .join("\n\n")
+    .slice(0, MOVE_ASK_NOTE_MAX_LENGTH);
 }
 
 /** The diver's own words and send time, never a staff reply or contact details. */
