@@ -61,7 +61,13 @@ import { availableParallelism, loadavg } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { baseDecision, baseRedArgs, readBaseVerdict, repoSlug } from "./base-ci.mjs";
+import {
+  baseDecision,
+  baseRedArgs,
+  readBaseVerdict,
+  repoSlug,
+} from "./base-ci.mjs";
+import { ownDecision, readOwnVerdict } from "./own-ci.mjs";
 import {
   affectedSpecs,
   captureGrep,
@@ -101,7 +107,10 @@ export const CORES_PER_E2E_WORKER = 3;
 export function e2eWorkers({ cores, load, override } = {}) {
   const set = Number(override);
   if (Number.isFinite(set) && set > 0) {
-    return { workers: Math.floor(set), formula: `E2E_WORKERS=${override} set by the operator` };
+    return {
+      workers: Math.floor(set),
+      formula: `E2E_WORKERS=${override} set by the operator`,
+    };
   }
   const free = Math.max(0, cores - load);
   const workers = Math.max(
@@ -126,13 +135,15 @@ function e2eWorkersHere() {
 }
 
 /** The line e2e/browser.ts prints when the pinned Chromium is missing. */
-const BROWSER_FALLBACK = /^e2e: the Chromium pinned by @playwright\/test is not installed.*$/m;
+const BROWSER_FALLBACK =
+  /^e2e: the Chromium pinned by @playwright\/test is not installed.*$/m;
 
 /** A unit, script or guard test: no page imports one, so no browser spec can move with it. */
 const UNIT_TEST = /\.test\.(?:ts|tsx|mts|mjs|js)$/;
 
 /** Paths the e2e build never reads: a change to only these reuses the build already made. */
-const NOT_BUILT = /(?:^|\/)[^/]+\.test\.(?:ts|tsx|mts|mjs|js)$|^e2e\/|^docs\/|\.md$|^\.claude\//;
+const NOT_BUILT =
+  /(?:^|\/)[^/]+\.test\.(?:ts|tsx|mts|mjs|js)$|^e2e\/|^docs\/|\.md$|^\.claude\//;
 
 /** A diff of only these changes no code: CI skips the unit and browser jobs for it too. */
 const DOCS_ONLY = /^(?:docs\/|\.claude\/|[^/]+\.md$)|\.md$/;
@@ -176,12 +187,16 @@ function staticSteps(changed) {
  * `--quick`: static checks plus native dependency/source-reader selection, direct
  * changed leaf tests, or a full fallback for global/unknown/deleted inputs.
  */
-export function quickPlan({ changed, selection, specs = [] }) {
+export function quickPlan({ changed, selection, specs = [], captures = [] }) {
   const steps = staticSteps(changed);
   const selected = selection ?? testPlan({ changed, readers: [] });
   if (selected.mode === "all" || selected.files.length > 0)
-    steps.push({ name: "related unit tests", command: "pnpm", args: testArgs(selected) });
-  steps.push(...browserSteps({ specs }));
+    steps.push({
+      name: "related unit tests",
+      command: "pnpm",
+      args: testArgs(selected),
+    });
+  steps.push(...browserSteps({ specs, captures }));
   return steps;
 }
 
@@ -196,14 +211,18 @@ export function baseReplayFiles({ files, existing }) {
 }
 
 /** Coverage in a stamp follows the actual browser plan in either verification mode. */
-export function stampCoverage({ specs, verdict, decision }) {
+export function stampCoverage({ specs, verdict, decision, own }) {
   return {
     specs,
+    ...(own ? { ownCi: own } : {}),
     baseCi: verdict.unknown
       ? { unknown: verdict.unknown }
       : {
           red: verdict.red,
-          ran: [...decision.files, ...decision.specs.filter((spec) => specs.includes(spec))],
+          ran: [
+            ...decision.files,
+            ...decision.specs.filter((spec) => specs.includes(spec)),
+          ],
         },
   };
 }
@@ -242,7 +261,12 @@ export function plan({ changed, specs, captures = [] }) {
 function browserSteps({ specs, captures = [] }) {
   const steps = [];
   if (specs.length > 0 || captures.length > 0) {
-    steps.push({ name: "e2e build", command: "pnpm", args: ["e2e:build"], build: true });
+    steps.push({
+      name: "e2e build",
+      command: "pnpm",
+      args: ["e2e:build"],
+      build: true,
+    });
     // Chunked so a hub-route change, which selects most of the suite, stays inside each step's
     // hour (SUBPROCESS_TIMEOUTS.verifyPushStep) and prints progress between chunks.
     const chunks = [];
@@ -250,7 +274,10 @@ function browserSteps({ specs, captures = [] }) {
       chunks.push(specs.slice(at, at + E2E_CHUNK));
     chunks.forEach((chunk, i) => {
       steps.push({
-        name: chunks.length === 1 ? "e2e specs" : `e2e specs ${i + 1}/${chunks.length}`,
+        name:
+          chunks.length === 1
+            ? "e2e specs"
+            : `e2e specs ${i + 1}/${chunks.length}`,
         command: "pnpm",
         args: ["e2e:run", ...chunk, "--reporter=line"],
         workers: true,
@@ -291,7 +318,14 @@ export function browserSpecs({ changed, strong, reach, rank, record }) {
  * What this run did not run, said plainly in the output and the stamp, so "verify:push is
  * green" is never read as "every test passed here". CI runs all of it.
  */
-export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = [], quick = false }) {
+export function notRunHere({
+  docsOnly,
+  testsOnly,
+  specs,
+  allSpecs,
+  captures = [],
+  quick = false,
+}) {
   if (quick) {
     const ran = new Set(specs.map((spec) => spec.replace(/:\d+$/, "")));
     const skipped = allSpecs.filter(
@@ -300,9 +334,13 @@ export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = []
     return [
       "unit tests outside native dependency selection and conservative source-reader contracts (quick run)",
       ...(skipped.length > 0
-        ? [`${ran.size === 0 ? "all " : ""}${skipped.length} Playwright specs (quick run)`]
+        ? [
+            `${ran.size === 0 ? "all " : ""}${skipped.length} Playwright specs (quick run)`,
+          ]
         : []),
-      "visual captures (reg-suit): CI only, and a difference never fails the build",
+      captures.length > 0
+        ? `visual captures (reg-suit): the ${captures.length} own CI named red ran here in light mode; the rest, dark mode and the comparison are CI's`
+        : "visual captures (reg-suit): CI only, and a difference never fails the build",
     ];
   }
   const lines = [];
@@ -334,7 +372,9 @@ export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = []
 export function appTreeKey(lsTree) {
   const built = lsTree
     .split("\n")
-    .filter((line) => line && !NOT_BUILT.test(line.slice(line.indexOf("\t") + 1)));
+    .filter(
+      (line) => line && !NOT_BUILT.test(line.slice(line.indexOf("\t") + 1)),
+    );
   return createHash("sha256").update(built.join("\n")).digest("hex");
 }
 
@@ -381,8 +421,11 @@ export function excerpt(text, lines = 40) {
   const all = text.split("\n");
   const first = all.findIndex((line) => FAILURE_LINE.test(line));
   const tailStart = Math.max(0, all.length - lines);
-  if (first === -1 || first >= tailStart) return all.slice(tailStart).join("\n");
-  return [...all.slice(first, first + 20), "…", ...all.slice(tailStart)].join("\n");
+  if (first === -1 || first >= tailStart)
+    return all.slice(tailStart).join("\n");
+  return [...all.slice(first, first + 20), "…", ...all.slice(tailStart)].join(
+    "\n",
+  );
 }
 
 function tail(file) {
@@ -400,7 +443,11 @@ function tail(file) {
  * the checkout's ports so the next run in it timed out across dozens of specs). After a clean
  * exit the group is already empty and the kill finds nothing.
  */
-export function runStep(command, args, { run = runBounded, kill = process.kill, ...options }) {
+export function runStep(
+  command,
+  args,
+  { run = runBounded, kill = process.kill, ...options },
+) {
   const result = run(command, args, { ...options, detached: true });
   if (result.pid) {
     try {
@@ -450,7 +497,9 @@ function main() {
     ? changedDiff({ root: ROOT, base, git })
     : affectedSpecs({ root: ROOT, base, git });
   if (!selection) {
-    console.error("verify:push: could not diff against a base (is origin/main fetched?).");
+    console.error(
+      "verify:push: could not diff against a base (is origin/main fetched?).",
+    );
     process.exit(1);
   }
   const record = durations(ROOT);
@@ -468,9 +517,15 @@ function main() {
   const strong = specs.filter((spec) => !reachRun.includes(spec));
   const docsOnly = docsOnlyDiff(selection.changed);
   const verdict = readBaseVerdict(git(["rev-parse", selection.base]), {
-    repo: repoSlug(git(["remote", "get-url", "origin"])) ?? process.env.GITHUB_REPOSITORY ?? null,
+    repo:
+      repoSlug(git(["remote", "get-url", "origin"])) ??
+      process.env.GITHUB_REPOSITORY ??
+      null,
   });
-  const decision = baseDecision(verdict, { base: selection.base, extra: baseRedArgs(args) });
+  const decision = baseDecision(verdict, {
+    base: selection.base,
+    extra: baseRedArgs(args),
+  });
   for (const line of decision.lines) console.log(line);
   if (decision.refuse && !docsOnly) {
     console.error(`verify:push: ${decision.refuse}`);
@@ -479,34 +534,71 @@ function main() {
   const existing = (file) => existsSync(path.join(ROOT, file));
   let baseSpecs;
   try {
-    baseReplayFiles({ files: [...decision.files, ...decision.specs], existing });
+    baseReplayFiles({
+      files: [...decision.files, ...decision.specs],
+      existing,
+    });
     baseSpecs = docsOnly ? [] : [...new Set(decision.specs)];
   } catch (error) {
     console.error(`verify:push: ${error.message}`);
     process.exit(1);
   }
+  // The branch's own last CI run (scripts/own-ci.mjs): a fix-forward push runs what that run
+  // named as red, so it is not the next CI run that says whether the fix worked. A file the
+  // change deleted is left out; deleting a red test is the change's own claim, and CI checks it.
+  const branch = git(["branch", "--show-current"]);
+  const own = ownDecision(
+    readOwnVerdict(branch, {
+      repo:
+        repoSlug(git(["remote", "get-url", "origin"])) ??
+        process.env.GITHUB_REPOSITORY ??
+        null,
+    }),
+    { branch, head },
+  );
+  for (const line of own.lines) console.log(line);
+  const ownSpecs = docsOnly ? [] : own.specs.filter(existing);
+  const ownCaptures = docsOnly ? [] : own.captures;
+  baseSpecs = [...new Set([...baseSpecs, ...ownSpecs])];
   if (quick) specs.splice(0, specs.length, ...baseSpecs);
   else specs.push(...baseSpecs.filter((spec) => !specs.includes(spec)));
-  const captures = quick || docsOnly || testsOnly ? [] : [...selection.captures.keys()].sort();
+  const captures = [
+    ...new Set([
+      ...(quick || docsOnly || testsOnly ? [] : [...selection.captures.keys()]),
+      ...ownCaptures,
+    ]),
+  ].sort();
   const unitSelection = quick
     ? testPlan({
         changed: selection.changed,
         readers: () => sourceReaders(ROOT),
-        extra: decision.files.filter(existing),
+        extra: [...decision.files, ...own.files].filter(existing),
       })
     : null;
   const steps = quick
-    ? quickPlan({ changed: selection.changed, selection: unitSelection, specs })
+    ? quickPlan({
+        changed: selection.changed,
+        selection: unitSelection,
+        specs,
+        captures,
+      })
     : plan({ changed: selection.changed, specs, captures });
 
   if (quick) {
-    for (const reason of unitSelection.reasons) console.log(`  unit selection: ${reason}`);
+    for (const reason of unitSelection.reasons)
+      console.log(`  unit selection: ${reason}`);
     console.log(
       `verify:push --quick: ${selection.changed.length} file(s) against ${selection.base}; ` +
         "static checks and the unit tests they reach. CI runs the rest; fix forward if it goes red.",
     );
     if (baseSpecs.length > 0)
-      console.log(`  replaying red browser specs on the base: ${baseSpecs.join(" ")}`);
+      console.log(
+        `  replaying red browser specs (base and own CI): ${baseSpecs.join(" ")}`,
+      );
+    if (captures.length > 0)
+      console.log(
+        `  replaying red captures from own CI: ${captures.length}, light mode only`,
+      );
   } else {
     console.log(
       `verify:push: ${selection.changed.length} file(s) against ${selection.base}; ` +
@@ -514,7 +606,9 @@ function main() {
         `(about ${Math.round(estimateMs(specs, record) / 60000)} CI-minutes of browser tests).`,
     );
     for (const spec of strong) {
-      console.log(`  ${spec}  — ${[...selection.strong.get(spec)].slice(0, 2).join("; ")}`);
+      console.log(
+        `  ${spec}  — ${[...selection.strong.get(spec)].slice(0, 2).join("; ")}`,
+      );
     }
     if (reachRun.length > 0) console.log(`  reached: ${reachRun.join(" ")}`);
     if (captures.length > 0) {
@@ -523,11 +617,15 @@ function main() {
           `(about ${Math.round(captureMs(captures) / 60000)} CI-minutes):`,
       );
       for (const title of captures) {
-        console.log(`    ${title}  — ${[...selection.captures.get(title)].slice(0, 2).join("; ")}`);
+        console.log(
+          `    ${title}  — ${[...selection.captures.get(title)].slice(0, 2).join("; ")}`,
+        );
       }
     }
-    if (baseSpecs.length > 0) console.log(`  red on the base: ${baseSpecs.join(" ")}`);
-    if (testsOnly) console.log("  only tests changed: no e2e build, no browser specs.");
+    if (baseSpecs.length > 0)
+      console.log(`  red on the base: ${baseSpecs.join(" ")}`);
+    if (testsOnly)
+      console.log("  only tests changed: no e2e build, no browser specs.");
   }
   const skipped = notRunHere({
     docsOnly,
@@ -539,8 +637,12 @@ function main() {
   });
   if (args.includes("--plan")) {
     for (const step of steps) {
-      const env = step.workers ? `E2E_WORKERS=${e2eWorkersHere().workers} ` : "";
-      console.log(`  step ${step.name}: ${env}${step.command} ${step.args.join(" ")}`);
+      const env = step.workers
+        ? `E2E_WORKERS=${e2eWorkersHere().workers} `
+        : "";
+      console.log(
+        `  step ${step.name}: ${env}${step.command} ${step.args.join(" ")}`,
+      );
     }
     for (const line of skipped) console.log(`  not run here: ${line}`);
     return;
@@ -568,7 +670,9 @@ function main() {
       const { workers, formula } = e2eWorkersHere();
       env = { ...process.env, E2E_WORKERS: String(workers) };
       workerCounts.push({ step: step.name, workers, formula });
-      process.stdout.write(`… ${step.name} on ${workers} worker(s): ${formula}\n`);
+      process.stdout.write(
+        `… ${step.name} on ${workers} worker(s): ${formula}\n`,
+      );
     } else {
       process.stdout.write(`… ${step.name}\n`);
     }
@@ -589,15 +693,20 @@ function main() {
         why = `\nIt rewrote generated files; look at them, commit them, and run verify:push again:\n${after}`;
       }
     }
-    const fallback = step.workers && readFileSync(log, "utf8").match(BROWSER_FALLBACK);
+    const fallback =
+      step.workers && readFileSync(log, "utf8").match(BROWSER_FALLBACK);
     if (fallback && !browserNote) {
       browserNote = fallback[0];
       // Said once, pass or fail: the older Chromium is not why a functional spec fails here
       // (CORES_PER_E2E_WORKER above), so nobody chases it again.
-      console.log(`${browserNote}\n(not a cause of functional failures; see CORES_PER_E2E_WORKER)`);
+      console.log(
+        `${browserNote}\n(not a cause of functional failures; see CORES_PER_E2E_WORKER)`,
+      );
     }
     if (failed) {
-      console.error(`✗ ${step.name} (${seconds}s) — full log: ${log}\n${tail(log)}${why}`);
+      console.error(
+        `✗ ${step.name} (${seconds}s) — full log: ${log}\n${tail(log)}${why}`,
+      );
       console.error(
         "\nverify:push: red. Fix it and run again. A failure that is red on the base branch too " +
           "is still yours to name: see docs/agents/verifying.md#the-pre-push-gate.",
@@ -615,18 +724,31 @@ function main() {
     base: selection.base,
     at: new Date().toISOString(),
     steps: ran,
-    ...stampCoverage({ specs, verdict, decision }),
-    captures: !quick && captures.length > 0 ? captures : undefined,
+    ...stampCoverage({
+      specs,
+      verdict,
+      decision,
+      own:
+        own.files.length + ownSpecs.length + ownCaptures.length > 0
+          ? { files: own.files, specs: ownSpecs, captures: ownCaptures }
+          : undefined,
+    }),
+    captures: captures.length > 0 ? captures : undefined,
     e2eWorkers: workerCounts.length > 0 ? workerCounts : undefined,
     browser: browserNote ?? undefined,
     notRunHere: skipped,
   };
   writeStamps(stamp, { git });
-  console.log(`verify:push${quick ? " --quick" : ""}: green. ${head.slice(0, 9)} may be pushed.`);
+  console.log(
+    `verify:push${quick ? " --quick" : ""}: green. ${head.slice(0, 9)} may be pushed.`,
+  );
   console.log("Not run here, so CI is the first to run it:");
   for (const line of skipped) console.log(`  - ${line}`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   main();
 }

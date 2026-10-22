@@ -195,6 +195,18 @@ describe("the quick pre-push plan", () => {
     ]);
   });
 
+  it("replays the branch's own red spec and capture in a quick run (scripts/own-ci.mjs)", () => {
+    const steps = quickPlan({
+      changed: ["src/lib/x.ts"],
+      selection: { mode: "related", files: [] },
+      specs: ["e2e/last-minute-fill.spec.ts"],
+      captures: ["a station names a blocker aboard (light)"],
+    });
+    expect(names(steps).slice(-3)).toEqual(["e2e build", "e2e specs", "visual captures"]);
+    expect(steps.at(-1).args).toContain("e2e/visual.spec.ts");
+    expect(steps.at(-1).args.join(" ")).toContain("a station names a blocker aboard \\(light\\)");
+  });
+
   it("stops at the static checks for documents without reader tests; deletions run all units", () => {
     const statics = ["regen", "lint", "typecheck", "check:repo", "guards"];
     expect(names(quickPlan({ changed: ["AGENTS.md"], related: [] }))).toEqual(statics);
