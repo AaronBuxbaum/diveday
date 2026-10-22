@@ -33,6 +33,7 @@ import { inAfterDivePopulation, isAccountedForAfterDive } from "@/lib/roll-call-
 import {
   filterActionsForRoles,
   isBlockedAboard,
+  oneRowPerDiver,
   type RollCallGapReason,
   type TodayAction,
 } from "@/lib/today";
@@ -1566,7 +1567,7 @@ async function forecastsForDepartures(
 
 /**
  * Every seat a payment row could be about: a blocked one in the window that
- * owes money (`collapseDiverActions` raises a payment row from no other).
+ * owes money (`blockedDiverActions` raises a payment row from no other).
  */
 function owingSeatIds(
   trips: readonly DepartureTrip[],
@@ -1939,7 +1940,7 @@ export async function getTodayWork(
   personId?: string,
   /**
    * Resolves the blocked-diver rows' `detail`/`actionLabel` text
-   * (`collapseDiverActions`, `src/lib/today.ts`). Defaults to English so every
+   * (`blockedDiverActions`, `src/lib/today.ts`). Defaults to English so every
    * pre-existing caller (tests included) keeps working unchanged; the page
    * passes its own request-locale translator.
    */
@@ -2246,9 +2247,10 @@ export async function getTodayWork(
       });
   }
 
-  const visibleActions = attachAgencyChecks(
-    filterActionsForRoles(actions, roles),
-    agencyCheckCards,
+  // **Each diver once per boat** (UX delight sheet 2026-10-22, item 4): folded
+  // after the role filter, so a row names only the gaps its reader may see.
+  const visibleActions = oneRowPerDiver(
+    attachAgencyChecks(filterActionsForRoles(actions, roles), agencyCheckCards),
   );
 
   return {

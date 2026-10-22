@@ -744,3 +744,39 @@ describe("tomorrow from tonight", () => {
     expect(screen.getByText("Still out")).toBeInTheDocument();
   });
 });
+
+/**
+ * **Each diver once, a long boat folded** (UX delight sheet 2026-10-22, item
+ * 4): naming every diver may not bury the boat, and folding may not drop one.
+ */
+describe("a boat with many divers to name", () => {
+  const names = ["Ana", "Ben", "Cara", "Dev", "Eli", "Fay", "Gus", "Hal"];
+  const rows = names.map((name, index) =>
+    action({
+      id: `blocker:b${index}:waiver_not_sent`,
+      subject: `${name} Diver`,
+      detail: "waiver, emergency contact",
+      departure: { tripId: "t1", label: "Two-Tank Reef · 1:00 PM" },
+      diver: { personId: `p${index}`, items: ["waiver", "emergency contact"] },
+      dueAt: hoursFromNow(2),
+    }),
+  );
+
+  it("shows its first rows and folds the rest behind and N more, every diver still on the page", () => {
+    const { container } = renderSpine({ actions: rows });
+    const fold = screen.getByText("and 3 more");
+    expect(fold.closest("summary")).not.toBeNull();
+    expect(fold.closest("details")?.hasAttribute("open")).toBe(false);
+    for (const name of names) expect(screen.getByText(`${name} Diver`)).toBeTruthy();
+    // The folded rows sit inside the fold, the first five above it.
+    const folded = fold.closest("details");
+    expect(folded?.textContent).toContain("Fay Diver");
+    expect(folded?.textContent).not.toContain("Ana Diver");
+    expect(container.textContent).toContain("waiver, emergency contact");
+  });
+
+  it("shows a boat of six whole, since and 1 more would cost the row it hides", () => {
+    renderSpine({ actions: rows.slice(0, 6) });
+    expect(screen.queryByText(/and \d+ more/)).toBeNull();
+  });
+});

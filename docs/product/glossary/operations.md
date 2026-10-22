@@ -19,11 +19,13 @@
   row ranked. Rows bound to no departure (unanswered messages, found items waiting to go home)
   follow every boat as **The desk** group. A row about the shop that names a boat, such as a blank
   emergency reference, is filed under that boat so it keeps its rank. It sits under the day's
-  departures, which carry no rows of their own. A status list, not a page: an empty one is not drawn. A row about one diver is
-  titled with their name over what is wrong in a few words ("Waiver not signed, not sent yet."); a
-  row for several says it as one sentence ("9 divers not certified for this trip.") and names
-  nobody. Neither carries the levels or the other blockers — the roster and the diver record carry
-  the full sentence. Failed emails of one kind and one cause are one row with one resend, however
+  departures, which carry no rows of their own. A status list, not a page: an empty one is not drawn. Each diver is named
+  once under each boat they are on: one row with their name over what is wrong in a few words
+  ("Waiver not signed, not sent yet."), or, when several things are open for them, over every item
+  ("Priya Sharma · waiver, emergency contact"), with one button for the first fix. Counts stay only
+  for what cannot name a person, such as a boat's open orders. A boat with many rows shows its
+  first five and folds the rest behind "and N more"; a danger row never folds. No row carries the
+  levels — the roster and the diver record carry the full sentence. Failed emails of one kind and one cause are one row with one resend, however
   many people they missed. **A crew reader's lens** (UX audit 2026-10-07, item 7): for a captain or
   divemaster who crews one of today's boats, the list leads with that boat's rows, every
   danger-tone row about any boat (a diver unaccounted for is everyone's to see), and any row about

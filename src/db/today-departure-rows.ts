@@ -1,6 +1,7 @@
 import { boatWorkSentence } from "@/i18n/boat-work-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
+  boatWorkItemText,
   helpRequestActionText,
   helpRequestDetailText,
   missingContactNamedDetailText,
@@ -18,7 +19,7 @@ import { lastMinuteEntryMatchesTripDate } from "@/lib/interests";
 import { publicTripPath } from "@/lib/public-routes";
 import { shopPath } from "@/lib/staff-notices";
 import {
-  collapseDiverActions,
+  blockedDiverActions,
   collapseEmailDeliveries,
   type TodayAction,
   urgencyFor,
@@ -72,12 +73,14 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         blockers: row.readiness.blockers,
         aboard: boardedAnywhere.get(trip.id)?.has(row.booking.id) === true,
       }));
-    actions.push(...collapseDiverActions(blockedDivers, shopSlug, now, t));
+    actions.push(...blockedDiverActions(blockedDivers, shopSlug, now, t));
 
     // **The boat's work** (third review, item 4): sizes, nitrox, contacts and
     // open orders, decided by `boatWorkItems` from the one reader the trip's
-    // own band reads, in the same words. One diver is a row about that
-    // person, named; several stay one row about the boat.
+    // own band reads, in the same words. Each diver's gap is a row about that
+    // person, named (UX delight sheet 2026-10-22, item 4), which
+    // `oneRowPerDiver` folds with the rest of their gaps on this boat; orders
+    // cannot name a person and stay one row about the boat.
     const work = boatWorkFor(boatWork, trip.id);
     for (const item of boatWorkItems(
       {
@@ -89,25 +92,38 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
       },
       { startsAt: trip.startsAt, now },
     )) {
-      const row = boatWorkRow(item, work, {
-        tripHref,
-        ordersHref: `${shopPath(shopSlug, "orders")}?tripId=${trip.id}&status=open&range=all`,
-        t,
-      });
-      const lone = row.divers.length === 1 ? row.divers[0] : undefined;
-      actions.push({
-        id: `${row.idPrefix}:${trip.id}`,
-        kind: row.kind,
-        urgency: urgencyFor(trip.startsAt, now),
-        subject: lone ? lone.fullName : trip.title,
-        context: when,
-        departure,
-        ...(lone ? {} : { aboutDeparture: true }),
-        detail: lone ? row.namedDetail : boatWorkSentence(t, item),
-        actionLabel: row.actionLabel,
-        href: row.href,
-        dueAt: trip.startsAt,
-      });
+      if (item.code === "open_orders") {
+        // The index the row opens is filtered to the departure, the same door the band uses.
+        actions.push({
+          id: `orders:${trip.id}`,
+          kind: "payment",
+          urgency: urgencyFor(trip.startsAt, now),
+          subject: trip.title,
+          context: when,
+          departure,
+          aboutDeparture: true,
+          detail: boatWorkSentence(t, item),
+          actionLabel: openOrdersActionText(t),
+          href: `${shopPath(shopSlug, "orders")}?tripId=${trip.id}&status=open&range=all`,
+          dueAt: trip.startsAt,
+        });
+        continue;
+      }
+      for (const gap of boatWorkGaps(item.code, work, { tripHref, t })) {
+        actions.push({
+          id: `${gap.idPrefix}:${trip.id}:${gap.diver.personId}`,
+          kind: gap.kind,
+          urgency: urgencyFor(trip.startsAt, now),
+          subject: gap.diver.fullName,
+          context: when,
+          departure,
+          detail: gap.namedDetail,
+          actionLabel: gap.actionLabel,
+          href: gap.href,
+          diver: { personId: gap.diver.personId, items: [gap.item] },
+          dueAt: trip.startsAt,
+        });
+      }
     }
 
     pushCrewGapRows(actions, ctx, { trip, when, departure, tripHref });
@@ -187,57 +203,65 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
   );
 }
 
-/** What one item of a boat's work becomes as a Today row: its kind, its door, and its named form. */
-function boatWorkRow(
-  item: BoatWorkItem,
-  work: BoatWork,
-  { tripHref, ordersHref, t }: { tripHref: string; ordersHref: string; t: StaffTranslator },
-): {
+/** One diver's gap from a boat's work, as a Today row about that diver: its kind, its door, its words. */
+type BoatWorkGap = {
   idPrefix: string;
   kind: TodayAction["kind"];
-  divers: readonly BoatWorkDiver[];
+  diver: BoatWorkDiver;
   namedDetail: string;
+  item: string;
   actionLabel: string;
   href: string;
-} {
-  switch (item.code) {
+};
+
+/** Every diver an item of a boat's work names, each as their own gap. */
+function boatWorkGaps(
+  code: Exclude<BoatWorkItem["code"], "open_orders">,
+  work: BoatWork,
+  { tripHref, t }: { tripHref: string; t: StaffTranslator },
+): BoatWorkGap[] {
+  const prepHref = `${tripHref}/prep#${PREP_SECTION_ID}`;
+  switch (code) {
     case "missing_sizes":
-      return {
-        idPrefix: "prep",
-        kind: "dive_prep",
-        divers: [...work.missingSize, ...work.kitUnasked],
-        namedDetail: missingFitNamedDetailText(t, work.missingSize.length === 0),
-        actionLabel: openPrepListActionText(t),
-        href: `${tripHref}/prep#${PREP_SECTION_ID}`,
-      };
+      return [
+        ...work.missingSize.map((diver) => ({
+          idPrefix: "prep",
+          kind: "dive_prep" as const,
+          diver,
+          namedDetail: missingFitNamedDetailText(t, false),
+          item: boatWorkItemText(t, "missing_size"),
+          actionLabel: openPrepListActionText(t),
+          href: prepHref,
+        })),
+        ...work.kitUnasked.map((diver) => ({
+          idPrefix: "prep",
+          kind: "dive_prep" as const,
+          diver,
+          namedDetail: missingFitNamedDetailText(t, true),
+          item: boatWorkItemText(t, "kit_unasked"),
+          actionLabel: openPrepListActionText(t),
+          href: prepHref,
+        })),
+      ];
     case "ungated_nitrox":
-      return {
+      return work.ungatedNitrox.map((diver) => ({
         idPrefix: "nitrox",
-        kind: "nitrox_gate",
-        divers: work.ungatedNitrox,
+        kind: "nitrox_gate" as const,
+        diver,
         namedDetail: ungatedNitroxNamedDetailText(t),
+        item: boatWorkItemText(t, "ungated_nitrox"),
         actionLabel: openPrepListActionText(t),
-        href: `${tripHref}/prep#${PREP_SECTION_ID}`,
-      };
+        href: prepHref,
+      }));
     case "missing_contact":
-      return {
+      return work.missingContact.map((diver) => ({
         idPrefix: "contact",
-        kind: "emergency_contact",
-        divers: work.missingContact,
+        kind: "emergency_contact" as const,
+        diver,
         namedDetail: missingContactNamedDetailText(t),
+        item: boatWorkItemText(t, "missing_contact"),
         actionLabel: openTripActionText(t),
         href: tripHref,
-      };
-    case "open_orders":
-      // Orders are about the boat, never one named diver: the index the row
-      // opens is filtered to the departure, the same door the band uses.
-      return {
-        idPrefix: "orders",
-        kind: "payment",
-        divers: [],
-        namedDetail: "",
-        actionLabel: openOrdersActionText(t),
-        href: ordersHref,
-      };
+      }));
   }
 }

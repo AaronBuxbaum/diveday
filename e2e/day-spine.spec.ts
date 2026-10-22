@@ -1,5 +1,8 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { HELD_SEND_TIMEOUT_MS, openCounterFor, STAFF_DAY_HEADING } from "./helpers";
+
+const staff = staffTranslator("en-US");
 
 signedInAsOwner();
 
@@ -69,6 +72,41 @@ test("the day is named, said once, and followed by its departures and what needs
   const needsYou = page.getByRole("heading", { level: 2, name: "Needs you" });
   await expect(needsYou).toBeVisible();
   await expect(page.getByText("First thing", { exact: false })).toHaveCount(0);
+});
+
+/**
+ * **Needs you names each diver once under each boat** (UX delight sheet
+ * 2026-10-22, item 4): a diver's gaps are one row, "Priya Sharma · waiver,
+ * emergency contact", never a boat's count the desk taps through. A help
+ * request and a bounced email stay rows of their own: each carries its own
+ * control.
+ */
+test("Needs you names each diver once under each boat", async ({ page }) => {
+  await page.goto("/shop/blue-mantis");
+  const needsYou = page
+    .locator("div")
+    .filter({ has: page.getByRole("heading", { level: 2, name: "Needs you" }) })
+    .filter({ has: page.locator("ul") })
+    .last();
+  await expect(needsYou).toBeVisible();
+  const boats = needsYou.getByRole("heading", { level: 3 });
+  const count = await boats.count();
+  expect(count).toBeGreaterThan(0);
+  for (let index = 0; index < count; index += 1) {
+    const group = needsYou
+      .locator("div")
+      .filter({ has: boats.nth(index) })
+      .filter({ has: page.locator("ul") })
+      .last();
+    // Folded rows are in the page too, inside "and N more".
+    const names = await group
+      .locator("li")
+      .filter({ hasNotText: staff("today.actionKind.helpRequest") })
+      .filter({ hasNotText: staff("today.actionKind.emailDelivery") })
+      .locator("span.font-medium")
+      .allTextContents();
+    expect(new Set(names).size).toBe(names.length);
+  }
 });
 
 test("a departure's title is said once — the station owns it, no row repeats it", async ({

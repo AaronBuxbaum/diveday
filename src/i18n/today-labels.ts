@@ -114,52 +114,13 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   readiness_unavailable: "today.blockerAction.checkReadiness",
 };
 
-/** The same fix, worded for a row that stands for several divers ("Send waivers"). */
-const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
-  requirements_not_configured: "today.blockerGroup.setRequirements",
-  identity_unconfirmed: "today.blockerGroup.confirmIdentities",
-  under_minimum_age: "today.blockerGroup.checkDatesOfBirth",
-  waiver_not_sent: "today.blockerGroup.sendWaivers",
-  waiver_lapsed: "today.blockerGroup.sendWaivers",
-  waiver_runs_out: "today.blockerGroup.sendWaivers",
-  waiver_pending: "today.blockerGroup.nudgeWaivers",
-  waiver_expired: "today.blockerGroup.reissueWaivers",
-  medical_review: "today.blockerGroup.reviewMedicals",
-  medical_not_cleared: "today.blockerGroup.contactDivers",
-  guardian_signature_missing: "today.blockerGroup.reissueWaivers",
-  course_form_unsigned: "today.blockerGroup.getCourseFormsSigned",
-  course_form_guardian_missing: "today.blockerGroup.getCourseFormsSigned",
-  training_mark_invalid: "today.blockerGroup.clearTrainingMarks",
-  certification_missing: "today.blockerGroup.reviewCards",
-  certification_not_yet: "today.blockerGroup.contactDivers",
-  certification_pending: "today.blockerGroup.verifyCards",
-  certification_self_declared: "today.blockerGroup.askForCards",
-  certification_insufficient: "today.blockerGroup.reviewCards",
-  certification_in_training: "today.blockerGroup.checkCourseResults",
-  specialty_missing: "today.blockerGroup.reviewSpecialties",
-  specialty_pending: "today.blockerGroup.verifySpecialties",
-  specialty_import_unconfirmed: "today.blockerGroup.confirmImportedSpecialties",
-  nitrox_missing: "today.blockerGroup.reviewNitroxCards",
-  nitrox_pending: "today.blockerGroup.verifyNitroxCards",
-  nitrox_self_declared: "today.blockerGroup.askForNitroxCards",
-  payment_due: "today.blockerGroup.takePayments",
-  payment_refunded: "today.blockerGroup.takePayments",
-  readiness_unavailable: "today.blockerGroup.checkReadiness",
-};
-
 /**
- * A blocked row's action-button word: the singular verb ("Send waiver") when
- * one tap sends in place, or the group verb ("Send waivers") when one row
- * stands for several divers on the same boat. Used by both the Today queue
- * (`src/lib/today.ts`) and the blocker queue (`src/lib/blockers.ts`), which
- * share the same blocker→fix rule.
+ * A blocked row's action-button word, the verb when one tap sends in place
+ * ("Send waiver"). Used by the Today queue (`src/lib/today.ts`) through
+ * `blockerDestination`, the one blocker→fix rule.
  */
-export function blockerActionLabelText(
-  t: StaffTranslator,
-  code: ReadinessBlockerCode,
-  grouped: boolean,
-): string {
-  return t(grouped ? BLOCKER_GROUP_LABEL_KEYS[code] : BLOCKER_ACTION_LABEL_KEYS[code]);
+export function blockerActionLabelText(t: StaffTranslator, code: ReadinessBlockerCode): string {
+  return t(BLOCKER_ACTION_LABEL_KEYS[code]);
 }
 
 /**
@@ -215,22 +176,83 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
 
 /**
  * **A Today row says what is wrong in a few words, and the record says the
- * rest.** "Not certified for this trip." for one diver, "9 divers not
- * certified for this trip." for a boat of them — never the levels, the names,
- * or the count of other blockers (Aaron, 2026-10-05). The full sentence
+ * rest.** "Not certified for this trip" — never the levels or the count of
+ * other blockers (Aaron, 2026-10-05). The full sentence
  * (`readinessBlockerText`) is one tap away on the roster and the diver
  * record, which is where it is read.
  */
-export function blockerRowText(
-  t: StaffTranslator,
-  blocker: ReadinessBlocker,
-  count: number,
-): string {
+export function blockerRowText(t: StaffTranslator, blocker: ReadinessBlocker): string {
   const specialty = blocker.params?.specialty;
   return t(BLOCKER_ROW_KEYS[blocker.code], {
-    count,
     specialty: specialty ? t(SPECIALTY_KEYS[specialty]) : "",
   });
+}
+
+/** A gap's short name in a diver's row, keyed by blocker code (`today.diverItem.*`). */
+const BLOCKER_ITEM_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
+  requirements_not_configured: "today.diverItem.requirements",
+  identity_unconfirmed: "today.diverItem.identity",
+  under_minimum_age: "today.diverItem.minimumAge",
+  waiver_not_sent: "today.diverItem.waiver",
+  waiver_lapsed: "today.diverItem.waiver",
+  waiver_runs_out: "today.diverItem.waiver",
+  waiver_pending: "today.diverItem.waiver",
+  waiver_expired: "today.diverItem.waiver",
+  guardian_signature_missing: "today.diverItem.guardianSignature",
+  course_form_unsigned: "today.diverItem.courseForm",
+  course_form_guardian_missing: "today.diverItem.courseForm",
+  training_mark_invalid: "today.diverItem.trainingMark",
+  medical_review: "today.diverItem.medicalReview",
+  medical_not_cleared: "today.diverItem.medicalNotCleared",
+  certification_missing: "today.diverItem.certification",
+  certification_pending: "today.diverItem.certification",
+  certification_self_declared: "today.diverItem.certification",
+  certification_insufficient: "today.diverItem.certification",
+  certification_not_yet: "today.diverItem.certification",
+  certification_in_training: "today.diverItem.certification",
+  specialty_missing: "today.diverItem.specialty",
+  specialty_pending: "today.diverItem.specialty",
+  specialty_import_unconfirmed: "today.diverItem.specialty",
+  nitrox_missing: "today.diverItem.nitrox",
+  nitrox_pending: "today.diverItem.nitrox",
+  nitrox_self_declared: "today.diverItem.nitrox",
+  payment_due: "today.diverItem.payment",
+  payment_refunded: "today.diverItem.payment",
+  readiness_unavailable: "today.diverItem.readiness",
+};
+
+/** One blocker as an item of a diver's row: "waiver", "certification". */
+export function blockerItemText(t: StaffTranslator, blocker: ReadinessBlocker): string {
+  const specialty = blocker.params?.specialty;
+  return t(BLOCKER_ITEM_KEYS[blocker.code], {
+    specialty: specialty ? t(SPECIALTY_KEYS[specialty]) : "",
+  });
+}
+
+/** The boat's own per-diver gaps as items of a diver's row. */
+export function boatWorkItemText(
+  t: StaffTranslator,
+  gap: "missing_size" | "kit_unasked" | "ungated_nitrox" | "missing_contact",
+): string {
+  switch (gap) {
+    case "missing_size":
+      return t("today.diverItem.size");
+    case "kit_unasked":
+      return t("today.diverItem.kit");
+    case "ungated_nitrox":
+      return t("today.diverItem.nitrox");
+    case "missing_contact":
+      return t("today.diverItem.emergencyContact");
+  }
+}
+
+/**
+ * Every item open for one diver, in the row's order: "waiver, emergency
+ * contact". A comma list in both locales, like `nameListText`'s leading names;
+ * no conjunction, because the row is a list of gaps, not a sentence.
+ */
+export function diverItemsText(items: readonly string[]): string {
+  return items.join(", ");
 }
 
 /**
