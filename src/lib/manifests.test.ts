@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { boardedAt, crewMember, notBoardedAt, trip } from "./manifest-test-fixtures";
 import {
   blockedAtDock,
-  buddyAlertFor,
   buildTripManifest,
   carryForwardNotBoarded,
   crewIsAccountedFor,
@@ -9,8 +9,6 @@ import {
   isNotBackAboard,
   isRollCallAccountedFor,
   isRollCallCheckpoint,
-  type ManifestBuddyTeam,
-  type ManifestCrewMember,
   type ManifestDiverInput,
   manifestAtCheckpoint,
   maxRecordedDiveNumber,
@@ -20,52 +18,7 @@ import {
   rollCallLabel,
   rollCallRecordedTone,
   rollCallRowState,
-  splitBuddyTeamIds,
 } from "./manifests";
-
-const boardedAt = (recordedByName = "Dana Reyes"): RollCallRecord => ({
-  state: "boarded",
-  occurredAt: new Date("2026-07-20T11:45:00.000Z"),
-  recordedByName,
-});
-/**
- * The recorder's name is the discriminator here. It used to be the note, which
- * went with the roll-call note itself (#1058) -- these tests only ever needed
- * *some* field that tells one record from another when several are in flight.
- */
-const notBoardedAt = (recordedByName = "Dana Reyes"): RollCallRecord => ({
-  state: "not_boarded",
-  occurredAt: new Date("2026-07-20T11:45:00.000Z"),
-  recordedByName,
-});
-
-/**
- * A crew member with no emergency contact on file — the ordinary state, since
- * nobody is asked for one at hire. Tests that care about the contact pass it
- * explicitly; everything else says nothing and gets the common case.
- */
-const crewMember = (
-  member: Omit<
-    ManifestCrewMember,
-    "emergencyContactName" | "emergencyContactPhone" | "standingRatings"
-  > &
-    Partial<
-      Pick<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone" | "standingRatings">
-    >,
-): ManifestCrewMember => ({
-  emergencyContactName: null,
-  emergencyContactPhone: null,
-  standingRatings: [],
-  ...member,
-});
-
-const trip = {
-  id: "trip-1",
-  title: "Two-Tank Reef",
-  startsAt: new Date("2026-07-20T12:00:00.000Z"),
-  endsAt: new Date("2026-07-20T16:00:00.000Z"),
-  plannedDives: 2,
-};
 
 describe("manifestAtCheckpoint", () => {
   const manifests = rollCallCheckpoints(trip.plannedDives).map((checkpoint) =>
@@ -910,226 +863,6 @@ describe("rollCallCompleteness — the crew half of the head count (DOM-H1)", ()
       complete: false,
       reason: "crew_not_back_aboard",
     });
-  });
-});
-
-describe("buddy teams — the split-team alert (ADR 20260804-buddy-teams)", () => {
-  const carriedAshore: RollCallRecord = { ...notBoardedAt(), implied: true };
-
-  it("says nothing unless this person is themselves back aboard", () => {
-    // The alert renders on whoever is back — a teammate's own row already
-    // carries whatever state matters about *them*.
-    expect(buddyAlertFor("after_dive_1", undefined, [boardedAt()])).toBeNull();
-    expect(buddyAlertFor("after_dive_1", notBoardedAt(), [undefined])).toBeNull();
-    expect(buddyAlertFor("after_dive_1", carriedAshore, [undefined])).toBeNull();
-  });
-
-  it("is quiet when the team's statuses agree, and when there is no team at all", () => {
-    expect(buddyAlertFor("departure", boardedAt(), [boardedAt()])).toBeNull();
-    expect(buddyAlertFor("after_dive_1", boardedAt(), [boardedAt(), boardedAt()])).toBeNull();
-    expect(buddyAlertFor("departure", undefined, [undefined])).toBeNull();
-    // An empty teammate list is nobody to diverge from — never an alert.
-    expect(buddyAlertFor("after_dive_1", boardedAt(), [])).toBeNull();
-  });
-
-  it("raises the dock heads-up while one is aboard and another is not yet", () => {
-    expect(buddyAlertFor("departure", boardedAt(), [undefined])).toBe("separated_dock");
-  });
-
-  it("says nothing at the dock about a teammate the crew recorded staying ashore", () => {
-    // `not_boarded` at the dock is a decision somebody made, not a buddy still
-    // to gather: the heads-up is for someone the crew may yet bring aboard
-    // (dive-domain review of UX batch 1).
-    expect(buddyAlertFor("departure", boardedAt(), [notBoardedAt()])).toBeNull();
-    // A second teammate still to gather keeps it.
-    expect(buddyAlertFor("departure", boardedAt(), [notBoardedAt(), undefined])).toBe(
-      "separated_dock",
-    );
-  });
-
-  it("raises the loud alert after a dive only once a teammate is recorded not back", () => {
-    expect(buddyAlertFor("after_dive_1", boardedAt(), [notBoardedAt()])).toBe(
-      "separated_after_dive",
-    );
-  });
-
-  it("stays quiet after a dive while a teammate is merely uncalled", () => {
-    // **An alarm is earned by a recorded fact, never by the absence of one**
-    // (ADR 20260827-the-departure-is-two-working-surfaces, decision 4). A crew
-    // starts the surface-interval count believing everyone is back, so the
-    // first diver counted in must not paint the second one red before anybody
-    // has said a word about them — which is what an uncalled teammate used to
-    // do, on every row of every count.
-    expect(buddyAlertFor("after_dive_1", boardedAt(), [undefined])).toBeNull();
-    expect(buddyAlertFor("after_dive_1", boardedAt(), [boardedAt(), undefined])).toBeNull();
-  });
-
-  it("needs only one teammate recorded not back, however large the team", () => {
-    // Three of four back is exactly as loud as one of two: the boat's next
-    // move is identical, and a team is not a severity scale.
-    expect(
-      buddyAlertFor("after_dive_1", boardedAt(), [boardedAt(), boardedAt(), notBoardedAt()]),
-    ).toBe("separated_after_dive");
-    expect(
-      buddyAlertFor("after_dive_1", boardedAt(), [boardedAt(), boardedAt(), boardedAt()]),
-    ).toBeNull();
-  });
-
-  it("never alarms about a teammate who stayed ashore from the dock", () => {
-    // Carried forward from departure: they never left. Accounted for on land,
-    // not missing from the water — alarming here would teach the crew to stop
-    // reading the panel.
-    expect(buddyAlertFor("after_dive_1", boardedAt(), [carriedAshore])).toBeNull();
-    // …but a second teammate a human recorded as not back is still loud, so
-    // the exemption can never silence a real one.
-    expect(buddyAlertFor("after_dive_1", boardedAt(), [carriedAshore, notBoardedAt()])).toBe(
-      "separated_after_dive",
-    );
-  });
-
-  const diver = (
-    bookingId: string,
-    fullName: string,
-    extra: Partial<ManifestDiverInput> = {},
-  ): ManifestDiverInput => ({
-    bookingId,
-    fullName,
-    email: null,
-    emergencyContactName: null,
-    emergencyContactPhone: null,
-    readiness: { status: "ready", blockers: [] },
-    rentalFit: { state: "own_kit" as const },
-    nitroxRequested: false,
-    checkedIn: false,
-    ...extra,
-  });
-
-  const team = (teamId: string, others: ManifestBuddyTeam["others"]) => ({ teamId, others });
-  const otherDiver = (bookingId: string, fullName: string) =>
-    ({ kind: "diver", bookingId, fullName }) as const;
-  const otherCrew = (personId: string, fullName: string) =>
-    ({ kind: "crew", personId, fullName }) as const;
-
-  it("derives the alert through buildTripManifest, on the returned row only", () => {
-    const manifest = buildTripManifest({
-      trip,
-      checkpoint: "after_dive_1",
-      crew: [],
-      divers: [
-        diver("booking-tom", "Tom Okafor", {
-          rollCall: boardedAt(),
-          buddyTeam: team("team-1", [otherDiver("booking-lena", "Lena Fischer")]),
-        }),
-        diver("booking-lena", "Lena Fischer", {
-          // Recorded not back aboard — the fact that earns the alert on Tom's
-          // row (decision 4 of ADR 20260827-the-departure-is-two-working-surfaces).
-          rollCall: notBoardedAt(),
-          buddyTeam: team("team-1", [otherDiver("booking-tom", "Tom Okafor")]),
-        }),
-        // The odd diver out — unteamed, and that is normal, never an error.
-        diver("booking-omar", "Omar Haddad"),
-      ],
-    });
-    expect(manifest.divers.find((d) => d.bookingId === "booking-tom")?.buddyAlert).toBe(
-      "separated_after_dive",
-    );
-    expect(manifest.divers.find((d) => d.bookingId === "booking-lena")?.buddyAlert).toBeNull();
-    expect(manifest.divers.find((d) => d.bookingId === "booking-omar")?.buddyAlert).toBeNull();
-  });
-
-  it("reads a crew teammate's own roll call, and puts the alert on the crew row too", () => {
-    const manifest = buildTripManifest({
-      trip,
-      checkpoint: "after_dive_1",
-      crew: [
-        crewMember({
-          id: "person-keiko",
-          fullName: "Keiko Tanaka",
-          roles: ["divemaster"],
-          rollCall: boardedAt(),
-          buddyTeams: [team("team-1", [otherDiver("booking-tom", "Tom Okafor")])],
-        }),
-      ],
-      divers: [
-        diver("booking-tom", "Tom Okafor", {
-          rollCall: notBoardedAt(),
-          buddyTeam: team("team-1", [otherCrew("person-keiko", "Keiko Tanaka")]),
-        }),
-      ],
-    });
-    // The divemaster is back and the diver they led is recorded not back — the
-    // split reads on the DM's row, which is the row a deck is looking at.
-    expect(manifest.crew[0]?.buddyAlert).toBe("separated_after_dive");
-    expect(manifest.divers[0]?.buddyAlert).toBeNull();
-  });
-
-  it("counts split *teams*, not rows wearing an alert", () => {
-    const manifest = buildTripManifest({
-      trip,
-      checkpoint: "after_dive_1",
-      crew: [],
-      divers: [
-        diver("a", "A", {
-          rollCall: boardedAt(),
-          buddyTeam: team("team-1", [otherDiver("b", "B"), otherDiver("c", "C")]),
-        }),
-        diver("b", "B", {
-          rollCall: boardedAt(),
-          buddyTeam: team("team-1", [otherDiver("a", "A"), otherDiver("c", "C")]),
-        }),
-        diver("c", "C", {
-          rollCall: notBoardedAt(),
-          buddyTeam: team("team-1", [otherDiver("a", "A"), otherDiver("b", "B")]),
-        }),
-      ],
-    });
-    // Two rows wear the alert; one team is split.
-    expect(manifest.divers.filter((d) => d.buddyAlert !== null)).toHaveLength(2);
-    expect(splitBuddyTeamIds(manifest, "separated_after_dive")).toEqual(new Set(["team-1"]));
-  });
-
-  it("yields no alert for a teammate reference that is not on the manifest", () => {
-    // Defensive: a stale reference (roster changed between reads) must not
-    // fabricate an alert about a person who is not on the boat.
-    const manifest = buildTripManifest({
-      trip,
-      checkpoint: "after_dive_1",
-      crew: [],
-      divers: [
-        diver("booking-tom", "Tom Okafor", {
-          rollCall: boardedAt(),
-          buddyTeam: team("team-1", [otherDiver("booking-gone", "Gone Diver")]),
-        }),
-      ],
-    });
-    expect(manifest.divers[0]?.buddyAlert).toBeNull();
-  });
-
-  it("never lets a team change the checkpoint verdict", () => {
-    const base = {
-      trip,
-      checkpoint: "after_dive_1" as const,
-      crew: [],
-      divers: [
-        diver("booking-tom", "Tom Okafor", { rollCall: boardedAt() }),
-        diver("booking-lena", "Lena Fischer"),
-      ],
-    };
-    const unteamed = buildTripManifest(base);
-    const teamed = buildTripManifest({
-      ...base,
-      divers: [
-        diver("booking-tom", "Tom Okafor", {
-          rollCall: boardedAt(),
-          buddyTeam: team("team-1", [otherDiver("booking-lena", "Lena Fischer")]),
-        }),
-        diver("booking-lena", "Lena Fischer", {
-          buddyTeam: team("team-1", [otherDiver("booking-tom", "Tom Okafor")]),
-        }),
-      ],
-    });
-    expect(teamed.completeness).toEqual(unteamed.completeness);
-    expect(teamed.summary).toEqual(unteamed.summary);
   });
 });
 

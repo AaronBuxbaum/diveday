@@ -952,7 +952,6 @@ describe("every retention window deletes", () => {
     },
   );
 });
-
 /**
  * Tables retention does not govern — and a list that has to be edited by hand
  * for every table added to the schema, which is the price of the guard below.
@@ -972,6 +971,7 @@ describe("every retention window deletes", () => {
  * than a reason to add a name below.
  */
 const OUTSIDE_RETENTION: readonly string[] = [
+  "retention_prune_state", // one mutable scheduler cursor, never an age-pruned trail
   // The shop's own catalogue and configuration: what a shop sets up, edits,
   // and deletes when it stops being true. Nothing here ages.
   "shops",

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expectNoA11yViolations } from "./a11y-scan";
 import { expect, signedInAsOwner, test } from "./fixtures";

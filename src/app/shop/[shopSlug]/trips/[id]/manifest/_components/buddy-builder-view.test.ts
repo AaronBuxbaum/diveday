@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { PartyTeamPlan } from "@/db/buddy-pairs";
+import type { PartyTeamPlan, TripBuddyTeam } from "@/db/buddy-pairs";
+import { partyLeftReasonText } from "@/i18n/buddy-labels";
+import { partyLeftReason } from "@/lib/party-teams";
 import { buddyBuilderView } from "./buddy-builder-view";
 import { diver, t } from "./diver-roll-call-test-fixtures";
 import { crewMember, tripManifest } from "./manifest-page-test-fixtures";
@@ -20,6 +22,8 @@ const NAMES = new Map([
 
 function plan(overrides: Partial<PartyTeamPlan>): PartyTeamPlan {
   return {
+    departure: { course: null },
+    members: new Map(),
     parties: new Map(),
     teamable: [],
     left: [],
@@ -32,11 +36,7 @@ function plan(overrides: Partial<PartyTeamPlan>): PartyTeamPlan {
 function view(buddyError?: string, teamed: string[] = [], partyPlan: PartyTeamPlan = plan({})) {
   return buddyBuilderView({
     manifest,
-    buddyTeamsList: teamed.length
-      ? ([
-          { id: "team-1", members: teamed.map((bookingId) => ({ kind: "diver", bookingId })) },
-        ] as never)
-      : [],
+    buddyTeamsList: teamed.length ? [team(teamed)] : [],
     buddyError,
     partyPlan,
     locale: "en-US",
@@ -44,7 +44,132 @@ function view(buddyError?: string, teamed: string[] = [], partyPlan: PartyTeamPl
   });
 }
 
+function team(bookingIds: string[], crewId?: string): TripBuddyTeam {
+  return {
+    teamId: "team-1",
+    createdAt: new Date("2026-09-25T12:00:00Z"),
+    recordedByName: "Keiko Tanaka",
+    members: [
+      ...bookingIds.map((bookingId) => ({
+        kind: "diver" as const,
+        bookingId,
+        fullName: NAMES.get(bookingId) ?? bookingId,
+        cancelled: false,
+      })),
+      ...(crewId ? [{ kind: "crew" as const, personId: crewId, fullName: "Keiko Tanaka" }] : []),
+    ],
+  };
+}
+
 describe("buddyBuilderView", () => {
+  it.each([
+    { departure: { course: null }, age: 11 },
+    { departure: { course: { intro: true } }, age: 35 },
+    { departure: { course: { intro: false } }, age: 35 },
+  ])("warns on a manual team using the same party rule: %j", ({ departure, age }) => {
+    const member = { age, declaredMinor: age < 18, verifiedCard: true };
+    const reason = partyLeftReason(departure, [member, member]);
+    if (!reason) throw new Error("expected a shared caution");
+    const { panel } = view(
+      undefined,
+      ["b-1", "b-2"],
+      plan({
+        departure,
+        members: new Map([
+          ["b-1", member],
+          ["b-2", member],
+        ]),
+      }),
+    );
+    expect(panel.teamWarnings["team-1"]).toContain(
+      t("manifest.buddyTeamCaution", {
+        reason: partyLeftReasonText(t, reason),
+      }),
+    );
+    // The warning leaves every mutation control available.
+    expect(panel.buddyErrorText).toBeNull();
+  });
+
+  it.each(["medical_review", "medical_not_cleared", "certification_missing"] as const)(
+    "warns from existing readiness without exposing the %s detail",
+    (code) => {
+      // Extra private data must never be interpolated into the generic warning.
+      const blocker = { code, privateMedicalAnswer: "Private medical answer" };
+      const blocked = tripManifest({
+        divers: [
+          diver({ bookingId: "b-1", readiness: { status: "blocked", blockers: [blocker] } }),
+          diver({ bookingId: "b-2" }),
+        ],
+      });
+      const result = buddyBuilderView({
+        manifest: blocked,
+        partyPlan: plan({}),
+        buddyTeamsList: [team(["b-1", "b-2"])],
+        buddyError: undefined,
+        locale: "en-US",
+        t,
+      });
+      expect(result.panel.teamWarnings["team-1"]).toEqual([t("manifest.buddyTeamNotCleared")]);
+      expect(JSON.stringify(result.panel.teamWarnings)).not.toContain("Private medical answer");
+    },
+  );
+
+  it("keeps a junior's certified adult context, and never treats a crew label as a card", () => {
+    const junior = { age: 13, declaredMinor: true, verifiedCard: true };
+    const adult = { age: 40, declaredMinor: false, verifiedCard: true };
+    expect(
+      view(
+        undefined,
+        ["b-1", "b-2"],
+        plan({
+          members: new Map([
+            ["b-1", junior],
+            ["b-2", adult],
+          ]),
+        }),
+      ).panel.teamWarnings["team-1"],
+    ).toEqual([]);
+    const result = buddyBuilderView({
+      manifest,
+      partyPlan: plan({ members: new Map([["b-1", junior]]) }),
+      buddyTeamsList: [team(["b-1"], manifest.crew[0]?.id)],
+      buddyError: undefined,
+      locale: "en-US",
+      t,
+    });
+    expect(result.panel.teamWarnings["team-1"]).toContain(
+      t("manifest.buddyTeamCaution", {
+        reason: t("manifest.buddyPartyLeftReason.junior_without_adult"),
+      }),
+    );
+  });
+
+  it("ignores cancelled members and keeps crew-only teams free of diver cautions", () => {
+    const cancelled = team(["b-1", "b-2"]);
+    const member = cancelled.members[0];
+    if (member?.kind !== "diver") throw new Error("diver fixture missing");
+    member.cancelled = true;
+    const result = buddyBuilderView({
+      manifest: tripManifest({
+        divers: [
+          diver({
+            bookingId: "b-1",
+            readiness: { status: "blocked", blockers: [{ code: "medical_review" }] },
+          }),
+          diver({ bookingId: "b-2" }),
+        ],
+      }),
+      partyPlan: plan({
+        members: new Map([["b-1", { age: 11, declaredMinor: true, verifiedCard: true }]]),
+      }),
+      buddyTeamsList: [cancelled, { ...team([], "crew-1"), teamId: "crew-team" }],
+      buddyError: undefined,
+      locale: "en-US",
+      t,
+    });
+    expect(result.panel.teamWarnings).toEqual({ "team-1": [], "crew-team": [] });
+  });
+
   it("offers every free diver and every crew member, never a snorkeler or a teamed diver", () => {
     const { panel } = view(undefined, ["b-1"]);
     expect(panel.diverOptions).toEqual([{ token: "diver:b-2", label: "Ben Okafor" }]);

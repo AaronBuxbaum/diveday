@@ -1,3 +1,4 @@
+import { personsAboveTotalPersonsAboard } from "@/lib/boat-safety";
 import { counterIsDone, isSettledAtCounter } from "@/lib/check-in";
 import { cachedFormatter } from "@/lib/intl-cache";
 import {
@@ -195,6 +196,12 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
         : undefined;
     return { ...member, state };
   });
+  // The live count uses this same certificate predicate. Count every passenger
+  // kind and only crew actually aboard, including changes queued on this device.
+  const overTotalPersons = personsAboveTotalPersonsAboard(
+    boarded + crewWithState.filter((member) => member.state?.state === "boarded").length,
+    manifest.trip.certifiedTotalPersons,
+  );
   const completeness = rollCallCompleteness({
     checkpoint,
     totalDivers: manifest.summary.totalDivers,
@@ -275,6 +282,7 @@ export function offlineTripView(envelope: OfflineManifestEnvelope, checkpoint: R
     blockedAtRail,
     medicalHold,
     boarded,
+    overTotalPersons,
     awaiting,
     notBackAboard,
     crewAssigned,

@@ -211,7 +211,6 @@ const FOLDED_TABLES = [
   "booking_referrals", // bookings.csv `referred_by_booking_id`
   "review_replies", // trip_reviews.csv `shop_reply`, the one live reply per review
 ];
-
 /**
  * Deliberate exclusions — each must be defensible in the bundle README and on
  * the export page, and as of ADR 20260806-export-operational-records each must
@@ -223,6 +222,7 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
+  "retention_prune_state", // global scheduler cursor, no tenant or personal data
   // record, mirrored here only so an owner sees an open one on Today and on
   // the order; every field is Stripe's, kept current from Stripe's events, and
   // the shop's Stripe dashboard is where a dispute is answered and exported.

@@ -198,7 +198,8 @@ jobs:
       # The migrated + demo-seeded PGlite snapshots every db-backed test
       # hydrates from (src/test/db-template.ts). Vitest's global setup builds
       # them when its own fingerprint (`inputsFingerprint`: every non-test file
-      # under `drizzle/` and `src/db/`, plus the frozen clock) has no match on
+      # under `drizzle/`, `src/db/` and `src/content/`, plus the frozen clock
+      # and snapshot builder) has no match on
       # disk — initdb, the migrations and the seed, three variants — which on a
       # fresh runner is every shard, every run. The key hashes those same
       # inputs, and the lockfile for the PGlite build that wrote the bytes.
@@ -214,7 +215,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/diveday
-          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/content/**', '!src/content/**/*.test.ts', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/content/**', '!src/content/**/*.test.ts', 'src/test/frozen-clock.ts', 'src/test/db-template-build.ts', 'pnpm-lock.yaml') }}
       # Not `pnpm test -- ...`: pnpm/npm insert a literal `--` before forwarded
       # args when the target script is itself a bare command (`vitest run`),
       # so the underlying CLI sees `vitest run -- --reporter=dot --shard=…`
@@ -327,7 +328,7 @@ jobs:
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/diveday
-          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/content/**', '!src/content/**/*.test.ts', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', '!src/db/**/*.test.ts', '!src/db/**/*.test.tsx', 'src/content/**', '!src/content/**/*.test.ts', 'src/test/frozen-clock.ts', 'src/test/db-template-build.ts', 'pnpm-lock.yaml') }}
       - name: Run the unit files that read a document
         run: |
           mapfile -t files < <(git grep -lE "[\"'\`](\./)?(docs/|\.claude/|AGENTS\.md|CLAUDE\.md|README)|[\"'\`](docs|\.claude)[\"'\`]|\.md[\"'\`]" -- \

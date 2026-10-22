@@ -111,3 +111,24 @@ describe("the snapshot is published atomically", () => {
     expect(source).not.toMatch(/writeFile\(\s*templateFile\(/);
   });
 });
+
+it("invalidates both immutable CI caches when a fingerprint file changes", async () => {
+  const [workflow, builder] = await Promise.all([
+    readFile(path.join(process.cwd(), ".github/workflows/ci.yml"), "utf8"),
+    readFile(path.join(process.cwd(), "src/test/db-template.ts"), "utf8"),
+  ]);
+  const keys = workflow
+    .split("\n")
+    .filter((line) => line.includes("key:") && line.includes("-pglite-template-"));
+  expect(keys).toHaveLength(2);
+  expect(keys[0]?.trim()).toBe(keys[1]?.trim());
+  // GitHub caches cannot overwrite an exact key hit. An input known only to
+  // the inner fingerprint rebuilds on every run and can never save that build.
+  const fingerprintFiles = [
+    ...builder.matchAll(/hash\.update\(await readFile\("([^"]+)"\)\)/g),
+  ].map((match) => match[1]);
+  expect(fingerprintFiles).toContain("src/test/db-template-build.ts");
+  for (const file of fingerprintFiles) {
+    for (const key of keys) expect(key).toContain(`'${file}'`);
+  }
+});

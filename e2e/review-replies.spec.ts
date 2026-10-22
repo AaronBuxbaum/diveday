@@ -1,4 +1,4 @@
-import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";

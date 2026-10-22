@@ -5,10 +5,12 @@ import { shops } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
-import { seededTestDb } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { findElements } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
+
+const ctx = fileScopedShopContext();
 
 // The page is invoked directly, outside Next's request scope, so the three
 // things that only exist inside one are stubbed (as in ./page.test.tsx).
@@ -27,7 +29,7 @@ const OrdersIndexPage = (await import("./page")).default;
 
 /** The Orders index as the seeded owner sees it, after `prepare` has run. */
 async function ownerOrders(prepare?: (db: AppDb, shopId: string) => Promise<void>) {
-  const db: AppDb = await seededTestDb();
+  const db = ctx.db;
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
   const owner = (await listShopStaff(db, shop.id)).find((staff) => staff.roles.includes("owner"));

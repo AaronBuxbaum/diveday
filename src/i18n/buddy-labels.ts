@@ -15,15 +15,17 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
  * raises the alert: `buddyAlertFor` fires after a dive only on a teammate the
  * crew recorded as not back (ADR 20260827-the-departure-is-two-working-surfaces,
  * decision 4), never on one merely uncalled. "Unaccounted for" undersold it
- * (dive-domain review of UX batch 1). The dock words say "not aboard yet",
- * never "ashore": a teammate the crew recorded staying ashore raises nothing.
+ * (dive-domain review of UX batch 1). The dock words say "not aboard yet"
+ * about an uncalled teammate, and "staying ashore" about a recorded absence.
  *
  * The words name the buddy, not a count: a team of four with two unaccounted
  * for is the same instruction as a pair with one, and naming a number here
  * would invite reading it as a severity scale it is not. They say "Buddy",
  * never "Someone": the chip sits on the row of the diver who *is* aboard,
  * and "Someone not aboard" on that row read as this diver being missing
- * (UX review 2026-10-10, item 23).
+ * (UX review 2026-10-10, item 23). A buddy recorded staying ashore instead
+ * prompts re-pairing, including a carried-forward dock absence. That heads-up
+ * never wears the after-dive alarm's words or danger tone.
  *
  * **Naming the teammate** (#2403, Aaron 2026-10-13): when exactly one
  * teammate raises the alert, the chip says who, by first name ("Ravi not
@@ -37,11 +39,13 @@ import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 const BUDDY_ALERT_KEYS: Record<BuddyAlert, StaffMessageKey> = {
   separated_dock: "shared.buddyTeam.separatedDock",
   separated_after_dive: "shared.buddyTeam.separatedAfterDive",
+  teammate_ashore: "shared.buddyTeam.ashore",
 };
 
 const BUDDY_ALERT_NAMED_KEYS: Record<BuddyAlert, StaffMessageKey> = {
   separated_dock: "shared.buddyTeam.separatedDockNamed",
   separated_after_dive: "shared.buddyTeam.separatedAfterDiveNamed",
+  teammate_ashore: "shared.buddyTeam.ashoreNamed",
 };
 
 /** Longest first name the chip carries before it is cut with an ellipsis. */
