@@ -93,7 +93,7 @@ describe("crewWeekFor", () => {
     expect(lines.map((line) => line.title)).toEqual(["Rostered 0", "Rostered 1", "Rostered 2"]);
   });
 
-  it("says when to be at the dock: their own shift, else the shop's crew time, else the divers' call", async () => {
+  it("says when to be at the dock: the earlier of their own shift and the shop's call", async () => {
     const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const captain = staff.find((entry) => entry.roles.includes("captain"));
@@ -116,7 +116,8 @@ describe("crewWeekFor", () => {
     await db.update(shops).set({ crewLeadMinutes: null }).where(eq(shops.id, shop.id));
     expect(await read()).toEqual({ at: minutesBefore(30), source: "divers" });
 
-    // An entered shift wins over the crew time, set or not.
+    // An entered shift wins when it is earlier than the call; the crew time,
+    // when earlier still, wins over the shift (dive-domain review of layer 1).
     await db.insert(staffShifts).values({
       shopId: shop.id,
       personId: captain.person.id,
@@ -125,7 +126,7 @@ describe("crewWeekFor", () => {
     });
     expect(await read()).toEqual({ at: minutesBefore(45), source: "shift" });
     await db.update(shops).set({ crewLeadMinutes: 30 }).where(eq(shops.id, shop.id));
-    expect(await read()).toEqual({ at: minutesBefore(45), source: "shift" });
+    expect(await read()).toEqual({ at: minutesBefore(60), source: "crew" });
   });
 
   it("reads nothing for somebody rostered on nothing", async () => {

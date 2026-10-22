@@ -9,7 +9,7 @@
 
 ## Decision
 
-**Decided 2026-10-22 (Aaron: Recommended, in the project thread): the rule in hours.** "Plan to fly no earlier than 24 hours after your last dive", under the dock time, only on the reminder before the diver's last boat with the shop. The exact clock time stays on `/ready` and the recap.
+**Decided 2026-10-22 (Aaron: Recommended, in the project thread): the rule in hours.** "Plan to fly no earlier than 24 hours after your last dive, and longer if you make decompression stops", under the dock time, only on the reminder before the diver's last boat with the shop. The exact clock time stays on `/ready` and the recap.
 
 ## What shipped
 

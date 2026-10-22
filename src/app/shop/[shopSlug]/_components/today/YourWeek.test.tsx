@@ -127,6 +127,27 @@ describe("YourWeekList's dock time", () => {
     ).toBeInTheDocument();
   });
 
+  it("names the call's own day when it falls the evening before the departure", () => {
+    // Thu Oct 15 04:30 EDT departure; crew called Wed 22:30 EDT.
+    render(
+      <YourWeekList
+        lines={[
+          {
+            ...line({ at: new Date("2026-10-15T02:30:00.000Z"), source: "crew" }),
+            startsAt: new Date("2026-10-15T08:30:00.000Z"),
+          },
+        ]}
+        shopSlug="blue-mantis"
+        timeZone="America/New_York"
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(
+      screen.getByText(/At the dock Wednesday 10:30\sPM · leaves 4:30\sAM · Divemaster/),
+    ).toBeInTheDocument();
+  });
+
   it("names the divers' call as theirs when no shift says the crew's", () => {
     show({ at: new Date("2026-10-15T10:30:00.000Z"), source: "divers" });
     expect(

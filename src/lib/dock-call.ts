@@ -14,13 +14,6 @@ export function dockCallAt(startsAt: Date, dockCallMinutes: number): Date | null
 }
 
 /**
- * How long before a departure a covering shift may start and still be read as
- * that boat's crew call. A day-long shift from 06:00 says when the day
- * starts, not when the 13:00 boat's crew should be on the dock.
- */
-export const CREW_CALL_SHIFT_LEAD_MS = 3 * 60 * 60 * 1000;
-
-/**
  * What "Crew arrive N minutes before divers" accepts (`shops.crew_lead_minutes`,
  * H-149): the form's `min`/`max`, the action's parse and the table's CHECK.
  */
@@ -49,21 +42,23 @@ export type CrewCall = { at: Date; source: "shift" | "crew" | "divers" };
 
 /**
  * **When a crew member should be at the dock** (fifth-loop ideas, item 47;
- * ux-delight sheet 2026-10-22, item 2).
+ * ux-delight sheet 2026-10-22, item 2; dive-domain review of layer 1).
  *
- * - **Their own shift covers the departure** and starts no more than
- *   {@link CREW_CALL_SHIFT_LEAD_MS} before it: the earlier of the shift's
- *   start and the divers' dock call, as `shift`. An entered shift wins over
- *   the shop's crew time, and crew are never asked later than the divers
- *   they meet.
- * - **Otherwise the shop's crew time** (`crewLeadMinutes`, H-149): that many
- *   minutes before the divers' dock call, or before the departure when divers
- *   have none, as `crew`.
- * - **Otherwise** the divers' dock call, as `divers`, so the line says it is
- *   the divers' time (dive-domain review of layer r5-4, fix 4): crew who
- *   arrive with the customers leave tanks unloaded and the O2 unchecked.
+ * The shop's call first: its crew time (`crewLeadMinutes`, H-149), that many
+ * minutes before the divers' dock call (or before the departure when divers
+ * have none), as `crew`; with no crew time set, the divers' call, as
+ * `divers`, so the line says it is the divers' time (dive-domain review of
+ * layer r5-4, fix 4): crew who arrive with the customers leave tanks
+ * unloaded and the O2 unchecked.
  *
- * `null` when none of them says anything before the departure itself.
+ * Then **their own shift**, when one starts before the departure and is
+ * still running at that call (a sunrise prep shift from 03:30, a 05:00–07:00
+ * fill shift for a 07:00 boat): the earlier of the two wins, as `shift` when
+ * the shift is earlier. A shift never makes the call later, and the call is
+ * never later than a shift of theirs that is already running, so the line
+ * never contradicts the person's own crew grid.
+ *
+ * `null` when nothing says anything before the departure itself.
  */
 export function crewCallAt(
   startsAt: Date,
@@ -71,16 +66,23 @@ export function crewCallAt(
   shifts: readonly { startsAt: Date; endsAt: Date }[],
 ): CrewCall | null {
   const divers = dockCallAt(startsAt, shop.dockCallMinutes);
-  const earliest = (a: Date | null, b: Date) => (a === null || b < a ? b : a);
+  const crew = dockCallAt(divers ?? startsAt, shop.crewLeadMinutes ?? 0);
+  const call: CrewCall | null = crew
+    ? { at: crew, source: "crew" }
+    : divers
+      ? { at: divers, source: "divers" }
+      : null;
+  // Running at the call, or at the departure when there is no call.
+  const by = call?.at ?? startsAt;
   let shiftStart: Date | null = null;
   for (const shift of shifts) {
-    const covers = shift.startsAt < startsAt && shift.endsAt > startsAt;
-    const near = startsAt.getTime() - shift.startsAt.getTime() <= CREW_CALL_SHIFT_LEAD_MS;
-    if (covers && near) shiftStart = earliest(shiftStart, shift.startsAt);
+    const relevant = shift.startsAt < startsAt && shift.endsAt >= by;
+    if (relevant && (shiftStart === null || shift.startsAt < shiftStart)) {
+      shiftStart = shift.startsAt;
+    }
   }
-  if (shiftStart)
-    return { at: divers ? earliest(shiftStart, divers) : shiftStart, source: "shift" };
-  const crew = dockCallAt(divers ?? startsAt, shop.crewLeadMinutes ?? 0);
-  if (crew) return { at: crew, source: "crew" };
-  return divers ? { at: divers, source: "divers" } : null;
+  if (shiftStart && (call === null || shiftStart < call.at)) {
+    return { at: shiftStart, source: "shift" };
+  }
+  return call;
 }

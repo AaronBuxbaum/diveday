@@ -59,8 +59,8 @@
       "packageSaved": "Paquete agregado",
       "packageDeleted": "Paquete eliminado",
       "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar.",
-      "crewLeadSaved": "Hora de la tripulación guardada",
-      "crewLeadInvalid": "Introduce una hora de la tripulación de entre 5 y 180 minutos, o déjala vacía."
+      "crewLeadSaved": "Minutos de la tripulación guardados",
+      "crewLeadInvalid": "Introduce entre 5 y 180 minutos para la tripulación, o déjalo vacío."
     },
     "timezone": {
       "heading": "Zona horaria",
@@ -285,8 +285,8 @@
     },
     "crewLead": {
       "label": "La tripulación llega antes que los buceadores",
-      "description": "Minutos antes de la hora de los buceadores en el muelle; el turno propio de un tripulante sigue mandando. Vacío, la tripulación tiene la hora de los buceadores.",
-      "submit": "Guardar hora de la tripulación"
+      "description": "Minutos antes de que los buceadores lleguen al muelle; el turno propio de un tripulante gana si empieza antes. Vacío, la tripulación llega con los buceadores.",
+      "submit": "Guardar minutos de la tripulación"
     },
     "units": {
       "heading": "Unidades",

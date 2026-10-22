@@ -4,7 +4,7 @@ import type { AppDb } from "@/db/client";
 import { type CrewWeekLine, crewWeekFor } from "@/db/crew-week";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabel } from "@/i18n/staff-role-labels";
-import { formatShortDate, formatTime } from "@/lib/format";
+import { formatShortDate, formatTime, formatWeekdayTime, isSameCalendarDay } from "@/lib/format";
 import { GAP_TONE } from "@/lib/staffing-week";
 import { addCalendarDays, shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 
@@ -107,7 +107,11 @@ export function YourWeekList({
                         ? "today.yourWeek.diversAtTheDock"
                         : "today.yourWeek.atTheDock",
                       {
-                        dock: formatTime(line.crewCall.at, locale, timeZone),
+                        // A call the evening before names its own day, never
+                        // the departure's (dive-domain review of layer 1).
+                        dock: isSameCalendarDay(line.crewCall.at, line.startsAt, timeZone)
+                          ? formatTime(line.crewCall.at, locale, timeZone)
+                          : formatWeekdayTime(line.crewCall.at, locale, timeZone),
                         leaves: formatTime(line.startsAt, locale, timeZone),
                       },
                     )

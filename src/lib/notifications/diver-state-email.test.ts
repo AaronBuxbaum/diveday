@@ -137,10 +137,10 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
     expect(lines.slice(0, 3)).toEqual([
       "Two-Tank Reef sails tomorrow; be at the dock by 8:30 AM EDT.",
       "",
-      "Plan to fly no earlier than 24 hours after your last dive.",
+      "Plan to fly no earlier than 24 hours after your last dive, and longer if you make decompression stops.",
     ]);
     expect(email.html).toContain(
-      "<p>Plan to fly no earlier than 24 hours after your last dive.</p>",
+      "<p>Plan to fly no earlier than 24 hours after your last dive, and longer if you make decompression stops.</p>",
     );
     expect(email.html.indexOf("Plan to fly")).toBeLessThan(email.html.indexOf("href="));
     // Hours only: no clock time rides on the line.
@@ -153,7 +153,7 @@ describe("diverStateEmail: week_out and tonight (the reminders)", () => {
       flySafeHours: 18,
     });
     expect(spanish.text).toContain(
-      "Planea volar como mínimo 18 horas después de tu última inmersión.",
+      "Planea volar como mínimo 18 horas después de tu última inmersión, y más si haces paradas de descompresión.",
     );
   });
 

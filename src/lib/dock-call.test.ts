@@ -56,62 +56,57 @@ describe("dockCallAt on the fall-back day", () => {
 
 /**
  * "At the dock 6:15 AM · leaves 7:00" on a crew member's week (item 47), and
- * whose time it is (dive-domain review of layer r5-4, fix 4): the crew's only
- * when their own shift says so; otherwise it is the divers' call, and the line
- * says that rather than send crew to load tanks at the minute customers arrive.
+ * whose time it is (dive-domain review of layer r5-4, fix 4): the crew's own
+ * when their shift or the shop's crew time says so; otherwise it is the divers'
+ * call, and the line says that rather than send crew to load tanks at the
+ * minute customers arrive.
  */
 describe("crewCallAt", () => {
   const sails = new Date("2030-08-01T13:00:00.000Z");
   const at = (iso: string) => new Date(`2030-08-01T${iso}:00.000Z`);
+  const shift = (from: string, to: string) => ({ startsAt: at(from), endsAt: at(to) });
   /** A shop that set no crew time: the divers' call, named as theirs. */
   const unset = (dockCallMinutes: number) => ({ dockCallMinutes, crewLeadMinutes: null });
 
-  it("is the divers' dock call, named as theirs, when no shift covers and no crew time is set", () => {
+  it("is the divers' dock call, named as theirs, when no shift is running and no crew time is set", () => {
     expect(crewCallAt(sails, unset(30), [])).toEqual({ at: at("12:30"), source: "divers" });
-    expect(crewCallAt(sails, unset(30), [{ startsAt: at("06:00"), endsAt: at("10:00") }])).toEqual({
+    // Over before the call: says nothing about this boat.
+    expect(crewCallAt(sails, unset(30), [shift("06:00", "10:00")])).toEqual({
       at: at("12:30"),
       source: "divers",
     });
   });
 
-  it("is the crew's own when their shift covers the departure", () => {
-    expect(crewCallAt(sails, unset(30), [{ startsAt: at("12:15"), endsAt: at("18:00") }])).toEqual({
+  it("is the crew's own when their shift starts before the divers' call", () => {
+    expect(crewCallAt(sails, unset(30), [shift("12:15", "18:00")])).toEqual({
       at: at("12:15"),
       source: "shift",
     });
   });
 
-  it("never asks crew later than the divers they meet", () => {
-    expect(crewCallAt(sails, unset(30), [{ startsAt: at("12:45"), endsAt: at("18:00") }])).toEqual({
-      at: at("12:30"),
-      source: "shift",
-    });
-  });
-
-  it("reads no shift that starts more than three hours before the departure", () => {
-    // A long day's shift from 06:00 says nothing about when the 13:00 boat's
-    // crew should be at the dock.
-    expect(crewCallAt(sails, unset(30), [{ startsAt: at("09:59"), endsAt: at("18:00") }])).toEqual({
+  it("never asks crew later than the divers they meet, and names the divers' time as theirs", () => {
+    expect(crewCallAt(sails, unset(30), [shift("12:45", "18:00")])).toEqual({
       at: at("12:30"),
       source: "divers",
     });
-    expect(crewCallAt(sails, unset(30), [{ startsAt: at("10:00"), endsAt: at("18:00") }])).toEqual({
-      at: at("10:00"),
-      source: "shift",
-    });
   });
 
-  it("is null with no lead time, no crew time and no covering shift", () => {
+  it("is null with no lead time, no crew time and no shift", () => {
     expect(crewCallAt(sails, unset(0), [])).toBeNull();
-    expect(
-      crewCallAt(sails, unset(0), [{ startsAt: at("06:00"), endsAt: at("18:00") }]),
-    ).toBeNull();
+    expect(crewCallAt(sails, unset(0), [shift("06:00", "10:00")])).toBeNull();
+  });
+
+  it("is their shift when nothing else leads the departure", () => {
+    expect(crewCallAt(sails, unset(0), [shift("06:00", "18:00")])).toEqual({
+      at: at("06:00"),
+      source: "shift",
+    });
   });
 
   /**
    * Ux-delight sheet 2026-10-22, item 2 (H-149): "Crew arrive N minutes
-   * before divers", shop-wide, default 30. A shift still wins; the divers'
-   * time only when nothing is set.
+   * before divers", shop-wide, default 30. An entered shift wins only when it
+   * is earlier (dive-domain review of layer 1, findings 1 and 2).
    */
   describe("with the shop's crew time", () => {
     const shop = { dockCallMinutes: 30, crewLeadMinutes: 30 };
@@ -124,32 +119,44 @@ describe("crewCallAt", () => {
       });
     });
 
-    it("lets a covering shift win, later or earlier than the crew time", () => {
-      expect(crewCallAt(sails, shop, [{ startsAt: at("12:15"), endsAt: at("18:00") }])).toEqual({
-        at: at("12:15"),
-        source: "shift",
-      });
-      expect(crewCallAt(sails, shop, [{ startsAt: at("11:00"), endsAt: at("18:00") }])).toEqual({
+    it("lets a shift win only when it starts earlier than the crew time", () => {
+      expect(crewCallAt(sails, shop, [shift("11:00", "18:00")])).toEqual({
         at: at("11:00"),
         source: "shift",
       });
-    });
-
-    it("still never asks a shift later than the divers", () => {
-      expect(crewCallAt(sails, shop, [{ startsAt: at("12:45"), endsAt: at("18:00") }])).toEqual({
-        at: at("12:30"),
-        source: "shift",
-      });
-    });
-
-    it("ignores a shift that does not cover the departure, or starts too early", () => {
-      expect(crewCallAt(sails, shop, [{ startsAt: at("06:00"), endsAt: at("10:00") }])).toEqual({
+      // The muster time typed as a shift: the crew time still stands.
+      expect(crewCallAt(sails, shop, [shift("12:15", "18:00")])).toEqual({
         at: at("12:00"),
         source: "crew",
       });
-      expect(crewCallAt(sails, shop, [{ startsAt: at("09:59"), endsAt: at("18:00") }])).toEqual({
+      expect(crewCallAt(sails, shop, [shift("12:45", "18:00")])).toEqual({
         at: at("12:00"),
         source: "crew",
+      });
+    });
+
+    describe("a 07:00 departure, never contradicting the person's own earlier shift", () => {
+      const seven = at("07:00");
+
+      it("a sunrise prep shift from 03:30 is their dock time", () => {
+        expect(crewCallAt(seven, shop, [shift("03:30", "12:00")])).toEqual({
+          at: at("03:30"),
+          source: "shift",
+        });
+      });
+
+      it("a fill shift ending as the boat leaves is their dock time", () => {
+        expect(crewCallAt(seven, shop, [shift("05:00", "07:00")])).toEqual({
+          at: at("05:00"),
+          source: "shift",
+        });
+      });
+
+      it("a shift over before the crew time says nothing", () => {
+        expect(crewCallAt(seven, shop, [shift("03:00", "05:30")])).toEqual({
+          at: at("06:00"),
+          source: "crew",
+        });
       });
     });
 
