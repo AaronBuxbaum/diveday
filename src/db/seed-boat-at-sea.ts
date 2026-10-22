@@ -342,67 +342,105 @@ async function seatTheDivers(
     )
     .orderBy(asc(people.fullName));
 
-  const divers: Diver[] = [];
-  for (const candidate of candidates) {
-    if (divers.length === AT_SEA_ABOARD) break;
-    const seat = divers.length;
-    const bookedAt = new Date(
-      plan.startsAt.getTime() -
-        (BOOKED_DAYS_AHEAD[seat] ?? 1) * 24 * 60 * 60_000 -
-        (seat + 1) * 7 * 60_000,
-    );
-    const [booking] = await db
-      .insert(bookings)
-      .values({
+  // Who the boarding gate clears is asked once, of every candidate seated at
+  // once, rather than one whole-roster readiness read per seat (it ran on
+  // every e2e reset). The probe seats come out again and only the cleared
+  // divers are seated, in seat order.
+  const probe = await writeSeats(db, shopId, trip, plan, recorderId, template, candidates, "probe");
+  const readiness = await listTripReadiness(db, shopId, trip.id);
+  const ready = new Set(
+    readiness.flatMap((row) => (row.readiness.status === "ready" ? [row.booking.id] : [])),
+  );
+  const cleared = probe
+    .filter((seat) => ready.has(seat.bookingId))
+    .slice(0, AT_SEA_ABOARD)
+    .map(({ personId, fullName }) => ({ personId, fullName }));
+  const probeIds = probe.map((seat) => seat.bookingId);
+  if (probeIds.length > 0) {
+    await db.delete(waiverRecords).where(inArray(waiverRecords.bookingId, probeIds));
+    await db.delete(bookingPayments).where(inArray(bookingPayments.bookingId, probeIds));
+    await db.delete(bookings).where(inArray(bookings.id, probeIds));
+  }
+  return writeSeats(db, shopId, trip, plan, recorderId, template, cleared, "seat");
+}
+
+/**
+ * A paid, checked-in seat and a release signed at the desk for each diver,
+ * in seat order: booked ahead the way a reef boat sells, each release signed
+ * when they booked, before the shop's evidence seal was switched on
+ * (`seed-waiver-evidence.ts`), like the rest of its regulars' releases.
+ */
+async function writeSeats(
+  db: DbExecutor,
+  shopId: string,
+  trip: typeof trips.$inferSelect,
+  plan: DemoAtSeaDeparture,
+  recorderId: string,
+  template: NonNullable<Awaited<ReturnType<typeof getCurrentWaiverTemplate>>>,
+  divers: readonly { personId: string; fullName: string }[],
+  tokenKind: "probe" | "seat",
+): Promise<Diver[]> {
+  if (divers.length === 0) return [];
+  const bookedAt = divers.map(
+    (_, seat) =>
+      new Date(
+        plan.startsAt.getTime() -
+          (BOOKED_DAYS_AHEAD[seat] ?? 1) * 24 * 60 * 60_000 -
+          (seat + 1) * 7 * 60_000,
+      ),
+  );
+  const rows = await db
+    .insert(bookings)
+    .values(
+      divers.map((diver, seat) => ({
         bookedAs: "diver" as const,
         shopId,
         tripId: trip.id,
-        personId: candidate.personId,
+        personId: diver.personId,
         status: "checked_in" as const,
-        createdAt: bookedAt,
-      })
-      .returning({ id: bookings.id });
-    if (!booking) continue;
-    await db.insert(bookingPayments).values({
+        createdAt: bookedAt[seat] as Date,
+      })),
+    )
+    .returning({ id: bookings.id, personId: bookings.personId });
+  const bookingOf = new Map(rows.map((row) => [row.personId, row.id]));
+  const seated = divers.flatMap((diver, seat) => {
+    const bookingId = bookingOf.get(diver.personId);
+    return bookingId ? [{ ...diver, bookingId, seat, at: bookedAt[seat] as Date }] : [];
+  });
+  await db.insert(bookingPayments).values(
+    seated.map((row) => ({
       shopId,
-      bookingId: booking.id,
+      bookingId: row.bookingId,
       status: "paid" as const,
       amountCents: trip.priceCents ?? 0,
       currency: "usd",
-      createdAt: bookedAt,
-      updatedAt: bookedAt,
-    });
-    // Signed at the desk when they booked, before the shop's evidence seal
-    // was switched on (`seed-waiver-evidence.ts`), like the rest of its
-    // regulars' releases.
-    const signedAt = withinDeskHours(new Date(bookedAt.getTime() + 5 * 60_000));
-    await db.insert(waiverRecords).values({
-      shopId,
-      bookingId: booking.id,
-      personId: candidate.personId,
-      templateId: template.id,
-      templateTitle: template.title,
-      templateVersion: template.version,
-      templateGeneration: template.materialGeneration,
-      templateBody: template.body,
-      tokenHash: `seed-at-sea-waiver-${shopId}-${seat + 1}`,
-      expiresAt: new Date(plan.startsAt.getTime() + 60 * 24 * 60 * 60_000),
-      createdAt: signedAt,
-      ...paperRelease(signedAt, recorderId, candidate.fullName),
-    });
-    const readiness = await listTripReadiness(db, shopId, trip.id);
-    const cleared = readiness.find((row) => row.booking.id === booking.id);
-    if (cleared?.readiness.status !== "ready") {
-      // Never a seat the dock would turn away: the boat at sea carries only
-      // divers the gate cleared, so its roll call reads as a working day.
-      await db.delete(waiverRecords).where(eq(waiverRecords.bookingId, booking.id));
-      await db.delete(bookingPayments).where(eq(bookingPayments.bookingId, booking.id));
-      await db.delete(bookings).where(eq(bookings.id, booking.id));
-      continue;
-    }
-    divers.push({ ...candidate, bookingId: booking.id });
-  }
-  return divers;
+      createdAt: row.at,
+      updatedAt: row.at,
+    })),
+  );
+  await db.insert(waiverRecords).values(
+    seated.map((row) => {
+      const signedAt = withinDeskHours(new Date(row.at.getTime() + 5 * 60_000));
+      return {
+        shopId,
+        bookingId: row.bookingId,
+        personId: row.personId,
+        templateId: template.id,
+        templateTitle: template.title,
+        templateVersion: template.version,
+        templateGeneration: template.materialGeneration,
+        templateBody: template.body,
+        tokenHash:
+          tokenKind === "seat"
+            ? `seed-at-sea-waiver-${shopId}-${row.seat + 1}`
+            : `seed-at-sea-probe-${shopId}-${row.seat + 1}`,
+        expiresAt: new Date(plan.startsAt.getTime() + 60 * 24 * 60 * 60_000),
+        createdAt: signedAt,
+        ...paperRelease(signedAt, recorderId, row.fullName),
+      };
+    }),
+  );
+  return seated.map(({ personId, fullName, bookingId }) => ({ personId, fullName, bookingId }));
 }
 
 /**
