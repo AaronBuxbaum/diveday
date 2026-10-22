@@ -51,6 +51,8 @@ import {
   scheduleCrewedOpenWaterSession,
   seatFromRoster,
   seededTripId,
+  signInAsOwner,
+  signOut,
   threadStatus,
   tripPathByTitle,
   waiverLinkFromResult,
@@ -1245,6 +1247,79 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(dayOf.getByText("Anything that would help?")).toBeVisible();
         await capture(page, "readiness-easing-back", scheme);
       });
+
+      if (scheme === "light") {
+        test("the thread names its assigned helper at readable size (light)", async ({ page }) => {
+          // Real booking, request, staff assignment and completion, then both viewport captures.
+          test.setTimeout(FLOW_TIMEOUT_MS);
+          const name = "Visual Regression Diver";
+          await bookAVisualRegressionSeat(page, "light");
+          const readyPath = new URL(page.url()).pathname;
+          await openThreadStep(page, "dayof");
+          await page.getByRole("radio", { name: diverCopy("ready.helpCarryGear") }).check();
+          await page.getByRole("button", { name: diverCopy("ready.dayOfSave") }).click();
+          await expect(
+            page.getByRole("status").filter({ hasText: diverCopy("ready.dayOfSaved") }),
+          ).toBeVisible();
+
+          await signInAsOwner(page);
+          await page.goto("/shop/blue-mantis");
+          const row = page
+            .getByRole("listitem")
+            .filter({ hasText: name })
+            .filter({
+              has: page.getByText(staffCopy("today.actionKind.helpRequest"), { exact: true }),
+            });
+          await row
+            .getByRole("button", { name: staffCopy("today.helpRequest.arrangeHelp") })
+            .click();
+          const crew = row.getByLabel(staffCopy("today.helpRequest.crewSelector"));
+          const helperName = "Keiko Tanaka";
+          await expect(crew.locator("option").filter({ hasText: helperName })).toHaveText(
+            helperName,
+          );
+          await crew.selectOption({ label: helperName });
+          await row
+            .getByRole("button", { name: staffCopy("today.helpRequest.confirmHelper") })
+            .click();
+          await expect(
+            row.getByRole("button", { name: staffCopy("today.helpRequest.markHandled") }),
+          ).toBeVisible();
+          await signOut(page);
+          await page.goto(readyPath);
+          await openThreadStep(page, "dayof");
+          const promise = page.getByText(`${helperName} will help you`, { exact: false });
+          const readableHelper = async () => {
+            await expect(promise).toBeVisible();
+            expect(
+              await promise.evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize)),
+            ).toBeGreaterThanOrEqual(16);
+          };
+          await capture(page, "thread-named-helper", "light", { beforeScreenshot: readableHelper });
+
+          await signInAsOwner(page);
+          await page.goto("/shop/blue-mantis");
+          await row
+            .getByRole("button", { name: staffCopy("today.helpRequest.markHandled") })
+            .click();
+          await expect(
+            page.getByText(staffCopy("today.helpRequest.completed"), { exact: true }),
+          ).toBeVisible();
+          await signOut(page);
+          await page.goto(readyPath);
+          await openThreadStep(page, "dayof");
+          await capture(page, "thread-completed-helper", "light", {
+            beforeScreenshot: async () => {
+              await readableHelper();
+              const status = page.getByText(diverCopy("ready.helpHandled"), { exact: true });
+              await expect(status).toBeVisible();
+              expect(
+                await status.evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize)),
+              ).toBeGreaterThanOrEqual(16);
+            },
+          });
+        });
+      }
 
       /**
        * **The thread with a later step opened**, which the capture above can
@@ -5877,7 +5952,7 @@ for (const scheme of ["light", "dark"] as const) {
         const credentials = page.locator('details[id^="credentials-"]').first();
         await expect(credentials).toBeVisible();
         await credentials.locator("summary").click();
-        await capture(page, "team-member-credentials-open", scheme, {
+        await capture(page, "team-member-credential-summary", scheme, {
           darkPhone: true,
           beforeShot: async () => {
             const summary = credentials.locator("summary");
@@ -5908,7 +5983,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripTab(page, "Manifest");
         await page.locator("#dock-rider summary").click();
         const form = page.getByTestId("dock-rider-form");
-        await capture(page, "manifest-dock-rider-editor", scheme, {
+        await capture(page, "manifest-dock-rider-controls", scheme, {
           beforeShot: async () => {
             const date = form.locator('input[name="dateOfBirth"]');
             const aboard = form.getByRole("group", { name: "Aboard as" });

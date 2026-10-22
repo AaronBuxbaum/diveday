@@ -180,11 +180,39 @@ function withoutComments(source) {
 function captureCalls(source) {
   return [
     ...withoutComments(source).matchAll(
-      /\b(?:capture|capturePrint)\(\s*page\s*,\s*(["'`])([^"'`\r\n]+)\1/g,
+      /\b(capture|capturePrint)\(\s*page\s*,\s*(["'`])([^"'`\r\n]+)\2(?:\s*,\s*(?:"(light|dark)"|'(light|dark)'|(scheme)\b))?/g,
     ),
   ]
-    .filter((match) => match[1] !== "`" || !match[2].includes("${"))
-    .map((match) => ({ name: match[2], index: match.index }));
+    .filter((match) => match[2] !== "`" || !match[3].includes("${"))
+    .map((match) => ({
+      name: match[3],
+      index: match.index,
+      kind: match[1],
+      scheme: match[4] ?? match[5],
+    }));
+}
+
+/**
+ * Output ownership for an explicit set of literal, nonlocalized capture names.
+ * Bounded to capture/capturePrint and literal light/dark or the shared scheme loop;
+ * this is not a general interpreter of dynamic names, locale options or control flow.
+ */
+export function captureOutputOwners(sources, names) {
+  const owners = new Map();
+  for (const [file, source] of sources) {
+    for (const call of captureCalls(source)) {
+      if (!names.has(call.name)) continue;
+      const suffixes =
+        call.kind === "capturePrint" ? ["print"] : call.scheme ? [call.scheme] : ["light", "dark"];
+      for (const suffix of suffixes) {
+        const output = `${call.name}-${suffix}`;
+        const writers = owners.get(output) ?? [];
+        writers.push(`${file}:${source.slice(0, call.index).split("\n").length}`);
+        owners.set(output, writers);
+      }
+    }
+  }
+  return owners;
 }
 
 /**

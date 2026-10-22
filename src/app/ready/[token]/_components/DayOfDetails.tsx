@@ -256,7 +256,7 @@ export function DayOfDetails({
           {data.helpRequest?.status === "handled" ? (
             <>
               {data.helpRequest.helperPersonName ? (
-                <p className="mt-3 text-sm font-medium text-success-strong">
+                <p className="mt-3 text-base font-medium text-success-strong">
                   {meetingInfo.length > 0
                     ? t("ready.helpAcknowledged", {
                         name: data.helpRequest.helperPersonName,
@@ -267,7 +267,7 @@ export function DayOfDetails({
                       })}
                 </p>
               ) : null}
-              <p className="mt-3 text-sm font-medium text-success-strong">
+              <p className="mt-3 text-base font-medium text-success-strong">
                 {t("ready.helpHandled")}
               </p>
             </>
@@ -301,7 +301,7 @@ export function DayOfDetails({
                 />
               </fieldset>
               {data.helpRequest ? (
-                <p className="mt-3 text-sm font-medium text-success-strong">
+                <p className="mt-3 text-base font-medium text-success-strong">
                   {data.helpRequest.status !== "requested" && data.helpRequest.helperPersonName
                     ? meetingInfo.length > 0
                       ? t("ready.helpAcknowledged", {

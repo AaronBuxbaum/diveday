@@ -2,7 +2,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import os from "node:os";
 import path from "node:path";
 import { expect, test } from "vitest";
-import { collectCaptureNames, deriveCoverage } from "./check-route-coverage.mjs";
+import {
+  captureOutputOwners,
+  collectCaptureNames,
+  collectVisualSources,
+  deriveCoverage,
+} from "./check-route-coverage.mjs";
 import { selectCaptureFiles } from "./visual-affected.mjs";
 import { captureBuildBoundary, matchesRoute, writeCaptureEvidence } from "./visual-evidence.mjs";
 import { visualSpecs } from "./visual-specs.mjs";
@@ -96,4 +101,40 @@ test("hashes only at boundaries while every capture uses the bound build", () =>
   expect(reads).toBe(2);
   fingerprint = "edited-during-capture";
   expect(() => guard.end()).toThrow("changed during visual capture");
+});
+
+test("critical rider and credential capture outputs have one setup writer", async () => {
+  const names = new Set([
+    "manifest-dock-rider-editor",
+    "manifest-dock-rider-controls",
+    "team-member-credentials-open",
+    "team-member-credential-summary",
+  ]);
+  const owners = captureOutputOwners(await collectVisualSources(process.cwd()), names);
+  expect([...owners].filter(([, writers]) => writers.length !== 1)).toEqual([]);
+  for (const name of names)
+    expect([...owners.keys()].some((key) => key.startsWith(`${name}-`))).toBe(true);
+});
+
+test("output ownership identifies two normal writers with source locations", () => {
+  const owners = captureOutputOwners(
+    new Map([
+      ["visual.spec.ts", 'capture(page, "rider", "light");'],
+      ["visual-audit.ts", '\n capture(page, "rider", "light");'],
+    ]),
+    new Set(["rider"]),
+  );
+  expect(owners.get("rider-light")).toEqual(["visual.spec.ts:1", "visual-audit.ts:2"]);
+});
+
+test("print and screen suffixes and disjoint schemes have separate owners", () => {
+  const owners = captureOutputOwners(
+    new Map([
+      ["visual.spec.ts", 'capture(page, "rider", "light"); capturePrint(page, "rider");'],
+      ["visual-audit.ts", 'capture(page, "rider", "dark");'],
+    ]),
+    new Set(["rider"]),
+  );
+  expect([...owners.keys()]).toEqual(["rider-light", "rider-print", "rider-dark"]);
+  expect([...owners.values()].every((writers) => writers.length === 1)).toBe(true);
 });
