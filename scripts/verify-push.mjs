@@ -205,6 +205,40 @@ export function quickPlan({ changed, selection, specs = [], captures = [] }) {
   return steps;
 }
 
+/**
+ * Whether everything since the branch's last push is merges, each bringing in another branch's
+ * commits (the layer below, or main) and no commit of this branch's own. Those commits had their
+ * own CI, so a quick run checks the merge result statically and does not re-run the unit suite a
+ * merged schema or migration file would otherwise pull in (Aaron, 2026-10-22: a cascade after
+ * #2932 merged main waited 20-30 minutes on it). `false` when the branch was never pushed or git
+ * cannot answer.
+ */
+export function mergeOnly(git, branch) {
+  if (!branch) return false;
+  const pushed = `origin/${branch}`;
+  if (!git(["rev-parse", "--verify", "--quiet", pushed])) return false;
+  const own = git(["rev-list", "--first-parent", "--no-merges", `${pushed}..HEAD`]);
+  const merges = git(["rev-list", "--first-parent", "--merges", `${pushed}..HEAD`]);
+  return own === "" && Boolean(merges);
+}
+
+/**
+ * A quick run never stops on the base's own red (Aaron, 2026-10-22, after a fix-forward on a
+ * red main waited an hour on it): the base's failures are named in a warning and left to the
+ * base's owner and to CI, and are not replayed here. The full run still replays them and still
+ * refuses. Returns the decision the run acts on.
+ */
+export function quickBase(decision) {
+  const named = [...decision.files, ...decision.specs];
+  const lines = [];
+  if (decision.refuse) lines.push(`base CI (not blocking a quick run): ${decision.refuse}`);
+  if (named.length > 0)
+    lines.push(
+      `base CI: not replayed in a quick run, red on the base and its owner's to fix: ${named.join(" ")}`,
+    );
+  return { refuse: null, files: [], specs: [], lines };
+}
+
 /** A named base failure must run or stop the gate; deletion is not verification. */
 export function baseReplayFiles({ files, existing }) {
   const missing = files.filter((file) => !existing(file));
@@ -481,11 +515,13 @@ async function main() {
   const verdict = readBaseVerdict(git(["rev-parse", selection.base]), {
     repo: repoSlug(git(["remote", "get-url", "origin"])) ?? process.env.GITHUB_REPOSITORY ?? null,
   });
-  const decision = baseDecision(verdict, {
+  const baseVerdict = baseDecision(verdict, {
     base: selection.base,
     extra: baseRedArgs(args),
   });
-  for (const line of decision.lines) console.log(line);
+  for (const line of baseVerdict.lines) console.log(line);
+  const decision = quick ? quickBase(baseVerdict) : baseVerdict;
+  for (const line of quick ? decision.lines : []) console.log(line);
   const redBelow = unansweredRed(verdict, { touched: selection.changed });
   if (redBelow && !docsOnly) {
     const below = branchOf(selection.base);
@@ -536,13 +572,22 @@ async function main() {
       ...ownCaptures,
     ]),
   ].sort();
-  const unitSelection = quick
-    ? testPlan({
-        changed: selection.changed,
-        readers: () => sourceReaders(ROOT),
-        extra: [...decision.files, ...own.files].filter(existing),
-      })
-    : null;
+  const merged = quick && mergeOnly(git, branch);
+  const unitSelection = !quick
+    ? null
+    : merged
+      ? {
+          mode: "direct",
+          files: own.files.filter(existing).sort(),
+          reasons: [
+            "merge-only push: the merged commits ran their own CI, so units run only for this branch's own red CI",
+          ],
+        }
+      : testPlan({
+          changed: selection.changed,
+          readers: () => sourceReaders(ROOT),
+          extra: [...decision.files, ...own.files].filter(existing),
+        });
   const steps = quick
     ? quickPlan({
         changed: selection.changed,

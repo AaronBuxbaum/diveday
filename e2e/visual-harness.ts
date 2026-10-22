@@ -99,8 +99,9 @@ export async function openStandaloneLibraryMapPin(page: Page) {
   // requiring every click to finish at a higher zoom before choosing again.
   for (let level = 0; level < 19; level += 1) {
     if ((await pin.count()) > 0) return pin;
+    // -1 before the first drill-in: the untouched overview keeps no camera.
     const previousZoom = await savedZoom();
-    expect(previousZoom).toBeGreaterThanOrEqual(0);
+    if (level > 0) expect(previousZoom).toBeGreaterThanOrEqual(0);
     await page.locator(".leaflet-site-cluster").first().click();
     await expect.poll(savedZoom).toBeGreaterThan(previousZoom);
   }

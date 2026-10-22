@@ -32,3 +32,12 @@ export function writeMapViewport(key: string, viewport: MapViewport): void {
     // A browser that blocks storage can still use the map normally.
   }
 }
+
+/** Forget this tab's camera for `key`, so the next visit fits its own overview. */
+export function clearMapViewport(key: string): void {
+  try {
+    sessionStorage.removeItem(`diveday:map:${key}`);
+  } catch {
+    // A browser that blocks storage has nothing stored to forget.
+  }
+}

@@ -143,15 +143,22 @@ contracts and documentation inputs. Database snapshot loaders are operational fi
 schema, migrations and test infrastructure changes instead run all unit tests. Source/test deletions,
 global configuration and unknown inputs also fall back to the whole unit suite. A test-only diff runs
 edited tests directly when they neither export fixtures nor appear in other tests; otherwise it
-keeps native dependency selection. Base CI's named failures, and this branch's own last red
-run's, are included in either mode ([below](#a-red-run-on-this-branch)).
+keeps native dependency selection. This branch's own last red run's failures are included in
+either mode ([below](#a-red-run-on-this-branch)); the base's are replayed by the full run only
+([below](#a-red-base)).
+
+**A merge-only push** (Aaron, 2026-10-22): when every commit since the branch's last push is a
+merge of another branch (the layer below, or main) and nothing of its own, those commits already
+had their own CI. The quick run then checks the merge result statically and runs units only for
+this branch's own red CI. Without this, any merged schema or migration file pulled in the whole
+unit suite, and the cascade after #2932 merged main waited 20 to 30 minutes on it.
 
 `pnpm test:affected --plan` shows this local selection against the nearest contained remote
 branch below HEAD; `--base <ref>` selects an explicit base. Without `--plan`, it runs the whole
 guards project and selected units. This developer command includes working changes and untracked
 files; the push gate measures committed HEAD. Quick mode discovers only the diff, without
-building browser dependency graphs. It builds and runs browser specs only when the base CI
-names failed specs or `--base-red` identifies them. Those targeted replays run after selected
+building browser dependency graphs. It builds and runs browser specs only when this branch's
+own last CI run names failed specs. Those targeted replays run after selected
 units, using the same build reuse, bounded chunks and worker policy as the full gate. A missing
 named unit test or browser spec stops verification instead of silently dropping that failure.
 Its stamp names what it left to CI; CI continues to run the whole unit and browser suites.
@@ -160,9 +167,10 @@ is deliberately broader than exact runtime impact.
 
 The trade is explicit: CI is now the first to run the browser for most pushes, and a red job is
 the next commit on the same layer, worked as soon as it comes back. The base-CI read below runs
-in both modes, so a quick run on a red base still refuses until the base's named unit files and
-browser specs pass here; a job naming no file requires `--base-red` to identify its failing files.
-The stamp records replayed specs and excludes them from the browser tests left to CI. The full
+in both modes, but only the full run replays the base's failures and refuses on them. A quick run
+names them in a warning and stamps (Aaron, 2026-10-22: a fix-forward on a red main waited an hour
+for main's own failure to pass here). The stamp records replayed specs and excludes them from the
+browser tests left to CI. The full
 run is still there for a change where the browser's answer is worth the hour before CI's.
 
 ### Why a spec times out here and not on CI
@@ -262,6 +270,11 @@ So `verify:push` reads the layer below's latest CI before anything else (`script
 - **Unreadable** (no `gh`, no network): a line saying so, and on. The gate fails open; CI still
   answers.
 
+That replay and refusal belong to the full run. A quick run prints the same verdict, names the
+base's failures as "not replayed in a quick run, red on the base and its owner's to fix", and
+stamps: the red stays the base owner's job and the banner below stays loud, but a fix-forward
+push is not held behind a failure it did not cause.
+
 The stamp records what it found (`baseCi`). The fix for a red base goes where the break is when
 that layer is still open (its owner, through the coordinator), or rides in this layer when it
 cannot wait; either way, nothing is pushed red on purpose. `scripts/guard-push.mjs` refuses an
@@ -276,7 +289,7 @@ running base is only a note), so `scripts/guard-push.mjs` reads it again at push
 the same banner when the stamp did not replay those files. That one is a warning, not a refusal:
 the guard cannot run tests, so it cannot tell a push that carries the fix from one that does not,
 and a push that fixes the layer below must never be blocked. Proving the fix stays the gate's job
-(`pnpm verify:push --quick` replays them and stamps only if they pass). It fails open, and there is
+(the full `pnpm verify:push` replays them and stamps only if they pass). It fails open, and there is
 no override for it: an inherited-red reason stays refused. Fix the bottom first, then
 `pnpm stack:sync` merges it up one layer at a time (the **stacked-prs** skill).
 

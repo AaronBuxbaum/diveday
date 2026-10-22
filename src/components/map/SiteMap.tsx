@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { mapTileLayer } from "@/lib/carto";
 import { clusterMapPoints, mapTargetIsVisible, separateShopAnchor } from "./map-clustering";
 import { labelRectangle, placeMapLabel, rectanglesOverlap } from "./map-label-placement";
-import { readMapViewport, writeMapViewport } from "./map-viewport-storage";
+import { clearMapViewport, readMapViewport, writeMapViewport } from "./map-viewport-storage";
 
 export type MapPin = {
   id: string;
@@ -120,7 +120,8 @@ export default function SiteMap({
     return () => {
       isCancelled = true;
       if (mapRef.current) {
-        if (viewportStorageKey) persistMapView(mapRef.current, viewportStorageKey);
+        if (viewportStorageKey)
+          persistMapView(mapRef.current, viewportStorageKey, lastFitRef.current);
         mapRef.current.remove();
         markersRef.current.clear();
         mapRef.current = null;
@@ -130,24 +131,16 @@ export default function SiteMap({
     };
   }, [center.latitude, center.longitude, viewportStorageKey, zoom]);
 
-  // Keep the untouched overview fitted as its container changes size.
-  useEffect(() => {
-    if (!mapInstance || allCoordinates.length === 0 || restoredViewRef.current) return;
-    return keepOverviewFitted(mapInstance, allCoordinates, zoom, lastFitRef, markersRef.current);
-  }, [allCoordinates, mapInstance, zoom]);
-
-  useEffect(() => {
-    if (!mapInstance || !viewportStorageKey) return;
-    const saveView = () => {
-      if (mapRef.current === mapInstance) persistMapView(mapInstance, viewportStorageKey);
-    };
-    saveView();
-    mapInstance.on("moveend", saveView);
-    return () => {
-      saveView();
-      mapInstance.off("moveend", saveView);
-    };
-  }, [mapInstance, viewportStorageKey]);
+  useOverviewAndCamera({
+    mapInstance,
+    mapRef,
+    allCoordinates,
+    zoom,
+    viewportStorageKey,
+    lastFitRef,
+    restoredViewRef,
+    markers: markersRef.current,
+  });
 
   // Render only pins near the viewport and cluster close points to keep marker
   // work proportional to the visible map while retaining every site in bounds.
@@ -452,7 +445,67 @@ function selectMapPin(
   }
 }
 
-function persistMapView(map: LeafletMap, key: string) {
+/**
+ * Keep the untouched overview fitted as its container changes size, and keep
+ * the reader's own camera, never a fit, for the next visit in this tab.
+ */
+function useOverviewAndCamera({
+  mapInstance,
+  mapRef,
+  allCoordinates,
+  zoom,
+  viewportStorageKey,
+  lastFitRef,
+  restoredViewRef,
+  markers,
+}: {
+  mapInstance: LeafletMap | null;
+  mapRef: { current: LeafletMap | null };
+  allCoordinates: [number, number][];
+  zoom: number;
+  viewportStorageKey: string | undefined;
+  lastFitRef: { current: FittedOverview | null };
+  restoredViewRef: { current: boolean };
+  markers: ReadonlyMap<string, LeafletMarker>;
+}) {
+  useEffect(() => {
+    if (!mapInstance || allCoordinates.length === 0 || restoredViewRef.current) return;
+    // A fit without animation ends its move before it is recorded as the
+    // overview, so the camera is settled again once it is: a fit is never kept.
+    const settle = viewportStorageKey
+      ? () => persistMapView(mapInstance, viewportStorageKey, lastFitRef.current)
+      : undefined;
+    return keepOverviewFitted(mapInstance, allCoordinates, zoom, lastFitRef, markers, settle);
+  }, [allCoordinates, lastFitRef, mapInstance, markers, restoredViewRef, viewportStorageKey, zoom]);
+
+  useEffect(() => {
+    if (!mapInstance || !viewportStorageKey) return;
+    const saveView = () => {
+      if (mapRef.current === mapInstance) {
+        persistMapView(mapInstance, viewportStorageKey, lastFitRef.current);
+      }
+    };
+    saveView();
+    mapInstance.on("moveend", saveView);
+    return () => {
+      saveView();
+      mapInstance.off("moveend", saveView);
+    };
+  }, [lastFitRef, mapInstance, mapRef, viewportStorageKey]);
+}
+
+/**
+ * Keep the reader's camera for the next visit in this tab, never the map's own
+ * overview fit: a fit kept at one width came back at another (a desktop's zoom
+ * on a phone) and, being "restored", was never fitted again, so most of the
+ * shop's sites sat outside it. An untouched overview clears what an earlier
+ * camera left, so the next visit fits its own container.
+ */
+function persistMapView(map: LeafletMap, key: string, overview: FittedOverview | null) {
+  if (showsOverview(map, overview)) {
+    clearMapViewport(key);
+    return;
+  }
   const position = map.getCenter();
   writeMapViewport(key, {
     latitude: position.lat,
@@ -479,6 +532,7 @@ function keepOverviewFitted(
   zoom: number,
   lastFit: { current: FittedOverview | null },
   markers: ReadonlyMap<string, LeafletMarker>,
+  onFitted?: () => void,
 ) {
   const coordinateKey = coordinates
     .map(([latitude, longitude]) => `${String(latitude)},${String(longitude)}`)
@@ -495,24 +549,30 @@ function keepOverviewFitted(
       center: map.getCenter(),
       zoom: map.getZoom(),
     };
+    onFitted?.();
   };
   if (lastFit.current?.map !== map || lastFit.current.coordinates !== coordinateKey) fitOverview();
 
   const resize = () => {
-    const overview = lastFit.current;
-    if (!overview || overview.map !== map || map.getZoom() !== overview.zoom) return;
-    // Leaflet rounds container centers to pixels during invalidateSize.
     // Preserve a user's pan/zoom, and let the open popup's own update pan it.
-    const drift = map
-      .project(map.getCenter(), overview.zoom)
-      .distanceTo(map.project(overview.center, overview.zoom));
-    if (drift > 1 || Array.from(markers.values()).some((marker) => marker.isPopupOpen())) return;
+    if (!showsOverview(map, lastFit.current)) return;
+    if (Array.from(markers.values()).some((marker) => marker.isPopupOpen())) return;
     fitOverview();
   };
   map.on("resize", resize);
   return () => {
     map.off("resize", resize);
   };
+}
+
+/** Whether the map still shows the overview it last fitted, untouched by the reader. */
+function showsOverview(map: LeafletMap, overview: FittedOverview | null): boolean {
+  if (!overview || overview.map !== map || map.getZoom() !== overview.zoom) return false;
+  // Leaflet rounds container centers to pixels during invalidateSize.
+  const drift = map
+    .project(map.getCenter(), overview.zoom)
+    .distanceTo(map.project(overview.center, overview.zoom));
+  return drift <= 1;
 }
 
 function mapControlRectangles(container: HTMLElement) {

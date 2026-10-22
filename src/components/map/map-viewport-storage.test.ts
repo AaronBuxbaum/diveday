@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readMapViewport, writeMapViewport } from "./map-viewport-storage";
+import { clearMapViewport, readMapViewport, writeMapViewport } from "./map-viewport-storage";
 
 afterEach(() => {
   sessionStorage.clear();
@@ -14,6 +14,15 @@ describe("map viewport storage", () => {
     expect(readMapViewport("shop-1:catalog")).toEqual(camera);
     expect(readMapViewport("shop-1:library")).toBeNull();
     expect(readMapViewport("shop-2:catalog")).toBeNull();
+  });
+
+  it("forgets one map's camera and leaves the others", () => {
+    const camera = { latitude: 25.1, longitude: -80.2, zoom: 13 };
+    writeMapViewport("shop-1:library", camera);
+    writeMapViewport("shop-1:catalog", camera);
+    clearMapViewport("shop-1:library");
+    expect(readMapViewport("shop-1:library")).toBeNull();
+    expect(readMapViewport("shop-1:catalog")).toEqual(camera);
   });
 
   it.each([
@@ -36,6 +45,10 @@ describe("map viewport storage", () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("denied");
     });
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    expect(() => clearMapViewport("catalog")).not.toThrow();
     expect(readMapViewport("catalog")).toBeNull();
     expect(() =>
       writeMapViewport("catalog", { latitude: 25, longitude: -80, zoom: 12 }),
