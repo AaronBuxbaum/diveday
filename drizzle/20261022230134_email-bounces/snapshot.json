@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "b878979e-9d47-45d5-a039-acd6a55ead32",
+  "id": "b76e340f-6beb-4939-b150-6977b60fcbd9",
   "prevIds": [
     "5854b371-bac6-4e35-85d7-234846710e7b"
   ],
@@ -34127,6 +34127,27 @@
       "method": "btree",
       "concurrently": false,
       "name": "email_bounces_recipient_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "email_bounces"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "sent_by_person_id",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "email_bounces_sent_by_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "email_bounces"

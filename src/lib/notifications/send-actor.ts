@@ -1,4 +1,3 @@
-import { unstable_rethrow } from "next/navigation";
 import { isStaff } from "@/lib/authz";
 
 /** The signed-in staff member and the shop their session belongs to. */
@@ -15,7 +14,8 @@ export type SendActor = { personId: string; shopId: string };
  * `@/lib/auth` is imported lazily: the send path lives under `src/db/`, which
  * `@/lib/auth` itself imports, and most sends run where no request exists.
  * Any failure reads as "nobody", because a send must never fail over who sent
- * it; Next's own control-flow errors are passed through untouched.
+ * it. Nothing sends mail while a page renders, so there is no prerender
+ * signal here to pass through; a server action or route is where sends run.
  */
 export async function currentSendActor(): Promise<SendActor | null> {
   try {
@@ -24,8 +24,7 @@ export async function currentSendActor(): Promise<SendActor | null> {
     return session?.user && isStaff(session.user.roles)
       ? { personId: session.user.personId, shopId: session.user.shopId }
       : null;
-  } catch (error) {
-    unstable_rethrow(error);
+  } catch {
     return null;
   }
 }

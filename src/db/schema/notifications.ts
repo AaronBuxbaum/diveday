@@ -326,6 +326,8 @@ export const emailBounces = pgTable(
     ),
     index("email_bounces_occurred_idx").on(table.occurredAt),
     index("email_bounces_recipient_idx").on(table.recipient),
+    // The erasure and a person merge look rows up by who sent them.
+    index("email_bounces_sent_by_idx").on(table.sentByPersonId),
     check("email_bounces_event_check", sql`${table.event} in ('bounce', 'complaint')`),
   ],
 );
