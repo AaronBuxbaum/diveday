@@ -211,7 +211,9 @@ export async function listDateInterestsByIds(
     .select(dateInterestColumns)
     .from(interests)
     .leftJoin(courses, eq(courses.id, interests.courseId))
-    .where(and(eq(interests.shopId, shopId), eq(interests.scope, "date"), inArray(interests.id, ids)))
+    .where(
+      and(eq(interests.shopId, shopId), eq(interests.scope, "date"), inArray(interests.id, ids)),
+    )
     .orderBy(desc(interests.askedAt), asc(interests.name), asc(interests.id));
   return withRosterLinks(db, shopId, rows.map(asDateInterest));
 }
@@ -236,7 +238,10 @@ export async function listOpenDateInterestsForDates(
       and(
         // An answered interest no longer asks for the day (third UX review, item 13).
         openDateInterest(shopId),
-        or(inArray(interests.preferredDate, uniqueDates), inArray(interests.alternateDate, uniqueDates)),
+        or(
+          inArray(interests.preferredDate, uniqueDates),
+          inArray(interests.alternateDate, uniqueDates),
+        ),
       ),
     )
     .orderBy(desc(interests.askedAt), asc(interests.name), asc(interests.id));
@@ -367,17 +372,23 @@ const departureChild = alias(interests, "departure_child");
  * flexible and a date it named is within `FLEXIBLE_WINDOW_DAYS` of it.
  *
  * `target` is a departure (`tripId`, read in this shop and live; null when it is
- * not) or a calendar date in the shop's own zone (`date`). Rows keep the order
- * people asked in (ADR 20260813): never ranked or filtered by fit.
+ * not) or a calendar date in the shop's own zone (`date`). A caller that has
+ * already read the live departure hands its `day` with the `tripId`, so the
+ * trip page does not wait on a second read of the same row (staff render cost).
+ * Rows keep the order people asked in (ADR 20260813): never ranked or filtered
+ * by fit.
  */
 export async function listDateInterestsInReach(
   db: DbExecutor,
   shopId: string,
-  target: { tripId: string } | { date: CalendarDate },
+  target: { tripId: string; day?: CalendarDate } | { date: CalendarDate },
 ): Promise<DateInterestInReach[]> {
   let tripId: string | null = null;
   let day: CalendarDate;
-  if ("tripId" in target) {
+  if ("tripId" in target && target.day) {
+    tripId = target.tripId;
+    day = target.day;
+  } else if ("tripId" in target) {
     const [row] = await db
       .select({ startsAt: trips.startsAt, timezone: shops.timezone })
       .from(trips)
@@ -411,7 +422,12 @@ export async function listDateInterestsInReach(
         tripId ? eq(departureChild.tripId, tripId) : sql`false`,
       ),
     )
-    .where(and(openDateInterest(shopId), or(near(interests.preferredDate), near(interests.alternateDate))))
+    .where(
+      and(
+        openDateInterest(shopId),
+        or(near(interests.preferredDate), near(interests.alternateDate)),
+      ),
+    )
     .orderBy(asc(interests.askedAt), asc(interests.name), asc(interests.id));
   const linked = await withRosterLinks(db, shopId, rows.map(asDateInterest));
   return linked.flatMap((row) => {

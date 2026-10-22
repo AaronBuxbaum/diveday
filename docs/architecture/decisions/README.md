@@ -402,7 +402,7 @@ script again.
 | 20261016-fresh-link-per-booking-row | A booking's page lists the… |
 | 20261016-incident-drafts | Reuse an incident draft only… |
 | 20261016-shared-boat-photos | A diver may share a… |
-| 20261017-one-interest-with-a-scope | One `interests` table for everyone… (proposed) |
+| 20261017-one-interest-with-a-scope | One `interests` table for everyone… |
 | 20261017-xero-removed-before-launch | Xero is removed before launch,… |
 | 20261018-claude-assists | Use the Claude API for… |
 | 20261018-diver-messages-are-states | Every diver reminder is a… |

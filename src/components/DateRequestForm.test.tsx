@@ -201,7 +201,7 @@ describe("DateRequestForm — server-recorded submission", () => {
   });
 });
 
-describe("DateRequestForm — a lead the shop can answer", () => {
+describe("DateRequestForm — a request the shop can answer", () => {
   // A question with no email and no phone is an interest nobody can reply to, so
   // the composer refuses to send it at all.
   it("refuses the server send when neither an email nor a phone is given", () => {

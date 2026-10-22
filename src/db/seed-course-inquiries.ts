@@ -44,7 +44,7 @@ export async function seedCourseInquiries(
 
   // A diver the shop already knows, asking about their next card. Live rows
   // only — the same restriction `livePersonIdForEmail` applies, and for the
-  // same reason: linking a lead to a removed duplicate would point a later
+  // same reason: linking an interest to a removed duplicate would point a later
   // erasure at the wrong record.
   const [regular] = await db
     .select({ id: people.id, email: people.email })

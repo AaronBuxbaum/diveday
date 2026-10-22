@@ -202,7 +202,7 @@ describe("what one request says", () => {
     );
   });
 
-  it("closes the lead with Mark done", () => {
+  it("closes the interest with Mark done", () => {
     const item = row({});
     const form = screen.getByRole("button", { name: "Mark done" }).closest("form");
     expect(form?.querySelector('input[name="requestId"]')).toHaveValue(BASE.id);

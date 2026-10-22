@@ -6668,14 +6668,16 @@ for (const scheme of ["light", "dark"] as const) {
        * who has no certification declaration, is correctly absent from the
        * send list.
        *
-       * The night charter still carries both seeded joiners, while Selah also
-       * starts today so the headline reef departure has one marked row when a
-       * demo visitor opens it. Rowan remains tomorrow-only, keeping that first
-       * list realistic rather than alarming.
+       * The deal is sent from the Divers tab's Who wants in panel now (H-145
+       * D-3), whose "Around these dates" group lists only who fits the
+       * departure (dive-domain review of #2656, m1). The night charter asks for
+       * a Night card nobody on the list holds, so this pins the shallow
+       * Christ of the Abyss reef a week out: an Open Water bar and no specialty,
+       * inside Rowan's window, so her claim arrives with its mark.
        */
       test(`the deal panel carries the demo's own declarations (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
+        const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Christ of the Abyss");
         await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
         // Both seeded joiners now read unverified (#2428: a staff-typed card
         // nobody checked is not vouched for), so wait on the first of them.

@@ -341,6 +341,46 @@ describe("a held offer rechecks its departure when it fires", () => {
   });
 });
 
+describe("a seat released as the boat loads", () => {
+  // The counter's no-show salvage (e2e check-in, "releases a no-show"): ten
+  // minutes past the scheduled time the seat is still the shop's to sell
+  // (`hasSailed`, the booking transaction's gate), so the wait list hears.
+  it("is offered to the wait list inside the departure's grace", async () => {
+    const { db, shop, trip } = await context();
+    await askAnytime(db, { shopId: shop.id, ...ana, declaration: openWater });
+    const [person] = await db.select().from(people).where(eq(people.email, ana.email));
+    if (!person) throw new Error("setup: person missing");
+    const [own] = await db
+      .insert(interests)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        personId: person.id,
+        partySize: 1,
+      })
+      .returning();
+    if (!own) throw new Error("setup: wait-list row missing");
+    const startsAt = new Date(nowDate().getTime() - 10 * 60_000);
+    // diveday:allow-flat-revision: a test fixture moving a departure just past its time.
+    await db
+      .update(trips)
+      .set({ startsAt, endsAt: new Date(startsAt.getTime() + 3 * HOUR_MS) })
+      .where(eq(trips.id, trip.id));
+
+    await offerSeats(db, {
+      shopId: shop.id,
+      shopSlug: shop.slug,
+      tripId: trip.id,
+      interestIds: [own.id],
+    });
+
+    const [after] = await db.select().from(interests).where(eq(interests.id, own.id));
+    expect(after?.offeredAt).not.toBeNull();
+  });
+});
+
 describe("an offer to someone already aboard", () => {
   // Coordinator's follow-up to the #2656 reviews: the panel hides a seated
   // diver, but a hand-posted id is read on the server, so it is filtered there.

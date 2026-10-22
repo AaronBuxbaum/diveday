@@ -17,8 +17,8 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
-import { generateLastMinutePromoCode, lastMinuteDealDiscount } from "@/lib/last-minute-list";
 import { offerMailClass } from "@/lib/interests";
+import { generateLastMinutePromoCode, lastMinuteDealDiscount } from "@/lib/last-minute-list";
 import { minorToMajor } from "@/lib/money";
 import {
   type NotificationDelivery,
@@ -31,12 +31,16 @@ import type { PromotionProvider } from "@/lib/payments/promotions";
 import { type PromoDiscount, promoDiscountColumns } from "@/lib/promo-codes";
 import { publicTripPath } from "@/lib/public-routes";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
-import { spotsRemaining } from "@/lib/trips";
+import { hasSailed, spotsRemaining } from "@/lib/trips";
 import { courseStudentSeatCap, tripAdmissionFor, tripCourseCrewCounts } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { listDateInterestsInReach } from "./interest-dates";
-import { ensureDepartureInterest, issueInterestUnsubscribeToken, listAnytimeInterestsCovering } from "./interests";
+import {
+  ensureDepartureInterest,
+  issueInterestUnsubscribeToken,
+  listAnytimeInterestsCovering,
+} from "./interests";
 import { sendNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
 import {
@@ -106,7 +110,10 @@ async function getOfferContext(db: AppDb, shopId: string, tripId: string, intere
     .from(interests)
     .innerJoin(trips, and(eq(trips.id, interests.tripId), eq(trips.shopId, shopId), liveTrip()))
     .innerJoin(shops, eq(shops.id, shopId))
-    .leftJoin(parentInterest, and(eq(parentInterest.id, interests.parentInterestId), eq(parentInterest.shopId, shopId)))
+    .leftJoin(
+      parentInterest,
+      and(eq(parentInterest.id, interests.parentInterestId), eq(parentInterest.shopId, shopId)),
+    )
     .leftJoin(people, and(eq(people.id, interests.personId), eq(people.shopId, shopId)))
     .where(
       and(
@@ -254,15 +261,20 @@ export async function offerSeats(
   // Read when the held send fires, not when it was held (dive-domain review of
   // #2656, m3): a departure cancelled, held for conditions, gone or made a
   // rehearsal during the hold offers nobody, with or without a deal, and
-  // nothing is stamped. The same checks the `departure_note` send makes.
+  // nothing is stamped. "Gone" is `hasSailed`, the booking transaction's own
+  // gate, not the scheduled minute: a seat the counter released as the boat
+  // loads is still the shop's to sell, and offering it to the wait list is
+  // the no-show salvage (`salvageOffer`).
   const offerable =
     tripRow !== null &&
     !tripRow.isRehearsal &&
     tripRow.status === "scheduled" &&
     !tripRow.conditionsHold &&
-    tripRow.startsAt > nowDate();
+    !hasSailed(tripRow.startsAt, nowDate());
   if (!offerable && !input.discount) {
-    return { results: interestIds.map((interestId) => ({ interestId, delivery: "fallback" as const })) };
+    return {
+      results: interestIds.map((interestId) => ({ interestId, delivery: "fallback" as const })),
+    };
   }
   const found =
     tripRow && !tripRow.isRehearsal
@@ -647,7 +659,10 @@ async function sendOffer(
   // own wait-list row included, carries the person's courtesy opt-out.
   const unsubscribeToken =
     fromList && interest.parentInterestId
-      ? await issueInterestUnsubscribeToken(db, { shopId: input.shopId, interestId: interest.parentInterestId })
+      ? await issueInterestUnsubscribeToken(db, {
+          shopId: input.shopId,
+          interestId: interest.parentInterestId,
+        })
       : await issuePersonCourtesyEmailUnsubscribeToken(db, {
           shopId: input.shopId,
           personId: person.id,
@@ -719,7 +734,13 @@ async function claimOfferSend(
     const [row] = await tx
       .select({ emailedAt: interests.emailedAt })
       .from(interests)
-      .where(and(eq(interests.id, interestId), eq(interests.shopId, shopId), eq(interests.scope, "departure")))
+      .where(
+        and(
+          eq(interests.id, interestId),
+          eq(interests.shopId, shopId),
+          eq(interests.scope, "departure"),
+        ),
+      )
       .limit(1)
       .for("update");
     if (!row) return null;
@@ -740,11 +761,22 @@ async function claimOfferSend(
  * last email that did, only while the mark is still this claim's. `offeredAt`
  * stays, because "Offered" is still true (staff reach the diver by hand).
  */
-async function releaseOfferSend(db: AppDb, shopId: string, interestId: string, claim: OfferSendClaim) {
+async function releaseOfferSend(
+  db: AppDb,
+  shopId: string,
+  interestId: string,
+  claim: OfferSendClaim,
+) {
   await db
     .update(interests)
     .set({ emailedAt: claim.previous })
-    .where(and(eq(interests.id, interestId), eq(interests.shopId, shopId), eq(interests.emailedAt, claim.at)));
+    .where(
+      and(
+        eq(interests.id, interestId),
+        eq(interests.shopId, shopId),
+        eq(interests.emailedAt, claim.at),
+      ),
+    );
 }
 
 const listParent = alias(interests, "list_parent");

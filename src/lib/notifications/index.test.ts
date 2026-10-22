@@ -201,10 +201,9 @@ describe("notificationIdempotencyKey", () => {
   });
 
   it("keys a reschedule confirmation by confirmedAt, not just bookingId (Codex finding)", () => {
-    // A reschedule can reactivate the same bookingId a much earlier
-    // confirmation already used — without `confirmedAt` distinguishing the
-    // two sends, a provider's own idempotency window would replay the first
-    // (stale) response instead of delivering this one.
+    // A reschedule can reactivate a bookingId an earlier confirmation used: without
+    // `confirmedAt` telling the sends apart, the provider's idempotency window would
+    // replay the stale response instead of delivering this one.
     expect(
       notificationIdempotencyKey({
         ...booking,

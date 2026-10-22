@@ -1,6 +1,6 @@
 # 20261017-one-interest-with-a-scope — One `interests` table for everyone who wants a seat
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-17
 - **Supersedes:** [20260814-a-date-request-is-a-course-inquiry](20260814-a-date-request-is-a-course-inquiry.md) and [20260816-trip-invitations-are-outreach](20260816-trip-invitations-are-outreach.md)
 - **Amends:** [20260719-trip-waitlist](20260719-trip-waitlist.md) (party rule stands), [20260727-last-minute-fill-promos](20260727-last-minute-fill-promos.md) (the list half), [20260827-the-departure-is-two-working-surfaces](20260827-the-departure-is-two-working-surfaces.md) (the groups under Divers), [20260902-sender-standards-for-ses](20260902-sender-standards-for-ses.md) (mail class, H-145), [20261005-optional-shop-features](20261005-optional-shop-features.md) (the switches gate scopes)
@@ -22,12 +22,14 @@ Four tables hold one fact, a person who wants a seat: the wait list, invitations
 - One held-send kind, `seat_offer`; two notification kinds split by mail class so the schema can require the unsubscribe link on one. Every commercial offer takes the 24 h cold-send window (#2133).
 - Erasure keeps two modes under one `scope` branch: departure and anytime rows are deleted; date rows are blanked by person, email and fuzzy phone, with their departure children.
 - The export's four CSVs become one `interests.csv` with a `scope` column.
-- The name `interests` collides with a booking's *party lead*; the glossary keeps them apart (D-1, H-145).
+- The concept is **Interest** (Aaron, H-145 D-1, 2026-10-17): `interests`, its code and file names, so it never meets a booking's *party lead*.
+- **Mail class follows H-96's test** (H-145 D-2 option b): a seat on the departure the diver waited for, or the reply to their own date request, is service mail; everything the shop chose is commercial (`offerMailClass`, `src/lib/interests.ts`).
 
 ## Alternatives considered
 
 - **A spine plus three detail tables** gives back most of the "one table" win.
-- **Interest as the name** avoids the collision; kept as the fallback in H-145.
+- **`leads` as the name**, the build's first default: it collides with a booking's party lead.
+- **Today's mail classes, mapped** (H-145 D-2 a): kept a diver-asked wait-list invite commercial, failing H-96's own test.
 
 ## Consequences
 

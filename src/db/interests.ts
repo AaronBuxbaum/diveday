@@ -200,7 +200,11 @@ export async function askForDeparture(db: AppDb, req: DepartureAsk): Promise<Dep
       .select()
       .from(interests)
       .where(
-        and(eq(interests.scope, "departure"), eq(interests.tripId, trip.id), eq(interests.personId, person.id)),
+        and(
+          eq(interests.scope, "departure"),
+          eq(interests.tripId, trip.id),
+          eq(interests.personId, person.id),
+        ),
       )
       .limit(1);
     if (existing) {
@@ -253,7 +257,13 @@ export async function listDepartureInterests(db: AppDb, shopId: string, tripId: 
     .select({ interest: interests, person: interestPerson })
     .from(interests)
     .leftJoin(people, and(eq(people.id, interests.personId), eq(people.shopId, shopId)))
-    .where(and(eq(interests.scope, "departure"), eq(interests.shopId, shopId), eq(interests.tripId, tripId)))
+    .where(
+      and(
+        eq(interests.scope, "departure"),
+        eq(interests.shopId, shopId),
+        eq(interests.tripId, tripId),
+      ),
+    )
     .orderBy(asc(interests.askedAt), asc(people.fullName), asc(interests.id));
 }
 
@@ -576,7 +586,11 @@ export async function attachDateInterestsToDeparture(
       .select()
       .from(interests)
       .where(
-        and(eq(interests.shopId, input.shopId), eq(interests.scope, "date"), inArray(interests.id, interestIds)),
+        and(
+          eq(interests.shopId, input.shopId),
+          eq(interests.scope, "date"),
+          inArray(interests.id, interestIds),
+        ),
       );
     if (parents.length === 0) return 0;
 
@@ -805,6 +819,42 @@ export type AnytimeInterestsCovering = {
 };
 
 /**
+ * **The specialty cards on file, read only when the departure asks for one**:
+ * the fit check folds them as it folds the rung (dive-domain review of #2656,
+ * m1). A live row is a card; the table holds no unsighted claims. The send
+ * (`listAnytimeInterestsCovering`) and the Who wants in panel (`getTripGuests`)
+ * both read it, so the panel never hides someone the send would reach.
+ */
+export async function specialtiesForFit(
+  db: DbExecutor,
+  shopId: string,
+  personIds: readonly string[],
+  requirement: { requiredSpecialties: readonly DiveSpecialty[] } | null,
+): Promise<Map<string, DiveSpecialty[]>> {
+  const specialties = new Map<string, DiveSpecialty[]>();
+  if ((requirement?.requiredSpecialties.length ?? 0) === 0 || personIds.length === 0) {
+    return specialties;
+  }
+  const rows = await db
+    .select({
+      personId: specialtyCertifications.personId,
+      specialty: specialtyCertifications.specialty,
+    })
+    .from(specialtyCertifications)
+    .where(
+      and(
+        eq(specialtyCertifications.shopId, shopId),
+        inArray(specialtyCertifications.personId, [...personIds]),
+        isNull(specialtyCertifications.deletedAt),
+      ),
+    );
+  for (const row of rows) {
+    specialties.set(row.personId, [...(specialties.get(row.personId) ?? []), row.specialty]);
+  }
+  return specialties;
+}
+
+/**
  * **Who a bulk offer on this departure would reach, and how to draw them.**
  * Open anytime interests whose window covers the departure's day (in the shop's
  * zone), with an address to write to, filtered by the deal's below-the-bar rule
@@ -860,28 +910,7 @@ export async function listAnytimeInterestsCovering(
 
   const reachableIds = reachable.map(({ person }) => person.id);
   const summaries = await listCertificationSummaries(db, shopId, reachableIds);
-  // The specialty cards on file, read only when the departure asks for one:
-  // the fit check folds them as it folds the rung (dive-domain review of
-  // #2656, m1). A live row is a card; the table holds no unsighted claims.
-  const specialties = new Map<string, DiveSpecialty[]>();
-  if ((requirement?.requiredSpecialties.length ?? 0) > 0 && reachableIds.length > 0) {
-    const rows = await db
-      .select({
-        personId: specialtyCertifications.personId,
-        specialty: specialtyCertifications.specialty,
-      })
-      .from(specialtyCertifications)
-      .where(
-        and(
-          eq(specialtyCertifications.shopId, shopId),
-          inArray(specialtyCertifications.personId, reachableIds),
-          isNull(specialtyCertifications.deletedAt),
-        ),
-      );
-    for (const row of rows) {
-      specialties.set(row.personId, [...(specialties.get(row.personId) ?? []), row.specialty]);
-    }
-  }
+  const specialties = await specialtiesForFit(db, shopId, reachableIds, requirement);
   const eligible = orderLastMinuteRecipients(
     filterEligibleLastMinuteRecipients(
       reachable.map((row) => ({

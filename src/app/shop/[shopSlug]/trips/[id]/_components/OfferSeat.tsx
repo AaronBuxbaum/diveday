@@ -9,7 +9,7 @@ import {
 } from "@/app/actions/held-sends";
 import { copyToClipboard } from "@/components/Copyable";
 import { SendHold, type SendHoldCopy } from "@/components/SendHold";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import type { HeldSendOutcome } from "@/db/held-sends";
 import { fill } from "@/i18n/fill";
 
@@ -146,7 +146,9 @@ export function OfferSeat({
     const results = outcome.kind === "seat_offer" ? outcome.results : [];
     const failed = results
       .filter((result) => result.delivery !== "sent")
-      .flatMap((result) => interests.filter((interest) => interest.interestId === result.interestId));
+      .flatMap((result) =>
+        interests.filter((interest) => interest.interestId === result.interestId),
+      );
     // An interest that went is done being ticked; one that did not stays ticked.
     for (const box of tickedBoxes(formId)) {
       if (!failed.some((interest) => interest.interestId === box.value)) box.checked = false;
@@ -191,7 +193,12 @@ export function OfferSeat({
         {chooseByTick
           ? null
           : interests.map((interest) => (
-              <input key={interest.interestId} type="hidden" name="interestId" value={interest.interestId} />
+              <input
+                key={interest.interestId}
+                type="hidden"
+                name="interestId"
+                value={interest.interestId}
+              />
             ))}
         {discountFields}
         <button
@@ -215,14 +222,14 @@ export function OfferSeat({
             {fallbacks.map((fallback) => (
               <li key={fallback.interest.interestId}>
                 {fallback.mailto ? (
-                  <a href={fallback.mailto} className="underline">
+                  <a href={fallback.mailto} className={proseLinkClass}>
                     {fill(copy.writeTo, { name: fallback.interest.name })}
                   </a>
                 ) : (
                   <button
                     type="button"
                     onClick={() => void copyMessage(fallback)}
-                    className="underline"
+                    className={proseLinkClass}
                   >
                     {copied[fallback.interest.interestId] === "copied"
                       ? copy.copied

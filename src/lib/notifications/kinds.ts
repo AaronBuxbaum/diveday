@@ -1009,7 +1009,7 @@ const founderDigestSchema = z.object({
     .max(500),
 });
 
-// The shop's own inbox learns about a lead the moment the diver submits the
+// The shop's own inbox learns about an interest the moment the diver submits the
 // public course-page composer (docs/product/archive/ux-personas-20260730-findings.md
 // task 7) — carries the interest id so a retried send can't double
 // up, exactly like waiver_request keys off its own row.

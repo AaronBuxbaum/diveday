@@ -20,7 +20,7 @@ import {
  * "Get in touch and we will set one" used to be the end of the road: a diver
  * with no workable date was handed a sentence and left to write the email
  * themselves. This asks the questions a shop always ends up asking for and
- * turns them into a lead the desk can act on without a round trip.
+ * turns them into an interest the desk can act on without a round trip.
  *
  * It stands on **two** surfaces now, which is why it lives here rather than in
  * the course folder it grew up in: a course page, where the request is about

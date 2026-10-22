@@ -843,7 +843,7 @@ test("a blank inquiry is rejected, not defaulted — a way to reply is required"
   ).toBeVisible();
   await expect(inquiry.getByText("Sent", { exact: true })).toHaveCount(0);
 
-  // Experience is useful context, but a lead with no address and no number is
+  // Experience is useful context, but a request with no address and no number is
   // still a question nobody can answer.
   await openMoreDetails(page);
   await page.getByLabel("Your diving experience").selectOption("never");

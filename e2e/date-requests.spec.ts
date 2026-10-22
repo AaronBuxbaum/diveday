@@ -214,7 +214,7 @@ test("staff mark a request done, and reopen it", async ({ page }) => {
   const row = open.locator("li").filter({ hasText: "Wants to dive: A night dive, any week" });
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: /^Actions for/ }).click();
-  // A lead with only a phone is answered by calling it.
+  // A request with only a phone is answered by calling it.
   await expect(row.getByRole("link", { name: "Reply" })).toHaveAttribute(
     "href",
     /^tel:\+13055550788$/,

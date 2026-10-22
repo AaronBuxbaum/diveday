@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import {
+  certifications,
+  interests,
+  people,
+  specialtyCertifications,
+  tripRequirements,
+} from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { getTripGuests } from "./trips-guests";
 
@@ -78,6 +85,64 @@ describe("getTripGuests", () => {
       for (const match of guests.lastMinute.matched) {
         expect(match.person.id).toBeTruthy();
       }
+    });
+
+    /**
+     * The panel reads the specialty cards the send reads (dive-domain review of
+     * #2656, m1): on a departure that asks for a Night card, the joiner who
+     * holds one is listed and the one who does not is left out, where the panel
+     * used to drop both because it never read the cards at all.
+     */
+    it("lists a joiner who holds the departure's specialty card, and leaves out one who does not", async () => {
+      const ctx = await context();
+      const { db, shop, tripId } = ctx;
+      await db
+        .insert(tripRequirements)
+        .values({
+          tripId,
+          shopId: shop.id,
+          minimumCertificationLevel: "open_water",
+          requiredSpecialties: ["night"],
+        })
+        .onConflictDoUpdate({
+          target: tripRequirements.tripId,
+          set: { minimumCertificationLevel: "open_water", requiredSpecialties: ["night"] },
+        });
+      const joiner = async (fullName: string, night: boolean) => {
+        const [person] = await db
+          .insert(people)
+          .values({ shopId: shop.id, fullName, email: `${fullName.split(" ")[0]}@example.com` })
+          .returning();
+        if (!person) throw new Error("setup: person missing");
+        await db.insert(certifications).values({
+          shopId: shop.id,
+          personId: person.id,
+          agency: "padi",
+          level: "open_water",
+          identifier: `OW-${person.id.slice(0, 8)}`,
+          status: "verified",
+        });
+        if (night) {
+          await db.insert(specialtyCertifications).values({
+            shopId: shop.id,
+            personId: person.id,
+            agency: "padi",
+            specialty: "night",
+            identifier: `N-${person.id.slice(0, 8)}`,
+            status: "verified",
+          });
+        }
+        await db
+          .insert(interests)
+          .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId: person.id });
+        return person.id;
+      };
+      const holder = await joiner("Noor Holder", true);
+      const without = await joiner("Wes Without", false);
+
+      const ids = (await guestsFor(ctx)).lastMinute.recipients.map(({ person }) => person.id);
+      expect(ids).toContain(holder);
+      expect(ids).not.toContain(without);
     });
 
     it("never offers a seat to somebody the requirements would refuse", async () => {

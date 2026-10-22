@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { proseLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -75,7 +76,7 @@ export function LastMinuteDealSection({
       {leadTime}
       {tripPath ? (
         <p className="mt-2 text-sm">
-          <a href={`${tripPath}#${WHO_WANTS_IN_ID}`} className="underline">
+          <a href={`${tripPath}#${WHO_WANTS_IN_ID}`} className={proseLinkClass}>
             {t("trips.lastMinute.offerWithDiscount")}
           </a>
         </p>

@@ -35,7 +35,7 @@ const inquirySchema = z.object({
 });
 
 /**
- * A lead the shop cannot answer is not a lead. The composer asks for both an
+ * A request the shop cannot answer is not an interest. The composer asks for both an
  * email and a phone and requires neither on its own, because a diver on a dock
  * may have only one of the two — but one of them has to be there, or the row
  * records a question with no way back to whoever asked it. Enforced here as
