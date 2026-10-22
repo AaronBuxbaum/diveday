@@ -399,11 +399,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
 
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(page.getByRole("heading", { name: "What a shop pays, line by line" })).toBeVisible();
-  // The price as an invoice (2026-09-24): eight labelled lines under the
+  // The price as an invoice (2026-09-24): seven labelled lines under the
   // figure, beside the builder's notes on them, so the terms a buyer scans
-  // for are on the first screen as a ledger rather than as prose.
+  // for are on the first screen as a ledger rather than as prose. The trial
+  // line left on 2026-10-22: the page states the trial once, in its note.
   const invoice = page.getByRole("main").locator("dl[aria-label='The invoice']");
-  await expect(invoice.getByRole("term")).toHaveCount(8);
+  await expect(invoice.getByRole("term")).toHaveCount(7);
   await expect(invoice.getByRole("term").filter({ hasText: "Cut of your bookings" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Notes on the invoice" })).toBeVisible();
   await expect(page.getByText("$99", { exact: true })).toBeVisible();

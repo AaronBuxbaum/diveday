@@ -528,7 +528,9 @@ test.describe("import ↔ switching guides", () => {
 
     await page.goto("/switching/eve");
     await page.getByRole("link", { name: "Open Import in your shop" }).click();
-    await expect(page).toHaveURL(/\/shop\/blue-mantis\/settings\/import$/);
+    // The guide names itself, so the preview can say which system sold the
+    // bookings after today.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/settings\/import\?from=eve$/);
   });
 });
 

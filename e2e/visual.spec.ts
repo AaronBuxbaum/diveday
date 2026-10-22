@@ -8189,7 +8189,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/courses");
         const earlier = page.locator("#cards-to-process-earlier > summary");
         await earlier.waitFor();
-        const people = page.getByText("See who", { exact: true });
+        // The first ladder row: the demo now seeds two shop-certified cards
+        // of its own (H-148), so "See who" is on more than one step.
+        const people = page.getByText("See who", { exact: true }).first();
         await people.waitFor();
         await capture(page, "course-follow-ups-closed", scheme);
         await earlier.click();
