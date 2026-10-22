@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { canPersonImportShopData, commitContactImport, type ImportSummary } from "@/db/import";
+import { getShopById } from "@/db/shops";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { parseForm } from "@/lib/form-parse";
 import type { ImportFatalCode, ImportFatalParams } from "@/lib/import";
 import { prepareContactImport } from "@/lib/import";
@@ -44,7 +47,11 @@ export async function importContactsAction(
   const csv = parsed.ok ? parsed.data.csv : "";
   if (!csv.trim()) return { status: "error", code: "csv_required" };
 
-  const prepared = prepareContactImport(csv);
+  // The shop's today, re-read here rather than taken from the browser: a
+  // booking after it is a seat sold elsewhere, never a visit.
+  const shop = await getShopById(db, session.user.shopId);
+  const today = calendarDateInTimezone(nowDate(), shop?.timezone ?? "UTC");
+  const prepared = prepareContactImport(csv, { today });
   if (prepared.fatal) {
     return { status: "error", code: prepared.fatal.code, params: prepared.fatal.params };
   }

@@ -95,6 +95,11 @@ const COPY = {
   visitRowsNoticeOther: "{count} rows carry a past visit",
   paymentHistoryRowsNoticeOne: "{count} row carries payment history",
   paymentHistoryRowsNoticeOther: "{count} rows carry payment history",
+  bookingsAfterTodayOne: "{count} booking is after today. Keep it in {system}.",
+  bookingsAfterTodayOther: "{count} bookings are after today. Keep them in {system}.",
+  bookingsAfterTodayMoreOne: "And {count} more.",
+  bookingsAfterTodayMoreOther: "And {count} more.",
+  sourceSystem: "FareHarbor",
   stats: {
     diversInFile: "Divers in file",
     extraCardRows: "Extra card rows",
@@ -202,6 +207,7 @@ describe("a row's issues", () => {
         intro="Upload contacts.csv"
         copy={copy}
         locale="en-US"
+        timeZone="America/New_York"
       />,
     );
 
@@ -229,6 +235,7 @@ describe("ImportWizard reset on revisit", () => {
         intro="Upload contacts.csv"
         copy={COPY}
         locale="en-US"
+        timeZone="America/New_York"
       />,
     );
 
@@ -252,11 +259,72 @@ describe("ImportWizard reset on revisit", () => {
         intro="Upload contacts.csv"
         copy={COPY}
         locale="en-US"
+        timeZone="America/New_York"
       />,
     );
 
     expect(screen.queryByText("Divers in file")).not.toBeInTheDocument();
     expect(screen.queryByText("contacts.csv")).not.toBeInTheDocument();
     expect(screen.getByText("Choose a file")).toBeInTheDocument();
+  });
+});
+
+describe("bookings after today", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("says how many, names the old system, and lists each one with its date and trip", async () => {
+    // The browser's today, read through the clock in the shop's zone: 03:00
+    // UTC on Oct 23 is still Oct 22 in Key Largo, so a booking on the 23rd
+    // has not sailed.
+    vi.stubEnv("DIVEDAY_CLOCK", "2026-10-23T03:00:00Z");
+    render(
+      <ImportWizard
+        diversHref="/shop/blue-mantis/divers"
+        intro="Upload contacts.csv"
+        copy={COPY}
+        locale="en-US"
+        timeZone="America/New_York"
+      />,
+    );
+    const input = screen.getByLabelText(/choose a file/i, { selector: "input" });
+    await chooseFile(
+      input,
+      [
+        "customer_name,email,booking_date,tour_name,booking_id",
+        "Hana Kobayashi,hana@example.com,2026-10-20,Two-tank Molasses Reef,FH-1",
+        "Hana Kobayashi,hana@example.com,2026-10-23,Night dive Benwood,FH-2",
+        "Sam Reed,sam@example.com,2026-11-14,Discover Scuba,FH-3",
+      ].join("\n"),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("2 bookings are after today. Keep them in FareHarbor."),
+      ).toBeInTheDocument();
+    });
+    const list = screen.getByRole("list", { name: /bookings are after today/i });
+    expect(list).toHaveTextContent(/Oct\s23,\s2026 · Hana Kobayashi · Night dive Benwood/);
+    expect(list).toHaveTextContent(/Nov\s14,\s2026 · Sam Reed · Discover Scuba/);
+    expect(list).not.toHaveTextContent("Two-tank Molasses Reef");
+  });
+
+  it("says nothing when every booking is today or earlier", async () => {
+    vi.stubEnv("DIVEDAY_CLOCK", "2026-10-23T03:00:00Z");
+    render(
+      <ImportWizard
+        diversHref="/shop/blue-mantis/divers"
+        intro="Upload contacts.csv"
+        copy={COPY}
+        locale="en-US"
+        timeZone="America/New_York"
+      />,
+    );
+    const input = screen.getByLabelText(/choose a file/i, { selector: "input" });
+    await chooseFile(
+      input,
+      "customer_name,email,booking_date,tour_name\nHana,hana@example.com,2026-10-22,Reef\n",
+    );
+    await waitFor(() => expect(screen.getByText("Divers in file")).toBeInTheDocument());
+    expect(screen.queryByText(/after today/)).not.toBeInTheDocument();
   });
 });

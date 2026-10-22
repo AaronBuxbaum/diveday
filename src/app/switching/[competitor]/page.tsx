@@ -162,13 +162,9 @@ async function GuideRoute({ params }: { params: Promise<{ competitor: string }> 
 async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
   const locale = await requestLocale();
   const t = diverTranslator(locale);
-  return (
-    <GuideBody
-      locale={locale}
-      guide={guide}
-      importCta={<SwitchingImportCta label={t("switching.common.openImportCta")} />}
-    />
-  );
+  const label = t("switching.common.openImportCta");
+  const importCta = <SwitchingImportCta label={label} from={guide.slug} />;
+  return <GuideBody locale={locale} guide={guide} importCta={importCta} />;
 }
 
 /**

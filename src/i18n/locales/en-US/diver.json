@@ -4242,7 +4242,7 @@
           },
           "pastVisits": {
             "what": "Past visits (what they booked, when)",
-            "detail": "One row per booking becomes visit history. It is not a dive, and it never appears on your schedule or counts toward capacity."
+            "detail": "One row per booking up to today becomes visit history. It is not a dive, and it never appears on your schedule or counts toward capacity."
           },
           "paymentHistory": {
             "what": "Payment & receipt history",

@@ -10,6 +10,11 @@
   visits remain inert booking-history records and their amount labels remain display-only.
 - **Amended in part by:** [20260824-gear-history-import](20260824-gear-history-import.md),
   which supersedes the service-history conclusion below. The prior-visit rules remain unchanged.
+- **Amended 2026-10-22 (market sheet, item 3):** a booking dated after the shop's today (its
+  timezone, read from the clock) is not a visit. `prepareContactImport` takes that day from its
+  caller; such a row is listed in the import preview as a seat sold in the old system, and nothing is
+  written for it. The diver on the row still comes across. Moving those seats onto the board is not
+  built (declined, item 9).
 
 ## Context
 

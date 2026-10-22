@@ -7,6 +7,8 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { type PreparedImport, prepareContactImport } from "@/lib/import";
 import { type ImportActionState, importContactsAction } from "./actions";
 import { ImportPreview, PREVIEW_LIMIT } from "./ImportPreview";
@@ -18,6 +20,7 @@ export function ImportWizard({
   intro,
   copy,
   locale,
+  timeZone,
 }: {
   diversHref: string;
   /** Rendered on the server via `t.rich` for the embedded `contacts.csv` mono span. */
@@ -29,6 +32,8 @@ export function ImportWizard({
    * browser is the *device's* language and not the one the page is written in.
    */
   locale: string;
+  /** The shop's timezone: a booking after the shop's today is listed, never filed as a visit. */
+  timeZone: string;
 }) {
   const [state, formAction] = useActionState<ImportActionState, FormData>(importContactsAction, {
     status: "idle",
@@ -66,7 +71,8 @@ export function ImportWizard({
     const text = await file.text();
     setFileName(file.name);
     setCsvText(text);
-    setPrepared(prepareContactImport(text));
+    // The preview's today; the commit re-reads it on the server.
+    setPrepared(prepareContactImport(text, { today: calendarDateInTimezone(nowDate(), timeZone) }));
   }
 
   const showResult = state.status === "done";
@@ -109,6 +115,7 @@ export function ImportWizard({
           formAction={formAction}
           csvText={csvText}
           state={state}
+          locale={locale}
         />
       ) : null}
 

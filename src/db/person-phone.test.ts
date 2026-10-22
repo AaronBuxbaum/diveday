@@ -2,8 +2,8 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { prepareContactImport } from "@/lib/import";
 import { fileScopedShopContext } from "@/test/db";
+import { prepareContactImport } from "@/test/import-fixture";
 import { createBooking } from "./bookings";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { createDiver, updateDiver } from "./divers";

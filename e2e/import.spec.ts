@@ -330,6 +330,47 @@ const PAYMENT_HISTORY_CSV = [
   "Source Sloane,source.sloane@example.com,2026-03-05,Refunded,USD 25.00,USD,Refund,legacy-refund-1001,REC-1002,,pi_legacy_1002",
 ].join("\n");
 
+/**
+ * **Seats sold in the old system are named, not filed** (market sheet
+ * 2026-10-22, item 3). A booking after the shop's today is not a visit: the
+ * preview counts and lists it, and the "Past visits" tile leaves it out.
+ * Preview only; nothing is committed.
+ */
+test.describe("contact import — bookings after today", () => {
+  signedInAsOwner();
+
+  test("the preview counts the bookings after today, names the system, and lists them", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings/import?from=fareharbor");
+    await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
+    await page.setInputFiles('input[type="file"]', {
+      name: "bookings.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        [
+          "Customer Name,Email,Booking Date,Tour Name,Booking ID",
+          "Sold Sally,sold.sally@example.com,2020-03-14,Two-tank Molasses Reef,FH-E2E-1",
+          "Sold Sally,sold.sally@example.com,2099-11-14,Night dive Benwood,FH-E2E-2",
+          "Future Fred,future.fred@example.com,2099-12-01,Discover Scuba,FH-E2E-3",
+        ].join("\n"),
+        "utf-8",
+      ),
+    });
+    // The whole sentence is pinned in import-copy.test.ts; here, its count and system.
+    await expect(page.getByText(/^2 bookings are after today\..+FareHarbor/)).toBeVisible();
+    const list = page.getByRole("list", { name: /bookings are after today/ });
+    await expect(list.getByRole("listitem")).toHaveText([
+      /Nov\s14,\s2099 · Sold Sally · Night dive Benwood/,
+      /Dec\s1,\s2099 · Future Fred · Discover Scuba/,
+    ]);
+    await expect(page.getByText("1 row records a past visit.", { exact: false })).toBeVisible();
+  });
+});
+
 test.describe("contact import — payment and receipt history", () => {
   signedInAsOwner();
 
