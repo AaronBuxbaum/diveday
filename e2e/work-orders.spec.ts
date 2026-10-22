@@ -1,5 +1,8 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openDiverFileGroup } from "./helpers";
+
+const staffCopy = staffTranslator("en-US");
 
 /**
  * The bench (ADR 20261008-gear-work-orders): opening a ticket on a diver's own
@@ -97,7 +100,7 @@ test.describe("staff", () => {
     // only with what the technician marks passed.
     await page.getByLabel("Service", { exact: true }).first().selectOption("passed");
     await page.getByRole("button", { name: "Record the work" }).click();
-    await expect(page.getByText("Work recorded")).toBeVisible();
+    await expect(page.getByRole("status")).toHaveText(staffCopy("workOrders.notice.workRecorded"));
     await expect(page.getByRole("button", { name: "Record the work" })).toHaveCount(0);
 
     // Ready for its owner, then collected, and collected is the end of it.

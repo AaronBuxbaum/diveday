@@ -1,11 +1,13 @@
 import type { Page } from "@playwright/test";
 import { weekStartOf } from "@/lib/week-board";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { createTrip, daysFromNow, e2eNow, openTripAbout, tripPathByTitle } from "./helpers";
 
 signedInAsOwner();
 
 const SHOP = "blue-mantis";
+const staffCopy = staffTranslator("en-US");
 /** A hull from the demo fleet. Every assertion names this spec's own departures. */
 const HULL = "Mantis II";
 const BOARD = `/shop/${SHOP}/schedule/board`;
@@ -113,7 +115,7 @@ test.describe("a standing crew clash", () => {
     await page.goto(twoTankPath);
     await openTripAbout(page);
     await expect(page.locator("#crew").getByRole("status")).toContainText(
-      `Also rostered on ${drift} at these hours.`,
+      staffCopy("trips.crew.clash", { departure: drift }),
     );
     // Still nobody's gate: the roster is the owner's, so every control on the
     // row keeps working (issue #1345).

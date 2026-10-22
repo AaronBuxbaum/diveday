@@ -2,6 +2,8 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, openTripAbout, openTripMore } from "./helpers";
 
+const staffCopy = staffTranslator("en-US");
+
 test.describe("staff", () => {
   signedInAsOwner();
 
@@ -501,7 +503,9 @@ test.describe("staff", () => {
     // `◆`/`◇` glyph pair and the adopted-version line went back to the site
     // page. `.first()` stays because the assertion is "the library is offering
     // an update", not "exactly one row is".
-    const updateReady = library.getByText("Template update v3 ready.").first();
+    const updateReady = library
+      .getByText(staffCopy("diveSites.list.templateUpdateReady", { version: 3 }), { exact: true })
+      .first();
 
     await page.goto("/shop/blue-mantis/dive-sites");
     await expect(existing).toHaveCount(1);

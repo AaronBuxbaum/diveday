@@ -1,9 +1,11 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, test } from "./fixtures";
 import { E2E_APP_HOST } from "./servers";
 import { mintOnboardFormPath } from "./setup-link";
 
 /** The origin the fleet advertises, as the shop-link hint prints it: no scheme. */
 const STOREFRONT_HOST = new URL(E2E_APP_HOST).host;
+const staffCopy = staffTranslator("en-US");
 
 // A freshly onboarded shop is the real "empty shop" scenario the first-run
 // checklist exists for — the seeded demo shop never reaches this state, so
@@ -81,7 +83,9 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page.getByText("Contact details saved")).toBeVisible();
 
   await page.goto(`/shop/${unique}`);
-  await expect(page.getByText("Contact details on file.")).toBeVisible();
+  await expect(
+    page.getByText(staffCopy("shopHome.firstRun.contactDone"), { exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("1 of 7 done")).toBeVisible();
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveText("Set up profile");

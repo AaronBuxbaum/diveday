@@ -122,6 +122,7 @@ describe("ReadyBookedHeader", () => {
   });
 
   it("says a milestone boat once, as a count, and nothing on any other (H-128)", () => {
+    const t = diverTranslator("en-US");
     render(
       withProvider(
         "en-US",
@@ -131,11 +132,15 @@ describe("ReadyBookedHeader", () => {
           milestone={25}
           locale="en-US"
           now={NIGHT_BEFORE}
-          t={diverTranslator("en-US")}
+          t={t}
         />,
       ),
     );
-    expect(screen.getByText("Your 25th dive day with Blue Mantis Divers.")).toBeTruthy();
+    expect(
+      screen.getByText(t("booking.milestoneDay", { ordinal: "25th", shopName: FACTS.shop.name }), {
+        exact: true,
+      }),
+    ).toBeTruthy();
   });
 
   /**

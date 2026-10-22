@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { clearCourseForms } from "./course-form-only";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
@@ -11,6 +12,8 @@ import {
   signOut,
   writeCourseForm,
 } from "./helpers";
+
+const staffCopy = staffTranslator("en-US");
 
 /**
  * **Course forms, end to end** (ADR 20261008-course-forms).
@@ -38,7 +41,11 @@ test.describe("course forms", () => {
       formTitle,
       "I will dive within the limits of my training, plan every dive with my buddy, and tell the instructor about anything that changes my fitness to dive.",
     );
-    await expect(page.locator("#course-forms").getByText("Saved.")).toBeVisible();
+    await expect(
+      page
+        .locator("#course-forms")
+        .getByText(staffCopy("waiversStaff.courseForms.notice.saved"), { exact: true }),
+    ).toBeVisible();
     await clearCourseForms(page, "open-water-diver");
     await requireCourseForm(page, "open-water-diver", formTitle);
     // 24 days out, clear of the seeded sessions whose crew would clash with

@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { ACTION_KIND_META, type TodayAction } from "@/lib/today";
@@ -467,6 +468,7 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
 
   it("asks about the bench: a ticket past its promise, and one ready a week and not collected", async () => {
     const { db, shop } = ctx;
+    const t = staffTranslator("en-US");
     const today = calendarDateInTimezone(nowDate(), shop.timezone);
     const booking = await anySeededBooking(db, shop.id);
     const added = await addCustomerGearItem(db, {
@@ -515,7 +517,11 @@ describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
       href: `/shop/${shop.slug}/gear/work-orders/${late.workOrder.id}`,
       actionLabel: "Open ticket",
     });
-    expect(lateRow?.detail).toMatch(/^Promised .+, not ready yet\.$/);
+    expect(lateRow?.detail).toBe(
+      t("benchFollowUp.today.pastPromise", {
+        date: formatCalendarDate(shiftCalendarDate(today, -2), "en-US"),
+      }),
+    );
     // Ready today: the customer has a week before anybody chases them.
     expect(work.actions.some((action) => action.kind === "work_order_uncollected")).toBe(false);
 

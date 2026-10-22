@@ -86,7 +86,13 @@ describe("a training mark on a charter seat's row (issue #2275)", () => {
   it("names who cleared a mark with forms owed", () => {
     draw({ mark: null, options: [], clearedWithFormsOwed: { at, byName: "Dana Reyes" } });
     expect(
-      screen.getByText("Training mark cleared by Dana Reyes with course forms unsigned."),
+      screen.getByText(
+        t("trips.roster.trainingMark.clearedWithFormsOwed", {
+          hasName: "yes",
+          name: "Dana Reyes",
+        }),
+        { exact: true },
+      ),
     ).toBeTruthy();
   });
 });
