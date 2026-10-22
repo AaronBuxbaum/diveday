@@ -1028,6 +1028,22 @@ export async function openCantFillASize(page: Page): Promise<void> {
 }
 
 /**
+ * Open every boat's "and N more" under Today's Needs you (`foldBoatRows`).
+ *
+ * A boat with more than six rows shows five and folds its chores behind the
+ * fold; a spec after a row that can fold (a bounced email, "seats open, N want
+ * in") opens it first. Call after the page has rendered Needs you.
+ */
+export async function openTodayBoatFolds(page: Page): Promise<void> {
+  await expect(page.getByRole("heading", { name: "Needs you", level: 2 })).toBeVisible();
+  const folds = page.locator("details").filter({
+    has: page.locator("> summary", { hasText: /^and \d+ more$/ }),
+  });
+  // diveday:allow-e2e-hygiene empty-all: no fold is a boat of six rows or fewer, all shown; the caller then waits for its own row, which fails loudly if it is missing.
+  for (const fold of await folds.all()) await openIfClosed(fold);
+}
+
+/**
  * Native `open` is DOM state React never touches, so check before toggling.
  *
  * `> summary`, not `summary`: these panels contain other disclosures (the

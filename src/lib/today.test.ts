@@ -3,7 +3,6 @@ import type { ReadinessBlocker } from "./readiness";
 import {
   ACTION_KIND_META,
   assembleDaySpine,
-  collapseDiverActions,
   collapseEmailDeliveries,
   collapseOwedRefunds,
   crewClashPhase,
@@ -187,20 +186,6 @@ describe("diverBlockerAction", () => {
     );
   });
 
-  it("says it of a boat's worth of held seats too", () => {
-    const rows = collapseDiverActions(
-      [
-        { ...input, blockers: [blocker("identity_unconfirmed")] },
-        { ...input, bookingId: "b2", personId: "p2", blockers: [blocker("identity_unconfirmed")] },
-      ],
-      "blue-reef",
-      NOW,
-    );
-    expect(rows.map((row) => row.subject)).toEqual([
-      "2 bookings matched on a guess. Confirm who each one is before the waivers go out.",
-    ]);
-  });
-
   it("says a cert gap without the levels, which the record carries", () => {
     const result = diverBlockerAction(
       {
@@ -289,136 +274,6 @@ describe("diverBlockerAction", () => {
   it("never marks a non-payment row for the inline payment control", () => {
     const result = diverBlockerAction(input, "blue-reef", NOW);
     expect(result?.payment).toBeUndefined();
-  });
-});
-
-describe("collapseDiverActions", () => {
-  const diver = (fullName: string, code: ReadinessBlocker["code"], tripId = "t1") => ({
-    bookingId: `b-${fullName}`,
-    personId: `p-${fullName}`,
-    fullName,
-    tripId,
-    tripTitle: "Reef Drift · 8:00 AM",
-    startsAt: hoursFromNow(3),
-    blockers: [blocker(code)],
-  });
-
-  it("turns a boatload of identical blockers into one job", () => {
-    const result = collapseDiverActions(
-      ["Ana Ruiz", "Ben Cole", "Cara Diaz"].map((name) => diver(name, "waiver_not_sent")),
-      "blue-reef",
-      NOW,
-    );
-
-    expect(result).toHaveLength(1);
-    expect(result[0]?.subject).toBe("3 waivers not signed, not sent yet");
-    expect(result[0]?.actionLabel).toBe("Send waivers");
-    // A batch send carries every diver's booking, so one tap sends all three.
-    expect(result[0]?.waiver).toEqual({
-      bookingIds: ["b-Ana Ruiz", "b-Ben Cole", "b-Cara Diaz"],
-    });
-    // The subject is the whole fact; the names are on the roster it opens.
-    expect(result[0]?.detail).toBe("");
-    // The roster is the only screen that shows all of them at once.
-    expect(result[0]?.href).toBe("/shop/blue-reef/trips/t1");
-  });
-
-  it("does not turn a grouped non-waiver blocker into a batch send", () => {
-    const result = collapseDiverActions(
-      ["Ana Ruiz", "Ben Cole"].map((name) => diver(name, "payment_due")),
-      "blue-reef",
-      NOW,
-    );
-    expect(result[0]?.actionLabel).toBe("Open roster");
-    expect(result[0]?.waiver).toBeUndefined();
-    // A collapsed row stands for several bookings, so there is no single one
-    // for the inline payment control to act on — it keeps the roster link.
-    expect(result[0]?.payment).toBeUndefined();
-  });
-
-  it("says a boat of cert gaps as one short sentence (Aaron's example)", () => {
-    const names = ["Ana", "Ben", "Cara", "Dev", "Eli", "Fay", "Gus", "Hal", "Ivy"];
-    const result = collapseDiverActions(
-      names.map((name) => ({
-        ...diver(name, "certification_insufficient"),
-        blockers: [
-          {
-            code: "certification_insufficient" as const,
-            params: {
-              requiredLevel: "advanced_open_water" as const,
-              heldLevel: "open_water" as const,
-            },
-          },
-        ],
-      })),
-      "blue-reef",
-      NOW,
-    );
-
-    expect(result[0]?.subject).toBe("9 divers not certified for this trip");
-    expect(result[0]?.detail).toBe("");
-  });
-
-  it("never folds a diver who is aboard into the ashore group", () => {
-    const result = collapseDiverActions(
-      [
-        diver("Ana", "waiver_not_sent"),
-        diver("Ben", "waiver_not_sent"),
-        { ...diver("Cara", "waiver_not_sent"), aboard: true },
-      ],
-      "blue-reef",
-      NOW,
-    );
-
-    expect(result).toHaveLength(2);
-    const aboard = result.find((entry) => entry.kind === "blocked_aboard");
-    expect(aboard?.subject).toBe("Cara");
-    expect(aboard?.detail).toBe("Waiver not signed, not sent yet");
-    expect(result.find((entry) => entry.kind === "waiver")?.subject).toBe(
-      "2 waivers not signed, not sent yet",
-    );
-  });
-
-  it("keeps a lone diver named, and pointed at their own record", () => {
-    const result = collapseDiverActions(
-      [diver("Ana Ruiz", "certification_pending")],
-      "blue-reef",
-      NOW,
-    );
-
-    expect(result).toHaveLength(1);
-    expect(result[0]?.subject).toBe("Ana Ruiz");
-    expect(result[0]?.href).toBe("/shop/blue-reef/divers/p-Ana Ruiz");
-  });
-
-  it("never merges different blockers, or different boats", () => {
-    const result = collapseDiverActions(
-      [
-        diver("Ana", "waiver_not_sent"),
-        diver("Ben", "waiver_not_sent"),
-        diver("Cara", "payment_due"),
-        diver("Dev", "waiver_not_sent", "t2"),
-        diver("Eli", "waiver_not_sent", "t2"),
-      ],
-      "blue-reef",
-      NOW,
-    );
-
-    expect(result).toHaveLength(3);
-    expect(
-      result.filter((entry) => entry.subject === "2 waivers not signed, not sent yet"),
-    ).toHaveLength(2);
-    expect(result.filter((entry) => entry.subject === "Cara")).toHaveLength(1);
-  });
-
-  it("ignores divers who are already clear", () => {
-    expect(
-      collapseDiverActions(
-        [{ ...diver("Ana", "waiver_not_sent"), blockers: [] }],
-        "blue-reef",
-        NOW,
-      ),
-    ).toEqual([]);
   });
 });
 

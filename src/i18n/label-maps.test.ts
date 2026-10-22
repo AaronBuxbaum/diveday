@@ -129,6 +129,7 @@ import {
 import {
   ACTION_KIND_KEYS,
   blockerActionLabelText,
+  blockerItemText,
   blockerRowText,
   mediaDeletionKindText,
   stuckOperationKindText,
@@ -925,28 +926,23 @@ const CASES: readonly LabelMapCase[] = [
     map: "BLOCKER_ACTION_LABEL_KEYS",
     // The singular verb on a row that fixes one diver in place.
     rows: codeRows(keysOf(BLOCKER_CATEGORY), (locale, code) =>
-      blockerActionLabelText(staffTranslator(locale), code, false),
-    ),
-  },
-  {
-    module: "today-labels.ts",
-    map: "BLOCKER_GROUP_LABEL_KEYS",
-    // The same twenty-two codes in the plural, for a row standing for several
-    // divers — one resolver, one boolean apart, so both maps need a row.
-    rows: codeRows(keysOf(BLOCKER_CATEGORY), (locale, code) =>
-      blockerActionLabelText(staffTranslator(locale), code, true),
+      blockerActionLabelText(staffTranslator(locale), code),
     ),
   },
   {
     module: "today-labels.ts",
     map: "BLOCKER_ROW_KEYS",
-    // A Today row's few words per blocker, for one diver and for a batch.
+    // A Today row's few words per blocker, for one diver.
     rows: codeRows(keysOf(BLOCKER_CATEGORY), (locale, code) =>
-      [1, 9]
-        .map((count) =>
-          blockerRowText(staffTranslator(locale), { code, params: { specialty: "deep" } }, count),
-        )
-        .join(" | "),
+      blockerRowText(staffTranslator(locale), { code, params: { specialty: "deep" } }),
+    ),
+  },
+  {
+    module: "today-labels.ts",
+    map: "BLOCKER_ITEM_KEYS",
+    // A blocker's short name among the items of one diver's row.
+    rows: codeRows(keysOf(BLOCKER_CATEGORY), (locale, code) =>
+      blockerItemText(staffTranslator(locale), { code, params: { specialty: "deep" } }),
     ),
   },
   {

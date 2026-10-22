@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops } from "./schema";
+import { DEMO_SHOP_BRAND_COLOR } from "./seed-identifiers";
 
 const bundled = (file: string) => `/dive-sites/${encodeURIComponent(file)}`;
 
@@ -24,9 +25,9 @@ export const DEMO_SHOP_BRAND = {
   tagline: "Small-boat reef and wreck diving out of Key Largo.",
   // i18n-exempt: shop-authored, as above.
   description:
-    "Two boats, fourteen divers at most, and a crew that has dived these reefs since 1998. We sail twice a day to Molasses, French and Pickles, and to the Spiegel Grove and the Duane when the current allows.",
+    "Two boats, fourteen divers at most, and a crew that knows every mooring on the reef. We sail twice a day to Molasses, French and Pickles, and to the Spiegel Grove and the Duane when the current allows.",
   logoUrl: "/demo-shop/blue-mantis-logo.png",
-  brandColor: "#1d5fa3",
+  brandColor: DEMO_SHOP_BRAND_COLOR,
   brandDisplayFont: "outfit",
   brandHeroImageUrl: bundled("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
   // i18n-exempt: a shop writes its own alt text, like its tagline.
@@ -52,7 +53,8 @@ export const DEMO_SHOP_BRAND = {
  * once per database and never again (`demo-refresh.ts`), so a database seeded
  * before the brand existed would never wear it. Matched on `isDemo` as well as
  * the slug, so it can never touch a real tenant; keyed on a blank logo, so it
- * runs once and leaves the shop alone afterwards.
+ * runs once and leaves the shop alone afterwards. Taking the demo's logo off
+ * brings the whole profile back the next night, tagline and about line too.
  */
 export async function syncDemoShopBrand(db: DbExecutor): Promise<void> {
   await db

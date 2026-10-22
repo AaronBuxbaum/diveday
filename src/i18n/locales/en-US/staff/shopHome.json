@@ -183,6 +183,7 @@
     "needsYouCountCrewAway": "{count, plural, one {# thing} other {# things}}, {away, plural, one {# crew member away} other {# crew members away}}",
     "needsYouCountBeforeNext": "{count, plural, one {# thing} other {# things}} · {before, plural, =0 {none before the {time}} other {# before the {time}}}",
     "deskFoldLabel": "{count, plural, one {# more for other boats and the desk} other {# more for other boats and the desk}}",
+    "boatFoldLabel": "{count, plural, one {and # more} other {and # more}}",
     "needsYouLabel": "Needs you",
     "deskGroupLabel": "The desk",
     "crewTips": "Your share of tips this week: {amount}.",

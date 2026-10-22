@@ -108,7 +108,6 @@ export async function generateMetadata({
       title: `Dive schedule — ${shop.name}`,
       description,
       url: publicSchedulePath(shop.slug),
-      ...(shop.logoUrl ? { images: [{ url: shop.logoUrl, alt: `${shop.name} logo` }] } : {}),
     },
   };
 }

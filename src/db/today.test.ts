@@ -86,34 +86,33 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(departure?.booked).toBe(11);
   });
 
-  it("collapses a boat's identical blockers so one busy trip cannot bury the rest", async () => {
+  // Readiness is a safety surface (UX delight sheet 2026-10-22, item 4):
+  // naming each diver once may drop nobody the manifest calls blocked, on the
+  // boat that carries the most of them.
+  it("names every blocked diver on a busy boat exactly once", async () => {
     const { db, shop } = ctx;
-
-    // Today's reef trip is mostly ready these days (only one straggler left);
-    // the wreck charter five days out is the boat still carrying a pile of
-    // divers who share the same blocker (short of the AOW + Deep + nitrox the
-    // charter requires) — exactly the "one busy trip" scenario this collapses.
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const wreck = trips.find((trip) => trip.title === "Wreck Trip — Spiegel Grove");
     if (!wreck) throw new Error("demo wreck trip missing");
     const manifest = await getTripManifest(db, shop.id, wreck.id);
     if (!manifest) throw new Error("expected wreck manifest");
-    const wreckBlocked = manifest.divers.filter(
-      (diver) => diver.readiness.status !== "ready",
-    ).length;
+    const blocked = manifest.divers
+      .filter((diver) => diver.readiness.status === "blocked")
+      .map((diver) => diver.fullName)
+      .sort();
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    // Scoped to the wreck boat: the shop has other trips on the books, and
-    // their blockers are their own rows. What must not happen is this boat's
-    // blocked divers each claiming a line of the queue.
-    const blockerRows = work.actions.filter((action) =>
-      action.id.startsWith(`blockers:${wreck.id}:`),
-    );
+    const named = work.actions
+      .filter((action) => action.departure?.tripId === wreck.id && action.diver)
+      .map((action) => action.subject);
 
-    expect(wreckBlocked).toBeGreaterThan(1);
-    expect(blockerRows.length).toBeGreaterThan(0);
-    expect(blockerRows.length).toBeLessThan(wreckBlocked);
-    expect(new Set(blockerRows.map((action) => action.id)).size).toBe(blockerRows.length);
+    expect(blocked.length).toBeGreaterThan(1);
+    // Once each: no diver is two rows on one boat.
+    expect(new Set(named).size).toBe(named.length);
+    // Every blocked diver is named; the rest named are divers with other gaps.
+    expect(blocked.filter((name) => !named.includes(name))).toEqual([]);
+    // No count row stands in for them.
+    expect(work.actions.some((action) => action.id.startsWith(`blockers:${wreck.id}`))).toBe(false);
   });
 
   it("drops a diver out of the queue once their evidence clears", async () => {

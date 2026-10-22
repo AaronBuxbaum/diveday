@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
-import type { TodayAction } from "@/lib/today";
+import { oneRowPerDiver, type TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
 import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
@@ -14,7 +14,7 @@ import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-ac
 import { getTodayWork } from "./today";
 import { getDepartureNeeds } from "./today-departure-needs";
 import { pushDepartureRows } from "./today-departure-rows";
-import { rowsContext } from "./today-rows-test-fixtures";
+import { NOW, rowsContext, rowsNaming } from "./today-rows-test-fixtures";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { listStaff } from "./trips-crew";
 import { getTripOverview } from "./trips-overview";
@@ -35,6 +35,113 @@ describe("pushDepartureRows", () => {
     const actions: TodayAction[] = [];
     pushDepartureRows(actions, rowsContext(emptyWave));
     expect(actions).toEqual([]);
+  });
+
+  // UX delight sheet 2026-10-22, item 4: "3 people have no emergency contact"
+  // sent the desk to the roster to find out who.
+  const trip = {
+    id: "t1",
+    title: "Reef Drift",
+    startsAt: new Date(NOW.getTime() + 2 * 3_600_000),
+    sellableCapacity: 12,
+    booked: 6,
+  };
+  const ana = { personId: "p-ana", fullName: "Ana Ruiz" };
+  const ben = { personId: "p-ben", fullName: "Ben Cole" };
+  const cara = { personId: "p-cara", fullName: "Cara Diaz" };
+  const pushed = (wave: Record<string, unknown>, overrides = {}) => {
+    const actions: TodayAction[] = [];
+    pushDepartureRows(
+      actions,
+      rowsContext({ ...emptyWave, ...wave }, { inWindow: [trip] as never, ...overrides }),
+    );
+    // The boat's crew gap is another builder's row; these tests read the rows about people and orders.
+    return actions.filter((action) => action.kind !== "uncrewed_departure");
+  };
+
+  it("names each diver a boat's work counts, one row per gap, and keeps orders a count", () => {
+    const actions = pushed({
+      boatWork: new Map([
+        [
+          "t1",
+          {
+            missingSize: [ana],
+            kitUnasked: [ben],
+            ungatedNitrox: [ana],
+            missingContact: [ana, cara],
+            openOrders: 2,
+          },
+        ],
+      ]),
+    });
+    expect(
+      actions.map((action) => [action.kind, action.subject, action.diver?.items ?? null]),
+    ).toEqual([
+      ["dive_prep", "Ana Ruiz", ["rental size"]],
+      ["dive_prep", "Ben Cole", ["kit"]],
+      ["nitrox_gate", "Ana Ruiz", ["nitrox certification"]],
+      ["emergency_contact", "Ana Ruiz", ["emergency contact"]],
+      ["emergency_contact", "Cara Diaz", ["emergency contact"]],
+      ["payment", "Reef Drift", null],
+    ]);
+    const prep = actions[0];
+    expect(prep?.detail).toBe("Missing a rental size.");
+    expect(prep?.actionLabel).toBe("Open prep list");
+    // The packing list reads on the departure (ADR 20260919-one-idea, slice 23c).
+    expect(prep?.href).toBe("/shop/blue-mantis/trips/t1/prep#packing-list");
+    expect(actions[1]?.detail).toBe("Not asked about kit.");
+    expect(actions[3]?.href).toBe("/shop/blue-mantis/trips/t1");
+    // Orders cannot name a person: one row about the boat.
+    expect(actions[5]?.aboutDeparture).toBe(true);
+    expect(actions[5]?.detail).toBe("2 orders awaiting payment.");
+
+    // Then Ana is one row with everything open for her, the warning first.
+    const folded = oneRowPerDiver(actions);
+    expect(folded.filter((action) => action.subject === "Ana Ruiz")).toHaveLength(1);
+    expect(folded.find((action) => action.subject === "Ana Ruiz")?.detail).toBe(
+      "nitrox certification, rental size, emergency contact",
+    );
+    expect(folded).toHaveLength(4);
+  });
+
+  it("names every blocked diver and nobody who is ready, in their own row", () => {
+    const seat = (id: string, fullName: string, blockers: readonly { code: string }[]) => ({
+      booking: { id: `b-${id}` },
+      person: { id: `p-${id}`, fullName },
+      readiness: { status: blockers.length > 0 ? "blocked" : "ready", blockers },
+    });
+    const actions = pushed(
+      {},
+      {
+        readinessByTrip: new Map([
+          [
+            "t1",
+            [
+              seat("ana", "Ana Ruiz", [{ code: "waiver_not_sent" }]),
+              seat("ben", "Ben Cole", [{ code: "waiver_not_sent" }]),
+              seat("dev", "Dev Shah", []),
+              seat("cara", "Cara Diaz", [
+                { code: "waiver_pending" },
+                { code: "certification_missing" },
+                { code: "medical_review" },
+                { code: "payment_due" },
+                { code: "identity_unconfirmed" },
+              ]),
+            ],
+          ],
+        ]) as never,
+      },
+    );
+    expect(actions.filter((action) => action.diver).map((action) => action.subject)).toEqual([
+      "Ana Ruiz",
+      "Ben Cole",
+      "Cara Diaz",
+    ]);
+    // Ana and Ben share an unsent waiver: one tap above them sends both.
+    const batch = actions.find((action) => !action.diver);
+    expect(batch?.detail).toBe("2 waivers not signed, not sent yet");
+    expect(batch?.waiver).toEqual({ bookingIds: ["b-ana", "b-ben"] });
+    expect(actions.find((action) => action.subject === "Cara Diaz")?.diver?.items).toHaveLength(5);
   });
 });
 
@@ -317,8 +424,10 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     });
     expect(requested.ok).toBe(true);
 
+    const nitroxRows = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
+      rowsNaming(work.actions, reef.id, "nitrox certification");
     const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(before.actions.some((action) => action.id === `nitrox:${reef.id}`)).toBe(false);
+    expect(nitroxRows(before)).toEqual([]);
 
     // The card is pulled (archived) after the request was already accepted.
     await db
@@ -332,12 +441,9 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       );
 
     const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const nitroxAction = after.actions.find((action) => action.id === `nitrox:${reef.id}`);
-    // One diver is a row about that person, by name, never "1 diver wants…".
-    expect(nitroxAction?.subject).toBe("Priya Sharma");
-    expect(nitroxAction?.detail).toBe(
-      "Wants nitrox, gets air unless a card is verified before the boat leaves.",
-    );
+    // A row about that person, by name, never "1 diver wants…"; folded with
+    // anything else open for her on this boat.
+    expect(nitroxRows(after).map((action) => action.subject)).toEqual(["Priya Sharma"]);
   });
 
   it("nudges staff about missing emergency contacts on a near boat, and clears once filled", async () => {
@@ -355,12 +461,23 @@ describe("departure rows on the queue, read through getTodayWork", () => {
         .where(eq(people.id, entry.person.id));
     }
 
+    const contactRows = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
+      rowsNaming(work.actions, reef.id, "emergency contact");
     const flagged = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const contactAction = flagged.actions.find((action) => action.id === `contact:${reef.id}`);
-    expect(contactAction?.kind).toBe("emergency_contact");
-    expect(contactAction?.detail).toContain("no emergency contact");
-    // Never a boarding blocker; it points at the guests roster to settle at the counter.
-    expect(contactAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
+    // Every diver on the boat, by name and once each (UX delight sheet
+    // 2026-10-22, item 4), never "3 people have no emergency contact".
+    expect(
+      contactRows(flagged)
+        .map((action) => action.subject)
+        .sort(),
+    ).toEqual(roster.map((entry) => entry.person.fullName).sort());
+    // Never a boarding blocker: a diver whose only gap it is gets the plain
+    // contact row, pointed at the roster to settle at the counter.
+    const contactOnly = contactRows(flagged).find((action) => action.kind === "emergency_contact");
+    if (contactOnly) {
+      expect(contactOnly.detail).toBe("No emergency contact.");
+      expect(contactOnly.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
+    }
 
     // A name with no phone is unreachable in an incident — still flagged.
     for (const entry of roster) {
@@ -370,7 +487,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
         .where(eq(people.id, entry.person.id));
     }
     const nameOnly = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(nameOnly.actions.some((action) => action.id === `contact:${reef.id}`)).toBe(true);
+    expect(contactRows(nameOnly)).toHaveLength(roster.length);
 
     // A contact is only "on file" with a reachable number, so fill both.
     for (const entry of roster) {
@@ -380,7 +497,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
         .where(eq(people.id, entry.person.id));
     }
     const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(cleared.actions.some((action) => action.id === `contact:${reef.id}`)).toBe(false);
+    expect(contactRows(cleared)).toEqual([]);
   });
 
   // Third review, item 4, then fourth review, item 36: Today listed seven rows
@@ -416,7 +533,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(needs?.map((action) => action.detail)).toEqual(onToday.map((action) => action.detail));
     // More than the boat's work: the contacts row is there, and so is every
     // row the boat's work never counted.
-    expect(needs?.some((action) => action.id === `contact:${reef.id}`)).toBe(true);
+    expect(rowsNaming(needs ?? [], reef.id, "emergency contact").length).toBeGreaterThan(0);
     expect(needs?.some((action) => !/^(prep|nitrox|contact|orders):/.test(action.id))).toBe(true);
   });
 

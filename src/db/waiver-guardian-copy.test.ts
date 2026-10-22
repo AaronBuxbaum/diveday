@@ -43,12 +43,22 @@ async function context() {
 
 /**
  * The rendered bytes less the shop's own logo, the one `http` a branded shop's
- * header carries: a public image on DiveDay's own host, holding no token and
- * naming nobody. Every other `http` in the message is still refused.
+ * header carries: one `<img>` on DiveDay's own host, never in the subject or
+ * the text part, and never carrying a query or fragment a token could ride.
+ * Every other `http` in the message is still refused.
  */
-function withoutShopLogo(body: string, sent: { sender?: { logoUrl?: string } }): string {
+function withoutShopLogo(
+  rendered: { subject: string; text: string; html: string },
+  sent: { sender?: { logoUrl?: string } },
+): string {
   const logo = sent.sender?.logoUrl;
-  return logo ? body.replaceAll(escapeHtml(logo), "").replaceAll(logo, "") : body;
+  let html = rendered.html;
+  if (logo) {
+    expect(logo).not.toMatch(/[?#]/);
+    expect(`${rendered.subject}\n${rendered.text}`).not.toContain(logo);
+    html = html.replace(`<img src="${escapeHtml(logo)}"`, "<img");
+  }
+  return `${rendered.subject}\n${rendered.text}\n${html}`;
 }
 
 async function signOnline(
@@ -144,7 +154,7 @@ describe("the guardian's copy of a signed release", () => {
     // **The message itself.** Rendered rather than inspected as a payload,
     // because the thing being promised is what lands in a parent's inbox.
     const rendered = messageFor(sent);
-    const body = withoutShopLogo(`${rendered.subject}\n${rendered.text}\n${rendered.html}`, sent);
+    const body = withoutShopLogo(rendered, sent);
     expect(body).not.toContain("http");
     expect(body).not.toContain("<a ");
     expect(rendered.text).toContain(ctx.person.fullName);
@@ -181,7 +191,7 @@ describe("the guardian's copy of a signed release", () => {
     expect(sent.medicalReviewPending).toBe(true);
 
     const rendered = messageFor(sent);
-    const body = withoutShopLogo(`${rendered.subject}\n${rendered.text}\n${rendered.html}`, sent);
+    const body = withoutShopLogo(rendered, sent);
     expect(rendered.text).toContain("physician");
     expect(body).not.toContain("nothing to do");
     // Still a courtesy copy: no link, no token, and no medical answer naming
