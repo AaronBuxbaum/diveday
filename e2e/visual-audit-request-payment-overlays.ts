@@ -95,6 +95,10 @@ export function registerRequestPaymentOverlayAuditCaptures(
         .click();
       await page.waitForURL(/\/divers\/new/);
       await page.getByLabel("Full name").fill(NAMESAKE);
+      // This trip hand-entry door requires contact details before its on-file prompt.
+      await page
+        .getByLabel(staffCopy("divers.page.emailLabel"), { exact: true })
+        .fill("jordan.booking.review@example.com");
       await page.getByRole("button", { name: "Add to trip" }).click();
       await page.getByRole("heading", { name: /^Is this the same Jordan Alexanderson/ }).waitFor();
       await page.getByRole("button", { name: NAMESAKE, exact: true }).first().click();
@@ -139,7 +143,10 @@ export function registerRequestPaymentOverlayAuditCaptures(
       const composer = page.locator("#new-code");
       await openIfClosed(composer);
       await composer
-        .getByRole("textbox", { name: staffCopy("promos.fields.code"), exact: true })
+        .getByRole("textbox", {
+          name: `${staffCopy("promos.fields.code")} ${staffCopy("promos.fields.codeHint")}`,
+          exact: true,
+        })
         .fill("REEFREVIEW15");
       await composer
         .getByRole("spinbutton", { name: staffCopy("promos.fields.discount"), exact: true })
