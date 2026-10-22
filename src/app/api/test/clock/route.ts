@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getDb } from "@/db/client";
+import { bringDemoBoatsAtSeaHome } from "@/db/seed-boat-at-sea";
 import { nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 
@@ -17,6 +19,9 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * docblock on why the departures move instead). A spec that moved it would
  * move it for the rest of the run. The simulation owns its server outright,
  * which is the only reason this is safe there.
+ *
+ * Moving it past the demo's boat at sea brings her home
+ * (`bringDemoBoatsAtSeaHome`), the one write this route makes.
  *
  * Gated like every other `/api/test/*` route (`e2eTestRouteAuthorized`), and
  * the clock module refuses the override outright whenever a real
@@ -46,5 +51,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "clock_would_move_backwards" }, { status: 409 });
   }
   process.env.DIVEDAY_CLOCK = new Date(requested).toISOString();
+  // A clock moved past the demo's boat at sea brings her home the way the
+  // nightly refresh does, rather than leaving dive 2's count open hours after
+  // she was due (visual triage of PR #2918, item 1a). A boat still out by the
+  // new clock is left at sea.
+  await bringDemoBoatsAtSeaHome(await getDb(), nowDate());
   return NextResponse.json({ now: nowDate().toISOString() });
 }

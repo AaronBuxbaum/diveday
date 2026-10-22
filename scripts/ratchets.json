@@ -232,7 +232,7 @@
     "e2e/departure-desk.spec.ts": 2,
     "e2e/departure-log.spec.ts": 1,
     "e2e/desk-ping.spec.ts": 1,
-    "e2e/dive-sites.spec.ts": 5,
+    "e2e/dive-sites.spec.ts": 3,
     "e2e/export.spec.ts": 2,
     "e2e/find-my-booking.spec.ts": 2,
     "e2e/gear-fit-and-age.spec.ts": 2,

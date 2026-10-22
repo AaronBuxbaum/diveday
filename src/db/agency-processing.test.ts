@@ -5,6 +5,7 @@ import { fileScopedShopContext } from "@/test/db";
 import {
   CARD_PROCESSING_SINCE,
   cardIsLate,
+  cardProcessingSince,
   issuedCardsForTrip,
   listCardsToProcess,
   setCardProcessed,
@@ -264,9 +265,21 @@ describe("agency processing", () => {
     const recent = { id: "recent", issuedAt: new Date(since + 10 * DAY_MS) };
     expect(cardIsLate(old.issuedAt, now)).toBe(false);
     expect(cardIsLate(atCut.issuedAt, now)).toBe(true);
-    expect(splitCardsToProcess([old, atCut, recent])).toEqual({
+    expect(splitCardsToProcess([old, atCut, recent], now)).toEqual({
       current: [atCut, recent],
       earlier: [old],
     });
+  });
+
+  it("takes the cut from the clock: never a day ahead of it (visual triage of PR #2918, 1d)", () => {
+    const since = CARD_PROCESSING_SINCE.getTime();
+    expect(cardProcessingSince(new Date(since + DAY_MS))).toEqual(CARD_PROCESSING_SINCE);
+    expect(cardProcessingSince(new Date(since))).toEqual(CARD_PROCESSING_SINCE);
+    const before = new Date(since - 90 * DAY_MS);
+    expect(cardProcessingSince(before)).toBeNull();
+    const old = { id: "old", issuedAt: new Date(before.getTime() - 400 * DAY_MS) };
+    expect(splitCardsToProcess([old], before)).toEqual({ current: [old], earlier: [] });
+    expect(cardIsLate(old.issuedAt, before)).toBe(true);
+    expect(cardIsLate(new Date(before.getTime() - 9 * DAY_MS), before)).toBe(false);
   });
 });
