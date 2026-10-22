@@ -4,6 +4,7 @@ import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { SkipLink } from "@/components/SkipLink";
+import { shopAssistsAvailable } from "@/db/assist-shop";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -39,6 +40,7 @@ import {
   offlineManifestManagerCopy,
 } from "./_components/manifest-copy";
 import { readManifestPage } from "./_components/manifest-reads";
+import type { ManifestSearchParams } from "./_components/manifest-search-params";
 import { manifestSpecies } from "./_components/manifest-species";
 import { offlineManifestPayload } from "./_components/offline-payload";
 import { openCheckpoint } from "./_components/open-checkpoint";
@@ -73,27 +75,6 @@ export const instant = true;
 
 export const metadata: Metadata = {
   title: "Boat manifest — DiveDay",
-};
-
-/** What the manifest reads off its URL. */
-type ManifestSearchParams = {
-  checkpoint?: string;
-  buddyError?: string;
-  buddies?: string;
-  /**
-   * **Not part of this route's URL contract.** The paper day
-   * (`/shop/[shopSlug]/print`) composes this page once per departure of
-   * today, and duplicate element ids there silently point every
-   * `aria-labelledby` and `#roll-call-list` jump at the *first* departure's
-   * section (`src/lib/element-id.ts`). A page component's props are pinned
-   * to Next's `PageProps`, so an extra prop is a build error and this is the
-   * one channel a composing surface has.
-   *
-   * Narrowed by `uuidParam` below rather than trusted: anything that is not
-   * a departure id is dropped, so a hand-typed `?idPrefix=` on this route
-   * changes nothing.
-   */
-  idPrefix?: string;
 };
 
 export default async function TripManifestPage({
@@ -173,6 +154,7 @@ export default async function TripManifestPage({
     shopPickedSpecies,
     catalogSpecies,
     speciesBySite,
+    canAssist: checkpoint !== "departure" && (await shopAssistsAvailable(db, shop.id)),
     t,
   });
   const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);

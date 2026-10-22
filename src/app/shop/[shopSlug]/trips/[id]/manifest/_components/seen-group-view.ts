@@ -6,6 +6,7 @@ import type { RollCallCheckpoint } from "@/lib/manifests";
 import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
 import { hasSailed } from "@/lib/trips";
 import { deleteSightingAction, type ManifestActionContext, recordSightingAction } from "../actions";
+import { matchSightingsAction } from "../sightings-assist-action";
 import type { ManifestSpecies } from "./manifest-species";
 
 /**
@@ -24,6 +25,7 @@ export function seenGroupView({
   shopPickedSpecies,
   catalogSpecies,
   speciesBySite,
+  canAssist = false,
   t,
 }: {
   checkpoint: RollCallCheckpoint;
@@ -38,6 +40,8 @@ export function seenGroupView({
   shopPickedSpecies: Awaited<ReturnType<typeof listShopPickedSpecies>>;
   catalogSpecies: readonly ManifestSpecies[];
   speciesBySite: Record<string, readonly ManifestSpecies[]>;
+  /** Claude's "say what you saw" (the `sightings` assist) is available. */
+  canAssist?: boolean;
   t: StaffTranslator;
 }) {
   // **Which reef these taps attach to.**
@@ -125,5 +129,24 @@ export function seenGroupView({
     },
     recordAction: boundRecordSightingAction,
     deleteAction: boundDeleteSightingAction,
+    match:
+      canAssist && sightingContext && seenChips.length > 0
+        ? {
+            action: matchSightingsAction.bind(
+              null,
+              sightingContext,
+              seenChips.map((chip) => chip.slug),
+            ),
+            copy: {
+              label: t("deskAssists.sightings.label"),
+              match: t("deskAssists.sightings.match"),
+              matching: t("deskAssists.sightings.matching"),
+              add: t("deskAssists.sightings.add"),
+              adding: t("deskAssists.sightings.adding"),
+              none: t("deskAssists.sightings.none"),
+              proposed: t.raw("deskAssists.sightings.proposed"),
+            },
+          }
+        : undefined,
   };
 }
