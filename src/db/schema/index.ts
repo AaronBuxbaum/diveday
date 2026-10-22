@@ -28,6 +28,7 @@ export * from "./incidents";
 export * from "./integrations";
 export * from "./notifications";
 export * from "./payments";
+export * from "./retention";
 export * from "./reviews";
 export * from "./trips";
 export * from "./waivers";
