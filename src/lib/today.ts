@@ -987,6 +987,12 @@ export type TodayAction = {
    * one-tap waiver send): it is not counted again as a job.
    */
   batch?: true;
+  /**
+   * A tone louder than the kind's own, when a merged diver row folds in a row
+   * that was (`oneRowPerDiver`): a payment lead with an ungated nitrox request
+   * reads as the warning the nitrox row was (#2549). Read through `rowTone`.
+   */
+  tone?: "danger" | "warning";
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };
@@ -1439,11 +1445,17 @@ function diverRow(rows: readonly TodayAction[], t: StaffTranslator): TodayAction
       [lead, ...sorted.filter((row) => row !== lead)].flatMap((row) => row.diver?.items ?? []),
     ),
   ];
-  if (items.length <= 1) return lead;
+  // The row is as loud as the loudest row it stands for.
+  const loudest = sorted.reduce((worst, row) => (toneRank(row) < toneRank(worst) ? row : worst));
+  const loudestTone = rowTone(loudest);
+  const louder =
+    toneRank(loudest) < toneRank(lead) && loudestTone !== "neutral" ? { tone: loudestTone } : {};
+  if (items.length <= 1) return { ...lead, ...louder };
   const diver = { ...lead.diver, items };
-  if (!lead.diver.readiness) return { ...lead, detail: diverItemsText(items), diver };
+  if (!lead.diver.readiness) return { ...lead, ...louder, detail: diverItemsText(items), diver };
   return {
     ...lead,
+    ...louder,
     detail: diverAlsoText(t, lead.detail, items.slice(1)),
     diver,
   };
@@ -1770,8 +1782,13 @@ const TONE_RANK: Record<"danger" | "warning" | "neutral", number> = {
   neutral: 2,
 };
 
+/** A row's tone: its kind's, unless a merged row carries a louder one (`TodayAction.tone`). */
+export function rowTone(action: TodayAction): "danger" | "warning" | "neutral" {
+  return action.tone ?? ACTION_KIND_META[action.kind].tone;
+}
+
 function toneRank(action: TodayAction): number {
-  return TONE_RANK[ACTION_KIND_META[action.kind].tone];
+  return TONE_RANK[rowTone(action)];
 }
 
 /**
@@ -2134,7 +2151,7 @@ export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReadi
   const crewsToday = spine.stations.some((station) => crewed.has(station.tripId));
   const leads = (action: TodayAction) =>
     !crewsToday ||
-    ACTION_KIND_META[action.kind].tone === "danger" ||
+    rowTone(action) === "danger" ||
     (action.departure != null && crewed.has(action.departure.tripId)) ||
     (lens.readerPersonId != null && action.staffPersonId === lens.readerPersonId);
   const lead = all.filter(leads);
@@ -2297,8 +2314,7 @@ export function foldBoatRows(rows: readonly TodayAction[]): {
   // Danger and readiness rows are kept wherever they sit: a fold that hid one
   // would be the grouping hiding a diver who cannot board (layer 3 auditor
   // review, note 1). Only boat work and the boat's other chores fold.
-  const danger = (row: TodayAction) =>
-    ACTION_KIND_META[row.kind].tone === "danger" || READINESS_KINDS.has(row.kind);
+  const danger = (row: TodayAction) => rowTone(row) === "danger" || READINESS_KINDS.has(row.kind);
   const shown = rows.filter((row, index) => index < BOAT_ROWS_SHOWN || danger(row));
   const more = rows.filter((row, index) => index >= BOAT_ROWS_SHOWN && !danger(row));
   return more.length <= 1 ? { shown: [...rows], more: [] } : { shown, more };

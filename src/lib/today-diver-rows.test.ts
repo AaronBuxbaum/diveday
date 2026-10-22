@@ -7,6 +7,8 @@ import {
   filterActionsForRoles,
   foldBoatRows,
   oneRowPerDiver,
+  rowTone,
+  sortStationRows,
   type TodayAction,
   urgencyFor,
   waiverBatchActions,
@@ -467,6 +469,32 @@ describe("a merged row keeps what the blocker says and does", () => {
     expect(row?.detail).toBe(
       "Un médico no lo autorizó a bucear; también exención, contacto de emergencia",
     );
+  });
+
+  // Auditor re-review N1: nitrox asked for with no verified card is a warning
+  // (#2549); folded under a neutral payment lead it went grey.
+  it("keeps the worst tone of the rows it folds together, and ranks and folds by it", () => {
+    const nitrox = action({
+      id: "nitrox_gate:t1:p-Cara",
+      kind: "nitrox_gate",
+      subject: "Cara",
+      departure: reef,
+      detail: "nitrox sentence",
+      diver: { personId: "p-Cara", items: ["nitrox certification"] },
+      dueAt: hoursFromNow(3),
+    });
+    const [row] = oneRowPerDiver([
+      ...blockedDiverActions([input("Cara", ["payment_due"])], "blue-reef", NOW),
+      nitrox,
+    ]);
+    expect(row?.kind).toBe("payment");
+    expect(row?.payment).toEqual({ bookingId: "b-Cara" });
+    expect(row?.detail).toBe("Payment due; also nitrox certification");
+    if (!row) throw new Error("expected a row");
+    expect(rowTone(row)).toBe("warning");
+    // A neutral prep row ranks below it, as it ranked below the nitrox row on main.
+    const prep = gap("Dev", "dive_prep", "rental size");
+    expect(sortStationRows([prep, row])[0]).toBe(row);
   });
 
   it("never folds a readiness blocker of any tone behind and N more (auditor note 1)", () => {

@@ -37,12 +37,13 @@ import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from 
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import type { StaffDestinationId } from "@/lib/staff-destinations";
 import {
-  ACTION_KIND_META,
+  type ACTION_KIND_META,
   type DaySpine as DaySpineData,
   type DayStation as DayStationData,
   type FactOfScale,
   type NeedsYouReading,
   readNeedsYou,
+  rowTone,
   sortStationRows,
   spineJobCount,
   type TodayAction,
@@ -371,9 +372,8 @@ function StationRow({
       action.helpRequest ||
       action.rentalFit,
   );
-  // The person, then the sentence, in one line (`SpineRow`). Each half keeps
-  // its own element so a reader (and a test) can find either by its own words.
-  const tone = ACTION_KIND_META[action.kind].tone;
+  // The person, then the sentence, in one line (`SpineRow`); each half its own element.
+  const tone = rowTone(action);
   // A row whose subject already is the whole fact carries no detail at all
   // (the desk's two counting rows), so neither the separator nor the second
   // span renders — a dangling " · " is the shape of a sentence that was
