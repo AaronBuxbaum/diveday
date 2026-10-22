@@ -83,17 +83,18 @@ it("refuses receipts after a concurrent HEAD/tree/working-file change", () => {
     expect(verificationInputsStable({ ...initial, status: "", ...changed }, initial)).toBe(false);
 });
 /**
- * Whether `pid` is still running. A killed child whose parent exited is a zombie until init reaps
- * it, and a container whose PID 1 is not an init never does: signal 0 still reaches a zombie.
+ * Whether `pid` still runs. A killed child whose parent has gone is re-parented to
+ * PID 1, and a container whose PID 1 never reaps leaves it a zombie: dead, yet
+ * still answering signal 0. Its state letter in /proc says which.
  */
-function running(pid) {
+function isAlive(pid) {
   try {
     process.kill(pid, 0);
   } catch {
     return false;
   }
   try {
-    return readFileSync(`/proc/${pid}/stat`, "utf8").split(") ").at(-1)[0] !== "Z";
+    return readFileSync(`/proc/${pid}/stat`, "utf8").split(") ")[1]?.[0] !== "Z";
   } catch {
     return true;
   }
@@ -115,7 +116,7 @@ it("reaps owned detached stages with quote-bearing paths when their parent recei
     });
     expect(result.status).toBe(143);
     pid = Number(readFileSync(pidFile, "utf8"));
-    expect(running(pid)).toBe(false);
+    expect(isAlive(pid)).toBe(false);
   } finally {
     if (pid) {
       try {
