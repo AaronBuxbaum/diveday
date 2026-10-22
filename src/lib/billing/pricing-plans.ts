@@ -7,12 +7,12 @@ import { earlyAccessPriceAmount } from "@/lib/marketing";
  * took through DiveDay that month, optionally on top of a smaller monthly base
  * fee.
  *
- * Pure. The numbers come from the `pricing` flag (`./pricing-flags.ts`, read
- * from AWS Parameter Store by `./pricing-flags-reader.ts`); this module decides
- * which plan a shop is on and what it owes from what is stored, the flag and
- * the shop's id. The pages, the cron and the scripts only ask. With the flag
- * absent, unreadable or invalid the numbers are `DEFAULT_PRICING_CONFIG`: the
- * test off and the flat price every shop pays today.
+ * Pure. The numbers come from the `PRICING_*` environment variables, read by
+ * `@/lib/pricing-flags`; this module decides which plan a shop is on and what
+ * it owes from what is stored, those numbers and the shop's id. The pages, the
+ * cron and the scripts only ask. With the variables unset or any of them
+ * invalid the numbers are `DEFAULT_PRICING_CONFIG`: the test off and the flat
+ * price every shop pays today.
  */
 
 export const PRICING_PLANS = ["flat_monthly", "percent_of_volume"] as const;
@@ -24,12 +24,12 @@ export type PricingPlanSource = (typeof PRICING_PLAN_SOURCES)[number];
 
 /**
  * Today's flat monthly amount in cents, derived from the one published price
- * (`earlyAccessPrice`, H-12's single source), never restated. The flag's
+ * (`earlyAccessPrice`, H-12's single source), never restated. The config's
  * default, and the amount the existing `BILLING_STRIPE_PRICE_ID` charges.
  */
 export const FLAT_MONTHLY_CENTS = Math.round(Number(earlyAccessPriceAmount) * 100);
 
-/** The bounds every number in the flag (and every per-shop deal) is held to. */
+/** The bounds every number in the config (and every per-shop deal) is held to. */
 export const PRICING_BOUNDS = {
   monthlyCents: { min: 0, max: 100_000 },
   basisPoints: { min: 0, max: 1_000 },
@@ -65,7 +65,7 @@ export function isPricingPlan(value: unknown): value is PricingPlan {
   return typeof value === "string" && (PRICING_PLANS as readonly string[]).includes(value);
 }
 
-/** The flag's numbers for one plan. */
+/** The config's numbers for one plan. */
 export function termsFor(plan: PricingPlan, config: PricingConfig): PlanTerms {
   return plan === "flat_monthly"
     ? { plan, monthlyCents: config.flat.monthlyCents, basisPoints: 0 }
@@ -101,7 +101,7 @@ export function pricingPlanForKey(key: string, split: number): PricingPlan {
   return pricingBucket(key) < split ? "percent_of_volume" : "flat_monthly";
 }
 
-/** A random arm for a new visitor, at the flag's split. */
+/** A random arm for a new visitor, at the config's split. */
 export function randomPricingPlan(split: number, random: () => number = Math.random): PricingPlan {
   return Math.floor(random() * 100) < split ? "percent_of_volume" : "flat_monthly";
 }
@@ -122,11 +122,11 @@ export type StoredPricing = {
  *    snapshot, or, with none, today's flat price, because a subscription with
  *    no snapshot was opened before the test existed on the one price there was.
  * 2. **An override is a deal made by hand** and stands whether or not the test
- *    is on: its snapshot, or the flag's numbers for that plan.
- * 3. **Test off**: the flat plan at the flag's flat fee. A stored arm is kept,
+ *    is on: its snapshot, or the config's numbers for that plan.
+ * 3. **Test off**: the flat plan at the config's flat fee. A stored arm is kept,
  *    so turning the test back on restores it.
- * 4. The stored arm, or the shop id's bucket at the flag's split, on the
- *    flag's numbers for that plan.
+ * 4. The stored arm, or the shop id's bucket at the config's split, on the
+ *    config's numbers for that plan.
  */
 export function effectivePricing(input: {
   stored: StoredPricing | null;
@@ -189,7 +189,7 @@ const PLAN_WORDS: Record<string, PricingPlan | null> = {
 
 /**
  * `pnpm billing:pricing-plan <shop-slug> <flat|percent|auto> [--monthly-cents N]
- * [--basis-points N]`, read. A deal's numbers are held to the flag's bounds;
+ * [--basis-points N]`, read. A deal's numbers are held to the config's bounds;
  * `auto` takes none, and `--basis-points` only goes with `percent`.
  */
 export function parsePricingPlanArgs(
@@ -203,13 +203,13 @@ export function parsePricingPlanArgs(
   let monthlyCents: number | null = null;
   let basisPoints: number | null = null;
   for (let index = 0; index < rest.length; index += 2) {
-    const flag = rest[index];
+    const option = rest[index];
     const raw = rest[index + 1];
     const value = raw !== undefined && /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
-    if (flag === "--monthly-cents" && monthlyCents === null) {
+    if (option === "--monthly-cents" && monthlyCents === null) {
       if (!withinBounds(value, "monthlyCents")) return { ok: false, error: "monthly_cents" };
       monthlyCents = value;
-    } else if (flag === "--basis-points" && basisPoints === null) {
+    } else if (option === "--basis-points" && basisPoints === null) {
       if (!withinBounds(value, "basisPoints")) return { ok: false, error: "basis_points" };
       basisPoints = value;
     } else {

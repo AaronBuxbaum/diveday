@@ -1,8 +1,30 @@
 import type { DiverTranslator } from "@/i18n/messages";
-import { planCopyParams } from "@/lib/billing/plan-display";
+import { planCopyParams, planMoney, planPercent } from "@/lib/billing/plan-display";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
-import { continuityPromise, fullShopExport } from "@/lib/marketing";
+import { continuityPromise, earlyAccessPrice, fullShopExport } from "@/lib/marketing";
 import { ONBOARDING_EMAIL, SUPPORT_EMAIL } from "@/lib/platform-mail";
+
+/**
+ * The pricing card's figure and cadence for an offer (ADR
+ * 20261022-pricing-ab-test): the flat arm's canonical price and cadence, or
+ * the percent arm's rate with its base-fee line. Beside the page for the
+ * same baseline reason as the FAQ.
+ */
+export function offerFigure(t: DiverTranslator, offer: PlanTerms, locale: string) {
+  const params = planCopyParams(offer, locale);
+  if (offer.plan !== "percent_of_volume") {
+    return {
+      params,
+      figure: planMoney(offer.monthlyCents, locale),
+      cadence: t(earlyAccessPrice.cadenceKey),
+    };
+  }
+  return {
+    params,
+    figure: planPercent(offer.basisPoints, locale),
+    cadence: t("marketing.pricing.percentArm.cadence", params),
+  };
+}
 
 export type PricingFaqRow = {
   question: string;

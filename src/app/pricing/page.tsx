@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -17,16 +16,14 @@ import {
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { planCopyParams, planMoney, planPercent } from "@/lib/billing/plan-display";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { earlyAccessPrice, sharedLinkCard } from "@/lib/marketing";
+import { earlyAccessPrice } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
-import { requestPricingArm, requestPricingOffer } from "@/lib/pricing-arm-request";
-import { pricingConfig } from "@/lib/pricing-flags";
+import { requestPricingOffer } from "@/lib/pricing-arm-request";
 import { PricingExportBand } from "./_components/PricingExportBand";
-import { pricingFaq } from "./faq";
+import { offerFigure, pricingFaq } from "./faq";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
 // read this page makes (`requestLocale()`) sits behind this segment's
@@ -35,63 +32,7 @@ import { pricingFaq } from "./faq";
 // 20260804-instant-navigation.
 export const instant = true;
 
-const flatMetadata: Metadata = {
-  title: "Pricing — one flat price per shop | DiveDay",
-  description:
-    "One flat price per shop location, line by line: no setup fee, no per-seat charge, no feature tiers and no cut of your bookings. A three-week trial with no card.",
-  alternates: { canonical: "/pricing" },
-  openGraph: {
-    ...sharedLinkCard,
-    title: "DiveDay pricing — one flat price per shop",
-    description:
-      "One plan, line by line. No setup fee, no per-seat charge and no cut of your bookings.",
-    url: "/pricing",
-  },
-  // `summary_large_image`: the OG block above names the shared link card
-  // (`sharedLinkCard` → `src/app/opengraph-image.tsx`), so the large card has an
-  // image to fill it — docs/product/marketing.md, Twitter-card policy. The
-  // price figure deliberately stays out of the card: it lives in exactly one
-  // place (`earlyAccessPrice`), and a card is a copy that goes stale silently.
-  twitter: {
-    card: "summary_large_image",
-    title: "DiveDay pricing — one flat price per shop",
-    description:
-      "One plan, line by line. No setup fee, no per-seat charge and no cut of your bookings.",
-  },
-};
-
-/**
- * The percent arm's metadata (ADR 20261022-pricing-ab-test): the flat arm's
- * "one flat price" and "no cut of your bookings" are not true of it, so it
- * says what both arms share and names no figure, like the flat arm's.
- */
-const percentMetadata: Metadata = {
-  title: "Pricing — one plan per shop, line by line | DiveDay",
-  description:
-    "One plan per shop location, line by line: no setup fee, no per-seat charge and no feature tiers. A three-week trial with no card.",
-  alternates: { canonical: "/pricing" },
-  openGraph: {
-    ...sharedLinkCard,
-    title: "DiveDay pricing — one plan per shop",
-    description: "One plan, line by line. No setup fee, no per-seat charge and no feature tiers.",
-    url: "/pricing",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "DiveDay pricing — one plan per shop",
-    description: "One plan, line by line. No setup fee, no per-seat charge and no feature tiers.",
-  },
-};
-
-/**
- * Per arm. While the pricing test is off this reads nothing from the request
- * and is the flat arm's metadata, exactly as the static export was.
- */
-export async function generateMetadata(): Promise<Metadata> {
-  const config = pricingConfig();
-  if (!config.test) return flatMetadata;
-  return (await requestPricingArm(config)) === "percent_of_volume" ? percentMetadata : flatMetadata;
-}
+export { generateMetadata } from "./metadata";
 
 /**
  * The body renders **once**, in the reader's own language — see `ProductPage`
@@ -129,13 +70,7 @@ async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: Plan
   // The percent arm's own lines replace every flat-only one: the figure, its
   // cadence, the invoice's "cut" row, the anchor's answer and the closing line.
   const percentArm = offer.plan === "percent_of_volume";
-  const params = planCopyParams(offer, locale);
-  const figure = percentArm
-    ? planPercent(offer.basisPoints, locale)
-    : planMoney(offer.monthlyCents, locale);
-  const cadence = percentArm
-    ? t("marketing.pricing.percentArm.cadence", params)
-    : t(earlyAccessPrice.cadenceKey);
+  const { params, figure, cadence } = offerFigure(t, offer, locale);
   // Generated from the migration-guides registry, never hand-listed, so a new
   // guide can't be silently omitted from this answer.
   const competitors = cachedListFormat(locale, { type: "conjunction" }).format(

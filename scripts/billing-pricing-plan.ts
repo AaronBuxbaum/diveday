@@ -12,7 +12,7 @@
  */
 import { getDb } from "@/db/client";
 import { setShopPricingPlan } from "@/db/shop-subscriptions";
-import { parsePricingPlanArgs, type PlanTerms } from "@/lib/billing/pricing-plans";
+import { type PlanTerms, parsePricingPlanArgs } from "@/lib/billing/pricing-plans";
 import { pricingConfig } from "@/lib/pricing-flags";
 
 const USAGE =

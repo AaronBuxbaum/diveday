@@ -5,6 +5,7 @@ import { recordSetupRequest } from "./funnel";
 import { pricingTestByArm } from "./pricing-test-report";
 import { people, pricingVolumeStatements, shopSubscriptions, shops, userAccounts } from "./schema";
 
+const PAID_AT = new Date("2031-06-15T12:00:00Z");
 let seq = 0;
 
 async function shopOn(
@@ -70,14 +71,14 @@ describe("pricingTestByArm", () => {
       ...flat,
       stripeSubscriptionId: "sub_1",
       stripeStatus: "active",
-      firstPaidAt: new Date(),
+      firstPaidAt: PAID_AT,
       paidTotalCents: 19_800,
     });
     await shopOn(db, {
       ...flat,
       stripeSubscriptionId: "sub_2",
       stripeStatus: "canceled",
-      firstPaidAt: new Date(),
+      firstPaidAt: PAID_AT,
       paidTotalCents: 9_900,
     });
     await shopOn(db, flat);
@@ -85,7 +86,7 @@ describe("pricingTestByArm", () => {
       ...percent,
       stripeSubscriptionId: "sub_3",
       stripeStatus: "active",
-      firstPaidAt: new Date(),
+      firstPaidAt: PAID_AT,
       paidTotalCents: 4_500,
     });
     // Moved by hand to flat: still counted in the arm it was assigned.

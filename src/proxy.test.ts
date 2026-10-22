@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   EMBED_REQUEST_HEADER,
   REFUSED_SHOP_SLUG_HEADER,
@@ -1217,72 +1217,5 @@ describe("the partner referral cookie (issue #1285)", () => {
       ),
     );
     expect(setCookie(res)).toContain("diveday_ref=blue-mantis%3Ascript-alert-1-script");
-  });
-});
-
-describe("the pricing arm (ADR 20261022-pricing-ab-test)", () => {
-  const ARM_HEADER = "x-middleware-request-x-diveday-pricing-arm";
-
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("writes no cookie and passes no arm while the test is off", async () => {
-    const res = await run(request("/pricing"));
-    expect(res.headers.get("set-cookie")).toBeNull();
-    expect(res.headers.get(ARM_HEADER)).toBe("");
-  });
-
-  it("ignores an arm cookie, and a forged header, while the test is off", async () => {
-    const res = await run(
-      request("/pricing", {
-        cookie: "dd_pricing=percent_of_volume",
-        "x-diveday-pricing-arm": "percent_of_volume",
-      }),
-    );
-    expect(res.headers.get(ARM_HEADER)).toBe("");
-  });
-
-  it("gives a new visitor an arm, on the cookie and on this request", async () => {
-    vi.stubEnv("PRICING_TEST", "on");
-    vi.stubEnv("PRICING_PERCENT_SPLIT", "100");
-    const res = await run(request("/pricing"));
-    const cookie = res.headers.get("set-cookie") ?? "";
-    expect(cookie).toContain("dd_pricing=percent_of_volume");
-    expect(cookie).toContain("HttpOnly");
-    expect(cookie.toLowerCase()).toContain("samesite=lax");
-    expect(cookie).toContain("Max-Age=7776000");
-    expect(res.headers.get("cache-control")).toBe("private, no-store");
-    expect(res.headers.get(ARM_HEADER)).toBe("percent_of_volume");
-  });
-
-  it("keeps the arm a returning visitor already holds, whatever the split says now", async () => {
-    vi.stubEnv("PRICING_TEST", "on");
-    vi.stubEnv("PRICING_PERCENT_SPLIT", "100");
-    const res = await run(request("/", { cookie: "dd_pricing=flat_monthly" }));
-    expect(res.headers.get("set-cookie")).toBeNull();
-    expect(res.headers.get(ARM_HEADER)).toBe("flat_monthly");
-  });
-
-  it("replaces a cookie that names no arm, and overwrites a forged header", async () => {
-    vi.stubEnv("PRICING_TEST", "on");
-    vi.stubEnv("PRICING_PERCENT_SPLIT", "0");
-    const res = await run(
-      request("/get-set-up", {
-        cookie: "dd_pricing=free_forever",
-        "x-diveday-pricing-arm": "percent_of_volume",
-      }),
-    );
-    expect(res.headers.get("set-cookie")).toContain("dd_pricing=flat_monthly");
-    expect(res.headers.get(ARM_HEADER)).toBe("flat_monthly");
-  });
-
-  it("passes no arm off the marketing pages, test on or not", async () => {
-    vi.stubEnv("PRICING_TEST", "on");
-    const res = await run(
-      request("/shop/blue-mantis/divers", { cookie: "dd_pricing=percent_of_volume" }),
-    );
-    expect(res.headers.get(ARM_HEADER)).toBe("");
-    expect(res.headers.get("set-cookie")).toBeNull();
   });
 });

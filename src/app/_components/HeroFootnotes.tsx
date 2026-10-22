@@ -55,3 +55,17 @@ export function HeroFootnotes({
     </>
   );
 }
+
+/**
+ * The home page's closing price line, per pricing arm (ADR
+ * 20261022-pricing-ab-test): the flat arm's is today's, word for word.
+ */
+export function closingPriceLine(t: DiverTranslator, offer: PlanTerms, locale: string): string {
+  const params = planCopyParams(offer, locale);
+  return offer.plan === "percent_of_volume"
+    ? t("marketing.home.percentArm.priceLine", params)
+    : t("marketing.home.priceLine", {
+        price: params.price,
+        cadence: t(earlyAccessPrice.cadenceKey),
+      });
+}

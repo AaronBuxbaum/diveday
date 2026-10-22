@@ -3,7 +3,7 @@ import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { type ReactNode, Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
-import { HeroFootnotes } from "@/app/_components/HeroFootnotes";
+import { closingPriceLine, HeroFootnotes } from "@/app/_components/HeroFootnotes";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
@@ -34,13 +34,11 @@ import {
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { planCopyParams } from "@/lib/billing/plan-display";
 import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { type FeaturePageSlug, featurePagePath, getFeaturePage } from "@/lib/feature-pages";
 import { switchingHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
-  earlyAccessPrice,
   earlyAccessPriceAmount,
   fullShopExport,
   midSeasonCutover,
@@ -271,9 +269,6 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
-  // The pricing arm and its numbers (ADR 20261022-pricing-ab-test) are part
-  // of the cache key; the flat arm's lines are today's, word for word.
-  const priceParams = planCopyParams(offer, locale);
   // Generated from the migration-guides registry, never hand-listed, so a new
   // guide can't be silently omitted from the pitch that sends shops to it.
   const competitors = cachedListFormat(locale, { type: "disjunction" }).format(
@@ -552,14 +547,7 @@ async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTer
                 {t("marketing.home.tryDescription")}
               </p>
               <FunnelCtas locale={locale} source="home-closing" className="mt-8 justify-center" />
-              <p className="mt-6 font-medium">
-                {offer.plan === "percent_of_volume"
-                  ? t("marketing.home.percentArm.priceLine", priceParams)
-                  : t("marketing.home.priceLine", {
-                      price: priceParams.price,
-                      cadence: t(earlyAccessPrice.cadenceKey),
-                    })}
-              </p>
+              <p className="mt-6 font-medium">{closingPriceLine(t, offer, locale)}</p>
               <Link href="/pricing" className={buttonClass({ variant: "link" })}>
                 {t("marketing.home.seeIncluded")}
               </Link>

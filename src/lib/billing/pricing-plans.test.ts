@@ -104,7 +104,7 @@ describe("effectivePricing", () => {
     ).toEqual({ plan: "flat_monthly", monthlyCents: 9_900, basisPoints: 0 });
   });
 
-  it("charges the flag's flat fee while the test is off", () => {
+  it("charges the config's flat fee while the test is off", () => {
     const config = { ...DEFAULT_PRICING_CONFIG, flat: { monthlyCents: 12_900 } };
     expect(
       effectivePricing({ stored: null, shopId: percentShop, config, hasLiveSubscription: false }),
@@ -122,14 +122,14 @@ describe("effectivePricing", () => {
     ).toBe("flat_monthly");
   });
 
-  it("falls back to the shop id's bucket, on the flag's numbers", () => {
+  it("falls back to the shop id's bucket, on the config's numbers", () => {
     const config = { ...ON, percent: { basisPoints: 250, monthlyCents: 2_900 } };
     expect(
       effectivePricing({ stored: null, shopId: percentShop, config, hasLiveSubscription: false }),
     ).toEqual({ plan: "percent_of_volume", monthlyCents: 2_900, basisPoints: 250 });
   });
 
-  it("keeps a live subscription on the numbers it was sold, whatever the flag says now", () => {
+  it("keeps a live subscription on the numbers it was sold, whatever the config says now", () => {
     const stored = {
       plan: "percent_of_volume",
       source: "assigned",
@@ -248,7 +248,7 @@ describe("parsePricingPlanArgs", () => {
     expect(parsePricingPlanArgs(["reef", "flat_monthly"])).toEqual({ ok: false, error: "usage" });
   });
 
-  it("holds the numbers to the flag's bounds", () => {
+  it("holds the numbers to the config's bounds", () => {
     expect(parsePricingPlanArgs(["reef", "flat", "--monthly-cents", "100001"])).toEqual({
       ok: false,
       error: "monthly_cents",
