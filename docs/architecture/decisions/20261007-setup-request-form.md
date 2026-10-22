@@ -29,3 +29,12 @@ Since 2026-09-25 every shop is set up by hand, and every public "Get set up" but
 - The per-IP limit is per instance while rate limiting runs on the in-memory store (ADR 20260801-distributed-rate-limit-store). This is accepted for a form whose worst case is mail to our own inbox; the global cap is counted in the table, so it holds across instances. Two requests in the same instant can both pass the count at 29, which is accepted.
 - The alert labels the address "Email (unverified)": anyone can type anyone's address into the form, and Reply-To goes to it.
 - Reopening self-serve sign-up (the earlier ADR's "revisit") now means pointing `setUpHref` at `/onboard`, or turning this form into an invite.
+
+## Amendment 2026-10-22: which system, and one way to ask
+
+The market sheet of 2026-10-22 (item 5). The pricing FAQ answered "What do I have to do to get set up?" with a mail address, and every switching page ended on a `mailto:switch@dive.day` link, so the site had three ways to ask for a shop. The form never asked which booking system or shop software, so the thank-you page could only link the list of guides and the onboarding mail could not say "FareHarbor".
+
+- **"Which one?"** follows "A booking system" or "Dive-shop software", and only those, offering each switching guide's system and "Another one". It is optional. The answer is a guide's slug in the new nullable column `setup_requests.current_system_guide`; `parseSetupRequest` keeps it only after one of those two answers and only for a registered guide, so a crafted value or one left behind by a changed answer is stored as null.
+- **A switching guide's door preselects its system.** `/get-set-up?from=switching-<slug>[-mid|-close|-concierge]` starts with that guide's answer and system checked (`setupPreselection`, `guideOfSource` in `src/lib/funnel.ts`).
+- **The thank-you page links that system's guide** (`?guide=<slug>` beside `?uses=`), and the onboarding mail reads "Uses today: a booking system, FareHarbor". The `setup_request` alert accepts only a registered guide's slug.
+- **The concierge's door on every switching page is the form** (`SwitchingConcierge` takes a tag: `switching-hub-concierge`, `switching-spreadsheet-concierge`, `switching-<slug>-concierge`), and so is the FareHarbor guide's website offer. `switch@dive.day` is no longer linked anywhere. The pricing FAQ's set-up answer names the form.

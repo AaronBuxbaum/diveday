@@ -316,25 +316,65 @@ describe("the homepage close says a person reads it once", () => {
 });
 
 /**
- * `feesNote` names the one cost the flat price does not cover — processing fees,
- * which stay with the shop's own provider — and stops there. Its second
- * sentence ("if an integration ever costs extra, we'll say so before you turn
- * it on") went on 2026-08-28: a promise about a charge that does not exist,
- * printed under "What the price covers" directly beneath four negations, which
- * manufactures the doubt it then answers. The silence is the assertion.
+ * One way to ask for a shop (2026-10-22): the pricing FAQ's set-up answer
+ * names the Get set up form, the same door as every button on the page, and
+ * no mail address.
  */
-describe("the fee footnote raises no charge that does not exist", () => {
-  const futureCharge = {
-    "en-US": /costs? extra|charge you extra|additional (?:cost|charge|fee)/i,
-    "es-ES": /coste adicional|cargo adicional|cobro adicional/i,
-  } as const;
-
+describe("the pricing FAQ points at the set-up form", () => {
   for (const locale of DIVER_LOCALES) {
-    it(`names processing fees and nothing further in ${locale}`, () => {
-      const note = marketingMessages(locale)["marketing.pricing.feesNote"];
-      expect(note).toBeDefined();
-      expect(note).toMatch(locale === "en-US" ? /processing fees/i : /procesamiento de pagos/i);
-      expect(note).not.toMatch(futureCharge[locale]);
+    it(`names the form's own button and no address in ${locale}`, () => {
+      const messages = marketingMessages(locale);
+      const answer = messages["marketing.pricing.faq.setupTime.answer"];
+      expect(answer).toContain(`“${messages["marketing.common.getSetUp"]}”`);
+      expect(answer).not.toMatch(/@|\{email\}/);
+    });
+  }
+});
+
+/**
+ * The site speaks as the company: "we", and no person named (H-145). The
+ * builder's notes under the screens were the last first-person singular
+ * lines ("I left it out on purpose", "I wrote the trial…").
+ */
+describe("the builder's notes say we", () => {
+  it("carries no first-person singular in an en-US note", () => {
+    const messages = marketingMessages("en-US");
+    const singular = Object.entries(messages).filter(
+      ([key, value]) => /\.note\d+$/.test(key) && /\b(?:I|I’m|I’ve|my|me)\b/.test(value),
+    );
+    expect(singular).toEqual([]);
+  });
+
+  it("says we left the ready-everyone button out, in both locales", () => {
+    expect(marketingMessages("en-US")["marketing.home.steps.check.note2"]).toMatch(/\bWe left\b/);
+    expect(marketingMessages("es-ES")["marketing.home.steps.check.note2"]).toMatch(/\bdejamos\b/);
+  });
+});
+
+/**
+ * `/pricing` says each thing once (2026-10-22, the market sheet's item 8). It
+ * stated the trial five times (the invoice row, the hero's note, the closing
+ * band's copy of it, a margin note and the FAQ) and card fees three times (the
+ * invoice row, a margin note and a footnote under the included list). The
+ * trial keeps the hero's note and its FAQ answer; card fees keep the invoice's
+ * row. The deleted keys are absence checks, because the failure they guard is
+ * an editor filling one back in.
+ */
+describe("the pricing page says the trial and card fees once", () => {
+  for (const locale of DIVER_LOCALES) {
+    it(`keeps card fees in the invoice row alone in ${locale}`, () => {
+      const messages = marketingMessages(locale);
+      expect(messages["marketing.pricing.invoice.cards.value"]).toMatch(/Stripe/);
+      expect(messages["marketing.pricing.feesNote"]).toBeUndefined();
+      expect(messages["marketing.pricing.notes.note3"]).toBeUndefined();
+    });
+
+    it(`keeps the trial beside the price and in the FAQ alone in ${locale}`, () => {
+      const messages = marketingMessages(locale);
+      expect(messages["marketing.pricing.trialNote"]).toBeDefined();
+      expect(messages["marketing.pricing.faq.trialMeaning.answer"]).toBeDefined();
+      expect(messages["marketing.pricing.invoice.trial.label"]).toBeUndefined();
+      expect(messages["marketing.pricing.notes.note4"]).toBeUndefined();
     });
   }
 });

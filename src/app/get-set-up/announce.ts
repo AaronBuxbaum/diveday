@@ -51,6 +51,7 @@ export async function announceSetupRequest(request: SetupRequest): Promise<void>
       region: request.region,
       runsBoat: request.runsBoat,
       currentSystem: currentSystemOf(request.currentSystem),
+      ...(request.currentSystemGuide ? { currentSystemGuide: request.currentSystemGuide } : {}),
       contactName: request.contactName,
       contactEmail: request.email,
       contactPhone: request.phone ?? undefined,

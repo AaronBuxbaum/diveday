@@ -3565,8 +3565,7 @@
     "concierge": {
       "eyebrow": "A person does the import with you",
       "title": "We will switch you on, and off, ourselves.",
-      "description": "Send us what you have, whether a clean export or a decade of messy tabs, and we’ll map the columns and bring your divers in with you, free. If DiveDay is ever the wrong fit, we’ll help you carry it all back out the same way.",
-      "emailCta": "Email us at {email}"
+      "description": "Send us what you have, whether a clean export or a decade of messy tabs, and we’ll map the columns and bring your divers in with you, free. If DiveDay is ever the wrong fit, we’ll help you carry it all back out the same way."
     }
   },
   "nav": {
@@ -3605,7 +3604,7 @@
     "recap": {
       "label": "Dive recap",
       "greeting": "Nice diving, Priya.",
-      "tripLine": "Two-Tank Reef · Saturday · Jun 14",
+      "tripLine": "Two-Tank Reef · Saturday · Jun 13",
       "crewNoteLabel": "From your crew",
       "crewNote": "A calm first dive, then a brilliant drift over the reef. Thanks for diving with us.",
       "recordHeading": "Dive log entry",
@@ -3902,7 +3901,7 @@
         "check": {
           "when": "Each morning, for the week ahead",
           "title": "Anyone who can’t board yet is named, with the reason",
-          "note2": "There is no “mark everyone ready” button. I left it out on purpose.",
+          "note2": "There is no “mark everyone ready” button. We left it out on purpose.",
           "mockupLabel": "Today in the demo shop: one departure with 7 of 9 divers ready, then two rows under Needs you."
         },
         "aboard": {
@@ -4627,10 +4626,6 @@
           "label": "Contract",
           "value": "Month to month"
         },
-        "trial": {
-          "label": "Trial",
-          "value": "3 weeks, no card"
-        },
         "leaving": {
           "label": "Leaving",
           "value": "A ZIP from Settings, any day"
@@ -4639,11 +4634,8 @@
       "notes": {
         "title": "Notes on the invoice",
         "note1": "Every staff login is in the price, front desk to captain. Nothing is counted per seat.",
-        "note2": "Waivers, medical review and the cert gate are in the price. None of it is an add-on.",
-        "note3": "Card fees are Stripe’s and go to Stripe. The money never sits with us.",
-        "note4": "I wrote the trial to switch nothing off on day 22. What you build in it keeps working."
+        "note2": "Waivers, medical review and the cert gate are in the price. None of it is an add-on."
       },
-      "feesNote": "Payment-processing fees stay between you and your payment provider.",
       "includedLead": "What the price covers",
       "seeFullList": "The full list is on the product page →",
       "feeAnchor": {
@@ -4686,7 +4678,7 @@
         },
         "setupTime": {
           "question": "What do I have to do to get set up?",
-          "answer": "Write to {email} and we set up your shop’s name, web address and timezone, and your own login. Bringing a spreadsheet of divers across is its own step, and a person can do that import with you, free."
+          "answer": "Send the “Get set up” form and we set up your shop’s name, web address and timezone, and your own login. Bringing a spreadsheet of divers across is its own step, and a person can do that import with you, free."
         },
         "dataIfNotWorking": {
           "question": "How do I access my shop’s records?",
@@ -5236,6 +5228,8 @@
         "shopSoftware": "Dive-shop software",
         "other": "Something else"
       },
+      "whichSystem": "Which one?",
+      "anotherSystem": "Another one",
       "contactName": "Your name",
       "email": "Email",
       "phone": "Phone",
@@ -5254,7 +5248,8 @@
         "spreadsheet": "Save your diver list as a CSV. We’ll read it with you.",
         "spreadsheetLink": "What we read in it",
         "system": "While you wait, download your customer list from the system you use now.",
-        "systemLink": "Export steps by system"
+        "systemLink": "Export steps by system",
+        "systemGuideLink": "Export steps for {competitor}"
       }
     }
   },

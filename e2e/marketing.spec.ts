@@ -419,14 +419,18 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByText("Today’s price, locked for two years for founding shops."),
   ).toBeVisible();
-  // The trial's own terms, at both decision points — free, three weeks, no
+  // The trial's own terms, once, beside the price — free, three weeks, no
   // card, and the soft expiry that src/lib/trial.ts actually implements. The
-  // demo note beside it answers only for the demo, so before this the trial
-  // button carried no terms at all.
+  // FAQ answer is the only other place the page states the trial (2026-10-22:
+  // the invoice row, the margin note and the closing copy were deleted), and
+  // card fees are the invoice's own row, nowhere else.
   const trialTerms = page.getByText(
     "The trial is a shop of your own: free for 3 weeks, no card, and nothing switches off when the window ends.",
   );
-  await expect(trialTerms).toHaveCount(2);
+  await expect(trialTerms).toHaveCount(1);
+  await expect(page.getByText("3 weeks, no card", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Stripe’s fee, paid to Stripe", { exact: true })).toHaveCount(1);
+  await expect(page.getByText(/Card fees are Stripe’s|Payment-processing fees/)).toHaveCount(0);
   // The offline row is gone from this page's FAQ, deliberately — the claim
   // lives on the boat manifest page, asserted above.
   await expect(page.getByRole("heading", { name: "Does the manifest work offline?" })).toHaveCount(
@@ -516,8 +520,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // (docs/product/marketing.md, "The budget binds controls, not facts") — and
   // this assertion is what stops the note growing a "See the terms" link that
   // would re-order the two above it.
-  await expect(trialTerms.first().locator("a, button")).toHaveCount(0);
-  await expect(trialTerms.last().locator("a, button")).toHaveCount(0);
+  await expect(trialTerms.locator("a, button")).toHaveCount(0);
 
   // The page closes on the number it opened with, and that closing door is
   // tagged apart from the hero's. Without it there was no second door below
@@ -976,11 +979,12 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(page.getByText("Lightframe", { exact: true })).toBeVisible();
   await expect(page.getByText(/third parties report \$5,000 a year/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Or have us build the website." })).toBeVisible();
-  // The concierge section further down carries the same words with a
-  // ?subject=, so the offer's door is picked by its bare href.
-  await expect(page.locator('a[href="mailto:switch@dive.day"]')).toHaveText(
-    /Email us at switch@dive\.day/,
-  );
+  // The offer's door and the concierge section's further down are the same
+  // set-up form, tagged as the concierge (2026-10-22; both were mail links).
+  await expect(
+    page.locator('a[href="/get-set-up?from=switching-fareharbor-concierge"]'),
+  ).toHaveText(["Get set up", "Get set up"]);
+  await expect(page.locator('a[href^="mailto:switch@"]')).toHaveCount(0);
   // It still renders the shared three-part promise and the honesty table.
   await expect(
     page.getByRole("heading", { name: "Get your data out of FareHarbor" }),
@@ -1357,14 +1361,13 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   await expect(page.getByText("Signed waivers & medical clearance", { exact: true })).toBeVisible();
 
   // The owner-authorized concierge switch offer lands, phrased as a human
-  // commitment, with a real handoff: an email link the shop can act on.
+  // commitment, with a real handoff: the set-up form, tagged as its door.
   await expect(
     page.getByRole("heading", { name: /switch you on, and off, ourselves/ }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: /Email us at/ })).toHaveAttribute(
-    "href",
-    /^mailto:switch@dive\.day/,
-  );
+  await expect(
+    page.locator('a[href="/get-set-up?from=switching-spreadsheet-concierge"]'),
+  ).toHaveText("Get set up");
 
   // Demo-before-trial funnel, same as every guide — and, same as every guide,
   // the first of those doors is in the hero rather than nine sections down.

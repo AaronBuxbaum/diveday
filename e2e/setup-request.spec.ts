@@ -53,3 +53,38 @@ test("every closed door to a trial now opens the set-up form", async ({ page }) 
   await expect(page).toHaveURL(/\/get-set-up\?from=onboard-closed$/);
   await expect(page.getByLabel("Shop name")).toBeVisible();
 });
+
+/**
+ * One way to ask for a shop (2026-10-22): a switching guide's concierge door
+ * is the set-up form, which arrives with that guide's system answered, and the
+ * thank-you page links that system's guide.
+ */
+test("a shop leaving FareHarbor asks from its guide and is sent back to that guide", async ({
+  page,
+}) => {
+  await page.goto("/switching/fareharbor");
+  await expect(page.locator('a[href^="mailto:switch@"]')).toHaveCount(0);
+  await page.locator('a[href="/get-set-up?from=switching-fareharbor-concierge"]').last().click();
+  await expect(page).toHaveURL(/\/get-set-up\?from=switching-fareharbor-concierge$/);
+  await expect(page.getByRole("radio", { name: "A booking system" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "FareHarbor" })).toBeChecked();
+
+  // Paper asks nothing more; dive-shop software asks again.
+  await page.getByRole("radio", { name: "Paper" }).check();
+  await expect(page.getByRole("radio", { name: "FareHarbor" })).toHaveCount(0);
+  await page.getByRole("radio", { name: "A booking system" }).check();
+  await page.getByRole("radio", { name: "FareHarbor" }).check();
+
+  await page.getByLabel("Shop name").fill("Harbor Line Divers");
+  await page.getByLabel("Town or region").fill("Islamorada, FL");
+  await page.getByRole("radio", { name: "Yes" }).check();
+  await page.getByLabel("Your name").fill("Ana Ruiz");
+  await page.getByLabel("Email").fill(`fareharbor-${Date.now()}@example.com`);
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page).toHaveURL(/\/get-set-up\/sent\?uses=booking_system&guide=fareharbor$/);
+  await expect(page.getByRole("link", { name: "Export steps for FareHarbor" })).toHaveAttribute(
+    "href",
+    "/switching/fareharbor?from=setup-sent",
+  );
+});

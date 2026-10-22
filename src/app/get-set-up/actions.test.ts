@@ -124,6 +124,32 @@ describe("submitSetupRequestAction", () => {
   });
 
   /**
+   * "Which one?" (2026-10-22): the system a reader names is stored, named in
+   * the onboarding mail, and carried to the thank-you page, which links its
+   * guide. After any other answer a value in the field is dropped everywhere.
+   */
+  it("stores, mails and carries the system a reader named", async () => {
+    expect(await submit(setUpForm({ currentSystemGuide: "fareharbor" }))).toEqual({
+      redirect: "/get-set-up/sent?uses=booking_system&guide=fareharbor",
+    });
+    const [row] = await db.select().from(setupRequests);
+    expect(row?.currentSystemGuide).toBe("fareharbor");
+    expect(vi.mocked(notify).mock.calls[0]?.[0]).toMatchObject({
+      currentSystem: "booking_system",
+      currentSystemGuide: "fareharbor",
+    });
+  });
+
+  it("drops a named system after an answer that does not ask for one", async () => {
+    expect(
+      await submit(setUpForm({ currentSystem: "spreadsheet", currentSystemGuide: "fareharbor" })),
+    ).toEqual({ redirect: "/get-set-up/sent?uses=spreadsheet" });
+    const [row] = await db.select().from(setupRequests);
+    expect(row?.currentSystemGuide).toBeNull();
+    expect(vi.mocked(notify).mock.calls[0]?.[0]).not.toHaveProperty("currentSystemGuide");
+  });
+
+  /**
    * The mail carries the request's own single-use setup link (ADR
    * 20261009-single-use-setup-links), and that link opens the form with the
    * request's answers. The reader of the thank-you page is never handed it.
@@ -216,6 +242,7 @@ describe("submitSetupRequestAction", () => {
       region: "Somewhere",
       runsBoat: false,
       currentSystem: "paper" as const,
+      currentSystemGuide: null,
       contactName: "Someone",
       email: "someone@example.com",
       phone: null,
@@ -240,6 +267,7 @@ describe("submitSetupRequestAction", () => {
         region: "Somewhere",
         runsBoat: false,
         currentSystem: "paper",
+        currentSystemGuide: null,
         contactName: "Someone",
         email: "someone@example.com",
         phone: null,

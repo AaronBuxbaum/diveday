@@ -6,7 +6,12 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
-import { SETUP_CURRENT_SYSTEM_KEYS, SETUP_CURRENT_SYSTEMS } from "@/lib/setup-requests";
+import { MIGRATION_GUIDES } from "@/lib/migration-guides";
+import {
+  SETUP_CURRENT_SYSTEM_KEYS,
+  SETUP_CURRENT_SYSTEMS,
+  setupPreselection,
+} from "@/lib/setup-requests";
 import { SetupRequestForm, type SetupRequestFormWords } from "./_components/SetupRequestForm";
 
 // `instant = true`: the frame paints from the static shell while the locale
@@ -24,6 +29,8 @@ export const metadata: Metadata = {
  * set-up button lands here, carrying its page's funnel tag in `?from=`, which
  * the form posts back so the request reads per surface. Shops are still opened
  * by hand (ADR 20260925-shops-are-set-up-by-hand); this is how a shop asks.
+ * A switching guide's tag also answers "What do you use today?" and "Which
+ * one?" with that guide's system (2026-10-22).
  *
  * The nav's own demo button is hidden, as on `/onboard`: Send is the page's
  * one primary. The demo waits on the thank-you page, for a reader with a reply
@@ -46,6 +53,8 @@ export default async function GetSetUpPage({
     current: Object.fromEntries(
       SETUP_CURRENT_SYSTEMS.map((system) => [system, t(SETUP_CURRENT_SYSTEM_KEYS[system])]),
     ) as SetupRequestFormWords["current"],
+    whichSystem: t("marketing.setUp.whichSystem"),
+    anotherSystem: t("marketing.setUp.anotherSystem"),
     contactName: t("marketing.setUp.contactName"),
     email: t("marketing.setUp.email"),
     phone: t("marketing.setUp.phone"),
@@ -75,7 +84,12 @@ export default async function GetSetUpPage({
           </p>
         }
       >
-        <SetupRequestForm source={eventSource(from)} words={words} />
+        <SetupRequestForm
+          source={eventSource(from)}
+          words={words}
+          systems={MIGRATION_GUIDES.map((guide) => ({ slug: guide.slug, name: guide.competitor }))}
+          preselect={setupPreselection(from)}
+        />
       </EntryShell>
       <MarketingFooter />
     </div>

@@ -3565,8 +3565,7 @@
     "concierge": {
       "eyebrow": "Una persona hace la importación contigo",
       "title": "Te ayudamos a cambiarte, y a salir, nosotros mismos.",
-      "description": "Envíanos lo que tengas, sea una exportación limpia o una década de pestañas desordenadas, y mapeamos las columnas y traemos a tus buceadores contigo, gratis. Si algún día DiveDay no encaja, te ayudamos a llevártelo todo de vuelta de la misma manera.",
-      "emailCta": "Escríbenos a {email}"
+      "description": "Envíanos lo que tengas, sea una exportación limpia o una década de pestañas desordenadas, y mapeamos las columnas y traemos a tus buceadores contigo, gratis. Si algún día DiveDay no encaja, te ayudamos a llevártelo todo de vuelta de la misma manera."
     }
   },
   "nav": {
@@ -3605,7 +3604,7 @@
     "recap": {
       "label": "Resumen de la inmersión",
       "greeting": "Qué buena inmersión, Priya.",
-      "tripLine": "Arrecife de dos tanques · Sábado · 14 de junio",
+      "tripLine": "Arrecife de dos tanques · Sábado · 13 de junio",
       "crewNoteLabel": "De tu tripulación",
       "crewNote": "Una primera inmersión tranquila y después una deriva brillante sobre el arrecife. Gracias por bucear con nosotros.",
       "recordHeading": "Registro de la inmersión",
@@ -3902,7 +3901,7 @@
         "check": {
           "when": "Cada mañana, para la semana que viene",
           "title": "Quien aún no puede embarcar aparece con su nombre y el motivo",
-          "note2": "No hay botón de “marcar a todos como listos”. Lo dejé fuera a propósito.",
+          "note2": "No hay botón de “marcar a todos como listos”. Lo dejamos fuera a propósito.",
           "mockupLabel": "Hoy en el centro de demostración: una salida con 7 de 9 buceadores listos y dos filas en Pendiente."
         },
         "aboard": {
@@ -4627,10 +4626,6 @@
           "label": "Contrato",
           "value": "Mes a mes"
         },
-        "trial": {
-          "label": "Prueba",
-          "value": "3 semanas, sin tarjeta"
-        },
         "leaving": {
           "label": "Irse",
           "value": "Un ZIP desde Ajustes, cualquier día"
@@ -4639,11 +4634,8 @@
       "notes": {
         "title": "Notas sobre la factura",
         "note1": "Cada acceso del personal está en el precio, de recepción a capitán. Nada se cuenta por asiento.",
-        "note2": "Las exenciones, la revisión médica y el control de certificación están en el precio. Nada de eso es un extra.",
-        "note3": "Las comisiones de tarjeta son de Stripe y van a Stripe. El dinero nunca pasa por nosotros.",
-        "note4": "Escribí la prueba para que no apague nada el día 22. Lo que armes en ella sigue funcionando."
+        "note2": "Las exenciones, la revisión médica y el control de certificación están en el precio. Nada de eso es un extra."
       },
-      "feesNote": "Las comisiones de procesamiento de pagos quedan entre tú y tu proveedor de pagos.",
       "includedLead": "Qué cubre el precio",
       "seeFullList": "La lista completa está en la página del producto →",
       "feeAnchor": {
@@ -4686,7 +4678,7 @@
         },
         "setupTime": {
           "question": "¿Qué tengo que hacer para ponerlo en marcha?",
-          "answer": "Escribe a {email} y configuramos el nombre de tu centro, su dirección web y su zona horaria, y tu propio acceso. Traer una hoja de cálculo de buceadores es un paso aparte, y una persona puede hacer esa importación contigo, gratis."
+          "answer": "Envía el formulario “Pide tu centro” y configuramos el nombre de tu centro, su dirección web y su zona horaria, y tu propio acceso. Traer una hoja de cálculo de buceadores es un paso aparte, y una persona puede hacer esa importación contigo, gratis."
         },
         "dataIfNotWorking": {
           "question": "¿Cómo accedo a los registros de mi centro?",
@@ -5236,6 +5228,8 @@
         "shopSoftware": "Un programa de gestión de buceo",
         "other": "Otra cosa"
       },
+      "whichSystem": "¿Cuál?",
+      "anotherSystem": "Otro",
       "contactName": "Tu nombre",
       "email": "Correo electrónico",
       "phone": "Teléfono",
@@ -5254,7 +5248,8 @@
         "spreadsheet": "Guarda tu lista de buceadores como CSV y la leemos contigo.",
         "spreadsheetLink": "Qué leemos en ella",
         "system": "Mientras esperas, descarga tu lista de clientes del sistema que usas hoy.",
-        "systemLink": "Pasos de exportación por sistema"
+        "systemLink": "Pasos de exportación por sistema",
+        "systemGuideLink": "Pasos de exportación de {competitor}"
       }
     }
   },

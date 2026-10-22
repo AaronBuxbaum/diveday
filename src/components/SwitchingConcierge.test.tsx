@@ -19,7 +19,9 @@ afterEach(cleanup);
 describe("the concierge's skeleton", () => {
   function renderPair() {
     const skeleton = render(<SwitchingConciergeSkeleton />).container;
-    const real = render(<SwitchingConcierge locale="en-US" />).container;
+    const real = render(
+      <SwitchingConcierge locale="en-US" source="switching-eve-concierge" />,
+    ).container;
     return { skeleton, real };
   }
 
@@ -52,5 +54,22 @@ describe("the concierge's skeleton", () => {
     for (const line of linesOf(offer)) expect(line).toHaveClass("h-8");
     expect(linesOf(offer).filter((line) => line.classList.contains("sm:hidden"))).toHaveLength(4);
     expect(door).toHaveClass("mt-6", "h-12");
+  });
+});
+
+/**
+ * One way to ask for a shop (2026-10-22): the offer's door is the set-up form,
+ * carrying the page's concierge tag, where it was a mail link.
+ */
+describe("the concierge's door", () => {
+  it("opens the set-up form with the page's tag, and no mail link", () => {
+    const { container } = render(
+      <SwitchingConcierge locale="en-US" source="switching-eve-concierge" />,
+    );
+    const links = Array.from(container.querySelectorAll("a"));
+    expect(links.map((link) => link.getAttribute("href"))).toEqual([
+      "/get-set-up?from=switching-eve-concierge",
+    ]);
+    expect(links[0]).toHaveTextContent("Get set up");
   });
 });

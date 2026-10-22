@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { ChoicePill, controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import {
+  asksWhichSystem,
   SETUP_CURRENT_SYSTEMS,
   SETUP_HONEYPOT_FIELD,
   SETUP_PHONE_MAX,
@@ -25,6 +26,8 @@ export type SetupRequestFormWords = {
   no: string;
   currentSystem: string;
   current: Record<SetupCurrentSystem, string>;
+  whichSystem: string;
+  anotherSystem: string;
   contactName: string;
   email: string;
   phone: string;
@@ -45,19 +48,37 @@ export type SetupRequestFormWords = {
  * then who to write back to. The two choice questions are pills, not selects:
  * two and five short answers read faster laid out than folded away.
  *
+ * **"Which one?"** (2026-10-22) follows "A booking system" or "Dive-shop
+ * software", and only those: the systems with a switching guide, and
+ * "Another one". Optional, so a system with no guide never blocks a request.
+ * A reader who came from a guide's door finds that system already answered
+ * (`preselect`), until they answer otherwise.
+ *
  * The honeypot sits off screen, out of the tab order and hidden from
  * assistive technology, so only a bot ever fills it (`SETUP_HONEYPOT_FIELD`).
  */
 export function SetupRequestForm({
   source,
   words,
+  systems,
+  preselect,
 }: {
   /** The funnel tag the door carried, already clamped by `eventSource`. */
   source: string;
   words: SetupRequestFormWords;
+  /** The systems "Which one?" offers: each switching guide's slug and name. */
+  systems: readonly { slug: string; name: string }[];
+  /** The answers a switching guide's door starts the form with. */
+  preselect?: {
+    currentSystem: SetupCurrentSystem;
+    currentSystemGuide: string;
+  } | null;
 }) {
   const [state, formAction] = useActionState(submitSetupRequestAction, {});
-  const values = state.values ?? {};
+  // What the reader typed wins once there is any; until then, the door's answers.
+  const values: Partial<Record<SetupField, string>> = state.values ?? preselect ?? {};
+  const [picked, setPicked] = useState<string | null>(null);
+  const asksWhich = asksWhichSystem(picked ?? values.currentSystem);
   const errorFor = (field: SetupField): string | undefined => {
     const code: SetupFieldError | undefined = state.fieldErrors?.[field];
     if (!code) return undefined;
@@ -130,12 +151,34 @@ export function SetupRequestForm({
                 value={system}
                 required
                 defaultChecked={values.currentSystem === system}
+                onChange={() => setPicked(system)}
               >
                 {words.current[system]}
               </ChoicePill>
             ))}
           </div>
         </Field>
+        {asksWhich ? (
+          <Field label={words.whichSystem} group>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ...systems.map(({ slug, name }) => [slug, name] as const),
+                ["", words.anotherSystem] as const,
+              ].map(([slug, name]) => (
+                <ChoicePill
+                  key={slug}
+                  type="radio"
+                  size="md"
+                  name="currentSystemGuide"
+                  value={slug}
+                  defaultChecked={slug !== "" && values.currentSystemGuide === slug}
+                >
+                  {name}
+                </ChoicePill>
+              ))}
+            </div>
+          </Field>
+        ) : null}
         <Field label={words.contactName} error={errorFor("contactName")}>
           <input
             name="contactName"

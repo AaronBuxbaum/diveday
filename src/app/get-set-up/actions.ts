@@ -92,7 +92,11 @@ export async function submitSetupRequestAction(
     const answered = (SETUP_CURRENT_SYSTEMS as readonly string[]).includes(values.currentSystem);
     redirect(
       answered
-        ? setupSentPath(SET_UP_SENT_PATH, values.currentSystem as SetupCurrentSystem)
+        ? setupSentPath(
+            SET_UP_SENT_PATH,
+            values.currentSystem as SetupCurrentSystem,
+            values.currentSystemGuide,
+          )
         : SET_UP_SENT_PATH,
     );
   }
@@ -119,6 +123,9 @@ export async function submitSetupRequestAction(
   });
   after(() => announceSetupRequest(row));
 
-  // What they use today, and nothing else, rides to the next page (item 55).
-  redirect(setupSentPath(SET_UP_SENT_PATH, parsed.data.currentSystem));
+  // What they use today, and which system, and nothing else, ride to the next
+  // page (item 55; the system since 2026-10-22).
+  redirect(
+    setupSentPath(SET_UP_SENT_PATH, parsed.data.currentSystem, parsed.data.currentSystemGuide),
+  );
 }

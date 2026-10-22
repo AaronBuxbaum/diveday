@@ -2398,6 +2398,15 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "get-set-up", scheme);
       });
 
+      // The form as a FareHarbor guide's concierge door opens it (2026-10-22):
+      // "A booking system" answered, and "Which one?" asked and answered.
+      test(`the set-up form asks which system (${scheme})`, async ({ page }) => {
+        await page.goto("/get-set-up?from=switching-fareharbor-concierge");
+        await page.locator("h1").first().waitFor();
+        await page.getByRole("radio", { name: "FareHarbor" }).waitFor();
+        await capture(page, "get-set-up-which-system", scheme);
+      });
+
       // The thank-you page a sent request lands on, with the demo door.
       test(`the set-up request thank-you page renders true to the design (${scheme})`, async ({
         page,

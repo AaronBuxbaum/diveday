@@ -786,7 +786,7 @@
     ],
     "src/app/onboard/page.tsx": 479,
     "src/app/page.tsx": 581,
-    "src/app/pricing/page.tsx": 468,
+    "src/app/pricing/page.tsx": 430,
     "src/app/ready/[token]/page.tsx": 654,
     "src/app/s/[shopSlug]/page.tsx": 879,
     "src/app/s/[shopSlug]/trips/[id]/page.tsx": 511,
