@@ -125,7 +125,11 @@ export function registerStaffAuditCaptures(capture: AuditCapture, flowTimeout: n
         title,
         "I will dive within the limits of my training and plan every dive with my buddy.",
       );
-      await expect(page.locator("#course-forms").getByText("Saved.")).toBeVisible();
+      await expect(
+        page
+          .locator("#course-forms")
+          .getByText(copy("waiversStaff.courseForms.notice.saved"), { exact: true }),
+      ).toBeVisible();
       await clearCourseForms(page, "open-water-diver");
       await requireCourseForm(page, "open-water-diver", title);
       await scheduleCrewedOpenWaterSession(page, "Open Water Diver — review forms", 24);

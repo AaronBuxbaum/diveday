@@ -4,10 +4,13 @@ import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { DEMO_SHOP_TIMEZONE } from "../src/db/seed-clock";
 import { LISTED_SHOP_SLUGS } from "../src/db/seed-listed-shops";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffPassengerCount } from "../src/i18n/participant-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
+import { calendarDateInTimezone, formatCalendarDate } from "../src/lib/calendar-date";
+import { DAY_MS } from "../src/lib/clock";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
@@ -4513,7 +4516,7 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * `?blockedAboard=1` boards the first diver the gate clears, by name
        * (Diego Alvarez in the seed), then supersedes the release he signed, so
-       * the row reads "Signed waiver lapsed." — a signature that no longer
+       * the row reads "Signed waiver lapsed" — a signature that no longer
        * stands, never "not sent yet" (`waiver_lapsed`, which renamed it). The
        * reset restores the schedule before the next test, which is what makes
        * it safe to board him here.
@@ -4531,8 +4534,8 @@ for (const scheme of ["light", "dark"] as const) {
         // the capture exists for.
         await page
           .getByRole("listitem")
-          .filter({ hasText: "Aboard" })
-          .filter({ hasText: "Signed waiver lapsed." })
+          .filter({ hasText: staffCopy("today.actionKind.blockedAboard") })
+          .filter({ hasText: staffCopy("today.blockerRow.waiverLapsed", { count: 1 }) })
           .first()
           .waitFor();
         await capture(page, "today-blocked-aboard", scheme);
@@ -9269,10 +9272,26 @@ for (const scheme of ["light", "dark"] as const) {
       test(`Today asks about the bench (${scheme})`, async ({ page, request }) => {
         await request.post("/api/test/seed-trouble-states?bench=1");
         await page.goto("/shop/blue-mantis");
-        await page.getByRole("listitem").filter({ hasText: "not ready yet." }).first().waitFor();
+        const benchDate = (daysAgo: number) =>
+          formatCalendarDate(
+            calendarDateInTimezone(
+              new Date(e2eNow().getTime() - daysAgo * DAY_MS),
+              DEMO_SHOP_TIMEZONE,
+            ),
+            "en-US",
+          );
         await page
           .getByRole("listitem")
-          .filter({ hasText: "and not collected." })
+          .filter({
+            hasText: staffCopy("benchFollowUp.today.pastPromise", { date: benchDate(2) }),
+          })
+          .first()
+          .waitFor();
+        await page
+          .getByRole("listitem")
+          .filter({
+            hasText: staffCopy("benchFollowUp.today.uncollected", { date: benchDate(9) }),
+          })
           .first()
           .waitFor();
         await capture(page, "today-bench", scheme);

@@ -79,18 +79,21 @@ export function registerGearStaffOverlayAuditCaptures(capture: AuditCapture) {
       const week = page.getByRole("region", { name: "Who’s working" });
       await week.getByText("Boat 2", { exact: true }).first().waitFor();
       await capture(page, "staffing-shift-remove-disclosure", "light", {
-        // The grid and phone day-list own separate details elements. Open
-        // the visible chip after each resize, so both images show Remove.
+        // The grid has a disclosure; the phone day-list shows Remove inline.
+        // Locate the shift in the visible layout after each resize.
         beforeShot: async () => {
-          const chip = week
-            .locator("details")
+          const shift = week
+            .locator("details, li")
             .filter({ hasText: "Boat 2" })
-            .filter({ visible: true })
-            .first();
-          if (!(await chip.evaluate((element) => element.hasAttribute("open")))) {
-            await chip.locator("> summary").click();
+            .filter({ visible: true });
+          await expect(shift).toHaveCount(1);
+          const summary = shift.locator("> summary");
+          if ((await summary.count()) > 0) {
+            if (!(await shift.evaluate((element) => element.hasAttribute("open")))) {
+              await summary.click();
+            }
           }
-          await chip.getByRole("button", { name: "Remove", exact: true }).waitFor();
+          await expect(shift.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
         },
       });
     });

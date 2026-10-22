@@ -20,9 +20,21 @@ const diver = diverTranslator("en-US");
 const staff = staffTranslator("en-US");
 const REEF = "Two-Tank Reef — Molasses & French";
 
-async function bookThread(page: Page, name = "Lena Ortiz", email = "lena.review@example.com") {
+async function openPublicTrip(page: Page, title: string) {
   await page.goto("/s/blue-mantis");
-  await page.getByRole("link", { name: REEF, exact: true }).click();
+  // Schedule links name the date, time and capacity as well as the title.
+  // Pick the row by its exact heading, then follow its own departure link.
+  await page
+    .getByRole("list", { name: diver("schedule.tripListLabel") })
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("heading", { level: 3, name: title, exact: true }) })
+    .getByRole("link", { name: title })
+    .click();
+  await page.waitForURL(/\/s\/blue-mantis\/trips\//);
+}
+
+async function bookThread(page: Page, name = "Lena Ortiz", email = "lena.review@example.com") {
+  await openPublicTrip(page, REEF);
   await bookASeatAndOpenThread(page, name, email);
   await threadStatus(page).waitFor();
 }
@@ -318,10 +330,7 @@ export function registerRemainingExpandedAuditCaptures(
     });
 
     test("a Night departure opens the specialty-card form", async ({ page }) => {
-      await page.goto("/s/blue-mantis");
-      await page
-        .getByRole("link", { name: "Night Dive — City of Washington", exact: true })
-        .click();
+      await openPublicTrip(page, "Night Dive — City of Washington");
       await bookASeatAndOpenThread(page, "Nora Quinn", "nora.night.review@example.com");
       const certification = await openThreadStep(page, "certification");
       const specialty = nestedEditor(certification, 'input[name="specialty"][value="night"]');
@@ -357,8 +366,7 @@ export function registerRemainingExpandedAuditCaptures(
         process.env.VISUAL_EXHAUSTIVE_AUDIT !== "1",
         "A raw claim URL is a random bearer credential, so this state is audited without a reusable baseline.",
       );
-      await page.goto("/s/blue-mantis");
-      await page.getByRole("link", { name: REEF, exact: true }).click();
+      await openPublicTrip(page, REEF);
       await choosePartySize(page, 2);
       await page.getByLabel("Diver 2 name", { exact: true }).fill("Maya Chen");
       await page.getByLabel("Use main contact’s email").check();

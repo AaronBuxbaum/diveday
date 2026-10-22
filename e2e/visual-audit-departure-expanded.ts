@@ -136,9 +136,11 @@ export function registerDepartureExpandedAuditCaptures(capture: AuditCapture, fl
     test("a student's next step opens its own note and saved-outcome control", async ({ page }) => {
       await (await findTripOnBoard(page, "blue-mantis", /Advanced Open Water Diver/)).click();
       await openTripTab(page, "Trip");
-      const student = page.locator('#roster li[id^="booking-"]').first();
-      await openRosterDetails(student);
-      const editor = fieldEditor(student, 'textarea[name="note"]');
+      const student = await openRosterRow(page, "Naledi Khumalo");
+      // Private staff notes also use name="note"; choose the course control by its summary.
+      const editor = student.locator(
+        `details:has(> summary:text-is(${JSON.stringify(staff("trips.roster.nextStepSummary"))}))`,
+      );
       await openIfClosed(editor);
       await editor
         .getByLabel(staff("trips.roster.nextStepLabel"))

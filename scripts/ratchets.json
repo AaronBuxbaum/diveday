@@ -270,7 +270,7 @@
     "e2e/staffing.spec.ts": 2,
     "e2e/took-a-call.spec.ts": 2,
     "e2e/trip-admission.spec.ts": 8,
-    "e2e/trips.spec.ts": 5,
+    "e2e/trips.spec.ts": 4,
     "e2e/visual.spec.ts": 7,
     "e2e/waiver-print.spec.ts": 1,
     "e2e/waivers.spec.ts": 15,
