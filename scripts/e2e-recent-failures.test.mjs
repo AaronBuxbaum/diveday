@@ -38,3 +38,46 @@ describe("rankFailedSpecs", () => {
     expect(rankFailedSpecs([])).toEqual([]);
   });
 });
+
+it("uses structured github reporter title identity when an error originates in a helper", () => {
+  expect(
+    rankFailedSpecs([
+      [
+        {
+          annotation_level: "failure",
+          path: "e2e/a11y-scan.ts",
+          title: "[chromium] › e2e/a11y.spec.ts:12:3 › accessibility › dashboard",
+          message: "helper failed",
+        },
+      ],
+    ]),
+  ).toEqual(["e2e/a11y.spec.ts"]);
+});
+
+it("distinguishes successful empty history from failed or partial pagination", async () => {
+  const { readFailureHistory, pages } = await import("./e2e-recent-failures.mjs");
+  expect(readFailureHistory("owner/repo", "2026-10-01", () => ({ workflow_runs: [] }))).toEqual({
+    perJob: [],
+    runCount: 0,
+  });
+  expect(() =>
+    readFailureHistory("owner/repo", "2026-10-01", () => {
+      throw new Error("unauthorized");
+    }),
+  ).toThrow("unauthorized");
+  const seen = [];
+  expect(
+    pages("endpoint", "rows", (url) => {
+      seen.push(url);
+      return { rows: seen.length === 1 ? Array(100).fill({}) : [{}] };
+    }),
+  ).toHaveLength(101);
+  expect(seen[1]).toContain("page=2");
+  let count = 0;
+  expect(() =>
+    pages("endpoint", "rows", () => {
+      if (count++) throw new Error("rate limited");
+      return { rows: Array(100).fill({}) };
+    }),
+  ).toThrow("rate limited");
+});

@@ -518,6 +518,8 @@
   },
   "buddyTeam": {
     "with": "Buddy team: {names}",
+    "ashore": "Buddy staying ashore. Re-pair.",
+    "ashoreNamed": "{name} staying ashore. Re-pair.",
     "separatedDock": "Buddy not aboard yet",
     "separatedAfterDive": "Buddy not back aboard",
     "separatedDockNamed": "{name} not aboard yet",

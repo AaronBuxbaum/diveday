@@ -251,11 +251,65 @@ describe("captureDepartureBoatSafety", () => {
     expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toBeNull();
   });
 
+  it("keeps existing evidence but takes no fresh snapshot from a deleted hull", async () => {
+    const { db, shop } = ctx;
+    const boat = await paperedBoat(db, shop.id);
+    const trip = await departure(db, shop.id, boat.id);
+    await captureDepartureBoatSafety(db, shop.id, trip.id, BEFORE);
+    const before = await departureBoatSafetySnapshot(db, shop.id, trip.id);
+    await db.update(boats).set({ deletedAt: BEFORE }).where(eq(boats.id, boat.id));
+    expect(
+      await captureDepartureBoatSafety(db, shop.id, trip.id, new Date(BEFORE.getTime() + 60_000)),
+    ).toBe("no_boat");
+    expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toEqual(before);
+  });
+
+  it("preserves evidence with unknown departure-time provenance instead of guessing it may be rewritten", async () => {
+    const { db, shop } = ctx;
+    const boat = await paperedBoat(db, shop.id);
+    const trip = await departure(db, shop.id, boat.id);
+    await captureDepartureBoatSafety(db, shop.id, trip.id, BEFORE);
+    await db
+      .update(departureBoatSafetySnapshots)
+      .set({ departureStartsAt: null })
+      .where(eq(departureBoatSafetySnapshots.tripId, trip.id));
+    const before = await db
+      .select()
+      .from(departureBoatSafetySnapshots)
+      .where(eq(departureBoatSafetySnapshots.tripId, trip.id));
+    await db.update(boats).set({ inspectionDueOn: "2027-10-01" }).where(eq(boats.id, boat.id));
+    expect(
+      await captureDepartureBoatSafety(db, shop.id, trip.id, new Date(BEFORE.getTime() + 60_000)),
+    ).toBe("kept_unknown");
+    expect(
+      await db
+        .select()
+        .from(departureBoatSafetySnapshots)
+        .where(eq(departureBoatSafetySnapshots.tripId, trip.id)),
+    ).toEqual(before);
+  });
+
   it("names the hull it kept, so a swapped boat can be told apart", async () => {
     const { db, shop } = ctx;
     const boat = await paperedBoat(db, shop.id);
     const trip = await departure(db, shop.id, boat.id);
     await captureDepartureBoatSafety(db, shop.id, trip.id, BEFORE);
     expect((await departureBoatSafetySnapshot(db, shop.id, trip.id))?.boatId).toBe(boat.id);
+  });
+
+  it("never rewrites kept sailed evidence with a later offline tap against a changed hull", async () => {
+    const { db, shop } = ctx;
+    const boat = await paperedBoat(db, shop.id);
+    const replacement = await createBoat(db, shop.id, "Replacement Hull", 12);
+    const startsAt = new Date(nowMs() - 4 * 3_600_000);
+    const trip = await departure(db, shop.id, boat.id, startsAt);
+    const firstTap = new Date(startsAt.getTime() - 10 * 60_000);
+    expect(await captureDepartureBoatSafety(db, shop.id, trip.id, firstTap)).toBe("captured");
+    const before = await departureBoatSafetySnapshot(db, shop.id, trip.id);
+    await db.update(trips).set({ boatId: replacement.id }).where(eq(trips.id, trip.id));
+    expect(
+      await captureDepartureBoatSafety(db, shop.id, trip.id, new Date(firstTap.getTime() + 60_000)),
+    ).toBe("sailed");
+    expect(await departureBoatSafetySnapshot(db, shop.id, trip.id)).toEqual(before);
   });
 });

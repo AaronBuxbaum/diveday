@@ -58,9 +58,12 @@ for (const locale of ["en-US", "es-ES"] as const) {
 
     it("says when the departure has since moved to another boat", () => {
       draw({ ...SNAPSHOT, boatChanged: true });
-      expect(screen.getByText(t("incidentExport.boatChanged"))).toBeInTheDocument();
+      expect(screen.getByRole("status")).toHaveTextContent(
+        t("incidentExport.boatChanged", { boatName: SNAPSHOT.boatName }),
+      );
+      expect(screen.getByRole("status")).toHaveClass("text-danger");
       draw(SNAPSHOT);
-      expect(screen.getAllByText(t("incidentExport.boatChanged"))).toHaveLength(1);
+      expect(screen.getAllByRole("status")).toHaveLength(1);
     });
 
     it("sets the kept papers, says which were not recorded, and words each notice", () => {

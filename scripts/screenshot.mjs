@@ -113,11 +113,19 @@ let viewports = [{ width: 390 }, { width: 1280 }];
 const DEFAULT_ROLE = "owner";
 let role = DEFAULT_ROLE;
 let probing = false;
+let waitForSelector;
+let waitAfterSelector;
+const hoverSelectors = [];
+const clickSelectors = [];
 
 for (let index = 0; index < args.length; index += 1) {
   const arg = args[index];
   if (arg === "--base") base = args[++index];
   else if (arg === "--out") out = args[++index];
+  else if (arg === "--wait-for") waitForSelector = args[++index];
+  else if (arg === "--wait-after") waitAfterSelector = args[++index];
+  else if (arg === "--hover") hoverSelectors.push(args[++index]);
+  else if (arg === "--click") clickSelectors.push(args[++index]);
   else if (arg === "--light") schemes = ["light"];
   else if (arg === "--dark") schemes = ["dark"];
   else if (arg === "--both") schemes = ["light", "dark"];
@@ -134,10 +142,19 @@ for (let index = 0; index < args.length; index += 1) {
 if (
   paths.length === 0 ||
   !DEV_STAFF_LOGINS[role] ||
-  viewports.some((viewport) => Number.isNaN(viewport.width))
+  viewports.some((viewport) => Number.isNaN(viewport.width)) ||
+  [waitForSelector, waitAfterSelector].some(
+    (selector) =>
+      selector !== undefined &&
+      (typeof selector !== "string" || selector.length === 0 || selector.startsWith("--")),
+  ) ||
+  [...hoverSelectors, ...clickSelectors].some(
+    (selector) =>
+      typeof selector !== "string" || selector.length === 0 || selector.startsWith("--"),
+  )
 ) {
   console.error(
-    "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark|--both] [--width <px>|--tablet] [--as owner|instructor|divemaster|captain] [--probe]\n" +
+    "Usage: node scripts/screenshot.mjs <path> [<path>…] [--base http://localhost:3000] [--out screenshots] [--light|--dark|--both] [--width <px>|--tablet] [--as owner|instructor|divemaster|captain] [--wait-for <selector>] [--hover <selector>] [--click <selector>] [--wait-after <selector>] [--probe]\n" +
       "Writes <out>/<path>[-<role>]-<scheme>-<width>.png; the role appears only when it is not the default owner.",
   );
   process.exit(1);
@@ -231,6 +248,24 @@ async function openAndSettle(page, target) {
         });
       }
       await waitPastTheSkeleton(page, target);
+      if (waitForSelector) {
+        await page.locator(waitForSelector).first().waitFor({
+          state: "visible",
+          timeout: LOCATOR_TIMEOUT_MS,
+        });
+      }
+      for (const selector of hoverSelectors) {
+        await page.locator(selector).first().hover({ timeout: LOCATOR_TIMEOUT_MS });
+      }
+      for (const selector of clickSelectors) {
+        await page.locator(selector).first().click({ timeout: LOCATOR_TIMEOUT_MS });
+      }
+      if (waitAfterSelector) {
+        await page.locator(waitAfterSelector).first().waitFor({
+          state: "visible",
+          timeout: LOCATOR_TIMEOUT_MS,
+        });
+      }
       return;
     } catch (error) {
       const wentAway = SERVER_WENT_AWAY.test(String(error?.message ?? error));

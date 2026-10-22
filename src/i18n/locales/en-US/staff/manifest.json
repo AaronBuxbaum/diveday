@@ -40,6 +40,7 @@
   "headCountBlockedAboard": "{count, plural, one {# blocked person aboard} other {# blocked people aboard}}",
   "headCountOverCertificate": "{limit, plural, one {Certificate allows # passenger} other {Certificate allows # passengers}}",
   "headCountOverTotalPersons": "{limit, plural, one {Certificate allows # person, crew included} other {Certificate allows # persons, crew included}}",
+  "headCountOverTotalPersonsAboard": "{aboard, plural, one {# person} other {# people}} aboard, crew included; the certificate allows {limit} in all.",
   "progressAriaLabel": "Roll-call progress",
   "ofTotalAboard": "of {total, plural, one {# diver} other {# divers}} aboard",
   "allAccountedFor": "Everyone’s accounted for, divers and crew. Ready for the next check.",
@@ -163,6 +164,8 @@
     "junior_without_adult": "a junior with no certified adult on file"
   },
   "buddyTeamLabel": "Team {number, number, ::00}",
+  "buddyTeamCaution": "Check pairing: {reason}.",
+  "buddyTeamNotCleared": "Teamed with a diver not cleared to board",
   "buddyCancelledName": "{name} (seat canceled)",
   "buddyCrewName": "{name} (crew)",
   "buddyRecordedBy": "Recorded by {name}",

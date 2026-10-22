@@ -105,6 +105,20 @@ describe("the capture itself", () => {
   });
 });
 
+describe("interactive capture states", () => {
+  const source = readFileSync(path.join(process.cwd(), "scripts/screenshot.mjs"), "utf8");
+
+  it("waits for, hovers, and clicks selectors before taking the picture", () => {
+    expect(source).toContain('arg === "--wait-for"');
+    expect(source).toContain('arg === "--hover"');
+    expect(source).toContain('arg === "--click"');
+    expect(source).toContain('arg === "--wait-after"');
+    expect(source).toMatch(/page\.locator\(selector\)\.first\(\)\.hover/);
+    expect(source).toMatch(/page\.locator\(selector\)\.first\(\)\.click/);
+    expect(source).toContain("if (waitAfterSelector)");
+  });
+});
+
 /**
  * The fourth: one scheme by default.
  *

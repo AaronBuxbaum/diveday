@@ -22,6 +22,10 @@
       "total": "{count, plural, one {# site} other {# sites}}"
     }
   },
+  "map": {
+    "openSite": "Open site",
+    "clusterLabel": "dive sites"
+  },
   "catalog": {
     "title": "DiveDay common dive sites",
     "description": "Published, versioned starting points. Importing makes an independent site in your own library; later template updates never overwrite your edits.",

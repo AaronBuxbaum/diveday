@@ -534,7 +534,7 @@ describe("planLedgerWrite (the ratchet)", () => {
 describe("summaryLine", () => {
   it("states coverage and exemptions in the same breath, so neither hides", () => {
     expect(summaryLine({ total: 57, e2e: 54, visual: 48, exempt: 3, uncovered: 0 })).toBe(
-      "route-coverage: 57 routes — 54 with an e2e spec, 48 with a visual capture, 3 exempt with a stated reason",
+      "route-coverage (static source associations, not runtime proof): 57 routes — 54 with an e2e spec, 48 with a visual capture, 3 exempt with a stated reason",
     );
   });
 });
@@ -647,4 +647,52 @@ describe("derived coverage", () => {
     expect(result.next).toEqual({ "/s/[shopSlug]": { visual: ["storefront"] } });
     expect(result.derivedNames).toEqual(['/s/[shopSlug]: e2e "booking.spec.ts"']);
   });
+});
+
+it("credits only a scan's last literal navigation in the same test", () => {
+  const result = deriveCoverage({
+    routes: ["/a", "/b", "/setup"],
+    specSources: new Map([
+      [
+        "demo.spec.ts",
+        `
+    test.beforeEach(async()=>{await page.goto('/setup')});
+    test('scan', async()=>{await page.goto('/a'); await expectNoA11yViolations(page)});
+    test('ordinary',async()=>{await page.goto('/b')});
+    // await expectNoA11yViolations(page)
+  `,
+      ],
+    ]),
+  });
+  expect([...result.get("/a").a11y]).toEqual(["demo.spec.ts"]);
+  expect([...result.get("/b").a11y]).toEqual([]);
+  expect([...result.get("/setup").a11y]).toEqual([]);
+});
+
+it("does not borrow unrelated literals, commented scans or stale dynamic navigation", () => {
+  const result = deriveCoverage({
+    routes: ["/a", "/b", "/c"],
+    specSources: new Map([
+      [
+        "demo.spec.ts",
+        `
+    test('scan',async()=>{const unrelated='/b';await page.goto('/a');await expectNoA11yViolations(page);await page.goto('/b');await page.goto(destination);await expectNoA11yViolations(page)});
+    test('comment',async()=>{await page.goto('/c');/* expectNoA11yViolations(page) */});
+    test.skip('disabled',async()=>{await page.goto('/c');await expectNoA11yViolations(page)});
+  `,
+      ],
+    ]),
+  });
+  expect([...result.get("/a").a11y]).toEqual(["demo.spec.ts"]);
+  expect([...result.get("/b").a11y]).toEqual([]);
+  expect([...result.get("/c").a11y]).toEqual([]);
+});
+
+it("does not credit scans inside a quarantined function-callback suite", () => {
+  const source = `test.describe('suite', {tag:'@quarantine'}, function () { test('critical', async function(){await page.goto('/a');await expectNoA11yViolations(page)}) })`;
+  expect([
+    ...deriveCoverage({ routes: ["/a"], specSources: new Map([["demo.spec.ts", source]]) }).get(
+      "/a",
+    ).a11y,
+  ]).toEqual([]);
 });

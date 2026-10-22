@@ -35,6 +35,7 @@ function renderPanel(
     left: string[];
     teamable: number;
   } | null = null,
+  teamWarnings: Record<string, string[]> = {},
 ) {
   render(
     <BuddyTeamsPanel
@@ -47,6 +48,7 @@ function renderPanel(
       buddyErrorText={null}
       buddyErrorForm={null}
       partyLines={partyLines}
+      teamWarnings={teamWarnings}
       teamUpPartiesAction={noop}
       formBuddyTeamAction={noop}
       addBuddyTeamMemberAction={noop}
@@ -98,6 +100,17 @@ describe("a buddy team's member chips", () => {
 });
 
 describe("a buddy team's row", () => {
+  it("keeps an informational caution beside its team and leaves dissolve available", () => {
+    renderPanel([team(["Ana Ruiz", "Ben Okafor"])], null, {
+      "team-2": ["Check pairing: a diver under 12.", "Teamed with a diver not cleared to board"],
+    });
+    const caution = screen.getByText("Check pairing: a diver under 12.");
+    expect(caution.closest("li")).toContainElement(
+      screen.getByRole("button", { name: "manifest.buddyDissolve" }),
+    );
+    expect(screen.getByText("Teamed with a diver not cleared to board")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "manifest.buddyDissolve" })).toBeEnabled();
+  });
   /**
    * **One chip, whether or not it can lose a member** (pixel-craft class 12,
    * K-359). A team of three's chips hold a 44px remove target, and stood 50px

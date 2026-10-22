@@ -1,0 +1,49 @@
+name: Mobile behavior
+
+on:
+  schedule:
+    - cron: "15 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-behavior
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  mobile:
+    name: Touch Chromium and mobile WebKit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    env:
+      E2E_WORKERS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright-shell
+      - name: Install WebKit and its system libraries
+        run: pnpm exec playwright install --with-deps webkit
+      - run: pnpm e2e:build
+      - name: Drive touch and mobile engine behavior
+        run: pnpm exec playwright test --config playwright.mobile.config.ts --reporter=github,html
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: mobile-behavior-evidence
+          path: |
+            playwright-report/
+            test-results/mobile/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Report the completed run
+        if: ${{ !cancelled() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_OUTCOME: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/workflow-alert.mjs --workflow mobile-behavior --outcome "$RUN_OUTCOME" --run-url "$RUN_URL"

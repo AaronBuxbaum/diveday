@@ -46,8 +46,9 @@
 //     static route over a dynamic sibling (`/gear/rentals` over `/gear/[id]`);
 //   - **a capture photographs a route** when the last path literal before its
 //     `capture(page, …)` call, inside the same `test(`, resolves to it;
-//   - **a spec scans a route** (`a11y`) when it covers the route and calls
-//     `expectNoA11yViolations`;
+//   - **a source scan candidate** (`a11y`) pairs `expectNoA11yViolations(page)`
+//     with the last literal `page.goto` inside the same enabled test. These
+//     source associations do not prove the test or scan actually ran;
 //   - `e2e/visual.spec.ts` is never a route's spec: a capture photographs a page
 //     and does not drive it. Three routes once passed "has a spec" on a
 //     photograph alone (test review 2026-10-14).
@@ -87,6 +88,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { calls, disabled, literal } from "./e2e-source.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -281,8 +283,6 @@ const PATH_CONSTANT =
 const CONSTANT_PREFIXED = /`\$\{(\w+)\}((?:[^`\s\\$]|\$\{[^}]*\}|\$(?!\{))*)`/g;
 /** A `test(` declaration, which bounds the captures a path literal can be credited with. */
 const TEST_START = /^\s*test(?:\.(?:only|skip|fixme|fail))?\s*\(/gm;
-/** The call that makes a spec an accessibility scan rather than a visit. */
-const A11Y_SCAN = /\bexpectNoA11yViolations\s*\(/;
 
 /** A path literal reduced to its route shape: `${…}` becomes `*`, query and hash dropped. */
 function pathShape(text) {
@@ -357,11 +357,27 @@ export function deriveCoverage({ routes, specSources = new Map(), visualSources 
   for (const [spec, source] of specSources) {
     // A capture photographs a route; it does not drive it. Its paths credit `visual` below.
     if (spec === path.basename(VISUAL_SPEC)) continue;
-    const scans = A11Y_SCAN.test(source);
     for (const { path: shape } of pathLiterals(source)) {
       for (const route of routesForPath(routes, shape)) {
         derived.get(route).e2e.add(spec);
-        if (scans) derived.get(route).a11y.add(spec);
+      }
+    }
+  }
+  // Source candidates only: a literal page.goto immediately establishes the
+  // page for a scan in that same enabled test. Setup and other tests cannot lend
+  // their navigation; dynamic navigation clears the candidate.
+  for (const [spec, source] of specSources) {
+    const all = calls(source);
+    const tests = all.filter((call) => /^test(?:\.(?:only|skip|fixme|fail))?$/.test(call.name));
+    const scopes = tests.length ? tests : [{ start: -1, end: source.length + 1, name: "root" }];
+    for (const scope of scopes) {
+      if (disabled(scope, all)) continue;
+      let destination = null;
+      for (const call of all.filter((call) => call.start > scope.start && call.end < scope.end)) {
+        if (call.name === "page.goto") destination = literal(call.arg);
+        if (call.name === "expectNoA11yViolations" && call.arg === "page" && destination) {
+          for (const route of routesForPath(routes, destination)) derived.get(route).a11y.add(spec);
+        }
       }
     }
   }
@@ -693,7 +709,7 @@ export function serializeLedger(next) {
 }
 
 export function summaryLine(stats) {
-  return `route-coverage: ${stats.total} routes — ${stats.e2e} with an e2e spec, ${stats.visual} with a visual capture, ${stats.exempt} exempt with a stated reason`;
+  return `route-coverage (static source associations, not runtime proof): ${stats.total} routes — ${stats.e2e} with an e2e spec, ${stats.visual} with a visual capture, ${stats.exempt} exempt with a stated reason`;
 }
 
 // ---------------------------------------------------------------------------

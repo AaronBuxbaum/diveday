@@ -135,10 +135,19 @@ The later heading decision changes **205 further message values** across **108 k
 root crash heading, “Something went sideways”. These are the heading follow-up counts; the
 641-value fragment-and-sentence table above remains the record of the initial sweep.
 
-Compared with the source before the initial copy commit (`45fffc154^`), the combined copy change
-now covers **846 unique message values** across **453 keys** in **79 locale files**: 451 English
-values and 395 Spanish values. These totals come from the combined JSON diff; keys shared between
-the two passes are counted once.
+At the pre-integration checkpoint, compared with the source before the initial copy commit
+(`45fffc154^`), the combined copy change covered **846 unique message values** across **453 keys**
+in **79 locale files**: 451 English values and 395 Spanish values. These are historical totals
+from the combined JSON diff; keys shared between the two passes are counted once.
+
+The final integrated diff against operational UX parent
+`ba639b0a3efb494db837b1629b4b0aab11a14794` changes **847 message values** across **454 keys** in
+**79 locale files**: 452 English values and 395 Spanish values, with no added or removed message
+keys. Incoming collection/editor wording and keys remain. The additional English value is
+`manifest.buddyTeamNotCleared`: the standalone warning fragment “Teamed with a diver not cleared
+to board” loses its final period without losing any word or safety qualification. Its Spanish
+counterpart is a complete body sentence and retains its period. Integration verification is
+recorded in the [visual pattern audit](visual-pattern-audit.md#publication-integration-checkpoint).
 
 The review traced semantic headings and shared heading consumers, including page and section
 headers, confirmation moments, disclosure headings, empty-state titles, group labels, dynamic

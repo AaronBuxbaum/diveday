@@ -2,6 +2,13 @@
   "//": "Pixel-probe flags that are right as they are. Each entry names the check and the signature (or a `classes` list the flag's class string must all carry), the reason, and a pointer to the code comment that explains it. A contextual entry also requires its exact capture and fresh structural/geometry evidence from pixel-probe/settlements.mjs; absent evidence leaves it open. The report lists matches as settled — never drops them. A flag that belongs here also earns a row in docs/design/settled-questions.md.",
   "settled": [
     {
+      "check": "mismatched-controls",
+      "classes": ["bg-foreground", "rounded-full", "text-surface"],
+      "container": "div.leaflet-marker-pane leaflet-pane",
+      "reason": "The shop anchor and numbered dive-site clusters are geographic objects positioned by coordinates. Their shared Leaflet marker pane does not make them a row of peer form controls, and their different glyph/count typography distinguishes their roles. This settles only the control-row comparison; target size, focus geometry and marker overlap remain separate findings.",
+      "pointer": "src/components/map/SiteMap.tsx, the comment on geographic marker roles; docs/design/settled-questions.md"
+    },
+    {
       "check": "focus-invisible",
       "classes": ["focus-visible:outline-none", "focus-visible:after:focus-ring-inset"],
       "reason": "Focus shows on the link's ::after overlay, the target a pointer has — RowLink's in a table cell, SettingsDoorRow's across a settings row: focus-visible:after:focus-ring-inset draws the ring inside the overlay's own edge, and the text is not ringed a second time. The probe reads only the element's own outline. How far RowLink's overlay reaches (the cell or the whole row) is issue #1989.",

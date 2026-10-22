@@ -156,6 +156,8 @@ export const e2eServerEnv: Readonly<Record<string, string | undefined>> = server
 
 export default defineConfig({
   testDir: "./e2e",
+  // Touch/engine assurance is a separate nightly/manual lane.
+  testIgnore: "**/mobile*.spec.ts",
   globalSetup: "./e2e/global-setup.ts",
   fullyParallel: true,
   workers: E2E_WORKER_COUNT,

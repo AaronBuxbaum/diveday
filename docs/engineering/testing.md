@@ -66,7 +66,10 @@ erasure) merges with tests for the failure paths, not only the happy path.
 The walks a shop cannot lose, each with the browser test that proves it. This list is the e2e
 floor, not "every important flow" (testing review decision 2, 2026-10-14):
 `pnpm check:critical-journeys` (in `check:repo`) fails when a row's spec is gone or its test is
-renamed, deleted or skipped. Renaming a journey's test renames its row in the same change.
+renamed, deleted or statically disabled. Comments and quoted examples cannot satisfy a row; skipped
+suites, skip hooks, callback skips, expected failures and quarantine tags are rejected. This source
+check cannot prove fixture-driven runtime outcomes; the browser run supplies that evidence.
+Renaming a journey's test renames its row in the same change.
 
 | Journey | Spec | Test |
 | --- | --- | --- |
@@ -106,9 +109,12 @@ run comments on it, and the first green run closes it. A manual run on another b
 nothing.
 
 **Flakes.** Playwright runs `retries: 0` locally and in CI, so a flake fails the run that meets it.
-One exception, decided 2026-10-16 (#2633): a CI shard, functional or visual, whose failure log
-carries the renderer probe's `wedged, not slow` verdict reruns only its failed tests once with
-`--last-failed`. That verdict proves the browser stopped answering; every other failure stays red.
+One exception, decided 2026-10-16 (#2633): a functional or visual shard may rerun its failed tests
+once with `--last-failed` when `scripts/e2e-retry-policy.mjs` proves every initial failure from the
+structured Playwright report. Proof is the visual screenshot probe's explicit wedge error, or a
+timed-out test's own `browser-activity` attachment with the renderer probe verdict. Mixed ordinary
+failures, missing evidence, global errors and unexecuted tests keep the shard red. Both attempts'
+JSON reports and attachments are retained; duration and budget consumers keep the initial report.
 A failing or flaky test is part of the work that meets it, even when unrelated: fixed, after
 searching open PRs for a fix in flight, or quarantined; never skipped, never given a wider timeout
 (AGENTS.md, testing review decision 4).
@@ -124,7 +130,11 @@ searching open PRs for a fix in flight, or quarantined; never skipped, never giv
   PR, push-gate and local run. `.github/workflows/e2e-nightly.yml` sets
   `DIVEDAY_RUN_QUARANTINE=1` and runs them every night, then runs each spec that failed on CI in
   the last 7 days five times (`--repeat-each=5`, `scripts/e2e-recent-failures.mjs`, at most 8
-  specs).
+  specs). The history reader paginates failed workflow runs, Playwright and visual jobs, and their
+  annotations. It resolves helper-thrown failures from the reporter title's spec identity and
+  reports the inspected run count and date window. Authentication, API and partial-page failures
+  fail the hunt explicitly. An empty result means no existing spec was identified in those
+  annotations; it does not establish an exhaustive clean history.
 
 ## Selection
 
@@ -153,7 +163,21 @@ What a diff runs is decided by reading it, at two places:
 912 images, down from 1,218. The accepted risk is a dark-only defect that shows only at phone
 width.
 
-CI's Playwright shards run every spec but one: `e2e/pixel-probe.spec.ts` runs on `main` and when
+The mobile behavior lane (`.github/workflows/mobile-behavior.yml`) runs nightly and on manual
+dispatch, outside PR shards. `playwright.mobile.config.ts` runs only `e2e/mobile*.spec.ts` under
+touch Chromium (Pixel 7) and mobile WebKit (iPhone 13). Tests assert the engine and touch/mobile
+context and use real taps for public navigation, booking, guardian signature and offline manifest
+save/reload/reconciliation. The frozen clock, isolated worker databases and provider isolation
+come from the normal fleet. WebKit gets no Chromium launch flags. Failures retain screenshots
+and traces and open a `ci-red` issue; the first green run closes it.
+
+Run `pnpm e2e:build`, then `E2E_WORKERS=1 pnpm exec playwright test --config playwright.mobile.config.ts`.
+Install engines with `pnpm exec playwright install chromium webkit` (Linux also needs
+`--with-deps`). This is browser/device emulation, including mobile input and storage behavior;
+real iOS Safari verification remains a separate manual release check. Chromium screenshot
+baselines continue through the normal config unchanged.
+
+CI's normal Playwright shards exclude `e2e/mobile*.spec.ts`; `e2e/pixel-probe.spec.ts` runs on `main` and when
 the probe, its spec, `e2e/fixtures.ts`, `globals.css`, a dependency or `ci.yml` changed
 (`changes.pixel_probe`).
 
@@ -314,27 +338,31 @@ tree is also what ADR 20260730-pinned-browser-visual-determinism assumes.
 
 ## The route coverage ledger
 
-`pnpm check:route-coverage` (part of `pnpm check:repo`) holds every `src/app/**/page.tsx` route to
-the bar: an `e2e/*.spec.ts` file that drives a flow landing there and an `e2e/visual.spec.ts` capture
-that photographs it, or a written `exempt` reason for the half it lacks. Most of that coverage is
-derived from the tree every run — a spec whose source holds a path literal resolving to the route
-covers it, and a capture shot after the last such literal inside one `test(` photographs it.
-`scripts/route-coverage.json` holds only what no literal shows: the specs and captures that reach a
-route by clicks, and the exemptions. A capture never counts as a route's spec: a photograph is not
-a flow.
+`pnpm check:route-coverage` (part of `pnpm check:repo`) checks static source associations for every
+`src/app/**/page.tsx` route: an `e2e/*.spec.ts` file and an `e2e/visual.spec.ts` capture, or a written
+`exempt` reason for the half it lacks. A spec's path literal associates it with a route; a capture
+uses the last such literal within its test. These associations are candidates for coverage, not
+proof that a route was visited or a capture ran. A capture never counts as a route's flow spec.
+
+An inferred `a11y` candidate requires `expectNoA11yViolations(page)` after the last literal
+`page.goto` in the same enabled test. Setup routes, unrelated tests and comments cannot lend scan
+credit; a dynamic navigation clears the candidate. Conditional execution, helpers, loops and
+fixture-driven skips require runtime evidence, so these figures cannot establish scanning
+completeness. `scripts/route-coverage.json` retains explicit click-reached associations and written
+exemptions for what source inference cannot resolve.
 
 It exists because a page with no test is silent by construction: it produces no failure for anyone
 to notice. A 2026-08-03 evaluation of the test system found three staff pages that had shipped with
 neither an e2e spec nor a visual capture — `/shop/[shopSlug]/orders/new`,
 `/shop/[shopSlug]/dive-sites/catalog`, and `/shop/[shopSlug]/staffing`. All three have since been
-covered and the ledger holds no exemptions; closing a future one means writing the spec and
-deleting the exemption in the same change.
+covered. Closing an exemption means writing the missing coverage and deleting its reason in the
+same change.
 
 The hand-written half is the part no string shows. A spec sometimes reaches a route by *clicking* —
 `e2e/waivers.spec.ts` gets to `/waivers/[token]` by pressing "Send waiver" and following the link out
-of a toast — and guessing those would invent coverage, so they are named by hand. Everything a spec
-reaches by URL needs no edit: the ledger used to list every route's specs by hand, and it was the
-file every feature layer of a stack conflicted on.
+of a toast — and guessing those would invent coverage, so they are named by hand. A path literal
+that associates a spec with a route needs no edit: the ledger used to list every route's specs by
+hand, and it was the file every feature layer of a stack conflicted on.
 
 ```bash
 node scripts/check-route-coverage.mjs            # the gate
@@ -464,6 +492,9 @@ named, and all picked up by that glob rather than by a list anyone has to rememb
 | --- | --- |
 | `migrations.postgres.test.ts` | `drizzle/` applies from empty, *and* on top of the previous release's schema, *and* both land on an identical schema (read from `information_schema`/`pg_constraint`, not from Drizzle's model) |
 | `bookings.postgres.test.ts` | Two — and five — genuinely concurrent transactions racing for the last seat sell exactly the seats that exist |
+| `account-security.postgres.test.ts` | Two and five competing sign-ins consume one recovery code once; different codes cannot resurrect each other; simultaneous sign-ins spend one TOTP step once |
+| `integration-events.postgres.test.ts` | Two independent workers claiming one integration delivery award one claim and increment its attempt count once |
+| `notifications.postgres.test.ts` | Two overlapping retry drains send one queued message once, while the provider remains suspended until the losing drain returns; final counters and payload cleanup agree |
 | `payments.postgres.test.ts` | Two simultaneous payment writes leave one unbroken `booking_payment_events` chain rather than a fork |
 | `refunds.postgres.test.ts` | Two — and five — simultaneous taps of Refund on one paid order reach Stripe exactly once; the losers are refused locally with `in_progress` rather than by Stripe's over-refund rejection (PAY-L3) |
 | `roll-call.postgres.test.ts` | The counter marking a diver not here and the crew boarding them at the rail serialise on the booking row, so a standing `boarded` result and a released seat never both stand — the rail overrules the desk, and never refuses |

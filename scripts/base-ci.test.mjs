@@ -119,6 +119,23 @@ describe("what the gate does about the base", () => {
     expect(decision.lines).toEqual(["base CI: unknown (no gh)."]);
   });
 
+  it.each(["", "README.md", "src/lib/x.ts", "e2e/a.spec.ts:42"])(
+    "refuses unsupported --base-red input %j instead of clearing an unnamed failure",
+    (file) => {
+      const verdict = { ...green, red: ["CI result"], unnamed: ["CI result"] };
+      const decision = baseDecision(verdict, { base: "origin/main", extra: [file] });
+      expect(decision.refuse).toMatch(/unsupported --base-red/);
+      expect(decision.files).toEqual([]);
+      expect(decision.specs).toEqual([]);
+      expect(
+        baseDecision(verdict, { base: "origin/main", extra: ["src/lib/x.test.ts", file] }).refuse,
+      ).toMatch(/unsupported --base-red/);
+      expect(
+        baseDecision({ unknown: "offline" }, { base: "origin/main", extra: [file] }).refuse,
+      ).toMatch(/unsupported --base-red/);
+    },
+  );
+
   it("warns, without refusing, while the base is still running", () => {
     const decision = baseDecision({ ...green, pending: ["Build"] }, { base: "origin/main" });
     expect(decision.refuse).toBeNull();
@@ -203,5 +220,7 @@ describe("reading GitHub", () => {
       "e2e/b.spec.ts",
     ]);
     expect(baseRedArgs(["--plan"])).toEqual([]);
+    expect(() => baseRedArgs(["--base-red"])).toThrow(/requires at least one/);
+    expect(() => baseRedArgs(["--base-red", "--plan"])).toThrow(/requires at least one/);
   });
 });

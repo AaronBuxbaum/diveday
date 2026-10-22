@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
-import type { MapPin, ShopAnchor } from "@/components/map/SiteMap";
+import type { MapPin } from "@/components/map/SiteMap";
+import { shopMapAnchor } from "@/components/map/shop-map-anchor";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -15,15 +16,16 @@ import {
   currentGlobalDiveSiteVersions,
   diveSiteLibrarySize,
   groupSiteLibrary,
+  listDiveSiteMapRows,
   listDiveSitesPage,
-  shopSearchAnchor,
 } from "@/db/dive-sites";
+import { staffDiveSiteDepthText } from "@/i18n/depth-labels";
+import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
-import { timeZoneAnchor } from "@/lib/timezones";
 import { CatalogView } from "./_components/CatalogView";
 import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
@@ -90,7 +92,7 @@ export default async function DiveSitesPage({
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
   const requestedPage = Number.parseInt(page ?? "", 10);
   const query = q?.trim() ?? "";
-  const [sitePage, librarySize, catalogSize, rawAnchor] = await Promise.all([
+  const [sitePage, librarySize, catalogSize, mapRows] = await Promise.all([
     listDiveSitesPage(
       db,
       shop.id,
@@ -104,7 +106,7 @@ export default async function DiveSitesPage({
     // The tail door's number, over the whole published catalog — never the
     // `total` of a page nobody has fetched yet (ADR 20260827-the-shops-shelves).
     countGlobalDiveSiteTemplates(db),
-    shopSearchAnchor(db, shop.id),
+    listDiveSiteMapRows(db, shop.id),
   ]);
   const sites = sitePage.rows;
   const banner = noticeFromParam(notice, NOTICES);
@@ -117,27 +119,26 @@ export default async function DiveSitesPage({
     sites.map((site) => site.sourceTemplateId).filter((id): id is string => Boolean(id)),
   );
 
-  const anchorCoords = rawAnchor ?? timeZoneAnchor(shop.timezone);
-  const shopAnchor: ShopAnchor | null = anchorCoords
-    ? {
-        latitude: anchorCoords.latitude,
-        longitude: anchorCoords.longitude,
-        name: shop.name,
-      }
-    : null;
+  const shopAnchor = shopMapAnchor(shop);
 
-  const pins: MapPin[] = sites
+  const pins: MapPin[] = mapRows
     .filter(
-      (site): site is typeof site & { forecastLatitude: number; forecastLongitude: number } =>
-        site.forecastLatitude != null && site.forecastLongitude != null,
+      (site): site is typeof site & { latitude: number; longitude: number } =>
+        site.latitude != null && site.longitude != null,
     )
     .map((site) => ({
       id: site.id,
       name: site.name,
-      latitude: site.forecastLatitude,
-      longitude: site.forecastLongitude,
+      latitude: site.latitude,
+      longitude: site.longitude,
       subtitle: site.locationName,
+      details: [
+        staffDiveSiteDepthText(t, site, shop.depthUnit),
+        diveSiteDifficultyLabel(site.difficultyLevel, diverT),
+      ].filter((detail): detail is string => Boolean(detail)),
+      description: site.description,
       href: `/shop/${shopSlug}/dive-sites/${site.id}`,
+      hrefLabel: t("diveSites.map.openSite"),
       tone:
         site.difficultyLevel === "advanced"
           ? "warning"
@@ -226,7 +227,7 @@ export default async function DiveSitesPage({
         </QueryForm>
       ) : null}
 
-      {sites.length === 0 ? (
+      {librarySize === 0 ? (
         <EmptyState
           title={query ? t("diveSites.list.noMatchHeading") : t("diveSites.list.emptyHeading")}
           body={t("diveSites.list.emptyBody")}
@@ -256,27 +257,41 @@ export default async function DiveSitesPage({
           className="mt-4"
         />
       ) : (
-        <SiteLibraryLayout shopAnchor={shopAnchor} pins={pins} empty={sites.length === 0}>
-          <SiteLibraryLedger
-            groups={groupSiteLibrary(sites)}
-            shopSlug={shopSlug}
-            t={t}
-            diverT={diverT}
-            depthUnit={shop.depthUnit}
-            currentTemplateVersion={currentTemplateVersion}
-            // The tail door renders only when there is something behind it. A
-            // catalog DiveDay has not published into yet would otherwise offer a
-            // shop a page of nothing at the foot of its own library.
-            catalog={catalogSize > 0 ? { href: catalogHref, count: catalogSize } : null}
-          />
+        <SiteLibraryLayout
+          shopAnchor={shopAnchor}
+          pins={pins}
+          clusterLabel={t("diveSites.map.clusterLabel")}
+        >
+          {sites.length === 0 ? (
+            <EmptyState
+              title={t("diveSites.list.noMatchHeading")}
+              body={t("diveSites.list.emptyBody")}
+              className="mt-4"
+            />
+          ) : (
+            <>
+              <SiteLibraryLedger
+                groups={groupSiteLibrary(sites)}
+                shopSlug={shopSlug}
+                t={t}
+                diverT={diverT}
+                depthUnit={shop.depthUnit}
+                currentTemplateVersion={currentTemplateVersion}
+                // The tail door renders only when there is something behind it. A
+                // catalog DiveDay has not published into yet would otherwise offer a
+                // shop a page of nothing at the foot of its own library.
+                catalog={catalogSize > 0 ? { href: catalogHref, count: catalogSize } : null}
+              />
 
-          <Pager
-            page={sitePage.page}
-            pageCount={sitePage.pageCount}
-            href={pageHref}
-            total={t("diveSites.list.pagination.total", { count: sitePage.total })}
-            words={staffPagerWords(t)}
-          />
+              <Pager
+                page={sitePage.page}
+                pageCount={sitePage.pageCount}
+                href={pageHref}
+                total={t("diveSites.list.pagination.total", { count: sitePage.total })}
+                words={staffPagerWords(t)}
+              />
+            </>
+          )}
         </SiteLibraryLayout>
       )}
     </main>

@@ -339,6 +339,14 @@ type ActivityParamShapes = {
   departure_added: { actor: string };
   series_added: { actor: string };
   departure_moved: { actor: string };
+  departure_boat_changed: {
+    actor: string;
+    fromBoat: string;
+    toBoat: string;
+    hasFromBoat: string;
+    hasToBoat: string;
+    snapshot: string;
+  };
   departure_copied: { actor: string };
   departure_deleted: { actor: string };
   /**
@@ -533,6 +541,7 @@ export const ACTIVITY_CODES = [
   "departure_added",
   "series_added",
   "departure_moved",
+  "departure_boat_changed",
   "departure_copied",
   "departure_deleted",
   "departure_retitled_by_erasure",

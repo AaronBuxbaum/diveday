@@ -14,6 +14,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
+import { boatTripFixture, tripBoatPatch } from "./trip-boat-test-fixtures";
 import { listTripChangeEvents } from "./trip-change-events";
 import {
   createTrip,
@@ -576,32 +577,8 @@ describe("trip records (in-memory PGlite)", () => {
  * `deleteTrip` refuses a departure carrying bookings.
  */
 describe("editing a departure's boat, mode and public sale", () => {
-  async function boatTrip() {
-    const { db, shop } = ctx;
-    const hull = await createBoat(db, shop.id, "Reef Runner", 12);
-    const spare = await createBoat(db, shop.id, "Blue Horizon", 12);
-    const trip = await createTrip(db, {
-      shopId: shop.id,
-      title: "Two-Tank Reef",
-      startsAt: new Date("2030-08-03T13:00:00.000Z"),
-      endsAt: new Date("2030-08-03T17:00:00.000Z"),
-      capacity: 10,
-      plannedDives: 2,
-      diveMode: "boat",
-      boatId: hull.id,
-      isPrivate: false,
-    });
-    if (!trip) throw new Error("trip not created");
-    return { db, shop, trip, hull, spare };
-  }
-
-  const patch = (trip: { title: string; startsAt: Date; endsAt: Date }) => ({
-    title: trip.title,
-    startsAt: trip.startsAt,
-    endsAt: trip.endsAt,
-    capacity: 10,
-    plannedDives: 2,
-  });
+  const boatTrip = () => boatTripFixture(ctx.db, ctx.shop);
+  const patch = tripBoatPatch;
 
   it("moves a departure to another hull", async () => {
     const { db, shop, trip, spare } = await boatTrip();

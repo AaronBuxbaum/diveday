@@ -27,6 +27,23 @@ export const ALERT_LABEL = "ci-red";
 
 /** The workflows that alert, keyed by their file name without `.yml`. */
 export const ALERTS = {
+  "mobile-behavior": {
+    title: "Fix the nightly mobile behavior run, which is red on main",
+    kind: "risk",
+    effort: "S",
+    touches: [
+      ".github/workflows/mobile-behavior.yml",
+      "e2e/mobile-behavior.spec.ts",
+      "playwright.mobile.config.ts",
+    ],
+    noticed:
+      "The scheduled mobile behavior run failed on main. Its touch Chromium and mobile WebKit journeys cover public booking, guardian waiver signing, navigation and offline manifest persistence and reconciliation. While it is red those mobile engine contracts are unverified. Each red run adds its evidence; the first green run closes this issue.",
+    why: "The nightly lane found this outside a feature change. Read the trace to distinguish an application regression from a test that missed an intended flow change or a browser installation failure.",
+    proposed:
+      "Read the failing step and download mobile-behavior-evidence. Reproduce with the mobile config and fix the failing behavior or stale locator. Do not widen timeouts, add retries or replace touch events with clicks.",
+    prompt:
+      "The nightly mobile behavior lane is red. Read the newest run and mobile-behavior-evidence artifact, then docs/engineering/testing.md and e2e/mobile-behavior.spec.ts. Reproduce with E2E_WORKERS=1 pnpm exec playwright test --config playwright.mobile.config.ts after pnpm e2e:build. Fix the regression or intended-flow mismatch without retries or timeout increases. Done is both mobile projects passing, workflow alert tests, lint, typecheck and repo checks passing. Close this issue in the fix PR.",
+  },
   "simulate-day": {
     title: "Fix the nightly one-day simulation, which is red on main",
     kind: "risk",

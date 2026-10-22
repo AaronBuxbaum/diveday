@@ -59,6 +59,8 @@ const SPEC_ROOT = "e2e";
  * eight shards (`--visual`) and has its own baseline plumbing.
  */
 export const EXCLUDED_SPECS = ["e2e/visual.spec.ts"];
+// Mobile behavior has its own nightly/manual engine lane, never desktop shards.
+const MOBILE_SPEC = /(?:^|\/)mobile[^/]*\.spec\.ts$/;
 
 /** One `test(`/`it(` per test, including modifiers and `.each` tables (counted
  *  once — the table's rows are not worth parsing for). */
@@ -165,7 +167,11 @@ export async function listSpecs(root = process.cwd()) {
     for (const entry of entries) {
       const relativePath = `${relativeDirectory}/${entry.name}`;
       if (entry.isDirectory()) await walk(relativePath);
-      else if (entry.name.endsWith(".spec.ts") && !EXCLUDED_SPECS.includes(relativePath)) {
+      else if (
+        entry.name.endsWith(".spec.ts") &&
+        !EXCLUDED_SPECS.includes(relativePath) &&
+        !MOBILE_SPEC.test(relativePath)
+      ) {
         found.push(relativePath);
       }
     }

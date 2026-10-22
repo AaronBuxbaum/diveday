@@ -235,8 +235,15 @@ export function CrewRollCall({
               // divemaster's row and on the row of the diver they lead.
               const teamLabel = buddyTeamLabel(member.buddyTeams ?? []);
               const capsule = member.buddyAlert ? (
-                <Badge tone={member.buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
-                  {buddyAlertText(t, member.buddyAlert, member.buddyMissing)}
+                <Badge
+                  tone={member.buddyAlert === "separated_after_dive" ? "danger" : "warning"}
+                  size="lg"
+                  wraps
+                  className="max-w-full"
+                >
+                  <span className="min-w-0 wrap-anywhere">
+                    {buddyAlertText(t, member.buddyAlert, member.buddyMissing)}
+                  </span>
                 </Badge>
               ) : null;
               /**

@@ -35,6 +35,7 @@ function cleanSummary() {
         deleted: 12,
         capped: false,
         failed: false,
+        skipped: false,
         retentionDays: 400,
       },
       {
@@ -42,11 +43,13 @@ function cleanSummary() {
         deleted: 3,
         capped: false,
         failed: false,
+        skipped: false,
         retentionDays: 1095,
       },
     ],
     totalDeleted: 15,
     failedTables: [],
+    skippedTables: [],
   };
 }
 
@@ -139,6 +142,7 @@ describe("GET /api/cron/retention — reporting", () => {
       outcomes: [],
       totalDeleted: 0,
       failedTables: [],
+      skippedTables: [],
     } as never);
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(200);
@@ -155,13 +159,19 @@ describe("GET /api/cron/retention — reporting", () => {
           deleted: 5000,
           capped: true,
           failed: false,
+          skipped: false,
           retentionDays: 1095,
         },
       ],
       totalDeleted: 5000,
       failedTables: [],
+      skippedTables: [],
     } as never);
-    await GET(cronRequest(`Bearer ${secret}`));
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(200);
+    expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: "error" }),
+    );
     expect(summaryLine()).toEqual(expect.objectContaining({ tablesCapped: "activity_events" }));
     const warned = vi.mocked(console.warn).mock.calls.map((call) => JSON.parse(String(call[0])));
     expect(warned).toEqual([
@@ -183,20 +193,56 @@ describe("GET /api/cron/retention — reporting", () => {
           deleted: 0,
           capped: false,
           failed: true,
+          skipped: false,
           retentionDays: 90,
         },
       ],
       totalDeleted: 0,
       failedTables: ["account_tokens"],
+      skippedTables: [],
     } as never);
     const response = await GET(cronRequest(`Bearer ${secret}`));
     expect(response.status).toBe(500);
     expect(summaryLine()).toEqual(
       expect.objectContaining({ tablesFailed: 1, failedTables: "account_tokens" }),
     );
+    expect(
+      vi.mocked(console.error).mock.calls.map((call) => JSON.parse(String(call[0]))),
+    ).toContainEqual(
+      expect.objectContaining({ event: "cron_retention.prune_failed", table: "account_tokens" }),
+    );
     expect(Sentry.captureMessage).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ tags: { retention_table: "account_tokens" } }),
+    );
+    expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: "error" }),
+    );
+  });
+
+  it("alarms on skipped tables without claiming a proven backlog", async () => {
+    const summary = cleanSummary();
+    const first = summary.outcomes[0];
+    if (!first) throw new Error("missing test outcome");
+    summary.outcomes[0] = { ...first, deleted: 0, skipped: true };
+    vi.mocked(pruneExpiredRecords).mockResolvedValue({
+      ...summary,
+      skippedTables: ["stripe_webhook_events"],
+    });
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      skippedTables: ["stripe_webhook_events"],
+    });
+    expect(summaryLine()).toMatchObject({ tablesSkipped: "stripe_webhook_events" });
+    expect(
+      vi.mocked(console.warn).mock.calls.map((call) => JSON.parse(String(call[0]))),
+    ).toContainEqual(
+      expect.objectContaining({
+        event: "cron_retention.prune_capped",
+        tablesCapped: "",
+        tablesSkipped: "stripe_webhook_events",
+      }),
     );
     expect(Sentry.captureCheckIn).toHaveBeenLastCalledWith(
       expect.objectContaining({ status: "error" }),

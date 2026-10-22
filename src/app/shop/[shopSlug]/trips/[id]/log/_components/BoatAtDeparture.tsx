@@ -63,8 +63,11 @@ export function BoatAtDeparture({
             })}
           </p>
           {boatSafety.boatChanged ? (
-            <p className="mt-1 max-w-prose text-sm font-medium">
-              {t("incidentExport.boatChanged")}
+            <p
+              className="mt-2 max-w-prose rounded-inset border border-danger bg-danger-tint px-4 py-3 text-base font-semibold text-danger"
+              role="status"
+            >
+              {t("incidentExport.boatChanged", { boatName: boatSafety.boatName })}
             </p>
           ) : null}
           <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-2">

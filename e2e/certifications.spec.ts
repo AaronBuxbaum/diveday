@@ -14,6 +14,7 @@ import {
   rosterRow,
   signInAsOwner,
   signOut,
+  tripPathByTitle,
 } from "./helpers";
 
 signedInAsOwner();
@@ -210,8 +211,12 @@ test("an instructor certifies a diver from the course roster, and they can book 
 test("an instructor writes a student's next step on the course session's own roster", async ({
   page,
 }) => {
-  const trip = await findTripOnBoard(page, "blue-mantis", /Advanced Open Water Diver/);
-  await trip.click();
+  // The seeded session starts 29 days out; open its week directly so setup
+  // does not spend the form's test budget crawling four preceding weeks.
+  const tripPath = await tripPathByTitle(page, "blue-mantis", /Advanced Open Water Diver/, {
+    daysOut: 29,
+  });
+  await page.goto(tripPath);
   // Crew is on Details; the roster the diver joins is the Divers tab.
   await openTripTab(page, "Trip");
 

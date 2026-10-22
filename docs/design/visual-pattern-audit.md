@@ -210,7 +210,7 @@ disclosures. Two other supplemental tests build tank-gas correction and drysuit-
 forms through the ordinary rental and diver-fit UI. These supplemental captures are included in
 the final local verification below.
 
-## Final local verification
+## Initial audit verification before the expanded review
 
 Seven focused component files passed 54 tests: booking party fields, coming-as, walk-in party
 rows, tank-gas presentation, cards-to-process, agency checking and public course sections.
@@ -226,17 +226,17 @@ Completed local evidence across the subsequent runs includes:
 - The fourteen-case geometry run passed before the last corrective source edits; five critical
   smoke journeys, the payment-history import journey and the work-order journey also passed
   across the previous runs, alongside sixteen visual capture groups.
-- The [copy audit](visual-consistency-audit.md) now records 641 changed message values across
+- The initial [copy audit](visual-consistency-audit.md) records 641 changed message values across
   355 keys in 73 locale files; its final focused run passed 835 tests in 54 files.
 
-The final production build, full typecheck and repository checks pass. Lint passes with its
-19 baseline warnings. The final bounded browser replay passed all seven cases, including
-centred CatchUpStrip targets at 390px and 1280px, the import report's 16px trip links and 44px
-targets, waiver smoke, and manifest, course, report and focused Got it captures. This replay
+At that checkpoint, the final production build, full typecheck and repository checks passed.
+Lint passed with its 19 baseline warnings. The final bounded browser replay passed all seven cases,
+including centred CatchUpStrip targets at 390px and 1280px, the import report's 16px trip links
+and 44px targets, waiver smoke, and manifest, course, report and focused Got it captures. This replay
 closes the families changed after the earlier passing runs; their unchanged families retain
 their earlier evidence.
 
-The current pixel-probe report contains 144 records, zero skipped, 24 capture states, zero open
+The checkpoint's pixel-probe report contains 144 records, zero skipped, 24 capture states, zero open
 flags and seven settled clusters. The known atlas identity limitation was addressed for this
 review with explicit Got it focus PNGs rather than a change to the atlas tool. The final critic
 verified the normal and focused Got it label, focus ring and panel clearance at both widths,
@@ -252,7 +252,26 @@ Local integration logs are `/tmp/diveday-3392-build-final-verified.log`,
 `/tmp/diveday-3392-repo-final-verified.log` and `/tmp/diveday-3392-final-replay.log`.
 No permission, readiness, gas, certification or medical rule changed in this presentation pass.
 
-Publication is deliberately held behind the exact local operational UX predecessor `6bb4302b4`,
-which remains unpublished. The coordinator will send the exact green-parent and resource-slot
-resume trigger; the root thread retains integration and push ownership without an idle watcher.
-This audit claims neither a published PR nor CI approval.
+## Publication integration checkpoint
+
+The publication parent is now operational UX [#2906](https://github.com/AaronBuxbaum/diveday/pull/2906),
+branch `codex/ux-operational-trust-20261021`, at `ba639b0a3efb494db837b1629b4b0aab11a14794`.
+Its hosted CI run 5034 completed successfully. Aaron asked all chats to push their saved work and
+respond to hosted CI failures, while retaining the restriction against heavy local testing.
+
+The audit is being integrated with that exact parent using source, JSON, syntax, formatting and
+whitespace checks. The inherited migrations and export snapshot remain the parent's work; this
+presentation audit adds no schema change. The initial validation above belongs to its recorded
+pre-integration checkpoint. No fresh local build, browser replay, full typecheck or broad test
+gate establishes the final integrated head. Expanded capture preparation still does not establish
+that every designed state has been rendered or reviewed.
+
+The integrated JSON diff against that parent changes 847 message values across 454 keys in 79
+locale files: 452 English and 395 Spanish values. No message keys are added or removed, and the
+incoming collection/editor wording remains. The earlier 846-value count is the historical
+pre-integration checkpoint. One additional English buddy-team warning fragment loses its terminal
+period; every safety qualification remains, and its complete Spanish body sentence keeps its
+period. The [copy audit](visual-consistency-audit.md#heading-follow-up) records both checkpoints.
+
+The root thread owns the integration commit, push, draft PR and hosted CI handoff. Publication and
+the audit's own final-head CI result are not claimed by this source checkpoint.

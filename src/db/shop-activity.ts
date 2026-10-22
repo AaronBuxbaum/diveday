@@ -333,6 +333,13 @@ export type ShopActivityWrite =
       tripId: string;
     }
   | {
+      code: "departure_boat_changed";
+      tripId: string;
+      fromBoat: string | null;
+      toBoat: string | null;
+      snapshot: "refreshed" | "kept" | "none";
+    }
+  | {
       code: "review_replied" | "review_reply_edited" | "review_reply_deleted";
       reviewId: string;
     }
@@ -536,7 +543,20 @@ async function writeShopActivity(
       bookingId: null,
       orderId: null,
       subjectPersonId: null,
-      entry: { code: write.code, params: { actor: actor.name } },
+      entry:
+        write.code === "departure_boat_changed"
+          ? {
+              code: write.code,
+              params: {
+                actor: actor.name,
+                fromBoat: write.fromBoat ?? "",
+                toBoat: write.toBoat ?? "",
+                hasFromBoat: write.fromBoat === null ? "no" : "yes",
+                hasToBoat: write.toBoat === null ? "no" : "yes",
+                snapshot: write.snapshot,
+              },
+            }
+          : { code: write.code, params: { actor: actor.name } },
     };
   } else if (write.code === "boat_papers_changed") {
     values = {
