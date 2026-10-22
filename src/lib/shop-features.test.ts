@@ -8,6 +8,7 @@ const allOn = {
   tipsEnabled: true,
   publicYearEnabled: true,
   padiChecksEnabled: true,
+  claudeSuggestionsEnabled: true,
 };
 
 describe("shopOffers", () => {
@@ -34,5 +35,13 @@ describe("PADI checks", () => {
     const { shops } = await import("@/db/schema");
     expect(shops.padiChecksEnabled.default).toBe(false);
     expect(shops.publicYearEnabled.default).toBe(false);
+  });
+});
+
+describe("Claude suggestions", () => {
+  it("start on: every assist is a draft a person still accepts", async () => {
+    const { shops } = await import("@/db/schema");
+    expect(shops.claudeSuggestionsEnabled.default).toBe(true);
+    expect(parseShopFeature("claudeSuggestions")).toBe("claudeSuggestions");
   });
 });

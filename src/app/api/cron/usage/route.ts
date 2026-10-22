@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { claudeSpendUsdBetween } from "@/db/assists";
 import { getDb } from "@/db/client";
 import { nowDate } from "@/lib/clock";
 import {
@@ -19,7 +20,7 @@ import { claimUsageAlert, releaseUsageAlert } from "@/lib/usage/alert-ledger";
 import { collectUsageSamples } from "@/lib/usage/collect";
 
 /**
- * Four HTTP reads against two vendors' usage APIs, each already bounded by its
+ * Four HTTP reads against two vendors' usage APIs and one sum over `claude_usage`, each already bounded by its
  * own `PROBE_TIMEOUT_MS`, plus at most a handful of SES sends. 60s is far above
  * the observed tick and still a bound: a provider that stops answering gets the
  * whole request killed rather than holding a function slot open, and the Sentry
@@ -106,9 +107,12 @@ export async function GET(request: Request) {
 
   try {
     const now = nowDate();
-    const samples = await collectUsageSamples({ now });
-    const evaluations = evaluateCeilings(samples, now);
     const db = await getDb();
+    const samples = await collectUsageSamples({
+      now,
+      readAnthropicSpendUsd: (start, end) => claudeSpendUsdBetween(db, start, end),
+    });
+    const evaluations = evaluateCeilings(samples, now);
 
     let alertsSent = 0;
     let alertsSuppressed = 0;

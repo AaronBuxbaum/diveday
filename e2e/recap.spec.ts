@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
-import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { openRecapDoor, openRosterDetails, openSettingsRow, signOut } from "./helpers";

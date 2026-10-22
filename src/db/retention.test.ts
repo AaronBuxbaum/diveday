@@ -783,6 +783,19 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.staffReplies.id }),
     ),
+  claude_usage: async ({ db, shop }, at) =>
+    idOf(
+      await db
+        .insert(schema.claudeUsage)
+        .values({
+          shopId: shop.id,
+          feature: "inbox_sort",
+          model: "claude-haiku-5-5",
+          outcome: "ok",
+          createdAt: at,
+        })
+        .returning({ id: schema.claudeUsage.id }),
+    ),
   weekly_digest_sends: async ({ db, shop, people }, at, n) =>
     idOf(
       await db

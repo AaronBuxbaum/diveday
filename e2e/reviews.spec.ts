@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed-identifiers";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { signRecapToken } from "../src/lib/recap-links";

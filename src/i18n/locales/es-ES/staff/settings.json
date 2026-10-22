@@ -436,6 +436,11 @@
         "label": "Verificar certificaciones y eLearning de PADI",
         "description": "Beta: nadie lo ha probado todavía en la página real de DiveChek de PADI, y PADI no ha dicho si acepta que una extensión la rellene. Funciona en un navegador donde uno de tus profesionales PADI tiene la sesión iniciada en el PADI Pros’ Site, con la afiliación de ese profesional. Desactivado, el enlace al PADI Pros’ Site se mantiene. Un propietario o un gerente puede activarlo."
       },
+      "claudeSuggestions": {
+        "heading": "Sugerencias de Claude",
+        "label": "Mostrar sugerencias de Claude",
+        "description": "Borradores y orden que tu equipo puede editar o ignorar. No se envía ni se guarda nada hasta que alguien de tu equipo lo haga. Lo que Claude lee se envía a Anthropic, el proveedor de IA de DiveDay."
+      },
       "door": "Activar o desactivar funciones"
     },
     "crewSchedule": {

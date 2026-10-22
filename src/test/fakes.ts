@@ -20,6 +20,7 @@
  * ceiling per payment intent (PAY-M3). That is a simulator, not a stub.
  */
 
+import type { ClaudeMessage, ClaudeProvider, ClaudeRequest } from "@/lib/claude/provider";
 import { nowMs } from "@/lib/clock";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import type {
@@ -185,4 +186,71 @@ export function fakeCourtesy(
     ...overrides,
   };
   return { sent, provider };
+}
+
+/**
+ * One Messages API response, filled in: a text block, `end_turn`, and a small
+ * usage so a cost is never zero by accident. A test names only what it reads.
+ */
+export function fakeClaudeMessage({
+  text,
+  stopReason = "end_turn",
+  usage = {},
+  model = "claude-haiku-5-5",
+}: {
+  text: string;
+  stopReason?: ClaudeMessage["stop_reason"];
+  usage?: Partial<
+    Pick<
+      ClaudeMessage["usage"],
+      "input_tokens" | "output_tokens" | "cache_creation_input_tokens" | "cache_read_input_tokens"
+    >
+  >;
+  model?: string;
+}): ClaudeMessage {
+  return {
+    id: "msg_fake",
+    type: "message",
+    role: "assistant",
+    model,
+    content: [{ type: "text", text, citations: null }],
+    stop_reason: stopReason,
+    stop_sequence: null,
+    stop_details: null,
+    container: null,
+    usage: {
+      input_tokens: 10,
+      output_tokens: 5,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0,
+      cache_creation: null,
+      inference_geo: null,
+      output_tokens_details: null,
+      server_tool_use: null,
+      service_tier: null,
+      ...usage,
+    },
+  } as ClaudeMessage;
+}
+
+/**
+ * Claude, faked. `reply` answers each request; by default every call answers
+ * `{}` (which most schemas refuse, so a test that expects a value says what it
+ * is). `requests` records what was sent, for asserting on the prompt.
+ */
+export function fakeClaude({
+  reply = () => fakeClaudeMessage({ text: "{}" }),
+}: {
+  reply?: (request: ClaudeRequest) => ClaudeMessage;
+} = {}): ClaudeProvider & {
+  requests: ClaudeRequest[];
+} {
+  const requests: ClaudeRequest[] = [];
+  return {
+    requests,
+    async createMessage(request) {
+      requests.push(request);
+      return reply(request);
+    },
+  };
 }
