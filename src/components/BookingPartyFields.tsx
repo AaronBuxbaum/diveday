@@ -445,23 +445,14 @@ export function BookingPartyFields({
                       details rather than a question about them. Stacked
                       without a gap, each row's own 44px is the rhythm. */}
                   {leadOnly ? null : (
-                    <div className="grid">
-                      {index > 0 ? (
-                        <ChoiceRow
-                          type="checkbox"
-                          checked={usesLeadEmail(index)}
-                          onChange={(event) => {
-                            const checked = event.target.checked;
-                            setLeadEmailChoice((current) => ({ ...current, [index]: checked }));
-                            if (checked) updateMember(index, { email: "" });
-                          }}
-                          className="text-sm text-muted"
-                        >
-                          {t("party.useMainContactEmail")}
-                        </ChoiceRow>
-                      ) : null}
-                      <UnderEighteenChoice index={index} />
-                    </div>
+                    <MemberBoxes
+                      index={index}
+                      usesLeadEmail={usesLeadEmail(index)}
+                      onLeadEmailChange={(checked) => {
+                        setLeadEmailChoice((current) => ({ ...current, [index]: checked }));
+                        if (checked) updateMember(index, { email: "" });
+                      }}
+                    />
                   )}
                 </FieldGrid>
               </div>
@@ -470,6 +461,39 @@ export function BookingPartyFields({
         );
       })}
     </>
+  );
+}
+
+/**
+ * **The boxes close the diver's block, together.** "Under 18" stood between
+ * Joining as and Email, a 44px row with the grid's 16px either side, so it read
+ * as a gap in the person's details rather than a question about them. Stacked
+ * without a gap, each row's own 44px is the rhythm.
+ */
+function MemberBoxes({
+  index,
+  usesLeadEmail,
+  onLeadEmailChange,
+}: {
+  index: number;
+  usesLeadEmail: boolean;
+  onLeadEmailChange: (checked: boolean) => void;
+}) {
+  const t = useTranslations();
+  return (
+    <div className="grid">
+      {index > 0 ? (
+        <ChoiceRow
+          type="checkbox"
+          checked={usesLeadEmail}
+          onChange={(event) => onLeadEmailChange(event.target.checked)}
+          className="text-sm text-muted"
+        >
+          {t("party.useMainContactEmail")}
+        </ChoiceRow>
+      ) : null}
+      <UnderEighteenChoice index={index} />
+    </div>
   );
 }
 

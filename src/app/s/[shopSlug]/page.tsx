@@ -379,8 +379,6 @@ export default async function SchedulePage({
           inside the frame, where the widget stays the list-first window onto the
           schedule that issue #805 made it. */}
       {isEmbed ? null : (
-        // The logo stands above the hero on a phone: beside it, its 64px
-        // column indented the photograph, the name and every line under them.
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
           {shop.logoUrl ? (
             // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
