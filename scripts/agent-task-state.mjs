@@ -4,8 +4,34 @@ import { fileURLToPath } from "node:url";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { appendMetric } from "./task-metrics.mjs";
 
+/**
+ * One state file per branch, `.agent-out/task-state/<branch>.json`: sessions share a checkout,
+ * and a single `.agent-out/task-state.json` was overwritten by whichever saved last.
+ */
+export function statePath(root, branch) {
+  const slug = (branch || "detached").replace(/[^\w.-]+/g, "_");
+  return path.join(root, ".agent-out", "task-state", `${slug}.json`);
+}
+
+/** The checked-out branch, or null (detached HEAD, not a repository). */
+export function currentBranch(root) {
+  try {
+    return (
+      readBounded("git", ["branch", "--show-current"], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeoutMs: SUBPROCESS_TIMEOUTS.git,
+      }).trim() || null
+    );
+  } catch {
+    return null;
+  }
+}
+
 export function validateState(state) {
   const errors = [];
+  if (state?.unreadable) return [`state file is unreadable: ${state.unreadable}`];
   if (!state || typeof state !== "object" || Array.isArray(state))
     return ["state must be an object"];
   if (state.version !== 1) errors.push("version must be 1");
@@ -75,12 +101,23 @@ export function inspectState(
   };
 }
 
-export function readState(root = process.cwd()) {
+/**
+ * This branch's saved state, null when there is none, or `{ unreadable }` when the file is not
+ * JSON, so bootstrap reports it instead of throwing.
+ */
+export function readState(root = process.cwd(), branch = currentBranch(root)) {
+  const file = statePath(root, branch);
+  let text;
   try {
-    return JSON.parse(readFileSync(path.join(root, ".agent-out/task-state.json"), "utf8"));
+    text = readFileSync(file, "utf8");
   } catch (error) {
     if (error.code === "ENOENT") return null;
-    throw error;
+    return { unreadable: `${path.relative(root, file)}: ${error.message}` };
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return { unreadable: `${path.relative(root, file)}: ${error.message}` };
   }
 }
 
@@ -93,15 +130,17 @@ export function gitSha(root, ref) {
 }
 
 /** Save first, then observe now. The ledger deduplicates repeated saves by task identity. */
-export function saveTaskState(root, state, { resolveSha = gitSha, record = appendMetric } = {}) {
+export function saveTaskState(
+  root,
+  state,
+  { resolveSha = gitSha, record = appendMetric, branch = currentBranch(root) } = {},
+) {
   const errors = validateState(state);
   if (errors.length) throw new Error(errors.join("; "));
   for (const ref of [state.baseSha, state.headSha]) resolveSha(root, `${ref}^{commit}`);
-  mkdirSync(path.join(root, ".agent-out"), { recursive: true });
-  writeFileSync(
-    path.join(root, ".agent-out/task-state.json"),
-    `${JSON.stringify(state, null, 2)}\n`,
-  );
+  const file = statePath(root, branch);
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, `${JSON.stringify(state, null, 2)}\n`);
   try {
     return {
       metric: record(
@@ -113,7 +152,7 @@ export function saveTaskState(root, state, { resolveSha = gitSha, record = appen
           taskClass: state.taskClass ?? "unknown",
           sha: state.headSha,
           baseSha: state.baseSha,
-          evidence: ".agent-out/task-state.json (first observed save; not historical task start)",
+          evidence: `${path.relative(root, file)} (first observed save; not historical task start)`,
         },
         { root },
       ),
@@ -135,7 +174,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
           ? { state, ...inspectState(state, gitSha(root, "HEAD")) }
           : {
               usage:
-                "pnpm task:state <prepared-state.json> validates and saves .agent-out/task-state.json",
+                "pnpm task:state <prepared-state.json> validates and saves .agent-out/task-state/<branch>.json",
               template: {
                 version: 1,
                 task: "",
@@ -161,6 +200,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     const result = saveTaskState(root, state);
     if (result.metricError)
       console.error(`State saved, start metric unavailable: ${result.metricError}`);
-    console.log("Saved .agent-out/task-state.json; keep it with this checkout when handing off.");
+    console.log(
+      `Saved ${path.relative(root, statePath(root, currentBranch(root)))}; keep it with this checkout when handing off.`,
+    );
   }
 }

@@ -350,7 +350,7 @@ export function PublicShopChromePlaceholder({ label }: { label: DiverTranslator 
         level="shell"
       />
       {/* Marked so a visual capture can tell this band from the real chrome.
-          `capture()` (e2e/visual.spec.ts) waits for the page's own skeleton to
+          `capture()` (e2e/visual-harness.ts) waits for the page's own skeleton to
           leave `<main>`, and this bar is *above* `<main>` — so a shot fired
           while it still stood photographed a header with no shop name and,
           on a staffer's own shop, no "you work here" bar at all. One run had

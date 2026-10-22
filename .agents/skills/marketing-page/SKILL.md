@@ -66,14 +66,14 @@ the same PR.
    deliberately when copy changes; a red marketing spec on a copy change is the test working.
 3. Screenshot every touched route and **look at the PNGs**, light, desktop + phone (dark too only
    for colour work). The visual spec writes them, so a filtered run is the fastest way in:
-   `pnpm e2e:build && pnpm e2e:run e2e/visual.spec.ts --grep 'light mode public the' --reporter=line`,
+   `pnpm e2e:build && pnpm e2e:run e2e/visual-front-door.spec.ts --grep 'light mode public the' --reporter=line`,
    then read the images it wrote under `e2e/screenshots/` (gitignored).
 4. Run the `design-review` skill for anything beyond a copy tweak; new sections or pages get a
-   visual snapshot in `e2e/visual.spec.ts` (see `e2e-and-visual`).
+   visual snapshot in `e2e/visual-front-door.spec.ts` (see `e2e-and-visual`).
 5. Launch the `conversion-reviewer` agent for anything beyond a copy tweak — CTA clarity, funnel
    logic, and objection-handling are easy to lose while satisfying the claims policy; it reviews
    for persuasion the way `design-critic` reviews for delight.
 6. If claims, positioning, or page inventory changed: update `docs/product/marketing.md` in the
    same PR.
-7. After push: watch for `e2e/visual.spec.ts` failures and run `visual-triage` — marketing pages
+7. After push: watch for `e2e/visual-front-door.spec.ts` failures and run `visual-triage` — marketing pages
    are visual surfaces; their diffs need decisions like any other.

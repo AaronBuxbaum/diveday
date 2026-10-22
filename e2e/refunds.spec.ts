@@ -111,7 +111,7 @@ test.describe("refunds", () => {
     // even starts. A traced CI failure measured the total sequential cost at
     // 18.2s against the default 15s test timeout — every individual step
     // resolved successfully (none were stuck), the outer clock just ran out
-    // first. Same reasoning as visual.spec.ts's `test.setTimeout` on its
+    // first. Same reasoning as the visual specs' `test.setTimeout` on its
     // heaviest capture sequence: aggregate per-step cost across many
     // sequential steps in one test, not a hang this override would mask.
     test.setTimeout(30_000);

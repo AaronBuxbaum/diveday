@@ -10,7 +10,7 @@ const BILLING = "/shop/blue-mantis/settings/billing";
  * deployment is in until a human finishes the `stripe-billing-setup` manual
  * action. blue-mantis is a demo shop, which is never billed and says so ahead
  * of anything else; a real shop's "isn’t turned on yet" line is the
- * `settings-billing` capture in e2e/visual.spec.ts (a freshly onboarded shop)
+ * `settings-billing` capture in e2e/visual-front-door.spec.ts (a freshly onboarded shop)
  * and `settings/billing/page.test.tsx`. What these tests cover: the page
  * renders, offers no door to Stripe, and is the owner's alone. Checkout, the Portal and the webhook are
  * covered by unit tests against a faked Stripe (`settings/billing/actions.test.ts`,

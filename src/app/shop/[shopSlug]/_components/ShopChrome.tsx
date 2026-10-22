@@ -389,7 +389,7 @@ export function ShopSidebarSkeleton() {
  * where a reserved band is simply the page starting where it will stay.
  *
  * **Marked `data-suspense-placeholder`**, which `capture()` in
- * `e2e/visual.spec.ts` waits to see gone (issue #2514). The band stands above
+ * `e2e/visual-harness.ts` waits to see gone (issue #2514). The band stands above
  * `<main>`, where the wait for the page's own skeleton cannot see it, so a
  * shot could fire while it stood: `today-empty` at 390 came back on one run
  * with a blank band for the header and no tab bar, 62px shorter for the tab

@@ -42,7 +42,7 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
  *   "a correction" replaces the armed button with a plain Publish, so the way
  *   out is on screen and one tap away. Escape and a blur already disarm it.
  *   A wall clock here bought nothing and cost determinism: the armed state is
- *   photographed (`waiver-materiality-choice` in `e2e/visual.spec.ts`), and a
+ *   photographed (`waiver-materiality-choice` in `e2e/visual-staff-office.spec.ts`), and a
  *   `setTimeout` runs on the runner's real clock — the e2e fleet freezes
  *   `Date`, not timers — so an 8-second arm was racing a two-viewport capture
  *   whose own budgets are measured in tens of seconds. Two baselines from one

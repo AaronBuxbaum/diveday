@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   bankCounts,
+  liveAbsorbed,
   RATCHETS_PATH,
   ratchetFlags,
   readCounts,
@@ -92,6 +93,20 @@ describe("writeRatchet", () => {
   });
 });
 
+describe("liveAbsorbed", () => {
+  it("drops rises a later fall paid back, including parallel branches' conflicting ones", () => {
+    const absorbed = [
+      { why: "branch a", files: { "x.test.ts": "1670 -> 1673", "y.ts": "10 -> 12" } },
+      { why: "branch b", files: { "x.test.ts": "1672 -> 1675" } },
+      { why: "still here", files: { "x.test.ts": "1560 -> 1565", "gone.ts": "1 -> 2" } },
+    ];
+    expect(liveAbsorbed(absorbed, { "x.test.ts": 1565, "y.ts": 12 })).toEqual([
+      { why: "branch a", files: { "y.ts": "10 -> 12" } },
+      { why: "still here", files: { "x.test.ts": "1560 -> 1565" } },
+    ]);
+  });
+});
+
 describe("bankCounts", () => {
   it("banks a fall, sorted, and accepts a list of hits as its length", async () => {
     const root = await repo({ copy: { "//": "copy note", "src/b.tsx": 3, "src/a.tsx": 1 } });
@@ -157,7 +172,7 @@ describe("bankCounts", () => {
     const root = await repo({
       copy: {
         "//": "copy note",
-        "//absorbed": [{ why: "earlier", files: { "src/z.tsx": "0 -> 1" } }],
+        "//absorbed": [{ why: "earlier", files: { "src/a.tsx": "0 -> 1" } }],
         "src/a.tsx": 1,
       },
     });
@@ -170,7 +185,7 @@ describe("bankCounts", () => {
     expect((await onDisk(root)).copy).toEqual({
       "//": "copy note",
       "//absorbed": [
-        { why: "earlier", files: { "src/z.tsx": "0 -> 1" } },
+        { why: "earlier", files: { "src/a.tsx": "0 -> 1" } },
         { why: "merged #42, which predates the check", files: { "src/a.tsx": "1 -> 2" } },
       ],
       "src/a.tsx": 2,

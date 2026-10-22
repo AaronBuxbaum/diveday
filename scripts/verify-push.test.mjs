@@ -5,7 +5,6 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
-  appTreeKey,
   baseReplayFiles,
   browserSpecs,
   CORES_PER_E2E_WORKER,
@@ -195,6 +194,18 @@ describe("the quick pre-push plan", () => {
     ]);
   });
 
+  it("replays the branch's own red spec and capture in a quick run (scripts/own-ci.mjs)", () => {
+    const steps = quickPlan({
+      changed: ["src/lib/x.ts"],
+      selection: { mode: "related", files: [] },
+      specs: ["e2e/last-minute-fill.spec.ts"],
+      captures: ["a station names a blocker aboard (light)"],
+    });
+    expect(names(steps).slice(-3)).toEqual(["e2e build", "e2e specs", "visual captures"]);
+    expect(steps.at(-1).args).toContain("e2e/visual");
+    expect(steps.at(-1).args.join(" ")).toContain("a station names a blocker aboard \\(light\\)");
+  });
+
   it("stops at the static checks for documents without reader tests; deletions run all units", () => {
     const statics = ["regen", "lint", "typecheck", "check:repo", "guards"];
     expect(names(quickPlan({ changed: ["AGENTS.md"], related: [] }))).toEqual(statics);
@@ -298,32 +309,6 @@ describe("the browser specs a push runs", () => {
       record,
     });
     expect(picked.specs).toEqual(["e2e/a.spec.ts"]);
-  });
-});
-
-describe("the build key", () => {
-  const line = (file, sha) => `100644 blob ${sha}\t${file}`;
-  const app = [line("src/lib/x.ts", "a1"), line("package.json", "b2")];
-
-  it("does not move when only tests, specs or docs change, so the build is reused", () => {
-    const before = appTreeKey(
-      [...app, line("src/lib/x.test.ts", "c3"), line("e2e/a.spec.ts", "d4")].join("\n"),
-    );
-    const after = appTreeKey(
-      [
-        ...app,
-        line("src/lib/x.test.ts", "ff"),
-        line("e2e/a.spec.ts", "ee"),
-        line("docs/x.md", "11"),
-      ].join("\n"),
-    );
-    expect(after).toBe(before);
-  });
-
-  it("moves when anything the app is built from changes", () => {
-    const before = appTreeKey(app.join("\n"));
-    const after = appTreeKey([line("src/lib/x.ts", "a2"), line("package.json", "b2")].join("\n"));
-    expect(after).not.toBe(before);
   });
 });
 

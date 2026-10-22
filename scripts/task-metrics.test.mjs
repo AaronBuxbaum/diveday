@@ -1,12 +1,31 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { expect, it } from "vitest";
-import { ciObservation, metricRecord } from "./task-metrics.mjs";
+import { ciObservation, metricRecord, readRows } from "./task-metrics.mjs";
 
-it("records missing tokens as unknown and requires an observed source", () => {
-  expect(metricRecord({ task: "T", event: "started" }).tokens).toBeNull();
-  expect(() => metricRecord({ task: "T", event: "usage", tokens: 12 })).toThrow(/usageSource/);
-  expect(
-    metricRecord({ task: "T", event: "usage", tokens: 12, usageSource: "provider export" }).tokens,
-  ).toBe(12);
+it("records missing usage as unknown and has no separate token total", () => {
+  expect(metricRecord({ task: "T", event: "started" }).usage).toBeNull();
+  expect(metricRecord({ task: "T", event: "started" })).not.toHaveProperty("tokens");
+  expect(() =>
+    metricRecord({ task: "T", event: "usage", tokens: 12, usageSource: "provider export" }),
+  ).toThrow(/usage/);
+});
+
+it("skips a corrupt ledger line instead of losing every row", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "metrics-"));
+  try {
+    const file = path.join(dir, "events.jsonl");
+    writeFileSync(
+      file,
+      '{"task":"A","event":"started"}\n{"task":"B",\n[1]\n{"task":"C","event":"merged"}\n',
+    );
+    const { rows, corrupt } = readRows(file);
+    expect(rows.map((row) => row.task)).toEqual(["A", "C"]);
+    expect(corrupt).toBe(2);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 it("requires identifiable usage measurements and keeps token categories distinct", () => {

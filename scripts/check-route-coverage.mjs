@@ -1,8 +1,8 @@
 // Route → test-coverage ledger.
 //
 // AGENTS.md says every important flow a user runs gets an `e2e/` spec and every
-// important surface they look at gets a screenshot assertion in
-// `e2e/visual.spec.ts`. Nothing enforced it, and the gap was not theoretical: a
+// important surface they look at gets a screenshot assertion in a
+// `e2e/visual-*.spec.ts`. Nothing enforced it, and the gap was not theoretical: a
 // 2026-08-03 evaluation of the test system found three staff pages that had
 // shipped with neither — `/shop/[shopSlug]/orders/new`,
 // `/shop/[shopSlug]/dive-sites/catalog`, and `/shop/[shopSlug]/staffing`. A page
@@ -17,7 +17,7 @@
 //   - every hand-written entry still names a real route;
 //   - every spec file it names exists under `e2e/`;
 //   - every capture name it names appears as `capture(page, "<name>"` in
-//     `e2e/visual.spec.ts` or a visual registration module it imports.
+//     a visual spec (`e2e/visual-*.spec.ts`) or a visual registration module one imports.
 //
 // That first one used to read "a route with *neither* carries a written reason",
 // which left a fourth state the ledger tolerated in silence: a spec, no capture,
@@ -49,7 +49,7 @@
 //   - **a source scan candidate** (`a11y`) pairs `expectNoA11yViolations(page)`
 //     with the last literal `page.goto` inside the same enabled test. These
 //     source associations do not prove the test or scan actually ran;
-//   - `e2e/visual.spec.ts` is never a route's spec: a capture photographs a page
+//   - a visual spec is never a route's spec: a capture photographs a page
 //     and does not drive it. Three routes once passed "has a spec" on a
 //     photograph alone (test review 2026-10-14).
 //
@@ -95,7 +95,6 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const APP_DIR = "src/app";
 export const E2E_DIR = "e2e";
-export const VISUAL_SPEC = "e2e/visual.spec.ts";
 export const LEDGER_PATH = "scripts/route-coverage.json";
 
 export const LEDGER_NOTE =
@@ -235,13 +234,7 @@ export async function collectVisualSources(root) {
   const sources = new Map();
   async function visit(file) {
     if (sources.has(file)) return;
-    let source;
-    try {
-      source = await readFile(path.join(root, E2E_DIR, file), "utf8");
-    } catch (error) {
-      if (file === path.basename(VISUAL_SPEC) && error?.code === "ENOENT") return;
-      throw error;
-    }
+    const source = await readFile(path.join(root, E2E_DIR, file), "utf8");
     sources.set(file, source);
     for (const match of withoutComments(source).matchAll(
       /^\s*import\s+(?:type\s+)?[^;]*?\s+from\s*["']\.\/(visual-[a-z0-9-]+)(?:\.ts)?["']/gm,
@@ -550,7 +543,7 @@ export function auditLedger(world) {
     for (const name of visualNames) {
       if (!captures.has(name)) {
         violations.push(
-          `${route}: names visual capture "${name}", which no ${VISUAL_SPEC} \`capture(page, "…"\` call produces. Fix the name, or restore the capture this route lost.`,
+          `${route}: names visual capture "${name}", which no visual spec's \`capture(page, "…"\` call produces. Fix the name, or restore the capture this route lost.`,
         );
       }
     }

@@ -21,7 +21,7 @@ import { STALLED, statePass } from "./states.mjs";
 /**
  * **The pixel probe, run against one page at one width.**
  *
- * Two callers: `capture()` in `e2e/visual.spec.ts` (behind `PIXEL_PROBE=1`,
+ * Two callers: `capture()` in `e2e/visual-harness.ts` (behind `PIXEL_PROBE=1`,
  * light scheme only, after each viewport's screenshot), and
  * `scripts/screenshot.mjs --probe` against a running `pnpm dev`. Both hand in
  * their own `bound` — the visual spec's is `withRendererBound` — so every page

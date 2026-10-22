@@ -369,7 +369,7 @@ the control's own face (see the ephemeral-acknowledgement section below).
 at scroll 0 and does not paint a *currently stuck* element at all — measured on the course editor,
 where `Save course page` reports a bounding box at y=744 and the 8,531 px capture contains no pixel
 of it anywhere. So a surface that adopts `StickyFormActions` also takes a `captureStickyFoot`
-capture in `e2e/visual.spec.ts` (it scrolls to the foot first, where the sticky offset is zero and
+capture in `e2e/visual-harness.ts` (it scrolls to the foot first, where the sticky offset is zero and
 the element paints normally). Without it the page's primary action has no baseline, which is the
 opposite of what a capture is for.
 

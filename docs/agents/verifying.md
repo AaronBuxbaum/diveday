@@ -74,7 +74,9 @@ So the problem was never flakiness. A stacked change that breaks a spec breaks i
 above it, which is how one deleted sentence became twelve red Playwright shards.
 
 `pnpm verify:push` (`scripts/verify-push.mjs`) runs the local half of every row above against
-the layer below (`stackBase` in `scripts/e2e-affected.mjs`; `origin/main` off a stack), stops at
+the layer below (`resolveVerificationBase` in `scripts/verification-base.mjs`: the open PR's base;
+else `--base <ref>` or `git config branch.<branch>.divedayBase origin/<parent>`; else the nearest
+remote layer HEAD contains; else `origin/main`), stops at
 the first red step, and writes a stamp naming HEAD into the git directory (keyed by sha in the
 common git dir too, so a push from any worktree finds it):
 
@@ -86,8 +88,9 @@ common git dir too, so a push from any worktree finds it):
    over the changed code, and every other unit test was CI's first run; Aaron chose "run
    everything" over that saving. CI runs the four shards in about six minutes each.
 4. The Playwright specs `pnpm e2e:affected` selects, after an `e2e:build` it reuses while
-   nothing the build reads has changed (the tree minus tests, `e2e/` and docs, so a commit that
-   only fixes a spec reuses it). *Strong*: specs the diff edits or whose helper it edits, specs
+   nothing the build reads has changed (`.next/diveday-build-evidence.json`, a content
+   fingerprint without tests, written by `scripts/e2e-build-evidence.mjs`, so a commit that only
+   fixes a spec reuses it). *Strong*: specs the diff edits or whose helper it edits, specs
    quoting text the diff removed (a locale value, JSX text, a seed literal), and specs visiting a
    route whose own directory the diff edits. *Smoke*: five tests (`SMOKE`: booking, a waiver,
    check-in, roll call offline, sign-in), run as `file:line` whenever the app changed. *Reach*:
@@ -140,7 +143,8 @@ contracts and documentation inputs. Database snapshot loaders are operational fi
 schema, migrations and test infrastructure changes instead run all unit tests. Source/test deletions,
 global configuration and unknown inputs also fall back to the whole unit suite. A test-only diff runs
 edited tests directly when they neither export fixtures nor appear in other tests; otherwise it
-keeps native dependency selection. Base CI's named failures are included in either mode.
+keeps native dependency selection. Base CI's named failures, and this branch's own last red
+run's, are included in either mode ([below](#a-red-run-on-this-branch)).
 
 `pnpm test:affected --plan` shows this local selection against the nearest contained remote
 branch below HEAD; `--base <ref>` selects an explicit base. Without `--plan`, it runs the whole
@@ -205,6 +209,31 @@ Measured again on 2026-10-18 for #2624, at load averages of 10 to 14 from other 
   queued behind worker 0's seed, and reads 1.3 s after it.
 - A cheaper reset stays the fix, and it is #2729's (`src/db/seed.ts`).
 
+### A red run on this branch
+
+Fixing forward had a hole of its own. A push meant to fix a red run went out behind
+`verify:push --quick`, which runs no browser, so the next CI run, about 22 minutes later, was the
+first to say whether the fix worked. In the week from 2026-10-16 to 10-22, 37 pushes followed a
+red run on the same PR; 18 came back red again, and 14 of those were still red on a test the run
+before had already named (the review is in the PR that added this section).
+
+So `verify:push`, in both modes, also reads this branch's own latest finished CI run
+(`scripts/own-ci.mjs`). When it is red, what it names runs here:
+
+- **Unit shards**: the files `src/test/failed-files-reporter.ts` annotated.
+- **Playwright shards**: each failed test's spec file, read from the "Playwright Run Summary"
+  notice (a failure annotation can point at `e2e/fixtures.ts` rather than the spec).
+- **Visual capture shards**: each failed capture by title, in light mode. A capture that fails is
+  a functional failure, a heading it waits for gone or a timeout, not a pixel difference; reg-suit
+  compares pixels, and its "Refuse a green check over nothing compared" step goes red whenever a
+  capture shard does, so fix the capture and reg-suit follows.
+- Lint, Typecheck and Repository safeguards run here anyway; a job naming nothing (Build, say)
+  gets a line with its run's link: read its log before pushing.
+
+It never refuses and fails open when GitHub cannot answer. The stamp records what it replayed
+(`ownCi`). The cost is the e2e build plus the named files, a few minutes, against a 22-minute CI
+round per miss.
+
 ### A red base
 
 The gate as first built had one hole, and on 2026-10-14 it was the whole of what went red. Main
@@ -239,6 +268,17 @@ cannot wait; either way, nothing is pushed red on purpose. `scripts/guard-push.m
 override whose reason says the red came from elsewhere ("red on main", "not mine", "inherited",
 "flake", "pre-existing"), and names the base check instead. The override is left for its two
 cases: work saved before the container is reclaimed, and a question only CI can answer.
+
+**Loud, with the layer's name.** When the base is red on test files this branch does not edit,
+`verify:push` prints a `THE LAYER BELOW IS RED` banner naming that layer's branch and pull request
+before it runs them (`scripts/red-below.mjs`). The base can also finish red after the stamp (a
+running base is only a note), so `scripts/guard-push.mjs` reads it again at push time and prints
+the same banner when the stamp did not replay those files. That one is a warning, not a refusal:
+the guard cannot run tests, so it cannot tell a push that carries the fix from one that does not,
+and a push that fixes the layer below must never be blocked. Proving the fix stays the gate's job
+(`pnpm verify:push --quick` replays them and stamps only if they pass). It fails open, and there is
+no override for it: an inherited-red reason stays refused. Fix the bottom first, then
+`pnpm stack:sync` merges it up one layer at a time (the **stacked-prs** skill).
 
 The PR body rows are a separate gate: `scripts/guard-pr-body.mjs` runs `check-pr-body.mjs`
 before the GitHub MCP creates or edits a pull request.
@@ -280,6 +320,28 @@ its reason in front of the command and in the body.
 find out, never to walk away. A pull request left red with nobody working it is the thing this
 rule must not become — see AGENTS.md's rules on visual diffs and review threads, which apply from
 the moment it is open.
+
+### The fast lane: an early browser answer
+
+On a pull request, CI's `Fast lane` job starts when the build's artifact exists and runs, on one
+runner, what is most likely to be red: the spec files and capture titles the branch's latest
+finished red CI run named (`scripts/own-ci.mjs`, the reading `verify:push` replays), then the
+`strong` tier of `scripts/e2e-affected.mjs` against the pull request's base, capped at about four
+recorded CI-minutes (`scripts/fast-lane.mjs`; its job summary names both lists and what the cap
+left out). It reports under its own check in a few minutes rather than the ~22 a full run took
+(2026-10-22). It decides nothing: `continue-on-error` keeps it from failing the run, and the
+Playwright and visual capture shards run every one of its tests again and still decide green. A
+red `Fast lane` is the same failure the shards will report; start on it without waiting for them.
+
+### The weekly CI health check
+
+`.github/workflows/ci-health.yml` runs `node scripts/ci-health.mjs` every Monday over the pull
+requests merged or updated in the last seven days, and writes to its job summary: red CI runs per
+pull request, the share green on their first run, the repeat-red rate (of the pushes that
+followed a red run, how many were red again on a test that run had named), the median and p90 CI
+run, and the failing jobs ranked. A week over 1.0 red runs per pull request or 25% repeat red
+opens one `needs-triage` issue, or comments the week on the one already open. Run it by hand the
+same way (`--days <n>`; add `--file-issue --dry-run` to see what it would file).
 
 ## Neither: the tracker scan
 

@@ -25,7 +25,7 @@ position, and anything the worker must not do (push, open a PR, call a tool).
 
 ## Reproducibility and accepted decisions
 Immutable base/head SHA, exact accepted product terms and decision provenance, route/capture/state
-matrix for visual work, and current owner. Save these in `.agent-out/task-state.json`.
+matrix for visual work, and current owner. Save these in `.agent-out/task-state/<branch>.json`.
 
 ## Done when
 Checkable conditions, each one observable: a test that passes, a page that shows a state,

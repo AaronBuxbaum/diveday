@@ -133,7 +133,7 @@ test.describe("contact import — specialty cards", () => {
     page,
   }) => {
     // Six full-page navigations plus a trip/roster setup and a confirm-card
-    // flow — same aggregate-cost reasoning as visual.spec.ts's
+    // flow — same aggregate-cost reasoning as the visual specs'
     // `test.setTimeout` and role-permissions.spec.ts's captain test: many
     // real, sequential steps under 2-worker load add up past the default 15s
     // budget even though no individual step is stuck.

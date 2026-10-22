@@ -40,7 +40,9 @@ Before every push:
    (`scripts/guard-push.mjs`), so a merge from the layer below means another run. It reads the
    layer below's CI first: on a red base it re-runs the files CI names and stamps only when they
    pass here, so carry the fix or wait for the layer that broke; a red job naming no file needs
-   `--base-red <file…>` from its log. The reasons
+   `--base-red <file…>` from its log. It also replays what this branch's own last red CI run
+   names (unit files, specs, captures), so a fix is checked here, not by CI's next round. A red
+   **Visual capture** shard is a functional failure, not a pixel diff. The reasons
    and the measurements: [verifying.md](../../../docs/agents/verifying.md#the-pre-push-gate).
 7. **One validated push per round.** Commit as often as you like; push once, when
    `verify:push --quick` is green for the round's work, because each push cancels the CI run of the one
@@ -69,14 +71,14 @@ pnpm e2e e2e/<flow>.spec.ts --reporter=line   # one spec; the whole suite runs o
 ```
 
 If new user-facing flows were added, extend `e2e/` with a smoke spec for them first, and add a
-visual snapshot in `e2e/visual.spec.ts` for any new surface (see the `e2e-and-visual` skill). `pnpm
+visual snapshot in the feature's `e2e/visual-*.spec.ts` for any new surface (see the `e2e-and-visual` skill). `pnpm
 lint` includes the `clock` rule, which fails if domain/data code reads the wall clock directly.
 
 ## 3. UI changed: look at it
 
 Never ship UI you haven't seen; the commands, the probe and the dev-server traps are in
 [look.md](look.md). In light only (dark only for colour work, H-90): `pnpm e2e:build` once, then
-`pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*<capture group>' --reporter=line` (or the
+`pnpm e2e:run e2e/visual-<feature>.spec.ts -g 'light mode.*<capture group>' --reporter=line` (or the
 captures the diff reaches, by the **e2e-and-visual** skill's `--grep` recipe), read the PNGs
 in `e2e/screenshots/` against `docs/design/principles.md`'s checklist, and give every pixel-probe
 flag a verdict. No capture group: `node scripts/screenshot.mjs <path>`. Significant UI: the
