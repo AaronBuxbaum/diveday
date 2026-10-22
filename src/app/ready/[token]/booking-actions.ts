@@ -7,6 +7,7 @@ import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { recordMoveAsk } from "@/db/inbound-messages";
 import { alertStaffToMoveAsk } from "@/db/move-ask-alerts";
+import { strandedMoveAsk } from "@/db/move-offer";
 import { startPartySeatCheckout } from "@/db/party-seat-checkout";
 import {
   planReadinessLinkRescue,
@@ -14,18 +15,26 @@ import {
   sendPlannedReadinessLink,
 } from "@/db/readiness-link-rescue";
 import { settleReleasedPartySeats, settleSelfCancelledSeat } from "@/db/self-cancel-settle";
+import { getShopById } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { formValue, parseForm, readForm, single } from "@/lib/form-parse";
+import { formValue, parseForm, readForm, single, text } from "@/lib/form-parse";
+import { formatPlannedDateTimeTz } from "@/lib/format";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { diverNameSchema } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-import { base, bounceTarget, contextFor, refuseWhileHeld } from "./action-helpers";
+import {
+  base,
+  bounceTarget,
+  contextFor,
+  refuseWhileHeld,
+  strandedContextFor,
+} from "./action-helpers";
 
 /**
  * Pay for the trip from the page. Abandonment already degrades safely — the
@@ -107,6 +116,58 @@ export async function askToMoveAction(token: string, formData: FormData) {
     messageId: outcome.id,
     now: nowDate(),
   });
+  revalidateAndRedirect(base(token), `${base(token)}?saved=move-ask#move-ask`);
+}
+
+/**
+ * **"Ask to move to Thu 12:00" from a called-off departure's card** (UX sheet
+ * 2026-10-22, item 5; H-151). The same Inbox ask as `askToMoveAction`, filed
+ * against the stranded seat with the offered boat written into its note; the
+ * desk confirms it with its ordinary move, so nothing moves or is charged
+ * here.
+ *
+ * The link opens nothing else (`strandedContextFor`). The offer is computed
+ * again for the link's own booking and shop, and the posted trip id is only
+ * compared against it: a forged or stale id, or a boat that filled since the
+ * page drew it, files nothing and the card redraws with what is true now.
+ */
+const moveOfferForm = z.object({ tripId: text() });
+
+export async function askToMoveFromCancelledAction(token: string, formData: FormData) {
+  const ip = await clientIp();
+  if (
+    !(await checkRateLimit(rateLimitKey("booking-move-ask", ip), RATE_LIMITS.bookingSelfCancel))
+      .allowed
+  ) {
+    redirect(`${base(token)}?error=rate#move-ask`);
+  }
+  const ctx = await strandedContextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const now = nowDate();
+  const ask = await strandedMoveAsk(ctx.db, { shopId: ctx.shopId, bookingId: ctx.bookingId, now });
+  if (ask?.state === "asked") redirect(`${base(token)}#move-ask`);
+  const { tripId } = readForm(moveOfferForm, formData);
+  if (ask?.state !== "open" || ask.offer.tripId !== tripId) {
+    redirect(`${base(token)}?error=move-ask#move-ask`);
+  }
+  const shop = await getShopById(ctx.db, ctx.shopId);
+  if (!shop) redirect(`${base(token)}?error=move-ask#move-ask`);
+  // In the shop's own language: the desk reads it, and it names the boat the
+  // card offered so nobody has to work out which one.
+  const locale = recipientLocale(null, shop.defaultLocale);
+  const note = diverTranslator(locale)("ready.moveOffer.note", {
+    title: ask.offer.title,
+    when: formatPlannedDateTimeTz(ask.offer.startsAt, locale, shop.timezone),
+  });
+  const outcome = await recordMoveAsk(ctx.db, {
+    shopId: ctx.shopId,
+    bookingId: ctx.bookingId,
+    note,
+    now,
+  });
+  if (outcome.status === "not_found") redirect(`${base(token)}?error=move-ask#move-ask`);
+  if (outcome.status === "already") revalidateAndRedirect(base(token), `${base(token)}#move-ask`);
+  await alertStaffToMoveAsk(ctx.db, { shopId: ctx.shopId, messageId: outcome.id, now });
   revalidateAndRedirect(base(token), `${base(token)}?saved=move-ask#move-ask`);
 }
 

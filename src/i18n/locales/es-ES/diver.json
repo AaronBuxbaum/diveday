@@ -897,6 +897,11 @@
       "sent": "Enviado. El centro te contactará para elegir otra fecha.",
       "unavailable": "No se pudo enviar. Llama al centro al número de abajo."
     },
+    "moveOffer": {
+      "lead": "{title} tiene una plaza libre, al mismo precio o menos.",
+      "action": "Pedir cambio al {when}",
+      "note": "Por favor, cámbienme a {title}, {when}."
+    },
     "cancelSpot": "Cancelar mi plaza",
     "lateLead": "¿Vas de camino pero con retraso?",
     "lateButton": "Llego tarde",

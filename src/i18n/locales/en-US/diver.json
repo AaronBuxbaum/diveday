@@ -897,6 +897,11 @@
       "sent": "Sent. The shop will be in touch about another date.",
       "unavailable": "That couldn’t be sent. Call the shop on the number below."
     },
+    "moveOffer": {
+      "lead": "{title} has a seat free, at the same price or less.",
+      "action": "Ask to move to {when}",
+      "note": "Please move me to {title}, {when}."
+    },
     "cancelSpot": "Cancel my seat",
     "lateLead": "On your way but behind?",
     "lateButton": "Running late",

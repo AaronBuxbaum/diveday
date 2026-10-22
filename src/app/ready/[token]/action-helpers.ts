@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { verifyBookingCapability } from "@/db/booking-capabilities";
+import {
+  verifyBookingCapability,
+  verifyStrandedBookingCapability,
+} from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
@@ -110,4 +113,32 @@ export async function contextFor(token: string): Promise<ReadyContextResult> {
     ownLocale,
     delivered: capability.delivered,
   };
+}
+
+/**
+ * **The one context a called-off departure's link opens** (UX sheet
+ * 2026-10-22, item 5). `contextFor` refuses such a link, and every action
+ * above stays refused with it; only the cancelled card's "Ask to move to …"
+ * comes through here. Throttled on the same per-IP bucket as `contextFor`,
+ * and resolved by `verifyStrandedBookingCapability`, which accepts nothing
+ * the ordinary check would. It names the booking and its shop and reads
+ * nothing else: the caller re-derives the offer from those two.
+ */
+export async function strandedContextFor(
+  token: string,
+): Promise<
+  | { ok: true; db: AwaitedDb; bookingId: string; shopId: string }
+  | { ok: false; reason: "rate_limited" | "invalid" }
+> {
+  const ip = await clientIp();
+  if (
+    !(await checkRateLimit(rateLimitKey("readiness-token", ip), RATE_LIMITS.capabilityAction))
+      .allowed
+  ) {
+    return { ok: false, reason: "rate_limited" };
+  }
+  const db = await getDb();
+  const stranded = await verifyStrandedBookingCapability(db, { token });
+  if (!stranded) return { ok: false, reason: "invalid" };
+  return { ok: true, db, bookingId: stranded.bookingId, shopId: stranded.shopId };
 }

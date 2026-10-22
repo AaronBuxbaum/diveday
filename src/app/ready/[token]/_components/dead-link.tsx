@@ -1,12 +1,16 @@
 import {
   resolveRevokedBookingCapability,
   staleBookingCapabilityForToken,
+  verifyStrandedBookingCapability,
 } from "@/db/booking-capabilities";
 import type { getDb } from "@/db/client";
+import { strandedMoveAsk } from "@/db/move-offer";
 import { getReadyPageData } from "@/db/ready";
 import { getShopById } from "@/db/shops";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { nowDate } from "@/lib/clock";
+import { askToMoveFromCancelledAction } from "../booking-actions";
 import { cancelledNoticeForReady } from "./CancelledNotice";
 import { ExpiredLink, UnavailableReadyLink } from "./ExpiredLink";
 import { TripCancelledCard } from "./TripCancelledCard";
@@ -23,6 +27,7 @@ export async function readyDeadLink({
   token,
   cancelled,
   sent,
+  error,
   anonT,
 }: {
   db: Awaited<ReturnType<typeof getDb>>;
@@ -31,6 +36,8 @@ export async function readyDeadLink({
   cancelled: string | undefined;
   /** `?sent=` — a fresh link was just asked for (`ExpiredLink`). */
   sent: string | undefined;
+  /** `?error=` — only `move-ask` and `rate` are read here, for the cancelled card's ask. */
+  error?: string;
   /** The visitor's own locale: a dead link resolves no shop to negotiate with. */
   anonT: DiverTranslator;
 }) {
@@ -85,8 +92,30 @@ export async function readyDeadLink({
     // cancels the trip and leaves every booking active, because whether each
     // seat is refunded stays a per-booking staff decision).
     if (data?.departureCancelled && !data.detail.cancelled) {
-      const strandedT = diverTranslator(await requestLocale(data.shop.defaultLocale));
-      return <TripCancelledCard db={db} data={data} t={strandedT} />;
+      const locale = await requestLocale(data.shop.defaultLocale);
+      // The move offer (UX sheet 2026-10-22, item 5) only on a link the strict
+      // stranded check accepts, the one the action itself opens with: a
+      // revoked link still reads the card, and is offered nothing on it.
+      const live = await verifyStrandedBookingCapability(db, { token });
+      const moveAsk =
+        live?.bookingId === stranded.bookingId
+          ? await strandedMoveAsk(db, {
+              shopId: live.shopId,
+              bookingId: live.bookingId,
+              now: nowDate(),
+            })
+          : null;
+      return (
+        <TripCancelledCard
+          db={db}
+          data={data}
+          t={diverTranslator(locale)}
+          locale={locale}
+          moveAsk={moveAsk}
+          action={askToMoveFromCancelledAction.bind(null, token)}
+          notice={error === "move-ask" || error === "rate" ? error : null}
+        />
+      );
     }
   }
   // **Name the shop where the token still tells us which one it is.**
