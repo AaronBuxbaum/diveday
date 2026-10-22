@@ -1501,8 +1501,8 @@ export async function resetDemoSchedule(
   // second, and both before the people and delivery rows they point at.
   await db.delete(staffReplies).where(eq(staffReplies.shopId, shopId));
   await db.delete(inboundMessages).where(eq(inboundMessages.shopId, shopId));
-  // Saved answers are re-seeded beside the inbox, so a spec that saves one
-  // does not leave the next one an extra chip.
+  // Retired saved answers name people, so a database seeded before they went
+  // still clears them ahead of the people they point at.
   await db.delete(inboxSavedAnswers).where(eq(inboxSavedAnswers.shopId, shopId));
   // Stripe checkout/refund state references bookings, trips, and orders, so it
   // must be cleared before those parents or the deletes below FK-violate and

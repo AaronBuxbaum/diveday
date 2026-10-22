@@ -188,6 +188,7 @@ export async function replyFacts(
       closes: shops.deskClosesMinute,
       phone: shops.contactPhone,
       rentalTerms: shops.rentalTerms,
+      replyNotes: shops.replyNotes,
     })
     .from(shops)
     .where(eq(shops.id, shopId))
@@ -225,6 +226,9 @@ export async function replyFacts(
     for (const course of courses) lines.push(`- ${course.title}: ${money(course.priceCents)}`);
   }
   if (shop.rentalTerms?.trim()) lines.push(`Rental terms: ${shop.rentalTerms.trim()}`);
+  // The shop's own notes for replies: parking, rentals, what to bring.
+  const notes = (shop.replyNotes ?? "").split(/\r?\n/).filter((line) => line.trim());
+  if (notes.length > 0) lines.push("Notes from the shop:", ...notes);
   const window = [
     `Today is ${formatShortDate(now, shop.locale, shop.timezone)} (${shop.timezone}).`,
     `The departures in <facts> are the shop's public departures in the next ${FACT_HORIZON_DAYS} days, through ${formatShortDate(horizon, shop.locale, shop.timezone)}, at most ${FACT_DEPARTURES} departures.`,

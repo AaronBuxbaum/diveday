@@ -670,6 +670,10 @@ export const staffReplies = pgTable(
  * and phone numbers taken out before it is written, and keeps
  * `source_person_id`: the words still came from a reply to them, so erasing
  * that diver deletes the answer too. Deleting is soft, like every delete.
+ *
+ * **Retired** (Aaron, 2026-10-22): nothing reads or writes it any more; the
+ * shop's reply notes (`shops.reply_notes`) and Claude's draft replaced it.
+ * Declared until the release that drops it, so erasure still clears its rows.
  */
 export const inboxSavedAnswers = pgTable(
   "inbox_saved_answers",

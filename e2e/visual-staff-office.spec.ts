@@ -524,15 +524,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-diver-conversation", scheme);
       });
 
-      // **Saved answers** (fifth loop, item 15), where the shop keeps them: the
-      // foot of the Inbox, holding the two the seed saves, one with both
-      // markers. The chips above the reply box are in the capture above.
-      test(`the inbox's saved answers render true to the design (${scheme})`, async ({ page }) => {
+      // **Notes for Claude**, at the foot of the Inbox: the box holding the
+      // seed's notes that a reply draft reads (Aaron, 2026-10-22).
+      test(`the inbox's notes for Claude render true to the design (${scheme})`, async ({
+        page,
+      }) => {
         await page.goto("/shop/blue-mantis/inbox");
-        const saved = page.getByRole("region", { name: "Saved answers" });
-        await saved.getByText("Wetsuit sizes").waitFor();
-        await saved.scrollIntoViewIfNeeded();
-        await capture(page, "staff-inbox-saved-answers", scheme);
+        const notes = page.getByRole("region", { name: "Notes for Claude" });
+        await notes.getByRole("button", { name: "Save notes" }).waitFor();
+        await notes.scrollIntoViewIfNeeded();
+        await capture(page, "staff-inbox-reply-notes", scheme);
       });
 
       // Shop-wide discount codes: the codes as one ledger shelved live /
