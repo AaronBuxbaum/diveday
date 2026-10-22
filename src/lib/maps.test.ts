@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   appleMapsUrl,
   directionsUrl,
-  googleMapEmbedUrl,
   googleMapsUrl,
-  googleTerrainEmbedUrl,
   openMapsUrl,
   openStreetMapUrl,
   osmCoordsEmbedUrl,
@@ -67,17 +65,5 @@ describe("googleMapsUrl and directions linkouts", () => {
 
   it("openMapsUrl defaults to googleMapsUrl", () => {
     expect(openMapsUrl("25.0106,-80.3756")).toBe(googleMapsUrl("25.0106,-80.3756"));
-  });
-});
-
-describe("backward-compatibility aliases", () => {
-  it("googleTerrainEmbedUrl proxies to osmCoordsEmbedUrl without marker", () => {
-    expect(googleTerrainEmbedUrl("25.0106,-80.3756", 16)).toBe(
-      osmCoordsEmbedUrl("25.0106,-80.3756", 16, false),
-    );
-  });
-
-  it("googleMapEmbedUrl proxies to osmMapEmbedUrl", () => {
-    expect(googleMapEmbedUrl("25.0106,-80.3756")).toBe(osmMapEmbedUrl("25.0106,-80.3756"));
   });
 });

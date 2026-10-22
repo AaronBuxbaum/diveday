@@ -2,11 +2,18 @@ import path from "node:path";
 import type { Page, Request } from "@playwright/test";
 import { test as base, expect } from "@playwright/test";
 import { DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { MAP_REACHABILITY_PROBES } from "../src/lib/maps";
+import { BASEMAP_TILE_HOSTS } from "../src/lib/basemap";
+import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { currentStaffStorageStateGeneration, signInAs } from "./helpers";
 import { E2E_FROZEN_CLOCK, e2eBaseURL } from "./servers";
 
 type StaffRole = keyof typeof DEV_STAFF_LOGINS;
+
+/** A 256px tile of flat sea, the stand-in for every basemap tile in a test. */
+const STUB_BASEMAP_TILE = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAACAElEQVR42u3TQQ0AAAjEsFOKMoQgjzcaaFIFS5bqgbciAQYAA4ABwABgADAAGAAMAAYAA4ABwABgADAAGAAMAAYAA4ABwABgADAAGAAMAAYAA4ABwABgADAAGAAMAAYAA4ABwABgADAAGAAMAAYAA4ABwABgADAAGAAMAAYAA4ABMIAKGAAMAAYAA4ABwABgADAAGAAMAAYAA4ABwABgADAAGAAMAAYAA4ABwABgADAAGAAMAAYAA4ABwABgADAAGAAMAAYAA4ABwABgADAAGAAMAAYAA4ABwABgADAAGAAMAAbAAGAAMAAYAAwABgADgAHAAGAAMAAYAAwABgADgAHAAGAAMAAYAAwABgADgAHAAGAAMAAYAAwABgADgAHAAGAAMAAYAAwABgADgAHAAGAAMAAYAAwABgADgAHAAGAAMAAGUAEDgAHAAGAAMAAYAAwABgADgAHAAGAAMAAYAAwABgADgAHAAGAAMAAYAAwABgADgAHAAGAAMAAYAAwABgADgAHAAGAAMAAYAAwABgADgAHAAGAAMAAYAAwABgADgAHAABgADAAGAAOAAcAAYAAwABgADAAGAAOAAcAAYAAwABgADAAGAAOAAcAAYAAwABgADAAGAAOAAcAAYAAwABgADAAGAAOAAcAAYAAwABgADAAGAAOAAcAAYAAwAFwL7+QZb0ldw+0AAAAASUVORK5CYII=",
+  "base64",
+);
 
 /**
  * Patches `getByText`/`getByRole`/`getByLabel`/`getByPlaceholder` on a Page
@@ -654,7 +661,7 @@ export const test = base.extend<
         }
       }
     };
-    // The trip detail page embeds a live Google Maps iframe (DiveSiteMap.tsx).
+    // The meeting point's map on `/ready` embeds a live OpenStreetMap iframe (ArrivalMap.tsx).
     // DIVEDAY_DISABLE_EXTERNAL_HTTP keeps the *server* from waiting on a
     // third-party forecast, but that flag can't reach this request — it's the
     // browser loading the iframe directly, not our server code. Left alone,
@@ -690,13 +697,25 @@ export const test = base.extend<
         body: "<!doctype html><title></title>",
       }),
     );
-    // The route maps' reachability reads (`MAP_REACHABILITY_PROBES`,
-    // src/lib/maps.ts: one image on each host the embed needs) are refused, so
-    // every capture draws the route alone over the panel, the way it reads
-    // where the map cannot load, and no test leaves this worker for it. Later
-    // routes win, so this pair sits after the maps host's catch-all above. A
-    // spec that wants the map answers both on its page (e2e/map-probe.spec.ts).
-    for (const probe of MAP_REACHABILITY_PROBES) {
+    // **Basemap tiles are answered here, never fetched** (#2930). Every
+    // Leaflet map draws on the shared basemap (src/lib/basemap.ts); a live
+    // tile is a capture that changes when the provider re-renders a coast, a
+    // keyed provider's watermark when CI has no key, and a request that leaves
+    // this worker. One flat sea tile stands in for all of them, so a map
+    // capture shows its pins, shop and cards over water, and the same water on
+    // every run.
+    for (const host of BASEMAP_TILE_HOSTS) {
+      await context.route(`${host}/**`, (route) =>
+        route.fulfill({ status: 200, contentType: "image/png", body: STUB_BASEMAP_TILE }),
+      );
+    }
+    // The route maps' reachability reads (`MAP_REACHABILITY_PROBES` and
+    // `ARRIVAL_MAP_PROBES`, src/lib/maps.ts) are refused, so every capture
+    // draws the route alone over the panel, the way it reads where the map
+    // cannot load. Later routes win, so these sit after the tile catch-all
+    // above. A spec that wants the map answers them on its page
+    // (e2e/dive-site-pages.spec.ts).
+    for (const probe of [...MAP_REACHABILITY_PROBES, ...ARRIVAL_MAP_PROBES]) {
       await context.route(probe, (route) => route.abort());
     }
     // The storefront's brand display face is a Google Fonts stylesheet (see
