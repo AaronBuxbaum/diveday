@@ -257,6 +257,7 @@ export function tripAboutRows(context: TripAboutRowsContext) {
       editorOpen: Boolean(detailsStatus),
       editor: canConfigure ? (
         <DetailsEditor
+          shop={shop}
           held={held}
           tell={tell}
           context={{

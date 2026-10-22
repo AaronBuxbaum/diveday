@@ -19,7 +19,7 @@ import {
 import { listTripDives } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { staffTideWindowText } from "@/i18n/tide-labels";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
@@ -31,8 +31,10 @@ import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { fetchTideStation, tideStationEcho } from "@/lib/tide-stations";
 import { uuidParam } from "@/lib/uuid";
 import { routeEditorCopy } from "../_components/route-editor-copy";
+import { loadSiteAssists, SiteTranslations, siteBriefAssist } from "../_components/SiteAssists";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell } from "../_components/SiteFormShell";
+import { ERROR_KEYS, NOTICE_KEYS } from "../_components/site-edit-notices";
 import {
   fieldGuideEditorCopy,
   landmarkEditorCopy,
@@ -68,25 +70,6 @@ export const metadata: Metadata = { title: "Edit dive site — DiveDay" };
  */
 const TIDE_LINE_DEPARTURES = 7;
 
-// A notice/error query param maps to a message key, never to a sentence — the
-// words come from the staff bundle at render time (docs ADR
-// 20260730-staff-copy-localization).
-const NOTICE_KEYS: Record<string, StaffMessageKey> = {
-  saved: "diveSites.edit.savedNotice",
-  copied: "diveSites.edit.copiedNotice",
-  "template-updated": "diveSites.edit.templateUpdates.updated",
-  "template-replaced": "diveSites.edit.templateUpdates.replaced",
-  "template-undone": "diveSites.edit.templateUpdates.undone",
-  "template-update-unavailable": "diveSites.edit.templateUpdates.unavailable",
-};
-
-// Only the archive action still refuses through the URL; a rejected *save*
-// hands its code back to the form instead (see `SiteFormShell`), which is what
-// keeps a briefing's twenty fields from being wiped by their own error banner.
-const ERROR_KEYS: Record<string, StaffMessageKey> = {
-  invalid: "diveSites.edit.errorInvalid",
-};
-
 export default async function EditDiveSitePage({
   params,
   searchParams,
@@ -104,6 +87,7 @@ export default async function EditDiveSitePage({
   const { db, shop } = await requireShopSurface(shopSlug);
   const site = await getDiveSite(db, shop.id, id);
   if (!site) notFound();
+  const assists = await loadSiteAssists(db, shop, site);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // The species picker previews what a *diver* will read off this site's
@@ -376,8 +360,10 @@ export default async function EditDiveSitePage({
               siteId={site.id}
               certificationDescription={t("diveSites.edit.certificationDescription")}
               requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
+              briefAssist={siteBriefAssist(shopSlug, assists.canAssist, t)}
             />
           </SiteFormShell>
+          <SiteTranslations shopSlug={shopSlug} assists={assists} t={t} />
         </div>
       </div>
       <DangerDisclosure

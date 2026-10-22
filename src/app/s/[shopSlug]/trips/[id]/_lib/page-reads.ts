@@ -15,6 +15,7 @@ import {
 import { getShopReviewAggregate, listSiteReviews } from "@/db/reviews";
 import { publicRunOf } from "@/db/series-next";
 import { tripMayTakeACode } from "@/db/shop-promos";
+import { withTranslatedFields } from "@/db/shop-text-translations";
 import type { shopBySlugCached } from "@/db/shops-cached";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
@@ -27,6 +28,7 @@ import {
   pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
 } from "@/db/trips";
+import { requestLocale } from "@/i18n/request";
 import type { auth } from "@/lib/auth";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { publicAppUrl } from "@/lib/notifications";
@@ -96,7 +98,12 @@ export async function readTripPage(
   // its own notice below, pays for the wave like any other; it is the rare
   // visit, and every booking visit used to pay a dozen round trips for it.
   // Seats on sale are capped at the boat's certificate (#2321).
-  const tripRead = publicTripRecord(shop.id, tripId).then((row) => row && seatsOnSale(row));
+  // The description in the shop's own Spanish for a reader in Spanish, when
+  // the shop saved one for these words (`shop-translate`); the original else.
+  const locale = await requestLocale(shop.defaultLocale);
+  const tripRead = publicTripRecord(shop.id, tripId)
+    .then((row) => row && seatsOnSale(row))
+    .then((row) => row && withTranslatedFields(db, shop, locale, "trip", row, ["description"]));
   const tripDivesRead = listTripDives(db, shop.id, tripId);
   // The embed's short confirmation renders only from a verified `confirm`
   // capability — never from a raw booking id in the URL (design principle 6:

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { MeetingDaysField } from "@/app/shop/[shopSlug]/_components/MeetingDaysField";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { RemovablePhoto } from "@/components/RemovablePhoto";
@@ -66,7 +67,45 @@ export type DetailsSectionContext = {
   locale: string;
   /** The shop's currency — what the numbers in these price boxes mean. */
   currency: string;
+  /** Claude's Draft button for the description, inside this form; absent while dark. */
+  descriptionAssist?: ReactNode;
 };
+
+/** The departure's title and description, and Claude's Draft button under the description. */
+function TitleAndDescription({
+  trip,
+  assist,
+  t,
+}: {
+  trip: Trip;
+  assist?: ReactNode;
+  t: StaffTranslator;
+}) {
+  return (
+    <FieldGrid columns={1} className="max-w-2xl gap-y-5">
+      <Field label={t("trips.details.titleLabel")}>
+        <input
+          name="title"
+          type="text"
+          required
+          maxLength={120}
+          defaultValue={trip.title}
+          className={controlClass}
+        />
+      </Field>
+      <Field label={t("trips.details.descriptionLabel")} hint={t("trips.details.optionalHint")}>
+        <textarea
+          name="description"
+          rows={2}
+          maxLength={500}
+          defaultValue={trip.description ?? ""}
+          className={textareaClassFor(2)}
+        />
+        {assist ? <div className="mt-2">{assist}</div> : null}
+      </Field>
+    </FieldGrid>
+  );
+}
 
 export function DetailsSection({ context }: { context: DetailsSectionContext }) {
   const {
@@ -99,27 +138,7 @@ export function DetailsSection({ context }: { context: DetailsSectionContext }) 
        values it is about to show, which is what the row above it states
        (`TripAboutSection`, design review 2026-09-17). */
     <form action={action} encType="multipart/form-data" className="flex flex-col gap-5 pt-1">
-      <FieldGrid columns={1} className="max-w-2xl gap-y-5">
-        <Field label={t("trips.details.titleLabel")}>
-          <input
-            name="title"
-            type="text"
-            required
-            maxLength={120}
-            defaultValue={trip.title}
-            className={controlClass}
-          />
-        </Field>
-        <Field label={t("trips.details.descriptionLabel")} hint={t("trips.details.optionalHint")}>
-          <textarea
-            name="description"
-            rows={2}
-            maxLength={500}
-            defaultValue={trip.description ?? ""}
-            className={textareaClassFor(2)}
-          />
-        </Field>
-      </FieldGrid>
+      <TitleAndDescription trip={trip} assist={context.descriptionAssist} t={t} />
       {/* Where this departure meets, when it isn't the shop's own front
               door — a marina three miles out, a shore dive's beach car park, a
               second dock (issue #704 slice 2). Both blank, the default and

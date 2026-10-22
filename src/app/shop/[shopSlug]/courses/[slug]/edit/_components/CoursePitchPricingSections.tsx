@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
 import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import { controlClass, Field, FieldGrid, PriceField, textareaClassFor } from "@/components/ui/form";
@@ -13,6 +14,7 @@ export function CoursePitchPricingSections({
   currency,
   locale,
   t,
+  summaryAssist,
 }: {
   course: EditableCourse;
   pitch: EditorSectionRef;
@@ -20,6 +22,8 @@ export function CoursePitchPricingSections({
   currency: ShopCurrency;
   locale: string;
   t: StaffTranslator;
+  /** Claude's Draft button for the summary, inside the save form; absent while dark. */
+  summaryAssist?: ReactNode;
 }) {
   return (
     <>
@@ -36,6 +40,7 @@ export function CoursePitchPricingSections({
               defaultValue={course.summary ?? ""}
               className={controlClass}
             />
+            {summaryAssist ? <div className="mt-2">{summaryAssist}</div> : null}
           </Field>
           <Field
             label={t("courses.edit.overviewLabel")}

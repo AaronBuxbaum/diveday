@@ -123,6 +123,7 @@ export function SiteFields({
   siteId,
   locale,
   timezone,
+  briefAssist,
 }: {
   t: StaffTranslator;
   /** How this shop reads depth; the stored figure is always metres. */
@@ -153,6 +154,8 @@ export function SiteFields({
   locale: string;
   /** The shop's zone, so that date reads as the day the shop lived. */
   timezone: string;
+  /** Claude's "Draft from these fields" (site-brief), inside this form; absent while dark. */
+  briefAssist?: ReactNode;
 }) {
   const labels = siteFormSectionLabels(t);
 
@@ -187,6 +190,7 @@ export function SiteFields({
               defaultValue={values?.description ?? ""}
               className={textareaClassFor(3)}
             />
+            {briefAssist ? <div className="mt-2">{briefAssist}</div> : null}
           </Field>
         </FieldGrid>
       ),
