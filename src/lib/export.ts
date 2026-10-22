@@ -186,6 +186,8 @@ export const EXPORT_FILE_NOTES = {
   "shop_promo_redemptions.csv":
     "Every time one of those codes was actually spent: which code, which checkout attempt in booking_checkouts.csv, and what the shop took on that sale. Read amount_charged_cents as \"what this code was worth on this sale\" — Stripe's own settled total where Stripe reported one, and otherwise the asking price less this code's own discount. It is not a full order total: another discount stacked by Stripe, or a later refund, is not reflected here, so reconcile against orders.csv for revenue and use this file for how a code performed.",
   "courses.csv": "The course catalog with public-page content, hidden courses included.",
+  "shop_text_translations.csv":
+    "The shop's own Spanish for its trip descriptions, course summaries and dive-site briefings, as staff saved it. subject_kind says which file subject_id points into (trips.csv, courses.csv or dive_sites.csv) and field which column it translates. A row whose original has changed since it was saved is not shown to divers until staff save it again; an empty text is a translation the shop cleared.",
 } as const;
 
 export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;

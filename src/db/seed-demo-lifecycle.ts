@@ -88,6 +88,7 @@ import {
   shopStripeAccounts,
   shopSubscriptions,
   shops,
+  shopTextTranslations,
   shopWhatsappAccounts,
   specialtyCertifications,
   staffCredentials,
@@ -301,6 +302,9 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId));
+  // The shop's Spanish for the trips, sites and courses about to go: a
+  // translation has no foreign key to its subject, so it goes with them.
+  await db.delete(shopTextTranslations).where(eq(shopTextTranslations.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));
   // Before the series it points at, and after the trips: a skip is the
   // memory of a date that is no longer there.

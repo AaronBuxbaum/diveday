@@ -49,6 +49,16 @@ describe("anonymizeDiver — the inbox", () => {
       providerMessageId: "erase-1",
     });
     if (matched.status !== "recorded") throw new Error("not recorded");
+    // What a Claude assist read in it (ADR 20261018-claude-assists): the
+    // translation is the diver's words, and goes with them.
+    await db
+      .update(inboundMessages)
+      .set({
+        assistIntent: "question",
+        assistLanguage: "es",
+        assistTranslation: "Tengo la rodilla mal",
+      })
+      .where(eq(inboundMessages.id, matched.id));
     await recordStaffReply(db, {
       shopId: shop.id,
       personId: diver.id,
@@ -95,6 +105,7 @@ describe("anonymizeDiver — the inbox", () => {
         body: inboundMessages.body,
         subject: inboundMessages.subject,
         fromAddress: inboundMessages.fromAddress,
+        assistTranslation: inboundMessages.assistTranslation,
       })
       .from(inboundMessages)
       .where(
@@ -118,6 +129,7 @@ describe("anonymizeDiver — the inbox", () => {
       expect(row.body).not.toContain("knee");
       expect(row.subject).toBeNull();
       expect(row.fromAddress).not.toContain("@");
+      expect(row.assistTranslation).toBeNull();
     }
     expect(byNumber?.body).not.toContain("reef");
     expect(byNumber?.fromAddress).not.toBe("13055550177");

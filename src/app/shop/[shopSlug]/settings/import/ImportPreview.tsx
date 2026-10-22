@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { fill, pluralForm } from "@/i18n/fill";
+import { formatCalendarDate } from "@/lib/calendar-date";
 import type { ImportIssue, PreparedImport } from "@/lib/import";
 import type { ImportActionState } from "./actions";
 import type { ImportWizardCopy } from "./import-wizard-copy";
@@ -59,6 +60,8 @@ export function ImportPreview({
   formAction,
   csvText,
   state,
+  assist,
+  locale,
 }: {
   prepared: PreparedImport;
   previewRows: PreparedImport["rows"];
@@ -68,7 +71,21 @@ export function ImportPreview({
   formAction: (formData: FormData) => void;
   csvText: string;
   state: ImportActionState;
+  /**
+   * Claude's mapping for the columns the importer could not read (the
+   * `import` assist), as JSON for the confirm to post back, where the server
+   * re-reads it; and the words that mark what it suggested.
+   */
+  assist?: { json: string; suggested: string; pendingCards: string };
+  /** The reader's locale, for the dates of bookings after today. */
+  locale: string;
 }) {
+  const anyAssisted = prepared.mapping.some((entry) => entry.assisted);
+  const afterToday = prepared.rows.filter(
+    (row) => row.action !== "skip" && row.bookingAfterToday !== null,
+  );
+  const listedAfterToday = afterToday.slice(0, PREVIEW_LIMIT);
+  const unlistedAfterToday = afterToday.length - listedAfterToday.length;
   return (
     <div className="mt-6">
       <div className="flex flex-wrap gap-2">
@@ -78,12 +95,19 @@ export function ImportPreview({
             className="inline-flex items-baseline gap-1.5 rounded-full bg-surface-sunken px-3 py-1 text-xs"
             title={fill(copy.columnTitle, { header: entry.header })}
           >
-            <span className="font-medium text-foreground">{copy.fieldLabels[entry.field]}</span>
+            <span className="font-medium text-foreground">
+              {entry.assisted && assist
+                ? fill(assist.suggested, { field: copy.fieldLabels[entry.field] })
+                : copy.fieldLabels[entry.field]}
+            </span>
             <span className="font-mono text-muted">{entry.header}</span>
           </span>
         ))}
       </div>
 
+      {anyAssisted && assist ? (
+        <p className="mt-3 text-sm text-muted">{assist.pendingCards}</p>
+      ) : null}
       {prepared.ignoredMedicalColumns.length > 0 ? (
         <p className="mt-3 text-sm text-warning">
           {fill(copy.ignoredMedicalColumns, {
@@ -112,6 +136,48 @@ export function ImportPreview({
             { count: prepared.totals.withVisit },
           )}
         </p>
+      ) : null}
+      {/* Seats sold in the old system for a day that has not come. They are
+          not visits and not seats here; each is named so the shop can add it
+          on the board or leave it where it was sold until it sails. */}
+      {afterToday.length > 0 ? (
+        <div className="mt-3 text-sm">
+          <p id="import-bookings-after-today" className="text-warning">
+            {fill(
+              pluralForm(afterToday.length, {
+                one: copy.bookingsAfterTodayOne,
+                other: copy.bookingsAfterTodayOther,
+              }),
+              { count: afterToday.length, system: copy.sourceSystem },
+            )}
+          </p>
+          <ul aria-labelledby="import-bookings-after-today" className="mt-1 space-y-0.5 text-muted">
+            {listedAfterToday.map((row) => (
+              <li key={row.rowNumber}>
+                {[
+                  row.bookingAfterToday
+                    ? formatCalendarDate(row.bookingAfterToday.bookedFor, locale)
+                    : null,
+                  row.fullName,
+                  row.bookingAfterToday?.title,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </li>
+            ))}
+          </ul>
+          {unlistedAfterToday > 0 ? (
+            <p className="mt-1 text-muted">
+              {fill(
+                pluralForm(unlistedAfterToday, {
+                  one: copy.bookingsAfterTodayMoreOne,
+                  other: copy.bookingsAfterTodayMoreOther,
+                }),
+                { count: unlistedAfterToday },
+              )}
+            </p>
+          ) : null}
+        </div>
       ) : null}
       {prepared.totals.withPaymentHistory > 0 ? (
         <p className="mt-3 text-sm text-warning">
@@ -312,6 +378,7 @@ export function ImportPreview({
         // components/ui/form.tsx).
         <form action={formAction} className="mt-5 flex flex-wrap items-center gap-3">
           <input type="hidden" name="csv" value={csvText} />
+          {assist && anyAssisted ? <input type="hidden" name="assist" value={assist.json} /> : null}
           <SubmitButton
             pendingLabel={copy.submitting}
             disabled={prepared.totals.importable === 0}

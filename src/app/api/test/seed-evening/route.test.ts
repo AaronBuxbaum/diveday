@@ -1,9 +1,11 @@
-import { and, desc, eq, gte, isNull, lt, ne } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDayCloseout } from "@/db/closeout";
 import { listFitAdjustedReturns } from "@/db/gear";
 import { getTripManifest } from "@/db/manifests";
 import { bookings, rollCallCrewEvents, rollCallEvents, type Shop, trips } from "@/db/schema";
+import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "@/db/seed-boat-at-sea";
+import { listRollCallGaps } from "@/db/today";
 import { listStaff } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import { assembleEveningClose } from "@/lib/closeout";
@@ -169,6 +171,37 @@ describe("POST /api/test/seed-evening", () => {
     // claimed, because nobody has been counted back off any of these boats.
     expect(evening.closing).toBe(true);
     expect(evening.allHome).toBe(false);
+  });
+
+  /**
+   * **The boat at sea comes home with the rest of the day** (visual triage of
+   * PR #2918, item 1a). The route moved her behind the clock with dive 2's
+   * count still open as the seed left it, so the evening read "Boat is back
+   * with dive 2 uncounted: 2 of 11 people", the state
+   * `bringDemoBoatsAtSeaHome` exists so a demo never shows.
+   */
+  it("brings the boat at sea home counted, never back with people uncounted", async () => {
+    // The boat at sea rides the history flag, as the e2e reset seeds it.
+    const { db, shop } = await seededShopContext({ history: true });
+    vi.mocked(getDb).mockResolvedValue(db);
+    const [atSea] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(eq(trips.shopId, shop.id), inArray(trips.title, [AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE])),
+      );
+    if (!atSea) throw new Error("expected the seed's boat at sea under the frozen clock");
+
+    const response = await POST(seedRequest());
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.departures.map((departure: { id: string }) => departure.id)).toContain(atSea.id);
+
+    const gaps = await listRollCallGaps(db, shop.id, nowDate(), [atSea.id]);
+    expect(gaps.map((gap) => gap.reason)).toEqual([]);
+    const closeout = await getDayCloseout(db, shop.id, shop.timezone);
+    const station = closeout.departures.find((departure) => departure.tripId === atSea.id);
+    expect(station?.status).toBe("all_home");
   });
 
   it("closes every count on the boats it moved, which is the only way to the coral moment", async () => {

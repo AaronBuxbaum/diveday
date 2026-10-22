@@ -10,10 +10,13 @@ export function ImportKindTabs({
   t,
   base,
   current,
+  website = false,
 }: {
   t: StaffTranslator;
   base: string;
-  current: "divers" | "gear" | "dive-sites";
+  current: "divers" | "gear" | "dive-sites" | "website";
+  /** The `setup` assist's tab, shown only while the shop's assists are on. */
+  website?: boolean;
 }) {
   return (
     <SectionTabs
@@ -27,6 +30,15 @@ export function ImportKindTabs({
           href: `${base}?what=dive-sites`,
           label: t("settings.import.tabs.diveSites"),
         },
+        ...(website
+          ? [
+              {
+                id: "website" as const,
+                href: `${base}?what=website`,
+                label: t("assistsFront.setup.tab"),
+              },
+            ]
+          : []),
       ]}
     />
   );

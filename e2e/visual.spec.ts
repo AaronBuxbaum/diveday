@@ -1,10 +1,14 @@
 import { readdirSync, readFileSync } from "node:fs";
-import type { Browser, Locator, Page } from "@playwright/test";
+import type { APIRequestContext, Browser, Locator, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { DEMO_SHOP_TIMEZONE } from "../src/db/seed-clock";
-import { DEMO_RECAP_BOOKING_ID, LISTED_SHOP_SLUGS } from "../src/db/seed-identifiers";
+import {
+  AT_SEA_DAY_TITLE,
+  DEMO_RECAP_BOOKING_ID,
+  LISTED_SHOP_SLUGS,
+} from "../src/db/seed-identifiers";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffPassengerCount } from "../src/i18n/participant-labels";
 import { staffTranslator } from "../src/i18n/staff-messages";
@@ -18,6 +22,7 @@ import {
 } from "../src/lib/offline-manifests";
 import { publicFindMyBookingPath } from "../src/lib/public-routes";
 import { signRecapToken } from "../src/lib/recap-links";
+import { demoEmail } from "../src/lib/simulator-email";
 import { weekStartOf } from "../src/lib/week-board";
 import { clearCourseForms } from "./course-form-only";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
@@ -36,6 +41,7 @@ import {
   openCounterFor,
   openDiverFileGroup,
   openFirstRosterRowWith,
+  openIfClosed,
   openManifestPerson,
   openOnThisPhone,
   openPaperWaiverForm,
@@ -2443,6 +2449,15 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/get-set-up?from=pricing");
         await page.locator("h1").first().waitFor();
         await capture(page, "get-set-up", scheme);
+      });
+
+      // The form as a FareHarbor guide's concierge door opens it (2026-10-22):
+      // "A booking system" answered, and "Which one?" asked and answered.
+      test(`the set-up form asks which system (${scheme})`, async ({ page }) => {
+        await page.goto("/get-set-up?from=switching-fareharbor-concierge");
+        await page.locator("h1").first().waitFor();
+        await page.getByRole("radio", { name: "FareHarbor" }).waitFor();
+        await capture(page, "get-set-up-which-system", scheme);
       });
 
       // The thank-you page a sent request lands on, with the demo door.
@@ -6543,6 +6558,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await page.getByRole("button", { name: "Reinstate trip" }).waitFor();
         await page.getByRole("link", { name: "View the blow-out cascade" }).waitFor();
+        // Nobody can be offered a seat on a cancelled departure.
+        await expect(page.getByRole("heading", { name: /Who wants in/ })).toHaveCount(0);
         await capture(page, "trip-cancelled", scheme);
       });
 
@@ -7882,6 +7899,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "order-detail", scheme);
       });
 
+      // An open demo order (market sheet 2026-10-22, item 6): Record payment
+      // offers cash and the card machine as live buttons; Refresh and Void
+      // stay disabled beside the demo note.
+      test(`an open demo order's Record payment renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/orders?status=open&range=all");
+        const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
+        await ledgerRow.filter({ visible: true }).first().waitFor();
+        await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
+        await page.getByRole("button", { name: "Card machine", exact: true }).waitFor();
+        await capture(page, "order-detail-open-demo", scheme);
+      });
+
       // **The dispute sheet on screen** (issue #2390): a seat's order, the
       // signed release, the check-in and the roll call, reached the way an
       // owner reaches it, from the order's own "Dispute sheet" door.
@@ -7947,6 +7978,35 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/import");
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
+      });
+
+      // A bookings export that holds seats sold for after today (market sheet
+      // 2026-10-22, item 3): the preview counts them, names the system the
+      // guide came from, and lists them. The browser's clock is the frozen
+      // one, so "today" is the seed's day and the list never moves.
+      test(`the import preview lists bookings after today (${scheme})`, async ({ page }) => {
+        await page.clock.install({ time: E2E_FROZEN_CLOCK });
+        await page.goto("/shop/blue-mantis/settings/import?from=fareharbor");
+        await page
+          .locator('input[type="file"][data-hydrated="true"]')
+          .filter({ visible: true })
+          .waitFor({ state: "attached" });
+        await page.setInputFiles('input[type="file"]', {
+          name: "bookings.csv",
+          mimeType: "text/csv",
+          buffer: Buffer.from(
+            [
+              "Customer Name,Email,Booking Date,Tour Name,Booking Status,Total,Booking ID",
+              "Hana Kobayashi,hana.k@example.com,2026-06-12,Two-tank Molasses Reef,Completed,$165.00,FH-1",
+              "Hana Kobayashi,hana.k@example.com,2026-08-14,Night dive Benwood,Booked,$95.00,FH-2",
+              "Sam Reed,sam.r@example.com,2026-08-29,Discover Scuba,Booked,$120.00,FH-3",
+              "Ada Brooks,ada.b@example.com,2026-09-05,Two-tank Molasses Reef,Booked,$165.00,FH-4",
+            ].join("\n"),
+            "utf-8",
+          ),
+        });
+        await page.getByRole("list", { name: /bookings are after today/ }).waitFor();
+        await capture(page, "settings-import-bookings-after-today", scheme);
       });
 
       // Import's "Gear history" tab: the gear CSV importer.
@@ -8131,18 +8191,22 @@ for (const scheme of ["light", "dark"] as const) {
         page,
         request,
       }) => {
-        // The existing recap fixture issues a real shop AOW card. Its frozen
-        // issue date predates the processing cut, and the diver has not taken
-        // the next course, so both of the follow-up disclosures are populated.
+        // The existing recap fixture issues a real shop AOW card, and the
+        // diver has not taken the next course, so the ladder's follow-up
+        // disclosure is populated. The fleet's frozen July clock is before the
+        // card-processing stamp's migration, so no card is set apart as
+        // "certified before" it (`cardProcessingSince`, PR #2918 item 1d):
+        // that disclosure is absent here, and its grammar is held by
+        // CardsToProcess.test.tsx under a clock past the cut.
         const seeded = await request.post("/api/test/seed-certified-recap");
         expect(seeded.ok(), await seeded.text()).toBe(true);
         await page.goto("/shop/blue-mantis/courses");
-        const earlier = page.locator("#cards-to-process-earlier > summary");
-        await earlier.waitFor();
-        const people = page.getByText("See who", { exact: true });
+        // The first ladder row: the demo now seeds two shop-certified cards
+        // of its own (H-148), so "See who" is on more than one step.
+        const people = page.getByText("See who", { exact: true }).first();
         await people.waitFor();
+        await expect(page.locator("#cards-to-process-earlier")).toHaveCount(0);
         await capture(page, "course-follow-ups-closed", scheme);
-        await earlier.click();
         await people.click();
         await capture(page, "course-follow-ups-open", scheme);
       });
@@ -8746,6 +8810,31 @@ for (const scheme of ["light", "dark"] as const) {
           .click();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-not-back-aboard", scheme);
+      });
+
+      /**
+       * **The boat at sea, mid roll call** (market sheet 2026-10-22, item 1):
+       * the demo always has one underway, dive 1 counted and dive 2's count
+       * at "9 of 11 back aboard" with one buddy pair still to surface. Read
+       * only, so it needs no reset of its own.
+       */
+      test(`the boat at sea's open after-dive count renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        // The day's spine carries the departure's title as its door, like the
+        // dawn boat's (`openSailedTrip`).
+        await page.goto("/shop/blue-mantis");
+        await page.getByRole("link", { name: AT_SEA_DAY_TITLE, exact: true }).first().click();
+        await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        await page
+          .getByRole("link", { name: "After dive 2" })
+          .evaluate((link: HTMLElement) => link.click());
+        await page.waitForURL(/checkpoint=after_dive_2/);
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-at-sea-mid-roll-call", scheme);
       });
 
       /**
@@ -10935,3 +11024,230 @@ for (const scheme of ["light", "dark"] as const) {
     });
   });
 }
+
+/**
+ * **Claude's assists, lit** (ADR 20261018-claude-assists): the inbox row with
+ * its intent and translation, the reply draft, the website setup tab, the
+ * import mapping, the card-photo prefill, the review flags, the Draft buttons
+ * on a departure and a dive site, the sightings box and the recap line.
+ *
+ * Every shop the fleet holds is a demo, and a demo is dark, so each test takes
+ * a minted shop and `/api/test/claude-fixtures` clears its demo flag and arms
+ * the canned provider for it: every answer comes from
+ * `src/lib/assists/e2e-fixtures.ts` and nothing leaves the machine. The route's
+ * DELETE makes it a demo again before the private-shop teardown, which drops
+ * demo shops only. Light only: the assists draw with the page's own controls,
+ * and dark already shoots those.
+ *
+ * **A pinned identity**, for the same reason `manifest-emergency-empty` has
+ * one: the minted shop's name renders in the staff header.
+ */
+test.describe("light mode — Claude's assists, lit", () => {
+  test.use({
+    colorScheme: "light",
+    viewport: { width: 1280, height: 800 },
+    privateShopSlug: "lit-lantern-dive-co",
+  });
+
+  async function lit(
+    request: APIRequestContext,
+    slug: string,
+    body: () => Promise<void>,
+  ): Promise<void> {
+    const armed = await request.post(
+      `/api/test/claude-fixtures?slug=${encodeURIComponent(slug)}&review=1`,
+    );
+    expect(armed.ok()).toBe(true);
+    try {
+      await body();
+    } finally {
+      await request.delete(`/api/test/claude-fixtures?slug=${encodeURIComponent(slug)}`);
+    }
+  }
+
+  /** The page again until `target` shows: these assists read after the response. */
+  async function reloadUntil(page: Page, target: Locator): Promise<void> {
+    await expect(async () => {
+      await page.reload();
+      await expect(target).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+  }
+
+  test("the inbox row and the reply draft", async ({ page, request, privateShop }) => {
+    test.setTimeout(FLOW_TIMEOUT_MS);
+    await lit(request, privateShop.slug, async () => {
+      const sent = await request.post("/api/test/inbound-message", {
+        data: {
+          shopSlug: privateShop.slug,
+          from: demoEmail("Diego Alvarez"),
+          channel: "email",
+          // i18n-exempt: a diver's own words, delivered as the provider would
+          body: "Hola, ¿podemos cambiar el buceo al domingo? Gracias",
+        },
+      });
+      expect(sent.ok()).toBe(true);
+      await page.goto(`/shop/${privateShop.slug}/inbox`);
+      const row = page.getByRole("listitem").filter({ hasText: "Diego Alvarez" }).first();
+      await reloadUntil(page, row.getByText("Wants to move"));
+      await expect(row.getByText(/^In Spanish: /)).toBeVisible();
+      await capture(page, "assist-inbox-row", "light");
+
+      await row
+        .getByRole("link", { name: "Open the record for Diego Alvarez" })
+        .click({ position: { x: 4, y: 4 } });
+      await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
+      const conversation = page.getByRole("region", { name: "Conversation" });
+      await conversation.getByRole("button", { name: "Draft a reply" }).click();
+      await expect(conversation.locator("textarea").first()).toHaveValue(
+        /Thanks for getting in touch/,
+      );
+      await page.mouse.move(0, 0);
+      await capture(page, "assist-reply-draft", "light");
+    });
+  });
+
+  test("the website setup tab and the import mapping", async ({ page, request, privateShop }) => {
+    test.setTimeout(FLOW_TIMEOUT_MS);
+    await lit(request, privateShop.slug, async () => {
+      await page.goto(`/shop/${privateShop.slug}/settings/import?what=website`);
+      const read = page.getByRole("button", { name: "Read the site" });
+      await page
+        .locator("form", { has: read })
+        .getByLabel("Your website")
+        .fill("https://lit-lantern.example.com");
+      await read.click();
+      await page.waitForURL(/notice=setup-read/);
+      await page.getByText("Read. Accept the lines that are right.").waitFor();
+      await page.mouse.move(0, 0);
+      await capture(page, "assist-website-setup", "light");
+
+      await page.goto(`/shop/${privateShop.slug}/settings/import`);
+      const file = page.locator('input[type="file"]');
+      await expect(file).toHaveAttribute("data-hydrated", "true");
+      await file.setInputFiles({
+        name: "divers.csv",
+        mimeType: "text/csv",
+        // i18n-exempt: an imported file's own headers and rows
+        buffer: Buffer.from(
+          "name,email,Cell Ph,Cert Level\n" +
+            "Rosa Vega,rosa.vega@example.com,305 555 0144,Adv OW\n" +
+            "Tomas Reyes,tomas.reyes@example.com,305 555 0177,Adv OW\n",
+        ),
+      });
+      await page.getByRole("button", { name: "Map the other columns" }).click();
+      await page
+        .getByText(/, suggested$/)
+        .first()
+        .waitFor();
+      await page.mouse.move(0, 0);
+      await capture(page, "assist-import-mapping", "light");
+    });
+  });
+
+  test("the card-photo prefill and the review flags", async ({ page, request, privateShop }) => {
+    test.setTimeout(FLOW_TIMEOUT_MS);
+    await lit(request, privateShop.slug, async () => {
+      await page.goto(`/shop/${privateShop.slug}/divers`);
+      await page
+        .getByRole("link", { name: /Adaeze Nwosu/ })
+        .first()
+        .click();
+      await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);
+      const group = await openDiverFileGroup(page, "Certification records");
+      await group.getByText("Add certification", { exact: true }).click();
+      const form = page
+        .locator("form", {
+          has: page.getByRole("button", { name: "Capture for review", exact: true }),
+        })
+        .filter({ visible: true });
+      await form
+        .locator('input[type="file"][accept="image/*"]')
+        .setInputFiles("public/dive-sites/AtlanticGoliathGrouper.jpg");
+      await expect(form.getByLabel("Certification number")).toHaveValue("OW-48213");
+      await page.mouse.move(0, 0);
+      await capture(page, "assist-card-photo", "light");
+
+      await page.goto(`/shop/${privateShop.slug}/reviews`);
+      await reloadUntil(page, page.getByText("Phone or email", { exact: true }).first());
+      await page.mouse.move(0, 0);
+      await capture(page, "assist-review-flags", "light");
+    });
+  });
+
+  test("the Draft buttons on a departure and a dive site", async ({
+    page,
+    request,
+    privateShop,
+  }) => {
+    test.setTimeout(FLOW_TIMEOUT_MS);
+    await lit(request, privateShop.slug, async () => {
+      await page.goto(`/shop/${privateShop.slug}/schedule/board`);
+      await openTripFromBoard(page, REEF_TRIP);
+      await openTripAbout(page);
+      await page.getByText("Edit details", { exact: true }).click();
+      await page.getByRole("button", { name: "Draft it", exact: true }).click();
+      await expect(page.locator('textarea[name="description"]')).toHaveValue(
+        /a crew who know the reef well/,
+      );
+      // The Spanish box is for a description already on file, so save first.
+      await page.getByRole("button", { name: "Save changes" }).click();
+      await expect(page.getByRole("status")).toContainText("Changes saved");
+      await page.getByRole("button", { name: "Draft in Spanish" }).click();
+      await expect(page.getByLabel("Description, in Spanish", { exact: true })).toHaveValue(
+        /español/,
+      );
+      await page.mouse.move(0, 0);
+      await capture(page, "assist-trip-draft", "light");
+
+      await page.goto(`/shop/${privateShop.slug}/dive-sites`);
+      await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
+      await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
+      await page.getByRole("button", { name: "Draft from these fields" }).click();
+      await expect
+        .poll(() =>
+          page
+            .locator("textarea")
+            .evaluateAll((boxes) =>
+              boxes.some((box) => (box as HTMLTextAreaElement).value.includes("sand edge")),
+            ),
+        )
+        .toBe(true);
+      await page.mouse.move(0, 0);
+      await capture(page, "assist-site-brief", "light");
+    });
+  });
+
+  test("the sightings box and the recap line", async ({ page, request, privateShop }) => {
+    test.setTimeout(FLOW_TIMEOUT_MS);
+    await lit(request, privateShop.slug, async () => {
+      await page.goto(`/shop/${privateShop.slug}`);
+      await page.getByRole("link", { name: SAILED_TRIP, exact: true }).first().click();
+      await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+      await openTripTab(page, "Manifest");
+      await offlineCopySaved(page);
+      await page
+        .getByRole("link", { name: "After dive 1" })
+        .evaluate((link: HTMLElement) => link.click());
+      await page.waitForURL(/checkpoint=after_dive_1/);
+      const seen = page.getByRole("region", { name: "Seen" });
+      // i18n-exempt: what the crew said, typed as they would
+      await seen.getByLabel("Or say what you saw").fill("two stingrays and a big grouper");
+      await seen.getByRole("button", { name: "Match" }).click();
+      const add = seen.getByRole("button", { name: "Add these" });
+      await add.waitFor();
+      await add.evaluate((button) => button.scrollIntoView({ block: "center" }));
+      await page.mouse.move(0, 0);
+      await capture(page, "assist-sightings", "light");
+      await add.click();
+      await expect(seen.getByRole("listitem").first()).toBeVisible();
+
+      await page.goto(`/shop/${privateShop.slug}`);
+      const recap = page.locator("details", { hasText: "Recap" }).first();
+      await openIfClosed(recap);
+      await recap.getByRole("button", { name: "Draft it", exact: true }).click();
+      await expect(recap.getByLabel("Note to divers")).toHaveValue(/ at /);
+      await page.mouse.move(0, 0);
+      await capture(page, "assist-recap-line", "light");
+    });
+  });
+});

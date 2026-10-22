@@ -1,3 +1,4 @@
+import { LOST_MASK } from "../src/db/seed-booth";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
@@ -112,7 +113,10 @@ test("the crew records something left aboard and the shop hands it back", async 
   const row = page.getByTestId("lost-item").filter({ hasText: "Blue mask, seat 4" });
   await expect(row).toContainText(SAILED);
   await row.getByRole("button", { name: "Returned" }).click();
-  await expect(page.getByText("Nothing is waiting to go home")).toBeVisible();
+  // Handed back, it leaves the list; the demo's own left-behind mask (H-148)
+  // still waits for its diver, booked tomorrow.
+  await expect(row).toHaveCount(0);
+  await expect(page.getByTestId("lost-item").filter({ hasText: LOST_MASK })).toBeVisible();
 });
 
 /**

@@ -15,6 +15,7 @@ import {
   accountSessions,
   accountTokens,
   activityEvents,
+  assistResults,
   bookingCapabilities,
   bookingPaymentEvents,
   bookings,
@@ -42,6 +43,7 @@ import {
   tripReadMarks,
   trips,
   waiverDeliveries,
+  websiteSetupDrafts,
   weeklyDigestSends,
 } from "./schema";
 
@@ -348,6 +350,19 @@ export const PRUNE_ARMS = {
     from: claudeUsage,
     id: claudeUsage.id,
     clock: claudeUsage.createdAt,
+  },
+  // What an assist answered, on the age of its last answer: a row nobody asked
+  // again for a season and a year is about reviews and weeks long gone.
+  assist_results: {
+    from: assistResults,
+    id: assistResults.id,
+    clock: assistResults.updatedAt,
+  },
+  // The website setup's proposals, one row per shop, on the age of its reading.
+  website_setup_drafts: {
+    from: websiteSetupDrafts,
+    id: websiteSetupDrafts.shopId,
+    clock: websiteSetupDrafts.readAt,
   },
   // Crew news, spent the hour it settles (ADR 20261009-crew-hear-about-their-boats).
   crew_notices: {

@@ -88,6 +88,7 @@ import {
   shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
+  shopTextTranslations,
   specialtyCertifications,
   staffCredentials,
   staffReplies,
@@ -123,7 +124,9 @@ import {
   workOrders,
 } from "./schema";
 import { seedBackup } from "./seed-backup";
+import { AT_SEA_CREW, seedBoatAtSea } from "./seed-boat-at-sea";
 import { seedBookings } from "./seed-bookings";
+import { fillWeeklyRun, seedBoothStories } from "./seed-booth";
 import { seedBuddyPairs } from "./seed-buddy-pairs";
 import { LEAD_INSTRUCTOR_NAME, OWNER_NAME, RELIEF_INSTRUCTOR_NAME, staffDefs } from "./seed-cast";
 import { seedCatalog } from "./seed-catalog";
@@ -148,6 +151,7 @@ import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
+import { seedHulls } from "./seed-hulls";
 import { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 import { seedInbox } from "./seed-inbox";
 import { seedLenses } from "./seed-lenses";
@@ -171,7 +175,7 @@ import { seedSightings } from "./seed-sightings";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
-import { nameDemoNightDeparture, seedTrips } from "./seed-trips";
+import { seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
 import { seedWaiverVersions } from "./seed-waiver-versions";
 import { seedWeeklyRun } from "./seed-weekly-run";
@@ -272,16 +276,18 @@ const DEMO_SHOP_UNIT_COLUMNS = {
 async function seedStaffShifts(
   db: DbExecutor,
   shopId: string,
-  cast: { id: string; roles: readonly string[] }[],
+  cast: { id: string; fullName: string; roles: readonly string[] }[],
+  { boatAtSea }: { boatAtSea: boolean },
 ): Promise<void> {
   if (cast.length === 0) return;
   const now = nowDate();
   await db.insert(staffShifts).values(
     cast.flatMap((person) =>
-      // The boats' crew (`DEMO_DAWN_CREW_ROLES`) are on from 4:30 too, and
-      // only they work a night boat's hours.
+      // The boats' crew (`DEMO_DAWN_CREW_ROLES`) are on from 4:30 too; the boat
+      // at sea's crew (`AT_SEA_CREW`) work her hours, when the demo has her.
       demoTodayShifts(now, DEMO_SHOP_TIMEZONE, {
         crew: person.roles.some((role) => DEMO_DAWN_CREW_ROLES.has(role)),
+        atSea: boatAtSea && AT_SEA_CREW.some((member) => member.fullName === person.fullName),
       }).map(({ startsAt, endsAt }) => ({
         shopId,
         personId: person.id,
@@ -622,7 +628,12 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   await seedStaffShifts(
     db,
     shop.id,
-    staff.map((person, i) => ({ id: person.id, roles: staffDefs[i].roles })),
+    staff.map((person, i) => ({
+      id: person.id,
+      fullName: staffDefs[i].fullName,
+      roles: staffDefs[i].roles,
+    })),
+    { boatAtSea: opts.history !== false },
   );
   // The shop's own checklist items are settings, not schedule (ADR
   // 20260824-pre-departure-safety-check): seeded once here, never re-seeded by
@@ -630,6 +641,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // finished dawn boat can record its check against them (UX review
   // 2026-10-13, item 40).
   await seedPreDepartureChecklist(db, shop.id);
+  // Stable half: packages are shop configuration a reset leaves standing.
+  // Before the schedule, whose regular holds a card from one of them
+  // (src/db/seed-booth.ts).
+  await seedPackages(db, shop.id);
   await seedDemoSchedule(db, shop.id, opts);
   // Pay-at-booking in Stripe test mode, when configured (ADR
   // 20261009-demo-test-mode-payments); nothing otherwise.
@@ -639,8 +654,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // settings row a demo visitor cannot break, so it lives outside the
   // resettable schedule (ADR 20260804-shop-owned-backup-export).
   await seedBackup(db, shop.id);
-  // Same tier: packages are shop configuration a reset leaves standing.
-  await seedPackages(db, shop.id);
   // Two listed shops beside a demo no listing may show. Stable half: real
   // rows a reset never touches.
   await seedListedShops(db);
@@ -875,7 +888,12 @@ export async function createDemoShop(
   await seedStaffShifts(
     db,
     shop.id,
-    staff.map((person, i) => ({ id: person.id, roles: staffDefs[i].roles })),
+    staff.map((person, i) => ({
+      id: person.id,
+      fullName: staffDefs[i].fullName,
+      roles: staffDefs[i].roles,
+    })),
+    { boatAtSea: opts.history !== false },
   );
   // A visitor's demo should carry the same owner-facing story as the
   // canonical demo, including sailed trips, tips, and reviews. Test-only
@@ -884,11 +902,12 @@ export async function createDemoShop(
   // The same checklist the canonical demo keeps, for the same reason and in
   // the same place: before the schedule, whose dawn boat records against it.
   await seedPreDepartureChecklist(db, shop.id);
-  await seedDemoSchedule(db, shop.id, { history: opts.history !== false });
-  // The canonical demo's two packages, for a visitor's demo too. A private
-  // test shop mints without history and starts with nothing on sale, which is
-  // the state `e2e/package-purchase.spec.ts` begins from.
+  // The canonical demo's two packages, for a visitor's demo too, before the
+  // schedule whose regular holds a card. A private test shop mints without
+  // history and starts with nothing on sale, which is the state
+  // `e2e/package-purchase.spec.ts` begins from.
   if (opts.history !== false) await seedPackages(db, shop.id);
+  await seedDemoSchedule(db, shop.id, { history: opts.history !== false });
 
   return { slug: shop.slug, ownerEmail: identity.emailFor("dana") };
 }
@@ -1227,6 +1246,17 @@ export async function seedDemoSchedule(
   // its own departure (ADR 20260904-reef-all-the-way-down, Budget rule 4;
   // `demoStageTaps`) — after the trips exist and
   // their plans have sites on them, since the tap stamps the site it reads.
+  // The boat at sea, halfway through her roll call, whatever hour the demo is
+  // seeded (src/db/seed-boat-at-sea.ts, market sheet 2026-10-22, item 1):
+  // after every scenario that seats a diver, since she takes regulars with no
+  // seat from today on, and before the stage taps, which she carries too.
+  if (opts.history !== false) await seedBoatAtSea(db, shopId);
+  // What a booth visitor is shown (src/db/seed-booth.ts, market sheet
+  // 2026-10-22, item 4): a dive card, a weather call, two cards the shop
+  // issued, a mask left behind. After the boat at sea, which takes regulars
+  // with no seat from today on, and before the course forms are worded, which
+  // sign for every student already booked.
+  if (opts.history !== false) await seedBoothStories(db, shopId);
   if (captainId) await seedTripStage(db, shopId, captainId);
   await seedTripLegs(db, shopId, opts.history !== false);
 
@@ -1314,11 +1344,18 @@ export async function seedDemoSchedule(
       divemasterIds: standing,
       reliefs: reliefPool.filter((relief) => !standing.includes(relief.personId)),
     });
+    // Its next date sold out, with a wait list (src/db/seed-booth.ts).
+    await fillWeeklyRun(db, shopId);
   }
 
-  // Updates-only, and after every scenario that finds today's boat by its day
-  // name: an evening seed's late boat is named as a night dive (issue #2440).
-  await nameDemoNightDeparture(db, shopId);
+  // Updates-only, after every scenario that creates a departure: a hull on
+  // every boat day and the shop's word on the ones seeded after the first pass
+  // (src/db/seed-hulls.ts, src/db/seed-lenses.ts), so Reports' "By boat" and
+  // "By kind of trip" add up to the month (market sheet 2026-10-22, item 2).
+  if (opts.history !== false) {
+    await seedHulls(db, shopId);
+    await seedLenses(db, shopId);
+  }
 
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated
@@ -1581,6 +1618,9 @@ export async function resetDemoSchedule(
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }
+  // The shop's Spanish for the trips, sites and courses about to go: a
+  // translation has no foreign key to its subject, so it goes with them.
+  await db.delete(shopTextTranslations).where(eq(shopTextTranslations.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));
   // After the trips that point at them. The seed writes one run (the weekly
   // Saturday boat) and specs create more on the schedule board, so a reset
@@ -1908,7 +1948,12 @@ async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promis
     await seedStaffShifts(
       db,
       shopId,
-      restored.map((person, i) => ({ id: person.id, roles: missing[i]?.roles ?? [] })),
+      restored.map((person, i) => ({
+        id: person.id,
+        fullName: missing[i]?.fullName ?? "",
+        roles: missing[i]?.roles ?? [],
+      })),
+      { boatAtSea: true },
     );
   }
 

@@ -49,6 +49,12 @@ export const setupRequests = pgTable(
     runsBoat: boolean("runs_boat").notNull(),
     /** A `SetupCurrentSystem` code (`src/lib/setup-requests.ts`). */
     currentSystem: text("current_system").notNull(),
+    /**
+     * Which booking system or shop software, as a switching guide's slug
+     * (`MIGRATION_GUIDE_SLUGS`), when the reader named one. Null for every
+     * other answer, and for a system with no guide.
+     */
+    currentSystemGuide: text("current_system_guide"),
     contactName: text("contact_name").notNull(),
     email: text("email").notNull(),
     phone: text("phone"),

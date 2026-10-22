@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { getDb } from "@/db/client";
 import { pingDeskAfterHoursSafely } from "@/db/desk-pings";
 import { recordInboundMessage, shopIdForInboundEmailToken } from "@/db/inbound-messages";
+import { triageInboundMessagesSafely } from "@/db/inbox-assists";
 import { handleInboundReplyKeyword } from "@/db/reply-keywords";
 import { nowDate } from "@/lib/clock";
 import { parseInboundEmail } from "@/lib/inbound-email";
@@ -168,6 +169,12 @@ export async function POST(request: Request) {
     if (senderAuthenticated && !notification.spamFlagged) {
       const receivedAt = notification.receivedAt;
       after(() => pingDeskAfterHoursSafely(db, { shopId, receivedAt }));
+      // Claude's intent, urgency and translation for the inbox (the
+      // `inbox-sort` and `translate` assists), on the same two conditions: a
+      // spoofed burst must not spend the shop's Claude budget. A keyword reply
+      // and a dark shop are skipped inside; nothing here can fail the webhook.
+      const messageId = result.id;
+      after(() => triageInboundMessagesSafely(db, shopId, [messageId]));
     }
   }
   // Ids and outcomes only — never the sender, the subject or the words.

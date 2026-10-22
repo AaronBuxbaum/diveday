@@ -1,0 +1,63 @@
+{
+  "draft": "Redactar",
+  "drafting": "Redactando…",
+  "cardPhoto": "Leer foto de la tarjeta",
+  "cardPhotoPending": "Leyendo la tarjeta…",
+  "gearNote": "Llenar tallas con su nota",
+  "gearNotePending": "Leyendo la nota…",
+  "search": {
+    "label": "Pregunta con tus palabras",
+    "placeholder": "Quién no ha vuelto en un año",
+    "submit": "Buscar",
+    "pending": "Buscando…",
+    "noAnswer": "Eso no coincide con ninguna vista de la lista. Prueba con el buscador."
+  },
+  "dupes": {
+    "ask": "Preguntar a Claude si es una sola persona",
+    "pending": "Leyendo los dos registros…",
+    "verdict": {
+      "same": "Claude cree que es una sola persona.",
+      "different": "Claude cree que son dos personas.",
+      "unsure": "Claude no puede saberlo con estos registros."
+    }
+  },
+  "reviewFlags": {
+    "names_someone": "Nombra a alguien",
+    "contact_info": "Teléfono o email",
+    "safety_complaint": "Queja de seguridad",
+    "profanity": "Groserías"
+  },
+  "themes": {
+    "heading": "Lo que más mencionan los buceadores"
+  },
+  "translate": {
+    "label": "En español",
+    "marineLifeLabel": "Vida marina, en español",
+    "descriptionLabel": "Descripción, en español",
+    "draft": "Redactar en español",
+    "save": "Guardar español",
+    "saving": "Guardando…",
+    "saved": "Guardado.",
+    "error": "No se guardó. Inténtalo de nuevo.",
+    "stale": "El original cambió después de guardar esto, así que los buceadores que leen en español ven el original. Redáctalo de nuevo o corrígelo para que coincida, y guárdalo.",
+    "staleSave": "Este texto en español se escribió para un original anterior. Redáctalo de nuevo o corrígelo para que coincida, y guárdalo."
+  },
+  "bench": {
+    "draft": "Redactar con las notas del taller"
+  },
+  "siteBrief": {
+    "draft": "Redactar con estos datos"
+  },
+  "sightings": {
+    "label": "O di lo que viste",
+    "match": "Buscar",
+    "matching": "Buscando…",
+    "add": "Agregarlos",
+    "adding": "Agregando…",
+    "none": "Nada de lo que dijiste coincide con las especies de este arrecife.",
+    "proposed": "{name} × {count}"
+  },
+  "requirement": {
+    "nitrox": "Requiere tarjeta de nitrox"
+  }
+}

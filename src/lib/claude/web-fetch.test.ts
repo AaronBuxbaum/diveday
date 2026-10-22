@@ -3,7 +3,9 @@ import { allowedFetchHost, webFetchTool } from "./web-fetch";
 
 describe("allowedFetchHost", () => {
   it("reads the host out of a pasted website, URL or bare", () => {
-    expect(allowedFetchHost("https://www.BlueReefDivers.com/trips?x=1")).toBe("bluereefdivers.com");
+    expect(allowedFetchHost("https://www.BlueReefDivers.com/trips?x=1")).toBe(
+      "www.bluereefdivers.com",
+    );
     expect(allowedFetchHost("bluereefdivers.com")).toBe("bluereefdivers.com");
     expect(allowedFetchHost("  http://shop.example.org/  ")).toBe("shop.example.org");
   });
@@ -11,8 +13,26 @@ describe("allowedFetchHost", () => {
   it("keeps a builder subdomain whole, so the allowance never widens to the builder", () => {
     expect(allowedFetchHost("https://bluereef.wixsite.com/home")).toBe("bluereef.wixsite.com");
     expect(allowedFetchHost("https://www.bluereef.squarespace.com")).toBe(
-      "bluereef.squarespace.com",
+      "www.bluereef.squarespace.com",
     );
+    expect(allowedFetchHost("bluereefdivers.co.uk")).toBe("bluereefdivers.co.uk");
+  });
+
+  it("refuses a registry or a builder's shared root, which would allow every site under it", () => {
+    for (const input of [
+      "co.uk",
+      "www.co.uk",
+      "https://com.au/",
+      "wixsite.com",
+      "https://www.wixsite.com/bluereef",
+      "github.io",
+      "squarespace.com",
+      "netlify.app",
+      "sites.google.com/view/bluereef",
+      "facebook.com/bluereefdivers",
+    ]) {
+      expect(allowedFetchHost(input), input).toBeNull();
+    }
   });
 
   it("refuses anything that is not a public web host", () => {
@@ -42,7 +62,7 @@ describe("webFetchTool", () => {
     expect(webFetchTool("https://www.bluereefdivers.com")).toEqual({
       type: "web_fetch_20260209",
       name: "web_fetch",
-      allowed_domains: ["bluereefdivers.com"],
+      allowed_domains: ["www.bluereefdivers.com"],
       max_uses: 8,
       max_content_tokens: 20_000,
     });

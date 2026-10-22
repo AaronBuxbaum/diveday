@@ -796,6 +796,29 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.claudeUsage.id }),
     ),
+  assist_results: async ({ db, shop }, at, n) =>
+    idOf(
+      await db
+        .insert(schema.assistResults)
+        .values({
+          shopId: shop.id,
+          feature: "review_flags",
+          subjectKey: `review-${n}`,
+          value: { flags: [] },
+          inputDigest: "0",
+          createdAt: at,
+          updatedAt: at,
+        })
+        .returning({ id: schema.assistResults.id }),
+    ),
+  website_setup_drafts: async ({ db, shop }, at) =>
+    idOf(
+      await db
+        .insert(schema.websiteSetupDrafts)
+        .values({ shopId: shop.id, host: "example.com", lines: [], readAt: at })
+        .onConflictDoUpdate({ target: schema.websiteSetupDrafts.shopId, set: { readAt: at } })
+        .returning({ id: schema.websiteSetupDrafts.shopId }),
+    ),
   weekly_digest_sends: async ({ db, shop, people }, at, n) =>
     idOf(
       await db
@@ -981,6 +1004,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_series",
   "trip_series_crew",
   "inbox_saved_answers", // kept until a staffer deletes one, like waiver templates
+  "shop_text_translations", // the shop's own words in Spanish, kept while the original is
   "trip_series_skips",
   "trip_schedule_days",
   // DiveDay's own shared catalogue, and a shop asking for an addition to it.

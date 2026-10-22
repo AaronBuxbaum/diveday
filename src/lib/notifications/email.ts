@@ -18,6 +18,7 @@ import {
 import type { ShopMilestone } from "@/lib/founder-metrics";
 import { escapeHtml } from "@/lib/html";
 import { openMapsUrl } from "@/lib/maps";
+import { getMigrationGuide } from "@/lib/migration-guides";
 import { firstNameOf } from "@/lib/person-name";
 import type { SetupCurrentSystem } from "@/lib/setup-requests";
 import { cachedListFormat } from "../intl-cache";
@@ -1277,6 +1278,8 @@ type SetupRequestAlertEmailInput = {
   region: string;
   runsBoat: boolean;
   currentSystem: SetupCurrentSystem;
+  /** A switching guide's slug, when the requester named their system. */
+  currentSystemGuide?: string;
   contactName: string;
   contactEmail: string;
   contactPhone?: string;
@@ -1295,6 +1298,12 @@ const currentSystemWords: Record<SetupCurrentSystem, string> = {
   other: "something else",
 };
 
+/** "a booking system, FareHarbor": the answer, then the system when one was named. */
+function usesToday(system: SetupCurrentSystem, guide: string | undefined): string {
+  const named = guide ? getMigrationGuide(guide)?.competitor : undefined;
+  return named ? `${currentSystemWords[system]}, ${named}` : currentSystemWords[system];
+}
+
 /**
  * A shop asked to be set up (ADR 20261007-setup-request-form). To the
  * onboarding inbox, internal and English like the founder alerts above, laid
@@ -1306,7 +1315,7 @@ export function setupRequestAlertEmail(input: SetupRequestAlertEmailInput): Noti
     ["Shop", input.shopName],
     ["Where", input.region],
     ["Runs a boat", input.runsBoat ? "yes" : "no"],
-    ["Uses today", currentSystemWords[input.currentSystem]],
+    ["Uses today", usesToday(input.currentSystem, input.currentSystemGuide)],
     ["Name", input.contactName],
     // Typed by whoever filled the form; nothing has proved they own it.
     ["Email (unverified)", input.contactEmail],

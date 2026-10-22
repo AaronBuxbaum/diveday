@@ -26,6 +26,7 @@ import { uuidParam } from "@/lib/uuid";
 import { DEFAULT_WAIVER_BODY, isSampleRelease } from "@/lib/waivers";
 import { type CourseFormNotice, CourseFormsSection } from "./_components/CourseFormsSection";
 import { PublishRelease, type PublishReleaseCopy } from "./_components/PublishRelease";
+import { ReleasePdfDraft } from "./_components/ReleasePdfDraft";
 import { SignedRecordsSection } from "./_components/SignedRecordsSection";
 import { saveWaiverAction } from "./actions";
 
@@ -286,6 +287,7 @@ export default async function WaiversPage({
             <FieldGrid columns={1} className="gap-y-5">
               <Field label={t("waiversStaff.fieldLabel")}>
                 <textarea
+                  id="release-body"
                   name="body"
                   required
                   rows={14}
@@ -296,6 +298,7 @@ export default async function WaiversPage({
                 />
               </Field>
             </FieldGrid>
+            <ReleasePdfDraft shopId={shop.id} fieldId="release-body" t={t} />
             <PublishRelease copy={publishCopy} standingSignatures={atRisk.divers > 0} />
             {/* Beside the form, never a banner at the top of the page: the
               release is a fourteen-row textarea, so the top of this page is a

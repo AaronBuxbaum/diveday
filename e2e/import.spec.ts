@@ -320,6 +320,47 @@ test.describe("contact import — prior visits", () => {
 });
 
 /**
+ * **Seats sold in the old system are named, not filed** (market sheet
+ * 2026-10-22, item 3). A booking after the shop's today is not a visit: the
+ * preview counts and lists it, and the "Past visits" tile leaves it out.
+ * Preview only; nothing is committed.
+ */
+test.describe("contact import — bookings after today", () => {
+  signedInAsOwner();
+
+  test("the preview counts the bookings after today, names the system, and lists them", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/settings/import?from=fareharbor");
+    await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
+    await page.setInputFiles('input[type="file"]', {
+      name: "bookings.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        [
+          "Customer Name,Email,Booking Date,Tour Name,Booking ID",
+          "Sold Sally,sold.sally@example.com,2020-03-14,Two-tank Molasses Reef,FH-E2E-1",
+          "Sold Sally,sold.sally@example.com,2099-11-14,Night dive Benwood,FH-E2E-2",
+          "Future Fred,future.fred@example.com,2099-12-01,Discover Scuba,FH-E2E-3",
+        ].join("\n"),
+        "utf-8",
+      ),
+    });
+    // The whole sentence is pinned in import-copy.test.ts; here, its count and system.
+    await expect(page.getByText(/^2 bookings are after today\..+FareHarbor/)).toBeVisible();
+    const list = page.getByRole("list", { name: /bookings are after today/ });
+    await expect(list.getByRole("listitem")).toHaveText([
+      /Nov\s14,\s2099 · Sold Sally · Night dive Benwood/,
+      /Dec\s1,\s2099 · Future Fred · Discover Scuba/,
+    ]);
+    await expect(page.getByText("1 row records a past visit.", { exact: false })).toBeVisible();
+  });
+});
+
+/**
  * Payment history is useful migration evidence but deliberately does not
  * manufacture a DiveDay order, booking payment, or Stripe confirmation. This
  * walks the staff path from a source export through the visible unverified
@@ -396,7 +437,9 @@ test.describe("contact import — payment and receipt history", () => {
     });
     const historyLinkBox = await historyLink.boundingBox();
     if (!historyLinkBox) throw new Error("Imported-history review link is missing");
-    expect(historyLinkBox.height).toBeGreaterThanOrEqual(44);
+    // Bounding boxes come back as 43.99993896484375px for a 44px link; restore
+    // Chromium's 1/64px layout precision, as visual-consistency.spec.ts does.
+    expect(Math.round(historyLinkBox.height * 64) / 64).toBeGreaterThanOrEqual(44);
     const emptySeatLinks = page
       .getByRole("region", { name: "Departures that left with empty seats" })
       .getByRole("link");
@@ -487,7 +530,9 @@ test.describe("import ↔ switching guides", () => {
 
     await page.goto("/switching/eve");
     await page.getByRole("link", { name: "Open Import in your shop" }).click();
-    await expect(page).toHaveURL(/\/shop\/blue-mantis\/settings\/import$/);
+    // The guide names itself, so the preview can say which system sold the
+    // bookings after today.
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/settings\/import\?from=eve$/);
   });
 });
 

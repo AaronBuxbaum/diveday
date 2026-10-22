@@ -27,6 +27,8 @@ export type WeeklyDigestEmailInput = {
   thisWeekFrom: string;
   thisWeekTo: string;
   sections: readonly WeeklyDigestEmailSection[];
+  /** The `monday` assist's sentences, each naming the section it links to. */
+  read?: readonly { section: string; text: string }[];
   settingsUrl: string;
   turnOffUrl: string;
 };
@@ -247,6 +249,20 @@ export function weeklyDigestEmail(input: WeeklyDigestEmailInput): NotificationEm
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.recipientName, t("notifications.common.genericName"));
   const blocks = input.sections.map((section) => blockFor(section, input, t));
+  // Each sentence links to the section whose numbers it quotes; one whose
+  // section is not in this email (another grade's) is not printed.
+  const read = (input.read ?? []).flatMap((sentence) => {
+    const at = input.sections.findIndex((section) => section.kind === sentence.section);
+    const block = blocks[at];
+    return block ? [{ text: sentence.text, url: block.url, label: block.linkLabel }] : [];
+  });
+  const readText = read.map((line) => `${line.text} ${line.label}: ${line.url}`).join("\n");
+  const readHtml = read
+    .map(
+      (line) =>
+        `<p style="${SECTION_LINE_STYLE}">${escapeHtml(line.text)} <a href="${escapeHtml(line.url)}">${escapeHtml(line.label)}</a></p>`,
+    )
+    .join("");
   const note = zoneNote(input, t);
   const why = t("notifications.weeklyDigest.why", { shopName: input.shopName });
   const settings = t("notifications.weeklyDigest.settings");
@@ -281,8 +297,8 @@ export function weeklyDigestEmail(input: WeeklyDigestEmailInput): NotificationEm
 
   return {
     subject: t("notifications.weeklyDigest.subject", { shopName: input.shopName }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${textBlocks}\n\n${note}\n${why}\n${settings}: ${input.settingsUrl}\n${turnOff}: ${input.turnOffUrl}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p>${htmlBlocks}<p style="margin-top: 32px; font-size: 13px; line-height: 1.5; opacity: 0.75;">${escapeHtml(note)}<br>${escapeHtml(why)}<br><a href="${escapeHtml(input.settingsUrl)}">${escapeHtml(settings)}</a> · <a href="${escapeHtml(input.turnOffUrl)}">${escapeHtml(turnOff)}</a></p>`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${readText ? `${readText}\n\n` : ""}${textBlocks}\n\n${note}\n${why}\n${settings}: ${input.settingsUrl}\n${turnOff}: ${input.turnOffUrl}\n`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p>${readHtml}${htmlBlocks}<p style="margin-top: 32px; font-size: 13px; line-height: 1.5; opacity: 0.75;">${escapeHtml(note)}<br>${escapeHtml(why)}<br><a href="${escapeHtml(input.settingsUrl)}">${escapeHtml(settings)}</a> · <a href="${escapeHtml(input.turnOffUrl)}">${escapeHtml(turnOff)}</a></p>`,
   };
 }
 

@@ -1,4 +1,14 @@
-import { index, integer, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  check,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { appNowTimestamp } from "./columns";
 import { shops } from "./core";
 
@@ -41,5 +51,81 @@ export const claudeUsage = pgTable(
     index("claude_usage_shop_created_at_idx").on(table.shopId, table.createdAt),
     // The platform guardrail's sum and the retention prune: every shop, by age.
     index("claude_usage_created_at_idx").on(table.createdAt),
+  ],
+);
+
+/**
+ * **What an assist answered, kept where asking again would be waste**: the
+ * review chips (`review_flags`, one row per review), the owner's monthly
+ * review themes (`review_themes`, one per month) and the Monday read
+ * (`monday_read`, one per week, grade and language). `subject_key` names what
+ * the answer is about inside the feature; `input_digest` fingerprints what was
+ * sent, so a changed input is asked again rather than served stale.
+ *
+ * Codes, ids and the shop's own derived sentences only. The themes hold review
+ * ids, never quotes, and the page reads each quote from its review row, so an
+ * erased or unpublished review leaves with its row. Rows cascade with the shop
+ * and age out with H-02's retention prune.
+ */
+export const assistResults = pgTable(
+  "assist_results",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    feature: text("feature").notNull(),
+    subjectKey: text("subject_key").notNull(),
+    value: jsonb("value").notNull(),
+    inputDigest: text("input_digest").notNull(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("assist_results_subject_unique").on(table.shopId, table.feature, table.subjectKey),
+    index("assist_results_updated_at_idx").on(table.updatedAt),
+  ],
+);
+
+/**
+ * **A shop's own words in another language** (the `shop-translate` assist):
+ * the Spanish of a trip description, course summary or a dive-site
+ * briefing, written or drafted by the shop and saved by staff. A diver page in
+ * that language shows it instead of the original while `source_digest` still
+ * matches the original's words; edit the original and the translation stops
+ * showing until it is saved again.
+ *
+ * Only the fields `TRANSLATABLE_FIELDS` lists (`src/lib/assists/shop-translate.ts`)
+ * are ever written: never a waiver, a medical question or a course form (H-01,
+ * H-03). An emptied box stores null rather than removing the row.
+ */
+export const shopTextTranslations = pgTable(
+  "shop_text_translations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    subjectKind: text("subject_kind").notNull(),
+    subjectId: uuid("subject_id").notNull(),
+    field: text("field").notNull(),
+    locale: text("locale").notNull(),
+    text: text("text"),
+    sourceDigest: text("source_digest").notNull(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+    updatedAt: appNowTimestamp("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("shop_text_translations_subject_unique").on(
+      table.shopId,
+      table.subjectKind,
+      table.subjectId,
+      table.field,
+      table.locale,
+    ),
+    check(
+      "shop_text_translations_kind",
+      sql`${table.subjectKind} in ('trip', 'course', 'dive_site')`,
+    ),
   ],
 );

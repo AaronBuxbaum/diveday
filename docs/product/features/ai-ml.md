@@ -14,6 +14,34 @@ The features built on it (inbox drafts and sorting, import mapping, card reading
 the rest of the build plan) land in the layers above that ADR; each keeps the guardrails below. The
 "app has no LLM dependency" baseline in the audit section is out of date for that reason.
 
+**Front of house (2026-10-22)**, each rendered only while the shop's assists are on:
+
+- **Inbox sort and translate**: an intent and urgency tag and a translation, stored on the message
+  (`inbound_messages.assist_*`) by the inbound webhooks and the inbox view; the diver's words stay
+  in view, and a cancellation still goes through the reply keyword's confirm.
+- **Reply draft and translation**: Draft and Translate beside the diver record's reply box; a draft
+  is thrown away when it quotes a number the database did not give it, or the diver asked a medical
+  question. Staff send.
+- **Request and call note**: "Make a request" reads a message, and the Took-a-call scribble box
+  reads a call, into the Took-a-call form's own fields for a staffer to log; admission decides
+  after that. The scribble lands in the note as typed.
+- **Import mapping**: headers and masked values from at most 50 rows, never a column that mentions
+  health, map the columns the aliases miss; a card read through a suggested column imports pending.
+- **Waiver from PDF**: the release editor's text drafted from the shop's PDF. Not legal advice; the
+  owner publishes.
+- **Website setup**: Import's Website tab reads the pasted host only (`web_fetch`), stores lines in
+  `website_setup_drafts`, and writes one only when the owner accepts it, its source sentence beside
+  every price.
+
+**Content and desk assists (2026-10-22):** card-photo reading at the desk and at sign-up, a roster
+ask box, the gear-note fill, a same-person read on merge, review flags and monthly themes, the
+Monday read in the weekly digest, trip and course description drafts, Spanish drafts of shop text
+(`shop_text_translations`, shown on the shop's diver pages), dive-site briefs, the recap line
+(drafted, or filled before send when the shop allows it), sightings matched from what the crew
+said, and bench notes on work orders. Pure prompt and guard code is in `src/lib/assists/`, cached
+reads in `assist_results`. No prompt carries medical or waiver answers; a fact the model must
+repeat is passed as a placeholder, and an answer that invents a number or a species is refused.
+
 ## Guardrails
 
 - AI suggests; the safety spine decides.
@@ -90,6 +118,10 @@ section — the task numbering below is unchanged from the original audit, only 
 - **Verification**: Table-driven unit tests for every rationale branch and the clamp; a `src/db` test seeding two past blasts asserts the outcome aggregate; open the trip page in dev and confirm the prefilled percent; `pnpm check` green.
 
 ### Ship an assistive review-moderation and themes assistant (Claude API)
+
+**Shipped 2026-10-22** on the shared seam rather than a module of its own: flags in
+`src/lib/assists/review-flags.ts`, themes in `src/lib/assists/review-themes.ts`, stored by
+`src/db/review-assists.ts`. The prompt below is kept for its guardrails.
 
 - **Priority**: high
 - **Effort**: L

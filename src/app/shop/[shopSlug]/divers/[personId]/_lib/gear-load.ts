@@ -1,3 +1,4 @@
+import { shopAssistsAvailable } from "@/db/assist-shop";
 import type { AppDb } from "@/db/client";
 import { countGearItems } from "@/db/gear";
 import { listOpenCounterRentalsForPerson } from "@/db/gear-counter-rentals";
@@ -22,18 +23,21 @@ export async function loadDiverGear(
   personId: string,
   { removed }: { removed: boolean },
 ) {
-  const [ownPieces, workOrders, counterRentals, fleetSize] = await Promise.all([
+  const [ownPieces, workOrders, counterRentals, fleetSize, canAssist] = await Promise.all([
     listCustomerGearItems(db, shop.id, personId),
     listWorkOrdersForPerson(db, shop.id, personId, {
       todayLocal: calendarDateInTimezone(nowDate(), shop.timezone),
     }),
     listOpenCounterRentalsForPerson(db, shop.id, personId),
     removed ? 0 : countGearItems(db, shop.id),
+    // Claude's desk assists on this record (the card photo, the gear note):
+    // false while they are dark, and never for a removed record.
+    removed ? false : shopAssistsAvailable(db, shop.id),
   ]);
   const reminders = await serviceReminderStates(
     db,
     shop.id,
     ownPieces.filter((piece) => customerGearDueDates(piece).length > 0).map((piece) => piece.id),
   );
-  return { ownPieces, workOrders, counterRentals, hasFleet: fleetSize > 0, reminders };
+  return { ownPieces, workOrders, counterRentals, hasFleet: fleetSize > 0, reminders, canAssist };
 }

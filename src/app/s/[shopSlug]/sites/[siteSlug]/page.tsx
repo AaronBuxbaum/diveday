@@ -22,6 +22,7 @@ import {
   listDiveSiteBriefingExtras,
   listUpcomingDeparturesForSite,
 } from "@/db/dive-sites";
+import { withTranslatedFields } from "@/db/shop-text-translations";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
@@ -112,9 +113,13 @@ export default async function DiveSitePage({
   const { shopSlug, siteSlug } = await params;
   const resolved = await resolveSite(shopSlug, siteSlug);
   if (!resolved) notFound();
-  const { db, shop, site } = resolved;
-
+  const { db, shop, site: siteRow } = resolved;
   const { locale, t } = await requestTranslator(shop.defaultLocale);
+  // The shop's own Spanish briefing for a reader in Spanish (`shop-translate`).
+  const site = await withTranslatedFields(db, shop, locale, "dive_site", siteRow, [
+    "description",
+    "marineLifeDescription",
+  ]);
   const [extras, departures] = await Promise.all([
     listDiveSiteBriefingExtras(db, shop.id, [site.id]),
     listUpcomingDeparturesForSite(db, shop.id, site.id),

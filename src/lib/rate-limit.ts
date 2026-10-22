@@ -515,6 +515,20 @@ export const RATE_LIMITS = {
    */
   selfRegisterByShop: perHour(120),
   /**
+   * A card photo read on the counter's self-registration form (the `certscan`
+   * assist), per IP and per shop. Each read is a paid Claude call on the shop's
+   * cap, and the form is anonymous: a diver reads one card, perhaps twice.
+   */
+  cardScanByIp: perHour(10),
+  /**
+   * Per shop **per day**, checked fail-closed with the address bucket: at most
+   * a small slice of the shop's monthly Claude cap can be spent from the
+   * anonymous form, so a stranger rotating addresses cannot turn every staff
+   * assist dark for the month (security review L3, B2). A busy counter checks
+   * in a few dozen walk-ups a day.
+   */
+  cardScanByShop: perDay(40),
+  /**
    * Self-registration, per **recipient address**.
    *
    * The bucket `waiverLinkResendByBooking` and `declarationByPerson` already

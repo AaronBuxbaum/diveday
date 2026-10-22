@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 61 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 62 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, infra-ASCII, CI-change-detection, runner-image, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, form-control, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, shop-word, seat-word, live-trip-read, live-people-read, event-scope, slug-action, env-reads, action-pins, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, critical-journeys, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, sentry-imports, assist-prompt, infra-ASCII, CI-change-detection, runner-image, Node-version, tenant-gate, instant-navigation, storefront shop-read, redirect-slug, capability-refusal and intl-provider safeguards. The last six were Vitest scans until the 2026-10-14 test review moved them here; each script's header carries its incident.
 
 ## The guards worth reading about
 
@@ -33,6 +33,10 @@ The CI-change-detection one (`scripts/check-ci-change-detection.mjs`) reads the 
 ### sentry-imports
 
 The sentry-imports one (`scripts/check-sentry-imports.mjs`) refuses any static import of `@sentry/nextjs` under `src/app` that binds a value: a namespace, a default or a named binding. `import type`, a dynamic `import()` and test files pass. Fifteen cron routes and both webhooks opened with `import * as Sentry from "@sentry/nextjs"`, so every cold start of every cron evaluated the SDK and its 1.2 MB server chunk before the route had checked its bearer token, in builds with no DSN too (code review 2026-10-13, item 28). A route reports through `sentry` in `src/lib/observability/sentry.ts`, which imports the SDK on first use and only when a DSN is configured, the shape `src/instrumentation.ts` already had; the root `global-error.tsx` imports it inside its handler.
+
+### assist-prompts
+
+The assist-prompts one (`scripts/check-assist-prompts.mjs`) holds the Claude assists' rule that a medical answer never reaches a prompt (ADR 20261018-claude-assists). Nothing in the seam can enforce it, because `runAssist` sends whatever its caller built, so the guard is on what a prompt-building module can reach: every module under src/lib/assists, and every module that imports `@/db/assists`, may not import a module whose path names `medical`, `questionnaire` or `waiver-records`, nor `@/lib/waivers` or `@/db/waivers`, and may not name `medicalAnswers` at all. Tests and `src/db/assists.ts` itself pass. It came from the L1 security review (note N2): the rule was in the plan and nowhere else.
 
 ### infra-ASCII
 

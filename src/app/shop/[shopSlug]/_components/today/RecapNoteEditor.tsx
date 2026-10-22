@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { AssistFillButton } from "@/components/assists/AssistFillButton";
 import { ImageUploadTile } from "@/components/ImageUploadTile";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -51,6 +52,8 @@ export type RecapNoteEditorContext = {
   recapSentAt?: Date | null;
   recapSentAtLabel?: string;
   recapStatusSummary?: string;
+  /** Claude's draft of the highlight from the logged sightings; absent while dark. */
+  draftShoutout?: (form: Record<string, string>) => Promise<Record<string, string> | null>;
 };
 
 /**
@@ -195,6 +198,13 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
             >
               {t("trips.recapNote.save")}
             </SubmitButton>
+          ) : null}
+          {!recapLocked && context.draftShoutout ? (
+            <AssistFillButton
+              draft={context.draftShoutout}
+              label={t("deskAssists.draft")}
+              pendingLabel={t("deskAssists.drafting")}
+            />
           ) : null}
           <FormStatus tone={saved ? "success" : undefined}>
             {saved ? t("trips.notices.recapNote") : null}

@@ -1,4 +1,5 @@
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { AssistPhotoButton } from "@/components/assists/AssistPhotoButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -6,6 +7,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { addCardAction } from "../card-actions";
+import { readCardPhotoAction } from "../card-assist-actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { AGENCY_KEYS } from "./shared";
 
@@ -18,12 +20,15 @@ export function AddCertificationForm({
   shopSlug,
   personId,
   groupStatus,
+  canAssist = false,
 }: {
   t: StaffTranslator;
   shopSlug: string;
   personId: string;
   /** The group's own outcome, unless a card-number refusal already sits on its box. */
   groupStatus?: DiverNotice;
+  /** Claude can read a card photo into the form (`certscan`); off while assists are dark. */
+  canAssist?: boolean;
 }) {
   return (
     <>
@@ -95,6 +100,13 @@ export function AddCertificationForm({
               <input name="identifier" required className={controlClass} />
             </Field>
             <FieldActions>
+              {canAssist ? (
+                <AssistPhotoButton
+                  read={readCardPhotoAction.bind(null, shopSlug)}
+                  label={t("deskAssists.cardPhoto")}
+                  pendingLabel={t("deskAssists.cardPhotoPending")}
+                />
+              ) : null}
               <SubmitButton
                 pendingLabel={t("divers.certifications.capturing")}
                 className={buttonClass({ variant: "secondary" })}

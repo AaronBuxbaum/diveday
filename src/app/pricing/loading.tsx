@@ -2,17 +2,8 @@ import { MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
 import { SkeletonLineBars } from "@/components/ShopPageHeader";
 
-/** The invoice's eight lines, as the page lists them. */
-const INVOICE_ROWS = [
-  "setup",
-  "logins",
-  "tiers",
-  "cut",
-  "cards",
-  "contract",
-  "trial",
-  "leaving",
-] as const;
+/** The invoice's seven lines, as the page lists them. */
+const INVOICE_ROWS = ["setup", "logins", "tiers", "cut", "cards", "contract", "leaving"] as const;
 
 /**
  * What the plan covers, one entry per item with the lines it wraps to on a
@@ -54,15 +45,15 @@ const COVERS_LINES = [
  *   - the figure `mt-10`, `leading-none` at `text-7xl`/`sm:text-8xl`: 72/96px;
  *   - the cadence `mt-4`, one 24px line; the lock note `mt-2`, 24px lines,
  *     two on a phone;
- *   - the invoice `mt-12`: eight `py-3` rows of one 24px line between
+ *   - the invoice `mt-12`: seven `py-3` rows of one 24px line between
  *     hairlines, beside (from `lg`) or over the notes, a 20px heading and
- *     four notes `space-y-3` under it, each two lines on `max-w-4xl` and
+ *     two notes `space-y-3` under it, each two lines on `max-w-4xl` and
  *     `max-w-5xl` alike (329px and 386px of text beside the ledger);
  *   - the doors `mt-12`, 48px, stacked below `sm`; the demo note `mt-6` (two
  *     lines on a phone, one from `sm`) and the trial note `mt-2` (three, then
  *     two), 24px lines;
  *   - the hairline `mt-14`, its 20px heading, the list `mt-5 gap-y-3`, the
- *     48px link `mt-4` and the fees note `mt-8`.
+ *     48px link `mt-4`.
  */
 export default function PricingLoading() {
   return (
@@ -104,7 +95,7 @@ export default function PricingLoading() {
               <div>
                 <div className="h-5 w-44 rounded bg-surface-sunken" />
                 <div className="mt-4 space-y-3">
-                  {["note1", "note2", "note3", "note4"].map((note) => (
+                  {["note1", "note2"].map((note) => (
                     <div key={note}>
                       <SkeletonLineBars lines={2} height="h-6" width="w-full" />
                     </div>
@@ -147,9 +138,6 @@ export default function PricingLoading() {
               </div>
               <div className="mt-4 flex h-12 items-center">
                 <div className="h-4 w-56 rounded bg-surface-sunken" />
-              </div>
-              <div className="mt-8">
-                <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-6" width="w-full max-w-xl" />
               </div>
             </div>
           </div>

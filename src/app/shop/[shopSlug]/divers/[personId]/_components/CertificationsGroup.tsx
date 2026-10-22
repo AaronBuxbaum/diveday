@@ -361,6 +361,7 @@ export function CertificationsGroup({
   t,
   status,
   gap,
+  canAssist = false,
 }: {
   diver: DiverProfile;
   shop: Shop;
@@ -372,6 +373,8 @@ export function CertificationsGroup({
   status?: DiverNotice;
   /** The status row about this diver's cards, said by this row (`splitDiverStatus`). */
   gap?: DiverStatusRow;
+  /** Assists are available for this shop (the add-a-card photo read). */
+  canAssist?: boolean;
 }) {
   // A refused card *number* belongs on the box it names, not in the group's
   // action row — and emphatically not opening the add-a-card form, which is a
@@ -684,6 +687,7 @@ export function CertificationsGroup({
           shopSlug={shopSlug}
           personId={personId}
           groupStatus={groupStatus}
+          canAssist={canAssist}
         />
       </InsetGroup>
     </DiverFileGroupDisclosure>

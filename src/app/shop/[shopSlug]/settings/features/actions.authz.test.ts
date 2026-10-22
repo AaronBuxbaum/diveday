@@ -64,7 +64,7 @@ function form(row: string, on: Record<string, boolean> = {}) {
 const FEATURES = "settings/features";
 
 describe("the Features page's action", () => {
-  it("covers the ten switches, each with a gate", () => {
+  it("covers the eleven switches, each with a gate", () => {
     expect(FEATURE_ROWS.map((row) => row.id)).toEqual([
       "reviews",
       "tips",
@@ -73,6 +73,7 @@ describe("the Features page's action", () => {
       "publicYear",
       "padiChecks",
       "claudeSuggestions",
+      "recapAutoApprove",
       "crewSchedule",
       "tax",
       "divingOptions",

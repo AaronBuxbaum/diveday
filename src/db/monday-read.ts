@@ -1,0 +1,58 @@
+import {
+  MONDAY_READ_FEATURE,
+  type MondaySentence,
+  mondayRead,
+  mondayReadCall,
+  mondaySectionFacts,
+} from "@/lib/assists/monday-read";
+import { sourceDigest } from "@/lib/assists/shop-translate";
+import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
+import { readAssistResult, saveAssistResult } from "./assist-results";
+import { shopAssist } from "./assist-shop";
+import type { AssistOptions } from "./assists";
+import type { AppDb } from "./client";
+
+/**
+ * **monday**: the Monday email's opening sentences, written once per shop,
+ * week, grade and language and kept in `assist_results`, so every recipient
+ * of the same email reads the same words and an hourly pass asks once.
+ *
+ * Only the digest's own counts go out (`mondaySectionFacts`), never a name or
+ * a booking. A dark assist, a refused answer or a week with no sections reads
+ * as no sentences, and the email is the one it always was.
+ */
+export async function mondayReadFor(
+  db: AppDb,
+  input: {
+    shopId: string;
+    weekOf: string;
+    grade: string;
+    locale: string;
+    sections: readonly WeeklyDigestEmailSection[];
+  },
+  options: AssistOptions = {},
+): Promise<MondaySentence[]> {
+  if (input.sections.length === 0) return [];
+  const sections = input.sections.map((section) => mondaySectionFacts(section, input.locale));
+  const subjectKey = `${input.weekOf}:${input.grade}:${input.locale}`;
+  const digest = sourceDigest(JSON.stringify(sections));
+  const stored = await readAssistResult(db, input.shopId, MONDAY_READ_FEATURE, subjectKey);
+  if (stored && stored.inputDigest === digest) {
+    return mondayRead(stored.value as { sentences: MondaySentence[] } | null, sections);
+  }
+  const value = await shopAssist(db, {
+    ...options,
+    shopId: input.shopId,
+    feature: MONDAY_READ_FEATURE,
+    call: mondayReadCall(sections, input.locale),
+  });
+  if (!value) return [];
+  await saveAssistResult(db, {
+    shopId: input.shopId,
+    feature: MONDAY_READ_FEATURE,
+    subjectKey,
+    value,
+    inputDigest: digest,
+  });
+  return mondayRead(value, sections);
+}

@@ -336,6 +336,20 @@ const routes: SeedRoute[] = [
     // tenant is looked up.
     expectPastTheGuard: expectInvalidBody,
   },
+  {
+    slug: "claude-fixtures",
+    // Lights Claude's canned assists on a shop and clears its demo flag, so an
+    // unguarded copy would turn a real tenant into a non-demo with fixture
+    // answers. Past the guard with no `?slug=`: refused on its shape.
+    expectPastTheGuard: expectInvalidBody,
+  },
+  {
+    slug: "claude-fixtures",
+    method: "DELETE",
+    // The disarm half; it flips a shop back to a demo, which the private-shop
+    // teardown then deletes, so it is guarded on its own row.
+    expectPastTheGuard: expectInvalidBody,
+  },
 ];
 
 beforeEach(() => {

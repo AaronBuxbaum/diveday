@@ -6,10 +6,13 @@ import {
   toggleRecapAutoSendPauseAction,
   uploadCrewRecapPhotoAction,
 } from "@/app/shop/[shopSlug]/actions";
+import { shopAssistsAvailable } from "@/db/assist-shop";
+import type { AppDb } from "@/db/client";
 import type { getDayCloseout } from "@/db/closeout";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
+import { draftRecapLineAction } from "../../recap-assist-action";
 import { RecapNoteEditor } from "./RecapNoteEditor";
 import { recapStatusLine } from "./recap-status";
 
@@ -19,21 +22,29 @@ type Departure = Awaited<ReturnType<typeof getDayCloseout>>["departures"][number
  * Each returned departure's recap editor, keyed by trip: written where the crew is standing when
  * they still remember the day, so it rides its own station rather than a page-level section.
  */
-export function recapEditorsFor({
-  departures,
+export async function recapEditorsFor({
+  db,
+  shop,
+  closeout,
   noted,
   now,
   locale,
-  timeZone,
   t,
 }: {
-  departures: readonly Departure[];
+  db: AppDb;
+  shop: { id: string; timezone: string };
+  closeout: { departures: readonly Departure[] };
   noted?: string;
   now: Date;
   locale: string;
-  timeZone: string;
   t: StaffTranslator;
 }) {
+  const { departures } = closeout;
+  const timeZone = shop.timezone;
+  // Claude's "Draft it" on the highlight (`recap`): only once a boat is back,
+  // and only while assists are not dark.
+  const canAssist =
+    departures.some((departure) => departure.ended) && (await shopAssistsAvailable(db, shop.id));
   const recapEditors = new Map<string, React.ReactNode>();
   for (const departure of departures) {
     // Only a returned boat: a trip still out has no day to write about yet,
@@ -67,6 +78,7 @@ export function recapEditorsFor({
           recapNowMs: now.getTime(),
           recapSentAt: departure.recapSentAt,
           recapStatusSummary,
+          draftShoutout: canAssist ? draftRecapLineAction.bind(null, departure.tripId) : undefined,
         }}
       />,
     );

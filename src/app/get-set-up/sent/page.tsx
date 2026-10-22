@@ -6,7 +6,6 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { proseLinkClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { switchingHref } from "@/lib/funnel";
 import { setupSentAdvice } from "@/lib/setup-requests";
 import { SetUpDemoDoor } from "../_components/SetUpDemoDoor";
 
@@ -27,17 +26,18 @@ export const metadata: Metadata = {
  *
  * **It answers what the reader said they use today** (fifth-loop ideas, item
  * 55): the form's one answer rides in `?uses=`, and paper, a spreadsheet or
- * another system each get the first step of moving across. Anything else,
+ * another system each get the first step of moving across. A system the reader
+ * named rides in `?guide=` and gets its own guide (2026-10-22). Anything else,
  * honeypot bots included, reads the page as it always was.
  */
 export default async function SetUpSentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ uses?: string | string[] }>;
+  searchParams: Promise<{ uses?: string | string[]; guide?: string | string[] }>;
 }) {
-  const [{ uses }, locale] = await Promise.all([searchParams, requestLocale()]);
+  const [{ uses, guide }, locale] = await Promise.all([searchParams, requestLocale()]);
   const t = diverTranslator(locale);
-  const advice = setupSentAdvice(uses);
+  const advice = setupSentAdvice(uses, guide);
   return (
     <div className="flex flex-1 flex-col">
       <MarketingNav hideCta compactMobile />
@@ -53,11 +53,8 @@ export default async function SetUpSentPage({
                 {advice.link ? (
                   <>
                     {" "}
-                    <Link
-                      href={switchingHref(advice.link.destination, "setup-sent")}
-                      className={proseLinkClass}
-                    >
-                      {t(advice.link.key)}
+                    <Link href={advice.link.href} className={proseLinkClass}>
+                      {t(advice.link.key, { competitor: advice.link.competitor ?? "" })}
                     </Link>
                   </>
                 ) : null}

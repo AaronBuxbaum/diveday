@@ -37,8 +37,8 @@ export const ZERO_USAGE: TokenUsage = {
 /**
  * List prices in micro-USD per token, which is the same number as USD per
  * million tokens. Anthropic first-party rates as of 2026-10; a cache write
- * (five-minute TTL) is 1.25 times fresh input. Haiku 5.5's long-prompt rate
- * (over 100K tokens) is not modelled: no assist sends a prompt that long.
+ * (five-minute TTL) is 1.25 times fresh input. Haiku 5.5 charges five times
+ * these rates for a prompt over 100K tokens ({@link LONG_PROMPT_PRICES}).
  */
 export const MODEL_PRICES_MICRO_USD_PER_TOKEN: Readonly<
   Record<
@@ -55,6 +55,20 @@ export const MODEL_PRICES_MICRO_USD_PER_TOKEN: Readonly<
   "claude-sonnet-5-5": { input: 2, cacheWrite: 2.5, cacheRead: 0.2, output: 10 },
 };
 
+/**
+ * Haiku 5.5's long-prompt rates ($0.50 in, $2.50 out per million), for a
+ * prompt whose input, cached or not, runs past {@link LONG_PROMPT_TOKENS}.
+ * Nothing stops an assist from sending one (a big import sample, a month of
+ * reviews), so the ledger prices it rather than assuming it never happens:
+ * a cap that under-counts by five times is not a cap.
+ */
+export const LONG_PROMPT_TOKENS = 100_000;
+const LONG_PROMPT_PRICES: Partial<
+  Record<ClaudeModel, (typeof MODEL_PRICES_MICRO_USD_PER_TOKEN)[ClaudeModel]>
+> = {
+  "claude-haiku-5-5": { input: 0.5, cacheWrite: 0.625, cacheRead: 0.05, output: 2.5 },
+};
+
 function count(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
@@ -64,7 +78,11 @@ function count(value: number): number {
  * A count that is negative or not a number is read as zero, never a credit.
  */
 export function costMicroUsd(model: ClaudeModel, usage: TokenUsage): number {
-  const price = MODEL_PRICES_MICRO_USD_PER_TOKEN[model];
+  const prompt =
+    count(usage.inputTokens) + count(usage.cacheWriteTokens) + count(usage.cacheReadTokens);
+  const price =
+    (prompt > LONG_PROMPT_TOKENS ? LONG_PROMPT_PRICES[model] : undefined) ??
+    MODEL_PRICES_MICRO_USD_PER_TOKEN[model];
   const total =
     count(usage.inputTokens) * price.input +
     count(usage.cacheWriteTokens) * price.cacheWrite +

@@ -1,5 +1,10 @@
+import { AssistFillButton } from "@/components/assists/AssistFillButton";
+import { shopAssistsAvailable } from "@/db/assist-shop";
+import { getDb } from "@/db/client";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RescheduleNotice } from "../../../_components/RescheduleNotice";
+import { loadTranslationBox, ShopTextTranslation } from "../../../_components/ShopTextTranslation";
+import { draftTripDescriptionAction } from "../../../content-assist-actions";
 import { DetailsSection, type DetailsSectionContext } from "./DetailsSection";
 
 /**
@@ -8,18 +13,42 @@ import { DetailsSection, type DetailsSectionContext } from "./DetailsSection";
  * the new time…" with Undo. Outside the form, because the hold's Undo and
  * "Tell them" are a form of their own.
  */
-export function DetailsEditor({
+export async function DetailsEditor({
+  shop,
   context,
   held,
   tell,
 }: {
+  shop: { id: string; slug: string; defaultLocale: string };
   context: DetailsSectionContext;
   held?: string;
   tell?: string;
 }) {
+  const t = staffTranslator(context.locale);
+  // Claude's "Draft it" on the description, and the description's Spanish
+  // beside the form (the `copywriter` and `shop-translate` assists).
+  const db = await getDb();
+  const canAssist = await shopAssistsAvailable(db, shop.id);
+  const descriptionTranslation = await loadTranslationBox(
+    db,
+    shop,
+    { kind: "trip", id: context.trip.id, field: "description" },
+    context.trip.description,
+  );
   return (
     <>
-      <DetailsSection context={context} />
+      <DetailsSection
+        context={{
+          ...context,
+          descriptionAssist: canAssist ? (
+            <AssistFillButton
+              draft={draftTripDescriptionAction.bind(null, shop.slug, context.trip.id)}
+              label={t("deskAssists.draft")}
+              pendingLabel={t("deskAssists.drafting")}
+            />
+          ) : undefined,
+        }}
+      />
       {held ? (
         <div className="mt-3">
           <RescheduleNotice
@@ -27,10 +56,20 @@ export function DetailsEditor({
             heldId={held}
             tell={tell}
             tripId={context.trip.id}
-            t={staffTranslator(context.locale)}
+            t={t}
           />
         </div>
       ) : null}
+      <div className="mt-5 max-w-2xl">
+        <ShopTextTranslation
+          shopSlug={shop.slug}
+          box={descriptionTranslation}
+          canAssist={canAssist}
+          t={t}
+          maxLength={500}
+          label={t("deskAssists.translate.descriptionLabel")}
+        />
+      </div>
     </>
   );
 }

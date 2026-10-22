@@ -547,6 +547,26 @@ export const inboundMessages = pgTable(
      * every other channel, which gives no verdict to read.
      */
     spamFlagged: boolean("spam_flagged").notNull().default(false),
+    /**
+     * **What Claude read in it** (ADR 20261018-claude-assists; inbox-sort and
+     * translate): stored once so a page view never asks again. All five are
+     * null until the assist has run, and stay null on a shop with assists
+     * dark. `assist_intent` is an `InboxIntent` code (`src/lib/assists/inbox.ts`)
+     * and only orders and labels the row: a cancellation still goes through
+     * the reply-keyword confirm (ADR 20260909-reply-keywords), never this.
+     * `assist_language` is the message's language as a two- or three-letter
+     * code, and `assist_translation` its words in `assist_translated_to`
+     * (a locale), set only when the two languages differ. The translation is
+     * the diver's words in another language, so the erasure redacts it with
+     * the body.
+     */
+    assistIntent: text("assist_intent"),
+    assistUrgent: boolean("assist_urgent"),
+    assistLanguage: text("assist_language"),
+    assistTranslation: text("assist_translation"),
+    assistTranslatedTo: text("assist_translated_to"),
+    /** When the assist answered for this message, whether or not it found anything. */
+    assistedAt: timestamp("assisted_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: appNowTimestamp("created_at").notNull(),
   },

@@ -422,14 +422,7 @@ async function TodayBody({
     showFirstRunChecklist,
   );
 
-  const recapEditors = recapEditorsFor({
-    departures: closeout.departures,
-    noted,
-    now,
-    locale,
-    timeZone: shop.timezone,
-    t,
-  });
+  const recapEditors = await recapEditorsFor({ db, shop, closeout, noted, now, locale, t });
   const evening: EveningReading = {
     close: eveningClose,
     takings: dayTakingsReading,

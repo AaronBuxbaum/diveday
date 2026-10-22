@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AssistFillButton } from "@/components/assists/AssistFillButton";
 import { EditorRail } from "@/components/editor/EditorRail";
 import type { EditorSectionRef } from "@/components/editor/EditorSection";
 import { FlashParams } from "@/components/FlashParams";
@@ -9,6 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { FormStatus, StickyFormActions } from "@/components/ui/form";
+import { shopAssistsAvailable } from "@/db/assist-shop";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getCourseBySlug, getCourseTemplateUpdate } from "@/db/courses";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
@@ -19,6 +21,8 @@ import { publicCoursePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { loadTranslationBox, ShopTextTranslation } from "../../../_components/ShopTextTranslation";
+import { draftCourseSummaryAction } from "../../../content-assist-actions";
 import { ConflictGuardedForm } from "./_components/ConflictGuardedForm";
 import { CourseDetailSections } from "./_components/CourseDetailSections";
 import {
@@ -76,6 +80,13 @@ export default async function EditCoursePage({
   // whose only outcome is a refusal is a control that should not be drawn.
   const canSetVisibility = await canPersonConfigureTrips(db, shop.id, session.user.personId);
   const templateUpdate = await getCourseTemplateUpdate(db, session.user.shopId, course.id);
+  const canAssist = await shopAssistsAvailable(db, shop.id);
+  const summaryTranslation = await loadTranslationBox(
+    db,
+    shop,
+    { kind: "course", id: course.id, field: "summary" },
+    course.summary,
+  );
   // The forms a course asks for are chosen by the same people who set its
   // visibility, so the same answer draws the section (ADR 20261008-course-forms).
   const formsPanel = canSetVisibility
@@ -250,6 +261,15 @@ export default async function EditCoursePage({
                   currency={currency}
                   locale={locale}
                   t={t}
+                  summaryAssist={
+                    canAssist ? (
+                      <AssistFillButton
+                        draft={draftCourseSummaryAction.bind(null, shopSlug, course.id)}
+                        label={t("deskAssists.draft")}
+                        pendingLabel={t("deskAssists.drafting")}
+                      />
+                    ) : undefined
+                  }
                 />
                 <CoursePhotosSection course={course} photos={photos} t={t} />
                 <CourseDetailSections
@@ -302,6 +322,17 @@ export default async function EditCoursePage({
               </StickyFormActions>
             </ConflictGuardedForm>
           </UnsavedChangesGuard>
+
+          {/* The summary's Spanish, its own small form for the same reason. */}
+          <div className="mt-8">
+            <ShopTextTranslation
+              shopSlug={shopSlug}
+              box={summaryTranslation}
+              canAssist={canAssist}
+              t={t}
+              maxLength={200}
+            />
+          </div>
 
           {formsPanel ? (
             <CourseFormsRequirement

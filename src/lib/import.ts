@@ -57,7 +57,9 @@
  *     it is declined — a visit with no date can't be placed on a timeline, and
  *     no date is invented. The source's status word and money text are carried
  *     verbatim and un-mapped, because a booking is not a dive and the amount is
- *     display-only. Nothing here feeds a gate or capacity.
+ *     display-only. Nothing here feeds a gate or capacity. A booking dated
+ *     after the shop's today is not a visit: the preview lists it as a seat
+ *     sold elsewhere, and nothing is written for it.
  *   - A source payment/refund or receipt becomes separate, **unverified
  *     imported payment history** (ADR 20260816-imported-payment-history-is-evidence).
  *     It never creates an order, a Stripe charge, a booking payment, or a
@@ -1010,6 +1012,18 @@ export function priorVisitDedupeKey(visit: {
   return `row:${visit.visitedOn}|${title}|${amount}`;
 }
 
+/**
+ * A booking the old system sold for a day after the shop's today. It is not a
+ * visit (nobody has dived it), and it is not a seat here either: the preview
+ * lists it so the shop adds it on the board or keeps it where it was sold
+ * until it sails. Nothing is written for it.
+ */
+export type PreparedBookingAfterToday = {
+  bookedFor: CalendarDate;
+  title: string | null;
+  sourceReference: string | null;
+};
+
 export type PreparedRow = {
   /** 1-based row number in the file body (header is not counted). */
   rowNumber: number;
@@ -1062,6 +1076,8 @@ export type PreparedRow = {
    * (ADR 20260725-import-prior-visits).
    */
   visit: PreparedVisit | null;
+  /** A booking dated after the shop's today, which is listed and never filed as a visit. */
+  bookingAfterToday: PreparedBookingAfterToday | null;
   /** Unverified source payment/refund/receipt history, separate from live orders. */
   paymentHistory: PreparedImportedPaymentHistory | null;
   /** Internal / staff / diver notes imported into the diver's record. */
@@ -1082,7 +1098,13 @@ export type PreparedRow = {
   issues: ImportIssue[];
 };
 
-export type ColumnMapping = { field: ImportField; header: string; columnIndex: number };
+export type ColumnMapping = {
+  field: ImportField;
+  header: string;
+  columnIndex: number;
+  /** Matched by a Claude assist rather than an alias (`ImportAssist`). */
+  assisted?: true;
+};
 
 /**
  * Every reason a file can't be prepared at all, before any row is read — the
@@ -1126,6 +1148,8 @@ export type PreparedImport = {
     withWaiver: number;
     /** Prior visits this file records, across importable and merge rows. */
     withVisit: number;
+    /** Bookings dated after the shop's today, across importable and merge rows. */
+    bookingsAfterToday: number;
     /** Unverified payment/refund/receipt source rows this file records. */
     withPaymentHistory: number;
     withNotes: number;
@@ -1550,11 +1574,242 @@ function cardNumber(value: string | null): string | null {
 }
 
 /**
+ * What one row's booking files as: a prior visit when its date is the shop's
+ * today or earlier, a booking after today when it is later (listed in the
+ * preview, written nowhere), or nothing with an issue when the date is
+ * missing or unreadable. Issues are pushed onto the row's own list.
+ */
+function fileBooking(
+  booking: {
+    visitDateRaw: string | null;
+    visitTitle: string | null;
+    visitStatus: string | null;
+    visitAmount: string | null;
+    visitReference: string | null;
+    namesAVisit: boolean;
+  },
+  {
+    sourceLabel,
+    today,
+    issues,
+  }: { sourceLabel: string | null; today: CalendarDate; issues: ImportIssue[] },
+): { visit: PreparedVisit | null; bookingAfterToday: PreparedBookingAfterToday | null } {
+  const { visitDateRaw, visitTitle, visitStatus, visitAmount, visitReference, namesAVisit } =
+    booking;
+  let visit: PreparedVisit | null = null;
+  let bookingAfterToday: PreparedBookingAfterToday | null = null;
+  if (visitDateRaw) {
+    const parsed = parseCardDate(visitDateRaw);
+    if (!parsed) {
+      issues.push({
+        level: "warning",
+        code: "visit_date_unreadable",
+        params: { value: echoedCell(visitDateRaw) },
+      });
+    } else if (parsed.date > today) {
+      // Sold in the old system for a day that has not come: not a visit,
+      // and not a seat here. Listed in the preview, written nowhere.
+      bookingAfterToday = {
+        bookedFor: parsed.date,
+        title: visitTitle,
+        sourceReference: visitReference,
+      };
+    } else {
+      const visitedOn = parsed.date;
+      visit = {
+        visitedOn,
+        title: visitTitle,
+        statusLabel: visitStatus,
+        amountLabel: visitAmount,
+        sourceLabel,
+        sourceReference: visitReference,
+        dedupeKey: priorVisitDedupeKey({
+          visitedOn,
+          title: visitTitle,
+          amountLabel: visitAmount,
+          sourceReference: visitReference,
+        }),
+      };
+      if (!visitReference) {
+        issues.push({
+          level: "info",
+          code: "visit_no_reference",
+        });
+      }
+    }
+  } else if (namesAVisit) {
+    issues.push({
+      level: "warning",
+      code: "visit_no_date",
+    });
+  }
+  return { visit, bookingAfterToday };
+}
+
+/**
  * Turn raw CSV text into a validated, safety-normalized import plan. Pure: no
  * database, no clock, no framework — the browser preview and the server commit
  * both call this and must agree.
  */
-export function prepareContactImport(text: string): PreparedImport {
+/**
+ * **What a Claude assist added to the header aliases** (ADR
+ * 20261018-claude-assists; the `import` assist, `src/lib/assists/import-mapping.ts`):
+ * a field for a header the aliases did not know, and a ladder rung for a level
+ * spelling `normalizeLevel` did not read. It only ever fills a gap: an alias
+ * match wins, a medical or payment-method header is never mapped, and a field
+ * outside {@link ASSIST_MAPPABLE_FIELDS} is ignored.
+ *
+ * **A card it touched is never verified.** An imported card lands verified on
+ * the premise that the shop's old system checked it (ADR
+ * 20260724-import-verified-cards); a column Claude matched is not that system's
+ * word, so every card in a file with an assisted card column, and every rung
+ * read through an assisted spelling, imports `pending` for a staffer to
+ * confirm. The assist clears no gate.
+ */
+export type ImportAssist = {
+  readonly headers: Readonly<Record<string, ImportField>>;
+  readonly levels: Readonly<Record<string, ImportLevel>>;
+};
+
+/**
+ * Fields an assist may never fill: each is a gate's evidence, a medical pointer,
+ * or who the row is. A name or an email decides which diver a row's verified
+ * card and trusted waiver land on (the commit merges by email), and a date of
+ * birth is the age gate's evidence, so only the shop's own header may name
+ * them. An assisted emergency contact only fills a blank (`commitContactImport`).
+ */
+const ASSIST_UNMAPPABLE_FIELDS: ReadonlySet<ImportField> = new Set<ImportField>([
+  "full_name",
+  "first_name",
+  "last_name",
+  "email",
+  "date_of_birth",
+  "certification_status",
+  "nitrox_certified",
+  "waiver_accepted",
+  "waiver_signed_at",
+  "waiver_document_url",
+  "medical_document_url",
+]);
+
+export const ASSIST_MAPPABLE_FIELDS: readonly ImportField[] = IMPORT_FIELDS.filter(
+  (field) => !ASSIST_UNMAPPABLE_FIELDS.has(field),
+);
+
+/** The fields that make a card; a file whose card column came from an assist imports pending. */
+const CARD_FIELDS: ReadonlySet<ImportField> = new Set<ImportField>([
+  "certification_agency",
+  "certification_level",
+  "certification_number",
+  "specialty",
+  "specialty_certification_number",
+  "nitrox_certification_number",
+]);
+
+/** The level-spelling key an assist's `levels` map is read by. */
+export function assistLevelKey(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/**
+ * The headers this file has that no alias claims, minus the ones that are
+ * never mapped (medical, payment method). What an assist is asked about.
+ */
+export function unclaimedImportHeaders(headers: readonly string[]): string[] {
+  const claimed = new Set<ImportField>();
+  const out: string[] = [];
+  for (const raw of headers) {
+    const header = raw.trim();
+    const normalized = normalizeHeader(header);
+    if (!normalized) continue;
+    if (SENSITIVE_PAYMENT_HEADER_PATTERN.test(normalized) || MEDICAL_HEADER_PATTERN.test(header)) {
+      continue;
+    }
+    const field = IMPORT_FIELDS.find(
+      (candidate) => !claimed.has(candidate) && HEADER_ALIASES[candidate].includes(normalized),
+    );
+    if (field) claimed.add(field);
+    else out.push(header);
+  }
+  return out;
+}
+
+/** The field an assist gave a header, when it may fill it and no column already has. */
+function assistedField(
+  assist: ImportAssist | undefined,
+  header: string,
+  claimed: ReadonlySet<ImportField>,
+): ImportField | null {
+  const field = assist && Object.hasOwn(assist.headers, header) ? assist.headers[header] : null;
+  return field && ASSIST_MAPPABLE_FIELDS.includes(field) && !claimed.has(field) ? field : null;
+}
+
+/** The rung an assist gave a level spelling `normalizeLevel` could not read; never a technical name. */
+function assistedLevel(
+  assist: ImportAssist | undefined,
+  raw: string | undefined,
+): ImportLevel | null {
+  if (!assist || !raw || isTechnicalCertName(raw)) return null;
+  const level = assist.levels[assistLevelKey(raw)];
+  return level && IMPORT_LEVELS.includes(level) ? level : null;
+}
+
+/**
+ * Which column is which field: an alias first, then (only for a gap) a Claude
+ * assist's suggestion. A payment-method header is left unmapped and a medical
+ * one ignored before any assist is consulted.
+ */
+function mapImportHeaders(headers: readonly string[], assist: ImportAssist | undefined) {
+  const mapping: ColumnMapping[] = [];
+  const unmappedColumns: string[] = [];
+  const ignoredMedicalColumns: string[] = [];
+  const claimedFields = new Set<ImportField>();
+
+  headers.forEach((rawHeader, columnIndex) => {
+    const header = rawHeader.trim();
+    const normalized = normalizeHeader(header);
+    if (!normalized) return;
+    if (SENSITIVE_PAYMENT_HEADER_PATTERN.test(normalized)) {
+      unmappedColumns.push(header);
+      return;
+    }
+    const field = IMPORT_FIELDS.find(
+      (candidate) =>
+        !claimedFields.has(candidate) && HEADER_ALIASES[candidate].includes(normalized),
+    );
+    if (field) {
+      claimedFields.add(field);
+      mapping.push({ field, header, columnIndex });
+      return;
+    }
+    if (MEDICAL_HEADER_PATTERN.test(header)) {
+      ignoredMedicalColumns.push(header);
+      return;
+    }
+    const suggested = assistedField(assist, header, claimedFields);
+    if (suggested) {
+      claimedFields.add(suggested);
+      mapping.push({ field: suggested, header, columnIndex, assisted: true });
+      return;
+    }
+    unmappedColumns.push(header);
+  });
+  // A card column Claude matched is not the old system's word: no card from
+  // this file lands verified (see `ImportAssist`).
+  const assistedCards = mapping.some((entry) => entry.assisted && CARD_FIELDS.has(entry.field));
+  return { mapping, unmappedColumns, ignoredMedicalColumns, assistedCards };
+}
+
+export function prepareContactImport(
+  text: string,
+  /**
+   * `today` is the shop's calendar day, read from the clock in the shop's
+   * timezone by the caller: a booking dated after it has not sailed, so it is
+   * never filed as a visit. `assist` is a Claude assist's mapping for the
+   * headers no alias claims (see {@link ImportAssist}).
+   */
+  { today, assist }: { today: CalendarDate; assist?: ImportAssist },
+): PreparedImport {
   const grid = parseCsv(text).filter((row) => row.some((cell) => cell.trim() !== ""));
   const empty: PreparedImport = {
     mapping: [],
@@ -1571,6 +1826,7 @@ export function prepareContactImport(text: string): PreparedImport {
       withNitrox: 0,
       withWaiver: 0,
       withVisit: 0,
+      bookingsAfterToday: 0,
       withPaymentHistory: 0,
       withNotes: 0,
     },
@@ -1616,31 +1872,10 @@ export function prepareContactImport(text: string): PreparedImport {
     }
   }
 
-  const mapping: ColumnMapping[] = [];
-  const unmappedColumns: string[] = [];
-  const ignoredMedicalColumns: string[] = [];
-  const claimedFields = new Set<ImportField>();
-
-  headers.forEach((rawHeader, columnIndex) => {
-    const header = rawHeader.trim();
-    const normalized = normalizeHeader(header);
-    if (!normalized) return;
-    if (SENSITIVE_PAYMENT_HEADER_PATTERN.test(normalized)) {
-      unmappedColumns.push(header);
-      return;
-    }
-    const field = IMPORT_FIELDS.find(
-      (candidate) =>
-        !claimedFields.has(candidate) && HEADER_ALIASES[candidate].includes(normalized),
-    );
-    if (field) {
-      claimedFields.add(field);
-      mapping.push({ field, header, columnIndex });
-      return;
-    }
-    if (MEDICAL_HEADER_PATTERN.test(header)) ignoredMedicalColumns.push(header);
-    else unmappedColumns.push(header);
-  });
+  const { mapping, unmappedColumns, ignoredMedicalColumns, assistedCards } = mapImportHeaders(
+    headers,
+    assist,
+  );
 
   const indexOf = (field: ImportField) =>
     mapping.find((entry) => entry.field === field)?.columnIndex ?? -1;
@@ -1706,7 +1941,8 @@ export function prepareContactImport(text: string): PreparedImport {
         params: { status: clean(statusRaw) ?? "" },
       });
     }
-    const cardStatus: PreparedCardStatus = sourceSaysUnverified ? "pending" : "verified";
+    const cardStatus: PreparedCardStatus =
+      sourceSaysUnverified || assistedCards ? "pending" : "verified";
     // Same answer for every card kind on the row: only the source's own status
     // can downgrade one.
     const nitroxStatus: PreparedCardStatus = cardStatus;
@@ -1789,7 +2025,9 @@ export function prepareContactImport(text: string): PreparedImport {
       });
     }
     if (levelRaw && !levelNamesSpecialty) {
-      const level = normalizeLevel(levelRaw);
+      const known = normalizeLevel(levelRaw);
+      const level = known ?? assistedLevel(assist, levelRaw);
+      const levelStatus: PreparedCardStatus = known ? cardStatus : "pending";
       if (!level && isTechnicalCertName(levelRaw)) {
         // Named separately from the generic "isn't a level" note, because this is
         // the case a shop would otherwise assume came across: it looks like a
@@ -1817,11 +2055,11 @@ export function prepareContactImport(text: string): PreparedImport {
           level,
           identifier: certNumber,
           sourceLabel,
-          status: cardStatus,
+          status: levelStatus,
         };
         issues.push({
           level: "info",
-          code: cardStatus === "verified" ? "cert_imported_verified" : "cert_imported_pending",
+          code: levelStatus === "verified" ? "cert_imported_verified" : "cert_imported_pending",
         });
         if (!agencyKnown) {
           issues.push({
@@ -1961,7 +2199,6 @@ export function prepareContactImport(text: string): PreparedImport {
     // water on a day nobody claimed. `parseCardDate` is reused deliberately, so
     // a shop's US-locale bookings export reads the same way its certification
     // export does rather than growing a second date dialect.
-    let visit: PreparedVisit | null = null;
     const visitDateRaw = clean(at(cells, "visit_date"));
     const visitTitle = freeText(clean(at(cells, "visit_title")));
     const visitStatus = freeText(clean(at(cells, "visit_status")));
@@ -1970,43 +2207,10 @@ export function prepareContactImport(text: string): PreparedImport {
     const namesAVisit = Boolean(
       visitDateRaw || visitTitle || visitStatus || visitAmount || visitReference,
     );
-    if (visitDateRaw) {
-      const parsed = parseCardDate(visitDateRaw);
-      if (!parsed) {
-        issues.push({
-          level: "warning",
-          code: "visit_date_unreadable",
-          params: { value: echoedCell(visitDateRaw) },
-        });
-      } else {
-        const visitedOn = parsed.date;
-        visit = {
-          visitedOn,
-          title: visitTitle,
-          statusLabel: visitStatus,
-          amountLabel: visitAmount,
-          sourceLabel,
-          sourceReference: visitReference,
-          dedupeKey: priorVisitDedupeKey({
-            visitedOn,
-            title: visitTitle,
-            amountLabel: visitAmount,
-            sourceReference: visitReference,
-          }),
-        };
-        if (!visitReference) {
-          issues.push({
-            level: "info",
-            code: "visit_no_reference",
-          });
-        }
-      }
-    } else if (namesAVisit) {
-      issues.push({
-        level: "warning",
-        code: "visit_no_date",
-      });
-    }
+    const { visit, bookingAfterToday } = fileBooking(
+      { visitDateRaw, visitTitle, visitStatus, visitAmount, visitReference, namesAVisit },
+      { sourceLabel, today, issues },
+    );
 
     // Financial source evidence is deliberately built separately from the
     // prior visit above. A booking can remain a useful visit even where no
@@ -2140,6 +2344,7 @@ export function prepareContactImport(text: string): PreparedImport {
       declinedSizes: action === "skip" ? [] : declinedSizes,
       waiver: action === "skip" ? null : waiver,
       visit: action === "skip" ? null : visit,
+      bookingAfterToday: action === "skip" ? null : bookingAfterToday,
       paymentHistory: action === "skip" ? null : paymentHistory,
       notes: action === "skip" ? null : clean(at(cells, "internal_notes")),
       action,
@@ -2167,6 +2372,7 @@ export function prepareContactImport(text: string): PreparedImport {
       withNitrox: written.filter((row) => row.nitrox).length,
       withWaiver: written.filter((row) => row.waiver).length,
       withVisit: written.filter((row) => row.visit).length,
+      bookingsAfterToday: written.filter((row) => row.bookingAfterToday).length,
       withPaymentHistory: written.filter((row) => row.paymentHistory).length,
       withNotes: written.filter((row) => Boolean(row.notes)).length,
     },

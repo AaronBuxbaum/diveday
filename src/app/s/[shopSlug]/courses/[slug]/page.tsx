@@ -10,6 +10,7 @@ import { PhoneFootBar } from "@/components/PhoneFootBar";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
 import { getShopReviewAggregate } from "@/db/reviews";
+import { withTranslatedFields } from "@/db/shop-text-translations";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { listUpcomingSessionsForCourse } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
@@ -124,7 +125,9 @@ export default async function CoursePage({
   // this for `stored.overview` would be publishing the raw marker. The whole
   // row is resolved rather than the fields this page happens to render, so a
   // new prose field cannot quietly opt out (src/lib/courses.ts).
-  const course = resolveCourseContentDepths(stored, courseDepthFormat(t, shop.depthUnit));
+  const resolved = resolveCourseContentDepths(stored, courseDepthFormat(t, shop.depthUnit));
+  // The shop's own Spanish summary for a reader in Spanish (`shop-translate`).
+  const course = await withTranslatedFields(db, shop, locale, "course", resolved, ["summary"]);
 
   const certificationRequired = course.minimumCertificationLevel
     ? t("course.certificationOrHigher", {

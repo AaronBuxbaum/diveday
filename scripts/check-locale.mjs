@@ -215,6 +215,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["diver.json marketing.privacy.processors.awsTerm", "brand"],
   ["diver.json marketing.privacy.processors.googleTerm", "brand"],
   ["diver.json marketing.privacy.processors.metaTerm", "brand"],
+  ["diver.json marketing.privacy.processors.anthropicTerm", "brand"],
   ["diver.json marketing.privacy.processors.neonTerm", "brand"],
   ["diver.json marketing.privacy.processors.sentryTerm", "brand"],
   ["diver.json marketing.privacy.processors.stripeTerm", "brand"],

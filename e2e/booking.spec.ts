@@ -714,7 +714,9 @@ test("a diver's card payment at booking settles their Pay step", async ({
   await page.locator(`a[href^="/s/${SHOP}/trips/"]`).first().click();
   await bookASeatAndOpenThread(page, "Carla Card", email);
   const thread = page.url();
-  const pay = page.locator("li[data-thread-step='pay']");
+  // Visible only: a preserved `<Activity>` copy of the thread carries the same
+  // hook, and strict mode refuses the pair (see `openThreadStep` in helpers).
+  const pay = page.locator("li[data-thread-step='pay']").filter({ visible: true });
   // This departure does not gate on payment, so an unpaid seat shows no Pay
   // step at all; money that settles earns one, done.
   const settled = page.locator("li[data-thread-step='pay'][data-step-state='done']");

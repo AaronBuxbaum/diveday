@@ -18,6 +18,7 @@ import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { GEAR_KIND_ORDER, GEAR_SERVICE_KINDS } from "@/lib/gear";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
 import { MEETING_POINT_LIMITS } from "@/lib/meeting-point";
+import { getMigrationGuide } from "@/lib/migration-guides";
 import { DIVER_EMAIL_MAX } from "@/lib/person-fields";
 import {
   isSingleLineText,
@@ -957,6 +958,11 @@ const setupRequestAlertSchema = z.object({
   region: setupAnswerSchema(SETUP_TEXT_MAX),
   runsBoat: z.boolean(),
   currentSystem: z.enum(SETUP_CURRENT_SYSTEMS),
+  /** Which system, as a switching guide's slug, when the requester named one. */
+  currentSystemGuide: z
+    .string()
+    .refine((slug) => getMigrationGuide(slug) !== null, "unknown guide")
+    .optional(),
   contactName: setupAnswerSchema(SETUP_TEXT_MAX),
   contactEmail: emailAddressSchema,
   contactPhone: setupAnswerSchema(SETUP_PHONE_MAX).optional(),
@@ -1242,6 +1248,15 @@ const weeklyDigestSchema = z.object({
   thisWeekFrom: calendarDateSchema,
   thisWeekTo: calendarDateSchema,
   sections: z.array(weeklyDigestSectionSchema).min(1).max(6),
+  /**
+   * Claude's opening sentences (the `monday` assist), each about one of the
+   * sections above and linked to that section's page. Absent while assists are
+   * dark, and the email reads exactly as it did.
+   */
+  read: z
+    .array(z.object({ section: z.string().max(40), text: z.string().trim().min(1).max(280) }))
+    .max(3)
+    .optional(),
   /** The recipient's own email settings, where the toggle lives. */
   settingsUrl: z.url().max(2_000),
   /** The one-click opt-out — see the docblock above for why it is not `unsubscribeUrl`. */

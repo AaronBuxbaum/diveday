@@ -55,6 +55,7 @@ export function ReviewLedgerRow({
   reasons,
   copy,
   reply,
+  flags = [],
 }: {
   review: StaffReview;
   group: ReviewGroup;
@@ -67,6 +68,8 @@ export function ReviewLedgerRow({
   copy: ReviewRowCopy;
   /** The shop's reply: who may write one, and its words. Without it the row offers none. */
   reply?: ReviewReplyContext;
+  /** What to read twice before publishing (the `review-flags` assist), as words. */
+  flags?: readonly string[];
 }) {
   const waiting = group === "waiting";
   return (
@@ -115,6 +118,17 @@ export function ReviewLedgerRow({
           >
             {review.comment}
           </p>
+        ) : null}
+        {flags.length > 0 ? (
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {flags.map((flag) => (
+              <li key={flag}>
+                <Badge tone="warning" size="sm">
+                  {flag}
+                </Badge>
+              </li>
+            ))}
+          </ul>
         ) : null}
         <p className="mt-1 text-xs text-muted">
           {t.rich("reviews.reviewMeta", {

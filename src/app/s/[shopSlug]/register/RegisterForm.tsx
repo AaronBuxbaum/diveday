@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
+import { AssistPhotoButton } from "@/components/assists/AssistPhotoButton";
 import { SmsConsentNote } from "@/components/SmsConsentNote";
 
 import { SubmitButton } from "@/components/SubmitButton";
@@ -41,6 +42,7 @@ import {
 export function RegisterForm({
   action,
   shopName,
+  readCardPhoto,
 }: {
   // i18n-exempt: type annotation, not copy.
   action: (
@@ -48,6 +50,11 @@ export function RegisterForm({
     formData: FormData,
   ) => Promise<SelfRegistrationFormState>;
   shopName: string;
+  /** Claude reads a card photo into the three card boxes; absent while assists are dark. */
+  readCardPhoto?: (image: {
+    data: string;
+    mediaType: string;
+  }) => Promise<Record<string, string> | null>;
 }) {
   const t = useTranslations();
   const [state, formAction] = useActionState<SelfRegistrationFormState, FormData>(action, {});
@@ -135,6 +142,14 @@ export function RegisterForm({
             <input id="identifier" name="identifier" maxLength={120} className={controlClass} />
           </Field>
         </FieldGrid>
+        {readCardPhoto ? (
+          <AssistPhotoButton
+            read={readCardPhoto}
+            label={t("register.cardPhoto")}
+            pendingLabel={t("register.cardPhotoPending")}
+            className="mt-3"
+          />
+        ) : null}
       </fieldset>
 
       <fieldset>

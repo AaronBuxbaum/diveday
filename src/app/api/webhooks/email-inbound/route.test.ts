@@ -15,6 +15,8 @@ vi.mock("@/db/inbound-messages", () => ({
 vi.mock("@/db/reply-keywords", () => ({ handleInboundReplyKeyword: vi.fn() }));
 // The after-hours desk ping, likewise: its rule is `src/db/desk-pings.test.ts`.
 vi.mock("@/db/desk-pings", () => ({ pingDeskAfterHoursSafely: vi.fn() }));
+// Claude's inbox triage, likewise: its rule is `src/db/inbox-assists.test.ts`.
+vi.mock("@/db/inbox-assists", () => ({ triageInboundMessagesSafely: vi.fn() }));
 // The ping runs after the response (#2311); the test runs what was deferred.
 vi.mock("next/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/server")>();
@@ -32,6 +34,7 @@ const { getDb } = await import("@/db/client");
 const { recordInboundMessage, shopIdForInboundEmailToken } = await import("@/db/inbound-messages");
 const { handleInboundReplyKeyword } = await import("@/db/reply-keywords");
 const { pingDeskAfterHoursSafely } = await import("@/db/desk-pings");
+const { triageInboundMessagesSafely } = await import("@/db/inbox-assists");
 const { after } = await import("next/server");
 
 /** Run whatever the route handed to `after()`, as Next does once it has answered. */
@@ -121,6 +124,7 @@ beforeEach(() => {
   vi.mocked(shopIdForInboundEmailToken).mockReset().mockResolvedValue(SHOP_ID);
   vi.mocked(handleInboundReplyKeyword).mockReset().mockResolvedValue("not_a_keyword");
   vi.mocked(pingDeskAfterHoursSafely).mockReset();
+  vi.mocked(triageInboundMessagesSafely).mockReset();
   vi.mocked(after).mockReset();
   read.mockReset().mockResolvedValue({ status: "ok", message: RAW_MESSAGE });
   vi.mocked(inboundMailStoreFromEnvironment)
@@ -213,12 +217,15 @@ describe("email-inbound webhook — filing a reply", () => {
     // the webhook has answered, so a slow mail provider cannot make SNS wait
     // and retry (#2311).
     expect(pingDeskAfterHoursSafely).not.toHaveBeenCalled();
-    expect(after).toHaveBeenCalledTimes(1);
+    // And reads it for the inbox's intent and translation, after the response too.
+    expect(triageInboundMessagesSafely).not.toHaveBeenCalled();
+    expect(after).toHaveBeenCalledTimes(2);
     await runDeferred();
     expect(pingDeskAfterHoursSafely).toHaveBeenCalledWith(FAKE_DB, {
       shopId: SHOP_ID,
       receivedAt: new Date("2026-07-21T12:59:58.000Z"),
     });
+    expect(triageInboundMessagesSafely).toHaveBeenCalledWith(FAKE_DB, SHOP_ID, ["im1"]);
   });
 
   /**

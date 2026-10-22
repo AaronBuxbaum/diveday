@@ -4,8 +4,10 @@ import { useState, useTransition } from "react";
 import { ConnectivityStatus, type ConnectivityStatusCopy } from "@/components/ConnectivityStatus";
 import { buttonClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import type { SightingMatch } from "@/lib/assists/sightings-match";
 import { scopedId } from "@/lib/element-id";
 import type { SightingResult } from "../actions";
+import { SeenSaid, type SeenSaidCopy } from "./SeenSaid";
 
 /**
  * The words this group needs, resolved on the server and handed down —
@@ -142,6 +144,7 @@ export function SeenGroup({
   copy,
   recordAction,
   deleteAction,
+  match,
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
@@ -152,6 +155,8 @@ export function SeenGroup({
   copy: SeenGroupCopy;
   recordAction: SightingAction;
   deleteAction: SightingAction;
+  /** Claude's match of what the crew said to these chips; absent while assists are dark. */
+  match?: { action: (said: string) => Promise<SightingMatch[] | null>; copy: SeenSaidCopy };
 }) {
   // One flag for the group, set by whichever tap answered last. A success
   // clears it, which is the honest reading: the boat has bars again.
@@ -203,6 +208,15 @@ export function SeenGroup({
           </SeenTap>
         ))}
       </div>
+      {match && chips.length > 0 ? (
+        <SeenSaid
+          chips={chips}
+          match={match.action}
+          recordAction={recordAction}
+          onResult={onResult}
+          copy={match.copy}
+        />
+      ) : null}
       {/* The tally, which is the tap's whole answer — announced politely so a
           crew member working by voice hears the count move rather than having
           to go looking for it. */}

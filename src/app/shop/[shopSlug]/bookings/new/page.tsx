@@ -43,6 +43,7 @@ import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices"
 import { isCallOutcome } from "@/lib/took-a-call";
 import { seatsOnSale, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
+import { CallNoteSlot } from "./_components/CallNoteSlot";
 import type { DeparturePickerDay } from "./_components/DeparturePicker";
 import { DepartureWindowSection } from "./_components/DepartureWindowSection";
 import { type CallDeparture, TookACallFields } from "./_components/TookACallFields";
@@ -319,10 +320,8 @@ export default async function NewBookingPage({
         t={t}
       />
 
-      {/* `padding="none"`: the summary and the open body pad themselves. Opens
-          on its own refusal, or on a kept draft — a shut disclosure would hide
-          the answer the staffer is waiting for, or the call they were halfway
-          through. */}
+      {/* `padding="none"`: summary and body pad themselves. Opens on its own
+          refusal or a kept draft, never hiding an answer or a half-typed call. */}
       <AutoOpenDetails
         openOnHash="call"
         id="call"
@@ -350,6 +349,7 @@ export default async function NewBookingPage({
             actions={draftBinding.actions}
             copy={formDraftCopy(t)}
           />
+          <CallNoteSlot shopId={shop.id} shopSlug={shopSlug} t={t} />
           <PersonFieldTrio
             as="div"
             email="optional"

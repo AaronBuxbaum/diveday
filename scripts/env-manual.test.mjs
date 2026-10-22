@@ -53,6 +53,24 @@ describe("env-manual", () => {
   // so .env.manual carries exactly the manual keys, which the cases around
   // this one already cover.
 
+  it("collapses a key written twice into one line, keeping the value", () => {
+    // A registry row that was once duplicated left two lines per key here, and
+    // the Vercel upload refuses a file that repeats a key. Whichever of the two
+    // holds the value, the refreshed file has one line carrying it.
+    for (const lines of [
+      ["ANTHROPIC_API_KEY=", "ANTHROPIC_API_KEY=sk-ant-mine"],
+      ["ANTHROPIC_API_KEY=sk-ant-mine", "ANTHROPIC_API_KEY="],
+    ]) {
+      const cwd = workspace();
+      writeFileSync(join(cwd, ".env.manual"), [...lines, ""].join("\n"));
+
+      expect(envManual(cwd).status).toBe(0);
+      const manual = readFileSync(join(cwd, ".env.manual"), "utf8");
+      expect(manual.match(/^ANTHROPIC_API_KEY=/gm)).toHaveLength(1);
+      expect(manual).toContain("ANTHROPIC_API_KEY=sk-ant-mine");
+    }
+  });
+
   it("is idempotent, and never overwrites a value already set", () => {
     const cwd = workspace();
     writeFileSync(join(cwd, ".env.manual"), "STRIPE_SECRET_KEY=sk_mine\n");

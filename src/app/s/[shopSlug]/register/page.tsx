@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { shopAssistsAvailable } from "@/db/assist-shop";
+import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { registerAtShopAction } from "./actions";
+import { readCardPhotoAtShopAction } from "./card-photo-action";
 import { RegisterForm } from "./RegisterForm";
 
 export const instant = true;
@@ -53,6 +56,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ shopS
   if (!shop) notFound();
   const locale = await requestLocale(shop.defaultLocale);
   const { t } = await requestTranslator(shop.defaultLocale);
+  const canAssist = await shopAssistsAvailable(await getDb(), shop.id);
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -67,7 +71,11 @@ export default async function RegisterPage({ params }: { params: Promise<{ shopS
         timeZone={shop.timezone}
         namespaces={["register", "common", "course"]}
       >
-        <RegisterForm action={registerAtShopAction.bind(null, shop.slug)} shopName={shop.name} />
+        <RegisterForm
+          action={registerAtShopAction.bind(null, shop.slug)}
+          shopName={shop.name}
+          readCardPhoto={canAssist ? readCardPhotoAtShopAction.bind(null, shop.slug) : undefined}
+        />
       </DiverIntlProvider>
     </main>
   );

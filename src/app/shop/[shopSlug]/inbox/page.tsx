@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { LedgerGroup } from "@/components/ui/ledger";
+import { assistsAvailable } from "@/db/assists";
 import { pagedInboxMessages } from "@/db/inbound-messages";
+import { triageInboundMessagesSafely } from "@/db/inbox-assists";
 import { listDeletedSavedAnswers, listSavedAnswers } from "@/db/inbox-saved-answers";
 import { inboxSeats } from "@/db/inbox-seats";
 import { requestLocale } from "@/i18n/request";
@@ -23,6 +26,7 @@ import {
   restoreSavedAnswerAction,
   setInboxMessageDoneAction,
 } from "./actions";
+import { requestFromMessageAction } from "./assist-actions";
 
 /**
  * `?notice=` codes this page redirects back to itself with. Read through
@@ -46,6 +50,8 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "answer-restored": { tone: "success", key: "inbox.notices.answerRestored" },
   "answer-gone": { tone: "warning", key: "inbox.notices.answerGone" },
   "answers-full": { tone: "warning", key: "inbox.notices.answersFull" },
+  // "Make a request" read nothing a request could hold (the `request` assist).
+  "request-nothing": { tone: "warning", key: "assistsFront.inbox.requestNothing" },
 };
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -92,10 +98,11 @@ export default async function InboxPage({
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it
   // into range, so a bookmarked page past the end lands on the last real one.
-  const [messages, savedAnswers, deletedAnswers] = await Promise.all([
+  const [messages, savedAnswers, deletedAnswers, assists] = await Promise.all([
     pagedInboxMessages(db, shop.id, { page: Number.parseInt(page ?? "", 10) }),
     listSavedAnswers(db, shop.id),
     listDeletedSavedAnswers(db, shop.id),
+    assistsAvailable(db, shop.id),
   ]);
   // One clock for the read and the stamps: "Today, 7:00 AM" and the seat it
   // links to are the same today (fourth review, item 45).
@@ -109,7 +116,24 @@ export default async function InboxPage({
     messages.rows.map((row) => row.message),
     now,
   );
-  const waiting = messages.rows.filter((row) => row.message.answeredAt === null);
+  // While the shop's assists are on, a message Claude read as urgent leads its
+  // group; the rest keep `pagedInboxMessages`' order (the sort is stable).
+  const waiting = messages.rows
+    .filter((row) => row.message.answeredAt === null)
+    .sort((a, b) =>
+      assists
+        ? Number(b.message.assistUrgent === true) - Number(a.message.assistUrgent === true)
+        : 0,
+    );
+  // Waiting messages nobody has read for intent and language yet, read after
+  // the response so the inbox never waits on Claude; the next view shows them.
+  if (assists) {
+    const unread = waiting.flatMap((row) =>
+      row.message.assistedAt === null ? [row.message.id] : [],
+    );
+    if (unread.length > 0) after(() => triageInboundMessagesSafely(db, shop.id, unread));
+  }
+  const requestAction = assists ? requestFromMessageAction : undefined;
   const answered = messages.rows.filter((row) => row.message.answeredAt !== null);
   const banner = noticeFromParam(notice, NOTICES);
   const base = shopPath(shopSlug, "inbox");
@@ -156,6 +180,7 @@ export default async function InboxPage({
                     doneAction={setInboxMessageDoneAction}
                     seats={seats.get(row.message.id) ?? []}
                     lateAction={markInboxSenderLateAction}
+                    requestAction={requestAction}
                   />
                 ))}
               </ul>
@@ -178,6 +203,7 @@ export default async function InboxPage({
                     doneAction={setInboxMessageDoneAction}
                     seats={seats.get(row.message.id) ?? []}
                     lateAction={markInboxSenderLateAction}
+                    requestAction={requestAction}
                   />
                 ))}
               </ul>

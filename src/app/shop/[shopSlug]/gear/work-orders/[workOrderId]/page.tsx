@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { shopAssistsAvailable } from "@/db/assist-shop";
 import { latestServiceClocks } from "@/db/gear";
 import { listStaff } from "@/db/trips";
 import { getWorkOrderDetail } from "@/db/work-orders";
@@ -25,6 +26,7 @@ import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { isCustomerRegulatorServiceMonths, type WorkOrderOutcome } from "@/lib/work-orders";
+import { draftBenchNoteAction } from "../../../content-assist-actions";
 import { BillAndPickupCard } from "../_components/BillAndPickupCard";
 import { pieceDueLine } from "../_components/piece-dates";
 import { WorkOrderHistoryCard } from "../_components/WorkOrderHistoryCard";
@@ -182,6 +184,11 @@ export default async function WorkOrderPage({
           readOnly={deleted}
           locale={locale}
           t={t}
+          draftNote={
+            !deleted && (await shopAssistsAvailable(db, shop.id))
+              ? draftBenchNoteAction.bind(null, shopSlug)
+              : undefined
+          }
         />
 
         {detail.pieces.length > 0 ? (

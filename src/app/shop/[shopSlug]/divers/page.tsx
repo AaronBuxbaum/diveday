@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import { after } from "next/server";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
+import { AssistAskForm } from "@/components/assists/AssistAskForm";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { UndoToast } from "@/components/UndoToast";
+import { shopAssistsAvailable } from "@/db/assist-shop";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { listDiverMergeDuplicateIds } from "@/db/diver-merge";
 import { isDiverFilter, isDiverSort, listDiverSummaries } from "@/db/divers";
 import { rosterFacts } from "@/db/roster-facts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { DIVER_SEARCH_MAX_ASK } from "@/lib/assists/diver-search";
 import { canDeleteDiver, canExportShopData, canImportShopData, canMergeDiver } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
@@ -22,6 +25,7 @@ import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices"
 import { DiverList, type RosterBadge, type RosterRow } from "./_components/DiverList";
 import { RosterOrderLine, rosterHref } from "./_components/RosterOrderLine";
 import { restoreDiverAction } from "./actions";
+import { askRosterAction } from "./search-assist-action";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -111,7 +115,7 @@ export default async function DiversPage({
   // range, so a search that narrows the roster never strands the reader on a
   // page the new result set does not have.
   const now = nowDate();
-  const [diverPage, possibleDuplicateIds] = await Promise.all([
+  const [diverPage, possibleDuplicateIds, canAssist] = await Promise.all([
     listDiverSummaries(db, shop.id, {
       query,
       page: Number.parseInt(page ?? "", 10),
@@ -122,6 +126,7 @@ export default async function DiversPage({
       now,
     }),
     canMerge ? listDiverMergeDuplicateIds(db, shop.id) : Promise.resolve([]),
+    shopAssistsAvailable(db, shop.id),
   ]);
   // Second, because it takes the ids the first one just returned: the four
   // roster facts are all `inArray`-bounded to this page rather than read over
@@ -257,6 +262,20 @@ export default async function DiversPage({
         <ShopNotice tone={noticeIsError ? "danger" : "success"} className="mt-6">
           <p role="status">{noticeText}</p>
         </ShopNotice>
+      ) : null}
+
+      {canAssist ? (
+        <div className="mt-6">
+          <AssistAskForm
+            ask={askRosterAction.bind(null, shopSlug)}
+            label={t("deskAssists.search.label")}
+            placeholder={t("deskAssists.search.placeholder")}
+            submitLabel={t("deskAssists.search.submit")}
+            pendingLabel={t("deskAssists.search.pending")}
+            noAnswer={t("deskAssists.search.noAnswer")}
+            maxLength={DIVER_SEARCH_MAX_ASK}
+          />
+        </div>
       ) : null}
 
       <DiverList

@@ -821,6 +821,8 @@
     "levelLabel": "Level",
     "levelPlaceholder": "Choose your level",
     "identifierLabel": "Card number",
+    "cardPhoto": "Fill this from a photo of my card",
+    "cardPhotoPending": "Reading your card…",
     "sizesHeading": "Your sizes",
     "sizesHint": "Only if you rent from us. It saves a fitting at the counter.",
     "wetsuitLabel": "Wetsuit",
@@ -3565,8 +3567,7 @@
     "concierge": {
       "eyebrow": "A person does the import with you",
       "title": "We will switch you on, and off, ourselves",
-      "description": "Send us what you have, whether a clean export or a decade of messy tabs, and we’ll map the columns and bring your divers in with you, free. If DiveDay is ever the wrong fit, we’ll help you carry it all back out the same way.",
-      "emailCta": "Email us at {email}"
+      "description": "Send us what you have, whether a clean export or a decade of messy tabs, and we’ll map the columns and bring your divers in with you, free. If DiveDay is ever the wrong fit, we’ll help you carry it all back out the same way."
     }
   },
   "nav": {
@@ -3605,7 +3606,7 @@
     "recap": {
       "label": "Dive recap",
       "greeting": "Nice diving, Priya",
-      "tripLine": "Two-Tank Reef · Saturday · Jun 14",
+      "tripLine": "Two-Tank Reef · Saturday · Jun 13",
       "crewNoteLabel": "From your crew",
       "crewNote": "A calm first dive, then a brilliant drift over the reef. Thanks for diving with us.",
       "recordHeading": "Dive log entry",
@@ -3902,7 +3903,7 @@
         "check": {
           "when": "Each morning, for the week ahead",
           "title": "Anyone who can’t board yet is named, with the reason",
-          "note2": "There is no “mark everyone ready” button. I left it out on purpose.",
+          "note2": "There is no “mark everyone ready” button. We left it out on purpose.",
           "mockupLabel": "Today in the demo shop: one departure with 7 of 9 divers ready, then two rows under Needs you."
         },
         "aboard": {
@@ -4242,7 +4243,7 @@
           },
           "pastVisits": {
             "what": "Past visits (what they booked, when)",
-            "detail": "One row per booking becomes visit history. It is not a dive, and it never appears on your schedule or counts toward capacity."
+            "detail": "One row per booking up to today becomes visit history. It is not a dive, and it never appears on your schedule or counts toward capacity."
           },
           "paymentHistory": {
             "what": "Payment & receipt history",
@@ -4627,10 +4628,6 @@
           "label": "Contract",
           "value": "Month to month"
         },
-        "trial": {
-          "label": "Trial",
-          "value": "3 weeks, no card"
-        },
         "leaving": {
           "label": "Leaving",
           "value": "A ZIP from Settings, any day"
@@ -4639,11 +4636,8 @@
       "notes": {
         "title": "Notes on the invoice",
         "note1": "Every staff login is in the price, front desk to captain. Nothing is counted per seat.",
-        "note2": "Waivers, medical review and the cert gate are in the price. None of it is an add-on.",
-        "note3": "Card fees are Stripe’s and go to Stripe. The money never sits with us.",
-        "note4": "I wrote the trial to switch nothing off on day 22. What you build in it keeps working."
+        "note2": "Waivers, medical review and the cert gate are in the price. None of it is an add-on."
       },
-      "feesNote": "Payment-processing fees stay between you and your payment provider.",
       "includedLead": "What the price covers",
       "seeFullList": "The full list is on the product page →",
       "feeAnchor": {
@@ -4686,7 +4680,7 @@
         },
         "setupTime": {
           "question": "What do I have to do to get set up?",
-          "answer": "Write to {email} and we set up your shop’s name, web address and timezone, and your own login. Bringing a spreadsheet of divers across is its own step, and a person can do that import with you, free."
+          "answer": "Send the “Get set up” form and we set up your shop’s name, web address and timezone, and your own login. Bringing a spreadsheet of divers across is its own step, and a person can do that import with you, free."
         },
         "dataIfNotWorking": {
           "question": "How do I access my shop’s records?",
@@ -4768,6 +4762,8 @@
         "vercelBody": "hosting, the file storage that holds photos and certification evidence, and page-level analytics. Analytics records which pages are viewed; we do not attach a diver’s or a staff member’s identity to a page view.",
         "neonTerm": "Neon",
         "neonBody": "the database itself.",
+        "anthropicTerm": "Anthropic",
+        "anthropicBody": "Claude, the AI model behind DiveDay’s suggestions, and only for a shop that has them turned on. It receives what a suggestion needs: a message staff ask it to draft, sort or translate; sample rows from a file being imported; a certification card photo, read and then discarded; the shop’s own website; text the shop wrote, such as trip descriptions and site briefings; review comments; and work-order notes. Medical answers are never sent. Anthropic processes this only to answer the request, under its commercial terms, does not train its models on it, and deletes it within 30 days, unless a request is flagged under its usage policy.",
         "sentryTerm": "Sentry",
         "sentryBody": "error reporting. When something breaks, the crash is sent here so we can fix it. The address of the page is stripped of any token before it goes, and we do not send diver records with it.",
         "googleTerm": "Google",
@@ -5236,6 +5232,8 @@
         "shopSoftware": "Dive-shop software",
         "other": "Something else"
       },
+      "whichSystem": "Which one?",
+      "anotherSystem": "Another one",
       "contactName": "Your name",
       "email": "Email",
       "phone": "Phone",
@@ -5254,7 +5252,8 @@
         "spreadsheet": "Save your diver list as a CSV. We’ll read it with you.",
         "spreadsheetLink": "What we read in it",
         "system": "While you wait, download your customer list from the system you use now.",
-        "systemLink": "Export steps by system"
+        "systemLink": "Export steps by system",
+        "systemGuideLink": "Export steps for {competitor}"
       }
     }
   },

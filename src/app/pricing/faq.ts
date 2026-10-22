@@ -48,8 +48,9 @@ export function pricingFaq(t: DiverTranslator, competitors: string): readonly Pr
       answer: t("marketing.pricing.faq.seeBefore.answer"),
     },
     {
-      // Counted against what setup is now: one email to the onboarding
-      // address, and a person creates the shop (its name, web address and
+      // Counted against what setup is now: one request through the Get set
+      // up form (the page's own doors; an onboarding@ address until
+      // 2026-10-22), and a person creates the shop (its name, web address and
       // timezone) and the owner's login, because every shop is set up by
       // hand (ADR 20260925-shops-are-set-up-by-hand). Until 2026-10-05 this
       // answer still counted the six fields of a sign-up form no visitor can
@@ -60,7 +61,7 @@ export function pricingFaq(t: DiverTranslator, competitors: string): readonly Pr
       // same eight-word promise about seeing what will happen before anything
       // is saved. This is the time question, so it ends on time.
       question: t("marketing.pricing.faq.setupTime.question"),
-      answer: t("marketing.pricing.faq.setupTime.answer", { email: ONBOARDING_EMAIL }),
+      answer: t("marketing.pricing.faq.setupTime.answer"),
     },
     // "Does the manifest work offline?" left this list on 2026-08-28: a
     // product question wearing pricing clothes, and the boat manifest page

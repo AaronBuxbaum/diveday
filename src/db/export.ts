@@ -560,15 +560,11 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const departureCheckRows = await readDepartureCheckRows(tx, scope);
 
-  const priorVisitRows = await readScoped(tx, "priorVisits", scope);
-
   const importedPaymentHistoryRows = await readScoped(tx, "importedPaymentHistory", scope);
 
   const boatRows = await readScoped(tx, "boats", scope);
 
   const boatName = new Map(boatRows.map((row) => [row.id, row.name]));
-
-  const tripLensRows = await readScoped(tx, "tripLenses", scope);
 
   // Per-person rollups for contacts.csv. Archived cards never represent a
   // diver in a migration file; archived people still export, marked.
@@ -721,11 +717,12 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     workOrderCareRows,
     workOrderEventRows,
     ...departureCheckRows,
-    priorVisitRows,
+    priorVisitRows: await readScoped(tx, "priorVisits", scope),
     importedPaymentHistoryRows,
     boatRows,
     boatName,
-    tripLensRows,
+    tripLensRows: await readScoped(tx, "tripLenses", scope),
+    shopTextTranslationRows: await readScoped(tx, "shopTextTranslations", scope),
     cardsByPerson,
     nitroxVerified,
     fitByPerson,
@@ -1330,6 +1327,7 @@ export async function loadShopExportCounts(
     "dive_package_entitlements.csv": await countShopScoped(db, "divePackageEntitlements", shopId),
     "shop_promo_codes.csv": await countShopScoped(db, "shopPromoCodes", shopId),
     "courses.csv": await countShopScoped(db, "courses", shopId),
+    "shop_text_translations.csv": await countShopScoped(db, "shopTextTranslations", shopId),
   };
 
   return (Object.keys(EXPORT_FILE_NOTES) as (keyof typeof EXPORT_FILE_NOTES)[]).map((file) => ({

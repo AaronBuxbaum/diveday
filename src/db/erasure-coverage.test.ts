@@ -406,7 +406,13 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   boats: "the shop’s vessels",
   claude_usage:
     "one row per Claude call: a feature code, a model, token counts and a cost, with no person and no words",
+  assist_results:
+    "an assist's answer about the shop: review flag codes and theme titles holding review ids (each quote is read from its review row, so erasing the review erases the quote), and the Monday read's sentences built from shop-wide counts. No person",
+  shop_text_translations:
+    "the shop's own descriptions and briefings in Spanish, about its trips, courses and sites. No person",
   courses: "the shop’s course catalog, copied from a template and then its own",
+  website_setup_drafts:
+    "lines Claude read off the shop’s own public website for the owner to accept: shop facts, prices and policies, never a diver",
   waiver_templates:
     "the text a shop asks people to sign, versioned. The *signatures* are `waiver_records`, which the erasure strips and re-seals",
   course_forms: "the course forms a shop asks students to sign, by title and agency code",
@@ -744,6 +750,10 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     why: '"stripe", or null for a manual mark: which system moved the money, not a handle on anything it holds',
   },
   "booking_payment_events.provider": { held: "none", why: "as booking_payments.provider" },
+  "inbound_messages.assist_intent": {
+    held: "none",
+    why: "Claude's code for what a message asks (cancel, move, question…): a tag from a fixed list, not a handle on anything",
+  },
   "auth_provider_accounts.provider_id": {
     held: "none",
     why: "better-auth's name for a login provider, on a table no sign-in path in this repo writes. A provider's *name*, and no payment anywhere near it",

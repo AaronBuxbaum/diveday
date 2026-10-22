@@ -98,7 +98,8 @@ describe("the switching hub's skeleton", () => {
 
   it("ends with the concierge's own skeleton", () => {
     const concierge = sections().sections[3];
-    const real = render(<SwitchingConcierge locale="en-US" />).container.firstElementChild;
+    const real = render(<SwitchingConcierge locale="en-US" source="switching-hub-concierge" />)
+      .container.firstElementChild;
     expect(concierge.className).toBe(real?.className);
   });
 

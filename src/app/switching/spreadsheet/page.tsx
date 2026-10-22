@@ -57,7 +57,7 @@ export const instant = true;
  *
  * The concierge switch offer is a service commitment authorized by the product
  * owner (docs/product/marketing.md, claims policy) — not a product feature. It
- * is the shared `SwitchingConcierge` block, routed to the switch@dive.day inbox,
+ * is the shared `SwitchingConcierge` block, whose door is the Get set up form,
  * so a shop has a real handoff (in and out) on every switching page, not just
  * the self-service importer and export.
  */
@@ -263,7 +263,7 @@ async function SpreadsheetBody({
       </MovePath>
 
       {/* The owner-authorized concierge switch offer (shared across /switching). */}
-      <SwitchingConcierge locale={locale} />
+      <SwitchingConcierge locale={locale} source="switching-spreadsheet-concierge" />
 
       <ClosingCta
         locale={locale}

@@ -222,28 +222,19 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 aria-label={t("marketing.pricing.invoice.title")}
                 className="divide-y divide-border border-y border-border"
               >
-                {(
-                  [
-                    "setup",
-                    "logins",
-                    "tiers",
-                    "cut",
-                    "cards",
-                    "contract",
-                    "trial",
-                    "leaving",
-                  ] as const
-                ).map((row) => (
-                  <div
-                    key={row}
-                    className="flex items-baseline justify-between gap-6 py-3 text-sm leading-6"
-                  >
-                    <dt className="text-muted">{t(`marketing.pricing.invoice.${row}.label`)}</dt>
-                    <dd className="text-end font-medium">
-                      {t(`marketing.pricing.invoice.${row}.value`)}
-                    </dd>
-                  </div>
-                ))}
+                {(["setup", "logins", "tiers", "cut", "cards", "contract", "leaving"] as const).map(
+                  (row) => (
+                    <div
+                      key={row}
+                      className="flex items-baseline justify-between gap-6 py-3 text-sm leading-6"
+                    >
+                      <dt className="text-muted">{t(`marketing.pricing.invoice.${row}.label`)}</dt>
+                      <dd className="text-end font-medium">
+                        {t(`marketing.pricing.invoice.${row}.value`)}
+                      </dd>
+                    </div>
+                  ),
+                )}
               </dl>
               <div>
                 <h2 className="text-sm font-semibold tracking-widest text-muted uppercase">
@@ -251,12 +242,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 </h2>
                 <MarginNotes
                   className="mt-4"
-                  notes={[
-                    t("marketing.pricing.notes.note1"),
-                    t("marketing.pricing.notes.note2"),
-                    t("marketing.pricing.notes.note3"),
-                    t("marketing.pricing.notes.note4"),
-                  ]}
+                  notes={[t("marketing.pricing.notes.note1"), t("marketing.pricing.notes.note2")]}
                 />
               </div>
             </div>
@@ -331,19 +317,6 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               >
                 {t("marketing.pricing.seeFullList")}
               </Link>
-              {/* The one cost the price does not cover, as the footnote to the
-                  list of what it does — the same thought, finished. It carried
-                  a second sentence ("if an integration ever costs extra, we'll
-                  say so before you turn it on") until 2026-08-28: a promise
-                  about an unshipped condition, sitting under "What the price
-                  covers" and telling a reader who has just absorbed four
-                  negations that a fifth charge might arrive later. It answered
-                  a question nobody asked about a charge that does not exist
-                  (AGENTS.md, "every sentence earns its place, or it is
-                  deleted"). */}
-              <p className="mt-8 max-w-xl text-sm leading-6 text-muted">
-                {t("marketing.pricing.feesNote")}
-              </p>
             </div>
           </div>
         </section>
@@ -440,17 +413,6 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 page is warmest, the only door left asked for an account
                 (issue #785). */}
             <FunnelCtas locale={locale} source="pricing-close" className="mt-8 justify-center" />
-            {/* The same terms at the second door. `demoNote` is stated once
-                per page, at the first door (docs/product/marketing.md) — the
-                trial note is deliberately not: a reader who scrolled five
-                thousand pixels of objections to reach this band is being asked
-                to commit here, and the closing pair carried no terms at all.
-                The divergence is recorded in marketing.md beside that rule.
-                Same `font-medium` as the hero's copy of it, for the same
-                reason. */}
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 font-medium text-pretty text-muted">
-              {t("marketing.pricing.trialNote")}
-            </p>
             <p className="mt-10 text-sm leading-6 text-muted">
               {t("marketing.pricing.stillQuestion")}
             </p>

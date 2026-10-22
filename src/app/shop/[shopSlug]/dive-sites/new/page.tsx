@@ -4,12 +4,14 @@ import { EditorRail, UnsavedSections } from "@/components/editor/EditorRail";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { shopAssistsAvailable } from "@/db/assist-shop";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { routeEditorCopy } from "../_components/route-editor-copy";
+import { siteBriefAssist } from "../_components/SiteAssists";
 import { SiteFields } from "../_components/SiteFields";
 import { SiteFormShell } from "../_components/SiteFormShell";
 import {
@@ -52,7 +54,8 @@ export default function NewDiveSitePage({ params }: { params: Promise<{ shopSlug
 async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string }> }) {
   const { shopSlug } = await params;
   const back = `/shop/${shopSlug}/dive-sites`;
-  const { shop } = await requireShopSurface(shopSlug);
+  const { db, shop } = await requireShopSurface(shopSlug);
+  const canAssist = await shopAssistsAvailable(db, shop.id);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // The species picker previews what a *diver* will read off this site's
@@ -103,6 +106,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
               locale={locale}
               timezone={shop.timezone}
               certificationDescription={t("diveSites.new.certificationDescription")}
+              briefAssist={siteBriefAssist(shopSlug, canAssist, t)}
             />
           </SiteFormShell>
         </div>

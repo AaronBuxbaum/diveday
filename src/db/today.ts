@@ -428,6 +428,13 @@ export type OpenRollCall = {
    * `trips.roll_call_shore_alerted_at`), or null. Optional for the same reason.
    */
   shoreAlertedAt?: Date | null;
+  /**
+   * The latest after-dive checkpoint with any standing result on the trip,
+   * diver or crew, `0` when none. The close-out softens an open count only
+   * when it is this one (dive-domain review of 56ba7c1, auditor F2). Optional
+   * so a gap assembled by hand says nothing, and nothing softens.
+   */
+  latestMarkedDive?: number;
 };
 
 /**
@@ -743,6 +750,11 @@ export async function listRollCallGaps(
       }
     }
 
+    let latestMarkedDive = 0;
+    for (let dive = 1; dive < checkpoints.length; dive++) {
+      if ((recorded[dive] ?? 0) > 0 || (crewRecorded[dive] ?? 0) > 0) latestMarkedDive = dive;
+    }
+
     const base = {
       tripId: trip.id,
       title: trip.title,
@@ -755,6 +767,7 @@ export async function listRollCallGaps(
       stale,
       alertedAt: trip.alertedAt,
       shoreAlertedAt: trip.shoreAlertedAt,
+      latestMarkedDive,
     };
 
     // A human said a diver did not come back. That outranks every other gap on

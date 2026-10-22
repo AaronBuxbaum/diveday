@@ -22,6 +22,7 @@
 // file is imported here, so a stray or orphaned namespace cannot ship.
 
 import activity from "./activity.json";
+import assistsFront from "./assistsFront.json";
 import backup from "./backup.json";
 import benchFollowUp from "./benchFollowUp.json";
 import billing from "./billing.json";
@@ -36,6 +37,7 @@ import closeout from "./closeout.json";
 import counterRentals from "./counterRentals.json";
 import courses from "./courses.json";
 import desk from "./desk.json";
+import deskAssists from "./deskAssists.json";
 import disputeSheet from "./disputeSheet.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
@@ -72,6 +74,7 @@ import whatsapp from "./whatsapp.json";
 import workOrders from "./workOrders.json";
 
 const staff = {
+  assistsFront,
   benchFollowUp,
   calendar,
   emailSettings,
@@ -120,6 +123,7 @@ const staff = {
   participants,
   workOrders,
   desk,
+  deskAssists,
   disputeSheet,
 };
 

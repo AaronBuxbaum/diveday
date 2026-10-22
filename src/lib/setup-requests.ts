@@ -1,5 +1,7 @@
 import { z } from "zod";
 import type { DiverMessageKey } from "@/i18n/messages";
+import { guideHref, guideOfSource, switchingHref } from "./funnel";
+import { getMigrationGuide } from "./migration-guides";
 import { DIVER_EMAIL_MAX } from "./person-fields";
 
 /**
@@ -38,6 +40,56 @@ export const SETUP_CURRENT_SYSTEM_KEYS: Record<SetupCurrentSystem, DiverMessageK
 };
 
 /**
+ * **"Which one?"** (2026-10-22): the two answers that name a product, and so
+ * the only two after which the form asks which. The answer is a switching
+ * guide's slug, the systems DiveDay has a guide for; one with no guide is left
+ * unnamed, and the reply asks.
+ */
+const SETUP_GUIDED_SYSTEMS: readonly SetupCurrentSystem[] = ["booking_system", "shop_software"];
+
+/** Whether the form asks "Which one?" after this answer. */
+export function asksWhichSystem(system: unknown): boolean {
+  return SETUP_GUIDED_SYSTEMS.some((guided) => guided === system);
+}
+
+/**
+ * Which of the two answers each guide's system is. FareHarbor and Rezdy are
+ * booking systems; EVE, DiveShop360 and Smartwaiver are software a dive shop
+ * runs on, Smartwaiver for its releases. A guide missing here is never
+ * preselected or kept, which `setup-requests.test.ts` refuses for every slug.
+ */
+const GUIDE_SYSTEM: Record<string, SetupCurrentSystem> = {
+  fareharbor: "booking_system",
+  rezdy: "booking_system",
+  eve: "shop_software",
+  diveshop360: "shop_software",
+  smartwaiver: "shop_software",
+};
+
+/**
+ * The named system, when it may be kept: a registered guide's slug after one
+ * of the two answers that ask for it, and null otherwise, so a value a crafted
+ * POST put there, or one left behind by a changed answer, is never stored.
+ */
+function systemGuideAfter(system: unknown, guide: unknown): string | null {
+  if (!asksWhichSystem(system) || typeof guide !== "string") return null;
+  return getMigrationGuide(guide) && GUIDE_SYSTEM[guide] ? guide : null;
+}
+
+/**
+ * What the form starts with for a reader who arrived from a switching guide's
+ * door (`?from=switching-<slug>…`): that guide's system, answered and named.
+ * Anything else preselects nothing.
+ */
+export function setupPreselection(
+  source: unknown,
+): { currentSystem: SetupCurrentSystem; currentSystemGuide: string } | null {
+  const guide = guideOfSource(source);
+  const system = guide ? GUIDE_SYSTEM[guide] : undefined;
+  return guide && system ? { currentSystem: system, currentSystemGuide: guide } : null;
+}
+
+/**
  * **The honeypot.** A text box no person sees — off screen, out of the tab
  * order, hidden from assistive technology, `autocomplete="off"` — that a form
  * bot fills in because it fills in everything. A submission carrying a value
@@ -59,6 +111,7 @@ export const SETUP_FIELDS = [
   "region",
   "runsBoat",
   "currentSystem",
+  "currentSystemGuide",
   "contactName",
   "email",
   "phone",
@@ -103,26 +156,32 @@ const PHONE_SHAPE = /^[+\d\s().-]*$/;
 const requiredText = (max: number) =>
   z.string().trim().min(1, "required").max(max, "invalid").refine(isSingleLineText, "invalid");
 
-const setupRequestSchema = z.object({
-  shopName: requiredText(SETUP_TEXT_MAX),
-  region: requiredText(SETUP_TEXT_MAX),
-  runsBoat: z.enum(["yes", "no"], { error: "required" }).transform((value) => value === "yes"),
-  currentSystem: z.enum(SETUP_CURRENT_SYSTEMS, { error: "required" }),
-  contactName: requiredText(SETUP_TEXT_MAX),
-  email: z
-    .string()
-    .trim()
-    .min(1, "required")
-    .max(DIVER_EMAIL_MAX, "invalid")
-    .pipe(z.email("invalid"))
-    .transform((value) => value.toLowerCase()),
-  phone: z
-    .string()
-    .trim()
-    .max(SETUP_PHONE_MAX, "invalid")
-    .regex(PHONE_SHAPE, "invalid")
-    .transform((value) => (value ? value : null)),
-});
+const setupRequestSchema = z
+  .object({
+    shopName: requiredText(SETUP_TEXT_MAX),
+    region: requiredText(SETUP_TEXT_MAX),
+    runsBoat: z.enum(["yes", "no"], { error: "required" }).transform((value) => value === "yes"),
+    currentSystem: z.enum(SETUP_CURRENT_SYSTEMS, { error: "required" }),
+    currentSystemGuide: z.string(),
+    contactName: requiredText(SETUP_TEXT_MAX),
+    email: z
+      .string()
+      .trim()
+      .min(1, "required")
+      .max(DIVER_EMAIL_MAX, "invalid")
+      .pipe(z.email("invalid"))
+      .transform((value) => value.toLowerCase()),
+    phone: z
+      .string()
+      .trim()
+      .max(SETUP_PHONE_MAX, "invalid")
+      .regex(PHONE_SHAPE, "invalid")
+      .transform((value) => (value ? value : null)),
+  })
+  .transform(({ currentSystemGuide, ...answers }) => ({
+    ...answers,
+    currentSystemGuide: systemGuideAfter(answers.currentSystem, currentSystemGuide),
+  }));
 
 export type SetupRequestInput = z.output<typeof setupRequestSchema>;
 
@@ -169,14 +228,16 @@ export type SetupRequestFormState = {
  * (fifth-loop ideas, item 55). The one answer travels in the page's address
  * (`?uses=`), nothing personal with it, so the page can point at the first
  * step of moving across while the reader is most ready to take it. `other`,
- * and any value the list does not hold, gets no extra line.
+ * and any value the list does not hold, gets no extra line. A system the
+ * reader named (`?guide=`, 2026-10-22) links its own guide rather than the
+ * list of them.
  */
 export type SetupSentAdvice = {
   key: DiverMessageKey;
-  link?: { destination: "/switching" | "/switching/spreadsheet"; key: DiverMessageKey };
+  link?: { href: string; key: DiverMessageKey; competitor?: string };
 };
 
-export function setupSentAdvice(uses: unknown): SetupSentAdvice | null {
+export function setupSentAdvice(uses: unknown, guide?: unknown): SetupSentAdvice | null {
   switch (uses) {
     case "paper":
       return { key: "marketing.setUp.sent.paper" };
@@ -184,22 +245,43 @@ export function setupSentAdvice(uses: unknown): SetupSentAdvice | null {
       return {
         key: "marketing.setUp.sent.spreadsheet",
         link: {
-          destination: "/switching/spreadsheet",
+          href: switchingHref("/switching/spreadsheet", "setup-sent"),
           key: "marketing.setUp.sent.spreadsheetLink",
         },
       };
     case "booking_system":
-    case "shop_software":
+    case "shop_software": {
+      const named = systemGuideAfter(uses, guide);
+      const competitor = named ? getMigrationGuide(named)?.competitor : undefined;
       return {
         key: "marketing.setUp.sent.system",
-        link: { destination: "/switching", key: "marketing.setUp.sent.systemLink" },
+        link:
+          named && competitor
+            ? {
+                href: guideHref(named, "setup-sent"),
+                key: "marketing.setUp.sent.systemGuideLink",
+                competitor,
+              }
+            : {
+                href: switchingHref("/switching", "setup-sent"),
+                key: "marketing.setUp.sent.systemLink",
+              },
       };
+    }
     default:
       return null;
   }
 }
 
-/** The "Request sent" page for a reader who answered `system`. */
-export function setupSentPath(base: string, system: SetupCurrentSystem): string {
-  return `${base}?uses=${system}`;
+/**
+ * The "Request sent" page for a reader who answered `system`, and named
+ * `guide` after a booking system or shop software.
+ */
+export function setupSentPath(
+  base: string,
+  system: SetupCurrentSystem,
+  guide?: string | null,
+): string {
+  const named = systemGuideAfter(system, guide);
+  return `${base}?uses=${system}${named ? `&guide=${named}` : ""}`;
 }

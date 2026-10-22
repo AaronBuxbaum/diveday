@@ -150,6 +150,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // The shop's own Claude switch (ADR 20261018-claude-assists): a shop
       // that said no must not come back with assists on.
       "claude_suggestions_enabled",
+      // Off unless the shop said yes: a restore must not send unread recap
+      // highlights for a shop that approves each one.
+      "recap_assist_auto_approve",
       "contact_email",
       "contact_phone",
       "address_street",
@@ -253,6 +256,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.publicYearEnabled,
         shop.padiChecksEnabled,
         shop.claudeSuggestionsEnabled,
+        shop.recapAssistAutoApprove,
         shop.contactEmail,
         shop.contactPhone,
         shop.addressStreet,
@@ -2296,5 +2300,22 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.createdAt,
       ]),
     note: EXPORT_FILE_NOTES["courses.csv"],
+  },
+  {
+    // The shop's own words, drafted and edited by its staff: nothing drafts
+    // them again on a restore. The digest that pins each to its original stays
+    // out (security review L3, N2); an importer recomputes it from the original.
+    file: "shop_text_translations.csv",
+    header: ["subject_kind", "subject_id", "field", "locale", "text", "updated_at"],
+    rows: ({ shopTextTranslationRows }) =>
+      shopTextTranslationRows.map((row) => [
+        row.subjectKind,
+        row.subjectId,
+        row.field,
+        row.locale,
+        row.text,
+        row.updatedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["shop_text_translations.csv"],
   },
 ];

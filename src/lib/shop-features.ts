@@ -26,6 +26,7 @@ export const SHOP_FEATURES = [
   "publicYear",
   "padiChecks",
   "claudeSuggestions",
+  "recapAutoApprove",
 ] as const;
 
 export type ShopFeature = (typeof SHOP_FEATURES)[number];
@@ -39,6 +40,7 @@ export const SHOP_FEATURE_COLUMNS = {
   publicYear: "publicYearEnabled",
   padiChecks: "padiChecksEnabled",
   claudeSuggestions: "claudeSuggestionsEnabled",
+  recapAutoApprove: "recapAssistAutoApprove",
 } as const satisfies Record<ShopFeature, string>;
 
 export type ShopFeatureColumn = (typeof SHOP_FEATURE_COLUMNS)[ShopFeature];
