@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops } from "./schema";
+import { DEMO_SHOP_BRAND_COLOR } from "./seed-identifiers";
 
 const bundled = (file: string) => `/dive-sites/${encodeURIComponent(file)}`;
 
@@ -26,7 +27,7 @@ export const DEMO_SHOP_BRAND = {
   description:
     "Two boats, fourteen divers at most, and a crew that has dived these reefs since 1998. We sail twice a day to Molasses, French and Pickles, and to the Spiegel Grove and the Duane when the current allows.",
   logoUrl: "/demo-shop/blue-mantis-logo.png",
-  brandColor: "#1d5fa3",
+  brandColor: DEMO_SHOP_BRAND_COLOR,
   brandDisplayFont: "outfit",
   brandHeroImageUrl: bundled("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
   // i18n-exempt: a shop writes its own alt text, like its tagline.
