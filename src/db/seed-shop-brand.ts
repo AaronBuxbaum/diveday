@@ -25,7 +25,7 @@ export const DEMO_SHOP_BRAND = {
   tagline: "Small-boat reef and wreck diving out of Key Largo.",
   // i18n-exempt: shop-authored, as above.
   description:
-    "Two boats, fourteen divers at most, and a crew that has dived these reefs since 1998. We sail twice a day to Molasses, French and Pickles, and to the Spiegel Grove and the Duane when the current allows.",
+    "Two boats, fourteen divers at most, and a crew that knows every mooring on the reef. We sail twice a day to Molasses, French and Pickles, and to the Spiegel Grove and the Duane when the current allows.",
   logoUrl: "/demo-shop/blue-mantis-logo.png",
   brandColor: DEMO_SHOP_BRAND_COLOR,
   brandDisplayFont: "outfit",

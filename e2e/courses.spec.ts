@@ -637,6 +637,12 @@ test.describe("staff", () => {
             ? page.getByLabel("Email", { exact: true })
             : page.getByLabel(`Diver ${i + 1} email`);
         await nameField.fill(`Ratio Diver ${label}`);
+        if (i > 0) {
+          await page
+            .getByLabel("Use the main contact’s email for this diver")
+            .nth(i - 1)
+            .uncheck();
+        }
         await emailField.fill(`ratio-${stamp}-${label}@example.com`);
       }
       await acceptAgeAttestation(page);
