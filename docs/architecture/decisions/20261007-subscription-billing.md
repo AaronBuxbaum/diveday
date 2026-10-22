@@ -179,6 +179,11 @@ each action. A manager is refused, as is a session whose JWT still says owner.
   setting, not a code change.
 - `shop_subscriptions` sits outside retention and erasure. It holds no person, only a shop and its
   Stripe handles, and a shop reset keeps it, as it keeps `shop_stripe_accounts`.
+- **Amended by [20261022-pricing-ab-test](20261022-pricing-ab-test.md).** "One monthly price" is
+  now the default arm of a test. `shop_subscriptions` also holds the shop's pricing arm, the numbers
+  Checkout sold it and its paid total; Checkout may send `price_data` lines and a metered price;
+  `pricing_volume_statements` sits beside it, outside retention and the export for the same reason.
+  With the `PRICING_*` env unset, everything above reads as before.
 - **Escape hatch.** If billing moves to another provider, only `stripe-billing.ts`, `events.ts` and
   the route change. The standing mapping and the page read only `shop_subscriptions`. Dropping
   billing entirely is one table and one route.
