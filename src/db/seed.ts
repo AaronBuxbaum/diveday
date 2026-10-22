@@ -352,14 +352,13 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
   await seedDemo(db);
 }
 
-export { DEMO_SHOP_BRAND } from "./seed-shop-brand";
-
 /**
  * The colour a branded minted shop wears: mantis green, chosen because it is
  * not the product's teal and dark enough for white text as typed. Exported for
  * `e2e/storefront-brand.spec.ts`, which proves the storefront wears it.
  */
 export { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
+export { DEMO_SHOP_BRAND } from "./seed-shop-brand";
 
 /**
  * **The brand a minted shop wears when a visual capture or a brand spec asks
