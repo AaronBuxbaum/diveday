@@ -105,7 +105,7 @@ describe("erasing a diver who asked for a date", () => {
     });
   });
 
-  it("deletes a departure child that carries the person, and leaves another shop's lead alone", async () => {
+  it("blanks the person-less departure child of a linked request, and leaves another shop's lead alone", async () => {
     const { db, shop, diver, trip, actor } = await erasable();
     const linkedLead = (
       await askForDate(db, { shopId: shop.id, interest: "wrecks", email: "esme@example.com" })
@@ -129,7 +129,11 @@ describe("erasing a diver who asked for a date", () => {
 
     await anonymizeDiver(db, { shopId: shop.id, personId: diver.id, actorPersonId: actor });
 
-    expect(await db.select().from(leads).where(eq(leads.parentLeadId, linkedLead))).toHaveLength(0);
+    // The child never carries the person (security review of #2656, MAJOR 2):
+    // it holds the request's snapshot, and the erasure blanks it with its parent.
+    const children = await db.select().from(leads).where(eq(leads.parentLeadId, linkedLead));
+    expect(children).toHaveLength(1);
+    expect(children[0]).toMatchObject({ personId: null, name: null, email: null, phone: null });
     expect(await leadRow(db, linkedLead)).toMatchObject({ name: null, email: null });
     expect(await leadRow(db, theirs)).toMatchObject({ name: "Esme", email: "esme@example.com" });
   });

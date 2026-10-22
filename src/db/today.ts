@@ -1015,13 +1015,22 @@ export async function openAfterDiveRollCalls(
  * Today row can offer in one tap and fall back to the composer exactly like the
  * trip page's panel (`OfferSeat`).
  */
-export type SeatWantedFront = {
-  count: number;
+export type SeatWantedLead = {
   leadId: string;
   personName: string;
   personEmail: string | null;
   invitedAt: Date | null;
+  /** The seats this lead waits for, themselves included. */
+  partySize: number;
 };
+
+/**
+ * How many want in, and every one of them in the order they asked: the row
+ * offers the first whose whole party fits the open seats (dive-domain review
+ * of #2656, m2), as the roll does, never "a seat opened" to a party of four
+ * for one seat.
+ */
+export type SeatWantedFront = { count: number; leads: SeatWantedLead[] };
 
 async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
   const fronts = new Map<string, SeatWantedFront>();
@@ -1031,6 +1040,7 @@ async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
       tripId: leads.tripId,
       leadId: leads.id,
       invitedAt: leads.offeredAt,
+      partySize: leads.partySize,
       personName: people.fullName,
       personEmail: people.email,
     })
@@ -1059,20 +1069,17 @@ async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
     .orderBy(asc(leads.askedAt), asc(people.fullName), asc(leads.id));
   for (const row of rows) {
     if (!row.tripId) continue;
-    const existing = fronts.get(row.tripId);
-    // Rows arrive oldest-first, so the first seen per trip is the true front of
-    // the line; later ones only bump the depth count.
-    if (existing) {
-      existing.count += 1;
-      continue;
-    }
-    fronts.set(row.tripId, {
-      count: 1,
+    // Rows arrive oldest-first, so each trip's list is in the order people asked.
+    const front = fronts.get(row.tripId) ?? { count: 0, leads: [] };
+    front.count += 1;
+    front.leads.push({
       leadId: row.leadId,
       personName: row.personName,
       personEmail: row.personEmail,
       invitedAt: row.invitedAt,
+      partySize: row.partySize ?? 1,
     });
+    fronts.set(row.tripId, front);
   }
   return fronts;
 }

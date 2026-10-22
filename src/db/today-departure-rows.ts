@@ -122,6 +122,9 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
     // do (design/principles.md #10): with only the list to offer to, the tap is
     // the panel's door; with someone waiting it offers the seat in place.
     const waiting = front?.count ?? 0;
+    // The one tap goes to the first who asked whose whole party fits; none
+    // fitting leaves the row and its link to the panel, with no tap to send.
+    const fits = front?.leads.find((lead) => lead.partySize <= openSeats);
     const around =
       openSeats > 0 && urgencyFor(trip.startsAt, now) !== "later"
         ? lastMinuteWindows.filter((entry) =>
@@ -143,14 +146,14 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         // middle-click or an open-in-new-tab lands on the trip's panel.
         actionLabel: offerSeatActionText(t),
         href: `${tripHref}#who-wants-in`,
-        ...(front
+        ...(fits
           ? {
               offer: {
                 tripId: trip.id,
-                leadId: front.leadId,
-                personName: front.personName,
-                personEmail: front.personEmail,
-                offeredAt: front.invitedAt,
+                leadId: fits.leadId,
+                personName: fits.personName,
+                personEmail: fits.personEmail,
+                offeredAt: fits.invitedAt,
                 bookingPath: publicTripPath(shopSlug, trip.id),
                 tripTitle: trip.title,
                 tripWhen: when,

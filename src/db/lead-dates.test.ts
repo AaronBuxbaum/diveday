@@ -565,6 +565,17 @@ describe("attachDateLeadsToDeparture", () => {
       email: "wren@example.com",
     });
     if (!diver) throw new Error("diver insert failed");
+    const [own] = await db
+      .insert(leads)
+      .values({
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        personId: diver.id,
+        partySize: 1,
+      })
+      .returning({ id: leads.id });
     const linked = (
       await askForDate(db, { shopId: shop.id, interest: "reef", email: "wren@example.com" })
     ).id;
@@ -576,18 +587,60 @@ describe("attachDateLeadsToDeparture", () => {
     };
     expect(await attachDateLeadsToDeparture(db, input)).toBe(1);
     expect(await attachDateLeadsToDeparture(db, input)).toBe(0);
+    // Her own wait-list row is untouched and still the only row that is hers.
     const rows = await db
       .select()
       .from(leads)
       .where(and(eq(leads.tripId, trip.id), eq(leads.personId, diver.id)));
-    expect(rows).toHaveLength(1);
-    // A linked lead reads its name from the person, so the child keeps no snapshot.
-    expect(rows[0]).toMatchObject({
-      personId: diver.id,
-      name: null,
-      email: null,
-      parentLeadId: linked,
+    expect(rows.map((row) => row.id)).toEqual([own?.id]);
+    expect(rows[0]?.parentLeadId).toBeNull();
+  });
+
+  // Security review of #2656, MAJOR 2 (H-13): the email link on a date lead is a
+  // snapshot for erasure, set from an unauthenticated form on the address
+  // alone. It must never make the request's departure row that person's.
+  it("keeps the child person-less on the request's own snapshot, even when the address matched a diver", async () => {
+    const { db, shop, trip, author } = await attachContext();
+    const ana = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Ana Real",
+      email: "ana-real@example.com",
     });
+    if (!ana) throw new Error("diver insert failed");
+    // "Bob" types Ana's address on the public form.
+    const borrowed = (
+      await askForDate(db, {
+        shopId: shop.id,
+        interest: "wrecks",
+        name: "Bob Borrower",
+        email: "ANA-REAL@example.com",
+        phone: "+1 305 555 0199",
+      })
+    ).id;
+    expect((await leadRow(db, borrowed)).personId).toBe(ana.id);
+
+    expect(
+      await attachDateLeadsToDeparture(db, {
+        shopId: shop.id,
+        tripId: trip.id,
+        leadIds: [borrowed],
+        createdByPersonId: author,
+      }),
+    ).toBe(1);
+    const [child] = await db.select().from(leads).where(eq(leads.parentLeadId, borrowed));
+    expect(child).toMatchObject({
+      personId: null,
+      name: "Bob Borrower",
+      email: "ana-real@example.com",
+      phone: "+1 305 555 0199",
+    });
+    // Ana is on nobody's list for this departure.
+    expect(
+      await db
+        .select()
+        .from(leads)
+        .where(and(eq(leads.tripId, trip.id), eq(leads.personId, ana.id))),
+    ).toEqual([]);
   });
 
   it("reaches nothing outside this shop, and writes nothing for a rehearsal or a stranger author", async () => {

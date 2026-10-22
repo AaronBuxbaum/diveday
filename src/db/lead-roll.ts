@@ -1,4 +1,5 @@
 import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, notExists } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import { DEPARTURE_BUFFER_MS, hasSailed } from "@/lib/trips";
 import type { AppDb } from "./client";
@@ -20,7 +21,26 @@ import { liveTrip, notRehearsal } from "./trips-live";
  * seat on the target is added. Nothing here ranks anyone: every lead travels.
  * A cold invitation (`asked_by = 'shop'`) was the shop's outreach for that
  * date, and stays there.
+ *
+ * **A date request attached to a departure is not a wait list** (dive-domain
+ * review of #2656, M1). The builder's child of a `date` lead was a contact the
+ * shop chose to work by hand on the date it built; on main a `trip_invitations`
+ * row never rolled and was never auto-invited. It neither travels nor is
+ * invited by the roll: nothing checked that the asker fits the next date, and
+ * the roll's mail would tell them a date they never chose filled.
  */
+
+const requestParent = alias(leads, "request_parent");
+
+/** The departure row is not the child of a diver's date request. */
+function notADateRequest(db: AppDb) {
+  return notExists(
+    db
+      .select({ id: requestParent.id })
+      .from(requestParent)
+      .where(and(eq(requestParent.id, leads.parentLeadId), eq(requestParent.scope, "date"))),
+  );
+}
 
 /** Copy one departure's waiting leads onto another of this shop's. Returns the new leads. */
 async function copyLeads(
@@ -42,6 +62,7 @@ async function copyLeads(
         eq(leads.tripId, input.fromTripId),
         eq(leads.askedBy, "diver"),
         isNotNull(leads.personId),
+        notADateRequest(db),
         input.uninvitedOnly ? isNull(leads.offeredAt) : undefined,
       ),
     )
@@ -187,6 +208,7 @@ export async function rollSailedSeriesLeads(
         eq(leads.shopId, trips.shopId),
         eq(leads.askedBy, "diver"),
         isNull(leads.offeredAt),
+        notADateRequest(db),
       ),
     )
     .where(
@@ -241,6 +263,7 @@ export async function rollSailedSeriesLeads(
           eq(leads.tripId, next.id),
           eq(leads.askedBy, "diver"),
           isNull(leads.offeredAt),
+          notADateRequest(db),
           notExists(db.select({ id: bookings.id }).from(bookings).where(seatedOn(next.id))),
         ),
       )

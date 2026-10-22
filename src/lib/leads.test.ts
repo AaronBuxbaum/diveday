@@ -383,6 +383,32 @@ describe("isRecipientEligibleForDeal & filterEligibleLastMinuteRecipients", () =
     expect(isRecipientEligibleForDeal(ow, null, course)).toBe(false);
   });
 
+  it("keeps a diver without the departure's specialty or nitrox card out of a level-less charter's deal", () => {
+    // A 30 m wreck charter whose site asks for Deep and nobody typed a rung
+    // (dive-domain review of #2656, m1): an Open Water diver without Deep does not fit.
+    const deep = requires(null, { specialties: ["deep"] });
+    expect(isRecipientEligibleForDeal(ow, deep)).toBe(false);
+    expect(isRecipientEligibleForDeal({ ...ow, specialties: ["deep" as const] }, deep)).toBe(true);
+    expect(isRecipientEligibleForDeal(recipient("Anon", "unknown"), deep)).toBe(false);
+
+    const enrichedAir = requires(null, { nitrox: true });
+    expect(isRecipientEligibleForDeal(ow, enrichedAir)).toBe(false);
+    expect(
+      isRecipientEligibleForDeal(
+        {
+          ...ow,
+          certification: { level: "open_water", noCertificationDeclared: false, nitrox: true },
+        },
+        enrichedAir,
+      ),
+    ).toBe(true);
+
+    // A rung and a card: both must hold.
+    const both = requires("advanced_open_water", { specialties: ["deep"] });
+    expect(isRecipientEligibleForDeal(aow, both)).toBe(false);
+    expect(isRecipientEligibleForDeal({ ...aow, specialties: ["deep" as const] }, both)).toBe(true);
+  });
+
   it("filterEligibleLastMinuteRecipients returns only eligible recipients", () => {
     const list = [uncert, ow, aow, rescue];
     const aowCourse = { slug: "advanced-open-water-diver", title: "Advanced Open Water Diver" };

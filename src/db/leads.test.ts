@@ -474,4 +474,22 @@ describe("a shop-asked lead and a diver's own ask are one row", () => {
     const [after] = await db.select().from(leads).where(eq(leads.id, leadId));
     expect(after?.askedBy).toBe("diver");
   });
+
+  // Security review of #2656, minor 3: the form is unauthenticated, so a
+  // submit under another name with this diver's address may be a second human.
+  // It must not reclassify the shop's invitation or rewrite the party.
+  it("leaves a shop-asked row alone when someone asks under another name with the diver's address", async () => {
+    const { db, shop, fullTrip, leadId } = await diverAndOwner();
+    await db.update(leads).set({ askedBy: "shop", partySize: 1 }).where(eq(leads.id, leadId));
+    const again = await askForDeparture(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      ...visitor,
+      fullName: "Someone Else",
+      partySize: 3,
+    });
+    expect(again).toMatchObject({ ok: false, reason: "already_waitlisted", leadId });
+    const [after] = await db.select().from(leads).where(eq(leads.id, leadId));
+    expect(after).toMatchObject({ askedBy: "shop", partySize: 1 });
+  });
 });

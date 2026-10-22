@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { heldSendPayloadSchema } from "@/lib/held-sends";
 import { lastMinuteDealDiscount } from "@/lib/last-minute-list";
@@ -6,6 +7,7 @@ import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { askAnytime, askForDeparture } from "./leads";
+import { people, specialtyCertifications } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   getActiveTripPromoByCode,
@@ -213,7 +215,19 @@ describe("the deal: an offer with a discount (in-memory PGlite)", () => {
       shopId: shop.id,
       fullName: "Wren Ostrowski",
       email: "wren@example.com",
-      declaration: { level: "advanced_open_water" as const, noCertification: false, nitrox: false },
+      declaration: { level: "advanced_open_water" as const, noCertification: false, nitrox: true },
+    });
+    // The Spiegel Grove asks for a Deep card and an enriched-air card as well
+    // as the rung, and the deal reaches only a diver who holds them
+    // (dive-domain review of #2656, m1).
+    const [wren] = await db.select().from(people).where(eq(people.email, "wren@example.com"));
+    if (!wren) throw new Error("expected Wren's record");
+    await db.insert(specialtyCertifications).values({
+      shopId: shop.id,
+      personId: wren.id,
+      agency: "padi",
+      specialty: "deep",
+      identifier: "DEEP-1",
     });
 
     const outcome = await sendDeal(

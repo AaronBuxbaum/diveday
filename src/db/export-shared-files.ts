@@ -537,8 +537,10 @@ export const LEADS_CSV = sharedFile<ShopRow<"leadRows">>({
     { header: "promo_id", in: "shop", value: (row) => row.promoId },
     // When the shop closed the lead, and how: `booked` when a seat answered it,
     // `done` when staff marked it, `unsubscribed` when the diver left the list.
-    { header: "closed_at", in: "both", value: (row) => row.closedAt },
-    { header: "closed_as", in: "both", value: (row) => row.closedAs },
+    // The shop's bookkeeping, not the diver's, as `handled_as` was on main
+    // (security review of #2656, minor 4).
+    { header: "closed_at", in: "shop", value: (row) => row.closedAt },
+    { header: "closed_as", in: "shop", value: (row) => row.closedAs },
   ],
   shop: {
     rows: ({ leadRows }) => leadRows,

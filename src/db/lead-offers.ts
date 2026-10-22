@@ -1,14 +1,17 @@
 import {
   and,
   eq,
+  exists,
   gt,
   inArray,
   isNotNull,
   isNull,
   ne,
+  not,
   notExists,
   notInArray,
   or,
+  type SQL,
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -95,6 +98,7 @@ async function getOfferContext(db: AppDb, shopId: string, tripId: string, leadId
     .select({
       lead: leads,
       parentScope: parentLead.scope,
+      parentClosedAt: parentLead.closedAt,
       person: people,
       trip: trips,
       shop: shops,
@@ -245,6 +249,19 @@ export async function offerSeats(
 ): Promise<SeatOffersOutcome> {
   const leadIds = [...new Set(input.leadIds)];
   const tripRow = await getTripWithBooked(db, input.shopId, input.tripId);
+  // Read when the held send fires, not when it was held (dive-domain review of
+  // #2656, m3): a departure cancelled, held for conditions, gone or made a
+  // rehearsal during the hold offers nobody, with or without a deal, and
+  // nothing is stamped. The same checks the `departure_note` send makes.
+  const offerable =
+    tripRow !== null &&
+    !tripRow.isRehearsal &&
+    tripRow.status === "scheduled" &&
+    !tripRow.conditionsHold &&
+    tripRow.startsAt > nowDate();
+  if (!offerable && !input.discount) {
+    return { results: leadIds.map((leadId) => ({ leadId, delivery: "fallback" as const })) };
+  }
   const found =
     tripRow && !tripRow.isRehearsal
       ? await db
@@ -273,9 +290,12 @@ export async function offerSeats(
       inReachDate.add(row.id);
     }
   }
+  // Nobody already holding a seat on this departure is offered one, whatever id
+  // was posted: the panel hides them, and the server does not rely on it.
+  const aboard = new Set(tripRow ? await seatedPersonIds(db, input.shopId, tripRow.id) : []);
   const targets = leadIds.filter((id) => {
     const lead = byId.get(id);
-    if (!lead) return false;
+    if (!lead || (lead.personId && aboard.has(lead.personId))) return false;
     if (lead.scope === "anytime") return eligibleAnytime.has(id);
     if (lead.scope === "date") return inReachDate.has(id);
     return lead.scope === "departure" && lead.tripId === input.tripId;
@@ -300,16 +320,8 @@ export async function offerSeats(
     getShopById(db, input.shopId),
     getShopStripeAccount(db, input.shopId),
   ]);
-  if (
-    !shop ||
-    !tripRow ||
-    // A rehearsal is never sold or announced (ADR 20261012-rehearsal-departures).
-    tripRow.isRehearsal ||
-    tripRow.status !== "scheduled" ||
-    tripRow.startsAt <= nowDate()
-  ) {
-    return refused("trip_unavailable");
-  }
+  // A rehearsal is never sold or announced (ADR 20261012-rehearsal-departures).
+  if (!shop || !tripRow || !offerable) return refused("trip_unavailable");
   const openSeats = spotsRemaining({ capacity: tripRow.capacity, booked: tripRow.booked });
   if (openSeats <= 0) return refused("trip_full");
   if (!canAcceptPayments(account)) return refused("not_connected");
@@ -382,6 +394,21 @@ export async function offerSeats(
   };
 }
 
+/** The people holding a seat on this departure that is not cancelled. */
+async function seatedPersonIds(db: AppDb, shopId: string, tripId: string): Promise<string[]> {
+  const rows = await db
+    .select({ personId: bookings.personId })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        ne(bookings.status, "cancelled"),
+      ),
+    );
+  return rows.map((row) => row.personId);
+}
+
 /**
  * Write each target's departure row, then send. A lead that is not a target
  * (another shop's id, an anytime lead that does not clear the filter) answers
@@ -433,7 +460,10 @@ async function deliverTargets(
  * The departure row an offer goes out on. A departure lead is its own row. An
  * anytime lead is copied to one for this trip (`parent_lead_id` = the anytime
  * lead): one row per person per departure, so a diver who already has a row here
- * (waiting, or invited before) keeps it and it gains the parent and the deal. A
+ * (waiting, or invited before) keeps it, and it gains only the deal. It is never
+ * re-parented onto the list (security review of #2656, MAJOR 1): the row stays
+ * what the diver or the shop made it, so its later offers keep the person's own
+ * way out and the roll keeps reading it as the wait list it is. A
  * row whose last commercial email is inside the 24-hour window is
  * `window_taken`, left exactly as it is: the blast skips that diver rather than
  * failing (#2133). Null when the lead names nobody this shop can write to.
@@ -509,13 +539,12 @@ async function departureRowToOffer(
   ) {
     return "window_taken";
   }
-  await db
-    .update(leads)
-    .set({
-      parentLeadId: existing.parentLeadId ?? source.id,
-      ...(input.promoId ? { promoId: input.promoId } : {}),
-    })
-    .where(and(eq(leads.id, existing.id), eq(leads.shopId, source.shopId)));
+  if (input.promoId) {
+    await db
+      .update(leads)
+      .set({ promoId: input.promoId })
+      .where(and(eq(leads.id, existing.id), eq(leads.shopId, source.shopId)));
+  }
   return existing.id;
 }
 
@@ -592,11 +621,19 @@ async function sendOffer(
   // Before anything about the send itself: a diver who opted out is
   // `opted_out` whether or not this deployment could have emailed them.
   if (person.courtesyEmailOptOutAt) return { delivery: "opted_out", queued: false };
+  // An offer the last-minute list made possible is the list's to stop
+  // (security review of #2656, MAJOR 1): once the diver has left the list, no
+  // later offer goes out on the row it made, so the link in the first mail did
+  // what it said. The drain asks the same before a retry
+  // (`courtesyRecipientOptedOut`).
+  const fromList = lead.parentLeadId !== null && context.parentScope === "anytime";
+  if (fromList && context.parentClosedAt) return { delivery: "opted_out", queued: false };
   // An offer copied from a last-minute-list lead carries that list's own way
-  // out (the lead's token, which closes the lead), the one the diver joined; any
-  // other commercial offer carries the person's courtesy opt-out.
+  // out (the lead's token, which closes the lead and with it every offer on
+  // this row), the one the diver joined; any other commercial offer, a diver's
+  // own wait-list row included, carries the person's courtesy opt-out.
   const unsubscribeToken =
-    lead.parentLeadId && context.parentScope === "anytime"
+    fromList && lead.parentLeadId
       ? await issueLeadUnsubscribeToken(db, { shopId: input.shopId, leadId: lead.parentLeadId })
       : await issuePersonCourtesyEmailUnsubscribeToken(db, {
           shopId: input.shopId,
@@ -697,6 +734,21 @@ async function releaseOfferSend(db: AppDb, shopId: string, leadId: string, claim
     .where(and(eq(leads.id, leadId), eq(leads.shopId, shopId), eq(leads.emailedAt, claim.at)));
 }
 
+const listParent = alias(leads, "list_parent");
+
+/** A deal row the last-minute list made: shop-asked, copied from an anytime lead. */
+function madeByTheList(db: AppDb): SQL {
+  return sql`${and(
+    eq(leads.askedBy, "shop"),
+    exists(
+      db
+        .select({ id: listParent.id })
+        .from(listParent)
+        .where(and(eq(listParent.id, leads.parentLeadId), eq(listParent.scope, "anytime"))),
+    ),
+  )}`;
+}
+
 /**
  * **How many offers this departure can honor right now.** Measured as a seat is
  * measured when it is sold (`createBookingRecord`, `moveBooking`): the boat's
@@ -704,10 +756,13 @@ async function releaseOfferSend(db: AppDb, shopId: string, leadId: string, claim
  * it needs and the ratio its crew allows. A lead asks for a diver's seat, so the
  * divers-only limit binds. Every offer already out to someone who has not taken a
  * seat holds as many of those seats as their party asked for, so they are taken
- * off. **An offer that carries a deal does not count** (ADR
+ * off. **A row a deal made off the last-minute list does not count** (ADR
  * 20261017-one-lead-with-a-scope, R2): one blast to forty people must not push a
  * three-seat departure to "0 invitable" and stop the roll inviting real
- * wait-listers. Advice for whom to offer, never a gate: the seat is still
+ * wait-listers. Only the rows the list made (`asked_by = 'shop'`, parent an
+ * anytime lead): a deal that reaches a diver's own wait-list row or the shop's
+ * cold invitation leaves the seats that offer holds counted (dive-domain review
+ * of #2656, M3), so the roll never promises them twice. Advice for whom to offer, never a gate: the seat is still
  * measured under the trip's lock when the diver books. Exported for its test
  * (agency review G5 of #2226).
  */
@@ -728,7 +783,7 @@ export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect)
         eq(leads.shopId, trip.shopId),
         eq(leads.tripId, trip.id),
         isNotNull(leads.offeredAt),
-        isNull(leads.promoId),
+        or(isNull(leads.promoId), not(madeByTheList(db))),
         notExists(
           db
             .select({ id: bookings.id })

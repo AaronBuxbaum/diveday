@@ -1,0 +1,6 @@
+## leads.csv (3 rows)
+# Every time this diver asked the shop for a seat, or the shop offered one: a wait list, a date they asked for, the last-minute list.
+id | scope | asked_by | trip_title | trip_starts_at | course_title | interest | experience_level | timing | available_from | available_until | party_size | message | asked_at | offered_at | emailed_at
+string:<uuid> | string:anytime | string:diver | <null> | <null> | <null> | <null> | <null> | <null> | string:2026-06-01 | <null> | <null> | <null> | <instant> | <null> | <null>
+string:<uuid> | string:date | string:diver | <null> | <null> | <null> | string:wrecks | <null> | <null> | <null> | <null> | <null> | <null> | <instant> | <null> | <null>
+string:<uuid> | string:departure | string:diver | string:Saturday Two-Tank — Benwood & Christ of the Abyss | <instant> | <null> | <null> | <null> | <null> | <null> | <null> | number:2 | <null> | <instant> | <null> | <null>

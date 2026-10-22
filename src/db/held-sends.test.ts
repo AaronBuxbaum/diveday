@@ -145,4 +145,56 @@ describe("held sends", () => {
     expect(swept.map((row) => row.id)).toEqual([early.id]);
     expect(await db.select().from(heldSends).where(eq(heldSends.id, late.id))).toHaveLength(1);
   });
+
+  // Security review of #2656, minor 2: a row held by the release before this
+  // one (a `waitlist_invite` or a `last_minute_deal`) no longer parses. It
+  // must cost only itself, never another shop's due waiver or reschedule notice.
+  it("claims every readable due send when one held by an older release cannot be read", async () => {
+    const { db, shop, seat, owner } = await fixture();
+    const good = await holdSend(db, {
+      shopId: shop.id,
+      actorPersonId: owner.personId,
+      now,
+      payload: {
+        kind: "waiver_send",
+        bookingIds: [seat.bookingId],
+        channel: "email",
+        surface: "roster",
+        tripId: seat.tripId,
+      },
+    });
+    const [old] = await db
+      .insert(heldSends)
+      .values({
+        shopId: shop.id,
+        actorPersonId: owner.personId,
+        kind: "waitlist_invite",
+        runAt: good.runAt,
+        payload: { kind: "waitlist_invite", tripId: seat.tripId, entryIds: [] },
+      } as unknown as typeof heldSends.$inferInsert)
+      .returning();
+    if (!old) throw new Error("setup: old row missing");
+
+    const swept = await claimDueHeldSends(db, good.runAt);
+    expect(swept.map((row) => row.id)).toEqual([good.id]);
+    // The unreadable one is gone too: nothing could ever run it.
+    expect(await db.select().from(heldSends).where(eq(heldSends.id, old.id))).toHaveLength(0);
+    expect(await claimHeldSend(db, shop.id, old.id, good.runAt)).toEqual({ status: "gone" });
+  });
+
+  it("answers gone for a single claim of a send it cannot read", async () => {
+    const { db, shop, seat, owner } = await fixture();
+    const [old] = await db
+      .insert(heldSends)
+      .values({
+        shopId: shop.id,
+        actorPersonId: owner.personId,
+        kind: "last_minute_deal",
+        runAt: now,
+        payload: { kind: "last_minute_deal", tripId: seat.tripId },
+      } as unknown as typeof heldSends.$inferInsert)
+      .returning();
+    if (!old) throw new Error("setup: old row missing");
+    expect(await claimHeldSend(db, shop.id, old.id, now)).toEqual({ status: "gone" });
+  });
 });

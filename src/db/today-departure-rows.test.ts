@@ -100,6 +100,53 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     expect(row?.offer?.bookingPath).toBe(`/s/${shop.slug}/trips/${reef.id}`);
   });
 
+  // Dive-domain review of #2656, m2: one tap must not email "a seat opened" to
+  // a party the open seats cannot hold whole; the roll already skips them.
+  it("offers the one tap to the first party that fits whole, and to nobody when none does", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const open = reef.capacity - reef.booked;
+    expect(open).toBeGreaterThan(0);
+    const [big, small] = await db
+      .insert(people)
+      .values([
+        { shopId: shop.id, fullName: "Big Party", email: "big-party@example.com" },
+        { shopId: shop.id, fullName: "Solo Diver", email: "solo@example.com" },
+      ])
+      .returning();
+    if (!big || !small) throw new Error("could not seed waiters");
+    const asked = {
+      shopId: shop.id,
+      tripId: reef.id,
+      scope: "departure",
+      askedBy: "diver",
+    } as const;
+    await db.insert(leads).values({
+      ...asked,
+      personId: big.id,
+      partySize: open + 1,
+      askedAt: new Date("2020-01-01T00:00:00.000Z"),
+    });
+
+    const alone = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const tooBig = alone.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
+    expect(tooBig?.detail).toContain("1 want in");
+    expect(tooBig?.offer).toBeUndefined();
+
+    await db.insert(leads).values({
+      ...asked,
+      personId: small.id,
+      partySize: 1,
+      askedAt: new Date("2020-02-01T00:00:00.000Z"),
+    });
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
+    expect(row?.detail).toContain("2 want in");
+    expect(row?.offer?.personName).toBe("Solo Diver");
+  });
+
   it("does not count a lead who already holds a seat (seated means hidden)", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);

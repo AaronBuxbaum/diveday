@@ -902,6 +902,24 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   const nitroxRows = await readScoped(tx, "nitroxCertifications", scope);
 
   const leadRows = await readScoped(tx, "leads", scope);
+  // A wait-list row names a departure the diver holds no seat on, so its title
+  // and time are read here: the lookup above covers only the diver's bookings.
+  const leadTripIds = [
+    ...new Set(
+      leadRows.flatMap((row) => (row.tripId && !tripTitle.has(row.tripId) ? [row.tripId] : [])),
+    ),
+  ];
+  if (leadTripIds.length > 0) {
+    const leadTrips = await tx
+      .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt })
+      .from(trips)
+      // diveday:allow-deleted-trips: a diver's own export names every departure they asked about.
+      .where(and(inArray(trips.id, leadTripIds), eq(trips.shopId, shopId)));
+    for (const row of leadTrips) {
+      tripTitle.set(row.id, row.title);
+      tripStartsAt.set(row.id, row.startsAt);
+    }
+  }
 
   const paymentEventRows = await readScoped(tx, "bookingPaymentEvents", scope);
 
