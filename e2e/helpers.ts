@@ -1039,6 +1039,7 @@ export async function openTodayBoatFolds(page: Page): Promise<void> {
   const folds = page.locator("details").filter({
     has: page.locator("> summary", { hasText: /^and \d+ more$/ }),
   });
+  // diveday:allow-e2e-hygiene empty-all: no fold is a boat of six rows or fewer, all shown; the caller then waits for its own row, which fails loudly if it is missing.
   for (const fold of await folds.all()) await openIfClosed(fold);
 }
 
