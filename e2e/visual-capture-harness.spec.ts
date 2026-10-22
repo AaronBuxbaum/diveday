@@ -15,6 +15,7 @@ import {
   PHONE_VIEWPORT,
   SURFACE_TIMEOUT_MS,
   VIEWPORTS,
+  VISUAL_STEP_BOUNDS,
   waitForSiteLibrary,
   waitForSiteMap,
   withRendererBound,
@@ -23,6 +24,7 @@ import {
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
+test.use(VISUAL_STEP_BOUNDS);
 
 /**
  * The capture harness's own escape hatch, exercised on purpose.

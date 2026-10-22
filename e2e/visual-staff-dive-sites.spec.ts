@@ -14,12 +14,14 @@ import {
   installVisualBuildGuard,
   openStandaloneLibraryMapPin,
   SURFACE_TIMEOUT_MS,
+  VISUAL_STEP_BOUNDS,
   waitForSiteLibrary,
   waitForSiteMap,
 } from "./visual-harness";
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
+test.use(VISUAL_STEP_BOUNDS);
 
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {

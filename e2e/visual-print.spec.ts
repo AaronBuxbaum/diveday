@@ -13,10 +13,12 @@ import {
   openDisputeSheet,
   openReefTrip,
   SURFACE_TIMEOUT_MS,
+  VISUAL_STEP_BOUNDS,
 } from "./visual-harness";
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
+test.use(VISUAL_STEP_BOUNDS);
 
 /**
  * Print / Save-as-PDF surfaces. The complete trip packet, manifest, prep list,

@@ -30,11 +30,13 @@ import {
   REEF_TRIP,
   SURFACE_TIMEOUT_MS,
   staffCopy,
+  VISUAL_STEP_BOUNDS,
   waitForHashLanding,
 } from "./visual-harness";
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
+test.use(VISUAL_STEP_BOUNDS);
 
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode`, () => {

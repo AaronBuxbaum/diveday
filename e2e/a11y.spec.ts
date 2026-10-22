@@ -17,7 +17,6 @@ import {
   STAFF_DAY_HEADING,
   seededTripId,
   sendWaiverForFirstDiver,
-  signOut,
   threadStatus,
 } from "./helpers";
 import { mintOnboardFormPath } from "./setup-link";
@@ -684,7 +683,10 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
       capacity: 6,
       price: 110,
     });
-    await signOut(page);
+    // `clearCookies` rather than `signOut()`, as in the booking scan above: a
+    // visitor is anyone without the staff cookie, and the identity menu's
+    // sign-out would revoke the worker's cached staff session for the next test.
+    await page.context().clearCookies();
 
     // Two seats, because that is what puts an unclaimed seat — and therefore a
     // claim link — on the confirmation (ADR 20260804-seat-claim-links).

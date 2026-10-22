@@ -13,8 +13,12 @@
 // This reads the diff and names the specs, in two tiers:
 //
 //   strong — a spec file or e2e helper the diff edits; a spec that contains text the diff
-//            removed (a locale value, JSX text, a seed or content literal); a spec that
-//            navigates to a route whose own directory the diff edits.
+//            removed (a locale value, JSX text, a seed or content literal, a seeded name); a
+//            spec that reads an en-US locale key whose value the diff changed, by its full
+//            dotted key (`staffCopy("today.blockerRow.waiverLapsed")`); a spec that names a
+//            seeded record or seed constant on a line the diff changed (a booking added to it
+//            moves its counts), when few specs do; a spec that navigates to a route whose own
+//            directory the diff edits.
 //   reach  — a spec that navigates to a route whose page or layout imports, through any chain,
 //            a module the diff edits. Wide by nature (a barrel reaches everything), so
 //            `verify-push.mjs` runs it only while the estimated time stays inside a budget.
@@ -92,6 +96,19 @@ const MIN_FRAGMENT = 12;
 /** Files whose string literals are copy a spec may assert on, beyond the locale bundles. */
 const LITERAL_SOURCES = /^src\/(?:db\/seed[^/]*\.ts|content\/)/;
 
+/** The demo seed's modules: what they name, specs assert on by name and by count. */
+const SEED_SOURCE = /^src\/db\/seed[^/]*\.ts$/;
+
+/**
+ * A seeded proper name — a person, a boat, a site — is shorter than {@link MIN_FRAGMENT}
+ * ("Marcus Webb", quoted by thirteen specs) but two capitalised words are still specific.
+ */
+const SEED_NAME = /^\p{Lu}[\p{L}'’.-]+(?:\s+\p{Lu}[\p{L}'’.-]*)+$/u;
+const MIN_SEED_NAME = 7;
+
+/** An upper-case constant a seed module exports and a spec imports (`LOST_MASK`). */
+const SEED_CONSTANT = /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b|\b[A-Z]{4,}\b/g;
+
 const SOURCE_EXT = /\.(?:ts|tsx|mts|mjs|js|jsx)$/;
 
 /** A test file changes no page, so it selects no spec by route or import. */
@@ -137,15 +154,18 @@ export function parseDiff(text) {
   return files;
 }
 
+const quotable = (piece) =>
+  piece.length >= MIN_FRAGMENT && /[A-Za-z]{3}/.test(piece) && /\s/.test(piece);
+const seedQuotable = (piece) =>
+  quotable(piece) || (piece.length >= MIN_SEED_NAME && SEED_NAME.test(piece));
+
 /** Pieces of a message or literal a spec could quote: split around ICU and template holes. */
-function fragmentsOf(value) {
+function fragmentsOf(value, keep = quotable) {
   return value
     .replace(/\\(["'\\])/g, "$1")
     .split(/\$\{[^}]*\}|\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|<\/?[a-zA-Z][^>]*>|\\n/)
     .map((piece) => piece.trim())
-    .filter(
-      (piece) => piece.length >= MIN_FRAGMENT && /[A-Za-z]{3}/.test(piece) && /\s/.test(piece),
-    );
+    .filter(keep);
 }
 
 /**
@@ -164,11 +184,127 @@ export function textOf(file, line) {
     for (const match of line.matchAll(/>([^<>{}]+)</g)) out.push(...fragmentsOf(match[1]));
   }
   if (LITERAL_SOURCES.test(file)) {
+    const keep = SEED_SOURCE.test(file) ? seedQuotable : quotable;
     for (const match of line.matchAll(/"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|`([^`]*)`/g)) {
-      out.push(...fragmentsOf(match[1] ?? match[2] ?? match[3]));
+      out.push(...fragmentsOf(match[1] ?? match[2] ?? match[3], keep));
     }
   }
   return out;
+}
+
+/**
+ * The prefix a locale bundle's keys carry in a translator call: none for `diver.json`, the
+ * namespace for `staff/<namespace>.json` (composed by `staff/index.ts` under the file's stem).
+ * Null for anything that is not an en-US bundle, the only locale a spec reads.
+ */
+export function localeKeyPrefix(file) {
+  if (file === "src/i18n/locales/en-US/diver.json") return "";
+  const staff = file.match(/^src\/i18n\/locales\/en-US\/staff\/([\w-]+)\.json$/);
+  return staff ? `${staff[1]}.` : null;
+}
+
+function leaves(value, prefix, out) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    for (const [key, child] of Object.entries(value)) leaves(child, `${prefix}${key}.`, out);
+  } else {
+    out.set(prefix.slice(0, -1), JSON.stringify(value));
+  }
+  return out;
+}
+
+/**
+ * The full dotted keys whose value differs between two versions of one bundle, removed keys
+ * included; a key only `after` has is new, and no spec written before it can read it. Either
+ * side may be null (the file was added or deleted) or unparseable, which reads as empty.
+ */
+export function changedLocaleKeys(before, after, prefix = "") {
+  const parse = (text) => {
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      return {};
+    }
+  };
+  const old = leaves(parse(before), prefix, new Map());
+  const now = leaves(parse(after), prefix, new Map());
+  return [...old].filter(([key, value]) => now.get(key) !== value).map(([key]) => key);
+}
+
+/** A regex that finds `key` quoted whole in a source: `staffCopy("a.b")`, `diver('a.b')`. */
+function keyPattern(key) {
+  return new RegExp(`["'\`]${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["'\`]`);
+}
+
+/**
+ * The string an upper-case seed constant holds (`SHOP_CERTIFIED_TITLE` → "Rescue Diver —
+ * weekend course"), from each seed module's source: the seed refers to its records by these,
+ * and a spec by the words.
+ */
+export function seedConstantValues(sources) {
+  const values = new Map();
+  for (const [file, source] of sources) {
+    if (!SEED_SOURCE.test(file) || TEST_FILE.test(file)) continue;
+    const pattern =
+      /^(?:export\s+)?const\s+([A-Z][A-Z0-9_]+)\s*=\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|`([^`$]*)`)/gm;
+    for (const match of source.matchAll(pattern)) {
+      if (!values.has(match[1])) values.set(match[1], new Set());
+      values.get(match[1]).add(match[2] ?? match[3] ?? match[4]);
+    }
+  }
+  return values;
+}
+
+/** Every seed module's source, for {@link seedConstantValues}. */
+export function readSeedSources(root = ROOT) {
+  const sources = new Map();
+  for (const entry of readdirSync(path.join(root, "src/db"))) {
+    const file = `src/db/${entry}`;
+    if (SEED_SOURCE.test(file) && !TEST_FILE.test(file)) {
+      sources.set(file, readFileSync(path.join(root, file), "utf8"));
+    }
+  }
+  return sources;
+}
+
+/**
+ * What the diff's changed seed lines name: the quotable literals on them (a diver, a trip, a
+ * boat whose rows or counts moved), the upper-case constants they use outside import lines,
+ * and the quotable words those constants hold (`values`, from {@link seedConstantValues}).
+ */
+export function seedTouches(files, values = new Map()) {
+  const names = new Set();
+  const constants = new Set();
+  for (const [file, { removed, added }] of files) {
+    if (!SEED_SOURCE.test(file) || TEST_FILE.test(file)) continue;
+    for (const line of [...removed, ...added]) {
+      if (/^\s*(?:import|export\s+\{.*\}\s+from)\b/.test(line)) continue;
+      for (const piece of textOf(file, line)) names.add(piece);
+      for (const match of line.replace(/(["'`])(?:\\.|(?!\1).)*\1/g, "").matchAll(SEED_CONSTANT)) {
+        constants.add(match[0]);
+        for (const value of values.get(match[0]) ?? []) {
+          for (const piece of fragmentsOf(value, seedQuotable)) names.add(piece);
+        }
+      }
+    }
+  }
+  return { names, constants };
+}
+
+/** The names a source imports from the seed's modules (`../src/db/seed-booth`, `@/db/seed`). */
+export function seedImports(source) {
+  const names = new Set();
+  const pattern =
+    /import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*["'](?:(?:\.\.\/)+src|@)\/db\/seed[\w-]*["']/g;
+  for (const match of source.matchAll(pattern)) {
+    for (const part of match[1].split(",")) {
+      const name = part
+        .replace(/^\s*type\s+/, "")
+        .split(/\s+as\s+/)[0]
+        .trim();
+      if (name) names.add(name);
+    }
+  }
+  return names;
 }
 
 /** Removed text fragments the same diff did not add back somewhere. */
@@ -358,6 +494,12 @@ const ENTRY = /\/(?:page|layout|route|template|loading|default)\.tsx?$/;
 export const HUB_SPECS = 10;
 
 /**
+ * A seeded name or constant on a changed seed line selects strongly only when this few specs
+ * say it: a seed edit usually touches a record many specs pass through without counting it.
+ */
+export const SEED_STRONG_SPECS = 3;
+
+/**
  * The selection. `changed` is every file the diff touches, `diff` its parsed hunks, `specs`
  * every spec's source, `graph` the import graph (or null to skip the reach tier). With
  * `modules` (the `symbol-reach.mjs` index) and `lines` (each file's changed lines), the reach
@@ -367,7 +509,16 @@ export const HUB_SPECS = 10;
  * specs for {@link withinBudget}: the ones naming most of the diff's vocabulary first
  * ({@link overlapScores}), then the narrowest route.
  */
-export function selectSpecs({ changed, diff, specs, graph, modules, lines }) {
+export function selectSpecs({
+  changed,
+  diff,
+  specs,
+  graph,
+  modules,
+  lines,
+  localeKeys = [],
+  seedValues,
+}) {
   const strong = new Map();
   const reach = new Map();
   const rank = new Map();
@@ -401,6 +552,44 @@ export function selectSpecs({ changed, diff, specs, graph, modules, lines }) {
   for (const piece of removedText(diff)) {
     for (const [spec, source] of specs) {
       if (source.includes(piece)) note(strong, spec, `quotes "${piece}"`);
+    }
+  }
+
+  // A locale value the diff changed, read by its full key: the spec's locator now holds the new
+  // words, which can match a second element, or nothing on a page that hard-codes the old ones.
+  for (const key of localeKeys) {
+    const hits = matching(keyPattern(key));
+    for (const [spec] of hits) {
+      if (hits.length <= HUB_SPECS) note(strong, spec, `reads ${key}`);
+      else noteReach(spec, `reads ${key} (shared)`, hits.length);
+    }
+  }
+
+  // A seeded record or constant on a changed seed line: its rows, counts or wording moved.
+  // A name a handful of specs say is strong; one more of the suite says (an instructor, the
+  // reef charter) only ranks, since most seed edits leave what those specs count alone.
+  const seed = seedTouches(diff, seedValues);
+  for (const name of seed.names) {
+    const hits = [...specs].filter(([, source]) => source.includes(name));
+    for (const [spec] of hits) {
+      if (hits.length <= SEED_STRONG_SPECS) note(strong, spec, `seed names "${name}"`);
+      else noteReach(spec, `seed names "${name}" (shared)`, hits.length);
+    }
+  }
+  if (seed.constants.size > 0) {
+    const importing = new Map();
+    for (const [spec, source] of specs) {
+      for (const name of seedImports(source)) {
+        if (!seed.constants.has(name)) continue;
+        if (!importing.has(name)) importing.set(name, []);
+        importing.get(name).push(spec);
+      }
+    }
+    for (const [name, hits] of importing) {
+      for (const spec of hits) {
+        if (hits.length <= SEED_STRONG_SPECS) note(strong, spec, `seed ${name}`);
+        else noteReach(spec, `seed ${name} (shared)`, hits.length);
+      }
     }
   }
 
@@ -513,7 +702,7 @@ function titlePattern(title) {
  * spec itself. Each value says why. A capture is a screenshot; running it here is what finds the
  * heading it waits for gone (five visual shards, 2026-10-09 to 2026-10-12).
  */
-export function selectCaptures({ changed, diff, source, file }) {
+export function selectCaptures({ changed, diff, source, file, localeKeys = [], seedValues }) {
   const picked = new Map();
   if (!source) return picked;
   const blocks = visualBlocks(source);
@@ -523,6 +712,25 @@ export function selectCaptures({ changed, diff, source, file }) {
   };
   for (const piece of removedText(diff)) {
     for (const block of blocks) if (block.body.includes(piece)) note(block, `quotes "${piece}"`);
+  }
+  // The same few-readers rules as the specs: a key, seeded name or seed constant more captures
+  // say than the specs' strong limit selects none of them.
+  const fewReaders = (why, has, limit) => {
+    const hits = blocks.filter((block) => has(block.body));
+    if (hits.length <= limit) for (const block of hits) note(block, why);
+  };
+  for (const key of localeKeys) {
+    const pattern = keyPattern(key);
+    fewReaders(`reads ${key}`, (body) => pattern.test(body), HUB_SPECS);
+  }
+  const seed = seedTouches(diff, seedValues);
+  for (const name of seed.names) {
+    fewReaders(`seed names "${name}"`, (body) => body.includes(name), SEED_STRONG_SPECS);
+  }
+  for (const name of seedImports(source)) {
+    if (!seed.constants.has(name)) continue;
+    const pattern = new RegExp(`\\b${name}\\b`);
+    fewReaders(`seed ${name}`, (body) => pattern.test(body), SEED_STRONG_SPECS);
   }
   const routes = new Map();
   for (const file of changed) {
@@ -627,12 +835,31 @@ export function changedDiff({
   return { base: label, changed: names, from, to };
 }
 
+/** Every en-US key whose value changed between `from` and `to`, read from both blobs. */
+export function changedLocaleKeysIn(git, names, from, to) {
+  const keys = [];
+  for (const file of names) {
+    const prefix = localeKeyPrefix(file);
+    if (prefix === null) continue;
+    keys.push(
+      ...changedLocaleKeys(
+        git(["show", `${from}:${file}`]),
+        git(["show", `${to}:${file}`]),
+        prefix,
+      ),
+    );
+  }
+  return keys;
+}
+
 export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root) } = {}) {
   const diff = changedDiff({ root, base, commit, git });
   if (!diff) return null;
   const { from, to, base: label, changed: names } = diff;
   const diffText = git(["diff", "-U0", "--no-color", from, to, "--", "src", "e2e"]) ?? "";
   const specs = readSpecs(root);
+  const localeKeys = changedLocaleKeysIn(git, names, from, to);
+  const seedValues = seedConstantValues(readSeedSources(root));
   const selection = selectSpecs({
     changed: names,
     diff: parseDiff(diffText),
@@ -640,6 +867,8 @@ export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root)
     graph: importGraph(root),
     modules: moduleIndex(readModules(root)),
     lines: changedLinesByFile(diffText),
+    localeKeys,
+    seedValues,
   });
   if (names.some((file) => APP_CHANGE.test(file))) {
     for (const test of smokeTests(specs).found) {
@@ -658,6 +887,8 @@ export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root)
         diff: parseDiff(diffText),
         source: readFileSync(path.join(root, file), "utf8"),
         file,
+        localeKeys,
+        seedValues,
       });
       for (const [title, why] of selected)
         captures.set(title, new Set([...(captures.get(title) ?? []), ...why]));

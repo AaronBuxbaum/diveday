@@ -7,7 +7,6 @@ import {
   findTripOnBoard,
   openThreadStep,
   openTripAbout,
-  signOut,
   threadStatus,
 } from "./helpers";
 
@@ -52,10 +51,12 @@ test.describe("staff-prepared trip", () => {
     await requirements.getByText("Edit requirements").click();
     await requirements.getByLabel("Require payment to board").check();
     await requirements.getByRole("button", { name: "Save requirements" }).click();
-    // Wait for the save's own redirect: signing out while it is in flight
-    // lets that redirect land after the session is gone, on /sign-in.
+    // Wait for the save's own redirect: dropping the session while it is in
+    // flight lets that redirect land after the session is gone, on /sign-in.
     await expect(page.getByRole("status")).toContainText("requirements updated");
-    await signOut(page);
+    // The visitor below is anyone without the staff cookie (see
+    // `bookStaffPreparedTrip`).
+    await page.context().clearCookies();
 
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await page
@@ -103,7 +104,12 @@ test.describe("staff-prepared trip", () => {
       returnsAt: "11:00",
       capacity: 6,
     });
-    await signOut(page);
+    // A visitor is anyone without the staff cookie. Dropping it, rather than
+    // signing out through the identity menu, saves the menu's three taps and
+    // leaves the server session alive, so the worker's cached staff sign-in
+    // (`signedInAsOwner`) still serves the next test instead of being redone;
+    // sign-out itself is `auth.spec.ts`'s subject, not this one's.
+    await page.context().clearCookies();
 
     // A visitor books it.
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });

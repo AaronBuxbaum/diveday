@@ -23,11 +23,13 @@ import {
   SURFACE_TIMEOUT_MS,
   settleOfflineShellWorker,
   staffCopy,
+  VISUAL_STEP_BOUNDS,
   waitForSiteLibrary,
 } from "./visual-harness";
 
 installVisualBuildGuard();
 test.describe.configure({ timeout: SURFACE_TIMEOUT_MS });
+test.use(VISUAL_STEP_BOUNDS);
 
 /**
  * **The emergency card with nothing in it.**
