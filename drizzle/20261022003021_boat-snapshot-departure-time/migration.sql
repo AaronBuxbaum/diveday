@@ -1,0 +1,1 @@
+ALTER TABLE "departure_boat_safety_snapshots" ADD COLUMN "departure_starts_at" timestamp with time zone;

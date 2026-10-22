@@ -18,9 +18,8 @@ import {
 } from "@/lib/gear";
 import { GUARDIAN_RELATIONSHIPS } from "@/lib/guardian";
 import { INCIDENT_KINDS, INCIDENT_SEVERITIES } from "@/lib/incident-reports";
-import type { BuddyAlert, RollCallLabel } from "@/lib/manifests";
+import type { RollCallLabel } from "@/lib/manifests";
 import { CARDINAL_DIRECTIONS, SEA_STATES, WIND_STATES } from "@/lib/marine-forecast";
-import type { PartyLeftReason } from "@/lib/party-teams";
 import { PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import {
   BLOCKER_CATEGORY,
@@ -41,7 +40,6 @@ import { stripComments } from "@/test/source";
 import { SHOP_ACTIVITY_KIND_KEYS, shopActivityLineText } from "./activity-labels";
 import { boatSafetyNoticeText } from "./boat-safety-labels";
 import { boatWorkText } from "./boat-work-labels";
-import { buddyAlertText, partyLeftReasonText } from "./buddy-labels";
 import {
   CARD_STATUS_KEYS,
   CERTIFICATION_ROW_STATE_BADGE,
@@ -75,6 +73,8 @@ import {
   staffGuardianRelationshipOptions,
 } from "./guardian-labels";
 import { INCIDENT_KIND_KEYS, INCIDENT_SEVERITY_KEYS } from "./incident-labels";
+import { codeRows, everyCodeOf, type LabelMapCase } from "./label-map-test-fixtures";
+import { BUDDY_LABEL_MAP_CASES } from "./label-maps-buddy-test-fixtures";
 import { rollCallLabelText } from "./manifest-labels";
 import { diverTranslator } from "./messages";
 import {
@@ -115,7 +115,7 @@ import {
 import { CHECKLIST_DETAIL_KEYS } from "./readiness-summary-labels";
 import { reminderActionText } from "./reminder-labels";
 import { rentalItemLabel } from "./rental-labels";
-import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, type DiverLocale } from "./settings";
+import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES } from "./settings";
 import { staffTranslator } from "./staff-messages";
 import { STAFF_ROLE_LABEL_KEYS, staffRoleLabel } from "./staff-role-labels";
 import { suitChoiceLabel } from "./suit-choice-labels";
@@ -215,68 +215,11 @@ import {
  * the counted sentences below are rendered at one representative count.
  */
 
-/** Everything one map's rows need to say, with the map's own code type erased. */
-type LabelMapCase = {
-  /** The file it lives in, spelled as the scan at the bottom names it. */
-  module: string;
-  /** The map's identifier, likewise. */
-  map: string;
-  rows: readonly LabelRow[];
-};
-
-type LabelRow = {
-  code: string;
-  /** True for a code whose label is deliberately nothing at all. */
-  silent: boolean;
-  /** The finished string a surface renders for this code, in one locale. */
-  render: (locale: DiverLocale) => string | null;
-};
-
-/**
- * One row per code, closing over the code so the table can hold maps keyed by
- * different unions without a cast.
- */
-function codeRows<Code extends string>(
-  codes: readonly Code[],
-  render: (locale: DiverLocale, code: Code) => string | null,
-  silent: readonly Code[] = [],
-): readonly LabelRow[] {
-  return codes.map((code) => ({
-    code,
-    silent: silent.includes(code),
-    render: (locale: DiverLocale) => render(locale, code),
-  }));
-}
-
-/**
- * The codes of a union with no runtime list of its own. Spelled as a
- * `Record<Code, true>` rather than an array so a member added to the union is a
- * type error here, not a row that silently goes unproven.
- */
-function everyCodeOf<Code extends string>(present: Record<Code, true>): readonly Code[] {
-  return Object.keys(present) as Code[];
-}
-
 const BOAT_WORK_CODES = everyCodeOf<BoatWorkCode>({
   missing_sizes: true,
   ungated_nitrox: true,
   missing_contact: true,
   open_orders: true,
-});
-
-const BUDDY_ALERTS = everyCodeOf<BuddyAlert>({
-  separated_dock: true,
-  separated_after_dive: true,
-});
-
-const PARTY_LEFT_REASONS = everyCodeOf<PartyLeftReason>({
-  intro_course: true,
-  training_course: true,
-  young_child: true,
-  minor_age_conflict: true,
-  minor_age_unknown: true,
-  junior_without_adult: true,
-  too_large: true,
 });
 
 const WAIVER_ROW_STATES = everyCodeOf<WaiverRowState>({
@@ -518,25 +461,7 @@ const CASES: readonly LabelMapCase[] = [
       boatWorkText(staffTranslator(locale), { code, count: 2, tone: "work" }),
     ),
   },
-  {
-    module: "buddy-labels.ts",
-    map: "BUDDY_ALERT_KEYS",
-    rows: codeRows(BUDDY_ALERTS, (locale, alert) => buddyAlertText(staffTranslator(locale), alert)),
-  },
-  {
-    module: "buddy-labels.ts",
-    map: "BUDDY_ALERT_NAMED_KEYS",
-    rows: codeRows(BUDDY_ALERTS, (locale, alert) =>
-      buddyAlertText(staffTranslator(locale), alert, ["Ravi Patel"]),
-    ),
-  },
-  {
-    module: "buddy-labels.ts",
-    map: "PARTY_LEFT_KEYS",
-    rows: codeRows(PARTY_LEFT_REASONS, (locale, reason) =>
-      partyLeftReasonText(staffTranslator(locale), reason),
-    ),
-  },
+  ...BUDDY_LABEL_MAP_CASES,
   {
     module: "card-labels.ts",
     map: "CARD_STATUS_KEYS",

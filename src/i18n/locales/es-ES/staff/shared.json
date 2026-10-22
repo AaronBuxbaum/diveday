@@ -518,6 +518,8 @@
   },
   "buddyTeam": {
     "with": "Pareja: {names}",
+    "ashore": "Compañero en tierra. Reorganiza la pareja.",
+    "ashoreNamed": "{name} en tierra. Reorganiza la pareja.",
     "separatedDock": "Compañero aún no a bordo",
     "separatedAfterDive": "Compañero sin regresar a bordo",
     "separatedDockNamed": "{name} aún no a bordo",

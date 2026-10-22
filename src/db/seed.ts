@@ -155,6 +155,7 @@ import { seedFrontDesk } from "./seed-front-desk";
 import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
 import { seedHulls } from "./seed-hulls";
+import { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 import { seedInbox } from "./seed-inbox";
 import { seedLenses } from "./seed-lenses";
 import { seedListedShops } from "./seed-listed-shops";
@@ -383,7 +384,7 @@ export const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
  * not the product's teal and dark enough for white text as typed. Exported for
  * `e2e/storefront-brand.spec.ts`, which proves the storefront wears it.
  */
-export const MINTED_DEMO_BRAND_COLOR = "#158462";
+export { MINTED_DEMO_BRAND_COLOR } from "./seed-identifiers";
 
 /**
  * **The brand a minted shop wears when a visual capture or a brand spec asks
@@ -1989,12 +1990,11 @@ async function restoreMissingStableStaff(db: DbExecutor, shopId: string): Promis
   if (owedRoles.length > 0) await db.insert(personRoles).values(owedRoles);
 }
 
+export { demoTodayDepartureStart } from "./seed-clock";
 /**
  * The demo-shop lifecycle, re-exported so `@/db/seed` stays the one import for
  * everything about demo data. See `./seed-demo-lifecycle.ts`.
  */
-export { DEMO_RECAP_BOOKING_ID } from "./seed-bookings";
-export { demoTodayDepartureStart } from "./seed-clock";
 export {
   DEFAULT_DEMO_SHOP_MAX_LIVE,
   DEFAULT_DEMO_TTL_MS,
@@ -2003,3 +2003,4 @@ export {
   purgeMintedDemoShops,
   reapExpiredDemoShops,
 } from "./seed-demo-lifecycle";
+export { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";

@@ -1,6 +1,7 @@
 import { and, asc, eq, gt, gte, isNull, lt, sql } from "drizzle-orm";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { shopDayBounds } from "@/lib/zoned";
+import { rebindDepartureBoatSafetyTime } from "./boat-safety";
 import type { AppDb } from "./client";
 import { DEMO_SHOP_SLUG } from "./demo-shop";
 import { shops, trips } from "./schema";
@@ -9,6 +10,7 @@ import { demoTodayDepartureStart } from "./seed-clock";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { syncDemoStripeAccount } from "./stripe-accounts";
 import { upcomingScheduleRange } from "./trips";
+import { liveTrip } from "./trips-live";
 
 /**
  * The keeper of the canonical demo shop's schedule.
@@ -207,6 +209,7 @@ export async function ensureDemoSailsToday(
     .where(
       and(
         eq(trips.shopId, shopId),
+        liveTrip(),
         eq(trips.status, "scheduled"),
         gte(trips.startsAt, from),
         lt(trips.startsAt, to),
@@ -221,6 +224,7 @@ export async function ensureDemoSailsToday(
     .where(
       and(
         eq(trips.shopId, shopId),
+        liveTrip(),
         eq(trips.status, "scheduled"),
         gt(trips.startsAt, now),
         // Never a series instance. A moved one keeps its `series_occurrence_date`
@@ -234,17 +238,49 @@ export async function ensureDemoSailsToday(
     .limit(1);
   if (!candidate) return "no_candidate";
 
-  // Same duration, new start — a two-tank morning stays a two-tank morning
-  // rather than becoming a trip that returns before it leaves.
-  const startsAt = demoTodayDepartureStart(now, timeZone);
-  const endsAt = new Date(
-    startsAt.getTime() + (candidate.endsAt.getTime() - candidate.startsAt.getTime()),
-  );
-  await db
-    .update(trips)
-    // A real departure really moves, so the demo shop's own `.ics` says so
-    // (issue #1165) — the same reason `moveTrip` bumps.
-    .set({ startsAt, endsAt, revision: sql`${trips.revision} + 1` })
-    .where(eq(trips.id, candidate.id));
-  return "moved";
+  return db.transaction(async (tx) => {
+    // A count or staff edit may have changed the candidate since selection.
+    // Share its lock with capture and recheck every eligibility condition.
+    const [current] = await tx
+      .select()
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shopId),
+          eq(trips.id, candidate.id),
+          liveTrip(),
+          eq(trips.status, "scheduled"),
+          gt(trips.startsAt, now),
+          isNull(trips.seriesId),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!current) return "no_candidate";
+    const [alreadyToday] = await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shopId),
+          liveTrip(),
+          eq(trips.status, "scheduled"),
+          gte(trips.startsAt, from),
+          lt(trips.startsAt, to),
+        ),
+      )
+      .limit(1);
+    if (alreadyToday) return "already";
+    // Same duration, new start: a two-tank morning stays a two-tank morning.
+    const startsAt = demoTodayDepartureStart(now, timeZone);
+    const endsAt = new Date(
+      startsAt.getTime() + (current.endsAt.getTime() - current.startsAt.getTime()),
+    );
+    await tx
+      .update(trips)
+      .set({ startsAt, endsAt, revision: sql`${trips.revision} + 1` })
+      .where(and(eq(trips.shopId, shopId), eq(trips.id, current.id)));
+    await rebindDepartureBoatSafetyTime(tx, shopId, current.id, current.startsAt, startsAt, now);
+    return "moved";
+  });
 }

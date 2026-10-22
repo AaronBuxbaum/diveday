@@ -1,4 +1,4 @@
-import { MINTED_DEMO_BRAND_COLOR } from "../src/db/seed";
+import { MINTED_DEMO_BRAND_COLOR } from "../src/db/seed-identifiers";
 import { deriveBrandTheme, deriveDarkBrandTheme } from "../src/lib/brand";
 import { expectNoA11yViolations } from "./a11y-scan";
 import { expect, test } from "./fixtures";

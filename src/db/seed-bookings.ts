@@ -13,6 +13,7 @@ import {
   waiverRecords,
 } from "./schema";
 import { at, DEMO_SHOP_TIMEZONE, nextCreatedAt } from "./seed-clock";
+import { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 import { commonsImage } from "./seed-images";
 import { paperRelease, signingNames } from "./seed-paper-release";
 import { getCurrentWaiverTemplate } from "./waivers";
@@ -54,7 +55,7 @@ export const DEMO_REEF_DIVER_INDEXES: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 
  * querying a random-uuid booking out of the running server. Real bookings keep
  * their `defaultRandom` ids; only this one demo row is pinned.
  */
-export const DEMO_RECAP_BOOKING_ID = "0de3c0de-1eaf-4b0a-9c0f-000000000001";
+export { DEMO_RECAP_BOOKING_ID } from "./seed-identifiers";
 
 /**
  * Who is booked on what, and everything that follows from a seat being taken:

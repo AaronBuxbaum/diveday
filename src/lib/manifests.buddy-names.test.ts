@@ -64,12 +64,13 @@ describe("buddy teams — who is missing, by name (ADR 20260804-buddy-teams)", (
       ],
     });
     const byId = (id: string) => manifest.divers.find((d) => d.bookingId === id);
+    expect(byId("booking-tom")?.buddyAlert).toBe("separated_after_dive");
     expect(byId("booking-tom")?.buddyMissing).toEqual(["Ravi Patel"]);
     expect(byId("booking-lena")?.buddyMissing).toEqual([]);
     expect(byId("booking-ravi")?.buddyMissing).toEqual([]);
   });
 
-  it("names no one at the dock for a teammate recorded ashore, or when the row is not aboard", () => {
+  it("names the teammate staying ashore at departure, but no one on a row not aboard", () => {
     const manifest = buildTripManifest({
       trip,
       checkpoint: "departure",
@@ -86,8 +87,9 @@ describe("buddy teams — who is missing, by name (ADR 20260804-buddy-teams)", (
       ],
     });
     const byId = (id: string) => manifest.divers.find((d) => d.bookingId === id);
-    expect(byId("booking-tom")?.buddyAlert).toBeNull();
-    expect(byId("booking-tom")?.buddyMissing).toEqual([]);
+    expect(byId("booking-tom")?.buddyAlert).toBe("teammate_ashore");
+    expect(byId("booking-tom")?.buddyMissing).toEqual(["Lena Fischer"]);
+    expect(byId("booking-lena")?.buddyAlert).toBeNull();
     expect(byId("booking-lena")?.buddyMissing).toEqual([]);
   });
 });

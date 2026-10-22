@@ -602,13 +602,15 @@ export type ManifestBuddyTeam = {
  * - `separated_after_dive` — this person came back from a dive and a human has
  *   **recorded** a teammate as not back aboard. This is the signal a deck
  *   watches for, and it is the loud one.
+ * - `teammate_ashore` — this person is aboard while a teammate is recorded
+ *   staying ashore. A re-pairing heads-up, including a carried dock absence,
+ *   never an after-dive missing-person alarm.
  * - `null` — nothing to say. Covers: no divergence (everyone aboard, everyone
  *   ashore, everyone awaiting), this person not being aboard themselves (their
  *   *own* row already carries whatever state matters — a teammate's row is
- *   where the "back without them" fact renders), and teammates who are
- *   recorded ashore from the dock (`isRecordedAshore`): someone who never left
- *   the dock is accounted for on land, not separated in the water, and alarming
- *   about them would teach the crew to stop reading the panel.
+ *   where the "back without them" fact renders). Someone who never left the
+ *   dock is accounted for on land; their teammate needs a re-pairing prompt,
+ *   never the missing-person alarm.
  *
  * **An alarm is earned by a recorded fact, never by the absence of one** (ADR
  * 20260827-the-departure-is-two-working-surfaces, decision 4). A teammate
@@ -638,7 +640,7 @@ export type ManifestBuddyTeam = {
  * never computes this — a snapshot cannot know who came back
  * (src/lib/offline-manifests.ts).
  */
-export type BuddyAlert = "separated_dock" | "separated_after_dive";
+export type BuddyAlert = "separated_dock" | "separated_after_dive" | "teammate_ashore";
 
 export function buddyAlertFor(
   checkpoint: RollCallCheckpoint,
@@ -647,27 +649,25 @@ export function buddyAlertFor(
 ): BuddyAlert | null {
   // Only someone who is themselves aboard can be "back without their team".
   if (self?.state !== "boarded") return null;
-  // The two checkpoints ask different questions of a teammate, because the
-  // two checkpoints are different acts.
-  //
-  // At the dock the crew is *assembling* a boat, so anyone not yet aboard is
-  // genuinely still to gather and "aboard while my buddy is not yet" is
-  // precisely the heads-up this checkpoint exists to give — a heads-up, worded
-  // and toned as one. A teammate the crew recorded staying ashore
-  // (`isRecordedAshore`) is a decision already made, not someone to gather.
-  //
-  // After a dive the crew is *counting a boat back*, believing everyone is
-  // already on it. There an uncalled teammate is "not yet", not a split: only a
-  // recorded "did not come back" earns the alarm (see the note above).
-  if (!teammates.some((mate) => teammateRaisesAlert(checkpoint, mate))) return null;
-  return checkpoint === "departure" ? "separated_dock" : "separated_after_dive";
+  // A recorded non-return always outranks the informational re-pairing
+  // prompt, including on a crew row shared by several teams.
+  if (teammates.some((mate) => isNotBackAboard(checkpoint, mate))) return "separated_after_dive";
+  if (teammates.some((mate) => isRecordedAshore(checkpoint, mate))) return "teammate_ashore";
+  if (checkpoint === "departure" && teammates.some((mate) => mate?.state !== "boarded")) {
+    return "separated_dock";
+  }
+  return null;
 }
 
 /** Whether one teammate's record is the one that raises the alert at this checkpoint. */
-function teammateRaisesAlert(checkpoint: RollCallCheckpoint, mate: MaybeRollCall): boolean {
-  return checkpoint === "departure"
-    ? mate?.state !== "boarded" && !isRecordedAshore(checkpoint, mate)
-    : isNotBackAboard(checkpoint, mate);
+function teammateRaisesAlert(
+  checkpoint: RollCallCheckpoint,
+  mate: MaybeRollCall,
+  alert: BuddyAlert,
+): boolean {
+  if (alert === "teammate_ashore") return isRecordedAshore(checkpoint, mate);
+  if (alert === "separated_after_dive") return isNotBackAboard(checkpoint, mate);
+  return mate?.state !== "boarded" && !isRecordedAshore(checkpoint, mate);
 }
 
 /**
@@ -686,6 +686,8 @@ function buddyMissingNamesIn(
   byCrewId: ReadonlyMap<string, MaybeRollCall>,
 ): string[] {
   if (self?.state !== "boarded") return [];
+  const alert = buddyAlertFor(checkpoint, self, teammateRollCallsIn(teams, byBooking, byCrewId));
+  if (!alert) return [];
   return teams.flatMap((team) =>
     (team?.others ?? []).flatMap((other) => {
       const known =
@@ -693,7 +695,7 @@ function buddyMissingNamesIn(
       if (!known) return [];
       const record =
         other.kind === "diver" ? byBooking.get(other.bookingId) : byCrewId.get(other.personId);
-      return teammateRaisesAlert(checkpoint, record) ? [other.fullName] : [];
+      return teammateRaisesAlert(checkpoint, record, alert) ? [other.fullName] : [];
     }),
   );
 }

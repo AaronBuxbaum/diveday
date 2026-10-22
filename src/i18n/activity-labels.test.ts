@@ -26,6 +26,11 @@ describe("activity lines", () => {
     boat: "Reef Runner",
     field: "inspectionDueOn",
     to: "none",
+    fromBoat: "Reef Runner",
+    toBoat: "Blue Horizon",
+    hasFromBoat: "yes",
+    hasToBoat: "yes",
+    snapshot: "refreshed",
   };
 
   // Records review 2: the paper line names the field and both values.
@@ -84,6 +89,29 @@ describe("activity lines", () => {
       expect(line, code).not.toMatch(/\{[a-z]/i);
     }
   });
+
+  it.each(["en-US", "es-ES"])(
+    "keeps a hull literally named none distinct from an absent hull in %s",
+    (locale) => {
+      const t = staffTranslator(locale);
+      const params = {
+        actor: "Marisol Vega",
+        fromBoat: "none",
+        toBoat: "Blue Horizon",
+        hasFromBoat: "yes",
+        hasToBoat: "yes",
+        snapshot: "refreshed",
+      };
+      const named = activityLine(t, { code: "departure_boat_changed", params });
+      const absent = activityLine(t, {
+        code: "departure_boat_changed",
+        params: { ...params, fromBoat: "", hasFromBoat: "no" },
+      });
+      expect(named).toContain("none");
+      expect(named).not.toEqual(absent);
+      expect(named).toContain("Blue Horizon");
+    },
+  );
 
   /**
    * The two limits that can refuse an undo ask for different next acts — find

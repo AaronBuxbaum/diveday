@@ -3,9 +3,7 @@ import type { Browser, Locator, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
-import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
-import { AT_SEA_DAY_TITLE } from "../src/db/seed-boat-at-sea";
-import { LISTED_SHOP_SLUGS } from "../src/db/seed-listed-shops";
+import { AT_SEA_DAY_TITLE, DEMO_RECAP_BOOKING_ID, LISTED_SHOP_SLUGS } from "../src/db/seed-identifiers";
 import { diverTranslator } from "../src/i18n/messages";
 import { staffTranslator } from "../src/i18n/staff-messages";
 import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
@@ -10593,6 +10591,165 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("checkbox", { name: "Remove current logo" }).waitFor();
       await page.getByRole("checkbox", { name: "Remove the cover photo" }).waitFor();
       await capture(page, "settings-profile", scheme);
+    });
+  });
+}
+// Operational trust warning states (#2742, #2727, #2807). Synthetic departures
+// on a pinned private shop; every frame first proves its warning is visible.
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`${scheme} mode — operational trust warnings`, () => {
+    test.use({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+      privateShopSlug: "operational-trust-divers",
+    });
+
+    test(`offline total persons exceeds the certificate (${scheme})`, async ({
+      page,
+      request,
+      context,
+      privateShop,
+    }) => {
+      test.setTimeout(FLOW_TIMEOUT_MS);
+      const response = await request.post(
+        `/api/test/seed-trouble-states?operationalTrust=capacity&shop=${privateShop.slug}`,
+      );
+      expect(response.ok()).toBe(true);
+      const { operationalTrust: state } = await response.json();
+      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
+      await offlineCopySaved(page);
+      await settleOfflineShellWorker(page);
+      await openOnThisPhone(page);
+      await page.getByRole("link", { name: "Open offline roll call" }).click();
+      await page.waitForURL(/offline-manifest/);
+      await expect(page.getByRole("heading", { name: "Ari Vale" })).toBeVisible();
+      await context.setOffline(true);
+      const crew = page
+        .getByRole("region", { name: "Crew aboard" })
+        .getByRole("listitem")
+        .filter({ hasText: state.crewName });
+      await crew
+        .getByRole("button", { name: staffCopy("manifest.crewMarkAboard"), exact: true })
+        .click();
+      await expect(
+        page.getByRole("status").filter({
+          hasText: staffCopy("manifest.headCountOverTotalPersonsAboard", { aboard: 6, limit: 5 }),
+        }),
+      ).toBeVisible();
+      await capture(page, "offline-manifest-total-persons", scheme);
+      await context.setOffline(false);
+    });
+
+    test(`a junior's blocked team and ashore teammate warn visibly (${scheme})`, async ({
+      page,
+      request,
+      privateShop,
+    }) => {
+      test.setTimeout(FLOW_TIMEOUT_MS);
+      const response = await request.post(
+        `/api/test/seed-trouble-states?operationalTrust=ashore&shop=${privateShop.slug}`,
+      );
+      expect(response.ok()).toBe(true);
+      const { operationalTrust: state } = await response.json();
+      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
+      await expect(
+        page.getByText(
+          staffCopy("manifest.buddyTeamCaution", {
+            reason: staffCopy("manifest.buddyPartyLeftReason.young_child"),
+          }),
+        ),
+      ).toBeVisible();
+      await expect(page.getByText(staffCopy("manifest.buddyTeamNotCleared"))).toBeVisible();
+      await expect(
+        manifestRow(page, "Bea Quill").getByText(
+          staffCopy("shared.buddyTeam.ashoreNamed", { name: "Ari" }),
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await offlineCopySaved(page);
+      await capture(page, "manifest-buddy-operational-warnings", scheme);
+    });
+
+    test(`an intro team's manual pairing caution is visible (${scheme})`, async ({
+      page,
+      request,
+      privateShop,
+    }) => {
+      test.setTimeout(FLOW_TIMEOUT_MS);
+      const response = await request.post(
+        `/api/test/seed-trouble-states?operationalTrust=intro&shop=${privateShop.slug}`,
+      );
+      expect(response.ok()).toBe(true);
+      const { operationalTrust: state } = await response.json();
+      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/manifest`);
+      await expect(
+        page.getByText(
+          staffCopy("manifest.buddyTeamCaution", {
+            reason: staffCopy("manifest.buddyPartyLeftReason.intro_course"),
+          }),
+        ),
+      ).toBeVisible();
+      await offlineCopySaved(page);
+      await capture(page, "manifest-buddy-intro-warning", scheme);
+    });
+
+    test(`a historic hull mismatch keeps its original papers (${scheme})`, async ({
+      page,
+      request,
+      privateShop,
+    }) => {
+      test.setTimeout(FLOW_TIMEOUT_MS);
+      const response = await request.post(
+        `/api/test/seed-trouble-states?operationalTrust=historic&shop=${privateShop.slug}`,
+      );
+      expect(response.ok()).toBe(true);
+      const { operationalTrust: state } = await response.json();
+      await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/log`);
+      await expect(
+        page
+          .getByRole("status")
+          .filter({ hasText: staffCopy("incidentExport.boatChanged", { boatName: "Trust I" }) }),
+      ).toBeVisible();
+      await expect(page.getByText("TRUST1", { exact: true })).toBeVisible();
+      await capture(page, "departure-log-historic-hull-warning", scheme);
+    });
+
+    test.describe("Spanish historical hull warning", () => {
+      test(`a historic hull warning fits in Spanish (${scheme})`, async ({
+        browser,
+        context,
+        request,
+        privateShop,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const response = await request.post(
+          `/api/test/seed-trouble-states?operationalTrust=historic&shop=${privateShop.slug}`,
+        );
+        expect(response.ok()).toBe(true);
+        const { operationalTrust: state } = await response.json();
+        // privateShop signs in through the English form. Carry that real
+        // session to a Spanish reader after authentication, including its
+        // navigator.language, which capture() checks against the baseline.
+        const spanishContext = await browser.newContext({
+          baseURL: new URL(context.pages()[0].url()).origin,
+          colorScheme: scheme,
+          locale: SPANISH,
+          storageState: await context.storageState(),
+        });
+        try {
+          const page = makeActivitySafe(await spanishContext.newPage());
+          await page.goto(`/shop/${privateShop.slug}/trips/${state.tripId}/log`);
+          const spanish = staffTranslator(SPANISH);
+          await expect(
+            page
+              .getByRole("status")
+              .filter({ hasText: spanish("incidentExport.boatChanged", { boatName: "Trust I" }) }),
+          ).toBeVisible();
+          await capture(page, "departure-log-historic-hull-warning", scheme, { locale: SPANISH });
+        } finally {
+          await spanishContext.close();
+        }
+      });
     });
   });
 }

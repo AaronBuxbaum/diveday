@@ -36,6 +36,7 @@ import {
   demoAtSeaDeparture,
   withinDeskHours,
 } from "./seed-clock";
+import { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed-identifiers";
 import { paperRelease } from "./seed-paper-release";
 import { liveTrip } from "./trips-live";
 import { getCurrentWaiverTemplate } from "./waivers";
@@ -52,9 +53,7 @@ export const AT_SEA_CREW: readonly { fullName: string; tripRole: TripAssignmentR
   { fullName: RELIEF_INSTRUCTOR_NAME, tripRole: "divemaster" },
 ];
 
-/** The boat at sea's names, by day and at dusk. */
-export const AT_SEA_DAY_TITLE = "Two-Tank Reef — Molasses & Pickles";
-export const AT_SEA_DUSK_TITLE = "Dusk & Night Two-Tank — French Reef";
+export { AT_SEA_DAY_TITLE, AT_SEA_DUSK_TITLE } from "./seed-identifiers";
 
 /** Divers aboard, and how many are still to come up from dive 2. */
 export const AT_SEA_ABOARD = 11;

@@ -55,6 +55,7 @@ import { tripReservationWindow } from "@/lib/gear";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { MAX_SUPPRESSED_SHARE_FOR_RATING } from "@/lib/reviews";
 import { boatSliceStates } from "./boat-states";
+import { operationalStateResponse } from "./operational-states";
 
 /**
  * Puts the seeded demo shop into the trouble states that only render when
@@ -79,22 +80,20 @@ import { boatSliceStates } from "./boat-states";
  * behind it to succeed on the second attempt." A demo shop permanently
  * shouting that four payments are broken is a worse demo, and that call stands.
  *
- * A test-only route keeps the demo pristine and the coverage real. It is safe
- * to mutate freely because of the fleet's topology (`e2e/servers.ts`): each
- * Playwright worker has its **own** `next start` server on its own port backed
- * by its own in-memory PGlite database, and `e2e/fixtures.ts` resets that
- * database before every test. So this cannot reach another test's capture, and
- * nothing has to undo it afterwards.
+ * A test-only route keeps the demo pristine. Each Playwright worker has its
+ * own server and in-memory PGlite database (`e2e/servers.ts`), reset before
+ * every test (`e2e/fixtures.ts`), so these writes cannot reach another capture.
  *
- * Gated identically to /api/test/reset — and, like every route here, it
- * resolves the shop itself from `DEMO_SHOP_SLUG` and refuses a shop that is not
- * `isDemo`, rather than taking an id from the caller.
+ * Gated identically to /api/test/reset. Every variant refuses non-demo shops;
+ * operational fixtures may name a private demo by slug.
  */
 export async function POST(request: Request) {
   if (!e2eTestRouteAuthorized(request)) {
     return NextResponse.json({ error: "not_available" }, { status: 404 });
   }
   const db = await getDb();
+  const operational = await operationalStateResponse(request, db);
+  if (operational) return operational;
   const shop = await getShopBySlug(db, DEMO_SHOP_SLUG);
   if (!shop?.isDemo) return NextResponse.json({ error: "not_available" }, { status: 404 });
 
