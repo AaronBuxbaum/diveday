@@ -17,11 +17,13 @@ import {
   type DockDayStep,
   dockDayOffsets,
 } from "@/lib/diver-planning";
+import { CREW_LEAD_LIMITS } from "@/lib/dock-call";
 import { EMERGENCY_LINE_SLOTS } from "@/lib/emergency-reference";
 import { formatDateTimeTz } from "@/lib/format";
 import { MIN_TURNAROUND_LIMITS } from "@/lib/move-preflight";
 import {
   resendShoreAlertConfirmationAction,
+  saveCrewLeadAction,
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
   saveTurnaroundAction,
@@ -497,6 +499,41 @@ export function TurnaroundForm({ shop, t }: { shop: SettingsShop; t: StaffTransl
           className={buttonClass({ variant: "secondary" })}
         >
           {t("settings.main.turnaround.submit")}
+        </SubmitButton>
+      </FieldActions>
+    </FieldGrid>
+  );
+}
+
+/**
+ * **"Crew arrive N minutes before divers"** (ux-delight sheet 2026-10-22,
+ * item 2; H-149): one number, its own save, empty for "crew come with the
+ * divers". A crew member's own shift still wins (`crewCallAt`).
+ */
+export function CrewLeadForm({ shop, t }: { shop: SettingsShop; t: StaffTranslator }) {
+  return (
+    <FieldGrid as="form" action={saveCrewLeadAction} columns={2} className="mt-8">
+      <Field
+        label={t("settings.main.crewLead.label")}
+        description={t("settings.main.crewLead.description")}
+      >
+        <input
+          name="crewLeadMinutes"
+          type="number"
+          inputMode="numeric"
+          min={CREW_LEAD_LIMITS.min}
+          max={CREW_LEAD_LIMITS.max}
+          step={5}
+          defaultValue={shop.crewLeadMinutes ?? ""}
+          className={`${controlClass} tabular-nums`}
+        />
+      </Field>
+      <FieldActions>
+        <SubmitButton
+          pendingLabel={t("settings.main.dockCall.submitting")}
+          className={buttonClass({ variant: "secondary" })}
+        >
+          {t("settings.main.crewLead.submit")}
         </SubmitButton>
       </FieldActions>
     </FieldGrid>

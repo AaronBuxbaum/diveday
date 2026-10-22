@@ -7,6 +7,7 @@ import { sendNotification } from "@/db/notifications";
 import { recordShopActivity } from "@/db/shop-activity";
 import {
   getShopById,
+  setShopCrewLead,
   setShopDockDayRhythm,
   setShopEmergencyReference,
   setShopMinTurnaround,
@@ -17,6 +18,7 @@ import { toDiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
+import { parseCrewLeadMinutes } from "@/lib/dock-call";
 import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
 import { checkbox, formValue, readForm, text } from "@/lib/form-parse";
 import { parseMinTurnaroundMinutes } from "@/lib/move-preflight";
@@ -38,6 +40,9 @@ const dockDayForm = z.object(
 
 /** The minimum turnaround as posted; `parseMinTurnaroundMinutes` holds the bounds. */
 const turnaroundForm = z.object({ minTurnaroundMinutes: text() });
+
+/** The crew time as posted; `parseCrewLeadMinutes` holds the bounds, and empty clears it. */
+const crewLeadForm = z.object({ crewLeadMinutes: text() });
 
 /**
  * The reference's fixed lines, the shore contact's alert address and its
@@ -94,6 +99,25 @@ export async function saveTurnaroundAction(formData: FormData) {
   }
   await setShopMinTurnaround(await getDb(), session.user.shopId, minutes);
   revalidateAndRedirect(page, noticeUrl(page, "turnaround-saved"));
+}
+
+/**
+ * **"Crew arrive N minutes before divers"** (ux-delight sheet 2026-10-22,
+ * item 2; H-149): one number, its own save. Crew "Your week" lines read it
+ * when no shift of theirs covers the departure; an empty field clears it, and
+ * crew read the divers' time.
+ */
+export async function saveCrewLeadAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const page = shopPath(session.user.shopSlug, "settings", "dock-day");
+  await settingsBlock(session);
+  const { crewLeadMinutes } = readForm(crewLeadForm, formData);
+  const parsed = parseCrewLeadMinutes(crewLeadMinutes);
+  if (!parsed.ok) {
+    redirect(noticeUrl(page, "crew-lead-invalid"));
+  }
+  await setShopCrewLead(await getDb(), session.user.shopId, parsed.minutes);
+  revalidateAndRedirect(page, noticeUrl(page, "crew-lead-saved"));
 }
 
 /**

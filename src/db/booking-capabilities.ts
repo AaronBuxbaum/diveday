@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import {
   capabilityExpiryFor,
   createCapabilityToken,
@@ -370,31 +370,7 @@ export async function verifyBookingCapability(
   db: DbExecutor,
   input: { token: string; purpose: CapabilityPurpose; now?: Date },
 ): Promise<BookingCapabilityContext | null> {
-  const now = input.now ?? nowDate();
-  const tokenHash = hashCapabilityToken(input.token);
-  const [row] = await db
-    .select({
-      bookingId: bookingCapabilities.bookingId,
-      capabilityShopId: bookingCapabilities.shopId,
-      bookingShopId: bookings.shopId,
-      personId: bookings.personId,
-      tripId: bookings.tripId,
-      bookingStatus: bookings.status,
-      tripStatus: trips.status,
-      delivered: bookingCapabilities.delivered,
-    })
-    .from(bookingCapabilities)
-    .innerJoin(bookings, eq(bookings.id, bookingCapabilities.bookingId))
-    .innerJoin(trips, eq(trips.id, bookings.tripId))
-    .where(
-      and(
-        eq(bookingCapabilities.tokenHash, tokenHash),
-        eq(bookingCapabilities.purpose, input.purpose),
-        isNull(bookingCapabilities.revokedAt),
-        gt(bookingCapabilities.expiresAt, now),
-      ),
-    )
-    .limit(1);
+  const row = await liveCapabilityRow(db, input);
   if (!row) return null;
   // Fail closed on a since-cancelled booking even though nothing proactively
   // revoked this row, and defend in depth against the capability's shopId
@@ -417,6 +393,72 @@ export async function verifyBookingCapability(
     tripId: row.tripId,
     delivered: row.delivered,
   };
+}
+
+/**
+ * **A live readiness link whose departure was called off, for one ask and
+ * nothing else** (UX sheet 2026-10-22, item 5).
+ *
+ * `verifyBookingCapability` fails closed on a cancelled departure, and must:
+ * the link may not keep paying, fitting gear or cancelling for a boat that no
+ * longer runs. The diver it stranded may still ask the shop to move them, and
+ * this is the only door for that: a second, differently-named function rather
+ * than a relaxed flag on the first, so no existing caller can reach it by
+ * accident.
+ *
+ * Every other check stays as strict as `verifyBookingCapability`: the hash
+ * matches an unrevoked, unexpired `readiness` capability, the booking is
+ * live, the departure is not deleted, and the capability's shop is the
+ * booking's. Only the inverse of the one relaxation is required: the
+ * departure **is** cancelled, so this never verifies a link the ordinary
+ * check would accept. Its one caller files a move ask through
+ * `recordMoveAsk`, which writes an Inbox row and moves nothing.
+ */
+export async function verifyStrandedBookingCapability(
+  db: DbExecutor,
+  input: { token: string; now?: Date },
+): Promise<{ bookingId: string; shopId: string } | null> {
+  const row = await liveCapabilityRow(db, { ...input, purpose: "readiness" });
+  if (!row) return null;
+  if (row.bookingStatus === "cancelled") return null;
+  if (row.tripStatus !== "cancelled" || row.tripDeleted) return null;
+  if (row.capabilityShopId !== row.bookingShopId) return null;
+  return { bookingId: row.bookingId, shopId: row.capabilityShopId };
+}
+
+/** The unrevoked, unexpired capability row a token names, with its booking and departure. */
+async function liveCapabilityRow(
+  db: DbExecutor,
+  input: { token: string; purpose: CapabilityPurpose; now?: Date },
+) {
+  const now = input.now ?? nowDate();
+  const tokenHash = hashCapabilityToken(input.token);
+  const [row] = await db
+    .select({
+      bookingId: bookingCapabilities.bookingId,
+      capabilityShopId: bookingCapabilities.shopId,
+      bookingShopId: bookings.shopId,
+      personId: bookings.personId,
+      tripId: bookings.tripId,
+      bookingStatus: bookings.status,
+      tripStatus: trips.status,
+      tripDeleted: sql<boolean>`${trips.deletedAt} is not null`,
+      delivered: bookingCapabilities.delivered,
+    })
+    .from(bookingCapabilities)
+    .innerJoin(bookings, eq(bookings.id, bookingCapabilities.bookingId))
+    // diveday:allow-deleted-trips: the stranded check reads `tripDeleted` and refuses a deleted departure.
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookingCapabilities.tokenHash, tokenHash),
+        eq(bookingCapabilities.purpose, input.purpose),
+        isNull(bookingCapabilities.revokedAt),
+        gt(bookingCapabilities.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
 }
 
 /**

@@ -17,7 +17,7 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { demoEmail } from "../src/lib/simulator-email";
 import { weekStartOf } from "../src/lib/week-board";
 import { clearCourseForms } from "./course-form-only";
-import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   bookOpenWaterSession,
@@ -41,6 +41,7 @@ import {
   openRosterNotes,
   openSettingsRow,
   openThreadStep,
+  openTodayBoatFolds,
   openTripAbout,
   openTripFromBoard,
   openTripTab,
@@ -144,6 +145,31 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Send it to the shop" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "shopfront-register", scheme);
+      });
+
+      /**
+       * **The night-before reminder, on the diver's last boat** (ux-delight
+       * sheet 2026-10-22, item 1; H-150): the fly-safe rule in hours under
+       * the dock time, never a clock time. The email as sent, from the
+       * preview route's fixture notification.
+       */
+      test(`the night-before reminder email says the fly-safe hours (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const response = await request.get("/api/test/email-previews");
+        expect(response.ok()).toBe(true);
+        const { previews } = (await response.json()) as {
+          previews: { kind: string; message: { html: string } }[];
+        };
+        const reminder = previews.find((preview) => preview.kind === "trip_reminder_24h");
+        if (!reminder) throw new Error("no night-before reminder preview");
+        await page.setContent(reminder.message.html);
+        const flySafe = diverTranslator("en-US")("notifications.tripReminder.flySafe", {
+          count: 24,
+        });
+        await page.getByText(flySafe).waitFor();
+        await capture(page, "email-reminder-night-before", scheme);
       });
 
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
@@ -601,6 +627,25 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Join the wait list" }).waitFor();
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "public-trip-full", scheme);
+      });
+
+      /**
+       * **A first-timer's course session** (UX sheet 2026-10-22, item 3). Under
+       * The day, the course's own "Your afternoon" and, since the seed's
+       * Discover Scuba includes its gear, "Gear is included." The page where
+       * she pays now says what the course page says.
+       */
+      test(`a course session's page carries the afternoon and the gear (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis");
+        await page
+          .getByRole("link", { name: /Discover Scuba — Pool & Reef/ })
+          .first()
+          .click();
+        await page.getByTestId("trip-course-plan").getByText("Gear is included.").waitFor();
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await capture(page, "public-trip-course-session", scheme);
       });
 
       test(`the pitch's door opens onto the whole briefing (${scheme})`, async ({ page }) => {
@@ -1432,9 +1477,9 @@ for (const scheme of ["light", "dark"] as const) {
        * photographed — which matters more here than on the two above, because
        * this is the card a diver reads on the morning a trip they had planned
        * around was called off. It carries the cancellation, the shop's name,
-       * the way to the schedule, and now a short list of the preparation that
-       * survived: those records are filed against the person and the shop, not
-       * the seat, so they are still there.
+       * the way to the schedule, a short list of the preparation that
+       * survived (those records are filed against the person and the shop, not
+       * the seat, so they are still there), and one boat to ask to move to.
        *
        * The sizes are saved through the real product path first, because the
        * block renders only what is actually true and a diver who has prepared
@@ -1477,6 +1522,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(threadUrl);
         await page.getByRole("heading", { level: 1, name: "This trip was canceled" }).waitFor();
         await page.getByText("Still on file for you").waitFor();
+        // The boat it offers (UX sheet 2026-10-22, item 5): the demo runs
+        // another reef boat at the charter's price or less with seats free.
+        await page.getByRole("button", { name: /^Ask to move to / }).waitFor();
         await capture(page, "stranded-diver-card", scheme);
       });
 
@@ -2149,6 +2197,25 @@ for (const scheme of ["light", "dark"] as const) {
     test.describe("staff", () => {
       signedInAsOwner();
 
+      /**
+       * **Crew get a dock time of their own** (ux-delight sheet 2026-10-22,
+       * item 2; H-149): the demo captain's "Your week" reads "At the dock",
+       * 30 minutes before the divers, from the shop's crew time.
+       */
+      test.describe("as the captain", () => {
+        signedInAs("captain");
+
+        test(`a captain's week names the crew's own dock time (${scheme})`, async ({ page }) => {
+          await page.goto("/shop/blue-mantis");
+          await page.getByRole("heading", { name: "Your week" }).waitFor();
+          await page
+            .getByText(/At the dock \d{1,2}:\d\d\s[AP]M · leaves/)
+            .first()
+            .waitFor();
+          await capture(page, "today-captain-your-week", scheme);
+        });
+      });
+
       test(`the day spine renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis");
         await page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING }).waitFor();
@@ -2394,6 +2461,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`failed emails batch into one row (${scheme})`, async ({ page, request }) => {
         await request.post("/api/test/seed-trouble-states?failedEmails=1");
         await page.goto("/shop/blue-mantis");
+        // A chore on a long boat: the row sits behind "and N more" (foldBoatRows).
+        await openTodayBoatFolds(page);
         await page.getByRole("button", { name: "Resend confirmations" }).waitFor();
         await capture(page, "today-failed-emails", scheme);
       });

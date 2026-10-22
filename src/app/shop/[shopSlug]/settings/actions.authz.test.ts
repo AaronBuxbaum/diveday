@@ -55,6 +55,7 @@ const { revalidatePath } = await import("next/cache");
 const { requireStaffSession } = await import("@/lib/session");
 const {
   resendShoreAlertConfirmationAction,
+  saveCrewLeadAction,
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
 } = await import("./boat-actions");
@@ -311,7 +312,14 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings?notice=not-authorized`,
     );
 
+    const crew = new FormData();
+    crew.set("crewLeadMinutes", "90");
+    expect(await redirectedTo(() => saveCrewLeadAction(crew))).toBe(
+      `/shop/${shop.slug}/settings?notice=not-authorized`,
+    );
+
     const after = await getShopById(db, shop.id);
+    expect(after?.crewLeadMinutes).toBe(before?.crewLeadMinutes);
     expect(after?.packingList).toEqual(before?.packingList);
     expect(after?.dockCallMinutes).toBe(before?.dockCallMinutes);
     expect(after?.offersHotelPickup).toBe(before?.offersHotelPickup);
@@ -478,6 +486,26 @@ describe("every settings mutation refuses the daily crew", () => {
       `/shop/${shop.slug}/settings/dock-day?notice=dock-saved`,
     );
     expect((await getShopById(db, shop.id))?.dockCallMinutes).toBe(90);
+
+    // "Crew arrive before divers" (H-149): a number, then empty to clear it,
+    // and an out-of-range post changes nothing.
+    const crew = (minutes: string) => {
+      const posted = new FormData();
+      posted.set("crewLeadMinutes", minutes);
+      return posted;
+    };
+    expect(await redirectedTo(() => saveCrewLeadAction(crew("45")))).toBe(
+      `/shop/${shop.slug}/settings/dock-day?notice=crew-lead-saved`,
+    );
+    expect((await getShopById(db, shop.id))?.crewLeadMinutes).toBe(45);
+    expect(await redirectedTo(() => saveCrewLeadAction(crew("0")))).toBe(
+      `/shop/${shop.slug}/settings/dock-day?notice=crew-lead-invalid`,
+    );
+    expect((await getShopById(db, shop.id))?.crewLeadMinutes).toBe(45);
+    expect(await redirectedTo(() => saveCrewLeadAction(crew("")))).toBe(
+      `/shop/${shop.slug}/settings/dock-day?notice=crew-lead-saved`,
+    );
+    expect((await getShopById(db, shop.id))?.crewLeadMinutes).toBeNull();
 
     // "We offer hotel pickup" (fourth UX review, item 8): on, then off again.
     const pickup = new FormData();

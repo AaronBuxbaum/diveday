@@ -46,6 +46,11 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   // retried, so that race fails the test outright instead of settling.
   await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}/);
   await expect(page.getByText("Course session · Discover Scuba Diving")).toBeVisible();
+  // Her afternoon and her gear, under The day, off the course's own row (UX
+  // sheet 2026-10-22, item 3): the seed's Discover Scuba includes its gear.
+  const coursePlan = page.getByTestId("trip-course-plan");
+  await expect(coursePlan.getByText("Your afternoon")).toBeVisible();
+  await expect(coursePlan.getByText("Gear is included.")).toBeVisible();
   // The course session line links out to the course page (a crawlable
   // inbound link for SEO), mirroring the link the schedule list already
   // carries — never just a bare name.

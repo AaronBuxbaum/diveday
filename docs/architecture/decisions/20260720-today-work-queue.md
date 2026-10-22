@@ -33,9 +33,16 @@ Rules that define the queue, encoded in [`src/lib/today.ts`](../../../src/lib/to
   language, and a verb-labelled link to the one surface that fixes it. Card evidence resolves to
   the person record; waiver, payment, and requirement work resolves to the trip roster row (which
   now carries a `booking-<id>` anchor so the link lands on the right diver).
-- **One row per job, not per fact.** A diver with three blockers is one row headlined by the
-  hardest one. Several divers on the same boat with the same blocker collapse into one row
-  ("9 divers · Send waivers"). Without this, one busy departure buries every other boat.
+- **One row per diver per boat, not per fact.** A diver with three blockers is one row headlined
+  by the hardest one, naming the rest. *Amended 2026-10-22* (UX delight sheet, item 4, Aaron's
+  call 4): several divers with the same blocker no longer collapse into a counted row ("9 divers ·
+  Send waivers"), which sent the desk to the roster to find out who; each is named, with every gap
+  open for them on that boat (`oneRowPerDiver`). Two or more ashore sharing a waiver gap keep one
+  boat row above them that sends every one ("3 waivers not signed · Send waivers",
+  `waiverBatchActions`). A busy departure still cannot bury the others: its
+  group shows five rows and folds the rest behind "and N more" (`foldBoatRows`), never a danger
+  row or a readiness blocker. A readiness blocker leads its diver's row with its own fix and
+  sentence, the other gaps after it ("Not cleared to dive by a physician; also waiver").
 - **Chronological, then severity.** The 07:00 boat's problems outrank the 14:00 boat's. Severity
   ranks by how long a fix takes to land — evidence that must come from a diver or a physician
   outranks anything staff can settle at the dock — and only breaks ties inside one departure.

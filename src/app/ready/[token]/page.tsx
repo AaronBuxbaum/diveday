@@ -124,7 +124,7 @@ export default async function ReadyTokenPage({
   const anonT = diverTranslator(await requestLocale());
   const capability = await verifyBookingCapability(db, { token, purpose: "readiness" });
   if (!capability) {
-    return readyDeadLink({ db, token, cancelled, sent, anonT });
+    return readyDeadLink({ db, token, cancelled, sent, error, anonT });
   }
   const { bookingId, shopId: capabilityShopId, delivered } = capability;
 

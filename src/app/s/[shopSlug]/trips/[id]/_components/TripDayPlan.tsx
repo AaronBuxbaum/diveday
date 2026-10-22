@@ -12,7 +12,8 @@ import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import type { SiteReview } from "@/db/reviews";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import { diveSiteDepthText } from "@/i18n/unit-labels";
+import { courseDepthFormat, diveSiteDepthText } from "@/i18n/unit-labels";
+import { type CourseScheduleDay, formatScheduleDayTime, resolveCourseDepths } from "@/lib/courses";
 import { dayProfileRows } from "@/lib/day-profile";
 import type { DepthUnit } from "@/lib/depth-units";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
@@ -47,7 +48,11 @@ export type DayProfileFacts = {
   day?: { startsAt: Date; endsAt: Date; plannedDives: number };
   /** The reader's depth unit, added after the shop's when it differs (ideas item 22). */
   readerDepthUnit?: DepthUnit | null;
+  /** A course session's course: its own day list and whether its gear comes with it. */
+  course?: CourseFacts | null;
 };
+
+type CourseFacts = { scheduleDays: CourseScheduleDay[]; gearIncluded: boolean };
 
 type ProfileShop = Pick<Shop, keyof DockDayRhythm | "depthUnit">;
 type ProfileTrip = Pick<Trip, "diveMode" | "course" | "startsAt" | "endsAt" | "plannedDives">;
@@ -70,11 +75,83 @@ export function dayProfileFacts(
     diveMode: trip.diveMode,
     dayCount,
     readerDepthUnit,
+    course: trip.course,
     day:
       trip.course || dayCount > 1
         ? undefined
         : { startsAt: trip.startsAt, endsAt: trip.endsAt, plannedDives: trip.plannedDives },
   };
+}
+
+/**
+ * What a course session's "The day" says of the course itself (UX sheet
+ * 2026-10-22, item 3): the course's own day list, the "Your afternoon" its
+ * page shows, and whether its gear comes with it. Read off the course row the
+ * shop edits, never written again here, with its depth markers said in the
+ * shop's unit as the course page says them.
+ *
+ * **One session, one day.** A trip page is one session, so it says that
+ * session's day of the plan and never the whole multi-day plan. A session
+ * records no plan day of its own (`trip_schedule_days` numbers its meetings,
+ * not the course's days), so the only day it can be matched to is a
+ * one-meeting session of a one-day plan: Discover Scuba's afternoon. Any other
+ * session says no plan day at all; the gear line is the course's either way.
+ */
+export type CourseDayPlan = { days: CourseScheduleDay[]; gearIncluded: boolean };
+
+export function courseDayPlan(
+  course: CourseFacts | null | undefined,
+  t: DiverTranslator,
+  depthUnit: DepthUnit,
+  meetingDays: number,
+): CourseDayPlan | undefined {
+  if (!course) return undefined;
+  const sessionDays =
+    meetingDays === 1 && course.scheduleDays.length === 1 ? course.scheduleDays : [];
+  if (sessionDays.length === 0 && !course.gearIncluded) return undefined;
+  const format = courseDepthFormat(t, depthUnit);
+  return {
+    days: sessionDays.map((day) => ({
+      ...day,
+      title: resolveCourseDepths(day.title, format),
+      items: day.items.map((item) => resolveCourseDepths(item, format)),
+    })),
+    gearIncluded: course.gearIncluded,
+  };
+}
+
+function CoursePlan({
+  plan,
+  t,
+  locale,
+}: {
+  plan: CourseDayPlan;
+  t: DiverTranslator;
+  locale: string;
+}) {
+  return (
+    <div data-testid="trip-course-plan" className="mt-2 space-y-3">
+      {plan.days.map((day) => {
+        const time = formatScheduleDayTime(day, locale);
+        return (
+          <div key={day.title}>
+            <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm font-medium">
+              <span>{day.title}</span>
+              {time ? <span className="font-normal text-muted tabular-nums">{time}</span> : null}
+            </p>
+            {day.items.length > 0 ? (
+              <ul className="mt-1 grid gap-1 text-sm text-muted">
+                {day.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        );
+      })}
+      {plan.gearIncluded ? <p className="text-sm">{t("trip.courseGearIncluded")}</p> : null}
+    </div>
+  );
 }
 
 /**
@@ -247,13 +324,17 @@ export function TripDayPlan({
   siteReviews?: readonly SiteReview[];
 }) {
   const t = diverTranslator(locale);
-  if (briefings.length === 0) return null;
+  const course = profile
+    ? courseDayPlan(profile.course, t, profile.depthUnit, profile.dayCount)
+    : undefined;
+  if (briefings.length === 0 && !course) return null;
   const rhythm = profile ? dayRhythmLine(profile, briefings, t, locale, shop.timezone) : null;
   const rhythmLine = rhythm ? (
     <p data-testid="trip-day-rhythm" className="mt-2 text-sm font-medium">
       {rhythm}
     </p>
   ) : null;
+  const coursePlan = course ? <CoursePlan plan={course} t={t} locale={locale} /> : null;
   // Durations, never a clock. The beat stays time-neutral — the day's hours
   // belong to the thread a booked diver walks — but how long a dive runs and
   // how long the boat sits between two of them are facts about the day itself,
@@ -306,9 +387,12 @@ export function TripDayPlan({
       <section>
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
         {rhythmLine}
-        <p className="mt-2 text-sm text-muted">
-          {t("trip.sitesToBeConfirmed", { count: briefings.length })}
-        </p>
+        {coursePlan}
+        {briefings.length > 0 ? (
+          <p className="mt-2 text-sm text-muted">
+            {t("trip.sitesToBeConfirmed", { count: briefings.length })}
+          </p>
+        ) : null}
       </section>
     );
   }
@@ -326,6 +410,7 @@ export function TripDayPlan({
     <section>
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
       {rhythmLine}
+      {coursePlan}
       <ul className="mt-2">
         {briefings.map(({ dive, diveSite }) => {
           const bottomTime = bottomTimes.get(dive.diveNumber) ?? null;

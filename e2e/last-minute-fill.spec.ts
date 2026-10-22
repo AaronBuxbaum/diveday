@@ -1,6 +1,12 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { HELD_SEND_TIMEOUT_MS, openDiverFileGroup, rosterRow, signInAsOwner } from "./helpers";
+import {
+  HELD_SEND_TIMEOUT_MS,
+  openDiverFileGroup,
+  openTodayBoatFolds,
+  rosterRow,
+  signInAsOwner,
+} from "./helpers";
 
 /** The panel keeps the names past its preview cap behind "Show N more"; open them. */
 async function openMoreWhoWantsIn(page: Page): Promise<void> {
@@ -52,6 +58,8 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis");
+  // The want-in row is a chore: on a long boat it sits behind "and N more".
+  await openTodayBoatFolds(page);
   const nudge = page
     .locator("li")
     .filter({ hasText: /3 seats open, \d+ want in\./ })
@@ -132,6 +140,8 @@ test("a failed send attempt does not silence the Today row — nothing actually 
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis");
+  // The want-in row is a chore: on a long boat it sits behind "and N more".
+  await openTodayBoatFolds(page);
   const nudge = page
     .locator("li")
     .filter({ hasText: /3 seats open, \d+ want in\./ })
@@ -160,6 +170,8 @@ test("a failed send attempt does not silence the Today row — nothing actually 
   });
 
   await page.goto("/shop/blue-mantis");
+  // The want-in row is a chore: on a long boat it sits behind "and N more".
+  await openTodayBoatFolds(page);
   await expect(page.getByText(/3 seats open, \d+ want in\./)).toBeVisible();
 });
 
@@ -233,6 +245,8 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis");
+  // The want-in row is a chore: on a long boat it sits behind "and N more".
+  await openTodayBoatFolds(page);
   const nudge = page
     .locator("li")
     .filter({ hasText: /3 seats open, \d+ want in\./ })
@@ -304,6 +318,8 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   // night charter asks for a Night card nobody on the list holds, so its panel
   // is rightly empty (dive-domain review of #2656, m1).
   await page.goto("/shop/blue-mantis");
+  // The want-in row is a chore: on a long boat it sits behind "and N more".
+  await openTodayBoatFolds(page);
   await page
     .locator("li")
     .filter({ hasText: /3 seats open, \d+ want in\./ })

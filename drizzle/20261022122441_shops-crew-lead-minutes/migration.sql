@@ -1,0 +1,2 @@
+ALTER TABLE "shops" ADD COLUMN "crew_lead_minutes" integer DEFAULT 30;--> statement-breakpoint
+ALTER TABLE "shops" ADD CONSTRAINT "shops_crew_lead_minutes_range" CHECK ("crew_lead_minutes" IS NULL OR ("crew_lead_minutes" >= 5 and "crew_lead_minutes" <= 180));

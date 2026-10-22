@@ -17,7 +17,7 @@ import {
 import { createStaffCredential } from "./staff-credentials";
 import { getTodayWork } from "./today";
 import { pushEquipmentRows } from "./today-equipment-rows";
-import { rowsContext } from "./today-rows-test-fixtures";
+import { rowsContext, rowsNaming } from "./today-rows-test-fixtures";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { addCustomerGearItem, createWorkOrder, setWorkOrderStatus } from "./work-orders";
 
@@ -89,13 +89,14 @@ describe("rental fits on the queue, read through getTodayWork", () => {
     const roster = await getTripRoster(db, shop.id, reef.id);
     if (roster.length === 0) throw new Error("demo bookings missing");
 
+    // Each diver's own row names their sizes job (UX delight sheet 2026-10-22,
+    // item 4); the row's door is pinned in `today-departure-rows.test.ts`.
+    const sizeRows = (work: Awaited<ReturnType<typeof getTodayWork>>) => [
+      ...rowsNaming(work.actions, reef.id, "rental size"),
+      ...rowsNaming(work.actions, reef.id, "kit"),
+    ];
     const flagged = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const prepAction = flagged.actions.find((action) => action.id === `prep:${reef.id}`);
-    expect(prepAction?.actionLabel).toBe("Open prep list");
-    // The packing list reads on the departure now (ADR 20260919-one-idea,
-    // slice 23c), so the day's row lands on its section rather than on a
-    // route no staffer navigates to.
-    expect(prepAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}/prep#packing-list`);
+    expect(sizeRows(flagged).length).toBeGreaterThan(0);
 
     const rents = {
       rentsBcd: true,
@@ -125,7 +126,7 @@ describe("rental fits on the queue, read through getTodayWork", () => {
       });
     }
     const stillPartial = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(stillPartial.actions.some((action) => action.id === `prep:${reef.id}`)).toBe(true);
+    expect(rowsNaming(stillPartial.actions, reef.id, "rental size").length).toBeGreaterThan(0);
 
     for (const entry of roster) {
       await saveRentalFit(db, {
@@ -141,7 +142,7 @@ describe("rental fits on the queue, read through getTodayWork", () => {
     }
 
     const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(cleared.actions.some((action) => action.id === `prep:${reef.id}`)).toBe(false);
+    expect(sizeRows(cleared)).toEqual([]);
   });
 });
 

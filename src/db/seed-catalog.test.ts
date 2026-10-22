@@ -4,7 +4,7 @@ import { COURSE_TEMPLATES } from "@/content/course-templates";
 import { nowDate } from "@/lib/clock";
 import { courseSlug } from "@/lib/courses";
 import { seededShopContext } from "@/test/db";
-import { courseForms, courseFormVersions } from "./schema";
+import { courseForms, courseFormVersions, courses } from "./schema";
 import { courseTemplateDisplayTitle } from "./seed-catalog";
 
 /**
@@ -79,5 +79,24 @@ describe("seeded course forms", () => {
     expect(versions.length).toBeGreaterThan(0);
     const now = nowDate().getTime();
     expect([...forms, ...versions].filter((row) => row.created.getTime() !== now)).toEqual([]);
+  }, 60_000);
+});
+
+/**
+ * **The demo's Discover Scuba includes its gear** (UX sheet 2026-10-22, item
+ * 3), as its page's "Complete rental gear" says, so the session's trip page
+ * says "Gear is included." where a buyer can see it. No other course claims it.
+ */
+describe("seeded gear-included courses", () => {
+  it("are Discover Scuba Diving alone", async () => {
+    const { db, shop } = await seededShopContext();
+    const rows = await db
+      .select({ slug: courses.slug, gearIncluded: courses.gearIncluded })
+      .from(courses)
+      .where(eq(courses.shopId, shop.id));
+    expect(rows.length).toBeGreaterThan(1);
+    expect(rows.filter((row) => row.gearIncluded).map((row) => row.slug)).toEqual([
+      "discover-scuba-diving",
+    ]);
   }, 60_000);
 });

@@ -39,6 +39,12 @@ describe("TripNoticeBanner", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("says a refused waiver link never went out, in the shared send-limit sentence", () => {
+    expect(resolve("send-limit")?.text).toBe(
+      "You have sent a lot of links this hour. Nothing went out; try again in a little while.",
+    );
+  });
+
   it("keeps a booking removal's undo available after the transient toast interval", () => {
     vi.useFakeTimers();
     render(
