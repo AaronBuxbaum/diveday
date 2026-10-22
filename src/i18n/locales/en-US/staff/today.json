@@ -143,6 +143,11 @@
     "getCourseFormsSigned": "Get forms signed",
     "clearTrainingMark": "Clear training mark"
   },
+  "blockerGroup": {
+    "sendWaivers": "Send waivers",
+    "nudgeWaivers": "Nudge waivers",
+    "reissueWaivers": "Reissue waivers"
+  },
   "pointingLabel": {
     "trip": "Open roster",
     "diver": "Open {name}’s record"
@@ -333,14 +338,14 @@
   "blockerRow": {
     "requirementsNotConfigured": "Trip requirements not set",
     "identityUnconfirmed": "Booking matched on a guess. Confirm who this is before the waiver goes out.",
-    "waiverNotSent": "Waiver not signed, not sent yet",
-    "waiverPending": "Waiver not signed, link sent",
-    "waiverExpired": "Waiver link expired",
-    "waiverLapsed": "Signed waiver lapsed",
-    "waiverRunsOut": "Waiver runs out before the trip.",
+    "waiverNotSent": "{count, plural, one {Waiver not signed, not sent yet} other {# waivers not signed, not sent yet}}",
+    "waiverPending": "{count, plural, one {Waiver not signed, link sent} other {# waivers not signed, links sent}}",
+    "waiverExpired": "{count, plural, one {Waiver link expired} other {# waiver links expired}}",
+    "waiverLapsed": "{count, plural, one {Signed waiver lapsed} other {# signed waivers lapsed}}",
+    "waiverRunsOut": "{count, plural, one {Waiver runs out before the trip.} other {# waivers run out before the trip.}}",
     "medicalReview": "Medical answer needs a doctor’s sign-off.",
     "medicalNotCleared": "Not cleared to dive by a physician",
-    "guardianSignatureMissing": "Waiver needs a guardian’s signature.",
+    "guardianSignatureMissing": "{count, plural, one {Waiver needs a guardian’s signature.} other {# waivers need a guardian’s signature.}}",
     "certificationMissing": "No certification on file",
     "certificationPending": "Certification not verified yet",
     "certificationSelfDeclared": "Certification self-declared, not verified",

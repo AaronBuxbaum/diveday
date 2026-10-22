@@ -8,6 +8,7 @@ import {
   oneRowPerDiver,
   type TodayAction,
   urgencyFor,
+  waiverBatchActions,
 } from "./today";
 
 /**
@@ -298,5 +299,66 @@ describe("foldBoatRows", () => {
     expect(folded.shown.some((row) => row.kind === "roll_call_missing_diver")).toBe(true);
     expect(folded.more.every((row) => row.kind === "dive_prep")).toBe(true);
     expect(folded.shown.length + folded.more.length).toBe(9);
+  });
+});
+
+describe("waiverBatchActions", () => {
+  const diver = (fullName: string, code: ReadinessBlocker["code"], tripId = "t1") => ({
+    bookingId: `b-${fullName}`,
+    personId: `p-${fullName}`,
+    fullName,
+    tripId,
+    tripTitle: "Reef Drift · 8:00 AM",
+    startsAt: hoursFromNow(3),
+    blockers: [blocker(code)],
+  });
+
+  it("keeps one tap for a boat's unsent waivers, beside the named rows", () => {
+    const divers = ["Ana", "Ben", "Cara"].map((name) => diver(name, "waiver_not_sent"));
+    const [batch, ...rest] = waiverBatchActions(divers, "blue-reef", NOW);
+    expect(rest).toEqual([]);
+    expect(batch?.subject).toBe("3 waivers not signed, not sent yet");
+    expect(batch?.actionLabel).toBe("Send waivers");
+    expect(batch?.waiver).toEqual({ bookingIds: ["b-Ana", "b-Ben", "b-Cara"] });
+    expect(batch?.aboutDeparture).toBe(true);
+    // No diver, so the per-diver fold leaves it standing beside them.
+    const rows = oneRowPerDiver([
+      ...(batch ? [batch] : []),
+      ...blockedDiverActions(divers, "blue-reef", NOW),
+    ]);
+    expect(rows).toHaveLength(4);
+  });
+
+  it("offers no batch for one diver, another boat, an aboard diver, a non-waiver gap or a held seat", () => {
+    const rows = waiverBatchActions(
+      [
+        diver("Ana", "waiver_not_sent"),
+        diver("Ben", "waiver_not_sent", "t2"),
+        { ...diver("Cara", "waiver_not_sent"), aboard: true },
+        diver("Dev", "payment_due"),
+        diver("Eli", "payment_due"),
+        {
+          ...diver("Fay", "waiver_not_sent"),
+          blockers: [blocker("identity_unconfirmed"), blocker("waiver_not_sent")],
+        },
+      ],
+      "blue-reef",
+      NOW,
+    );
+    expect(rows).toEqual([]);
+  });
+
+  it("splits waivers by what the tap does: send, nudge", () => {
+    const rows = waiverBatchActions(
+      [
+        diver("Ana", "waiver_not_sent"),
+        diver("Ben", "waiver_not_sent"),
+        diver("Cara", "waiver_pending"),
+        diver("Dev", "waiver_pending"),
+      ],
+      "blue-reef",
+      NOW,
+    );
+    expect(rows.map((row) => row.actionLabel)).toEqual(["Send waivers", "Nudge waivers"]);
   });
 });

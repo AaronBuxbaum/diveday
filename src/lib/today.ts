@@ -12,6 +12,8 @@ import {
   owedRefundGroupDetailText,
   owedRefundGroupSubjectText,
   pointingLabelText,
+  type WaiverBatchCode,
+  waiverBatchLabelText,
 } from "@/i18n/today-labels";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
@@ -994,7 +996,7 @@ const WAIVER_CODES = new Set<ReadinessBlockerCode>([
   "guardian_signature_missing",
 ]);
 
-export function isWaiverCode(code: ReadinessBlockerCode): boolean {
+export function isWaiverCode(code: ReadinessBlockerCode): code is WaiverBatchCode {
   return WAIVER_CODES.has(code);
 }
 
@@ -1304,6 +1306,52 @@ export function blockedDiverActions(
   t: StaffTranslator = staffTranslator("en-US"),
 ): TodayAction[] {
   return divers.flatMap((diver) => diverBlockerAction(diver, shopSlug, now, t) ?? []);
+}
+
+/**
+ * **One tap still sends a boat's waivers** (coordinator, 2026-10-22): the
+ * divers stay named one row each, and when two or more ashore on one boat lead
+ * with the same waiver gap, one row about the boat sends them all — "3 waivers
+ * not signed, not sent yet · Send waivers" — the batch the counted rows used to
+ * carry. Grouped by headline, as that batch was, so a held seat
+ * (`identity_unconfirmed` leads) never gets a waiver from it. Aboard divers keep
+ * their own rows: a send cannot reach somebody already on the boat.
+ */
+export function waiverBatchActions(
+  divers: readonly DiverBlockerInput[],
+  shopSlug: string,
+  now: Date,
+  t: StaffTranslator = staffTranslator("en-US"),
+): TodayAction[] {
+  const byTripAndCode = new Map<string, { code: WaiverBatchCode; rows: DiverBlockerInput[] }>();
+  for (const diver of divers) {
+    const headline = headlineFor(diver);
+    if (!headline || headline.aboard || !isWaiverCode(headline.blocker.code)) continue;
+    const key = `${diver.tripId}:${headline.blocker.code}`;
+    const bucket = byTripAndCode.get(key);
+    if (bucket) bucket.rows.push(diver);
+    else byTripAndCode.set(key, { code: headline.blocker.code, rows: [diver] });
+  }
+  return [...byTripAndCode].flatMap(([key, { code, rows }]) => {
+    const [first] = rows;
+    if (!first || rows.length < 2) return [];
+    return [
+      {
+        id: `waivers:${key}`,
+        kind: "waiver" as const,
+        urgency: urgencyFor(first.startsAt, now),
+        subject: blockerRowText(t, { code }, rows.length),
+        context: first.tripTitle,
+        departure: { tripId: first.tripId, label: first.tripTitle },
+        aboutDeparture: true,
+        detail: "",
+        actionLabel: waiverBatchLabelText(t, code),
+        href: `/shop/${shopSlug}/trips/${first.tripId}`,
+        waiver: { bookingIds: rows.map((row) => row.bookingId) },
+        dueAt: first.startsAt,
+      },
+    ];
+  });
 }
 
 /**

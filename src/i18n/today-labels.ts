@@ -181,11 +181,29 @@ const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
  * (`readinessBlockerText`) is one tap away on the roster and the diver
  * record, which is where it is read.
  */
-export function blockerRowText(t: StaffTranslator, blocker: ReadinessBlocker): string {
+export function blockerRowText(t: StaffTranslator, blocker: ReadinessBlocker, count = 1): string {
   const specialty = blocker.params?.specialty;
   return t(BLOCKER_ROW_KEYS[blocker.code], {
+    count,
     specialty: specialty ? t(SPECIALTY_KEYS[specialty]) : "",
   });
+}
+
+/** The one-tap fix for a boat's waivers at once, by the code they share ("Send waivers"). */
+const WAIVER_BATCH_LABEL_KEYS = {
+  waiver_not_sent: "today.blockerGroup.sendWaivers",
+  waiver_lapsed: "today.blockerGroup.sendWaivers",
+  waiver_runs_out: "today.blockerGroup.sendWaivers",
+  waiver_pending: "today.blockerGroup.nudgeWaivers",
+  waiver_expired: "today.blockerGroup.reissueWaivers",
+  guardian_signature_missing: "today.blockerGroup.reissueWaivers",
+} as const satisfies Partial<Record<ReadinessBlockerCode, StaffMessageKey>>;
+
+export type WaiverBatchCode = keyof typeof WAIVER_BATCH_LABEL_KEYS;
+
+/** The batch waiver button's word for a code a one-tap send resolves. */
+export function waiverBatchLabelText(t: StaffTranslator, code: WaiverBatchCode): string {
+  return t(WAIVER_BATCH_LABEL_KEYS[code]);
 }
 
 /** A gap's short name in a diver's row, keyed by blocker code (`today.diverItem.*`). */

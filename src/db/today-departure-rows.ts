@@ -23,6 +23,7 @@ import {
   collapseEmailDeliveries,
   type TodayAction,
   urgencyFor,
+  waiverBatchActions,
 } from "@/lib/today";
 import { type BoatWork, type BoatWorkDiver, boatWorkFor } from "./boat-work";
 import { pushCrewGapRows } from "./today-crew-gap-rows";
@@ -73,7 +74,10 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         blockers: row.readiness.blockers,
         aboard: boardedAnywhere.get(trip.id)?.has(row.booking.id) === true,
       }));
-    actions.push(...blockedDiverActions(blockedDivers, shopSlug, now, t));
+    actions.push(
+      ...waiverBatchActions(blockedDivers, shopSlug, now, t),
+      ...blockedDiverActions(blockedDivers, shopSlug, now, t),
+    );
 
     // **The boat's work** (third review, item 4): sizes, nitrox, contacts and
     // open orders, decided by `boatWorkItems` from the one reader the trip's

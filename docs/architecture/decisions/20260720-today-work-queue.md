@@ -37,7 +37,9 @@ Rules that define the queue, encoded in [`src/lib/today.ts`](../../../src/lib/to
   by the hardest one, naming the rest. *Amended 2026-10-22* (UX delight sheet, item 4, Aaron's
   call 4): several divers with the same blocker no longer collapse into a counted row ("9 divers ·
   Send waivers"), which sent the desk to the roster to find out who; each is named, with every gap
-  open for them on that boat (`oneRowPerDiver`). A busy departure still cannot bury the others: its
+  open for them on that boat (`oneRowPerDiver`). Two or more ashore sharing a waiver gap keep one
+  boat row above them that sends every one ("3 waivers not signed · Send waivers",
+  `waiverBatchActions`). A busy departure still cannot bury the others: its
   group shows five rows and folds the rest behind "and N more" (`foldBoatRows`), never a danger
   row.
 - **Chronological, then severity.** The 07:00 boat's problems outrank the 14:00 boat's. Severity

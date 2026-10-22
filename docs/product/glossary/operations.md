@@ -23,7 +23,8 @@
   once under each boat they are on: one row with their name over what is wrong in a few words
   ("Waiver not signed, not sent yet."), or, when several things are open for them, over every item
   ("Priya Sharma · waiver, emergency contact"), with one button for the first fix. Counts stay only
-  for what cannot name a person, such as a boat's open orders. A boat with many rows shows its
+  for what cannot name a person, such as a boat's open orders, and for a batch fix: two or more
+  divers on a boat sharing a waiver gap get one row above them that sends every waiver at once. A boat with many rows shows its
   first five and folds the rest behind "and N more"; a danger row never folds. No row carries the
   levels — the roster and the diver record carry the full sentence. Failed emails of one kind and one cause are one row with one resend, however
   many people they missed. **A crew reader's lens** (UX audit 2026-10-07, item 7): for a captain or
