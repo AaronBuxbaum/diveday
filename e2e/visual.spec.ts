@@ -8083,16 +8083,14 @@ test.describe("capture harness", () => {
         });
         await test.step("fresh desktop overview", async () => {
           await page.setViewportSize(VIEWPORTS[1]);
-          // This independent overview must not restore the preceding phone camera.
+          // The phone overview nobody moved left no camera behind, so the
+          // reload fits its own desktop width rather than restoring a phone's.
           const savedViewportKeys = await page.evaluate((view) => {
             return Object.keys(sessionStorage).filter(
               (key) => key.startsWith("diveday:map:") && key.endsWith(`:${view}`),
             );
           }, surface.name);
-          expect(savedViewportKeys).toHaveLength(1);
-          await page.evaluate((keys) => {
-            for (const key of keys) sessionStorage.removeItem(key);
-          }, savedViewportKeys);
+          expect(savedViewportKeys).toEqual([]);
           await page.reload();
           await surface.ready(page);
           await expectOverviewMapSites(page, surface.pins);
