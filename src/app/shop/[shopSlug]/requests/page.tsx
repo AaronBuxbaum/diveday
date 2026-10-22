@@ -219,8 +219,9 @@ export default async function RequestsPage({
                   }),
                 }))}
                 add={
-                  // "Add a departure" is for the days with nothing on the board.
-                  canAddDeparture && !boardByDate.has(group.date)
+                  // Offered on every day, "On the board" or not: a busy day can
+                  // still want a second boat for the people who asked.
+                  canAddDeparture
                     ? {
                         href: addDepartureHref(
                           shopSlug,
