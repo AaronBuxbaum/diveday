@@ -57,6 +57,19 @@ afterEach(() => {
 });
 
 describe("POST /api/test/seed-trouble-states", () => {
+  it("does not seed the rental lookup without its bearer or against a real database", async () => {
+    vi.mocked(getDb).mockClear();
+    const denied = await POST(
+      new Request("http://localhost/api/test/seed-trouble-states?rentalLookup=1", {
+        method: "POST",
+      }),
+    );
+    expect(denied.status).toBe(404);
+    vi.stubEnv("DATABASE_URL", "postgres://example.invalid/not-a-test-database");
+    expect((await POST(seedRequest("?rentalLookup=1"))).status).toBe(404);
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
   it("cancels no departure for a caller who asked for another state", async () => {
     const { db, shop } = await seededShopContext();
     vi.mocked(getDb).mockResolvedValue(db);

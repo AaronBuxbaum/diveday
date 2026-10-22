@@ -71,7 +71,8 @@ export function SignedRecordsSection({
     keepQuery = true,
   }: {
     target?: number;
-    nextView?: SignedRecordView;
+    /** Omit to inherit the current view; null clears it. */
+    nextView?: SignedRecordView | null;
     keepQuery?: boolean;
   }) => {
     const search = new URLSearchParams();
@@ -87,7 +88,7 @@ export function SignedRecordsSection({
     {
       key: "all",
       label: t("waiversStaff.signatures.views.all"),
-      href: logHref({ nextView: undefined }),
+      href: logHref({ nextView: null }),
       active: !view,
     },
     {

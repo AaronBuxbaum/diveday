@@ -410,5 +410,6 @@ script again.
 | 20261019-map-centric-dive-sites | Map-centric dive sites library and… (proposed) |
 | 20261019-replace-google-maps | Eliminate Google Maps runtime dependencies… (proposed) |
 | 20261019-single-address-token-table | Address confirmations and alerts use… |
+| 20261021-setup-request-receipts | Bound requester receipts to saved… |
 
 <!-- adr-index:end -->

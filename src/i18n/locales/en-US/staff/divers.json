@@ -243,7 +243,9 @@
     "chooseActivity": "Choose a departure",
     "booking": "Booking…",
     "bookActivityButton": "Book",
-    "noOpenActivities": "No upcoming departure has a seat open.",
+    "noOpenActivities": "No other upcoming departure has a seat open.",
+    "earlierDepartures": "Earlier departures",
+    "laterDepartures": "Later departures",
     "noEmailNote": "No email on file. Hand this diver their waiver link in person, or add an address to their record.",
     "bookDeparture": "Add a booking"
   },
@@ -274,7 +276,7 @@
     "noContact": "No contact details",
     "compare": "Compare",
     "compareWith": "Compare with {name}",
-    "more": "And {count} more"
+    "showMore": "Show more"
   },
   "mergePreview": {
     "title": "Merge duplicate records",

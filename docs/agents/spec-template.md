@@ -23,6 +23,10 @@ them is handed back, not made.
 The rules, ADRs and glossary lines this work must keep, the branch and base, the stack
 position, and anything the worker must not do (push, open a PR, call a tool).
 
+## Reproducibility and accepted decisions
+Immutable base/head SHA, exact accepted product terms and decision provenance, route/capture/state
+matrix for visual work, and current owner. Save these in `.agent-out/task-state.json`.
+
 ## Done when
 Checkable conditions, each one observable: a test that passes, a page that shows a state,
 a guard that goes green. "Looks right" is not one.
@@ -34,7 +38,8 @@ The exact commands to run, focused (`pnpm test <file> --reporter=dot`,
 ## Hand back
 Write the full result to <path>, then hand back that path plus at most ten lines: the commit
 sha or why there is none, the files changed, each check and its result, review outcomes, and
-what was not done.
+what was not done. Include pending review/CI run IDs, process ownership and the next executable
+command. Update the durable task state with `pnpm task:state <prepared-state.json>`.
 ```
 
 The worker's result file is what the steering thread reads next; the steering thread does not

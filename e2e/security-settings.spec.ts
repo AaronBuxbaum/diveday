@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { totpCode } from "../src/lib/totp";
 import { expect, test } from "./fixtures";
 import { E2E_FROZEN_CLOCK } from "./servers";
@@ -52,6 +53,16 @@ test.describe("account security settings", () => {
     // the unambiguous read on the state.
     await expect(page.getByRole("button", { name: "Disable two-factor" })).toBeVisible();
     await expect(page.getByText("Not enabled")).toHaveCount(0);
+
+    // A narrow keyboard walk checks that the server-identified session is
+    // labeled and its technical fingerprint stays behind a native disclosure.
+    await page.setViewportSize({ width: 390, height: 844 });
+    const staff = staffTranslator("en-US");
+    await expect(page.getByText(staff("settings.security.thisDevice"))).toBeVisible();
+    const details = page.getByText(staff("settings.security.details"), { exact: true });
+    await details.focus();
+    await details.press("Enter");
+    await expect(page.getByText(staff("settings.security.browserDetails"))).toBeVisible();
 
     // The reveal, which is the only moment ten usable codes exist anywhere: the
     // shop is told to save them because DiveDay keeps only their hashes.

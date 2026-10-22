@@ -255,3 +255,16 @@ describe("the handoff docs' paths", () => {
     }
   });
 });
+
+// Canonical skill trees must also cover non-Claude providers.
+import { providerSkillProblems } from "./agent-layer.mjs";
+
+describe("canonical provider skills", () => {
+  it("rejects missing mirrors and divergent copies", () => {
+    expect(providerSkillProblems(["verify"], { verify: false })).toHaveLength(1);
+    expect(providerSkillProblems(["verify"], {})).toHaveLength(1);
+  });
+  it("accepts resolved canonical mirrors", () => {
+    expect(providerSkillProblems(["verify"], { verify: true })).toEqual([]);
+  });
+});

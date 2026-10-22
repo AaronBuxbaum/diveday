@@ -229,6 +229,8 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: "Clear search" }).click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/dive-sites$/);
     await expect(rows).toHaveCount(seededCount);
+    await expect(search).toHaveValue("");
+    await expect(page.getByRole("link", { name: "Clear search" })).toHaveCount(0);
 
     // One screenful of sites is never told it is on "page 1 of 1"; the pager
     // only exists when there is somewhere to go. (`src/db/dive-sites.test.ts`
@@ -533,15 +535,16 @@ test.describe("staff", () => {
       .filter({ visible: true });
     await expect(template.getByText("Template v3")).toBeVisible();
 
-    // The catalog's one action. It lands on the freshly created site's own
-    // briefing, ready to tailor — not back on a list where staff would have to
-    // find what they just imported.
-    await template.getByRole("button", { name: "Import to my library" }).click();
+    await expect(template.getByRole("button", { name: "Import to my library" })).toHaveCount(0);
+    await template.getByRole("link", { name: "Molasses Reef", exact: true }).click();
+    await expect(page).toHaveTitle("Molasses Reef — DiveDay");
+    await page.getByRole("button", { name: "Import to my library" }).click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/dive-sites\/[0-9a-f-]+/);
     await expect(
       page.getByRole("heading", { level: 1, name: "Molasses Reef 2", exact: true }),
     ).toBeVisible();
 
+    await expect(page).toHaveTitle("Molasses Reef 2 — DiveDay");
     await page.getByRole("main").getByRole("link", { name: "Dive sites", exact: true }).click();
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/dive-sites$/);
     // Both sites now: the new one states the version it came from, while the
@@ -1086,22 +1089,22 @@ test("map labels keep saved site text literal and details navigation works", asy
   await expect(marker).toBeVisible();
   const popup = page.locator(".leaflet-popup-content");
   // Check the shop before another site's popup auto-pan moves the viewport.
-  const shopMarker = page.locator(".leaflet-shop-marker button").first();
+  const shopMarker = page.locator('.leaflet-shop-marker [role="img"]').first();
   await expect(shopMarker).toHaveAccessibleName(/\S/);
   await shopMarker.focus();
-  await shopMarker.press("Enter");
-  await expect(popup.locator("strong")).toBeVisible();
-  await page.getByRole("button", { name: "Close popup" }).click();
+  await expect(page.locator(".leaflet-shop-tooltip")).toBeVisible();
+  await shopMarker.click();
   await expect(popup).toHaveCount(0);
   await marker.focus();
   await marker.press("Enter");
   await expect(marker).toHaveClass(/ring-4/);
   await expect(popup).toHaveCount(1);
   await expect(popup.getByText(name, { exact: true })).toBeVisible();
-  await expect(popup.getByText(subtitle, { exact: true })).toBeVisible();
+  await expect(popup.getByText(subtitle, { exact: true })).toHaveCount(0);
   await expect(popup.locator("img, b, [onerror], [onmouseover]")).toHaveCount(0);
   await page.getByRole("button", { name: "Close popup" }).click();
   await expect(popup).toHaveCount(0);
+  await expect(marker).not.toHaveClass(/ring-4/);
   await marker.focus();
   await marker.press("Space");
   await expect(popup).toHaveCount(1);

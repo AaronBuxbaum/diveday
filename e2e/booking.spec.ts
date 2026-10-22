@@ -98,7 +98,7 @@ test.describe("staff", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "You’ve got a seat, Nora" }),
     ).toBeVisible();
-    await expect(threadStatus(page)).toContainText("Next: sign your waiver.");
+    await expect(threadStatus(page)).toContainText(diver("thread.next.signWaiver"));
     await expect(page.getByText(diver("ready.logEntryWaiting"))).toBeVisible();
 
     // No email provider is configured in the e2e fleet, so nothing left the

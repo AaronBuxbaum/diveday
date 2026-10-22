@@ -32,7 +32,7 @@ export function boatWorkText(t: StaffTranslator, item: BoatWorkItem): string {
   return t(BOAT_WORK_KEYS[item.code], { count: item.count });
 }
 
-/** The same words as a Today row's sentence. */
+/** Preserve each message's fragment or complete-sentence punctuation on Today. */
 export function boatWorkSentence(t: StaffTranslator, item: BoatWorkItem): string {
   return t("today.detail.boatWork", { work: boatWorkText(t, item) });
 }

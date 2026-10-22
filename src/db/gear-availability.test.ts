@@ -4,7 +4,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { listAvailableGearUnits, listTripGearAssignments } from "./gear-availability";
-import { createGearItem, setGearItemStatus } from "./gear-items";
+import { createGearItem, deleteGearItem, setGearItemStatus } from "./gear-items";
 import { listGearItems } from "./gear-register";
 import {
   checkOutGearReservation,
@@ -12,7 +12,14 @@ import {
   returnGearReservation,
 } from "./gear-reservations";
 import { recordGearService } from "./gear-service";
-import { gearShopContext, mustCreate, SETUP_PICK, shopBooking, TODAY } from "./gear-test-fixtures";
+import {
+  gearShopContext,
+  mustCreate,
+  rivalShop,
+  SETUP_PICK,
+  shopBooking,
+  TODAY,
+} from "./gear-test-fixtures";
 import { gearReservations, gearServiceEvents } from "./schema";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -20,6 +27,57 @@ import { gearReservations, gearServiceEvents } from "./schema";
 const ctx = fileScopedShopContext();
 
 describe("gear register readers: the picker and a departure's assignments", () => {
+  it("only the counter opt-in includes unavailable units, with current reasons and tenant isolation", async () => {
+    const { db, shop } = await gearShopContext(ctx);
+    const free = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "Free" }),
+    );
+    const busy = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "Busy" }),
+    );
+    const pulled = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "Pulled" }),
+    );
+    const removed = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "Deleted" }),
+    );
+    await deleteGearItem(db, { shopId: shop.id, gearItemId: removed.id, todayLocal: TODAY });
+    await setGearItemStatus(db, {
+      shopId: shop.id,
+      gearItemId: pulled.id,
+      status: "needs_service",
+    });
+    const booking = await shopBooking(db, shop.id, "Busy Bea");
+    await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: busy.id,
+      bookingId: booking.bookingId,
+      reservedFrom: "2026-09-01",
+      reservedUntil: "2026-09-02",
+      screen: SETUP_PICK,
+    });
+    const other = await rivalShop(db);
+    mustCreate(await createGearItem(db, { shopId: other.id, kind: "bcd", label: "Other tenant" }));
+    const window = {
+      from: "2026-09-01",
+      until: "2026-09-01",
+      todayLocal: TODAY,
+      kind: "bcd" as const,
+    };
+    expect((await listAvailableGearUnits(db, shop.id, window)).map((unit) => unit.id)).toEqual([
+      free.id,
+    ]);
+    const counter = await listAvailableGearUnits(db, shop.id, {
+      ...window,
+      includeUnavailable: true,
+    });
+    expect(counter.map((unit) => [unit.id, unit.unavailable])).toEqual([
+      [busy.id, "unit_unavailable"],
+      [free.id, null],
+      [pulled.id, "unit_out_of_service"],
+    ]);
+  });
+
   it("the picker offers only free, working units for the window", async () => {
     const { db, shop } = await gearShopContext(ctx);
     mustCreate(

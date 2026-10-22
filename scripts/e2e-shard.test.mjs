@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   dealSpecs,
   dealVisualTests,
-  EXCLUDED_SPECS,
   estimateCost,
   listedTests,
   listSpecs,
@@ -46,7 +45,8 @@ describe("dealing the real e2e tree", () => {
 
   it("never deals the visual spec, which has its own shards and baselines", async () => {
     const bins = await dealSpecs(SHARDS);
-    expect(bins.flatMap((bin) => bin.items)).not.toContain(EXCLUDED_SPECS[0]);
+    expect(bins.flatMap((bin) => bin.items)).not.toContain("e2e/visual.spec.ts");
+    expect(bins.flatMap((bin) => bin.items)).not.toContain("e2e/visual-sites.spec.ts");
   });
 
   it("leaves a skipped spec out of every shard, and deals the rest once", async () => {

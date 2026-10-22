@@ -42,17 +42,17 @@ export const THREAD_STEP_STATE_KEYS: Record<Exclude<ThreadStepState, "done">, Di
 };
 
 /**
- * **What the thread asks next, as a sentence** (UX review 2026-10-10, item 9).
+ * **What the thread asks next, as a status heading** (UX review 2026-10-10, item 9).
  *
  * The status head leads with this line, so it says the act rather than naming
- * the step ("Next: sign your waiver.", not "Next: Sign"). The step row under
+ * the step ("Next: sign your waiver"). The step row under
  * it already says how long the release takes, so this line does not repeat it.
  *
  * The sign and certification steps each speak for several readiness codes, and
- * one sentence for all of them would ask a diver to do the wrong thing: a
+ * one lead for all of them would ask a diver to do the wrong thing: a
  * diver short a level is not helped by "add your certification", and a minor
  * cannot sign their own waiver. Those two steps branch on the item's code in
- * `threadNextKey`; every other step has one sentence here.
+ * `threadNextKey`; every other step has one lead here.
  */
 export const THREAD_STEP_NEXT_KEYS: Record<
   Exclude<ThreadStepId, "sign" | "certification">,

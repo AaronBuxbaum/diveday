@@ -258,13 +258,13 @@ export function CompactDisclosureRow({
   const rowClass = `group/compact-row ${className}`.trim();
   const body = (
     <>
-      <summary className="-mx-2 grid min-h-11 cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)] content-center items-start gap-x-2 gap-y-1 rounded-lg px-2 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-primary sm:flex sm:items-center sm:justify-between sm:gap-3">
+      <summary className="-mx-2 grid min-h-11 cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)] content-center items-start gap-x-2 gap-y-1 rounded-lg px-2 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-primary sm:grid-cols-[max-content_minmax(0,1fr)] sm:items-center sm:gap-3">
         <span className="contents sm:flex sm:min-w-0 sm:items-center sm:gap-2">
           <SummaryCaret className="text-muted group-open/compact-row:rotate-90" />
           <span className="min-w-0 font-medium">{label}</span>
         </span>
         {value != null ? (
-          <span className="col-start-2 min-w-0 max-w-full whitespace-normal break-words text-muted sm:truncate sm:text-end">
+          <span className="col-start-2 min-w-0 max-w-full whitespace-normal break-words text-muted sm:col-start-auto sm:text-end">
             {value}
           </span>
         ) : null}

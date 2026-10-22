@@ -14,6 +14,15 @@ afterEach(cleanup);
 function data(participantType: ReadyPageData["participantType"]): ReadyPageData {
   return {
     participantType,
+    trip: {
+      meetingPointLabel: null,
+      meetingPointAddress: null,
+      arrivalLandmark: null,
+      arrivalParkingNote: null,
+      arrivalTransitNote: null,
+      arrivalLookFor: null,
+      arrivalFirstInteraction: null,
+    },
     lastDivedBand: null,
     diveIntent: null,
     reEntryAsk: null,
@@ -127,5 +136,84 @@ describe("the day-of step saves as one", () => {
   it("shows the saved confirmation in the step itself after a save", () => {
     render(<DayOfDetails token="tok" data={data("diver")} saved t={t} />);
     expect(screen.getByRole("status").textContent).toBe(t("rental.savedNote"));
+  });
+});
+
+describe("the day-of help request promise", () => {
+  it("says the request was sent until the desk records a named helper", () => {
+    render(
+      <DayOfDetails
+        token="tok"
+        data={
+          {
+            ...data("diver"),
+            helpRequest: { status: "acknowledged", helperPersonName: null },
+          } as ReadyPageData
+        }
+        saved={false}
+        t={t}
+      />,
+    );
+    expect(screen.getByText("Your request has been sent.")).toBeInTheDocument();
+    expect(screen.queryByText(/will help you/)).toBeNull();
+  });
+
+  it("names the confirmed helper at this departure's saved meeting details", () => {
+    render(
+      <DayOfDetails
+        token="tok"
+        data={
+          {
+            ...data("diver"),
+            trip: {
+              ...data("diver").trip,
+              meetingPointLabel: "North dock",
+              arrivalLandmark: "beside the fuel shed",
+            },
+            helpRequest: { status: "acknowledged", helperPersonName: "Sam" },
+          } as ReadyPageData
+        }
+        saved={false}
+        t={t}
+      />,
+    );
+    expect(
+      screen.getByText("Sam will help you at North dock · beside the fuel shed."),
+    ).toBeVisible();
+  });
+
+  it("uses a truthful fallback when the departure has no meeting details", () => {
+    render(
+      <DayOfDetails
+        token="tok"
+        data={
+          {
+            ...data("diver"),
+            helpRequest: { status: "acknowledged", helperPersonName: "Sam" },
+          } as ReadyPageData
+        }
+        saved={false}
+        t={t}
+      />,
+    );
+    expect(screen.getByText("Sam will help you on this departure.")).toBeVisible();
+  });
+
+  it("keeps the named helper visible after staff mark the request complete", () => {
+    render(
+      <DayOfDetails
+        token="tok"
+        data={
+          {
+            ...data("diver"),
+            trip: { ...data("diver").trip, meetingPointLabel: "North dock" },
+            helpRequest: { status: "handled", helperPersonName: "Sam" },
+          } as ReadyPageData
+        }
+        saved={false}
+        t={t}
+      />,
+    );
+    expect(screen.getByText("Sam will help you at North dock.")).toBeVisible();
   });
 });

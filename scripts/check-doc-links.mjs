@@ -67,6 +67,8 @@ const files = [
   "AGENTS.md",
   ...(await walk("docs")),
   ...(await walk(".claude/skills")),
+  ...(await walk(".agents/skills")),
+  "CLAUDE.md",
   ...(await walk(".claude/rules")),
 ];
 
@@ -82,7 +84,10 @@ function anchorsFor(file) {
 
 let anchorLinks = 0;
 for (const file of files) {
-  for (const match of contentsByFile.get(file).matchAll(markdownLink)) {
+  for (const match of contentsByFile
+    .get(file)
+    .replace(/^\s*(```|~~~)[\s\S]*?^\s*\1[^\n]*$/gm, "")
+    .matchAll(markdownLink)) {
     const raw = match[1];
     const target = targetPath(file, raw);
     if (!target) continue;

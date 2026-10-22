@@ -16,6 +16,7 @@ import {
   personRoles,
   rollCallCrewEvents,
   tripAssignments,
+  tripHelpRequests,
   tripScheduleDays,
   trips,
 } from "./schema";
@@ -718,6 +719,10 @@ export async function setTripCrew(
     if ((await crewBusyElsewhere(tx, shopId, tripId, valid, proposedDays)).size > 0) {
       return false;
     }
+    // A helper who leaves the crew can no longer be promised to a diver. Lock
+    // and clear request rows before deleting assignments, matching the helper
+    // assignment transaction's request-then-assignment lock order.
+    await clearHelpRequestHelpers(tx, shopId, tripId, dropped, options.now);
     // The roles were read before the delete (`existingRoles` above), so a crew
     // edit that says nothing about roles preserves them instead of blanking
     // them.
@@ -1215,6 +1220,10 @@ export async function changeTripCrewOutcome(
             },
           }));
     } else {
+      // Clear the promise before deleting the crew row. Help-request assignment
+      // locks the request before sharing the crew row, so this keeps one lock
+      // order and avoids a crew-change/assignment deadlock.
+      await clearHelpRequestHelpers(tx, shopId, tripId, [change.personId], options.now);
       const removed = await tx
         .delete(tripAssignments)
         .where(
@@ -1243,6 +1252,41 @@ export async function changeTripCrewOutcome(
   // Late news goes now, not on the hour (`flushUrgentCrewNotices`).
   if (outcome.ok) await flushUrgentCrewNotices(db, { shopId, tripIds: [tripId], now: options.now });
   return outcome;
+}
+
+async function clearHelpRequestHelpers(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+  personIds: readonly string[],
+  now?: Date,
+): Promise<void> {
+  if (personIds.length === 0) return;
+  const base = and(
+    eq(tripHelpRequests.shopId, shopId),
+    eq(tripHelpRequests.tripId, tripId),
+    inArray(tripHelpRequests.helperPersonId, [...personIds]),
+  );
+  await tx
+    .update(tripHelpRequests)
+    .set({
+      revision: sql`${tripHelpRequests.revision} + 1`,
+      status: "requested",
+      acknowledgedAt: null,
+      handledAt: null,
+      helperPersonId: null,
+      resolvedByPersonId: null,
+      updatedAt: now ?? nowDate(),
+    })
+    .where(and(base, eq(tripHelpRequests.status, "acknowledged")));
+  await tx
+    .update(tripHelpRequests)
+    .set({
+      revision: sql`${tripHelpRequests.revision} + 1`,
+      helperPersonId: null,
+      updatedAt: now ?? nowDate(),
+    })
+    .where(and(base, eq(tripHelpRequests.status, "handled")));
 }
 
 /**
