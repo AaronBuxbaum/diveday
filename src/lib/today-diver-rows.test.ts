@@ -311,6 +311,16 @@ describe("foldBoatRows", () => {
     expect(folded.more.every((row) => row.kind === "dive_prep")).toBe(true);
     expect(folded.shown.length + folded.more.length).toBe(9);
   });
+
+  it("never folds a diver's own help request, so Arrange help stays in reach", () => {
+    // A request is the diver's ask, waiting on a staffer to name a helper: a
+    // neutral row, ranked last, that a fold would hide behind "and N more".
+    const all = [...rows(7, "dive_prep"), ...rows(2, "help_request")];
+    const { shown, more } = foldBoatRows(all);
+    expect(shown.filter((row) => row.kind === "help_request")).toHaveLength(2);
+    expect(more.every((row) => row.kind === "dive_prep")).toBe(true);
+    expect([...shown, ...more]).toHaveLength(all.length);
+  });
 });
 
 describe("waiverBatchActions", () => {
