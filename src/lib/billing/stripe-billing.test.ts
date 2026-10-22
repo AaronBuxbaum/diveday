@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
+import { DEFAULT_PRICING_CONFIG, termsFor } from "./pricing-plans";
 import {
   billingConfigFromEnvironment,
   billingKeyIsLive,
   billingProviderFromEnvironment,
   CHECKOUT_MIN_TRIAL_MS,
+  type CheckoutLine,
+  checkoutLines,
   checkoutTrialEnd,
+  percentBillingFromEnvironment,
   stripeBillingProvider,
 } from "./stripe-billing";
 
@@ -19,6 +23,8 @@ const CONFIG = {
   priceId: "price_monthly",
 };
 const NOW = new Date("2026-10-07T12:00:00.000Z");
+const TODAY: CheckoutLine[] = [{ kind: "price", priceId: "price_monthly", metered: false }];
+const PERCENT = { priceId: "price_metered", meterEventName: "diveday_fee_cents" };
 
 function fakeFetch(status: number, body: unknown) {
   return vi.fn(
@@ -137,6 +143,7 @@ describe("stripeBillingProvider", () => {
     const end = new Date("2027-04-02T04:00:00.000Z");
     const result = await provider.createCheckoutSession({
       shopId: "shop-1",
+      lines: TODAY,
       customerId: "cus_123",
       successUrl: "https://dive.day/shop/x/settings/billing?notice=card-added",
       cancelUrl: "https://dive.day/shop/x/settings/billing",
@@ -165,6 +172,7 @@ describe("stripeBillingProvider", () => {
     const key = async (overrides: { replaces?: string | null; firstChargeAt?: Date | null }) => {
       await provider.createCheckoutSession({
         shopId: "shop-1",
+        lines: TODAY,
         customerId: "cus_123",
         successUrl: "https://dive.day/ok",
         cancelUrl: "https://dive.day/back",
@@ -254,6 +262,7 @@ describe("stripeBillingProvider", () => {
     expect(
       await odd.createCheckoutSession({
         shopId: "s",
+        lines: TODAY,
         customerId: "c",
         successUrl: "https://x",
         cancelUrl: "https://x",
@@ -262,5 +271,137 @@ describe("stripeBillingProvider", () => {
         replaces: null,
       }),
     ).toEqual({ status: "failed" });
+  });
+});
+
+describe("the pricing test's Stripe side (ADR 20261022-pricing-ab-test)", () => {
+  it("reads the percent plan's price and meter together, or not at all", () => {
+    expect(
+      percentBillingFromEnvironment({
+        BILLING_STRIPE_PERCENT_PRICE_ID: "price_metered",
+        BILLING_STRIPE_PERCENT_METER_EVENT: "diveday_fee_cents",
+      }),
+    ).toEqual(PERCENT);
+    expect(
+      percentBillingFromEnvironment({ BILLING_STRIPE_PERCENT_PRICE_ID: "price_m" }),
+    ).toBeNull();
+    expect(
+      percentBillingFromEnvironment({
+        BILLING_STRIPE_PERCENT_PRICE_ID: "prod_x",
+        BILLING_STRIPE_PERCENT_METER_EVENT: "fee",
+      }),
+    ).toBeNull();
+    expect(
+      percentBillingFromEnvironment({
+        BILLING_STRIPE_PERCENT_PRICE_ID: "price_m",
+        BILLING_STRIPE_PERCENT_METER_EVENT: "fee&value=1",
+      }),
+    ).toBeNull();
+  });
+
+  it("sells today's flat price on the existing price, and any other fee as price_data", () => {
+    expect(checkoutLines(termsFor("flat_monthly", DEFAULT_PRICING_CONFIG), CONFIG, null)).toEqual(
+      TODAY,
+    );
+    expect(
+      checkoutLines({ plan: "flat_monthly", monthlyCents: 12_900, basisPoints: 0 }, CONFIG, null),
+    ).toEqual([{ kind: "monthly_amount", unitAmountCents: 12_900 }]);
+  });
+
+  it("sells the percent plan as its metered price, with a base fee line only above zero", () => {
+    const percent = (monthlyCents: number) =>
+      checkoutLines({ plan: "percent_of_volume", monthlyCents, basisPoints: 300 }, CONFIG, PERCENT);
+    expect(percent(0)).toEqual([{ kind: "price", priceId: "price_metered", metered: true }]);
+    expect(percent(2_900)).toEqual([
+      { kind: "monthly_amount", unitAmountCents: 2_900 },
+      { kind: "price", priceId: "price_metered", metered: true },
+    ]);
+    expect(
+      checkoutLines({ plan: "percent_of_volume", monthlyCents: 0, basisPoints: 300 }, CONFIG, null),
+    ).toBeNull();
+  });
+
+  it("builds price_data on the flat price's product, read once, and leaves a metered line unquantified", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request, _init?: RequestInit) =>
+      String(url).includes("/v1/prices/")
+        ? new Response(JSON.stringify({ id: "price_monthly", product: "prod_diveday" }))
+        : new Response(JSON.stringify({ id: "cs_1", url: "https://checkout.stripe.com/c/1" })),
+    );
+    const provider = stripeBillingProvider(CONFIG, fetchMock as never);
+    const request = {
+      shopId: "shop-1",
+      lines: [
+        { kind: "monthly_amount", unitAmountCents: 2_900 },
+        { kind: "price", priceId: "price_metered", metered: true },
+      ] as CheckoutLine[],
+      customerId: "cus_123",
+      successUrl: "https://dive.day/ok",
+      cancelUrl: "https://dive.day/back",
+      firstChargeAt: null,
+      now: NOW,
+      replaces: null,
+    };
+    expect((await provider.createCheckoutSession(request)).status).toBe("ok");
+    await provider.createCheckoutSession(request);
+    const priceReads = fetchMock.mock.calls.filter(([url]) => String(url).includes("/v1/prices/"));
+    expect(priceReads.length).toBeLessThanOrEqual(1);
+    const checkout = fetchMock.mock.calls.find(([url]) =>
+      String(url).endsWith("checkout/sessions"),
+    );
+    const body = new URLSearchParams(String(checkout?.[1]?.body ?? ""));
+    expect(body.get("line_items[0][price_data][product]")).toBe("prod_diveday");
+    expect(body.get("line_items[0][price_data][unit_amount]")).toBe("2900");
+    expect(body.get("line_items[0][price_data][currency]")).toBe("usd");
+    expect(body.get("line_items[0][price_data][recurring][interval]")).toBe("month");
+    expect(body.get("line_items[0][quantity]")).toBe("1");
+    expect(body.get("line_items[1][price]")).toBe("price_metered");
+    expect(body.has("line_items[1][quantity]")).toBe(false);
+  });
+
+  it("reports a month's fee to the meter, keyed by its identifier", async () => {
+    const fetchMock = fakeFetch(200, { identifier: "diveday-fee-s-2026-09" });
+    const provider = stripeBillingProvider(CONFIG, fetchMock as never);
+    const at = new Date("2026-09-30T23:59:00.000Z");
+    expect(
+      await provider.reportMeterEvent({
+        eventName: "diveday_fee_cents",
+        customerId: "cus_123",
+        valueCents: 3_015,
+        identifier: "diveday-fee-s-2026-09",
+        timestamp: at,
+      }),
+    ).toEqual({ status: "ok", value: "reported" });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      "https://api.stripe.com/v1/billing/meter_events",
+    );
+    const body = sentBody(fetchMock);
+    expect(Object.fromEntries(body)).toEqual({
+      event_name: "diveday_fee_cents",
+      "payload[stripe_customer_id]": "cus_123",
+      "payload[value]": "3015",
+      identifier: "diveday-fee-s-2026-09",
+      timestamp: String(Math.floor(at.getTime() / 1000)),
+    });
+    const headers = (fetchMock.mock.calls[0]?.[1]?.headers ?? {}) as Record<string, string>;
+    expect(headers["Idempotency-Key"]).toBe("diveday-fee-s-2026-09");
+  });
+
+  it("reads Stripe already holding the identifier as reported, and anything else as failed", async () => {
+    const event = {
+      eventName: "e",
+      customerId: "cus_1",
+      valueCents: 1,
+      identifier: "id",
+      timestamp: NOW,
+    };
+    const dup = stripeBillingProvider(
+      CONFIG,
+      fakeFetch(400, { error: { code: "resource_already_exists" } }) as never,
+    );
+    expect(await dup.reportMeterEvent(event)).toEqual({ status: "ok", value: "already_reported" });
+    const bad = stripeBillingProvider(CONFIG, fakeFetch(400, { error: { code: "x" } }) as never);
+    expect(await bad.reportMeterEvent(event)).toEqual({ status: "failed" });
+    const neg = stripeBillingProvider(CONFIG, fakeFetch(200, {}) as never);
+    expect(await neg.reportMeterEvent({ ...event, valueCents: -1 })).toEqual({ status: "failed" });
   });
 });

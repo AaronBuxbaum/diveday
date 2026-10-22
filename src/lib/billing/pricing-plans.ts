@@ -224,3 +224,11 @@ export function parsePricingPlanArgs(
   }
   return { ok: true, args: { shopSlug, plan, monthlyCents, basisPoints } };
 }
+
+/**
+ * The monthly close (`/api/cron/pricing-volume`): 14:08 UTC on the 2nd and 3rd.
+ * By then every zone's month has ended and a late refund recorded on the 1st
+ * is in; the 3rd retries whatever the 2nd could not report. Restated in
+ * vercel.json, and `src/lib/cron-schedule.test.ts` holds the two together.
+ */
+export const PRICING_CLOSE_CRONTAB = "8 14 2,3 * *";

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { DiverTranslator } from "@/i18n/messages";
+import { planCopyParams } from "@/lib/billing/plan-display";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { earlyAccessPrice } from "@/lib/marketing";
 import { FIND_YOUR_BOOKING_PATH } from "@/lib/public-routes";
 
@@ -7,7 +9,17 @@ import { FIND_YOUR_BOOKING_PATH } from "@/lib/public-routes";
  * The two quiet lines under the home hero's doors: the terms, for the shop
  * deciding, and the one way through for a diver who landed here by mistake.
  */
-export function HeroFootnotes({ t }: { t: DiverTranslator }) {
+export function HeroFootnotes({
+  t,
+  offer,
+  locale,
+}: {
+  t: DiverTranslator;
+  /** The reader's pricing arm and its numbers (ADR 20261022-pricing-ab-test). */
+  offer: PlanTerms;
+  locale: string;
+}) {
+  const params = planCopyParams(offer, locale);
   return (
     <>
       {/* The terms, standing at the door rather than four bands below it
@@ -18,10 +30,13 @@ export function HeroFootnotes({ t }: { t: DiverTranslator }) {
           question this line already answers. The closing band keeps the
           two-year-lock detail and the door to /pricing. */}
       <p className="mt-2 text-sm text-muted">
-        {t("marketing.home.heroPriceLine", {
-          price: earlyAccessPrice.price,
-          cadence: t(earlyAccessPrice.cadenceKey),
-        })}
+        {/* "No cut of your bookings" is the flat arm's alone. */}
+        {offer.plan === "percent_of_volume"
+          ? t("marketing.home.percentArm.heroPriceLine", params)
+          : t("marketing.home.heroPriceLine", {
+              price: params.price,
+              cadence: t(earlyAccessPrice.cadenceKey),
+            })}
       </p>
       {/* **The one line for a diver** (fourth review, item 50). Every
           shop footer says "Bookings by DiveDay" and links here, so a

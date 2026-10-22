@@ -164,3 +164,64 @@ describe("the Billing page once billing is on", () => {
     expect(forms).toHaveLength(0);
   });
 });
+
+describe("the Billing page's plan (ADR 20261022-pricing-ab-test)", () => {
+  const percentShop = async (db: AppDb, shopId: string) => {
+    await notDemo(db, shopId);
+    await db.insert(shopSubscriptions).values({
+      shopId,
+      pricingPlan: "percent_of_volume",
+      pricingPlanSource: "assigned",
+      assignedPricingPlan: "percent_of_volume",
+    });
+  };
+  const configurePercent = () => {
+    configure();
+    vi.stubEnv("PRICING_TEST", "on");
+    vi.stubEnv("BILLING_STRIPE_PERCENT_PRICE_ID", "price_metered");
+    vi.stubEnv("BILLING_STRIPE_PERCENT_METER_EVENT", "diveday_fee_cents");
+  };
+
+  it("states today's flat price while the test is off, whatever arm is stored", async () => {
+    configure();
+    const { lines } = await render(percentShop);
+    expect(lines).toContain("DiveDay, $99 a month");
+  });
+
+  it("states the percent plan, this month's volume and fee, in en-US", async () => {
+    configurePercent();
+    const { lines, forms } = await render(percentShop);
+    expect(lines).toContain("DiveDay, 3% of card money taken through DiveDay");
+    expect(lines).toContain(COPY.plan.thisMonth);
+    expect(forms.map((form) => form.props.action)).toEqual([startBillingCheckoutAction]);
+  });
+
+  it("states a base fee when the percent plan carries one", async () => {
+    configurePercent();
+    vi.stubEnv("PRICING_PERCENT_MONTHLY_CENTS", "2900");
+    const { lines } = await render(percentShop);
+    expect(lines).toContain("DiveDay, 3% of card money taken through DiveDay plus $29 a month");
+  });
+
+  it("states the percent plan in es-ES", async () => {
+    configurePercent();
+    const { lines } = await render(async (db, shopId) => {
+      await percentShop(db, shopId);
+      await db.update(shops).set({ defaultLocale: "es-ES" }).where(eq(shops.id, shopId));
+    });
+    expect(
+      lines
+        .map(String)
+        .some((line) => /^DiveDay, el 3\s?% del dinero cobrado con tarjeta/.test(line)),
+    ).toBe(true);
+    expect(lines).toContain(STAFF_MESSAGES["es-ES"].billing.plan.thisMonth);
+  });
+
+  it("offers no card while the percent plan's Stripe side is not configured", async () => {
+    configure();
+    vi.stubEnv("PRICING_TEST", "on");
+    const { card, forms } = await render(percentShop);
+    expect(card.props.description).toBe(COPY.plan.percentNotConfigured);
+    expect(forms).toHaveLength(0);
+  });
+});

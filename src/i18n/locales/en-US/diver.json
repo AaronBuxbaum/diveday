@@ -3954,7 +3954,11 @@
       "contactTitle": "Ask us first",
       "contactBody": "Write in with whatever would decide it for you.",
       "contactCta": "Email {email}",
-      "stepLink": "{name} →"
+      "stepLink": "{name} →",
+      "percentArm": {
+        "heroPriceLine": "{hasBase, select, yes {{percent} of the card money taken through DiveDay plus {base} a month, and no setup fee.} other {{percent} of the card money taken through DiveDay, and no monthly fee.}}",
+        "priceLine": "{hasBase, select, yes {{percent} of the card money taken through DiveDay plus {base} a month, locked for two years for founding shops.} other {{percent} of the card money taken through DiveDay, locked for two years for founding shops.}}"
+      }
     },
     "common": {
       "gettingReady": "Getting your shop ready…",
@@ -4726,7 +4730,16 @@
       "closingTitle": "That is the full price",
       "closingBody": "{price} {cadence}, month to month, and the export works on any day.",
       "stillQuestion": "Anything this page did not answer, email it. A real person reads it.",
-      "emailCta": "Email {email}"
+      "emailCta": "Email {email}",
+      "percentArm": {
+        "cadence": "{hasBase, select, yes {of the card money taken through DiveDay, plus {base} a month} other {of the card money taken through DiveDay, each month}}",
+        "invoiceFeeLabel": "DiveDay’s fee",
+        "invoiceFeeValue": "{percent} of card money through DiveDay",
+        "ours": "{hasBase, select, yes {DiveDay charges {base} a month plus {percent} of the card money your shop takes through it.} other {DiveDay has no monthly charge. Its fee is {percent} of the card money your shop takes through it.}} Nothing is added to your guest’s price.",
+        "closingBody": "{hasBase, select, yes {{percent} of the card money taken through DiveDay plus {base} a month} other {{percent} of the card money taken through DiveDay}}, month to month, and the export works on any day.",
+        "whatCountsQuestion": "What counts toward the {percent}?",
+        "whatCountsAnswer": "Card money your shop takes through DiveDay: online bookings, and the invoices and packages divers pay by card. Tips, tax, park and other pass-through fees, money taken at the counter and history imported from your old system never count. A refund recorded before the month closes comes off it."
+      }
     },
     "privacy": {
       "eyebrow": "How DiveDay handles data",

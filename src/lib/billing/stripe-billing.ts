@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { boundedStripeFetch } from "../payments/stripe-fetch";
+import { isTodaysPrice, type PlanTerms } from "./pricing-plans";
 
 /**
  * DiveDay's own subscription on DiveDay's own Stripe account — the money a
@@ -36,7 +37,10 @@ type BillingEnvironment = Readonly<Record<string, string | undefined>>;
 export type BillingConfig = {
   secretKey: string;
   webhookSecret: string;
-  /** The one recurring price every shop subscribes to (`price_…`). */
+  /**
+   * Today's flat monthly price (`price_…`). Its product is also what every
+   * other monthly fee is sold on (ADR 20261022-pricing-ab-test).
+   */
   priceId: string;
 };
 
@@ -80,6 +84,69 @@ export function billingConfigFromEnvironment(
   return parsed.data;
 }
 
+/**
+ * The percent plan's Stripe side (ADR 20261022-pricing-ab-test): a metered
+ * price on a Stripe Billing Meter at $0.01 a unit, and the meter's event
+ * name. DiveDay computes each month's fee itself and reports it in cents as
+ * that meter's value, so changing the rate never needs a Stripe change. Both
+ * or neither: without them the percent plan's Billing page says billing for
+ * the plan is not on, and offers no button.
+ */
+export type PercentBillingConfig = { priceId: string; meterEventName: string };
+
+const percentBillingSchema = z.object({
+  priceId: z
+    .string()
+    .trim()
+    .regex(/^price_\S+$/),
+  meterEventName: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9_.-]{1,100}$/),
+});
+
+export function percentBillingFromEnvironment(
+  env: BillingEnvironment = process.env,
+): PercentBillingConfig | null {
+  const parsed = percentBillingSchema.safeParse({
+    priceId: env.BILLING_STRIPE_PERCENT_PRICE_ID,
+    meterEventName: env.BILLING_STRIPE_PERCENT_METER_EVENT,
+  });
+  return parsed.success ? parsed.data : null;
+}
+
+/** One Checkout line: a price Stripe already holds, or a monthly amount on the plan's product. */
+export type CheckoutLine =
+  | { kind: "price"; priceId: string; metered: boolean }
+  | { kind: "monthly_amount"; unitAmountCents: number };
+
+/**
+ * What Checkout sells for a plan's numbers, or null when the plan cannot be
+ * sold yet (the percent plan without its metered price configured).
+ *
+ * Today's flat price is the existing `BILLING_STRIPE_PRICE_ID`, unchanged. Any
+ * other monthly fee is `price_data` on that price's product, recurring
+ * monthly, so a new number in the environment needs no new Stripe price. The
+ * percent plan adds its metered price; a base fee of zero sells the metered
+ * line alone.
+ */
+export function checkoutLines(
+  terms: PlanTerms,
+  config: BillingConfig,
+  percent: PercentBillingConfig | null,
+): CheckoutLine[] | null {
+  if (terms.plan === "flat_monthly") {
+    return isTodaysPrice(terms)
+      ? [{ kind: "price", priceId: config.priceId, metered: false }]
+      : [{ kind: "monthly_amount", unitAmountCents: terms.monthlyCents }];
+  }
+  if (!percent) return null;
+  const metered: CheckoutLine = { kind: "price", priceId: percent.priceId, metered: true };
+  return terms.monthlyCents > 0
+    ? [{ kind: "monthly_amount", unitAmountCents: terms.monthlyCents }, metered]
+    : [metered];
+}
+
 /** Which Stripe mode the configured key acts in — what a verified event's `livemode` must match. */
 export function billingKeyIsLive(config: BillingConfig): boolean {
   return /^(sk|rk)_live_/.test(config.secretKey);
@@ -96,6 +163,8 @@ export const CHECKOUT_MIN_TRIAL_MS = 48 * 60 * 60 * 1000 + 5 * 60 * 1000;
 
 export type CheckoutRequest = {
   shopId: string;
+  /** What to sell, from `checkoutLines`. */
+  lines: readonly CheckoutLine[];
   customerId: string;
   successUrl: string;
   cancelUrl: string;
@@ -172,7 +241,30 @@ export interface BillingProvider {
     returnUrl: string;
     cancelSubscriptionId?: string;
   }): Promise<BillingCallResult<string>>;
+  /**
+   * One month's percent fee, reported to the meter (ADR
+   * 20261022-pricing-ab-test). `identifier` makes it once-only at Stripe as
+   * well as in DiveDay's statement row; `already_reported` is Stripe saying it
+   * holds an event with that identifier.
+   */
+  reportMeterEvent(input: {
+    eventName: string;
+    customerId: string;
+    valueCents: number;
+    identifier: string;
+    timestamp: Date;
+  }): Promise<BillingCallResult<"reported" | "already_reported">>;
 }
+
+const priceProductResponse = z.object({
+  product: z.union([z.string().min(1), z.object({ id: z.string().min(1) })]),
+});
+const stripeErrorResponse = z.object({
+  error: z.object({ code: z.string().optional() }).optional(),
+});
+
+/** Each configured price's product, read once per process: it never changes under a price id. */
+const productOfPrice = new Map<string, string>();
 
 export function stripeBillingProvider(
   config: BillingConfig,
@@ -204,6 +296,20 @@ export function stripeBillingProvider(
   const post = (path: string, body: URLSearchParams, idempotencyKey?: string) =>
     call("POST", path, body, idempotencyKey);
 
+  /** The product behind the configured flat price: what a `price_data` line sells. */
+  async function productOf(priceId: string): Promise<string | null> {
+    const known = productOfPrice.get(priceId);
+    if (known) return known;
+    const parsed = priceProductResponse.safeParse(
+      await call("GET", `prices/${encodeURIComponent(priceId)}`),
+    );
+    if (!parsed.success) return null;
+    const product =
+      typeof parsed.data.product === "string" ? parsed.data.product : parsed.data.product.id;
+    productOfPrice.set(priceId, product);
+    return product;
+  }
+
   return {
     async createCustomer({ shopId, shopName, email }) {
       const body = new URLSearchParams({ name: shopName, "metadata[shop_id]": shopId });
@@ -220,6 +326,7 @@ export function stripeBillingProvider(
 
     async createCheckoutSession({
       shopId,
+      lines,
       customerId,
       successUrl,
       cancelUrl,
@@ -231,12 +338,27 @@ export function stripeBillingProvider(
         mode: "subscription",
         customer: customerId,
         client_reference_id: shopId,
-        "line_items[0][price]": config.priceId,
-        "line_items[0][quantity]": "1",
         "subscription_data[metadata][shop_id]": shopId,
         success_url: successUrl,
         cancel_url: cancelUrl,
       });
+      if (lines.length === 0) return { status: "failed" };
+      for (const [index, line] of lines.entries()) {
+        const at = `line_items[${index}]`;
+        if (line.kind === "price") {
+          body.set(`${at}[price]`, line.priceId);
+          // A metered price takes no quantity: Stripe counts it from the meter.
+          if (!line.metered) body.set(`${at}[quantity]`, "1");
+          continue;
+        }
+        const product = await productOf(config.priceId);
+        if (!product) return { status: "failed" };
+        body.set(`${at}[price_data][currency]`, "usd");
+        body.set(`${at}[price_data][product]`, product);
+        body.set(`${at}[price_data][unit_amount]`, String(line.unitAmountCents));
+        body.set(`${at}[price_data][recurring][interval]`, "month");
+        body.set(`${at}[quantity]`, "1");
+      }
       const trialEnd = checkoutTrialEnd(firstChargeAt, now);
       if (trialEnd !== null) body.set("subscription_data[trial_end]", String(trialEnd));
       // Keyed by the shop, what is sent (its customer and trial end among it)
@@ -290,6 +412,37 @@ export function stripeBillingProvider(
       }
       const parsed = urlResponse.safeParse(await post("billing_portal/sessions", body));
       return parsed.success ? { status: "ok", value: parsed.data.url } : { status: "failed" };
+    },
+
+    async reportMeterEvent({ eventName, customerId, valueCents, identifier, timestamp }) {
+      if (!Number.isSafeInteger(valueCents) || valueCents < 0) return { status: "failed" };
+      const body = new URLSearchParams({
+        event_name: eventName,
+        "payload[stripe_customer_id]": customerId,
+        "payload[value]": String(valueCents),
+        identifier,
+        timestamp: String(Math.floor(timestamp.getTime() / 1000)),
+      });
+      try {
+        const response = await fetchImpl("https://api.stripe.com/v1/billing/meter_events", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${config.secretKey}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Idempotency-Key": identifier,
+          },
+          body: body.toString(),
+        });
+        if (response.ok) return { status: "ok", value: "reported" };
+        const answer = stripeErrorResponse.safeParse(await response.json().catch(() => null));
+        // Stripe already holds an event with this identifier: an earlier run
+        // reported it and lost the answer before stamping the statement.
+        return answer.success && answer.data.error?.code === "resource_already_exists"
+          ? { status: "ok", value: "already_reported" }
+          : { status: "failed" };
+      } catch {
+        return { status: "failed" };
+      }
     },
   };
 }

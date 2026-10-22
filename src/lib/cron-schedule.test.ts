@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { PRICING_CLOSE_CRONTAB } from "./billing/pricing-plans";
 import { BOOKKEEPER_CRON_CRONTAB } from "./bookkeeper";
 import { CREW_NOTICE_CRON_CRONTAB } from "./crew-notices";
 import {
@@ -60,6 +61,11 @@ describe("the daily tick", () => {
   it("matches the deployed schedule for /api/cron/bookkeeper", () => {
     const pass = vercelCrons().find((cron) => cron.path === "/api/cron/bookkeeper");
     expect(pass?.schedule).toBe(BOOKKEEPER_CRON_CRONTAB);
+  });
+
+  it("matches the deployed schedule for /api/cron/pricing-volume", () => {
+    const pass = vercelCrons().find((cron) => cron.path === "/api/cron/pricing-volume");
+    expect(pass?.schedule).toBe(PRICING_CLOSE_CRONTAB);
   });
 
   it("matches the deployed hourly schedule for /api/cron/crew-notices", () => {

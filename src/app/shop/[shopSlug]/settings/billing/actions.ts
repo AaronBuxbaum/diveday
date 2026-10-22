@@ -8,13 +8,21 @@ import {
   getShopSubscription,
   holdsLiveSubscription,
   recordShopCheckoutSession,
+  shopPricing,
+  snapshotShopPricing,
 } from "@/db/shop-subscriptions";
 import { getShopById } from "@/db/shops";
 import { freeTimeEndsAt } from "@/lib/billing/standing";
-import { billingProviderFromEnvironment } from "@/lib/billing/stripe-billing";
+import {
+  billingConfigFromEnvironment,
+  billingProviderFromEnvironment,
+  checkoutLines,
+  percentBillingFromEnvironment,
+} from "@/lib/billing/stripe-billing";
 import { nowDate } from "@/lib/clock";
 import { parseForm } from "@/lib/form-parse";
 import { publicAppUrl } from "@/lib/notifications";
+import { pricingConfig } from "@/lib/pricing-flags";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { trialEndsAt } from "@/lib/trial";
@@ -84,8 +92,9 @@ function refuse(slug: string, notice: BillingNotice): never {
 
 /**
  * "Add a card": mint (or reuse) the shop's Stripe Customer, then open
- * Checkout for the one price, with the first charge deferred to the end of
- * whatever free time the shop has left.
+ * Checkout for the shop's plan (today's one price, unless the pricing test
+ * put the shop on other numbers), with the first charge deferred to the end
+ * of whatever free time the shop has left.
  *
  * Two guards keep a shop to one subscription, both decided on the row rather
  * than on the standing the page shows:
@@ -118,6 +127,14 @@ export async function startBillingCheckoutAction(): Promise<void> {
     redirect(portal.value);
   }
 
+  // What Checkout sells: the shop's plan and numbers (ADR
+  // 20261022-pricing-ab-test). The percent plan without its metered price
+  // configured cannot be sold yet, and is refused like billing that is off.
+  const config = billingConfigFromEnvironment();
+  const terms = shopPricing(context.shopId, row, pricingConfig());
+  const lines = config ? checkoutLines(terms, config, percentBillingFromEnvironment()) : null;
+  if (!lines) refuse(context.slug, "not-configured");
+
   let customerId = row?.stripeCustomerId ?? null;
   if (!customerId) {
     const created = await provider.createCustomer({
@@ -137,9 +154,14 @@ export async function startBillingCheckoutAction(): Promise<void> {
     if (settled.value === "completed") refuse(context.slug, "pending");
   }
 
+  // The numbers this Checkout sells, kept on the row before it opens, so the
+  // subscription it starts is held to them whatever the environment says later.
+  await snapshotShopPricing(db, context.shopId, terms);
+
   const now = nowDate();
   const checkout = await provider.createCheckoutSession({
     shopId: context.shopId,
+    lines,
     customerId,
     successUrl: `${origin}${noticeUrl(billingPath(context.slug), "card-added")}`,
     cancelUrl: returnUrl,

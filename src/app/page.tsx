@@ -34,6 +34,8 @@ import {
 import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
+import { planCopyParams } from "@/lib/billing/plan-display";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { type FeaturePageSlug, featurePagePath, getFeaturePage } from "@/lib/feature-pages";
 import { switchingHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -46,6 +48,7 @@ import {
 } from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { requestPricingOffer } from "@/lib/pricing-arm-request";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary placed inside the page — the root
@@ -135,8 +138,8 @@ export default function Home() {
 }
 
 async function LocalizedHomeBody() {
-  const locale = await requestLocale();
-  return <HomeBody locale={locale} />;
+  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
+  return <HomeBody locale={locale} offer={offer} />;
 }
 
 /**
@@ -264,10 +267,13 @@ const STEPS: readonly {
  * eyebrow/h2/lede/card-grid template. Two demo doors, hero and close, with the
  * demo's cost stated once at the first of them (docs/product/marketing.md).
  */
-async function HomeBody({ locale }: { locale: DiverLocale }) {
+async function HomeBody({ locale, offer }: { locale: DiverLocale; offer: PlanTerms }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
+  // The pricing arm and its numbers (ADR 20261022-pricing-ab-test) are part
+  // of the cache key; the flat arm's lines are today's, word for word.
+  const priceParams = planCopyParams(offer, locale);
   // Generated from the migration-guides registry, never hand-listed, so a new
   // guide can't be silently omitted from the pitch that sends shops to it.
   const competitors = cachedListFormat(locale, { type: "disjunction" }).format(
@@ -301,7 +307,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 door, where the decision is actually made. The closing band
                 repeats the door, not the note. */}
             <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
-            <HeroFootnotes t={t} />
+            <HeroFootnotes t={t} offer={offer} locale={locale} />
           </div>
           <MarketingHeroMotion>
             <div className="mx-auto w-full max-w-sm lg:max-w-md">
@@ -547,10 +553,12 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               </p>
               <FunnelCtas locale={locale} source="home-closing" className="mt-8 justify-center" />
               <p className="mt-6 font-medium">
-                {t("marketing.home.priceLine", {
-                  price: earlyAccessPrice.price,
-                  cadence: t(earlyAccessPrice.cadenceKey),
-                })}
+                {offer.plan === "percent_of_volume"
+                  ? t("marketing.home.percentArm.priceLine", priceParams)
+                  : t("marketing.home.priceLine", {
+                      price: priceParams.price,
+                      cadence: t(earlyAccessPrice.cadenceKey),
+                    })}
               </p>
               <Link href="/pricing" className={buttonClass({ variant: "link" })}>
                 {t("marketing.home.seeIncluded")}

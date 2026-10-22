@@ -17,10 +17,14 @@ import {
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
+import { planCopyParams, planMoney, planPercent } from "@/lib/billing/plan-display";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { earlyAccessPrice, sharedLinkCard } from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { requestPricingArm, requestPricingOffer } from "@/lib/pricing-arm-request";
+import { pricingConfig } from "@/lib/pricing-flags";
 import { PricingExportBand } from "./_components/PricingExportBand";
 import { pricingFaq } from "./faq";
 
@@ -31,7 +35,7 @@ import { pricingFaq } from "./faq";
 // 20260804-instant-navigation.
 export const instant = true;
 
-export const metadata: Metadata = {
+const flatMetadata: Metadata = {
   title: "Pricing — one flat price per shop | DiveDay",
   description:
     "One flat price per shop location, line by line: no setup fee, no per-seat charge, no feature tiers and no cut of your bookings. A three-week trial with no card.",
@@ -57,6 +61,39 @@ export const metadata: Metadata = {
 };
 
 /**
+ * The percent arm's metadata (ADR 20261022-pricing-ab-test): the flat arm's
+ * "one flat price" and "no cut of your bookings" are not true of it, so it
+ * says what both arms share and names no figure, like the flat arm's.
+ */
+const percentMetadata: Metadata = {
+  title: "Pricing — one plan per shop, line by line | DiveDay",
+  description:
+    "One plan per shop location, line by line: no setup fee, no per-seat charge and no feature tiers. A three-week trial with no card.",
+  alternates: { canonical: "/pricing" },
+  openGraph: {
+    ...sharedLinkCard,
+    title: "DiveDay pricing — one plan per shop",
+    description: "One plan, line by line. No setup fee, no per-seat charge and no feature tiers.",
+    url: "/pricing",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DiveDay pricing — one plan per shop",
+    description: "One plan, line by line. No setup fee, no per-seat charge and no feature tiers.",
+  },
+};
+
+/**
+ * Per arm. While the pricing test is off this reads nothing from the request
+ * and is the flat arm's metadata, exactly as the static export was.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const config = pricingConfig();
+  if (!config.test) return flatMetadata;
+  return (await requestPricingArm(config)) === "percent_of_volume" ? percentMetadata : flatMetadata;
+}
+
+/**
  * The body renders **once**, in the reader's own language — see `ProductPage`
  * for the whole story. In short: the fallback used to be a second, English
  * render of this entire page, and swapping it out for the negotiated-locale
@@ -66,13 +103,13 @@ export const metadata: Metadata = {
  * nothing interactive in it to lose.
  */
 export default async function PricingPage() {
-  const locale = await requestLocale();
+  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
   return (
     <div className="flex flex-1 flex-col">
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <PricingBody locale={locale} />
+      <PricingBody locale={locale} offer={offer} />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
       </Suspense>
@@ -80,11 +117,25 @@ export default async function PricingPage() {
   );
 }
 
-/** Cached per negotiated locale (DIVER_LOCALES — two entries) — no session-scoped content. */
-async function PricingBody({ locale }: { locale: DiverLocale }) {
+/**
+ * Cached per negotiated locale (DIVER_LOCALES — two entries) and per offer:
+ * the pricing arm and its numbers (ADR 20261022-pricing-ab-test), so a changed
+ * `PRICING_*` value is a new cache entry. No session-scoped content.
+ */
+async function PricingBody({ locale, offer }: { locale: DiverLocale; offer: PlanTerms }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
+  // The percent arm's own lines replace every flat-only one: the figure, its
+  // cadence, the invoice's "cut" row, the anchor's answer and the closing line.
+  const percentArm = offer.plan === "percent_of_volume";
+  const params = planCopyParams(offer, locale);
+  const figure = percentArm
+    ? planPercent(offer.basisPoints, locale)
+    : planMoney(offer.monthlyCents, locale);
+  const cadence = percentArm
+    ? t("marketing.pricing.percentArm.cadence", params)
+    : t(earlyAccessPrice.cadenceKey);
   // Generated from the migration-guides registry, never hand-listed, so a new
   // guide can't be silently omitted from this answer.
   const competitors = cachedListFormat(locale, { type: "conjunction" }).format(
@@ -121,7 +172,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
     },
   ].flatMap((row) => (row ? [row] : []));
 
-  const faq = pricingFaq(t, competitors);
+  const faq = pricingFaq(t, competitors, offer, locale);
 
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -183,9 +234,9 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   the line box ended 0.06em inside the final "9", and centring
                   that box set the ink 3px right of the stack (K-405). */}
               <p className="mt-10 pe-[0.06em] text-7xl leading-none font-semibold tracking-[-0.06em] sm:text-8xl">
-                {earlyAccessPrice.price}
+                {figure}
               </p>
-              <p className="mt-4 text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</p>
+              <p className="mt-4 text-base text-muted">{cadence}</p>
               {/* The two-year lock, under the figure it is about. It used to
                   be reachable only by reading the included list (`item5`) and
                   the founding-shop FAQ row — two places, neither of them where
@@ -228,9 +279,15 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                       key={row}
                       className="flex items-baseline justify-between gap-6 py-3 text-sm leading-6"
                     >
-                      <dt className="text-muted">{t(`marketing.pricing.invoice.${row}.label`)}</dt>
+                      <dt className="text-muted">
+                        {percentArm && row === "cut"
+                          ? t("marketing.pricing.percentArm.invoiceFeeLabel")
+                          : t(`marketing.pricing.invoice.${row}.label`)}
+                      </dt>
                       <dd className="text-end font-medium">
-                        {t(`marketing.pricing.invoice.${row}.value`)}
+                        {percentArm && row === "cut"
+                          ? t("marketing.pricing.percentArm.invoiceFeeValue", params)
+                          : t(`marketing.pricing.invoice.${row}.value`)}
                       </dd>
                     </div>
                   ),
@@ -349,7 +406,9 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               ))}
             </ul>
             <p className="mt-10 border-l-2 border-primary pl-5 text-lg leading-8">
-              {t("marketing.pricing.feeAnchor.ours")}
+              {percentArm
+                ? t("marketing.pricing.percentArm.ours", params)
+                : t("marketing.pricing.feeAnchor.ours")}
             </p>
             <p className="mt-5 text-sm leading-6 text-muted">
               {t("marketing.pricing.feeAnchor.sourcesNote")}
@@ -403,10 +462,12 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               {t("marketing.pricing.closingTitle")}
             </h2>
             <p className="mt-4 text-lg leading-8 text-balance text-muted">
-              {t("marketing.pricing.closingBody", {
-                price: earlyAccessPrice.price,
-                cadence: t(earlyAccessPrice.cadenceKey),
-              })}
+              {percentArm
+                ? t("marketing.pricing.percentArm.closingBody", params)
+                : t("marketing.pricing.closingBody", {
+                    price: params.price,
+                    cadence: t(earlyAccessPrice.cadenceKey),
+                  })}
             </p>
             {/* Both doors, not just the trial. The demo used to be dropped here
                 — at the one moment a reader who has just read the whole price

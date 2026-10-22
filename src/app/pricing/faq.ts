@@ -1,4 +1,6 @@
 import type { DiverTranslator } from "@/i18n/messages";
+import { planCopyParams } from "@/lib/billing/plan-display";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { continuityPromise, fullShopExport } from "@/lib/marketing";
 import { ONBOARDING_EMAIL, SUPPORT_EMAIL } from "@/lib/platform-mail";
 
@@ -13,7 +15,26 @@ export type PricingFaqRow = {
  * stays under its page-length baseline; the page renders these and feeds
  * them to the FAQPage JSON-LD. `competitors` is the registry-derived list.
  */
-export function pricingFaq(t: DiverTranslator, competitors: string): readonly PricingFaqRow[] {
+export function pricingFaq(
+  t: DiverTranslator,
+  competitors: string,
+  offer: PlanTerms,
+  locale: string,
+): readonly PricingFaqRow[] {
+  // The percent arm's one extra row, right after billing: what the share is
+  // of (ADR 20261022-pricing-ab-test), in the words of `cardMoneyThroughDiveDayCents`.
+  const percentRow: PricingFaqRow[] =
+    offer.plan === "percent_of_volume"
+      ? [
+          {
+            question: t(
+              "marketing.pricing.percentArm.whatCountsQuestion",
+              planCopyParams(offer, locale),
+            ),
+            answer: t("marketing.pricing.percentArm.whatCountsAnswer"),
+          },
+        ]
+      : [];
   // "What is included?" left this list on 2026-08-13: the hero now answers it
   // in the first screenful, and a FAQ row restating the screen above it is the
   // duplication the three-densities rule exists to stop.
@@ -25,6 +46,7 @@ export function pricingFaq(t: DiverTranslator, competitors: string): readonly Pr
       question: t("marketing.pricing.faq.billing.question"),
       answer: t("marketing.pricing.faq.billing.answer"),
     },
+    ...percentRow,
     {
       // The per-seat fear, answered where the flat price raises it: the
       // number above is per *location*, and the roles it covers are the six
