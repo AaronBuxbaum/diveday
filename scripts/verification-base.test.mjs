@@ -15,6 +15,22 @@ describe("verification parent policy", () => {
         ),
       ).toMatchObject({ ref: `origin/${provider}/parent`, source: "pull-request" });
     });
+  it("uses the hosted PR base ahead of a configured local layer", () => {
+    expect(
+      resolveVerificationBase(
+        fake({
+          "rev-parse --abbrev-ref HEAD": "codex/top",
+          "config --get branch.codex/top.divedayBase": "origin/codex/middle",
+          "rev-parse --verify --quiet origin/main": "main",
+          "rev-parse --verify --quiet origin/codex/middle": "middle",
+        }),
+        { env: { GITHUB_BASE_REF: "main" } },
+      ),
+    ).toMatchObject({
+      ref: "origin/main",
+      source: "pull-request",
+    });
+  });
   it("does not guess a merged side branch or use push upstream", () => {
     expect(
       resolveVerificationBase(

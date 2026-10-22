@@ -15,4 +15,14 @@ describe("scoped review policy", () => {
   it("color work opts into both existing scheme matrices", () => {
     expect(reviewPlan(["--grep", "invoice", "--plan", "--color"]).captureArgs).toContain("invoice");
   });
+  it("preserves operator regex syntax as one Playwright argv value", () => {
+    const grep = "^(invoice|rental)$";
+    const plan = reviewPlan(["--grep", grep, "--plan", "--color"]);
+    expect(plan.captureArgs[plan.captureArgs.indexOf("--grep") + 1]).toBe(grep);
+    const pattern = new RegExp(grep);
+    expect(pattern.test("invoice")).toBe(true);
+    expect(pattern.test("rental")).toBe(true);
+    expect(pattern.test("invoice draft")).toBe(false);
+    expect(() => reviewPlan(["--grep", "[", "--plan"])).toThrow(SyntaxError);
+  });
 });

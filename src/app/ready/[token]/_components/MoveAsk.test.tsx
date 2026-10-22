@@ -15,7 +15,7 @@ describe("a pending move request receipt", () => {
     "shows the standing note, shop timezone and next action in %s",
     (locale) => {
       const t = diverTranslator(locale);
-      render(
+      const { container } = render(
         <MoveAsk
           state={{ note: "Any Saturday in August", sentAt }}
           tripId="trip-1"
@@ -31,11 +31,13 @@ describe("a pending move request receipt", () => {
       expect(
         screen.getByText(t("ready.moveAsk.asked", { shop: "Blue Mantis" })),
       ).toBeInTheDocument();
-      expect(
-        screen.getByText(
-          t("ready.moveAsk.sentAt", { when: formatDateTimeTz(sentAt, locale, timeZone) }),
-        ),
-      ).toBeInTheDocument();
+      const receiptTime = container.querySelector("time");
+      expect(receiptTime).toHaveAttribute("datetime", sentAt.toISOString());
+      // Keep the formatter's nonbreaking spaces exact rather than normalizing
+      // the rendered date and timezone into a different string for the query.
+      expect(receiptTime?.textContent).toBe(
+        t("ready.moveAsk.sentAt", { when: formatDateTimeTz(sentAt, locale, timeZone) }),
+      );
       expect(screen.queryByRole("button")).not.toBeInTheDocument();
       expect(screen.getByText(t("ready.moveAsk.bookingUnchanged"))).toBeInTheDocument();
     },

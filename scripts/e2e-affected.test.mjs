@@ -340,7 +340,7 @@ describe("the base a layer is measured from", () => {
       "rev-list --count origin/main..origin/claude/mid": "9",
       "rev-list --count origin/main..origin/claude/top": "12",
     });
-    expect(stackBase(git)).toBe("origin/claude/mid");
+    expect(stackBase(git, { env: {} })).toBe("origin/claude/mid");
   });
 
   it("falls back to origin/main off a stack", () => {
@@ -350,7 +350,7 @@ describe("the base a layer is measured from", () => {
       "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin": "",
       "rev-parse --verify --quiet origin/main": "def",
     });
-    expect(stackBase(git)).toBe("origin/main");
+    expect(stackBase(git, { env: {} })).toBe("origin/main");
   });
 });
 
@@ -467,7 +467,9 @@ describe("cheap diff discovery", () => {
       "rev-list --count origin/main..origin/codex/base": "8",
       "rev-list --count origin/main..origin/feature/old": "3",
     };
-    expect(stackBase((args) => answers[args.join(" ")] ?? null)).toBe("origin/codex/base");
+    expect(stackBase((args) => answers[args.join(" ")] ?? null, { env: {} })).toBe(
+      "origin/codex/base",
+    );
   });
 });
 

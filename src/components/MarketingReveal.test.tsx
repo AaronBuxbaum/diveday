@@ -162,7 +162,7 @@ describe("the marketing section reveal", () => {
 describe("the hero's motion, which is the other polarity", () => {
   /**
    * `MarketingHeroMotion` fails the opposite way round, and the difference is
-   * why `PENDING_REVEAL_SELECTOR` in `e2e/visual.spec.ts` names one class and
+   * why `PENDING_REVEAL_SELECTOR` in `e2e/visual-harness.ts` names one class and
    * not both. Its animations hang off `.marketing-hero-motion-active`, so the
    * *inactive* state is the visible one: a hero whose observer never fires
    * loses an arrival and keeps its content. It fails to animate; the sections
@@ -197,19 +197,19 @@ describe("the capture's own guard against a blank chapter", () => {
     readFile(path.join(process.cwd(), file), "utf8") as Promise<string>;
 
   it("names the one class that photographs as nothing", async () => {
-    const spec = await read("e2e/visual.spec.ts");
+    const spec = await read("e2e/visual-harness.ts");
     expect(spec).toContain('const PENDING_REVEAL_SELECTOR = ".marketing-reveal-pending"');
   });
 
   it("refuses the capture rather than warning about it", async () => {
-    const spec = await read("e2e/visual.spec.ts");
+    const spec = await read("e2e/visual-harness.ts");
     // A `console.warn` is what the other settles do, and it is what let this
     // reach a baseline in the first place. This one has to throw.
     expect(spec).toMatch(/stillPending > 0\s*\)\s*\{\s*throw new Error\(/);
   });
 
   it("tries to fix it before it refuses, by scrolling again", async () => {
-    const spec = await read("e2e/visual.spec.ts");
+    const spec = await read("e2e/visual-harness.ts");
     expect(spec).toMatch(/while \(hidingSomething\(\) > 0 && revealPasses < 2\)/);
   });
 
@@ -223,7 +223,7 @@ describe("the capture's own guard against a blank chapter", () => {
    * pins that they agree.
    */
   it("counts what a pending element hides, not how many wear the class", async () => {
-    const spec = await read("e2e/visual.spec.ts");
+    const spec = await read("e2e/visual-harness.ts");
     const byRenderedSize = spec.match(/box\.width > 0 && box\.height > 0/g) ?? [];
     expect(byRenderedSize, "the sweep and the tripwire must use the same count").toHaveLength(2);
   });
@@ -303,7 +303,7 @@ describe("the signal the camera waits on", () => {
 
 describe("the capture waits for that signal, and bounds every pass", () => {
   const readSpec = () =>
-    readFile(path.join(process.cwd(), "e2e/visual.spec.ts"), "utf8") as Promise<string>;
+    readFile(path.join(process.cwd(), "e2e/visual-harness.ts"), "utf8") as Promise<string>;
 
   it("waits for the page to finish deciding before it scrolls past", async () => {
     const spec = await readSpec();

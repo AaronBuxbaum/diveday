@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
@@ -14,7 +14,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { liveTrip } from "./trips-live";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * **An "Ask to move" close to its boat emails owners and managers** (issue
@@ -54,7 +54,7 @@ async function ownerAndManagerEmails() {
   return rows.map((row) => row.email).sort();
 }
 
-/** File an ask on the `index`th seat of a live departure; the diver's words ride in the note. */
+/** File an ask on the `index`th eligible seat; the diver's words ride in the note. */
 async function anAsk(index: number) {
   const { db, shop } = ctx;
   const seats = await db
@@ -62,7 +62,18 @@ async function anAsk(index: number) {
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(people, eq(people.id, bookings.personId))
-    .where(and(eq(bookings.shopId, shop.id), liveTrip()))
+    .where(
+      and(
+        eq(bookings.shopId, shop.id),
+        eq(bookings.status, "booked"),
+        isNull(bookings.identityUnconfirmedAt),
+        ne(trips.status, "cancelled"),
+        liveTrip(),
+        notRehearsal(),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
     .orderBy(bookings.id);
   const seat = seats[index];
   if (!seat) throw new Error("seeded booking missing");

@@ -82,8 +82,10 @@ it("refuses receipts after a concurrent HEAD/tree/working-file change", () => {
   ])
     expect(verificationInputsStable({ ...initial, status: "", ...changed }, initial)).toBe(false);
 });
-it("reaps owned detached stages when their parent receives SIGTERM", () => {
-  const dir = mkdtempSync(path.join(tmpdir(), "stage-cancel-"));
+it("reaps owned detached stages with quote-bearing paths when their parent receives SIGTERM", () => {
+  // These bytes must remain path data through both JSON-encoded JavaScript literals.
+  // Unquoted interpolation would execute the exit canary instead of writing the PID.
+  const dir = mkdtempSync(path.join(tmpdir(), 'stage-cancel-";process.exit(97);"-'));
   const pidFile = path.join(dir, "pid");
   const moduleUrl = pathToFileURL(path.resolve("scripts/verification-stages.mjs")).href;
   const childCode = `require('node:fs').writeFileSync(${JSON.stringify(pidFile)},String(process.pid));setInterval(()=>{},1000)`;

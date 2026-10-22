@@ -2374,7 +2374,7 @@ details[open]::details-content {
 .leaflet-shop-landmark::after {
   position: absolute;
   z-index: -1;
-  top: 50%;
+  inset-block-start: 50%;
   left: calc(50% - 1px);
   width: 2px;
   height: var(--shop-stem-length, 48px);
@@ -2655,7 +2655,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .leaflet-site-popup .leaflet-popup-close-button > span::before,
 .leaflet-site-popup .leaflet-popup-close-button > span::after {
   position: absolute;
-  top: 50%;
+  inset-block-start: 50%;
   left: 50%;
   width: 12px;
   height: 2px;

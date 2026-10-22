@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -30,72 +29,8 @@ export function installationIdentity(root) {
     return null;
   }
 }
-const ownedGroups = new Set();
-function reapGroups() {
-  for (const pid of ownedGroups) {
-    try {
-      process.kill(-pid, "SIGKILL");
-    } catch {}
-  }
-}
-function interrupted() {
-  reapGroups();
-  process.exit(130);
-}
-function terminated() {
-  reapGroups();
-  process.exit(143);
-}
-function registerGroup(pid) {
-  if (!pid) return;
-  if (ownedGroups.size === 0) {
-    process.on("exit", reapGroups);
-    process.on("SIGINT", interrupted);
-    process.on("SIGTERM", terminated);
-  }
-  ownedGroups.add(pid);
-}
-function releaseGroup(pid) {
-  ownedGroups.delete(pid);
-  if (ownedGroups.size === 0) {
-    process.off("exit", reapGroups);
-    process.off("SIGINT", interrupted);
-    process.off("SIGTERM", terminated);
-  }
-}
+export { runBoundedAsync as runStageAsync } from "./subprocess.mjs";
 
-/** Bounded asynchronous equivalent of runStep; owns and reaps the whole process group. */
-export function runStageAsync(command, args, { timeoutMs, ...options }) {
-  if (
-    !(timeoutMs > 0) ||
-    options.shell ||
-    [command, ...args].some((value) => typeof value !== "string" || value.includes("\0"))
-  )
-    throw new Error("A stage requires bounded argv without a shell.");
-  return new Promise((resolve) => {
-    let settled = false;
-    const child = spawn(command, args, { ...options, detached: true });
-    registerGroup(child.pid);
-    const kill = () => {
-      if (child.pid) {
-        try {
-          process.kill(-child.pid, "SIGKILL");
-        } catch {}
-      }
-    };
-    const finish = (result) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      kill();
-      releaseGroup(child.pid);
-      resolve(result);
-    };
-    const timer = setTimeout(() => finish({ status: 124, error: "ETIMEDOUT" }), timeoutMs);
-    child.once("error", (error) => finish({ status: 1, error: error.code }));
-    child.once("exit", (status, signal) => finish({ status: status ?? 1, signal }));
-  });
-}
 export async function collectStages(steps, run, concurrency = 2) {
   const results = new Array(steps.length);
   let next = 0;

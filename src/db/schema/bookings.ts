@@ -659,6 +659,7 @@ export const tripHelpRequests = pgTable(
     uniqueIndex("trip_help_requests_booking_unique").on(table.bookingId),
     index("trip_help_requests_shop_status_idx").on(table.shopId, table.status, table.createdAt),
     index("trip_help_requests_trip_idx").on(table.tripId, table.createdAt),
+    index("trip_help_requests_helper_person_idx").on(table.helperPersonId),
   ],
 );
 
