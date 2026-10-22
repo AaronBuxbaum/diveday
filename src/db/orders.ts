@@ -60,6 +60,7 @@ import {
   paymentOperationIntents,
   people,
   personRoles,
+  shops,
   trips,
 } from "./schema";
 import { type SeatPaymentRow, seatLedgerEntries, seatPaymentsByIds } from "./seat-payments";
@@ -802,6 +803,78 @@ export async function recordPaymentOnOpenOrder(
     return invalid;
   }
   return { ok: true, order: settled };
+}
+
+export type RecordDemoPaymentOutcome =
+  | { ok: true; order: Order }
+  /**
+   * - `not_demo` — the shop is not a demo shop; a real shop's invoice goes
+   *   through {@link recordPaymentOnOpenOrder}, which tells Stripe.
+   * - `invalid` — not cash or the card machine, a caller who is not staff, or
+   *   no open, unpaid invoice of this shop's by that id.
+   */
+  | { ok: false; reason: "not_demo" | "invalid" };
+
+/**
+ * **Record payment on a demo order** (market sheet 2026-10-22, item 6): cash
+ * or the card machine, on an open invoice of a demo shop, settled here and
+ * nowhere else. A demo invoice's Stripe ids are made up, so
+ * {@link recordPaymentOnOpenOrder}'s mark-paid-out-of-band call has nothing to
+ * mark; counter money never needed Stripe to begin with.
+ *
+ * **Stripe is out of reach by construction**: this function takes no
+ * invoicing provider and calls none. **A real shop is out of reach by the
+ * shop row**: `shops.is_demo` is read, under a lock, in the transaction that
+ * writes, with the order matched on both its id and that shop, so neither a
+ * flag flipped mid-call nor an order id from another shop gets through. Room
+ * charges stay on the Stripe path's side (the brief named only the counter's
+ * two methods). Settled exactly as a real counter payment settles, through
+ * `settleCounterClaim`: paid in full, the seat marked paid, `order.paid`
+ * queued. The caller asks for the money step-up and writes the activity line.
+ */
+export async function recordDemoPaymentOnOpenOrder(
+  db: AppDb,
+  input: {
+    shopId: string;
+    orderId: string;
+    actorPersonId: string;
+    collection: CounterCollection;
+  },
+): Promise<RecordDemoPaymentOutcome> {
+  const invalid = { ok: false, reason: "invalid" } as const;
+  if (!COUNTER_COLLECTIONS.has(input.collection)) return invalid;
+  const roles = await loadActiveStaffRoles(db, input.shopId, input.actorPersonId);
+  if (!roles || !isStaff(roles)) return invalid;
+
+  return db.transaction(async (tx): Promise<RecordDemoPaymentOutcome> => {
+    const [shop] = await tx
+      .select({ isDemo: shops.isDemo })
+      .from(shops)
+      .where(eq(shops.id, input.shopId))
+      .for("share");
+    if (shop?.isDemo !== true) return { ok: false, reason: "not_demo" };
+    const now = nowDate();
+    const [current] = await tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, input.orderId), eq(orders.shopId, input.shopId)))
+      .for("update");
+    if (
+      current?.status !== "open" ||
+      current.collection !== "stripe_invoice" ||
+      current.stripePaymentIntentId !== null ||
+      current.counterClaimedAt !== null
+    ) {
+      return invalid;
+    }
+    const [claimed] = await tx
+      .update(orders)
+      .set({ collection: input.collection, counterClaimedAt: now, updatedAt: now })
+      .where(eq(orders.id, current.id))
+      .returning();
+    const settled = claimed ? await settleCounterClaim(tx, claimed, input.collection) : null;
+    return settled ? { ok: true, order: settled } : invalid;
+  });
 }
 
 /**

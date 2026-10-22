@@ -277,11 +277,10 @@ export default async function OrderDetailPage({
           {order.order.status === "open" && counterCollection === null ? (
             demo ? (
               <>
-                <DisabledDemoButton
-                  label={t("orders.detail.recordPayment.label")}
-                  hint={demoActionHint}
-                  variant="secondary"
-                />
+                {/* Cash and the card machine never touch Stripe, so a demo
+                    records them (market sheet 2026-10-22, item 6); only the
+                    Stripe actions stay disabled. No room charge here. */}
+                <RecordPaymentForm orderId={order.order.id} t={t} roomCharge={false} />
                 <DisabledDemoButton
                   label={t("orders.detail.refreshStatus")}
                   hint={demoActionHint}

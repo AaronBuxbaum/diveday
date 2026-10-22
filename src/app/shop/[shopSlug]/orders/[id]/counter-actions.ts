@@ -1,7 +1,12 @@
 "use server";
 
 import { getDb } from "@/db/client";
-import { recordPaymentOnOpenOrder, voidCounterOrder } from "@/db/orders";
+import {
+  type RecordPaymentOnOrderOutcome,
+  recordDemoPaymentOnOpenOrder,
+  recordPaymentOnOpenOrder,
+  voidCounterOrder,
+} from "@/db/orders";
 import { counterPaymentActivity, recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
 import { dispatchIntegrationsAfterResponse } from "@/features/integrations";
@@ -51,8 +56,12 @@ export async function voidCounterAction(formData: FormData) {
  * Stripe so the diver is not asked for the money again; the activity log
  * names who recorded it.
  *
- * Refused on a demo shop before any Stripe call: its invoices are made up, the
- * same reason Refresh and Void are (`actions.ts`).
+ * **On a demo shop, cash and the card machine are recorded locally**
+ * (market sheet 2026-10-22, item 6): its invoices are made up, so there is no
+ * Stripe invoice to mark, and counter money never needed one.
+ * `recordDemoPaymentOnOpenOrder` takes no Stripe provider and re-reads the
+ * shop's demo flag in its own transaction. A room charge stays refused there,
+ * as Refresh and Void are (`actions.ts`).
  */
 export async function recordPaymentAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -60,25 +69,37 @@ export async function recordPaymentAction(formData: FormData) {
   const collection = postedCollection(formData);
   const db = await getDb();
   const back = shopPath(session.user.shopSlug, "orders", orderId);
-  if ((await getShopById(db, session.user.shopId))?.isDemo) {
+  const demo = (await getShopById(db, session.user.shopId))?.isDemo === true;
+  const counterMoney = collection === "cash" || collection === "card_machine" ? collection : null;
+  if (demo && !counterMoney) {
     revalidateAndRedirect(back, noticeUrl(back, "demo-disabled"));
     return;
   }
   if (!(await hasRequiredStepUp(db, session, "money"))) {
     revalidateAndRedirect(back, stepUpChallengeUrl(session.user.shopSlug, "money", back));
   }
-  const outcome =
-    orderId && collection
-      ? await recordPaymentOnOpenOrder(db, {
-          shopId: session.user.shopId,
-          orderId,
-          actorPersonId: session.user.personId,
-          collection,
-          room: collection === "room_charge" ? postedRoom(formData) : null,
-        })
-      : null;
+  let outcome: RecordPaymentOnOrderOutcome | null = null;
+  if (orderId && demo && counterMoney) {
+    outcome = demoOutcome(
+      await recordDemoPaymentOnOpenOrder(db, {
+        shopId: session.user.shopId,
+        orderId,
+        actorPersonId: session.user.personId,
+        collection: counterMoney,
+      }),
+    );
+  } else if (orderId && collection) {
+    outcome = await recordPaymentOnOpenOrder(db, {
+      shopId: session.user.shopId,
+      orderId,
+      actorPersonId: session.user.personId,
+      collection,
+      room: collection === "room_charge" ? postedRoom(formData) : null,
+    });
+  }
   if (outcome?.ok && collection) {
-    // Stripe stops collecting this invoice for good: the log names who did it.
+    // The money came over the counter (and, on a real shop, Stripe stops
+    // collecting this invoice for good): the log names who recorded it.
     await recordShopActivity(db, {
       shopId: session.user.shopId,
       actorPersonId: session.user.personId,
@@ -86,5 +107,12 @@ export async function recordPaymentAction(formData: FormData) {
     });
     dispatchIntegrationsAfterResponse();
   }
-  revalidateAndRedirect(back, noticeUrl(back, recordPaymentNotice(outcome)));
+  revalidateAndRedirect(back, noticeUrl(back, recordPaymentNotice(outcome, { demo })));
+}
+
+/** A demo write's refusal reads as any failed record: there is nothing in flight to wait on. */
+function demoOutcome(
+  outcome: Awaited<ReturnType<typeof recordDemoPaymentOnOpenOrder>>,
+): RecordPaymentOnOrderOutcome {
+  return outcome.ok ? outcome : { ok: false, reason: "invalid" };
 }

@@ -115,6 +115,7 @@
       "disputeNotAuthorized": "Las hojas de disputa son solo para propietarios y gerentes. Pide a uno de ellos que imprima esta.",
       "fallback": "Algo cambió en este pedido. Los detalles de abajo están al día.",
       "paymentRecorded": "Pago registrado. Stripe ya no se lo pedirá al buceador.",
+      "paymentRecordedDemo": "Pago registrado.",
       "paymentStripeRefused": "Stripe no quiso marcar esta factura como pagada. Es posible que el buceador acabe de pagarla en línea, así que actualiza antes de registrar nada.",
       "paymentRecordFailed": "No se pudo registrar este pago.",
       "paymentInFlight": "Se está registrando un pago de este pedido. Revisa el pedido en un minuto antes de volver a intentarlo."

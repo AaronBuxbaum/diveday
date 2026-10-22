@@ -703,7 +703,7 @@
     "src/db/seed-history.ts#seedHistory": 720,
     "src/db/seed-more-trips.ts#seedMoreTrips": 633,
     "src/db/seed-trips.ts#seedTrips": 384,
-    "src/lib/import.ts#prepareContactImport": 500
+    "src/lib/import.ts#prepareContactImport": 472
   },
   "live-people": {
     "//": "Reads of `people` written before scripts/check-live-people.mjs that carry no `livePerson()`, per file. Most are right (a by-id read in a transaction, a name for an activity line); a count may only fall. Written by `node scripts/check-live-people.mjs --write`."
@@ -795,14 +795,12 @@
     "src/app/shop/[shopSlug]/divers/[personId]/page.tsx": 473,
     "src/app/shop/[shopSlug]/gear/[id]/page.tsx": 779,
     "src/app/shop/[shopSlug]/gear/page.tsx": 415,
-    "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 401,
     "src/app/shop/[shopSlug]/orders/page.tsx": 728,
     "src/app/shop/[shopSlug]/page.tsx": 675,
     "src/app/shop/[shopSlug]/promos/page.tsx": 592,
     "src/app/shop/[shopSlug]/reports/page.tsx": 499,
     "src/app/shop/[shopSlug]/reviews/page.tsx": 457,
     "src/app/shop/[shopSlug]/schedule/board/page.tsx": 415,
-    "src/app/shop/[shopSlug]/settings/import/page.tsx": 498,
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 714,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 592,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 537,

@@ -12,6 +12,16 @@ describe("recordPaymentNotice", () => {
     expect(recordPaymentNotice(null)).toBe("payment-record-failed");
   });
 
+  it("does not tell a demo shop Stripe was told", () => {
+    const ok = { ok: true, order: {} } as Parameters<typeof recordPaymentNotice>[0];
+    expect(recordPaymentNotice(ok)).toBe("payment-recorded");
+    expect(recordPaymentNotice(ok, { demo: true })).toBe("payment-recorded-demo");
+    expect(NOTICES["payment-recorded-demo"]).toBeDefined();
+    expect(recordPaymentNotice({ ok: false, reason: "invalid" }, { demo: true })).toBe(
+      "payment-record-failed",
+    );
+  });
+
   it("names a notice the page can render for every outcome", () => {
     for (const reason of [
       "invalid",

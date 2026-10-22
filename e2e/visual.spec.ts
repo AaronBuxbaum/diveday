@@ -7774,6 +7774,20 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "order-detail", scheme);
       });
 
+      // An open demo order (market sheet 2026-10-22, item 6): Record payment
+      // offers cash and the card machine as live buttons; Refresh and Void
+      // stay disabled beside the demo note.
+      test(`an open demo order's Record payment renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/orders?status=open&range=all");
+        const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
+        await ledgerRow.filter({ visible: true }).first().waitFor();
+        await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
+        await page.getByRole("button", { name: "Card machine", exact: true }).waitFor();
+        await capture(page, "order-detail-open-demo", scheme);
+      });
+
       // **The dispute sheet on screen** (issue #2390): a seat's order, the
       // signed release, the check-in and the roll call, reached the way an
       // owner reaches it, from the order's own "Dispute sheet" door.
@@ -7839,6 +7853,35 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/import");
         await page.getByRole("heading", { name: "What comes across" }).waitFor();
         await capture(page, "settings-import", scheme);
+      });
+
+      // A bookings export that holds seats sold for after today (market sheet
+      // 2026-10-22, item 3): the preview counts them, names the system the
+      // guide came from, and lists them. The browser's clock is the frozen
+      // one, so "today" is the seed's day and the list never moves.
+      test(`the import preview lists bookings after today (${scheme})`, async ({ page }) => {
+        await page.clock.install({ time: E2E_FROZEN_CLOCK });
+        await page.goto("/shop/blue-mantis/settings/import?from=fareharbor");
+        await page
+          .locator('input[type="file"][data-hydrated="true"]')
+          .filter({ visible: true })
+          .waitFor({ state: "attached" });
+        await page.setInputFiles('input[type="file"]', {
+          name: "bookings.csv",
+          mimeType: "text/csv",
+          buffer: Buffer.from(
+            [
+              "Customer Name,Email,Booking Date,Tour Name,Booking Status,Total,Booking ID",
+              "Hana Kobayashi,hana.k@example.com,2026-06-12,Two-tank Molasses Reef,Completed,$165.00,FH-1",
+              "Hana Kobayashi,hana.k@example.com,2026-08-14,Night dive Benwood,Booked,$95.00,FH-2",
+              "Sam Reed,sam.r@example.com,2026-08-29,Discover Scuba,Booked,$120.00,FH-3",
+              "Ada Brooks,ada.b@example.com,2026-09-05,Two-tank Molasses Reef,Booked,$165.00,FH-4",
+            ].join("\n"),
+            "utf-8",
+          ),
+        });
+        await page.getByRole("list", { name: /bookings are after today/ }).waitFor();
+        await capture(page, "settings-import-bookings-after-today", scheme);
       });
 
       // Import's "Gear history" tab: the gear CSV importer.
