@@ -6,7 +6,7 @@ import {
   routeMapQuery,
   routePathD,
 } from "@/lib/dive-site-route";
-import { openMapsUrl, osmCoordsEmbedUrl } from "@/lib/maps";
+import { openMapsUrl } from "@/lib/maps";
 import { MapEmbed } from "./MapEmbed";
 import { RouteWaypoint } from "./RouteWaypoint";
 
@@ -91,14 +91,13 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
               briefing has no way to tell they have done that, and nothing puts
               the frame back except a reload. Exploring the site for real is the
               "Open map" link in the caption, which opens Google Maps properly
-              rather than a 256px-tall pretend one — which is also why `MapEmbed`
-              can crop the provider's own controls away without taking anything
-              from the reader. */}
+              rather than a 256px-tall pretend one. */}
           <MapEmbed
             title={t("site.terrainMapTitle", { site: site.name })}
-            src={osmCoordsEmbedUrl(query, site.routeZoom)}
+            latitude={site.forecastLatitude as number}
+            longitude={site.forecastLongitude as number}
+            zoom={site.routeZoom}
             className="h-full w-full"
-            showAttribution
           >
             <svg
               viewBox="0 0 100 100"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ARRIVAL_MAP_PROBES } from "@/lib/maps";
 import { useMapReachable } from "./use-map-reachable";
 
 /**
@@ -14,7 +15,7 @@ import { useMapReachable } from "./use-map-reachable";
  * address and "Open in maps" beneath it carry the card on their own.
  */
 export function ArrivalMap({ title, src }: { title: string; src: string }) {
-  const reachable = useMapReachable(true);
+  const reachable = useMapReachable(true, ARRIVAL_MAP_PROBES);
   const [online, setOnline] = useState(true);
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);

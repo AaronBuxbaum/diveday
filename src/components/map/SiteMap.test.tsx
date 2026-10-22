@@ -144,9 +144,13 @@ describe("SiteMap labels through Leaflet", () => {
     expect(shopPoint.y + Number.parseFloat(shop.style.marginTop) + 22).toBe(badge.y);
     const tooltip = container.querySelector<HTMLElement>(".leaflet-shop-tooltip");
     expect(tooltip).not.toBeNull();
-    const tooltipPane = tooltip?.parentElement;
-    const shopPane = shop.parentElement;
-    expect(Number(tooltipPane?.style.zIndex)).toBeGreaterThan(Number(shopPane?.style.zIndex));
+    // Every hover label and card is read over the shop, never behind it:
+    // the shop's pane sits above the pins (600) and below Leaflet's tooltip
+    // (650) and popup (700) panes, and its own label is an ordinary tooltip.
+    expect(tooltip?.parentElement).toHaveClass("leaflet-tooltip-pane");
+    const shopPane = Number(shop.parentElement?.style.zIndex);
+    expect(shopPane).toBeGreaterThan(600);
+    expect(shopPane).toBeLessThan(650);
   });
 
   it("fits a noncoincident cluster fully in one click and lets a smaller cluster advance again", async () => {
@@ -356,6 +360,59 @@ describe("SiteMap labels through Leaflet", () => {
     );
     expect(container.querySelector(".leaflet-site-marker .ring-4")).toHaveAccessibleName(PIN.name);
     expect(container.querySelectorAll(".leaflet-site-popup")).toHaveLength(1);
+  });
+
+  // Aaron, 2026-10-22: clicks "randomly" did nothing. Leaflet drops a click
+  // while its map drag still reads as moved, and a pin's own press never
+  // reached the map to reset that, so after any drag every pin went dead.
+  it("opens a pin's card after the map was dragged", async () => {
+    const L = await import("leaflet");
+    const getContainer = vi.spyOn(L.Map.prototype, "getContainer");
+    const { container } = await sizedOverview({ width: 640, height: 440 });
+    const map = getContainer.mock.contexts[0];
+    if (!(map instanceof L.Map)) throw new Error("Map did not mount");
+    const draggable = (map.dragging as unknown as { _draggable: { _moved: boolean } })._draggable;
+    draggable._moved = true;
+    const [first, second] = container.querySelectorAll<HTMLButtonElement>(
+      ".leaflet-site-marker button",
+    );
+    if (!first || !second) throw new Error("Two site markers did not mount");
+    fireEvent.click(first);
+    await waitFor(() => expect(popup(container).querySelector("h2")).not.toBeNull());
+    fireEvent.click(second);
+    await waitFor(() => expect(container.querySelectorAll(".leaflet-site-popup")).toHaveLength(1));
+    expect(container.querySelector(".leaflet-site-marker .ring-4")).toBe(
+      container.querySelectorAll(".leaflet-site-marker button")[1] ?? null,
+    );
+  });
+
+  it("keeps a selected site's card open when its pin is clicked again", async () => {
+    const { container } = render(
+      <SiteMap center={CENTER} pins={[PIN]} clusterLabel="dive sites" />,
+    );
+    const button = await markerButton(container);
+    fireEvent.click(button);
+    await waitFor(() => expect(container.querySelectorAll(".leaflet-site-popup")).toHaveLength(1));
+    fireEvent.click(await markerButton(container));
+    expect(container.querySelectorAll(".leaflet-site-popup")).toHaveLength(1);
+  });
+
+  it("shows no hover label on the selected site, and brings it back once deselected", async () => {
+    const { container } = render(
+      <SiteMap center={CENTER} pins={[PIN]} clusterLabel="dive sites" />,
+    );
+    fireEvent.click(await markerButton(container));
+    await waitFor(() => expect(container.querySelectorAll(".leaflet-site-popup")).toHaveLength(1));
+    fireEvent.mouseOver(await markerButton(container));
+    expect(container.querySelector(".leaflet-site-tooltip")).toBeNull();
+    const close = container.querySelector<HTMLElement>(".leaflet-popup-close-button");
+    if (!close) throw new Error("Popup has no close button");
+    fireEvent.click(close);
+    await waitFor(() => expect(container.querySelector(".leaflet-site-popup")).toBeNull());
+    fireEvent.mouseOver(await markerButton(container));
+    await waitFor(() =>
+      expect(container.querySelector(".leaflet-site-tooltip")).toHaveTextContent(PIN.name),
+    );
   });
 
   it("refits the untouched overview on resize so both edge sites remain visible", async () => {

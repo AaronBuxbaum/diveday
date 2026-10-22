@@ -1,78 +1,56 @@
 import type { ReactNode } from "react";
+import { BASEMAP_CREDIT } from "@/lib/basemap";
 import { MapFrame } from "./MapFrame";
 
 /**
- * A Google Maps embed whose route overlay can keep the provider's attribution
- * visible without changing the map frame the route was drawn against.
+ * The still map a route is drawn over, with the basemap's credit in a band
+ * below the drawing window.
  *
- * The classic `output=embed` map draws its own furniture at the edges — a
- * "View larger map" chip top-left, pan/zoom controls in a corner, and a bottom
- * bar carrying "Keyboard shortcuts", "Map data ©…", "Terms" and "Report a map
- * error". The route surfaces keep the corner controls out of the drawing area,
- * but expose the provider's bottom attribution strip below it.
- *
- * The chrome cannot be turned off by a URL parameter, so it is put *outside the
- * window* instead: the iframe remains inflated symmetrically around the
- * original drawing window. The outer frame grows by the same 64px that used to
- * be hidden below it, so the iframe keeps the old dimensions and the old route
- * pixels remain unchanged. Only the provider's bottom strip becomes visible in
- * that added band. Overlays are positioned against the original-height inner
- * window, not the attribution band, for the same reason.
+ * **The map is larger than its window, on purpose.** Routes stored before the
+ * shared basemap were drawn over an OpenStreetMap embed that was inflated 4rem
+ * past the window on the left, right and top and 4rem into the credit band
+ * below, to crop the provider's own furniture; that embed fitted the site's
+ * box to the inflated size. The map keeps exactly that box (`-top-16 -left-16`,
+ * `calc(100% + 8rem)` wide, `calc(100% + 4rem)` tall), so it fits to the same
+ * zoom and centre and a waypoint stored as a percentage of the window still
+ * points at the water it always pointed at. Overlays are positioned against
+ * the window, never the band.
  */
 export function MapEmbed({
   title,
-  src,
+  latitude,
+  longitude,
+  zoom,
   className = "",
-  interactive = false,
-  showAttribution = false,
   children,
 }: {
   title: string;
-  src: string;
-  /** Sizing and shape for the visible window — the iframe fills it and then some. */
+  latitude: number;
+  longitude: number;
+  /** The stored route zoom; the frame is fitted to the site's box at it. */
+  zoom: number;
+  /** Sizing and shape for the visible window, credit band included. */
   className?: string;
-  /**
-   * Whether the frame itself takes pointer events. Both callers today say no:
-   * a panned map is a route drawn against a frame the briefing cannot
-   * reproduce. `tabIndex={-1}` follows, since a frame nobody can interact with
-   * should not be a stop in the tab order either.
-   */
-  interactive?: boolean;
-  /** Expose the provider's bottom attribution strip below the route window. */
-  showAttribution?: boolean;
   /** Overlays drawn over the map — the route SVG, a click surface. */
   children?: ReactNode;
 }) {
-  const iframeHeightClass = showAttribution ? "h-[calc(100%+4rem)]" : "h-[calc(100%+8rem)]";
-
-  // `bg-surface-sunken` is the ground under the frame (issue #2013): the iframe
-  // paints over it once loaded, and until then, or for good where the host is
-  // blocked, the route still has a surface rather than white or the browser's
-  // error page.
+  // `bg-surface-sunken` is the ground under the map (issue #2013): the tiles
+  // paint over it once loaded, and until then, or for good where the host is
+  // blocked, the route still has a surface.
   return (
-    <div className={`relative overflow-hidden bg-surface-sunken ${className}`}>
-      {/* The size is declared, not inferred from opposing insets. An `<iframe>`
-          is a *replaced* element, so an `auto` width resolves to its intrinsic
-          300×150 and the box is then over-constrained — CSS drops `right` and
-          `bottom` on the floor. `-inset-16` alone therefore didn't inflate this
-          frame at all; it just shifted the whole map 64px up and left, which is
-          the one outcome this must never produce, because the route SVG over it
-          is in frame percentages and would have been drawing on the wrong
-          water. `calc(100% + 8rem)` resolves against the containing block —
-          this box — so the growth stays symmetric and the centre stays put. */}
+    <div className={`group/embed relative overflow-hidden bg-surface-sunken ${className}`}>
       <MapFrame
         title={title}
-        src={src}
-        interactive={interactive}
-        className={`absolute -top-16 -left-16 ${iframeHeightClass} w-[calc(100%+8rem)] border-0 ${
-          interactive ? "" : "pointer-events-none"
-        }`}
+        latitude={latitude}
+        longitude={longitude}
+        zoom={zoom}
+        className="absolute -top-16 -left-16 h-[calc(100%+4rem)] w-[calc(100%+8rem)]"
       />
-      {showAttribution ? (
-        <div className="absolute inset-x-0 top-0 h-[calc(100%-4rem)]">{children}</div>
-      ) : (
-        children
-      )}
+      {/* The credit shows with the map it credits, never over a blocked one. */}
+      <p className="pointer-events-none absolute right-0 bottom-0 hidden max-w-full truncate rounded-tl-inset bg-surface/90 px-1.5 py-0.5 text-xs text-muted group-has-[[data-map-state=reachable]]/embed:block">
+        {BASEMAP_CREDIT}
+      </p>
+      <div className="absolute inset-x-0 top-0 h-[calc(100%-4rem)]">{children}</div>
     </div>
   );
 }

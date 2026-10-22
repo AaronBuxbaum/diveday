@@ -2,7 +2,7 @@
 
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { mapTileLayer } from "@/lib/carto";
+import { createBasemapMap } from "./leaflet-basemap";
 import { clusterMapPoints, mapTargetIsVisible, separateShopAnchor } from "./map-clustering";
 import { labelRectangle, placeMapLabel, rectanglesOverlap } from "./map-label-placement";
 import { clearMapViewport, readMapViewport, writeMapViewport } from "./map-viewport-storage";
@@ -91,27 +91,18 @@ export default function SiteMap({
 
       const savedView = viewportStorageKey ? readMapViewport(viewportStorageKey) : null;
       restoredViewRef.current = savedView !== null;
-      const map = L.map(containerRef.current, {
+      const map = createBasemapMap(L, containerRef.current, {
         center: savedView
           ? [savedView.latitude, savedView.longitude]
           : [center.latitude, center.longitude],
         zoom: savedView?.zoom ?? zoom,
         zoomControl: true,
-        attributionControl: false,
       });
 
-      map.createPane("shopAnchor").style.zIndex = "750";
-      map.createPane("shopTooltip").style.zIndex = "760";
-      L.control.attribution({ prefix: false }).addTo(map);
-
-      const tileLayer = mapTileLayer("light_all");
-      L.tileLayer(tileLayer.url, {
-        attribution:
-          tileLayer.provider === "carto"
-            ? '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>'
-            : '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map);
+      // The shop sits over the sites' pins and under every card: a site's
+      // hover label and its open card (tooltips 650, popups 700) are read
+      // over the shop's pin and stem, never behind them.
+      map.createPane("shopAnchor").style.zIndex = "620";
 
       mapRef.current = map;
       setMapInstance(map);
@@ -150,6 +141,7 @@ export default function SiteMap({
     let isCancelled = false;
     let updateQueued = false;
     let isClearingMarkers = false;
+    let isSelecting = false;
     let popupOpen = false;
     let leaflet: typeof import("leaflet") | null = null;
 
@@ -172,6 +164,24 @@ export default function SiteMap({
         markersRef.current.get("shop-anchor"),
         markersRef.current.values(),
       );
+
+    // A pin answers its own button's click, never Leaflet's: Leaflet drops a
+    // click while it thinks the map was last dragged, and a pin's press never
+    // reaches the map to tell it otherwise, so after any drag a pin could go
+    // dead until the empty map was pressed (Aaron, 2026-10-22). The click stops
+    // at the button, so Leaflet neither drops it nor toggles the card shut.
+    const selectFromMap = (pinId: string, marker: LeafletMarker) => {
+      isSelecting = true;
+      try {
+        activePinIdRef.current = pinId;
+        marker.closeTooltip();
+        marker.openPopup();
+      } finally {
+        isSelecting = false;
+      }
+      setActivePinId(pinId);
+      onSelectPin?.(pinId);
+    };
 
     const renderMarkers = (L: typeof import("leaflet"), openSelectedPopup = false) => {
       if (isCancelled || mapRef.current !== mapInstance) return;
@@ -236,8 +246,9 @@ export default function SiteMap({
         if (group.length > 1) {
           const count = group.length;
           const label = `${count} ${clusterLabel}`;
+          const button = createClusterButton(count, label);
           const icon = L.divIcon({
-            html: createClusterButton(count, label),
+            html: button,
             className: "leaflet-site-cluster-marker",
             iconSize: [44, 44],
             iconAnchor: [22, 22],
@@ -259,7 +270,10 @@ export default function SiteMap({
             className: "leaflet-site-tooltip",
           });
           bindTooltipFocus(marker, "button");
-          marker.on("click", () => openMapCluster(L, mapInstance, marker, group, clusterLabel));
+          button.addEventListener("click", (event) => {
+            event.stopPropagation();
+            openMapCluster(L, mapInstance, marker, group, clusterLabel);
+          });
           markersRef.current.set(`cluster:${groupIndex}`, marker);
           return;
         }
@@ -273,8 +287,9 @@ export default function SiteMap({
         const ringClass = isSelected
           ? "ring-4 ring-primary scale-110 z-50"
           : "ring-2 ring-surface hover:scale-105";
+        const button = createSiteButton(pin, colorClass, ringClass);
         const icon = L.divIcon({
-          html: createSiteButton(pin, colorClass, ringClass),
+          html: button,
           className: "leaflet-site-marker",
           iconSize: [44, 44],
           iconAnchor: [22, 22],
@@ -293,17 +308,13 @@ export default function SiteMap({
           autoPanPaddingTopLeft: [12, 110],
           autoPanPaddingBottomRight: [12, 12],
         });
-        marker.bindTooltip(createSiteTooltip(pin), {
-          direction: "top",
-          offset: [0, -12],
-          opacity: 1,
-          className: "leaflet-site-tooltip",
-        });
+        // The open card already names the selected site; its hover label
+        // would only cover the card.
+        if (!isSelected) bindSiteTooltip(marker, pin);
         bindTooltipFocus(marker, "button");
-        marker.on("click", () => {
-          activePinIdRef.current = pin.id;
-          setActivePinId(pin.id);
-          onSelectPin?.(pin.id);
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          selectFromMap(pin.id, marker);
         });
         markersRef.current.set(`site:${pin.id}`, marker);
         if (isSelected && openSelectedPopup) marker.openPopup();
@@ -338,7 +349,9 @@ export default function SiteMap({
     };
     const handlePopupClose = () => {
       popupOpen = false;
-      if (!isClearingMarkers) {
+      // Opening another site's card closes this one on the way; that is a
+      // new selection, not a cleared one.
+      if (!isClearingMarkers && !isSelecting) {
         activePinIdRef.current = null;
         setActivePinId(null);
         onSelectPin?.(null);
@@ -420,6 +433,13 @@ function selectMapPin(
     if (!key.startsWith("site:")) return;
     const selected = key === `site:${activePinId}`;
     marker.setZIndexOffset(selected ? 1000 : 100);
+    if (selected) {
+      marker.closeTooltip();
+      marker.unbindTooltip();
+    } else if (!marker.getTooltip()) {
+      const pin = pins.find((candidate) => key === `site:${candidate.id}`);
+      if (pin) bindSiteTooltip(marker, pin);
+    }
     const button = marker.getElement()?.querySelector("button");
     for (const className of ["ring-4", "ring-primary", "scale-110", "z-50"]) {
       button?.classList.toggle(className, selected);
@@ -611,7 +631,6 @@ function addShopMarker(
   const tooltip = document.createElement("span");
   tooltip.textContent = anchor.name || label;
   marker.bindTooltip(tooltip, {
-    pane: "shopTooltip",
     direction: "top",
     offset: [0, -68],
     opacity: 1,
@@ -675,6 +694,15 @@ function updateShopMarkerPosition(
     tooltip.options.offset = [position.x - point.x, position.y - point.y];
     if (marker.isTooltipOpen()) tooltip.update();
   }
+}
+
+function bindSiteTooltip(marker: LeafletMarker, pin: MapPin) {
+  marker.bindTooltip(createSiteTooltip(pin), {
+    direction: "top",
+    offset: [0, -12],
+    opacity: 1,
+    className: "leaflet-site-tooltip",
+  });
 }
 
 function bindTooltipFocus(marker: LeafletMarker, selector: string) {
