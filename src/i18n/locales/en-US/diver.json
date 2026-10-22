@@ -4763,7 +4763,7 @@
         "neonTerm": "Neon",
         "neonBody": "the database itself.",
         "anthropicTerm": "Anthropic",
-        "anthropicBody": "Claude, the AI model behind DiveDay’s suggestions, and only for a shop that has them turned on. It receives what a suggestion needs: a message staff ask it to draft, sort or translate; sample rows from a file being imported; a certification card photo, read and then discarded; the shop’s own website; text the shop wrote, such as trip descriptions and site briefings; review comments; and work-order notes. Medical answers are never sent. Anthropic processes this only to answer the request, under its commercial terms, and does not train its models on it.",
+        "anthropicBody": "Claude, the AI model behind DiveDay’s suggestions, and only for a shop that has them turned on. It receives what a suggestion needs: a message staff ask it to draft, sort or translate; sample rows from a file being imported; a certification card photo, read and then discarded; the shop’s own website; text the shop wrote, such as trip descriptions and site briefings; review comments; and work-order notes. Medical answers are never sent. Anthropic processes this only to answer the request, under its commercial terms, does not train its models on it, and deletes it within 30 days, unless a request is flagged under its usage policy.",
         "sentryTerm": "Sentry",
         "sentryBody": "error reporting. When something breaks, the crash is sent here so we can fix it. The address of the page is stripped of any token before it goes, and we do not send diver records with it.",
         "googleTerm": "Google",
