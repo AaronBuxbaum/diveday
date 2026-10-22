@@ -38,7 +38,8 @@
     "saving": "Guardando…",
     "saved": "Guardado.",
     "error": "No se guardó. Inténtalo de nuevo.",
-    "stale": "El original cambió después de guardar esto. Los buceadores leen el original hasta que vuelvas a guardar el español."
+    "stale": "El original cambió después de guardar esto, así que los buceadores que leen en español ven el original. Redáctalo de nuevo o corrígelo para que coincida, y guárdalo.",
+    "staleSave": "Este texto en español se escribió para un original anterior. Redáctalo de nuevo o corrígelo para que coincida, y guárdalo."
   },
   "bench": {
     "draft": "Redactar con las notas del taller"
@@ -54,5 +55,8 @@
     "adding": "Agregando…",
     "none": "Nada de lo que dijiste coincide con las especies de este arrecife.",
     "proposed": "{name} × {count}"
+  },
+  "requirement": {
+    "nitrox": "Requiere tarjeta de nitrox"
   }
 }

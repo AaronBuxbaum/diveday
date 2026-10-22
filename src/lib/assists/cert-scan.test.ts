@@ -39,9 +39,13 @@ describe("certScanCall", () => {
       cardNumber: "12345",
       confidence: 0.4,
     });
-    const result = await callStructured(provider, certScanCall(image, options, "quick"));
+    const result = await callStructured(provider, certScanCall(image, options, "draft"));
     expect(result.outcome).toBe("low_confidence");
     expect(certScanFields(result.value)).toEqual({});
+    // Haiku's unsure reading passes the seam for scanCard to judge, but never fills a box.
+    const quick = await callStructured(provider, certScanCall(image, options, "quick"));
+    expect(quick.value).not.toBeNull();
+    expect(certScanFields(quick.value)).toEqual({});
   });
 
   it("refuses a card the form does not offer", async () => {
@@ -58,9 +62,10 @@ describe("certScanCall", () => {
 
 describe("certScanFields", () => {
   it("keeps a number only when a person could have typed it", () => {
-    const base = { agency: "padi" as const, card: "nitrox" as const };
+    const base = { agency: "padi" as const, card: "nitrox" as const, confidence: 0.9 };
     expect(certScanFields({ ...base, cardNumber: " 2207 1188 " })).toEqual({
-      ...base,
+      agency: "padi",
+      card: "nitrox",
       cardNumber: "2207 1188",
     });
     expect(certScanFields({ ...base, cardNumber: "ab" }).cardNumber).toBeUndefined();
@@ -72,27 +77,60 @@ describe("certScanFields", () => {
 
   it("answers nothing for no reading, and never a verification field", () => {
     expect(certScanFields(null)).toEqual({});
-    const fields = certScanFields({ agency: "ssi", card: null, cardNumber: "SSI-22891" });
+    const fields = certScanFields({
+      agency: "ssi",
+      card: null,
+      cardNumber: "SSI-22891",
+      confidence: 0.9,
+    });
     expect(Object.keys(fields).sort()).toEqual(["agency", "cardNumber"]);
   });
 });
 
 describe("scanCard", () => {
-  it("asks Sonnet only when Haiku came back empty", async () => {
+  const reading = (confidence: number, agency: string | null = "padi") => ({
+    agency,
+    card: null,
+    cardNumber: null,
+    confidence,
+  });
+
+  it("keeps a sure Haiku reading and asks nothing more", async () => {
     const asked: string[] = [];
-    const first = await scanCard(async (model) => {
+    const value = await scanCard(async (model) => {
       asked.push(model);
-      return model === "quick" ? "haiku" : "sonnet";
+      return reading(0.9);
     });
-    expect(first).toBe("haiku");
+    expect(value).toEqual(reading(0.9));
     expect(asked).toEqual(["quick"]);
-    asked.length = 0;
-    const second = await scanCard(async (model) => {
+  });
+
+  it("asks Sonnet when Haiku saw a card but was unsure, and takes only Sonnet's answer", async () => {
+    const asked: string[] = [];
+    const value = await scanCard(async (model) => {
       asked.push(model);
-      return model === "quick" ? null : "sonnet";
+      return model === "quick" ? reading(0.4) : null;
     });
-    expect(second).toBe("sonnet");
+    expect(value).toBeNull();
     expect(asked).toEqual(["quick", "draft"]);
+  });
+
+  it("never asks Sonnet about a photo Haiku says is not a card, or when Haiku failed", async () => {
+    for (const quick of [reading(0, null), reading(0.1, null), null]) {
+      const asked: string[] = [];
+      expect(
+        await scanCard(async (model) => {
+          asked.push(model);
+          return model === "quick" ? quick : reading(0.9);
+        }),
+      ).toBeNull();
+      expect(asked).toEqual(["quick"]);
+    }
+  });
+
+  it("lets Haiku's answer through the seam whatever its confidence, and floors Sonnet's", () => {
+    expect(certScanCall(image, options, "quick").minConfidence).toBe(0);
+    expect(certScanCall(image, options, "draft").minConfidence).toBeUndefined();
   });
 });
 

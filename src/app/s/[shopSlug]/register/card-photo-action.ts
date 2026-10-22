@@ -12,7 +12,7 @@ import {
   parseCardImage,
   scanCard,
 } from "@/lib/assists/cert-scan";
-import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { checkRateLimitFailClosed, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { SELF_DECLARED_AGENCIES, SELF_DECLARED_LEVELS } from "@/lib/self-registration";
 
@@ -24,7 +24,10 @@ import { SELF_DECLARED_AGENCIES, SELF_DECLARED_LEVELS } from "@/lib/self-registr
  * nothing, and the diver types it as before.
  *
  * Anonymous, so it is bucketed like the registration itself: the address
- * first, then the shop, so one address cannot spend a counter's allowance.
+ * first, then the shop, so one address cannot spend a counter's allowance. The
+ * shop's bucket is a daily one well under the monthly cap, both fail closed,
+ * and a photo Haiku says is not a card is never sent on to Sonnet
+ * (`scanCard`), so the public cannot spend the staff's assists dark.
  */
 export async function readCardPhotoAtShopAction(
   shopSlug: string,
@@ -32,18 +35,29 @@ export async function readCardPhotoAtShopAction(
 ): Promise<Record<string, string> | null> {
   const parsed = parseCardImage(image?.data, image?.mediaType);
   if (!parsed) return null;
+  // Every pass is a paid call on the shop's own cap, so both buckets fail
+  // closed: a store outage reads no card, and the diver types it as before.
   const ip = await clientIp();
-  if (!(await checkRateLimit(rateLimitKey("card-scan-ip", ip), RATE_LIMITS.cardScanByIp)).allowed) {
-    return null;
-  }
   if (
-    !(await checkRateLimit(rateLimitKey("card-scan-shop", shopSlug), RATE_LIMITS.cardScanByShop))
+    !(await checkRateLimitFailClosed(rateLimitKey("card-scan-ip", ip), RATE_LIMITS.cardScanByIp))
       .allowed
   ) {
     return null;
   }
   const shop = await shopBySlugCached(shopSlug);
   if (!shop) return null;
+  // A daily slice of the shop's monthly cap, keyed on the shop itself: the
+  // public can never spend more of the staff's budget than this.
+  if (
+    !(
+      await checkRateLimitFailClosed(
+        rateLimitKey("card-scan-shop", shop.id),
+        RATE_LIMITS.cardScanByShop,
+      )
+    ).allowed
+  ) {
+    return null;
+  }
   const db = await getDb();
   // The card options in the shop's own language: the model reads the card's
   // words against these labels, and the shop's language is the likeliest match.

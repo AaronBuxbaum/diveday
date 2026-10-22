@@ -40,12 +40,16 @@ function fillOne(field: Element | RadioNodeList | null, value: string): boolean 
   return true;
 }
 
-/** The form's text values, files left out: what an assist reads of a form not yet saved. */
+/**
+ * The form's text values, files left out: what an assist reads of a form not
+ * yet saved. A repeated name (a group of checkboxes) is joined with commas.
+ */
 export function formTextValues(form: HTMLFormElement | null): Record<string, string> {
   if (!form) return {};
   const values: Record<string, string> = {};
   for (const [key, value] of new FormData(form)) {
-    if (typeof value === "string" && !(key in values)) values[key] = value;
+    if (typeof value !== "string") continue;
+    values[key] = key in values ? `${values[key]},${value}` : value;
   }
   return values;
 }

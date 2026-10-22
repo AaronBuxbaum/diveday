@@ -23,6 +23,7 @@ export function translationEditorCopy(t: StaffTranslator): TranslationEditorCopy
     saved: t("deskAssists.translate.saved"),
     error: t("deskAssists.translate.error"),
     stale: t("deskAssists.translate.stale"),
+    staleSave: t("deskAssists.translate.staleSave"),
   };
 }
 
@@ -32,6 +33,8 @@ export type TranslationBox = {
   id: string;
   field: string;
   text: string;
+  /** The digest of the English the saved Spanish translates, or "". */
+  translatedFrom: string;
   stale: boolean;
 };
 
@@ -56,6 +59,7 @@ export async function loadTranslationBox(
     return {
       ...subject,
       text: stored?.text ?? "",
+      translatedFrom: stored?.text ? stored.sourceDigest : "",
       stale: Boolean(stored && stored.sourceDigest !== sourceDigest(original)),
     };
   } catch {
@@ -85,6 +89,7 @@ export function ShopTextTranslation({
     <TranslationEditor
       boxId={translationBoxId(kind, id, field)}
       defaultValue={box.text}
+      translatedFrom={box.translatedFrom}
       stale={box.stale}
       maxLength={maxLength}
       save={saveTranslationAction.bind(null, shopSlug, kind, id, field)}

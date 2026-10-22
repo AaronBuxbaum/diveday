@@ -231,10 +231,9 @@ const RESET_KEEPS: Record<string, string> = {
   // the month's cap is the shop's spend and a reset must not refill it.
   claude_usage:
     "the shop's Claude spend this month, which the cap reads; a reset must not refill it",
-  // What the shop's assists answered (review chips, themes, the Monday read)
-  // and the shop's own Spanish: configuration-shaped, nothing seeds either.
+  // What the shop's assists answered (review chips, themes, the Monday read):
+  // configuration-shaped, nothing seeds it.
   assist_results: "derived answers about the shop's reviews and week; a reset must not re-ask",
-  shop_text_translations: "the shop's own Spanish words, like its other settings",
   // Crew news waiting to be told (ADR 20261009-crew-hear-about-their-boats):
   // it hangs off a departure, so the reset's trip delete clears it.
   crew_notices: "ON DELETE CASCADE from trips clears it",
@@ -288,7 +287,6 @@ const CASCADE_KEEPS: Record<string, string> = {
   weekly_digest_sends: "ON DELETE CASCADE from shops and people clears it",
   claude_usage: "ON DELETE CASCADE from shops clears it",
   assist_results: "ON DELETE CASCADE from shops clears it",
-  shop_text_translations: "ON DELETE CASCADE from shops clears it",
   crew_notices: "ON DELETE CASCADE from shops, people and trips clears it",
   crew_away_acknowledgements: "ON DELETE CASCADE from shops, people and trips clears it",
   trip_desk_events: "ON DELETE CASCADE from trips clears it",

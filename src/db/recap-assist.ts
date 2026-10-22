@@ -11,7 +11,7 @@ import { temperatureInUnit, temperatureUnitFor } from "@/lib/temperature-units";
 import { shopAssist } from "./assist-shop";
 import type { AssistOptions } from "./assists";
 import type { AppDb } from "./client";
-import { shops, tripSightings, trips } from "./schema";
+import { incidentReports, shops, tripSightings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -67,12 +67,16 @@ export async function recapLogFor(
   const names = new Map<string, string>(
     marineLifeCatalogCards(diverTranslator(locale)).map((card) => [card.slug, card.name]),
   );
-  const counts = new Map<string, number>();
+  // Grouped by the site they were logged at, so the line cannot move a
+  // creature to another reef; a count is summed only within its own site.
+  const bySite = new Map<string, Map<string, number>>();
   for (const sighting of sightings) {
     if (!names.has(sighting.slug)) continue;
+    const counts = bySite.get(sighting.site) ?? new Map<string, number>();
     counts.set(sighting.slug, (counts.get(sighting.slug) ?? 0) + sighting.count);
+    bySite.set(sighting.site, counts);
   }
-  if (counts.size === 0) return null;
+  if (bySite.size === 0) return null;
   const conditions: Record<string, string> = {};
   if (typeof row.trip.waterTemperatureC === "number") {
     const unit = temperatureUnitFor(row.shop);
@@ -80,8 +84,10 @@ export async function recapLogFor(
   }
   return {
     locale,
-    sites: [...new Set(sightings.map((sighting) => sighting.site))],
-    species: [...counts].map(([slug, count]) => ({ slug, name: names.get(slug) ?? slug, count })),
+    sites: [...bySite].map(([name, counts]) => ({
+      name,
+      species: [...counts].map(([slug, count]) => ({ slug, name: names.get(slug) ?? slug, count })),
+    })),
     conditions,
   };
 }
@@ -104,11 +110,27 @@ export async function draftRecapLine(
   return recapLine(value, log, catalogNames());
 }
 
+async function hasLiveIncidentReport(db: AppDb, shopId: string, tripId: string) {
+  const [report] = await db
+    .select({ id: incidentReports.id })
+    .from(incidentReports)
+    .where(
+      and(
+        eq(incidentReports.shopId, shopId),
+        eq(incidentReports.tripId, tripId),
+        isNull(incidentReports.deletedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(report);
+}
+
 /**
  * The shop's "Recap highlights" switch, at send time: a departure whose crew
  * left the highlight blank gets Claude's line, written to the trip as if the
  * crew had saved it, so the page and the email read one text. Only a blank
- * one: a crew's own words are never replaced. Returns whether it wrote.
+ * one: a crew's own words are never replaced, and never on a departure with a
+ * live incident report. Returns whether it wrote.
  */
 export async function autoFillRecapLine(
   db: AppDb,
@@ -119,6 +141,10 @@ export async function autoFillRecapLine(
   if (!shop.recapAssistAutoApprove || trip.recapShoutout?.trim()) return false;
   // A recap is never held up by its highlight: any failure here is no line.
   try {
+    // A departure with an incident report gets no line nobody read: the recap
+    // may reach the diver it is about, or their family. The crew can still
+    // draft one on Today and send it themselves.
+    if (await hasLiveIncidentReport(db, trip.shopId, trip.id)) return false;
     const line = await draftRecapLine(db, trip.shopId, trip.id, options);
     if (!line) return false;
     const [written] = await db

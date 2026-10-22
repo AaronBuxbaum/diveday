@@ -77,6 +77,9 @@ export async function readUnsurePair(
       and(
         eq(certifications.shopId, shopId),
         inArray(certifications.personId, [sourceId, survivorId]),
+        // A removed card or an unchecked claim is not a level the diver holds.
+        isNull(certifications.deletedAt),
+        eq(certifications.status, "verified"),
       ),
     )
     .orderBy(asc(certifications.level));

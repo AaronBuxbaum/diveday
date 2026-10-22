@@ -79,8 +79,14 @@ export function certScanCall<Agency extends string, Card extends string>(
     schema: readingSchema(options),
     maxTokens: 1_000,
     confidence: (value) => value.confidence,
+    // Haiku's answer comes back whatever its confidence, so `scanCard` can
+    // tell "not a card" from "a card it could not read"; Sonnet's is floored.
+    ...(model === "quick" ? { minConfidence: 0 } : {}),
   };
 }
+
+/** Below this a reading is not trusted (the seam's default floor). */
+const SURE = 0.6;
 
 export type CertScanFields<Agency extends string, Card extends string> = {
   agency?: Agency;
@@ -97,9 +103,11 @@ export function certScanFields<Agency extends string, Card extends string>(
     agency: Agency | null;
     card: Card | null;
     cardNumber: string | null;
+    confidence: number;
   } | null,
 ): CertScanFields<Agency, Card> {
-  if (!value) return {};
+  // Never fill from an unsure reading, whichever call produced it.
+  if (!value || !(value.confidence >= SURE)) return {};
   const fields: CertScanFields<Agency, Card> = {};
   if (value.agency) fields.agency = value.agency;
   if (value.card) fields.card = value.card;
@@ -115,15 +123,33 @@ export function certScanFields<Agency extends string, Card extends string>(
   return fields;
 }
 
+/** At or below this with no field read, Haiku is saying the photo is not a card. */
+const NOT_A_CARD = 0.2;
+
+type Reading = {
+  readonly agency: string | null;
+  readonly card: string | null;
+  readonly cardNumber: string | null;
+  readonly confidence: number;
+};
+
 /**
- * Haiku first, Sonnet only when Haiku's reading came back empty (dark, low
- * confidence, unreadable). `run` is `runAssist` bound to the shop, or a test's
- * fake; it answers null for every way a call can fail.
+ * Haiku first; Sonnet only when Haiku saw a card it could not read surely
+ * (some field read, or a confidence above 0.2). A photo Haiku says is not a
+ * card, or a Haiku call that failed or is dark, ends the scan: on the
+ * anonymous sign-up page a junk image costs one call, not two (security
+ * review L3, B2). `run` is the seam bound to the shop, or a test's fake; it
+ * answers null for every way a call can fail.
  */
-export async function scanCard<T>(
+export async function scanCard<T extends Reading>(
   run: (model: "quick" | "draft") => Promise<T | null>,
 ): Promise<T | null> {
-  return (await run("quick")) ?? (await run("draft"));
+  const quick = await run("quick");
+  if (!quick) return null;
+  if (Number.isFinite(quick.confidence) && quick.confidence >= SURE) return quick;
+  const sawACard =
+    Boolean(quick.agency || quick.card || quick.cardNumber) || quick.confidence > NOT_A_CARD;
+  return sawACard ? run("draft") : null;
 }
 
 /** An image the client posted, or null when it is not one this assist reads. */

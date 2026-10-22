@@ -62,6 +62,72 @@ export function boundedText(value: string | null | undefined, max: number): stri
   return text.length > max ? null : text;
 }
 
+/** The text with every placeholder blanked, for checking only what the model wrote. */
+function bareText(text: string): string {
+  return text.replace(PLACEHOLDER, " ");
+}
+
+/** A whole-word, case-blind search for any of `words`, in any script. */
+function wordPattern(words: readonly string[]): RegExp {
+  return new RegExp(`(^|[^\\p{L}])(${words.join("|")})($|[^\\p{L}])`, "iu");
+}
+
+/**
+ * Count words the digit check would let through. A number comes from the
+ * record by placeholder, so "three", "a dozen" or "tres" written by the model
+ * is refused like a digit.
+ */
+const NUMBER_WORD = wordPattern([
+  // i18n-exempt: words the refusal looks for, never shown
+  "one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fifteen|twenty|thirty|forty|fifty|hundreds?|dozens?|couple|pair|single",
+  // i18n-exempt: words the refusal looks for, never shown
+  "uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|doce|quince|veinte|treinta|cuarenta|cincuenta|cien|cientos|docenas?|par|pareja",
+]);
+
+export function hasNumberWord(text: string): boolean {
+  return NUMBER_WORD.test(bareText(text));
+}
+
+/**
+ * **Who a dive is for is the record's, never the prose's** (glossary
+ * `certification.md`, Requirement; dive-domain review of the copywriter and
+ * site brief). The page shows the requirement itself, so a draft that names a
+ * level, a certification, an age or an audience is refused whole: prose would
+ * be a second, weaker statement of a gate.
+ */
+const AUDIENCE_WORD = wordPattern([
+  // i18n-exempt: words the refusal looks for, never shown
+  "certif\\p{L}*|open water|advanced|rescue|divemasters?|instructors?|beginners?|novices?|first[- ]tim\\p{L}*|newly|experience|experienced|suits?|suited|ideal for|perfect for|great for|for everyone|for anyone|levels?|prerequisites?|ages?|years old",
+  // i18n-exempt: words the refusal looks for, never shown
+  "certific\\p{L}*|aguas abiertas|avanzad\\p{L}*|rescate|principiantes?|novat\\p{L}*|primera vez|experiencia|experimentad\\p{L}*|ideal para|perfect\\p{L}* para|para todos|para cualquiera|nivel\\p{L}*|requisitos?|edad\\p{L}*|años",
+]);
+
+/** Words that soften a dive. Allowed only when the site's own difficulty is `beginner`. */
+const SOFT_WORD = wordPattern([
+  // i18n-exempt: words the refusal looks for, never shown
+  "easy|easier|gentle|mellow|relaxed|relaxing|mild|calm|lazy|f[aá]cil|suaves?|tranquil\\p{L}*|relajad\\p{L}*|calmad\\p{L}*",
+]);
+
+/** The text with each of the record's own words (a title, an agency) blanked, so naming them is not a claim. */
+function withoutGiven(text: string, given: readonly string[]): string {
+  let rest = bareText(text);
+  for (const word of [...given].sort((a, b) => b.length - a.length)) {
+    if (word.trim().length < 3) continue;
+    rest = rest.split(new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "giu")).join(" ");
+  }
+  return rest;
+}
+
+/** True when a draft says who the dive suits, or names a level, a card or an age. */
+export function claimsAnAudience(text: string, given: readonly string[]): boolean {
+  return AUDIENCE_WORD.test(withoutGiven(text, given));
+}
+
+/** True when a draft calls the dive easy or gentle in words the record did not give. */
+export function softensTheDive(text: string, given: readonly string[]): boolean {
+  return SOFT_WORD.test(withoutGiven(text, given));
+}
+
 /** The locale's language as the prompt names it. */
 export function languageName(locale: string): string {
   return locale.toLowerCase().startsWith("es")

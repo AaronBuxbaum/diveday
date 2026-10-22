@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { callStructured } from "@/lib/claude/structured";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import { diverSearchCall, diverSearchFilters } from "./diver-search";
-import { rentalNoteCall, rentalNoteFields } from "./rental-note";
+import { RENTAL_NOTE_SYSTEM, rentalNoteCall, rentalNoteFields } from "./rental-note";
 import { samePersonCall, samePersonRead } from "./same-person";
 
 function answering(value: unknown) {
@@ -58,6 +58,18 @@ describe("gear note", () => {
       wetsuitSize: "L",
       finSize: "10",
     });
+  });
+
+  it("fills only empty boxes, and never the lead", () => {
+    const offered = new Set(["wetsuitSize", "finSize", "bootSize", "weightPreference"]);
+    expect(
+      rentalNoteFields(
+        { wetsuitSize: "L", finSize: "10", bootSize: "9", weightPreference: "6 kg" },
+        offered,
+        { wetsuitSize: "M", finSize: " ", bootSize: "" },
+      ),
+    ).toEqual({ finSize: "10", bootSize: "9" });
+    expect(RENTAL_NOTE_SYSTEM).toContain("A fin size is not a boot size");
   });
 
   it("drops a size longer than the box takes", () => {

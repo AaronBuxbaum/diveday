@@ -520,7 +520,14 @@ export const RATE_LIMITS = {
    * cap, and the form is anonymous: a diver reads one card, perhaps twice.
    */
   cardScanByIp: perHour(10),
-  cardScanByShop: perHour(60),
+  /**
+   * Per shop **per day**, checked fail-closed with the address bucket: at most
+   * a small slice of the shop's monthly Claude cap can be spent from the
+   * anonymous form, so a stranger rotating addresses cannot turn every staff
+   * assist dark for the month (security review L3, B2). A busy counter checks
+   * in a few dozen walk-ups a day.
+   */
+  cardScanByShop: perDay(40),
   /**
    * Self-registration, per **recipient address**.
    *

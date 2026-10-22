@@ -194,6 +194,8 @@ export const EXPORT_FILE_NOTES = {
   "courses.csv": "The course catalog with public-page content, hidden courses included.",
   "course_inquiries.csv":
     "Course leads: someone asked about a course through the shop's public page and left their details, their experience level, and when they were hoping to go. Not a booking and never a seat — a lead that never converted still has a row here, which is the point of taking it with you. person_id is filled in only where the address exactly matched a diver the shop already had at the time; a lead with no match stays an unlinked name and email, and was never back-filled.",
+  "shop_text_translations.csv":
+    "The shop's own Spanish for its trip descriptions, course summaries and dive-site briefings, as staff saved it. subject_kind says which file subject_id points into (trips.csv, courses.csv or dive_sites.csv) and field which column it translates. A row whose original has changed since it was saved is not shown to divers until staff save it again; an empty text is a translation the shop cleared.",
 } as const;
 
 export type ExportFileName = keyof typeof EXPORT_FILE_NOTES;

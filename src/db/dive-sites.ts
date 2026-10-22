@@ -53,6 +53,7 @@ import {
   tripDives,
   trips,
 } from "./schema";
+import { forgetTranslationsOf } from "./shop-text-translations";
 import { liveTrip, notRehearsal } from "./trips-live";
 import { liveBookingJoin, tripBoatCertifiedPassengers } from "./trips-queries";
 
@@ -740,12 +741,18 @@ export async function updateDiveSiteForForm(
 
 /** Keep historical trip briefings intact while removing a site from new-trip pickers. */
 export async function deleteDiveSite(db: AppDb, shopId: string, siteId: string) {
-  const [site] = await db
-    .update(diveSites)
-    .set({ deletedAt: nowDate() })
-    .where(and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)))
-    .returning({ id: diveSites.id });
-  return Boolean(site);
+  return db.transaction(async (tx) => {
+    const [site] = await tx
+      .update(diveSites)
+      .set({ deletedAt: nowDate() })
+      .where(
+        and(eq(diveSites.id, siteId), eq(diveSites.shopId, shopId), isNull(diveSites.deletedAt)),
+      )
+      .returning({ id: diveSites.id });
+    // Its Spanish briefing goes with it: nothing would show it again.
+    if (site) await forgetTranslationsOf(tx, shopId, "dive_site", site.id);
+    return Boolean(site);
+  });
 }
 
 /** Copying makes an independent briefing; edits never surprise another charter. */

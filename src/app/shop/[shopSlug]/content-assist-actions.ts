@@ -3,7 +3,10 @@
 import { shopAssist } from "@/db/assist-shop";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { courseWords, tripWords } from "@/db/content-assists";
+import type { DiveSpecialty } from "@/db/schema";
 import { saveTranslation, translatableOriginal } from "@/db/shop-text-translations";
+import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { BENCH_NOTE_FEATURE, benchNote, benchNoteCall } from "@/lib/assists/bench-note";
 import {
   DESCRIPTION_DRAFT_FEATURE,
@@ -16,10 +19,14 @@ import {
   SHOP_TRANSLATE_FEATURE,
   shopTranslateCall,
   shopTranslation,
+  sourceDigest,
   type TranslatableKind,
   translationBoxId,
+  translationSourceId,
 } from "@/lib/assists/shop-translate";
 import { SITE_BRIEF_FEATURE, siteBrief, siteBriefCall } from "@/lib/assists/site-brief";
+import type { CertificationLevel } from "@/lib/certification-levels";
+import { parseRequirement, type Requirement } from "@/lib/requirement";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 
@@ -61,6 +68,37 @@ function count(form: Record<string, string> | undefined, key: string): string | 
   return value && /^\d{1,6}(\.\d{1,2})?$/.test(value) ? value : undefined;
 }
 
+/**
+ * The record's requirement as labelled words for a draft's context
+ * (`minCert`, `specialties`, `nitrox`). A draft is never allowed to restate
+ * it (`claimsAnAudience`): it is sent so the model has no reason to guess.
+ */
+function requirementWords(locale: string, requirement: Requirement): Record<string, string> {
+  const t = staffTranslator(locale);
+  const level = requirement.minimumCertificationLevel;
+  return defined({
+    minCert: level ? t(CERTIFICATION_LEVEL_KEYS[level]) : undefined,
+    specialties:
+      requirement.requiredSpecialties.map((specialty) => t(SPECIALTY_KEYS[specialty])).join(", ") ||
+      undefined,
+    nitrox: requirement.requiresNitrox ? t("deskAssists.requirement.nitrox") : undefined,
+  });
+}
+
+/** A site form's requirement boxes, unsaved: the level select, the repeated `specialty` boxes (joined) and nitrox. */
+function formRequirement(form: Record<string, string>): Requirement {
+  const level = word(form, "minimumCertificationLevel", 40);
+  const specialties = (word(form, "specialty", 200) ?? "").split(",").filter(Boolean);
+  return parseRequirement({
+    minimumCertificationLevel:
+      level && level in CERTIFICATION_LEVEL_KEYS ? (level as CertificationLevel) : null,
+    requiredSpecialties: specialties.filter(
+      (value): value is DiveSpecialty => value in SPECIALTY_KEYS,
+    ),
+    requiresNitrox: Boolean(form.requiresNitrox),
+  });
+}
+
 function defined<T extends Record<string, string | undefined>>(record: T): Record<string, string> {
   return Object.fromEntries(
     Object.entries(record).filter((entry): entry is [string, string] => entry[1] !== undefined),
@@ -86,6 +124,7 @@ export async function draftTripDescriptionAction(
       mode: record.trip.diveMode ?? undefined,
       meetingPoint: word(form, "meetingPointLabel", 120),
     }),
+    requirement: requirementWords(shop.defaultLocale, record.requirement),
     facts: defined({
       dives: record.dives > 0 ? String(record.dives) : undefined,
       seats: count(form, "capacity"),
@@ -103,6 +142,9 @@ export async function draftTripDescriptionAction(
   return defined({
     description: draft.primary,
     [`#${translationBoxId("trip", tripId, "description")}`]: draft.spanish ?? undefined,
+    [`#${translationSourceId(translationBoxId("trip", tripId, "description"))}`]: draft.spanish
+      ? sourceDigest(draft.primary)
+      : undefined,
   });
 }
 
@@ -128,6 +170,7 @@ export async function draftCourseSummaryAction(
         (word(form, "overview", 1_200) ?? course.overview ?? "").replace(/\d+/g, "").trim() ||
         undefined,
     }),
+    requirement: requirementWords(shop.defaultLocale, course.requirement),
     facts: {},
   };
   const draft = descriptionDraft(
@@ -142,6 +185,9 @@ export async function draftCourseSummaryAction(
   return defined({
     summary: draft.primary,
     [`#${translationBoxId("course", courseId, "summary")}`]: draft.spanish ?? undefined,
+    [`#${translationSourceId(translationBoxId("course", courseId, "summary"))}`]: draft.spanish
+      ? sourceDigest(draft.primary)
+      : undefined,
   });
 }
 
@@ -166,6 +212,7 @@ export async function draftSiteBriefAction(
       current: word(form, "currentNote", 300),
       plan: word(form, "divePlan", 600),
     }),
+    requirement: requirementWords(shop.defaultLocale, formRequirement(form)),
     facts: defined({
       minDepth: depth("minDepth"),
       maxDepth: depth("maxDepth"),
@@ -207,10 +254,12 @@ export async function draftTranslationAction(
     }),
     original,
   );
-  return text ? { text } : null;
+  // The box records which English it holds a translation of, so a save after
+  // the English changed is refused rather than re-pinned (saveTranslation).
+  return text ? { text, translatedFrom: sourceDigest(original) } : null;
 }
 
-export type TranslationSaveState = { status?: "saved" | "error" };
+export type TranslationSaveState = { status?: "saved" | "error" | "stale" };
 
 export async function saveTranslationAction(
   shopSlug: string,
@@ -226,16 +275,18 @@ export async function saveTranslationAction(
   const original = await translatableOriginal(db, shop.id, kind, id, field);
   if (original === null) return { status: "error" };
   const text = formData.get("text");
-  const saved = await saveTranslation(
+  const translatedFrom = formData.get("translatedFrom");
+  const result = await saveTranslation(
     db,
     shop.id,
     { kind, id, field },
     {
       text: typeof text === "string" ? text : "",
       original,
+      translatedFrom: typeof translatedFrom === "string" ? translatedFrom : "",
     },
   );
-  return { status: saved ? "saved" : "error" };
+  return { status: result === "refused" ? "error" : result };
 }
 
 export async function draftBenchNoteAction(

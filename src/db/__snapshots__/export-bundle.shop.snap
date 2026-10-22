@@ -85,4 +85,5 @@ shop_promo_codes.csv 2 rows 751c892304557ca8 [id,code,description,discount_perce
 shop_promo_redemptions.csv 1 rows 3524bb76f4777903 [id,promo_code_id,code,checkout_id,amount_charged_cents,redeemed_at]
 courses.csv 55 rows 59744ddf6dbd4977 [id,title,agency,slug,description,source_template_slug,source_template_version,source_template_snapshot,summary,overview,price_cents,e_learning_price_cents,private_price_cents,minimum_certification_level,certifies_level,minimum_age,duration_text,group_size_text,prerequisite_note,includes,excludes,schedule_days,faqs,learning_materials,hero_image_url,hero_image_alt,gallery_photos,is_active,is_intro_course,nitrox_compatible,gear_included,created_at]
 course_inquiries.csv 7 rows d8ca2902b1673b72 [id,course_id,course_title,interest,person_id,person_name,name,email,phone,experience_level,timing,preferred_date,alternate_date,date_flexible,divers,message,created_at,handled_at,handled_as]
+shop_text_translations.csv 0 rows 68bdd08a26b600a1 [subject_kind,subject_id,field,locale,text,updated_at]
 photos: 71 bc4d23ca6bc435c3

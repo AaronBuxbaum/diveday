@@ -38,7 +38,8 @@
     "saving": "Saving…",
     "saved": "Saved.",
     "error": "That didn’t save. Try again.",
-    "stale": "The original changed after this was saved. Divers read the original until you save the Spanish again."
+    "stale": "The original changed after this was saved, so divers reading Spanish see the original. Draft it again or rewrite it to match, then save.",
+    "staleSave": "This Spanish was written for an earlier original. Draft it again or rewrite it to match, then save."
   },
   "bench": {
     "draft": "Draft from the bench notes"
@@ -54,5 +55,8 @@
     "adding": "Adding…",
     "none": "Nothing you said matches this reef’s chips.",
     "proposed": "{name} × {count}"
+  },
+  "requirement": {
+    "nitrox": "Nitrox card required"
   }
 }

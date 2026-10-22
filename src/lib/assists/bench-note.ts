@@ -16,6 +16,7 @@ export const BENCH_NOTE_MAX = 1_000;
 export const BENCH_NOTE_SYSTEM = [
   "A dive shop technician's bench notes on a customer's gear service become one or two plain sentences telling the customer what was done and anything they should know.",
   "Use only what the notes say. Leave out prices, internal shop talk and the technician's name. Keep any number exactly as written.",
+  "Say only what was done. Never say the gear is safe, ready to dive, certified or that it passed. Keep every recommendation, declined repair or do-not-use the notes give, as plainly as the notes say it.",
   VOICE_RULES,
 ].join("\n");
 
@@ -46,9 +47,25 @@ export function benchNoteCall(input: BenchInput): StructuredCall<typeof Note> {
   };
 }
 
+/**
+ * A shop's tech never writes that life-support gear is safe, ready to dive,
+ * certified or passed; a line saying so is refused (dive-domain review, B4).
+ */
+const SAFETY_CLAIM =
+  // i18n-exempt: words the refusal looks for, never shown
+  /(^|[^\p{L}])(safe|safely|safety[- ]checked|ready to dive|good to dive|good to go|certified|passed|pass(es)? (every|all)|segur[oa]s?|list[oa]s? para bucear|certificad[oa]s?|aprobad[oa]s?|pas[oó] (la|las|todas))($|[^\p{L}])/iu;
+
+/** A do-not-use in the notes, in either language. */
+const DO_NOT_USE =
+  // i18n-exempt: words the refusal looks for, never shown
+  /do not use|don't use|not to be used|no usar|no lo use|no la use|no se debe usar/iu;
+
 export function benchNote(value: { message: string } | null, input: BenchInput): string | null {
   const message = value?.message.trim() ?? "";
   if (!message || message.length > BENCH_NOTE_MAX) return null;
+  if (SAFETY_CLAIM.test(message)) return null;
+  // A do-not-use the technician wrote is the one thing the customer must read.
+  if (DO_NOT_USE.test(input.technicianNotes) && !DO_NOT_USE.test(message)) return null;
   return numbersCameFrom(message, `${input.reportedProblem} ${input.technicianNotes}`)
     ? message
     : null;

@@ -51,6 +51,7 @@ import {
   rollCallEvents,
   shopPromoCodes,
   shopPromoRedemptions,
+  shopTextTranslations,
   specialtyCertifications,
   staffCredentials,
   tips,
@@ -592,6 +593,18 @@ export const EXPORT_TABLES = {
     table: tripLenses,
     order: [asc(tripLenses.createdAt), asc(tripLenses.id)],
     scope: { shopColumn: tripLenses.shopId },
+  },
+  // The shop's own Spanish for its trips, courses and sites (ADR
+  // 20261018-claude-assists): written and edited by its staff, so it leaves
+  // with the shop.
+  shopTextTranslations: {
+    table: shopTextTranslations,
+    order: [
+      asc(shopTextTranslations.subjectKind),
+      asc(shopTextTranslations.subjectId),
+      asc(shopTextTranslations.field),
+    ],
+    scope: { shopColumn: shopTextTranslations.shopId },
   },
 } satisfies Record<string, ExportTableRead>;
 

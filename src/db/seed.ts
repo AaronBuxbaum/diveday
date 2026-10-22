@@ -89,6 +89,7 @@ import {
   shopShoreAlertTokens,
   shopStripeAccounts,
   shops,
+  shopTextTranslations,
   specialtyCertifications,
   staffCredentials,
   staffReplies,
@@ -1591,6 +1592,9 @@ export async function resetDemoSchedule(
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));
   }
+  // The shop's Spanish for the trips, sites and courses about to go: a
+  // translation has no foreign key to its subject, so it goes with them.
+  await db.delete(shopTextTranslations).where(eq(shopTextTranslations.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));
   // After the trips that point at them. The seed writes one run (the weekly
   // Saturday boat) and specs create more on the schedule board, so a reset

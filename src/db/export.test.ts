@@ -114,9 +114,11 @@ const EXPECTED_FILES = [
   "shop_promo_redemptions.csv",
   "courses.csv",
   "course_inquiries.csv",
+  "shop_text_translations.csv",
 ];
 /** Schema tables that get their own CSV in the bundle. */
 const EXPORTED_TABLES = [
+  "shop_text_translations",
   "dive_packages",
   "dive_package_entitlements",
   "shops",
@@ -330,7 +332,6 @@ const EXCLUDED_TABLES = [
   "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
   "claude_usage", // token counts and cost codes for Claude calls — DiveDay's billing ledger, not the shop's records
   "assist_results", // what an assist answered (review chips, themes, the Monday read): derived, and asked again on demand
-  "shop_text_translations", // Spanish copies of descriptions the export carries in the original; a restore drafts them again
   "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "shop_shore_alert_tokens", // the shore contact's confirm and stop links (H-118): bearer credentials, same reasoning
@@ -627,6 +628,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // `row_version` for the same reason as `dive_sites` above: it counts saves
   // in this installation's editor and is meaningless in another.
   courses: ["shop_id", "row_version"],
+  // The digest is recomputed from the original on import: not the shop's words.
+  shop_text_translations: ["id", "shop_id", "source_digest", "created_at"],
 };
 
 function table(

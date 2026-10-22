@@ -40,6 +40,15 @@ export function translationBoxId(kind: TranslatableKind, id: string, field: stri
   return `es-${kind}-${id}-${field}`;
 }
 
+/**
+ * The id of the box's hidden "translated from" field: the digest of the
+ * English its Spanish was written from, set by a draft and cleared when the
+ * staffer types (TranslationEditor).
+ */
+export function translationSourceId(boxId: string): string {
+  return `${boxId}-from`;
+}
+
 export const TRANSLATION_MAX_LENGTH = 1_500;
 
 export const SHOP_TRANSLATE_SYSTEM = [

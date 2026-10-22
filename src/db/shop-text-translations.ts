@@ -76,17 +76,27 @@ export function readsTranslations(locale: string, shopLocale: string): boolean {
 
 /**
  * Saves the shop's Spanish for one field, pinned to the original it
- * translates. An empty box stores null. Refuses a field outside the list.
+ * translates. An empty box stores null.
+ *
+ * `translatedFrom` is the digest of the English the box's Spanish was written
+ * from: the saved row's, or the draft's that filled the box. Empty means the
+ * staffer wrote the words themselves in this edit. A box holding Spanish of an
+ * original that has since changed is refused (`stale`), so pressing Save does
+ * not re-pin old Spanish to new English and hide a sentence the owner just
+ * added (dive-domain copy review, B1). `refused` is a field outside the list
+ * or text too long.
  */
 export async function saveTranslation(
   db: AppDb,
   shopId: string,
   subject: Subject,
-  input: { text: string; original: string },
-): Promise<boolean> {
-  if (!isTranslatable(subject.kind, subject.field)) return false;
+  input: { text: string; original: string; translatedFrom: string },
+): Promise<"saved" | "stale" | "refused"> {
+  if (!isTranslatable(subject.kind, subject.field)) return "refused";
   const text = input.text.trim();
-  if (text.length > TRANSLATION_MAX_LENGTH) return false;
+  if (text.length > TRANSLATION_MAX_LENGTH) return "refused";
+  const current = sourceDigest(input.original);
+  if (text && input.translatedFrom && input.translatedFrom !== current) return "stale";
   const now = nowDate();
   const values = {
     shopId,
@@ -95,7 +105,7 @@ export async function saveTranslation(
     field: subject.field,
     locale: TRANSLATION_LOCALE,
     text: text || null,
-    sourceDigest: sourceDigest(input.original),
+    sourceDigest: current,
     createdAt: now,
     updatedAt: now,
   };
@@ -112,7 +122,30 @@ export async function saveTranslation(
       ],
       set: { text: values.text, sourceDigest: values.sourceDigest, updatedAt: now },
     });
-  return true;
+  return "saved";
+}
+
+/**
+ * Forgets the Spanish of a subject that is going (a removed departure, a
+ * deleted dive site). A translation has no foreign key to its subject, so
+ * each delete path calls this in the same transaction (security review L3,
+ * N3): the shop's words about a thing it removed are not kept on.
+ */
+export async function forgetTranslationsOf(
+  db: DbExecutor,
+  shopId: string,
+  kind: TranslatableKind,
+  id: string,
+): Promise<void> {
+  await db
+    .delete(shopTextTranslations)
+    .where(
+      and(
+        eq(shopTextTranslations.shopId, shopId),
+        eq(shopTextTranslations.subjectKind, kind),
+        eq(shopTextTranslations.subjectId, id),
+      ),
+    );
 }
 
 /**

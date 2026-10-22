@@ -29,6 +29,7 @@ import {
   trips,
   tripWaitlistEntries,
 } from "./schema";
+import { forgetTranslationsOf } from "./shop-text-translations";
 import { insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
 import { liveTrip } from "./trips-live";
 import { boatCertifiedPassengers } from "./trips-queries";
@@ -337,6 +338,8 @@ export async function deleteTrip(
       .update(trips)
       .set({ deletedAt: nowDate() })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), isNull(trips.deletedAt)));
+    // Its Spanish description goes with it: a removed date is never shown again.
+    await forgetTranslationsOf(tx, shopId, "trip", tripId);
     return { ok: true };
   });
 }

@@ -1,5 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
+import { parseRequirement } from "@/lib/requirement";
 import type { AppDb } from "./client";
+import { tripRequirementSummaries } from "./readiness";
 import { courses, diveSites, tripDives, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -11,7 +13,10 @@ import { liveTrip } from "./trips-live";
 
 export async function tripWords(db: AppDb, shopId: string, tripId: string) {
   const [trip] = await db
-    .select({ title: trips.title, diveMode: trips.diveMode })
+    .select({
+      title: trips.title,
+      diveMode: trips.diveMode,
+    })
     .from(trips)
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
@@ -22,14 +27,24 @@ export async function tripWords(db: AppDb, shopId: string, tripId: string) {
     .leftJoin(diveSites, and(eq(diveSites.id, tripDives.diveSiteId), isNull(diveSites.deletedAt)))
     .where(eq(tripDives.tripId, tripId));
   const sites = [...new Set(dives.flatMap((dive) => (dive.site ? [dive.site] : [])))];
-  return { trip, sites, dives: dives.length };
+  // What the departure asks of a diver: its own requirement folded with every
+  // site it visits, read where admission and readiness read it.
+  const requirement = parseRequirement(
+    (await tripRequirementSummaries(db, shopId, [tripId])).get(tripId),
+  );
+  return { trip, sites, dives: dives.length, requirement };
 }
 
 export async function courseWords(db: AppDb, shopId: string, courseId: string) {
   const [course] = await db
-    .select({ title: courses.title, agency: courses.agency, overview: courses.overview })
+    .select({
+      title: courses.title,
+      agency: courses.agency,
+      overview: courses.overview,
+      minimumCertificationLevel: courses.minimumCertificationLevel,
+    })
     .from(courses)
     .where(and(eq(courses.id, courseId), eq(courses.shopId, shopId)))
     .limit(1);
-  return course ?? null;
+  return course ? { ...course, requirement: parseRequirement(course) } : null;
 }

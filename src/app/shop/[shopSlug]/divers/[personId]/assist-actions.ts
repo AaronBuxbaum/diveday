@@ -69,6 +69,7 @@ export async function readCardPhotoAction(
 export async function readGearNoteAction(
   shopSlug: string,
   rawPersonId: string,
+  form: Record<string, string> = {},
 ): Promise<Record<string, string> | null> {
   const personId = uuidParam(rawPersonId);
   if (!personId) return null;
@@ -80,6 +81,7 @@ export async function readGearNoteAction(
     feature: RENTAL_NOTE_FEATURE,
     call: rentalNoteCall(note.note),
   });
-  const fields = rentalNoteFields(value, offeredSizeFields(note.rentalItems));
+  // The form as it stands: a box staff already filled is not overwritten.
+  const fields = rentalNoteFields(value, offeredSizeFields(note.rentalItems), form);
   return Object.keys(fields).length > 0 ? fields : null;
 }

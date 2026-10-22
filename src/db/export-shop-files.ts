@@ -2307,4 +2307,21 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["courses.csv"],
   },
   shopFile(COURSE_INQUIRIES_CSV),
+  {
+    // The shop's own words, drafted and edited by its staff: nothing drafts
+    // them again on a restore. The digest that pins each to its original stays
+    // out (security review L3, N2); an importer recomputes it from the original.
+    file: "shop_text_translations.csv",
+    header: ["subject_kind", "subject_id", "field", "locale", "text", "updated_at"],
+    rows: ({ shopTextTranslationRows }) =>
+      shopTextTranslationRows.map((row) => [
+        row.subjectKind,
+        row.subjectId,
+        row.field,
+        row.locale,
+        row.text,
+        row.updatedAt,
+      ]),
+    note: EXPORT_FILE_NOTES["shop_text_translations.csv"],
+  },
 ];

@@ -409,7 +409,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   assist_results:
     "an assist's answer about the shop: review flag codes and theme titles holding review ids (each quote is read from its review row, so erasing the review erases the quote), and the Monday read's sentences built from shop-wide counts. No person",
   shop_text_translations:
-    "the shop's own descriptions and briefings in Spanish, about its trips, courses, packages and sites. No person",
+    "the shop's own descriptions and briefings in Spanish, about its trips, courses and sites. No person",
   courses: "the shop’s course catalog, copied from a template and then its own",
   waiver_templates:
     "the text a shop asks people to sign, versioned. The *signatures* are `waiver_records`, which the erasure strips and re-seals",
