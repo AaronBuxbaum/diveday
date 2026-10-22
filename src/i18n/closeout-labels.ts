@@ -69,7 +69,15 @@ export function closeoutDepartureDetailText(
   }
   switch (departure.status) {
     case "still_out":
-      return t("closeout.departures.detail.stillOut", { time });
+      // A count still being taken keeps its dive and count (src/lib/closeout.ts,
+      // `countStillBeingTaken`), so the station says it is open.
+      return departure.diveNumber >= 1 && departure.uncounted > 0
+        ? t("closeout.departures.detail.stillOutCountOpen", {
+            dive: departure.diveNumber,
+            count: departure.uncounted,
+            time,
+          })
+        : t("closeout.departures.detail.stillOut", { time });
     case "not_departed":
       return t("closeout.departures.detail.notDeparted", { time });
     default:

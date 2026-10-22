@@ -44,11 +44,12 @@ import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "./zoned";
  * the water are never toned or worded like paperwork.
  *
  * - `unreconciled` — the departure carries an after-dive gap (missing diver or
- *   crew, or an unfinished after-dive count on a boat that is home). Loudest
- *   state on the page.
- * - `still_out` — the boat has left and is not due back yet, an after-dive
- *   count still being taken included. Not an alarm, but a day cannot quietly
- *   read "everyone is home" while it isn't.
+ *   crew, or an unfinished after-dive count other than one still being
+ *   taken). Loudest state on the page.
+ * - `still_out` — the boat has left and is not due back yet. An after-dive
+ *   count still being taken (`countStillBeingTaken`) reads here too, keeping
+ *   its dive and count. Not an alarm, but a day cannot quietly read
+ *   "everyone is home" while it isn't.
  * - `count_open` — a dock-count gap (`departure_uncounted` / `no_roll_call`).
  *   Paperwork, toned as such — see DOM-H3's wallpaper lesson in
  *   `src/lib/today.ts`.
@@ -260,6 +261,11 @@ export type CloseoutTripInput = {
   /** Dives whose actual site was not the planned one. */
   planChanges?: readonly CloseoutPlanChange[];
   /**
+   * The highest dive number the crew logged in `executed_dives`, `0` when none.
+   * Absent reads as unknown, and an unknown never softens an open count.
+   */
+  loggedDives?: number;
+  /**
    * The crew's post-trip note, as it stands. Carried here because the close-out
    * is where it gets written: the hourly recap scan mails each diver no earlier
    * than four hours after the departure ends, so the evening the boat came in is
@@ -303,6 +309,11 @@ export type CloseoutRollCallGap = {
   diveNumber: number;
   /** People not accounted for at that checkpoint. */
   uncounted: number;
+  /**
+   * The latest after-dive checkpoint carrying any result, diver or crew, `0`
+   * when none. Absent reads as unknown, and an unknown never softens.
+   */
+  latestMarkedDive?: number;
 };
 
 export type CloseoutDeparture = {
@@ -372,17 +383,23 @@ export type DayCloseoutState = {
 function departureStatus(
   trip: CloseoutTripInput,
   gap: CloseoutRollCallGap | undefined,
+  tripGaps: readonly CloseoutRollCallGap[],
   now: Date,
+  timeZone: string,
+  historical: boolean,
 ): Pick<CloseoutDeparture, "status" | "gapReason" | "diveNumber" | "uncounted"> {
   if (gap) {
     // **A count still being taken at sea is not a count never closed**
-    // (visual triage of PR #2918, item 1b). `listRollCallGaps` raises an
-    // after-dive count started and left open while the boat is out, and
-    // Needs-you words it as exactly that; the station reads still out until
-    // the clock or the crew says she is home, and the gap's own reading
-    // from then on. A person recorded not back aboard never waits for that.
-    if (UNFINISHED_COUNT_REASONS.has(gap.reason) && boatIsOut(trip, now)) {
-      return { status: "still_out", gapReason: null, diveNumber: 0, uncounted: 0 };
+    // (visual triage of PR #2918, item 1b), within the narrow window
+    // `countStillBeingTaken` names. The open checkpoint and its count stay on
+    // the departure, so the station says so and links to it.
+    if (countStillBeingTaken(trip, gap, tripGaps, now, timeZone, historical)) {
+      return {
+        status: "still_out",
+        gapReason: null,
+        diveNumber: gap.diveNumber,
+        uncounted: gap.uncounted,
+      };
     }
     return {
       status: AFTER_DIVE_GAP_REASONS.has(gap.reason) ? "unreconciled" : "count_open",
@@ -436,14 +453,51 @@ const UNFINISHED_COUNT_REASONS: ReadonlySet<RollCallGapReason> = new Set([
   "crew_uncounted",
 ]);
 
+/** The after-dive gaps that mean a person was recorded not back aboard. */
+const NOT_BACK_ABOARD_REASONS: ReadonlySet<RollCallGapReason> = new Set([
+  "missing_diver",
+  "missing_crew",
+]);
+
 /**
- * Whether the boat is out by the same reading `departureStatus` gives a
- * departure with no gap: sailed, not yet `hasReturned`, and no live `home`
- * tap from the crew.
+ * **Whether an open after-dive count is a count still being taken** (visual
+ * triage of PR #2918, item 1b; dive-domain review of 56ba7c1). Every check
+ * must pass; any doubt reads the gap loud, which is the safe direction.
+ *
+ * 1. The gap is an unfinished count, and no gap on the trip, diver or crew,
+ *    records a person not back aboard.
+ * 2. Not a past day's record: a record never softens (issue #2662).
+ * 3. She has sailed (`hasSailed`; the first hour reads loud, harmlessly) and
+ *    is **not yet due back**: `now < endsAt`, never the late-arrival hour,
+ *    because the stale-count alert reaches shore from `endsAt` on.
+ * 4. No live `home` tap from the crew.
+ * 5. The whole trip lies within the shop day `now` is on. A multi-day trip
+ *    never softens: which day holds the open dive is not known here, and a
+ *    count left open overnight is not in progress.
+ * 6. The open checkpoint is the latest any result was recorded at, and no
+ *    later dive is logged: an earlier dive's count left open while the boat
+ *    moved on is how a diver is left at the first site.
  */
-function boatIsOut(trip: CloseoutTripInput, now: Date): boolean {
-  if (!hasSailed(trip.startsAt, now) || hasReturned(trip.endsAt, now)) return false;
-  return liveStageOf(trip.stage ?? null, trip.endsAt, now)?.stage !== "home";
+function countStillBeingTaken(
+  trip: CloseoutTripInput,
+  gap: CloseoutRollCallGap,
+  tripGaps: readonly CloseoutRollCallGap[],
+  now: Date,
+  timeZone: string,
+  historical: boolean,
+): boolean {
+  if (!UNFINISHED_COUNT_REASONS.has(gap.reason)) return false;
+  if (tripGaps.some((other) => NOT_BACK_ABOARD_REASONS.has(other.reason))) return false;
+  if (historical) return false;
+  if (!hasSailed(trip.startsAt, now)) return false;
+  if (now.getTime() >= trip.endsAt.getTime()) return false;
+  if (liveStageOf(trip.stage ?? null, trip.endsAt, now)?.stage === "home") return false;
+  const today = shopDayOf(now, timeZone);
+  if (shopDayOf(trip.startsAt, timeZone) !== today) return false;
+  if (shopDayOf(trip.endsAt, timeZone) !== today) return false;
+  if (gap.latestMarkedDive === undefined || gap.latestMarkedDive !== gap.diveNumber) return false;
+  if (trip.loggedDives === undefined || trip.loggedDives > gap.diveNumber) return false;
+  return true;
 }
 
 /**
@@ -459,12 +513,16 @@ export function assembleDayCloseout(input: {
   now?: Date;
   /** The day the trips are from, when it is not today's (a past day, issue #2662). */
   shopDay?: string;
+  /** A past day's record (`pastDayCloseout`): an open count never softens on it. */
+  historical?: boolean;
 }): DayCloseoutState {
   const now = input.now ?? nowDate();
   const shopDay = input.shopDay ?? shopDayOf(now, input.timeZone);
 
   const worstGapByTrip = new Map<string, CloseoutRollCallGap>();
+  const gapsByTrip = new Map<string, CloseoutRollCallGap[]>();
   for (const gap of input.gaps) {
+    gapsByTrip.set(gap.tripId, [...(gapsByTrip.get(gap.tripId) ?? []), gap]);
     const current = worstGapByTrip.get(gap.tripId);
     if (!current || GAP_REASON_RANK[gap.reason] < GAP_REASON_RANK[current.reason]) {
       worstGapByTrip.set(gap.tripId, gap);
@@ -491,7 +549,14 @@ export function assembleDayCloseout(input: {
       ended: trip.endsAt <= now,
       photos: trip.photos ?? [],
       crewPhotos: trip.crewPhotos ?? [],
-      ...departureStatus(trip, worstGapByTrip.get(trip.tripId), now),
+      ...departureStatus(
+        trip,
+        worstGapByTrip.get(trip.tripId),
+        gapsByTrip.get(trip.tripId) ?? [],
+        now,
+        input.timeZone,
+        input.historical === true,
+      ),
     }))
     .sort(
       (a, b) =>
