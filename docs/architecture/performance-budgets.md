@@ -96,10 +96,12 @@ that on serverless such entries "typically don't persist across requests"
 considerations").
 
 **Decision (2026-10-13, code review 2026-10-13b item 19): measure, do not switch yet.**
-`"use cache: remote"` is not the fix by itself: with no `cacheHandlers` in `next.config.ts`, Next
-backs `remote` with the same in-memory LRU (`cacheHandlers.md`), and where a platform does supply a
-shared handler it adds a network lookup and a storage bill to every read. Whether that buys
-anything depends on a hit rate nobody has seen. So the cached scope stamps when it computed its
+On local or self-hosted Next.js, without a supplied handler, `remote` falls back to the same
+in-memory LRU (`cacheHandlers.md`). On Vercel, the platform supplies a shared handler for
+[`"use cache: remote"`](https://vercel.com/docs/caching/runtime-cache#using-use-cache-remote)
+without application `cacheHandlers` configuration. That adds a network lookup and storage cost
+to each read; it does not establish that switching "Our year" improves its performance. So the
+cached scope stamps when it computed its
 value (`cacheStamp()`) and each read logs one line, `{"event":"cache.read","cache":"our_year","outcome":"hit"|"miss","ageS":…}`
 (`reportCacheRead`, `src/lib/observability/runtime-cache.ts`). Read a week of it:
 
@@ -107,10 +109,47 @@ value (`cacheStamp()`) and each read logs one line, `{"event":"cache.read","cach
 fields outcome | filter event = "cache.read" and cache = "our_year" | stats count(*) by outcome
 ```
 
-If misses dominate, the in-memory cache is doing nothing: set a `remote` handler the platform
-provides (or none, and drop the directive) and switch the scope to `"use cache: remote"`; if hits
+If misses dominate, the in-memory cache is doing nothing: use the platform's remote handler
+(or none, and drop the directive) and switch the scope to `"use cache: remote"`; if hits
 dominate, keep it and remove the logging. Either way, record the outcome here. **The next cache
 under `/s` starts the same way**: a stamp and a `reportCacheRead`, or a reason here why not.
+
+### Published dive-site catalog map
+
+The catalog map uses `"use cache: remote"` through
+`src/app/shop/[shopSlug]/dive-sites/catalog-map-cache.ts`. Its entry contains the complete raw
+published map rows; language, depth units, shop links and authorization stay outside the cache.
+The shop's own dive-site library is separate and is not included in this global entry. On Vercel
+the entry is shared across function instances in a region; local Next.js uses its in-memory
+fallback, so local reuse does not prove reuse across production instances.
+
+**Publication invalidates by changing the key.** The catalog page's existing count query also
+computes a deterministic digest of every currently joined template's ID, slug, current version
+and immutable version-row ID. It reads no full briefings and adds no SQL statement. Pages,
+proximity sorting and shop units do not enter that digest. A new publication, version change,
+rename, replacement version row or removal from the published join changes it. A rolled-back
+publication leaves it unchanged. Because the read derives the key from committed database state,
+CLI and bootstrap publishers need no Next.js callback, and no invalidation runs before commit.
+Published version briefings remain immutable: a correction publishes a newer version rather than
+editing an existing snapshot.
+
+The revision summary and a cache-miss row query are separate database statements. If a publication
+commits between them, that request can cache newer rows under the older revision key. Later reads
+see the committed revision and select its new entry; the catalog page and map do not form a
+transaction-coordinated snapshot.
+
+The revision is an input retained in the cached function's returned envelope. Older revisions are
+unreachable from new catalog reads and expire or are evicted normally; publication does not purge
+every old entry. `cacheLife("hours")` refreshes in the background after an hour and blocks for fresh
+data after one day. The `dive-site-catalog-map` tag supports an operational purge, and Next.js also
+separates keys by build/deployment identity. Cache eviction or a cold deployment can cause misses.
+
+Each read reports `cache.read` as `dive_site_catalog_map` using the same timestamp observation as
+"Our year". Inspect hit rate, entry age and database duration before claiming a production latency
+improvement. Warm hits skip the full map-row query; authentication, catalog paging/counting and
+the small revision aggregate still run. Caching does not shrink the client payload. The checked-in
+catalog's 1,126 map rows projected to about 564 KB of JSON on 2026-10-21; actual cached serialization
+must remain below Vercel's 2 MB item limit as the catalog grows.
 
 ## When the budget fails
 

@@ -19,8 +19,9 @@ red run. Each rule names what enforces it; the reasoning and the incidents are i
   20260815-per-test-private-shops).
 - **No timing guesses**: `waitForTimeout`, `networkidle`, spec-level `retries:` and retry loops fail
   `pnpm check:e2e-hygiene` unless the line says `diveday:allow-e2e-hygiene <rule>: <why>`. The suite
-  runs `retries: 0`; its one exception is CI's single `--last-failed` rerun of a shard whose log
-  says `wedged, not slow` (#2633).
+  runs `retries: 0`; CI allows one `--last-failed` rerun only when the structured per-test proof in
+  `scripts/e2e-retry-policy.mjs` classifies every failure as a wedge; mixed or unknown failures stay
+  red (#2633).
 - **Never navigate straight off a submit**: wait on the action's `?notice=` redirect or on what the
   row shows; reading the field back is not a wait (`check:e2e-hygiene`, `action-race`).
 - **A click lands after React owns the page**: every `goto`/`reload`/`waitForURL` on a fixture page

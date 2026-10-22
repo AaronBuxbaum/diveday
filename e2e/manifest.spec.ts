@@ -942,21 +942,37 @@ test("resolving a blocker from the manifest lands on that diver, under the block
   await expect(row).toBeInViewport();
 });
 
-test("an owner adds and removes a line on the shop's own pre-departure checklist", async ({
-  page,
-}) => {
-  await page.goto("/shop/blue-mantis/safety-checklist");
-  // The seeded demo shop's own list (src/db/seed-pre-departure-checklist.ts).
-  await expect(page.getByText("VHF radio checked")).toBeVisible();
-  await page.getByLabel("New line").fill("Test kit checked");
-  await page.getByRole("button", { name: "Add" }).click();
-  await expect(page.getByText("Added to the checklist.")).toBeVisible();
-  const newRow = page.getByRole("listitem").filter({ hasText: "Test kit checked" });
-  await expect(newRow).toBeVisible();
+test.describe("checklist configuration in a private shop", () => {
+  // The privateShop fixture signs in as its minted owner. An inherited
+  // canonical owner session would redirect /sign-in before that can happen.
+  test.use({ storageState: { cookies: [], origins: [] } });
 
-  await newRow.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByText("Removed from the checklist.")).toBeVisible();
-  await expect(page.getByText("Test kit checked")).not.toBeVisible();
+  test("an owner adds and removes a line on the shop's own pre-departure checklist", async ({
+    page,
+    privateShop,
+  }) => {
+    await page.goto(`/shop/${privateShop.slug}/safety-checklist`);
+    // The seeded demo shop's own list (src/db/seed-pre-departure-checklist.ts).
+    await expect(page.getByText("VHF radio checked")).toBeVisible();
+    await expect(page.getByLabel("New line")).not.toBeVisible();
+    await page.locator("#checklist-new summary").click();
+    await page.getByLabel("New line").fill("Test kit checked");
+    await page.getByRole("button", { name: "Add" }).click();
+    await expect(page.getByText("Added to the checklist.")).toBeVisible();
+    const newRow = page.getByRole("listitem").filter({ hasText: "Test kit checked" });
+    await expect(newRow).toBeVisible();
+    const ordered = page.getByRole("main").locator("ol").getByRole("listitem");
+    await expect(ordered.first().getByRole("button", { name: "Move up" })).toBeDisabled();
+    await expect(newRow.getByRole("button", { name: "Move down" })).toBeDisabled();
+    const count = await ordered.count();
+    await newRow.getByRole("button", { name: "Move up" }).click();
+    await expect(ordered.nth(count - 2)).toContainText("Test kit checked");
+    await expect(newRow.getByRole("button", { name: "Move down" })).toBeEnabled();
+
+    await newRow.getByRole("button", { name: "Delete" }).click();
+    await expect(page.getByText("Removed from the checklist.")).toBeVisible();
+    await expect(page.getByText("Test kit checked")).not.toBeVisible();
+  });
 });
 
 test("a crew member checks a pre-departure item on the live manifest, and two re-taps undo it", async ({

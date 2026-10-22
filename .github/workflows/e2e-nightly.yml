@@ -44,15 +44,23 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/playwright-shell
+      - name: Install Chromium for real extension checks
+        run: pnpm exec playwright install chromium
       - run: pnpm e2e:build
       - name: Quarantined tests
         run: pnpm exec playwright test --grep @quarantine --pass-with-no-tests
       - name: Specs that failed in the last 7 days, five times each
         if: ${{ !cancelled() }}
         run: |
-          mapfile -t specs < <(node scripts/e2e-recent-failures.mjs --days 7 --max 8)
+          node scripts/e2e-recent-failures.mjs --days 7 --max 8 > recent-failures.txt 2> recent-history.log || {
+            cat recent-history.log >&2
+            echo "CI failure history unavailable; flake hunt did not run." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
+          cat recent-history.log >> "$GITHUB_STEP_SUMMARY"
+          mapfile -t specs < recent-failures.txt
           if [ "${#specs[@]}" -eq 0 ]; then
-            echo "No spec failed on CI in the last 7 days." >> "$GITHUB_STEP_SUMMARY"
+            echo "No existing spec was identified in failed CI annotations from the last 7 days." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           printf -- '- `%s`\n' "${specs[@]}" >> "$GITHUB_STEP_SUMMARY"

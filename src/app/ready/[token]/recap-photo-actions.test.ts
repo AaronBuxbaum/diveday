@@ -18,6 +18,8 @@ vi.mock("@/lib/navigation", () => ({
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
+// All upload data operations below are mocked, so this unit needs only an opaque handle.
+vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
 vi.mock("@/db/people", () => ({ recordDiverOwnLocaleForBooking: vi.fn() }));
 vi.mock("@/db/recap", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/db/recap")>();

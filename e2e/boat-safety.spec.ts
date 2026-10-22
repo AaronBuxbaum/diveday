@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, tripPathByTitle } from "./helpers";
 
@@ -7,10 +8,48 @@ const BOAT = "Mantis I";
 /** The demo's departure on the other hull, Mantis II. */
 const WRECK = "Wreck Trip — Spiegel Grove";
 
-/** The fleet row whose name box holds this boat. */
+/** The fleet disclosure whose editor holds this boat's name. */
 function boatRow(page: Page, name: string) {
-  return page.locator("form").filter({ has: page.locator(`input[name="name"][value="${name}"]`) });
+  return page
+    .locator("details")
+    .filter({ has: page.locator(`input[name="name"][value="${name}"]`) });
 }
+
+test("a distress-channel refusal reopens the new boat editor", async ({ page, privateShop }) => {
+  const t = staffTranslator("en-US");
+  const shop = `/shop/${privateShop.slug}`;
+  await page.goto(`${shop}/boats`);
+  const add = page.locator("#boat-new");
+  await add.locator("summary").click();
+  await add.getByLabel(t("boats.nameLabel")).fill("Radio test");
+  await add.getByLabel(t("boats.capacityLabel")).fill("10");
+  await add.getByLabel(t("boats.workingChannelLabel")).fill("16");
+  await add.getByRole("button", { name: t("boats.addBoat"), exact: true }).click();
+  await expect(add.getByRole("alert")).toHaveText(t("boats.boatChannelDistress"));
+  await expect(add).toHaveAttribute("open");
+  await expect(add.getByLabel(t("boats.workingChannelLabel"))).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await expect(boatRow(page, BOAT)).not.toHaveAttribute("open");
+});
+
+test("an MMSI refusal reopens the existing boat editor", async ({ page, privateShop }) => {
+  const t = staffTranslator("en-US");
+  const shop = `/shop/${privateShop.slug}`;
+  await page.goto(`${shop}/boats`);
+  const row = boatRow(page, BOAT);
+  await row.locator("summary").click();
+  await row.getByLabel(t("boats.mmsiLabel"), { exact: true }).fill("123");
+  await row.getByRole("button", { name: t("boats.submit"), exact: true }).click();
+  await expect(row.getByRole("alert")).toHaveText(t("boats.boatRadioInvalid"));
+  await expect(row).toHaveAttribute("open");
+  await expect(row.getByLabel(t("boats.mmsiLabel"), { exact: true })).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await expect(page.locator("#boat-new")).not.toHaveAttribute("open");
+});
 
 /**
  * **The boat as a machine with papers and an emergency kit** (roadmap N-08,
@@ -40,6 +79,8 @@ test("a boat's papers and the kit aboard it reach the departure that sails on it
   //    boat sells is refused on the row, and nothing is saved…
   await page.goto(`${shop}/boats`);
   const row = boatRow(page, BOAT);
+  await expect(row).not.toHaveAttribute("open");
+  await row.locator("summary").click();
   await row.getByLabel("Passengers allowed on the certificate (not crew)").fill("10");
   await row.getByRole("button", { name: "Save boat" }).click();
   const refused = boatRow(page, BOAT).getByRole("alert");

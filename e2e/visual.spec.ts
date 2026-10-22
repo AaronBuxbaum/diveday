@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
-import type { Browser, Page } from "@playwright/test";
+import { readdirSync, readFileSync } from "node:fs";
+import type { Browser, Locator, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/after-state-test-ids";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
+import { DIVE_SITE_TEMPLATES } from "../src/content/dive-site-templates";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { LISTED_SHOP_SLUGS } from "../src/db/seed-listed-shops";
 import { diverTranslator } from "../src/i18n/messages";
@@ -61,6 +62,73 @@ import { mintOnboardFormPath } from "./setup-link";
 
 const staffCopy = staffTranslator("en-US");
 const diverCopy = diverTranslator("en-US");
+const CATALOG_MAP_SITE_COUNT = DIVE_SITE_TEMPLATES.filter(
+  ({ briefing }) => briefing.forecastLatitude != null && briefing.forecastLongitude != null,
+).length;
+
+async function expectOverviewMapSites(page: Page, count: number) {
+  await expect
+    .poll(() =>
+      page.locator(".leaflet-container").evaluate((map) => {
+        const bounds = map.getBoundingClientRect();
+        const targets = [
+          ...map.querySelectorAll(".leaflet-site-marker button, button.leaflet-site-cluster"),
+        ];
+        return {
+          sites: targets.reduce(
+            (sum, target) =>
+              sum + (target.matches(".leaflet-site-cluster") ? Number(target.textContent) : 1),
+            0,
+          ),
+          clipped: targets.flatMap((target) => {
+            const rect = target.getBoundingClientRect();
+            return rect.width > 0 &&
+              rect.height > 0 &&
+              rect.left >= bounds.left &&
+              rect.top >= bounds.top &&
+              rect.right <= bounds.right &&
+              rect.bottom <= bounds.bottom
+              ? []
+              : [target.getAttribute("aria-label")];
+          }),
+        };
+      }),
+    )
+    .toEqual({ sites: count, clipped: [] });
+}
+
+async function expectPopupInMap(page: Page, popup: Locator) {
+  await expect
+    .poll(async () => {
+      const card = await popup.boundingBox();
+      const map = await page.locator(".leaflet-container").boundingBox();
+      if (!card || !map) return Number.NEGATIVE_INFINITY;
+      return Math.min(
+        card.x - map.x,
+        card.y - map.y,
+        map.x + map.width - card.x - card.width,
+        map.y + map.height - card.y - card.height,
+      );
+    })
+    .toBeGreaterThanOrEqual(0);
+}
+
+async function waitForSiteMap(page: Page) {
+  // The server heading can precede both lazy imports. Pins or clusters prove
+  // the data effect ran; controls and attribution prove Leaflet initialized.
+  const map = page.locator(".leaflet-container");
+  await map.locator(".leaflet-site-marker button, button.leaflet-site-cluster").first().waitFor();
+  await map.locator(".leaflet-control-zoom-in").waitFor();
+  await map.locator(".leaflet-control-attribution").waitFor();
+}
+
+async function waitForSiteLibrary(page: Page) {
+  await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
+  // The ledger and its final catalog-count link can finish before the lazy map.
+  await page.getByRole("link", { name: "Molasses Reef", exact: true }).waitFor();
+  await page.getByRole("link", { name: "Browse the DiveDay catalog" }).waitFor();
+  await waitForSiteMap(page);
+}
 
 /**
  * Visual regression coverage: one `capture()` call per surface, each shot in
@@ -7056,10 +7124,20 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
         const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
         await assignments.getByRole("heading", { name: "Rental assignments" }).waitFor();
-        await assignments.getByRole("button", { name: "Hand over" }).first().click();
-        // Wait on what the destination renders, never on a timeout: the set
-        // that just went out has a return pane and no hand-over.
-        await assignments.getByRole("button", { name: "All good" }).first().waitFor();
+        const diverRow = assignments.locator("li").filter({ hasText: "Priya Sharma" });
+        await expect(diverRow.getByRole("button", { name: "All good" })).toHaveCount(0);
+        await diverRow.getByRole("button", { name: "Hand over" }).click();
+        const acknowledgement = page
+          .getByRole("status")
+          .filter({ hasText: staffCopy("gear.prep.notice.handedOver") });
+        await expect(acknowledgement).toBeVisible();
+        // Wait for the same diver's set, then photograph its saved state after
+        // the acknowledgement leaves, rather than racing its four-second life.
+        await expect(diverRow.getByRole("button", { name: "All good" })).toBeVisible();
+        await expect(diverRow.getByRole("button", { name: "Hand over" })).toHaveCount(0);
+        await page.mouse.move(0, 0);
+        await expect(acknowledgement).toBeHidden();
+        await expect(diverRow.getByRole("button", { name: "All good" })).toBeVisible();
         await capture(page, "departure-load-out-handed-over", scheme);
       });
 
@@ -7395,10 +7473,16 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/boats");
         await page.getByRole("heading", { level: 1, name: "Boats" }).waitFor();
-        // The submit on the add-a-boat row, which is what this page's own
-        // editor ends in now that it is a page rather than a settings row.
-        await page.getByRole("button", { name: "Add a boat" }).waitFor();
+        const boat = page.locator('details[id^="boat-"]:not(#boat-new)').first();
+        await boat.locator("summary").waitFor();
         await capture(page, "settings-boats", scheme);
+        await boat.locator("summary").click();
+        await boat.getByLabel(staffCopy("boats.nameLabel")).waitFor();
+        await capture(page, "settings-boats-edit", scheme);
+        await boat.locator("summary").click();
+        await page.locator("#boat-new summary").click();
+        await page.getByRole("button", { name: "Add a boat", exact: true }).waitFor();
+        await capture(page, "settings-boats-add", scheme);
       });
 
       /**
@@ -7409,6 +7493,14 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/trip-tags");
         await page.getByRole("heading", { level: 1, name: "Trip tags" }).waitFor();
         await capture(page, "settings-trip-tags", scheme);
+        const tag = page.locator('details[id^="tag-"]:not(#tag-new)').first();
+        await tag.locator("summary").click();
+        await tag.getByLabel(staffCopy("lenses.nameLabel")).waitFor();
+        await capture(page, "settings-trip-tags-edit", scheme);
+        await tag.locator("summary").click();
+        await page.locator("#tag-new summary").click();
+        await page.locator("#tag-new").getByLabel(staffCopy("lenses.nameLabel")).waitFor();
+        await capture(page, "settings-trip-tags-add", scheme);
       });
 
       /**
@@ -7430,19 +7522,9 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The emergency reference, open — the five number slots, the vessel and
-       * shore-contact boxes, and the free-text plan (issue #688). Its own
-       * capture for the same reason as the dock-day row above: it is closed in
-       * `settings-payments`, so the only form in the app whose output a crew
-       * reads offshore is otherwise never looked at.
-       *
-       * The seeded shop fills it in, so this is the state a configured shop
-       * sees. The *empty* state — the prompt a crew meets when nobody filled
-       * this in — is `manifest-emergency-empty` at the bottom of this file,
-       * which needs a shop of its own to produce. This comment used to claim
-       * the empty state was "covered where it matters more, on the offline
-       * manifest itself"; there was no such capture, and `seed.ts` fills the
-       * field precisely so no offline capture could ever show it.
+       * Saved emergency numbers and the response plan read at rest; the same
+       * capture also opens the contact, plan and shore-alert editors so their
+       * fixed-slot fields and consent controls remain visible in the baseline.
        */
       test(`the emergency reference card renders true to the design (${scheme})`, async ({
         page,
@@ -7451,11 +7533,21 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/settings/emergency-reference");
         await page.getByRole("heading", { level: 1, name: "Emergency reference" }).waitFor();
         await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
-        // H-118 review: blue-mantis is a demo shop, so the shore contact's
-        // alert address says demo shops send nothing, beside the free-text
-        // shore contact's line saying DiveDay never messages it.
-        await page.getByText(staffCopy("settings.main.emergency.shoreAlertDemo")).waitFor();
         await capture(page, "settings-emergency", scheme);
+        const contact = page
+          .locator('details[id^="emergency-contact-"]:not(#emergency-contact-new)')
+          .first();
+        await contact.locator("summary").click();
+        await page.locator("#emergency-response summary").click();
+        await page.locator("#emergency-alerts summary").click();
+        await page.getByText(staffCopy("settings.main.emergency.shoreAlertDemo")).waitFor();
+        await capture(page, "settings-emergency-edit", scheme);
+        await contact.locator("summary").click();
+        await page.locator("#emergency-response summary").click();
+        await page.locator("#emergency-alerts summary").click();
+        await page.locator("#emergency-contact-new summary").click();
+        await page.locator('#emergency-contact-new input[name^="emergencyLabel-"]').waitFor();
+        await capture(page, "settings-emergency-add", scheme);
       });
 
       /**
@@ -7537,8 +7629,11 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the dive-packages page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/promos/packages");
         await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
-        await page.getByRole("button", { name: "Add package" }).waitFor();
+        await page.locator("#package-new summary").waitFor();
         await capture(page, "settings-dive-packages", scheme);
+        await page.locator("#package-new summary").click();
+        await page.getByRole("button", { name: "Add package", exact: true }).waitFor();
+        await capture(page, "settings-dive-packages-add", scheme);
       });
 
       /**
@@ -7828,6 +7923,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Pre-departure checklist" }).waitFor();
         await page.getByText("VHF radio checked").waitFor();
         await capture(page, "settings-safety-checklist", scheme);
+        await page.locator("#checklist-new summary").click();
+        await page.getByLabel(staffCopy("settings.safetyChecklist.addLabel")).waitFor();
+        await capture(page, "settings-safety-checklist-add", scheme);
       });
 
       /**
@@ -8841,15 +8939,73 @@ for (const scheme of ["light", "dark"] as const) {
       // as the quiet door at its tail.
       test(`the dive-site library renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/dive-sites");
-        await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
-        // A seeded row, not just the heading: this route is `instant = true`,
-        // so the heading is already in the static shell while `loading.tsx`'s
-        // skeleton is what stands where the ledger will be.
-        await page.getByRole("link", { name: "Molasses Reef", exact: true }).waitFor();
-        // The tail door, which is the last thing the page paints — it carries a
-        // count read from the published catalog rather than from this page.
-        await page.getByRole("link", { name: "Browse the DiveDay catalog" }).waitFor();
-        await capture(page, "dive-sites-library", scheme);
+        await waitForSiteLibrary(page);
+        // Leaflet measures pan progress with Date; let its animation clock
+        // advance from the harness instant while this case changes map sizes.
+        await page.clock.install({ time: E2E_FROZEN_CLOCK });
+        await capture(page, "dive-sites-library", scheme, {
+          beforeShot: () => expectOverviewMapSites(page, 8),
+        });
+
+        // Use a real standalone pin from this viewport; a cluster's count
+        // does not identify which named sites it contains.
+        await page.locator(".leaflet-container").scrollIntoViewIfNeeded();
+        const firstPin = page.locator(".leaflet-site-marker button").first();
+        await expect(firstPin).toBeVisible();
+        const pinName = await firstPin.getAttribute("aria-label");
+        if (!pinName) throw new Error("Site marker has no accessible name");
+        const mapPin = page
+          .locator(".leaflet-site-marker")
+          .getByRole("button", { name: pinName, exact: true });
+        await expect(mapPin).toBeVisible();
+        await mapPin.hover();
+        await expect(page.locator(".leaflet-site-tooltip")).toContainText(pinName);
+        const pinBox = await mapPin.boundingBox();
+        const mapBox = await page.locator(".leaflet-container").boundingBox();
+        const viewport = page.viewportSize();
+        if (!pinBox || !mapBox || !viewport) throw new Error("Map target has no viewport bounds");
+        expect(pinBox.x).toBeGreaterThanOrEqual(Math.max(0, mapBox.x));
+        expect(pinBox.y).toBeGreaterThanOrEqual(Math.max(0, mapBox.y));
+        expect(pinBox.x + pinBox.width).toBeLessThanOrEqual(
+          Math.min(viewport.width, mapBox.x + mapBox.width),
+        );
+        expect(pinBox.y + pinBox.height).toBeLessThanOrEqual(
+          Math.min(viewport.height, mapBox.y + mapBox.height),
+        );
+        const scrollBeforePinSelection = await page.evaluate(() => window.scrollY);
+        // The target is fully visible; use physical input so this assertion
+        // measures selection without the driver's ancestor-scroll preparation.
+        await page.mouse.click(pinBox.x + pinBox.width / 2, pinBox.y + pinBox.height / 2);
+        await expect(mapPin).toHaveClass(/ring-4/);
+        const selectedPopup = page
+          .locator(".leaflet-site-popup")
+          .filter({ has: page.getByRole("heading", { name: pinName, exact: true }) })
+          .last();
+        await expect(selectedPopup).toBeVisible();
+        expect(await page.evaluate(() => window.scrollY)).toBe(scrollBeforePinSelection);
+        let footerFocusedAtPreviousWidth = false;
+        await capture(page, "dive-sites-library-pin-selected", scheme, {
+          beforeShot: async () => {
+            await expectPopupInMap(page, selectedPopup);
+            const footer = selectedPopup.locator(".leaflet-site-card__link");
+            await expect
+              .poll(async () => (await footer.boundingBox())?.height ?? 0)
+              .toBeGreaterThanOrEqual(44);
+            if (footerFocusedAtPreviousWidth) await expect(footer).toBeFocused();
+            await selectedPopup.locator(".leaflet-popup-close-button").focus();
+            await page.keyboard.press("Shift+Tab");
+            await expect(footer).toBeFocused();
+            expect(
+              await footer.evaluate((link) => {
+                const style = getComputedStyle(link);
+                return link.matches(":focus-visible") && Number.parseFloat(style.outlineWidth) > 0;
+              }),
+            ).toBe(true);
+            footerFocusedAtPreviousWidth = true;
+            await expectPopupInMap(page, selectedPopup);
+          },
+        });
+        await expect(selectedPopup.locator(".leaflet-site-card__link")).toBeFocused();
       });
 
       // The gear register on a calm morning (ADR 20260827-the-shops-shelves,
@@ -9319,7 +9475,10 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the dive-site catalog renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/dive-sites/catalog");
         await page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }).waitFor();
-        await capture(page, "dive-sites-catalog", scheme);
+        await waitForSiteMap(page);
+        await capture(page, "dive-sites-catalog", scheme, {
+          beforeShot: () => expectOverviewMapSites(page, CATALOG_MAP_SITE_COUNT),
+        });
       });
 
       /**
@@ -9566,6 +9725,125 @@ for (const scheme of ["light", "dark"] as const) {
  * prevent. Shoots nothing, so it costs the baseline nothing.
  */
 test.describe("capture harness", () => {
+  test.describe("lazy site maps", () => {
+    signedInAsOwner();
+    // The actual lazy-library request must reach Playwright's route handler.
+    test.use({ serviceWorkers: "block" });
+
+    for (const surface of [
+      {
+        name: "catalog",
+        path: "/shop/blue-mantis/dive-sites?view=catalog",
+        heading: "DiveDay common dive sites",
+        pins: CATALOG_MAP_SITE_COUNT,
+        ready: waitForSiteMap,
+      },
+      {
+        name: "library",
+        path: "/shop/blue-mantis/dive-sites",
+        heading: "Dive-site library",
+        pins: 8,
+        ready: waitForSiteLibrary,
+      },
+    ]) {
+      test(`${surface.name} overview keeps every site visible after resizing`, async ({ page }) => {
+        await test.step("fresh phone overview", async () => {
+          await page.setViewportSize(PHONE_VIEWPORT);
+          await page.goto(surface.path);
+          await surface.ready(page);
+          await expectOverviewMapSites(page, surface.pins);
+        });
+        await test.step("fresh desktop overview", async () => {
+          await page.setViewportSize(VIEWPORTS[1]);
+          await page.reload();
+          await surface.ready(page);
+          await expectOverviewMapSites(page, surface.pins);
+        });
+        await test.step("desktop overview resized to phone", async () => {
+          await page.setViewportSize(PHONE_VIEWPORT);
+          await expectOverviewMapSites(page, surface.pins);
+        });
+      });
+
+      test(`${surface.name} capture waits for Leaflet after its content is visible`, async ({
+        page,
+      }) => {
+        let releaseLeaflet = () => {};
+        let libraryHeld = false;
+        let mapReady: Promise<void> | undefined;
+        const release = new Promise<void>((resolve) => {
+          releaseLeaflet = resolve;
+        });
+        // Discover the emitted library before navigation, then hold its real
+        // request before delivery rather than inspecting a fetched response.
+        const libraryChunks = new Set(
+          readdirSync(".next/static/chunks", { recursive: true, encoding: "utf8" })
+            .filter(
+              (file) =>
+                file.endsWith(".js") &&
+                readFileSync(`.next/static/chunks/${file}`, "utf8").includes(
+                  "https://leafletjs.com",
+                ),
+            )
+            .map((file) => `/_next/static/chunks/${file.replaceAll("\\", "/")}`),
+        );
+        expect(
+          libraryChunks.size,
+          "The production build contains the Leaflet library",
+        ).toBeGreaterThan(0);
+        await page.route(
+          (url) => libraryChunks.has(url.pathname),
+          async (route) => {
+            libraryHeld = true;
+            await release;
+            await route.continue();
+          },
+        );
+        const contentReady = async () => {
+          await page.getByRole("heading", { level: 1, name: surface.heading }).waitFor();
+          if (surface.name === "library") {
+            await page.getByRole("link", { name: "Molasses Reef", exact: true }).waitFor();
+            await page.getByRole("link", { name: "Browse the DiveDay catalog" }).waitFor();
+          }
+        };
+        try {
+          // A held script also holds load; the fixture still settles React
+          // hydration after DOM content arrives, before interaction.
+          await page.goto(surface.path, { waitUntil: "domcontentloaded" });
+          await expect.poll(() => libraryHeld).toBe(true);
+          await contentReady();
+          await expect(page.locator(".leaflet-control-zoom-in")).toHaveCount(0);
+          let ready = false;
+          mapReady = surface.ready(page).then(() => {
+            ready = true;
+          });
+          // Join the original promise in finally, including the failure path.
+          void mapReady.catch(() => undefined);
+          // Content can settle independently; capture readiness must remain
+          // held by Leaflet rather than returning with the visible ledger.
+          await contentReady();
+          expect(ready).toBe(false);
+          releaseLeaflet();
+          await mapReady;
+          await expect
+            .poll(async () => {
+              const pinCount = await page.locator(".leaflet-site-marker button").count();
+              const clusterCounts = await page
+                .locator("button.leaflet-site-cluster")
+                .allTextContents();
+              return pinCount + clusterCounts.reduce((total, count) => total + Number(count), 0);
+            })
+            .toBe(surface.pins);
+          await expect(page.locator(".leaflet-control-zoom-in")).toBeVisible();
+          await expect(page.locator(".leaflet-control-attribution")).toBeVisible();
+        } finally {
+          releaseLeaflet();
+          await mapReady;
+        }
+      });
+    }
+  });
+
   test("a pass that never settles is bounded, reported, and degraded", async ({ page }) => {
     await page.goto("/");
     const warnings: string[] = [];
@@ -9962,7 +10240,10 @@ for (const scheme of ["light", "dark"] as const) {
       await page.waitForURL(/[?&]notice=saved/);
       await page.goto(`/shop/${privateShop.slug}/dive-sites`);
       await page.getByText("The entry silted up after the storm").waitFor();
-      await capture(page, "dive-site-planning-note", scheme);
+      await waitForSiteLibrary(page);
+      await capture(page, "dive-site-planning-note", scheme, {
+        beforeShot: () => expectOverviewMapSites(page, 8),
+      });
     });
 
     /**
@@ -9980,6 +10261,7 @@ for (const scheme of ["light", "dark"] as const) {
     }) => {
       test.setTimeout(FLOW_TIMEOUT_MS);
       await page.goto(`/shop/${privateShop.slug}/settings/emergency-reference`);
+      await page.locator("#emergency-alerts summary").click();
       await page.getByLabel("Shore contact’s email for roll-call alerts").fill("shore@example.com");
       await page.getByRole("button", { name: "Save emergency reference" }).click();
       await page.getByText(staffCopy("settings.main.notice.shoreAlertConsentMissing")).waitFor();
@@ -10010,22 +10292,51 @@ for (const scheme of ["light", "dark"] as const) {
       // Settings → clear → manifest → the saved copy, in one flow.
       test.setTimeout(FLOW_TIMEOUT_MS);
       await page.goto(`/shop/${privateShop.slug}/settings/emergency-reference`);
-      // Cleared through the shop's own form, which is how a shop would arrive
-      // in this state — not by writing the column behind the app's back.
-      const filled = page.locator(
-        'input[name^="emergencyLabel-"], input[name^="emergencyPhone-"], ' +
-          'input[name="emergencyVessel"], input[name="emergencyShoreContact"]',
+      await page
+        .getByRole("button", { name: staffCopy("settings.main.emergency.submit") })
+        .waitFor();
+      // A private shop may start with no contacts. Open and clear only
+      // existing rows; the next unused slot is already empty.
+      const contactSummaries = page.locator(
+        'details[id^="emergency-contact-"]:not(#emergency-contact-new) > summary',
       );
-      // The seeded shop has an emergency reference on file, so these boxes
-      // exist — and if they ever stop existing, the capture below would
-      // otherwise photograph a *populated* panel under an "empty" name.
-      await expect(filled).not.toHaveCount(0);
-      for (const field of await filled.all()) await field.fill("");
+      const contactCount = await contactSummaries.count();
+      for (let index = 0; index < contactCount; index += 1) {
+        await contactSummaries.nth(index).click();
+      }
+      for (const id of ["emergency-response", "emergency-alerts"]) {
+        const editor = page.locator(`#${id}`);
+        if ((await editor.getAttribute("open")) === null) await editor.locator("summary").click();
+      }
+      const alertAddress = page.locator('input[name="shoreAlertEmail"]');
+      const hadAlertAddress = (await alertAddress.inputValue()).trim().length > 0;
+      // Clear through the shop's form whether the reference started empty
+      // or populated, including any independently configured alert address.
+      const fields = page
+        .locator(
+          'input[name^="emergencyLabel-"], input[name^="emergencyPhone-"], ' +
+            'input[name="emergencyVessel"], input[name="emergencyShoreContact"], ' +
+            'input[name="shoreAlertEmail"]',
+        )
+        .filter({ visible: true });
+      await expect(fields).not.toHaveCount(0);
+      for (const field of await fields.all()) await field.fill("");
+      await page
+        .getByRole("checkbox", { name: staffCopy("settings.main.emergency.shoreAlertConsent") })
+        .uncheck();
       await page.locator('textarea[name="emergencyPlan"]').fill("");
       await page.getByRole("button", { name: "Save emergency reference" }).click();
-      // The page comes back with its saved notice — the destination's own
-      // render, not a timing guess.
-      await page.getByText("Emergency reference saved.").waitFor();
+      // Observe the completed save before the manifest/offline empty-state
+      // assertions. Clearing an address has its own saved outcome.
+      await page
+        .getByText(
+          staffCopy(
+            hadAlertAddress
+              ? "settings.main.notice.shoreAlertCleared"
+              : "settings.main.notice.emergencySaved",
+          ),
+        )
+        .waitFor();
 
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);
@@ -10084,6 +10395,7 @@ for (const scheme of ["light", "dark"] as const) {
       privateShop,
     }) => {
       await page.goto(`/shop/${privateShop.slug}/promos/packages`);
+      await page.locator("#package-new summary").click();
       await page.getByLabel("What you call it").fill("Ten-dive card");
       await page.getByLabel("Dives included").fill("10");
       await page.getByLabel("Price").fill("450");

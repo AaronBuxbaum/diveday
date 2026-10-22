@@ -22,6 +22,10 @@
       "total": "{count, plural, one {# sitio} other {# sitios}}"
     }
   },
+  "map": {
+    "openSite": "Abrir sitio de buceo",
+    "clusterLabel": "sitios de buceo"
+  },
   "catalog": {
     "title": "Sitios de buceo comunes de DiveDay",
     "description": "Puntos de partida publicados y versionados. Importar crea un sitio independiente en tu propia biblioteca; las actualizaciones de la plantilla nunca sobrescriben tus cambios.",

@@ -1,13 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { PGlite } from "@electric-sql/pglite";
-import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
-import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
-import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
-import { closePglite } from "@/db/close-pglite";
-import { seedDemo } from "@/db/seed";
 
 /**
  * Template-database snapshots for the PGlite integration tests.
@@ -19,19 +12,13 @@ import { seedDemo } from "@/db/seed";
  * dump in a few hundred milliseconds. Same isolation, ~10x cheaper.
  */
 
-import {
-  CACHE_DIR,
-  META_FILE,
-  type TemplateVariant,
-  templateFile,
-  VARIANTS,
-} from "./db-template-read";
+import { CACHE_DIR, META_FILE, templateFile, VARIANTS } from "./db-template-read";
 
 export { type TemplateVariant, templateBytes } from "./db-template-read";
 
 /**
  * Everything the templates' contents depend on: migrations, db source (schema,
- * seed, queries), and the frozen instant.
+ * seed, queries), the frozen instant, and the snapshot builder itself.
  *
  * The snapshots never expire. The demo seed is clock-anchored — one trip always
  * sails *today*, departures round to upcoming half-hour slots — but it reads
@@ -62,28 +49,8 @@ async function inputsFingerprint(): Promise<string> {
   // The instant the seed is anchored to. Not under `src/db`, but every row's
   // dates derive from it, so a snapshot built against a different one is stale.
   hash.update(await readFile("src/test/frozen-clock.ts"));
+  hash.update(await readFile("src/test/db-template-build.ts"));
   return hash.digest("hex");
-}
-
-/** Migrate (and, for the seeded variants, seed) one variant and dump its data directory. */
-async function buildSnapshot(variant: TemplateVariant): Promise<Buffer> {
-  const client = new PGlite({ extensions: { pg_trgm, btree_gist } });
-  const db = drizzle({ client });
-  await migrate(db, { migrationsFolder: "drizzle" });
-  if (variant === "empty") {
-    const emptyDump = await client.dumpDataDir("none");
-    await closePglite(client);
-    return Buffer.from(await emptyDump.arrayBuffer());
-  }
-  // The `lean` fixture has no trailing-quarter back-fill. That history is for
-  // the demo experience, the e2e/visual-regression fleet, and the handful of
-  // reporting-shaped unit tests that ask for `{ history: true }`; everything
-  // else is calibrated to the small, controlled dataset and builds its own
-  // history when it needs it (src/db/reporting.test.ts).
-  await seedDemo(db, { history: variant === "history" });
-  const dump = await client.dumpDataDir("none");
-  await closePglite(client);
-  return Buffer.from(await dump.arrayBuffer());
 }
 
 /** Build (or reuse) the migrated (and, for two of three, demo-seeded) snapshots. Once per run. */
@@ -97,6 +64,8 @@ export async function ensureTestDbTemplate(): Promise<void> {
     VARIANTS.every((variant) => meta.variants?.includes(variant));
   if (cached) return;
 
+  // A warm cache needs filesystem reads only; loading the seed graph costs seconds.
+  const { buildSnapshot } = await import("./db-template-build");
   await mkdir(CACHE_DIR, { recursive: true });
   for (const variant of VARIANTS) {
     // Written to a sibling and renamed, never to the live path. `writeFile`

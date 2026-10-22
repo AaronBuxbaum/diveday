@@ -5,9 +5,11 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
+import { DisclosureRow, DisclosureRowList } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { LedgerRow } from "@/components/ui/ledger";
 import { ListItemActions } from "@/components/ui/list-item-actions";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageSafetyChecklist } from "@/db/authz";
 import { listChecklistItems } from "@/db/pre-departure-check";
 import { requestLocale } from "@/i18n/request";
@@ -82,107 +84,111 @@ export default async function SafetyChecklistPage({
 
       {message ? <StaffNoticeBanner tone={message.tone}>{message.text}</StaffNoticeBanner> : null}
 
-      <SectionCard title={t("settings.safetyChecklist.listHeading")} className="mt-6">
-        {items.length === 0 ? (
-          <EmptyState
-            title={t("settings.safetyChecklist.empty.title")}
-            body={t("settings.safetyChecklist.empty.body")}
-          />
-        ) : (
-          <ol className="flex flex-col gap-2">
-            {items.map((item, index) => (
-              <li
-                key={item.id}
-                // `max-sm:py-5`: below `sm` the actions drop to the row's last
-                // line and sink their unseen 12px into its padding. At `p-3`
-                // that put their boxes on the border, the hover fill against
-                // the hairline and the ring across it; 20px leaves the boxes
-                // 8px clear and the text over and the ink under both ~24px.
-                className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-3 max-sm:py-5"
-              >
-                <span className="min-w-0 flex-1 break-words text-sm">{item.label}</span>
-                <ListItemActions>
-                  <form action={moveChecklistItemAction.bind(null, shopSlug)}>
-                    <input type="hidden" name="itemId" value={item.id} />
-                    <input type="hidden" name="direction" value="up" />
-                    <button
-                      type="submit"
-                      disabled={index === 0}
-                      aria-label={t("settings.safetyChecklist.moveUp")}
-                      // Below `sm` the actions are the row's last line, and
-                      // their unseen lower half sinks into its padding.
-                      className={buttonClass({
-                        variant: "ghost",
-                        size: "icon-sm",
-                        outdent: "block-end-phone",
-                      })}
-                    >
-                      <DiveDayIcon name="arrow-up" className="size-4" />
-                    </button>
-                  </form>
-                  <form action={moveChecklistItemAction.bind(null, shopSlug)}>
-                    <input type="hidden" name="itemId" value={item.id} />
-                    <input type="hidden" name="direction" value="down" />
-                    <button
-                      type="submit"
-                      disabled={index === items.length - 1}
-                      aria-label={t("settings.safetyChecklist.moveDown")}
-                      className={buttonClass({
-                        variant: "ghost",
-                        size: "icon-sm",
-                        outdent: "block-end-phone",
-                      })}
-                    >
-                      <DiveDayIcon name="arrow-down" className="size-4" />
-                    </button>
-                  </form>
-                  <form action={deleteChecklistItemAction.bind(null, shopSlug)}>
-                    <input type="hidden" name="itemId" value={item.id} />
-                    {/* Ghost weight, not the bordered `danger`: five bordered
+      <div className="space-y-10">
+        <section aria-labelledby="checklist-heading">
+          <h2 id="checklist-heading" className={`${SECTION_TITLE_CLASS} mb-4`}>
+            {t("settings.safetyChecklist.listHeading")}
+          </h2>
+          {items.length === 0 ? (
+            <EmptyState
+              title={t("settings.safetyChecklist.empty.title")}
+              body={t("settings.safetyChecklist.empty.body")}
+            />
+          ) : (
+            <ol>
+              {items.map((item, index) => (
+                <LedgerRow
+                  key={item.id}
+                  id={`checklist-${item.id}`}
+                  stacked
+                  trailing={
+                    <ListItemActions>
+                      <form action={moveChecklistItemAction.bind(null, shopSlug)}>
+                        <input type="hidden" name="itemId" value={item.id} />
+                        <input type="hidden" name="direction" value="up" />
+                        <button
+                          type="submit"
+                          disabled={index === 0}
+                          aria-label={t("settings.safetyChecklist.moveUp")}
+                          // Below `sm` the actions are the row's last line, and
+                          // their unseen lower half sinks into its padding.
+                          className={buttonClass({
+                            variant: "ghost",
+                            size: "icon-sm",
+                          })}
+                        >
+                          <DiveDayIcon name="arrow-up" className="size-4" />
+                        </button>
+                      </form>
+                      <form action={moveChecklistItemAction.bind(null, shopSlug)}>
+                        <input type="hidden" name="itemId" value={item.id} />
+                        <input type="hidden" name="direction" value="down" />
+                        <button
+                          type="submit"
+                          disabled={index === items.length - 1}
+                          aria-label={t("settings.safetyChecklist.moveDown")}
+                          className={buttonClass({
+                            variant: "ghost",
+                            size: "icon-sm",
+                          })}
+                        >
+                          <DiveDayIcon name="arrow-down" className="size-4" />
+                        </button>
+                      </form>
+                      <form action={deleteChecklistItemAction.bind(null, shopSlug)}>
+                        <input type="hidden" name="itemId" value={item.id} />
+                        {/* Ghost weight, not the bordered `danger`: five bordered
                         red buttons down a five-row list shout at a shop
                         editing its own words, and the two arrows beside each
                         are already ghosts. The word stays "Delete"
                         (ADR 20260820-every-delete-is-soft). */}
-                    <SubmitButton
-                      pendingLabel={t("settings.safetyChecklist.delete")}
-                      className={buttonClass({
-                        variant: "danger-ghost",
-                        size: "sm",
-                        outdent: "block-end-phone",
-                      })}
-                    >
-                      {t("settings.safetyChecklist.delete")}
-                    </SubmitButton>
-                  </form>
-                </ListItemActions>
-              </li>
-            ))}
-          </ol>
-        )}
-
-        <FieldGrid
-          as="form"
-          action={addChecklistItemAction.bind(null, shopSlug)}
-          columns={1}
-          className="mt-6"
-        >
-          <Field label={t("settings.safetyChecklist.addLabel")}>
-            <input
-              type="text"
-              name="label"
-              required
-              maxLength={200}
-              placeholder={t("settings.safetyChecklist.addPlaceholder")}
-              className={controlClass}
-            />
-          </Field>
-          <FieldActions>
-            <button type="submit" className={buttonClass({ variant: "secondary" })}>
-              {t("settings.safetyChecklist.addSubmit")}
-            </button>
-          </FieldActions>
-        </FieldGrid>
-      </SectionCard>
+                        <SubmitButton
+                          pendingLabel={t("settings.safetyChecklist.delete")}
+                          className={buttonClass({
+                            variant: "danger-ghost",
+                            size: "sm",
+                          })}
+                        >
+                          {t("settings.safetyChecklist.delete")}
+                        </SubmitButton>
+                      </form>
+                    </ListItemActions>
+                  }
+                >
+                  <span className="break-words">{item.label}</span>
+                </LedgerRow>
+              ))}
+            </ol>
+          )}
+        </section>
+        <DisclosureRowList>
+          <DisclosureRow
+            id="checklist-new"
+            heading={t("settings.safetyChecklist.addTitle")}
+            open={
+              notice === "checklist-item-invalid" || notice === "checklist-item-duplicate-label"
+            }
+          >
+            <FieldGrid as="form" action={addChecklistItemAction.bind(null, shopSlug)} columns={1}>
+              <Field label={t("settings.safetyChecklist.addLabel")}>
+                <input
+                  type="text"
+                  name="label"
+                  required
+                  maxLength={200}
+                  placeholder={t("settings.safetyChecklist.addPlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+              <FieldActions>
+                <button type="submit" className={buttonClass({ variant: "secondary" })}>
+                  {t("settings.safetyChecklist.addSubmit")}
+                </button>
+              </FieldActions>
+            </FieldGrid>
+          </DisclosureRow>
+        </DisclosureRowList>
+      </div>
     </main>
   );
 }

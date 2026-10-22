@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
+import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { registerPaneClass } from "../_components/register-pane";
 
 export default function SafetyChecklistLoading() {
@@ -16,7 +17,16 @@ export default function SafetyChecklistLoading() {
           descriptionWidth="w-full max-w-md"
           descriptionLines={{ base: 3, sm: 2 }}
         />
-        <div className={sectionCardClass({ padding: "none", className: "mt-6 h-72" })} />
+        <div className="space-y-10">
+          <div>
+            {[0, 1, 2].map((row) => (
+              <div key={row} className={`${ledgerRowBoxClass} flex min-h-13 items-center py-2`}>
+                <div className="h-4 w-2/3 rounded bg-surface-sunken" />
+              </div>
+            ))}
+          </div>
+          <div className={sectionCardClass({ padding: "none", className: "h-14" })} />
+        </div>
       </div>
     </main>
   );
