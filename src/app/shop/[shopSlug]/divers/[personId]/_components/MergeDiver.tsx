@@ -1,11 +1,10 @@
-import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverMergeCandidate, DiverMergeCandidateReason } from "@/db/diver-merge";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { shopPath } from "@/lib/staff-notices";
+import { MergeCandidateList } from "./MergeCandidateList";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
 /** The words for why a record was offered, strongest signal first. */
@@ -15,14 +14,6 @@ export const MERGE_REASON_KEYS: Record<DiverMergeCandidateReason, StaffMessageKe
   same_name_and_birth_date: "divers.merge.sameNameAndBirthDate",
   same_name: "divers.merge.sameName",
 };
-
-/**
- * How many candidates the panel lists, strongest first (`listDiverMergeCandidates`
- * sorts them). A record that looks like a dozen others is a data problem the
- * panel cannot solve by listing them all: on the seeded shop a too-loose email
- * rule once made it list about 140 divers and run 14,000px down the page.
- */
-export const MERGE_CANDIDATES_SHOWN = 5;
 
 function contactLine(email: string | null, phone: string | null, missing: string): string {
   return [email, displayStoredPhoneWhole(phone)].filter(Boolean).join(" · ") || missing;
@@ -53,8 +44,6 @@ export function MergeDiver({
   if (candidates.length === 0) {
     return <DiverFormStatus status={status} className="mt-6" />;
   }
-  const shown = candidates.slice(0, MERGE_CANDIDATES_SHOWN);
-  const hidden = candidates.length - shown.length;
   return (
     /* Flat, per 20260827-clearwater-surface-language decision 1: the panel
        keeps its condition (it renders only when a candidate exists) and the
@@ -63,34 +52,18 @@ export function MergeDiver({
       <h2 id="merge-heading" className={SECTION_TITLE_CLASS}>
         {t("divers.merge.heading")}
       </h2>
-      <ul className="mt-4 grid gap-2">
-        {shown.map((candidate) => (
-          <li
-            key={candidate.id}
-            className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3"
-          >
-            <span className="min-w-0 [overflow-wrap:anywhere]">
-              <span className="block font-medium">{candidate.fullName}</span>
-              <span className="mt-0.5 block text-sm text-muted">
-                {contactLine(candidate.email, candidate.phone, t("divers.merge.noContact"))}
-              </span>
-              <span className="mt-1 block text-xs text-warning-strong">
-                {candidate.reasons.map((reason) => t(MERGE_REASON_KEYS[reason])).join(" · ")}
-              </span>
-            </span>
-            <Link
-              href={shopPath(shopSlug, "divers", personId, "merge", candidate.id)}
-              aria-label={t("divers.merge.compareWith", { name: candidate.fullName })}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("divers.merge.compare")}
-            </Link>
-          </li>
-        ))}
-      </ul>
-      {hidden > 0 ? (
-        <p className="mt-2 text-sm text-muted">{t("divers.merge.more", { count: hidden })}</p>
-      ) : null}
+      <MergeCandidateList
+        key={personId}
+        candidates={candidates.map((candidate) => ({
+          fullName: candidate.fullName,
+          contact: contactLine(candidate.email, candidate.phone, t("divers.merge.noContact")),
+          reasons: candidate.reasons.map((reason) => t(MERGE_REASON_KEYS[reason])).join(" · "),
+          href: shopPath(shopSlug, "divers", personId, "merge", candidate.id),
+          compareWith: t("divers.merge.compareWith", { name: candidate.fullName }),
+        }))}
+        compare={t("divers.merge.compare")}
+        showMore={t("divers.merge.showMore")}
+      />
       <DiverFormStatus status={status} className="mt-3" />
     </section>
   );

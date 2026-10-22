@@ -12,7 +12,6 @@ import { listSavedAnswers } from "@/db/inbox-saved-answers";
 import { openLostItemsByPerson } from "@/db/lost-items";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -40,10 +39,11 @@ import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { WaiverGroup } from "./_components/WaiverGroup";
 import { WorkOrdersGroup } from "./_components/WorkOrdersGroup";
-import { BOOK_ACTIVITY_TRIP_SCAN_LIMIT } from "./_lib/book-activity";
+import { loadBookingDepartures } from "./_lib/book-activity";
 import { loadDiverGear } from "./_lib/gear-load";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
 import { loadDiverRecordGates } from "./_lib/record-gates";
+import { DIVER_RECORD_FLASH_PARAMS } from "./_lib/record-query";
 import { savedAnswerFillFor } from "./_lib/saved-answer-fill";
 import { diverStatusRows } from "./_lib/status-load";
 import { restoreCardAction } from "./card-actions";
@@ -112,8 +112,10 @@ export default async function DiverDetailPage({
     edit?: string;
     /** The deleted diver note's text, carried by the land-then-undo redirect. */
     noteBody?: string;
-    /** Which page of the Activity group is being read. Not `?page=`: this record has one paged list, and it is not the page. */
+    /** Which page of the Activity group is being read, independent of the booking picker. */
     activity?: string;
+    /** Which page of eligible departures is open inside Add a booking. */
+    bookingPage?: string | string[];
   }>;
 }) {
   const { shopSlug, personId } = await params;
@@ -121,8 +123,9 @@ export default async function DiverDetailPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(personId)) notFound();
-  const { notice, undo, cardType, by, gate, form, card, edit, noteBody, activity } =
-    await searchParams;
+  const query = await searchParams;
+  const { notice, undo, cardType, by, gate, form, card, edit, noteBody, activity, bookingPage } =
+    query;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -179,14 +182,14 @@ export default async function DiverDetailPage({
   });
   // Reads that need the gates above, so they could not ride the `Promise.all`
   // that produced them; concurrent with each other instead of serial.
-  const [mergeCandidates, status, { trips: scannedTrips }, guardianEmails, found, savedAnswers] =
+  const [mergeCandidates, status, departures, guardianEmails, found, savedAnswers] =
     await Promise.all([
       canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
       // The readiness of the departure this diver is next on, read through the
       // entry the Today queue and the manifest already use — never a second
       // detector (`_lib/status-load.ts`).
       diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
-      pagedUpcomingTripsWithCounts(db, shop.id, { limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT }),
+      loadBookingDepartures(db, shop.id, personId, bookingPage, now),
       // The co-signing guardians' addresses, for the owner's control that erases
       // one on the guardian's request (H-103). Nobody else is shown them here.
       canErase ? listGuardianEmails(db, shop.id, personId) : [],
@@ -194,12 +197,6 @@ export default async function DiverDetailPage({
       // Chips above the reply box, only when there is a conversation to answer.
       thread.length > 0 && !removed ? listSavedAnswers(db, shop.id) : [],
     ]);
-  const upcoming = scannedTrips.filter(
-    (trip) =>
-      !diver.bookings.some(
-        ({ booking }) => booking.tripId === trip.id && booking.status !== "cancelled",
-      ) && trip.booked < trip.capacity,
-  );
   /**
    * The page's `?notice=` resolved once, to words *and* to the group those
    * words belong beside. Each group is handed its own below with
@@ -240,7 +237,7 @@ export default async function DiverDetailPage({
   const standing = diverStanding(diver, { now, shop, showMoney: canManageOrders });
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["notice", "undo", "cardType", "by", "form", "edit", "noteBody"]} />
+      <FlashParams params={DIVER_RECORD_FLASH_PARAMS} />
       <DiverHeader
         diver={diver}
         shopSlug={shopSlug}
@@ -267,7 +264,9 @@ export default async function DiverDetailPage({
               t={t}
               diver={diver}
               shop={shop}
-              upcoming={upcoming}
+              upcoming={departures.trips}
+              pagination={departures}
+              query={query}
               shopSlug={shopSlug}
               personId={personId}
               status={noticeForForm(diverNotice, "book")}

@@ -147,6 +147,19 @@ const guardedRoots = ["src/app", "src/components"];
  * name. A third locale that disagrees is a decision, not a merge conflict.
  */
 export const DELIBERATELY_IDENTICAL = new Map([
+  ["staff/settings.json security.browser.chrome", "browser or operating system brand name"],
+  ["staff/settings.json security.browser.edge", "browser or operating system brand name"],
+  ["staff/settings.json security.browser.firefox", "browser or operating system brand name"],
+  ["staff/settings.json security.browser.opera", "browser or operating system brand name"],
+  ["staff/settings.json security.browser.safari", "browser or operating system brand name"],
+  ["staff/settings.json security.browser.samsung", "browser or operating system brand name"],
+  ["staff/settings.json security.os.android", "browser or operating system brand name"],
+  ["staff/settings.json security.os.chromeOs", "browser or operating system brand name"],
+  ["staff/settings.json security.os.ios", "browser or operating system brand name"],
+  ["staff/settings.json security.os.linux", "browser or operating system brand name"],
+  ["staff/settings.json security.os.macOs", "browser or operating system brand name"],
+  ["staff/settings.json security.os.windows", "browser or operating system brand name"],
+
   // Training-agency acronyms — brand names. `other` is the one real word in
   // the group and is translated.
   // The boat's radio identity (fourth review, item 11): the ITU acronym a

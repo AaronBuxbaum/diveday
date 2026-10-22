@@ -5,6 +5,7 @@ import {
   crewClashDetailText,
   crewClashSailedDetailText,
   daySpineSummaryText,
+  helpRequestActionText,
   helpRequestDetailText,
   reviewsPendingSubjectText,
   rollCallGapDetailText,
@@ -186,8 +187,17 @@ describe("a Needs you row's sentence", () => {
       "Asked for help: carry gear.",
     );
     expect(helpRequestDetailText(en, { kind: "find_group", status: "acknowledged" })).toBe(
-      "Waiting for help: finding their group.",
+      "Asked for help: finding their group.",
     );
+    expect(
+      helpRequestDetailText(en, {
+        kind: "find_group",
+        status: "acknowledged",
+        helperPersonName: "Sam Rivera",
+      }),
+    ).toBe("Sam Rivera will help with finding their group.");
+    expect(helpRequestActionText(en, "requested")).toBe("Arrange help");
+    expect(helpRequestActionText(en, "acknowledged", "Sam Rivera")).toBe("Help completed");
   });
 
   it("ends with a period, the count-only rows included", () => {

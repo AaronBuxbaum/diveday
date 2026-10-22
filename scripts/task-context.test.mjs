@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { areaList, renderArea } from "./task-context.mjs";
+import { areaList, matchAreas, pathPacket, recipeForPath, renderArea } from "./task-context.mjs";
 import { areas } from "./task-context-data.mjs";
 
 const ROOT = path.join(import.meta.dirname, "..");
@@ -52,4 +52,28 @@ describe("pnpm task:context", () => {
     expect(text).toMatch(/^# Task context: work-orders/);
     expect(text).not.toContain("planned or not present yet");
   });
+});
+
+describe("bounded path packets", () => {
+  it("refuses paths outside the checkout", () => {
+    expect(() => pathPacket(ROOT, "../secret")).toThrow();
+  });
+  it("does not assign entire e2e or app trees", () => {
+    const packet = pathPacket(ROOT, "src/db/bookings.ts");
+    expect(packet.tests).not.toContain("e2e");
+    expect(packet.read).toContain(".claude/rules/db.md");
+    expect(packet.invariants.length).toBeGreaterThan(0);
+  });
+  it("leaves unrelated files to the route map", () => {
+    expect(matchAreas("unknown-file.ts")).toEqual([]);
+  });
+});
+
+it("routes common visual changes to concrete recipe IDs", () => {
+  expect(matchAreas("src/components/ui/button.ts")).toEqual(["design"]);
+  expect(recipeForPath("src/components/ui/button.ts")).toBe("forms");
+  expect(recipeForPath("src/components/RowMenu.tsx")).toBe("row-actions");
+  expect(recipeForPath("src/components/Toast.tsx")).toBe("feedback");
+  expect(recipeForPath("src/app/shop/settings/SettingsRail.tsx")).toBe("settings");
+  expect(recipeForPath("src/db/help-requests.ts")).toBe("handoff");
 });

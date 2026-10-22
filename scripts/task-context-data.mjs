@@ -287,7 +287,7 @@ export const areas = {
     tests: ["e2e"],
     invariants: [
       "Use semantic tokens only; no raw colors in components.",
-      "Inspect light at phone and desktop, dark at desktop.",
+      "Inspect light at phone and desktop; inspect dark only for color or scheme-token changes (H-90).",
       "Include empty, loading, validation, error, and success states.",
       "Keep touch targets and focus states accessible.",
     ],
@@ -352,7 +352,7 @@ export const areas = {
       "Schema changes include focused PGlite tests and generated migrations.",
     ],
     validate: [
-      "pnpm test src/db --reporter=dot",
+      "pnpm test <changed-module.test.ts> --reporter=dot",
       "pnpm typecheck",
       "pnpm db:generate",
       "pnpm check:repo && pnpm lint && pnpm typecheck",

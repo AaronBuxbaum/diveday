@@ -1,4 +1,5 @@
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAs, test } from "./fixtures";
 import { openSettingsRow } from "./helpers";
 
@@ -170,6 +171,7 @@ test.describe("settings that change the shop", () => {
     // the shop profile is one.
     test.setTimeout(60_000);
     // From inside a setting: on the hub itself the page is the map.
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/shop/${privateShop.slug}/settings/email`);
     const rail = page.getByRole("navigation", { name: "Settings sections" });
     await rail.getByRole("link", { name: "Shop profile & branding" }).click();
@@ -177,7 +179,8 @@ test.describe("settings that change the shop", () => {
 
     const tagline = page.getByLabel("Tagline");
     await expect(tagline).toBeVisible();
-    await tagline.fill("Small-boat reef and wreck diving out of Key Largo.");
+    const savedTagline = "Reef and wreck diving";
+    await tagline.fill(savedTagline);
     await page.getByRole("button", { name: "Save profile" }).click();
 
     // Saved, and the page comes back with its notice: the action's redirect
@@ -185,9 +188,27 @@ test.describe("settings that change the shop", () => {
     await expect(
       page.getByRole("status").filter({ hasText: "Shop profile and branding saved" }),
     ).toBeVisible();
-    await expect(page.getByLabel("Tagline")).toHaveValue(
-      "Small-boat reef and wreck diving out of Key Largo.",
-    );
+    await expect(page.getByLabel("Tagline")).toHaveValue(savedTagline);
+
+    // Opening the saved page in another tab keeps the unsaved draft in this
+    // form, while the public route continues to show the last saved value.
+    const draftTagline = "Unpublished draft";
+    await tagline.fill(draftTagline);
+    const savedPagePromise = page.context().waitForEvent("page");
+    const savedPageLink = page.getByRole("link", {
+      name: staffTranslator("en-US")("settings.main.profile.viewSavedStorefront"),
+      exact: true,
+    });
+    await savedPageLink.focus();
+    await expect(savedPageLink).toBeFocused();
+    await page.keyboard.press("Enter");
+    const savedPage = await savedPagePromise;
+    await expect(savedPage).toHaveURL(new RegExp(`/s/${privateShop.slug}$`));
+    await expect(savedPage.getByText(savedTagline)).toBeVisible();
+    await expect(tagline).toHaveValue(draftTagline);
+    await expect(
+      page.getByText(staffTranslator("en-US")("settings.main.profile.brandPreview")),
+    ).toBeVisible();
   });
 
   test("a shop can change the zone its whole schedule is read in", async ({

@@ -238,6 +238,15 @@ describe("a real-Postgres suite", () => {
     ).toHaveLength(3);
   });
 
+  it("runs feature-layer PostgreSQL suites through the real-server job", () => {
+    expect(
+      findMisplacedRealServerSuites(
+        "src/features/setup-request-receipts/setup-request-receipts.postgres.test.ts",
+        suite,
+      ),
+    ).toEqual([]);
+  });
+
   it("leaves alone a *.postgres.test.ts in src/db, and the harness that defines it", () => {
     expect(findMisplacedRealServerSuites("src/db/seat-locks.postgres.test.ts", suite)).toEqual([]);
     expect(findMisplacedRealServerSuites("src/test/postgres.ts", suite)).toEqual([]);

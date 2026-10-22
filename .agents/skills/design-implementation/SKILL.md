@@ -66,8 +66,7 @@ in the same PR as the slice:
    slice is marked shipped and the file it names does not mention its ADR.
 2. **A test pins the rule, not the pixels.** Test the invariant the ADR states ("the destructive
    path is never a single tap", "no danger tone renders with nothing recorded"), never a screenshot
-   of the layout. A pixel snapshot fails on every legitimate restyle and teaches people to
-   re-baseline without reading.
+   of the layout. Behavioral assertions complement the scoped rendered-state review from **design-review**; neither substitutes for the other.
 3. **Update the canvas README's slice table** — status, the file it landed in, the test that pins
    it. When the last open slice lands, flip the canvas `Status:` to `Shipped`.
 4. **Move the roadmap slice to [shipped.md](../../../docs/product/shipped.md)**; the `surfaces.md`

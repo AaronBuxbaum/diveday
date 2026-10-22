@@ -29,6 +29,7 @@ import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices"
 import { CatalogView } from "./_components/CatalogView";
 import { SiteLibraryLayout } from "./_components/SiteLibraryLayout";
 import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
+import { catalogPageMetadata } from "./dive-site-page-metadata";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
@@ -46,7 +47,16 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
 // 20260804-instant-navigation.
 export const instant = true;
 
-export const metadata: Metadata = { title: "Dive sites — DiveDay" };
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ view?: string; template?: string }>;
+}): Promise<Metadata> {
+  const { shopSlug } = await params;
+  return catalogPageMetadata(shopSlug, await searchParams);
+}
 
 export default async function DiveSitesPage({
   params,
@@ -131,7 +141,6 @@ export default async function DiveSitesPage({
       name: site.name,
       latitude: site.latitude,
       longitude: site.longitude,
-      subtitle: site.locationName,
       details: [
         staffDiveSiteDepthText(t, site, shop.depthUnit),
         diveSiteDifficultyLabel(site.difficultyLevel, diverT),
@@ -199,6 +208,7 @@ export default async function DiveSitesPage({
           className="mb-6 flex items-center gap-2"
         >
           <SearchField
+            key={query}
             id="site-search"
             name="q"
             label={t("diveSites.list.searchLabel")}
@@ -258,6 +268,7 @@ export default async function DiveSitesPage({
         />
       ) : (
         <SiteLibraryLayout
+          viewportStorageKey={`${shop.id}:library`}
           shopAnchor={shopAnchor}
           pins={pins}
           clusterLabel={t("diveSites.map.clusterLabel")}

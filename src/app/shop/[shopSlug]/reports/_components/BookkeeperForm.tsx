@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass, Field, FormStatus } from "@/components/ui/form";
+import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import type { BookkeeperFormState } from "../bookkeeper-actions";
 
 export type BookkeeperFormCopy = {
@@ -52,8 +52,8 @@ export function BookkeeperForm({
               ? { tone: "warning" as const, text: copy.confirmationNotSent }
               : null;
   return (
-    <form action={formAction} className="flex max-w-xl flex-wrap items-end gap-3">
-      <Field label={copy.label} description={copy.description} className="min-w-0 flex-1">
+    <FieldGrid as="form" columns={1} action={formAction} className="max-w-xl">
+      <Field label={copy.label} description={copy.description}>
         <input
           type="email"
           name="email"
@@ -62,20 +62,19 @@ export function BookkeeperForm({
           className={controlClass}
         />
       </Field>
-      <SubmitButton pendingLabel={copy.saving} className={buttonClass({ variant: "secondary" })}>
-        {copy.save}
-      </SubmitButton>
-      {answer ? (
-        <FormStatus tone={answer.tone} className="basis-full">
-          {answer.text}
-        </FormStatus>
-      ) : status ? (
+      <FieldActions>
+        <SubmitButton pendingLabel={copy.saving} className={buttonClass({ variant: "secondary" })}>
+          {copy.save}
+        </SubmitButton>
+        {answer ? <FormStatus tone={answer.tone}>{answer.text}</FormStatus> : null}
+      </FieldActions>
+      {!answer && status ? (
         <p
-          className={`basis-full text-sm ${status.tone === "warning" ? "text-warning-strong" : "text-muted"}`}
+          className={`text-sm ${status.tone === "warning" ? "text-warning-strong" : "text-muted"}`}
         >
           {status.text}
         </p>
       ) : null}
-    </form>
+    </FieldGrid>
   );
 }

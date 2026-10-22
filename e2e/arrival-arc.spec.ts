@@ -105,21 +105,35 @@ test.describe("the dive arrival arc", () => {
     // hand-off), so Today lists two; act on this diver's row only. The row
     // leads with the name, so the sentence does not repeat it.
     const helpRow = page.getByRole("listitem").filter({ hasText: "Arrival Diver" });
-    const waiting = helpRow.filter({ hasText: "Waiting for help: carry gear." });
     await expect(helpRow.getByText("Asked for help: carry gear.")).toBeVisible();
-    await helpRow.getByRole("button", { name: "Acknowledge" }).click();
-    await expect(waiting).toBeVisible();
-    await helpRow.getByRole("button", { name: "Mark handled" }).click();
-    // Wait for the write to *land* before navigating away: the action ends in
-    // `revalidateAndRedirect(home, home)`, and Today lists only open requests,
-    // so the row leaving is the destination's own proof. Without it the `goto`
-    // below can preempt the in-flight action and the thread reads "acknowledged".
-    await expect(waiting).not.toBeVisible();
+    await helpRow.getByRole("button", { name: "Arrange help" }).click();
+    const crew = helpRow.getByLabel("Crew member");
+    const helperName = await crew.locator("option").nth(1).textContent();
+    expect(helperName).toBeTruthy();
+    await crew.selectOption({ label: helperName ?? "" });
+    await helpRow.getByRole("button", { name: "Confirm helper" }).click();
+    await expect(
+      helpRow.getByText(`${helperName} will help with carry gear.`, { exact: true }),
+    ).toBeVisible();
+    await helpRow.getByRole("button", { name: "Help completed" }).click();
+    // The row leaves the active queue after completion; the page-level outcome
+    // keeps Undo available after its unmount.
+    await expect(helpRow).not.toBeVisible();
+    await expect(page.getByText("Help marked complete.", { exact: true })).toBeVisible();
+
+    const diverPage = await page.context().newPage();
+    await diverPage.goto(readyPath);
+    await openThreadStep(diverPage, "dayof");
+    await expect(diverPage.getByText(new RegExp(`${helperName} will help you at`))).toBeVisible();
+    await diverPage.close();
+
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(helpRow.getByText(`${helperName} will help with carry gear.`)).toBeVisible();
 
     await page.goto(readyPath);
     // The response lives in the day-of step's body, and at most one step is
     // open at rest — the spec opens it exactly as the diver would.
     await openThreadStep(page, "dayof");
-    await expect(page.getByText("The crew handled this request.")).toBeVisible();
+    await expect(page.getByText(`${helperName} will help you at`, { exact: false })).toBeVisible();
   });
 });

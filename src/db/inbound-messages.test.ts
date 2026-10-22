@@ -1,10 +1,11 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, gt, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   countUnansweredMessages,
   deleteStrangerInboundMessage,
   getInboundMessage,
+  getPendingMoveAsk,
   hasMoveAsk,
   lastInboundAt,
   markInboundAnswered,
@@ -18,6 +19,7 @@ import {
   shopIdForInboundEmailToken,
 } from "./inbound-messages";
 import { bookings, inboundMessages, people, personRoles, shops, trips } from "./schema";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * The inbox's contract (ADR 20260907-two-way-inbox): a message lands on the
@@ -527,9 +529,18 @@ describe("an Ask to move", () => {
   async function aBooking() {
     const { db, shop } = ctx;
     const [row] = await db
-      .select({ bookingId: bookings.id, personId: bookings.personId })
+      .select({ bookingId: bookings.id, personId: bookings.personId, tripId: bookings.tripId })
       .from(bookings)
-      .where(eq(bookings.shopId, shop.id))
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookings.shopId, shop.id),
+          eq(bookings.status, "booked"),
+          gt(trips.startsAt, NOW),
+          liveTrip(),
+          notRehearsal(),
+        ),
+      )
       .limit(1);
     if (!row) throw new Error("seeded booking missing");
     return row;
@@ -557,6 +568,10 @@ describe("an Ask to move", () => {
       senderAuthenticated: true,
     });
     expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(true);
+    expect(await getPendingMoveAsk(db, shop.id, bookingId)).toEqual({
+      note: "Any Saturday in August",
+      sentAt: NOW,
+    });
     // `/ready` passes the departure it already read: the same answer.
     const [seat] = await db
       .select({ tripId: bookings.tripId })
@@ -566,8 +581,17 @@ describe("an Ask to move", () => {
     expect(await hasMoveAsk(db, shop.id, bookingId, seat.tripId)).toBe(true);
     expect(await countUnansweredMessages(db, shop.id)).toBeGreaterThan(0);
 
-    const again = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: NOW });
+    const again = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId,
+      note: "A replacement that was not sent",
+      now: new Date(NOW.getTime() + 60_000),
+    });
     expect(again.status).toBe("already");
+    expect(await getPendingMoveAsk(db, shop.id, bookingId)).toEqual({
+      note: "Any Saturday in August",
+      sentAt: NOW,
+    });
   });
 
   /**
@@ -578,18 +602,27 @@ describe("an Ask to move", () => {
    */
   it("stands for one departure: a moved seat asks again", async () => {
     const { db, shop } = ctx;
-    const { bookingId } = await aBooking();
+    const { bookingId, tripId } = await aBooking();
     const first = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: NOW });
     if (first.status !== "recorded") throw new Error(`expected recorded, got ${first.status}`);
     const [other] = await db
       .select({ id: trips.id })
       .from(trips)
       .innerJoin(bookings, eq(bookings.id, bookingId))
-      .where(and(eq(trips.shopId, shop.id), ne(trips.id, bookings.tripId)))
+      .where(
+        and(
+          eq(trips.shopId, shop.id),
+          ne(trips.id, bookings.tripId),
+          gt(trips.startsAt, NOW),
+          liveTrip(),
+          notRehearsal(),
+        ),
+      )
       .limit(1);
     if (!other) throw new Error("expected a second seeded trip");
     await db.update(bookings).set({ tripId: other.id }).where(eq(bookings.id, bookingId));
     expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(false);
+    expect(await getPendingMoveAsk(db, shop.id, bookingId, tripId)).toBeNull();
     const second = await recordMoveAsk(db, { shopId: shop.id, bookingId, now: NOW });
     if (second.status !== "recorded") throw new Error(`expected recorded, got ${second.status}`);
     expect(second.id).not.toBe(first.id);
@@ -621,9 +654,185 @@ describe("an Ask to move", () => {
         answeredAt: null,
         receivedAt: later,
       });
-      expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(true);
+      expect(await getPendingMoveAsk(db, shop.id, bookingId)).toEqual({
+        note: "Still sick, any date next month",
+        sentAt: later,
+      });
     },
   );
+
+  it("refuses a stale Mark done form after the diver renews the same move request", async () => {
+    const { db, shop } = ctx;
+    const { bookingId } = await aBooking();
+    const first = await recordMoveAsk(db, { shopId: shop.id, bookingId, note: "August", now: NOW });
+    if (first.status !== "recorded") throw new Error("request not filed");
+    await markInboundAnswered(db, shop.id, first.id, NOW);
+    const later = new Date(NOW.getTime() + 60_000);
+    const renewed = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId,
+      note: "September instead",
+      now: later,
+    });
+    if (renewed.status !== "recorded") throw new Error("renewal not filed");
+    expect(renewed.id).not.toBe(first.id);
+    expect(await markInboundAnswered(db, shop.id, first.id, later, NOW)).toBe(false);
+    expect(await getPendingMoveAsk(db, shop.id, bookingId)).toEqual({
+      note: "September instead",
+      sentAt: later,
+    });
+    expect(await markInboundAnswered(db, shop.id, renewed.id, later, later)).toBe(true);
+    expect(await getPendingMoveAsk(db, shop.id, bookingId)).toBeNull();
+  });
+
+  it.each(["done", "reopen", "sent reply"] as const)(
+    "keeps a renewal at the same instant pending after a stale %s",
+    async (act) => {
+      const { db, shop } = ctx;
+      const { bookingId, personId } = await aBooking();
+      const first = await recordMoveAsk(db, {
+        shopId: shop.id,
+        bookingId,
+        note: "August",
+        now: NOW,
+      });
+      if (first.status !== "recorded") throw new Error("request not filed");
+      await markInboundAnswered(db, shop.id, first.id, NOW);
+      const renewed = await recordMoveAsk(db, {
+        shopId: shop.id,
+        bookingId,
+        note: "September instead",
+        now: NOW,
+      });
+      if (renewed.status !== "recorded") throw new Error("renewal not filed");
+      if (act === "done") {
+        expect(await markInboundAnswered(db, shop.id, first.id, NOW, NOW)).toBe(false);
+      } else if (act === "reopen") {
+        expect(await reopenInboundMessage(db, shop.id, first.id, NOW)).toBe(false);
+      } else {
+        await recordStaffReply(db, {
+          shopId: shop.id,
+          personId,
+          inboundMessageId: first.id,
+          channel: "email",
+          toAddress: "diver@example.com",
+          body: "Answer to August request",
+          locale: "en-US",
+          sentByPersonId: null,
+          delivery: { status: "sent", providerMessageId: "old-move-reply" },
+          sentAt: NOW,
+        });
+      }
+      expect(await getPendingMoveAsk(db, shop.id, bookingId)).toEqual({
+        note: "September instead",
+        sentAt: NOW,
+      });
+      expect(renewed.id).not.toBe(first.id);
+      expect(await getInboundMessage(db, shop.id, first.id)).toMatchObject({
+        body: "August",
+        answeredAt: NOW,
+      });
+      expect(await markInboundAnswered(db, shop.id, renewed.id, NOW, NOW)).toBe(true);
+      expect(await getPendingMoveAsk(db, shop.id, bookingId)).toBeNull();
+    },
+  );
+
+  it("never folds staff-only reply text into the diver's receipt", async () => {
+    const { db, shop } = ctx;
+    const { bookingId, personId } = await aBooking();
+    const asked = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId,
+      note: "August please",
+      now: NOW,
+    });
+    if (asked.status !== "recorded") throw new Error("request not filed");
+    await recordStaffReply(db, {
+      shopId: shop.id,
+      personId,
+      inboundMessageId: asked.id,
+      channel: "email",
+      toAddress: "diver@example.com",
+      body: "Private failed reply about another guest",
+      locale: "en-US",
+      sentByPersonId: null,
+      delivery: { status: "failed", detail: "Provider-private failure" },
+    });
+    expect(await getPendingMoveAsk(db, shop.id, bookingId)).toEqual({
+      note: "August please",
+      sentAt: NOW,
+    });
+    await markInboundAnswered(db, shop.id, asked.id, NOW);
+    expect(await getPendingMoveAsk(db, shop.id, bookingId)).toBeNull();
+    await reopenInboundMessage(db, shop.id, asked.id);
+    expect(await getPendingMoveAsk(db, shop.id, bookingId)).toEqual({
+      note: "August please",
+      sentAt: NOW,
+    });
+  });
+
+  it.each([
+    "cancelled seat",
+    "cancelled departure",
+    "deleted departure",
+    "held identity",
+    "deleted person",
+    "erased person",
+  ] as const)("hides a standing receipt for a %s and refuses a stale submission", async (state) => {
+    const { db, shop } = ctx;
+    const { bookingId, tripId, personId } = await aBooking();
+    const first = await recordMoveAsk(db, {
+      shopId: shop.id,
+      bookingId,
+      note: "Private dates",
+      now: NOW,
+    });
+    expect(first.status).toBe("recorded");
+    if (state === "cancelled seat")
+      await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    if (state === "cancelled departure")
+      await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, tripId));
+    if (state === "deleted departure")
+      await db.update(trips).set({ deletedAt: NOW }).where(eq(trips.id, tripId));
+    if (state === "held identity")
+      await db
+        .update(bookings)
+        .set({ identityUnconfirmedAt: NOW })
+        .where(eq(bookings.id, bookingId));
+    if (state === "deleted person")
+      await db.update(people).set({ deletedAt: NOW }).where(eq(people.id, personId));
+    if (state === "erased person")
+      await db
+        .update(people)
+        .set({ anonymizedAt: NOW, deletedAt: NOW })
+        .where(eq(people.id, personId));
+    expect(await getPendingMoveAsk(db, shop.id, bookingId, tripId)).toBeNull();
+    expect(
+      await recordMoveAsk(db, { shopId: shop.id, bookingId, expectedTripId: tripId, now: NOW }),
+    ).toEqual({ status: "not_found" });
+  });
+
+  it("refuses a form for the departure staff already moved the seat from", async () => {
+    const { db, shop } = ctx;
+    const { bookingId, tripId } = await aBooking();
+    const [other] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, shop.id), ne(trips.id, tripId)))
+      .limit(1);
+    if (!other) throw new Error("expected another trip");
+    await db.update(bookings).set({ tripId: other.id }).where(eq(bookings.id, bookingId));
+    expect(
+      await recordMoveAsk(db, {
+        shopId: shop.id,
+        bookingId,
+        expectedTripId: tripId,
+        note: "About the original date",
+        now: NOW,
+      }),
+    ).toEqual({ status: "not_found" });
+    expect(await hasMoveAsk(db, shop.id, bookingId)).toBe(false);
+  });
 
   it("finds no booking from another shop", async () => {
     const { db } = ctx;

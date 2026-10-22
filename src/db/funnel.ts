@@ -62,6 +62,7 @@ export async function recordSetupRequest(
       phone: input.phone,
       source: input.source,
       locale: input.locale,
+      receiptStatus: input.receiptPending ? "pending" : null,
       createdAt: input.at ?? nowDate(),
     })
     .returning();

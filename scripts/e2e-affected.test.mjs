@@ -328,9 +328,11 @@ describe("what every push runs, and what only its tool's change runs", () => {
 describe("the base a layer is measured from", () => {
   const fake = (answers) => (args) => answers[args.join(" ")] ?? null;
 
-  it("is the nearest claude/* layer HEAD contains, not this branch's own remote", () => {
+  it("uses the explicitly configured layer, not this branch's own remote", () => {
     const git = fake({
       "rev-parse HEAD": "abc",
+      "config --get branch.claude/top.divedayBase": "origin/claude/mid",
+      "rev-parse --verify --quiet origin/claude/mid": "mid",
       "rev-parse --abbrev-ref HEAD": "claude/top",
       "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin":
         "origin/claude/low\norigin/claude/mid\norigin/claude/top",
@@ -454,6 +456,8 @@ describe("cheap diff discovery", () => {
   it("excludes aliases at HEAD and includes provider-neutral contained layers", () => {
     const answers = {
       "rev-parse HEAD": "top",
+      "config --get branch.codex/top.divedayBase": "origin/codex/base",
+      "rev-parse --verify --quiet origin/codex/base": "middle",
       "rev-parse --abbrev-ref HEAD": "codex/top",
       "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin":
         "origin/main\norigin/HEAD\norigin/codex/top\norigin/snapshot\norigin/codex/base\norigin/feature/old",
@@ -482,4 +486,15 @@ it("includes untracked working files and refuses an unreadable diff", () => {
   expect(
     changedDiff({ base: "origin/main", git: (args) => (args[0] === "merge-base" ? "base" : null) }),
   ).toBeNull();
+});
+
+it("selects edited captures in an extracted visual domain", () => {
+  const line = 'await page.goto("/shop/demo/sites");';
+  const captures = selectCaptures({
+    changed: ["e2e/visual-sites.spec.ts"],
+    diff: new Map([["e2e/visual-sites.spec.ts", { added: [line], removed: [] }]]),
+    source: `test("site renders true to the design", async () => {${line}});`,
+    file: "e2e/visual-sites.spec.ts",
+  });
+  expect([...captures.keys()]).toEqual(["site renders true to the design"]);
 });

@@ -103,7 +103,17 @@ test.describe("ask to move", () => {
     await page.getByLabel("Dates that would work (optional)").fill("Any Saturday in August");
     await page.getByRole("button", { name: "Ask to move" }).click();
     await expect(page.getByText(diver("ready.moveAsk.sent"))).toBeVisible();
-    await expect(page.getByText(/You asked .+ to move you/)).toBeVisible();
+    const receipt = page.locator("#move-ask");
+    await expect(
+      receipt.getByText(diver("ready.moveAsk.asked", { shop: "Blue Mantis Divers" })),
+    ).toBeVisible();
+    await expect(receipt.getByText("Any Saturday in August", { exact: true })).toBeVisible();
+    await expect(receipt.getByText(diver("ready.moveAsk.bookingUnchanged"))).toBeVisible();
+    await expect(receipt.locator("time")).toHaveAttribute("datetime", e2eNow().toISOString());
+    const sentAt = await receipt.locator("time").getAttribute("datetime");
+    await page.reload();
+    await expect(receipt.getByText("Any Saturday in August", { exact: true })).toBeVisible();
+    await expect(receipt.locator("time")).toHaveAttribute("datetime", sentAt ?? "");
     await expect(page.getByRole("button", { name: "Ask to move" })).toHaveCount(0);
     // The cancel is still the diver's own, beneath it.
     await expect(page.getByRole("button", { name: "Cancel my seat" })).toBeVisible();
@@ -114,5 +124,14 @@ test.describe("ask to move", () => {
     await expect(ask.getByText(/Asked to move/)).toBeVisible();
     await expect(ask.getByText(new RegExp(`Booked on ${title}`))).toBeVisible();
     await expect(ask.getByText("Any Saturday in August")).toBeVisible();
+    await ask.getByRole("button", { name: "More for the message from Rafa Ortiz" }).click();
+    await page.getByRole("button", { name: "Mark done", exact: true }).click();
+    await ask.getByRole("button", { name: "More for the message from Rafa Ortiz" }).click();
+    await expect(
+      page.getByRole("button", { name: "Move back to waiting", exact: true }),
+    ).toBeVisible();
+    await page.goto(readyUrl);
+    await expect(page.getByRole("button", { name: diver("ready.moveAsk.action") })).toBeVisible();
+    await expect(page.locator("#move-ask time")).toHaveCount(0);
   });
 });

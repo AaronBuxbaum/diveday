@@ -114,19 +114,29 @@ test("an undersized map zoom control still fails target-size", async ({ page }) 
   const zoom = page.locator(".leaflet-control-zoom-in");
   await zoom.evaluate((control) => {
     control.id = "zoom-small-target";
-    Object.assign(control.style, { width: "28px", height: "28px" });
+    Object.assign(control.style, {
+      width: "16px",
+      height: "16px",
+      minWidth: "16px",
+      minHeight: "16px",
+    });
     const neighbor = control.nextElementSibling;
     if (neighbor instanceof HTMLElement) {
       Object.assign(neighbor.style, {
         position: "absolute",
         left: "0",
-        top: "14px",
-        width: "28px",
-        height: "28px",
+        top: "8px",
+        width: "16px",
+        height: "16px",
+        minWidth: "16px",
+        minHeight: "16px",
       });
     }
   });
   await expect(zoom).toBeVisible();
+  const target = await zoom.boundingBox();
+  expect(target?.width).toBe(16);
+  expect(target?.height).toBe(16);
   await expect(expectNoA11yViolations(page)).rejects.toThrow("zoom-small-target");
 });
 

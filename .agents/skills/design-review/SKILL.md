@@ -24,9 +24,7 @@ Each step's commands and reasoning: [procedure.md](procedure.md). Read it before
 1. Read `docs/design/principles.md` (principles and checklist) and `docs/design/pixel-craft.md`.
 2. Read `docs/design/settled-questions.md`; **add to it** whatever this sweep finds looks wrong and
    is right.
-3. Capture every changed route in light: `pnpm e2e:build` once, then
-   `pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*<capture>' --reporter=line`; PNGs land in
-   `e2e/screenshots/`. No capture group: `node scripts/screenshot.mjs <path>`.
+3. Capture each changed state with `node scripts/visual-review.mjs --grep '<test title>' --route '<route template>' --role owner --fixture '<seed>' --state '<changed state>' --expect '<CSS selector proving changed content>'` after `pnpm e2e:build`; `--color` opts in to dark. Inspect its private images and probe report listed in `.agent-out/visual-review/`. A dev `scripts/screenshot.mjs` capture can provide an early look, then add a production state capture.
 4. **Holistic pass** from `docs/design/principles.md`, answered in writing in
    `docs/design/surfaces.md`.
 5. **Pixel pass before reading the source**: `PIXEL_PROBE=1` on the capture,

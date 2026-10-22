@@ -1,11 +1,16 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { acknowledgeCrewAway } from "@/db/crew-away-acknowledgements";
 import { fitAdjustedReturnTeaching } from "@/db/gear";
-import { updateHelpRequestStatus } from "@/db/help-requests";
+import {
+  assignHelpRequestHelper,
+  completeHelpRequest,
+  undoHelpRequestCompletion,
+} from "@/db/help-requests";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
   addCrewRecapPhoto,
@@ -60,21 +65,88 @@ async function shopHome() {
   return { staff, home: shopPath(staff.user.shopSlug) };
 }
 
-/** Move one diver's day-of request through the visible shop hand-off. */
-export async function updateHelpRequestAction(
-  requestId: string,
-  status: "acknowledged" | "handled",
-) {
+export type HelpRequestActionResult =
+  | {
+      ok: true;
+      requestId: string;
+      effect: "assigned" | "completed" | "undone";
+      helperPersonId: string;
+      revision: number;
+    }
+  | { ok: false; requestId: string; reason: "invalid" | "stale" | "helper" | "error" };
+
+/** Save one desk-confirmed handoff, completion, or race-safe undo in place. */
+export async function helpRequestAction(
+  _previous: HelpRequestActionResult | null,
+  formData: FormData,
+): Promise<HelpRequestActionResult> {
   const { staff, home } = await shopHome();
-  if (!uuidParam(requestId) || (status !== "acknowledged" && status !== "handled")) redirect(home);
-  const result = await updateHelpRequestStatus(await getDb(), {
+  const requestId = String(formData.get("requestId") ?? "");
+  const helperPersonId = String(formData.get("helperPersonId") ?? "");
+  const intent = String(formData.get("intent") ?? "");
+  const revisionValue = String(formData.get("expectedRevision") ?? "");
+  const expectedRevision = Number(revisionValue);
+  if (
+    !/^(0|[1-9][0-9]*)$/.test(revisionValue) ||
+    !Number.isSafeInteger(expectedRevision) ||
+    expectedRevision > 2_147_483_647 ||
+    !uuidParam(requestId) ||
+    !uuidParam(helperPersonId) ||
+    !["assign", "complete", "undo"].includes(intent)
+  ) {
+    return { ok: false, requestId, reason: "invalid" };
+  }
+  const expectedStatusValue = String(formData.get("expectedStatus"));
+  const expectedStatus =
+    expectedStatusValue === "acknowledged"
+      ? "acknowledged"
+      : expectedStatusValue === "requested"
+        ? "requested"
+        : null;
+  if (intent === "assign" && !expectedStatus) {
+    return { ok: false, requestId, reason: "invalid" };
+  }
+  const db = await getDb();
+  const input = {
     shopId: staff.user.shopId,
     requestId,
-    status,
     actorPersonId: staff.user.personId,
-  });
-  if (!result.ok) redirect(home);
-  revalidateAndRedirect(home, home);
+    expectedHelperPersonId: helperPersonId,
+    expectedRevision,
+  };
+  const result =
+    intent === "assign"
+      ? await assignHelpRequestHelper(db, {
+          shopId: staff.user.shopId,
+          requestId,
+          helperPersonId,
+          actorPersonId: staff.user.personId,
+          expectedStatus: expectedStatus ?? "requested",
+          expectedRevision,
+        })
+      : intent === "complete"
+        ? await completeHelpRequest(db, input)
+        : await undoHelpRequestCompletion(db, input);
+  if (!result.ok) {
+    return {
+      ok: false,
+      requestId,
+      reason:
+        result.reason === "invalid_helper"
+          ? "helper"
+          : result.reason === "invalid_transition"
+            ? "stale"
+            : "error",
+    };
+  }
+  revalidatePath(home);
+  return {
+    ok: true,
+    requestId,
+    effect: intent === "assign" ? "assigned" : intent === "complete" ? "completed" : "undone",
+    helperPersonId: result.request.helperPersonId ?? helperPersonId,
+    revision: result.request.revision,
+  };
 }
 
 /**

@@ -64,11 +64,7 @@ export function DiveSiteImportPanel({ t, notice }: { t: StaffTranslator; notice?
         <p className="text-sm text-muted">{t("diveSites.import.description")}</p>
         <p className="mt-3 text-sm text-muted">{t("diveSites.import.help")}</p>
         <p className="mt-3 text-sm text-muted">{t("diveSites.import.notRestored")}</p>
-        <form
-          action={restoreDiveSitesAction}
-          encType="multipart/form-data"
-          className="mt-5 flex flex-wrap items-end gap-3"
-        >
+        <form action={restoreDiveSitesAction} className="mt-5 flex flex-wrap items-end gap-3">
           {/* The picker the other tabs use: a secondary `md` button in the
               shop's language, the height of the submit beside it. A bare file
               input in a text-box outline read "Choose File No file chosen" as

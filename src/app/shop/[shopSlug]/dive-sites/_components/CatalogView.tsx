@@ -4,7 +4,6 @@ import type { MapPin } from "@/components/map/SiteMap";
 import { shopMapAnchor } from "@/components/map/shop-map-anchor";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
@@ -49,6 +48,10 @@ export async function CatalogView({
 }) {
   const back = shopPath(shopSlug, "dive-sites");
   const catalogHref = `${back}?view=catalog`;
+  const catalogPageHref =
+    page && Number.parseInt(page, 10) > 1
+      ? `${catalogHref}&page=${Number.parseInt(page, 10)}`
+      : catalogHref;
   const locationIsProvided = !!(shop.addressStreet && shop.addressLocality);
 
   if (!locationIsProvided) {
@@ -87,7 +90,7 @@ export async function CatalogView({
     return (
       <TemplatePreview
         template={preview}
-        backHref={catalogHref}
+        backHref={catalogPageHref}
         importAction={importDiveSiteTemplateAction}
         t={t}
         diverT={diverT}
@@ -105,7 +108,6 @@ export async function CatalogView({
     name: site.name,
     latitude: site.latitude,
     longitude: site.longitude,
-    subtitle: site.locationName,
     details: [
       staffDiveSiteDepthText(t, site, shop.depthUnit),
       diveSiteDifficultyLabel(
@@ -114,7 +116,7 @@ export async function CatalogView({
       ),
     ].filter((detail): detail is string => Boolean(detail)),
     description: site.description,
-    href: `${catalogHref}&template=${encodeURIComponent(site.slug)}`,
+    href: `${catalogPageHref}&template=${encodeURIComponent(site.slug)}`,
     hrefLabel: t("diveSites.map.openSite"),
     tone: "primary",
   }));
@@ -131,6 +133,7 @@ export async function CatalogView({
         />
       </div>
       <CatalogMapLayout
+        viewportStorageKey={`${shop.id}:catalog`}
         shopAnchor={shopAnchor}
         pins={catalogPins}
         clusterLabel={t("diveSites.map.clusterLabel")}
@@ -140,21 +143,10 @@ export async function CatalogView({
             <LedgerRow
               key={template.id}
               id={`template-row-${template.id}`}
-              href={`${catalogHref}&template=${encodeURIComponent(template.slug)}`}
+              href={`${catalogPageHref}&template=${encodeURIComponent(template.slug)}`}
               linkLabel={version.briefing.name}
               stacked
               pad="lg"
-              trailing={
-                <form action={importDiveSiteTemplateAction}>
-                  <input type="hidden" name="templateId" value={template.id} />
-                  <SubmitButton
-                    pendingLabel={t("diveSites.catalog.importing")}
-                    className={buttonClass({ variant: "secondary", size: "sm" })}
-                  >
-                    {t("diveSites.catalog.importToLibrary")}
-                  </SubmitButton>
-                </form>
-              }
             >
               <div className="min-w-0">
                 <p className="font-medium">{version.briefing.name}</p>

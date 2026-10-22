@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { BookActivity } from "./BookActivity";
 import { DiverHeader } from "./DiverHeader";
-import type { DiverProfile, Shop } from "./shared";
+import type { DiverProfile, Shop, UpcomingTrip } from "./shared";
 
 vi.mock("../details-actions", () => ({ savePersonAction: vi.fn() }));
 vi.mock("@/app/actions/seat-diver", () => ({ seatExistingDiverAction: vi.fn() }));
@@ -112,7 +112,14 @@ describe("DiverHeader actions", () => {
         shop={{ timezone: "America/New_York" } as Shop}
         locale="en-US"
         t={t}
-        upcoming={[]}
+        upcoming={[
+          {
+            id: "trip-1",
+            title: "Reef departure",
+            startsAt: new Date("2031-01-01T15:00:00Z"),
+            course: null,
+          } as UpcomingTrip,
+        ]}
         shopSlug="blue-mantis"
         personId="person-1"
       />,

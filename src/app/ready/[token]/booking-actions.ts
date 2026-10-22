@@ -6,6 +6,7 @@ import { addPartySeat, selfCancelBooking } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { recordMoveAsk } from "@/db/inbound-messages";
+import { isLockWaitRefusal } from "@/db/lock-bounds";
 import { alertStaffToMoveAsk } from "@/db/move-ask-alerts";
 import { startPartySeatCheckout } from "@/db/party-seat-checkout";
 import {
@@ -76,7 +77,7 @@ export async function payFromReady(token: string) {
  * and only a row this tap filed says "Sent": an ask that already stood is
  * shown as the page's own asked line, never reported as news.
  */
-const moveAskForm = z.object({ note: formValue() });
+const moveAskForm = z.object({ note: formValue(), tripId: single(z.uuid()) });
 
 export async function askToMoveAction(token: string, formData: FormData) {
   const ip = await clientIp();
@@ -89,14 +90,22 @@ export async function askToMoveAction(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   refuseWhileHeld(token, ctx.data);
-  if (ctx.data.moveAsk === "asked") redirect(`${base(token)}#move-ask`);
+  if (ctx.data.moveAsk && ctx.data.moveAsk !== "open") redirect(`${base(token)}#move-ask`);
   if (ctx.data.moveAsk !== "open") redirect(`${base(token)}?error=move-ask`);
-  const { note } = readForm(moveAskForm, formData);
+  const parsed = parseForm(moveAskForm, formData);
+  if (!parsed.ok || parsed.data.tripId !== ctx.data.trip.id) {
+    redirect(`${base(token)}?error=move-ask`);
+  }
+  const { note } = parsed.data;
   const outcome = await recordMoveAsk(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
+    expectedTripId: ctx.data.trip.id,
     note: typeof note === "string" ? note : null,
     now: nowDate(),
+  }).catch((error: unknown) => {
+    if (isLockWaitRefusal(error)) return { status: "not_found" as const };
+    throw error;
   });
   if (outcome.status === "not_found") redirect(`${base(token)}?error=move-ask`);
   if (outcome.status === "already") revalidateAndRedirect(base(token), `${base(token)}#move-ask`);

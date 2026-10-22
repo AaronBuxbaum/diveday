@@ -39,11 +39,11 @@ export const THREAD_STATUS_TEST_ID = "thread-status";
  * **The page's one status statement.** What is next, then how far along, and
  * nothing else on the page may say either.
  *
- * **The next step leads, as a sentence** (UX review 2026-10-10, item 9). The
+ * **The next step leads, as a heading** (UX review 2026-10-10, item 9). The
  * count used to lead as a large figure, so a diver who had just paid opened
  * the thread on a big "0" beside "of 4 done · Next: Sign": the first number
  * after paying read as a failing grade, and the one thing they could do was the
- * smallest text in the row. Now "Next: sign your waiver."
+ * smallest text in the row. Now "Next: sign your waiver"
  * is the line they read, and "0 of 4 done" is the quiet line under it. There
  * is still no bar: the steps are all finishable, and a bar would only re-draw
  * what the small line already says.
@@ -53,7 +53,7 @@ export function ThreadStatus({
   progress,
   settled = false,
 }: {
-  /** "Next: sign your waiver.", the nothing-on-your-side line, or the all-set words. */
+  /** "Next: sign your waiver", the nothing-on-your-side line, or the all-set words. */
   lead: string;
   /**
    * "0 of 4 done", one phrase so a screen reader hears the figure and its

@@ -3,7 +3,13 @@
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mapTileLayer } from "@/lib/carto";
-import { clusterMapPoints, mapTargetIsVisible, separateShopAnchor } from "./map-clustering";
+import {
+  clusterMapPoints,
+  type MapTargetRectangle,
+  mapTargetIsVisible,
+  separateShopAnchor,
+} from "./map-clustering";
+import { readMapViewport, writeMapViewport } from "./map-viewport-storage";
 
 export type MapPin = {
   id: string;
@@ -34,6 +40,7 @@ export type SiteMapProps = {
   className?: string;
   shopLabel?: string;
   clusterLabel: string;
+  viewportStorageKey?: string;
 };
 
 type FittedOverview = {
@@ -56,12 +63,20 @@ export default function SiteMap({
   className = "h-full w-full",
   shopLabel = "Dive shop",
   clusterLabel,
+  viewportStorageKey,
 }: SiteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
   const markersRef = useRef<Map<string, LeafletMarker>>(new Map());
   const lastFitRef = useRef<FittedOverview | null>(null);
+  const restoredViewRef = useRef(false);
+  const [activePinId, setActivePinId] = useState(selectedPinId ?? null);
+  const activePinIdRef = useRef(selectedPinId ?? null);
+  useEffect(() => {
+    activePinIdRef.current = selectedPinId ?? null;
+    setActivePinId(selectedPinId ?? null);
+  }, [selectedPinId]);
   const allCoordinates = useMemo(() => {
     const coordinates: [number, number][] = [];
     if (shopAnchor) coordinates.push([shopAnchor.latitude, shopAnchor.longitude]);
@@ -78,13 +93,18 @@ export default function SiteMap({
       if (isCancelled || !containerRef.current) return;
       if (mapRef.current) return;
 
+      const savedView = viewportStorageKey ? readMapViewport(viewportStorageKey) : null;
+      restoredViewRef.current = savedView !== null;
       const map = L.map(containerRef.current, {
-        center: [center.latitude, center.longitude],
-        zoom,
+        center: savedView
+          ? [savedView.latitude, savedView.longitude]
+          : [center.latitude, center.longitude],
+        zoom: savedView?.zoom ?? zoom,
         zoomControl: true,
         attributionControl: false,
       });
 
+      map.createPane("shopAnchor").style.zIndex = "750";
       L.control.attribution({ prefix: false }).addTo(map);
 
       const tileLayer = mapTileLayer("light_all");
@@ -103,19 +123,34 @@ export default function SiteMap({
     return () => {
       isCancelled = true;
       if (mapRef.current) {
+        if (viewportStorageKey) persistMapView(mapRef.current, viewportStorageKey);
         mapRef.current.remove();
+        markersRef.current.clear();
         mapRef.current = null;
         lastFitRef.current = null;
         setMapInstance(null);
       }
     };
-  }, [center.latitude, center.longitude, zoom]);
+  }, [center.latitude, center.longitude, viewportStorageKey, zoom]);
 
   // Keep the untouched overview fitted as its container changes size.
   useEffect(() => {
-    if (!mapInstance || allCoordinates.length === 0) return;
+    if (!mapInstance || allCoordinates.length === 0 || restoredViewRef.current) return;
     return keepOverviewFitted(mapInstance, allCoordinates, zoom, lastFitRef, markersRef.current);
   }, [allCoordinates, mapInstance, zoom]);
+
+  useEffect(() => {
+    if (!mapInstance || !viewportStorageKey) return;
+    const saveView = () => {
+      if (mapRef.current === mapInstance) persistMapView(mapInstance, viewportStorageKey);
+    };
+    saveView();
+    mapInstance.on("moveend", saveView);
+    return () => {
+      saveView();
+      mapInstance.off("moveend", saveView);
+    };
+  }, [mapInstance, viewportStorageKey]);
 
   // Render only pins near the viewport and cluster close points to keep marker
   // work proportional to the visible map while retaining every site in bounds.
@@ -163,8 +198,8 @@ export default function SiteMap({
         shopAnchor && inViewport
           ? mapInstance.project([shopAnchor.latitude, shopAnchor.longitude], mapInstance.getZoom())
           : null;
-      const { groups, showShopAnchor } = separateShopAnchor(
-        clusterMapPoints(visiblePoints, selectedPinId),
+      const { groups } = separateShopAnchor(
+        clusterMapPoints(visiblePoints, activePinIdRef.current),
         visiblePoints,
         shopPoint,
         (pin) =>
@@ -177,23 +212,13 @@ export default function SiteMap({
       );
       // Geographic shop/site/cluster positions and their distinct roles do
       // not form a uniform control row. Size, focus and overlap rules still apply.
-      if (
-        shopAnchor &&
-        showShopAnchor &&
-        (!inViewport ||
-          mapTargetIsVisible(
-            mapInstance.latLngToContainerPoint([shopAnchor.latitude, shopAnchor.longitude]),
-            32,
-            mapSize,
-            controlRectangles,
-          ))
-      ) {
+      if (shopAnchor) {
         markersRef.current.set("shop-anchor", addShopMarker(L, mapInstance, shopAnchor, shopLabel));
       }
       groups.forEach((group, groupIndex) => {
         const pin = group[0];
         if (!pin) return;
-        const isSelected = pin.id === selectedPinId;
+        const isSelected = pin.id === activePinIdRef.current;
         const position: [number, number] = [pin.latitude, pin.longitude];
         if (
           inViewport &&
@@ -222,6 +247,7 @@ export default function SiteMap({
           const marker = L.marker(position, {
             icon,
             keyboard: false,
+            autoPanOnFocus: false,
             zIndexOffset: 600,
           }).addTo(mapInstance);
           const tooltip = document.createElement("span");
@@ -232,25 +258,8 @@ export default function SiteMap({
             opacity: 1,
             className: "leaflet-site-tooltip",
           });
-          marker.on("click", () => {
-            const currentZoom = mapInstance.getZoom();
-            const maximumZoom = mapInstance.getMaxZoom();
-            const targetZoom = Math.min(maximumZoom < 0 ? 19 : maximumZoom, currentZoom + 3);
-            if (targetZoom > currentZoom) {
-              mapInstance.fitBounds(
-                group.map((pin) => [pin.latitude, pin.longitude] as [number, number]),
-                { padding: [36, 36], maxZoom: targetZoom },
-              );
-              return;
-            }
-
-            marker
-              .bindPopup(createClusterPopup(group, clusterLabel), {
-                className: "leaflet-site-cluster-popup",
-                maxWidth: 360,
-              })
-              .openPopup();
-          });
+          bindTooltipFocus(marker, "button");
+          marker.on("click", () => openMapCluster(L, mapInstance, marker, group, clusterLabel));
           markersRef.current.set(`cluster:${groupIndex}`, marker);
           return;
         }
@@ -274,12 +283,15 @@ export default function SiteMap({
         const marker = L.marker([pin.latitude, pin.longitude], {
           icon,
           keyboard: false,
+          autoPanOnFocus: false,
           zIndexOffset: isSelected ? 1000 : 100,
         }).addTo(mapInstance);
 
         marker.bindPopup(createSitePopup(pin), {
           className: "leaflet-site-popup",
           maxWidth: 320,
+          autoPanPaddingTopLeft: [12, 110],
+          autoPanPaddingBottomRight: [12, 12],
         });
         marker.bindTooltip(createSiteTooltip(pin), {
           direction: "top",
@@ -287,7 +299,12 @@ export default function SiteMap({
           opacity: 1,
           className: "leaflet-site-tooltip",
         });
-        marker.on("click", () => onSelectPin?.(pin.id));
+        bindTooltipFocus(marker, "button");
+        marker.on("click", () => {
+          activePinIdRef.current = pin.id;
+          setActivePinId(pin.id);
+          onSelectPin?.(pin.id);
+        });
         markersRef.current.set(`site:${pin.id}`, marker);
         if (isSelected && openSelectedPopup) marker.openPopup();
       });
@@ -305,9 +322,14 @@ export default function SiteMap({
     };
 
     const handleViewEnd = () => {
+      updateShopMarkerPosition(mapInstance, markersRef.current.get("shop-anchor"));
       if (!popupOpen) scheduleRender();
     };
+    const handleSelect = () => {
+      if (leaflet) renderMarkers(leaflet, true);
+    };
     const handleResize = () => {
+      updateShopMarkerPosition(mapInstance, markersRef.current.get("shop-anchor"));
       markersRef.current.forEach(updateOpenPopup);
     };
     const handlePopupOpen = () => {
@@ -315,7 +337,12 @@ export default function SiteMap({
     };
     const handlePopupClose = () => {
       popupOpen = false;
-      if (!isClearingMarkers) scheduleRender();
+      if (!isClearingMarkers) {
+        activePinIdRef.current = null;
+        setActivePinId(null);
+        onSelectPin?.(null);
+        scheduleRender();
+      }
     };
 
     import("leaflet").then((L) => {
@@ -323,6 +350,7 @@ export default function SiteMap({
       leaflet = L;
       mapInstance.on("zoomend moveend", handleViewEnd);
       mapInstance.on("resize", handleResize);
+      mapInstance.on("siteselect", handleSelect);
       mapInstance.on("popupopen", handlePopupOpen);
       mapInstance.on("popupclose", handlePopupClose);
       renderMarkers(L, true);
@@ -332,26 +360,97 @@ export default function SiteMap({
       isCancelled = true;
       mapInstance.off("zoomend moveend", handleViewEnd);
       mapInstance.off("resize", handleResize);
+      mapInstance.off("siteselect", handleSelect);
       mapInstance.off("popupopen", handlePopupOpen);
       mapInstance.off("popupclose", handlePopupClose);
     };
-  }, [clusterLabel, mapInstance, onSelectPin, pins, selectedPinId, shopAnchor, shopLabel]);
+  }, [clusterLabel, mapInstance, onSelectPin, pins, shopAnchor, shopLabel]);
 
   // Selecting a site moves only the map. It never scrolls the page to the list.
   useEffect(() => {
-    if (!selectedPinId || !mapInstance) return;
-    const pin = pins.find((candidate) => candidate.id === selectedPinId);
-    if (!pin) return;
-
-    const position: [number, number] = [pin.latitude, pin.longitude];
-    if (!mapInstance.getBounds().contains(position)) {
-      mapInstance.panTo(position, { animate: true });
-    }
-    const marker = markersRef.current.get(`site:${selectedPinId}`);
-    if (marker && !marker.isPopupOpen()) marker.openPopup();
-  }, [mapInstance, pins, selectedPinId]);
+    if (!mapInstance) return;
+    activePinIdRef.current = activePinId;
+    selectMapPin(mapInstance, pins, activePinId, markersRef.current);
+  }, [activePinId, mapInstance, pins]);
 
   return <div ref={containerRef} className={className} />;
+}
+
+function openMapCluster(
+  L: typeof import("leaflet"),
+  map: LeafletMap,
+  marker: LeafletMarker,
+  group: MapPin[],
+  clusterLabel: string,
+) {
+  const currentZoom = map.getZoom();
+  const maximumZoom = map.getMaxZoom();
+  const targetZoom = Number.isFinite(maximumZoom) && maximumZoom >= 0 ? maximumZoom : 19;
+  if (currentZoom < targetZoom) {
+    const bounds = L.latLngBounds(group.map((pin) => [pin.latitude, pin.longitude]));
+    const fittedZoom = map.getBoundsZoom(bounds, false, L.point(96, 96));
+    if (fittedZoom <= currentZoom) {
+      map.setView(bounds.getCenter(), Math.min(targetZoom, currentZoom + 1));
+    } else {
+      map.fitBounds(bounds, { padding: [48, 48], maxZoom: targetZoom });
+    }
+    return;
+  }
+
+  marker
+    .bindPopup(createClusterPopup(group, clusterLabel), {
+      className: "leaflet-site-cluster-popup",
+      maxWidth: 360,
+      autoPanPaddingTopLeft: [12, 110],
+      autoPanPaddingBottomRight: [12, 12],
+    })
+    .openPopup();
+}
+
+function selectMapPin(
+  map: LeafletMap,
+  pins: MapPin[],
+  activePinId: string | null,
+  markers: ReadonlyMap<string, LeafletMarker>,
+) {
+  // Preserve the marker and its open card when only selection changes. Closing
+  // and recreating it would leave Leaflet's fading old popup beside the new one.
+  markers.forEach((marker, key) => {
+    if (!key.startsWith("site:")) return;
+    const selected = key === `site:${activePinId}`;
+    marker.setZIndexOffset(selected ? 1000 : 100);
+    const button = marker.getElement()?.querySelector("button");
+    for (const className of ["ring-4", "ring-primary", "scale-110", "z-50"]) {
+      button?.classList.toggle(className, selected);
+    }
+    for (const className of ["ring-2", "ring-surface", "hover:scale-105"]) {
+      button?.classList.toggle(className, !selected);
+    }
+  });
+  if (!activePinId) return;
+  const pin = pins.find((candidate) => candidate.id === activePinId);
+  if (!pin) return;
+
+  const position: [number, number] = [pin.latitude, pin.longitude];
+  if (!map.getBounds().contains(position)) {
+    map.panTo(position, { animate: true });
+  }
+  const marker = markers.get(`site:${activePinId}`);
+  if (marker) {
+    if (!marker.isPopupOpen()) marker.openPopup();
+  } else {
+    // A list can select a site that currently belongs to a cluster.
+    map.fire("siteselect");
+  }
+}
+
+function persistMapView(map: LeafletMap, key: string) {
+  const position = map.getCenter();
+  writeMapViewport(key, {
+    latitude: position.lat,
+    longitude: position.lng,
+    zoom: map.getZoom(),
+  });
 }
 
 function updateOpenPopup(marker: LeafletMarker) {
@@ -428,27 +527,120 @@ function addShopMarker(
   label: string,
 ): LeafletMarker {
   const icon = L.divIcon({
-    html: createShopButton(anchor.name || label),
+    html: createShopLandmark(anchor.name || label),
     className: "leaflet-shop-marker",
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -18],
+    iconSize: [44, 44],
+    iconAnchor: [22, 70],
   });
   const marker = L.marker([anchor.latitude, anchor.longitude], {
     icon,
     keyboard: false,
-    zIndexOffset: 500,
+    pane: "shopAnchor",
+    autoPanOnFocus: false,
+    zIndexOffset: 2000,
   }).addTo(map);
-  const popup = document.createElement("strong");
-  popup.textContent = anchor.name || label;
-  return marker.bindPopup(popup);
+  const tooltip = document.createElement("span");
+  tooltip.textContent = anchor.name || label;
+  marker.bindTooltip(tooltip, {
+    pane: "shopAnchor",
+    direction: "top",
+    offset: [0, -68],
+    opacity: 1,
+    className: "leaflet-site-tooltip leaflet-shop-tooltip",
+  });
+  marker.on("tooltipopen", () => updateShopMarkerPosition(map, marker));
+  bindTooltipFocus(marker, "[role=img]");
+  updateShopMarkerPosition(map, marker);
+  return marker;
 }
 
-function createShopButton(label: string): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.type = "button";
+function updateShopMarkerPosition(map: LeafletMap, marker?: LeafletMarker) {
+  const element = marker?.getElement();
+  if (!marker || !element) return;
+  const point = map.latLngToContainerPoint(marker.getLatLng());
+  const size = map.getSize();
+  const controls = mapControlRectangles(map.getContainer());
+  const badge = placeMapLabel({ x: point.x, y: point.y - 48 }, { x: 44, y: 44 }, size, controls);
+  const dx = badge.x - point.x;
+  const dy = badge.y - point.y;
+  element.style.marginLeft = `${dx - 22}px`;
+  element.style.marginTop = `${dy - 22}px`;
+  element.style.setProperty("--shop-stem-length", `${Math.hypot(dx, dy)}px`);
+  element.style.setProperty("--shop-stem-angle", `${Math.atan2(dx, -dy)}rad`);
+  const tooltip = marker.getTooltip();
+  if (tooltip) {
+    const content = tooltip.getElement();
+    const tooltipSize = { x: content?.offsetWidth ?? 0, y: content?.offsetHeight ?? 0 };
+    const above = placeMapLabel(
+      { x: badge.x, y: badge.y - 26 - tooltipSize.y / 2 },
+      tooltipSize,
+      size,
+      [],
+    );
+    const aboveRectangle = labelRectangle(above, tooltipSize);
+    const fitsAbove =
+      aboveRectangle.bottom <= badge.y - 22 &&
+      !controls.some((control) => rectanglesOverlap(aboveRectangle, control));
+    const position = placeMapLabel(
+      fitsAbove ? above : { x: badge.x, y: badge.y + 26 + tooltipSize.y / 2 },
+      tooltipSize,
+      size,
+      controls,
+    );
+    tooltip.options.direction = "center";
+    tooltip.options.offset = [position.x - point.x, position.y - point.y];
+    if (marker.isTooltipOpen()) tooltip.update();
+  }
+}
+
+function placeMapLabel(
+  preferred: { x: number; y: number },
+  size: { x: number; y: number },
+  viewport: { x: number; y: number },
+  controls: MapTargetRectangle[],
+) {
+  const halfWidth = size.x / 2;
+  const halfHeight = size.y / 2;
+  const position = {
+    x: Math.max(halfWidth + 4, Math.min(viewport.x - halfWidth - 4, preferred.x)),
+    y: Math.max(halfHeight + 4, Math.min(viewport.y - halfHeight - 4, preferred.y)),
+  };
+  for (const control of controls) {
+    if (!rectanglesOverlap(labelRectangle(position, size), control)) continue;
+    const below = control.bottom + 4 + halfHeight;
+    position.y = below + halfHeight <= viewport.y - 4 ? below : control.top - 4 - halfHeight;
+  }
+  return position;
+}
+
+function labelRectangle(
+  center: { x: number; y: number },
+  size: { x: number; y: number },
+): MapTargetRectangle {
+  return {
+    left: center.x - size.x / 2,
+    right: center.x + size.x / 2,
+    top: center.y - size.y / 2,
+    bottom: center.y + size.y / 2,
+  };
+}
+
+function rectanglesOverlap(a: MapTargetRectangle, b: MapTargetRectangle) {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+function bindTooltipFocus(marker: LeafletMarker, selector: string) {
+  const target = marker.getElement()?.querySelector<HTMLElement>(selector);
+  target?.addEventListener("focus", () => marker.openTooltip());
+  target?.addEventListener("blur", () => marker.closeTooltip());
+}
+
+function createShopLandmark(label: string): HTMLSpanElement {
+  const button = document.createElement("span");
+  button.setAttribute("role", "img");
+  button.tabIndex = 0;
   button.className =
-    "flex items-center justify-center size-8 rounded-full bg-foreground text-surface shadow-md ring-2 ring-surface border border-border";
+    "leaflet-shop-landmark flex items-center justify-center size-11 rounded-full bg-foreground text-surface shadow-md ring-2 ring-surface border border-border";
   button.setAttribute("aria-label", label);
   button.addEventListener("mousedown", (event) => event.stopPropagation());
   button.addEventListener("keypress", (event) => event.stopPropagation());
@@ -517,10 +709,10 @@ function createSiteTooltip(pin: MapPin): HTMLDivElement {
   name.textContent = pin.name;
   tooltip.append(name);
 
-  if (pin.subtitle) {
+  if (pin.details?.length) {
     const subtitle = document.createElement("span");
     subtitle.className = "leaflet-site-tooltip__location";
-    subtitle.textContent = pin.subtitle;
+    subtitle.textContent = pin.details.join(" · ");
     tooltip.append(subtitle);
   }
 

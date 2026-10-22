@@ -3,6 +3,7 @@ import { and, eq, getTableName, isNull } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { notificationProcessorColumns } from "@/test/notification-processor-coverage";
 import { schemaTableNameOf } from "@/test/schema-tables";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
@@ -277,7 +278,7 @@ const ERASURE_KEEPS: Record<string, string> = {
   trip_desk_events:
     "`subject_person_id` is a pointer by design and the name is joined at read, which resolves to the anonymized one after this runs",
   trip_help_requests:
-    "that someone at a seat asked for help and when it was handled; a kind and a status, no words",
+    "that someone at a seat asked for help and when it was handled; a kind and a status, no words. The helper and recorder are staff pointers joined at read, so an erased person resolves to the anonymized name",
   work_order_items:
     "which of a diver's pieces one service ticket covered — two ids. Both ends are erased where they are stored: the piece's note and serial clear, the ticket's words are redacted",
   work_order_care:
@@ -677,15 +678,7 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
   "orders.invoice_pdf_url": { held: "copy", why: "the same invoice, as a PDF" },
 
   // --- at a system the obligation ledger deliberately does not reach -------
-  "notification_deliveries.provider_message_id": {
-    held: "elsewhere",
-    why: "SES's, SNS's or Meta's handle on a message that carried this diver's name. The erasure clears the prose beside it (`provider_detail`, `send_error`) and keeps the handle as the shop's evidence that a message went. A `wamid.` embeds the recipient's number, so it is rewritten to `wamid.` plus its SHA-256. Nothing is owed against the provider's copy: Meta keeps a Cloud API message at most 30 days, and SES and SNS keep no copy a shop can reach (ADR)",
-  },
-  "notification_delivery_attempts.provider_message_id": { held: "elsewhere", why: "as above" },
-  "notification_send_queue.provider_message_id": {
-    held: "elsewhere",
-    why: "the same handle on a send that was still queued. The row itself is deleted by the address and number sweeps, so this one usually goes with it",
-  },
+  ...notificationProcessorColumns,
   "inbound_messages.provider_message_id": {
     held: "elsewhere",
     why: "the provider's handle on a message the *diver* sent in. `body`, `subject` and `from_address` are redacted here; the provider's copy is not reached. `notNull`, so a `wamid.` is rewritten as on notification_deliveries rather than cleared",

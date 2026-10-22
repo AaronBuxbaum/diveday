@@ -1,10 +1,10 @@
 import { and, eq, gt, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
-import { getHelpRequestForBooking, updateHelpRequestStatus } from "@/db/help-requests";
+import { assignHelpRequestHelper, getHelpRequestForBooking } from "@/db/help-requests";
 import { getReadyPageData } from "@/db/ready";
 import { bookings, shops, trips } from "@/db/schema";
-import { listStaff } from "@/db/trips";
+import { getTripCrewAssignments, listStaff } from "@/db/trips";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { DIETARY_NOTE_MAX } from "@/lib/lunch-aboard";
 import { fileScopedShopContext } from "@/test/db";
@@ -236,11 +236,15 @@ describe("saveDayOfDetailsFromReady", () => {
     const request = await getHelpRequestForBooking(db, shop.id, bookingId);
     const [staff] = await listStaff(db, shop.id);
     if (!request || !staff) throw new Error("setup missing");
-    await updateHelpRequestStatus(db, {
+    const [assignment] = await getTripCrewAssignments(db, shop.id, request.tripId);
+    if (!assignment) throw new Error("departure crew missing");
+    await assignHelpRequestHelper(db, {
       shopId: shop.id,
       requestId: request.id,
-      status: "acknowledged",
+      expectedRevision: request.revision,
+      helperPersonId: assignment.personId,
       actorPersonId: staff.person.id,
+      expectedStatus: "requested",
     });
     // The whole form posts again, the help radio unchanged, to save a note.
     await save(token, { kind: "first_timer", note: "Bringing my own computer." });

@@ -119,9 +119,9 @@ runs. Pass args directly. The shell guard refuses the bare form.
   change gets a plan first. A cross-area change gets at most three parallel subagents, each given
   an objective, an output format and a boundary (the paths it may read or change). One turn here
   once spawned nine; most coding work has fewer independent parts than that.
-- **Route cheap work to a cheap model.** Scouting, search, triage, labelling, screenshot capture
-  and test runs go to a subagent on sonnet at low effort; the project's `Explore` agent
-  (`.claude/agents/Explore.md`) is that scout, read-only and without `AGENTS.md`. Design,
+- **Route cheap work to a cheap model.** Scouting and search go to the read-only `Explore` agent
+  (`.claude/agents/Explore.md`). Screenshot capture and test execution need an execution-capable
+  worker; never assign shell commands or file output to a read-only scout. Design,
   judging and safety-critical code stay on the main model.
 - **A worker hands back a path.** A subagent or worker writes its full result to a file (the
   scratchpad, or `docs/` when the result is the deliverable) and hands back the path plus at most

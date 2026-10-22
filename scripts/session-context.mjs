@@ -70,7 +70,7 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 /**
  * The one fetch a session makes on its own, at startup and resume: `main`, which
  * `verify:push`, `check:closing-keywords` and the migration guard all measure from, and the
- * `claude/*` thread branches `stack-map.mjs` derives the stack from. A container's refs are
+ * all provider thread branches `stack-map.mjs` derives the stack from. A container's refs are
  * whatever its clone saw, and on 2026-10-10 that was an `origin/main` five days and 650 commits
  * old. `--prune` drops refs of merged-and-deleted branches, so a merged layer leaves the stack.
  */
@@ -80,8 +80,7 @@ export const SESSION_FETCH_ARGS = [
   "--prune",
   "--no-tags",
   "origin",
-  "+refs/heads/main:refs/remotes/origin/main",
-  "+refs/heads/claude/*:refs/remotes/origin/claude/*",
+  "+refs/heads/*:refs/remotes/origin/*",
 ];
 const SESSION_FETCH_TIMEOUT_MS = 20_000;
 /** A fetch younger than this (by `FETCH_HEAD`'s mtime) is this session's; skip it. */
@@ -540,7 +539,7 @@ export function sessionBlock(
   }
   lines.push(...doctor);
   lines.push(
-    "Path-scoped rules in .claude/rules/ load as you read matching files; the hooks in .claude/settings.json are described in docs/agents/session-hooks.md.",
+    "Path-scoped rules in .claude/rules/ load automatically only in supported hosts; otherwise read matching rules explicitly; the hooks in .claude/settings.json are described in docs/agents/session-hooks.md.",
     // The papercuts log had one entry for a month of visible friction: nothing asked for them.
     "If a guard or hook fights you this session, add a papercut: one file in docs/agents/papercuts/ (docs/agents/papercuts.md).",
   );

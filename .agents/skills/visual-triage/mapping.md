@@ -4,7 +4,7 @@ Part of the **visual-triage** skill ([SKILL.md](SKILL.md)). Read it when a diff 
 
 ## Mapping and stability
 
-Visual specs are organized in `e2e/visual.spec.ts`. If a diff appears without a relevant code change, check `DIVEDAY_CLOCK`, browser version, fonts, and the deterministic PGlite reset. Do not mask a moving element to make the diff disappear.
+Visual specs are discovered from `e2e/visual*.spec.ts`; shared capture mechanics live in `e2e/visual-harness.ts`. First check the scoped manifest's build fingerprint, route/state assertion, browser and viewport. A stale or unasserted capture is missing evidence. If a diff appears without a relevant code change, check `DIVEDAY_CLOCK`, browser version, fonts, and the deterministic PGlite reset. Do not mask a moving element to make the diff disappear.
 
 Read the *shape* of a no-code-change diff before assuming a baseline moved:
 

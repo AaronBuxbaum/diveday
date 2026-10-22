@@ -2250,7 +2250,6 @@ details[open]::details-content {
 .leaflet-container {
   overflow: hidden;
   position: relative;
-  outline-offset: 1px;
   font-family: inherit;
 }
 .leaflet-tile,
@@ -2330,8 +2329,14 @@ details[open]::details-content {
 .leaflet-tooltip-pane {
   z-index: 650;
 }
+.leaflet-tooltip {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+}
 .leaflet-site-tooltip.leaflet-tooltip {
-  max-width: 240px;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 48px));
   padding: 7px 9px;
   border: 1px solid var(--border);
   border-radius: var(--radius-inset);
@@ -2357,6 +2362,28 @@ details[open]::details-content {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.25;
+}
+.leaflet-shop-marker {
+  cursor: default;
+}
+.leaflet-shop-landmark {
+  position: relative;
+  z-index: 0;
+  cursor: default;
+}
+.leaflet-shop-landmark::after {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: calc(50% - 1px);
+  width: 2px;
+  height: var(--shop-stem-length, 48px);
+  clip-path: inset(22px 0 0);
+  transform: rotate(var(--shop-stem-angle, 0rad));
+  transform-origin: center top;
+  background: var(--foreground);
+  content: "";
+  pointer-events: none;
 }
 .leaflet-site-cluster-marker {
   border: 0;
@@ -2501,9 +2528,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .leaflet-bar a {
   background-color: var(--surface);
   border-bottom: 1px solid var(--border);
-  width: 32px;
-  height: 32px;
-  line-height: 32px;
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
   display: block;
   text-align: center;
   text-decoration: none;
@@ -2606,13 +2633,38 @@ svg.leaflet-image-layer.leaflet-interactive path {
   z-index: 1;
   inset-block-start: 10px;
   right: 10px;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-inset);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
   background: var(--surface-sunken);
-  font-size: 16px;
-  line-height: 20px;
+  font-size: 20px;
+  line-height: 1;
   text-align: center;
+}
+.leaflet-site-popup .leaflet-popup-close-button > span {
+  position: relative;
+  display: block;
+  width: 12px;
+  height: 12px;
+  font-size: 0;
+}
+.leaflet-site-popup .leaflet-popup-close-button > span::before,
+.leaflet-site-popup .leaflet-popup-close-button > span::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 2px;
+  background: currentColor;
+  content: "";
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.leaflet-site-popup .leaflet-popup-close-button > span::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 .leaflet-site-card {
   overflow: hidden;
@@ -2623,7 +2675,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 }
 .leaflet-site-card__title {
   margin: 0;
-  padding-right: 22px;
+  padding-right: 44px;
   color: var(--foreground);
   font-size: 15px;
   font-weight: 650;
@@ -2679,9 +2731,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 }
 .leaflet-site-card__link:hover {
   background: var(--surface);
-  text-decoration: underline;
+  text-decoration: none;
 }
 @layer components {
+  .leaflet-container:focus-visible,
+  .leaflet-bar a:focus-visible,
+  .leaflet-shop-landmark:focus-visible,
   .leaflet-site-card__link:focus-visible {
     @apply focus-ring-inset;
   }

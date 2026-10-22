@@ -19,28 +19,8 @@ Part of the **design-review** skill ([SKILL.md](SKILL.md)). The SKILL.md procedu
    measuring. Reading it first is the cheapest part of this review. **Add to it** whenever this
    sweep investigates something that looks wrong and turns out not to be — that is part of the
    sweep, not a follow-up.
-3. Capture every changed route, in light. The visual spec asserts nothing — it writes PNGs — so a
-   filtered run of it is the fastest way to get review images:
-   ```bash
-   pnpm e2e:build
-   ```
+3. Capture changed states in light with `node scripts/visual-review.mjs --grep '<test title>' --route '<route template>' --role owner --fixture '<seed>' --state '<changed state>' --expect '<CSS selector proving changed content>'` after `pnpm e2e:build`. The command checks the build fingerprint, asserts the expected visible content, and runs the pixel probe in a private run folder. Reuse the build after spec-only edits; application/configuration edits require rebuilding. Add `--color` for colour work. A first dev look may use `node scripts/screenshot.mjs <path>`, but verification needs the production state capture.
 
-   ```bash
-   pnpm e2e:run e2e/visual.spec.ts -g 'light mode.*about page' --reporter=line
-   ```
-
-   Build **once** and re-run the second command as often as you iterate: `e2e:run` checks the
-   build is still current (`scripts/check-e2e-build.mjs`) rather than producing another one, which
-   is the difference between a design loop measured in seconds and one measured in minutes. Every
-   capture group runs once per scheme, under a `light mode` or `dark mode` block; the
-   `light mode.*` prefix is what keeps the run to one (the `print` block has no scheme, and no
-   prefix).
-
-   Inspect the PNGs it wrote under `e2e/screenshots/` (gitignored) — every capture is written at
-   both the phone and desktop widths in `VIEWPORTS`. A surface with no capture group can't be
-   reviewed this way until you add one (see `e2e-and-visual`); for a first look at such a surface,
-   `node scripts/screenshot.mjs <path>` against a running dev server captures the same light
-   phone/desktop pair without a spec (`--both` adds dark, for colour work only).
 4. **Holistic pass** — before the checklist, run "The holistic pass" from
    `docs/design/principles.md` for each captured surface, answering its questions in writing
    (the one idea, the arriving question, dissolvable controls, remove-until-it-breaks, and — for
@@ -53,11 +33,11 @@ Part of the **design-review** skill ([SKILL.md](SKILL.md)). The SKILL.md procedu
    an answer constrains code, say so in a comment beside that code and pin it with a test: that is
    why the shop home's one idea is the only one that survived the session that wrote it.
 5. **Pixel pass — measure what was drawn, before you open the source.**
-   - Probe the changed capture groups (the probe measures light captures only):
-     `PIXEL_PROBE=1 pnpm e2e:run e2e/visual.spec.ts --grep '<test title>' --reporter=line`. For a
+   - The scoped review command already probes light captures. For additional exploratory captures, probe the changed capture groups:
+     `PIXEL_PROBE=1 pnpm e2e:run e2e/visual --grep '<test title>' --reporter=line`. For a
      surface with no capture, `node scripts/screenshot.mjs <path> --probe` against `pnpm dev` —
      two or three paths per run, because a dev server dies at about thirty renders.
-   - `node scripts/pixel-probe-report.mjs` writes `e2e/pixel-probe/REPORT.md`. A flag is a
+   - For a scoped run, set `VISUAL_PROBE_DIR` to its manifest's probe directory on the report, tiles and atlas commands below so unrelated runs cannot mix. `node scripts/pixel-probe-report.mjs` writes `e2e/pixel-probe/REPORT.md`. A flag is a
      candidate, not a verdict: read its crop under `e2e/pixel-probe/crops/` and give it one —
      **confirmed**, with its measurement, or **dismissed**, with its reason. A flag that is right
      as drawn goes in `scripts/pixel-probe-settled.json` and gets a row in settled-questions.md,

@@ -58,7 +58,6 @@ import {
 } from "@/lib/today";
 import { shopDayBounds, utcToWallTime } from "@/lib/zoned";
 import { AUTH_NOTICES } from "./_components/auth-notices";
-import { updateHelpRequestAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -567,7 +566,6 @@ async function TodayBody({
             crewedTripIds: lens === "boat" ? crewedTripIds : undefined,
             readerPersonId: session.user.personId,
             drafts: spineDrafts,
-            helpRequestAction: updateHelpRequestAction,
             showPaymentsRow,
             firstBooking,
             factOfScale,

@@ -54,6 +54,16 @@ surfaces get two differently framed runs
 ([working-rules.md](../../docs/agents/working-rules.md#hard-rules)). `Explore` is not a reviewer:
 it replaces the built-in scout with a read-only one on `model: sonnet` at low effort.
 
+## Canonical source
+
+All skill bodies live in `.agents/skills/`; Claude directories are symlinks. Local skills have
+`sourceType: local` in `skills-lock.json`; only upstream entries are vendor-managed.
+
+| Skill | Trigger |
+| --- | --- |
+| `ci-triage` | Diagnose a failed CI run and record its failure class. |
+| `dependency-maintenance` | Update dependencies with focused compatibility evidence. |
+
 ## Maintenance
 
 - A skill states *how* to do a recurring task; a doc under `docs/` states *what the product is
@@ -69,7 +79,7 @@ it replaces the built-in scout with a read-only one on `model: sonnet` at low ef
   supporting file in the same folder saying when to read it. Reference (incidents, tables, full
   command walkthroughs) lives in those files. An invoked skill stays in context for the rest of the
   thread, so its length is paid on every later call (H-114).
-- A skill linked in from `.agents/skills/` is upstream's text, pinned by `skills-lock.json`, and a
+- An upstream skill (`sourceType: github` in `skills-lock.json`) is pinned, and a
   sync overwrites it. The few lines changed locally are listed in `VENDORED_SKILL_OVERRIDES`
   (`scripts/agent-layer.mjs`) with the wording that replaced them; after a sync, `pnpm check:agents`
   names each one the sync brought back, and the fix is to re-apply that wording.

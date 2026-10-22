@@ -1,4 +1,6 @@
 import { DEMO_SHOP_SLUG } from "../src/db/demo-shop";
+import { PAGE_SIZE } from "../src/db/paging";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
@@ -16,6 +18,7 @@ import {
 } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
+const staffCopy = staffTranslator("en-US");
 
 signedInAsOwner();
 
@@ -97,6 +100,49 @@ test("the record leads with what is open, and offers exactly one primary act", a
   await expect(page.getByLabel("Departure", { exact: true })).toBeHidden();
   await book.click();
   await expect(page.getByLabel("Departure", { exact: true })).toBeVisible();
+});
+
+test("later booking departures keep the selected diver and the picker open", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/divers?q=Priya");
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
+  const recordUrl = new URL(page.url());
+  const personId = recordUrl.pathname.split("/").at(-1);
+  await page
+    .locator("summary", { hasText: staffCopy("divers.bookActivity.bookDeparture") })
+    .click();
+  const picker = page.getByRole("combobox", {
+    name: staffCopy("divers.bookActivity.courseOrDiveLabel"),
+  });
+  await expect(picker).toBeVisible();
+  await expect(picker.locator("option")).toHaveCount(PAGE_SIZE.section + 1);
+  const firstIds = await picker
+    .locator("option[value]:not([value=''])")
+    .evaluateAll((options) => options.map((option) => option.getAttribute("value")));
+  await picker.selectOption({ index: 1 });
+  await page.getByRole("link", { name: staffCopy("divers.bookActivity.laterDepartures") }).click();
+  await page.waitForURL(/bookingPage=2/);
+  expect(new URL(page.url()).pathname).toBe(recordUrl.pathname);
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
+  await expect(picker).toBeVisible();
+  await expect(picker).toHaveValue("");
+  await expect(page.locator('input[name="personId"]')).toHaveValue(personId ?? "");
+  const laterIds = await picker
+    .locator("option[value]:not([value=''])")
+    .evaluateAll((options) => options.map((option) => option.getAttribute("value")));
+  expect(laterIds.length).toBeGreaterThan(0);
+  expect(laterIds.length).toBeLessThanOrEqual(PAGE_SIZE.section);
+  expect(laterIds.some((id) => firstIds.includes(id))).toBe(false);
+  await page
+    .getByRole("link", { name: staffCopy("divers.bookActivity.earlierDepartures") })
+    .click();
+  await page.waitForURL(/bookingPage=1/);
+  await expect(picker).toBeVisible();
+  expect(
+    await picker
+      .locator("option[value]:not([value=''])")
+      .evaluateAll((options) => options.map((option) => option.getAttribute("value"))),
+  ).toEqual(firstIds);
 });
 
 /**
