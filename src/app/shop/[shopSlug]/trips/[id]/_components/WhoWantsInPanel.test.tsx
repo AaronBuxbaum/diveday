@@ -12,7 +12,7 @@ afterEach(cleanup);
 
 function row(id: string, name: string, over: Partial<WhoWantsInRow> = {}): WhoWantsInRow {
   return {
-    leadId: id,
+    interestId: id,
     name,
     email: `${id}@example.com`,
     facts: `${id}@example.com · Asked Sat, Aug 1`,

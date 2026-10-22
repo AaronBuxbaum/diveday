@@ -79,27 +79,29 @@ export function registerStaffAuditCaptures(capture: AuditCapture, flowTimeout: n
     test("a duplicate gear tag renders its refusal beside the preserved fields", async ({
       page,
     }) => {
+      const addUnit = page.locator("details:has(> summary#add-unit)");
+      const tag = addUnit.getByRole("textbox", {
+        name: `${copy("gear.form.label")} ${copy("gear.form.labelHint")}`,
+        exact: true,
+      });
       const open = async () => {
         const door = page.getByRole("button", { name: "Add a unit", exact: true });
         await expect(door).toHaveAttribute("data-hydrated", "true");
-        await expect(page.locator("details:has(> summary#add-unit)")).toHaveAttribute(
-          "data-hydrated",
-          "true",
-        );
+        await expect(addUnit).toHaveAttribute("data-hydrated", "true");
         await door.click();
-        await page.getByLabel("Tag", { exact: true }).waitFor();
+        await tag.waitFor();
       };
       await page.goto("/shop/blue-mantis/gear");
       await open();
-      await page.getByLabel("Tag", { exact: true }).fill("Review regulator");
+      await tag.fill("Review regulator");
       await page.getByRole("button", { name: "Add to the register" }).click();
       await expect(page.getByRole("link", { name: "Review regulator", exact: true })).toBeVisible();
       await open();
-      await page.getByLabel("Tag", { exact: true }).fill("Review regulator");
+      await tag.fill("Review regulator");
       await page.getByLabel("Serial number").fill("SN-4471");
       await page.getByLabel("Brand & model").fill("Apeks XTX50");
       await page.getByRole("button", { name: "Add to the register" }).click();
-      await expect(page.getByLabel("Tag", { exact: true })).toHaveAttribute("aria-invalid", "true");
+      await expect(tag).toHaveAttribute("aria-invalid", "true");
       await capture(page, "gear-duplicate-tag-refusal", "light");
     });
 

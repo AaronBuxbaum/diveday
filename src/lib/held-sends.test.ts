@@ -77,7 +77,7 @@ describe("heldSendPayloadSchema", () => {
         kind: "seat_offer",
         tripId: booking,
         discount: { percent: 20 },
-        leadIds: [],
+        interestIds: [],
       }).success,
     ).toBe(false);
     expect(
@@ -85,13 +85,13 @@ describe("heldSendPayloadSchema", () => {
         kind: "seat_offer",
         tripId: booking,
         discount: { percent: 120 },
-        leadIds: [booking],
+        interestIds: [booking],
       }).success,
     ).toBe(false);
   });
 
   it("holds a deal at a percent or a fixed amount, never both and never neither", () => {
-    const deal = { kind: "seat_offer", tripId: booking, leadIds: [booking] };
+    const deal = { kind: "seat_offer", tripId: booking, interestIds: [booking] };
     expect(
       heldSendPayloadSchema.safeParse({ ...deal, discount: { amountCents: 2_000 } }).success,
     ).toBe(true);

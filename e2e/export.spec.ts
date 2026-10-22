@@ -62,7 +62,7 @@ test.describe("full-shop data export", () => {
       "trip_requirements.csv",
       "trip_assignments.csv",
       "bookings.csv",
-      "leads.csv",
+      "interests.csv",
       "roll_call_events.csv",
       "waiver_templates.csv",
       "waiver_records.csv",

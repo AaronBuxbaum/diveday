@@ -18,7 +18,11 @@ import { SummaryCaret } from "@/components/ui/disclosure";
 import { FieldActions, FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { readFormDraft } from "@/db/form-drafts";
-import { type DateLeadRow, listDateLeadsByIds, listOpenDateLeadsForDates } from "@/db/lead-dates";
+import {
+  type DateInterestRow,
+  listDateInterestsByIds,
+  listOpenDateInterestsForDates,
+} from "@/db/interest-dates";
 import { PAGE_SIZE } from "@/db/paging";
 import { offsetUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -30,7 +34,7 @@ import {
   shiftCalendarDate,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
+import { dateRequestsByDay, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { departurePickerWindow } from "@/lib/departure-picker-window";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
@@ -193,31 +197,21 @@ export default async function NewBookingPage({
   // and only emptied the hand-off — a captain following "Create booking" from
   // a request got no prefilled diver and no matching-request cards. Still
   // scoped to `shop.id`, so a `?request=` id cannot reach another tenant.
-  const [requestContext, relevantRows]: [DateLeadRow[], DateLeadRow[]] = await Promise.all([
-    requestId ? listDateLeadsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
-    listOpenDateLeadsForDates(db, shop.id, lookupDates),
+  const [requestContext, relevantRows]: [DateInterestRow[], DateInterestRow[]] = await Promise.all([
+    requestId ? listDateInterestsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
+    listOpenDateInterestsForDates(db, shop.id, lookupDates),
   ]);
   const selectedRequest = requestContext[0] ?? null;
-  const relevantDateById = new Map<string, string>();
-  for (const date of tripDates) {
-    for (const row of relevantRows) {
-      if (dateRequestMatchFor(row, date) && !relevantDateById.has(row.id)) {
-        relevantDateById.set(row.id, date);
-      }
-    }
-  }
-  const relevantRequestsByDate = new Map(
-    tripDates.map((date) => [
-      date,
-      relevantRows.filter((row) => dateRequestMatchFor(row, date) !== null),
-    ]),
+  const { byDay: relevantRequestsByDate, firstDayById: relevantDateById } = dateRequestsByDay(
+    relevantRows,
+    tripDates,
   );
-  const requestSubject = (row: DateLeadRow) =>
+  const requestSubject = (row: DateInterestRow) =>
     row.courseTitle
       ? t("requests.aboutCourse", { course: row.courseTitle })
       : t("requests.aboutDive", { interest: row.interest ?? "" });
-  const requestName = (row: DateLeadRow) => row.name ?? t("requests.anonymous");
-  const requestDivers = (row: DateLeadRow) =>
+  const requestName = (row: DateInterestRow) => row.name ?? t("requests.anonymous");
+  const requestDivers = (row: DateInterestRow) =>
     t("requests.divers", { count: Math.max(1, row.partySize ?? 1) });
   const bookingPath = (requestForBooking?: string, tripId?: string) => {
     const path = tripId

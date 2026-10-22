@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
+import { proseLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -29,7 +30,7 @@ const STATUS_KEYS: Record<TripLastMinutePromo["status"], StaffMessageKey> = {
 /**
  * **The deals this departure sent, and the way to send another.** The sender
  * itself is the Divers tab's "Who wants in" panel: one Offer, "with a discount"
- * (ADR 20261017-one-lead-with-a-scope). What stays here is history (the code,
+ * (ADR 20261017-one-interest-with-a-scope). What stays here is history (the code,
  * how many, whether Stripe minted it) and the answer to the last send
  * (`FormStatus`, since a deal's outcome redirects to `#last-minute-deal`).
  */
@@ -75,7 +76,7 @@ export function LastMinuteDealSection({
       {leadTime}
       {tripPath ? (
         <p className="mt-2 text-sm">
-          <a href={`${tripPath}#${WHO_WANTS_IN_ID}`} className="underline">
+          <a href={`${tripPath}#${WHO_WANTS_IN_ID}`} className={proseLinkClass}>
             {t("trips.lastMinute.offerWithDiscount")}
           </a>
         </p>

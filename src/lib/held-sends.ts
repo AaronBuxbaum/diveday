@@ -55,16 +55,16 @@ const waiverSendPayload = z
   });
 
 /**
- * **Offer a seat** (ADR 20261017-one-lead-with-a-scope): the one held act on a
- * departure's leads. Ids only, never a name or an address; the executor joins
- * those at send time. `leadIds` may name departure leads or anytime leads (the
+ * **Offer a seat** (ADR 20261017-one-interest-with-a-scope): the one held act on a
+ * departure's interests. Ids only, never a name or an address; the executor joins
+ * those at send time. `interestIds` may name departure interests or anytime interests (the
  * last-minute list). A `discount` makes it the last-minute deal: a percent off,
  * or a fixed amount in minor units, and exactly one of the two.
  */
 const seatOfferPayload = z.object({
   kind: z.literal("seat_offer"),
   tripId: z.uuid(),
-  leadIds: z.array(z.uuid()).min(1).max(500),
+  interestIds: z.array(z.uuid()).min(1).max(500),
   discount: z
     .union([
       z.strictObject({ percent: z.number().int().min(1).max(100) }),

@@ -470,19 +470,19 @@ export const BOOKINGS_CSV = sharedFile<ShopRow<"bookingRows">>({
 
 /**
  * **Everyone who wanted a seat**, every scope in one file (ADR
- * 20261017-one-lead-with-a-scope; H-02's portability promise holds, the file set
+ * 20261017-one-interest-with-a-scope; H-02's portability promise holds, the file set
  * changed). `scope` says what the row asked for: `departure` (a wait-list entry
  * or an offer, with its trip), `date` (a day that was not on the board) or
- * `anytime` (the last-minute list). The contact snapshot a person-less date lead
+ * `anytime` (the last-minute list). The contact snapshot a person-less date interest
  * kept is the shop's alone.
  */
-export const LEADS_CSV = sharedFile<ShopRow<"leadRows">>({
-  file: "leads.csv",
+export const INTERESTS_CSV = sharedFile<ShopRow<"interestRows">>({
+  file: "interests.csv",
   columns: [
     { header: "id", in: "both", value: (row) => row.id },
     { header: "scope", in: "both", value: (row) => row.scope },
     { header: "asked_by", in: "both", value: (row) => row.askedBy },
-    { header: "parent_lead_id", in: "shop", value: (row) => row.parentLeadId },
+    { header: "parent_interest_id", in: "shop", value: (row) => row.parentInterestId },
     { header: "trip_id", in: "shop", value: (row) => row.tripId },
     {
       header: "trip_title",
@@ -496,7 +496,7 @@ export const LEADS_CSV = sharedFile<ShopRow<"leadRows">>({
     },
     { header: "person_id", in: "shop", value: (row) => row.personId },
     // Resolved at capture time by exact email match against a live diver for a
-    // date lead, never back-filled: a null here is a lead nobody could tie to a
+    // date interest, never back-filled: a null here is an interest nobody could tie to a
     // person, not a lookup this export skipped.
     {
       header: "person_name",
@@ -522,7 +522,7 @@ export const LEADS_CSV = sharedFile<ShopRow<"leadRows">>({
     { header: "date_flexible", in: "shop", value: (row) => row.dateFlexible },
     { header: "available_from", in: "both", value: (row) => row.availableFrom },
     { header: "available_until", in: "both", value: (row) => row.availableUntil },
-    // The seats this lead waits for, themselves included (fourth review, item 34).
+    // The seats this interest waits for, themselves included (fourth review, item 34).
     { header: "party_size", in: "both", value: (row) => row.partySize },
     { header: "message", in: "both", value: (row) => row.message },
     { header: "asked_at", in: "both", value: (row) => row.askedAt },
@@ -535,7 +535,7 @@ export const LEADS_CSV = sharedFile<ShopRow<"leadRows">>({
     { header: "offered_at", in: "both", value: (row) => row.offeredAt },
     { header: "emailed_at", in: "both", value: (row) => row.emailedAt },
     { header: "promo_id", in: "shop", value: (row) => row.promoId },
-    // When the shop closed the lead, and how: `booked` when a seat answered it,
+    // When the shop closed the interest, and how: `booked` when a seat answered it,
     // `done` when staff marked it, `unsubscribed` when the diver left the list.
     // The shop's bookkeeping, not the diver's, as `handled_as` was on main
     // (security review of #2656, minor 4).
@@ -543,11 +543,11 @@ export const LEADS_CSV = sharedFile<ShopRow<"leadRows">>({
     { header: "closed_as", in: "shop", value: (row) => row.closedAs },
   ],
   shop: {
-    rows: ({ leadRows }) => leadRows,
-    note: EXPORT_FILE_NOTES["leads.csv"],
+    rows: ({ interestRows }) => interestRows,
+    note: EXPORT_FILE_NOTES["interests.csv"],
   },
   diver: {
-    rows: ({ leadRows }) => leadRows,
+    rows: ({ interestRows }) => interestRows,
     note: "Every time this diver asked the shop for a seat, or the shop offered one: a wait list, a date they asked for, the last-minute list.",
   },
 });

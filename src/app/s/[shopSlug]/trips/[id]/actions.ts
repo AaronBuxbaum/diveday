@@ -12,7 +12,7 @@ import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals"
 import { type CheckoutPromo, startBookingCheckout } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
 import { recordShopMilestone } from "@/db/founder-metrics";
-import { askForDeparture } from "@/db/leads";
+import { askForDeparture } from "@/db/interests";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
@@ -985,7 +985,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     await trackEvent({ name: "waitlist_joined", source: "diver" });
     revalidateAndRedirect(
       publicTripPath(shopSlug, tripId),
-      `${publicTripPath(shopSlug, tripId)}?lead=${outcome.leadId}${embedParam(embed, "&")}`,
+      `${publicTripPath(shopSlug, tripId)}?interest=${outcome.interestId}${embedParam(embed, "&")}`,
     );
   }
   const code =

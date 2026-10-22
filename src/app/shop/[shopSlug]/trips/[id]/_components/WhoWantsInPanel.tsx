@@ -26,9 +26,9 @@ export type WhoWantsInGroup = {
 };
 
 /**
- * **Who wants in** (ADR 20261017-one-lead-with-a-scope): everyone who asked for
+ * **Who wants in** (ADR 20261017-one-interest-with-a-scope): everyone who asked for
  * a seat on this departure, in one panel on the Divers tab, under the roster.
- * Rendered only when some group has a row (principle 9). A lead reserves
+ * Rendered only when some group has a row (principle 9). An interest reserves
  * nothing and is never ranked or filtered by fit (ADR
  * 20260813-wait-list-is-a-lead-list): each group keeps the order people asked
  * in, and a below-the-bar mark informs the staffer without disabling the tick.
@@ -107,14 +107,14 @@ export function WhoWantsInPanel({
       </div>
     );
     return (
-      <li key={row.leadId} className="py-2.5">
+      <li key={row.interestId} className="py-2.5">
         {canOffer ? (
           <label className="flex cursor-pointer items-start gap-3">
             <input
               type="checkbox"
               form={OFFER_FORM_ID}
-              name="leadId"
-              value={row.leadId}
+              name="interestId"
+              value={row.interestId}
               data-below-bar={row.belowBar ? "true" : undefined}
               aria-label={t("trips.whoWantsIn.tickLabel", { name: row.name })}
               className={`${choiceClass} mt-1.5`}
@@ -163,7 +163,7 @@ export function WhoWantsInPanel({
           <OfferSeat
             formId={OFFER_FORM_ID}
             tripId={tripId}
-            leads={rows.map(({ leadId, name, email }) => ({ leadId, name, email }))}
+            interests={rows.map(({ interestId, name, email }) => ({ interestId, name, email }))}
             chooseByTick
             bookingPath={publicTripPath(shopSlug, tripId)}
             shopName={shopName}

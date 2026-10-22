@@ -6,7 +6,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
-import { askAnytime, askForDeparture } from "./leads";
+import { askAnytime, askForDeparture } from "./interests";
 import { people, specialtyCertifications } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
@@ -186,7 +186,7 @@ describe("the deal: an offer with a discount (in-memory PGlite)", () => {
       heldSendPayloadSchema.safeParse({
         kind: "seat_offer",
         tripId: openTrip.id,
-        leadIds: [openTrip.id],
+        interestIds: [openTrip.id],
         discount: { percent: 25, amountCents: 2_000 },
       }).success,
     ).toBe(false);

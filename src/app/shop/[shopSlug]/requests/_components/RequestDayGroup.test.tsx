@@ -16,7 +16,7 @@ const MANTIS: DepartureShape = {
   diversPerDivemaster: 6,
 };
 
-/** A day's worth of leads, as the advisor takes them. */
+/** A day's worth of interests, as the advisor takes them. */
 function party(...sizes: number[]) {
   return sizes.map((divers, index) => ({
     id: `r${index}`,
@@ -31,7 +31,7 @@ function party(...sizes: number[]) {
  *
  * The group's one act opens the schedule builder on that day with the
  * full add form disclosed (ADR 20260806-one-trip-create-form) and the day's
- * leads carried forward as invitations. Losing any one of those three
+ * interests carried forward as invitations. Losing any one of those three
  * parameters turns "four groups could make the 12th" back into a note
  * somewhere, and the loss is silent — the link still works, it just lands on
  * an empty form.
@@ -39,7 +39,7 @@ function party(...sizes: number[]) {
  * Every date offers the same secondary action, so its styling stays consistent.
  */
 describe("the add-a-departure link", () => {
-  it("carries the day, the disclosed form and every lead in the group", () => {
+  it("carries the day, the disclosed form and every interest in the group", () => {
     const href = addDepartureHref("blue-mantis", "2027-03-06", ["r1", "r2"]);
     const url = new URL(href, "https://diveday.test");
     expect(url.pathname).toBe("/shop/blue-mantis/schedule/board");

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
-import { offerDepartureToDiver } from "@/db/lead-offers";
+import { offerDepartureToDiver } from "@/db/interest-offers";
 import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
 import { turnBookingAway } from "@/db/turn-away";
 import { parseForm } from "@/lib/form-parse";

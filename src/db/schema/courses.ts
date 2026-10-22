@@ -21,7 +21,7 @@ import { appNowTimestamp } from "./columns";
 import { certificationLevel, shops } from "./core";
 
 /**
- * Courses (the date requests divers send about them are `leads`, `./leads.ts`).
+ * Courses (the date requests divers send about them are `interests`, `./interests.ts`).
  */
 
 /**

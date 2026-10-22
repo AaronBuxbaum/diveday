@@ -19,9 +19,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/db/authz", () => ({ canPersonConfigureTrips: vi.fn() }));
 vi.mock("@/db/boats", () => ({ listBoats: vi.fn(async () => []) }));
-vi.mock("@/db/lead-dates", () => ({
-  listOpenDateLeads: vi.fn(),
-  listClosedDateLeads: vi.fn(async () => []),
+vi.mock("@/db/interest-dates", () => ({
+  listOpenDateInterests: vi.fn(),
+  listClosedDateInterests: vi.fn(async () => []),
   listDeparturesOnDates: vi.fn(async () => []),
 }));
 vi.mock("./actions", () => ({ setRequestOutcomeAction: vi.fn() }));
@@ -29,7 +29,7 @@ vi.mock("@/i18n/request", () => ({ requestLocale: vi.fn(async () => "en-US") }))
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { canPersonConfigureTrips } = await import("@/db/authz");
-const { listOpenDateLeads, listClosedDateLeads } = await import("@/db/lead-dates");
+const { listOpenDateInterests, listClosedDateInterests } = await import("@/db/interest-dates");
 const { requireShopSurface } = await import("@/lib/session");
 const { default: RequestsPage } = await import("./page");
 
@@ -79,7 +79,7 @@ beforeEach(() => {
       name: "Blue Mantis Divers",
     },
   } as never);
-  vi.mocked(listOpenDateLeads).mockResolvedValue({
+  vi.mocked(listOpenDateInterests).mockResolvedValue({
     rows: [REQUEST],
     total: 1,
     page: 1,
@@ -119,14 +119,14 @@ describe("a day's Add a departure", () => {
 });
 
 /**
- * **A request closes** (third UX review, item 13). A closed lead leaves its
+ * **A request closes** (third UX review, item 13). A closed interest leaves its
  * day, so the day's count is open requests only, and it is listed under Done
  * with how it was closed and a way to reopen it.
  */
 describe("closed requests", () => {
   it("lists a booked request under Done, with Reopen", async () => {
     vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
-    vi.mocked(listClosedDateLeads).mockResolvedValue([
+    vi.mocked(listClosedDateInterests).mockResolvedValue([
       {
         ...REQUEST,
         id: "44444444-4444-4444-8444-444444444444",
@@ -158,13 +158,13 @@ describe("closed requests", () => {
 
   it("says nothing is open without claiming nobody ever asked", async () => {
     vi.mocked(canPersonConfigureTrips).mockResolvedValue(true);
-    vi.mocked(listOpenDateLeads).mockResolvedValue({
+    vi.mocked(listOpenDateInterests).mockResolvedValue({
       rows: [],
       total: 0,
       page: 1,
       pageCount: 1,
     } as never);
-    vi.mocked(listClosedDateLeads).mockResolvedValue([
+    vi.mocked(listClosedDateInterests).mockResolvedValue([
       { ...REQUEST, closedAt: new Date("2026-10-14T15:00:00Z"), closedAs: "done" },
     ] as never);
     await renderPage();

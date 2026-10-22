@@ -17,7 +17,7 @@ import {
   certifications,
   diveSites,
   executedDives,
-  leads,
+  interests,
   orders,
   tripBlowouts,
   trips,
@@ -249,9 +249,9 @@ describe("the demo's booth stories", () => {
     expect(seated).toHaveLength(run.capacity);
     for (const seat of seated) expect(seat.createdAt.getTime()).toBeLessThan(nowDate().getTime());
     const waiting = await db
-      .select({ personId: leads.personId })
-      .from(leads)
-      .where(and(eq(leads.tripId, run.id), eq(leads.scope, "departure")));
+      .select({ personId: interests.personId })
+      .from(interests)
+      .where(and(eq(interests.tripId, run.id), eq(interests.scope, "departure")));
     expect(waiting).toHaveLength(WEEKLY_RUN_WAITING);
   });
 });

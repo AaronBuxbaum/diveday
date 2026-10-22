@@ -419,9 +419,9 @@ function StationRow({
     <OfferSeat
       formId={`offer-seat-${action.offer.tripId}`}
       tripId={action.offer.tripId}
-      leads={[
+      interests={[
         {
-          leadId: action.offer.leadId,
+          interestId: action.offer.interestId,
           name: action.offer.personName,
           email: action.offer.personEmail,
         },

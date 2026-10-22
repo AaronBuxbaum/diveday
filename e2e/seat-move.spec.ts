@@ -16,7 +16,7 @@ import {
  *
  * A one-seat departure sells its seat and two more divers join its wait list.
  * Staff carry the wait list to a later departure from the demand banner and
- * land on it, where the leads wait to be invited; then staff move the booked
+ * land on it, where the interests wait to be invited; then staff move the booked
  * seat there from its roster row. The booking is the same row, so the diver's
  * own trip link now reads the new departure.
  */

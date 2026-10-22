@@ -1,12 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import {
-  HELD_SEND_TIMEOUT_MS,
-  openDiverFileGroup,
-  rosterRow,
-  seededTripId,
-  signInAsOwner,
-} from "./helpers";
+import { HELD_SEND_TIMEOUT_MS, openDiverFileGroup, rosterRow, signInAsOwner } from "./helpers";
 
 /** The panel keeps the names past its preview cap behind "Show N more"; open them. */
 async function openMoreWhoWantsIn(page: Page): Promise<void> {
@@ -48,6 +42,9 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await waitList.locator("summary").click();
   await waitList.getByLabel("Name").fill("Nora Quinn");
   await waitList.getByLabel("Email").fill("nora.e2e@example.com");
+  // The reef morning asks for Open Water, and the panel lists only who fits it
+  // (dive-domain review of #2656, m1), so Nora says what she holds.
+  await waitList.getByLabel("Certification level").selectOption("open_water");
   // No upper bound — "around from" 2020 covers today's frozen-clock departure.
   await page.locator('input[name="availableFrom"]').filter({ visible: true }).fill("2020-01-01");
   await page.getByRole("button", { name: "Notify me" }).click();
@@ -129,6 +126,7 @@ test("a failed send attempt does not silence the Today row — nothing actually 
   await waitList.locator("summary").click();
   await waitList.getByLabel("Name").fill("Priya Shah");
   await waitList.getByLabel("Email").fill("priya.e2e@example.com");
+  await waitList.getByLabel("Certification level").selectOption("open_water");
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
@@ -165,8 +163,8 @@ test("a failed send attempt does not silence the Today row — nothing actually 
   await expect(page.getByText(/3 seats open, \d+ want in\./)).toBeVisible();
 });
 
-// /api/test/seed-lead-unsubscribe-token mints a real
-// lead_unsubscribe_tokens row (test-only, gated identically to
+// /api/test/seed-interest-unsubscribe-token mints a real
+// interest_unsubscribe_tokens row (test-only, gated identically to
 // /api/test/reset) so this drives the actual /unsubscribe/[token] page and
 // server action, since the real send flow can't reach a live email in e2e
 // (Stripe always fails first — see the tests above) and the token is
@@ -186,7 +184,7 @@ test("a diver can self-serve unsubscribe from last-minute deal emails", async ({
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
-  const seeded = await request.post("/api/test/seed-lead-unsubscribe-token", {
+  const seeded = await request.post("/api/test/seed-interest-unsubscribe-token", {
     data: { shopSlug: "blue-mantis", email: "uma.e2e@example.com" },
   });
   expect(seeded.ok()).toBe(true);
@@ -291,12 +289,28 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
+  // A second joiner who holds the card, so "everyone who fits" has more than
+  // one row to tick beside the seeded list.
+  await page.goto("/s/blue-mantis");
+  await dealList.locator("summary").click();
+  await dealList.getByLabel("Name").fill("Owen Achebe");
+  await dealList.getByLabel("Email").fill("owen.e2e@example.com");
+  await dealList.getByLabel("Certification level").selectOption("open_water");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
+
   await signInAsOwner(page);
-  // The night charter, not today's reef morning: the shop-wide list is the same
-  // everywhere, but only a departure the whole seeded list matches puts eleven
-  // people in front of a ten-name panel.
-  const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
-  await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
+  // Today's reef morning, which asks for Open Water and no specialty card: the
+  // night charter asks for a Night card nobody on the list holds, so its panel
+  // is rightly empty (dive-domain review of #2656, m1).
+  await page.goto("/shop/blue-mantis");
+  await page
+    .locator("li")
+    .filter({ hasText: /3 seats open, \d+ want in\./ })
+    .filter({ hasNot: page.locator("li") })
+    .filter({ visible: true })
+    .getByRole("link", { name: "Offer a seat" })
+    .click();
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
   await openMoreWhoWantsIn(page);
 

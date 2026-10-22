@@ -4,7 +4,7 @@ import { bookings, people } from "./schema";
 
 /**
  * Who is *on* a departure: booked divers and the contact addresses for the
- * seats currently held. Who *wants* in is `src/db/leads.ts`.
+ * seats currently held. Who *wants* in is `src/db/interests.ts`.
  *
  * `bookings` carries its own `shop_id` (CR-007), so every read here filters on
  * it directly rather than joining through `trips` — none of these can be called

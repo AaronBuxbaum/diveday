@@ -902,7 +902,7 @@ export type TodayAction = {
    */
   resend?: { bookingIds: string[] };
   /**
-   * Present on a `seat_wanted` row: the lead who asked first plus the context
+   * Present on a `seat_wanted` row: the diver who asked first plus the context
    * the one-tap offer needs for its composer fallback, so staff can offer the
    * seat straight from the queue instead of navigating to the trip. `href`
    * stays the row's real destination (pre-hydration tap, middle-click,
@@ -910,7 +910,7 @@ export type TodayAction = {
    */
   offer?: {
     tripId: string;
-    leadId: string;
+    interestId: string;
     personName: string;
     personEmail: string | null;
     offeredAt: Date | null;
