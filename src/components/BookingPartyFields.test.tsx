@@ -58,13 +58,13 @@ describe("BookingPartyFields", () => {
     expect(screen.getByText("A parent or guardian signs the waiver too.")).toBeInTheDocument();
   });
 
-  it("asks 'Under 18' before the ticked email box, so a skimming parent meets it first", () => {
+  it("asks 'Under 18' last in each diver's block, after the email box", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} />);
     fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
     const under18 = screen.getAllByRole("checkbox", { name: /^Under 18/ })[1] as HTMLElement;
     const leadEmail = screen.getByRole("checkbox", { name: /use the main contact’s email/i });
     expect(
-      under18.compareDocumentPosition(leadEmail) & Node.DOCUMENT_POSITION_FOLLOWING,
+      leadEmail.compareDocumentPosition(under18) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 

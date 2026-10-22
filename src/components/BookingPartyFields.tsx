@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { SmsConsentNote } from "@/components/SmsConsentNote";
 import { buttonClass } from "@/components/ui/button";
-import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { ChoicePill, ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
@@ -419,6 +419,15 @@ export function BookingPartyFields({
                       />
                     </Field>
                   ) : null}
+                  {index > 0 ? (
+                    <LeadEmailChoice
+                      checked={usesLeadEmail(index)}
+                      onChange={(checked) => {
+                        setLeadEmailChoice((current) => ({ ...current, [index]: checked }));
+                        if (checked) updateMember(index, { email: "" });
+                      }}
+                    />
+                  ) : null}
                   {index === 0 && leadPhone ? (
                     <Field
                       label={t("party.phoneLabel")}
@@ -444,16 +453,7 @@ export function BookingPartyFields({
                       16px either side, so it read as a gap in the person's
                       details rather than a question about them. Stacked
                       without a gap, each row's own 44px is the rhythm. */}
-                  {leadOnly ? null : (
-                    <MemberBoxes
-                      index={index}
-                      usesLeadEmail={usesLeadEmail(index)}
-                      onLeadEmailChange={(checked) => {
-                        setLeadEmailChoice((current) => ({ ...current, [index]: checked }));
-                        if (checked) updateMember(index, { email: "" });
-                      }}
-                    />
-                  )}
+                  {leadOnly ? null : <UnderEighteenChoice index={index} />}
                 </FieldGrid>
               </div>
             </fieldset>
@@ -464,37 +464,24 @@ export function BookingPartyFields({
   );
 }
 
-/**
- * **The boxes close the diver's block, together.** "Under 18" stood between
- * Joining as and Email, a 44px row with the grid's 16px either side, so it read
- * as a gap in the person's details rather than a question about them. Stacked
- * without a gap, each row's own 44px is the rhythm. "Under 18" leads: below a
- * box that arrives ticked, a skimming parent stops before reaching it.
- */
-function MemberBoxes({
-  index,
-  usesLeadEmail,
-  onLeadEmailChange,
+/** "Use the main contact's email" (task 21), under the email it stands in for. */
+function LeadEmailChoice({
+  checked,
+  onChange,
 }: {
-  index: number;
-  usesLeadEmail: boolean;
-  onLeadEmailChange: (checked: boolean) => void;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
 }) {
   const t = useTranslations();
   return (
-    <div className="grid">
-      <UnderEighteenChoice index={index} last={index === 0} />
-      {index > 0 ? (
-        <ChoiceRow
-          type="checkbox"
-          checked={usesLeadEmail}
-          onChange={(event) => onLeadEmailChange(event.target.checked)}
-          className="text-sm text-muted"
-        >
-          {t("party.useMainContactEmail")}
-        </ChoiceRow>
-      ) : null}
-    </div>
+    <ChoiceRow
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      className="text-sm text-muted"
+    >
+      {t("party.useMainContactEmail")}
+    </ChoiceRow>
   );
 }
 
@@ -505,21 +492,25 @@ function MemberBoxes({
  * a parent or guardian to co-sign. Controlled so a refused submit keeps the
  * tick, and never remembered with the diver: a child grows up, and the next
  * booking asks again.
+ *
+ * The last box of each diver's block, drawn as a bordered box at the inputs'
+ * width and type size (Aaron, 2026-10-22): as a bare checkbox row between the
+ * fields it read as a gap in the form rather than a question in it.
  */
-function UnderEighteenChoice({ index, last }: { index: number; last: boolean }) {
+function UnderEighteenChoice({ index }: { index: number }) {
   const t = useTranslations();
   const [checked, setChecked] = useState(false);
   return (
-    <ChoiceRow
+    <ChoicePill
       type="checkbox"
+      size="md"
+      field
       name={`minor-${index}`}
-      outdent={last ? "block-end" : undefined}
       checked={checked}
       onChange={(event) => setChecked(event.target.checked)}
-      className="text-sm"
     >
       {t("party.under18")}
-      {checked ? <span className="block text-muted">{t("party.under18Hint")}</span> : null}
-    </ChoiceRow>
+      {checked ? <span className="block text-sm font-normal text-muted">{t("party.under18Hint")}</span> : null}
+    </ChoicePill>
   );
 }
