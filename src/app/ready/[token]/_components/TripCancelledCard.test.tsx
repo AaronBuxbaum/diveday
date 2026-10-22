@@ -58,6 +58,10 @@ describe("TripCancelledCard", () => {
       />,
     );
     expect(screen.getByText(t("ready.moveOffer.lead", { title: "Two-Tank Reef" }))).toBeTruthy();
+    expect(
+      screen.getByText(t("ready.tripCancelledMoveBody", { shop: "Blue Mantis Divers" })),
+    ).toBeTruthy();
+    expect(screen.queryByText(t("ready.tripCancelledBody"))).toBeNull();
     const button = screen.getByRole("button", {
       name: /^Ask to move to Thu, Oct\s29, 12:00\sPM\sEDT$/,
     });

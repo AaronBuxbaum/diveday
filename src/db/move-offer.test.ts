@@ -1,11 +1,12 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking, moveBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { hasMoveAsk, pagedInboxMessages, recordMoveAsk } from "./inbound-messages";
-import { strandedMoveAsk, strandedMoveOffer } from "./move-offer";
-import { shops } from "./schema";
+import { MOVE_OFFER_CANDIDATES, strandedMoveAsk, strandedMoveOffer } from "./move-offer";
+import { shops, trips } from "./schema";
 import { createTrip, setTripStatus } from "./trips";
 
 /**
@@ -98,6 +99,20 @@ describe("strandedMoveOffer", () => {
     const ours = await departure(db, shop.id, "Ours", 5 * DAY_MS);
 
     expect((await offerFor(db, shop.id, nora.bookingId))?.tripId).toBe(ours.id);
+  });
+
+  it("weighs only the next few departures that could be offered, soonest first", async () => {
+    const { db, shop, nora } = await stranded();
+    // Each passes the SQL narrowing and fails an exact check after it: no
+    // seat left for a diver.
+    for (let i = 0; i < MOVE_OFFER_CANDIDATES; i += 1) {
+      const boat = await departure(db, shop.id, `No diver seats ${i}`, (i + 1) * HOUR_MS);
+      await db.update(trips).set({ diverCapacity: 1 }).where(eq(trips.id, boat.id));
+      await seat(db, shop.id, boat.id, `Diver ${i}`);
+    }
+    // Qualifies, but sits past the cap: nothing is offered rather than more read.
+    await departure(db, shop.id, "Past the cap", 5 * DAY_MS);
+    expect(await offerFor(db, shop.id, nora.bookingId)).toBeNull();
   });
 
   it("offers nothing when no boat qualifies", async () => {

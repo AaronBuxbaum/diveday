@@ -1,13 +1,22 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lte, ne, notExists, sql } from "drizzle-orm";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { seatListPriceCents } from "@/lib/deposits";
 import { isDiver, seatRefusal } from "@/lib/participant-types";
-import { listSeatMoveTargets, tripAdmissionFor, tripCourseCrewCounts } from "./bookings";
+import { tripAdmissionFor, tripCourseCrewCounts } from "./bookings";
 import type { AppDb } from "./client";
 import { hasMoveAsk } from "./inbound-messages";
 import { bookings, courses, trips } from "./schema";
 import { liveTrip } from "./trips-live";
-import { heldSeatCounts, sellableCapacity } from "./trips-queries";
+import { heldSeatCounts, seatHeld, sellableCapacity } from "./trips-queries";
+
+/**
+ * **How many departures one cancelled card weighs**, soonest first. The card
+ * renders on a GET with no throttle of its own (layer 4 security review, note
+ * 1), and each candidate costs a few exact reads, so one SQL read narrows the
+ * field and takes only this many: past the next few boats that could be
+ * offered, the schedule link below covers the rest.
+ */
+export const MOVE_OFFER_CANDIDATES = 5;
 
 export type MoveOffer = { tripId: string; title: string; startsAt: Date };
 
@@ -69,43 +78,55 @@ export async function strandedMoveOffer(
   // An unpriced seat has no "same price or lower" to measure against.
   if (paid === null) return null;
 
-  // Scheduled, not held, not a rehearsal, not yet left, same course or
-  // another dive: the roster's own move list, soonest first.
-  const targets = await listSeatMoveTargets(db, shopId, seat.tripId, now);
-  const open = targets.filter((target) => target.seatsLeft > 0);
-  if (open.length === 0) return null;
-  const rows = await db
+  // One read, soonest first, filtered in SQL so the cap counts only boats
+  // that could be offered: scheduled, not held, not a rehearsal, not private,
+  // not yet left, same course or another dive, not already this diver's,
+  // fewer seats held than the departure's own capacity, and, where the
+  // price is a plain column, priced no higher. The loop below re-checks each
+  // one exactly (`seatListPriceCents`, the boat certificate, the divers-only
+  // cap, the course ratio, admission), so this only ever narrows.
+  const priceColumn = isDiver(seat.participantType)
+    ? seat.courseId
+      ? null
+      : trips.priceCents
+    : seat.participantType === "snorkeler"
+      ? trips.snorkelerPriceCents
+      : trips.riderPriceCents;
+  const candidates = await db
     .select()
     .from(trips)
     .where(
       and(
         eq(trips.shopId, shopId),
         liveTrip(),
-        inArray(
-          trips.id,
-          open.map((target) => target.id),
+        eq(trips.status, "scheduled"),
+        eq(trips.conditionsHold, false),
+        eq(trips.isRehearsal, false),
+        eq(trips.isPrivate, false),
+        ne(trips.id, seat.tripId),
+        gt(trips.startsAt, now),
+        seat.courseId ? eq(trips.courseId, seat.courseId) : isNull(trips.courseId),
+        priceColumn ? lte(priceColumn, paid) : undefined,
+        notExists(
+          db
+            .select({ id: bookings.id })
+            .from(bookings)
+            .where(
+              and(
+                eq(bookings.shopId, shopId),
+                eq(bookings.tripId, trips.id),
+                eq(bookings.personId, seat.personId),
+              ),
+            ),
         ),
+        sql`(select count(*) from ${bookings} where ${and(eq(bookings.tripId, trips.id), seatHeld)}) < ${trips.capacity}`,
       ),
-    );
-  const byId = new Map(rows.map((row) => [row.id, row]));
-  const mine = await db
-    .select({ tripId: bookings.tripId })
-    .from(bookings)
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        eq(bookings.personId, seat.personId),
-        inArray(
-          bookings.tripId,
-          open.map((target) => target.id),
-        ),
-      ),
-    );
-  const alreadyMine = new Set(mine.map((row) => row.tripId));
+    )
+    .orderBy(asc(trips.startsAt))
+    .limit(MOVE_OFFER_CANDIDATES);
 
-  for (const { id } of open) {
-    const target = byId.get(id);
-    if (!target || target.isPrivate || alreadyMine.has(id)) continue;
+  for (const target of candidates) {
+    const id = target.id;
     const price = seatListPriceCents(target, course, seat.participantType);
     if (price === null || price > paid) continue;
     const held = await heldSeatCounts(db, shopId, id);

@@ -53,7 +53,10 @@ export function TripCancelledCard({
     <ExpiredLinkCard
       glyph="cancelled"
       title={t("booking.cancelledHeading")}
-      text={t("ready.tripCancelledBody")}
+      // "Nothing you need to do" is untrue above a boat to ask for.
+      text={
+        offer ? t("ready.tripCancelledMoveBody", { shop: shopName }) : t("ready.tripCancelledBody")
+      }
       shop={{
         name: shopName,
         contactEmail: data.shop.contactEmail,

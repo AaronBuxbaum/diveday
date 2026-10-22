@@ -938,6 +938,7 @@
     "cancelledSeeSchedule": "See what’s coming up",
     "cancelledNextInSeries": "Book the next {trip}: {date}",
     "tripCancelledBody": "Your seat is released, and there’s nothing you need to do.",
+    "tripCancelledMoveBody": "{shop} can move your seat to another boat.",
     "checklistDetail": {
       "setupGeneric": "Your shop is still finalizing this trip’s details.",
       "readinessUnavailable": "Your shop is confirming your readiness. Check back shortly.",
