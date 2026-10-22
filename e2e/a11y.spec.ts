@@ -232,7 +232,7 @@ type StaffScan = {
   path: string;
   /** The page's own `<h1>`, waited for so no scan lands on a loading skeleton. */
   heading: string | RegExp;
-  /** Dynamic Leaflet pins must exist before axe snapshots a map surface. */
+  /** Dynamic Leaflet site pins or clusters must exist before axe snapshots a map surface. */
   mapPins?: boolean;
 };
 
@@ -244,7 +244,9 @@ async function scanStaticRoutes(page: Page, routes: readonly StaffScan[]) {
       `${route.path} never rendered its <h1>`,
     ).toBeVisible();
     if (route.mapPins) {
-      await expect(page.locator(".leaflet-site-marker button").first()).toBeVisible();
+      await expect(
+        page.locator(".leaflet-site-marker button, button.leaflet-site-cluster").first(),
+      ).toBeVisible();
     }
     await expectNoA11yViolations(page);
   }
