@@ -1580,8 +1580,19 @@ export type ImportAssist = {
   readonly levels: Readonly<Record<string, ImportLevel>>;
 };
 
-/** Fields an assist may never fill: each is a gate's evidence or a medical pointer. */
+/**
+ * Fields an assist may never fill: each is a gate's evidence, a medical pointer,
+ * or who the row is. A name or an email decides which diver a row's verified
+ * card and trusted waiver land on (the commit merges by email), and a date of
+ * birth is the age gate's evidence, so only the shop's own header may name
+ * them. An assisted emergency contact only fills a blank (`commitContactImport`).
+ */
 const ASSIST_UNMAPPABLE_FIELDS: ReadonlySet<ImportField> = new Set<ImportField>([
+  "full_name",
+  "first_name",
+  "last_name",
+  "email",
+  "date_of_birth",
   "certification_status",
   "nitrox_certified",
   "waiver_accepted",

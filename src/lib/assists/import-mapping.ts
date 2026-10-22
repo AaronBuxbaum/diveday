@@ -144,7 +144,7 @@ const MAPPING_SYSTEM = `You help a scuba diving shop move its customer list from
 
 You are given column headers DiveDay did not recognize, with a few masked sample values each, and the certification-level spellings it could not read. Answer:
 - columns: for each header, the DiveDay field it holds, or "none" when it holds none of them or you are unsure. Each field may be used once.
-- levels: for each spelling, the recreational rung it names: open_water, advanced_open_water, rescue, divemaster, instructor, or "none". A specialty, a technical, nitrox or cave rating, a junior or referral level, or anything you are unsure of is "none". "AOW" and "Adv Open Water" are advanced_open_water.
+- levels: for each spelling, the recreational rung it names: open_water, advanced_open_water, rescue, divemaster, instructor, or "none". A specialty, a technical, nitrox or cave rating, a junior or referral level, or anything you are unsure of is "none". "AOW" and "Adv Open Water" are advanced_open_water. "Scuba Diver" is none. "Adventure Diver" is open_water. CMAS or national-federation stars are none.
 
 Fields: ${ASSIST_MAPPABLE_FIELDS.join(", ")}.
 

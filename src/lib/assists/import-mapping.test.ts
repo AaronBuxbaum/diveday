@@ -12,10 +12,10 @@ import {
 } from "./import-mapping";
 
 const EXPORT = [
-  "Cust,E-Post,Lvl,Card #,Health notes,Card Number",
-  "Ana López,ana@example.org,Fortgeschritten,PADI-123456,asthma,4111111111111111",
-  "Ben Ito,ben@example.org,Sauveteur,PADI-654321,,",
-  "Cleo Park,cleo@example.org,Open Water,SSI-777777,,",
+  "Name,Cust,E-Post,Lvl,Card #,Health notes,Card Number",
+  "Ana López,C-1,ana@example.org,Fortgeschritten,PADI-123456,asthma,4111111111111111",
+  "Ben Ito,C-2,ben@example.org,Sauveteur,PADI-654321,,",
+  "Cleo Park,C-3,cleo@example.org,Open Water,SSI-777777,,",
 ].join("\n");
 
 describe("maskSampleCell", () => {
@@ -115,12 +115,12 @@ describe("importAssistFrom", () => {
       importAssistFrom(
         {
           columns: [
-            { header: "Cust", field: "full_name" },
-            { header: "E-Post", field: "email" },
+            { header: "Cust", field: "visit_reference" },
+            { header: "E-Post", field: "none" },
             { header: "Lvl", field: "certification_level" },
             { header: "Card #", field: "certification_number" },
             { header: "Health notes", field: "internal_notes" },
-            { header: "Other", field: "full_name" },
+            { header: "Other", field: "visit_reference" },
           ],
           levels: [
             { spelling: "Fortgeschritten", level: "advanced_open_water" },
@@ -131,8 +131,7 @@ describe("importAssistFrom", () => {
       ),
     ).toEqual({
       headers: {
-        Cust: "full_name",
-        "E-Post": "email",
+        Cust: "visit_reference",
         Lvl: "certification_level",
         "Card #": "certification_number",
       },
@@ -144,8 +143,7 @@ describe("importAssistFrom", () => {
 describe("prepareContactImport with an assist", () => {
   const assist = {
     headers: {
-      Cust: "full_name",
-      "E-Post": "email",
+      Cust: "visit_reference",
       Lvl: "certification_level",
       "Card #": "certification_number",
     },
@@ -156,13 +154,27 @@ describe("prepareContactImport with an assist", () => {
     const prepared = prepareContactImport(EXPORT, assist);
     expect(prepared.fatal).toBeNull();
     expect(prepared.mapping).toContainEqual({
-      field: "full_name",
+      field: "visit_reference",
       header: "Cust",
-      columnIndex: 0,
+      columnIndex: 1,
       assisted: true,
     });
     expect(prepared.ignoredMedicalColumns).toEqual(["Health notes"]);
     expect(prepared.mapping.map((entry) => entry.header)).not.toContain("Card Number");
+  });
+
+  it("never lets an assist say who a row is or how old they are", () => {
+    const prepared = prepareContactImport(EXPORT.replace("Name,", "Kunde,"), {
+      headers: { Kunde: "full_name", "E-Post": "email", Cust: "date_of_birth" },
+      levels: {},
+    } as unknown as Parameters<typeof prepareContactImport>[1]);
+    expect(prepared.fatal?.code).toBe("no_name_column");
+    const named = prepareContactImport(EXPORT, {
+      headers: { "E-Post": "email", Cust: "date_of_birth" },
+      levels: {},
+    } as unknown as Parameters<typeof prepareContactImport>[1]);
+    expect(named.mapping.filter((entry) => entry.assisted)).toEqual([]);
+    expect(named.rows.every((row) => row.email === null && row.dateOfBirth === null)).toBe(true);
   });
 
   it("imports every card from an assisted card column as pending, never verified", () => {
@@ -174,6 +186,31 @@ describe("prepareContactImport with an assist", () => {
       "open_water",
     ]);
     expect(certs.every((cert) => cert?.status === "pending")).toBe(true);
+  });
+
+  it("names the glossary's level traps, and a rung read through one never imports verified", () => {
+    const sample = importAssistSample(EXPORT);
+    if (!sample) throw new Error("expected a sample");
+    const system = JSON.stringify(buildStructuredRequest(importMappingCall(sample)).system);
+    expect(system).toContain(
+      '\\"Scuba Diver\\" is none. \\"Adventure Diver\\" is open_water. CMAS or national-federation stars are none.',
+    );
+    const file = [
+      "Name,Certification Level,Certification Number",
+      "Ana,PADI Scuba Diver,P-1",
+      "Ben,Adventure Diver,P-2",
+      "Cleo,CMAS 2 Star,P-3",
+    ].join("\n");
+    // Whatever rung a model gives these spellings, none of them lands verified.
+    const prepared = prepareContactImport(file, {
+      headers: {},
+      levels: {
+        "padi scuba diver": "open_water",
+        "adventure diver": "advanced_open_water",
+        "cmas 2 star": "advanced_open_water",
+      },
+    });
+    for (const row of prepared.rows) expect(row.cert?.status ?? "none").not.toBe("verified");
   });
 
   it("reads a level only through an assisted spelling as pending, even from a known column", () => {
@@ -201,16 +238,17 @@ describe("prepareContactImport with an assist", () => {
   });
 
   it("is the plain importer without one", () => {
-    expect(prepareContactImport(EXPORT).fatal?.code).toBe("no_name_column");
+    expect(prepareContactImport(EXPORT).mapping.some((entry) => entry.assisted)).toBe(false);
   });
 });
 
 describe("parseImportAssist", () => {
   it("reads a well-formed assist and refuses a field it may not fill", () => {
-    expect(parseImportAssist('{"headers":{"Cust":"full_name"},"levels":{}}')).toEqual({
-      headers: { Cust: "full_name" },
+    expect(parseImportAssist('{"headers":{"Cust":"visit_reference"},"levels":{}}')).toEqual({
+      headers: { Cust: "visit_reference" },
       levels: {},
     });
+    expect(parseImportAssist('{"headers":{"Cust":"email"},"levels":{}}')).toBeUndefined();
     expect(parseImportAssist('{"headers":{"Cust":"waiver_accepted"},"levels":{}}')).toBeUndefined();
     expect(parseImportAssist("not json")).toBeUndefined();
     expect(parseImportAssist("")).toBeUndefined();
