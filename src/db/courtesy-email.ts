@@ -11,10 +11,10 @@ import {
 
 /**
  * Mints a fresh, non-expiring bearer link opting one person out of courtesy
- * email — `waitlist_invite`, `trip_recap`, `checkout_recovery` and
- * `direct_trip_invitation` (Leo — self-serve email unsubscribe; issue #1953).
- * Called once per send, alongside `inviteWaitlistDiver` / `sendDueRecaps` /
- * `deliverTripInvitation`, mirroring `issueLastMinuteListUnsubscribeToken`: every
+ * email — `seat_offer_commercial`, `trip_recap`, `checkout_recovery` and
+ * `last_minute_deal` (Leo — self-serve email unsubscribe; issue #1953).
+ * Called once per send, alongside `sendOffer` / `sendDueRecaps` /
+ * `deliverSeatOffer`, mirroring `issueLastMinuteListUnsubscribeToken`: every
  * courtesy email carries its own working link even if an earlier one is later
  * relied on too, and the token never expires — an expired opt-out link would
  * leave someone unable to stop the emails, silently.

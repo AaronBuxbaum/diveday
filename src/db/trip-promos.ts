@@ -21,6 +21,7 @@ import { spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
 import { issueLastMinuteListUnsubscribeToken, listLastMinuteList } from "./last-minute-list";
+import { listDepartureLeads } from "./leads";
 import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { queryAll } from "./query-helpers";
@@ -40,7 +41,6 @@ import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stri
 import { promotionProviderFromEnvironment } from "./stripe-providers";
 import { liveTrip } from "./trips-live";
 import { getTripWithBooked } from "./trips-record";
-import { getTripWaitlist } from "./trips-roster";
 
 export type SendLastMinuteDealInput = {
   shopId: string;
@@ -171,10 +171,12 @@ export async function sendLastMinuteDealBlast(
   // just generically around that week. That is send order for one automated
   // mail, not a standing in a queue: the wait list has none
   // (ADR 20260813-wait-list-is-a-lead-list).
-  const waitlist = await getTripWaitlist(db, input.shopId, input.tripId);
+  const waitlist = (await listDepartureLeads(db, input.shopId, input.tripId)).filter(
+    ({ lead }) => lead.askedBy === "diver",
+  );
   const orderedMatches = orderLastMinuteRecipients(
     eligibleMatches,
-    waitlist.map(({ person }) => person.id),
+    waitlist.flatMap(({ lead }) => (lead.personId ? [lead.personId] : [])),
   );
 
   const currency = await getShopCurrency(db, input.shopId);

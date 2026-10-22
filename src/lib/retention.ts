@@ -23,7 +23,7 @@
  * and contact data
  * indefinitely and deletes it only when somebody explicitly asks it to
  * (product owner, 2026-08-14). So a dormancy clock on `people`,
- * `course_inquiries` or `trip_waitlist_entries` — expiring the record of
+ * `course_inquiries` or `leads` — expiring the record of
  * someone who inquired once and never booked — is not something to add here.
  * It was proposed and declined: a lead who books eight months later is
  * ordinary dive-shop behaviour, and the erasure path that does exist is the

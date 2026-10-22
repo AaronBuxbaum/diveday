@@ -73,7 +73,6 @@ export type TripRosterActions = {
   saveRosterEmergencyContactAction: FormAction;
   updateBookingPickupAction: (bookingId: string, formData: FormData) => void | Promise<void>;
   updateBookingDietaryNoteAction: (bookingId: string, formData: FormData) => void | Promise<void>;
-  recordTripInvitationAction: (invitationId: string) => Promise<"sent" | "fallback">;
   undoRemoveBookingAction: FormAction;
   restoreInternalNoteAction: FormAction;
   /** Absent on a course session, and for a staffer who may not configure trips. */
@@ -397,7 +396,6 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
                     tripTitle={trip.title}
                     tripStartsAt={trip.startsAt}
                     timezone={timezone}
-                    inviteAction={actions.recordTripInvitationAction}
                     locale={locale}
                     canInvite={acceptsDivers && mayInviteFromWaitlist}
                   />

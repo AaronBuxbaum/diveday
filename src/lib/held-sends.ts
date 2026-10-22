@@ -29,7 +29,7 @@ export const SEND_HOLD_TOLERANCE_MS = 750;
 export const HELD_SEND_KINDS = [
   "waiver_send",
   "last_minute_deal",
-  "waitlist_invite",
+  "seat_offer",
   "trip_rescheduled",
   "departure_note",
 ] as const;
@@ -70,10 +70,15 @@ const lastMinuteDealPayload = z
     { message: "one_discount" },
   );
 
-const waitlistInvitePayload = z.object({
-  kind: z.literal("waitlist_invite"),
+/**
+ * **Offer a seat** (ADR 20261017-one-lead-with-a-scope): the one held act on a
+ * departure's leads. Ids only, never a name or an address; the executor joins
+ * those at send time.
+ */
+const seatOfferPayload = z.object({
+  kind: z.literal("seat_offer"),
   tripId: z.uuid(),
-  entryId: z.uuid(),
+  leadIds: z.array(z.uuid()).min(1).max(500),
 });
 
 /**
@@ -114,7 +119,7 @@ const departureNotePayload = z.object({
 export const heldSendPayloadSchema = z.discriminatedUnion("kind", [
   waiverSendPayload,
   lastMinuteDealPayload,
-  waitlistInvitePayload,
+  seatOfferPayload,
   tripRescheduledPayload,
   departureNotePayload,
 ]);

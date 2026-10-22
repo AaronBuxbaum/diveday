@@ -26,6 +26,7 @@ import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./diver
 import { otherSameNamePeople } from "./identity-repoint";
 import { listInviteSuggestions } from "./invite-suggestions";
 import { listLastMinuteList } from "./last-minute-list";
+import { listDepartureLeads } from "./leads";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRosterWithPaymentMarks } from "./payment-marks";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
@@ -33,10 +34,8 @@ import { listTripPrepDivers } from "./rental-fit";
 import { listCertificationSummaries } from "./self-declared-cards";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { trainingMarksForRoster } from "./training-marks";
-import { listTripInvitations } from "./trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
 import { getTripWithBooked } from "./trips-record";
-import { getTripWaitlist } from "./trips-roster";
 import type { TripSharedReads } from "./trips-shared-reads";
 
 /**
@@ -92,8 +91,7 @@ export async function getTripGuests(
     siteRequirement,
     readinessRows,
     prepDivers,
-    waitlist,
-    invitations,
+    departureLeads,
     inviteSuggestions,
     lastMinuteList,
     lastMinutePromos,
@@ -119,8 +117,7 @@ export async function getTripGuests(
     shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
     shared ? shared.readiness : listTripReadiness(db, shop.id, tripId),
     shared ? shared.prepDivers : listTripPrepDivers(db, shop.id, tripId),
-    getTripWaitlist(db, shop.id, tripId),
-    listTripInvitations(db, shop.id, tripId),
+    listDepartureLeads(db, shop.id, tripId),
     // Past divers of this departure's site worth asking (H-130), only while
     // it has a seat to offer.
     isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
@@ -150,7 +147,11 @@ export async function getTripGuests(
   const lastMinuteMatched = lastMinuteList.filter(({ entry }) =>
     lastMinuteEntryMatchesTripDate(entry, tripDateIso),
   );
-  const waitlistPersonIds = waitlist.map(({ person }) => person.id);
+  // The wait list is the leads the diver asked for; the rest were the shop's own
+  // outreach (`asked_by`). One table, two readings.
+  const waitlist = departureLeads.filter(({ lead }) => lead.askedBy === "diver");
+  const invitations = departureLeads.filter(({ lead }) => lead.askedBy === "shop");
+  const waitlistPersonIds = waitlist.flatMap(({ lead }) => (lead.personId ? [lead.personId] : []));
   const heldSeats = roster.filter(({ booking }) => booking.identityUnconfirmedAt);
 
   // **One wave after the roster** (code review 2026-10-11, item 12): each of
@@ -453,7 +454,7 @@ export async function getTripGuests(
       capacity: trip.capacity,
       booked: trip.booked,
       // Seats wanted, not leads: a waiting couple is two (fourth review, item 34).
-      waitlisted: waitlist.reduce((seats, { entry }) => seats + entry.partySize, 0),
+      waitlisted: waitlist.reduce((seats, { lead }) => seats + (lead.partySize ?? 1), 0),
     }),
     lastMinute: {
       matched: lastMinuteMatched,

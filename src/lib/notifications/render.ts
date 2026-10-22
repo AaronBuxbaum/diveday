@@ -153,9 +153,14 @@ function addressConfirmationEmail(
 
 function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
-  if (notification.kind === "waitlist_invite") return waitlistInviteEmail(notification);
-  if (notification.kind === "trip_invitation") return tripInvitationEmail(notification);
-  if (notification.kind === "direct_trip_invitation") return tripInvitationEmail(notification);
+  if (notification.kind === "seat_offer") return tripInvitationEmail(notification);
+  // A waiting diver hears "a seat opened"; anyone the shop reached out to hears
+  // that the shop is offering it. The words are the diver's, unchanged.
+  if (notification.kind === "seat_offer_commercial") {
+    return notification.askedBy === "diver"
+      ? waitlistInviteEmail(notification)
+      : tripInvitationEmail(notification);
+  }
   if (notification.kind === "trip_reminder_7d") {
     return diverStateEmail({ ...notification, state: "week_out" });
   }

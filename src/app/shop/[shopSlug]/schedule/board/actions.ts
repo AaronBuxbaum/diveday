@@ -11,7 +11,6 @@ import { discardFormDraft } from "@/db/form-drafts";
 import { getMovePreflight } from "@/db/move-preflight";
 import { recordShopActivity } from "@/db/shop-activity";
 import { getShopById } from "@/db/shops";
-import { createTripRequestInvitations } from "@/db/trip-invitations";
 import { getTripLens, listTripLenses } from "@/db/trip-lenses";
 import { holdRescheduleNotice } from "@/db/trip-rescheduled";
 import {
@@ -398,8 +397,6 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   };
   const parsed = addSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return await invalid();
-  const requestIds = z.array(z.uuid()).safeParse(formData.getAll("inquiryId"));
-  if (!requestIds.success) return await invalid();
   // No role check on the ids beyond the shape above, since 2026-09-16 (issue
   // #1679). This refused a submit carrying `inquiryId`s unless the staffer
   // passed `canPersonViewShopReports`, on the ground that "a staffer who can
@@ -598,12 +595,6 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
       actorPersonId: session.user.personId,
       write: { code: "series_added", tripId: firstTrip.id },
     });
-    await createTripRequestInvitations(db, {
-      shopId: shop.id,
-      tripId: firstTrip.id,
-      requestIds: requestIds.data,
-      createdByPersonId: session.user.personId,
-    });
     await trackEvent({ name: "schedule_builder_action", action: "add", outcome: "ok" });
     await discardFormDraft(db, shop.id, session.user.personId, "add_departure");
     return await landAfterAdd(db, shop, shopSlug, title, series.trips.length);
@@ -625,16 +616,6 @@ export async function addDepartureAction(shopSlug: string, formData: FormData) {
   if (crewPersonIds.length > 0) {
     await setTripCrew(db, shop.id, created.id, crewPersonIds, {
       actorPersonId: session.user.personId,
-    });
-  }
-  // A rehearsal answers nobody's request: an invitation is a message, and a
-  // rehearsal sends none (ADR 20261012-rehearsal-departures).
-  if (!isRehearsal) {
-    await createTripRequestInvitations(db, {
-      shopId: shop.id,
-      tripId: created.id,
-      requestIds: requestIds.data,
-      createdByPersonId: session.user.personId,
     });
   }
   // "Add it as well": the pattern's second departure, read back off the board

@@ -3,19 +3,23 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { bookings, courses, people, shops, tripWaitlistEntries } from "./schema";
+import { deliverSeatOffer } from "./lead-offers";
+import {
+  askForDeparture,
+  ensureDepartureLead,
+  getDepartureLeadForTrip,
+  listDepartureLeads,
+} from "./leads";
+import { bookings, courses, leads, people, shops } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
 import {
   createTrip,
   getTripRoster,
-  getTripWaitlist,
   getTripWithBooked,
-  getWaitlistEntryForTrip,
   listStaff,
   setTripCrew,
   upcomingTripsWithCounts,
 } from "./trips";
-import { inviteWaitlistDiver, joinTripWaitlist, recordWaitlistInvite } from "./waitlist";
 
 async function seededContext() {
   const { db, shop } = ctx;
@@ -32,10 +36,10 @@ const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const ctx = fileScopedShopContext();
 
-describe("joinTripWaitlist (in-memory PGlite)", () => {
+describe("askForDeparture (in-memory PGlite)", () => {
   it("adds a new diver to a full trip without consuming a seat", async () => {
     const { db, shop, fullTrip } = await seededContext();
-    const outcome = await joinTripWaitlist(db, {
+    const outcome = await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       ...visitor,
@@ -47,8 +51,8 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
 
   it("keeps one entry per diver and trip, dated when they first asked", async () => {
     const { db, shop, fullTrip } = await seededContext();
-    const first = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
-    const again = await joinTripWaitlist(db, {
+    const first = await askForDeparture(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    const again = await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       ...visitor,
@@ -59,7 +63,7 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
     expect(again).toMatchObject({
       ok: false,
       reason: "already_waitlisted",
-      entryId: first.entryId,
+      leadId: first.leadId,
     });
   });
 
@@ -70,7 +74,7 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
    */
   it("does not write a declaration onto a person whose name does not match", async () => {
     const { db, shop, fullTrip } = await seededContext();
-    await joinTripWaitlist(db, {
+    await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       ...visitor,
@@ -79,7 +83,7 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
     const [person] = await db.select().from(people).where(eq(people.email, visitor.email));
     if (!person) throw new Error("setup: joiner not created");
 
-    const again = await joinTripWaitlist(db, {
+    const again = await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       email: visitor.email,
@@ -98,7 +102,7 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
   it("refuses a wait-list entry while a spot is available", async () => {
     const { db, shop, openTrip } = await seededContext();
     await expect(
-      joinTripWaitlist(db, { shopId: shop.id, tripId: openTrip.id, ...visitor }),
+      askForDeparture(db, { shopId: shop.id, tripId: openTrip.id, ...visitor }),
     ).resolves.toEqual({ ok: false, reason: "trip_available" });
     const trip = await getTripWithBooked(db, shop.id, openTrip.id);
     expect(trip?.booked).toBe(openTrip.booked);
@@ -125,7 +129,7 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
       .where(eq(bookings.id, released.booking.id));
 
     await expect(
-      joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor }),
+      askForDeparture(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor }),
     ).resolves.toEqual({ ok: false, reason: "trip_available" });
   });
 });
@@ -135,26 +139,23 @@ describe("joinTripWaitlist (in-memory PGlite)", () => {
  * amended): a couple waits together for the full Saturday as one entry of two,
  * and a boat with one seat left is still full for them.
  */
-describe("joinTripWaitlist for a party", () => {
-  async function entry(id: string | undefined) {
+describe("askForDeparture for a party", () => {
+  async function lead(id: string | undefined) {
     if (!id) throw new Error("expected an entry");
-    const [row] = await ctx.db
-      .select()
-      .from(tripWaitlistEntries)
-      .where(eq(tripWaitlistEntries.id, id));
+    const [row] = await ctx.db.select().from(leads).where(eq(leads.id, id));
     return row;
   }
 
   it("records the party on one entry", async () => {
     const { db, shop, fullTrip } = await seededContext();
-    const outcome = await joinTripWaitlist(db, {
+    const outcome = await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       ...visitor,
       partySize: 2,
     });
     expect(outcome).toMatchObject({ ok: true });
-    expect((await entry(outcome.entryId))?.partySize).toBe(2);
+    expect((await lead(outcome.leadId))?.partySize).toBe(2);
   });
 
   it("waits a pair on a boat with one seat left, and sends one diver to book it", async () => {
@@ -167,9 +168,9 @@ describe("joinTripWaitlist for a party", () => {
       .where(eq(bookings.id, released.booking.id));
 
     await expect(
-      joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor }),
+      askForDeparture(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor }),
     ).resolves.toEqual({ ok: false, reason: "trip_available" });
-    const pair = await joinTripWaitlist(db, {
+    const pair = await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       ...visitor,
@@ -180,8 +181,8 @@ describe("joinTripWaitlist for a party", () => {
 
   it("updates the party when the joiner asks again", async () => {
     const { db, shop, fullTrip } = await seededContext();
-    const first = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
-    const again = await joinTripWaitlist(db, {
+    const first = await askForDeparture(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    const again = await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       ...visitor,
@@ -190,9 +191,9 @@ describe("joinTripWaitlist for a party", () => {
     expect(again).toMatchObject({
       ok: false,
       reason: "already_waitlisted",
-      entryId: first.entryId,
+      leadId: first.leadId,
     });
-    expect((await entry(first.entryId))?.partySize).toBe(3);
+    expect((await lead(first.leadId))?.partySize).toBe(3);
   });
 
   /**
@@ -203,131 +204,107 @@ describe("joinTripWaitlist for a party", () => {
   it("holds a party larger than the boat to the boat's seats", async () => {
     const { db, shop, fullTrip } = await seededContext();
     expect(fullTrip.capacity).toBeLessThan(20);
-    const outcome = await joinTripWaitlist(db, {
+    const outcome = await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       ...visitor,
       partySize: fullTrip.capacity + 5,
     });
     expect(outcome).toMatchObject({ ok: true });
-    expect((await entry(outcome.entryId))?.partySize).toBe(fullTrip.capacity);
+    expect((await lead(outcome.leadId))?.partySize).toBe(fullTrip.capacity);
 
-    await joinTripWaitlist(db, {
+    await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       ...visitor,
       partySize: 99,
     });
-    expect((await entry(outcome.entryId))?.partySize).toBe(fullTrip.capacity);
+    expect((await lead(outcome.leadId))?.partySize).toBe(fullTrip.capacity);
   });
 });
 
-describe("recordWaitlistInvite", () => {
-  it("stamps an entry as invited, scoped to the shop, and is idempotent", async () => {
-    const { db, shop, fullTrip } = await seededContext();
-    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
-    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
+describe("deliverSeatOffer on a wait-list lead", () => {
+  const T = new Date("2026-07-21T10:00:00.000Z");
 
-    const findEntry = async () =>
-      (await getTripWaitlist(db, shop.id, fullTrip.id)).find(
-        (row) => row.entry.id === joined.entryId,
+  async function joined() {
+    const { db, shop, fullTrip } = await seededContext();
+    const outcome = await askForDeparture(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    if (!outcome.ok) throw new Error(`join failed: ${outcome.reason}`);
+    const find = async () =>
+      (await listDepartureLeads(db, shop.id, fullTrip.id)).find(
+        (row) => row.lead.id === outcome.leadId,
       );
+    return { db, shop, fullTrip, leadId: outcome.leadId, find };
+  }
 
-    const t0 = new Date("2026-07-21T10:00:00.000Z");
-    await expect(
-      recordWaitlistInvite(db, { shopId: shop.id, entryId: joined.entryId, now: t0 }),
-    ).resolves.toBe(true);
-    expect((await findEntry())?.entry.invitedAt?.toISOString()).toBe(t0.toISOString());
-
-    // A re-invite just moves the timestamp forward (no double-entry).
-    const t1 = new Date("2026-07-21T12:00:00.000Z");
-    await recordWaitlistInvite(db, { shopId: shop.id, entryId: joined.entryId, now: t1 });
-    expect((await findEntry())?.entry.invitedAt?.toISOString()).toBe(t1.toISOString());
-  });
-
-  it("refuses to stamp an entry from another shop", async () => {
-    const { db, shop, fullTrip } = await seededContext();
-    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
-    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
-    await expect(
-      recordWaitlistInvite(db, {
-        shopId: "00000000-0000-4000-8000-000000000099",
-        entryId: joined.entryId,
-      }),
-    ).resolves.toBe(false);
-  });
-});
-
-describe("inviteWaitlistDiver", () => {
-  it("stamps the entry and reports the composer fallback when email isn't configured", async () => {
+  it("stamps the lead as offered and reports the composer fallback when email isn't configured", async () => {
     // The test environment sets neither APP_HOST nor SES_*, so a real send
-    // can't happen and the delivery degrades to the fallback — while the invite
+    // can't happen and the delivery degrades to the fallback — while the offer
     // is still durably recorded.
-    const { db, shop, fullTrip } = await seededContext();
-    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
-    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
-
-    const now = new Date("2026-07-21T10:00:00.000Z");
-    const result = await inviteWaitlistDiver(db, {
-      shopId: shop.id,
-      shopSlug: "blue-mantis",
-      entryId: joined.entryId,
-      now,
-    });
-
-    expect(result).toEqual({ ok: true, delivery: "unconfigured", invitedAt: now });
-    const entry = (await getTripWaitlist(db, shop.id, fullTrip.id)).find(
-      (row) => row.entry.id === joined.entryId,
-    );
-    expect(entry?.entry.invitedAt?.toISOString()).toBe(now.toISOString());
+    const { db, shop, fullTrip, leadId, find } = await joined();
+    await expect(
+      deliverSeatOffer(db, {
+        shopId: shop.id,
+        shopSlug: "blue-mantis",
+        tripId: fullTrip.id,
+        leadId,
+        now: T,
+      }),
+    ).resolves.toBe("fallback");
+    expect((await find())?.lead.offeredAt?.toISOString()).toBe(T.toISOString());
+    // The mail did not go, so it holds no 24-hour window.
+    expect((await find())?.lead.emailedAt).toBeNull();
   });
 
-  it("reports opted_out and skips the send for a diver who self-served out of courtesy email", async () => {
-    // Leo — self-serve email unsubscribe: `waitlist_invite` is one of the two
-    // kinds `people.courtesyEmailOptOutAt` governs, so an opted-out diver
-    // still gets stamped invited (their held seat is real) but the composer
-    // fallback stands in for the automated email that never goes out.
-    const { db, shop, fullTrip } = await seededContext();
-    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
-    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
+  it("moves the stamp forward on a re-offer instead of adding a row", async () => {
+    const { db, shop, fullTrip, leadId, find } = await joined();
+    const input = { shopId: shop.id, shopSlug: "blue-mantis", tripId: fullTrip.id, leadId };
+    await deliverSeatOffer(db, { ...input, now: T });
+    const later = new Date(T.getTime() + 2 * 3_600_000);
+    await deliverSeatOffer(db, { ...input, now: later });
+    expect((await find())?.lead.offeredAt?.toISOString()).toBe(later.toISOString());
+    expect(await listDepartureLeads(db, shop.id, fullTrip.id)).toHaveLength(1);
+  });
+
+  it("reports opted_out and sends nothing to a diver who self-served out of courtesy email", async () => {
+    // Leo — self-serve email unsubscribe: a wait-listed diver's offer is
+    // commercial mail, so `people.courtesyEmailOptOutAt` governs it. The lead
+    // is still stamped offered; the composer stands in for the email.
+    const { db, shop, fullTrip, leadId, find } = await joined();
     await db
       .update(people)
       .set({ courtesyEmailOptOutAt: new Date("2026-07-20T00:00:00.000Z") })
       .where(eq(people.email, visitor.email));
 
-    const now = new Date("2026-07-21T10:00:00.000Z");
-    const result = await inviteWaitlistDiver(db, {
-      shopId: shop.id,
-      shopSlug: "blue-mantis",
-      entryId: joined.entryId,
-      now,
-    });
-
-    expect(result).toEqual({ ok: true, delivery: "opted_out", invitedAt: now });
+    await expect(
+      deliverSeatOffer(db, {
+        shopId: shop.id,
+        shopSlug: "blue-mantis",
+        tripId: fullTrip.id,
+        leadId,
+        now: T,
+      }),
+    ).resolves.toBe("opted_out");
+    expect((await find())?.lead.offeredAt?.toISOString()).toBe(T.toISOString());
+    expect((await find())?.lead.emailedAt).toBeNull();
   });
 
-  it("does not stamp or invite an entry from another shop", async () => {
-    const { db, shop, fullTrip } = await seededContext();
-    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
-    if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
-
+  it("does not stamp or offer a lead from another shop", async () => {
+    const { db, fullTrip, leadId, find } = await joined();
     await expect(
-      inviteWaitlistDiver(db, {
+      deliverSeatOffer(db, {
         shopId: "00000000-0000-4000-8000-000000000099",
         shopSlug: "blue-mantis",
-        entryId: joined.entryId,
+        tripId: fullTrip.id,
+        leadId,
       }),
-    ).resolves.toEqual({ ok: false, reason: "not_found" });
-
-    const entry = (await getTripWaitlist(db, shop.id, fullTrip.id)).find(
-      (row) => row.entry.id === joined.entryId,
-    );
-    expect(entry?.entry.invitedAt).toBeNull();
+    ).resolves.toBe("fallback");
+    expect((await find())?.lead.offeredAt).toBeNull();
   });
 });
 
-describe("getTripWaitlist / getWaitlistEntryForTrip cross-tenant isolation (CR-007)", () => {
-  it("neither shop can read the other's real wait-list entry by substituting its own trip/entry id", async () => {
+describe("listDepartureLeads / getDepartureLeadForTrip cross-tenant isolation (CR-007)", () => {
+  it("neither shop can read the other's real departure lead by substituting its own trip/lead id", async () => {
     const { db, shop, fullTrip } = await seededContext();
     const [otherShop] = await db
       .insert(shops)
@@ -335,7 +312,7 @@ describe("getTripWaitlist / getWaitlistEntryForTrip cross-tenant isolation (CR-0
       .returning();
     if (!otherShop) throw new Error("second shop insert failed");
 
-    const joined = await joinTripWaitlist(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    const joined = await askForDeparture(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
     if (!joined.ok) throw new Error(`join failed: ${joined.reason}`);
 
     // A genuinely different shop, its own trip, its own real entry — not a
@@ -345,11 +322,11 @@ describe("getTripWaitlist / getWaitlistEntryForTrip cross-tenant isolation (CR-0
     expect(otherTrips).toEqual([]); // a fresh shop has no seeded trips of its own
 
     // otherShop's session can't see shop's entry at all.
-    expect(await getTripWaitlist(db, otherShop.id, fullTrip.id)).toEqual([]);
-    expect(await getWaitlistEntryForTrip(db, otherShop.id, fullTrip.id, joined.entryId)).toBeNull();
+    expect(await listDepartureLeads(db, otherShop.id, fullTrip.id)).toEqual([]);
+    expect(await getDepartureLeadForTrip(db, otherShop.id, fullTrip.id, joined.leadId)).toBeNull();
 
     // shop's own session still can, unaffected by the other shop existing.
-    expect(await getWaitlistEntryForTrip(db, shop.id, fullTrip.id, joined.entryId)).not.toBeNull();
+    expect(await getDepartureLeadForTrip(db, shop.id, fullTrip.id, joined.leadId)).not.toBeNull();
   });
 });
 
@@ -364,7 +341,7 @@ describe("getTripWaitlist / getWaitlistEntryForTrip cross-tenant isolation (CR-0
  * Discover Scuba is PADI's 2:1 intro ratio (HD-6); 180 days out keeps the
  * seeded instructor's calendar clear, as in `bookings.test.ts`.
  */
-describe("joinTripWaitlist on a ratio-full course session (issue #2679)", () => {
+describe("askForDeparture on a ratio-full course session (issue #2679)", () => {
   const OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
 
   async function introSession() {
@@ -420,7 +397,7 @@ describe("joinTripWaitlist on a ratio-full course session (issue #2679)", () => 
     ).toMatchObject({ ok: false, reason: "course_ratio_full" });
     // ...so the wait list is open.
     expect(
-      await joinTripWaitlist(ctx.db, { shopId: ctx.shop.id, tripId: trip.id, ...visitor }),
+      await askForDeparture(ctx.db, { shopId: ctx.shop.id, tripId: trip.id, ...visitor }),
     ).toMatchObject({ ok: true });
   });
 
@@ -428,7 +405,7 @@ describe("joinTripWaitlist on a ratio-full course session (issue #2679)", () => 
     const trip = await introSession();
     await student(trip.id, "Ada First");
     expect(
-      await joinTripWaitlist(ctx.db, {
+      await askForDeparture(ctx.db, {
         shopId: ctx.shop.id,
         tripId: trip.id,
         ...visitor,
@@ -441,7 +418,60 @@ describe("joinTripWaitlist on a ratio-full course session (issue #2679)", () => 
     const trip = await introSession();
     await student(trip.id, "Ada First");
     expect(
-      await joinTripWaitlist(ctx.db, { shopId: ctx.shop.id, tripId: trip.id, ...visitor }),
+      await askForDeparture(ctx.db, { shopId: ctx.shop.id, tripId: trip.id, ...visitor }),
     ).toEqual({ ok: false, reason: "trip_available" });
+  });
+});
+
+describe("a shop-asked lead and a diver's own ask are one row", () => {
+  async function diverAndOwner() {
+    const { db, shop, fullTrip } = await seededContext();
+    const asked = await askForDeparture(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    if (!asked.ok) throw new Error(`join failed: ${asked.reason}`);
+    const [row] = await db.select().from(leads).where(eq(leads.id, asked.leadId));
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Nora Quinn")));
+    return { db, shop, fullTrip, row, ownerId: owner?.id ?? "", leadId: asked.leadId };
+  }
+
+  it("keeps the row a waiting diver has when staff offer them the same departure", async () => {
+    const { db, shop, fullTrip, row, leadId } = await diverAndOwner();
+    if (!row?.personId) throw new Error("setup: lead has no person");
+    const ensured = await ensureDepartureLead(db, {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      personId: row.personId,
+      createdByPersonId: row.personId,
+    });
+    expect(ensured).toEqual({ leadId, created: false });
+    expect(await listDepartureLeads(db, shop.id, fullTrip.id)).toHaveLength(1);
+  });
+
+  it("refuses a diver, an author or a departure that is not this shop's", async () => {
+    const { db, shop, fullTrip, row } = await diverAndOwner();
+    if (!row?.personId) throw new Error("setup: lead has no person");
+    const stranger = "00000000-0000-4000-8000-000000000099";
+    const base = {
+      shopId: shop.id,
+      tripId: fullTrip.id,
+      personId: row.personId,
+      createdByPersonId: row.personId,
+    };
+    expect(await ensureDepartureLead(db, { ...base, shopId: stranger })).toBeNull();
+    expect(await ensureDepartureLead(db, { ...base, tripId: stranger })).toBeNull();
+    expect(await ensureDepartureLead(db, { ...base, personId: stranger })).toBeNull();
+    expect(await ensureDepartureLead(db, { ...base, createdByPersonId: stranger })).toBeNull();
+  });
+
+  it("makes a diver-asked row of a shop-asked one when the diver asks themselves", async () => {
+    const { db, shop, fullTrip, row, leadId } = await diverAndOwner();
+    if (!row?.personId) throw new Error("setup: lead has no person");
+    await db.update(leads).set({ askedBy: "shop" }).where(eq(leads.id, leadId));
+    const again = await askForDeparture(db, { shopId: shop.id, tripId: fullTrip.id, ...visitor });
+    expect(again).toMatchObject({ ok: false, reason: "already_waitlisted", leadId });
+    const [after] = await db.select().from(leads).where(eq(leads.id, leadId));
+    expect(after?.askedBy).toBe("diver");
   });
 });

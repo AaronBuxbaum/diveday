@@ -8,6 +8,7 @@ import { createBooking, setBookingParticipantType } from "./bookings";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";
 import { tripRatioGapNeedsInstructor } from "./crew-requests";
+import { departureOpenToDiver, invitableSeats } from "./lead-offers";
 import { markBookingNoShow, undoBookingNoShow } from "./no-show";
 import {
   issueShopCertification,
@@ -16,10 +17,8 @@ import {
   studentOnSeat,
 } from "./readiness";
 import { bookings, courses, people, shops, trips } from "./schema";
-import { departureOpenToDiver } from "./trip-invitations";
 import { createTrip, listStaff, setTripCrew, setTripParticipantTerms } from "./trips";
 import { getTripOverview } from "./trips-overview";
-import { invitableSeats } from "./waitlist-roll";
 
 // One seeded database for the file and a rolled-back transaction per test.
 const ctx = fileScopedShopContext();

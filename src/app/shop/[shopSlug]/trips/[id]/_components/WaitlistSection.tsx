@@ -95,32 +95,35 @@ export function WaitlistGroup({
         <p className="text-xs text-muted">{t("trips.waitlist.description")}</p>
       </RosterGroupBand>
       <ul className="divide-y divide-border">
-        {waitlist.map(({ entry, person }) => {
-          const summary = certificationSummaries.get(person.id) ?? null;
+        {waitlist.map(({ lead, person }) => {
+          const summary =
+            (lead.personId ? certificationSummaries.get(lead.personId) : null) ?? null;
+          const name = person?.fullName ?? lead.name ?? "";
+          const email = person?.email ?? lead.email;
           // The deal panel and this row answer the same question with one
           // predicate. Unlike the capped deal preview, this list keeps its
           // lead order and never filters or gates the invite.
           const belowRequirement = ranksBelow({ certification: summary }, departureRequirement);
           return (
             <li
-              key={entry.id}
+              key={lead.id}
               className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
             >
               <div className="min-w-0">
-                <p className="font-medium text-base">{person.fullName}</p>
+                <p className="font-medium text-base">{name}</p>
                 <p className="text-muted wrap-anywhere">
-                  {person.email ?? t("trips.waitlist.noEmailOnFile")}
+                  {email ?? t("trips.waitlist.noEmailOnFile")}
                   {" · "}
                   {t("trips.waitlist.joined", {
-                    date: formatShortDate(entry.createdAt, locale, timezone),
+                    date: formatShortDate(lead.askedAt, locale, timezone),
                   })}
                   {/* A party waits and is invited together (fourth review,
                       item 34): the seats an invite would need. */}
-                  {entry.partySize > 1 ? (
+                  {(lead.partySize ?? 1) > 1 ? (
                     <>
                       {" · "}
                       <span className="font-medium text-foreground">
-                        {t("trips.waitlist.party", { count: entry.partySize })}
+                        {t("trips.waitlist.party", { count: lead.partySize ?? 1 })}
                       </span>
                     </>
                   ) : null}
@@ -141,10 +144,10 @@ export function WaitlistGroup({
               </div>
               {canInvite ? (
                 <WaitlistInvite
-                  entryId={entry.id}
-                  personName={person.fullName}
-                  personEmail={person.email}
-                  invitedAt={entry.invitedAt}
+                  leadId={lead.id}
+                  personName={name}
+                  personEmail={email}
+                  invitedAt={lead.offeredAt}
                   bookingPath={bookingPath}
                   shopName={shopName}
                   tripTitle={tripTitle}

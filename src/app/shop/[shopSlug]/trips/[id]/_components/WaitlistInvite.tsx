@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   holdSendAction,
   releaseHeldSendAction,
@@ -50,7 +50,7 @@ function relativeTime(copy: WaitlistInviteCopy, from: Date, now = nowDate()): st
 type InviteOutcome = "idle" | "sent" | "fallback";
 
 /**
- * One-tap seat recovery: sends a wait-list diver the freed-seat invite through
+ * One-tap seat recovery: offers a seat to a lead, sending the freed-seat email through
  * the server notification seam (real email, by default) and records that it
  * happened so two staff don't both reach out. Only when the server reports it
  * could not send — no provider configured, or no address on file — does the
@@ -58,7 +58,7 @@ type InviteOutcome = "idle" | "sent" | "fallback";
  * so an invite always goes out one way or another.
  */
 export function WaitlistInvite({
-  entryId,
+  leadId,
   personName,
   personEmail,
   invitedAt,
@@ -67,10 +67,9 @@ export function WaitlistInvite({
   tripTitle,
   tripWhen,
   tripId,
-  invite,
   copy,
 }: {
-  entryId: string;
+  leadId: string;
   personName: string;
   personEmail: string | null;
   invitedAt: Date | string | null;
@@ -78,14 +77,8 @@ export function WaitlistInvite({
   shopName: string;
   tripTitle: string;
   tripWhen: string;
-  /** The departure the seat is on: the held send is keyed to it. Absent on the record-only path. */
-  tripId?: string;
-  /**
-   * A request-origin invitation is recorded rather than sent — the server
-   * notes the outreach and hands staff the composer — so it takes this
-   * immediate path and never the hold. Absent for a wait-list seat.
-   */
-  invite?: (entryId: string) => Promise<"sent" | "fallback">;
+  /** The departure the seat is on: the held send is keyed to it. */
+  tripId: string;
   copy: WaitlistInviteCopy;
 }) {
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
@@ -120,15 +113,6 @@ export function WaitlistInvite({
   // post-send work the old submit did with it: open the mailto composer, or
   // copy the message, only when the server couldn't send.
   const [result, setResult] = useState<InviteOutcome>("idle");
-  const [recorded, recordAction, recording] = useActionState<InviteOutcome>(async () => {
-    if (!invite) return "idle";
-    const outcome = await invite(entryId);
-    setAttempt((count) => count + 1);
-    return outcome;
-  }, "idle");
-  useEffect(() => {
-    if (recorded !== "idle") setResult(recorded);
-  }, [recorded]);
 
   // Reacts to result/attempt only — mailto and copyMessage are derived fresh
   // from props every render, not values worth resubscribing to.
@@ -153,82 +137,53 @@ export function WaitlistInvite({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      {invite ? (
-        <form action={recordAction} className="contents">
-          {personEmail ? (
-            <button
-              type="submit"
-              disabled={recording}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
-            >
-              <span aria-live="polite">
-                {emailed
-                  ? copy.inviteEmailed
-                  : invited
-                    ? copy.reSendInvite
-                    : fill(copy.emailAnInvite, { firstName })}
-              </span>
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={recording}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
-            >
-              <span aria-live="polite">
-                {copyStatus === "copied"
-                  ? copy.copied
-                  : copyStatus === "failed"
-                    ? copy.copyFailed
-                    : copy.copyInviteMessage}
-              </span>
-            </button>
-          )}
-        </form>
-      ) : (
-        <SendHold
-          className="contents"
-          hold={holdSendAction}
-          undo={undoHeldSendAction}
-          release={releaseHeldSendAction}
-          onOutcome={(outcome) => {
-            setResult(outcome.kind === "waitlist_invite" ? outcome.result : "fallback");
-            setAttempt((count) => count + 1);
-          }}
-          copy={copy.hold}
-        >
-          <input type="hidden" name="holdKind" value="waitlist_invite" />
-          {tripId ? <input type="hidden" name="tripId" value={tripId} /> : null}
-          <input type="hidden" name="entryId" value={entryId} />
-          {personEmail ? (
-            <button
-              type="submit"
-              className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
-            >
-              <span aria-live="polite">
-                {emailed
-                  ? copy.inviteEmailed
-                  : invited
-                    ? copy.reSendInvite
-                    : fill(copy.emailAnInvite, { firstName })}
-              </span>
-            </button>
-          ) : (
-            <button
-              type="submit"
-              className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
-            >
-              <span aria-live="polite">
-                {copyStatus === "copied"
-                  ? copy.copied
-                  : copyStatus === "failed"
-                    ? copy.copyFailed
-                    : copy.copyInviteMessage}
-              </span>
-            </button>
-          )}
-        </SendHold>
-      )}
+      <SendHold
+        className="contents"
+        hold={holdSendAction}
+        undo={undoHeldSendAction}
+        release={releaseHeldSendAction}
+        onOutcome={(outcome) => {
+          setResult(
+            outcome.kind === "seat_offer" &&
+              outcome.results.every((result) => result.delivery === "sent")
+              ? "sent"
+              : "fallback",
+          );
+          setAttempt((count) => count + 1);
+        }}
+        copy={copy.hold}
+      >
+        <input type="hidden" name="holdKind" value="seat_offer" />
+        <input type="hidden" name="tripId" value={tripId} />
+        <input type="hidden" name="leadId" value={leadId} />
+        {personEmail ? (
+          <button
+            type="submit"
+            className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
+          >
+            <span aria-live="polite">
+              {emailed
+                ? copy.inviteEmailed
+                : invited
+                  ? copy.reSendInvite
+                  : fill(copy.emailAnInvite, { firstName })}
+            </span>
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
+          >
+            <span aria-live="polite">
+              {copyStatus === "copied"
+                ? copy.copied
+                : copyStatus === "failed"
+                  ? copy.copyFailed
+                  : copy.copyInviteMessage}
+            </span>
+          </button>
+        )}
+      </SendHold>
       {invited ? (
         <span className="text-xs text-muted">
           {fill(copy.invitedRelative, { time: relativeTime(copy, invited) })}

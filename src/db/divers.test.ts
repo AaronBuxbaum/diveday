@@ -8,6 +8,7 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { departureLead } from "@/test/leads";
 import { anonymizeDiver } from "./anonymize";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -42,6 +43,7 @@ import {
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
+  leads,
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
@@ -61,7 +63,6 @@ import {
   tripLastMinutePromos,
   tripReviews,
   trips,
-  tripWaitlistEntries,
   userAccounts,
   waiverRecords,
 } from "./schema";
@@ -1442,11 +1443,9 @@ describe("diver erasure", () => {
       tokenHash: "elena-readiness-hash",
       expiresAt: new Date(erasureNow.getTime() + 86_400_000),
     });
-    await db.insert(tripWaitlistEntries).values({
-      shopId: shop.id,
-      tripId: trip.id,
-      personId: diver.id,
-    });
+    await db
+      .insert(leads)
+      .values(departureLead({ shopId: shop.id, tripId: trip.id, personId: diver.id }));
     const [listEntry] = await db
       .insert(lastMinuteListEntries)
       .values({ shopId: shop.id, personId: diver.id })
@@ -1579,9 +1578,7 @@ describe("diver erasure", () => {
     expect(
       await db.select().from(internalNotes).where(eq(internalNotes.personId, diver.id)),
     ).toHaveLength(0);
-    expect(
-      await db.select().from(tripWaitlistEntries).where(eq(tripWaitlistEntries.personId, diver.id)),
-    ).toHaveLength(0);
+    expect(await db.select().from(leads).where(eq(leads.personId, diver.id))).toHaveLength(0);
     expect(
       await db
         .select()

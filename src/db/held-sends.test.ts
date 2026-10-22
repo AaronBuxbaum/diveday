@@ -82,16 +82,16 @@ describe("held sends", () => {
       shopId: shop.id,
       actorPersonId: owner.personId,
       now,
-      payload: { kind: "waitlist_invite", tripId: seat.tripId, entryId: seat.bookingId },
+      payload: { kind: "seat_offer", tripId: seat.tripId, leadIds: [seat.bookingId] },
     });
     expect(await undoHeldSend(db, shop.id, held.id, held.runAt)).toBe(false);
     const first = await claimHeldSend(db, shop.id, held.id, held.runAt);
     expect(first.status).toBe("claimed");
     if (first.status === "claimed") {
       expect(first.row.payload).toEqual({
-        kind: "waitlist_invite",
+        kind: "seat_offer",
         tripId: seat.tripId,
-        entryId: seat.bookingId,
+        leadIds: [seat.bookingId],
       });
       expect(first.row.actorPersonId).toBe(owner.personId);
     }

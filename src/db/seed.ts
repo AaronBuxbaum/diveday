@@ -62,6 +62,7 @@ import {
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
+  leads,
   marineLifeRequests,
   mediaDeletionAttempts,
   nitroxCertifications,
@@ -102,7 +103,6 @@ import {
   tripChangeEvents,
   tripDives,
   tripHelpRequests,
-  tripInvitations,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   tripRecapPhotos,
@@ -114,7 +114,6 @@ import {
   tripSightings,
   tripStageEvents,
   trips,
-  tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
   waiverMaterialityDecisions,
@@ -1532,12 +1531,11 @@ export async function resetDemoSchedule(
   // references trips and people. Both must go before the parents below.
   await db.delete(orderLineItems).where(eq(orderLineItems.shopId, shopId));
   await db.delete(orders).where(eq(orders.shopId, shopId));
-  await db.delete(tripInvitations).where(eq(tripInvitations.shopId, shopId));
-  await db.delete(tripWaitlistEntries).where(eq(tripWaitlistEntries.shopId, shopId));
+  await db.delete(leads).where(eq(leads.shopId, shopId));
   // References trips (last-minute-deal blasts) and people (the last-minute
   // list itself), so both must go before the trips/people deletes below or
   // this FK-violates and aborts the whole reset mid-run (docs ADR
-  // 20260727-last-minute-fill-promos; same class of bug the tripWaitlistEntries
+  // 20260727-last-minute-fill-promos; same class of bug the leads
   // comment above already walks).
   await db
     .delete(tripLastMinutePromoRecipients)

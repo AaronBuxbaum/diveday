@@ -15,7 +15,7 @@
  * whose form had already accepted it.
  *
  * The writes themselves are the ones that already exist, unchanged:
- * `recordCourseInquiry` and `joinTripWaitlist`.
+ * `recordCourseInquiry` and `askForDeparture`.
  */
 
 /**
@@ -39,8 +39,8 @@ export function isCallOutcome(value: unknown): value is CallOutcome {
  * Each row is a fact about the *mutation* underneath it rather than a
  * preference about the form:
  *
- * - `departure` — `joinTripWaitlist` names a `trips` row.
- * - `email` — `joinTripWaitlist` resolves its person by address
+ * - `departure` — `askForDeparture` names a `trips` row.
+ * - `email` — `askForDeparture` resolves its person by address
  *   (`findOrCreatePerson`), so an entry with no email has nobody to invite
  *   when a seat frees, which is the only thing a wait-list entry is for.
  * - `interest` — `course_inquiries` carries a check constraint refusing a row

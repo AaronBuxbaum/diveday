@@ -6,6 +6,7 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   lastMinuteListEntries,
+  leads,
   notificationDeliveries,
   notificationDeliveryAttempts,
   paymentOperationIntents,
@@ -13,7 +14,6 @@ import {
   personRoles,
   rollCallEvents,
   tripLastMinutePromos,
-  tripWaitlistEntries,
 } from "./schema";
 import { CAPTAIN_NAME } from "./seed-cast";
 import { at, dateAt, nextCreatedAt } from "./seed-clock";
@@ -66,12 +66,15 @@ export async function seedFrontDesk(
   if (includeHistoryData && wreckId) {
     const waiting = [10, 11, 12].map((index) => customers[index]).filter((c) => c !== undefined);
     if (waiting.length > 0) {
-      await db.insert(tripWaitlistEntries).values(
+      await db.insert(leads).values(
         waiting.map((person) => ({
           shopId,
+          scope: "departure" as const,
+          askedBy: "diver" as const,
+          partySize: 1,
           tripId: wreckId,
           personId: person.id,
-          createdAt: nextCreatedAt(),
+          askedAt: nextCreatedAt(),
         })),
       );
     }

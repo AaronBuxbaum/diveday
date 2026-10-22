@@ -108,6 +108,7 @@ import {
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
+  leads,
   lostItems,
   nitroxCertifications,
   notificationDeliveries,
@@ -138,7 +139,6 @@ import {
   tripReviews,
   tripSeries,
   trips,
-  tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
   waiverRecords,
@@ -955,9 +955,20 @@ async function scrubPersonOnlyRows(
   await tx
     .delete(rentalFitProfiles)
     .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
+  // A lead for a departure or "anytime" is a live intention of this person's
+  // alone, so the row goes whole. A date lead is a stranger's form that may
+  // live on a name and an address, and is blanked, not deleted
+  // (`scrubCourseInquiries`): the two modes sit under one `scope` branch (ADR
+  // 20261017-one-lead-with-a-scope, R4).
   await tx
-    .delete(tripWaitlistEntries)
-    .where(and(eq(tripWaitlistEntries.shopId, shopId), eq(tripWaitlistEntries.personId, personId)));
+    .delete(leads)
+    .where(
+      and(
+        eq(leads.shopId, shopId),
+        eq(leads.personId, personId),
+        inArray(leads.scope, ["departure", "anytime"]),
+      ),
+    );
   // Something found aboard with this diver's name on it (batch 4, J2). The
   // description is free text about their belongings, so the row goes whole.
   await tx

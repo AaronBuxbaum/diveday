@@ -68,7 +68,7 @@ const heldSendForm = z.object({
   surface: optionalText(),
   tripId: optionalText(),
   ticketId: optionalText(),
-  entryId: optionalText(),
+  leadId: idList(),
   discount: formValue(),
   discountPercent: formValue(),
   discountKind: formValue(),
@@ -119,7 +119,7 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
             ...dealDiscountFromForm(form, currency),
             recipientPersonIds: form.recipientPersonIds,
           }
-        : { kind, tripId: form.tripId, entryId: form.entryId };
+        : { kind, tripId: form.tripId, leadIds: form.leadId };
   return heldSendPayloadSchema.parse(raw);
 }
 
@@ -169,10 +169,10 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
     );
     if (!allowed) throw new Error("not_authorized");
   }
-  // The wait-list invite is Today's `waitlist_seat` row: what Today hides from
+  // An offer of a seat is Today's `waitlist_seat` row: what Today hides from
   // a role, the action refuses it too (issue #2134).
   if (
-    payload.kind === "waitlist_invite" &&
+    payload.kind === "seat_offer" &&
     !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
   ) {
     throw new Error("not_authorized");
@@ -225,7 +225,7 @@ async function assertMayActOnHeld(
     throw new Error("not_authorized");
   }
   if (
-    row.kind === "waitlist_invite" &&
+    row.kind === "seat_offer" &&
     !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
   ) {
     throw new Error("not_authorized");

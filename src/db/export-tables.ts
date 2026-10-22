@@ -37,6 +37,7 @@ import {
   incidentReports,
   internalNotes,
   lastMinuteListEntries,
+  leads,
   nitroxCertifications,
   notificationDeliveries,
   orderLineItems,
@@ -56,7 +57,6 @@ import {
   tips,
   tripChangeEvents,
   tripHelpRequests,
-  tripInvitations,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   tripLenses,
@@ -66,7 +66,6 @@ import {
   tripSeriesSkips,
   tripSightings,
   tripStageEvents,
-  tripWaitlistEntries,
   waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
@@ -185,10 +184,13 @@ export const EXPORT_TABLES = {
     order: [asc(tripSeriesSkips.createdAt), asc(tripSeriesSkips.id)],
     scope: { shopColumn: tripSeriesSkips.shopId },
   },
-  tripWaitlistEntries: {
-    table: tripWaitlistEntries,
-    order: [asc(tripWaitlistEntries.createdAt), asc(tripWaitlistEntries.id)],
-    scope: { shopColumn: tripWaitlistEntries.shopId, personColumn: tripWaitlistEntries.personId },
+  // Everyone who wanted a seat, every scope in one file (ADR
+  // 20261017-one-lead-with-a-scope). A date lead may carry no person: it is in
+  // the shop's bundle and in no diver's, which is the person-scope rule.
+  leads: {
+    table: leads,
+    order: [asc(leads.askedAt), asc(leads.id)],
+    scope: { shopColumn: leads.shopId, personColumn: leads.personId },
   },
   lastMinuteListEntries: {
     table: lastMinuteListEntries,
@@ -368,11 +370,6 @@ export const EXPORT_TABLES = {
     table: courseInquiries,
     order: [asc(courseInquiries.createdAt), asc(courseInquiries.id)],
     scope: { shopColumn: courseInquiries.shopId, personColumn: courseInquiries.personId },
-  },
-  tripInvitations: {
-    table: tripInvitations,
-    order: [asc(tripInvitations.createdAt), asc(tripInvitations.id)],
-    scope: { shopColumn: tripInvitations.shopId, personColumn: tripInvitations.personId },
   },
   // The counter's own trail, oldest first for the same reason roll call's
   // is: it is replayed, and `occurred_at` ties under a batched offline

@@ -7,9 +7,9 @@ import { fileScopedShopContext, seededShopContext } from "@/test/db";
 const fileCtx = fileScopedShopContext();
 
 /**
- * **Which invitation is commercial** (Aaron, 2026-10-06, issue #1953). A
+ * **Which offer is commercial** (Aaron, 2026-10-06, issue #1953). A
  * staffer's reply to a diver's own date request is service mail; a cold
- * invitation to a diver who asked for nothing is commercial, so it carries the
+ * offer to a diver who asked for nothing is commercial, so it carries the
  * courtesy unsubscribe (and with it the postal footer) and is not sent to a
  * diver who opted out of courtesy email.
  *
@@ -28,17 +28,13 @@ vi.mock("@/lib/notifications", async (importOriginal) => {
 });
 
 const { sendNotification } = await import("./notifications");
-const { recordCourseInquiry } = await import("./course-inquiries");
 const { getCourseBySlug } = await import("./courses");
 const { listBookableDivers } = await import("./divers");
-const { notificationSendQueue, people, personCourtesyEmailUnsubscribeTokens, tripInvitations } =
-  await import("./schema");
-const {
-  createDirectTripInvitation,
-  createTripRequestInvitations,
-  deliverTripInvitation,
-  listTripInvitations,
-} = await import("./trip-invitations");
+const { notificationSendQueue, leads, people, personCourtesyEmailUnsubscribeTokens } = await import(
+  "./schema"
+);
+const { deliverSeatOffer } = await import("./lead-offers");
+const { ensureDepartureLead } = await import("./leads");
 const { upcomingTripsWithCounts } = await import("./trips");
 
 async function context(base: { db: typeof fileCtx.db; shop: typeof fileCtx.shop } = fileCtx) {
@@ -61,17 +57,57 @@ async function directInvitation(ctx: Awaited<ReturnType<typeof context>>) {
     query: "mail.example",
   });
   if (!candidate) throw new Error("expected a bookable seeded diver");
-  await createDirectTripInvitation(db, {
+  const lead = await ensureDepartureLead(db, {
     shopId: shop.id,
     tripId: trip.id,
     personId: candidate.person.id,
     createdByPersonId: author.id,
   });
-  const row = (await listTripInvitations(db, shop.id, trip.id)).find(
-    ({ invitation }) => invitation.personId === candidate.person.id,
-  );
-  if (!row) throw new Error("direct invitation missing");
-  return { invitationId: row.invitation.id, personId: candidate.person.id };
+  if (!lead) throw new Error("shop lead missing");
+  return { leadId: lead.leadId, personId: candidate.person.id };
+}
+
+/**
+ * A departure lead the shop made **from a diver's own date request**: the
+ * parent is the person's `date` lead, so the offer answers what they asked for.
+ */
+async function answerToRequest(ctx: Awaited<ReturnType<typeof context>>, email: string) {
+  const { db, shop, author, trip } = ctx;
+  const course = await getCourseBySlug(db, shop.id, "open-water-diver");
+  if (!course) throw new Error("expected seeded course missing");
+  const [person] = await db
+    .insert(people)
+    .values({ shopId: shop.id, fullName: "Rae Asker", email })
+    .returning({ id: people.id });
+  if (!person) throw new Error("person insert failed");
+  const [request] = await db
+    .insert(leads)
+    .values({
+      shopId: shop.id,
+      scope: "date",
+      askedBy: "diver",
+      personId: person.id,
+      courseId: course.id,
+      name: "Rae Asker",
+      email,
+    })
+    .returning({ id: leads.id });
+  if (!request) throw new Error("date lead insert failed");
+  const [answer] = await db
+    .insert(leads)
+    .values({
+      shopId: shop.id,
+      scope: "departure",
+      askedBy: "diver",
+      parentLeadId: request.id,
+      tripId: trip.id,
+      personId: person.id,
+      partySize: 1,
+      createdByPersonId: author.id,
+    })
+    .returning({ id: leads.id });
+  if (!answer) throw new Error("answer insert failed");
+  return { leadId: answer.id, personId: person.id };
 }
 
 function sent(): Notification {
@@ -80,7 +116,7 @@ function sent(): Notification {
   return call[1];
 }
 
-describe("deliverTripInvitation", () => {
+describe("deliverSeatOffer", () => {
   beforeEach(() => {
     vi.mocked(sendNotification).mockReset();
     vi.mocked(sendNotification).mockResolvedValue({ status: "sent", providerMessageId: "m-1" });
@@ -88,20 +124,20 @@ describe("deliverTripInvitation", () => {
 
   it("sends a cold invitation as commercial mail, with a working unsubscribe link for that diver", async () => {
     const ctx = await context();
-    const { invitationId, personId } = await directInvitation(ctx);
+    const { leadId, personId } = await directInvitation(ctx);
 
     await expect(
-      deliverTripInvitation(ctx.db, {
+      deliverSeatOffer(ctx.db, {
         shopId: ctx.shop.id,
         shopSlug: ctx.shop.slug,
         tripId: ctx.trip.id,
-        invitationId,
+        leadId,
       }),
     ).resolves.toBe("sent");
 
     const notification = sent();
-    expect(notification.kind).toBe("direct_trip_invitation");
-    if (notification.kind !== "direct_trip_invitation") return;
+    expect(notification.kind).toBe("seat_offer_commercial");
+    if (notification.kind !== "seat_offer_commercial") return;
     expect(notification.unsubscribeUrl).toMatch(/^https:\/\/dive\.day\/unsubscribe\/[^/]+$/);
     // The token is minted for the invited person, so the link opts out the
     // diver who received it and nobody else.
@@ -114,18 +150,18 @@ describe("deliverTripInvitation", () => {
 
   it("does not email a cold invitation to a diver deleted since it was made", async () => {
     const ctx = await context();
-    const { invitationId, personId } = await directInvitation(ctx);
+    const { leadId, personId } = await directInvitation(ctx);
     await ctx.db
       .update(people)
       .set({ deletedAt: new Date("2026-07-20T00:00:00.000Z") })
       .where(eq(people.id, personId));
 
     await expect(
-      deliverTripInvitation(ctx.db, {
+      deliverSeatOffer(ctx.db, {
         shopId: ctx.shop.id,
         shopSlug: ctx.shop.slug,
         tripId: ctx.trip.id,
-        invitationId,
+        leadId,
       }),
     ).resolves.toBe("fallback");
     expect(sendNotification).not.toHaveBeenCalled();
@@ -133,18 +169,18 @@ describe("deliverTripInvitation", () => {
 
   it("does not email a cold invitation to a diver who opted out, and says so", async () => {
     const ctx = await context();
-    const { invitationId, personId } = await directInvitation(ctx);
+    const { leadId, personId } = await directInvitation(ctx);
     await ctx.db
       .update(people)
       .set({ courtesyEmailOptOutAt: new Date("2026-07-20T00:00:00.000Z") })
       .where(eq(people.id, personId));
 
     await expect(
-      deliverTripInvitation(ctx.db, {
+      deliverSeatOffer(ctx.db, {
         shopId: ctx.shop.id,
         shopSlug: ctx.shop.slug,
         tripId: ctx.trip.id,
-        invitationId,
+        leadId,
       }),
     ).resolves.toBe("opted_out");
 
@@ -157,57 +193,29 @@ describe("deliverTripInvitation", () => {
     expect(tokens).toHaveLength(0);
     // The outreach is still recorded: "Contacted" is staff reaching out, by
     // email or by hand.
-    const row = (await listTripInvitations(ctx.db, ctx.shop.id, ctx.trip.id)).find(
-      ({ invitation }) => invitation.id === invitationId,
-    );
-    expect(row?.invitation.invitedAt).not.toBeNull();
+    const [row] = await ctx.db.select().from(leads).where(eq(leads.id, leadId));
+    expect(row?.offeredAt).not.toBeNull();
   });
 
   it("answers a diver's own date request as service mail, even after they opted out", async () => {
     const ctx = await context();
-    const course = await getCourseBySlug(ctx.db, ctx.shop.id, "open-water-diver");
-    if (!course) throw new Error("expected seeded course missing");
-    // A diver already on file asks for a date, so the request resolves to a
-    // person whose courtesy-email setting could have been consulted.
-    const [asker] = await listBookableDivers(ctx.db, ctx.shop.id, ctx.trip.id, {
-      query: "mail.example",
-    });
-    if (!asker?.person.email) throw new Error("expected a seeded diver with an email");
-    const request = await recordCourseInquiry(ctx.db, {
-      shopId: ctx.shop.id,
-      courseId: course.id,
-      name: asker.person.fullName,
-      email: asker.person.email,
-      experienceLevel: "certified",
-      divers: 1,
-    });
-    await createTripRequestInvitations(ctx.db, {
-      shopId: ctx.shop.id,
-      tripId: ctx.trip.id,
-      requestIds: [request.id],
-      createdByPersonId: ctx.author.id,
-    });
-    const row = (await listTripInvitations(ctx.db, ctx.shop.id, ctx.trip.id)).find(
-      ({ invitation }) => invitation.courseInquiryId === request.id,
-    );
-    if (!row) throw new Error("request invitation missing");
-    expect(row.person?.id).toBe(asker.person.id);
+    const { leadId, personId } = await answerToRequest(ctx, "rae.asker@example.com");
     await ctx.db
       .update(people)
       .set({ courtesyEmailOptOutAt: new Date("2026-07-20T00:00:00.000Z") })
-      .where(eq(people.id, asker.person.id));
+      .where(eq(people.id, personId));
 
     await expect(
-      deliverTripInvitation(ctx.db, {
+      deliverSeatOffer(ctx.db, {
         shopId: ctx.shop.id,
         shopSlug: ctx.shop.slug,
         tripId: ctx.trip.id,
-        invitationId: row.invitation.id,
+        leadId,
       }),
     ).resolves.toBe("sent");
 
     const notification = sent();
-    expect(notification.kind).toBe("trip_invitation");
+    expect(notification.kind).toBe("seat_offer");
     expect("unsubscribeUrl" in notification).toBe(false);
   });
 
@@ -218,39 +226,39 @@ describe("deliverTripInvitation", () => {
    * 2026-10-13: a repeat within 24 hours of the last stamp is refused with
    * the composer fallback; roles are not narrowed.
    */
-  describe("re-sending a cold invitation", () => {
+  describe("re-sending a cold offer", () => {
     async function sentOnce() {
       const ctx = await context();
-      const { invitationId } = await directInvitation(ctx);
+      const { leadId } = await directInvitation(ctx);
       const input = {
         shopId: ctx.shop.id,
         shopSlug: ctx.shop.slug,
         tripId: ctx.trip.id,
-        invitationId,
+        leadId,
       };
-      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
+      await expect(deliverSeatOffer(ctx.db, input)).resolves.toBe("sent");
       return { ctx, input };
     }
 
-    async function stampOf(ctx: Awaited<ReturnType<typeof context>>, invitationId: string) {
+    async function stampOf(ctx: Awaited<ReturnType<typeof context>>, leadId: string) {
       const [row] = await ctx.db
-        .select({ invitedAt: tripInvitations.invitedAt })
-        .from(tripInvitations)
-        .where(eq(tripInvitations.id, invitationId));
-      return row?.invitedAt ?? null;
+        .select({ offeredAt: leads.offeredAt })
+        .from(leads)
+        .where(eq(leads.id, leadId));
+      return row?.offeredAt ?? null;
     }
 
     it("refuses a second email within 24 hours and hands back the composer", async () => {
       const { ctx, input } = await sentOnce();
-      const stamped = await stampOf(ctx, input.invitationId);
+      const stamped = await stampOf(ctx, input.leadId);
 
-      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("fallback");
+      await expect(deliverSeatOffer(ctx.db, input)).resolves.toBe("already_sent");
 
       expect(sendNotification).toHaveBeenCalledTimes(1);
       // The refusal neither mints another link nor moves the window forward.
       const tokens = await ctx.db.select().from(personCourtesyEmailUnsubscribeTokens);
       expect(tokens).toHaveLength(1);
-      expect(await stampOf(ctx, input.invitationId)).toEqual(stamped);
+      expect(await stampOf(ctx, input.leadId)).toEqual(stamped);
     });
 
     it("sends one email for two submits that land together", async () => {
@@ -259,31 +267,31 @@ describe("deliverTripInvitation", () => {
       // on one connection they never contend, so both would send
       // (src/test/db.ts, "When NOT to use this").
       const ctx = await context(await seededShopContext());
-      const { invitationId } = await directInvitation(ctx);
+      const { leadId } = await directInvitation(ctx);
       const input = {
         shopId: ctx.shop.id,
         shopSlug: ctx.shop.slug,
         tripId: ctx.trip.id,
-        invitationId,
+        leadId,
       };
 
       const outcomes = await Promise.all([
-        deliverTripInvitation(ctx.db, input),
-        deliverTripInvitation(ctx.db, input),
+        deliverSeatOffer(ctx.db, input),
+        deliverSeatOffer(ctx.db, input),
       ]);
 
-      expect(outcomes.sort()).toEqual(["fallback", "sent"]);
+      expect(outcomes.sort()).toEqual(["already_sent", "sent"]);
       expect(sendNotification).toHaveBeenCalledTimes(1);
     });
 
     it("sends on the next submit when the last one's mail did not go, still marked contacted", async () => {
       const ctx = await context();
-      const { invitationId } = await directInvitation(ctx);
+      const { leadId } = await directInvitation(ctx);
       const input = {
         shopId: ctx.shop.id,
         shopSlug: ctx.shop.slug,
         tripId: ctx.trip.id,
-        invitationId,
+        leadId,
       };
       vi.mocked(sendNotification).mockResolvedValueOnce({
         status: "failed",
@@ -291,20 +299,20 @@ describe("deliverTripInvitation", () => {
         errorCode: "rejected",
       });
 
-      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("fallback");
-      expect(await stampOf(ctx, invitationId)).toBeInstanceOf(Date);
-      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
+      await expect(deliverSeatOffer(ctx.db, input)).resolves.toBe("fallback");
+      expect(await stampOf(ctx, leadId)).toBeInstanceOf(Date);
+      await expect(deliverSeatOffer(ctx.db, input)).resolves.toBe("sent");
       expect(sendNotification).toHaveBeenCalledTimes(2);
     });
 
     it("keeps the window when the mail is queued for retry, so a staff retry cannot send a second", async () => {
       const ctx = await context();
-      const { invitationId } = await directInvitation(ctx);
+      const { leadId } = await directInvitation(ctx);
       const input = {
         shopId: ctx.shop.id,
         shopSlug: ctx.shop.slug,
         tripId: ctx.trip.id,
-        invitationId,
+        leadId,
       };
       // The real send, so a thrown provider error lands on the retry queue.
       const actual = await vi.importActual<typeof import("./notifications")>("./notifications");
@@ -318,8 +326,8 @@ describe("deliverTripInvitation", () => {
         },
       };
 
-      await expect(deliverTripInvitation(ctx.db, input, provider)).resolves.toBe("fallback");
-      await expect(deliverTripInvitation(ctx.db, input, provider)).resolves.toBe("fallback");
+      await expect(deliverSeatOffer(ctx.db, input, provider)).resolves.toBe("fallback");
+      await expect(deliverSeatOffer(ctx.db, input, provider)).resolves.toBe("already_sent");
 
       expect(calls).toBe(1);
       expect(await ctx.db.select().from(notificationSendQueue)).toHaveLength(1);
@@ -329,48 +337,29 @@ describe("deliverTripInvitation", () => {
       const { ctx, input } = await sentOnce();
       const at = (hours: number) =>
         ctx.db
-          .update(tripInvitations)
+          .update(leads)
           .set({ emailedAt: new Date(nowDate().getTime() - hours * HOUR_MS) })
-          .where(eq(tripInvitations.id, input.invitationId));
+          .where(eq(leads.id, input.leadId));
 
       await at(23);
-      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("fallback");
+      await expect(deliverSeatOffer(ctx.db, input)).resolves.toBe("already_sent");
       await at(24);
-      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
+      await expect(deliverSeatOffer(ctx.db, input)).resolves.toBe("sent");
       expect(sendNotification).toHaveBeenCalledTimes(2);
     });
 
     it("leaves a reply to a diver's own date request unthrottled", async () => {
       const ctx = await context();
-      const course = await getCourseBySlug(ctx.db, ctx.shop.id, "open-water-diver");
-      if (!course) throw new Error("expected seeded course missing");
-      const request = await recordCourseInquiry(ctx.db, {
-        shopId: ctx.shop.id,
-        courseId: course.id,
-        name: "Rae Asker",
-        email: "rae.asker@example.com",
-        experienceLevel: "certified",
-        divers: 1,
-      });
-      await createTripRequestInvitations(ctx.db, {
-        shopId: ctx.shop.id,
-        tripId: ctx.trip.id,
-        requestIds: [request.id],
-        createdByPersonId: ctx.author.id,
-      });
-      const row = (await listTripInvitations(ctx.db, ctx.shop.id, ctx.trip.id)).find(
-        ({ invitation }) => invitation.courseInquiryId === request.id,
-      );
-      if (!row) throw new Error("request invitation missing");
+      const { leadId } = await answerToRequest(ctx, "rae.asker@example.com");
       const input = {
         shopId: ctx.shop.id,
         shopSlug: ctx.shop.slug,
         tripId: ctx.trip.id,
-        invitationId: row.invitation.id,
+        leadId,
       };
 
-      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
-      await expect(deliverTripInvitation(ctx.db, input)).resolves.toBe("sent");
+      await expect(deliverSeatOffer(ctx.db, input)).resolves.toBe("sent");
+      await expect(deliverSeatOffer(ctx.db, input)).resolves.toBe("sent");
       expect(sendNotification).toHaveBeenCalledTimes(2);
     });
   });

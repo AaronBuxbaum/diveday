@@ -1,13 +1,10 @@
-import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, notExists, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, notExists } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { diverSeatLimit } from "@/lib/participant-types";
 import { DEPARTURE_BUFFER_MS, hasSailed } from "@/lib/trips";
-import { courseStudentSeatCap } from "./bookings";
 import type { AppDb } from "./client";
-import { bookings, shops, trips, tripWaitlistEntries } from "./schema";
+import { deliverSeatOffer, invitableSeats } from "./lead-offers";
+import { bookings, leads, shops, trips } from "./schema";
 import { liveTrip, notRehearsal } from "./trips-live";
-import { heldSeatCounts, sellableCapacity } from "./trips-queries";
-import { inviteWaitlistDiver } from "./waitlist";
 
 /**
  * **The wait list rolls forward** (third UX review, item 12). A wait list is a
@@ -15,34 +12,41 @@ import { inviteWaitlistDiver } from "./waitlist";
  * departure they waited for fills and sails, or a second departure is put up
  * for them, the leads should not stay behind on a day that is gone or full.
  *
- * Both helpers **copy** entries rather than move them: the original row is the
- * record of what the diver asked for, and the unique (trip, person) index makes
- * a second run a no-op. An entry keeps the time the diver first asked, so the
- * list reads in the order people actually waited. Nobody already holding a seat
- * on the target is added. Nothing here ranks anyone: every lead travels.
+ * Both helpers **copy** departure leads the diver asked for rather than move
+ * them: the original row is the record of what the diver asked for
+ * (`parent_lead_id` points back at it), and the unique (trip, person) index
+ * makes a second run a no-op. A copy keeps the time the diver first asked, so
+ * the list reads in the order people actually waited. Nobody already holding a
+ * seat on the target is added. Nothing here ranks anyone: every lead travels.
+ * A cold invitation (`asked_by = 'shop'`) was the shop's outreach for that
+ * date, and stays there.
  */
 
-/** Copy one departure's waiting leads onto another of this shop's. Returns the new entries. */
+/** Copy one departure's waiting leads onto another of this shop's. Returns the new leads. */
 async function copyLeads(
   db: AppDb,
   input: { shopId: string; fromTripId: string; toTripId: string; uninvitedOnly: boolean },
 ): Promise<string[]> {
-  const leads = await db
+  const waiting = await db
     .select({
-      personId: tripWaitlistEntries.personId,
-      createdAt: tripWaitlistEntries.createdAt,
-      partySize: tripWaitlistEntries.partySize,
+      id: leads.id,
+      personId: leads.personId,
+      askedAt: leads.askedAt,
+      partySize: leads.partySize,
     })
-    .from(tripWaitlistEntries)
+    .from(leads)
     .where(
       and(
-        eq(tripWaitlistEntries.shopId, input.shopId),
-        eq(tripWaitlistEntries.tripId, input.fromTripId),
-        input.uninvitedOnly ? isNull(tripWaitlistEntries.invitedAt) : undefined,
+        eq(leads.shopId, input.shopId),
+        eq(leads.scope, "departure"),
+        eq(leads.tripId, input.fromTripId),
+        eq(leads.askedBy, "diver"),
+        isNotNull(leads.personId),
+        input.uninvitedOnly ? isNull(leads.offeredAt) : undefined,
       ),
     )
-    .orderBy(asc(tripWaitlistEntries.createdAt));
-  if (leads.length === 0) return [];
+    .orderBy(asc(leads.askedAt));
+  if (waiting.length === 0) return [];
   const seated = await db
     .select({ personId: bookings.personId })
     .from(bookings)
@@ -53,27 +57,30 @@ async function copyLeads(
         ne(bookings.status, "cancelled"),
         inArray(
           bookings.personId,
-          leads.map((lead) => lead.personId),
+          waiting.flatMap((lead) => (lead.personId ? [lead.personId] : [])),
         ),
       ),
     );
   const onBoard = new Set(seated.map((row) => row.personId));
-  const fresh = leads.filter((lead) => !onBoard.has(lead.personId));
+  const fresh = waiting.filter((lead) => !lead.personId || !onBoard.has(lead.personId));
   if (fresh.length === 0) return [];
   const inserted = await db
-    .insert(tripWaitlistEntries)
+    .insert(leads)
     .values(
       fresh.map((lead) => ({
         shopId: input.shopId,
+        scope: "departure" as const,
+        askedBy: "diver" as const,
         tripId: input.toTripId,
         personId: lead.personId,
-        createdAt: lead.createdAt,
+        parentLeadId: lead.id,
+        askedAt: lead.askedAt,
         // A party travels whole (ADR 20260719-trip-waitlist, amended).
         partySize: lead.partySize,
       })),
     )
     .onConflictDoNothing()
-    .returning({ id: tripWaitlistEntries.id });
+    .returning({ id: leads.id });
   return inserted.map((row) => row.id);
 }
 
@@ -105,45 +112,12 @@ async function openDeparture(db: AppDb, shopId: string, tripId: string, now: Dat
 function seatedOn(tripId: string) {
   return and(
     eq(bookings.tripId, tripId),
-    eq(bookings.personId, tripWaitlistEntries.personId),
+    eq(bookings.personId, leads.personId),
     ne(bookings.status, "cancelled"),
   );
 }
 
-/**
- * **How many invitations this departure can honor right now.** Measured as a
- * seat is measured when it is sold (`createBookingRecord`, `moveBooking`): the
- * boat's sellable seats, the divers-only limit, and for a course session the
- * instructor it needs and the ratio its crew allows. A wait-list lead asks for
- * a diver's seat, so the divers-only limit binds. Every invitation already out
- * to someone who has not taken a seat holds as many of those seats as their
- * party asked for, so they are taken off. Advice for whom to invite, never a
- * gate: the seat is still measured under the trip's lock when the diver books.
- * Exported for its test (agency review G5 of #2226).
- */
-export async function invitableSeats(db: AppDb, trip: typeof trips.$inferSelect): Promise<number> {
-  const held = await heldSeatCounts(db, trip.shopId, trip.id);
-  let room = (await sellableCapacity(db, trip)) - held.aboard;
-  const diverLimit = diverSeatLimit(trip);
-  if (diverLimit !== null) room = Math.min(room, diverLimit - held.divers);
-  // The students, its divers: a priced rider is a passenger (G5 of #2226).
-  const ratioCap = await courseStudentSeatCap(db, trip);
-  if (ratioCap !== null) room = Math.min(room, ratioCap - held.divers);
-  const [outstanding] = await db
-    .select({ invited: sql<number>`coalesce(sum(${tripWaitlistEntries.partySize}), 0)::int` })
-    .from(tripWaitlistEntries)
-    .where(
-      and(
-        eq(tripWaitlistEntries.shopId, trip.shopId),
-        eq(tripWaitlistEntries.tripId, trip.id),
-        isNotNull(tripWaitlistEntries.invitedAt),
-        notExists(db.select({ id: bookings.id }).from(bookings).where(seatedOn(trip.id))),
-      ),
-    );
-  return Math.max(0, room - (outstanding?.invited ?? 0));
-}
-
-export type CarryWaitlistOutcome =
+export type CarryLeadsOutcome =
   | { ok: true; carried: number }
   | { ok: false; reason: "not_found" | "target_unavailable" };
 
@@ -153,10 +127,10 @@ export type CarryWaitlistOutcome =
  * shop has put up, where the wait list's one-tap invite reaches them. Staff
  * choose the departure, and nobody is messaged until staff invite.
  */
-export async function carryWaitlist(
+export async function carryLeads(
   db: AppDb,
   input: { shopId: string; fromTripId: string; toTripId: string; now?: Date },
-): Promise<CarryWaitlistOutcome> {
+): Promise<CarryLeadsOutcome> {
   const now = input.now ?? nowDate();
   if (input.fromTripId === input.toTripId) return { ok: false, reason: "target_unavailable" };
   const [from] = await db
@@ -174,7 +148,7 @@ export async function carryWaitlist(
   return { ok: true, carried: carried.length };
 }
 
-export type SeriesWaitlistRoll = { rolled: number; invited: number };
+export type SeriesLeadRoll = { rolled: number; invited: number };
 
 /** How far back the nightly roll looks for a sailed date, so a missed night still rolls. */
 const ROLL_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
@@ -185,15 +159,15 @@ const ROLL_LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;
  * the wait list of the next date that takes a seat (a date on a conditions
  * hold is passed over). While that date has seats nobody has been invited to,
  * the existing wait-list invite goes out to its queue in the order people
- * asked (`inviteWaitlistDiver`, which stamps the entry and honors a
+ * asked (`deliverSeatOffer`, which stamps the lead and honors a
  * courtesy-email opt-out). A lead staff already invited was worked by a
  * person, and stays where they left it.
  */
-export async function rollSailedSeriesWaitlists(
+export async function rollSailedSeriesLeads(
   db: AppDb,
   now: Date = nowDate(),
-): Promise<SeriesWaitlistRoll> {
-  const outcome: SeriesWaitlistRoll = { rolled: 0, invited: 0 };
+): Promise<SeriesLeadRoll> {
+  const outcome: SeriesLeadRoll = { rolled: 0, invited: 0 };
   const sailedBy = new Date(now.getTime() - DEPARTURE_BUFFER_MS);
   const sailed = await db
     .selectDistinct({
@@ -206,11 +180,13 @@ export async function rollSailedSeriesWaitlists(
     .from(trips)
     .innerJoin(shops, eq(shops.id, trips.shopId))
     .innerJoin(
-      tripWaitlistEntries,
+      leads,
       and(
-        eq(tripWaitlistEntries.tripId, trips.id),
-        eq(tripWaitlistEntries.shopId, trips.shopId),
-        isNull(tripWaitlistEntries.invitedAt),
+        eq(leads.scope, "departure"),
+        eq(leads.tripId, trips.id),
+        eq(leads.shopId, trips.shopId),
+        eq(leads.askedBy, "diver"),
+        isNull(leads.offeredAt),
       ),
     )
     .where(
@@ -240,14 +216,14 @@ export async function rollSailedSeriesWaitlists(
       .orderBy(asc(trips.startsAt))
       .limit(1);
     if (!next) continue;
-    const entryIds = await copyLeads(db, {
+    const leadIds = await copyLeads(db, {
       shopId: row.shopId,
       fromTripId: row.tripId,
       toTripId: next.id,
       uninvitedOnly: true,
     });
-    outcome.rolled += entryIds.length;
-    if (entryIds.length === 0) continue;
+    outcome.rolled += leadIds.length;
+    if (leadIds.length === 0) continue;
     // Invited only while the next date has a seat to give, and from that
     // date's whole queue in the order people asked: a rolled lead keeps the
     // time they first asked, so it takes its place in the line, never the
@@ -256,38 +232,43 @@ export async function rollSailedSeriesWaitlists(
     let open = await invitableSeats(db, next);
     if (open <= 0) continue;
     const queue = await db
-      .select({ id: tripWaitlistEntries.id, partySize: tripWaitlistEntries.partySize })
-      .from(tripWaitlistEntries)
+      .select({ id: leads.id, partySize: leads.partySize })
+      .from(leads)
       .where(
         and(
-          eq(tripWaitlistEntries.shopId, row.shopId),
-          eq(tripWaitlistEntries.tripId, next.id),
-          isNull(tripWaitlistEntries.invitedAt),
+          eq(leads.shopId, row.shopId),
+          eq(leads.scope, "departure"),
+          eq(leads.tripId, next.id),
+          eq(leads.askedBy, "diver"),
+          isNull(leads.offeredAt),
           notExists(db.select({ id: bookings.id }).from(bookings).where(seatedOn(next.id))),
         ),
       )
       // diveday:allow-time-id-order: the order invites go out in, shown to nobody; the id only breaks a tie between two leads who asked in the same instant.
-      .orderBy(asc(tripWaitlistEntries.createdAt), asc(tripWaitlistEntries.id));
+      .orderBy(asc(leads.askedAt), asc(leads.id));
     // A party is invited only when the whole party fits (fourth review,
     // item 34): two divers are never split across dates. A party too big for
     // what is free waits, and a smaller lead behind it may still fit, since a
     // wait list is a set of leads, not a queue (ADR 20260813).
-    for (const entry of queue) {
+    for (const lead of queue) {
       if (open <= 0) break;
-      if (entry.partySize > open) continue;
-      const invited = await inviteWaitlistDiver(db, {
+      const party = lead.partySize ?? 1;
+      if (party > open) continue;
+      await deliverSeatOffer(db, {
         shopId: row.shopId,
         shopSlug: row.shopSlug,
-        entryId: entry.id,
+        tripId: next.id,
+        leadId: lead.id,
         now,
         // Its own sentence: the date they asked for filled, this one has room
         // (fourth review, item 31).
         sailedStartsAt: row.startsAt,
       });
-      if (invited.ok) {
-        outcome.invited += 1;
-        open -= entry.partySize;
-      }
+      // Stamped either way (the offer is recorded; a diver who opted out is
+      // still offered by hand), and it holds the party's seats until it is
+      // taken or goes stale.
+      outcome.invited += 1;
+      open -= party;
     }
   }
   return outcome;

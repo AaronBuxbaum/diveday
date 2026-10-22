@@ -8,6 +8,7 @@ import { fakePromotions } from "@/test/fakes";
 import { waiverTemplateHistory } from "@/test/waiver-history";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
+import { askForDeparture } from "./leads";
 import { shopSenderFor } from "./notifications";
 import {
   accountSessions,
@@ -40,7 +41,6 @@ import {
 import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
-import { joinTripWaitlist } from "./waitlist";
 import { getCurrentWaiverTemplate, saveWaiverTemplate } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -103,7 +103,7 @@ describe("resetDemoSchedule", () => {
     // forever" cause: each poisoned reset then timed out downstream).
     const full = trips.find((t) => t.booked >= t.capacity);
     if (!full) throw new Error("expected a full trip in the seed to wait-list against");
-    const outcome = await joinTripWaitlist(db, {
+    const outcome = await askForDeparture(db, {
       shopId: shop.id,
       tripId: full.id,
       fullName: "Wait-List Wendy",

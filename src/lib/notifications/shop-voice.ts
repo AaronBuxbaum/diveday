@@ -32,9 +32,8 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "guardian_release_copy":
     case "readiness_link":
     case "booking_handoff":
-    case "waitlist_invite":
-    case "trip_invitation":
-    case "direct_trip_invitation":
+    case "seat_offer":
+    case "seat_offer_commercial":
     case "trip_reminder_7d":
     case "trip_reminder_24h":
     case "trip_rescheduled":

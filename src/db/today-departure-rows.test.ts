@@ -8,7 +8,7 @@ import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
 import { setBookingNitrox } from "./nitrox";
-import { boats, nitroxCertifications, orders, people, tripWaitlistEntries } from "./schema";
+import { boats, leads, nitroxCertifications, orders, people } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { getDepartureNeeds } from "./today-departure-needs";
@@ -60,27 +60,31 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       .returning();
     if (!front || !later) throw new Error("could not seed waiters");
     // Explicit join times so the front of the line is deterministic.
-    await db.insert(tripWaitlistEntries).values([
+    const asked = {
+      shopId: shop.id,
+      tripId: reef.id,
+      scope: "departure",
+      askedBy: "diver",
+    } as const;
+    await db.insert(leads).values([
       {
-        shopId: shop.id,
-        tripId: reef.id,
+        ...asked,
         personId: front.id,
-        createdAt: new Date("2020-01-01T00:00:00.000Z"),
+        partySize: 1,
+        askedAt: new Date("2020-01-01T00:00:00.000Z"),
       },
       {
-        shopId: shop.id,
-        tripId: reef.id,
+        ...asked,
         personId: later.id,
-        createdAt: new Date("2020-02-01T00:00:00.000Z"),
+        partySize: 1,
+        askedAt: new Date("2020-02-01T00:00:00.000Z"),
       },
     ]);
     const frontEntry = (
       await db
         .select()
-        .from(tripWaitlistEntries)
-        .where(
-          and(eq(tripWaitlistEntries.tripId, reef.id), eq(tripWaitlistEntries.personId, front.id)),
-        )
+        .from(leads)
+        .where(and(eq(leads.tripId, reef.id), eq(leads.personId, front.id)))
     )[0];
     if (!frontEntry) throw new Error("front entry missing");
 
@@ -90,7 +94,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     // Depth is counted, but the invite targets the earliest joiner specifically.
     expect(row?.detail).toContain("2 on the wait list");
     expect(row?.invite).toBeDefined();
-    expect(row?.invite?.entryId).toBe(frontEntry.id);
+    expect(row?.invite?.leadId).toBe(frontEntry.id);
     expect(row?.invite?.personName).toBe("Marina Reyes");
     expect(row?.invite?.personEmail).toBe("marina@example.com");
     expect(row?.invite?.tripId).toBe(reef.id);

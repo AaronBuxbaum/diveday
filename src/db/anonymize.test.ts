@@ -22,6 +22,7 @@ import {
   gearReservations,
   importedPaymentHistory,
   integrationEvents,
+  leads,
   mediaDeletionAttempts,
   orderLineItems,
   orders,
@@ -33,11 +34,9 @@ import {
   rollCallEvents,
   shops,
   tips,
-  tripInvitations,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   trips,
-  tripWaitlistEntries,
   userAccounts,
   waiverDeliveries,
   waiverRecords,
@@ -891,21 +890,17 @@ describe("anonymizeDiver — a wait-listed diver who was also invited (issue #16
       .limit(1);
     if (!trip) throw new Error("expected a seeded departure");
 
-    await db.insert(tripWaitlistEntries).values({
-      shopId: shop.id,
-      tripId: trip.id,
-      personId: diver.id,
-    });
-    // The invitation that used to point at that entry. `direct` is what a real
-    // writer produces; the point is that an invitation and a wait-list entry
-    // coexist for one diver on one departure at erasure time.
-    await db.insert(tripInvitations).values({
-      shopId: shop.id,
-      tripId: trip.id,
-      source: "direct",
-      personId: diver.id,
-      createdByPersonId: owner.id,
-    });
+    await db.insert(leads).values([
+      {
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        personId: diver.id,
+        partySize: 1,
+      },
+      { shopId: shop.id, scope: "anytime", askedBy: "diver", personId: diver.id },
+    ]);
 
     const erased = await anonymizeDiver(db, {
       shopId: shop.id,
@@ -917,9 +912,7 @@ describe("anonymizeDiver — a wait-listed diver who was also invited (issue #16
     const [row] = await db.select().from(people).where(eq(people.id, diver.id));
     expect(row?.anonymizedAt).not.toBeNull();
     expect(row?.email).toBeNull();
-    expect(
-      await db.select().from(tripWaitlistEntries).where(eq(tripWaitlistEntries.personId, diver.id)),
-    ).toEqual([]);
+    expect(await db.select().from(leads).where(eq(leads.personId, diver.id))).toEqual([]);
   });
 });
 

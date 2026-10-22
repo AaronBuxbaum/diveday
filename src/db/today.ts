@@ -84,6 +84,7 @@ import { readReviewsAwaitingModeration } from "./reviews";
 import {
   boats,
   bookings,
+  leads,
   people,
   personRoles,
   rollCallCrewEvents,
@@ -91,7 +92,6 @@ import {
   shops,
   tripAssignments,
   trips,
-  tripWaitlistEntries,
 } from "./schema";
 import { listStaffCredentials } from "./staff-credentials";
 import {
@@ -1017,7 +1017,7 @@ export async function openAfterDiveRollCalls(
  */
 export type WaitlistFront = {
   count: number;
-  entryId: string;
+  leadId: string;
   personName: string;
   personEmail: string | null;
   invitedAt: Date | null;
@@ -1028,19 +1028,25 @@ async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[])
   if (tripIds.length === 0) return fronts;
   const rows = await db
     .select({
-      tripId: tripWaitlistEntries.tripId,
-      entryId: tripWaitlistEntries.id,
-      invitedAt: tripWaitlistEntries.invitedAt,
+      tripId: leads.tripId,
+      leadId: leads.id,
+      invitedAt: leads.offeredAt,
       personName: people.fullName,
       personEmail: people.email,
     })
-    .from(tripWaitlistEntries)
-    .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
+    .from(leads)
+    .innerJoin(people, eq(people.id, leads.personId))
     .where(
-      and(eq(tripWaitlistEntries.shopId, shopId), inArray(tripWaitlistEntries.tripId, tripIds)),
+      and(
+        eq(leads.scope, "departure"),
+        eq(leads.askedBy, "diver"),
+        eq(leads.shopId, shopId),
+        inArray(leads.tripId, tripIds),
+      ),
     )
-    .orderBy(asc(tripWaitlistEntries.createdAt));
+    .orderBy(asc(leads.askedAt), asc(people.fullName), asc(leads.id));
   for (const row of rows) {
+    if (!row.tripId) continue;
     const existing = fronts.get(row.tripId);
     // Rows arrive oldest-first, so the first seen per trip is the true front of
     // the line; later ones only bump the depth count.
@@ -1050,7 +1056,7 @@ async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[])
     }
     fronts.set(row.tripId, {
       count: 1,
-      entryId: row.entryId,
+      leadId: row.leadId,
       personName: row.personName,
       personEmail: row.personEmail,
       invitedAt: row.invitedAt,

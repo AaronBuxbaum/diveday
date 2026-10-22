@@ -432,7 +432,7 @@ function StationRow({
     />
   ) : action.invite ? (
     <WaitlistInvite
-      entryId={action.invite.entryId}
+      leadId={action.invite.leadId}
       personName={action.invite.personName}
       personEmail={action.invite.personEmail}
       invitedAt={action.invite.invitedAt}

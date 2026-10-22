@@ -11,8 +11,8 @@ afterEach(cleanup);
 function entry(id: string, fullName: string, createdAt: Date): Waitlist[number] {
   return {
     // The section reads only these fields off the joined row; the full
-    // `trip_waitlist_entries`/`people` shapes aren't exercised here.
-    entry: { id, createdAt, invitedAt: null } as unknown as Waitlist[number]["entry"],
+    // `leads`/`people` shapes aren't exercised here.
+    lead: { id, askedAt: createdAt, offeredAt: null } as unknown as Waitlist[number]["lead"],
     person: {
       id: `p-${id}`,
       fullName,
@@ -372,9 +372,9 @@ describe("WaitlistGroup on a departure that can take nobody", () => {
 describe("WaitlistGroup party", () => {
   it("says how many a lead waits for, and nothing for one", () => {
     const pair = entry("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"));
-    (pair.entry as { partySize: number }).partySize = 2;
+    (pair.lead as { partySize: number }).partySize = 2;
     const single = entry("b", "Rafa Ortiz", new Date("2026-08-03T14:00:00Z"));
-    (single.entry as { partySize: number }).partySize = 1;
+    (single.lead as { partySize: number }).partySize = 1;
     renderSection([pair, single]);
     expect(screen.getAllByText("Party of 2")).toHaveLength(1);
     expect(screen.queryByText("Party of 1")).toBeNull();

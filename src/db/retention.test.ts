@@ -1023,8 +1023,10 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // the departure's crew, read with it, and gone when the person comes off it.
   "crew_away_acknowledgements",
   "trip_help_requests",
-  "trip_waitlist_entries",
-  "trip_invitations",
+  // Leads (ADR 20261017-one-lead-with-a-scope): wait list, outreach and date
+  // requests are contact data, kept until somebody asks for erasure (the
+  // standing decision at the top of src/lib/retention.ts).
+  "leads",
   "trip_last_minute_promos",
   "trip_last_minute_promo_recipients",
   "trip_blowouts",

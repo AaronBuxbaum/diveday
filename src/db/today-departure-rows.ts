@@ -181,7 +181,7 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         href: `${tripHref}#waitlist`,
         invite: {
           tripId: trip.id,
-          entryId: front.entryId,
+          leadId: front.leadId,
           personName: front.personName,
           personEmail: front.personEmail,
           invitedAt: front.invitedAt,

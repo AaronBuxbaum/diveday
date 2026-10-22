@@ -3,6 +3,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
+import { askForDeparture } from "./leads";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   getActiveTripPromoByCode,
@@ -12,7 +13,6 @@ import {
   tripIdsNeverSentLastMinuteDeal,
 } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
-import { joinTripWaitlist } from "./waitlist";
 
 const visitor = {
   fullName: "Nora Quinn",
@@ -197,7 +197,7 @@ describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
     // to advertise to everyone else who's merely around that week too.
     const { db, shop, fullTrip } = await context();
     await connectStripe(db, shop.id);
-    const waitlisted = await joinTripWaitlist(db, {
+    const waitlisted = await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,
       fullName: "Wren Ostrowski",

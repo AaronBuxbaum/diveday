@@ -10,10 +10,10 @@ import {
 import { log } from "@/lib/log";
 import type { AppDb } from "./client";
 import { type SendDepartureNoteOutcome, sendDepartureNote } from "./departure-notes";
+import type { SeatOffersOutcome } from "./lead-offers";
 import { heldSends } from "./schema";
 import { type SendLastMinuteDealOutcome, sendLastMinuteDealBlast } from "./trip-promos";
 import type { RescheduleNoticeOutcome } from "./trip-rescheduled";
-import { inviteWaitlistDiver } from "./waitlist";
 import { deliverWaiverBatch, type WaiverBatchOutcome } from "./waiver-issue";
 
 /**
@@ -38,7 +38,7 @@ export type HeldSendRow = {
 export type HeldSendOutcome =
   | ({ kind: "waiver_send" } & WaiverBatchOutcome)
   | { kind: "last_minute_deal"; outcome: SendLastMinuteDealOutcome }
-  | { kind: "waitlist_invite"; result: "sent" | "fallback" }
+  | ({ kind: "seat_offer" } & SeatOffersOutcome)
   | ({ kind: "trip_rescheduled" } & RescheduleNoticeOutcome)
   | { kind: "departure_note"; outcome: SendDepartureNoteOutcome };
 
@@ -152,11 +152,12 @@ export async function claimDueHeldSends(db: AppDb, now = nowDate()): Promise<Hel
 }
 
 function toRow(row: typeof heldSends.$inferSelect): HeldSendRow {
+  const payload = heldSendPayloadSchema.parse(row.payload);
   return {
     id: row.id,
     shopId: row.shopId,
-    kind: row.kind,
-    payload: heldSendPayloadSchema.parse(row.payload),
+    kind: payload.kind,
+    payload,
     actorPersonId: row.actorPersonId,
     runAt: row.runAt,
   };
@@ -197,16 +198,15 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
       });
       return { kind: "departure_note", outcome };
     }
-    case "waitlist_invite": {
-      const result = await inviteWaitlistDiver(db, {
+    case "seat_offer": {
+      const { offerSeats } = await import("./lead-offers");
+      const outcome = await offerSeats(db, {
         shopId: row.shopId,
         shopSlug: await shopSlugOf(db, row.shopId),
-        entryId: payload.entryId,
+        tripId: payload.tripId,
+        leadIds: payload.leadIds,
       });
-      return {
-        kind: "waitlist_invite",
-        result: result.ok && result.delivery === "sent" ? "sent" : "fallback",
-      };
+      return { kind: "seat_offer", ...outcome };
     }
     case "trip_rescheduled": {
       // Imported at call time: `trip-rescheduled` holds through this module.

@@ -365,7 +365,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const seriesRecordRows = await readSeriesRecordRows(tx, scope);
 
-  const waitlistRows = await readScoped(tx, "tripWaitlistEntries", scope);
+  const leadRows = await readScoped(tx, "leads", scope);
 
   const lastMinuteListRows = await readScoped(tx, "lastMinuteListEntries", scope);
 
@@ -503,9 +503,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const notificationRows = await readScoped(tx, "notificationDeliveries", scope);
 
   const inquiryRows = await readScoped(tx, "courseInquiries", scope);
-  const inquiryById = new Map(inquiryRows.map((row) => [row.id, row]));
-
-  const invitationRows = await readScoped(tx, "tripInvitations", scope);
 
   const arrivalRows = await readScoped(tx, "bookingArrivalEvents", scope);
 
@@ -669,7 +666,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     courseRows,
     courseTitle,
     ...seriesRecordRows,
-    waitlistRows,
+    leadRows,
     lastMinuteListRows,
     lastMinutePromoRows,
     lastMinutePromoRecipientRows,
@@ -707,8 +704,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     activityRows,
     notificationRows,
     inquiryRows,
-    inquiryById,
-    invitationRows,
     arrivalRows,
     rollCallRows,
     crewRollCallRows,
@@ -915,9 +910,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
 
   const nitroxRows = await readScoped(tx, "nitroxCertifications", scope);
 
-  const waitlistRows = await readScoped(tx, "tripWaitlistEntries", scope);
-
-  const invitationRows = await readScoped(tx, "tripInvitations", scope);
+  const leadRows = await readScoped(tx, "leads", scope);
 
   const lastMinuteListRows = await readScoped(tx, "lastMinuteListEntries", scope);
 
@@ -1081,7 +1074,9 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
 
   const inquiryRows = await readScoped(tx, "courseInquiries", scope);
   const inquiryCourseIds = [
-    ...new Set(inquiryRows.flatMap((row) => (row.courseId ? [row.courseId] : []))),
+    ...new Set(
+      [...inquiryRows, ...leadRows].flatMap((row) => (row.courseId ? [row.courseId] : [])),
+    ),
   ];
   const inquiryCourseRows = inquiryCourseIds.length
     ? await tx
@@ -1116,8 +1111,7 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     certificationRows,
     specialtyRows,
     nitroxRows,
-    waitlistRows,
-    invitationRows,
+    leadRows,
     lastMinuteListRows,
     lastMinutePromoRecipientRows,
     paymentEventRows,
@@ -1266,8 +1260,7 @@ export async function loadShopExportCounts(
     "notification_deliveries.csv": await countShopScoped(db, "notificationDeliveries", shopId),
     "shop_promo_redemptions.csv": await countShopScoped(db, "shopPromoRedemptions", shopId),
     "course_inquiries.csv": await countShopScoped(db, "courseInquiries", shopId),
-    "waitlist_entries.csv": await countShopScoped(db, "tripWaitlistEntries", shopId),
-    "trip_invitations.csv": await countShopScoped(db, "tripInvitations", shopId),
+    "leads.csv": await countShopScoped(db, "leads", shopId),
     "last_minute_list.csv": await countShopScoped(db, "lastMinuteListEntries", shopId),
     "trip_last_minute_promos.csv": await countShopScoped(db, "tripLastMinutePromos", shopId),
     "trip_last_minute_promo_recipients.csv": await countShopScoped(

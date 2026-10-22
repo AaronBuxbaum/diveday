@@ -4,6 +4,7 @@ import type { AppDb } from "@/db/client";
 import { nowMs } from "@/lib/clock";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { fileScopedShopContext } from "@/test/db";
+import { departureLead } from "@/test/leads";
 import { createBooking } from "./bookings";
 import {
   applyProviderEmailEvent,
@@ -17,12 +18,12 @@ import {
 } from "./notifications";
 import {
   bookings,
+  leads,
   notificationDeliveries,
   notificationDeliveryAttempts,
   notificationSendQueue,
   people,
   shops,
-  tripInvitations,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
@@ -452,14 +453,8 @@ describe("a courtesy message waiting in the retry queue", () => {
     const { db, shop, trip, booking } = context;
     const personId = await personOf(db, booking.bookingId);
     const [invitation] = await db
-      .insert(tripInvitations)
-      .values({
-        shopId: shop.id,
-        tripId: trip.id,
-        source: "direct",
-        personId,
-        createdByPersonId: personId,
-      })
+      .insert(leads)
+      .values(departureLead({ shopId: shop.id, tripId: trip.id, personId }))
       .returning();
     if (!invitation) throw new Error("invitation insert failed");
     const { provider, sent } = flakyProvider();
@@ -467,13 +462,14 @@ describe("a courtesy message waiting in the retry queue", () => {
       context,
       {
         ...SCHEDULE,
-        kind: "direct_trip_invitation",
-        invitationId: invitation.id,
+        kind: "seat_offer_commercial",
+        askedBy: "shop",
+        leadId: invitation.id,
         shopId: shop.id,
         to: "nora@example.com",
         shopName: shop.name,
         bookingUrl: "https://diveday.test/s/blue-mantis/trips/x",
-        invitedAt: new Date("2026-07-19T00:00:00.000Z"),
+        offeredAt: new Date("2026-07-19T00:00:00.000Z"),
         unsubscribeUrl: "https://diveday.test/unsubscribe/x",
       },
       provider,

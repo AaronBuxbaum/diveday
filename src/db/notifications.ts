@@ -53,14 +53,13 @@ import {
   bookingPayments,
   bookings,
   courses,
+  leads,
   notificationDeliveries,
   notificationDeliveryAttempts,
   notificationSendQueue,
   people,
   shops,
-  tripInvitations,
   trips,
-  tripWaitlistEntries,
   waiverDeliveries,
   waiverRecords,
 } from "./schema";
@@ -675,7 +674,7 @@ function drainableStatus() {
  * password resets) is never governed by the opt-out.
  *
  * The person is resolved the way each kind's own sender resolved them: through
- * the wait-list entry, the booking or the invitation the payload names, and for
+ * the lead or the booking the payload names, and for
  * a checkout reminder through the address, which is the only handle a party
  * checkout has (`findCourtesyEmailRecipientByAddress`). Each lookup is scoped to
  * the payload's shop.
@@ -684,19 +683,6 @@ async function courtesyRecipientOptedOut(db: AppDb, notification: Notification):
   const optOutAt = { at: people.courtesyEmailOptOutAt };
   let rows: { at: Date | null }[];
   switch (notification.kind) {
-    case "waitlist_invite":
-      rows = await db
-        .select(optOutAt)
-        .from(tripWaitlistEntries)
-        .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
-        .where(
-          and(
-            eq(tripWaitlistEntries.id, notification.waitlistEntryId),
-            eq(tripWaitlistEntries.shopId, notification.shopId),
-          ),
-        )
-        .limit(1);
-      break;
     case "trip_recap":
       rows = await db
         .select(optOutAt)
@@ -707,17 +693,14 @@ async function courtesyRecipientOptedOut(db: AppDb, notification: Notification):
         )
         .limit(1);
       break;
-    case "direct_trip_invitation":
+    // The commercial offer only: a service offer is the reply to a diver's own
+    // request and is never governed by the opt-out.
+    case "seat_offer_commercial":
       rows = await db
         .select(optOutAt)
-        .from(tripInvitations)
-        .innerJoin(people, eq(people.id, tripInvitations.personId))
-        .where(
-          and(
-            eq(tripInvitations.id, notification.invitationId),
-            eq(tripInvitations.shopId, notification.shopId),
-          ),
-        )
+        .from(leads)
+        .innerJoin(people, eq(people.id, leads.personId))
+        .where(and(eq(leads.id, notification.leadId), eq(leads.shopId, notification.shopId)))
         .limit(1);
       break;
     case "checkout_recovery": {

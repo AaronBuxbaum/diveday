@@ -1,12 +1,10 @@
 import { sendHoldCopy } from "@/components/send-hold-copy";
-import type { listTripInvitations } from "@/db/trip-invitations";
+import type { DepartureLeadRow } from "@/db/leads";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
 import { RosterGroupBand } from "./RosterGroupBand";
 import { WaitlistInvite, type WaitlistInviteCopy } from "./WaitlistInvite";
-
-type TripInvitation = Awaited<ReturnType<typeof listTripInvitations>>[number];
 
 /**
  * **The "Invited" group of the guests ledger** — ADR
@@ -23,18 +21,16 @@ export function TripInvitationGroup({
   tripTitle,
   tripStartsAt,
   timezone,
-  inviteAction,
   locale,
   canInvite = true,
 }: {
-  invitations: TripInvitation[];
+  invitations: DepartureLeadRow[];
   shopSlug: string;
   tripId: string;
   shopName: string;
   tripTitle: string;
   tripStartsAt: Date;
   timezone: string;
-  inviteAction: (invitationId: string) => Promise<"sent" | "fallback">;
   locale: string;
   /** False once the departure can take nobody (`acceptsNewDivers`). */
   canInvite?: boolean;
@@ -70,32 +66,32 @@ export function TripInvitationGroup({
         <p className="text-xs text-muted">{t("trips.invitations.description")}</p>
       </RosterGroupBand>
       <ul className="divide-y divide-border">
-        {invitations.map(({ invitation, person, request }) => {
-          const name = person?.fullName ?? request?.name ?? t("trips.invitations.anonymous");
-          const email = person?.email ?? request?.email ?? null;
+        {invitations.map(({ lead, person }) => {
+          const name = person?.fullName ?? lead.name ?? t("trips.invitations.anonymous");
+          const email = person?.email ?? lead.email ?? null;
           return (
             <li
-              key={invitation.id}
+              key={lead.id}
               className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
             >
               <div className="min-w-0">
                 <p className="font-medium text-base">{name}</p>
                 <p className="text-muted wrap-anywhere">
                   {email ?? t("trips.invitations.noEmailOnFile")}
-                  {request ? ` · ${t("trips.invitations.fromRequest")}` : ""}
+                  {lead.parentLeadId ? ` · ${t("trips.invitations.fromRequest")}` : ""}
                 </p>
               </div>
               {canInvite ? (
                 <WaitlistInvite
-                  entryId={invitation.id}
+                  leadId={lead.id}
                   personName={name}
                   personEmail={email}
-                  invitedAt={invitation.invitedAt}
+                  invitedAt={lead.offeredAt}
                   bookingPath={bookingPath}
                   shopName={shopName}
                   tripTitle={tripTitle}
                   tripWhen={tripWhen}
-                  invite={inviteAction}
+                  tripId={tripId}
                   copy={inviteCopy}
                 />
               ) : null}

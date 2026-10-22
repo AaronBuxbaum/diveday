@@ -914,7 +914,7 @@ export type TodayAction = {
    */
   invite?: {
     tripId: string;
-    entryId: string;
+    leadId: string;
     personName: string;
     personEmail: string | null;
     invitedAt: Date | null;

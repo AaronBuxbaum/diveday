@@ -140,16 +140,6 @@ export type DiverMergeResult =
  */
 const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_entries"] as const;
 
-/**
- * Tables unique on `(trip_id, person_id)` besides `bookings`. Both records on
- * one departure's wait list, or both invited to it, would collide on the
- * repoint; the kept record's row stands and the merged-away duplicate goes,
- * as `SINGLETON_PER_PERSON_TABLES` does per person. Now reachable, because a
- * cancelled seat no longer refuses a merge on a departure both records share
- * (issue #2177).
- */
-const ONE_PER_DEPARTURE_PER_PERSON_TABLES = ["trip_waitlist_entries", "trip_invitations"] as const;
-
 export const DIVER_HISTORY_TABLES = [
   "course_inquiries",
   // What the bench told this diver about their own gear (ADR
@@ -159,8 +149,7 @@ export const DIVER_HISTORY_TABLES = [
   "customer_gear_notices",
   "bookings",
   "internal_notes",
-  "trip_waitlist_entries",
-  "trip_invitations",
+  "leads",
   "last_minute_list_entries",
   "person_courtesy_email_unsubscribe_tokens",
   "trip_last_minute_promo_recipients",
@@ -364,7 +353,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "trip_desk_events.actor_person_id": "who did it at the desk",
   "trip_desk_events.subject_person_id": "an event trail records who it happened to at the time",
   "trip_help_requests.resolved_by_person_id": "who answered the ask",
-  "trip_invitations.created_by_person_id": "who sent the invitation",
+  "leads.created_by_person_id": "who raised the lead or sent the offer",
   "trip_last_minute_promos.created_by_person_id": "who wrote the deal",
   "trip_recap_photos.uploaded_by_person_id": "who uploaded the photo",
   "trip_sightings.deleted_by_person_id": "who took the mis-tapped sighting back",
@@ -978,8 +967,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
   history: ["prior_visits"],
   lists: [
     "course_inquiries",
-    "trip_waitlist_entries",
-    "trip_invitations",
+    "leads",
     "last_minute_list_entries",
     "person_courtesy_email_unsubscribe_tokens",
     "trip_last_minute_promo_recipients",
@@ -1348,12 +1336,18 @@ export async function mergeDiverRecords(input: {
         );
       }
 
-      for (const tableName of ONE_PER_DEPARTURE_PER_PERSON_TABLES) {
-        const table = sql.raw(quotedTable(tableName));
-        await tx.execute(
-          sql`delete from ${table} where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "trip_id" in (select "trip_id" from ${table} where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id})`,
-        );
-      }
+      // Leads are unique per person per departure (both records on one
+      // departure's wait list, or both offered it, would collide on the
+      // repoint) and per person for the last-minute list. The kept record's row
+      // stands and the merged-away duplicate goes, as the singletons above.
+      // Now reachable, because a cancelled seat no longer refuses a merge on a
+      // departure both records share (issue #2177).
+      await tx.execute(
+        sql`delete from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'departure' and "trip_id" in (select "trip_id" from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'departure')`,
+      );
+      await tx.execute(
+        sql`delete from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'anytime' and exists (select 1 from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'anytime')`,
+      );
 
       // Releases through the one path that keeps their seals honest: a bare
       // repoint would make every sealed release read as tampered, `person_id`

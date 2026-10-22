@@ -75,10 +75,8 @@ export const EXPORT_FILE_NOTES = {
     "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified Nitrox card, checked at fill time. status no_show is a released seat: with turned_away_at set, the desk saw the diver and turned them away, for the reason in turned_away_reason (medical, waiver, card, age, identity or payment — the category only, never the answers or card details; blank after the diver's erasure); with turned_away_at blank, the diver did not arrive. A removed seat with turned_away_at set was turned away, then removed: the diver did not cancel it.",
   "trip_help_requests.csv":
     "One non-medical day-of help request per booking, with its visible hand-off status and timestamps. The request is retained with the trip history; resolved staff identity is included when available.",
-  "waitlist_entries.csv":
-    "Divers in line for full trips, and how many seats each waits for (party_size, themselves included). A wait-list entry never consumed a seat and never appears on a manifest.",
-  "trip_invitations.csv":
-    "Staff outreach attached to a departure without claiming a seat: the source request or diver, the contact snapshot, and whether staff recorded an invitation attempt. Invitations never become bookings, capacity, readiness or manifest state by themselves.",
+  "leads.csv":
+    "Everyone who wanted a seat, one row each, with a scope: departure (a wait-list entry or an offer for one trip, with party_size and offered_at), date (a day that was not on the board, with the contact the person left), anytime (the last-minute list, with the dates they are around). asked_by says whether the diver asked or the shop reached out; parent_lead_id names the row an offer was copied from. A lead never consumed a seat and never appears on a manifest.",
   "last_minute_list.csv":
     "Divers who opted in, shop-wide, to hear about last-minute deals, with the date range they said they're around. Distinct from waitlist_entries.csv: this is a general availability signal, not interest in one specific full trip.",
   "trip_last_minute_promos.csv":

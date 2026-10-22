@@ -4,8 +4,8 @@ import { seatSailed } from "@/lib/closeout";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { similarDepartures } from "@/lib/similar-departures";
 import type { AppDb } from "./client";
+import { departureOpenToDiver } from "./lead-offers";
 import { bookings, people, trips } from "./schema";
-import { departureOpenToDiver } from "./trip-invitations";
 import { pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
 

@@ -182,9 +182,9 @@ describe("holdSendAction", () => {
 describe("holdSendAction wait-list invite", () => {
   const waitlistForm = (tripId: string) => {
     const form = new FormData();
-    form.set("holdKind", "waitlist_invite");
+    form.set("holdKind", "seat_offer");
     form.set("tripId", tripId);
-    form.set("entryId", crypto.randomUUID());
+    form.set("leadId", crypto.randomUUID());
     return form;
   };
 

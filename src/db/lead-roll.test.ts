@@ -5,9 +5,9 @@ import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
-import { courses, trips, tripWaitlistEntries } from "./schema";
+import { carryLeads, rollSailedSeriesLeads } from "./lead-roll";
+import { courses, leads, trips } from "./schema";
 import { createTrip, createTripSeries } from "./trips";
-import { carryWaitlist, rollSailedSeriesWaitlists } from "./waitlist-roll";
 
 /**
  * **The wait list rolls forward** (third UX review, item 12). Leads copy, never
@@ -23,7 +23,7 @@ async function lead(
   shopId: string,
   tripId: string,
   name: string,
-  invitedAt?: Date,
+  offeredAt?: Date,
   partySize = 1,
 ) {
   const person = await createDiver(db, {
@@ -32,12 +32,14 @@ async function lead(
     email: `${name.toLowerCase().replace(/\W+/g, "-")}@example.com`,
   });
   if (!person) throw new Error("diver failed");
-  await db.insert(tripWaitlistEntries).values({
+  await db.insert(leads).values({
     shopId,
     tripId,
+    scope: "departure",
+    askedBy: "diver",
     personId: person.id,
-    createdAt: new Date("2030-08-01T12:00:00Z"),
-    invitedAt: invitedAt ?? null,
+    askedAt: new Date("2030-08-01T12:00:00Z"),
+    offeredAt: offeredAt ?? null,
     partySize,
   });
   return person;
@@ -46,12 +48,12 @@ async function lead(
 async function waiting(db: AppDb, tripId: string) {
   return db
     .select({
-      personId: tripWaitlistEntries.personId,
-      createdAt: tripWaitlistEntries.createdAt,
-      invitedAt: tripWaitlistEntries.invitedAt,
+      personId: leads.personId,
+      askedAt: leads.askedAt,
+      offeredAt: leads.offeredAt,
     })
-    .from(tripWaitlistEntries)
-    .where(eq(tripWaitlistEntries.tripId, tripId));
+    .from(leads)
+    .where(eq(leads.tripId, tripId));
 }
 
 async function saturdays(capacity = 12) {
@@ -107,19 +109,19 @@ async function nextAfter(
   return later;
 }
 
-describe("rollSailedSeriesWaitlists", () => {
+describe("rollSailedSeriesLeads", () => {
   it("rolls uninvited leads onto the next date and invites them while it has seats", async () => {
     const { db, shop, first, second, now } = await saturdays();
     const ana = await lead(db, shop.id, first.id, "Ana Reyes");
     const worked = await lead(db, shop.id, first.id, "Ben Worked", new Date("2030-09-06T00:00Z"));
 
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 1 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 1, invited: 1 });
     const next = await waiting(db, second.id);
     expect(next).toEqual([
       {
         personId: ana.id,
-        createdAt: new Date("2030-08-01T12:00:00Z"),
-        invitedAt: now,
+        askedAt: new Date("2030-08-01T12:00:00Z"),
+        offeredAt: now,
       },
     ]);
     expect(next.map((row) => row.personId)).not.toContain(worked.id);
@@ -127,7 +129,7 @@ describe("rollSailedSeriesWaitlists", () => {
     expect((await waiting(db, first.id)).map((row) => row.personId)).toContain(ana.id);
 
     // A second night adds nobody twice and invites nobody again.
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 0, invited: 0 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 0, invited: 0 });
   });
 
   it("rolls a lead onto a full next date without inviting them", async () => {
@@ -142,28 +144,28 @@ describe("rollSailedSeriesWaitlists", () => {
     if (!booked.ok) throw new Error("booking failed");
     await lead(db, shop.id, first.id, "Cara Full");
 
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 0 });
-    expect((await waiting(db, second.id))[0]?.invitedAt).toBeNull();
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 1, invited: 0 });
+    expect((await waiting(db, second.id))[0]?.offeredAt).toBeNull();
   });
 
   it("does not roll a date that has not sailed", async () => {
     const { db, shop, first } = await saturdays();
     await lead(db, shop.id, first.id, "Dan Early");
-    expect(await rollSailedSeriesWaitlists(db, new Date(first.startsAt.getTime() - 1))).toEqual({
+    expect(await rollSailedSeriesLeads(db, new Date(first.startsAt.getTime() - 1))).toEqual({
       rolled: 0,
       invited: 0,
     });
   });
 });
 
-describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measured", () => {
+describe("rollSailedSeriesLeads, measuring the next date as a seat is measured", () => {
   it("skips a next date on a conditions hold for the one after it", async () => {
     const { db, shop, first, second, now } = await saturdays();
     const third = await nextAfter(db, shop.id, second);
     await db.update(trips).set({ conditionsHold: true }).where(eq(trips.id, second.id));
     const ana = await lead(db, shop.id, first.id, "Ana Held");
 
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 1 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 1, invited: 1 });
     expect(await waiting(db, second.id)).toEqual([]);
     expect((await waiting(db, third.id)).map((row) => row.personId)).toEqual([ana.id]);
   });
@@ -176,7 +178,7 @@ describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measur
     await db.update(trips).set({ isPrivate: true }).where(eq(trips.id, second.id));
     const ana = await lead(db, shop.id, first.id, "Ana Private");
 
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 1 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 1, invited: 1 });
     expect(await waiting(db, second.id)).toEqual([]);
     expect((await waiting(db, third.id)).map((row) => row.personId)).toEqual([ana.id]);
   });
@@ -187,7 +189,7 @@ describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measur
     await seat(db, shop.id, second.id, "Only Diver");
     await lead(db, shop.id, first.id, "Cy Diverlimit");
 
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 0 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 1, invited: 0 });
   });
 
   it("invites nobody onto a course date with no instructor rostered", async () => {
@@ -200,7 +202,7 @@ describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measur
     await db.update(trips).set({ courseId: course.id }).where(eq(trips.id, second.id));
     await lead(db, shop.id, first.id, "Dee Unstaffed");
 
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 0 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 1, invited: 0 });
   });
 
   it("counts invitations already out on the next date against its open seats", async () => {
@@ -210,7 +212,7 @@ describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measur
     await lead(db, shop.id, first.id, "Finn Rolled");
     await lead(db, shop.id, first.id, "Gus Rolled");
 
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 2, invited: 1 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 2, invited: 1 });
   });
 
   it("invites the next date's own earlier lead before a rolled one", async () => {
@@ -222,18 +224,21 @@ describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measur
     });
     if (!native) throw new Error("diver failed");
     // Asked about the second Saturday before the rolled lead asked about the first.
-    await db.insert(tripWaitlistEntries).values({
+    await db.insert(leads).values({
       shopId: shop.id,
       tripId: second.id,
+      scope: "departure",
+      askedBy: "diver",
       personId: native.id,
-      createdAt: new Date("2030-07-01T12:00:00Z"),
+      partySize: 1,
+      askedAt: new Date("2030-07-01T12:00:00Z"),
     });
     const rolled = await lead(db, shop.id, first.id, "Ivo Later");
 
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 1 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 1, invited: 1 });
     const next = await waiting(db, second.id);
-    expect(next.find((row) => row.personId === native.id)?.invitedAt).toEqual(now);
-    expect(next.find((row) => row.personId === rolled.id)?.invitedAt).toBeNull();
+    expect(next.find((row) => row.personId === native.id)?.offeredAt).toEqual(now);
+    expect(next.find((row) => row.personId === rolled.id)?.offeredAt).toBeNull();
   });
 });
 
@@ -242,15 +247,15 @@ describe("rollSailedSeriesWaitlists, measuring the next date as a seat is measur
  * a couple is one lead of two, invited only when two seats are free, and an
  * invitation out to a party holds its whole party's seats.
  */
-describe("rollSailedSeriesWaitlists with a party", () => {
+describe("rollSailedSeriesLeads with a party", () => {
   it("carries the party onto the next date", async () => {
     const { db, shop, first, second, now } = await saturdays();
     await lead(db, shop.id, first.id, "Ivy Pair", undefined, 2);
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 1 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 1, invited: 1 });
     const [rolled] = await db
-      .select({ partySize: tripWaitlistEntries.partySize })
-      .from(tripWaitlistEntries)
-      .where(eq(tripWaitlistEntries.tripId, second.id));
+      .select({ partySize: leads.partySize })
+      .from(leads)
+      .where(eq(leads.tripId, second.id));
     expect(rolled?.partySize).toBe(2);
   });
 
@@ -258,7 +263,7 @@ describe("rollSailedSeriesWaitlists with a party", () => {
     const { db, shop, first, now } = await saturdays(1);
     await lead(db, shop.id, first.id, "Jo Pair", undefined, 2);
     await lead(db, shop.id, first.id, "Kai Single");
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 2, invited: 1 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 2, invited: 1 });
   });
 
   it("counts an invited party's whole party against the open seats", async () => {
@@ -266,11 +271,11 @@ describe("rollSailedSeriesWaitlists with a party", () => {
     await lead(db, shop.id, second.id, "Lu Invited", new Date(now.getTime() - 60_000), 2);
     await lead(db, shop.id, first.id, "Mo Pair", undefined, 2);
     // Three seats, two spoken for by the invited pair: one left, not two.
-    expect(await rollSailedSeriesWaitlists(db, now)).toEqual({ rolled: 1, invited: 0 });
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 1, invited: 0 });
   });
 });
 
-describe("carryWaitlist", () => {
+describe("carryLeads", () => {
   it("copies every lead to the departure staff chose, skipping a diver already seated there", async () => {
     const { db, shop, first, now } = await saturdays();
     const second = await createTrip(db, {
@@ -294,7 +299,7 @@ describe("carryWaitlist", () => {
     if (!seated.ok) throw new Error("seat failed");
 
     expect(
-      await carryWaitlist(db, {
+      await carryLeads(db, {
         shopId: shop.id,
         fromTripId: first.id,
         toTripId: second.id,
@@ -302,21 +307,31 @@ describe("carryWaitlist", () => {
       }),
     ).toEqual({ ok: true, carried: 1 });
     expect(await waiting(db, second.id)).toEqual([
-      { personId: eve.id, createdAt: new Date("2030-08-01T12:00:00Z"), invitedAt: null },
+      { personId: eve.id, askedAt: new Date("2030-08-01T12:00:00Z"), offeredAt: null },
     ]);
+    // The copy remembers the row it came from.
+    const [copy] = await db
+      .select({ parentLeadId: leads.parentLeadId })
+      .from(leads)
+      .where(and(eq(leads.tripId, second.id), eq(leads.personId, eve.id)));
+    const [origin] = await db
+      .select({ id: leads.id })
+      .from(leads)
+      .where(and(eq(leads.tripId, first.id), eq(leads.personId, eve.id)));
+    expect(copy?.parentLeadId).toBe(origin?.id);
     // A departure that has left takes nobody.
     expect(
-      await carryWaitlist(db, { shopId: shop.id, fromTripId: second.id, toTripId: first.id, now }),
+      await carryLeads(db, { shopId: shop.id, fromTripId: second.id, toTripId: first.id, now }),
     ).toEqual({ ok: false, reason: "target_unavailable" });
   });
 
   it("refuses this departure itself and another shop's", async () => {
     const { db, shop, first } = await saturdays();
     expect(
-      await carryWaitlist(db, { shopId: shop.id, fromTripId: first.id, toTripId: first.id }),
+      await carryLeads(db, { shopId: shop.id, fromTripId: first.id, toTripId: first.id }),
     ).toEqual({ ok: false, reason: "target_unavailable" });
     expect(
-      await carryWaitlist(db, {
+      await carryLeads(db, {
         shopId: shop.id,
         fromTripId: first.id,
         toTripId: "00000000-0000-4000-8000-000000000000",
@@ -324,10 +339,8 @@ describe("carryWaitlist", () => {
     ).toEqual({ ok: false, reason: "target_unavailable" });
     const rows = await db
       .select()
-      .from(tripWaitlistEntries)
-      .where(
-        and(eq(tripWaitlistEntries.shopId, shop.id), eq(tripWaitlistEntries.tripId, first.id)),
-      );
+      .from(leads)
+      .where(and(eq(leads.shopId, shop.id), eq(leads.tripId, first.id)));
     expect(rows).toEqual([]);
   });
 });

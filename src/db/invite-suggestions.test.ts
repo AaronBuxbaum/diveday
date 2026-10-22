@@ -15,11 +15,11 @@ import {
   certifications,
   courses,
   diveSites,
+  leads,
   nitroxCertifications,
   people,
   personRoles,
   specialtyCertifications,
-  tripInvitations,
   tripRequirements,
   trips,
   waiverRecords,
@@ -165,31 +165,37 @@ describe("listInviteSuggestions", () => {
     for (const p of [aboard, invitedHere, invitedRecently, invitedLongAgo])
       await seat(march.id, p.id);
     await seat(target.id, aboard.id);
-    await db.insert(tripInvitations).values([
+    await db.insert(leads).values([
       {
         shopId: shop.id,
         tripId: target.id,
-        source: "direct",
+        scope: "departure",
+        askedBy: "shop",
+        partySize: 1,
         personId: invitedHere.id,
         createdByPersonId: aboard.id,
       },
       {
         shopId: shop.id,
         tripId: march.id,
-        source: "direct",
+        scope: "departure",
+        askedBy: "shop",
+        partySize: 1,
         personId: invitedRecently.id,
         createdByPersonId: aboard.id,
-        invitedAt: new Date(now.getTime() - 29 * DAY_MS),
-        createdAt: new Date(now.getTime() - 29 * DAY_MS),
+        offeredAt: new Date(now.getTime() - 29 * DAY_MS),
+        askedAt: new Date(now.getTime() - 29 * DAY_MS),
       },
       {
         shopId: shop.id,
         tripId: march.id,
-        source: "direct",
+        scope: "departure",
+        askedBy: "shop",
+        partySize: 1,
         personId: invitedLongAgo.id,
         createdByPersonId: aboard.id,
-        invitedAt: new Date(now.getTime() - 31 * DAY_MS),
-        createdAt: new Date(now.getTime() - 31 * DAY_MS),
+        offeredAt: new Date(now.getTime() - 31 * DAY_MS),
+        askedAt: new Date(now.getTime() - 31 * DAY_MS),
       },
     ]);
 
@@ -622,13 +628,13 @@ describe("createInvitationUnderCooldown", () => {
     const nadia = await diver("Cooldown Nadia");
     const other = await trip("Another wall dive", new Date(now.getTime() + 12 * DAY_MS));
     const input = { shopId: shop.id, personId: nadia.id, createdByPersonId: author.id, now };
-    expect(await createInvitationUnderCooldown(db, { ...input, tripId: target.id })).toBe(
-      "created",
-    );
+    expect(await createInvitationUnderCooldown(db, { ...input, tripId: target.id })).toMatchObject({
+      status: "created",
+    });
     // Nothing was sent yet (no `invited_at`), and the recorded row still holds the cooldown.
-    expect(await createInvitationUnderCooldown(db, { ...input, tripId: other.id })).toBe(
-      "cooldown",
-    );
+    expect(await createInvitationUnderCooldown(db, { ...input, tripId: other.id })).toEqual({
+      status: "cooldown",
+    });
   });
 
   it("refuses a departure this diver could not book (below its level), recording nothing", async () => {
@@ -649,7 +655,7 @@ describe("createInvitationUnderCooldown", () => {
         createdByPersonId: author.id,
         now,
       }),
-    ).toBe("unavailable");
+    ).toEqual({ status: "unavailable" });
     expect(await invitedWithinCooldown(db, shop.id, ow.id, now)).toBe(false);
   });
 
@@ -666,7 +672,7 @@ describe("createInvitationUnderCooldown", () => {
         createdByPersonId: author.id,
         now,
       }),
-    ).toBe("unavailable");
+    ).toEqual({ status: "unavailable" });
     expect(await invitedWithinCooldown(db, shop.id, referred.id, now)).toBe(false);
   });
 });
