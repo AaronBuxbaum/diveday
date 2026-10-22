@@ -192,11 +192,37 @@ test("a map pin with no accessible name still fails button-name", async ({ page 
 test("an intrinsically undersized geographic pin still fails target-size", async ({ page }) => {
   await openLibraryMap(page);
   await overlapNativePinPair(page);
-  const pin = page.locator(".leaflet-site-marker button").first();
-  await pin.evaluate((button) => {
-    button.id = "tiny-pin-target";
-    Object.assign(button.style, { width: "16px", height: "16px" });
+  const pair = page.locator(".leaflet-site-marker button");
+  // Shrink both real targets: a 44px neighbor moves its center far enough
+  // away that axe can correctly accept a lone 16px target via spacing.
+  await pair.evaluateAll((buttons) => {
+    for (const [index, button] of buttons.slice(0, 2).entries()) {
+      if (!(button instanceof HTMLElement)) throw new Error("Site target did not mount");
+      button.id = index === 0 ? "tiny-pin-target" : "tiny-pin-neighbor";
+      Object.assign(button.style, {
+        width: "16px",
+        height: "16px",
+        minWidth: "16px",
+        minHeight: "16px",
+      });
+    }
   });
+  const pin = page.locator("#tiny-pin-target");
+  const neighbor = page.locator("#tiny-pin-neighbor");
   await expect(pin).toBeVisible();
+  await expect(neighbor).toBeVisible();
+  const targetBox = await pin.boundingBox();
+  const neighborBox = await neighbor.boundingBox();
+  if (!targetBox || !neighborBox) throw new Error("Undersized site pair has no bounds");
+  for (const box of [targetBox, neighborBox]) {
+    expect(box.width).toBe(16);
+    expect(box.height).toBe(16);
+  }
+  expect(
+    Math.hypot(
+      targetBox.x + targetBox.width / 2 - neighborBox.x - neighborBox.width / 2,
+      targetBox.y + targetBox.height / 2 - neighborBox.y - neighborBox.height / 2,
+    ),
+  ).toBeLessThan(24);
   await expect(expectNoA11yViolations(page)).rejects.toThrow("tiny-pin-target");
 });
