@@ -8,7 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats, listBoatsForHistory } from "@/db/boats";
 import { readFormDraft } from "@/db/form-drafts";
-import { listDateLeadsByIds, listOpenDateLeadsForDates } from "@/db/lead-dates";
+import { listDateInterestsByIds, listOpenDateInterestsForDates } from "@/db/interest-dates";
 import { openAfterDiveRollCalls } from "@/db/today";
 import { upcomingScheduleRange, weekBoard } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
@@ -156,10 +156,10 @@ export default async function ScheduleBoardPage({
     weekRead,
     // **The days somebody asked for** (ADR 20260919-one-idea, slice 23f — "a request is a day
     // someone asked for, drawn as a ghost on the week"). Bounded to the week for the same reason
-    // everything else here is: Tide files a thing under the hour it happens at, and a lead for a
+    // everything else here is: Tide files a thing under the hour it happens at, and an interest for a
     // day three weeks out is that week's business. `/shop/<slug>/requests` stays the unbounded
     // reading of the same rows.
-    listOpenDateLeadsForDates(db, shop.id, weekDates(weekStartIso)),
+    listOpenDateInterestsForDates(db, shop.id, weekDates(weekStartIso)),
     // **Names come from every hull the shop has ever had, not just the live ones.** A departure
     // that sailed on a boat the shop has since deleted must still say which vessel — that is the
     // whole reason deleting one is a stamp rather than a delete (ADR
@@ -173,7 +173,7 @@ export default async function ScheduleBoardPage({
     // live report gate that protects /requests" — and that page is ungated now, so the check
     // protected nothing and only broke the day group's one act: a captain tapping "Add departure"
     // got a builder with no requests block and no explanation. `shop.id` is still the scope
-    // (`listDateLeadsByIds`), so a shareable URL still cannot pull another tenant's lead.
+    // (`listDateInterestsByIds`), so a shareable URL still cannot pull another tenant's interest.
     //
     // Read only for a reader the add panel renders for: the plan is drawn inside it and nowhere
     // else, so for anyone else these rows were loaded and shown to nobody. `/requests` no longer
@@ -181,7 +181,7 @@ export default async function ScheduleBoardPage({
     // nothing either.
     requestIds.length > 0
       ? canConfigureRead.then((allowed) =>
-          allowed ? listDateLeadsByIds(db, shop.id, requestIds) : [],
+          allowed ? listDateInterestsByIds(db, shop.id, requestIds) : [],
         )
       : [],
   ]);

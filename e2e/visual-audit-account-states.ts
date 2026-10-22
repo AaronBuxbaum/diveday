@@ -237,7 +237,7 @@ export function registerAccountAuditCaptures(capture: AuditCapture, flowTimeout:
         const endpoint =
           family === "courtesy"
             ? "seed-courtesy-email-unsubscribe-token"
-            : "seed-last-minute-unsubscribe-token";
+            : "seed-interest-unsubscribe-token";
         const seeded = await page.request.post(`/api/test/${endpoint}`, {
           data: { shopSlug: "blue-mantis", email },
         });

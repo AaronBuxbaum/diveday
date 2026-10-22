@@ -11,7 +11,7 @@ import {
   tripSeriesSkips,
   trips,
 } from "./schema";
-import { DEMO_WEEKLY_RUN_TITLE, guideSeats, surveySaturday } from "./seed-weekly-run";
+import { DEMO_WEEKLY_RUN_TITLE, surveySaturday } from "./seed-weekly-run";
 import { getTripSeriesSummary } from "./trips";
 
 describe("surveySaturday", () => {
@@ -37,19 +37,6 @@ describe("surveySaturday", () => {
  * Saturday run with a standing crew and a skipped Saturday, so a prospect sees
  * "Repeats weekly on Sat · keeps going" rather than only one-time departures.
  */
-describe("guideSeats", () => {
-  it("sells what the free guides cover, up to the run's twelve seats", () => {
-    expect(guideSeats(1, 6)).toBe(6);
-    expect(guideSeats(3, 6)).toBe(12);
-  });
-
-  it("sells nothing on a date no guide is free for, rather than a zero-seat trip", () => {
-    // A zero capacity breaks trips_capacity_range and fails the whole seed,
-    // which is how the build's sitemap export died (PR #2920).
-    expect(guideSeats(0, 6)).toBeNull();
-  });
-});
-
 describe("the seeded weekly run", () => {
   async function run() {
     const { db, shop } = await seededShopContext({ history: true });

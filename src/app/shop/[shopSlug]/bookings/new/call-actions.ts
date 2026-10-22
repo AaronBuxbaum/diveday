@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
 import { discardFormDraft } from "@/db/form-drafts";
-import { askForDate } from "@/db/leads";
+import { askForDate } from "@/db/interests";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -99,7 +99,7 @@ export async function tookACallAction(shopSlug: string, formData: FormData): Pro
       // somebody said on the phone, and picking a course row for them would be
       // the staffer's guess recorded as the caller's words. A request that
       // turns out to be about a course is matched on the Requests page, where
-      // the whole day's leads are read together.
+      // the whole day's interests are read together.
       interest,
       name: fullName,
       email,

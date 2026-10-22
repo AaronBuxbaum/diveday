@@ -9,7 +9,7 @@ import {
 } from "@/app/actions/held-sends";
 import { copyToClipboard } from "@/components/Copyable";
 import { SendHold, type SendHoldCopy } from "@/components/SendHold";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, proseLinkClass } from "@/components/ui/button";
 import type { HeldSendOutcome } from "@/db/held-sends";
 import { fill } from "@/i18n/fill";
 
@@ -35,10 +35,10 @@ export type OfferSeatCopy = {
   emailBody: string;
 };
 
-/** The leads an offer may reach, with what the composer fallback needs of each. */
-export type OfferSeatLead = { leadId: string; name: string; email: string | null };
+/** The interests an offer may reach, with what the composer fallback needs of each. */
+export type OfferSeatInterest = { interestId: string; name: string; email: string | null };
 
-type Fallback = { lead: OfferSeatLead; mailto: string | null; message: string };
+type Fallback = { interest: OfferSeatInterest; mailto: string | null; message: string };
 
 /** The ticks this form owns: boxes that name it in their `form` attribute. */
 function tickedBoxes(formId: string): HTMLInputElement[] {
@@ -48,16 +48,16 @@ function tickedBoxes(formId: string): HTMLInputElement[] {
 }
 
 /**
- * **Offer a seat** (ADR 20261017-one-lead-with-a-scope): the one act on who
+ * **Offer a seat** (ADR 20261017-one-interest-with-a-scope): the one act on who
  * wants in, always a held send (`seat_offer`, eight seconds, Undo where the
  * button stood). Two ways to choose who:
  *
  * - `chooseByTick`: the panel's tick boxes sit outside this form and join it by
  *   their `form` attribute, so the list stays on screen while the hold drains.
  *   The label counts what is ticked, and a below-the-bar tick is said under it.
- * - otherwise (Today's row) the offer goes to `leads` as given.
+ * - otherwise (Today's row) the offer goes to `interests` as given.
  *
- * Only a lead the server could not email (no provider, no address, an opt-out
+ * Only an interest the server could not email (no provider, no address, an opt-out
  * or a send inside the 24-hour window) falls back to a composer with the same
  * booking link, so an offer always goes out one way or another: a single
  * fallback opens the mail client (or copies the message when there is no
@@ -66,7 +66,7 @@ function tickedBoxes(formId: string): HTMLInputElement[] {
 export function OfferSeat({
   formId,
   tripId,
-  leads,
+  interests,
   chooseByTick,
   label,
   offeredLabel,
@@ -80,11 +80,11 @@ export function OfferSeat({
   /** Unique on the page: the tick boxes name it. */
   formId: string;
   tripId: string;
-  leads: OfferSeatLead[];
+  interests: OfferSeatInterest[];
   chooseByTick: boolean;
   /** The button's words when nothing is ticked for; the Today row's "Offer a seat to Ana". */
   label?: string;
-  /** "offered 2h ago", when the lead was already offered this seat. */
+  /** "offered 2h ago", when the interest was already offered this seat. */
   offeredLabel?: string;
   bookingPath: string;
   shopName: string;
@@ -113,29 +113,29 @@ export function OfferSeat({
     return () => document.removeEventListener("change", read);
   }, [chooseByTick, formId]);
 
-  const count = chooseByTick ? ticked.count : leads.length;
+  const count = chooseByTick ? ticked.count : interests.length;
 
-  function composerFor(lead: OfferSeatLead): Fallback {
+  function composerFor(interest: OfferSeatInterest): Fallback {
     const bookingUrl = new URL(bookingPath, window.location.origin).toString();
-    const firstName = lead.name.split(" ")[0] || lead.name;
+    const firstName = interest.name.split(" ")[0] || interest.name;
     const subject = fill(copy.emailSubject, { tripTitle });
     const body = fill(copy.emailBody, { firstName, tripTitle, tripWhen, shopName, bookingUrl });
     return {
-      lead,
+      interest,
       message: `${subject}\n\n${body}`,
-      mailto: lead.email
-        ? `mailto:${encodeURIComponent(lead.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+      mailto: interest.email
+        ? `mailto:${encodeURIComponent(interest.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
         : null,
     };
   }
 
   async function copyMessage(fallback: Fallback) {
     const ok = await copyToClipboard(fallback.message);
-    setCopied((now) => ({ ...now, [fallback.lead.leadId]: ok ? "copied" : "failed" }));
+    setCopied((now) => ({ ...now, [fallback.interest.interestId]: ok ? "copied" : "failed" }));
     setTimeout(
       () =>
         setCopied((now) => {
-          const { [fallback.lead.leadId]: _gone, ...rest } = now;
+          const { [fallback.interest.interestId]: _gone, ...rest } = now;
           return rest;
         }),
       4000,
@@ -146,10 +146,12 @@ export function OfferSeat({
     const results = outcome.kind === "seat_offer" ? outcome.results : [];
     const failed = results
       .filter((result) => result.delivery !== "sent")
-      .flatMap((result) => leads.filter((lead) => lead.leadId === result.leadId));
-    // A lead that went is done being ticked; one that did not stays ticked.
+      .flatMap((result) =>
+        interests.filter((interest) => interest.interestId === result.interestId),
+      );
+    // An interest that went is done being ticked; one that did not stays ticked.
     for (const box of tickedBoxes(formId)) {
-      if (!failed.some((lead) => lead.leadId === box.value)) box.checked = false;
+      if (!failed.some((interest) => interest.interestId === box.value)) box.checked = false;
     }
     const boxes = tickedBoxes(formId);
     setTicked({ count: boxes.length, below: boxes.filter((box) => box.dataset.belowBar).length });
@@ -190,8 +192,13 @@ export function OfferSeat({
         <input type="hidden" name="tripId" value={tripId} />
         {chooseByTick
           ? null
-          : leads.map((lead) => (
-              <input key={lead.leadId} type="hidden" name="leadId" value={lead.leadId} />
+          : interests.map((interest) => (
+              <input
+                key={interest.interestId}
+                type="hidden"
+                name="interestId"
+                value={interest.interestId}
+              />
             ))}
         {discountFields}
         <button
@@ -213,22 +220,22 @@ export function OfferSeat({
           <p>{copy.couldntSend}</p>
           <ul className="mt-1 space-y-1">
             {fallbacks.map((fallback) => (
-              <li key={fallback.lead.leadId}>
+              <li key={fallback.interest.interestId}>
                 {fallback.mailto ? (
-                  <a href={fallback.mailto} className="underline">
-                    {fill(copy.writeTo, { name: fallback.lead.name })}
+                  <a href={fallback.mailto} className={proseLinkClass}>
+                    {fill(copy.writeTo, { name: fallback.interest.name })}
                   </a>
                 ) : (
                   <button
                     type="button"
                     onClick={() => void copyMessage(fallback)}
-                    className="underline"
+                    className={proseLinkClass}
                   >
-                    {copied[fallback.lead.leadId] === "copied"
+                    {copied[fallback.interest.interestId] === "copied"
                       ? copy.copied
-                      : copied[fallback.lead.leadId] === "failed"
+                      : copied[fallback.interest.interestId] === "failed"
                         ? copy.copyFailed
-                        : fill(copy.copyFor, { name: fallback.lead.name })}
+                        : fill(copy.copyFor, { name: fallback.interest.name })}
                   </button>
                 )}
               </li>

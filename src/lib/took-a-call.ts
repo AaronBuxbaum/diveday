@@ -43,7 +43,7 @@ export function isCallOutcome(value: unknown): value is CallOutcome {
  * - `email` — `askForDeparture` resolves its person by address
  *   (`findOrCreatePerson`), so an entry with no email has nobody to invite
  *   when a seat frees, which is the only thing a wait-list entry is for.
- * - `interest` — `leads_scope_columns` refuses a date lead
+ * - `interest` — `interests_scope_columns` refuses a date interest
  *   that names neither a course nor an interest (ADR
  *   20260814-a-date-request-is-a-course-inquiry).
  */
@@ -70,8 +70,8 @@ export type CallCapture = {
 /**
  * Why this call cannot be written yet, or `null` when it can.
  *
- * `"reply"` is the one rule that is not about the mutation: a lead nobody can
- * ring back is a note about a conversation rather than a lead, and every other
+ * `"reply"` is the one rule that is not about the mutation: an interest nobody can
+ * ring back is a note about a conversation rather than an interest, and every other
  * door that records one already refuses it (`hasReplyPath`,
  * src/app/actions/inquiry.ts). A call is the surface where it bites hardest —
  * the staffer has the caller *on the line*, which is the only moment the

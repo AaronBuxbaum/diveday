@@ -104,9 +104,9 @@ import {
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
+  interests,
+  interestUnsubscribeTokens,
   internalNotes,
-  leads,
-  leadUnsubscribeTokens,
   lostItems,
   nitroxCertifications,
   notificationDeliveries,
@@ -364,7 +364,7 @@ function buddyMemberNameMatch(
  * against free text somebody else typed.
  *
  * `people.phone` is E.164 since issue #1547 (`+13055550142`), while a course
- * inquiry, a queued lead and a half-finished staff draft each hold the number
+ * inquiry, a queued interest notice and a half-finished staff draft each hold the number
  * exactly as the person typed it into that form (`+1 305 555 0142`). A string
  * comparison between the two now matches only by coincidence, and a handle
  * that matches by coincidence is an erasure that quietly does not happen
@@ -393,7 +393,7 @@ function erasablePhoneDigits(phone: string | null): string | null {
  * Each can therefore reach a third party's row in the same shop. None of them is
  * cross-tenant and all of them are owner-gated, so this is about visibility,
  * not containment: an owner who erases a diver and later finds a bystander's
- * lead blanked deserves a line saying it happened and how much it touched.
+ * interest blanked deserves a line saying it happened and how much it touched.
  * Ids and counts only — never the name, address or number that was matched
  * (AGENTS.md hard rule on PII in logs).
  */
@@ -952,18 +952,18 @@ async function scrubPersonOnlyRows(
   await tx
     .delete(rentalFitProfiles)
     .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
-  // An anytime lead's unsubscribe tokens name it by foreign key, so they go
-  // here, before `scrubLeads` deletes the lead, or that delete would raise
+  // An anytime interest's unsubscribe tokens name it by foreign key, so they go
+  // here, before `scrubInterests` deletes the interest, or that delete would raise
   // 23503 and roll back every other redaction with it.
-  await tx.delete(leadUnsubscribeTokens).where(
+  await tx.delete(interestUnsubscribeTokens).where(
     and(
-      eq(leadUnsubscribeTokens.shopId, shopId),
+      eq(interestUnsubscribeTokens.shopId, shopId),
       inArray(
-        leadUnsubscribeTokens.leadId,
+        interestUnsubscribeTokens.interestId,
         tx
-          .select({ id: leads.id })
-          .from(leads)
-          .where(and(eq(leads.shopId, shopId), eq(leads.personId, personId))),
+          .select({ id: interests.id })
+          .from(interests)
+          .where(and(eq(interests.shopId, shopId), eq(interests.personId, personId))),
       ),
     ),
   );
@@ -2284,7 +2284,7 @@ async function scrubPiiBlob(
   //
   // **Both address handles, not just the recipient's.** A kind whose *subject*
   // is not the person it is addressed to used to be out of reach entirely:
-  // `lead_received` mails the shop's own front desk about a diver who used
+  // `interest_received` mails the shop's own front desk about a diver who used
   // the public composer and carries their name, address, phone and free-text
   // message, and the `new_account` operator alert is the same shape about an owner. A
   // retryable failure plus an erasure before the retry drained left all of
@@ -2343,20 +2343,20 @@ async function scrubPiiBlob(
       .delete(shopShoreAlertTokens)
       .where(and(eq(shopShoreAlertTokens.shopId, shopId), eq(shopShoreAlertTokens.email, address)));
   }
-  // The number, for the lead that gave one and no address. Runs after the
+  // The number, for the interest that gave one and no address. Runs after the
   // address sweep so the count is the rows the number reached that the address
-  // did not — the over-reach, isolated, exactly as the date-lead
+  // did not — the over-reach, isolated, exactly as the date-interest
   // statements split theirs. It exists because the public composer takes
   // an address *or* a number (`hasReplyPath`, src/app/actions/inquiry.ts): a
-  // diver who leaves only a number produces a `lead_received` carrying their
+  // diver who leaves only a number produces a `interest_received` carrying their
   // name, that number and up to 1,500 characters of free text, and no address
   // handle can see it. The first version of this fix shipped exactly that hole
   // (`security-reviewer`, issue #1298).
   //
   // Fuzzier than the address by the same distance, and accepted for the same
   // written reason: a household number is shared, so this can drop a partner's
-  // queued lead. That costs a retry of a notification whose own
-  // date lead this transaction blanks anyway.
+  // queued interest notice. That costs a retry of a notification whose own
+  // date interest this transaction blanks anyway.
   const queuePhoneDigits = erasablePhoneDigits(ctx.phone);
   if (queuePhoneDigits) {
     const droppedByPhone = await tx
@@ -2415,7 +2415,7 @@ async function scrubUnfinishedForms(
   //
   // Each handle costs the over-reach it always costs here, and each is counted
   // separately so an owner can see which one fired: a household shares a phone
-  // (the reasoning the date-lead sweep records), and a name reaches a
+  // (the reasoning the date-interest sweep records), and a name reaches a
   // namesake — which is why it goes through `buddyMemberNameMatch`, anchored on
   // word boundaries and refused below three word characters.
   const draftHandles: { predicate: string; match: SQL }[] = [];
@@ -2468,116 +2468,116 @@ async function scrubUnfinishedForms(
 }
 
 /**
- * The erasure's "leads" sweep: **one function with a `scope` branch** (ADR
- * 20261017-one-lead-with-a-scope, R4), because the two modes live in one table.
+ * The erasure's "interests" sweep: **one function with a `scope` branch** (ADR
+ * 20261017-one-interest-with-a-scope, R4), because the two modes live in one table.
  *
- * - **Departure and anytime leads** are a live intention of this person's alone
+ * - **Departure and anytime interests** are a live intention of this person's alone
  *   (a wait-list place, a "tell me if something opens"), so the row goes whole.
- * - **Date leads** are a stranger's form that may live on a name and an address
+ * - **Date interests** are a stranger's form that may live on a name and an address
  *   with no person at all, so they are blanked, not deleted, and reached by
  *   person, then address, then phone.
  */
-async function scrubLeads(
+async function scrubInterests(
   tx: AppTransaction,
   ctx: ScrubSectionContext,
 ): Promise<ProcessorErasureTargetInput[]> {
   const { shopId, personId } = ctx;
   // The scope branch: these rows have nothing worth keeping once the person is gone.
   await tx
-    .delete(leads)
+    .delete(interests)
     .where(
       and(
-        eq(leads.shopId, shopId),
-        eq(leads.personId, personId),
-        inArray(leads.scope, ["departure", "anytime"]),
+        eq(interests.shopId, shopId),
+        eq(interests.personId, personId),
+        inArray(interests.scope, ["departure", "anytime"]),
       ),
     );
 
   // Three statements for the date scope, strongest handle first. `person_id` is
   // deliberately left in place on every one of them: it points at a row that is
   // itself already erased, so it discloses nothing, and keeping it makes a
-  // replayed erasure reach the same leads a second time.
+  // replayed erasure reach the same interests a second time.
   //
   // `interest` and the two date columns are deliberately *not* blanked. They
   // hold what the request was about and which days it asked for — no identity,
   // nothing that reaches back to a person once the name, address, phone, timing
   // prose and message above them are gone — and `interest` is what keeps a
-  // course-less row legal at all (`leads_scope_columns`): blanking it would turn
+  // course-less row legal at all (`interests_scope_columns`): blanking it would turn
   // an erasure into a constraint violation.
-  const blankLead = { name: null, email: null, phone: null, timing: null, message: null };
-  const dateLead = and(eq(leads.shopId, shopId), eq(leads.scope, "date"));
+  const blankInterest = { name: null, email: null, phone: null, timing: null, message: null };
+  const dateInterest = and(eq(interests.shopId, shopId), eq(interests.scope, "date"));
   const reached: string[] = [];
 
-  // 1. `person_id`, when the lead carries one. A public lead is still written
+  // 1. `person_id`, when the interest carries one. A public interest is still written
   //    before any person may exist, so the column stays nullable — but when the
   //    address on the form matched a live diver of this shop at capture time,
-  //    `askForDate` (src/db/leads.ts) snapshotted the link, and that snapshot is
+  //    `askForDate` (src/db/interests.ts) snapshotted the link, and that snapshot is
   //    an exact foreign key rather than a match against whatever the two rows
   //    happen to say today. It is the one handle that survives the diver
   //    changing their email afterwards, which the address sweep below cannot.
   //
-  //    A lead written with no email, or with an address no diver of this shop
+  //    An interest written with no email, or with an address no diver of this shop
   //    held at the time, still has no link and is still reachable only by the
   //    two fuzzy handles after it. That residual is narrower than it was, not
   //    closed: see the ADR. Nothing back-fills this column from a later match —
-  //    a link inferred after the fact would erase a bystander's lead.
+  //    a link inferred after the fact would erase a bystander's interest.
   const byPerson = await tx
-    .update(leads)
-    .set(blankLead)
-    .where(and(dateLead, eq(leads.personId, personId)))
-    .returning({ id: leads.id });
+    .update(interests)
+    .set(blankInterest)
+    .where(and(dateInterest, eq(interests.personId, personId)))
+    .returning({ id: interests.id });
   reached.push(...byPerson.map((row) => row.id));
 
   // 2 and 3 match on the contact details the diver themselves supplied, for the
-  // leads statement 1 cannot reach.
+  // interests statement 1 cannot reach.
   //
   // Split into two statements so the phone predicate can be counted on its
   // own. It is the fuzzier of the two by a distance: a household or family
   // number is genuinely shared, so this can blank a partner's or a child's
-  // lead — name, message and all — and there is no way to tell from the row.
-  // It is not tightened (to "…and the lead carries no email", say) because
+  // interest — name, message and all — and there is no way to tell from the row.
+  // It is not tightened (to "…and the interest carries no email", say) because
   // that would drop the real case it exists for: the diver who used a
   // different address on the public form than the one on their record. The
   // over-reach is accepted, owner-gated, and logged.
   if (ctx.email) {
     const byEmail = await tx
-      .update(leads)
-      .set(blankLead)
-      .where(and(dateLead, sql`lower(${leads.email}) = ${ctx.email.toLowerCase()}`))
-      .returning({ id: leads.id });
+      .update(interests)
+      .set(blankInterest)
+      .where(and(dateInterest, sql`lower(${interests.email}) = ${ctx.email.toLowerCase()}`))
+      .returning({ id: interests.id });
     reached.push(...byEmail.map((row) => row.id));
   }
-  const leadPhoneDigits = erasablePhoneDigits(ctx.phone);
-  if (leadPhoneDigits) {
+  const interestPhoneDigits = erasablePhoneDigits(ctx.phone);
+  if (interestPhoneDigits) {
     // Runs after the address sweep, so the count is the rows the number
     // reached that the address did not — the over-reach, isolated.
     const byPhone = await tx
-      .update(leads)
-      .set(blankLead)
+      .update(interests)
+      .set(blankInterest)
       .where(
         and(
-          dateLead,
-          sql`regexp_replace(coalesce(${leads.phone}, ''), '\\D', '', 'g') = ${leadPhoneDigits}`,
+          dateInterest,
+          sql`regexp_replace(coalesce(${interests.phone}, ''), '\\D', '', 'g') = ${interestPhoneDigits}`,
         ),
       )
-      .returning({ id: leads.id });
-    logFuzzyMatch(ctx, "date_lead_phone", byPhone.length);
+      .returning({ id: interests.id });
+    logFuzzyMatch(ctx, "date_interest_phone", byPhone.length);
     reached.push(...byPhone.map((row) => row.id));
   }
 
-  // A date lead attached to a departure left a person-less child that copied the
+  // A date interest attached to a departure left a person-less child that copied the
   // contact snapshot. It is the same stranger's details, so it is blanked with
   // its parent; a child that carries a person is already gone above.
   if (reached.length > 0) {
     await tx
-      .update(leads)
+      .update(interests)
       .set({ name: null, email: null, phone: null })
       .where(
         and(
-          eq(leads.shopId, shopId),
-          eq(leads.scope, "departure"),
-          isNull(leads.personId),
-          inArray(leads.parentLeadId, reached),
+          eq(interests.shopId, shopId),
+          eq(interests.scope, "departure"),
+          isNull(interests.personId),
+          inArray(interests.parentInterestId, reached),
         ),
       );
   }
@@ -2881,7 +2881,7 @@ const SCRUB_SECTIONS = [
   scrubCheckoutAddresses,
   scrubPiiBlob,
   scrubUnfinishedForms,
-  scrubLeads,
+  scrubInterests,
   scrubInbox,
   scrubIncidentReports,
 ] as const;

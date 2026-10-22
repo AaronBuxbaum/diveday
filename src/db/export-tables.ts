@@ -34,8 +34,8 @@ import {
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
+  interests,
   internalNotes,
-  leads,
   nitroxCertifications,
   notificationDeliveries,
   orderLineItems,
@@ -183,12 +183,12 @@ export const EXPORT_TABLES = {
     scope: { shopColumn: tripSeriesSkips.shopId },
   },
   // Everyone who wanted a seat, every scope in one file (ADR
-  // 20261017-one-lead-with-a-scope). A date lead may carry no person: it is in
+  // 20261017-one-interest-with-a-scope). A date interest may carry no person: it is in
   // the shop's bundle and in no diver's, which is the person-scope rule.
-  leads: {
-    table: leads,
-    order: [asc(leads.askedAt), asc(leads.id)],
-    scope: { shopColumn: leads.shopId, personColumn: leads.personId },
+  interests: {
+    table: interests,
+    order: [asc(interests.askedAt), asc(interests.id)],
+    scope: { shopColumn: interests.shopId, personColumn: interests.personId },
   },
   tripLastMinutePromos: {
     table: tripLastMinutePromos,

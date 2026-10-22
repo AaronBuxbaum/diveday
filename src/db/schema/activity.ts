@@ -318,7 +318,7 @@ export const formDrafts = pgTable(
  * (nothing writes it) and `last_minute_deal` follows when the deal folds into
  * the offer; both values stay in the type until the release after the one that
  * stopped writing them, when a serving release can no longer hold one (ADR
- * 20261017-one-lead-with-a-scope).
+ * 20261017-one-interest-with-a-scope).
  */
 export const heldSendKind = pgEnum("held_send_kind", [
   "waiver_send",

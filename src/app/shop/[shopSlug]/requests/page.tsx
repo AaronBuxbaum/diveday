@@ -5,7 +5,11 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats } from "@/db/boats";
-import { listClosedDateLeads, listDeparturesOnDates, listOpenDateLeads } from "@/db/lead-dates";
+import {
+  listClosedDateInterests,
+  listDeparturesOnDates,
+  listOpenDateInterests,
+} from "@/db/interest-dates";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
@@ -44,7 +48,7 @@ export const metadata: Metadata = {
  * What the redesign moved is where a day's facts live. **The group header owns
  * the count, the advice and the act** — "Mar 6, 2027 — 2 groups · 5 divers",
  * the hull and the crew the planner would put on it, and the one link into the
- * schedule builder, pre-dated and carrying these leads forward — drawn only
+ * schedule builder, pre-dated and carrying these interests forward — drawn only
  * for a reader who may create a departure (issue #1831). The rows
  * beneath are hairline ledger rows saying only who asked and what for; the
  * tinted "Planning suggestion" card and the per-row match badges went with it
@@ -93,17 +97,17 @@ export default async function RequestsPage({
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range, so a bookmarked page past the end lands on the last real one.
   const [requestPage, handled, shopBoats, canAddDeparture] = await Promise.all([
-    listOpenDateLeads(db, shop.id, {
+    listOpenDateInterests(db, shop.id, {
       page: Number.parseInt(page ?? "", 10),
     }),
-    // The closed leads (third UX review, item 13): off the days, under "Done".
-    listClosedDateLeads(db, shop.id),
+    // The closed interests (third UX review, item 13): off the days, under "Done".
+    listClosedDateInterests(db, shop.id),
     listBoats(db, shop.id),
     // **Reading a day is every role's; putting a boat on it is not** (issue
     // #1831). The day's act lands on the schedule builder, whose add panel is
     // `canConfigureTrips` — owner, manager, instructor (H-14). Asked here with
     // the same live check the board asks, so the link and the panel cannot
-    // disagree; a captain sees the day and its leads, and no act they would
+    // disagree; a captain sees the day and its interests, and no act they would
     // be refused (ADR 20260724-role-gated-surfaces-hide-not-explain).
     canPersonConfigureTrips(db, shop.id, session.user.personId),
   ]);
@@ -115,7 +119,7 @@ export default async function RequestsPage({
   );
   const { groups, undated } = groupDateRequests(requestPage.rows, (row) => row);
   // **Departures already on the board for these days** (ADR
-  // 20261017-one-lead-with-a-scope): a day whose leads were listed as if nothing
+  // 20261017-one-interest-with-a-scope): a day whose interests were listed as if nothing
   // existed for them now says what does.
   const boardByDate = new Map<string, Awaited<ReturnType<typeof listDeparturesOnDates>>>();
   for (const departure of await listDeparturesOnDates(
@@ -129,7 +133,7 @@ export default async function RequestsPage({
   const base = shopPath(shopSlug, "requests");
   // The one notice this page answers, and it is genuinely about the page rather
   // than about a form on it: the staffer wrote a caller down on "Took a call"
-  // and arrived here, where the lead now lives (`?notice=` via `noticeFromParam`,
+  // and arrived here, where the interest now lives (`?notice=` via `noticeFromParam`,
   // never a bare index — the param is attacker-supplied).
   const logged = noticeFromParam(notice, { "call-logged": true as const });
   // The advice the group above printed, so a day that would say the same thing
@@ -269,7 +273,7 @@ export default async function RequestsPage({
             );
           })}
 
-          {/* Last, always: prose a date field could not hold is still a lead,
+          {/* Last, always: prose a date field could not hold is still an interest,
               but it is not a day anyone can put a boat on — so this group has a
               count and no act. */}
           {undated.length > 0 ? (
@@ -294,7 +298,7 @@ export default async function RequestsPage({
         </div>
       )}
 
-      {/* The closed leads, after every open one and outside the pager: they
+      {/* The closed interests, after every open one and outside the pager: they
           are here to reopen a mistaken tick, not to plan from. */}
       {done.length > 0 ? (
         <div className="mt-10">

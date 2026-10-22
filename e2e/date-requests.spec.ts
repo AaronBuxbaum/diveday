@@ -185,7 +185,7 @@ test("the builder opened from a day's requests reads as finished sentences", asy
   const plan = page.getByRole("group", { name: "Starting from requests" });
   await expect(plan).toBeVisible();
 
-  // The lead is named and counted, and the crew line is a sentence rather than
+  // The interest is named and counted, and the crew line is a sentence rather than
   // the ICU template that used to survive to the screen.
   await expect(plan.getByText("Nadia Okonkwo (1 diver)")).toBeVisible();
   await expect(plan.getByText(/^Bring 1 divemaster for your \d+:1 target\.$/)).toBeVisible();
@@ -214,7 +214,7 @@ test("staff mark a request done, and reopen it", async ({ page }) => {
   const row = open.locator("li").filter({ hasText: "Wants to dive: A night dive, any week" });
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: /^Actions for/ }).click();
-  // A lead with only a phone is answered by calling it.
+  // A request with only a phone is answered by calling it.
   await expect(row.getByRole("link", { name: "Reply" })).toHaveAttribute(
     "href",
     /^tel:\+13055550788$/,

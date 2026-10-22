@@ -24,3 +24,10 @@ describe("the roster's unmet-demand panel", () => {
     expect(heading?.[0]).toContain("text-balance");
   });
 });
+
+/** A cancelled departure has no seat to offer, so the panel is not drawn. */
+describe("the Who wants in panel", () => {
+  it("is left out on a cancelled departure", () => {
+    expect(SOURCE).toMatch(/whoWantsInGroup: guests\.cancelled \? null :/);
+  });
+});

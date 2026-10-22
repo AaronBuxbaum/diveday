@@ -1,4 +1,5 @@
 import { agencyCheckOffered } from "@/lib/agency-check";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseCertifiesStudents, readLearningMaterials } from "@/lib/courses";
 import { departureUnderway } from "@/lib/day-blowout";
@@ -6,10 +7,12 @@ import { demandRecommendation } from "@/lib/demand";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import { type ElearningQuery, elearningCheckQuery } from "@/lib/elearning-check";
 import {
+  type CourseTargetInfo,
   filterEligibleLastMinuteRecipients,
+  type LastMinuteDepartureBar,
   lastMinuteEntryMatchesTripDate,
   orderLastMinuteRecipients,
-} from "@/lib/leads";
+} from "@/lib/interests";
 import { unionRequirements } from "@/lib/requirement";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -24,14 +27,15 @@ import { courseNextStepsByBooking } from "./course-next-step";
 import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
 import { otherSameNamePeople } from "./identity-repoint";
+import { listDateInterestsInReach } from "./interest-dates";
+import { listDepartureInterests, listOpenAnytimeInterests, specialtiesForFit } from "./interests";
 import { listInviteSuggestions } from "./invite-suggestions";
-import { listDateLeadsInReach } from "./lead-dates";
-import { listDepartureLeads, listOpenAnytimeLeads } from "./leads";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRosterWithPaymentMarks } from "./payment-marks";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
 import { listTripPrepDivers } from "./rental-fit";
-import { listCertificationSummaries } from "./self-declared-cards";
+import type { DiveSpecialty } from "./schema";
+import { type CertificationSummary, listCertificationSummaries } from "./self-declared-cards";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { trainingMarksForRoster } from "./training-marks";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
@@ -66,6 +70,45 @@ export type TripGuestsFilters = {
   confirmName?: string;
 };
 
+/**
+ * **Who on the last-minute list fits this departure**, in send order: the
+ * list's matches (seated people already left out) with their summary and
+ * specialty cards, through the same fit check the send makes
+ * (`listAnytimeInterestsCovering`), this departure's wait-listers first.
+ */
+function lastMinuteRecipientsOf<M extends { person: { id: string } }>(input: {
+  trip: { course?: CourseTargetInfo | null };
+  matched: readonly M[];
+  certificationSummaries: ReadonlyMap<string, CertificationSummary>;
+  specialtiesByPerson: ReadonlyMap<string, DiveSpecialty[]>;
+  dealRequirement: LastMinuteDepartureBar | null;
+  waitlistPersonIds: readonly string[];
+}) {
+  const course = input.trip.course;
+  const courseTarget = course
+    ? {
+        slug: course.slug,
+        title: course.title,
+        sourceTemplateSlug: course.sourceTemplateSlug,
+        minimumCertificationLevel: course.minimumCertificationLevel,
+        isIntroCourse: course.isIntroCourse,
+      }
+    : null;
+  const recipients = orderLastMinuteRecipients(
+    filterEligibleLastMinuteRecipients(
+      input.matched.map((match) => ({
+        ...match,
+        certification: input.certificationSummaries.get(match.person.id) ?? null,
+        specialties: input.specialtiesByPerson.get(match.person.id) ?? [],
+      })),
+      input.dealRequirement,
+      courseTarget,
+    ),
+    [...input.waitlistPersonIds],
+  );
+  return { courseTarget, recipients };
+}
+
 export type TripGuests = NonNullable<Awaited<ReturnType<typeof getTripGuests>>>;
 
 export async function getTripGuests(
@@ -91,8 +134,8 @@ export async function getTripGuests(
     siteRequirement,
     readinessRows,
     prepDivers,
-    departureLeads,
-    dateLeadsInReach,
+    departureInterests,
+    dateInterestsInReach,
     inviteSuggestions,
     lastMinuteList,
     lastMinutePromos,
@@ -118,13 +161,17 @@ export async function getTripGuests(
     shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
     shared ? shared.readiness : listTripReadiness(db, shop.id, tripId),
     shared ? shared.prepDivers : listTripPrepDivers(db, shop.id, tripId),
-    listDepartureLeads(db, shop.id, tripId),
+    listDepartureInterests(db, shop.id, tripId),
     // Open date requests that could make this day, for the panel's second group.
-    listDateLeadsInReach(db, shop.id, { tripId }),
+    // The departure is already read and live, so its day goes with it.
+    listDateInterestsInReach(db, shop.id, {
+      tripId,
+      day: calendarDateInTimezone(trip.startsAt, shop.timezone),
+    }),
     // Past divers of this departure's site worth asking (H-130), only while
     // it has a seat to offer.
     isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
-    listOpenAnytimeLeads(db, shop.id),
+    listOpenAnytimeInterests(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listTripLastMinutePromoRecipients(db, shop.id, tripId),
     listBookingNotes(db, shop.id, tripId),
@@ -147,26 +194,31 @@ export async function getTripGuests(
   // The last-minute pipeline: who said they are around on this date, who among
   // them could actually be cleared for it, and in what order to offer the seat.
   const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
-  const lastMinuteMatched = lastMinuteList.filter(({ lead }) =>
-    lastMinuteEntryMatchesTripDate(lead, tripDateIso),
+  const lastMinuteMatched = lastMinuteList.filter(({ interest }) =>
+    lastMinuteEntryMatchesTripDate(interest, tripDateIso),
   );
-  // **Seated means hidden**: a lead reserves nothing and the booking transaction
-  // never writes to this table (ADR 20261017-one-lead-with-a-scope, R1), so who
+  // **Seated means hidden**: an interest reserves nothing and the booking transaction
+  // never writes to this table (ADR 20261017-one-interest-with-a-scope, R1), so who
   // wants in is read against the seats at read time.
   const seatedPersonIds = new Set(
     roster
       .filter(({ booking }) => booking.status !== "cancelled")
       .map(({ booking }) => booking.personId),
   );
-  const leads = departureLeads.filter(
-    ({ lead }) => lead.personId === null || !seatedPersonIds.has(lead.personId),
+  const interests = departureInterests.filter(
+    ({ interest }) => interest.personId === null || !seatedPersonIds.has(interest.personId),
   );
-  const dateLeads = dateLeadsInReach.filter((r) => !r.personId || !seatedPersonIds.has(r.personId));
-  // The leads the diver asked for: what the demand banner counts and the deal
-  // list orders by. The shop's own outreach (`asked_by`) is in `leads` too.
-  const waitlist = leads.filter(({ lead }) => lead.askedBy === "diver");
-  const waitlistPersonIds = waitlist.flatMap(({ lead }) => (lead.personId ? [lead.personId] : []));
+  const dateInterests = dateInterestsInReach.filter(
+    (r) => !r.personId || !seatedPersonIds.has(r.personId),
+  );
+  // The interests the diver asked for: what the demand banner counts and the deal
+  // list orders by. The shop's own outreach (`asked_by`) is in `interests` too.
+  const waitlist = interests.filter(({ interest }) => interest.askedBy === "diver");
+  const waitlistPersonIds = waitlist.flatMap(({ interest }) =>
+    interest.personId ? [interest.personId] : [],
+  );
   const heldSeats = roster.filter(({ booking }) => booking.identityUnconfirmedAt);
+  const dealRequirement = unionRequirements(requirement, siteRequirement);
 
   // **One wave after the roster** (code review 2026-10-11, item 12): each of
   // these takes only the roster, the trip, the wait list or the last-minute
@@ -183,6 +235,7 @@ export async function getTripGuests(
     issuedCardByPerson,
     dependentCharters,
     trainingMarks,
+    specialtiesByPerson,
   ] = await Promise.all([
     // What "Different person" on a held seat can offer to move along with it:
     // other held seats under the same name on the same matched diver, on other
@@ -236,7 +289,7 @@ export async function getTripGuests(
       ...new Set([
         ...lastMinuteMatched.map(({ person }) => person.id),
         ...waitlistPersonIds,
-        ...dateLeads.flatMap((row) => (row.personId ? [row.personId] : [])),
+        ...dateInterests.flatMap((row) => (row.personId ? [row.personId] : [])),
       ]),
     ]),
     // Who finished the course's materials, read across every departure of the
@@ -299,6 +352,13 @@ export async function getTripGuests(
         trainingClearedByPersonId: booking.trainingClearedByPersonId,
       })),
     ),
+    // The list's specialty cards when the departure asks for one, as the send reads them.
+    specialtiesForFit(
+      db,
+      shop.id,
+      lastMinuteMatched.map(({ person }) => person.id),
+      dealRequirement,
+    ),
   ]);
 
   const heldSeatLastDiveDay = new Map<string, Date | null>(
@@ -336,30 +396,14 @@ export async function getTripGuests(
     rows.sort((left, right) => left.note.createdAt.getTime() - right.note.createdAt.getTime());
   }
 
-  const dealRequirement = unionRequirements(requirement, siteRequirement);
-  const courseTarget = trip.course
-    ? {
-        slug: trip.course.slug,
-        title: trip.course.title,
-        sourceTemplateSlug: trip.course.sourceTemplateSlug,
-        minimumCertificationLevel: trip.course.minimumCertificationLevel,
-        isIntroCourse: trip.course.isIntroCourse,
-      }
-    : null;
-  const lastMinuteRecipients = orderLastMinuteRecipients(
-    filterEligibleLastMinuteRecipients(
-      // Seated means hidden here too: nobody on the roster is offered a seat.
-      lastMinuteMatched
-        .filter(({ person }) => !seatedPersonIds.has(person.id))
-        .map((match) => ({
-          ...match,
-          certification: certificationSummaries.get(match.person.id) ?? null,
-        })),
-      dealRequirement,
-      courseTarget,
-    ),
+  const { courseTarget, recipients: lastMinuteRecipients } = lastMinuteRecipientsOf({
+    trip,
+    matched: lastMinuteMatched.filter(({ person }) => !seatedPersonIds.has(person.id)),
+    certificationSummaries,
+    specialtiesByPerson,
+    dealRequirement,
     waitlistPersonIds,
-  );
+  });
 
   // The roster is the spine of the diver section; waiver, readiness, fit and
   // nitrox detail hang off it by booking id so each diver renders as one
@@ -393,7 +437,7 @@ export async function getTripGuests(
     courseTarget,
     roster,
     requirement,
-    leads,
+    interests,
     waitlist,
     inviteSuggestions,
     activity,
@@ -474,10 +518,10 @@ export async function getTripGuests(
     demand: demandRecommendation({
       capacity: trip.capacity,
       booked: trip.booked,
-      // Seats wanted, not leads: a waiting couple is two (fourth review, item 34).
-      waitlisted: waitlist.reduce((seats, { lead }) => seats + (lead.partySize ?? 1), 0),
+      // Seats wanted, not interests: a waiting couple is two (fourth review, item 34).
+      waitlisted: waitlist.reduce((seats, { interest }) => seats + (interest.partySize ?? 1), 0),
     }),
-    dateLeads,
+    dateInterests,
     lastMinute: {
       matched: lastMinuteMatched,
       dateIso: tripDateIso,

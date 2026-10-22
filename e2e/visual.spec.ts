@@ -5384,7 +5384,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **The days somebody asked for, under the week they belong to** (ADR
        * 20260919-one-idea, slice 23f).
        *
-       * A week off the current one, because that is where the seeded leads
+       * A week off the current one, because that is where the seeded interests
        * are: `seed-date-requests.ts` places them twelve and thirteen days out,
        * and the week board is seven days wide. Addressed by `?week=` rather
        * than by clicking the pager twice — the pager has its own coverage, and
@@ -5393,7 +5393,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the week draws the days somebody asked for (${scheme})`, async ({ page }) => {
         // Derived from the fleet's frozen clock rather than written down: the
-        // seed places these leads twelve days out, so a literal date here
+        // seed places these interests twelve days out, so a literal date here
         // would rot the moment either moves. Monday-first, like the board.
         const day = new Date(e2eNow());
         day.setUTCDate(day.getUTCDate() + 12);
@@ -6558,6 +6558,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await page.getByRole("button", { name: "Reinstate trip" }).waitFor();
         await page.getByRole("link", { name: "View the blow-out cascade" }).waitFor();
+        // Nobody can be offered a seat on a cancelled departure.
+        await expect(page.getByRole("heading", { name: /Who wants in/ })).toHaveCount(0);
         await capture(page, "trip-cancelled", scheme);
       });
 
@@ -6683,14 +6685,20 @@ for (const scheme of ["light", "dark"] as const) {
        * who has no certification declaration, is correctly absent from the
        * send list.
        *
-       * The night charter still carries both seeded joiners, while Selah also
-       * starts today so the headline reef departure has one marked row when a
-       * demo visitor opens it. Rowan remains tomorrow-only, keeping that first
-       * list realistic rather than alarming.
+       * The deal is sent from the Divers tab's Who wants in panel now (H-145
+       * D-3), whose "Around these dates" group lists only who fits the
+       * departure (dive-domain review of #2656, m1). The night charter asks for
+       * a Night card nobody on the list holds, so this pins the shallow
+       * Christ of the Abyss reef a week out: an Open Water bar and no specialty,
+       * inside Rowan's window, so her claim arrives with its mark.
        */
       test(`the deal panel carries the demo's own declarations (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
+        const tripId = await seededTripId(
+          page,
+          "blue-mantis",
+          "Two-Tank Reef — Christ of the Abyss",
+        );
         await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
         // Both seeded joiners now read unverified (#2428: a staff-typed card
         // nobody checked is not vouched for), so wait on the first of them.
@@ -6717,7 +6725,7 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * The tick beside the name is in the frame deliberately. Nothing
        * about this mark filters the list, reorders it, or disables the tick —
-       * a wait list is leads in the order they asked (ADR
+       * a wait list is interests in the order they asked (ADR
        * 20260813-wait-list-is-a-lead-list) and informing the staffer is the whole
        * design.
        */

@@ -82,16 +82,6 @@ function daysToNextSaturday(today: CalendarDate): number {
   return ahead === 0 ? 7 : ahead;
 }
 
-/**
- * Divers the run may sell on a date with this many in-water guides: the shop's
- * own ratio, never more than the run's twelve seats. `null` when no guide is
- * free, since a trip holds at least one seat.
- */
-export function guideSeats(guides: number, ratio: number): number | null {
-  const seats = Math.min(RUN_SEATS, guides * ratio);
-  return seats > 0 ? seats : null;
-}
-
 export async function seedWeeklyRun(
   db: DbExecutor,
   shopId: string,
@@ -152,7 +142,9 @@ export async function seedWeeklyRun(
     .select({ ratio: shops.diversPerDivemaster })
     .from(shops)
     .where(eq(shops.id, shopId));
-  const ratio = target?.ratio ?? 6;
+  // Divers the boat may sell on a date with this many guides: the shop's own
+  // ratio, never more than the run's twelve seats.
+  const guideSeats = (guides: number) => Math.min(RUN_SEATS, guides * (target?.ratio ?? 6));
 
   // The skipper and the divemasters sail every Saturday: the run's own record
   // of it, then each date asked whether they are free in its hours.
@@ -211,13 +203,18 @@ export async function seedWeeklyRun(
         }
         if (!placed) unfilled = true;
       }
-      if (unfilled && !calledOff.includes(trip.id)) {
+      if (unfilled) {
         const guides = roster.filter((entry) => entry.tripRole === "divemaster").length;
-        const seats = guideSeats(guides, ratio);
-        // No guide free at all sells nothing, and a trip holds at least one
-        // seat (trips_capacity_range), so the date is called off instead.
-        if (seats === null) calledOff.push(trip.id);
-        else await db.update(trips).set({ capacity: seats }).where(eq(trips.id, trip.id));
+        // No guide free at all: nothing to sell, so the date is called off
+        // like a captainless one (capacity 0 breaks trips_capacity_range).
+        if (guides === 0) {
+          calledOff.push(trip.id);
+          continue;
+        }
+        await db
+          .update(trips)
+          .set({ capacity: guideSeats(guides) })
+          .where(eq(trips.id, trip.id));
       }
     }
     // The crew have always sailed this run: being seated on it is not news

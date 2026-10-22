@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
-import { askForDate } from "@/db/leads";
+import { askForDate } from "@/db/interests";
 import { sendNotification } from "@/db/notifications";
 import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
@@ -35,7 +35,7 @@ const inquirySchema = z.object({
 });
 
 /**
- * A lead the shop cannot answer is not a lead. The composer asks for both an
+ * A request the shop cannot answer is not an interest. The composer asks for both an
  * email and a phone and requires neither on its own, because a diver on a dock
  * may have only one of the two — but one of them has to be there, or the row
  * records a question with no way back to whoever asked it. Enforced here as
@@ -55,7 +55,7 @@ export type { InquiryFormState };
  * Shared rather than duplicated because the two differ in exactly one field,
  * and because the either-or below — a request names a course *or* an interest
  * — has to hold identically on both, or the check constraint on
- * `leads` (`leads_scope_columns`) becomes the thing a diver meets instead of a sentence.
+ * `interests` (`interests_scope_columns`) becomes the thing a diver meets instead of a sentence.
  *
  * `shopSlug`/`courseSlug` are bound server-side from the calling page's own URL
  * params, never taken from the submitted form — the same discipline
@@ -138,14 +138,14 @@ export async function submitInquiryAction(
   // unverified address here is worse than the `Reply-To` that ticket was about:
   // a reply-to only leaks when a diver hits reply, this pushes the record
   // unprompted from a public page, on every submission. Nothing is lost by
-  // waiting — the request is already a date lead and staff read it at
+  // waiting — the request is already a date interest and staff read it at
   // `/shop/<slug>/requests`; what waits is the nudge.
   const contactEmail = deliverableShopContactEmail(shop);
   if (contactEmail) {
     after(async () => {
       await sendNotification(await getDb(), {
-        kind: "lead_received",
-        leadId: record.id,
+        kind: "interest_received",
+        interestId: record.id,
         shopId: shop.id,
         to: contactEmail,
         locale: toDiverLocale(shop.defaultLocale),
@@ -169,7 +169,7 @@ export async function submitInquiryAction(
   // **The diver hears it arrived** (third UX review, item 13). "We'll be in
   // touch" used to be the whole of it, and the only message DiveDay sent went
   // to the shop. Only to an address the diver gave, and carrying nothing they
-  // typed (`leadReceivedAckEmail`); best-effort, after the response,
+  // typed (`interestReceivedAckEmail`); best-effort, after the response,
   // like the shop's note above. Two a day per address at most, across shops:
   // the address is whatever was typed, so the IP bucket alone would let one
   // inbox be written to in the shop's name on every submission. Past that the
@@ -186,8 +186,8 @@ export async function submitInquiryAction(
     const locale = await requestLocale(shop.defaultLocale);
     after(async () => {
       await sendNotification(await getDb(), {
-        kind: "lead_received_ack",
-        leadId: record.id,
+        kind: "interest_received_ack",
+        interestId: record.id,
         shopId: shop.id,
         to: email,
         locale,

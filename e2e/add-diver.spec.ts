@@ -173,7 +173,7 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
   await expect(page.getByText("Waitlist Wally")).toBeVisible();
 
   // One act on who wants in: tick the diver and offer a seat, which stamps the
-  // lead so a second staffer sees it is already handled. The send may fall back
+  // interest so a second staffer sees it is already handled. The send may fall back
   // to the mail composer (mailto:) which the test can't follow, so we only
   // assert the recorded state lands.
   await page.getByLabel("Offer Waitlist Wally a seat").check();

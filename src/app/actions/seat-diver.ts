@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/db/client";
 import { findSimilarDivers } from "@/db/divers";
 import { discardFormDraft } from "@/db/form-drafts";
-import { setDateLeadOutcome } from "@/db/leads";
+import { setDateInterestOutcome } from "@/db/interests";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import {
   type SeatDiverPerson,
@@ -191,7 +191,7 @@ function refuse(
 /**
  * The date request this seating answers, when the door was opened from one
  * (`bookings/new?request=`). A uuid or nothing; the writer scopes it to the
- * session's shop, so a forged id reaches no other tenant's lead.
+ * session's shop, so a forged id reaches no other tenant's interest.
  */
 const answeredRequestForm = z.object({ request: formValue() });
 
@@ -235,9 +235,9 @@ async function seat(
   // leaves its day on the Requests page and stops counting there. A request
   // already closed keeps the answer it had.
   if (requestId) {
-    await setDateLeadOutcome(db, {
+    await setDateInterestOutcome(db, {
       shopId: actor.shopId,
-      leadId: requestId,
+      interestId: requestId,
       outcome: "booked",
       now: nowDate(),
     });

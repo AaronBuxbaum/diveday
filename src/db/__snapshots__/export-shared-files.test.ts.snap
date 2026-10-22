@@ -148,7 +148,7 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "currency",
     "imported_at",
   ],
-  "leads.csv": [
+  "interests.csv": [
     "id",
     "scope",
     "asked_by",

@@ -18,7 +18,7 @@ import { queryAll } from "./query-helpers";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
-  leads,
+  interests,
   people,
   type TripLastMinutePromo,
   tripLastMinutePromos,
@@ -49,8 +49,8 @@ export type TripLastMinutePromoRecipientItem = {
 
 /**
  * Returns who has been sent deals for this trip, with their name, email, promoId,
- * and timestamp: the departure rows that carry a deal (`leads.promo_id`), the
- * rows the offer wrote when it went out (ADR 20261017-one-lead-with-a-scope).
+ * and timestamp: the departure rows that carry a deal (`interests.promo_id`), the
+ * rows the offer wrote when it went out (ADR 20261017-one-interest-with-a-scope).
  */
 export async function listTripLastMinutePromoRecipients(
   db: DbExecutor,
@@ -59,26 +59,26 @@ export async function listTripLastMinutePromoRecipients(
 ): Promise<TripLastMinutePromoRecipientItem[]> {
   const rows = await db
     .select({
-      promoId: leads.promoId,
-      personId: leads.personId,
+      promoId: interests.promoId,
+      personId: interests.personId,
       fullName: people.fullName,
       email: people.email,
-      offeredAt: leads.offeredAt,
+      offeredAt: interests.offeredAt,
     })
-    .from(leads)
-    .innerJoin(tripLastMinutePromos, eq(tripLastMinutePromos.id, leads.promoId))
-    .innerJoin(people, and(eq(people.id, leads.personId), eq(people.shopId, shopId)))
+    .from(interests)
+    .innerJoin(tripLastMinutePromos, eq(tripLastMinutePromos.id, interests.promoId))
+    .innerJoin(people, and(eq(people.id, interests.personId), eq(people.shopId, shopId)))
     .where(
       and(
-        eq(leads.shopId, shopId),
-        eq(leads.scope, "departure"),
+        eq(interests.shopId, shopId),
+        eq(interests.scope, "departure"),
         eq(tripLastMinutePromos.tripId, tripId),
         // Who the deal went to, not who was merely stamped with it: an offer
         // whose mail never left carries no `offered_at`.
-        isNotNull(leads.offeredAt),
+        isNotNull(interests.offeredAt),
       ),
     )
-    .orderBy(asc(leads.offeredAt), asc(people.fullName));
+    .orderBy(asc(interests.offeredAt), asc(people.fullName));
   return rows.flatMap((row) =>
     row.promoId && row.personId && row.email && row.offeredAt
       ? [

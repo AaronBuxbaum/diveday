@@ -1,6 +1,6 @@
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import { leads, people, personRoles } from "./schema";
+import { interests, people, personRoles } from "./schema";
 import { dateAt, nextCreatedAt } from "./seed-clock";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 
@@ -124,7 +124,7 @@ export async function seedSelfDeclaredJoiners(
     // produce the same person.
     await db.insert(personRoles).values({ personId: person.id, role: "diver" as const });
 
-    await db.insert(leads).values({
+    await db.insert(interests).values({
       shopId,
       scope: "anytime",
       askedBy: "diver",

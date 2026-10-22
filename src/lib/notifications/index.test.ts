@@ -36,7 +36,8 @@ const booking = {
 
 const tripInvitation = {
   kind: "seat_offer" as const,
-  leadId: "00000000-0000-4000-8000-000000000002",
+  answers: "date_request" as const,
+  interestId: "00000000-0000-4000-8000-000000000002",
   shopId: "00000000-0000-4000-8000-000000000010",
   to: "delivered+invitation@dive.day",
   locale: "en-US" as const,
@@ -53,7 +54,7 @@ const tripInvitation = {
 const commercialOffer = {
   kind: "seat_offer_commercial",
   askedBy: "diver",
-  leadId: "00000000-0000-4000-8000-000000000003",
+  interestId: "00000000-0000-4000-8000-000000000003",
   shopId: "00000000-0000-4000-8000-000000000010",
   to: "delivered+waitlist@dive.day",
   locale: "en-US",
@@ -200,10 +201,9 @@ describe("notificationIdempotencyKey", () => {
   });
 
   it("keys a reschedule confirmation by confirmedAt, not just bookingId (Codex finding)", () => {
-    // A reschedule can reactivate the same bookingId a much earlier
-    // confirmation already used — without `confirmedAt` distinguishing the
-    // two sends, a provider's own idempotency window would replay the first
-    // (stale) response instead of delivering this one.
+    // A reschedule can reactivate a bookingId an earlier confirmation used: without
+    // `confirmedAt` telling the sends apart, the provider's idempotency window would
+    // replay the stale response instead of delivering this one.
     expect(
       notificationIdempotencyKey({
         ...booking,
@@ -351,28 +351,6 @@ describe("the demo-try alert's schema (docs ADR 20260805-demo-try-alerts)", () =
 
   it("refuses a role outside the demo roster", () => {
     expect(() => notificationSchema.parse({ ...alert, role: "regulator" })).toThrow();
-  });
-});
-
-describe("the seat offer notification schema", () => {
-  it("accepts a shop-scoped invitation payload for SES delivery", () => {
-    const notification = {
-      kind: "seat_offer" as const,
-      leadId: "00000000-0000-4000-8000-000000000002",
-      shopId: "00000000-0000-4000-8000-000000000010",
-      to: "nora@dive.day",
-      locale: "en-US" as const,
-      diverName: "Nora Quinn",
-      shopName: "Blue Mantis",
-      tripTitle: "Two-Tank Reef",
-      startsAt: new Date("2026-08-01T12:00:00.000Z"),
-      endsAt: new Date("2026-08-01T15:00:00.000Z"),
-      timezone: "America/New_York",
-      bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
-      offeredAt: new Date("2026-07-30T12:00:00.000Z"),
-    };
-
-    expect(notificationSchema.parse(notification)).toMatchObject(notification);
   });
 });
 

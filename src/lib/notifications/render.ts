@@ -25,8 +25,8 @@ import {
   type EmailShopBrand,
   founderDigestEmail,
   guardianReleaseCopyEmail,
+  interestReceivedEmail,
   lastMinuteDealEmail,
-  leadReceivedEmail,
   type NotificationEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
@@ -48,8 +48,8 @@ import {
   wrapEmailHtml,
 } from "./email";
 import { incidentMissingDiverEmail, incidentMissingDiverFoundEmail } from "./incident-emails";
+import { interestReceivedAckEmail } from "./interest-received-ack";
 import type { Notification } from "./kinds";
-import { leadReceivedAckEmail } from "./lead-received-ack";
 import { partyPaymentReceiptEmail } from "./party-payment-receipt";
 import {
   rollCallStaleEmail,
@@ -153,7 +153,13 @@ function addressConfirmationEmail(
 
 function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
-  if (notification.kind === "seat_offer") return tripInvitationEmail(notification);
+  // Service mail: a diver who joined the wait list hears "a seat opened"; the
+  // reply to a date request is the invitation. Neither carries a way out.
+  if (notification.kind === "seat_offer") {
+    return notification.answers === "wait_list"
+      ? waitlistInviteEmail(notification)
+      : tripInvitationEmail(notification);
+  }
   // A waiting diver hears "a seat opened"; anyone the shop reached out to hears
   // that the shop is offering it. The words are the diver's, unchanged.
   if (notification.kind === "seat_offer_commercial") {
@@ -193,7 +199,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
   if (notification.kind === "operator_alert") return operatorAlertEmail(notification);
-  if (notification.kind === "lead_received") return leadReceivedEmail(notification);
+  if (notification.kind === "interest_received") return interestReceivedEmail(notification);
   if (notification.kind === "staff_reply") return staffReplyEmail(notification);
   if (notification.kind === "weekly_digest") return weeklyDigestEmail(notification);
   if (notification.kind === "work_order_ready") return workOrderReadyEmail(notification);
@@ -222,8 +228,8 @@ function rawMessageFor(notification: Notification): NotificationEmail {
     return bookkeeperConfirmationEmail(notification);
   }
   if (notification.kind === "bookkeeper_notice") return bookkeeperNoticeEmail(notification);
-  if (notification.kind === "lead_received_ack") {
-    return leadReceivedAckEmail(notification);
+  if (notification.kind === "interest_received_ack") {
+    return interestReceivedAckEmail(notification);
   }
   return passwordChangedEmail(notification);
 }

@@ -13,7 +13,7 @@ import {
   divePackages,
   diveSites,
   executedDives,
-  leads,
+  interests,
   lostItems,
   orderLineItems,
   orders,
@@ -927,7 +927,7 @@ export async function fillWeeklyRun(db: DbExecutor, shopId: string): Promise<voi
     if (diver) waiting.push(diver);
   }
   if (waiting.length > 0) {
-    await db.insert(leads).values(
+    await db.insert(interests).values(
       waiting.map((diver, index) => ({
         shopId,
         scope: "departure" as const,

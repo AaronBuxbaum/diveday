@@ -7,7 +7,7 @@ import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
-import { askAnytime } from "./leads";
+import { askAnytime } from "./interests";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, listBookingPaymentEvents, setBookingPayment } from "./payments";
 import {

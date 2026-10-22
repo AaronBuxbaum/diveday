@@ -4,7 +4,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { LedgerRow } from "@/components/ui/ledger";
 import { menuRowClass } from "@/components/ui/menu";
-import type { DateLeadRow } from "@/db/lead-dates";
+import type { DateInterestRow } from "@/db/interest-dates";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
@@ -49,7 +49,7 @@ const ADDRESS_TARGET =
  * the language is 20260827-clearwater-surface-language).
  *
  * A request is a diver asking for a departure to *exist* — a
- * date lead (ADR 20261017-one-lead-with-a-scope),
+ * date interest (ADR 20261017-one-interest-with-a-scope),
  * never the wait list and never a last-minute deal. So the row's job is to say
  * who asked, what for, how many of them, and why it is filed under the day it
  * is filed under; the act that answers it belongs to the day group above.
@@ -67,16 +67,16 @@ const ADDRESS_TARGET =
  * - **No tint and no pill.** A second choice used to arrive as a
  *   `bg-surface-sunken` card wearing a neutral `Badge`. A tinted fill is a
  *   second pill grammar by the back door, and a badge on a row that is only
- *   ever a lead is a state word where the group header already owns the day.
+ *   ever an interest is a state word where the group header already owns the day.
  *   `RequestLedgerRow.test.tsx` pins the absence.
- * - **It carries no status word.** An open request is a lead; a closed one
+ * - **It carries no status word.** An open request is an interest; a closed one
  *   leaves its day for the Done list (`RequestDoneRow`, third UX review item
  *   13), so the state is where the row sits, never a badge on it.
  *
- * The name is the door when this lead is linked to a diver on file
+ * The name is the door when this interest is linked to a diver on file
  * (`personId`: an exact email match, made at capture time and again on every
  * read, so a diver added after they asked still gets their door —
- * `withRosterLinks` in `src/db/lead-dates.ts`). Most requests are strangers, so
+ * `withRosterLinks` in `src/db/interest-dates.ts`). Most requests are strangers, so
  * most rows have no door at all: a stretched row link over a list where one row
  * in four is tappable is a promise the surface cannot keep, and the row's own
  * acts — mailing them, seating them — have to stay reachable either way.
@@ -90,13 +90,13 @@ export function RequestLedgerRow({
   markDoneAction,
   t,
 }: {
-  request: DateLeadRow;
+  request: DateInterestRow;
   locale: string;
   timezone: string;
   shopSlug: string;
   /** Names the reply's subject line, so the diver knows who is writing. */
   shopName: string;
-  /** Closes the lead (third UX review, item 13); posts `requestId` and `outcome`. */
+  /** Closes the interest (third UX review, item 13); posts `requestId` and `outcome`. */
   markDoneAction: (formData: FormData) => void;
   t: StaffTranslator;
 }) {
@@ -106,7 +106,7 @@ export function RequestLedgerRow({
     : t("requests.aboutDive", { interest: request.interest ?? "" });
 
   // The row's quiet facts, in planning order: how many of them, where they are
-  // up to, why they are filed here, and how long the lead has been sitting.
+  // up to, why they are filed here, and how long the interest has been sitting.
   // `whole` is a unit a wrap may not split — a count, "Flexible", the date it
   // was asked on (K-462); where the diver is up to is a phrase ("Certified,
   // can share certification record", longer still in Spanish) and wraps like
@@ -130,7 +130,7 @@ export function RequestLedgerRow({
 
   // **The way back to whoever asked** (third UX review, item 13): an email
   // with the shop named in the subject, or the number they left when there is
-  // no address. The inbox composer answers a diver's own message, and a lead
+  // no address. The inbox composer answers a diver's own message, and an interest
   // has none yet, so the door is the channel the diver gave.
   const replyHref = request.email
     ? `mailto:${request.email}?subject=${encodeURIComponent(t("requests.replySubject", { shopName }))}`

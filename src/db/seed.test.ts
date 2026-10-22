@@ -8,7 +8,7 @@ import { fakePromotions } from "@/test/fakes";
 import { waiverTemplateHistory } from "@/test/waiver-history";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
-import { askForDeparture } from "./leads";
+import { askForDeparture } from "./interests";
 import { shopSenderFor } from "./notifications";
 import {
   accountSessions,
@@ -17,8 +17,8 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
-  leads,
-  leadUnsubscribeTokens,
+  interests,
+  interestUnsubscribeTokens,
   orders,
   paymentOperationIntents,
   people,
@@ -134,18 +134,18 @@ describe("resetDemoSchedule", () => {
    * data — which is why the failure appeared to wander between `manifest`,
    * `courses`, and `gear-fit-and-age` rather than pointing at its own cause.
    */
-  it("clears last-minute unsubscribe tokens instead of FK-violating on their leads", async () => {
+  it("clears last-minute unsubscribe tokens instead of FK-violating on their interests", async () => {
     const { db, shop } = ctx;
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: seeded shop has no people");
-    const [lead] = await db
-      .insert(leads)
+    const [interest] = await db
+      .insert(interests)
       .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId: person.id })
       .returning();
-    if (!lead) throw new Error("test setup: last-minute lead insert returned no row");
+    if (!interest) throw new Error("test setup: last-minute interest insert returned no row");
     await db
-      .insert(leadUnsubscribeTokens)
-      .values({ shopId: shop.id, leadId: lead.id, tokenHash: `hash_${lead.id}` });
+      .insert(interestUnsubscribeTokens)
+      .values({ shopId: shop.id, interestId: interest.id, tokenHash: `hash_${interest.id}` });
 
     // Resolving rather than throwing is the whole assertion.
     await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
@@ -153,8 +153,8 @@ describe("resetDemoSchedule", () => {
     expect(
       await db
         .select()
-        .from(leadUnsubscribeTokens)
-        .where(eq(leadUnsubscribeTokens.shopId, shop.id)),
+        .from(interestUnsubscribeTokens)
+        .where(eq(interestUnsubscribeTokens.shopId, shop.id)),
     ).toHaveLength(0);
   });
 

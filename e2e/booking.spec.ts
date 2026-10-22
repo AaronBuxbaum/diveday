@@ -447,7 +447,7 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Wreck Trip — Spiegel Grove");
   // Who is waiting is the guests ledger's "Who wants in" panel
-  // (ADR 20261017-one-lead-with-a-scope).
+  // (ADR 20261017-one-interest-with-a-scope).
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
   await expect(page.getByText("Nora Quinn").last()).toBeVisible();
   // Staff read when each diver asked, not a rank: the list is unnumbered.

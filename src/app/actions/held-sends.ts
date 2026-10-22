@@ -67,7 +67,7 @@ const heldSendForm = z.object({
   surface: optionalText(),
   tripId: optionalText(),
   ticketId: optionalText(),
-  leadId: idList(),
+  interestId: idList(),
   discount: formValue(),
   discountPercent: formValue(),
   discountKind: formValue(),
@@ -114,7 +114,7 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
       : {
           kind,
           tripId: form.tripId,
-          leadIds: form.leadId,
+          interestIds: form.interestId,
           // A blank box is no discount: an ordinary offer.
           ...(String(form.discount ?? form.discountPercent ?? "").trim() === ""
             ? {}

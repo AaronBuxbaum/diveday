@@ -82,7 +82,7 @@ describe("held sends", () => {
       shopId: shop.id,
       actorPersonId: owner.personId,
       now,
-      payload: { kind: "seat_offer", tripId: seat.tripId, leadIds: [seat.bookingId] },
+      payload: { kind: "seat_offer", tripId: seat.tripId, interestIds: [seat.bookingId] },
     });
     expect(await undoHeldSend(db, shop.id, held.id, held.runAt)).toBe(false);
     const first = await claimHeldSend(db, shop.id, held.id, held.runAt);
@@ -91,7 +91,7 @@ describe("held sends", () => {
       expect(first.row.payload).toEqual({
         kind: "seat_offer",
         tripId: seat.tripId,
-        leadIds: [seat.bookingId],
+        interestIds: [seat.bookingId],
       });
       expect(first.row.actorPersonId).toBe(owner.personId);
     }
@@ -109,7 +109,7 @@ describe("held sends", () => {
       payload: {
         kind: "seat_offer",
         tripId: seat.tripId,
-        leadIds: [owner.personId],
+        interestIds: [owner.personId],
         discount: { percent: 20 },
       },
     });

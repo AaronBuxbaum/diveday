@@ -15,7 +15,7 @@ import {
   certifications,
   courses,
   diveSites,
-  leads,
+  interests,
   nitroxCertifications,
   people,
   personRoles,
@@ -165,7 +165,7 @@ describe("listInviteSuggestions", () => {
     for (const p of [aboard, invitedHere, invitedRecently, invitedLongAgo])
       await seat(march.id, p.id);
     await seat(target.id, aboard.id);
-    await db.insert(leads).values([
+    await db.insert(interests).values([
       {
         shopId: shop.id,
         tripId: target.id,

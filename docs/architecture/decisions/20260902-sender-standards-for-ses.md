@@ -123,3 +123,14 @@ every kind was rendered for the production-access case (issue #1953).
   was recorded but not emailed.
 - The courtesy unsubscribe line on every courtesy kind now reads "Stop optional emails from
   {shop}", since it already stopped more than wait-list and recap mail.
+
+## Amended 2026-10-22: a seat the diver waited for is service mail
+
+Every seat offer now comes from one table ([20261017-one-interest-with-a-scope](20261017-one-interest-with-a-scope.md)),
+and its mail class is the 2026-10-06 test applied once (Aaron Buxbaum, H-145 D-2 option b,
+2026-10-17; `offerMailClass`, `src/lib/interests.ts`). A seat on the departure the diver joined the
+wait list for, and the reply to their own date request, are `seat_offer`, service mail, so they reach
+a diver who turned off courtesy email. A cold invitation, a row carried or rolled to another
+departure, anything from the last-minute list, and any offer carrying a deal are
+`seat_offer_commercial`: the courtesy unsubscribe, the postal footer, the 24-hour cold-send window,
+and no send to a person who opted out.

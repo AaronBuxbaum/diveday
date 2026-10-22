@@ -22,7 +22,7 @@ import { rearmTripReminders } from "./reminder-rearm";
 import type { Trip } from "./schema";
 import {
   bookings,
-  leads,
+  interests,
   rollCallCrewEvents,
   rollCallEvents,
   shops,
@@ -321,9 +321,13 @@ export async function deleteTrip(
 
     const [{ waiting }] = await tx
       .select({ waiting: count() })
-      .from(leads)
+      .from(interests)
       .where(
-        and(eq(leads.scope, "departure"), eq(leads.askedBy, "diver"), eq(leads.tripId, tripId)),
+        and(
+          eq(interests.scope, "departure"),
+          eq(interests.askedBy, "diver"),
+          eq(interests.tripId, tripId),
+        ),
       );
     if (waiting > 0) return { ok: false, reason: "has_roster" };
 

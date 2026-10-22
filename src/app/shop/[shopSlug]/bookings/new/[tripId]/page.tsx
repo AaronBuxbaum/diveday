@@ -9,7 +9,11 @@ import {
 } from "@/components/seat-diver/BookingRequestCards";
 import { SelectedTripCard } from "@/components/seat-diver/SelectedTripCard";
 import { findSimilarDivers, getBookableDiver, listBookableDivers } from "@/db/divers";
-import { type DateLeadRow, listDateLeadsByIds, listOpenDateLeadsForDates } from "@/db/lead-dates";
+import {
+  type DateInterestRow,
+  listDateInterestsByIds,
+  listOpenDateInterestsForDates,
+} from "@/db/interest-dates";
 import { getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -92,17 +96,17 @@ export default async function NewBookingDiverPage({
   // and only emptied the hand-off — a captain following "Create booking" from
   // a request got no prefilled diver and no matching-request cards. Still
   // scoped to `shop.id`, so a `?request=` id cannot reach another tenant.
-  const [requestRows, relevantRows]: [DateLeadRow[], DateLeadRow[]] = await Promise.all([
-    requestId ? listDateLeadsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
-    listOpenDateLeadsForDates(db, shop.id, lookupDates),
+  const [requestRows, relevantRows]: [DateInterestRow[], DateInterestRow[]] = await Promise.all([
+    requestId ? listDateInterestsByIds(db, shop.id, [requestId]) : Promise.resolve([]),
+    listOpenDateInterestsForDates(db, shop.id, lookupDates),
   ]);
-  const requestContext: DateLeadRow | null = requestRows[0] ?? null;
-  const requestSubject = (row: DateLeadRow) =>
+  const requestContext: DateInterestRow | null = requestRows[0] ?? null;
+  const requestSubject = (row: DateInterestRow) =>
     row.courseTitle
       ? t("requests.aboutCourse", { course: row.courseTitle })
       : t("requests.aboutDive", { interest: row.interest ?? "" });
-  const requestName = (row: DateLeadRow) => row.name ?? t("requests.anonymous");
-  const requestDivers = (row: DateLeadRow) =>
+  const requestName = (row: DateInterestRow) => row.name ?? t("requests.anonymous");
+  const requestDivers = (row: DateInterestRow) =>
     t("requests.divers", { count: Math.max(1, row.partySize ?? 1) });
   const matchingRequests = relevantRows.filter(
     (row) => dateRequestMatchFor(row, tripDate) !== null,

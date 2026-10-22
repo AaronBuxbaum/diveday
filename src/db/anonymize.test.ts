@@ -22,8 +22,8 @@ import {
   gearReservations,
   importedPaymentHistory,
   integrationEvents,
-  leads,
-  leadUnsubscribeTokens,
+  interests,
+  interestUnsubscribeTokens,
   mediaDeletionAttempts,
   orderLineItems,
   orders,
@@ -669,27 +669,27 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       })
       .returning({ id: tripLastMinutePromos.id });
     if (!promo) throw new Error("fixture insert failed");
-    // The deal went out as a departure row copied from the diver's anytime lead,
+    // The deal went out as a departure row copied from the diver's anytime interest,
     // with a way out of the list.
     const [anytime] = await db
-      .insert(leads)
+      .insert(interests)
       .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId: diver.id })
-      .returning({ id: leads.id });
+      .returning({ id: interests.id });
     if (!anytime) throw new Error("fixture insert failed");
-    await db.insert(leads).values({
+    await db.insert(interests).values({
       shopId: shop.id,
       scope: "departure",
       askedBy: "shop",
       tripId: trip.id,
       personId: diver.id,
-      parentLeadId: anytime.id,
+      parentInterestId: anytime.id,
       partySize: 1,
       promoId: promo.id,
       offeredAt: new Date("2026-03-01T12:00:00.000Z"),
     });
     await db
-      .insert(leadUnsubscribeTokens)
-      .values({ shopId: shop.id, leadId: anytime.id, tokenHash: "kwame-token-hash" });
+      .insert(interestUnsubscribeTokens)
+      .values({ shopId: shop.id, interestId: anytime.id, tokenHash: "kwame-token-hash" });
 
     // 6. A staff-typed invoice line, and the hosted pages Stripe mints.
     const [order] = await db
@@ -806,14 +806,14 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     expect(event?.note).toBeNull();
     expect(event?.amountCents).toBe(18000);
 
-    // The deal's departure row and the list lead it came from go whole, and the
-    // token that named the lead goes first.
-    expect(await db.select().from(leads).where(eq(leads.personId, diver.id))).toEqual([]);
+    // The deal's departure row and the list interest it came from go whole, and the
+    // token that named the interest goes first.
+    expect(await db.select().from(interests).where(eq(interests.personId, diver.id))).toEqual([]);
     expect(
       await db
         .select()
-        .from(leadUnsubscribeTokens)
-        .where(eq(leadUnsubscribeTokens.tokenHash, "kwame-token-hash")),
+        .from(interestUnsubscribeTokens)
+        .where(eq(interestUnsubscribeTokens.tokenHash, "kwame-token-hash")),
     ).toEqual([]);
 
     const [waiver] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
@@ -908,7 +908,7 @@ describe("anonymizeDiver — a wait-listed diver who was also invited (issue #16
       .limit(1);
     if (!trip) throw new Error("expected a seeded departure");
 
-    await db.insert(leads).values([
+    await db.insert(interests).values([
       {
         shopId: shop.id,
         scope: "departure",
@@ -930,7 +930,7 @@ describe("anonymizeDiver — a wait-listed diver who was also invited (issue #16
     const [row] = await db.select().from(people).where(eq(people.id, diver.id));
     expect(row?.anonymizedAt).not.toBeNull();
     expect(row?.email).toBeNull();
-    expect(await db.select().from(leads).where(eq(leads.personId, diver.id))).toEqual([]);
+    expect(await db.select().from(interests).where(eq(interests.personId, diver.id))).toEqual([]);
   });
 });
 

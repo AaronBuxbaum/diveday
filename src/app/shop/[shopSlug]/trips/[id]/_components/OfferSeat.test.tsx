@@ -11,20 +11,24 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 afterEach(cleanup);
 
 const copy = offerSeatCopy(staffTranslator("en-US"));
-const leads = [
-  { leadId: "11111111-1111-4111-8111-111111111111", name: "Nora Quinn", email: "n@example.com" },
-  { leadId: "22222222-2222-4222-8222-222222222222", name: "Rafa Ortiz", email: null },
+const interests = [
+  {
+    interestId: "11111111-1111-4111-8111-111111111111",
+    name: "Nora Quinn",
+    email: "n@example.com",
+  },
+  { interestId: "22222222-2222-4222-8222-222222222222", name: "Rafa Ortiz", email: null },
 ];
 
 function ticks(below: boolean[] = [false, false]) {
-  return leads.map((lead, index) => (
+  return interests.map((interest, index) => (
     <input
-      key={lead.leadId}
+      key={interest.interestId}
       type="checkbox"
       form="offer-seat"
-      name="leadId"
-      value={lead.leadId}
-      aria-label={lead.name}
+      name="interestId"
+      value={interest.interestId}
+      aria-label={interest.name}
       data-below-bar={below[index] ? "true" : undefined}
     />
   ));
@@ -37,7 +41,7 @@ function renderOffer(chooseByTick: boolean, below?: boolean[]) {
       <OfferSeat
         formId="offer-seat"
         tripId="33333333-3333-4333-8333-333333333333"
-        leads={chooseByTick ? leads : leads.slice(0, 1)}
+        interests={chooseByTick ? interests : interests.slice(0, 1)}
         chooseByTick={chooseByTick}
         label="Offer a seat to Nora Quinn"
         bookingPath="/s/blue-mantis/trips/trip-1"
@@ -82,7 +86,7 @@ describe("OfferSeat", () => {
     expect(screen.getByText("1 ticked is below this trip’s bar")).toBeVisible();
   });
 
-  it("is always the held seat_offer send, over the lead ids it was given when nothing is ticked", () => {
+  it("is always the held seat_offer send, over the interest ids it was given when nothing is ticked", () => {
     const { container } = renderOffer(false);
     const form = container.querySelector("form");
     expect(form).toHaveAttribute("id", "offer-seat");
@@ -90,10 +94,10 @@ describe("OfferSeat", () => {
     expect(form?.querySelector('input[name="tripId"]')).toHaveValue(
       "33333333-3333-4333-8333-333333333333",
     );
-    const ids = [...(form?.querySelectorAll('input[name="leadId"]') ?? [])].map(
+    const ids = [...(form?.querySelectorAll('input[name="interestId"]') ?? [])].map(
       (input) => (input as HTMLInputElement).value,
     );
-    expect(ids).toEqual([leads[0]?.leadId]);
+    expect(ids).toEqual([interests[0]?.interestId]);
     expect(screen.getByRole("button", { name: "Offer a seat to Nora Quinn" })).toBeEnabled();
   });
 
@@ -104,7 +108,7 @@ describe("OfferSeat", () => {
       fireEvent.click(screen.getByLabelText("Nora Quinn"));
     });
     const sent = new FormData(form);
-    expect(sent.getAll("leadId")).toEqual([leads[0]?.leadId]);
-    expect(form.querySelector('input[name="leadId"]')).toBeNull();
+    expect(sent.getAll("interestId")).toEqual([interests[0]?.interestId]);
+    expect(form.querySelector('input[name="interestId"]')).toBeNull();
   });
 });

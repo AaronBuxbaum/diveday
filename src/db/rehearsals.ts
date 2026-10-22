@@ -13,7 +13,7 @@ import {
   bookings,
   executedDives,
   incidentReports,
-  leads,
+  interests,
   rollCallCrewEvents,
   rollCallEvents,
   shops,
@@ -74,7 +74,7 @@ export async function isRehearsalTrip(
 type TripHandles = {
   tripId?: string;
   bookingId?: string;
-  leadId?: string;
+  interestId?: string;
   checkoutId?: string;
   waiverRecordId?: string;
 };
@@ -82,7 +82,13 @@ type TripHandles = {
 function tripHandlesOf(notification: Notification): TripHandles {
   const handles: TripHandles = {};
   const fields = notification as Record<string, unknown>;
-  for (const key of ["tripId", "bookingId", "leadId", "checkoutId", "waiverRecordId"] as const) {
+  for (const key of [
+    "tripId",
+    "bookingId",
+    "interestId",
+    "checkoutId",
+    "waiverRecordId",
+  ] as const) {
     const value = fields[key];
     if (typeof value === "string" && isUuid(value)) handles[key] = value;
   }
@@ -95,7 +101,7 @@ function tripHandlesOf(notification: Notification): TripHandles {
  * drain).
  *
  * Every kind that is about a departure carries one handle back to it — the
- * departure itself, a seat, a lead, a checkout or a
+ * departure itself, a seat, an interest, a checkout or a
  * signed release —
  * and each is resolved inside the notification's own shop. A kind that carries
  * none of them is not held here: crew changes are dropped where they are
@@ -120,11 +126,11 @@ export async function notificationHeldForRehearsal(
       .limit(1);
     if (row) tripIds.add(row.tripId);
   }
-  if (handles.leadId) {
+  if (handles.interestId) {
     const [row] = await db
-      .select({ tripId: leads.tripId })
-      .from(leads)
-      .where(and(eq(leads.id, handles.leadId), eq(leads.shopId, shopId)))
+      .select({ tripId: interests.tripId })
+      .from(interests)
+      .where(and(eq(interests.id, handles.interestId), eq(interests.shopId, shopId)))
       .limit(1);
     if (row?.tripId) tripIds.add(row.tripId);
   }

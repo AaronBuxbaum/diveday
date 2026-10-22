@@ -65,8 +65,8 @@ import {
 import { listTodayHelpRequests } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listUnfiledIncidentDrafts } from "./incident-reports";
-import { countOpenDateLeads } from "./lead-dates";
-import { listOpenAnytimeWindows } from "./leads";
+import { countOpenDateInterests } from "./interest-dates";
+import { listOpenAnytimeWindows } from "./interests";
 import { countOpenLostItems } from "./lost-items";
 import {
   listBoardedAtAnyCheckpointByTrip,
@@ -84,7 +84,7 @@ import { readReviewsAwaitingModeration } from "./reviews";
 import {
   boats,
   bookings,
-  leads,
+  interests,
   people,
   personRoles,
   rollCallCrewEvents,
@@ -1006,21 +1006,21 @@ export async function openAfterDiveRollCalls(
 }
 
 /**
- * How many divers asked for each departure *and* one suggested lead per trip,
+ * How many divers asked for each departure *and* one suggested interest per trip,
  * so a freed seat can be offered to a real person without leaving Today. The
  * suggestion is the one who asked first: a sensible default, not an entitlement
  * and never a ranking by fit (ADR 20260813-wait-list-is-a-lead-list). A diver
- * who holds a seat is not wanting one (a lead is read against the seats, never
+ * who holds a seat is not wanting one (an interest is read against the seats, never
  * written by the booking). Name, email and offered stamp ride along so the
  * Today row can offer in one tap and fall back to the composer exactly like the
  * trip page's panel (`OfferSeat`).
  */
-export type SeatWantedLead = {
-  leadId: string;
+export type SeatWantedInterest = {
+  interestId: string;
   personName: string;
   personEmail: string | null;
   invitedAt: Date | null;
-  /** The seats this lead waits for, themselves included. */
+  /** The seats this interest waits for, themselves included. */
   partySize: number;
 };
 
@@ -1030,50 +1030,50 @@ export type SeatWantedLead = {
  * of #2656, m2), as the roll does, never "a seat opened" to a party of four
  * for one seat.
  */
-export type SeatWantedFront = { count: number; leads: SeatWantedLead[] };
+export type SeatWantedFront = { count: number; interests: SeatWantedInterest[] };
 
 async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
   const fronts = new Map<string, SeatWantedFront>();
   if (tripIds.length === 0) return fronts;
   const rows = await db
     .select({
-      tripId: leads.tripId,
-      leadId: leads.id,
-      invitedAt: leads.offeredAt,
-      partySize: leads.partySize,
+      tripId: interests.tripId,
+      interestId: interests.id,
+      invitedAt: interests.offeredAt,
+      partySize: interests.partySize,
       personName: people.fullName,
       personEmail: people.email,
     })
-    .from(leads)
-    .innerJoin(people, eq(people.id, leads.personId))
+    .from(interests)
+    .innerJoin(people, eq(people.id, interests.personId))
     .where(
       and(
-        eq(leads.scope, "departure"),
-        eq(leads.askedBy, "diver"),
-        eq(leads.shopId, shopId),
-        inArray(leads.tripId, tripIds),
+        eq(interests.scope, "departure"),
+        eq(interests.askedBy, "diver"),
+        eq(interests.shopId, shopId),
+        inArray(interests.tripId, tripIds),
         notExists(
           db
             .select({ id: bookings.id })
             .from(bookings)
             .where(
               and(
-                eq(bookings.tripId, leads.tripId),
-                eq(bookings.personId, leads.personId),
+                eq(bookings.tripId, interests.tripId),
+                eq(bookings.personId, interests.personId),
                 ne(bookings.status, "cancelled"),
               ),
             ),
         ),
       ),
     )
-    .orderBy(asc(leads.askedAt), asc(people.fullName), asc(leads.id));
+    .orderBy(asc(interests.askedAt), asc(people.fullName), asc(interests.id));
   for (const row of rows) {
     if (!row.tripId) continue;
     // Rows arrive oldest-first, so each trip's list is in the order people asked.
-    const front = fronts.get(row.tripId) ?? { count: 0, leads: [] };
+    const front = fronts.get(row.tripId) ?? { count: 0, interests: [] };
     front.count += 1;
-    front.leads.push({
-      leadId: row.leadId,
+    front.interests.push({
+      interestId: row.interestId,
       personName: row.personName,
       personEmail: row.personEmail,
       invitedAt: row.invitedAt,
@@ -1804,7 +1804,7 @@ async function readTodayWave(
     readReviewsAwaitingModeration(db, shopId),
     countUnansweredMessages(db, shopId),
     // Open date requests count into the same unanswered row (issue #2658).
-    countOpenDateLeads(db, shopId),
+    countOpenDateInterests(db, shopId),
     db
       .select({
         unitsConfirmedAt: shops.unitsConfirmedAt,

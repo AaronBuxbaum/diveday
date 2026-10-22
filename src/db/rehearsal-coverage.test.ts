@@ -163,9 +163,10 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
     why: "no arrival card, even under a live seat token",
   },
   {
-    file: "src/db/waitlist.ts",
-    holds: "notRehearsal()",
-    why: "no wait list",
+    file: "src/db/interests.ts",
+    holds: "liveTrip(), notRehearsal()",
+    times: 3,
+    why: "no wait list: a departure interest is only written for a departure that is not a rehearsal",
   },
   {
     file: "src/db/checkouts.ts",
@@ -183,9 +184,10 @@ const GATES: { file: string; holds: string; times?: number; why: string }[] = [
     why: "no order reaches Shopify, QuickBooks or Zapier",
   },
   {
-    file: "src/db/trip-promos.ts",
-    holds: "tripRow.isRehearsal",
-    why: "no last-minute deal",
+    file: "src/db/interest-offers.ts",
+    holds: "!tripRow.isRehearsal",
+    times: 2,
+    why: "no seat offer and no last-minute deal: `offerSeats` reads the departure when the held send fires and offers nobody on a rehearsal",
   },
   {
     file: "src/db/notifications.ts",
@@ -257,7 +259,8 @@ const SENDERS: Record<string, string> = {
   "src/db/recap.ts": "the candidate scan carries `notRehearsal()`, so no email or text",
   "src/db/waiver-issue.ts": "a rehearsal's link is hand-over only, never texted or emailed",
   "src/db/crew-notices.ts": "a rehearsal's crew news is never recorded",
-  "src/db/trip-promos.ts": "a last-minute deal is refused for a rehearsal",
+  "src/db/interest-offers.ts":
+    "`offerSeats` offers nobody on a rehearsal, deal or not; the email is also held at the chokepoint",
   "src/db/blowouts.ts": HELD_AT_CHOKEPOINT,
   "src/db/booking-cancelled-notice.ts": HELD_AT_CHOKEPOINT,
   "src/db/booking-handoff.ts": HELD_AT_CHOKEPOINT,
@@ -266,7 +269,6 @@ const SENDERS: Record<string, string> = {
   "src/db/your-days.ts": HELD_AT_CHOKEPOINT,
   "src/db/readiness-link-rescue.ts": HELD_AT_CHOKEPOINT,
   "src/db/trip-invitations.ts": HELD_AT_CHOKEPOINT,
-  "src/db/waitlist.ts": HELD_AT_CHOKEPOINT,
   "src/db/waiver-guardian-copy.ts": HELD_AT_CHOKEPOINT,
   "src/db/party-payment-receipt.ts":
     "a rehearsal starts no card checkout, so nothing settles; the email is also held at the chokepoint",
