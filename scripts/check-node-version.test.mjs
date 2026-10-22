@@ -8,6 +8,7 @@ import { compare as compareVersions, satisfies, validRange } from "semver";
 import { describe, expect, it } from "vitest";
 
 import {
+  CI_NODE_VERSION,
   ES_LIB,
   findNodeVersionDrift,
   LAMBDA_NODE_MAJOR,
@@ -118,9 +119,21 @@ describe("findNodeVersionDrift", () => {
   it("catches CI installing a different Node from the one the project declares", () => {
     const files = repoFiles();
     const action = ".github/actions/setup/action.yml";
-    files.set(action, files.get(action).replace(/node-version: \d+/, "node-version: 22"));
+    files.set(action, files.get(action).replace(/node-version: \d+(?:\.\d+)*/, "node-version: 22"));
     expect(findNodeVersionDrift(readerFor(files))).toEqual([
-      `${action} (node-version:) says 22, and every other declaration says ${NODE_MAJOR}.`,
+      `${action} (node-version:) says 22, and every other declaration says ${CI_NODE_VERSION}.`,
+    ]);
+  });
+
+  it("rejects a floating CI major that can select different runner caches", () => {
+    const files = repoFiles();
+    const action = ".github/actions/setup/action.yml";
+    files.set(
+      action,
+      files.get(action).replace(`node-version: ${CI_NODE_VERSION}`, `node-version: ${NODE_MAJOR}`),
+    );
+    expect(findNodeVersionDrift(readerFor(files))).toEqual([
+      `${action} (node-version:) says ${NODE_MAJOR}, and every other declaration says ${CI_NODE_VERSION}.`,
     ]);
   });
 
@@ -240,6 +253,8 @@ describe("findNodeVersionDrift", () => {
 describe("the numbers themselves", () => {
   it("keeps the floor inside the major it is a floor for", () => {
     expect(NODE_FLOOR.startsWith(`${NODE_MAJOR}.`)).toBe(true);
+    expect(CI_NODE_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(satisfies(CI_NODE_VERSION, `^${NODE_FLOOR}`)).toBe(true);
   });
 
   it("is the lowest version on this major that every installed dependency accepts", () => {

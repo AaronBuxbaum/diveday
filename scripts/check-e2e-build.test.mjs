@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "vitest";
@@ -88,4 +96,40 @@ test("Next's generated root declarations do not invalidate a build as it complet
   // Generation is allowed; declarations authored under src remain actual inputs.
   writeFileSync(path.join(root, "src/custom-env.d.ts"), "declare const shop: string;");
   assert.throws(() => requireFreshBuild(root), /stale/);
+});
+
+// setup-node's major selector with check-latest:false accepts the runner's
+// cached patch. These are the actual producer/consumer caches from run 39791953247.
+test("cold CI runners can reuse the transferred build with the shared Node selection", async (t) => {
+  const { writeBuildEvidence } = await import("./e2e-build-evidence.mjs");
+  const setup = readFileSync(
+    new URL("../.github/actions/setup/action.yml", import.meta.url),
+    "utf8",
+  );
+  const selection = setup.match(/^\s*node-version:\s*(\S+)\s*$/m)?.[1];
+  assert.ok(selection);
+  const selectedNode = (cached) => `v${/^\d+$/.test(selection) ? cached : selection}`;
+  const original = Object.getOwnPropertyDescriptor(process, "version");
+  const producer = fixture(t);
+  const consumer = fixture(t);
+  try {
+    Object.defineProperty(process, "version", {
+      value: selectedNode("24.22.0"),
+      configurable: true,
+    });
+    writeBuildEvidence(producer, buildFingerprint(producer));
+    // Independent clean checkout receives only the artifact, not the producer's
+    // root generated declaration or filesystem metadata.
+    cpSync(path.join(producer, ".next"), path.join(consumer, ".next"), { recursive: true });
+    Object.defineProperty(process, "version", {
+      value: selectedNode("24.21.0"),
+      configurable: true,
+    });
+    assert.equal(requireFreshBuild(consumer).buildId, "build-1");
+    // A truly different runtime must still refuse the artifact.
+    Object.defineProperty(process, "version", { value: "v24.15.0", configurable: true });
+    assert.throws(() => requireFreshBuild(consumer), /stale/);
+  } finally {
+    Object.defineProperty(process, "version", original);
+  }
 });
