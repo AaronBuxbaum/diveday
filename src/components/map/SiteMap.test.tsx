@@ -71,6 +71,84 @@ async function sizedOverview(dimensions: { width: number; height: number }) {
 }
 
 describe("SiteMap labels through Leaflet", () => {
+  it("gives isolated site targets a 44px Leaflet hit area", async () => {
+    const L = await import("leaflet");
+    const getContainer = vi.spyOn(L.Map.prototype, "getContainer");
+    const { container } = render(
+      <SiteMap center={CENTER} pins={[PIN]} clusterLabel="dive sites" />,
+    );
+    await markerButton(container);
+    const map = getContainer.mock.contexts[0];
+    if (!(map instanceof L.Map)) throw new Error("Map did not mount");
+    const sizes: unknown[] = [];
+    map.eachLayer((layer) => {
+      if (
+        layer instanceof L.Marker &&
+        layer.getElement()?.classList.contains("leaflet-site-marker")
+      ) {
+        sizes.push(layer.options.icon?.options.iconSize, layer.options.icon?.options.iconAnchor);
+      }
+    });
+    expect(sizes).toEqual([
+      [44, 44],
+      [22, 22],
+    ]);
+  });
+
+  it("keeps the shop badge clear of a cluster above its geographic anchor and its tooltip above the stem", async () => {
+    const L = await import("leaflet");
+    const getContainer = vi.spyOn(L.Map.prototype, "getContainer");
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("leaflet-container") ? 640 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.classList.contains("leaflet-container") ? 440 : 0;
+    });
+    const clusterPoint = L.CRS.EPSG3857.latLngToPoint(
+      L.latLng(CENTER.latitude, CENTER.longitude),
+      11,
+    ).subtract([0, 48]);
+    const clusterLocation = L.CRS.EPSG3857.pointToLatLng(clusterPoint, 11);
+    const { container } = render(
+      <SiteMap
+        center={CENTER}
+        pins={[0, 1].map((index) => ({
+          ...PIN,
+          id: String(index),
+          latitude: clusterLocation.lat,
+          longitude: clusterLocation.lng,
+        }))}
+        shopAnchor={{ ...CENTER, name: "Blue Mantis" }}
+        clusterLabel="dive sites"
+      />,
+    );
+    await waitFor(() => expect(container.querySelector(".leaflet-site-cluster")).not.toBeNull());
+    const map = getContainer.mock.contexts[0];
+    if (!(map instanceof L.Map)) throw new Error("Map did not mount");
+    const shop = container.querySelector<HTMLElement>(".leaflet-shop-marker");
+    const landmark = shop?.querySelector<HTMLElement>("[role=img]");
+    if (!shop || !landmark) throw new Error("Shop did not mount");
+    const shopPoint = map.latLngToContainerPoint([CENTER.latitude, CENTER.longitude]);
+    const cluster = map.latLngToContainerPoint(clusterLocation);
+    const badge = {
+      x: shopPoint.x + Number.parseFloat(shop.style.marginLeft) + 22,
+      y: shopPoint.y + Number.parseFloat(shop.style.marginTop) + 22,
+    };
+    expect(Math.abs(badge.x - cluster.x) >= 48 || Math.abs(badge.y - cluster.y) >= 48).toBe(true);
+    fireEvent.focus(landmark);
+    expect(shopPoint.x + Number.parseFloat(shop.style.marginLeft) + 22).toBe(badge.x);
+    expect(shopPoint.y + Number.parseFloat(shop.style.marginTop) + 22).toBe(badge.y);
+    const tooltip = container.querySelector<HTMLElement>(".leaflet-shop-tooltip");
+    expect(tooltip).not.toBeNull();
+    const tooltipPane = tooltip?.parentElement;
+    const shopPane = shop.parentElement;
+    expect(Number(tooltipPane?.style.zIndex)).toBeGreaterThan(Number(shopPane?.style.zIndex));
+  });
+
   it("fits a noncoincident cluster fully in one click and lets a smaller cluster advance again", async () => {
     const L = await import("leaflet");
     const getContainer = vi.spyOn(L.Map.prototype, "getContainer");

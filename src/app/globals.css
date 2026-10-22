@@ -2344,6 +2344,7 @@ details[open]::details-content {
   color: var(--foreground);
   box-shadow: 0 5px 16px color-mix(in srgb, var(--foreground) 16%, transparent);
   white-space: normal;
+  font-size: 16px;
 }
 .leaflet-site-tooltip.leaflet-tooltip-top::before {
   border-top-color: var(--border);
@@ -2353,14 +2354,14 @@ details[open]::details-content {
   display: block;
 }
 .leaflet-site-tooltip__name {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 650;
   line-height: 1.25;
 }
 .leaflet-site-tooltip__location {
   margin-top: 2px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 16px;
   line-height: 1.25;
 }
 .leaflet-shop-marker {
@@ -2400,7 +2401,7 @@ details[open]::details-content {
   background: var(--primary);
   color: var(--surface);
   box-shadow: 0 5px 14px color-mix(in srgb, var(--foreground) 24%, transparent);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
   transition:

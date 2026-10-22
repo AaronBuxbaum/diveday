@@ -3,12 +3,8 @@
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mapTileLayer } from "@/lib/carto";
-import {
-  clusterMapPoints,
-  type MapTargetRectangle,
-  mapTargetIsVisible,
-  separateShopAnchor,
-} from "./map-clustering";
+import { clusterMapPoints, mapTargetIsVisible, separateShopAnchor } from "./map-clustering";
+import { labelRectangle, placeMapLabel, rectanglesOverlap } from "./map-label-placement";
 import { readMapViewport, writeMapViewport } from "./map-viewport-storage";
 
 export type MapPin = {
@@ -105,6 +101,7 @@ export default function SiteMap({
       });
 
       map.createPane("shopAnchor").style.zIndex = "750";
+      map.createPane("shopTooltip").style.zIndex = "760";
       L.control.attribution({ prefix: false }).addTo(map);
 
       const tileLayer = mapTileLayer("light_all");
@@ -176,6 +173,13 @@ export default function SiteMap({
       }
     };
 
+    const updateShop = () =>
+      updateShopMarkerPosition(
+        mapInstance,
+        markersRef.current.get("shop-anchor"),
+        markersRef.current.values(),
+      );
+
     const renderMarkers = (L: typeof import("leaflet"), openSelectedPopup = false) => {
       if (isCancelled || mapRef.current !== mapInstance) return;
       clearMarkers();
@@ -213,7 +217,10 @@ export default function SiteMap({
       // Geographic shop/site/cluster positions and their distinct roles do
       // not form a uniform control row. Size, focus and overlap rules still apply.
       if (shopAnchor) {
-        markersRef.current.set("shop-anchor", addShopMarker(L, mapInstance, shopAnchor, shopLabel));
+        markersRef.current.set(
+          "shop-anchor",
+          addShopMarker(L, mapInstance, shopAnchor, shopLabel, markersRef.current),
+        );
       }
       groups.forEach((group, groupIndex) => {
         const pin = group[0];
@@ -225,7 +232,7 @@ export default function SiteMap({
           !isSelected &&
           !mapTargetIsVisible(
             mapInstance.latLngToContainerPoint(position),
-            group.length > 1 ? 58 : 32,
+            58,
             mapSize,
             controlRectangles,
           )
@@ -276,9 +283,9 @@ export default function SiteMap({
         const icon = L.divIcon({
           html: createSiteButton(pin, colorClass, ringClass),
           className: "leaflet-site-marker",
-          iconSize: [28, 28],
-          iconAnchor: [14, 14],
-          popupAnchor: [0, -16],
+          iconSize: [44, 44],
+          iconAnchor: [22, 22],
+          popupAnchor: [0, -24],
         });
         const marker = L.marker([pin.latitude, pin.longitude], {
           icon,
@@ -308,6 +315,7 @@ export default function SiteMap({
         markersRef.current.set(`site:${pin.id}`, marker);
         if (isSelected && openSelectedPopup) marker.openPopup();
       });
+      updateShop();
     };
 
     const scheduleRender = () => {
@@ -322,14 +330,14 @@ export default function SiteMap({
     };
 
     const handleViewEnd = () => {
-      updateShopMarkerPosition(mapInstance, markersRef.current.get("shop-anchor"));
+      updateShop();
       if (!popupOpen) scheduleRender();
     };
     const handleSelect = () => {
       if (leaflet) renderMarkers(leaflet, true);
     };
     const handleResize = () => {
-      updateShopMarkerPosition(mapInstance, markersRef.current.get("shop-anchor"));
+      updateShop();
       markersRef.current.forEach(updateOpenPopup);
     };
     const handlePopupOpen = () => {
@@ -525,6 +533,7 @@ function addShopMarker(
   map: LeafletMap,
   anchor: ShopAnchor,
   label: string,
+  markers: ReadonlyMap<string, LeafletMarker>,
 ): LeafletMarker {
   const icon = L.divIcon({
     html: createShopLandmark(anchor.name || label),
@@ -542,25 +551,40 @@ function addShopMarker(
   const tooltip = document.createElement("span");
   tooltip.textContent = anchor.name || label;
   marker.bindTooltip(tooltip, {
-    pane: "shopAnchor",
+    pane: "shopTooltip",
     direction: "top",
     offset: [0, -68],
     opacity: 1,
     className: "leaflet-site-tooltip leaflet-shop-tooltip",
   });
-  marker.on("tooltipopen", () => updateShopMarkerPosition(map, marker));
+  marker.on("tooltipopen", () => updateShopMarkerPosition(map, marker, markers.values()));
   bindTooltipFocus(marker, "[role=img]");
   updateShopMarkerPosition(map, marker);
   return marker;
 }
 
-function updateShopMarkerPosition(map: LeafletMap, marker?: LeafletMarker) {
+function updateShopMarkerPosition(
+  map: LeafletMap,
+  marker?: LeafletMarker,
+  markers: Iterable<LeafletMarker> = [],
+) {
   const element = marker?.getElement();
   if (!marker || !element) return;
   const point = map.latLngToContainerPoint(marker.getLatLng());
   const size = map.getSize();
   const controls = mapControlRectangles(map.getContainer());
-  const badge = placeMapLabel({ x: point.x, y: point.y - 48 }, { x: 44, y: 44 }, size, controls);
+  const targets = [...controls];
+  for (const layer of markers) {
+    if (layer === marker) continue;
+    const target = layer.getElement();
+    if (
+      !target?.classList.contains("leaflet-site-marker") &&
+      !target?.classList.contains("leaflet-site-cluster-marker")
+    )
+      continue;
+    targets.push(labelRectangle(map.latLngToContainerPoint(layer.getLatLng()), { x: 58, y: 58 }));
+  }
+  const badge = placeMapLabel({ x: point.x, y: point.y - 48 }, { x: 44, y: 44 }, size, targets);
   const dx = badge.x - point.x;
   const dy = badge.y - point.y;
   element.style.marginLeft = `${dx - 22}px`;
@@ -591,42 +615,6 @@ function updateShopMarkerPosition(map: LeafletMap, marker?: LeafletMarker) {
     tooltip.options.offset = [position.x - point.x, position.y - point.y];
     if (marker.isTooltipOpen()) tooltip.update();
   }
-}
-
-function placeMapLabel(
-  preferred: { x: number; y: number },
-  size: { x: number; y: number },
-  viewport: { x: number; y: number },
-  controls: MapTargetRectangle[],
-) {
-  const halfWidth = size.x / 2;
-  const halfHeight = size.y / 2;
-  const position = {
-    x: Math.max(halfWidth + 4, Math.min(viewport.x - halfWidth - 4, preferred.x)),
-    y: Math.max(halfHeight + 4, Math.min(viewport.y - halfHeight - 4, preferred.y)),
-  };
-  for (const control of controls) {
-    if (!rectanglesOverlap(labelRectangle(position, size), control)) continue;
-    const below = control.bottom + 4 + halfHeight;
-    position.y = below + halfHeight <= viewport.y - 4 ? below : control.top - 4 - halfHeight;
-  }
-  return position;
-}
-
-function labelRectangle(
-  center: { x: number; y: number },
-  size: { x: number; y: number },
-): MapTargetRectangle {
-  return {
-    left: center.x - size.x / 2,
-    right: center.x + size.x / 2,
-    top: center.y - size.y / 2,
-    bottom: center.y + size.y / 2,
-  };
-}
-
-function rectanglesOverlap(a: MapTargetRectangle, b: MapTargetRectangle) {
-  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 }
 
 function bindTooltipFocus(marker: LeafletMarker, selector: string) {
@@ -673,13 +661,13 @@ function createShopLandmark(label: string): HTMLSpanElement {
 function createSiteButton(pin: MapPin, colorClass: string, ringClass: string): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = `group flex items-center justify-center size-7 rounded-full ${colorClass} shadow-md border border-border transition-transform ${ringClass}`;
+  button.className = `group flex items-center justify-center size-11 rounded-full ${colorClass} shadow-md border border-border transition-transform ${ringClass}`;
   button.setAttribute("aria-label", pin.name);
   button.addEventListener("mousedown", (event) => event.stopPropagation());
   button.addEventListener("keypress", (event) => event.stopPropagation());
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("class", "size-3.5");
+  svg.setAttribute("class", "size-5");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("fill", "currentColor");
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
