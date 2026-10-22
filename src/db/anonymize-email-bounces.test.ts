@@ -8,11 +8,11 @@ const ctx = fileScopedShopContext();
 
 /**
  * Erasure reaches `email_bounces`: a bounce record is the diver's address in
- * clear. Swept by address, on the shop's rows and on DiveDay's own mail that
- * named no shop, never on another shop's.
+ * clear. Swept by address on the shop's own rows only: neither another shop's
+ * nor DiveDay's own mail that named no shop is this shop's to delete.
  */
 describe("anonymizeDiver — bounce records", () => {
-  it("deletes the diver's bounces here and on shopless mail, and leaves another shop's", async () => {
+  it("deletes the diver's bounces here and leaves another shop's and DiveDay's own", async () => {
     const { db, shop } = ctx;
     const [owner] = await db
       .select({ id: people.id })
@@ -68,7 +68,7 @@ describe("anonymizeDiver — bounce records", () => {
           eq(emailBounces.bounceType, "Permanent"),
         ),
       );
-    expect(left.map((row) => row.id).sort()).toEqual(["elsewhere", "someone-else"]);
+    expect(left.map((row) => row.id).sort()).toEqual(["elsewhere", "shopless", "someone-else"]);
   });
 
   it("keeps a bounce on mail an erased person sent, without their name", async () => {

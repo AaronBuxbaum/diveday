@@ -1892,7 +1892,7 @@ const bookkeeperNoticeSchema = z.object({
 export const notificationSenderSchema = z.object({
   /**
    * The staff member whose action sent this, read off the session at the send
-   * (`currentStaffPersonId`) and carried into a queued retry. Tagged on the SES
+   * (`currentSendActor`) and carried into a queued retry. Tagged on the SES
    * send (`SES_SENDER_TAG`) so a bounce names who sent it. Absent on mail
    * nobody pressed a button for.
    */

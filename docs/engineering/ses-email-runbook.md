@@ -518,11 +518,12 @@ address, SES's `bounceType` and `bounceSubType`, the SMTP codes from the diagnos
 text), the complaint's feedback type, and the `diveday_kind`, `diveday_purpose`, `diveday_shop` and
 `diveday_sender` tags, so each one says which email it was, which shop it was for and which staff
 member's action sent it. `diveday_sender` is the signed-in staff member at the moment of the send
-(`currentStaffPersonId`, `src/lib/notifications/send-actor.ts`), carried into a queued retry, and
-absent on mail nobody pressed a button for. Each also logs `ses_webhook.bounce_recorded` with the
+(`currentSendActor`, `src/lib/notifications/send-actor.ts`) when the mail is for that staff member's
+own shop, carried into a queued retry, and absent on mail nobody pressed a button for. Each also logs `ses_webhook.bounce_recorded` with the
 same facts and the recipient's domain, never the address. The founder's Monday digest lists last
 week's rows, newest first. Rows are kept 90 days (`RETENTION_DAYS.email_bounces`) and an erasure
-deletes a diver's by address.
+deletes a diver's rows for that shop by address. A report that arrives after the erasure is kept
+until the 90 days run out.
 
 This is the place to look when the console shows a bounce rate but the suppression list is empty:
 only a `Permanent` bounce goes on the suppression list, and a `Transient` one (a full mailbox, a

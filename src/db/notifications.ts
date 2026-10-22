@@ -43,7 +43,7 @@ import {
 } from "@/lib/notifications";
 import { confirmationExtras } from "@/lib/notifications/confirmation-extras";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
-import { currentStaffPersonId } from "@/lib/notifications/send-actor";
+import { currentSendActor, type SendActor, sentByFor } from "@/lib/notifications/send-actor";
 import { shopVoiceOf } from "@/lib/notifications/shop-voice";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { issueBookingCapability } from "./booking-capabilities";
@@ -449,13 +449,13 @@ function withoutSentBy(notification: Notification): Notification {
 }
 
 /**
- * Stamp the staff member whose request is sending (`currentStaffPersonId`) on
- * the notification, unless it already names one. Done before the first
+ * Stamp the staff member whose request is sending (`currentSendActor`) on mail
+ * for their own shop, unless it already names one. Done before the first
  * attempt, so a queued retry still names them.
  */
-async function withSentBy(input: Notification): Promise<Notification> {
+function withSentBy(input: Notification, actor: SendActor | null): Notification {
   if (input.sender?.sentByPersonId) return input;
-  const sentByPersonId = await currentStaffPersonId();
+  const sentByPersonId = sentByFor(actor, input);
   return sentByPersonId ? { ...input, sender: { ...input.sender, sentByPersonId } } : input;
 }
 
@@ -486,7 +486,7 @@ export async function sendNotification(
   notification: Notification,
   provider?: NotificationProvider,
 ): Promise<NotificationDelivery> {
-  const input = await withSentBy(notification);
+  const input = withSentBy(notification, await currentSendActor());
   // Checked here rather than left to `notify`'s own hard `parse` below. A
   // notification the schema refuses never reached a provider, so reporting it
   // as `provider_error` names the wrong thing — and, because that code is
@@ -548,12 +548,8 @@ export async function sendNotificationBatch(
   const deliveries: NotificationDelivery[] = [];
   const senders = new Map<string, NotificationSender | undefined>();
   // One session read for the fan-out, not one per member.
-  const sentByPersonId = await currentStaffPersonId();
-  const stamped = inputs.map((input) =>
-    sentByPersonId && !input.sender?.sentByPersonId
-      ? { ...input, sender: { ...input.sender, sentByPersonId } }
-      : input,
-  );
+  const actor = await currentSendActor();
+  const stamped = inputs.map((input) => withSentBy(input, actor));
   for (let offset = 0; offset < stamped.length; offset += 100) {
     const batch = stamped.slice(offset, offset + 100);
     const results: (NotificationDelivery | undefined)[] = new Array(batch.length);

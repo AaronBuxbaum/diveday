@@ -2310,19 +2310,16 @@ async function scrubPiiBlob(
     logFuzzyMatch(ctx, "send_queue_address", dropped.length);
   }
   // **Bounce records** (`email_bounces`): an address in clear with the reason
-  // its mail bounced. By address, on this shop's rows and on DiveDay's own
-  // mail that named no shop (a sign-in link, say), case-insensitively like
-  // every address sweep here. A record of mail this person *sent* as staff
-  // keeps the bounce and loses their name.
+  // its mail bounced. By address on this shop's rows, case-insensitively like
+  // every address sweep here. DiveDay's own mail that named no shop is not
+  // this shop's to delete; retention takes it within 90 days. A record of
+  // mail this person *sent* as staff keeps the bounce and loses their name.
   if (ctx.email) {
     const address = ctx.email.toLowerCase();
     const bounces = await tx
       .delete(emailBounces)
       .where(
-        and(
-          or(eq(emailBounces.shopId, shopId), isNull(emailBounces.shopId)),
-          sql`lower(${emailBounces.recipient}) = ${address}`,
-        ),
+        and(eq(emailBounces.shopId, shopId), sql`lower(${emailBounces.recipient}) = ${address}`),
       )
       .returning({ id: emailBounces.id });
     logFuzzyMatch(ctx, "email_bounce_address", bounces.length);
