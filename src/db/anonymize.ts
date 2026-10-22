@@ -96,6 +96,7 @@ import {
   certifications,
   courseFormRecords,
   customerGearItems,
+  emailBounces,
   formDrafts,
   gearReservations,
   importedPaymentHistory,
@@ -2308,6 +2309,28 @@ async function scrubPiiBlob(
       .returning({ id: notificationSendQueue.id });
     logFuzzyMatch(ctx, "send_queue_address", dropped.length);
   }
+  // **Bounce records** (`email_bounces`): an address in clear with the reason
+  // its mail bounced. By address, on this shop's rows and on DiveDay's own
+  // mail that named no shop (a sign-in link, say), case-insensitively like
+  // every address sweep here. A record of mail this person *sent* as staff
+  // keeps the bounce and loses their name.
+  if (ctx.email) {
+    const address = ctx.email.toLowerCase();
+    const bounces = await tx
+      .delete(emailBounces)
+      .where(
+        and(
+          or(eq(emailBounces.shopId, shopId), isNull(emailBounces.shopId)),
+          sql`lower(${emailBounces.recipient}) = ${address}`,
+        ),
+      )
+      .returning({ id: emailBounces.id });
+    logFuzzyMatch(ctx, "email_bounce_address", bounces.length);
+  }
+  await tx
+    .update(emailBounces)
+    .set({ sentByPersonId: null })
+    .where(eq(emailBounces.sentByPersonId, ctx.personId));
   // **The shop's shore contact** (H-118 security review). A shop can name
   // somebody it also has as a diver as the address its stale roll-call alerts
   // go to. That address is the diver's, held in the shop's settings with the

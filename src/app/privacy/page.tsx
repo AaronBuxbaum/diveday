@@ -213,6 +213,7 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
           items={[
             p("keep.activity"),
             p("keep.delivery"),
+            p("keep.bounces"),
             p("keep.payments"),
             p("keep.webhooks"),
             p("keep.tokens"),

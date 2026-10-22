@@ -23,6 +23,7 @@ import {
   crewNotices,
   demoEntries,
   departureNotes,
+  emailBounces,
   formDrafts,
   inboundMessages,
   incidentReports,
@@ -398,6 +399,12 @@ export const PRUNE_ARMS = {
     from: setupRequests,
     id: setupRequests.id,
     clock: setupRequests.createdAt,
+  },
+  // A bounce or complaint on the day SES reported it.
+  email_bounces: {
+    from: emailBounces,
+    id: emailBounces.id,
+    clock: emailBounces.occurredAt,
   },
   // Found items, only once resolved: an open one is still the shop's to hold,
   // so `resolved_at` is both the clock and the filter (batch 4, J2).

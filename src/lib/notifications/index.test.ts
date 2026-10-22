@@ -477,6 +477,21 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     ]);
   });
 
+  it("tags the staff member who sent it, and never puts it in the message", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+    const sentByPersonId = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+
+    await notify({ ...booking, sender: { sentByPersonId } }, provider);
+
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.EmailTags).toContainEqual({
+      Name: "diveday_sender",
+      Value: sentByPersonId,
+    });
+    expect(JSON.stringify(command.input.Content)).not.toContain(sentByPersonId);
+  });
+
   it("sends with no Reply-To when the shop has no front-desk address on file", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
     const provider = sesNotificationProvider(sesConfig, { client });

@@ -1019,6 +1019,32 @@ const founderDigestSchema = z.object({
       }),
     )
     .max(500),
+  /**
+   * Last week's bounces and complaints (`email_bounces`), newest first: the
+   * address, why, which email, the shop and who sent it. `total` counts them
+   * all; `lines` is the first fifty.
+   */
+  bounces: z.object({
+    total: z.number().int().nonnegative(),
+    lines: z
+      .array(
+        z.object({
+          occurredAt: z.date(),
+          event: z.enum(["bounce", "complaint"]),
+          recipient: z.string().trim().min(1).max(320),
+          bounceType: z.string().max(120).nullable(),
+          bounceSubType: z.string().max(120).nullable(),
+          smtpStatus: z.string().max(40).nullable(),
+          complaintType: z.string().max(120).nullable(),
+          kind: z.string().max(120).nullable(),
+          purpose: z.string().max(120).nullable(),
+          shopName: z.string().max(120).nullable(),
+          shopSlug: z.string().max(120).nullable(),
+          sentByName: z.string().max(200).nullable(),
+        }),
+      )
+      .max(50),
+  }),
 });
 
 // The shop's own inbox learns about an interest the moment the diver submits the
@@ -1864,6 +1890,13 @@ const bookkeeperNoticeSchema = z.object({
 });
 
 export const notificationSenderSchema = z.object({
+  /**
+   * The staff member whose action sent this, read off the session at the send
+   * (`currentStaffPersonId`) and carried into a queued retry. Tagged on the SES
+   * send (`SES_SENDER_TAG`) so a bounce names who sent it. Absent on mail
+   * nobody pressed a button for.
+   */
+  sentByPersonId: z.uuid().optional(),
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
   postalAddress: z.string().trim().min(1).max(300).optional(),

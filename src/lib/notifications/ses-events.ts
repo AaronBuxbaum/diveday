@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { type ProviderEmailStatus, timestampFrom } from "./events";
-import { SES_SHOP_TAG } from "./ses-tags";
+import { SES_KIND_TAG, SES_PURPOSE_TAG, SES_SENDER_TAG, SES_SHOP_TAG } from "./ses-tags";
 
 /**
  * Turns a verified SES event (the JSON carried inside an SNS `Notification`
@@ -165,4 +165,112 @@ export function parseSesEmailEvent(rawMessage: string, now: Date): SesEmailEvent
       now,
     ),
   };
+}
+
+/** One recipient a bounce or complaint named, as `email_bounces` keeps it. */
+export type SesBounceReport = {
+  providerMessageId: string;
+  event: "bounce" | "complaint";
+  recipient: string;
+  bounceType: string | null;
+  bounceSubType: string | null;
+  smtpStatus: string | null;
+  complaintType: string | null;
+  kind: string | null;
+  purpose: string | null;
+  shopId: string | null;
+  /** The `diveday_sender` tag: the staff member whose action sent it. */
+  sentByPersonId: string | null;
+  occurredAt: Date;
+};
+
+function uuidOrNull(value: string | undefined): string | null {
+  const parsed = shopIdSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
+function trimmedOrNull(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+/**
+ * Every recipient a `Bounce` or `Complaint` names, one report each, with the
+ * classification SES gave it and the email it was (the `diveday_kind` and
+ * `diveday_purpose` tags). Empty for every other event and for anything that
+ * does not parse. Kept apart from `parseSesEmailEvent`, which reduces an event
+ * to one verdict on one message; this is the per-address record DiveDay keeps
+ * to debug its own mail. A recipient SES did not name falls back to the
+ * message's destinations, as `recipientOf` does.
+ */
+export function parseSesBounceReports(rawMessage: string, now: Date): SesBounceReport[] {
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(rawMessage);
+  } catch {
+    return [];
+  }
+  const parsed = sesEventDataSchema.safeParse(parsedJson);
+  if (!parsed.success) return [];
+  const data = parsed.data;
+
+  const common = {
+    providerMessageId: data.mail.messageId,
+    kind: trimmedOrNull(data.mail.tags?.[SES_KIND_TAG]?.[0]),
+    purpose: trimmedOrNull(data.mail.tags?.[SES_PURPOSE_TAG]?.[0]),
+    shopId: shopIdOf(data),
+    sentByPersonId: uuidOrNull(data.mail.tags?.[SES_SENDER_TAG]?.[0]),
+  };
+  const destinations = (data.mail.destination ?? []).map((address) => ({ emailAddress: address }));
+  const addressOf = (recipient: { emailAddress?: string }) =>
+    recipient.emailAddress?.trim().toLowerCase() || null;
+
+  if (data.eventType === "Bounce" && data.bounce) {
+    const { bounce } = data;
+    const named = bounce.bouncedRecipients?.length ? bounce.bouncedRecipients : destinations;
+    const occurredAt = timestampFrom([bounce.timestamp, data.mail.timestamp], now);
+    return named.flatMap((recipient) => {
+      const address = addressOf(recipient);
+      if (!address) return [];
+      const diagnostic = "diagnosticCode" in recipient ? recipient.diagnosticCode : undefined;
+      return [
+        {
+          ...common,
+          event: "bounce" as const,
+          recipient: address,
+          bounceType: trimmedOrNull(bounce.bounceType),
+          bounceSubType: trimmedOrNull(bounce.bounceSubType),
+          smtpStatus: diagnostic ? smtpStatusOf(diagnostic) : null,
+          complaintType: null,
+          occurredAt,
+        },
+      ];
+    });
+  }
+
+  if (data.eventType === "Complaint" && data.complaint) {
+    const { complaint } = data;
+    const named = complaint.complainedRecipients?.length
+      ? complaint.complainedRecipients
+      : destinations;
+    const occurredAt = timestampFrom([complaint.timestamp, data.mail.timestamp], now);
+    return named.flatMap((recipient) => {
+      const address = addressOf(recipient);
+      if (!address) return [];
+      return [
+        {
+          ...common,
+          event: "complaint" as const,
+          recipient: address,
+          bounceType: null,
+          bounceSubType: null,
+          smtpStatus: null,
+          complaintType: trimmedOrNull(complaint.complaintFeedbackType),
+          occurredAt,
+        },
+      ];
+    });
+  }
+
+  return [];
 }
