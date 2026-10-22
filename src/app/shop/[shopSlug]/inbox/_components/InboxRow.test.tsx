@@ -30,6 +30,12 @@ const MESSAGE: InboxMessageRow["message"] = {
   bookingId: null,
   senderAuthenticated: true,
   spamFlagged: false,
+  assistIntent: null,
+  assistUrgent: null,
+  assistLanguage: null,
+  assistTranslation: null,
+  assistTranslatedTo: null,
+  assistedAt: null,
   deletedAt: null,
   createdAt: new Date("2026-07-21T13:30:00.000Z"),
 };

@@ -796,6 +796,14 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.claudeUsage.id }),
     ),
+  website_setup_drafts: async ({ db, shop }, at) =>
+    idOf(
+      await db
+        .insert(schema.websiteSetupDrafts)
+        .values({ shopId: shop.id, host: "example.com", lines: [], readAt: at })
+        .onConflictDoUpdate({ target: schema.websiteSetupDrafts.shopId, set: { readAt: at } })
+        .returning({ id: schema.websiteSetupDrafts.shopId }),
+    ),
   weekly_digest_sends: async ({ db, shop, people }, at, n) =>
     idOf(
       await db

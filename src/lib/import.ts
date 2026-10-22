@@ -1082,7 +1082,13 @@ export type PreparedRow = {
   issues: ImportIssue[];
 };
 
-export type ColumnMapping = { field: ImportField; header: string; columnIndex: number };
+export type ColumnMapping = {
+  field: ImportField;
+  header: string;
+  columnIndex: number;
+  /** Matched by a Claude assist rather than an alias (`ImportAssist`). */
+  assisted?: true;
+};
 
 /**
  * Every reason a file can't be prepared at all, before any row is read — the
@@ -1554,7 +1560,79 @@ function cardNumber(value: string | null): string | null {
  * database, no clock, no framework — the browser preview and the server commit
  * both call this and must agree.
  */
-export function prepareContactImport(text: string): PreparedImport {
+/**
+ * **What a Claude assist added to the header aliases** (ADR
+ * 20261018-claude-assists; the `import` assist, `src/lib/assists/import-mapping.ts`):
+ * a field for a header the aliases did not know, and a ladder rung for a level
+ * spelling `normalizeLevel` did not read. It only ever fills a gap: an alias
+ * match wins, a medical or payment-method header is never mapped, and a field
+ * outside {@link ASSIST_MAPPABLE_FIELDS} is ignored.
+ *
+ * **A card it touched is never verified.** An imported card lands verified on
+ * the premise that the shop's old system checked it (ADR
+ * 20260724-import-verified-cards); a column Claude matched is not that system's
+ * word, so every card in a file with an assisted card column, and every rung
+ * read through an assisted spelling, imports `pending` for a staffer to
+ * confirm. The assist clears no gate.
+ */
+export type ImportAssist = {
+  readonly headers: Readonly<Record<string, ImportField>>;
+  readonly levels: Readonly<Record<string, ImportLevel>>;
+};
+
+/** Fields an assist may never fill: each is a gate's evidence or a medical pointer. */
+const ASSIST_UNMAPPABLE_FIELDS: ReadonlySet<ImportField> = new Set<ImportField>([
+  "certification_status",
+  "nitrox_certified",
+  "waiver_accepted",
+  "waiver_signed_at",
+  "waiver_document_url",
+  "medical_document_url",
+]);
+
+export const ASSIST_MAPPABLE_FIELDS: readonly ImportField[] = IMPORT_FIELDS.filter(
+  (field) => !ASSIST_UNMAPPABLE_FIELDS.has(field),
+);
+
+/** The fields that make a card; a file whose card column came from an assist imports pending. */
+const CARD_FIELDS: ReadonlySet<ImportField> = new Set<ImportField>([
+  "certification_agency",
+  "certification_level",
+  "certification_number",
+  "specialty",
+  "specialty_certification_number",
+  "nitrox_certification_number",
+]);
+
+/** The level-spelling key an assist's `levels` map is read by. */
+export function assistLevelKey(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/**
+ * The headers this file has that no alias claims, minus the ones that are
+ * never mapped (medical, payment method). What an assist is asked about.
+ */
+export function unclaimedImportHeaders(headers: readonly string[]): string[] {
+  const claimed = new Set<ImportField>();
+  const out: string[] = [];
+  for (const raw of headers) {
+    const header = raw.trim();
+    const normalized = normalizeHeader(header);
+    if (!normalized) continue;
+    if (SENSITIVE_PAYMENT_HEADER_PATTERN.test(normalized) || MEDICAL_HEADER_PATTERN.test(header)) {
+      continue;
+    }
+    const field = IMPORT_FIELDS.find(
+      (candidate) => !claimed.has(candidate) && HEADER_ALIASES[candidate].includes(normalized),
+    );
+    if (field) claimed.add(field);
+    else out.push(header);
+  }
+  return out;
+}
+
+export function prepareContactImport(text: string, assist?: ImportAssist): PreparedImport {
   const grid = parseCsv(text).filter((row) => row.some((cell) => cell.trim() !== ""));
   const empty: PreparedImport = {
     mapping: [],
@@ -1638,9 +1716,22 @@ export function prepareContactImport(text: string): PreparedImport {
       mapping.push({ field, header, columnIndex });
       return;
     }
-    if (MEDICAL_HEADER_PATTERN.test(header)) ignoredMedicalColumns.push(header);
-    else unmappedColumns.push(header);
+    if (MEDICAL_HEADER_PATTERN.test(header)) {
+      ignoredMedicalColumns.push(header);
+      return;
+    }
+    const suggested =
+      assist && Object.hasOwn(assist.headers, header) ? assist.headers[header] : undefined;
+    if (suggested && ASSIST_MAPPABLE_FIELDS.includes(suggested) && !claimedFields.has(suggested)) {
+      claimedFields.add(suggested);
+      mapping.push({ field: suggested, header, columnIndex, assisted: true });
+      return;
+    }
+    unmappedColumns.push(header);
   });
+  // A card column Claude matched is not the old system's word: no card from
+  // this file lands verified (see `ImportAssist`).
+  const assistedCards = mapping.some((entry) => entry.assisted && CARD_FIELDS.has(entry.field));
 
   const indexOf = (field: ImportField) =>
     mapping.find((entry) => entry.field === field)?.columnIndex ?? -1;
@@ -1706,7 +1797,8 @@ export function prepareContactImport(text: string): PreparedImport {
         params: { status: clean(statusRaw) ?? "" },
       });
     }
-    const cardStatus: PreparedCardStatus = sourceSaysUnverified ? "pending" : "verified";
+    const cardStatus: PreparedCardStatus =
+      sourceSaysUnverified || assistedCards ? "pending" : "verified";
     // Same answer for every card kind on the row: only the source's own status
     // can downgrade one.
     const nitroxStatus: PreparedCardStatus = cardStatus;
@@ -1789,7 +1881,14 @@ export function prepareContactImport(text: string): PreparedImport {
       });
     }
     if (levelRaw && !levelNamesSpecialty) {
-      const level = normalizeLevel(levelRaw);
+      const known = normalizeLevel(levelRaw);
+      const assistedLevel =
+        known || isTechnicalCertName(levelRaw) || !assist
+          ? null
+          : (assist.levels[assistLevelKey(levelRaw)] ?? null);
+      const level =
+        known ?? (assistedLevel && IMPORT_LEVELS.includes(assistedLevel) ? assistedLevel : null);
+      const levelStatus: PreparedCardStatus = known ? cardStatus : "pending";
       if (!level && isTechnicalCertName(levelRaw)) {
         // Named separately from the generic "isn't a level" note, because this is
         // the case a shop would otherwise assume came across: it looks like a
@@ -1817,11 +1916,11 @@ export function prepareContactImport(text: string): PreparedImport {
           level,
           identifier: certNumber,
           sourceLabel,
-          status: cardStatus,
+          status: levelStatus,
         };
         issues.push({
           level: "info",
-          code: cardStatus === "verified" ? "cert_imported_verified" : "cert_imported_pending",
+          code: levelStatus === "verified" ? "cert_imported_verified" : "cert_imported_pending",
         });
         if (!agencyKnown) {
           issues.push({
