@@ -151,8 +151,10 @@ What a diff runs is decided by reading it, at two places:
   everything; every surface not captured is copied from the baseline before the compare.
   Locally, `--grep <file>` writes the light-mode Playwright grep for the same selection.
 - **Specs before a push**: `scripts/e2e-affected.mjs`, run by `verify:push`. *Strong*: a spec or
-  helper the diff edits, a spec quoting text the diff removed, a spec visiting a route whose own
-  directory changed. *Smoke*: five tests (booking, a waiver, check-in, roll call offline, sign-in)
+  helper the diff edits, a spec quoting text the diff removed (a seeded name included), a spec
+  reading an en-US key whose value changed by its full dotted key, a spec naming a seeded record
+  or seed constant on a changed seed line when at most three specs name it, a spec visiting a
+  route whose own directory changed. *Smoke*: five tests (booking, a waiver, check-in, roll call offline, sign-in)
   whenever the app changed. *Reach*: specs visiting a route the changed names reach, ranked by how
   much of the diff's vocabulary they name, run while they fit the time budget. `--commit <sha>`
   replays one commit, to score the selector against what CI caught.
