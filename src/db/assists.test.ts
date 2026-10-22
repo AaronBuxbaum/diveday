@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -7,6 +8,8 @@ import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import {
   assistDarkReasonFor,
   claudeSpendUsdBetween,
+  MAX_CALLS_IN_FLIGHT,
+  reservedMicroUsd,
   runAssist,
   shopClaudeSpendMicroUsd,
 } from "./assists";
@@ -137,6 +140,102 @@ describe("runAssist", () => {
       }),
     ).toBeNull();
     expect(provider.requests).toHaveLength(0);
+  });
+
+  it("runs at most two calls at once for one shop, however many are fired together", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let started = 0;
+    const provider = {
+      requests: [] as unknown[],
+      async createMessage() {
+        started += 1;
+        await gate;
+        return fakeClaudeMessage({ text: JSON.stringify({ draft: "ok" }) });
+      },
+    };
+    const runs = Array.from({ length: 10 }, () =>
+      runAssist(ctx.db, {
+        shopId: ctx.shop.id,
+        feature: "inbox_draft",
+        call,
+        provider,
+        env: keyed,
+        now,
+      }),
+    );
+    // Let every reservation settle before the provider answers.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    release();
+    const values = await Promise.all(runs);
+    expect(started).toBe(MAX_CALLS_IN_FLIGHT);
+    expect(values.filter((value) => value !== null)).toHaveLength(MAX_CALLS_IN_FLIGHT);
+    const rows = await ctx.db.select().from(claudeUsage).where(eq(claudeUsage.shopId, ctx.shop.id));
+    expect(rows.map((row) => row.outcome)).toEqual(["ok", "ok"]);
+  });
+
+  it("refuses a call whose reservation would cross the cap, before sending it", async () => {
+    const reserve = reservedMicroUsd(call);
+    await spend(ctx.shop.id, 15_000_000 - reserve + 1, new Date("2026-10-02T00:00:00.000Z"));
+    const provider = replying("unused");
+    expect(
+      await runAssist(ctx.db, {
+        shopId: ctx.shop.id,
+        feature: "inbox_draft",
+        call,
+        provider,
+        env: keyed,
+        now,
+      }),
+    ).toBeNull();
+    expect(provider.requests).toHaveLength(0);
+  });
+
+  it("charges at least the reservation for a call that failed after it may have been billed", async () => {
+    const provider = fakeClaude({
+      reply: () => {
+        throw new Anthropic.APIConnectionTimeoutError();
+      },
+    });
+    expect(
+      await runAssist(ctx.db, {
+        shopId: ctx.shop.id,
+        feature: "inbox_draft",
+        call,
+        provider,
+        env: keyed,
+        now,
+      }),
+    ).toBeNull();
+    const [row] = await ctx.db
+      .select()
+      .from(claudeUsage)
+      .where(eq(claudeUsage.shopId, ctx.shop.id));
+    expect(row).toMatchObject({ outcome: "error", errorCode: "timeout" });
+    expect(row?.costMicroUsd).toBe(reservedMicroUsd(call));
+  });
+
+  it("charges nothing extra for a call the API refused outright", async () => {
+    const provider = fakeClaude({
+      reply: () => {
+        throw new Anthropic.BadRequestError(400, undefined, "bad", new Headers());
+      },
+    });
+    await runAssist(ctx.db, {
+      shopId: ctx.shop.id,
+      feature: "inbox_draft",
+      call,
+      provider,
+      env: keyed,
+      now,
+    });
+    const [row] = await ctx.db
+      .select()
+      .from(claudeUsage)
+      .where(eq(claudeUsage.shopId, ctx.shop.id));
+    expect(row).toMatchObject({ outcome: "error", errorCode: "http_400", costMicroUsd: 0 });
   });
 
   it("refuses a feature key that is not a code", async () => {

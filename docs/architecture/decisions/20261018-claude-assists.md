@@ -31,7 +31,9 @@ diver without a staff tap, and publishes nothing; every feature works identicall
   counts, cost in micro-USD at list price). It holds no prompt, answer or person. The cron's
   `anthropic_spend` ceiling ($200 a month, alert-only) sums it across shops.
 - **Websites**: read through the server-side `web_fetch` tool restricted by `allowed_domains` to the
-  host the owner pasted (`webFetchTool`); DiveDay's servers never fetch it.
+  exact host the owner pasted (`webFetchTool`); a registry or a builder's shared root (`co.uk`,
+  `wixsite.com`) is refused, since the allowance covers every subdomain. DiveDay's servers never
+  fetch it.
 - **Screen**: one pattern, `AssistDraftButton`: a quiet button that fills a field for editing,
   rendered only when `assistsAvailable` is true.
 
@@ -47,8 +49,12 @@ diver without a staff tap, and publishes nothing; every feature works identicall
 ## Consequences
 
 Later layers add a prompt, a schema, a feature code and an action; the gate, ledger and UI are
-shared. Shop data now reaches Anthropic, which needs a privacy-policy subprocessor entry and a
-confirmed retention setting before a pilot shop turns it on (human-task issue). Cost is read from
-our own price table, so a price change needs `models.ts` updated. The cap is checked before a call
-and recorded after, so concurrent calls can overshoot by one call. Leaving: remove the callers and
+shared. Shop data now reaches Anthropic, and the switch is on by default, so the key is the gate:
+the privacy-policy subprocessor entry and a confirmed retention setting come before
+`ANTHROPIC_API_KEY` is set in production (human-task issue #2836 orders them that way). Cost is read
+from our own price table, Haiku's long-prompt rate included, so a price change needs `models.ts`
+updated. Each call reserves its likely cost under a per-shop lock before it is sent, and a shop has
+at most two calls in flight, so concurrent calls overshoot the cap only by how far a call exceeds its
+reservation; a call that may have been billed and failed is charged its reservation. Prompt modules
+never import medical readers (`check:assist-prompts`). Leaving: remove the callers and
 `src/lib/claude/`; every feature already works dark, and `claude_usage` can be dropped.

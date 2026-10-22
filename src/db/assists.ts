@@ -1,4 +1,4 @@
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, gt, gte, lt, sql } from "drizzle-orm";
 import type { z } from "zod";
 import {
   type AssistDarkReason,
@@ -6,13 +6,18 @@ import {
   externalHttpDisabled,
   shopMonthlyCapMicroUsd,
 } from "@/lib/claude/dark";
+import {
+  CLAUDE_MODELS,
+  type ClaudeModel,
+  MODEL_PRICES_MICRO_USD_PER_TOKEN,
+} from "@/lib/claude/models";
 import { type ClaudeProvider, claudeProviderFromEnv } from "@/lib/claude/provider";
 import {
   callStructured,
   type StructuredCall,
   type StructuredResult,
 } from "@/lib/claude/structured";
-import { nowDate } from "@/lib/clock";
+import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { periodBounds } from "@/lib/cost-guardrails";
 import { log } from "@/lib/log";
 import type { AppDb } from "./client";
@@ -29,10 +34,22 @@ import { claudeUsage, shops } from "./schema";
  * sent is the caller's prompt; what is kept here is codes and token counts
  * only (`claude_usage`, `src/db/schema/assists.ts`).
  *
- * The cap is checked before the call and the spend recorded after, so two
- * calls racing at the line can both run: the overshoot is one call, cents at
- * most, and the next is refused. A lock would cost every call a round trip to
- * save less than that.
+ * **The cap holds under concurrency** (security review N3). Before a call is
+ * sent, a short transaction takes a per-shop advisory lock, sums the month's
+ * spend *including calls still in flight*, and writes the call's row as
+ * `pending` carrying a reserved cost: the most the call could plausibly
+ * cost ({@link reservedMicroUsd}). It refuses when the reservation would cross
+ * the cap, or when {@link MAX_CALLS_IN_FLIGHT} calls for this shop are already
+ * out. So N racing calls cannot all pass a check none of them has paid for
+ * yet; the overshoot is bounded by how far a real call can exceed its
+ * reservation, not by how many calls a client fires at once.
+ *
+ * After the call the row is settled to what the call actually cost. A row
+ * that is never settled (the process died, the update failed) keeps its
+ * reservation, so a lost row costs the shop its estimate rather than costing
+ * DiveDay a free call (N6). A call that failed after Anthropic may have
+ * billed it (timeout, dropped connection, 5xx) is charged at least its
+ * reservation for the same reason.
  */
 
 export type AssistEnvironment = Readonly<Record<string, string | undefined>>;
@@ -135,24 +152,139 @@ export async function assistsAvailable(
   return (await assistDarkReasonFor(db, shopId, options)) === null;
 }
 
-async function recordClaudeUsage(
+/** How many calls one shop may have out at once; a third waits for none and is refused. */
+export const MAX_CALLS_IN_FLIGHT = 2;
+
+/**
+ * How long a `pending` row counts as in flight. Past the provider's timeout
+ * and its one retry, a row still pending is a call that will never settle:
+ * it stops blocking the shop, and keeps charging its reservation.
+ */
+export const IN_FLIGHT_WINDOW_MS = 5 * MINUTE_MS;
+
+/** What a reservation assumes a call reads: a message and its context, or a few fetched pages. */
+const RESERVED_INPUT_TOKENS = 20_000;
+const RESERVED_TOOL_INPUT_TOKENS = 200_000;
+const DEFAULT_RESERVED_OUTPUT_TOKENS = 8_000;
+
+/**
+ * The most a call is expected to cost, held against the cap while it runs: a
+ * full answer at `maxTokens`, plus a generous prompt (larger when it may use
+ * server tools such as `web_fetch`, whose pages are re-sent on each turn).
+ */
+export function reservedMicroUsd(call: StructuredCall<z.ZodType>): number {
+  const model: ClaudeModel = CLAUDE_MODELS[call.model];
+  const price = MODEL_PRICES_MICRO_USD_PER_TOKEN[model];
+  const input = call.tools?.length ? RESERVED_TOOL_INPUT_TOKENS : RESERVED_INPUT_TOKENS;
+  const output = call.maxTokens ?? DEFAULT_RESERVED_OUTPUT_TOKENS;
+  return Math.ceil(input * price.input + output * price.output);
+}
+
+/** An error code a provider may still have billed: the request reached it, the answer did not reach us. */
+function mayHaveBilled(errorCode: string | undefined): boolean {
+  return (
+    errorCode === "timeout" ||
+    errorCode === "connection" ||
+    errorCode === "unknown" ||
+    /^http_5\d\d$/.test(errorCode ?? "")
+  );
+}
+
+/**
+ * One reservation at a time per shop within this process. The advisory lock
+ * below is what serialises reservations across server instances; it does
+ * nothing between two transactions on one connection (an advisory lock is
+ * re-entrant for its session, which is how a test database and a single
+ * pooled connection both behave), so this chain covers that case.
+ */
+const reservationQueues = new Map<string, Promise<unknown>>();
+
+function oneAtATime<T>(key: string, run: () => Promise<T>): Promise<T> {
+  const previous = reservationQueues.get(key) ?? Promise.resolve();
+  const next = previous.then(run, run);
+  const settled = next.catch(() => undefined);
+  reservationQueues.set(key, settled);
+  void settled.then(() => {
+    if (reservationQueues.get(key) === settled) reservationQueues.delete(key);
+  });
+  return next;
+}
+
+/**
+ * Takes this shop's lock, and writes the call's `pending` row when its
+ * reservation fits under the cap and the shop has room for another call in
+ * flight. The row's id, or null when the call must not run.
+ */
+async function reserveClaudeCall(
   db: AppDb,
-  shopId: string,
-  feature: string,
+  input: { shopId: string; feature: string; model: ClaudeModel; reserve: number; now: Date },
+  capMicroUsd: number,
+): Promise<string | null> {
+  return oneAtATime(input.shopId, () =>
+    db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext('claude_usage'), hashtext(${input.shopId}))`,
+      );
+      const { start, end } = periodBounds("calendar_month", input.now);
+      const [month] = await tx
+        .select({ total: sql<string | null>`sum(${claudeUsage.costMicroUsd})` })
+        .from(claudeUsage)
+        .where(
+          and(
+            eq(claudeUsage.shopId, input.shopId),
+            gte(claudeUsage.createdAt, start),
+            lt(claudeUsage.createdAt, end),
+          ),
+        );
+      const [flying] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(claudeUsage)
+        .where(
+          and(
+            eq(claudeUsage.shopId, input.shopId),
+            eq(claudeUsage.outcome, "pending"),
+            gt(claudeUsage.createdAt, new Date(input.now.getTime() - IN_FLIGHT_WINDOW_MS)),
+          ),
+        );
+      const spent = Number(month?.total ?? 0);
+      if (!Number.isFinite(spent) || spent + input.reserve > capMicroUsd) return null;
+      if ((flying?.count ?? 0) >= MAX_CALLS_IN_FLIGHT) return null;
+      const [row] = await tx
+        .insert(claudeUsage)
+        .values({
+          shopId: input.shopId,
+          feature: input.feature,
+          model: input.model,
+          outcome: "pending",
+          costMicroUsd: input.reserve,
+          createdAt: input.now,
+        })
+        .returning({ id: claudeUsage.id });
+      return row?.id ?? null;
+    }),
+  );
+}
+
+/** Settles a call's row to what it actually cost. */
+async function settleClaudeUsage(
+  db: AppDb,
+  usageId: string,
+  reserve: number,
   result: StructuredResult<unknown>,
 ): Promise<void> {
-  await db.insert(claudeUsage).values({
-    shopId,
-    feature,
-    model: result.model,
-    outcome: result.outcome,
-    errorCode: result.errorCode ?? null,
-    inputTokens: result.usage.inputTokens,
-    cacheWriteTokens: result.usage.cacheWriteTokens,
-    cacheReadTokens: result.usage.cacheReadTokens,
-    outputTokens: result.usage.outputTokens,
-    costMicroUsd: result.costMicroUsd,
-  });
+  const billedFloor = result.outcome === "error" && mayHaveBilled(result.errorCode) ? reserve : 0;
+  await db
+    .update(claudeUsage)
+    .set({
+      outcome: result.outcome,
+      errorCode: result.errorCode ?? null,
+      inputTokens: result.usage.inputTokens,
+      cacheWriteTokens: result.usage.cacheWriteTokens,
+      cacheReadTokens: result.usage.cacheReadTokens,
+      outputTokens: result.usage.outputTokens,
+      costMicroUsd: Math.max(result.costMicroUsd, billedFloor),
+    })
+    .where(eq(claudeUsage.id, usageId));
 }
 
 export type RunAssistInput<S extends z.ZodType> = AssistOptions & {
@@ -180,8 +312,24 @@ export async function runAssist<S extends z.ZodType>(
     }
     const provider = providerFor(input);
     if (!provider) return null;
+    const reserve = reservedMicroUsd(input.call);
+    const usageId = await reserveClaudeCall(
+      db,
+      {
+        shopId,
+        feature,
+        model: CLAUDE_MODELS[input.call.model],
+        reserve,
+        now: input.now ?? nowDate(),
+      },
+      shopMonthlyCapMicroUsd(input.env ?? process.env),
+    );
+    if (!usageId) {
+      log("claude_assist.dark", "info", { feature, reason: "over_cap" });
+      return null;
+    }
     const result = await callStructured(provider, input.call);
-    await recordClaudeUsage(db, shopId, feature, result);
+    await settleClaudeUsage(db, usageId, reserve, result);
     log("claude_assist.call", result.outcome === "error" ? "warn" : "info", {
       feature,
       model: result.model,

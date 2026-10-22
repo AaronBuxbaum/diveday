@@ -94,6 +94,7 @@ const checks = [
   ["redirect-slugs", "check-redirect-slugs.mjs"],
   ["capability-refusals", "check-capability-refusals.mjs"],
   ["intl-providers", "check-intl-providers.mjs"],
+  ["assist-prompts", "check-assist-prompts.mjs"],
 ];
 
 function runCheck(label, scriptFile) {
