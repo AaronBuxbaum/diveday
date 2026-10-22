@@ -17,6 +17,7 @@ test.describe("the dive arrival arc", () => {
   test("carries arrival facts, party help, and the staff hand-off", async ({ page }) => {
     test.setTimeout(60_000);
     const title = `Arrival Arc ${e2eNow().getTime()}`;
+    const helperName = "Marcus Webb";
 
     await createTrip(page, {
       title,
@@ -38,6 +39,11 @@ test.describe("the dive arrival arc", () => {
 
     await page.goto(staffTripPath);
     await openTripAbout(page);
+    // Help can only promise someone assigned to this departure. A newly
+    // created trip has no crew, so roster the helper before the diver asks.
+    await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
+    await page.getByLabel("Assign crew").selectOption({ label: helperName });
+    await expect(page.getByRole("button", { name: `Unassign ${helperName}` })).toBeVisible();
     await page.getByText("Edit details", { exact: true }).click();
     await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
     await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
@@ -108,9 +114,8 @@ test.describe("the dive arrival arc", () => {
     await expect(helpRow.getByText("Asked for help: carry gear.")).toBeVisible();
     await helpRow.getByRole("button", { name: "Arrange help" }).click();
     const crew = helpRow.getByLabel("Crew member");
-    const helperName = await crew.locator("option").nth(1).textContent();
-    expect(helperName).toBeTruthy();
-    await crew.selectOption({ label: helperName ?? "" });
+    await expect(crew.locator("option").filter({ hasText: helperName })).toHaveText(helperName);
+    await crew.selectOption({ label: helperName });
     await helpRow.getByRole("button", { name: "Confirm helper" }).click();
     await expect(
       helpRow.getByText(`${helperName} will help with carry gear.`, { exact: true }),

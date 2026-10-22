@@ -6,15 +6,26 @@ import { expect, makeActivitySafe, test } from "./fixtures";
 const diver = diverTranslator("en-US");
 const staff = staffTranslator("en-US");
 
+// PADI Rescue Diver has a seeded future session; SDI Rescue is catalog-only.
 const cases = [
-  { name: "no sessions and no contact details", slug: "rescue-diver", phone: "", scheduled: false },
+  {
+    name: "no sessions and no contact details",
+    slug: "sdi-rescue-diver",
+    phone: "",
+    scheduled: false,
+  },
   {
     name: "a scheduled session and no email",
     slug: "open-water-diver",
     phone: "",
     scheduled: true,
   },
-  { name: "a phone-only shop", slug: "rescue-diver", phone: "+1 305 555 0134", scheduled: false },
+  {
+    name: "a phone-only shop",
+    slug: "sdi-rescue-diver",
+    phone: "+1 305 555 0134",
+    scheduled: false,
+  },
 ];
 
 for (const scenario of cases) {

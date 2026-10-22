@@ -1156,7 +1156,7 @@ test("the signed records search by diver and narrow to medical holds", async ({ 
     "true",
   );
   await expect(rows).toHaveCount(fullListCount);
-  await expect(pager).toHaveText(fullPagerText);
+  await expect(pager).toHaveText(fullPagerText, { useInnerText: true });
 });
 
 /**

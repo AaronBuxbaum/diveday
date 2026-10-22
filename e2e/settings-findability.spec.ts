@@ -171,11 +171,13 @@ test.describe("settings that change the shop", () => {
     // the shop profile is one.
     test.setTimeout(60_000);
     // From inside a setting: on the hub itself the page is the map.
-    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/shop/${privateShop.slug}/settings/email`);
     const rail = page.getByRole("navigation", { name: "Settings sections" });
     await rail.getByRole("link", { name: "Shop profile & branding" }).click();
     await expect(page).toHaveURL(new RegExp(`/shop/${privateShop.slug}/settings/profile$`));
+    // The rail belongs to desktop; the profile and saved-page keyboard path
+    // below exercise the phone after that real rail navigation has landed.
+    await page.setViewportSize({ width: 390, height: 844 });
 
     const tagline = page.getByLabel("Tagline");
     await expect(tagline).toBeVisible();

@@ -126,7 +126,15 @@ test.describe("ask to move", () => {
     await expect(ask.getByText("Any Saturday in August")).toBeVisible();
     await ask.getByRole("button", { name: "More for the message from Rafa Ortiz" }).click();
     await page.getByRole("button", { name: "Mark done", exact: true }).click();
-    await ask.getByRole("button", { name: "More for the message from Rafa Ortiz" }).click();
+    // The returned row moves groups and remounts its menu. Wait for that
+    // committed state before opening it, or the old menu closes the new one.
+    const doneAsk = page
+      .getByRole("heading", { name: "Done", exact: true })
+      .locator("..")
+      .getByRole("listitem")
+      .filter({ hasText: "Rafa Ortiz" });
+    await expect(doneAsk).toBeVisible();
+    await doneAsk.getByRole("button", { name: "More for the message from Rafa Ortiz" }).click();
     await expect(
       page.getByRole("button", { name: "Move back to waiting", exact: true }),
     ).toBeVisible();

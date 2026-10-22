@@ -5880,7 +5880,9 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "team-member-credentials-open", scheme, {
           beforeShot: async () => {
             const summary = credentials.locator("summary");
-            const label = summary.locator(":scope > span").first();
+            const label = summary.getByText(staffCopy("staffing.credentials.heading"), {
+              exact: true,
+            });
             const value = summary.locator(":scope > span").last();
             await expect(label).toContainText("Credentials");
             await expect(value).toContainText("Emergency First Response");
@@ -7884,7 +7886,8 @@ test.describe("light mode — course date requests without a shop email", () => 
       page.getByText(staffCopy("settings.main.notice.contactSaved"), { exact: true }),
     ).toBeVisible();
 
-    await page.goto(`/s/${privateShop.slug}/courses/rescue-diver`);
+    // PADI Rescue has a seeded session; this catalog-only course proves the empty state.
+    await page.goto(`/s/${privateShop.slug}/courses/sdi-rescue-diver`);
     await expect(page.getByText(diverCopy("course.noDatesLead"), { exact: false })).toBeVisible();
     await expect(page.getByRole("region", { name: diverCopy("inquiry.getInTouch") })).toBeVisible();
     await capture(page, "course-request-no-email", "light");
@@ -7922,6 +7925,16 @@ test.describe("capture harness", () => {
         });
         await test.step("fresh desktop overview", async () => {
           await page.setViewportSize(VIEWPORTS[1]);
+          // This independent overview must not restore the preceding phone camera.
+          const savedViewportKeys = await page.evaluate((view) => {
+            return Object.keys(sessionStorage).filter(
+              (key) => key.startsWith("diveday:map:") && key.endsWith(`:${view}`),
+            );
+          }, surface.name);
+          expect(savedViewportKeys).toHaveLength(1);
+          await page.evaluate((keys) => {
+            for (const key of keys) sessionStorage.removeItem(key);
+          }, savedViewportKeys);
           await page.reload();
           await surface.ready(page);
           await expectOverviewMapSites(page, surface.pins);

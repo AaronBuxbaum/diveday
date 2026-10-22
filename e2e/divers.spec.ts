@@ -126,7 +126,8 @@ test("later booking departures keep the selected diver and the picker open", asy
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
   await expect(picker).toBeVisible();
   await expect(picker).toHaveValue("");
-  await expect(page.locator('input[name="personId"]')).toHaveValue(personId ?? "");
+  const bookingForm = page.locator("form").filter({ has: picker });
+  await expect(bookingForm.locator('input[name="personId"]')).toHaveValue(personId ?? "");
   const laterIds = await picker
     .locator("option[value]:not([value=''])")
     .evaluateAll((options) => options.map((option) => option.getAttribute("value")));
