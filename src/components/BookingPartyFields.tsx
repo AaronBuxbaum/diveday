@@ -503,14 +503,15 @@ function UnderEighteenChoice({ index }: { index: number }) {
   return (
     <ChoicePill
       type="checkbox"
-      size="md"
-      field
+      size="field"
       name={`minor-${index}`}
       checked={checked}
       onChange={(event) => setChecked(event.target.checked)}
     >
       {t("party.under18")}
-      {checked ? <span className="block text-sm font-normal text-muted">{t("party.under18Hint")}</span> : null}
+      {checked ? (
+        <span className="block text-sm font-normal text-muted">{t("party.under18Hint")}</span>
+      ) : null}
     </ChoicePill>
   );
 }

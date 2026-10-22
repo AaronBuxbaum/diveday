@@ -887,16 +887,9 @@ export function ChoicePill({
   aside,
   className = "",
   children,
-  field = false,
   ...input
-}: ChoiceProps & {
-  size?: "sm" | "md";
-  aside?: ReactNode;
-  /** A lone box among text inputs, drawn in their border and height so it reads as one of them. */
-  field?: boolean;
-}) {
-  const edge = field ? "min-h-12 border-border-strong" : "min-h-11 border-border";
-  const pill = `rounded-lg border ${edge} bg-surface transition-colors ${CHOICE_PILL_HOVER} ${CHOICE_PILL_CHOSEN} ${size === "md" ? "text-base" : "text-sm"}`;
+}: ChoiceProps & { size?: "sm" | "md" | "field"; aside?: ReactNode }) {
+  const pill = `rounded-lg border ${size === "field" ? "min-h-12 border-border-strong" : "min-h-11 border-border"} bg-surface transition-colors ${CHOICE_PILL_HOVER} ${CHOICE_PILL_CHOSEN} ${size === "sm" ? "text-sm" : "text-base"}`;
   const row = "grid cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-2 py-2";
   const ring = type === "radio" ? ` ${radioRingClass}` : "";
   if (aside === undefined || aside === null || aside === false) {
