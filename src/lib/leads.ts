@@ -1,9 +1,9 @@
+import type { DiveSpecialty } from "@/db/schema";
 import {
   type CertificationLevel,
   type CertRequirementSource,
   certificationRank,
 } from "./readiness";
-import type { DiveSpecialty } from "@/db/schema";
 import { requirementDemandsNothing } from "./requirement";
 
 /**

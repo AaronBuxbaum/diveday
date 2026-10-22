@@ -395,7 +395,10 @@ describe("isRecipientEligibleForDeal & filterEligibleLastMinuteRecipients", () =
     expect(isRecipientEligibleForDeal(ow, enrichedAir)).toBe(false);
     expect(
       isRecipientEligibleForDeal(
-        { ...ow, certification: { level: "open_water", noCertificationDeclared: false, nitrox: true } },
+        {
+          ...ow,
+          certification: { level: "open_water", noCertificationDeclared: false, nitrox: true },
+        },
         enrichedAir,
       ),
     ).toBe(true);

@@ -1,12 +1,12 @@
 import {
   and,
   eq,
+  exists,
   gt,
   inArray,
   isNotNull,
   isNull,
   ne,
-  exists,
   not,
   notExists,
   notInArray,
@@ -283,9 +283,7 @@ export async function offerSeats(
   }
   // Nobody already holding a seat on this departure is offered one, whatever id
   // was posted: the panel hides them, and the server does not rely on it.
-  const aboard = new Set(
-    tripRow ? await seatedPersonIds(db, input.shopId, tripRow.id) : [],
-  );
+  const aboard = new Set(tripRow ? await seatedPersonIds(db, input.shopId, tripRow.id) : []);
   const targets = leadIds.filter((id) => {
     const lead = byId.get(id);
     if (!lead || (lead.personId && aboard.has(lead.personId))) return false;

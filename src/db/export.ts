@@ -905,7 +905,9 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   // A wait-list row names a departure the diver holds no seat on, so its title
   // and time are read here: the lookup above covers only the diver's bookings.
   const leadTripIds = [
-    ...new Set(leadRows.flatMap((row) => (row.tripId && !tripTitle.has(row.tripId) ? [row.tripId] : []))),
+    ...new Set(
+      leadRows.flatMap((row) => (row.tripId && !tripTitle.has(row.tripId) ? [row.tripId] : [])),
+    ),
   ];
   if (leadTripIds.length > 0) {
     const leadTrips = await tx

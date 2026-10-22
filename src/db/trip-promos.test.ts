@@ -215,10 +215,11 @@ describe("the deal: an offer with a discount (in-memory PGlite)", () => {
       shopId: shop.id,
       fullName: "Wren Ostrowski",
       email: "wren@example.com",
-      declaration: { level: "advanced_open_water" as const, noCertification: false, nitrox: false },
+      declaration: { level: "advanced_open_water" as const, noCertification: false, nitrox: true },
     });
-    // The Spiegel Grove asks for a Deep card as well as the rung, and the deal
-    // reaches only a diver who holds it (dive-domain review of #2656, m1).
+    // The Spiegel Grove asks for a Deep card and an enriched-air card as well
+    // as the rung, and the deal reaches only a diver who holds them
+    // (dive-domain review of #2656, m1).
     const [wren] = await db.select().from(people).where(eq(people.email, "wren@example.com"));
     if (!wren) throw new Error("expected Wren's record");
     await db.insert(specialtyCertifications).values({

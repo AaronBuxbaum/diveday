@@ -103,7 +103,9 @@ describe("an unsubscribe from the last-minute list", () => {
       fakePromotions(),
     );
     expect(deal.results).toEqual([{ leadId: joined.leadId, delivery: "sent" }]);
-    expect(await unsubscribeAnytimeLeadByToken(db, { token: tokenOf(offered()[0]) })).not.toBeNull();
+    expect(
+      await unsubscribeAnytimeLeadByToken(db, { token: tokenOf(offered()[0]) }),
+    ).not.toBeNull();
     const [child] = await db
       .select()
       .from(leads)
@@ -259,7 +261,12 @@ describe("invitableSeats and the deal", () => {
     const parents = await db
       .insert(leads)
       .values(
-        listed.map((person) => ({ shopId: shop.id, scope: "anytime" as const, askedBy: "diver" as const, personId: person.id })),
+        listed.map((person) => ({
+          shopId: shop.id,
+          scope: "anytime" as const,
+          askedBy: "diver" as const,
+          personId: person.id,
+        })),
       )
       .returning({ id: leads.id, personId: leads.personId });
     const now = nowDate();
@@ -296,7 +303,10 @@ describe("a held offer rechecks its departure when it fires", () => {
   it.each([
     ["cancelled", { status: "cancelled" as const }],
     ["on a conditions hold", { conditionsHold: true }],
-    ["already gone", { startsAt: new Date("2020-01-01T08:00:00Z"), endsAt: new Date("2020-01-01T12:00:00Z") }],
+    [
+      "already gone",
+      { startsAt: new Date("2020-01-01T08:00:00Z"), endsAt: new Date("2020-01-01T12:00:00Z") },
+    ],
   ])("offers nobody on a departure %s, and stamps nothing", async (_label, change) => {
     const { db, shop, trip } = await context();
     await askAnytime(db, { shopId: shop.id, ...ana, declaration: openWater });

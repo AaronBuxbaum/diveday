@@ -159,21 +159,69 @@ describe("the export bundle, pinned", () => {
       .groupBy(people.id, people.email)
       .orderBy(desc(count(bookings.id)), people.fullName)
       .limit(1);
-    const [trip] = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shop.id)).orderBy(desc(trips.startsAt)).limit(1);
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .orderBy(desc(trips.startsAt))
+      .limit(1);
     if (!diver || !trip) throw new Error("seeded diver or trip missing");
     const askedAt = new Date("2026-05-01T12:00:00Z");
     const [own, stranger] = await db
       .insert(leads)
       .values([
-        { shopId: shop.id, scope: "date", askedBy: "diver", personId: diver.id, interest: "wrecks", email: diver.email, askedAt },
-        { shopId: shop.id, scope: "date", askedBy: "diver", interest: "reef", name: "Stranger Sam", email: "sam@example.com", askedAt },
+        {
+          shopId: shop.id,
+          scope: "date",
+          askedBy: "diver",
+          personId: diver.id,
+          interest: "wrecks",
+          email: diver.email,
+          askedAt,
+        },
+        {
+          shopId: shop.id,
+          scope: "date",
+          askedBy: "diver",
+          interest: "reef",
+          name: "Stranger Sam",
+          email: "sam@example.com",
+          askedAt,
+        },
       ])
       .returning({ id: leads.id });
     if (!own || !stranger) throw new Error("date leads missing");
     await db.insert(leads).values([
-      { shopId: shop.id, scope: "departure", askedBy: "diver", tripId: trip.id, personId: diver.id, partySize: 2, askedAt },
-      { shopId: shop.id, scope: "anytime", askedBy: "diver", personId: diver.id, availableFrom: "2026-06-01", askedAt, closedAt: askedAt, closedAs: "unsubscribed" },
-      { shopId: shop.id, scope: "departure", askedBy: "diver", tripId: trip.id, parentLeadId: stranger.id, name: "Stranger Sam", email: "sam@example.com", partySize: 1, askedAt },
+      {
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        personId: diver.id,
+        partySize: 2,
+        askedAt,
+      },
+      {
+        shopId: shop.id,
+        scope: "anytime",
+        askedBy: "diver",
+        personId: diver.id,
+        availableFrom: "2026-06-01",
+        askedAt,
+        closedAt: askedAt,
+        closedAs: "unsubscribed",
+      },
+      {
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        parentLeadId: stranger.id,
+        name: "Stranger Sam",
+        email: "sam@example.com",
+        partySize: 1,
+        askedAt,
+      },
     ]);
 
     const input = await loadDiverExportBundleInput(db, shop.id, diver.id);
@@ -183,6 +231,8 @@ describe("the export bundle, pinned", () => {
     expect(table.rows).toHaveLength(3);
     expect(table.header).not.toContain("closed_as");
     expect(file?.text).not.toContain("Stranger Sam");
-    await expect(`${file?.text}\n`).toMatchFileSnapshot("./__snapshots__/export-bundle.diver-leads.snap");
+    await expect(`${file?.text}\n`).toMatchFileSnapshot(
+      "./__snapshots__/export-bundle.diver-leads.snap",
+    );
   });
 });
