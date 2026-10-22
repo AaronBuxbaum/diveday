@@ -205,6 +205,12 @@ export async function seedWeeklyRun(
       }
       if (unfilled) {
         const guides = roster.filter((entry) => entry.tripRole === "divemaster").length;
+        // No guide free at all: nothing to sell, so the date is called off
+        // like a captainless one (capacity 0 breaks trips_capacity_range).
+        if (guides === 0) {
+          calledOff.push(trip.id);
+          continue;
+        }
         await db
           .update(trips)
           .set({ capacity: guideSeats(guides) })
