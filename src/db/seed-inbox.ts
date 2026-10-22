@@ -1,6 +1,7 @@
+import { eq } from "drizzle-orm";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import { inboundMessages, inboxSavedAnswers, type people, staffReplies } from "./schema";
+import { inboundMessages, type people, shops, staffReplies } from "./schema";
 import { hoursFromNow } from "./seed-clock";
 
 /**
@@ -109,22 +110,14 @@ export async function seedInbox(
     },
   ]);
 
-  // Two saved answers, so the composer's chips have something to offer in a
-  // demo and a capture (fifth loop, item 15). The second carries both markers.
-  await db.insert(inboxSavedAnswers).values([
-    {
-      shopId,
-      // i18n-exempt: fixture text, the shop's own saved words
-      title: "Parking",
-      // i18n-exempt: fixture text, the shop's own saved words
-      body: "Hi {name}, park behind the shop by the tank racks. The gate opens at 7:15.",
-    },
-    {
-      shopId,
-      // i18n-exempt: fixture text, the shop's own saved words
-      title: "Wetsuit sizes",
-      // i18n-exempt: fixture text, the shop's own saved words
-      body: "We rent 5mm wetsuits in every size, women's cuts too. I'll put one aside for {trip}.",
-    },
-  ]);
+  // The shop's notes for Claude's reply drafts, so a demo of the draft and a
+  // capture of the Inbox have something to read (Aaron, 2026-10-22).
+  await db
+    .update(shops)
+    .set({
+      replyNotes:
+        // i18n-exempt: fixture text, the shop's own notes
+        "Park behind the shop by the tank racks. The gate opens at 7:15.\nWe rent 5mm wetsuits in every size, women's cuts too.",
+    })
+    .where(eq(shops.id, shopId));
 }

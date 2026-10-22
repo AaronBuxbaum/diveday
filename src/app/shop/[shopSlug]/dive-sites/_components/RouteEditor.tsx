@@ -15,7 +15,6 @@ import {
   type RoutePoint,
   routePathD,
 } from "@/lib/dive-site-route";
-import { osmCoordsEmbedUrl } from "@/lib/maps";
 
 export type RouteEditorCopy = {
   /** Shown instead of the map when the site has no coordinates yet. */
@@ -122,7 +121,6 @@ export function RouteEditor({
     };
   }, []);
 
-  const query = coordinates ? `${coordinates.lat},${coordinates.lng}` : null;
   const full = points.length >= MAX_ROUTE_POINTS;
 
   function addPoint(event: React.MouseEvent<HTMLButtonElement>) {
@@ -149,20 +147,20 @@ export function RouteEditor({
       <input type="hidden" name="routePoints" value={JSON.stringify(points)} />
       <input type="hidden" name="routeZoom" value={zoom} />
 
-      {query ? (
+      {coordinates ? (
         <>
           <div className="overflow-hidden rounded-lg border border-border">
             {/* Never interactive: a panned map is a route drawn against a frame
-                the briefing cannot reproduce. See the note above. `MapEmbed`
-                also crops Google's own controls out of the window — a staffer
+                the briefing cannot reproduce. See the note above. A staffer
                 clicking a waypoint here is fixing a percentage of this box, so
                 the frame has to stay exactly the one the percentages were
-                measured against. */}
+                measured against (`MapEmbed`). */}
             <MapEmbed
               title={copy.mapAriaLabel}
-              src={osmCoordsEmbedUrl(query, zoom)}
+              latitude={coordinates.lat}
+              longitude={coordinates.lng}
+              zoom={zoom}
               className="h-[calc(18rem+4rem)]"
-              showAttribution
             >
               {/* The click surface sits over the whole frame. A `<button>`
                   rather than a bare div so it is a real control with a name,

@@ -726,22 +726,6 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
-      "CARTO basemap API key for client-rendered dive site maps (src/components/map/SiteMap.tsx).",
-      "Passed to CARTO basemaps.cartocdn.com tile requests via ?key=. Without a key,",
-      "CARTO returns tiles with an 'API Key Required' watermark.",
-    ],
-    keys: [
-      {
-        key: "NEXT_PUBLIC_CARTO_API_KEY",
-        from: "manual",
-        targets: LOCAL_AND_VERCEL,
-        absent:
-          "CARTO tiles load without key parameter and may display the API Key Required watermark",
-      },
-    ],
-  },
-  {
-    doc: [
       "Scheduled pre-trip reminders (ADR 20260721-scheduled-reminder-cadence). Vercel",
       "Cron calls GET /api/cron/reminders daily with this as a bearer token (the Hobby",
       "plan caps crons at daily; the cadence buckets are >=24h wide so a daily run",

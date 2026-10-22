@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "b76e340f-6beb-4939-b150-6977b60fcbd9",
+  "id": "849c32a4-4573-4f64-81ef-ef44c76f3e02",
   "prevIds": [
     "5854b371-bac6-4e35-85d7-234846710e7b"
   ],
@@ -1791,12 +1791,6 @@
     {
       "isRlsEnabled": false,
       "name": "interests",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "email_bounces",
       "entityType": "tables",
       "schema": "public"
     },
@@ -7449,6 +7443,19 @@
       "generated": null,
       "identity": null,
       "name": "rental_terms",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "reply_notes",
       "entityType": "columns",
       "schema": "public",
       "table": "shops"
@@ -17007,188 +17014,6 @@
       "entityType": "columns",
       "schema": "public",
       "table": "interests"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "provider_message_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "event",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "recipient",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "bounce_type",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "bounce_sub_type",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "smtp_status",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "complaint_type",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "kind",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "purpose",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "sent_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "occurred_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "email_bounces"
     },
     {
       "type": "uuid",
@@ -34058,104 +33883,6 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "provider_message_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "recipient",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "event",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": true,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "email_bounces_event_unique",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "occurred_at",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "email_bounces_occurred_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "recipient",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "email_bounces_recipient_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "sent_by_person_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "email_bounces_sent_by_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
           "value": "person_id",
           "isExpression": false,
           "asc": true,
@@ -42898,40 +42625,6 @@
         "id"
       ],
       "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "email_bounces_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "sent_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "SET NULL",
-      "name": "email_bounces_sent_by_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "email_bounces"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "name": "inbound_messages_shop_id_shops_id_fkey",
       "entityType": "fks",
@@ -47088,16 +46781,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "email_bounces_pkey",
-      "schema": "public",
-      "table": "email_bounces",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "inbound_messages_pkey",
       "schema": "public",
       "table": "inbound_messages",
@@ -48752,13 +48435,6 @@
       "entityType": "checks",
       "schema": "public",
       "table": "interests"
-    },
-    {
-      "value": "\"event\" in ('bounce', 'complaint')",
-      "name": "email_bounces_event_check",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "email_bounces"
     },
     {
       "value": "\"purpose\" in ('confirm', 'stop')",

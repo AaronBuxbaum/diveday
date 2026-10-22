@@ -4,11 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAP_REACHABILITY_PROBES } from "@/lib/maps";
 import { MAP_GIVE_UP_MS, MapFrame } from "./MapFrame";
 
+// The map itself is Leaflet's; what is under test is when it may show.
+vi.mock("./map/RouteFrameMap", () => ({
+  RouteFrameMap: ({ title }: { title: string }) => <div role="img" aria-label={title} />,
+}));
+
 /**
  * **A map that cannot load fails silently** (UX review 2026-10-10, item 20).
- * The frame's own `load` fires for the browser's error page as well, so it is
- * the probe image that decides; until it answers, the frame keeps its box and
- * shows nothing.
+ * A tile layer paints whatever arrives, so it is the probe image that decides;
+ * until it answers, the frame keeps its box and shows nothing.
  */
 const probes: { src: string; onload: (() => void) | null; onerror: (() => void) | null }[] = [];
 class FakeImage {
@@ -34,19 +38,23 @@ const answerAll = () => {
   for (const probe of probes) probe.onload?.();
 };
 
-const frame = () =>
-  render(
-    <MapFrame
-      title="Terrain map"
-      src="https://www.openstreetmap.org/export/embed.html"
-      className="h-full"
-      interactive={false}
-    />,
-  ).container.querySelector("iframe") as HTMLIFrameElement;
+const mapFrame = (
+  <MapFrame
+    title="Terrain map"
+    latitude={25.0106}
+    longitude={-80.3756}
+    zoom={16}
+    className="h-full"
+  />
+);
+
+const frame = () => render(mapFrame).container.querySelector("[data-map-state]") as HTMLElement;
 
 describe("MapFrame", () => {
   it("keeps the frame invisible until the provider answers, then shows it", () => {
     const iframe = frame();
+    // The map is mounted once the frame is on screen, under the same box.
+    expect(iframe.querySelector('[role="img"]')).toHaveAttribute("aria-label", "Terrain map");
     expect(iframe).toHaveClass("invisible");
     expect(iframe).toHaveAttribute("aria-hidden", "true");
     expect(probes).toHaveLength(MAP_REACHABILITY_PROBES.length);
@@ -54,28 +62,6 @@ describe("MapFrame", () => {
     act(() => answerAll());
     expect(iframe).not.toHaveClass("invisible");
     expect(iframe).not.toHaveAttribute("aria-hidden");
-  });
-
-  // #2441: the embed needs maps.google.com and www.google.com. With only one of
-  // them reachable the iframe is the browser's error page, so one answer is
-  // not enough and either refusal fails the frame.
-  it("stays invisible until every host the embed needs has answered", () => {
-    const iframe = frame();
-    act(() => probes[0]?.onload?.());
-    expect(iframe).toHaveClass("invisible");
-    expect(iframe).toHaveAttribute("data-map-state", "waiting");
-    act(() => probes[1]?.onload?.());
-    expect(iframe).not.toHaveClass("invisible");
-    expect(iframe).toHaveAttribute("data-map-state", "reachable");
-  });
-
-  it.each([0, 1])("is failed when only probe %i is refused", (refused) => {
-    const iframe = frame();
-    for (const [index, probe] of probes.entries()) {
-      act(() => (index === refused ? probe.onerror?.() : probe.onload?.()));
-    }
-    expect(iframe).toHaveClass("invisible");
-    expect(iframe).toHaveAttribute("data-map-state", "failed");
   });
 
   it("stays invisible when the provider cannot be reached", () => {
@@ -111,14 +97,7 @@ describe("MapFrame", () => {
   it("stops listening for the signal once it is gone from the page", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     const remove = vi.spyOn(window, "removeEventListener");
-    const { unmount } = render(
-      <MapFrame
-        title="Terrain map"
-        src="https://www.openstreetmap.org/export/embed.html"
-        className="h-full"
-        interactive={false}
-      />,
-    );
+    const { unmount } = render(mapFrame);
     unmount();
     expect(remove).toHaveBeenCalledWith("online", expect.any(Function));
   });
@@ -157,9 +136,9 @@ describe("MapFrame", () => {
     expect(iframe).not.toHaveClass("invisible");
   });
 
-  // Issue issue 2013: the frame says which state it is in, so a surface can draw a
-  // quiet line for the one that matters. A cross-origin frame has no reliable
-  // error event: the probe's error and the silence are the only signals.
+  // Issue 2013: the frame says which state it is in, so a surface can draw a
+  // quiet line for the one that matters. A tile that fails says nothing: the
+  // probe's error and the silence are the only signals.
   describe("its state (issue 2013)", () => {
     it("is waiting, then reachable once the provider answers", () => {
       const iframe = frame();

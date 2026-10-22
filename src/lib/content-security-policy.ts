@@ -1,4 +1,5 @@
-import { MAP_REACHABILITY_PROBES } from "./maps";
+import { BASEMAP_TILE_HOSTS } from "./basemap";
+import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "./maps";
 
 /**
  * The app's Content-Security-Policy.
@@ -169,23 +170,26 @@ function mediaRegionalImageHosts(region: string | null | undefined): string[] {
 }
 
 /**
- * The map `/ready`, the public trip page's dive briefing and the staff
- * dive-site editor frame OpenStreetMap export embeds (`src/lib/maps.ts`).
+ * The meeting point's map on `/ready` frames an OpenStreetMap export embed
+ * (`src/lib/maps.ts`).
  */
 const MAP_FRAME_HOSTS = ["https://www.openstreetmap.org"];
 
 /**
- * Public tile servers used by client map views (ADR 20261019-map-centric-dive-sites).
- * CARTO Positron / Voyager raster basemap tiles, plus OpenStreetMap fallbacks.
+ * The basemap's tile host, for every Leaflet map (ADR
+ * 20261019-map-centric-dive-sites, `src/lib/basemap.ts`).
  */
-const MAP_TILE_IMAGE_HOSTS = ["https://*.basemaps.cartocdn.com", "https://tile.openstreetmap.org"];
+const MAP_TILE_IMAGE_HOSTS: readonly string[] = BASEMAP_TILE_HOSTS;
 
 /**
  * The images the route maps may read from a frame host: each probe URL itself,
  * path and all, so an injected `<img>` to any other path on those origins is
  * still a violation (#2441: one per host the embed needs).
  */
-const MAP_PROBE_IMAGE_SOURCES: readonly string[] = MAP_REACHABILITY_PROBES;
+const MAP_PROBE_IMAGE_SOURCES: readonly string[] = [
+  ...MAP_REACHABILITY_PROBES,
+  ...ARRIVAL_MAP_PROBES,
+];
 
 /**
  * Sentry's ingest, as a belt to the tunnel's braces. `next.config.ts` sets

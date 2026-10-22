@@ -4,9 +4,9 @@
  * Provider-neutral, open mapping via OpenStreetMap: no proprietary keys, no tracking,
  * and no client SDK dependencies.
  *
- * Callers needing an embed frame (a dive site's terrain briefing, a shop's meeting
- * point on `/ready`) consume `osmMapEmbedUrl` or `osmCoordsEmbedUrl`, which target
- * OpenStreetMap's standard export embed endpoint.
+ * The meeting point's frame on `/ready` consumes `osmMapEmbedUrl`, which targets
+ * OpenStreetMap's standard export embed endpoint. Dive-site maps draw on the
+ * shared basemap instead (`src/lib/basemap.ts`).
  *
  * Callers needing a link out for directions or maps exploration consume `openMapsUrl`.
  */
@@ -121,22 +121,20 @@ export function directionsUrl(
 export const openMapsUrl = googleMapsUrl;
 
 /**
- * Backward-compatible aliases for existing callers during migration.
- */
-export const googleMapEmbedUrl = osmMapEmbedUrl;
-export const googleTerrainEmbedUrl = (coords: string, zoom = 15) =>
-  osmCoordsEmbedUrl(coords, zoom, false);
-
-/**
- * **What the map frames ask before showing the frame.**
+ * **What the maps ask before they show.**
  *
- * A framed map that cannot load is not silent: the browser paints its own
- * broken-document glyph in the middle of the frame, which is where routes or meeting
- * points sit. A one-pixel read of an open mapping host verifies network availability.
+ * A map that cannot load is not silent: an embedded frame paints the browser's
+ * broken-document glyph, and a tile layer paints half a picture, in the middle
+ * of the box where routes or meeting points sit. A one-pixel read of the host
+ * decides first.
  *
- * We probe OpenStreetMap's tile server and CARTO tile infrastructure.
+ * The route maps draw on the shared basemap (`src/lib/basemap.ts`), so they ask
+ * its tile host. The meeting point's map on `/ready` is still an OpenStreetMap
+ * embed of a typed address (no coordinates to place a tile map on), so it asks
+ * OpenStreetMap.
  */
 export const MAP_REACHABILITY_PROBES = [
-  "https://tile.openstreetmap.org/0/0/0.png",
-  "https://a.basemaps.cartocdn.com/rastertiles/voyager/0/0/0.png",
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/0/0/0",
 ] as const;
+
+export const ARRIVAL_MAP_PROBES = ["https://tile.openstreetmap.org/0/0/0.png"] as const;

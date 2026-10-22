@@ -1,7 +1,7 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { embedRenderPath } from "../src/lib/embed-routes";
-import { MAP_REACHABILITY_PROBES } from "../src/lib/maps";
+import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "../src/lib/maps";
 import { makeActivitySafe } from "./fixtures";
 import { E2E_TEST_ROUTE_SECRET } from "./servers";
 
@@ -92,7 +92,7 @@ export async function auditInitialPaint(
     await context.route("https://www.openstreetmap.org/export/embed.html*", (request) =>
       request.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html>" }),
     );
-    for (const probe of MAP_REACHABILITY_PROBES) {
+    for (const probe of [...MAP_REACHABILITY_PROBES, ...ARRIVAL_MAP_PROBES]) {
       await context.route(probe, (request) => request.abort());
     }
     await context.route("https://fonts.googleapis.com/**", (request) =>
