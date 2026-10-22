@@ -948,7 +948,6 @@
   "src/db/course-forms.medical.test.ts": 5387,
   "src/db/course-forms.postgres.test.ts": 2120,
   "src/db/course-forms.test.ts": 9881,
-  "src/db/course-inquiries.test.ts": 3445,
   "src/db/course-ladder.test.ts": 3375,
   "src/db/course-materials.test.ts": 3909,
   "src/db/course-next-step.test.ts": 4124,

@@ -635,7 +635,7 @@ describe("what the retry queue is allowed to hold", () => {
 
   it("lifts the subject's own handles out for a message addressed to somebody else", async () => {
     // The seam the erasure sweep rests on, exercised through `queueRetry`
-    // rather than by inserting a row by hand: `course_inquiry` is addressed to
+    // rather than by inserting a row by hand: `lead_received` is addressed to
     // the shop's front desk and is *about* a diver, so `recipient_email` is
     // the desk and the two subject handles are the diver's. Without this,
     // deleting either `notificationSubjectEmail`/`notificationSubjectPhone`
@@ -645,8 +645,8 @@ describe("what the retry queue is allowed to hold", () => {
     await sendNotification(
       db,
       {
-        kind: "course_inquiry",
-        courseInquiryId: "00000000-0000-4000-8000-00000000c001",
+        kind: "lead_received",
+        leadId: "00000000-0000-4000-8000-00000000c001",
         shopId: shop.id,
         to: "front-desk@example.invalid",
         locale: "en-US",

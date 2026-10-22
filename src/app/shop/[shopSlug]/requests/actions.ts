@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { setDateRequestOutcome } from "@/db/course-inquiries";
+import { setDateLeadOutcome } from "@/db/leads";
 import { nowDate } from "@/lib/clock";
 import { parseForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -24,9 +24,9 @@ export async function setRequestOutcomeAction(shopSlug: string, formData: FormDa
   const back = shopPath(shopSlug, "requests");
   const parsed = parseForm(outcomeForm, formData);
   if (parsed.ok) {
-    await setDateRequestOutcome(db, {
+    await setDateLeadOutcome(db, {
       shopId: shop.id,
-      requestId: parsed.data.requestId,
+      leadId: parsed.data.requestId,
       outcome: parsed.data.outcome === "done" ? "done" : null,
       now: nowDate(),
     });

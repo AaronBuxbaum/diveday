@@ -349,7 +349,7 @@ export const notificationSendQueue = pgTable(
      *
      * None is a new disclosure — every one of them is an address or a number
      * this same tenant already stores in a plaintext column of its own
-     * (`people`, `shops`, `course_inquiries`), unlike the payload, which held
+     * (`people`, `shops`, `leads`), unlike the payload, which held
      * raw bearer tokens that exist nowhere else un-hashed.
      *
      * **Cleared when a row is finished with, retained while it is only
@@ -383,7 +383,7 @@ export const notificationSendQueue = pgTable(
      * **`subject_email` and `subject_phone` are the person the message is
      * *about***, when that is not the person it is addressed to — and null when
      * the two are the same, which is almost every kind. Two are not:
-     * `course_inquiry` mails the shop's own front desk about a diver who used
+     * `lead_received` mails the shop's own front desk about a diver who used
      * the public composer and carries their name, address, phone and free-text
      * message; and the `new_account` operator alert mails DiveDay about a shop owner.
      * Before these a live row for either survived an erasure until it drained,
@@ -395,7 +395,7 @@ export const notificationSendQueue = pgTable(
      * leaves only a number produces a row a `subject_email` alone still could
      * not reach — the first version of this fix shipped that hole and a
      * `security-reviewer` pass found it. The phone match carries the same
-     * accepted over-reach the `course_inquiries.phone` sweep does, and for the
+     * accepted over-reach the the date-lead phone sweep does, and for the
      * same written reason.
      *
      * Both are written from `notificationSubjectEmail`/`notificationSubjectPhone`

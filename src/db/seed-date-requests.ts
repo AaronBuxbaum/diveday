@@ -1,11 +1,11 @@
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import { courseInquiries } from "./schema";
+import { leads } from "./schema";
 import { at, dateAt } from "./seed-clock";
 
 /**
  * Divers asking for a *dive* on a date the board has nothing on — the half of
- * `course_inquiries` that names no course, written from the shop's own schedule
+ * `date` leads that name no course, written from the shop's own schedule
  * page ("Nothing on a date that works?").
  *
  * Its own scenario rather than rows wedged into `seed-course-inquiries.ts`:
@@ -27,9 +27,11 @@ import { at, dateAt } from "./seed-clock";
  * the past.
  */
 export async function seedDateRequests(db: DbExecutor, shopId: string): Promise<void> {
-  await db.insert(courseInquiries).values([
+  await db.insert(leads).values([
     {
       shopId,
+      scope: "date" as const,
+      askedBy: "diver" as const,
       courseId: null,
       // i18n-exempt: what a diver typed into the shop's own request form, stored verbatim — a fixture value, not product copy
       interest: "A two-tank on the wrecks",
@@ -42,13 +44,15 @@ export async function seedDateRequests(db: DbExecutor, shopId: string): Promise<
       preferredDate: dateAt(12),
       alternateDate: dateAt(19),
       dateFlexible: false,
-      divers: 2,
+      partySize: 2,
       // i18n-exempt: what a diver typed into the shop's own request form, stored verbatim — a fixture value, not product copy
       message: "Two of us, both AOW, we would love the deeper wreck if the current allows.",
-      createdAt: at(-4, 20, 15),
+      askedAt: at(-4, 20, 15),
     },
     {
       shopId,
+      scope: "date" as const,
+      askedBy: "diver" as const,
       courseId: null,
       // i18n-exempt: what a diver typed into the shop's own request form, stored verbatim — a fixture value, not product copy
       interest: "A shallow reef morning",
@@ -62,12 +66,14 @@ export async function seedDateRequests(db: DbExecutor, shopId: string): Promise<
       preferredDate: dateAt(19),
       alternateDate: dateAt(12),
       dateFlexible: false,
-      divers: 1,
+      partySize: 1,
       message: null,
-      createdAt: at(-3, 9, 2),
+      askedAt: at(-3, 9, 2),
     },
     {
       shopId,
+      scope: "date" as const,
+      askedBy: "diver" as const,
       courseId: null,
       // i18n-exempt: what a diver typed into the shop's own request form, stored verbatim — a fixture value, not product copy
       interest: "A night dive, if you still run them",
@@ -82,12 +88,14 @@ export async function seedDateRequests(db: DbExecutor, shopId: string): Promise<
       preferredDate: dateAt(13),
       alternateDate: null,
       dateFlexible: true,
-      divers: 3,
+      partySize: 3,
       message: null,
-      createdAt: at(-2, 18, 40),
+      askedAt: at(-2, 18, 40),
     },
     {
       shopId,
+      scope: "date" as const,
+      askedBy: "diver" as const,
       courseId: null,
       // i18n-exempt: what a diver typed into the shop's own request form, stored verbatim — a fixture value, not product copy
       interest: "Whatever is best in October",
@@ -100,10 +108,10 @@ export async function seedDateRequests(db: DbExecutor, shopId: string): Promise<
       preferredDate: null,
       alternateDate: null,
       dateFlexible: true,
-      divers: 2,
+      partySize: 2,
       // i18n-exempt: what a diver typed into the shop's own request form, stored verbatim — a fixture value, not product copy
       message: "Neither of us has dived. Happy to take whatever you would put beginners on.",
-      createdAt: at(-1, 12, 25),
+      askedAt: at(-1, 12, 25),
     },
   ]);
 }

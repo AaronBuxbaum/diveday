@@ -28,7 +28,6 @@ import {
   courseFormRequirements,
   courseForms,
   courseFormVersions,
-  courseInquiries,
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
@@ -336,11 +335,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // time it exercises the picker's refusal.
   await db.delete(marineLifeRequests).where(eq(marineLifeRequests.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
-  // A course inquiry references its course without cascade (a lead is
-  // evidence, not something a schedule reset should silently vanish), so it
-  // must go before the courses delete or this FK-violates and aborts the whole
-  // reset mid-run — the same class of bug the comment above already walks.
-  await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(waiverMaterialityDecisions).where(eq(waiverMaterialityDecisions.shopId, shopId));
   await db.delete(waiverTemplates).where(eq(waiverTemplates.shopId, shopId));

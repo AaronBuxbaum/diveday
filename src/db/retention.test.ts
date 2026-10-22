@@ -994,7 +994,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "prior_gear_assignments",
   "imported_payment_history",
   "last_minute_list_entries",
-  "course_inquiries",
   // The request's single-use setup link (ADR 20261009-single-use-setup-links):
   // a hash, an expiry and a spent instant, one per request, deleted with it.
   // Its own clock is the expiry, which closes it; there is nothing left in it

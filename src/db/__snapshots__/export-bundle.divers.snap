@@ -4,8 +4,7 @@ certifications.csv 1 rows 305e00f5b87a5c6b [id,agency,level,identifier,declared_
 specialty_certifications.csv 0 rows 7cdb6cfe30f776d9 [id,agency,specialty,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,deleted_at,created_at]
 nitrox_certifications.csv 0 rows e1aff044597aa680 [id,agency,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
 bookings.csv 11 rows 4643e0f0d3edcb9d [id,trip_title,trip_starts_at,status,turned_away_reason,turned_away_at,participant_type,booked_as,wants_nitrox,conditions_briefed_at,dive_intent,re_entry_ask,last_dived_band,claimed_at,running_late_at,minor_declared_at,hotel_pickup_location,dietary_note,payment_status,payment_amount_cents,payment_currency,payment_provider,created_at]
-waitlist_entries.csv 0 rows 33e8f47755d4ef1e [id,trip_title,trip_starts_at,party_size,invited_at,created_at]
-trip_invitations.csv 0 rows 7b5330d6d8a60c45 [id,trip_title,trip_starts_at,source,invited_at,emailed_at,created_at]
+leads.csv 0 rows 5b0c7208f18aa348 [id,scope,asked_by,trip_title,trip_starts_at,course_title,interest,experience_level,timing,available_from,available_until,party_size,message,asked_at,offered_at,emailed_at,closed_at,closed_as]
 last_minute_list.csv 0 rows 0fca6ddf2c681695 [id,available_from,available_until,unsubscribed_at,created_at]
 trip_last_minute_promo_recipients.csv 0 rows 75b541858852a52a [id,trip_promo_id,email,created_at]
 booking_payment_events.csv 0 rows 2311ccd7880e0c82 [id,booking_id,status,previous_status,amount_cents,currency,provider,operation,method,occurred_at]
@@ -32,7 +31,6 @@ recap_photos.csv 0 rows 7182bf5dae65f90e [id,booking_id,image_url,caption,shared
 trip_reviews.csv 3 rows 1a598e1d771bfb2b [id,booking_id,rating,comment,is_published,published_at,created_at]
 review_moderation_events.csv 0 rows 84abde207d2b9b99 [id,review_id,action,reason,reason_note,recorded_by_name,occurred_at]
 dive_package_entitlements.csv 0 rows 02916f39b0f0e4bc [id,package_name,booking_id,consumed_at,expires_at,created_at]
-course_inquiries.csv 0 rows 40282ad88a347225 [id,course_title,interest,experience_level,timing,message,created_at]
 photos: 0 e3b0c44298fc1c14
 
 diver Camila Rojas (10 seats) at blue-mantis America/New_York
@@ -41,8 +39,7 @@ certifications.csv 1 rows 332d259f4f5a9332 [id,agency,level,identifier,declared_
 specialty_certifications.csv 0 rows 7cdb6cfe30f776d9 [id,agency,specialty,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,deleted_at,created_at]
 nitrox_certifications.csv 0 rows e1aff044597aa680 [id,agency,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
 bookings.csv 10 rows d4b7ad851eb42b97 [id,trip_title,trip_starts_at,status,turned_away_reason,turned_away_at,participant_type,booked_as,wants_nitrox,conditions_briefed_at,dive_intent,re_entry_ask,last_dived_band,claimed_at,running_late_at,minor_declared_at,hotel_pickup_location,dietary_note,payment_status,payment_amount_cents,payment_currency,payment_provider,created_at]
-waitlist_entries.csv 0 rows 33e8f47755d4ef1e [id,trip_title,trip_starts_at,party_size,invited_at,created_at]
-trip_invitations.csv 0 rows 7b5330d6d8a60c45 [id,trip_title,trip_starts_at,source,invited_at,emailed_at,created_at]
+leads.csv 0 rows 5b0c7208f18aa348 [id,scope,asked_by,trip_title,trip_starts_at,course_title,interest,experience_level,timing,available_from,available_until,party_size,message,asked_at,offered_at,emailed_at,closed_at,closed_as]
 last_minute_list.csv 0 rows 0fca6ddf2c681695 [id,available_from,available_until,unsubscribed_at,created_at]
 trip_last_minute_promo_recipients.csv 0 rows 75b541858852a52a [id,trip_promo_id,email,created_at]
 booking_payment_events.csv 0 rows 2311ccd7880e0c82 [id,booking_id,status,previous_status,amount_cents,currency,provider,operation,method,occurred_at]
@@ -69,7 +66,6 @@ recap_photos.csv 0 rows 7182bf5dae65f90e [id,booking_id,image_url,caption,shared
 trip_reviews.csv 0 rows 2c3eb123f522ad4a [id,booking_id,rating,comment,is_published,published_at,created_at]
 review_moderation_events.csv 0 rows 84abde207d2b9b99 [id,review_id,action,reason,reason_note,recorded_by_name,occurred_at]
 dive_package_entitlements.csv 0 rows 02916f39b0f0e4bc [id,package_name,booking_id,consumed_at,expires_at,created_at]
-course_inquiries.csv 0 rows 40282ad88a347225 [id,course_title,interest,experience_level,timing,message,created_at]
 photos: 0 e3b0c44298fc1c14
 
 diver Cosima Weber (10 seats) at blue-mantis America/New_York
@@ -78,8 +74,7 @@ certifications.csv 1 rows 3c4d4fd42d292a9f [id,agency,level,identifier,declared_
 specialty_certifications.csv 0 rows 7cdb6cfe30f776d9 [id,agency,specialty,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,deleted_at,created_at]
 nitrox_certifications.csv 0 rows e1aff044597aa680 [id,agency,identifier,status,review_note,reviewed_at,reviewed_by_name,agency_checked_at,imported_at,imported_from_label,self_declared_at,deleted_at,created_at]
 bookings.csv 10 rows d70a576135827ae4 [id,trip_title,trip_starts_at,status,turned_away_reason,turned_away_at,participant_type,booked_as,wants_nitrox,conditions_briefed_at,dive_intent,re_entry_ask,last_dived_band,claimed_at,running_late_at,minor_declared_at,hotel_pickup_location,dietary_note,payment_status,payment_amount_cents,payment_currency,payment_provider,created_at]
-waitlist_entries.csv 0 rows 33e8f47755d4ef1e [id,trip_title,trip_starts_at,party_size,invited_at,created_at]
-trip_invitations.csv 0 rows 7b5330d6d8a60c45 [id,trip_title,trip_starts_at,source,invited_at,emailed_at,created_at]
+leads.csv 0 rows 5b0c7208f18aa348 [id,scope,asked_by,trip_title,trip_starts_at,course_title,interest,experience_level,timing,available_from,available_until,party_size,message,asked_at,offered_at,emailed_at,closed_at,closed_as]
 last_minute_list.csv 0 rows 0fca6ddf2c681695 [id,available_from,available_until,unsubscribed_at,created_at]
 trip_last_minute_promo_recipients.csv 0 rows 75b541858852a52a [id,trip_promo_id,email,created_at]
 booking_payment_events.csv 0 rows 2311ccd7880e0c82 [id,booking_id,status,previous_status,amount_cents,currency,provider,operation,method,occurred_at]
@@ -106,5 +101,4 @@ recap_photos.csv 0 rows 7182bf5dae65f90e [id,booking_id,image_url,caption,shared
 trip_reviews.csv 2 rows 646713a07f72c1a3 [id,booking_id,rating,comment,is_published,published_at,created_at]
 review_moderation_events.csv 0 rows 84abde207d2b9b99 [id,review_id,action,reason,reason_note,recorded_by_name,occurred_at]
 dive_package_entitlements.csv 0 rows 02916f39b0f0e4bc [id,package_name,booking_id,consumed_at,expires_at,created_at]
-course_inquiries.csv 0 rows 40282ad88a347225 [id,course_title,interest,experience_level,timing,message,created_at]
 photos: 0 e3b0c44298fc1c14

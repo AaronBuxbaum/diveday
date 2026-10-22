@@ -37,7 +37,6 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
-  courseInquiries,
   courses,
   executedDives,
   internalNotes,
@@ -77,6 +76,7 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
  * surface — thirty tests that seat, search, page and filter, each reading back
  * what it just wrote — so nothing here needs its rows committed.
  */
+const DATE_LEAD = { scope: "date", askedBy: "diver" } as const;
 const ctx = fileScopedShopContext();
 /** The saved row, or a failure naming the refusal. */
 function saved(result: Awaited<ReturnType<typeof updateDiver>>) {
@@ -1389,7 +1389,7 @@ describe("diver erasure", () => {
       {
         shopId: shop.id,
         idempotencyKey: "erasure-elena-by-subject",
-        // **A `course_inquiry`**: addressed to the shop's own front desk, about
+        // **A `lead_received`**: addressed to the shop's own front desk, about
         // her. It carries her name, address, phone and free-text message inside
         // the sealed blob, so before `subject_email` existed neither handle
         // could see it and a live one outlived the erasure (issue #1298). No
@@ -1467,9 +1467,10 @@ describe("diver erasure", () => {
     // column on this row, so after erasure there is nothing left on it to
     // recognise it by.
     const [elenaInquiry] = await db
-      .insert(courseInquiries)
+      .insert(leads)
       .values({
         shopId: shop.id,
+        ...DATE_LEAD,
         courseId: course.id,
         name: "Erasure Elena",
         email: "ELENA@example.com",
@@ -1482,8 +1483,8 @@ describe("diver erasure", () => {
         timing: "any weekend in September",
         message: "Elena here — is the advanced course running?",
       })
-      .returning({ id: courseInquiries.id });
-    if (!elenaInquiry) throw new Error("course inquiry insert returned no row");
+      .returning({ id: leads.id });
+    if (!elenaInquiry) throw new Error("date lead insert returned no row");
 
     return {
       db,
@@ -1669,7 +1670,7 @@ describe("diver erasure", () => {
     // the number of the person it is about, for a kind addressed to somebody
     // else. Both address matches are case-insensitive, which is why the
     // fixtures above are cased differently; the number is matched exactly, the
-    // same way the `course_inquiries` sweep matches it. The one row naming none
+    // same way the date-lead sweep matches it. The one row naming none
     // of her handles stays.
     const queued = await db
       .select({ idempotencyKey: notificationSendQueue.idempotencyKey })
@@ -1689,16 +1690,13 @@ describe("diver erasure", () => {
       .where(eq(bookingCapabilities.bookingId, bookingId));
     expect(capability?.revokedAt).toBeInstanceOf(Date);
 
-    // `course_inquiries` is swept three ways: on `person_id` where the lead was
-    // linked to a live diver at capture time, and otherwise on the email and
-    // phone the diver themselves supplied, which are the only handles a lead
-    // carries. Elena's lead has no `person_id` — it was written straight into
-    // the table by this fixture, not through the capture path — so it is the
-    // email/phone sweep that has to reach it.
+    // Date leads are swept by `person_id`, then by the email and phone the diver
+    // supplied. Elena's has no `person_id` (the fixture writes it straight into
+    // the table), so it is the email/phone sweep that has to reach it.
     const inquiries = await db
       .select()
-      .from(courseInquiries)
-      .where(eq(courseInquiries.shopId, shop.id));
+      .from(leads)
+      .where(and(eq(leads.shopId, shop.id), eq(leads.scope, "date")));
     expect(inquiries).not.toHaveLength(0);
     const elena = inquiries.find((row) => row.id === elenaInquiryId);
     expect(elena).toBeDefined();
@@ -2597,7 +2595,7 @@ describe("diver erasure", () => {
   });
 
   /**
-   * `course_inquiries` is written from a public page, before any person need
+   * A date lead is written from a public page, before any person need
    * exist, so it carries a *nullable* `person_id` snapshotted at capture when
    * the supplied address already matched a live diver. That link is the only
    * handle the sweep has once the diver changes their email.
@@ -2614,9 +2612,10 @@ describe("diver erasure", () => {
         .limit(1);
       if (!course) throw new Error("seed course missing");
       const [row] = await db
-        .insert(courseInquiries)
+        .insert(leads)
         .values({
           shopId: input.shopId,
+          ...DATE_LEAD,
           courseId: course.id,
           personId: input.personId ?? null,
           name: input.name,
@@ -2631,7 +2630,7 @@ describe("diver erasure", () => {
     }
 
     async function inquiryById(db: AppDb, id: string) {
-      const [row] = await db.select().from(courseInquiries).where(eq(courseInquiries.id, id));
+      const [row] = await db.select().from(leads).where(eq(leads.id, id));
       return row;
     }
 
@@ -2715,9 +2714,10 @@ describe("diver erasure", () => {
       // state the app can reach, so this pins the query's own scoping: the
       // sweep must key on shop as well as person.
       const [foreign] = await db
-        .insert(courseInquiries)
+        .insert(leads)
         .values({
           shopId: rival.id,
+          ...DATE_LEAD,
           courseId: rivalCourse.id,
           personId: diver.id,
           name: "Erasure Elena",

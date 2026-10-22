@@ -141,7 +141,6 @@ export type DiverMergeResult =
 const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_entries"] as const;
 
 export const DIVER_HISTORY_TABLES = [
-  "course_inquiries",
   // What the bench told this diver about their own gear (ADR
   // 20261008-work-order-follow-up). It follows the gear and the tickets to the
   // survivor, or the survivor's ticket would read as never announced and the
@@ -966,7 +965,6 @@ export const DIVER_MERGE_COUNT_GROUPS = {
   ],
   history: ["prior_visits"],
   lists: [
-    "course_inquiries",
     "leads",
     "last_minute_list_entries",
     "person_courtesy_email_unsubscribe_tokens",

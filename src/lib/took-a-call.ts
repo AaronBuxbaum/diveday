@@ -15,7 +15,7 @@
  * whose form had already accepted it.
  *
  * The writes themselves are the ones that already exist, unchanged:
- * `recordCourseInquiry` and `askForDeparture`.
+ * `askForDate` and `askForDeparture`.
  */
 
 /**
@@ -43,7 +43,7 @@ export function isCallOutcome(value: unknown): value is CallOutcome {
  * - `email` — `askForDeparture` resolves its person by address
  *   (`findOrCreatePerson`), so an entry with no email has nobody to invite
  *   when a seat frees, which is the only thing a wait-list entry is for.
- * - `interest` — `course_inquiries` carries a check constraint refusing a row
+ * - `interest` — `leads_scope_columns` refuses a date lead
  *   that names neither a course nor an interest (ADR
  *   20260814-a-date-request-is-a-course-inquiry).
  */

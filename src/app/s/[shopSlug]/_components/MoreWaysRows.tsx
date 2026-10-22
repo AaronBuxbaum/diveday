@@ -45,7 +45,7 @@ export function MoreWaysRows({
             says "please create a departure".
 
             Not gated on `contactEmail`. The request lands in
-            `course_inquiries` and staff read it at /shop/<slug>/requests,
+            a date lead and staff read it at /shop/<slug>/requests,
             so the shop's email is only needed for the notification — which
             `submitInquiryAction` already skips when there is none.
             Guarding the form on it switched off the one conversion a shop

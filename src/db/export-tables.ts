@@ -17,7 +17,6 @@ import {
   courseFormRequirements,
   courseForms,
   courseFormVersions,
-  courseInquiries,
   courses,
   crewAwayAcknowledgements,
   customerGearItems,
@@ -365,11 +364,6 @@ export const EXPORT_TABLES = {
       shopColumn: notificationDeliveries.shopId,
       bookingColumn: notificationDeliveries.bookingId,
     },
-  },
-  courseInquiries: {
-    table: courseInquiries,
-    order: [asc(courseInquiries.createdAt), asc(courseInquiries.id)],
-    scope: { shopColumn: courseInquiries.shopId, personColumn: courseInquiries.personId },
   },
   // The counter's own trail, oldest first for the same reason roll call's
   // is: it is replayed, and `occurred_at` ties under a batched offline

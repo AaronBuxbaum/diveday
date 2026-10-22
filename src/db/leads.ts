@@ -1,6 +1,9 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { courseRatioRefusal } from "@/lib/booking-gates";
+import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import type { CourseInquiryExperience } from "@/lib/course-inquiry";
+import type { DateRequestOutcome } from "@/lib/date-requests";
 import type { DiveDeclaration } from "@/lib/dive-declaration";
 import { rowCanBeReactivated } from "@/lib/no-show";
 import { seatRefusal } from "@/lib/participant-types";
@@ -349,6 +352,229 @@ export async function ensureDepartureLead(
     )
     .limit(1);
   return standing ? { leadId: standing.id, created: false } : null;
+}
+
+/** Normalizes an optional free-text field to trimmed text or null, never an empty string. */
+function normalizeOptional(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+/**
+ * The shop's live diver holding exactly this address, or null.
+ *
+ * Exact and case-insensitive, never fuzzy, and never on the phone number: a
+ * household number is genuinely shared, and a link written from one would point
+ * a future erasure at a partner's or a child's lead. `people_shop_email_unique`
+ * is a partial unique index on `lower(email)` over this shop's live rows, so
+ * there is at most one candidate and no "first match wins" ordering to reason
+ * about. Deleted and erased records are excluded on purpose: a soft-deleted
+ * duplicate sits outside the unique index, which is exactly where a second row
+ * holding the same address could hide, and linking to it would send a later
+ * erasure at the wrong record.
+ */
+async function livePersonIdForEmail(
+  db: DbExecutor,
+  shopId: string,
+  email: string,
+): Promise<string | null> {
+  const [match] = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        sql`lower(${people.email}) = ${email}`,
+      ),
+    )
+    .limit(1);
+  return match?.id ?? null;
+}
+
+export type DateAsk = {
+  shopId: string;
+  /** Null for an ordinary dive request, which names `interest` instead. */
+  courseId?: string | null;
+  /** What a dive request is about; required when there is no course. */
+  interest?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  experienceLevel?: CourseInquiryExperience | null;
+  timing?: string | null;
+  preferredDate?: CalendarDate | null;
+  alternateDate?: CalendarDate | null;
+  dateFlexible?: boolean;
+  /** The asker and whoever dives with them; clamped to the column's 1 to 20. */
+  partySize?: number | null;
+  message?: string | null;
+  /** The staffer who wrote down a phone call; absent for the diver's own form. */
+  createdByPersonId?: string | null;
+};
+
+/**
+ * Records one diver asking for a date: a `date` lead. Insert-only, there is no
+ * edit or withdraw path (a diver just asks again).
+ *
+ * **No person row is made** (H-13): this form is unauthenticated, and creating
+ * a person from a stranger's typing is how a second human's record gets
+ * written. The contact is a snapshot on the lead. When the writer left an email
+ * that a live diver of this shop already holds, the `person_id` link is
+ * snapshotted onto the row. That is not a convenience: it is the only handle
+ * diver erasure has once the diver changes their address (`scrubLeads`, ADR
+ * 20260802-diver-data-erasure). A lead with no email, or an address nobody here
+ * holds, is stored unlinked, the honest answer.
+ *
+ * `courseId` and `shopId` are derived server-side from the URL's slugs, never
+ * accepted from the caller.
+ */
+export async function askForDate(
+  db: DbExecutor,
+  input: DateAsk,
+): Promise<{ id: string; askedAt: Date }> {
+  const email = normalizeOptional(input.email)?.toLowerCase() ?? null;
+  const courseId = input.courseId ?? null;
+  const interest = normalizeOptional(input.interest);
+  // A request must be about something. The check constraint says the same, and
+  // the server action refuses it in the diver's own words before reaching here;
+  // this is the layer that must not depend on either having run.
+  if (!courseId && !interest) {
+    throw new Error("askForDate: a request names either a course or an interest");
+  }
+  const personId = email ? await livePersonIdForEmail(db, input.shopId, email) : null;
+  const partySize =
+    input.partySize == null ? null : Math.min(20, Math.max(1, Math.trunc(input.partySize) || 1));
+  const [inserted] = await db
+    .insert(leads)
+    .values({
+      shopId: input.shopId,
+      scope: "date",
+      askedBy: "diver",
+      courseId,
+      interest,
+      personId,
+      name: normalizeOptional(input.name),
+      email,
+      phone: normalizeOptional(input.phone),
+      experienceLevel: input.experienceLevel ?? null,
+      timing: normalizeOptional(input.timing),
+      preferredDate: input.preferredDate ?? null,
+      alternateDate: input.alternateDate ?? null,
+      dateFlexible: input.dateFlexible ?? false,
+      partySize,
+      message: normalizeOptional(input.message),
+      createdByPersonId: input.createdByPersonId ?? null,
+    })
+    .returning({ id: leads.id, askedAt: leads.askedAt });
+  if (!inserted) throw new Error("askForDate: insert returned no row");
+  return inserted;
+}
+
+/**
+ * **Close a date lead, or open it again** (third UX review, item 13). `booked`
+ * is the seat a staffer made from the request; `done` is the staffer's tick;
+ * `null` is Reopen. Scoped by shop and scope, so an id from a form reaches
+ * nothing outside this shop's date leads. A `booked` stamp never overwrites an
+ * earlier close: the first answer is the one the page shows. Returns whether a
+ * row changed.
+ *
+ * **Closing a date lead never closes its departure children**: a diver offered
+ * Saturday keeps that offer standing.
+ */
+export async function setDateLeadOutcome(
+  db: DbExecutor,
+  input: { shopId: string; leadId: string; outcome: DateRequestOutcome | null; now: Date },
+): Promise<boolean> {
+  const scope = and(
+    eq(leads.id, input.leadId),
+    eq(leads.shopId, input.shopId),
+    eq(leads.scope, "date"),
+  );
+  const rows = await db
+    .update(leads)
+    .set(
+      input.outcome
+        ? { closedAt: input.now, closedAs: input.outcome }
+        : { closedAt: null, closedAs: null },
+    )
+    .where(input.outcome === "booked" ? and(scope, isNull(leads.closedAt)) : scope)
+    .returning({ id: leads.id });
+  return rows.length > 0;
+}
+
+/**
+ * **Attach date leads to a new departure** (the schedule builder's hand-off):
+ * one departure child row per lead, `parent_lead_id` pointing back,
+ * `asked_by = 'diver'` and `offered_at` null, so the departure's own panel shows
+ * them and staff offer the seat from there. Nothing is sent and nothing is
+ * reserved. The lead is only a contact source, so the child copies its
+ * snapshot (or its person link, when the lead matched a diver), its party and
+ * its original `askedAt`.
+ *
+ * Idempotent: a unique `(trip, parent)` index makes a retried submit harmless,
+ * and a diver already on this departure's list (`(trip, person)`) keeps the row
+ * they have. A rehearsal answers nobody's request, so it gets none. Returns how
+ * many rows were written.
+ */
+export async function attachDateLeadsToDeparture(
+  db: AppDb,
+  input: { shopId: string; tripId: string; leadIds: string[]; createdByPersonId: string },
+): Promise<number> {
+  const leadIds = [...new Set(input.leadIds)];
+  if (leadIds.length === 0) return 0;
+
+  return db.transaction(async (tx) => {
+    const [trip] = await tx
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip(), notRehearsal()),
+      )
+      .limit(1);
+    if (!trip) return 0;
+
+    const [author] = await tx
+      .select({ id: people.id })
+      .from(people)
+      .where(
+        and(eq(people.id, input.createdByPersonId), eq(people.shopId, input.shopId), livePerson()),
+      )
+      .limit(1);
+    if (!author) return 0;
+
+    const parents = await tx
+      .select()
+      .from(leads)
+      .where(
+        and(eq(leads.shopId, input.shopId), eq(leads.scope, "date"), inArray(leads.id, leadIds)),
+      );
+    if (parents.length === 0) return 0;
+
+    const inserted = await tx
+      .insert(leads)
+      .values(
+        parents.map((parent) => ({
+          shopId: input.shopId,
+          scope: "departure" as const,
+          askedBy: "diver" as const,
+          tripId: input.tripId,
+          parentLeadId: parent.id,
+          personId: parent.personId,
+          // The snapshot is only for a lead with no person: a linked one reads
+          // its name and address from the person, and erasure deletes the row.
+          name: parent.personId ? null : parent.name,
+          email: parent.personId ? null : parent.email,
+          phone: parent.personId ? null : parent.phone,
+          partySize: Math.min(20, Math.max(1, parent.partySize ?? 1)),
+          askedAt: parent.askedAt,
+          createdByPersonId: input.createdByPersonId,
+        })),
+      )
+      .onConflictDoNothing()
+      .returning({ id: leads.id });
+    return inserted.length;
+  });
 }
 
 export type { Lead };

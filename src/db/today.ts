@@ -54,7 +54,6 @@ import { openSnagsForShop } from "./boat-snags";
 import { readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
-import { countOpenDateRequests } from "./course-inquiries";
 import { crewAwayByTrip } from "./crew-away";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
@@ -67,6 +66,7 @@ import { listTodayHelpRequests } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listUnfiledIncidentDrafts } from "./incident-reports";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
+import { countOpenDateLeads } from "./lead-dates";
 import { countOpenLostItems } from "./lost-items";
 import {
   listBoardedAtAnyCheckpointByTrip,
@@ -1804,7 +1804,7 @@ async function readTodayWave(
     readReviewsAwaitingModeration(db, shopId),
     countUnansweredMessages(db, shopId),
     // Open date requests count into the same unanswered row (issue #2658).
-    countOpenDateRequests(db, shopId),
+    countOpenDateLeads(db, shopId),
     db
       .select({
         unitsConfirmedAt: shops.unitsConfirmedAt,
