@@ -204,6 +204,8 @@ const RESET_KEEPS: Record<string, string> = {
   shop_whatsapp_accounts: "shop settings, outside the resettable schedule",
   shop_subscriptions:
     "what the shop pays DiveDay, set by a person or Stripe's webhook — never by a demo visitor, so nothing for a reset to restore",
+  pricing_volume_statements:
+    "the percent plan's monthly fee basis, written by the pricing cron for real shops only — a demo is never billed, so a reset has nothing to restore",
   shop_contact_email_confirmation_tokens:
     "the front-desk address's own proof of ownership (issue #1288) — settings, not schedule",
   boats: "shop settings, outside the resettable schedule",

@@ -1119,6 +1119,10 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // A refund Stripe reported failed after accepting it (issue #2291): one row per
   // Stripe refund, owed until it is refunded again. The shop's books, not a trail.
   "stripe_refund_failures",
+  // A percent-plan shop's closed month (ADR 20261022-pricing-ab-test): the basis
+  // of a fee DiveDay charged, one row per shop per month, the books behind an
+  // invoice rather than a trail of events. Removed with the shop.
+  "pricing_volume_statements",
   "dive_package_entitlements",
   "shop_promo_redemptions",
   // Credentials that live and die with the thing they open: revoked, spent, or

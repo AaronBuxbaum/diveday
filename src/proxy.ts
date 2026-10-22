@@ -37,6 +37,13 @@ import {
 } from "@/lib/embed-routes";
 import { log } from "@/lib/log";
 import {
+  PRICING_ARM_COOKIE,
+  PRICING_ARM_COOKIE_MAX_AGE,
+  PRICING_ARM_HEADER,
+  visitorPricingArm,
+} from "@/lib/pricing-arm";
+import { pricingConfig } from "@/lib/pricing-flags";
+import {
   type PublicRouteQuery,
   type PublicRouteShape,
   publicRouteShape,
@@ -327,6 +334,39 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
     maxAge: REFERRAL_COOKIE_MAX_AGE,
   });
   res.headers.set("Cache-Control", "private, no-store");
+}
+
+/**
+ * **The pricing arm** (ADR 20261022-pricing-ab-test): while `PRICING_TEST=on`,
+ * a visitor to `/`, `/pricing` or `/get-set-up` without a valid `dd_pricing`
+ * cookie is given an arm at the configured split, and the answer is handed to
+ * the page as `PRICING_ARM_HEADER` (always overwritten, so a client cannot
+ * send one) on this same request, because the cookie set here only arrives
+ * with the next one. Off, it writes nothing and passes on nothing.
+ *
+ * Unlike the referral cookies this one carries nothing a database trusts as
+ * proof of anything, so it needs no navigation check: an `<img>` that plants
+ * an arm on someone changes which of two public price pages they read. It is
+ * `HttpOnly` and `SameSite=Lax` all the same, and the response that sets it is
+ * `private, no-store`, so no shared cache hands one visitor's arm to another.
+ */
+function rememberPricingArm(req: NextRequest, res: Response): string | null {
+  const decision = visitorPricingArm({
+    pathname: req.nextUrl.pathname,
+    cookie: req.cookies.get(PRICING_ARM_COOKIE)?.value,
+    config: pricingConfig(),
+  });
+  if (decision.setCookie && decision.arm && res instanceof NextResponse) {
+    res.cookies.set(PRICING_ARM_COOKIE, decision.arm, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.DIVEDAY_E2E !== "1",
+      path: "/",
+      maxAge: PRICING_ARM_COOKIE_MAX_AGE,
+    });
+    res.headers.set("Cache-Control", "private, no-store");
+  }
+  return decision.arm;
 }
 
 /**
@@ -792,6 +832,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   if (refused || isRefusalRender) res.headers.set("Cache-Control", "no-store");
   rememberPartnerReferral(req, res);
   rememberBuddyReferral(req, res);
+  const pricingArm = rememberPricingArm(req, res);
   // Forward embed-mode and the request's own pathname to the server-component
   // tree — a layout can't read searchParams or the URL itself (only page.tsx
   // can), so these headers are the one way it learns "this render is going
@@ -819,6 +860,7 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
     [REFUSED_SHOP_SLUG_HEADER]: isRefusalRender
       ? (req.headers.get(REFUSED_SHOP_SLUG_HEADER) ?? "")
       : (refused?.liveShopSlug ?? ""),
+    [PRICING_ARM_HEADER]: pricingArm ?? "",
   });
   // Deny framing everywhere by default (clickjacking on staff/sign-in surfaces);
   // an actual embed request is the one deliberate exception, so a shop can

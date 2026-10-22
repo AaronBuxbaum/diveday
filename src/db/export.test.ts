@@ -286,6 +286,9 @@ const EXCLUDED_TABLES = [
   // Stripe account mean nothing in another system, and the invoices are
   // Stripe's, emailed to the owner.
   "shop_subscriptions",
+  // The percent plan's monthly fee basis (ADR 20261022-pricing-ab-test): the
+  // same DiveDay-bills-the-shop record as shop_subscriptions, for the same reason.
+  "pricing_volume_statements",
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
   "stripe_webhook_events", // provider webhook-delivery ledger, not a shop record — same reasoning as payment_operation_intents
   "sms_opt_outs", // the platform texting number's STOP list, not one shop's record (ADR 20261007-sms-stop-and-help)

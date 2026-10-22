@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { type PricingConfig, pricingPlanForKey } from "@/lib/billing/pricing-plans";
 import { nowDate } from "@/lib/clock";
 import { shopDefaultsForTimeZone } from "@/lib/curated-defaults";
 import { hashPassword } from "@/lib/password-hashing";
+import { pricingConfig } from "@/lib/pricing-flags";
 import { shopNameNeedsReview } from "@/lib/shop-name-review";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { AppDb } from "./client";
@@ -10,6 +12,8 @@ import {
   people,
   personRoles,
   preDepartureChecklistItems,
+  setupRequests,
+  shopSubscriptions,
   shops,
   userAccounts,
   waiverTemplates,
@@ -51,6 +55,7 @@ class SignupRefused extends Error {
 export async function createSignedUpShop(
   db: AppDb,
   signup: ShopSignup,
+  pricing: PricingConfig = pricingConfig(),
 ): Promise<ShopSignupOutcome> {
   const email = signup.ownerEmail.toLowerCase();
   try {
@@ -111,7 +116,33 @@ export async function createSignedUpShop(
         })
         .returning();
       if (!shop) throw new Error("Failed to create shop");
-      await recordSetupLinkShop(tx, String(signup.setupToken), shop.id);
+      const link = await recordSetupLinkShop(tx, String(signup.setupToken), shop.id);
+
+      // **The pricing arm** (ADR 20261022-pricing-ab-test): the one the
+      // set-up request's reader was shown, or, with none recorded while the
+      // test is on, the shop id's bucket. Nothing is written while the test is
+      // off and the request saw no arm, so the row stays as lazy as it was.
+      const [request] = link
+        ? await tx
+            .select({ pricingPlan: setupRequests.pricingPlan })
+            .from(setupRequests)
+            .where(eq(setupRequests.id, link.setupRequestId))
+            .limit(1)
+        : [];
+      const arm =
+        request?.pricingPlan ?? (pricing.test ? pricingPlanForKey(shop.id, pricing.split) : null);
+      if (arm) {
+        const now = nowDate();
+        await tx.insert(shopSubscriptions).values({
+          shopId: shop.id,
+          pricingPlan: arm,
+          pricingPlanSource: "assigned",
+          assignedPricingPlan: arm,
+          pricingPlanSetAt: now,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
 
       const [person] = await tx
         .insert(people)

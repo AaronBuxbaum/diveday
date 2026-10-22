@@ -1,4 +1,5 @@
 import { and, count, eq, gte, isNull, lt, sql } from "drizzle-orm";
+import type { PricingPlan } from "@/lib/billing/pricing-plans";
 import { nowDate } from "@/lib/clock";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import type { SourceCount } from "@/lib/founder-metrics";
@@ -47,6 +48,8 @@ export async function recordSetupRequest(
     receiptPending?: boolean;
     source: FunnelSource | "unknown";
     locale: string;
+    /** The pricing arm the reader was shown; null while the test is off. */
+    pricingPlan?: PricingPlan | null;
     at?: Date;
   },
 ): Promise<SetupRequest> {
@@ -64,6 +67,7 @@ export async function recordSetupRequest(
       source: input.source,
       locale: input.locale,
       receiptStatus: input.receiptPending ? "pending" : null,
+      pricingPlan: input.pricingPlan ?? null,
       createdAt: input.at ?? nowDate(),
     })
     .returning();
