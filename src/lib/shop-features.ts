@@ -6,8 +6,9 @@
  * shopfront, which publishes the shop's own counts and so waits for its yes),
  * and each is a feature a shop can run without: DiveDay's own star ratings,
  * divers asking for a day that is not on the board, the last-minute deals
- * list, tips on the recap, the shopfront's "Our year", and the PADI checks
- * (beta). Off hides the feature on every surface that offers it and deletes
+ * list, tips on the recap, the shopfront's "Our year", the PADI checks
+ * (beta), and Claude suggestions (ADR 20261018-claude-assists; off, every
+ * assist is dark). Off hides the feature on every surface that offers it and deletes
  * nothing, so turning it back on finds everything where it was.
  *
  * The PADI checks also default off: "Check with PADI" (DiveChek) and the PADI
@@ -24,6 +25,7 @@ export const SHOP_FEATURES = [
   "tips",
   "publicYear",
   "padiChecks",
+  "claudeSuggestions",
 ] as const;
 
 export type ShopFeature = (typeof SHOP_FEATURES)[number];
@@ -36,6 +38,7 @@ export const SHOP_FEATURE_COLUMNS = {
   tips: "tipsEnabled",
   publicYear: "publicYearEnabled",
   padiChecks: "padiChecksEnabled",
+  claudeSuggestions: "claudeSuggestionsEnabled",
 } as const satisfies Record<ShopFeature, string>;
 
 export type ShopFeatureColumn = (typeof SHOP_FEATURE_COLUMNS)[ShopFeature];

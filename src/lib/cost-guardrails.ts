@@ -28,7 +28,7 @@ import { nowDate } from "@/lib/clock";
  */
 
 /** Every vendor with a ceiling in this registry. */
-export const COST_PROVIDERS = ["vercel", "neon", "sentry", "meta_whatsapp"] as const;
+export const COST_PROVIDERS = ["vercel", "neon", "sentry", "meta_whatsapp", "anthropic"] as const;
 export type CostProvider = (typeof COST_PROVIDERS)[number];
 
 /**
@@ -215,6 +215,23 @@ export const COST_CEILINGS: readonly CostCeiling[] = [
     period: "calendar_month",
     warnAt: 0.6,
     observability: "console_only",
+    overflow: "bills_overage",
+  },
+  {
+    // Claude, every shop's assists together (ADR 20261018-claude-assists).
+    // `polled`, but not from Anthropic: every call records its own cost in
+    // `claude_usage`, and the probe sums that table, so the reading is as good
+    // as the price list in `src/lib/claude/models.ts`. Each shop is also capped
+    // at $15 a month (`src/lib/claude/dark.ts`), and that cap is the one that
+    // switches anything off; this ceiling, like every other here, only emails.
+    id: "anthropic_spend",
+    provider: "anthropic",
+    metric: "billed_cost",
+    unit: "usd",
+    ceiling: 200,
+    period: "calendar_month",
+    warnAt: 0.5,
+    observability: "polled",
     overflow: "bills_overage",
   },
 ];

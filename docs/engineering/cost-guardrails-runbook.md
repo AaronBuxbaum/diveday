@@ -28,7 +28,16 @@ and the only consequences of crossing one are an email and a Sentry event.
 | Neon | Postgres compute, storage, egress | `neon_compute`, `neon_storage`, `neon_egress`, polled daily | `/api/cron/usage` |
 | Sentry | Error events | `sentry_errors` — **console only** | Nobody. See below. |
 | Meta (WhatsApp Cloud API) | Per-conversation messaging | `whatsapp_conversations` — **console only** | Nobody. See below. |
+| Anthropic | Claude assists (drafts, sorting, reading) | `anthropic_spend`, $200 a month, summed daily from DiveDay's own `claude_usage` ledger | `/api/cron/usage` |
 | Stripe | Per-transaction fees | none, deliberately | — |
+
+`anthropic_spend` is the one ceiling read from our own database rather than a vendor's API: every
+Claude call records its token counts and its cost at list price, so the reading is as good as the
+price table in `src/lib/claude/models.ts`. Reconcile it against the Anthropic console once a
+month. Separately from this alert-only ceiling, each shop's assists go dark at $15 a month
+(`DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD`, [ADR 20261018-claude-assists](../architecture/decisions/20261018-claude-assists.md)):
+switching off a suggestion costs a shop nothing it relies on, which is why that cap may stop
+something and nothing on this page may.
 
 Stripe has no ceiling because its cost is proportional to revenue that has already arrived: a
 Stripe bill that grows is a business succeeding, not a leak. Everything else on this list can grow

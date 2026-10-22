@@ -166,6 +166,7 @@ export type RetainedTable =
   | "inbound_messages"
   | "staff_replies"
   | "weekly_digest_sends"
+  | "claude_usage"
   | "crew_notices"
   | "notification_send_queue"
   | "waiver_deliveries"
@@ -387,6 +388,14 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * delivery trail keeps, and every newer email carries a live one of its own.
    */
   weekly_digest_sends: 400,
+  /**
+   * 400 days, measured on `created_at`. A row is one Claude call's token
+   * counts and cost (ADR 20261018-claude-assists): codes and numbers, nobody's
+   * words. The cap reads only the current month and the usage guardrail only
+   * the current month too; a year and a season is room to compare this
+   * month's bill with last year's same month, and nothing reads further back.
+   */
+  claude_usage: 400,
   /**
    * 30 days, measured on `created_at`. A row is crew news waiting for the
    * hourly pass (ADR 20261009-crew-hear-about-their-boats), and it is spent

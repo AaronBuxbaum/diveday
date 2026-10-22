@@ -151,6 +151,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // The shop's own yes to the PADI checks (H-121): a restore must not
       // run them under a PADI membership whose shop never chose to.
       "padi_checks_enabled",
+      // The shop's own Claude switch (ADR 20261018-claude-assists): a shop
+      // that said no must not come back with assists on.
+      "claude_suggestions_enabled",
       "contact_email",
       "contact_phone",
       "address_street",
@@ -253,6 +256,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.tipsEnabled,
         shop.publicYearEnabled,
         shop.padiChecksEnabled,
+        shop.claudeSuggestionsEnabled,
         shop.contactEmail,
         shop.contactPhone,
         shop.addressStreet,

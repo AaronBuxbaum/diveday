@@ -17,6 +17,7 @@ import {
   bookingCapabilities,
   bookingPaymentEvents,
   bookings,
+  claudeUsage,
   crewNotices,
   demoEntries,
   departureNotes,
@@ -329,6 +330,12 @@ export const PRUNE_ARMS = {
     from: weeklyDigestSends,
     id: weeklyDigestSends.id,
     clock: weeklyDigestSends.createdAt,
+  },
+  // Claude's per-call cost ledger (ADR 20261018-claude-assists), on its own age.
+  claude_usage: {
+    from: claudeUsage,
+    id: claudeUsage.id,
+    clock: claudeUsage.createdAt,
   },
   // Crew news, spent the hour it settles (ADR 20261009-crew-hear-about-their-boats).
   crew_notices: {

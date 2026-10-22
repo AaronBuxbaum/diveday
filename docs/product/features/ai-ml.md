@@ -6,6 +6,14 @@ audit's ML & data section; consolidated here 2026-08-01 so there is exactly one 
 Nothing here is committed scope until it moves into [roadmap.md](roadmap.md) with a milestone, an
 ADR for the provider/dependency boundary, and the right safety review.
 
+**What shipped (2026-10-18):** the provider boundary exists. Claude is a runtime dependency behind
+`src/lib/claude/` and `runAssist` in `src/db/assists.ts`, dark without a key, with the shop's
+"Claude suggestions" switch off, or past the shop's $15 monthly cap, and every call is costed in
+`claude_usage` ([ADR 20261018-claude-assists](../../architecture/decisions/20261018-claude-assists.md)).
+The features built on it (inbox drafts and sorting, import mapping, card reading, website setup and
+the rest of the build plan) land in the layers above that ADR; each keeps the guardrails below. The
+"app has no LLM dependency" baseline in the audit section is out of date for that reason.
+
 ## Guardrails
 
 - AI suggests; the safety spine decides.
