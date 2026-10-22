@@ -84,8 +84,33 @@ const NUMBER_WORD = wordPattern([
   "uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|doce|quince|veinte|treinta|cuarenta|cincuenta|cien|cientos|docenas?|par|pareja",
 ]);
 
-export function hasNumberWord(text: string): boolean {
-  return NUMBER_WORD.test(bareText(text));
+/** Every count word in a text, lowercased, repeats included. */
+function numberWordsIn(text: string): string[] {
+  const words: string[] = [];
+  const global = new RegExp(NUMBER_WORD.source, "giu");
+  // `lastIndex` steps back over the trailing boundary, so two count words in
+  // a row are both found.
+  for (let match = global.exec(text); match; match = global.exec(text)) {
+    words.push((match[2] ?? "").toLowerCase());
+    global.lastIndex -= (match[3] ?? "").length;
+  }
+  return words;
+}
+
+/**
+ * True when the text writes a count in words. With `given`, a word the given
+ * text already says (a trip called "Two-tank reef") is quoting, not counting,
+ * and passes as often as `given` says it.
+ */
+export function hasNumberWord(text: string, given = ""): boolean {
+  const offered = new Map<string, number>();
+  for (const word of numberWordsIn(given)) offered.set(word, (offered.get(word) ?? 0) + 1);
+  for (const word of numberWordsIn(bareText(text))) {
+    const left = offered.get(word) ?? 0;
+    if (left === 0) return true;
+    offered.set(word, left - 1);
+  }
+  return false;
 }
 
 /**
@@ -129,7 +154,7 @@ export function softensTheDive(text: string, given: readonly string[]): boolean 
 }
 
 /** The locale's language as the prompt names it. */
-export function languageName(locale: string): string {
+export function promptLanguage(locale: string): string {
   return locale.toLowerCase().startsWith("es")
     ? "Latin American Spanish"
     : "English (United States)";

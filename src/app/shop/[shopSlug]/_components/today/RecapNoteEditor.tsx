@@ -204,6 +204,7 @@ export function RecapNoteEditor({ context }: { context: RecapNoteEditorContext }
               draft={context.draftShoutout}
               label={t("deskAssists.draft")}
               pendingLabel={t("deskAssists.drafting")}
+              emptyLabel={t("deskAssists.nothing")}
             />
           ) : null}
           <FormStatus tone={saved ? "success" : undefined}>

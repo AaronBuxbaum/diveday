@@ -302,6 +302,7 @@ export function GearAndSizes({
                     draft={readGearNoteAction.bind(null, shopSlug, personId)}
                     label={t("deskAssists.gearNote")}
                     pendingLabel={t("deskAssists.gearNotePending")}
+                    emptyLabel={t("deskAssists.nothing")}
                   />
                 ) : null}
                 <SubmitButton

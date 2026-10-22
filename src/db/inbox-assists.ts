@@ -40,6 +40,36 @@ const FACT_DEPARTURES = 30;
 const FACT_HORIZON_DAYS = 14;
 
 /**
+ * **Whether triage would read this message**: the same rule as the `where` in
+ * {@link triageInboundMessage}, for the pages that choose which waiting
+ * messages to hand it. A message triage skips (an "Ask to move", a keyword
+ * reply, spam, an unauthenticated sender, a blank body) is never stamped, so a
+ * caller that passed it would spend a per-view slot on it on every view.
+ */
+export function awaitsTriage(
+  message: Pick<
+    typeof inboundMessages.$inferSelect,
+    | "assistedAt"
+    | "deletedAt"
+    | "keywordIntent"
+    | "spamFlagged"
+    | "senderAuthenticated"
+    | "channel"
+    | "body"
+  >,
+): boolean {
+  return (
+    message.assistedAt === null &&
+    message.deletedAt === null &&
+    message.keywordIntent === null &&
+    !message.spamFlagged &&
+    message.senderAuthenticated &&
+    message.channel !== "page" &&
+    message.body.trim() !== ""
+  );
+}
+
+/**
  * Sorts and, when it is in another language, translates one inbound message,
  * and stores the answer on it. Runs once per message: a message already read,
  * one a keyword handled, an "Ask to move", spam, or a deleted one is skipped.
@@ -154,7 +184,14 @@ export async function replyFacts(
   if (!shop) return [];
   const horizon = new Date(now.getTime() + FACT_HORIZON_DAYS * 24 * 60 * 60 * 1000);
   const [upcoming, courses] = await Promise.all([
-    offsetUpcomingTripsWithCounts(db, shopId, { limit: FACT_DEPARTURES, now, monthEnd: horizon }),
+    offsetUpcomingTripsWithCounts(db, shopId, {
+      limit: FACT_DEPARTURES,
+      now,
+      monthEnd: horizon,
+      // A charter's title is often a customer's name, and a rehearsal is not
+      // a departure: neither may reach a draft to another diver.
+      outward: true,
+    }),
     listActiveCourses(db, shopId),
   ]);
   const money = (cents: number | null | undefined) =>

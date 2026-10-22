@@ -17,8 +17,7 @@ import {
 import { sourceDigest } from "@/lib/assists/shop-translate";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { readAssistResult, readAssistResults, saveAssistResult } from "./assist-results";
-import { shopAssist } from "./assist-shop";
-import type { AssistOptions } from "./assists";
+import { type AssistOptions, runAssistOutcome } from "./assists";
 import type { AppDb } from "./client";
 import { tripReviews } from "./schema";
 
@@ -93,18 +92,23 @@ export async function flagWaitingReviews(
     .slice(0, REVIEW_FLAGS_PER_VISIT);
   let read = 0;
   for (const review of unread) {
-    const value = await shopAssist(db, {
+    const { status, value } = await runAssistOutcome(db, {
       ...options,
       shopId,
       feature: REVIEW_FLAGS_FEATURE,
       call: reviewFlagsCall(review.comment),
     });
-    if (!value) return read;
+    // Nothing came back (dark, over the cap, in flight, a provider error):
+    // left unread, so a later visit asks again.
+    if (status === "skipped") continue;
+    // A refused or unusable answer is stored as no flags: asking again would
+    // cost the same for the same answer, and it must not hold the reviews
+    // behind it out of the slots.
     await saveAssistResult(db, {
       shopId,
       feature: REVIEW_FLAGS_FEATURE,
       subjectKey: review.id,
-      value: { flags: value.flags },
+      value: { flags: value?.flags ?? [] },
       inputDigest: sourceDigest(review.comment),
     });
     read += 1;
@@ -189,18 +193,20 @@ export async function refreshReviewThemes(
   if (await readAssistResult(db, shopId, REVIEW_THEMES_FEATURE, month)) return false;
   const inputs = await themeInputs(db, shopId, now);
   if (inputs.length < REVIEW_THEMES_MIN_COMMENTS) return false;
-  const value = await shopAssist(db, {
+  const { status, value } = await runAssistOutcome(db, {
     ...options,
     shopId,
     feature: REVIEW_THEMES_FEATURE,
     call: reviewThemesCall(inputs, locale),
   });
-  if (!value) return false;
+  if (status === "skipped") return false;
+  // A refused or unusable answer is stored as no themes, so the month is
+  // asked once.
   await saveAssistResult(db, {
     shopId,
     feature: REVIEW_THEMES_FEATURE,
     subjectKey: month,
-    value: { themes: reviewThemes(value, inputs) },
+    value: { themes: value ? reviewThemes(value, inputs) : [] },
     inputDigest: sourceDigest(inputs.map((input) => input.id).join(",")),
   });
   return true;

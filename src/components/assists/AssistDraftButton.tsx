@@ -1,15 +1,17 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { FormStatus } from "@/components/ui/form";
 
 /**
  * **The one shape a Claude assist takes on screen** (ADR
  * 20261018-claude-assists): a quiet "Draft" button beside a field. A tap runs
  * a server action; the text it returns lands in the field for staff to edit,
- * and nothing is sent or saved until they do. When the assist is dark the
- * action returns `null` and the tap does nothing at all: no error, no
- * notice, because a shop without Claude has lost nothing it relied on.
+ * and nothing is sent or saved until they do. The page renders it only while
+ * the assist is lit, so a `null` answer means this one came back empty (a
+ * refusal, a draft thrown away, the cap): the field stays as it was and
+ * `emptyLabel` says so beside the button, so the tap never just stops.
  *
  * ## Using it
  *
@@ -61,6 +63,7 @@ export function AssistDraftButton({
   onDraft,
   label,
   pendingLabel,
+  emptyLabel,
   className,
 }: {
   /** A server action answering the draft, or null when the assist is dark or failed. */
@@ -71,35 +74,44 @@ export function AssistDraftButton({
   onDraft?: (text: string) => void;
   label: string;
   pendingLabel: string;
+  /** Said beside the button when the answer came back empty. */
+  emptyLabel?: string;
   className?: string;
 }) {
   const [pending, startTransition] = useTransition();
+  const [empty, setEmpty] = useState(false);
 
   function run() {
+    setEmpty(false);
     startTransition(async () => {
       let text: string | null = null;
       try {
         text = await draft();
       } catch {
-        // A failed action is a dark assist: the field stays as it was.
+        // A failed action is an empty answer: the field stays as it was.
+      }
+      if (!text?.trim()) {
+        setEmpty(true);
         return;
       }
-      if (!text?.trim()) return;
       if (onDraft) onDraft(text);
       if (fieldId) fillField(fieldId, text);
     });
   }
 
   return (
-    <button
-      type="button"
-      onClick={run}
-      disabled={pending}
-      aria-busy={pending || undefined}
-      className={buttonClass({ variant: "ghost", size: "sm", busy: pending, className })}
-    >
-      {pending ? pendingLabel : label}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={run}
+        disabled={pending}
+        aria-busy={pending || undefined}
+        className={buttonClass({ variant: "ghost", size: "sm", busy: pending, className })}
+      >
+        {pending ? pendingLabel : label}
+      </button>
+      <FormStatus tone="neutral">{empty && emptyLabel ? emptyLabel : null}</FormStatus>
+    </>
   );
 }
 

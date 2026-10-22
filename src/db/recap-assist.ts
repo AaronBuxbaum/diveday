@@ -7,9 +7,10 @@ import {
   recapLine,
   recapLineCall,
 } from "@/lib/assists/recap-line";
+import { sourceDigest } from "@/lib/assists/shop-translate";
 import { temperatureInUnit, temperatureUnitFor } from "@/lib/temperature-units";
-import { shopAssist } from "./assist-shop";
-import type { AssistOptions } from "./assists";
+import { readAssistResult, saveAssistResult } from "./assist-results";
+import { type AssistOptions, runAssist, runAssistOutcome } from "./assists";
 import type { AppDb } from "./client";
 import { incidentReports, shops, tripSightings, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -101,7 +102,7 @@ export async function draftRecapLine(
 ): Promise<string | null> {
   const log = await recapLogFor(db, shopId, tripId);
   if (!log) return null;
-  const value = await shopAssist(db, {
+  const value = await runAssist(db, {
     ...options,
     shopId,
     feature: RECAP_LINE_FEATURE,
@@ -145,8 +146,32 @@ export async function autoFillRecapLine(
     // may reach the diver it is about, or their family. The crew can still
     // draft one on Today and send it themselves.
     if (await hasLiveIncidentReport(db, trip.shopId, trip.id)) return false;
-    const line = await draftRecapLine(db, trip.shopId, trip.id, options);
-    if (!line) return false;
+    const log = await recapLogFor(db, trip.shopId, trip.id);
+    if (!log) return false;
+    // A line refused or thrown away for these sightings is remembered, so
+    // each send pass does not pay for the same refusal again. A staffer's
+    // Draft on Today still asks.
+    const digest = sourceDigest(JSON.stringify(log));
+    const refused = await readAssistResult(db, trip.shopId, RECAP_LINE_FEATURE, trip.id);
+    if (refused?.inputDigest === digest) return false;
+    const { status, value } = await runAssistOutcome(db, {
+      ...options,
+      shopId: trip.shopId,
+      feature: RECAP_LINE_FEATURE,
+      call: recapLineCall(log),
+    });
+    if (status === "skipped") return false;
+    const line = recapLine(value, log, catalogNames());
+    if (!line) {
+      await saveAssistResult(db, {
+        shopId: trip.shopId,
+        feature: RECAP_LINE_FEATURE,
+        subjectKey: trip.id,
+        value: { text: null },
+        inputDigest: digest,
+      });
+      return false;
+    }
     const [written] = await db
       .update(trips)
       .set({ recapShoutout: line })

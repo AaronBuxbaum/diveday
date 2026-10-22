@@ -2004,8 +2004,14 @@
   but recorded ashore still counts.
 - **Assist** — a suggestion Claude makes to staff (a drafted reply, a sorted message, a value read
   off a card or a website), which a person accepts, edits or ignores (ADR 20261018-claude-assists).
-  An assist never sends, publishes, saves or clears anything on its own, and it is **dark** (offers
-  nothing, says nothing) when there is no API key, external HTTP is off, the shop switched
-  "Claude suggestions" off in Features, the shop is a demo, or the shop reached its monthly cap. Every feature with an
-  assist works the same without it. Code: `runAssist` in `src/db/assists.ts`; on screen,
-  `AssistDraftButton`. Not "AI": the copy names Claude.
+  An assist never clears anything, and it never sends, publishes or saves on its own, with one
+  opt-in exception: a shop that turns on "Recap highlights" (`shops.recap_assist_auto_approve`,
+  off by default) lets the recap send fill a highlight the crew left blank, never over the crew's
+  own words and never on a departure with an incident report (the ADR's 2026-10-22 amendment). One
+  assist is the diver's: the card photo on the public register page fills the boxes they would
+  type, rate limited per address and per shop. An assist is **dark** (offers nothing, says
+  nothing) when there is no API key, external HTTP is off, the shop switched "Claude suggestions"
+  off in Features, the shop is a demo, or the shop reached its monthly cap. Every feature with an
+  assist works the same without it. Code: `runAssist` in `src/db/assists.ts`; on screen, the
+  controls in `src/components/assists/` (`AssistDraftButton` and its siblings). Not "AI": the copy
+  names Claude.

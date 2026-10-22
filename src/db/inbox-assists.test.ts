@@ -2,18 +2,20 @@ import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { REDACTED_TEXT } from "@/lib/anonymization";
 import type { ClaudeProvider, ClaudeRequest } from "@/lib/claude/provider";
+import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import { anonymizeDiver } from "./anonymize";
 import { recordInboundMessage, recordStaffReply } from "./inbound-messages";
 import {
+  awaitsTriage,
   diverReplyLanguage,
   draftReplyFor,
   replyFacts,
   translateReplyFor,
   triageInboundMessage,
 } from "./inbox-assists";
-import { inboundMessages, people, personRoles, shops } from "./schema";
+import { inboundMessages, people, personRoles, shops, trips } from "./schema";
 import { setShopFeature } from "./shops";
 
 const ctx = fileScopedShopContext();
@@ -200,11 +202,63 @@ describe("triageInboundMessage", () => {
   });
 });
 
+describe("awaitsTriage", () => {
+  // The pages hand triage only these, so its per-view slots never go to a
+  // message it would skip and leave unstamped (review of the assists, item 2).
+  it.each([
+    { name: "a plain message", set: {}, reads: true },
+    { name: "an Ask to move", set: { channel: "page" as const }, reads: false },
+    { name: "a keyword reply", set: { keywordIntent: "cancel" as const }, reads: false },
+    { name: "spam", set: { spamFlagged: true }, reads: false },
+    { name: "an unauthenticated sender", set: { senderAuthenticated: false }, reads: false },
+    { name: "a blank body", set: { body: "   " }, reads: false },
+  ])("agrees with what triage reads for $name", async ({ set, reads }) => {
+    const { messageId } = await diverWithMessage("Gibt es Platz am Samstag?");
+    if (Object.keys(set).length > 0) {
+      await ctx.db.update(inboundMessages).set(set).where(eq(inboundMessages.id, messageId));
+    }
+    const before = await stored(messageId);
+    if (!before) throw new Error("fixture row missing");
+    expect(awaitsTriage(before)).toBe(reads);
+    const provider = answering(triage);
+    await triageInboundMessage(ctx.db, ctx.shop.id, messageId, { provider, env: keyed });
+    expect(provider.requests).toHaveLength(reads ? 1 : 0);
+    const read = await stored(messageId);
+    if (!read) throw new Error("fixture row missing");
+    expect(awaitsTriage(read)).toBe(false);
+  });
+});
+
 describe("replyFacts", () => {
   it("quotes the shop's departures with their open seats and prices from the database", async () => {
     const facts = await replyFacts(ctx.db, ctx.shop.id);
     expect(facts[0]).toContain(ctx.shop.name);
     expect(facts.some((line) => /seats open|full/.test(line))).toBe(true);
+  });
+
+  it("never quotes a private charter or a rehearsal departure", async () => {
+    const soon = new Date(nowMs() + 2 * 24 * 60 * 60 * 1000);
+    const departure = (title: string, isPrivate: boolean, isRehearsal: boolean) => ({
+      shopId: ctx.shop.id,
+      title,
+      startsAt: soon,
+      endsAt: new Date(soon.getTime() + 3 * 60 * 60 * 1000),
+      capacity: 8,
+      isPrivate,
+      isRehearsal,
+      priceCents: 43_210,
+    });
+    await ctx.db
+      .insert(trips)
+      .values([
+        departure("Okafor family charter", true, false),
+        departure("Crew rehearsal run", true, true),
+        departure("Open reef morning", false, false),
+      ]);
+    const facts = (await replyFacts(ctx.db, ctx.shop.id)).join("\n");
+    expect(facts).toContain("Open reef morning");
+    expect(facts).not.toContain("Okafor family charter");
+    expect(facts).not.toContain("Crew rehearsal run");
   });
 });
 

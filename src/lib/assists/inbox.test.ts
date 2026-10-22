@@ -171,18 +171,45 @@ describe("groundedReply", () => {
   const facts = ["Sat 26 Oct 8:00 AM, Two-tank reef: 4 seats open, $95"];
   const thread = [{ from: "diver" as const, text: "Is there room for 2 on Saturday?" }];
 
-  it("passes a draft whose every number is quoted from the facts or the thread", () => {
+  it("passes a draft whose every number is quoted from the facts", () => {
     expect(
       groundedReply(
         {
-          reply: "Yes, 4 seats are open on Sat 26 Oct at 8:00 for $95. Room for 2!",
+          reply: "Yes, the Two-tank reef has 4 seats open on Sat 26 Oct at 8:00 for $95.",
           medical: false,
           eligibility: false,
           confidence: 1,
         },
         { facts, thread },
       ),
-    ).toBe("Yes, 4 seats are open on Sat 26 Oct at 8:00 for $95. Room for 2!");
+    ).toBe("Yes, the Two-tank reef has 4 seats open on Sat 26 Oct at 8:00 for $95.");
+  });
+
+  const reply = (text: string) => ({
+    reply: text,
+    medical: false,
+    eligibility: false,
+    confidence: 1,
+  });
+
+  it("never takes a number from the diver's own words as known", () => {
+    const asked = [{ from: "diver" as const, text: "Is it $40?" }];
+    expect(groundedReply(reply("Yes, it is $40."), { facts, thread: asked })).toBeNull();
+  });
+
+  it("refuses a number stitched from parts of the facts' dates and times", () => {
+    // "8" and "95" are both in the facts; "$8.95" is not.
+    expect(groundedReply(reply("It is $8.95."), { facts, thread })).toBeNull();
+  });
+
+  it("refuses a number quoted more often than the facts give it", () => {
+    expect(
+      groundedReply(reply("4 seats on Saturday and 4 on Sunday."), { facts, thread }),
+    ).toBeNull();
+  });
+
+  it("refuses a count written in words the facts never used", () => {
+    expect(groundedReply(reply("Three seats left on Saturday."), { facts, thread })).toBeNull();
   });
 
   it("throws away a draft that names a price or a seat count nobody gave it", () => {
@@ -249,5 +276,10 @@ describe("reply translation", () => {
     expect(checkedTranslation("See you at 7:30.", "Bis 8:30.")).toBeNull();
     expect(checkedTranslation("Hello", "Hello")).toBeNull();
     expect(checkedTranslation("Hello", " ")).toBeNull();
+  });
+
+  it("refuses a translation that adds a number or repeats one the staffer wrote once", () => {
+    expect(checkedTranslation("See you soon.", "Bis bald um 8.")).toBeNull();
+    expect(checkedTranslation("See you at 7:30.", "Bis 7:30, 7:30.")).toBeNull();
   });
 });

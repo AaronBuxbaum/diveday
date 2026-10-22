@@ -1,6 +1,7 @@
 // i18n-exempt-file: model instructions, sent to Claude and never shown to a reader
 import { z } from "zod";
 import type { StructuredCall } from "@/lib/claude/structured";
+import { hasNumberWord, numbersCameFrom } from "./facts";
 
 /**
  * **The inbox assists** (ADR 20261018-claude-assists): inbox-sort, translate
@@ -149,7 +150,7 @@ export const DRAFT_SYSTEM = `You draft replies for the staff of a scuba diving s
 
 Rules:
 - Answer the diver's latest message in <thread>, in the language it is written in, warmly and briefly, the way a person at the shop's desk writes. No subject line, no signature block, no placeholders in brackets.
-- Every date, time, seat count and price you mention must be copied exactly from <facts>. If the facts do not answer the question, say a staff member will confirm, and do not guess. Never promise a seat: say how many are open.
+- Every date, time, seat count and price you mention must be copied exactly from <facts>, in digits as the facts write them. A number only the diver wrote is not a fact. If the facts do not answer the question, say a staff member will confirm, and do not guess. Never promise a seat: say how many are open.
 - Never confirm a cancellation, a refund or a change to a booking. Say the staff will take care of it.
 - If the diver asks about their health, a medical condition, medication, pregnancy or whether they are fit to dive, set medical to true and leave reply empty: those questions are answered by a person.
 - Never say whether a certification, experience, age or nitrox card qualifies anyone for a dive or course, and never state a depth, a limit, a prerequisite or that one agency's card equals another's. Say a staff member will check their card against that dive.
@@ -181,26 +182,16 @@ export function replyDraftCall(input: {
   };
 }
 
-/** Runs of digits: a seat count, a price, a time, a date. */
-const NUMBERS = /\d+(?:[.,:]\d+)*/g;
-
-function numbersIn(text: string): Set<string> {
-  const found = new Set<string>();
-  for (const match of text.matchAll(NUMBERS)) {
-    // "10:30" and "10" are both fine to quote when "10:30" is a fact.
-    for (const part of match[0].split(/[.,:]/)) found.add(String(Number(part)));
-    found.add(match[0]);
-  }
-  return found;
-}
-
 /**
  * The draft, or null when it must not reach the reply box: the diver asked a
- * medical question, the draft judges eligibility (`ReplyDraft.eligibility`), or the draft names a number (a seat count, a price, a
- * time) that is in neither the facts nor the thread. That second rule is what
- * "seat counts and prices come from the database" means in code: the model
- * may only quote, and a number it made up throws the whole draft away rather
- * than leaving a staffer to spot it.
+ * medical question, the draft judges eligibility (`ReplyDraft.eligibility`),
+ * or the draft names a number (a seat count, a price, a time) the facts did
+ * not give it, in digits or in words. That last rule is what "seat counts and
+ * prices come from the database" means in code: every number is a whole token
+ * of the facts, quoted no more often than the facts give it, and the diver's
+ * own words are never a source ("is it $40?" does not make $40 a price). A
+ * number the model made up throws the whole draft away rather than leaving a
+ * staffer to spot it.
  */
 export function groundedReply(
   value: z.infer<typeof ReplyDraft>,
@@ -209,16 +200,8 @@ export function groundedReply(
   if (value.medical || value.eligibility) return null;
   const reply = value.reply.trim();
   if (!reply) return null;
-  const known = numbersIn(
-    [...sources.facts, ...sources.thread.map((line) => line.text)].join("\n"),
-  );
-  for (const match of reply.matchAll(NUMBERS)) {
-    const whole = match[0];
-    if (known.has(whole)) continue;
-    const parts = whole.split(/[.,:]/).map((part) => String(Number(part)));
-    if (parts.every((part) => known.has(part))) continue;
-    return null;
-  }
+  const facts = sources.facts.join("\n");
+  if (!numbersCameFrom(reply, facts) || hasNumberWord(reply, facts)) return null;
   return reply;
 }
 
@@ -241,16 +224,12 @@ export function replyTranslationCall(input: {
 }
 
 /**
- * The translation, or null when it is not one: empty, or every number in the
- * staffer's words did not survive (a translation that changed "10:30" to
- * "11:30" is worse than none).
+ * The translation, or null when it is not one: empty, or its numbers are not
+ * exactly the staffer's (a translation that changed "10:30" to "11:30", or
+ * added a time, is worse than none).
  */
 export function checkedTranslation(original: string, translation: string): string | null {
   const text = translation.trim();
   if (!text || text === original.trim()) return null;
-  const kept = numbersIn(text);
-  for (const match of original.matchAll(NUMBERS)) {
-    if (!kept.has(match[0])) return null;
-  }
-  return text;
+  return numbersCameFrom(text, original) && numbersCameFrom(original, text) ? text : null;
 }

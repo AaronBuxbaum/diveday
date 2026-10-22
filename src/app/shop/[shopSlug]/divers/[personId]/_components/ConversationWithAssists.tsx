@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { languageName } from "@/components/assists/language-name";
 import { assistsAvailable } from "@/db/assists";
 import { getDb } from "@/db/client";
-import { diverReplyLanguage, triageInboundMessagesSafely } from "@/db/inbox-assists";
+import { awaitsTriage, diverReplyLanguage, triageInboundMessagesSafely } from "@/db/inbox-assists";
 import { requestFromMessageAction } from "../../../inbox/assist-actions";
 import { draftReplyAction, translateReplyAction } from "../assist-actions";
 import { ConversationSection } from "./ConversationSection";
@@ -28,9 +28,14 @@ export async function ConversationWithAssists(props: ComponentProps<typeof Conve
     diverReplyLanguage(db, shopId, personId),
   ]);
   if (!assists) return <ConversationSection {...props} />;
-  const unread = entries.flatMap((entry) =>
-    entry.direction === "inbound" && entry.message.assistedAt === null ? [entry.message.id] : [],
-  );
+  // Newest first: the thread reads oldest first, and the latest message is the
+  // one a reply answers and the one that tells Translate the diver's language.
+  // Only what triage would read, so a message it skips holds no slot.
+  const unread = entries
+    .flatMap((entry) =>
+      entry.direction === "inbound" && awaitsTriage(entry.message) ? [entry.message.id] : [],
+    )
+    .reverse();
   if (unread.length > 0) after(() => triageInboundMessagesSafely(db, shopId, unread));
   return (
     <ConversationSection

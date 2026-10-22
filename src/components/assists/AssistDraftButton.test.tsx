@@ -63,6 +63,28 @@ describe("AssistDraftButton", () => {
     }
   });
 
+  it("says so beside the button when the answer came back empty, and clears it on a good draft", async () => {
+    const answers: (string | null)[] = [null, "Yes, two seats left."];
+    render(
+      <>
+        <AssistDraftButton
+          draft={async () => answers.shift() ?? null}
+          fieldId="reply"
+          emptyLabel="Nothing came back to use."
+          {...words}
+        />
+        <textarea id="reply" defaultValue="" />
+      </>,
+    );
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Draft" })));
+    expect(screen.getByText("Nothing came back to use.")).toBeInTheDocument();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Draft" })));
+    expect(screen.queryByText("Nothing came back to use.")).toBeNull();
+    expect((document.getElementById("reply") as HTMLTextAreaElement).value).toBe(
+      "Yes, two seats left.",
+    );
+  });
+
   it("reaches a controlled field through React's own change path", async () => {
     function Controlled() {
       const [text, setText] = useState("");

@@ -20,8 +20,9 @@ the rest of the build plan) land in the layers above that ADR; each keeps the gu
   (`inbound_messages.assist_*`) by the inbound webhooks and the inbox view; the diver's words stay
   in view, and a cancellation still goes through the reply keyword's confirm.
 - **Reply draft and translation**: Draft and Translate beside the diver record's reply box; a draft
-  is thrown away when it quotes a number the database did not give it, or the diver asked a medical
-  question. Staff send.
+  is thrown away when it quotes a number, in digits or words, the shop's facts did not give it (a
+  number only the diver wrote does not count), or the diver asked a medical question; a translation
+  is thrown away when its numbers are not the staffer's. Staff send.
 - **Request and call note**: "Make a request" reads a message, and the Took-a-call scribble box
   reads a call, into the Took-a-call form's own fields for a staffer to log; admission decides
   after that. The scribble lands in the note as typed.

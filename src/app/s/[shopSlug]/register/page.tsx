@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
@@ -56,7 +56,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ shopS
   if (!shop) notFound();
   const locale = await requestLocale(shop.defaultLocale);
   const { t } = await requestTranslator(shop.defaultLocale);
-  const canAssist = await shopAssistsAvailable(await getDb(), shop.id);
+  const canAssist = await assistsAvailable(await getDb(), shop.id);
 
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">

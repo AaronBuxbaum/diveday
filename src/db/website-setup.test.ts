@@ -4,7 +4,7 @@ import { fileScopedShopContext } from "@/test/db";
 import { fakeClaude, fakeClaudeMessage } from "@/test/fakes";
 import { listActiveCourses } from "./courses";
 import { readFormDraft } from "./form-drafts";
-import { courses, people, shops } from "./schema";
+import { courses, people, shops, websiteSetupDrafts } from "./schema";
 import {
   acceptSetupLine,
   dismissSetupLine,
@@ -153,6 +153,64 @@ describe("acceptSetupLine", () => {
     expect(await dismissSetupLine(ctx.db, ctx.shop.id, policy)).toBe(false);
     const after = await readWebsiteSetup(ctx.db, ctx.shop.id);
     expect(after?.lines.find((line) => line.key === policy)?.status).toBe("dismissed");
+  });
+
+  // Two interleaved taps on different lines: each writes its own line only.
+  // That they also serialise on the draft row (a double tap writes once) is
+  // a real-server question, in `website-setup.postgres.test.ts`.
+  it("keeps both lines accepted when taps on two lines interleave", async () => {
+    await readSite();
+    const setup = await readWebsiteSetup(ctx.db, ctx.shop.id);
+    const key = (kind: string) => setup?.lines.find((line) => line.kind === kind)?.key ?? "";
+    const personId = await owner();
+    const outcomes = await Promise.all([
+      acceptSetupLine(ctx.db, { shopId: ctx.shop.id, personId, key: key("tagline") }),
+      acceptSetupLine(ctx.db, { shopId: ctx.shop.id, personId, key: key("phone") }),
+    ]);
+    expect(outcomes).toEqual(["saved", "saved"]);
+    const after = await readWebsiteSetup(ctx.db, ctx.shop.id);
+    const status = (kind: string) => after?.lines.find((line) => line.kind === kind)?.status;
+    expect([status("tagline"), status("phone")]).toEqual(["accepted", "accepted"]);
+    expect(status("deskHours")).toBe("open");
+  });
+
+  it("refuses a tap from a page drawn before the site was read again", async () => {
+    await readSite();
+    const before = await readWebsiteSetup(ctx.db, ctx.shop.id);
+    const stale = before?.lines.find((line) => line.kind === "tagline")?.key ?? "";
+    const stalePolicy = before?.lines.find((line) => line.kind === "policy")?.key ?? "";
+    const [shopBefore] = await ctx.db.select().from(shops).where(eq(shops.id, ctx.shop.id));
+    // Another tab reads the site again: the same positions, a new reading.
+    await ctx.db
+      .update(websiteSetupDrafts)
+      .set({ readAt: new Date((before?.readAt.getTime() ?? 0) + 60_000) })
+      .where(eq(websiteSetupDrafts.shopId, ctx.shop.id));
+    const personId = await owner();
+    expect(await acceptSetupLine(ctx.db, { shopId: ctx.shop.id, personId, key: stale })).toBe(
+      "gone",
+    );
+    expect(await dismissSetupLine(ctx.db, ctx.shop.id, stalePolicy)).toBe(false);
+    const [shopAfter] = await ctx.db.select().from(shops).where(eq(shops.id, ctx.shop.id));
+    expect(shopAfter?.tagline).toBe(shopBefore?.tagline);
+    const after = await readWebsiteSetup(ctx.db, ctx.shop.id);
+    expect(after?.lines.every((line) => line.status === "open")).toBe(true);
+    // The new reading's own key still works.
+    const fresh = after?.lines.find((line) => line.kind === "tagline")?.key ?? "";
+    expect(fresh).not.toBe(stale);
+    expect(await acceptSetupLine(ctx.db, { shopId: ctx.shop.id, personId, key: fresh })).toBe(
+      "saved",
+    );
+  });
+
+  it("refuses a key that names no reading or no line", async () => {
+    await readSite();
+    const setup = await readWebsiteSetup(ctx.db, ctx.shop.id);
+    const personId = await owner();
+    const stamp = String(setup?.readAt.getTime());
+    for (const key of ["", "tagline-0", `${stamp}.`, `${stamp}.tagline-99`, "x.tagline-0"]) {
+      expect(await acceptSetupLine(ctx.db, { shopId: ctx.shop.id, personId, key })).toBe("gone");
+      expect(await dismissSetupLine(ctx.db, ctx.shop.id, key)).toBe(false);
+    }
   });
 
   it("reads no other shop's proposals", async () => {

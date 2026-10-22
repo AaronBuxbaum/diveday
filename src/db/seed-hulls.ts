@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lt, ne } from "drizzle-orm";
 import type { DbExecutor } from "./client";
 import { boats, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -17,11 +17,7 @@ import { liveTrip } from "./trips-live";
  * two departures at once (H-80, `src/db/trips-clashes.ts`).
  */
 export async function seedHulls(db: DbExecutor, shopId: string): Promise<void> {
-  const fleet = await db
-    .select({ id: boats.id })
-    .from(boats)
-    .where(eq(boats.shopId, shopId))
-    .orderBy(asc(boats.name));
+  const fleet = await liveFleet(db, shopId);
   if (fleet.length === 0) return;
   const board = await db
     .select({
@@ -61,4 +57,44 @@ export async function seedHulls(db: DbExecutor, shopId: string): Promise<void> {
       // diveday:allow-deleted-trips: the seed's own departure, read live above.
       .where(and(eq(trips.id, trip.id), isNull(trips.boatId)));
   }
+}
+
+/** The shop's boats still in its fleet, by name: the order every seed hands them out in. */
+function liveFleet(db: DbExecutor, shopId: string) {
+  return db
+    .select({ id: boats.id })
+    .from(boats)
+    .where(and(eq(boats.shopId, shopId), isNull(boats.deletedAt)))
+    .orderBy(asc(boats.name));
+}
+
+/**
+ * For a scenario writing one departure of its own: the first hull, by name,
+ * that no other live, uncancelled departure has out in those hours, or none
+ * when the whole fleet is out (the same rule `seedHulls` applies to the
+ * board).
+ */
+export async function freeHull(
+  db: DbExecutor,
+  shopId: string,
+  window: { startsAt: Date; endsAt: Date },
+): Promise<string | null> {
+  for (const hull of await liveFleet(db, shopId)) {
+    const [clash] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(
+        and(
+          eq(trips.shopId, shopId),
+          eq(trips.boatId, hull.id),
+          ne(trips.status, "cancelled"),
+          liveTrip(),
+          lt(trips.startsAt, window.endsAt),
+          gt(trips.endsAt, window.startsAt),
+        ),
+      )
+      .limit(1);
+    if (!clash) return hull.id;
+  }
+  return null;
 }

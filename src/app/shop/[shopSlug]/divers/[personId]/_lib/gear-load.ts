@@ -1,4 +1,4 @@
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import type { AppDb } from "@/db/client";
 import { countGearItems } from "@/db/gear";
 import { listOpenCounterRentalsForPerson } from "@/db/gear-counter-rentals";
@@ -32,7 +32,7 @@ export async function loadDiverGear(
     removed ? 0 : countGearItems(db, shop.id),
     // Claude's desk assists on this record (the card photo, the gear note):
     // false while they are dark, and never for a removed record.
-    removed ? false : shopAssistsAvailable(db, shop.id),
+    removed ? false : assistsAvailable(db, shop.id),
   ]);
   const reminders = await serviceReminderStates(
     db,

@@ -14,6 +14,7 @@ import {
 } from "@/lib/claude/models";
 import { type ClaudeProvider, claudeProviderFromEnv } from "@/lib/claude/provider";
 import {
+  CLAUDE_CALL_MAX_MS,
   callStructured,
   type StructuredCall,
   type StructuredResult,
@@ -156,25 +157,33 @@ export async function assistDarkReasonFor(
 /**
  * Whether to offer an assist on a page at all. A page that is dark renders no
  * Draft button, so a shop with Claude off never sees a control that does
- * nothing.
+ * nothing. It never throws: an assist is never the reason a page fails, so a
+ * read that throws (a database blip, a missing row) reads as dark and the
+ * page renders the way it always did.
  */
 export async function assistsAvailable(
   db: AppDb,
   shopId: string,
   options: AssistOptions = {},
 ): Promise<boolean> {
-  return (await assistDarkReasonFor(db, shopId, options)) === null;
+  try {
+    return (await assistDarkReasonFor(db, shopId, options)) === null;
+  } catch {
+    return false;
+  }
 }
 
 /** How many calls one shop may have out at once; a third waits for none and is refused. */
 export const MAX_CALLS_IN_FLIGHT = 2;
 
 /**
- * How long a `pending` row counts as in flight. Past the provider's timeout
- * and its one retry, a row still pending is a call that will never settle:
- * it stops blocking the shop, and keeps charging its reservation.
+ * How long a `pending` row counts as in flight: the longest a call can run
+ * (every turn it may resume, each at the provider's timeout and its one
+ * retry), and a minute more. Past that, a row still pending is a call that
+ * will never settle: it stops blocking the shop, and keeps charging its
+ * reservation.
  */
-export const IN_FLIGHT_WINDOW_MS = 5 * MINUTE_MS;
+export const IN_FLIGHT_WINDOW_MS = CLAUDE_CALL_MAX_MS + MINUTE_MS;
 
 /** What a reservation assumes a call reads: a message and its context, or a few fetched pages. */
 const RESERVED_INPUT_TOKENS = 20_000;

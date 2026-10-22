@@ -4,7 +4,7 @@ import {
   claimsAnAudience,
   fillFacts,
   hasNumberWord,
-  languageName,
+  promptLanguage,
   softensTheDive,
   VOICE_RULES,
 } from "./facts";
@@ -54,7 +54,7 @@ export function siteBriefCall(input: SiteBriefInput): StructuredCall<typeof Brie
     model: "draft",
     system: SITE_BRIEF_SYSTEM,
     content: JSON.stringify({
-      language: languageName(input.locale),
+      language: promptLanguage(input.locale),
       site: input.words,
       requirement: input.requirement ?? {},
       placeholders: Object.keys(input.facts),

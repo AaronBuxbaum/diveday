@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useRef, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { FormStatus } from "@/components/ui/form";
 import { fillFormFields } from "./fill-form";
 
 /** A card is legible at this width; a phone's 4000px photo is twelve times the bytes. */
@@ -35,14 +36,18 @@ export function AssistPhotoButton({
   read,
   label,
   pendingLabel,
+  emptyLabel,
   className,
 }: {
   read: (image: { data: string; mediaType: string }) => Promise<Record<string, string> | null>;
   label: string;
   pendingLabel: string;
+  /** Said beside the button when the read came back empty. */
+  emptyLabel?: string;
   className?: string;
 }) {
   const [pending, startTransition] = useTransition();
+  const [empty, setEmpty] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const id = useId();
@@ -52,17 +57,22 @@ export function AssistPhotoButton({
     const file = field?.files?.[0];
     const form = button.current?.form ?? null;
     if (!field || !file) return;
+    setEmpty(false);
     startTransition(async () => {
       const data = await shrunkJpeg(file);
       // The photo leaves the page with this request and nowhere else.
       field.value = "";
-      if (!data) return;
+      let values: Record<string, string> | null = null;
       try {
-        const values = await read({ data, mediaType: "image/jpeg" });
-        if (values) fillFormFields(form, values);
+        if (data) values = await read({ data, mediaType: "image/jpeg" });
       } catch {
-        // A failed read is a dark assist: the boxes stay as they were.
+        // A failed read is an empty answer: the boxes stay as they were.
       }
+      if (!values || Object.keys(values).length === 0) {
+        setEmpty(true);
+        return;
+      }
+      fillFormFields(form, values);
     });
   }
 
@@ -91,6 +101,7 @@ export function AssistPhotoButton({
       >
         {pending ? pendingLabel : label}
       </button>
+      <FormStatus tone="neutral">{empty && emptyLabel ? emptyLabel : null}</FormStatus>
     </>
   );
 }

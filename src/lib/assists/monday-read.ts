@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { StructuredCall } from "@/lib/claude/structured";
 import { formatMoneyCents } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
-import { fillFacts, languageName, VOICE_RULES } from "./facts";
+import { fillFacts, promptLanguage, VOICE_RULES } from "./facts";
 
 /**
  * **monday**: three sentences above the Monday numbers (what changed, what is
@@ -63,7 +63,7 @@ export function mondayReadCall<Kind extends string>(
     model: "draft",
     system: MONDAY_READ_SYSTEM,
     content: JSON.stringify({
-      language: languageName(locale),
+      language: promptLanguage(locale),
       sections: sections.map((section) => ({
         section: section.kind,
         facts: Object.fromEntries(

@@ -4,7 +4,7 @@ import { BoatSafetyNotices } from "@/components/BoatSafetyNotices";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { OfflineManifestManager } from "@/components/OfflineManifestManager";
 import { SkipLink } from "@/components/SkipLink";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -154,7 +154,7 @@ export default async function TripManifestPage({
     shopPickedSpecies,
     catalogSpecies,
     speciesBySite,
-    canAssist: checkpoint !== "departure" && (await shopAssistsAvailable(db, shop.id)),
+    canAssist: checkpoint !== "departure" && (await assistsAvailable(db, shop.id)),
     t,
   });
   const catchUpStrip = catchUpStripView(catchUp, locale, shop.timezone, t);

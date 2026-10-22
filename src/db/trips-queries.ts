@@ -571,14 +571,24 @@ export async function offsetUpcomingTripsWithCounts(
     hasSpace?: boolean;
     /** "fun_dive" for no linked course, "course" for a course session. */
     tripType?: "fun_dive" | "course";
+    /**
+     * Only what a diver could be told about: no private charter and no
+     * rehearsal (ADR 20261012-rehearsal-departures). For a read that leaves
+     * the shop, such as the facts a reply draft quotes.
+     */
+    outward?: boolean;
   } = {},
 ): Promise<UpcomingTripOffsetPage> {
   const now = options.now ?? nowDate();
-  const scope = upcomingTripScope(shopId, {
-    from: now,
-    monthEnd: options.monthEnd,
-    tripType: options.tripType,
-  });
+  const scope = and(
+    upcomingTripScope(shopId, {
+      from: now,
+      monthEnd: options.monthEnd,
+      tripType: options.tripType,
+      publicOnly: options.outward,
+    }),
+    options.outward ? notRehearsal() : undefined,
+  );
   const having = hasSpaceHaving(options.hasSpace);
 
   const paged = await offsetPage({

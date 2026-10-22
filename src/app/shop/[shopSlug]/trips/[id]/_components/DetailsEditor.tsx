@@ -1,5 +1,5 @@
 import { AssistFillButton } from "@/components/assists/AssistFillButton";
-import { shopAssistsAvailable } from "@/db/assist-shop";
+import { assistsAvailable } from "@/db/assists";
 import { getDb } from "@/db/client";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RescheduleNotice } from "../../../_components/RescheduleNotice";
@@ -28,7 +28,7 @@ export async function DetailsEditor({
   // Claude's "Draft it" on the description, and the description's Spanish
   // beside the form (the `copywriter` and `shop-translate` assists).
   const db = await getDb();
-  const canAssist = await shopAssistsAvailable(db, shop.id);
+  const canAssist = await assistsAvailable(db, shop.id);
   const descriptionTranslation = await loadTranslationBox(
     db,
     shop,
@@ -45,6 +45,7 @@ export async function DetailsEditor({
               draft={draftTripDescriptionAction.bind(null, shop.slug, context.trip.id)}
               label={t("deskAssists.draft")}
               pendingLabel={t("deskAssists.drafting")}
+              emptyLabel={t("deskAssists.nothing")}
             />
           ) : undefined,
         }}

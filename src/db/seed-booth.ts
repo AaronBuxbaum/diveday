@@ -33,6 +33,7 @@ import {
 import { CAPTAIN_NAME, LEAD_INSTRUCTOR_NAME, OWNER_NAME } from "./seed-cast";
 import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { HISTORY_DIVER_NAMES } from "./seed-history";
+import { freeHull } from "./seed-hulls";
 import { DEMO_WEEKLY_RUN_TITLE } from "./seed-weekly-run";
 import { liveTrip } from "./trips-live";
 
@@ -424,36 +425,6 @@ function daysSinceLastSaturday(now: Date): number {
   const weekday = new Date(Date.UTC(wall.year, wall.month - 1, wall.day)).getUTCDay();
   const back = (weekday - 6 + 7) % 7;
   return back === 0 ? 7 : back;
-}
-
-/** Whichever hull, by name, nothing else has out in those hours. */
-async function freeHull(
-  db: DbExecutor,
-  shopId: string,
-  window: { startsAt: Date; endsAt: Date },
-): Promise<string | null> {
-  const fleet = await db
-    .select({ id: boats.id })
-    .from(boats)
-    .where(eq(boats.shopId, shopId))
-    .orderBy(asc(boats.name));
-  for (const hull of fleet) {
-    const [clash] = await db
-      .select({ id: trips.id })
-      .from(trips)
-      .where(
-        and(
-          eq(trips.shopId, shopId),
-          eq(trips.boatId, hull.id),
-          liveTrip(),
-          lt(trips.startsAt, window.endsAt),
-          gt(trips.endsAt, window.startsAt),
-        ),
-      )
-      .limit(1);
-    if (!clash) return hull.id;
-  }
-  return null;
 }
 
 async function siteAndLens(db: DbExecutor, shopId: string, site: string, lens: string) {

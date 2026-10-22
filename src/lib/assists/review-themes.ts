@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { StructuredCall } from "@/lib/claude/structured";
-import { languageName, VOICE_RULES } from "./facts";
+import { promptLanguage, VOICE_RULES } from "./facts";
 
 /**
  * **themes**: once a month, the last ninety days of *published* reviews become
@@ -42,7 +42,7 @@ export function reviewThemesCall(
   return {
     model: "quick",
     system: REVIEW_THEMES_SYSTEM,
-    content: JSON.stringify({ language: languageName(locale), reviews: sent }),
+    content: JSON.stringify({ language: promptLanguage(locale), reviews: sent }),
     schema: Themes,
     maxTokens: 1_500,
   };

@@ -8,8 +8,7 @@ import {
 import { sourceDigest } from "@/lib/assists/shop-translate";
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
 import { readAssistResult, saveAssistResult } from "./assist-results";
-import { shopAssist } from "./assist-shop";
-import type { AssistOptions } from "./assists";
+import { type AssistOptions, runAssistOutcome } from "./assists";
 import type { AppDb } from "./client";
 
 /**
@@ -40,19 +39,22 @@ export async function mondayReadFor(
   if (stored && stored.inputDigest === digest) {
     return mondayRead(stored.value as { sentences: MondaySentence[] } | null, sections);
   }
-  const value = await shopAssist(db, {
+  const { status, value } = await runAssistOutcome(db, {
     ...options,
     shopId: input.shopId,
     feature: MONDAY_READ_FEATURE,
     call: mondayReadCall(sections, input.locale),
   });
-  if (!value) return [];
+  if (status === "skipped") return [];
+  // A refused or unusable answer is stored as no sentences, so the hourly
+  // pass asks once for this week, grade and language.
+  const answer = value ?? { sentences: [] };
   await saveAssistResult(db, {
     shopId: input.shopId,
     feature: MONDAY_READ_FEATURE,
     subjectKey,
-    value,
+    value: answer,
     inputDigest: digest,
   });
-  return mondayRead(value, sections);
+  return mondayRead(answer, sections);
 }

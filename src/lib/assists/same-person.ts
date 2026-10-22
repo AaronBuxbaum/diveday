@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { StructuredCall } from "@/lib/claude/structured";
-import { languageName } from "./facts";
+import { promptLanguage } from "./facts";
 
 /**
  * **dupes**: for a pair the duplicate check is unsure about (one name, and no
@@ -70,7 +70,7 @@ export function samePersonCall(
     model: "quick",
     system: SAME_PERSON_SYSTEM,
     content: JSON.stringify({
-      language: languageName(locale),
+      language: promptLanguage(locale),
       recordA: { ...left, emailDomain: undefined },
       recordB: { ...right, emailDomain: undefined },
       emailDomainsAgree: sameDomain,

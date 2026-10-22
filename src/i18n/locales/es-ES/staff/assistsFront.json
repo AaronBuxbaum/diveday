@@ -25,12 +25,12 @@
   },
   "callNote": {
     "label": "Notas de la llamada",
-    "hint": "Escríbelo como llegó. Rellenar lo pasa al formulario, y la nota guarda tus palabras.",
-    "fill": "Rellenar el formulario",
+    "hint": "Escríbelo como llegó. Llenar lo pasa al formulario, y la nota guarda tus palabras.",
+    "fill": "Llenar el formulario",
     "filling": "Leyendo…",
     "callback": "Devolver la llamada: {when}",
     "onFile": "En el registro: {name}",
-    "nothing": "Nada en la nota rellena un campo."
+    "nothing": "Nada en la nota llena un campo."
   },
   "import": {
     "map": "Asignar las otras columnas",

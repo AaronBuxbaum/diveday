@@ -1,6 +1,6 @@
 "use server";
 
-import { shopAssist } from "@/db/assist-shop";
+import { runAssist } from "@/db/assists";
 import { getDb } from "@/db/client";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { diverTranslator } from "@/i18n/messages";
@@ -69,7 +69,7 @@ export async function readCardPhotoAtShopAction(
     ),
   };
   const value = await scanCard((model) =>
-    shopAssist(db, {
+    runAssist(db, {
       shopId: shop.id,
       feature: CERT_SCAN_FEATURE,
       call: certScanCall(parsed, options, model),

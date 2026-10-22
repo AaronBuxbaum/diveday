@@ -4,7 +4,7 @@ import { type AppDb, getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
 import { bookings, shops, tripReviews, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { armClaudeFixtures } from "@/lib/assists/e2e-fixtures";
+import { armClaudeFixtures, e2eClaudeFixtureProvider } from "@/lib/assists/e2e-fixtures";
 import { nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 
@@ -17,8 +17,8 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * provider for it (`src/lib/assists/e2e-fixtures.ts`): its assists answer from
  * fixtures and nothing leaves the machine. `DELETE ?slug=` disarms it and
  * makes it a demo again, which the private-shop teardown needs before it will
- * drop the shop. The canonical `blue-mantis` fixture is refused: it is shared
- * by every spec.
+ * drop the shop; it refuses a shop this server did not arm. The canonical
+ * `blue-mantis` fixture is refused: it is shared by every spec.
  *
  * Gated like every `/api/test/*` route, before the body or the database.
  */
@@ -80,7 +80,11 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "not_available" }, { status: 404 });
   }
   const found = await mintedShop(request);
-  if (!found) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  // Only a shop this server armed goes back to being a demo: anything else
+  // (a real tenant, a shop disarmed already) keeps its flag.
+  if (!found || !e2eClaudeFixtureProvider(found.shop.id)) {
+    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  }
   armClaudeFixtures(found.shop.id, false);
   await found.db.update(shops).set({ isDemo: true }).where(eq(shops.id, found.shop.id));
   return NextResponse.json({ ok: true });

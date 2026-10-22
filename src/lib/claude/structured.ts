@@ -11,6 +11,7 @@ import {
   ZERO_USAGE,
 } from "./models";
 import {
+  CLAUDE_REQUEST_MAX_MS,
   type ClaudeMessage,
   type ClaudeProvider,
   type ClaudeRequest,
@@ -75,6 +76,9 @@ const DEFAULT_MAX_TOKENS = 8_000;
 const DEFAULT_MIN_CONFIDENCE = 0.6;
 /** Server-tool turns a call may resume before it is treated as cut off. */
 const MAX_CONTINUATIONS = 3;
+
+/** The longest one structured call can run: every turn it may resume, each at the request's longest. */
+export const CLAUDE_CALL_MAX_MS = CLAUDE_REQUEST_MAX_MS * (MAX_CONTINUATIONS + 1);
 
 const CACHED = { type: "ephemeral" } as const;
 
