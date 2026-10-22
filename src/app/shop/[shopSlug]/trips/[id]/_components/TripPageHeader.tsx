@@ -99,6 +99,7 @@ export function TripPageHeader({
   description,
   extraMeta,
   actions,
+  actionsClassName,
   headerAside,
   price,
   daySpan,
@@ -130,6 +131,8 @@ export function TripPageHeader({
   /** Rows below the date line that belong to this surface's reading of the trip. */
   extraMeta?: ReactNode;
   actions?: ReactNode;
+  /** Surface-owned visibility, such as the manifest's phone-only emergency door. */
+  actionsClassName?: string;
   /** Primary work on the Trip masthead, such as capacity and Add diver. */
   headerAside?: ReactNode;
   /** Optional fare shown with the departure's date and time. */
@@ -142,6 +145,16 @@ export function TripPageHeader({
   /** Allows a surface to tighten the space after its masthead when needed. */
   className?: string;
 }) {
+  // A surface-only door owns one slot. Keeping a second wrapper around a
+  // responsive action reserves a title-row gap after the action is hidden.
+  const actionSlot = actions ? (
+    <div
+      className={`flex shrink-0 flex-wrap items-center gap-x-1 gap-y-2 print:hidden ${actionsClassName ?? ""}`}
+    >
+      {actions}
+    </div>
+  ) : null;
+
   return (
     // `data-trip-page-header`: the printed packet drops the manifest's copy on
     // the sheet it shares with the dive plan, whose header already said it
@@ -190,18 +203,14 @@ export function TripPageHeader({
         >
           {trip.title}
         </h1>
-        {headerAside || actions ? (
+        {headerAside ? (
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
             {headerAside}
-            {actions ? (
-              // Doors ("Add diver", the manifest's •••), never facts: off the
-              // paper, as `ShopPageHeader`'s are.
-              <div className="flex flex-wrap items-center gap-x-1 gap-y-2 print:hidden">
-                {actions}
-              </div>
-            ) : null}
+            {actionSlot}
           </div>
-        ) : null}
+        ) : (
+          actionSlot
+        )}
       </div>
       {/* One geometry for every trip, whatever the length of its name: the
           name owns its line; beneath it, the trip's own facts — when it

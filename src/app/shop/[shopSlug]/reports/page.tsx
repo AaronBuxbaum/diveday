@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getMonthDeparturesWithEmptySeats } from "@/db/open-seats";
 import { getMonthMoneyDetail } from "@/db/report-lines";
@@ -447,7 +447,7 @@ export default async function ReportsPage({
                 </p>
                 <Link
                   href={revenueOrdersHref}
-                  className="mt-3 inline-block font-medium text-primary underline underline-offset-2"
+                  className={`${tapTargetLinkClass} mt-3 font-medium text-primary underline underline-offset-2`}
                 >
                   {t("reports.importedHistory.viewOrders")}
                 </Link>

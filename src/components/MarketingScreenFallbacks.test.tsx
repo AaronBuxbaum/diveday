@@ -272,7 +272,7 @@ describe("MarketingScreenFallbacks", () => {
     it("renders the import preview mockup in English", () => {
       render(<ImportPreviewFallback locale="en-US" />);
       expect(screen.getByText("Import preview")).toBeInTheDocument();
-      expect(screen.getByText("Nothing saves until you say so.")).toBeInTheDocument();
+      expect(screen.getByText("Nothing saves until you say so")).toBeInTheDocument();
     });
 
     it("renders the import preview mockup in Spanish", () => {

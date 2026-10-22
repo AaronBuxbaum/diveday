@@ -890,7 +890,7 @@ test("Today's arrival search says who is on file but not arriving today", async 
   await search.press("Enter");
 
   const elsewhere = page.getByTestId("arrival-elsewhere");
-  await expect(elsewhere.getByText("Not arriving today.")).toBeVisible();
+  await expect(elsewhere.getByText("Not arriving today")).toBeVisible();
   await expect(elsewhere.getByText("Zephyrine Quayside has nothing booked.")).toBeVisible();
   await elsewhere.getByRole("link", { name: "Open Zephyrine Quayside’s record" }).click();
   await page.waitForURL(/\/divers\/[0-9a-f-]{36}/);

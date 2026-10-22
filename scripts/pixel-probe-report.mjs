@@ -124,12 +124,25 @@ export function grepFor(titlePath) {
 
 /** A shell-safe re-run command for one capture's test. */
 export function rerunCommand(record) {
-  const file = record.testFile ? path.relative(ROOT, record.testFile) : "e2e/visual.spec.ts";
   if (record.source === "dev") {
     return `node scripts/screenshot.mjs ${record.path || "<path>"} --probe`;
   }
+  // Imported declarations still need the registering spec to load. Older
+  // records have no entryFile; recover only the known visual registration
+  // modules when their recorded title path confirms visual.spec.ts.
+  const importedVisual =
+    !record.entryFile &&
+    /(?:^|[/\\])e2e[/\\]visual-audit-[a-z0-9-]+\.ts$/.test(record.testFile || "") &&
+    path.basename(record.titlePath?.[0] || "") === "visual.spec.ts";
+  const entryFile = record.entryFile || (importedVisual ? "e2e/visual.spec.ts" : record.testFile);
+  const file = entryFile
+    ? path.relative(ROOT, path.resolve(ROOT, entryFile))
+    : "e2e/visual.spec.ts";
+  const environment = ["PIXEL_PROBE=1"];
+  if (record.exhaustiveAudit === true) environment.push("VISUAL_EXHAUSTIVE_AUDIT=1");
+  if (record.initialPaintAudit === true) environment.push("VISUAL_AUDIT_INITIAL_PAINT=1");
   const quoted = `'${grepFor(record.titlePath).replace(/'/g, "'\\''")}'`;
-  return `PIXEL_PROBE=1 pnpm e2e:run ${file} --grep ${quoted} --reporter=line`;
+  return `${environment.join(" ")} pnpm e2e:run ${file} --grep ${quoted} --reporter=line`;
 }
 
 function readJson(file, fallback) {
@@ -198,7 +211,7 @@ export function buildReport(records, { settled = [], ledger = {} } = {}) {
     }
     probed += 1;
     for (const flag of record.flags || []) {
-      const entry = settledEntryFor(flag, settled);
+      const entry = settledEntryFor(flag, settled, record);
       const key = clusterKey(flag);
       const target = entry ? settledHits : clusters;
       if (!target.has(key)) {

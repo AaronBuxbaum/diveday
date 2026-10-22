@@ -81,8 +81,8 @@ describe("CatchUpStrip", () => {
    * **"Got it" ends on the panel's inset, and its box stays out of the title's
    * line** (pixel-craft class 5, K-190). At the default `md` it was 48px with
    * `px-4`: the header row grew round it, the title sat 33px down a 16px
-   * panel, and the word ended 33px inside the right edge. At `sm`, `flush`
-   * keeps 8px of hover fill and hands it back as `-mx-2`, and `-my-2.5`
+   * panel, and the word ended 33px inside the right edge. The flush `sm` link
+   * ends its word on the inset without a nested hover fill, and `-my-2.5`
    * hands back what the 44px target adds round its 20px line — 24px, the
    * title's own line — so the title sits 16px down and the word ends 16px in,
    * with the target whole.
@@ -92,7 +92,7 @@ describe("CatchUpStrip", () => {
     const button = screen.getByRole("button", { name: "Got it" });
     // Asked of `buttonClass`, not spelled as `flush`'s tokens (K-83 moved its
     // room into a transparent border and `px-1.75`).
-    expect(rendersFlush(button, "ghost", "sm")).toBe(true);
+    expect(rendersFlush(button, "link", "sm", "padded")).toBe(true);
     expect(button).toHaveClass("-my-2.5", "text-sm");
     expect(button.className).not.toMatch(/(^|\s)(px-4|min-h-12)(\s|$)/);
   });

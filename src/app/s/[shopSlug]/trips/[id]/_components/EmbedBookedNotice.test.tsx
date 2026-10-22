@@ -74,13 +74,13 @@ describe("EmbedBookedNotice", () => {
     "greets a nameless booking (%j) with the fallback word, never an empty comma",
     (fullName) => {
       renderNotice({ fullName });
-      expect(screen.getByRole("heading", { name: "You’ve got a seat, there." })).toBeVisible();
+      expect(screen.getByRole("heading", { name: "You’ve got a seat, there" })).toBeVisible();
     },
   );
 
   it("greets a name with a leading space by its first word, not the whole name", () => {
     renderNotice({ fullName: " Nora Quinn" });
-    expect(screen.getByRole("heading", { name: /You’ve got a seat, Nora\./ })).toBeVisible();
+    expect(screen.getByRole("heading", { name: /You’ve got a seat, Nora/ })).toBeVisible();
   });
 
   /**

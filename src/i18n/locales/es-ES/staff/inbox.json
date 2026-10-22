@@ -71,7 +71,7 @@
     "whatsapp": "Responder por WhatsApp a {address}",
     "placeholder": "Escribe tu respuesta",
     "send": "Enviar",
-    "sending": "Enviando",
+    "sending": "Enviando…",
     "windowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
     "diverRemoved": "El registro de este buceador fue eliminado, así que las respuestas están desactivadas."
   },
@@ -89,13 +89,13 @@
     "notAuthorized": "Tu cuenta ya no puede responder a los buceadores en este centro. Pide a un propietario o gerente que revise tu acceso.",
     "lateMarked": "Marcado: llega tarde. La lista y el manifiesto lo muestran.",
     "lateClosed": "Ese lugar ya no admite el aviso: hizo el check-in, se canceló o el barco ya salió.",
-    "deleted": "Mensaje eliminado.",
+    "deleted": "Mensaje eliminado",
     "gone": "Ese mensaje ya no está en la bandeja.",
     "answerSaved": "Guardada. Ya está sobre el cuadro de respuesta, en la ficha de cada buceador.",
     "answerDuplicate": "Esa respuesta ya está guardada.",
     "answersFull": "{count, plural, one {Guardas # respuesta.} other {Guardas # respuestas.}} Elimina una en Mensajes para hacer sitio.",
-    "answerDeleted": "Respuesta guardada eliminada.",
-    "answerRestored": "Respuesta guardada recuperada.",
+    "answerDeleted": "Respuesta guardada eliminada",
+    "answerRestored": "Respuesta guardada recuperada",
     "answerGone": "Esa respuesta guardada ya no está."
   },
   "savedAnswers": {

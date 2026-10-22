@@ -99,9 +99,9 @@
       "room_charge_hotel": "Cargado a la habitación {room} · {hotel} el {date}"
     },
     "notice": {
-      "refreshed": "Estado actualizado desde Stripe.",
+      "refreshed": "Estado actualizado desde Stripe",
       "refreshFailed": "No se pudo contactar con Stripe para actualizar este pedido.",
-      "voided": "Pedido anulado.",
+      "voided": "Pedido anulado",
       "voidFailed": "No se pudo anular este pedido.",
       "refunded": "Pago reembolsado. La salida ahora aparece como no pagada para este buceador.",
       "refundInvalidAmount": "Ese importe no es uno que este pedido pueda devolver. Introduce un importe que no supere lo que aún se retiene.",
@@ -136,12 +136,12 @@
       "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar. Conecta una para empezar a cobrar a los buceadores.",
       "notAuthorized": "Enviar una factura está limitado a propietarios y gerentes. Pide a uno de ellos que le facture a este buceador.",
       "notAuthorizedRefund": "Los reembolsos son solo para propietarios y gerentes.",
-      "paidAfterCloseRefunded": "Reembolso enviado.",
+      "paidAfterCloseRefunded": "Reembolso enviado",
       "paidAfterCloseInProgress": "Ese reembolso ya está en camino.",
       "paidAfterCloseNeedsCheck": "Stripe ya devolvió parte de este pago. Revísalo antes en Pagos que necesitan revisión.",
       "paidAfterCloseNotConnected": "Tu cuenta de Stripe no está aceptando pagos, así que el reembolso no puede salir. Reembólsalo en Stripe.",
       "paidAfterCloseFailed": "Stripe no aceptó ese reembolso. Inténtalo de nuevo o reembólsalo en Stripe.",
-      "stripeRefundMatched": "Reembolso asignado a la plaza.",
+      "stripeRefundMatched": "Reembolso asignado a la plaza",
       "stripeRefundPartlyMatched": "Asignado. El resto de ese reembolso sigue esperando una plaza.",
       "stripeRefundNotMatched": "Esa plaza no puede llevar este reembolso. Puede que ya esté asignado, o que la plaza no se pagara con ese pago."
     },
@@ -158,8 +158,8 @@
       "toLabel": "Hasta",
       "clear": "Borrar filtros"
     },
-    "filteredByDiver": "Mostrando los pedidos de {name}.",
-    "filteredByTrip": "Mostrando los pedidos de {title}.",
+    "filteredByDiver": "Mostrando los pedidos de {name}",
+    "filteredByTrip": "Mostrando los pedidos de {title}",
     "openFilteredTrip": "Abrir la salida",
     "cancelledSeatsOnly": "Mostrando los pedidos que quedan en plazas canceladas. Cada uno puede necesitar un reembolso o anularse.",
     "backToLiveSeats": "Volver a los pedidos de la salida",
@@ -174,8 +174,8 @@
       "hotel": "{hotel} {amount} en {count, plural, one {# pedido} other {# pedidos}}",
       "unnamed": "{amount} en {count, plural, one {# pedido} other {# pedidos}}"
     },
-    "emptyAll": "Todavía no hay pedidos.",
-    "emptyFiltered": "Ningún pedido coincide con estos filtros.",
+    "emptyAll": "Todavía no hay pedidos",
+    "emptyFiltered": "Ningún pedido coincide con estos filtros",
     "ledger": {
       "today": "Hoy · {date}",
       "continued": "{day}, continuación",

@@ -1,6 +1,7 @@
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import type { LadderStep } from "@/db/course-ladder";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
@@ -90,10 +91,7 @@ export function CourseLadder({
                 : t("courses.ladder.noSession", { next: step.next.title })}
             </p>
             {step.stalled.length > 0 ? (
-              <details className="group">
-                <summary className="cursor-pointer py-2 font-medium text-primary">
-                  {t("courses.ladder.seeWho")}
-                </summary>
+              <CompactDisclosureRow label={t("courses.ladder.seeWho")} bodyClassName="">
                 <ul className="divide-y divide-border">
                   {step.stalled.map((person) => (
                     <li
@@ -127,7 +125,7 @@ export function CourseLadder({
                     </li>
                   ))}
                 </ul>
-              </details>
+              </CompactDisclosureRow>
             ) : null}
           </li>
         ))}

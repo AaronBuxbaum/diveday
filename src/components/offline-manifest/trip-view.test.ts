@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { OfflineRollCallEvent } from "@/lib/offline-manifests";
-import { savedCopy, view } from "./section-fixtures";
+import { canRecordOfflineCrewStatus, type OfflineRollCallEvent } from "@/lib/offline-manifests";
+import { diver, savedCopy, view } from "./section-fixtures";
 import { offlineTripView } from "./trip-view";
 import { richEnvelope } from "./view-fixtures";
 
@@ -19,6 +19,73 @@ describe("offlineTripView", () => {
     expect(
       offlineTripView({ ...copy, snapshot: { ...copy.snapshot, manifests: [] } }, "departure"),
     ).toBeNull();
+  });
+});
+
+describe("offlineTripView — certified total persons", () => {
+  function fullBoat(limit: number | null = 12) {
+    const copy = savedCopy();
+    const manifest = copy.snapshot.manifests[0];
+    if (!manifest) throw new Error("manifest missing");
+    manifest.trip.certifiedTotalPersons = limit;
+    manifest.trip.certifiedPassengers = 10;
+    manifest.divers = Array.from({ length: 10 }, (_, index) => ({
+      ...diver(`passenger-${index}`, `Passenger ${index}`),
+      participantType: index === 0 ? "snorkeler" : index === 1 ? "rider" : "diver",
+      rollCall: {
+        state: "boarded",
+        occurredAt: copy.snapshot.savedAt,
+        recordedByName: "Captain",
+      },
+    }));
+    manifest.crew = Array.from({ length: 3 }, (_, index) => ({
+      id: `crew-${index}`,
+      fullName: `Crew ${index}`,
+      roles: ["captain"],
+      rollCall: {
+        state: "boarded",
+        occurredAt: copy.snapshot.savedAt,
+        recordedByName: "Captain",
+      },
+    }));
+    // The summary is deliberately stale: this device's rows and queue decide.
+    return copy;
+  }
+
+  it("warns for ten passengers of all kinds plus three crew against twelve persons", () => {
+    const copy = fullBoat();
+    const counted = offlineTripView(copy, "departure");
+    expect(counted?.overTotalPersons).toEqual({ aboard: 13, limit: 12 });
+    expect(counted?.boarded).toBe(10);
+    expect(canRecordOfflineCrewStatus(copy.snapshot, "crew-0", "boarded", "departure")).toBe(true);
+  });
+
+  it("stays quiet at the limit or with no recorded limit", () => {
+    expect(offlineTripView(fullBoat(13), "departure")?.overTotalPersons).toBeNull();
+    expect(offlineTripView(fullBoat(null), "departure")?.overTotalPersons).toBeNull();
+  });
+
+  it("recounts queued crew and passenger changes, leaving offboard people out", () => {
+    const copy = fullBoat();
+    const ashore = (
+      subject: { bookingId: string } | { crewPersonId: string },
+    ): OfflineRollCallEvent => ({
+      ...subject,
+      clientEventId: JSON.stringify(subject),
+      snapshotId: copy.snapshot.snapshotId,
+      snapshotSavedAt: copy.snapshot.savedAt,
+      tripId: "trip-1",
+      checkpoint: "departure",
+      status: "not_boarded",
+      occurredAt: "2026-08-01T12:30:00.000Z",
+      syncStatus: "pending",
+    });
+    copy.events = [ashore({ crewPersonId: "crew-0" })];
+    expect(offlineTripView(copy, "departure")?.overTotalPersons).toBeNull();
+    copy.events = [ashore({ bookingId: "passenger-0" })];
+    expect(offlineTripView(copy, "departure")?.overTotalPersons).toBeNull();
+    copy.events = [];
+    expect(offlineTripView(copy, "departure")?.overTotalPersons).toEqual({ aboard: 13, limit: 12 });
   });
 });
 

@@ -6,7 +6,12 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
 import { isDiver } from "@/lib/participant-types";
-import { type PartyLeftReason, type PartyMember, partyLeftReason } from "@/lib/party-teams";
+import {
+  type PartyDeparture,
+  type PartyLeftReason,
+  type PartyMember,
+  partyLeftReason,
+} from "@/lib/party-teams";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
@@ -454,6 +459,9 @@ async function formBuddyTeamInTx(
 
 /** A party one tap may team, or one it left for the divemaster and why. */
 export type PartyTeamPlan = {
+  /** The same course and diver facts inform manual teams without gating them. */
+  departure: PartyDeparture;
+  members: Map<string, PartyMember>;
   /** Each live seat's party key: the organizer's booking id, or its own. */
   parties: Map<string, string>;
   /** Diver seats not yet on a team, one list per party one tap would team. */
@@ -498,6 +506,8 @@ export async function planPartyTeams(
     .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
     .limit(1);
   const plan: PartyTeamPlan = {
+    departure: { course: departure?.courseId ? { intro: Boolean(departure.intro) } : null },
+    members: new Map(),
     parties: new Map(),
     teamable: [],
     left: [],
@@ -542,26 +552,27 @@ export async function planPartyTeams(
   for (const seat of seats) {
     const key = seat.partyLeadBookingId ?? seat.bookingId;
     plan.parties.set(seat.bookingId, key);
-    const stillToTeam =
+    const eligible =
       (seat.status === "booked" || seat.status === "checked_in") &&
       seat.heldAt === null &&
-      isDiver(seat.participantType) &&
-      !onATeam.has(seat.bookingId);
-    if (!stillToTeam) continue;
+      isDiver(seat.participantType);
+    if (!eligible) continue;
+    const member: PartyMember = {
+      age: seat.dateOfBirth ? ageOnDate(seat.dateOfBirth, tripDay) : null,
+      declaredMinor: seat.declaredMinorAt !== null,
+      verifiedCard: Boolean(seat.verifiedCard),
+    };
+    plan.members.set(seat.bookingId, member);
+    if (onATeam.has(seat.bookingId)) continue;
     plan.names.set(seat.bookingId, seat.fullName);
     byParty.set(key, [
       ...(byParty.get(key) ?? []),
       {
         bookingId: seat.bookingId,
-        member: {
-          age: seat.dateOfBirth ? ageOnDate(seat.dateOfBirth, tripDay) : null,
-          declaredMinor: seat.declaredMinorAt !== null,
-          verifiedCard: Boolean(seat.verifiedCard),
-        },
+        member,
       },
     ]);
   }
-  const course = departure.courseId ? { intro: Boolean(departure.intro) } : null;
   for (const party of byParty.values()) {
     const bookingIds = party.map((seat) => seat.bookingId);
     if (party.length < MIN_BUDDY_TEAM_SIZE) {
@@ -569,7 +580,7 @@ export async function planPartyTeams(
       continue;
     }
     const reason = partyLeftReason(
-      { course },
+      plan.departure,
       party.map((seat) => seat.member),
     );
     if (reason) plan.left.push({ bookingIds, reason });

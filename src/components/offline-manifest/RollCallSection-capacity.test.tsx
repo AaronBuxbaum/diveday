@@ -1,0 +1,42 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { offlineManifestTranslator } from "@/i18n/offline-manifest-messages";
+import { OfflineRollCallSection } from "./RollCallSection";
+import { controls, diver, savedCopy } from "./section-fixtures";
+import { offlineTripView } from "./trip-view";
+
+afterEach(cleanup);
+
+for (const locale of ["en-US", "es-ES"] as const) {
+  describe(`offline certified total warning (${locale})`, () => {
+    it("states actual persons and limit in danger ink while keeping boarding controls", () => {
+      const copy = savedCopy();
+      const manifest = copy.snapshot.manifests[0];
+      if (!manifest) throw new Error("manifest missing");
+      manifest.trip.certifiedTotalPersons = 2;
+      const aboard = {
+        state: "boarded" as const,
+        occurredAt: copy.snapshot.savedAt,
+        recordedByName: "Captain",
+      };
+      manifest.divers = manifest.divers.map((diver) => ({ ...diver, rollCall: aboard }));
+      manifest.divers.push(diver("awaiting-passenger", "Awaiting Passenger"));
+      manifest.summary.totalDivers = manifest.divers.length;
+      manifest.crew = manifest.crew.map((member) => ({ ...member, rollCall: aboard }));
+      const view = offlineTripView(copy, "departure");
+      if (!view) throw new Error("view missing");
+      const t = offlineManifestTranslator(locale);
+      render(<OfflineRollCallSection view={view} controls={{ ...controls(), t, locale }} />);
+      const warning = screen.getByText(
+        t("manifest.headCountOverTotalPersonsAboard", { aboard: 3, limit: 2 }),
+      );
+      expect(warning).toHaveAttribute("role", "status");
+      expect(warning).toHaveClass("text-danger", "border-danger", "bg-danger-tint");
+      expect(
+        screen.getAllByRole("button", { name: t("shared.offlineManifest.single.markBoarded") })
+          .length,
+      ).toBeGreaterThan(0);
+    });
+  });
+}

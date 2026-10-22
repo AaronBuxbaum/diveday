@@ -65,7 +65,7 @@ test.describe("the tide window", () => {
     await page.goto(siteUrl);
     await page.getByLabel("NOAA tide station").fill("");
     await page.getByRole("button", { name: "Save dive site" }).click();
-    await page.getByText("Dive site saved.").waitFor();
+    await page.getByText("Dive site saved").waitFor();
     await expect(page.getByText(STAFF_LINE)).toHaveCount(0);
     await expect(page.getByText(STATION)).toHaveCount(0);
   });

@@ -374,7 +374,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     );
 
     const indicator = screen.getByTestId("gear-status-indicator");
-    expect(indicator).toHaveTextContent("Bringing own gear, so no rental needed.");
+    expect(indicator).toHaveTextContent("Bringing own gear, so no rental needed");
   });
 
   it("renders 'Select sizes' when rentals are selected but size is missing", () => {
@@ -416,7 +416,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     );
 
     const indicator = screen.getByTestId("gear-status-indicator");
-    expect(indicator).toHaveTextContent("Sizes recorded.");
+    expect(indicator).toHaveTextContent("Sizes recorded");
   });
 
   it("updates dynamically when user checks a rental and inputs a size", () => {
@@ -436,7 +436,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     );
 
     const indicator = screen.getByTestId("gear-status-indicator");
-    expect(indicator).toHaveTextContent("Bringing own gear, so no rental needed.");
+    expect(indicator).toHaveTextContent("Bringing own gear, so no rental needed");
 
     // Check BCD rental checkbox by selecting specifically input[type="checkbox"] label
     const bcdCheckbox = screen.getByLabelText(/bcd/i, {
@@ -452,7 +452,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     fireEvent.change(bcdSelect, { target: { value: "L" } });
 
     // Indicator should now light up
-    expect(indicator).toHaveTextContent("Sizes recorded.");
+    expect(indicator).toHaveTextContent("Sizes recorded");
   });
 
   it("renders the recorded-size message for a wetsuit once its size is provided", () => {
@@ -481,7 +481,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     ) as HTMLSelectElement;
     fireEvent.change(wetsuitSelect, { target: { value: "M" } });
 
-    expect(indicator).toHaveTextContent("Sizes recorded.");
+    expect(indicator).toHaveTextContent("Sizes recorded");
   });
 
   it("renders the recorded-size message for mask/fins because fin size is optional", () => {
@@ -502,7 +502,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     );
 
     const indicator = screen.getByTestId("gear-status-indicator");
-    expect(indicator).toHaveTextContent("Sizes recorded.");
+    expect(indicator).toHaveTextContent("Sizes recorded");
   });
 
   it("confirms gear match when BCD size is provided even if optional fin size is empty", () => {
@@ -530,7 +530,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     fireEvent.change(bcdSelect, { target: { value: "L" } });
 
     // Should be confirmed even though fin size is not provided
-    expect(indicator).toHaveTextContent("Sizes recorded.");
+    expect(indicator).toHaveTextContent("Sizes recorded");
   });
 });
 
@@ -760,7 +760,7 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
     expect(indicator).toHaveTextContent("Select sizes to confirm your gear match.");
     const select = container.querySelector('select[name="drysuitSize"]') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: "MT" } });
-    expect(indicator).toHaveTextContent("Sizes recorded.");
+    expect(indicator).toHaveTextContent("Sizes recorded");
   });
 
   it("never asks a shop that does not rent drysuits", () => {

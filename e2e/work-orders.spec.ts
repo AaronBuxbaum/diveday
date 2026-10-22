@@ -1,5 +1,8 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { openDiverFileGroup } from "./helpers";
+
+const staffCopy = staffTranslator("en-US");
 
 /**
  * The bench (ADR 20261008-gear-work-orders): opening a ticket on a diver's own
@@ -24,15 +27,20 @@ test.describe("staff", () => {
     // surfaces use; `?diverq=` is the state that search leaves behind.
     await page.goto("/shop/blue-mantis/gear/work-orders/new?diverq=Diego+Alvarez");
     await page.getByRole("link", { name: "Diego Alvarez" }).first().click();
+    const chooseAgain = page.getByRole("link", { name: "Choose somebody else" });
+    await expect(chooseAgain).toBeVisible();
+    const chooseAgainBox = await chooseAgain.boundingBox();
+    if (!chooseAgainBox) throw new Error("Customer chooser link is missing");
+    expect(chooseAgainBox.height).toBeGreaterThanOrEqual(44);
 
     // Nothing of his is on file yet in this spec's run, so the piece he
     // brought in is recorded first.
-    await page.locator("summary#add-piece").click();
+    await page.locator("details#add-piece > summary").click();
     await page.getByLabel("Kind").selectOption("regulator");
     await page.getByLabel("Make & model").fill("Apeks XTX50");
     await page.getByLabel("Serial number").fill("E2E-77001");
     await page.getByRole("button", { name: "Add to the record" }).click();
-    await expect(page.getByText("On the record.")).toBeVisible();
+    await expect(page.getByText("On the record")).toBeVisible();
 
     // **A refusal keeps the paragraph** (fifth loop, item 14): sent without
     // a piece ticked, the form comes back saying so, with the customer's
@@ -48,14 +56,14 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Open the work order" }).click();
 
     await expect(page.getByRole("heading", { level: 1, name: "Diego Alvarez" })).toBeVisible();
-    await expect(page.getByText("Work order opened.")).toBeVisible();
+    await expect(page.getByText("Work order opened")).toBeVisible();
     await expect(page.getByText("Received", { exact: true }).first()).toBeVisible();
     // The ticket's number, what the counter reads down the phone.
     await expect(page.getByText(/^#\d+$/).first()).toBeVisible();
 
     // On the bench: one button per move, the next step first.
     await page.getByRole("button", { name: "In progress" }).click();
-    await expect(page.getByText("Status saved.")).toBeVisible();
+    await expect(page.getByText("Status saved")).toBeVisible();
   });
 
   test("prices a ticket from its table, and corrects a line from its menu", async ({ page }) => {
@@ -69,14 +77,14 @@ test.describe("staff", () => {
     await page.getByLabel("Description").last().fill("Second-stage service kit");
     await page.getByLabel("Price each").last().fill("42");
     await page.getByRole("button", { name: "Add", exact: true }).click();
-    await expect(page.getByText("Line added.")).toBeVisible();
+    await expect(page.getByText("Line added")).toBeVisible();
 
     // The table is for reading; a figure changes behind the line's own menu.
     await page.getByRole("button", { name: "Change Second-stage service kit" }).last().click();
     await page.getByRole("button", { name: "Edit", exact: true }).click();
     await page.locator("[data-row-menu]").getByLabel("Price each").fill("45");
     await page.locator("[data-row-menu]").getByRole("button", { name: "Save" }).click();
-    await expect(page.getByText("Line saved.")).toBeVisible();
+    await expect(page.getByText("Line saved")).toBeVisible();
     await expect(page.getByRole("cell", { name: "$45.00" }).first()).toBeVisible();
   });
 
@@ -92,12 +100,12 @@ test.describe("staff", () => {
     // only with what the technician marks passed.
     await page.getByLabel("Service", { exact: true }).first().selectOption("passed");
     await page.getByRole("button", { name: "Record the work" }).click();
-    await expect(page.getByText("Work recorded.")).toBeVisible();
+    await expect(page.getByRole("status")).toHaveText(staffCopy("workOrders.notice.workRecorded"));
     await expect(page.getByRole("button", { name: "Record the work" })).toHaveCount(0);
 
     // Ready for its owner, then collected, and collected is the end of it.
     await page.getByRole("button", { name: "Ready for pickup" }).click();
-    await expect(page.getByText("Status saved.")).toBeVisible();
+    await expect(page.getByText("Status saved")).toBeVisible();
     await page.getByRole("button", { name: "Picked up" }).click();
     // The history is what answers "who said this was ready" a year later.
     await expect(page.getByText("Ready for pickup to Picked up")).toBeVisible();
@@ -168,7 +176,7 @@ test.describe("staff", () => {
     await expect(card.getByText("Goes to the customer when this ticket is ready.")).toBeVisible();
 
     await page.getByRole("button", { name: "Ready for pickup" }).click();
-    await expect(page.getByText("Status saved.")).toBeVisible();
+    await expect(page.getByText("Status saved")).toBeVisible();
     await expect(card.getByText("Not sent: messages aren’t set up")).toBeVisible();
     await expect(card.getByText("Goes to the customer when this ticket is ready.")).toHaveCount(0);
     await card.getByRole("button", { name: "Resend" }).click();
@@ -194,7 +202,7 @@ test.describe("staff", () => {
       .first()
       .click();
     const card = page.getByRole("region", { name: "Bill and pickup" });
-    await expect(card.getByText("Not sent yet.")).toBeVisible();
+    await expect(card.getByText("Not sent yet")).toBeVisible();
     await expect(card.getByRole("button", { name: "Send ready message" })).toBeVisible();
     await expect(card.getByText("Total: $89.00")).toBeVisible();
     await expect(card.getByRole("button", { name: "Send the bill" })).toBeVisible();
@@ -234,12 +242,12 @@ test.describe("staff", () => {
       .click();
     await page.getByRole("button", { name: "Delete work order" }).click();
 
-    await expect(page.getByText("Work order deleted.")).toBeVisible();
+    await expect(page.getByText("Work order deleted")).toBeVisible();
     await page.goto("/shop/blue-mantis/gear/work-orders?view=deleted");
     await page
       .getByRole("button", { name: /Restore/ })
       .first()
       .click();
-    await expect(page.getByText("Work order restored.")).toBeVisible();
+    await expect(page.getByText("Work order restored")).toBeVisible();
   });
 });

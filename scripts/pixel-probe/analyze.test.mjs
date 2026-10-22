@@ -1750,6 +1750,19 @@ describe("clusters, the settled list and the census", () => {
     expect(settledEntryFor({ ...flag, cls: "other" }, settled)).toBeNull();
   });
 
+  it("leaves a contextual settlement open when its capture evidence is absent", () => {
+    const settled = [
+      {
+        check: "nested-corners",
+        signature: "span.pill",
+        captures: ["settings-cert-checks"],
+        context: "cert-check-step-icons",
+      },
+    ];
+    expect(settledEntryFor(flag, settled)).toBeNull();
+    expect(settledEntryFor(flag, settled, { capture: "settings-cert-checks" })).toBeNull();
+  });
+
   it("settles the flags the audit found right by design, and nothing beside them", () => {
     // scripts/pixel-probe-settled.json itself, against flags as the probe
     // raised them in the 36-group audit. Each settled entry points at a code

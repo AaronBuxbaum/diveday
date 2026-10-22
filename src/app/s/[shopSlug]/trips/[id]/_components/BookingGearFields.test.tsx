@@ -346,7 +346,7 @@ describe("BookingGearFields as on the last trip", () => {
     expect(screen.getByLabelText(/^BCD/)).toBeChecked();
     expect(screen.getByLabelText(/^Regulator/)).not.toBeChecked();
     expect(screen.getByLabelText(/I.d like nitrox/)).toBeChecked();
-    expect(screen.getByText("Ticked as on your last trip.")).toBeInTheDocument();
+    expect(screen.getByText("Ticked as on your last trip")).toBeInTheDocument();
   });
 
   it("starts closed and says nothing about a last trip without one", () => {
@@ -363,6 +363,6 @@ describe("BookingGearFields as on the last trip", () => {
       />,
     );
     expect(screen.getByLabelText("Need rental gear?")).not.toBeChecked();
-    expect(screen.queryByText("Ticked as on your last trip.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ticked as on your last trip")).not.toBeInTheDocument();
   });
 });

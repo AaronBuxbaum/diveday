@@ -206,7 +206,7 @@ describe("AddDiverSection name-match prompt", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person.",
+        name: "Is this the same Nadia Ruis? Picking one reuses that diver’s record, and their certifications and waiver only count once someone confirms it’s the same person",
       }),
     ).toBeInTheDocument();
   });

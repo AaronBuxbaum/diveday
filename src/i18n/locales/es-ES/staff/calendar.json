@@ -12,8 +12,8 @@
     }
   },
   "status": {
-    "none": "Todavía sin suscripción.",
-    "active": "Suscrito el {issued}.",
+    "none": "Todavía sin suscripción",
+    "active": "Suscrito el {issued}",
     "lastRead": "Tu calendario lo leyó por última vez {when}.",
     "neverRead": "Ningún calendario lo ha leído todavía: pega el enlace en uno para terminar."
   },

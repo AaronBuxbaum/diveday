@@ -2,8 +2,9 @@ import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { partyLeftReason } from "@/lib/party-teams";
 import { fileScopedShopContext } from "@/test/db";
-import { formPartyTeams, listTripBuddyTeams, planPartyTeams } from "./buddy-pairs";
+import { formBuddyTeam, formPartyTeams, listTripBuddyTeams, planPartyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { bookings, certifications, courses, people, shops } from "./schema";
 import { createTrip, getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -197,6 +198,50 @@ describe("which parties one tap leaves for the divemaster", () => {
     (await planPartyTeams(db, shopId, tripId)).left.map((left) => left.reason);
 
   const adult = { age: 40 } satisfies Member;
+
+  it.each([
+    { intro: null, age: 11, reason: "young_child" },
+    { intro: true, age: 30, reason: "intro_course" },
+    { intro: false, age: 30, reason: "training_course" },
+  ])(
+    "keeps the shared caution facts after a manual team forms: $reason",
+    async ({ intro, age, reason }) => {
+      const { db, shop } = ctx;
+      const [staff] = await listStaff(db, shop.id);
+      if (!staff) throw new Error("demo staff missing");
+      let courseId: string | undefined;
+      if (intro !== null) {
+        const [course] = await db
+          .insert(courses)
+          .values({
+            shopId: shop.id,
+            title: "Manual buddy course",
+            slug: `manual-buddy-${reason}`,
+            isIntroCourse: intro,
+          })
+          .returning({ id: courses.id });
+        courseId = course?.id;
+      }
+      const trip = await departure(db, shop.id, courseId);
+      const bookingIds = await party(db, shop.id, trip, [
+        { age, minor: age < 18 },
+        { age, minor: age < 18 },
+      ]);
+      expect(
+        await formBuddyTeam(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          members: bookingIds.map((bookingId) => ({ kind: "diver", bookingId })),
+          recordedByPersonId: staff.person.id,
+        }),
+      ).toMatchObject({ ok: true });
+      const plan = await planPartyTeams(db, shop.id, trip.id);
+      expect(plan.teamable).toEqual([]);
+      expect(plan.members.size).toBe(2);
+      expect(partyLeftReason(plan.departure, [...plan.members.values()])).toBe(reason);
+      expect(await listTripBuddyTeams(db, shop.id, trip.id)).toHaveLength(1);
+    },
+  );
 
   it("teams two certified adults", async () => {
     const { db, shop } = ctx;

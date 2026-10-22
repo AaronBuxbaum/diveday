@@ -31,9 +31,9 @@
     "submitting": "Disconnecting…"
   },
   "notice": {
-    "connected": "WhatsApp connected.",
+    "connected": "WhatsApp connected",
     "disconnected": "WhatsApp disconnected. Courtesy messages will go out as SMS.",
-    "tested": "Test message delivered.",
+    "tested": "Test message delivered",
     "test-failed": "WhatsApp rejected the test message. Check that your token is still valid and your template is approved in the language shown above.",
     "invalid": "Check the details and try again.",
     "no-account": "No WhatsApp number is connected yet.",

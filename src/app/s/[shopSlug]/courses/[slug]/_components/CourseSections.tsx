@@ -271,7 +271,7 @@ export function CourseSchedule({
                 />
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <h3 className={ITEM_TITLE_CLASS}>{day.title}</h3>
-                  {time ? <p className="text-sm tabular-nums text-muted">{time}</p> : null}
+                  {time ? <p className="text-base tabular-nums text-muted">{time}</p> : null}
                 </div>
                 {day.items.length > 0 ? (
                   <ul className="mt-2 grid gap-1.5 text-sm text-muted">

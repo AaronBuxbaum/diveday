@@ -30,7 +30,7 @@ test("an owner records a captain's languages, and the public schedule says so", 
   await captainCard.getByLabel("German").check();
   await captainCard.getByLabel("Japanese").check();
   await captainCard.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Languages saved.")).toBeVisible();
+  await expect(page.getByText("Languages saved")).toBeVisible();
 
   // The checkboxes stayed checked across the round trip — not just a
   // confirmation banner with nothing actually stored.

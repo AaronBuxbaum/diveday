@@ -1,5 +1,8 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
+
+const staffCopy = staffTranslator("en-US");
 
 /**
  * READ_ONLY holds here: every one of these reads the orders index, its toolbar and its
@@ -266,7 +269,11 @@ test.describe("demo billing history", () => {
     const personId = new URL(page.url()).pathname.split("/").pop() ?? "";
 
     await page.goto(`/shop/blue-mantis/orders?personId=${personId}&range=all`);
-    await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
+    await expect(
+      page.getByText(staffCopy("orders.index.filteredByDiver", { name: "Grace Halloran" }), {
+        exact: true,
+      }),
+    ).toBeVisible();
 
     await page.locator('#orders-search[data-hydrated="true"]').waitFor();
     await page.getByLabel("Status").selectOption("void");
@@ -275,8 +282,12 @@ test.describe("demo billing history", () => {
     // Grace has no voided orders, so this is also the empty-result case: the
     // sentence naming whose orders these are used to be read off the first row
     // and therefore vanished exactly here.
-    await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
-    await expect(page.getByText("No orders match these filters.")).toBeVisible();
+    await expect(
+      page.getByText(staffCopy("orders.index.filteredByDiver", { name: "Grace Halloran" }), {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText("No orders match these filters")).toBeVisible();
   });
 
   /** A filter has to survive paging, or page 2 quietly shows the unfiltered set. */

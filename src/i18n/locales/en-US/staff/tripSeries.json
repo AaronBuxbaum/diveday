@@ -6,7 +6,7 @@
     "cadenceEveryNWeeks": "every {weeks} weeks on {days}",
     "summaryOpenEnded": "Repeats {cadence} · keeps going",
     "summaryUntil": "Repeats {cadence} · through {date}",
-    "summaryWithFuture": "{summary} · {count, plural, one {# upcoming date on the board.} other {# upcoming dates on the board.}}",
+    "summaryWithFuture": "{summary} · {count, plural, one {# upcoming date on the board} other {# upcoming dates on the board}}",
     "summaryAllDone": "{summary} · every date has departed or been canceled.",
     "applying": "Applying…",
     "applyToSeries": "Apply this date’s details to every upcoming date",

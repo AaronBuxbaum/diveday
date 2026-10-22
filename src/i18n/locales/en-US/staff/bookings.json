@@ -3,14 +3,14 @@
     "title": "Add a booking",
     "tripHeading": "Which departure?",
     "fullExcluded": "Full departures aren’t listed. Add seats, or another departure that day, from the board.",
-    "tripEmpty": "Nothing upcoming has a seat left.",
+    "tripEmpty": "Nothing upcoming has a seat left",
     "tripEmptyAction": "Open the schedule",
     "day": {
       "label": "Day",
       "show": "Show",
       "earlier": "Earlier days",
       "later": "Later days",
-      "empty": "No departure on these two days has a seat left.",
+      "empty": "No departure on these two days has a seat left",
       "nextOpen": "Next open seat: {date}"
     },
     "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",

@@ -126,13 +126,13 @@ test("staff adds a walk-in diver, and keeps a private note about them", async ({
   // §7): no confirm dialog — the delete lands immediately and a toast offers
   // a one-tap undo instead.
   await page.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Private note deleted." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Private note deleted" })).toBeVisible();
   await expect(page.getByText("Add a private note").first()).toBeVisible();
   await expect(page.getByText("Needs a small wetsuit staged.")).toHaveCount(0);
 
   // Undo recreates a fresh note carrying the same text, staff-attributed.
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByRole("status")).toContainText("Private staff note added.");
+  await expect(page.getByRole("status")).toContainText("Private staff note added");
   await openPrivateNotes(page);
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
 
@@ -167,7 +167,7 @@ test("staff wait-lists a diver once the trip is full, and invites them to a seat
   await page.getByRole("button", { name: "Add to who’s waiting" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
-  await expect(page.getByRole("status")).toContainText("Diver added to the wait list.");
+  await expect(page.getByRole("status")).toContainText("Diver added to the wait list");
   // The ledger's "Who wants in" panel owns the state word.
   await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
   await expect(page.getByText("Waitlist Wally")).toBeVisible();

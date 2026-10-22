@@ -425,6 +425,61 @@ describe("edits to the visual spec and its helpers", () => {
     ).toBe(String.raw`(?:the day \(light\))$`);
     expect(lightGrep([])).toBeNull();
   });
+
+  it("includes supplemental light-mode groups in the local selection", () => {
+    const grep = lightGrep([
+      "visual.spec.ts › light mode — private states › verified account",
+      "visual.spec.ts › dark mode — private states › dark account",
+      "visual.spec.ts › print › paper pass",
+    ]);
+    expect(grep).toBe("(?:verified account)$");
+  });
+
+  it("reads supplemental test locations from their own source when tracing route changes", () => {
+    const registered = {
+      suites: [
+        {
+          title: "visual.spec.ts",
+          file: "visual.spec.ts",
+          specs: [],
+          suites: [
+            {
+              title: "light mode — supplemental",
+              specs: [
+                { title: "private gear", file: "visual-audit-staff.ts", line: 2 },
+                { title: "private course", file: "visual-audit-staff.ts", line: 5 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const module = [
+      "export function register(capture) {",
+      '  test("private gear", async ({ page }) => {',
+      '    await page.goto("/shop/blue-mantis/gear");',
+      "  });",
+      '  test("private course", async ({ page }) => {',
+      '    await page.goto("/s/blue-mantis/courses/open-water");',
+      "  });",
+      "}",
+    ].join("\n");
+    const result = selectCaptures({
+      changed: ["src/app/shop/[shopSlug]/gear/page.tsx"],
+      graph,
+      report: registered,
+      source: 'import { register } from "./visual-audit-staff";',
+      visualSources: new Map([["visual-audit-staff.ts", module]]),
+      helpers: new Map(),
+    });
+    expect(result.mode).toBe("affected");
+    expect([...result.lines]).toEqual([
+      "visual-audit-staff.ts › light mode — supplemental › private gear",
+    ]);
+    expect(filterReport(registered, result.lines).suites[0].suites[0].specs).toEqual([
+      { title: "private gear", file: "visual-audit-staff.ts", line: 2 },
+    ]);
+  });
 });
 
 describe("the 28 pull requests the test review replayed", () => {

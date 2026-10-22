@@ -462,13 +462,13 @@ test("staff delete a diver, find them again in the Deleted view, and restore the
   // The land-then-undo toast, the app's one undo affordance — deliberately
   // left alone from here: the point of this spec is the path that still works
   // once it is gone.
-  await expect(page.getByText("Diver deleted.")).toBeVisible();
+  await expect(page.getByText("Diver deleted")).toBeVisible();
   await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
 
   // Gone from the active roster, and not findable by searching it.
   await page.goto(`/shop/${SHOP}/divers`);
   await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
-  await expect(page.getByText("No divers match this view.")).toBeVisible();
+  await expect(page.getByText("No divers match this view")).toBeVisible();
 
   // The Deleted view is where they are, and search works inside it.
   await page.getByRole("link", { name: "Deleted", exact: true }).click();
@@ -523,7 +523,7 @@ test("erase is absent on a live diver's record and appears once they are deleted
 
   await page.getByText(`Delete ${diverName}`).click();
   await page.getByRole("button", { name: "Delete diver" }).click();
-  await expect(page.getByText("Diver deleted.")).toBeVisible();
+  await expect(page.getByText("Diver deleted")).toBeVisible();
 
   // Deleted: the record says so, and now offers the erase.
   await page.goto(`/shop/${SHOP}/divers?filter=removed&q=${encodeURIComponent(diverName)}`);
@@ -596,10 +596,10 @@ test("a section's outcome renders inside that section, not in a banner at the to
 
   // Scoped to the region: the same text anywhere else on the page would not
   // satisfy this, which is the whole point of the change.
-  await expect(gear.getByText("Rental fit profile saved.")).toBeVisible();
+  await expect(gear.getByText("Rental fit profile saved")).toBeVisible();
   // And it is genuinely where the staffer is looking, not merely inside the
   // right DOM subtree.
-  await expect(gear.getByText("Rental fit profile saved.")).toBeInViewport();
+  await expect(gear.getByText("Rental fit profile saved")).toBeInViewport();
 
   // A refusal lands on the box it is about, not beside the button and not at
   // the top: this email belongs to another active diver in the demo shop.

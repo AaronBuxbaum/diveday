@@ -53,7 +53,7 @@ test.describe("as owner", () => {
       .getByLabel("Review link (optional)", { exact: true })
       .fill("https://g.page/r/blue-mantis/review");
     await page.getByRole("button", { name: "Save review link" }).click();
-    await expect(page.getByText("Review link saved.")).toBeVisible();
+    await expect(page.getByText("Review link saved")).toBeVisible();
     await signOut(page);
 
     // A review link is configured, but nothing was just submitted — no second

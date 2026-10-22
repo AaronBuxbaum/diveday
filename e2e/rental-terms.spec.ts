@@ -24,7 +24,7 @@ test("rental terms written in Settings print on the trip slip and the counter ti
   // The outcome beside the form is the wait. Not the URL: the hub's
   // `FlashParams` strips `?notice=` as soon as it hydrates, so the redirect's
   // query is only on screen for an instant, and CI missed it (PR #2269).
-  await expect(page.getByRole("status").filter({ hasText: "Rentals saved." })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Rentals saved" })).toBeVisible();
 
   // Both tickets open from the register's Rentals view, one per kind of rental.
   await page.goto(`/shop/${privateShop.slug}/gear?view=rentals`);

@@ -109,7 +109,7 @@
     "labelHint": "(única)",
     "labelPlaceholder": "Chaleco #7",
     "size": "Talla",
-    "sizePlaceholder": "M, 10, 3mm L…",
+    "sizePlaceholder": "M, 10, 3 mm L…",
     "serialNumber": "Número de serie",
     "brandModel": "Marca y modelo",
     "brandModelPlaceholder": "ScubaPro MK11 / C370",
@@ -122,15 +122,15 @@
     "thicknessMm": "Grosor (mm)"
   },
   "notice": {
-    "added": "En el registro.",
-    "restored": "Unidad restaurada.",
-    "updated": "Guardado.",
-    "deleted": "Unidad eliminada.",
+    "added": "En el registro",
+    "restored": "Unidad restaurada",
+    "updated": "Guardado",
+    "deleted": "Unidad eliminada",
     "unitHeld": "Esa unidad sigue comprometida. Libérala o márcala como devuelta primero.",
-    "serviceLogged": "Registrado.",
+    "serviceLogged": "Registrado",
     "returned": "Marcado como devuelto. La unidad está en casa.",
-    "checkedOut": "Entregado.",
-    "released": "Asignación liberada.",
+    "checkedOut": "Entregado",
+    "released": "Asignación liberada",
     "alreadyReturned": "Esa reserva ya estaba cerrada.",
     "alreadyCheckedOut": "Esa unidad ya salió por la puerta. Márcala como devuelta en su lugar.",
     "notFound": "Ese registro ya no está aquí.",
@@ -151,12 +151,12 @@
     "importTooManyColumns": "Ese archivo tiene más de 64 columnas. Usa la plantilla.",
     "importCellTooLong": "Uno de los valores de ese archivo pasa de 2.000 caracteres, así que no se leyó nada.",
     "imported": "Se importaron {events} eventos de mantenimiento en {units} unidades nuevas y {assignments} asignaciones históricas. Se dejaron {skipped} eventos duplicados y {assignmentSkipped} asignaciones sin cambios.",
-    "returnedSet": "De vuelta en la estantería.",
+    "returnedSet": "De vuelta en la estantería",
     "returnedSetPulled": "De vuelta. {count, plural, one {# enviado a mantenimiento.} other {# enviados a mantenimiento.}}",
     "concernNeedsWords": "Para revisar un equipo hace falta una línea que diga qué pasó, para que el técnico pueda actuar.",
     "nothingOut": "De ese conjunto no hay nada fuera.",
     "nothingToHandOver": "Ese conjunto ya está fuera.",
-    "returnedFlagged": "De vuelta y marcado para el técnico."
+    "returnedFlagged": "De vuelta y marcado para el técnico"
   },
   "import": {
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
@@ -173,7 +173,7 @@
     },
     "where": {
       "title": "Dónde está",
-      "inShop": "En el centro, sin reservas.",
+      "inShop": "En el centro, sin reservas",
       "window": "{from} – {until}",
       "release": "Liberar",
       "releasing": "Liberando…"
@@ -255,8 +255,8 @@
     "assignAnyway": "Asignar de todos modos",
     "ticketDoor": "Boleta de alquiler",
     "notice": {
-      "handedOver": "Entregado.",
-      "released": "Asignación liberada.",
+      "handedOver": "Entregado",
+      "released": "Asignación liberada",
       "unitUnavailable": "Alguien tomó esa unidad primero. Elige otra.",
       "unitOutOfService": "Esa unidad está fuera de la pared por mantenimiento.",
       "alreadyCheckedOut": "Esa unidad ya salió del mostrador. Márcala como devuelta desde el registro.",
@@ -301,7 +301,7 @@
   "ticket": {
     "eyebrow": "Alquiler",
     "unitsHeading": "Lo que llevas",
-    "dueBack": "Devolver antes del {date}.",
+    "dueBack": "Devolver antes del {date}",
     "termsHeading": "Condiciones de alquiler",
     "receivedBy": "Recibido por",
     "printedName": "Nombre en mayúsculas",

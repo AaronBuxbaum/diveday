@@ -42,7 +42,7 @@ test("a shop's packages earn a tab, and Buy goes to Stripe or says why not", asy
   await page.getByLabel("Dives included").fill("10");
   await page.getByLabel("Price").fill("450");
   await page.getByRole("button", { name: "Add package" }).click();
-  await expect(page.getByText("Package added.")).toBeVisible();
+  await expect(page.getByText("Package added")).toBeVisible();
 
   await page.goto(`/s/${SHOP}`);
   await nav.getByRole("link", { name: "Packages" }).click();

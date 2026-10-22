@@ -2,7 +2,7 @@
   "title": "Exenciones y registros firmados",
   "editRelease": "Editar la exención",
   "banner": {
-    "savedNew": "Guardado como nueva versión.",
+    "savedNew": "Guardado como nueva versión",
     "savedFirst": "Tu exención está guardada.",
     "invalid": "Eso no se guardó. La exención debe tener al menos unas frases de extensión.",
     "materialityRequired": "Eso no se publicó. Indica si es una corrección o un cambio sustancial y vuelve a publicar.",
@@ -30,7 +30,7 @@
   "versionInfo": "Versión {version} · publicado el {date}",
   "signatures": {
     "heading": "Registros firmados",
-    "noSignedRecords": "Todavía no hay registros firmados.",
+    "noSignedRecords": "Todavía no hay registros firmados",
     "noSignatureDate": "Sin fecha de firma",
     "noTrip": "Registro importado",
     "releaseVersion": "Versión {version} de la exención",
@@ -45,7 +45,7 @@
     "searchLabel": "Buscar registros firmados",
     "searchPlaceholder": "Nombre, correo o teléfono del buceador",
     "searchClear": "Borrar la búsqueda",
-    "noMatch": "Ningún registro firmado coincide.",
+    "noMatch": "Ningún registro firmado coincide",
     "views": {
       "label": "Vistas de registros firmados",
       "all": "Todos",
@@ -108,7 +108,7 @@
     "medicalScreeningHint": "Solo se firma; no se evalúa ninguna respuesta. Sigue impidiendo embarcar a quien no lo haya firmado, sea cual sea el ajuste de los formularios del curso.",
     "bodyPlaceholder": "Pega aquí el texto completo del formulario.",
     "notice": {
-      "saved": "Guardado.",
+      "saved": "Guardado",
       "unchanged": "Sin cambios, así que no hay versión nueva.",
       "invalid": "No se guardó. Pon un título al formulario y al menos unas frases de texto.",
       "deleted": "Formulario eliminado. Los cursos ya no lo piden; las copias firmadas se conservan.",

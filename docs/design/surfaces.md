@@ -203,6 +203,30 @@ claim is never a single tap, and no danger tone renders at a checkpoint where no
 recorded. `RollCallControls.tsx` defers to the ADR by name and `DiverRollCall.test.tsx` fails on
 either.
 
+**Reviewed 2026-10-21, offline total persons** (#2742): the one idea is a head count the crew
+can trust without signal. The question is how many people are aboard relative to the permitted
+total, answered below the count tiles with actual people, the limit, and crew explicitly included.
+The warning adds no controls, and boarding remains on each person's row. Nothing in the warning is
+removable, because the booked-or-named total and the currently aboard total are distinct facts.
+The composition keeps the exception in the count sequence above the ledger.
+
+**Reviewed 2026-10-21, pairing cautions** (#2807): the one idea is a count-led manifest whose team
+exceptions are visible where the crew can act on them. The question is which team needs a human
+check, answered on the team and by a named re-pair instruction beside the boarded teammate.
+Existing team actions remain beside their member chips, with no warning-specific button.
+Each caution earns its place because course, age, clearance, and a buddy staying ashore carry
+different consequences. The team ledger stays the composition, and its caution opens with the team.
+
+### The departure log — `/shop/[shopSlug]/trips/[id]/log`
+
+**Reviewed 2026-10-21, preserved boat identity** (#2727): the one idea is a departure record whose
+retained boat evidence stays identifiable after reassignment. The reader's question is which boat
+the papers describe, answered by the retained name, capture time, and an explicit mismatch warning
+before the facts. Print/save remains the document's one action, and the warning needs none of its
+own. Neither the historical name nor the mismatch sentence can be removed without making the
+record easier to mistake for today's assignment. The warning belongs between the evidence's
+identity and its fact list in the document's existing sequence.
+
 ### The schedule board — `/shop/[shopSlug]/schedule/board`
 
 **Shipped 2026-09-20, the week is the whole board** (issue #1923, finishing slice 23f of [ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md)). The vertical day stream is gone and the week renders at every width: a day is a row on a phone and a row on a desk, so there is no `xl` floor left to declare and no second composition of the same departures. What the stream carried alone came up first, because deleting it otherwise takes the question a manager opens the board on a Thursday to answer — *which boat has no divemaster* — off the board with nothing going red for it. The hull follows the site on the meta line (a shore or pool session says so in its place); the crew prints on its own line, and only on the departures that differ from the week's habit (`src/lib/usual-crew.ts`, which is where that rule lives now that one composition asks it). A course bar prints no crew line — its meta already names the instructor. The day header still pins under the chrome bar, as ADR 20260827-clearwater-surface-language's decision 10 requires; it moved to the week rather than going down with the stream. The board pages by `?week=` and by nothing else: the cursor pager and its `?after=` went too, and reaching past this week is the pager's own step. **The wind left with the stream** and is not back — filed as #1936 rather than restored by reflex, because a row a manager cannot act from is what the density was bought to avoid.
@@ -720,3 +744,17 @@ and one final disclosure adds a record, removing the repeated standing Save cont
 border around each record disappears before useful facts or consequences do. The open ledger
 serves short action rows, while the inset disclosure group serves records with forms; the
 [source audit](collection-pattern-audit.md) records the workflow-specific differences retained.
+
+## Visual consistency audit, 2026-10-21
+
+The one idea is to make equivalent facts and controls read as the same product across the
+[audited surfaces](visual-pattern-audit.md), preserving each surface's existing purpose.
+Arriving readers see what, when and how much before booking, clearance and contact facts on
+staff records, the fields needed to create a record, and configuration beside its object.
+No new control is introduced; compact disclosures reveal occasional work on intent, while
+separate compact action rows and safety badges keep their established roles and the catch-up
+dismissal keeps a quiet, centred target.
+The redundant settings frame and empty header action wrappers disappear before useful content
+or consequences do.
+The existing public booking compositions, staff ledgers and configuration groups serve their
+content, with readable trip titles and complete explanatory sentences preserving those shapes.

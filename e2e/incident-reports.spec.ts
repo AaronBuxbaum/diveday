@@ -49,7 +49,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   // Oxygen was given, so where the diver went is part of the account.
   await page.getByLabel("Who took over care").selectOption({ label: "Stayed with the crew" });
   await page.getByRole("button", { name: "Save draft" }).click();
-  await expect(page.getByText("Draft saved.")).toBeVisible();
+  await expect(page.getByText("Draft saved")).toBeVisible();
 
   // Unfiled, it is one line on the owner's Today, and the line opens it.
   const reportPath = new URL(page.url()).pathname;
@@ -65,12 +65,12 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   if (!firstSeat) throw new Error("expected a seat on the reef trip");
   await who.selectOption({ label: firstSeat });
   await people.getByRole("button", { name: "Add to the report" }).click();
-  await expect(page.getByText("Added to the report.")).toBeVisible();
+  await expect(page.getByText("Added to the report")).toBeVisible();
   await expect(people.getByText(firstSeat, { exact: true })).toBeVisible();
 
   // Filed: it reads as a record from here, with its answers in words.
   await page.getByRole("button", { name: "File report" }).click();
-  await expect(page.getByText("Report filed.")).toBeVisible();
+  await expect(page.getByText("Report filed")).toBeVisible();
   await expect(page.getByText("Yes, for 20 minutes")).toBeVisible();
   await expect(page.getByText("Stayed with the crew")).toBeVisible();
   await expect(page.getByText("Injury or illness", { exact: true })).toBeVisible();
@@ -81,7 +81,7 @@ test("a report is written, filed, amended and found on the Safety tab", async ({
   const addenda = page.getByRole("region", { name: "Later notes" });
   await addenda.getByLabel("Add a note").fill("Diver called at 18:00: discharged, feeling fine.");
   await addenda.getByRole("button", { name: "Add note" }).click();
-  await expect(page.getByText("Note added.")).toBeVisible();
+  await expect(page.getByText("Note added")).toBeVisible();
   await expect(addenda.getByText("Diver called at 18:00: discharged, feeling fine.")).toBeVisible();
 
   // The month's Safety tab lists it, beside the money.

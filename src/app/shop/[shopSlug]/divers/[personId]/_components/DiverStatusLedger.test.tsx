@@ -179,9 +179,11 @@ describe("an open item", () => {
     const rows = screen.getAllByRole("listitem");
     expect(rows).toHaveLength(2);
     for (const row of rows) expect(row).toHaveClass("max-sm:flex-wrap");
-    expect(screen.getByText("On Thu, Aug 27 · 6:00 AM.").parentElement).toHaveClass(
-      "max-sm:basis-full",
-    );
+    expect(
+      screen.getByText(t("divers.status.onDeparture", { when: "Thu, Aug 27 · 6:00 AM" }), {
+        exact: true,
+      }).parentElement,
+    ).toHaveClass("max-sm:basis-full");
   });
 
   /**
@@ -228,7 +230,11 @@ describe("an open item", () => {
       },
     ]);
     // 11:00 UTC is 6:00 in America/Cancun — the shop's zone, never the host's.
-    expect(screen.getByText("On Thu, Aug 27 · 6:00 AM.")).toBeInTheDocument();
+    expect(
+      screen.getByText(t("divers.status.onDeparture", { when: "Thu, Aug 27 · 6:00 AM" }), {
+        exact: true,
+      }),
+    ).toBeInTheDocument();
   });
 });
 

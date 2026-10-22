@@ -4,7 +4,7 @@
   "boatNotRecorded": "Sin registrar",
   "boatNoNotices": "La documentación y el registro de equipo no mostraban nada caducado ni ausente.",
   "boatNoticesLabel": "Lo que mostraban la documentación y el registro de equipo",
-  "boatChanged": "Desde entonces la salida ha pasado a otro barco o ya no tiene ninguno.",
+  "boatChanged": "La salida ahora indica otra embarcación o ninguna. Este registro sigue describiendo a {boatName}.",
   "boatNoBoat": "Esta salida no tiene barco asignado.",
   "boatNotKept": "No se guardó registro de la documentación ni del equipo de seguridad del barco para esta salida.",
   "actionCleared": "Registro anulado (corrección)",

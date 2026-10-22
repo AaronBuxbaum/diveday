@@ -96,7 +96,7 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
 
   // The door answers for itself — the outcome lands in its own action row
   // rather than in a banner a screen above it.
-  await expect(page.getByText("Shift saved.")).toBeVisible();
+  await expect(page.getByText("Shift saved")).toBeVisible();
   // Read back through the shop's own timezone, not the wall time it was typed
   // in: this fails if the shift is written or bucketed in the host's zone.
   await expect(week.getByText("6:30 AM – 2:45 PM").first()).toBeVisible();
@@ -120,7 +120,7 @@ test("an owner puts a shift in a day, steps a week off it, and takes it back off
   // the step above walked home — and the banner is the observable, because
   // `FlashParams` has already stripped `?notice=` from the URL by the time an
   // assertion could read it.
-  await expect(page.getByText("Shift removed.")).toBeVisible();
+  await expect(page.getByText("Shift removed")).toBeVisible();
   await expect(week.getByText(note)).toHaveCount(0);
   await expect(week.getByText(SEEDED_SHIFT).first()).toBeVisible();
 });
@@ -148,7 +148,7 @@ test("a shift added on another week comes back to that week", async ({ page, pri
   await form.getByLabel("Note").fill(note);
   await form.getByRole("button", { name: "Add shift" }).click();
 
-  await expect(page.getByText("Shift saved.")).toBeVisible();
+  await expect(page.getByText("Shift saved")).toBeVisible();
   // Same week, and the shift is on it. `FlashParams` keeps `?week=` — it is
   // a reading of the page, not one-shot chrome.
   await expect(page).toHaveURL(new RegExp(`week=${new URL(nextWeekUrl).searchParams.get("week")}`));

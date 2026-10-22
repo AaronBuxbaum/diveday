@@ -4,6 +4,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { ManifestBuddyTeam, TripManifest } from "@/lib/manifests";
 import { unteamedDivers as divingAndUnteamed } from "@/lib/participant-types";
+import { partyLeftReason } from "@/lib/party-teams";
 
 /**
  * **The buddy-team builder's inputs**: who can still join a new team, the
@@ -52,6 +53,36 @@ export function buddyBuilderView({
     token: `crew:${member.id}`,
     label: member.fullName,
   }));
+  // One policy for party planning and hand-built teams. A caution never
+  // refuses a team: crew may be deliberately accompanying a child or student.
+  // A crew assignment alone proves neither a card nor the adult's age.
+  const diverByBooking = new Map(manifest.divers.map((diver) => [diver.bookingId, diver]));
+  const teamWarnings: Record<string, string[]> = {};
+  for (const team of buddyTeamsList) {
+    const bookingIds = team.members.flatMap((member) =>
+      member.kind === "diver" && !member.cancelled && diverByBooking.has(member.bookingId)
+        ? [member.bookingId]
+        : [],
+    );
+    const members = bookingIds.flatMap((bookingId) => {
+      const member = partyPlan.members.get(bookingId);
+      return member ? [member] : [];
+    });
+    // Crew-only teams have no student or junior to place. A single diver
+    // beside crew still needs the same course/age context as a larger team.
+    const reason = members.length > 0 ? partyLeftReason(partyPlan.departure, members) : null;
+    const warnings = reason
+      ? [t("manifest.buddyTeamCaution", { reason: partyLeftReasonText(t, reason) })]
+      : [];
+    if (
+      bookingIds.some((bookingId) => diverByBooking.get(bookingId)?.readiness.status !== "ready")
+    ) {
+      // Only the shared readiness verdict leaves this derivation; no raw
+      // medical answer or blocker wording is repeated on the buddy panel.
+      warnings.push(t("manifest.buddyTeamNotCleared"));
+    }
+    teamWarnings[team.teamId] = warnings;
+  }
   // "Buddy team: Ana and Ben" — names de-duplicated (a divemaster on two teams
   // with one diver in common is still one body to look for) and joined through
   // `Intl.ListFormat` in the negotiated locale, never a hard-coded ", ".
@@ -126,6 +157,7 @@ export function buddyBuilderView({
       buddyErrorText,
       buddyErrorForm,
       partyLines,
+      teamWarnings,
     },
   };
 }

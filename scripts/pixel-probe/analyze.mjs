@@ -382,7 +382,7 @@ const EDGE_DEPTH = 6;
  * seven levels down stored "the summary's x" (8px left of its caret), and the
  * row's own stack read that back as the row's edge.
  */
-function visualLeft(ix, el, cache, depth = 0) {
+export function visualLeft(ix, el, cache = new Map(), depth = 0) {
   const key = `${el.i}:${depth}`;
   if (cache.has(key)) return cache.get(key);
   let value;
@@ -1934,8 +1934,11 @@ export function clusterKey(flag) {
  * Whether a flag is one `scripts/pixel-probe-settled.json` has already judged
  * right. An entry names the check and either the exact signature or a
  * `classes` list every one of which the flag's class string must carry.
+ * The two contextual #2887 settlements additionally require freshly captured
+ * evidence for their documented structure and geometry. Missing evidence or
+ * an unknown context leaves the flag open; older signature entries are intact.
  */
-export function settledEntryFor(flag, settled) {
+export function settledEntryFor(flag, settled, record) {
   for (const entry of settled || []) {
     if (entry.check !== flag.check) continue;
     if (entry.signature && entry.signature !== flag.sig) continue;
@@ -1945,6 +1948,41 @@ export function settledEntryFor(flag, settled) {
       if (!entry.classes.every((token) => tokens.has(token))) continue;
     }
     if (entry.label && !String(flag.label || "").startsWith(entry.label)) continue;
+    if (entry.captures && !entry.captures.includes(record?.capture)) continue;
+    if (entry.context) {
+      const evidence = record?.settlementContext;
+      if (!entry.captures?.length || evidence?.version !== 1) continue;
+      if (entry.context === "conditions-line-separator") {
+        if (
+          flag.check !== "ragged-edges" ||
+          flag.measure?.strays?.length !== 1 ||
+          flag.measure.strays[0].off !== -12 ||
+          flag.measure.strays[0].sig !== flag.sig ||
+          !evidence.conditionsLine?.some(
+            (edge) =>
+              edge.el === flag.el &&
+              edge.mode === flag.measure.mode &&
+              flag.measure.lefts?.includes(edge.mode - 12),
+          )
+        )
+          continue;
+      } else if (entry.context === "cert-check-step-icons") {
+        if (
+          flag.check !== "ragged-column" ||
+          flag.measure?.child !== "svg.size-4" ||
+          flag.measure.leftSpread !== 76 ||
+          flag.measure.rightSpread !== 76 ||
+          !evidence.certCheckSteps?.some(
+            (step) =>
+              step.el === flag.el &&
+              step.xs.length === 3 &&
+              flag.measure.xs?.length === 3 &&
+              step.xs.every((x, index) => x === flag.measure.xs[index]),
+          )
+        )
+          continue;
+      } else continue;
+    }
     if (!entry.signature && !entry.classes && !entry.label && !entry.container) continue;
     return entry;
   }

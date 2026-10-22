@@ -62,8 +62,9 @@ export type PartyLeftReason =
 export type PartyDeparture = { course: { intro: boolean } | null };
 
 /**
- * Why this party may not be teamed in one tap, or null when it may. A party
- * of one is not a party and is never asked about.
+ * Why this party needs a divemaster's decision, or null. One-tap planning
+ * leaves it untouched; a hand-built team's panel shows the same reason as
+ * an informational caution. A single diver beside crew can need one too.
  */
 export function partyLeftReason(
   departure: PartyDeparture,

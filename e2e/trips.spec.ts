@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
@@ -10,6 +11,8 @@ import {
   openTripMore,
   seededTripId,
 } from "./helpers";
+
+const staffCopy = staffTranslator("en-US");
 
 test("the public schedule lists seeded trips with capacity states, a month rail, and per-dive briefings", async ({
   page,
@@ -270,7 +273,10 @@ test.describe("trip pulse", () => {
     // Narrowed, and it says so with the departure's own name rather than
     // leaving a staffer to wonder which boat an empty list is about.
     await expect(
-      page.getByText("Showing orders for Two-Tank Reef — Molasses & French."),
+      page.getByText(
+        staffCopy("orders.index.filteredByTrip", { title: "Two-Tank Reef — Molasses & French" }),
+        { exact: true },
+      ),
     ).toBeVisible();
     expect(await rows.count()).toBeLessThan(shopWide);
     // The way back to the departure, and the way back out of the filter.

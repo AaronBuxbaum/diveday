@@ -1136,7 +1136,7 @@ test("the signed records search by diver and narrow to medical holds", async ({ 
   // Nothing matching says so, and clearing the search widens back out.
   await search.fill("Nobody-by-this-name");
   await search.press("Enter");
-  await expect(page.getByText("No signed records match.")).toBeVisible();
+  await expect(page.getByText("No signed records match")).toBeVisible();
   await page.getByRole("link", { name: "Clear search" }).click();
   await expect(rows.first()).toBeVisible();
   await expect(page).not.toHaveURL(/[?&]q=/);

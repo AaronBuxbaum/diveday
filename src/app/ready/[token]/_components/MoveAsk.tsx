@@ -54,7 +54,7 @@ export function MoveAsk({
         </Field>
         <SubmitButton
           pendingLabel={t("ready.moveAsk.pending")}
-          className={buttonClass({ variant: "secondary", size: "sm" })}
+          className={buttonClass({ variant: "secondary" })}
         >
           {t("ready.moveAsk.action")}
         </SubmitButton>

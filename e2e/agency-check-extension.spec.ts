@@ -651,7 +651,7 @@ test("after a match, the other cards SSI's page lists are offered, and the ticke
 
   await offer.getByRole("checkbox", { name: "Deep Diving" }).uncheck();
   await offer.getByRole("button", { name: "Add" }).click();
-  await expect(cards.getByText("Added.")).toBeVisible();
+  await expect(cards.getByText("Added")).toBeVisible();
 
   const nitrox = cards.getByRole("listitem").filter({ hasText: "SSI · Nitrox" });
   await expect(nitrox.getByText("Listed on SSI’s page.")).toBeVisible();

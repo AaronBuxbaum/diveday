@@ -780,7 +780,7 @@ describe("drysuit experience seen", () => {
 
   it("never reads as a card: the door and the empty state are unchanged", () => {
     renderGroup(seen());
-    expect(screen.getByText("No certification records yet.")).toBeInTheDocument();
+    expect(screen.getByText("No certification records yet")).toBeInTheDocument();
     expect(door()).not.toHaveTextContent(/drysuit/i);
   });
 

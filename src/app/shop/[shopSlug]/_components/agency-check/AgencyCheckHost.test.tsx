@@ -583,7 +583,7 @@ describe("the other cards a match's page lists", () => {
     expect(form.get("certificationId")).toBe("card-1");
     expect(form.get("pageText")).toBe("page for Number1");
     expect(form.getAll("kind")).toEqual(["deep"]);
-    expect(await offer.findByText("Added.")).toBeVisible();
+    expect(await offer.findByText("Added")).toBeVisible();
     // Filed: the offer stays, saying so, and the page's text is not kept to post again.
     expect(offer.queryByRole("button", { name: "Add" })).toBeNull();
   });

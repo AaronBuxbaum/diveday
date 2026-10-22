@@ -488,6 +488,9 @@ export type ButtonSize = keyof typeof sizes;
  */
 const FLUSH = "px-0";
 
+/** Symmetric target room for a short unpainted label, returned as an equal outdent. */
+const FLUSH_PADDED = "-mx-2 px-2";
+
 /**
  * **`flush` on a variant whose hover paints a fill keeps room around the label.**
  *
@@ -544,9 +547,9 @@ type PaintedAtRest = "primary" | "secondary" | "outline" | "danger" | "danger-so
  * `icon` and `mark` squares — has nothing for `flush` to drop and no label to
  * line up, and is left exactly as it is; so is a variant painted at rest.
  */
-function horizontalPadding(variant: ButtonVariant, x: string, flush: boolean) {
+function horizontalPadding(variant: ButtonVariant, x: string, flush: boolean | "padded") {
   if (!flush || x === FLUSH) return x;
-  if (PAINTS_NOTHING.has(variant)) return FLUSH;
+  if (PAINTS_NOTHING.has(variant)) return flush === "padded" ? FLUSH_PADDED : FLUSH;
   if (HOVER_FILL.has(variant)) return FLUSH_HOVER_FILL;
   return x;
 }
@@ -616,7 +619,7 @@ function blockEndOutdent(variant: ButtonVariant, size: ButtonSize, outdent?: But
 export function buttonClass<V extends ButtonVariant = "primary">({
   variant = "primary" as V,
   size = "md",
-  flush = false,
+  flush,
   outdent,
   edge,
   busy = false,
@@ -632,8 +635,14 @@ export function buttonClass<V extends ButtonVariant = "primary">({
    * dropped (`link`, `bare`), or traded for 8px of room and an equal negative
    * margin (`ghost`, `danger-ghost`; see `FLUSH_HOVER_FILL`). Refused on a
    * variant painted at rest, whose box is what lines up.
+   * `"padded"` keeps symmetric 8px target room on `link` or `bare`, with the
+   * same outdent, when a short label would otherwise make a narrow target.
    */
-  flush?: V extends PaintedAtRest ? false : boolean;
+  flush?: V extends PaintedAtRest
+    ? false
+    : V extends "link" | "bare"
+      ? boolean | "padded"
+      : boolean;
   /**
    * Sink the unseen lower half of a quiet button's target into the padding of
    * the box it ends, everywhere (`block-end`), below `sm` (`block-end-phone`) or
@@ -659,7 +668,7 @@ export function buttonClass<V extends ButtonVariant = "primary">({
   const end = blockEndOutdent(variant, size, outdent);
   const edged = variant === "secondary" && edge ? edge : undefined;
   const paint = edged ? `border-2 ${EDGES[edged]} ${SECONDARY_FACE}` : variants[variant];
-  const padding = edged ? EDGE_X[size] : horizontalPadding(variant, x, flush);
+  const padding = edged ? EDGE_X[size] : horizontalPadding(variant, x, flush ?? false);
   return `${base} ${DISABLED[busy ? "busy" : "default"]} ${paint} ${rest} ${corner} ${padding}${
     end ? ` ${end}` : ""
   } ${className}`.trim();

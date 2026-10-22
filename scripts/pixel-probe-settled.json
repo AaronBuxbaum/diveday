@@ -1,5 +1,5 @@
 {
-  "//": "Pixel-probe flags that are right as they are. Each entry names the check and the signature (or a `classes` list the flag's class string must all carry), the reason, and a pointer to the code comment that explains it. The report lists matches as settled — never drops them. A flag that belongs here also earns a row in docs/design/settled-questions.md.",
+  "//": "Pixel-probe flags that are right as they are. Each entry names the check and the signature (or a `classes` list the flag's class string must all carry), the reason, and a pointer to the code comment that explains it. A contextual entry also requires its exact capture and fresh structural/geometry evidence from pixel-probe/settlements.mjs; absent evidence leaves it open. The report lists matches as settled — never drops them. A flag that belongs here also earns a row in docs/design/settled-questions.md.",
   "settled": [
     {
       "check": "mismatched-controls",
@@ -95,6 +95,43 @@
       "classes": ["size-4", "shrink-0", "focus-visible:outline-none"],
       "reason": "The public package picker's native radio leaves its own outline off because focus is drawn around ChoicePill's rounded aside wrapper. That wrapper carries has-[input:focus-visible]:focus-ring from radioRingClass; the visible ring follows the whole option rather than the 16px dot. The probe reads the input's own outline. This entry requires the captured ring-bearing wrapper, not every outline-none radio.",
       "pointer": "src/components/ui/form.tsx, radioClass/radioRingClass and ChoicePill's aside wrapper; src/components/ui/form.test.tsx:594-612; src/app/s/[shopSlug]/packages/_components/PackagePurchaseForm.tsx:63-75; docs/design/settled-questions.md"
+    },
+    {
+      "check": "ragged-edges",
+      "signature": "p.overflow-x-clip text-muted text-sm",
+      "container": "section.border-border border-t pt-4 px-2",
+      "captures": ["booking-email-correction", "site-briefing"],
+      "context": "conditions-line-separator",
+      "reason": "ConditionsLine's K-483 separator run sits 12px left inside an inline-axis clip so a wrapped reading never strands a dot. The visible readings and adjacent prose start at the common column. This entry requires the captured clip, dot/reading structure and exactly -12px geometry; it does not exempt arbitrary clipped paragraphs.",
+      "pointer": "src/app/s/[shopSlug]/trips/[id]/_components/ConditionsLine.tsx, the K-483 comment; src/app/s/[shopSlug]/trips/[id]/_components/ConditionsLine.test.tsx, the wrapped-separator test; docs/design/settled-questions.md"
+    },
+    {
+      "check": "ragged-edges",
+      "signature": "div.flex flex-col outline-none",
+      "container": "div.flex flex-col outline-none",
+      "captures": ["booking-email-correction", "site-briefing"],
+      "context": "conditions-line-separator",
+      "reason": "The transparent PublicShopMainContent ancestor inherits only ConditionsLine's hidden -12px separator edge. Captured evidence must show that representing the verified clipped run by its visible edge removes the entire offset; another visible stray in the wrapper remains reportable.",
+      "pointer": "src/app/s/[shopSlug]/trips/[id]/_components/ConditionsLine.tsx, the K-483 comment; scripts/pixel-probe/settlements.mjs, the clipped-edge propagation evidence; docs/design/settled-questions.md"
+    },
+    {
+      "check": "ragged-edges",
+      "signature": "div{block;p0,0,0,0;b0,0,0,0;r0,0,0,0;f16/400;}",
+      "container": "div.lg:contents lg:space-y-0 space-y-10",
+      "captures": ["booking-email-correction", "site-briefing"],
+      "context": "conditions-line-separator",
+      "reason": "The transparent section-stack child inherits only ConditionsLine's hidden -12px separator edge. It is settled only when the verified clip accounts for the whole measured offset, leaving any other visible misalignment open.",
+      "pointer": "src/app/s/[shopSlug]/trips/[id]/_components/ConditionsLine.tsx, the K-483 comment; scripts/pixel-probe/settlements.mjs, the clipped-edge propagation evidence; docs/design/settled-questions.md"
+    },
+    {
+      "check": "ragged-column",
+      "signature": "svg.size-4",
+      "container": "ol.divide-border divide-y",
+      "classes": ["size-4", "shrink-0", "self-center"],
+      "captures": ["settings-cert-checks"],
+      "context": "cert-check-step-icons",
+      "reason": "Try the checks' Extension and PADI statuses belong directly to their steps; Sample lookups' result belongs after its nested agency label. Their status marks therefore differ by the agency label's 64px plus 12px gap. Captured evidence requires that exact four-step structure, nested sample list and 76px middle offset, not a generic SVG column exemption.",
+      "pointer": "src/app/shop/[shopSlug]/settings/_components/CertCheckTry.tsx, the nested-step status alignment comment; scripts/pixel-probe/settlements.test.mjs; docs/design/settled-questions.md"
     }
   ]
 }

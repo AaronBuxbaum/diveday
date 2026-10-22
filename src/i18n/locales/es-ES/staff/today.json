@@ -19,7 +19,7 @@
   },
   "paymentAction": {
     "copyLink": "Copiar enlace de pago",
-    "linkCopied": "Enlace copiado.",
+    "linkCopied": "Enlace copiado",
     "copyFailed": "No se pudo copiar. Cópialo desde la factura.",
     "resendInvoice": "Reenviar factura",
     "resending": "Reenviando…",
@@ -268,7 +268,7 @@
     "restrictedDetail": "Stripe los pausó el {when}. Los buceadores pagan en el centro hasta que Stripe los reactive."
   },
   "incidentReportUnfiled": {
-    "subject": "{count, plural, one {# informe de incidente sin presentar, empezado {day, select, relative {{when}} other {el {when}}} por {name}.} other {# informes de incidente sin presentar; el más antiguo lo empezó {name} {day, select, relative {{when}} other {el {when}}}.}}"
+    "subject": "{count, plural, one {# informe de incidente sin presentar, empezado {day, select, relative {{when}} other {el {when}}} por {name}} other {# informes de incidente sin presentar; el más antiguo lo empezó {name} {day, select, relative {{when}} other {el {when}}}.}}"
   },
   "reviewsPending": {
     "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión."
@@ -304,7 +304,7 @@
     "neverPickedUpDetail": "{units} {count, plural, one {estaba reservado} other {estaban reservados}} hasta el {dueOn}, sin recoger.",
     "fitConfirmDetail": "El {unitLabel} de {name} salió en talla {size}. ¿La guardamos como su talla?",
     "fitConfirmKeep": "Guardarla",
-    "fitConfirmSaving": "Guardando"
+    "fitConfirmSaving": "Guardando…"
   },
   "staffCredential": {
     "dueDetail": "{credential} se renueva el {dueOn}.",
@@ -336,33 +336,33 @@
     "resendConfirmations": "Reenviar confirmaciones"
   },
   "blockerRow": {
-    "requirementsNotConfigured": "{count, plural, one {Requisitos de la salida sin configurar.} other {Requisitos de la salida sin configurar para # buceadores.}}",
+    "requirementsNotConfigured": "{count, plural, one {Requisitos de la salida sin configurar} other {Requisitos de la salida sin configurar para # buceadores}}",
     "identityUnconfirmed": "{count, plural, one {Reserva asociada a una ficha por suposición. Confirma quién es antes de enviar la exención.} other {# reservas asociadas a una ficha por suposición. Confirma quién es cada una antes de enviar las exenciones.}}",
-    "waiverNotSent": "{count, plural, one {Exención sin firmar, aún sin enviar.} other {# exenciones sin firmar, aún sin enviar.}}",
-    "waiverPending": "{count, plural, one {Exención sin firmar, enlace enviado.} other {# exenciones sin firmar, enlaces enviados.}}",
-    "waiverExpired": "{count, plural, one {El enlace de la exención caducó.} other {# enlaces de exención caducados.}}",
-    "waiverLapsed": "{count, plural, one {Exención firmada caducada.} other {# exenciones firmadas caducadas.}}",
+    "waiverNotSent": "{count, plural, one {Exención sin firmar, aún sin enviar} other {# exenciones sin firmar, aún sin enviar}}",
+    "waiverPending": "{count, plural, one {Exención sin firmar, enlace enviado} other {# exenciones sin firmar, enlaces enviados}}",
+    "waiverExpired": "{count, plural, one {El enlace de la exención caducó.} other {# enlaces de exención caducados}}",
+    "waiverLapsed": "{count, plural, one {Exención firmada caducada} other {# exenciones firmadas caducadas}}",
     "waiverRunsOut": "{count, plural, one {Una exención caduca antes de la salida.} other {# exenciones caducan antes de la salida.}}",
     "medicalReview": "{count, plural, one {Una respuesta médica necesita el visto bueno de un médico.} other {# respuestas médicas necesitan el visto bueno de un médico.}}",
-    "medicalNotCleared": "{count, plural, one {Un médico no lo autorizó a bucear.} other {# buceadores sin autorización médica para bucear.}}",
+    "medicalNotCleared": "{count, plural, one {Un médico no lo autorizó a bucear.} other {# buceadores sin autorización médica para bucear}}",
     "guardianSignatureMissing": "{count, plural, one {La exención necesita la firma de un tutor.} other {# exenciones necesitan la firma de un tutor.}}",
-    "certificationMissing": "{count, plural, one {Sin certificación registrada.} other {# buceadores sin certificación registrada.}}",
-    "certificationPending": "{count, plural, one {Certificación aún sin verificar.} other {# certificaciones aún sin verificar.}}",
-    "certificationSelfDeclared": "{count, plural, one {Certificación declarada por el buceador, sin verificar.} other {# certificaciones declaradas por los buceadores, sin verificar.}}",
-    "certificationInsufficient": "{count, plural, one {Sin la certificación que pide esta salida.} other {# buceadores sin la certificación que pide esta salida.}}",
-    "certificationInTraining": "{count, plural, one {Aún en formación para el nivel de esta salida.} other {# buceadores aún en formación para el nivel de esta salida.}}",
+    "certificationMissing": "{count, plural, one {Sin certificación registrada} other {# buceadores sin certificación registrada}}",
+    "certificationPending": "{count, plural, one {Certificación aún sin verificar} other {# certificaciones aún sin verificar}}",
+    "certificationSelfDeclared": "{count, plural, one {Certificación declarada por el buceador, sin verificar} other {# certificaciones declaradas por los buceadores, sin verificar}}",
+    "certificationInsufficient": "{count, plural, one {Sin la certificación que pide esta salida} other {# buceadores sin la certificación que pide esta salida}}",
+    "certificationInTraining": "{count, plural, one {Aún en formación para el nivel de esta salida} other {# buceadores aún en formación para el nivel de esta salida}}",
     "certificationNotYet": "{count, plural, one {Dice que todavía no tiene certificación.} other {# buceadores dicen que todavía no tienen certificación.}}",
-    "specialtyMissing": "{count, plural, one {Sin certificación de {specialty} registrada.} other {# buceadores sin certificación de {specialty} registrada.}}",
-    "specialtyPending": "{count, plural, one {Certificación de {specialty} aún sin verificar.} other {# certificaciones de {specialty} aún sin verificar.}}",
-    "specialtyImportUnconfirmed": "{count, plural, one {Certificación de {specialty} importada sin confirmar.} other {# certificaciones de {specialty} importadas sin confirmar.}}",
-    "nitroxMissing": "{count, plural, one {Sin certificación de nitrox registrada.} other {# buceadores sin certificación de nitrox registrada.}}",
-    "nitroxPending": "{count, plural, one {Certificación de nitrox aún sin verificar.} other {# certificaciones de nitrox aún sin verificar.}}",
-    "nitroxSelfDeclared": "{count, plural, one {Nitrox declarado por el buceador, sin verificar.} other {# buceadores declararon nitrox, sin verificar.}}",
-    "underMinimumAge": "{count, plural, one {Por debajo de la edad mínima del curso.} other {# buceadores por debajo de la edad mínima del curso.}}",
-    "paymentDue": "{count, plural, one {Pago pendiente.} other {# pagos pendientes.}}",
+    "specialtyMissing": "{count, plural, one {Sin certificación de {specialty} registrada} other {# buceadores sin certificación de {specialty} registrada}}",
+    "specialtyPending": "{count, plural, one {Certificación de {specialty} aún sin verificar} other {# certificaciones de {specialty} aún sin verificar}}",
+    "specialtyImportUnconfirmed": "{count, plural, one {Certificación de {specialty} importada sin confirmar} other {# certificaciones de {specialty} importadas sin confirmar}}",
+    "nitroxMissing": "{count, plural, one {Sin certificación de nitrox registrada} other {# buceadores sin certificación de nitrox registrada}}",
+    "nitroxPending": "{count, plural, one {Certificación de nitrox aún sin verificar} other {# certificaciones de nitrox aún sin verificar}}",
+    "nitroxSelfDeclared": "{count, plural, one {Nitrox declarado por el buceador, sin verificar} other {# buceadores declararon nitrox, sin verificar.}}",
+    "underMinimumAge": "{count, plural, one {Por debajo de la edad mínima del curso} other {# buceadores por debajo de la edad mínima del curso}}",
+    "paymentDue": "{count, plural, one {Pago pendiente} other {# pagos pendientes}}",
     "paymentRefunded": "{count, plural, one {Reembolsado, así que vuelve a deber el pago.} other {# buceadores reembolsados, así que vuelven a deber el pago.}}",
     "readinessUnavailable": "{count, plural, one {No se pudo revisar si está listo.} other {No se pudo revisar si están listos # buceadores.}}",
-    "courseFormUnsigned": "{count, plural, one {Formulario del curso sin firmar.} other {# formularios del curso sin firmar.}}",
+    "courseFormUnsigned": "{count, plural, one {Formulario del curso sin firmar} other {# formularios del curso sin firmar}}",
     "trainingMarkInvalid": "{count, plural, one {Marca de formación que ya no corresponde a su plaza del curso.} other {# marcas de formación que ya no corresponden a su plaza del curso.}}"
   }
 }

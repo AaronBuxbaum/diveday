@@ -59,6 +59,7 @@ describe("pushShopRows", () => {
   });
 
   it("names an unfiled incident report: how many, who started the oldest, and when", () => {
+    const t = staffTranslator("en-US");
     // NOW is Tuesday 9:30 AM in Key Largo; the draft was started Saturday.
     const draft = {
       id: "r-1",
@@ -70,7 +71,12 @@ describe("pushShopRows", () => {
     expect(one).toMatchObject({
       kind: "incident_report_unfiled",
       urgency: "now",
-      subject: "1 incident report not filed, started Saturday by Sal Rivera.",
+      subject: t("today.incidentReportUnfiled.subject", {
+        count: 1,
+        day: "weekday",
+        when: "Saturday",
+        name: "Sal Rivera",
+      }),
       detail: "",
       href: "/shop/blue-mantis/trips/trip-1/incidents/r-1",
       dueAt: null,
@@ -85,19 +91,31 @@ describe("pushShopRows", () => {
     expect(several).toHaveLength(1);
     // The date is the shop's short date, whatever spacing ICU puts in it.
     expect(several[0]?.subject).toBe(
-      `2 incident reports not filed, the oldest started on ${formatShortDate(new Date("2026-07-02T15:00:00Z"), "en-US", "America/New_York")} by Sal Rivera.`,
+      t("today.incidentReportUnfiled.subject", {
+        count: 2,
+        day: "date",
+        when: formatShortDate(new Date("2026-07-02T15:00:00Z"), "en-US", "America/New_York"),
+        name: "Sal Rivera",
+      }),
     );
     expect(several[0]?.href).toBe("/shop/blue-mantis/trips/trip-1/incidents/r-1");
   });
 
   it("says today and yesterday in words, in the shop's own zone and language", () => {
+    const t = staffTranslator("en-US");
+    const es = staffTranslator("es-ES");
     const draft = { id: "r-1", tripId: "trip-1", createdByName: "Sal Rivera" };
     // 1 AM UTC Tuesday is still Monday evening in Key Largo.
     const [yesterday] = rows({
       unfiledIncidentDrafts: [{ ...draft, createdAt: new Date("2026-07-21T01:00:00Z") }],
     });
     expect(yesterday?.subject).toBe(
-      "1 incident report not filed, started yesterday by Sal Rivera.",
+      t("today.incidentReportUnfiled.subject", {
+        count: 1,
+        day: "relative",
+        when: "yesterday",
+        name: "Sal Rivera",
+      }),
     );
     const actions: TodayAction[] = [];
     pushShopRows(
@@ -107,11 +125,16 @@ describe("pushShopRows", () => {
           ...quiet,
           unfiledIncidentDrafts: [{ ...draft, createdAt: new Date("2026-07-21T12:00:00Z") }],
         },
-        { locale: "es-ES", t: staffTranslator("es-ES") },
+        { locale: "es-ES", t: es },
       ),
     );
     expect(actions[0]?.subject).toBe(
-      "1 informe de incidente sin presentar, empezado hoy por Sal Rivera.",
+      es("today.incidentReportUnfiled.subject", {
+        count: 1,
+        day: "relative",
+        when: "hoy",
+        name: "Sal Rivera",
+      }),
     );
   });
 

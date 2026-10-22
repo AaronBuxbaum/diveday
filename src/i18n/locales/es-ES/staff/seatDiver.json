@@ -2,7 +2,7 @@
   "findHeading": "Buscar un buceador que ya conste",
   "findLabel": "Busca por nombre, correo o teléfono",
   "findPlaceholder": "Empieza a escribir un nombre…",
-  "noMatches": "Sin coincidencias para “{query}”.",
+  "noMatches": "Sin coincidencias para “{query}”",
   "noEmailOnFile": "Sin correo registrado",
   "adding": "Agregando…",
   "handEntryHeading": "Buceador nuevo",

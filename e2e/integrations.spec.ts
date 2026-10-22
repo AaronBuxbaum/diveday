@@ -25,7 +25,7 @@ test.describe("shop integrations settings", () => {
     // primary a shop could fix by clicking, and nothing here can fix it
     // (principle 8). With more than one unavailable, the ask to email support
     // is said once under the title, and each card says only that much.
-    await expect(page.getByText("Not available yet.", { exact: true })).toHaveCount(2);
+    await expect(page.getByText("Not available yet", { exact: true })).toHaveCount(2);
     await expect(
       page.getByText(/Want one of these\? Email .+ and we’ll switch it on\./),
     ).toHaveCount(1);
