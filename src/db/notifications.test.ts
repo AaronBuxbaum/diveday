@@ -488,6 +488,65 @@ describe("a courtesy message waiting in the retry queue", () => {
     ]);
   });
 
+  // Security review of #2656, MAJOR 1: an offer made off the last-minute list
+  // is stopped by that list's own unsubscribe, even one queued before it.
+  it("drops a list offer whose last-minute-list lead was unsubscribed after it was queued", async () => {
+    const context = await seededBooking();
+    const { db, shop, trip, booking } = context;
+    const personId = await personOf(db, booking.bookingId);
+    const [anytime] = await db
+      .insert(leads)
+      .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId })
+      .returning();
+    if (!anytime) throw new Error("anytime insert failed");
+    const [offer] = await db
+      .insert(leads)
+      .values(
+        departureLead({
+          shopId: shop.id,
+          tripId: trip.id,
+          personId,
+          askedBy: "shop",
+          parentLeadId: anytime.id,
+        }),
+      )
+      .returning();
+    if (!offer) throw new Error("offer insert failed");
+    const { provider, sent } = flakyProvider();
+    await expect(
+      sendNotification(
+        db,
+        {
+          ...SCHEDULE,
+          kind: "seat_offer_commercial",
+          askedBy: "shop",
+          leadId: offer.id,
+          shopId: shop.id,
+          to: "nora@example.com",
+          shopName: shop.name,
+          bookingUrl: "https://diveday.test/s/blue-mantis/trips/x",
+          offeredAt: new Date("2026-07-19T00:00:00.000Z"),
+          unsubscribeUrl: "https://diveday.test/unsubscribe/x",
+        },
+        provider,
+      ),
+    ).resolves.toMatchObject({ status: "failed", retryable: true });
+    await db
+      .update(leads)
+      .set({ closedAt: new Date("2026-07-20T00:00:00.000Z"), closedAs: "unsubscribed" })
+      .where(eq(leads.id, anytime.id));
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(drainNotificationRetries(db, { provider })).resolves.toMatchObject({
+      sent: 0,
+      failed: 1,
+    });
+    expect(sent).toEqual([]);
+  });
+
   it("drops a checkout reminder to an address whose person opted out", async () => {
     const context = await seededBooking();
     const { db, shop } = context;

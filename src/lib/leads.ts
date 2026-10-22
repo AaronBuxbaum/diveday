@@ -3,6 +3,7 @@ import {
   type CertRequirementSource,
   certificationRank,
 } from "./readiness";
+import type { DiveSpecialty } from "@/db/schema";
 import { requirementDemandsNothing } from "./requirement";
 
 /**
@@ -147,7 +148,11 @@ export type LastMinuteRecipientLevel = {
   certification: {
     level: CertificationLevel | null;
     noCertificationDeclared: boolean;
+    /** An enriched-air card on file, claimed or verified. Absent reads as none. */
+    nitrox?: boolean;
   } | null;
+  /** The specialty cards on file. Absent reads as none. */
+  specialties?: readonly DiveSpecialty[];
 };
 
 /**
@@ -331,7 +336,11 @@ export function isRecipientEligibleForDeal(
     return !ranksBelow(recipient, requirement);
   }
 
-  // Non-course departure: diver must not be below minimum requirement
+  // Non-course departure: diver must not be below minimum requirement, and
+  // must hold the cards it asks for (dive-domain review of #2656, m1): a Deep
+  // or nitrox charter with the level box blank does not fit every Open Water
+  // diver on the list. Read the way the rung is, from what is on file.
+  if (!holdsRequiredCards(recipient, requirement)) return false;
   if (requirement?.minimumCertificationLevel) {
     if (noCert) return false;
     return certificationRank(level) >= certificationRank(requirement.minimumCertificationLevel);
@@ -340,6 +349,18 @@ export function isRecipientEligibleForDeal(
     return false;
   }
   return !ranksBelow(recipient, requirement);
+}
+
+/** Every specialty card the departure asks for, and an enriched-air card when it asks for one. */
+function holdsRequiredCards(
+  recipient: LastMinuteRecipientLevel,
+  requirement: LastMinuteDepartureBar | null,
+): boolean {
+  const held = new Set(recipient.specialties ?? []);
+  if ((requirement?.requiredSpecialties ?? []).some((specialty) => !held.has(specialty))) {
+    return false;
+  }
+  return !requirement?.requiresNitrox || recipient.certification?.nitrox === true;
 }
 
 /**

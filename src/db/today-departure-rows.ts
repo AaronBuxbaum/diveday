@@ -164,6 +164,9 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
 
     const front = seatWanted.get(trip.id);
     const waiting = front?.count ?? 0;
+    // The one tap goes to the first who asked whose whole party fits; none
+    // fitting leaves the row and its link to the panel, with no tap to send.
+    const fits = front?.leads.find((lead) => lead.partySize <= openSeats);
     if (front && waiting > 0 && openSeats > 0) {
       actions.push({
         id: `seat-wanted:${trip.id}`,
@@ -179,16 +182,20 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         // middle-click or an open-in-new-tab lands on the trip's panel.
         actionLabel: offerSeatActionText(t),
         href: `${tripHref}#who-wants-in`,
-        offer: {
-          tripId: trip.id,
-          leadId: front.leadId,
-          personName: front.personName,
-          personEmail: front.personEmail,
-          offeredAt: front.invitedAt,
-          bookingPath: publicTripPath(shopSlug, trip.id),
-          tripTitle: trip.title,
-          tripWhen: when,
-        },
+        ...(fits
+          ? {
+              offer: {
+                tripId: trip.id,
+                leadId: fits.leadId,
+                personName: fits.personName,
+                personEmail: fits.personEmail,
+                offeredAt: fits.invitedAt,
+                bookingPath: publicTripPath(shopSlug, trip.id),
+                tripTitle: trip.title,
+                tripWhen: when,
+              },
+            }
+          : {}),
         dueAt: trip.startsAt,
       });
     }

@@ -243,6 +243,80 @@ describe("rollSailedSeriesLeads, measuring the next date as a seat is measured",
 });
 
 /**
+ * **A date request attached to a departure never rolls** (dive-domain review of
+ * #2656, M1). On main only the wait list rolled; a request the builder attached
+ * was a contact the shop works by hand, and the roll would otherwise email an
+ * uncertified asker a seat on an AOW boat in the shop's name.
+ */
+describe("rollSailedSeriesLeads and attached date requests", () => {
+  async function dateRequest(db: AppDb, shopId: string, email: string) {
+    const [parent] = await db
+      .insert(leads)
+      .values({ shopId, scope: "date", askedBy: "diver", interest: "reef", email })
+      .returning({ id: leads.id });
+    if (!parent) throw new Error("date lead insert failed");
+    return parent.id;
+  }
+
+  it("neither copies nor invites a date-parented child on a sailed date, linked or not", async () => {
+    const { db, shop, first, second, now } = await saturdays();
+    const maria = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Maria Never",
+      email: "maria-never@example.com",
+    });
+    if (!maria) throw new Error("diver failed");
+    // A child that carries a person (as the first cut of the redesign wrote
+    // them) and a person-less one: neither is a wait-list row.
+    await db.insert(leads).values([
+      {
+        shopId: shop.id,
+        tripId: first.id,
+        scope: "departure",
+        askedBy: "diver",
+        personId: maria.id,
+        parentLeadId: await dateRequest(db, shop.id, "maria-never@example.com"),
+        partySize: 1,
+      },
+      {
+        shopId: shop.id,
+        tripId: first.id,
+        scope: "departure",
+        askedBy: "diver",
+        name: "Stranger Sam",
+        email: "sam@example.com",
+        parentLeadId: await dateRequest(db, shop.id, "sam@example.com"),
+        partySize: 1,
+      },
+    ]);
+
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 0, invited: 0 });
+    expect(await waiting(db, second.id)).toEqual([]);
+  });
+
+  it("does not auto-invite a date request attached to the next date", async () => {
+    const { db, shop, first, second, now } = await saturdays();
+    await db.insert(leads).values({
+      shopId: shop.id,
+      tripId: second.id,
+      scope: "departure",
+      askedBy: "diver",
+      name: "Stranger Sam",
+      email: "sam@example.com",
+      parentLeadId: await dateRequest(db, shop.id, "sam@example.com"),
+      partySize: 1,
+      askedAt: new Date("2030-07-01T12:00:00Z"),
+    });
+    const ana = await lead(db, shop.id, first.id, "Ana Rolls");
+
+    expect(await rollSailedSeriesLeads(db, now)).toEqual({ rolled: 1, invited: 1 });
+    const next = await waiting(db, second.id);
+    expect(next.find((row) => row.personId === ana.id)?.offeredAt).toEqual(now);
+    expect(next.find((row) => row.personId === null)?.offeredAt).toBeNull();
+  });
+});
+
+/**
  * **A wait-list party rolls and is invited whole** (fourth UX review, item 34):
  * a couple is one lead of two, invited only when two seats are free, and an
  * invitation out to a party holds its whole party's seats.

@@ -14,6 +14,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate, nowMs } from "@/lib/clock";
 import { readLearningMaterials } from "@/lib/courses";
@@ -681,6 +682,9 @@ function drainableStatus() {
  * checkout has (`findCourtesyEmailRecipientByAddress`). Each lookup is scoped to
  * the payload's shop.
  */
+/** The last-minute-list lead a commercial offer's departure row was copied from. */
+const offerListLead = alias(leads, "offer_list_lead");
+
 async function courtesyRecipientOptedOut(db: AppDb, notification: Notification): Promise<boolean> {
   const optOutAt = { at: people.courtesyEmailOptOutAt };
   let rows: { at: Date | null }[];
@@ -697,14 +701,27 @@ async function courtesyRecipientOptedOut(db: AppDb, notification: Notification):
       break;
     // The commercial offer only: a service offer is the reply to a diver's own
     // request and is never governed by the opt-out.
-    case "seat_offer_commercial":
-      rows = await db
-        .select(optOutAt)
+    //
+    // An offer the last-minute list made possible is also stopped by leaving
+    // that list (security review of #2656, MAJOR 1): its mail carried the
+    // list's link, and a click on it after this was queued must still hold.
+    case "seat_offer_commercial": {
+      const [row] = await db
+        .select({ at: people.courtesyEmailOptOutAt, listLeftAt: offerListLead.closedAt })
         .from(leads)
         .innerJoin(people, eq(people.id, leads.personId))
+        .leftJoin(
+          offerListLead,
+          and(
+            eq(offerListLead.id, leads.parentLeadId),
+            eq(offerListLead.shopId, leads.shopId),
+            eq(offerListLead.scope, "anytime"),
+          ),
+        )
         .where(and(eq(leads.id, notification.leadId), eq(leads.shopId, notification.shopId)))
         .limit(1);
-      break;
+      return Boolean(row?.at ?? row?.listLeftAt);
+    }
     case "checkout_recovery": {
       const recipient = await findCourtesyEmailRecipientByAddress(db, {
         shopId: notification.shopId,

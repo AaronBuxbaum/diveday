@@ -23,6 +23,7 @@ import {
   STAFF_PERSON_ONLY_TABLES,
 } from "./diver-merge";
 import { getIncidentExport } from "./incident-export";
+import { issueLeadUnsubscribeToken, resolveLeadUnsubscribeToken } from "./leads";
 import { survivingPersonNames } from "./people";
 import { getBookingReadiness } from "./readiness";
 import {
@@ -443,6 +444,37 @@ describe("diver record merge, a seat that is already over", () => {
       { personId: f.survivor.id, scope: "anytime" },
       { personId: f.survivor.id, scope: "departure" },
     ]);
+  });
+
+  // Security review of #2656, minor 5: one person, two records. An unsubscribe
+  // either record made is that person's, and an old mail's link still works.
+  it("keeps the merged-away record's last-minute-list unsubscribe, and its links", async () => {
+    const f = await mergeFixtures();
+    const unsubscribedAt = new Date("2026-01-02T00:00:00Z");
+    const [gone, kept] = await f.db
+      .insert(leads)
+      .values([
+        {
+          shopId: f.shop.id,
+          scope: "anytime",
+          askedBy: "diver",
+          personId: f.source.id,
+          closedAt: unsubscribedAt,
+          closedAs: "unsubscribed",
+        },
+        { shopId: f.shop.id, scope: "anytime", askedBy: "diver", personId: f.survivor.id },
+      ])
+      .returning();
+    if (!gone || !kept) throw new Error("setup: leads missing");
+    const token = await issueLeadUnsubscribeToken(f.db, { shopId: f.shop.id, leadId: gone.id });
+
+    expect((await merge(f)).ok).toBe(true);
+    const [after] = await f.db.select().from(leads).where(eq(leads.id, kept.id));
+    expect(after).toMatchObject({ closedAs: "unsubscribed", closedAt: unsubscribedAt });
+    expect(await resolveLeadUnsubscribeToken(f.db, token)).toMatchObject({
+      leadId: kept.id,
+      alreadyUnsubscribed: true,
+    });
   });
 
   it("leaves the kept record's live seat Ready", async () => {

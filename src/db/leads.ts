@@ -27,6 +27,7 @@ import { findOrCreatePerson } from "./people";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookings,
+  type DiveSpecialty,
   type Lead,
   leads,
   leadUnsubscribeTokens,
@@ -34,6 +35,7 @@ import {
   people,
   personRoles,
   shops,
+  specialtyCertifications,
   trips,
 } from "./schema";
 import { listCertificationSummaries, recordSelfDeclaredCards } from "./self-declared-cards";
@@ -202,8 +204,12 @@ export async function askForDeparture(db: AppDb, req: DepartureAsk): Promise<Dep
       )
       .limit(1);
     if (existing) {
-      // Asking again is how a joiner updates what they said, the party too.
-      if (existing.partySize !== partySize || existing.askedBy !== "diver") {
+      // Asking again is how a joiner updates what they said, the party too,
+      // and how a diver the shop invited cold says they want in. Only under
+      // their own name (security review of #2656, minor 3): this form is
+      // unauthenticated, and a submit with this address under another name
+      // may be a second human, who must not rewrite the shop's invitation.
+      if (nameMatches && (existing.partySize !== partySize || existing.askedBy !== "diver")) {
         await tx
           .update(leads)
           .set({ partySize, askedBy: "diver" })
@@ -533,12 +539,11 @@ export async function setDateLeadOutcome(
  * `asked_by = 'diver'` and `offered_at` null, so the departure's own panel shows
  * them and staff offer the seat from there. Nothing is sent and nothing is
  * reserved. The lead is only a contact source, so the child copies its
- * snapshot (or its person link, when the lead matched a diver), its party and
- * its original `askedAt`.
+ * snapshot, its party and its original `askedAt`, and never its person link.
  *
  * Idempotent: a unique `(trip, parent)` index makes a retried submit harmless,
- * and a diver already on this departure's list (`(trip, person)`) keeps the row
- * they have. A rehearsal answers nobody's request, so it gets none. Returns how
+ * and a diver already on this departure's list keeps the row they have,
+ * untouched. A rehearsal answers nobody's request, so it gets none. Returns how
  * many rows were written.
  */
 export async function attachDateLeadsToDeparture(
@@ -584,12 +589,17 @@ export async function attachDateLeadsToDeparture(
           askedBy: "diver" as const,
           tripId: input.tripId,
           parentLeadId: parent.id,
-          personId: parent.personId,
-          // The snapshot is only for a lead with no person: a linked one reads
-          // its name and address from the person, and erasure deletes the row.
-          name: parent.personId ? null : parent.name,
-          email: parent.personId ? null : parent.email,
-          phone: parent.personId ? null : parent.phone,
+          // Never the parent's person link (H-13; security review of #2656,
+          // MAJOR 2): that link is set from an unauthenticated form on the
+          // address alone, as a handle for erasure, and copying it here would
+          // put whoever owns the address on this departure's list by name, in
+          // their (trip, person) slot. The child lives on the request's own
+          // snapshot, as `trip_invitations` did on main; erasure blanks it
+          // with its parent (`scrubLeads`).
+          personId: null,
+          name: parent.name,
+          email: parent.email,
+          phone: parent.phone,
           partySize: Math.min(20, Math.max(1, parent.partySize ?? 1)),
           askedAt: parent.askedAt,
           createdByPersonId: input.createdByPersonId,
@@ -848,16 +858,36 @@ export async function listAnytimeLeadsCovering(
     // diveday:allow-time-id-order: the send order of wait-listers only; nobody is shown it
     .orderBy(asc(leads.askedAt), asc(leads.id));
 
-  const summaries = await listCertificationSummaries(
-    db,
-    shopId,
-    reachable.map(({ person }) => person.id),
-  );
+  const reachableIds = reachable.map(({ person }) => person.id);
+  const summaries = await listCertificationSummaries(db, shopId, reachableIds);
+  // The specialty cards on file, read only when the departure asks for one:
+  // the fit check folds them as it folds the rung (dive-domain review of
+  // #2656, m1). A live row is a card; the table holds no unsighted claims.
+  const specialties = new Map<string, DiveSpecialty[]>();
+  if ((requirement?.requiredSpecialties.length ?? 0) > 0 && reachableIds.length > 0) {
+    const rows = await db
+      .select({
+        personId: specialtyCertifications.personId,
+        specialty: specialtyCertifications.specialty,
+      })
+      .from(specialtyCertifications)
+      .where(
+        and(
+          eq(specialtyCertifications.shopId, shopId),
+          inArray(specialtyCertifications.personId, reachableIds),
+          isNull(specialtyCertifications.deletedAt),
+        ),
+      );
+    for (const row of rows) {
+      specialties.set(row.personId, [...(specialties.get(row.personId) ?? []), row.specialty]);
+    }
+  }
   const eligible = orderLastMinuteRecipients(
     filterEligibleLastMinuteRecipients(
       reachable.map((row) => ({
         ...row,
         certification: summaries.get(row.person.id) ?? null,
+        specialties: specialties.get(row.person.id) ?? [],
       })),
       requirement,
       trip.course ?? null,

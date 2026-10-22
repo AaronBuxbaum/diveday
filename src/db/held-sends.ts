@@ -140,17 +140,31 @@ export async function claimHeldSend(
     .where(and(eq(heldSends.id, id), eq(heldSends.shopId, shopId)))
     .returning();
   if (!claimed) return { status: "gone" };
-  return { status: "claimed", row: toRow(claimed) };
+  const readable = toRow(claimed);
+  return readable ? { status: "claimed", row: readable } : { status: "gone" };
 }
 
-/** Every held send whose hold has drained, claimed for the cron sweep. */
+/**
+ * Every held send whose hold has drained, claimed for the cron sweep. A row
+ * this release cannot read (a payload the release before it held, such as a
+ * `waitlist_invite`) is claimed and dropped on its own, logged, and never
+ * costs the other due rows their send (security review of #2656, minor 2):
+ * the claim deletes every due row, so one throw here would lose them all.
+ */
 export async function claimDueHeldSends(db: AppDb, now = nowDate()): Promise<HeldSendRow[]> {
   const rows = await db.delete(heldSends).where(lte(heldSends.runAt, now)).returning();
-  return rows.map(toRow);
+  return rows.flatMap((row) => toRow(row) ?? []);
 }
 
-function toRow(row: typeof heldSends.$inferSelect): HeldSendRow {
-  const payload = heldSendPayloadSchema.parse(row.payload);
+/** The row as this release reads it, or null (logged) for a payload it cannot read. */
+function toRow(row: typeof heldSends.$inferSelect): HeldSendRow | null {
+  const parsed = heldSendPayloadSchema.safeParse(row.payload);
+  if (!parsed.success) {
+    // The kind column, never the payload: it names people and bookings.
+    log("held_send.unreadable", "error", { kind: row.kind });
+    return null;
+  }
+  const payload = parsed.data;
   return {
     id: row.id,
     shopId: row.shopId,

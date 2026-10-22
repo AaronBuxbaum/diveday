@@ -1336,10 +1336,23 @@ export async function mergeDiverRecords(input: {
       await tx.execute(
         sql`delete from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'departure' and "trip_id" in (select "trip_id" from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'departure')`,
       );
-      // The last-minute list is one lead per person: the source's goes, with the
-      // unsubscribe links that name it (a foreign key, so they go first).
+      // The last-minute list is one lead per person: the source's goes. Before
+      // it does, what it carries moves to the kept record's lead (security
+      // review of #2656, minor 5). Both records are one person, so an
+      // unsubscribe either made is that person's and stands: the kept lead takes
+      // the source's `unsubscribed` close unless it is unsubscribed already. The
+      // links already mailed, and the offer rows the list made, point at the
+      // kept lead, so an old link still unsubscribes and still stops them.
+      const survivorList = sql`(select "id" from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'anytime')`;
+      const sourceList = sql`(select "id" from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'anytime')`;
       await tx.execute(
-        sql`delete from "lead_unsubscribe_tokens" where "lead_id" in (select "id" from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'anytime') and exists (select 1 from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'anytime')`,
+        sql`update "leads" as kept set "closed_at" = gone."closed_at", "closed_as" = 'unsubscribed' from "leads" as gone where kept."id" = ${survivorList} and gone."id" = ${sourceList} and gone."closed_as" = 'unsubscribed' and kept."closed_as" is distinct from 'unsubscribed'`,
+      );
+      await tx.execute(
+        sql`update "lead_unsubscribe_tokens" set "lead_id" = ${survivorList} where "lead_id" = ${sourceList} and exists ${survivorList}`,
+      );
+      await tx.execute(
+        sql`update "leads" set "parent_lead_id" = ${survivorList} where "shop_id" = ${input.shopId} and "parent_lead_id" = ${sourceList} and exists ${survivorList}`,
       );
       await tx.execute(
         sql`delete from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'anytime' and exists (select 1 from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'anytime')`,
