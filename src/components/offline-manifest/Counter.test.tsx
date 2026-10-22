@@ -91,6 +91,27 @@ describe("OfflineManifestView — the counter", () => {
     expect(row).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("keeps a long full name on its arrival action and queues that person's seat", async () => {
+    const fullName = "María Fernanda de los Ángeles Rodríguez-Sánchez";
+    const envelope = richEnvelope("trip-1");
+    for (const manifest of envelope.snapshot.manifests) manifest.divers[0].fullName = fullName;
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
+    vi.mocked(appendOfflineArrival).mockResolvedValue(envelope);
+    render(<OfflineManifestView />);
+    const counter = await screen.findByRole("region", { name: "At the counter" });
+    const row = within(counter).getByRole("button", { name: `${fullName} Check in` });
+    expect(within(row).getByText(fullName, { exact: true })).toBeVisible();
+    fireEvent.click(row);
+    await waitFor(() =>
+      expect(appendOfflineArrival).toHaveBeenCalledWith("trip-1", {
+        bookingId: "diver-priya",
+        status: "arrived",
+        retractsClientEventId: undefined,
+      }),
+    );
+    expect(appendOfflineRollCall).not.toHaveBeenCalled();
+  });
+
   it("queues an arrival, never a roll call, when the counter row is tapped", async () => {
     vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
     vi.mocked(appendOfflineArrival).mockResolvedValue(

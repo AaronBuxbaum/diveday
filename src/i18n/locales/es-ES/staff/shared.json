@@ -22,7 +22,7 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
     "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
-    "tooBigSuffix": ": supera los {maxMb}\u00a0MB, prueba con una foto más pequeña.",
+    "tooBigSuffix": ": supera los {maxMb} MB, prueba con una foto más pequeña.",
     "choose": "Elige una foto",
     "chooseAnother": "Elige otra foto",
     "chooseOthers": "Elige otras fotos"
@@ -637,8 +637,8 @@
   "boatWork": {
     "missingSize": "{count} sin talla",
     "kitUnasked": "{count} sin preguntar por su equipo",
-    "ungatedNitrox": "{count, plural, one {# buceador quiere nitrox y recibe aire} other {# buceadores quieren nitrox y reciben aire}} a menos que se verifique una certificación antes de que salga el barco",
-    "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia",
+    "ungatedNitrox": "{count, plural, one {# buceador quiere nitrox y recibe aire} other {# buceadores quieren nitrox y reciben aire}} a menos que se verifique una certificación antes de que salga el barco.",
+    "missingContact": "{count, plural, one {# persona no tiene} other {# personas no tienen}} contacto de emergencia.",
     "openOrders": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"
   },
   "payouts": {

@@ -60,6 +60,7 @@ function context(over: Partial<ReadyThreadSectionsContext> = {}): ReadyThreadSec
         shop: { name: "Blue Mantis Divers", timezone: "America/New_York" },
       },
       shop: { dockCallMinutes: 30 },
+      trip: { id: "trip-1" },
       pickupTime: null,
       rentalFit: null,
       canCancelBooking: true,
@@ -214,13 +215,11 @@ describe("ThreadSections", () => {
 
   it("says the ask was sent instead of offering it twice, and shows nothing before the window closes", () => {
     const asked = context();
-    Object.assign(asked.data, { moveAsk: "asked" });
+    Object.assign(asked.data, {
+      moveAsk: { note: "Any Saturday", sentAt: new Date("2026-07-21T13:30:00Z") },
+    });
     render(<ThreadSections context={asked} />);
-    expect(
-      screen.getByText(
-        "You asked Blue Mantis Divers to move you. They’ll be in touch about another date.",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByText(t("ready.moveAsk.asked", { shop: "Blue Mantis Divers" }))).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Ask to move" })).toBeNull();
     cleanup();
     const early = context();

@@ -166,6 +166,9 @@ describe("marking a message done", () => {
     );
     const done = screen.getByRole("button", { name: "Mark done" });
     expect(done.closest("form")?.querySelector('input[name="done"]')).toHaveValue("true");
+    expect(done.closest("form")?.querySelector('input[name="receivedAt"]')).toHaveValue(
+      MESSAGE.receivedAt.toISOString(),
+    );
   });
 
   it("offers the way back on a done message, posting done=false", async () => {

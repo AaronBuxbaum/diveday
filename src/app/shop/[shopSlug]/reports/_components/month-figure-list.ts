@@ -1,4 +1,5 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { formatMoneyCents } from "@/lib/format";
 import {
   formatPercent,
   formatPercentChange,
@@ -53,7 +54,7 @@ export function monthFigureList({
   split: { revenue?: string; seats?: string; fill?: string } | null;
   bookingsDetail: string;
   revenueOrdersHref: string;
-  /** "Keiko $180 · Sal $160", the crew sheet's shares (item 31). */
+  /** "Keiko $180.00 · Sal $160.00", the crew sheet's exact shares (item 31). */
   tipsSplit?: string;
 }): MonthFigure[] {
   // **No line against nothing** (UX audit 2026-10-07, item 21): "vs $0 in
@@ -154,10 +155,11 @@ export function monthFigureList({
     {
       // Tips sit beside revenue rather than inside it (PAY-M2): they are their
       // own Stripe charge, 100% to the shop, and never part of the booking
-      // payment gate. The split under it is who they go to (item 31).
+      // payment gate. The split under it is who they go to (item 31), so the
+      // pool keeps its minor units too: it must add up to the shares (#2858).
       key: "tips",
       label: t("reports.metrics.tipsLabel"),
-      value: formatReportMoney(report.tipsCents, currency, locale),
+      value: formatMoneyCents(report.tipsCents, currency, locale),
       detail: t("reports.metrics.tipsDetail", { count: report.tipCount }),
       split: tipsSplit,
       comparison: moneyLine("tipsCents"),

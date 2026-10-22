@@ -83,6 +83,17 @@ export function DayOfDetails({
   t: DiverTranslator;
 }) {
   const diving = isDiver(data.participantType);
+  const meetingInfo = [
+    data.trip.meetingPointLabel,
+    data.trip.meetingPointAddress,
+    data.trip.arrivalLandmark,
+    data.trip.arrivalParkingNote,
+    data.trip.arrivalTransitNote,
+    data.trip.arrivalLookFor,
+    data.trip.arrivalFirstInteraction,
+  ]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
   return (
     <form action={saveDayOfDetailsFromReady.bind(null, token)}>
       {/* The gear step's own "Saved.", for the same reason: the redirect
@@ -243,7 +254,23 @@ export function DayOfDetails({
           <h3 className="text-base font-semibold">{t("ready.helpHeading")}</h3>
           <p className="mt-1 text-sm text-muted">{t("ready.helpBody")}</p>
           {data.helpRequest?.status === "handled" ? (
-            <p className="mt-3 text-sm font-medium text-success-strong">{t("ready.helpHandled")}</p>
+            <>
+              {data.helpRequest.helperPersonName ? (
+                <p className="mt-3 text-base font-medium text-success-strong">
+                  {meetingInfo.length > 0
+                    ? t("ready.helpAcknowledged", {
+                        name: data.helpRequest.helperPersonName,
+                        meeting: meetingInfo.join(" · "),
+                      })
+                    : t("ready.helpAssignedFallback", {
+                        name: data.helpRequest.helperPersonName,
+                      })}
+                </p>
+              ) : null}
+              <p className="mt-3 text-base font-medium text-success-strong">
+                {t("ready.helpHandled")}
+              </p>
+            </>
           ) : (
             <>
               <fieldset className="mt-3 flex flex-col gap-2">
@@ -273,9 +300,18 @@ export function DayOfDetails({
                   defaultChecked={data.helpRequest?.kind === "find_group"}
                 />
               </fieldset>
-              {data.helpRequest?.status === "acknowledged" ? (
-                <p className="mt-3 text-sm font-medium text-success-strong">
-                  {t("ready.helpAcknowledged")}
+              {data.helpRequest ? (
+                <p className="mt-3 text-base font-medium text-success-strong">
+                  {data.helpRequest.status !== "requested" && data.helpRequest.helperPersonName
+                    ? meetingInfo.length > 0
+                      ? t("ready.helpAcknowledged", {
+                          name: data.helpRequest.helperPersonName,
+                          meeting: meetingInfo.join(" · "),
+                        })
+                      : t("ready.helpAssignedFallback", {
+                          name: data.helpRequest.helperPersonName,
+                        })
+                    : t("ready.helpSent")}
                 </p>
               ) : null}
             </>

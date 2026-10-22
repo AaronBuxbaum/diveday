@@ -16,6 +16,7 @@ vi.mock("@/app/actions/held-sends", () => ({
 vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   keepRentalFitAction: vi.fn(),
   acknowledgeCrewAwayAction: vi.fn(),
+  helpRequestAction: vi.fn(),
 }));
 vi.mock("next/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/navigation")>()),

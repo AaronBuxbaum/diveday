@@ -1,8 +1,60 @@
 import type { Page } from "@playwright/test";
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { e2eNow } from "./helpers";
 
 signedInAsOwner();
+
+const staff = staffTranslator("en-US");
+
+for (const activation of ["pointer", "keyboard"] as const) {
+  test(`staff reach the sixth duplicate candidate by ${activation} before comparing records`, async ({
+    page,
+    request,
+  }) => {
+    const seeded = await request.post("/api/test/seed-trouble-states?mergeCandidates=1");
+    expect(seeded.ok()).toBe(true);
+    const { mergeCandidates } = (await seeded.json()) as {
+      mergeCandidates: { sourceId: string; candidateIds: string[] };
+    };
+    expect(mergeCandidates.candidateIds).toHaveLength(8);
+    await page.goto(`/shop/blue-mantis/divers/${mergeCandidates.sourceId}`);
+    const panel = page.locator("#merge");
+    const compare = panel.getByRole("link", { name: /Compare with/ });
+    const showMore = panel.getByRole("button", { name: staff("divers.merge.showMore") });
+    const sixth = panel.getByRole("link", {
+      name: staff("divers.merge.compareWith", { name: "Mara Duplicate 06" }),
+    });
+    await expect(compare).toHaveCount(5);
+    await expect(sixth).toHaveCount(0);
+    if (activation === "keyboard") {
+      await compare.last().focus();
+      await page.keyboard.press("Tab");
+      await expect(showMore).toBeFocused();
+      await page.keyboard.press("Enter");
+    } else {
+      await showMore.click();
+    }
+    await expect(compare).toHaveCount(8);
+    await expect(sixth).toBeFocused();
+    await expect(panel.getByText(staff("divers.merge.samePhone"), { exact: true })).toHaveCount(8);
+    await expect(showMore).toHaveCount(0);
+    await expect(panel.getByRole("checkbox")).toHaveCount(0);
+    const preview = `/shop/blue-mantis/divers/${mergeCandidates.sourceId}/merge/${mergeCandidates.candidateIds[5]}`;
+    await expect(sixth).toHaveAttribute("href", preview);
+    if (activation === "keyboard") await page.keyboard.press("Enter");
+    else await sixth.click();
+    await page.waitForURL((url) => url.pathname === preview);
+    await expect(
+      page.getByRole("heading", { level: 1, name: staff("divers.mergePreview.title") }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: staff("divers.mergePreview.submit", { name: "Mara Duplicate 06" }),
+      }),
+    ).toBeVisible();
+  });
+}
 
 /**
  * Adds a diver through the staff form and returns the record's path. The

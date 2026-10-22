@@ -639,11 +639,18 @@ export const tripHelpRequests = pgTable(
       .notNull()
       .references(() => bookings.id, { onDelete: "cascade" }),
     kind: tripHelpRequestKind("kind").notNull(),
+    /** Monotonic form token; changes even when status/helper return to earlier values. */
+    revision: integer("revision").notNull().default(0),
     status: tripHelpRequestStatus("status").notNull().default("requested"),
     createdAt: appNowTimestamp("created_at").notNull(),
     updatedAt: appNowTimestamp("updated_at").notNull(),
     acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
     handledAt: timestamp("handled_at", { withTimezone: true }),
+    /** The crew member the desk spoke with and assigned to this request. */
+    helperPersonId: uuid("helper_person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
+    /** Staff member who recorded the latest hand-off or completion. */
     resolvedByPersonId: uuid("resolved_by_person_id").references(() => people.id, {
       onDelete: "set null",
     }),
@@ -652,6 +659,7 @@ export const tripHelpRequests = pgTable(
     uniqueIndex("trip_help_requests_booking_unique").on(table.bookingId),
     index("trip_help_requests_shop_status_idx").on(table.shopId, table.status, table.createdAt),
     index("trip_help_requests_trip_idx").on(table.tripId, table.createdAt),
+    index("trip_help_requests_helper_person_idx").on(table.helperPersonId),
   ],
 );
 

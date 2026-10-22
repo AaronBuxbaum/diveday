@@ -146,3 +146,26 @@ it("keeps helper importers when documents and a test change together", () => {
   expect(result.mode).toBe("related");
   expect(result.files).toContain("src/test/source-helper.ts");
 });
+
+describe("canonical agent contract inputs", () => {
+  it.each([
+    ".agents/skills/verify/SKILL.md",
+    ".agents/skills/verify/examples.json",
+    "skills-lock.json",
+  ])("selects source-reader coverage for %s without widening all units", (file) => {
+    expect(testPlan({ ...options, changed: [file] })).toMatchObject({
+      mode: "direct",
+      files: [reader],
+    });
+    expect(
+      testPlan({ ...options, changed: [file], readers: ["scripts/agent-layer.mjs"] }),
+    ).toMatchObject({ mode: "related", files: ["scripts/agent-layer.mjs"] });
+    expect(testPlan({ ...options, changed: [file], readers: null }).mode).toBe("all");
+  });
+  it("preserves global fallback in mixed skill and fixture edits", () => {
+    expect(
+      testPlan({ ...options, changed: [".agents/skills/verify/SKILL.md", "src/test/setup.ts"] })
+        .mode,
+    ).toBe("all");
+  });
+});

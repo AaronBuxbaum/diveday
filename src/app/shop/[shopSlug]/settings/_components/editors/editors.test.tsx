@@ -13,9 +13,11 @@ import { listDiveSites, listSiteBottomTimeOverrides } from "@/db/dive-sites";
 import { diveSites, shops } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { STAFF_MESSAGES, staffTranslator } from "@/i18n/staff-messages";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { fileScopedShopContext } from "@/test/db";
 import { findElements, hrefsIn, inputNamesIn, selectNamesIn } from "@/test/jsx-inspect";
 import { BrandColorField } from "../BrandColorField";
+import { BrandPreview } from "../BrandPreview";
 import type { SettingsShop } from "../groups/kit";
 import { DockDayForm, EmergencyReferenceForm } from "./BoatsSitesEditors";
 import { ProfileForm } from "./ProfileForm";
@@ -88,6 +90,37 @@ describe("the profile editor", () => {
     // The colour is a Client Component (picker + hex field), so it appears in
     // the server tree as an element rather than as an `<input name>`.
     expect(findElements(form, BrandColorField)).toHaveLength(1);
+  });
+
+  it("opens the saved storefront separately and keeps the brand preview", async () => {
+    const form = await profileForm();
+    const savedStorefrontLabel = t("settings.main.profile.viewSavedStorefront");
+    const links = findElements<{
+      href?: string;
+      target?: string;
+      rel?: string;
+      children?: unknown;
+    }>(form, "a");
+    const savedStorefront = links.find(({ props }) => props.href === publicSchedulePath(SHOP_SLUG));
+
+    expect(savedStorefront?.props).toMatchObject({
+      target: "_blank",
+      rel: "noopener noreferrer",
+      children: savedStorefrontLabel,
+    });
+    expect(findElements(form, BrandPreview)).toHaveLength(1);
+  });
+
+  it("uses the Spanish saved-storefront label for the same public route", async () => {
+    const { shop } = await demoShop();
+    const form = ProfileForm({ shop, t: staffTranslator("es-ES") });
+    const savedStorefront = findElements<{ href?: string; children?: unknown }>(form, "a").find(
+      ({ props }) => props.href === publicSchedulePath(SHOP_SLUG),
+    );
+
+    expect(savedStorefront?.props.children).toBe(
+      staffTranslator("es-ES")("settings.main.profile.viewSavedStorefront"),
+    );
   });
 
   /**

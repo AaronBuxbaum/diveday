@@ -1117,6 +1117,9 @@ test("the signed records search by diver and narrow to medical holds", async ({ 
   const pager = page.getByRole("navigation", { name: "Pages" });
   await expect(pager).toContainText(/Page 1 of \d+/);
   const rows = page.locator('details[id^="waiver-record-"]');
+  await expect(rows.first()).toBeVisible();
+  const fullListCount = await rows.count();
+  const fullPagerText = await pager.innerText();
 
   // The demo's medical hold is status-only: a physician referral with no
   // answers stored. It is a hold all the same, so the view lists it.
@@ -1140,6 +1143,20 @@ test("the signed records search by diver and narrow to medical holds", async ({ 
   await page.getByRole("link", { name: "Clear search" }).click();
   await expect(rows.first()).toBeVisible();
   await expect(page).not.toHaveURL(/[?&]q=/);
+  await expect(page).toHaveURL(/[?&]view=medical/);
+
+  await views.getByRole("link", { name: "All", exact: true }).click();
+  await expect(page).not.toHaveURL(/[?&]view=/);
+  await expect(views.getByRole("link", { name: "All", exact: true })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await expect(views.getByRole("link", { name: "Medical holds" })).not.toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await expect(rows).toHaveCount(fullListCount);
+  await expect(pager).toHaveText(fullPagerText, { useInnerText: true });
 });
 
 /**

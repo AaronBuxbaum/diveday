@@ -54,7 +54,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 import { tripReservationWindow } from "@/lib/gear";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { MAX_SUPPRESSED_SHARE_FOR_RATING } from "@/lib/reviews";
-import { boatSliceStates } from "./boat-states";
+import { boatAndMergeStates } from "./merge-candidates-state";
 import { operationalStateResponse } from "./operational-states";
 
 /**
@@ -466,7 +466,7 @@ export async function POST(request: Request) {
       : null;
 
   const batchFour = await batchFourStates(request, db, shop, actor.id, now);
-  const boatSlice = await boatSliceStates(request, db, shop.id, now);
+  const boatSlice = await boatAndMergeStates(request, db, shop.id, now);
   return NextResponse.json({
     ok: true,
     ...batchFour,

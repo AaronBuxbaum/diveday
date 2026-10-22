@@ -1,4 +1,9 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
+import { formatMoneyCents } from "../src/lib/format";
+import { parseCsv } from "../src/lib/import";
+import { majorToMinor } from "../src/lib/money";
 import { expect, READ_ONLY, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { E2E_FROZEN_CLOCK } from "./servers";
 
 /**
  * READ_ONLY holds here: the monthly report is a read of trips that already sailed, and
@@ -52,6 +57,44 @@ test.describe("owner", () => {
     // A month that has fully sailed still renders its numbers and its trips.
     await expect(page.getByRole("region", { name: "This month’s numbers" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Trips this month" })).toBeVisible();
+  });
+
+  test("the visible tip pool and crew shares reconcile with the crew export", {
+    tag: READ_ONLY,
+  }, async ({ page, request }) => {
+    const month = E2E_FROZEN_CLOCK.slice(0, 7);
+    const response = await request.get(
+      `/shop/blue-mantis/settings/export/crew-sheet?month=${month}`,
+    );
+    expect(response.status()).toBe(200);
+    const shares = parseCsv(await response.text())
+      .slice(1)
+      .filter((row) => Number(row[4]) > 0)
+      .map((row) => ({
+        name: row[0] ?? "",
+        cents: majorToMinor(Number(row[4]), row[5] ?? "usd"),
+        currency: row[5] ?? "usd",
+      }));
+    expect(shares.length).toBeGreaterThan(0);
+    expect(shares.every((share) => share.currency === "USD")).toBe(true);
+
+    await page.goto(`/shop/blue-mantis/reports?month=${month}`);
+    const t = staffTranslator("en-US");
+    const metrics = page.getByRole("region", { name: t("reports.numbersLabel") });
+    const splitLine = metrics.getByText(t("reports.tipsSplit", { shares: "" }), { exact: false });
+    await expect(splitLine).toBeVisible();
+    for (const share of shares) {
+      await expect(splitLine).toContainText(
+        t("reports.tipsShare", {
+          name: share.name,
+          amount: formatMoneyCents(share.cents, share.currency, "en-US"),
+        }),
+      );
+    }
+    const poolCents = shares.reduce((sum, share) => sum + share.cents, 0);
+    await expect(
+      metrics.getByText(formatMoneyCents(poolCents, "usd", "en-US"), { exact: true }),
+    ).toBeVisible();
   });
 
   test("the month sits between its arrows, which are the only way to change it", {

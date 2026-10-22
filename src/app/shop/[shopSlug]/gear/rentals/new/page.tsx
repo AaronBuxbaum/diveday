@@ -17,7 +17,7 @@ import {
   counterRentalWaiverStandings,
 } from "@/db/gear-counter-rentals";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { gearItemKindLabel, tankFillOptions } from "@/i18n/gear-labels";
+import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { isMinorOnDate } from "@/lib/age";
@@ -47,9 +47,11 @@ import {
   type PaymentChoice,
   type PickerUnit,
 } from "./_components/CounterRentalCart";
+import { counterRentalCartWords } from "./_components/counter-rental-cart-words";
 import { RentalCardSeen } from "./_components/RentalCardSeen";
 import { RentalPersonStep } from "./_components/RentalPersonStep";
 import { RentalWindowFields } from "./_components/RentalWindowFields";
+import { rentalWindowStatus } from "./_components/rental-window-status";
 import { RENT_OUT_NOTICES as NOTICES } from "./notices";
 
 export const instant = true;
@@ -68,7 +70,8 @@ export const metadata: Metadata = {
  * read again as they change), then which units are free for the whole of it
  * and what to charge. A refusal
  * lands back on the same URL with its `?notice=`, so nothing already chosen
- * is lost. The list of free units is advisory — the exclusion constraint
+ * is lost. Unavailable units stay visible with their reason. The picker is
+ * advisory — the exclusion constraint
  * decides at submit, and the refusal names the unit that lost.
  *
  * Any staff may rent gear out (H-06). The invoice beside it is shown only to
@@ -128,7 +131,13 @@ export default async function RentOutPage({
     ? await Promise.all([
         windowRefusal
           ? []
-          : listAvailableGearUnits(db, shop.id, { from, until, todayLocal, serviceAsOf: until }),
+          : listAvailableGearUnits(db, shop.id, {
+              from,
+              until,
+              todayLocal,
+              serviceAsOf: until,
+              includeUnavailable: true,
+            }),
         canPersonManageOrders(db, shop.id, session.user.personId),
         (async () => canAcceptPayments(await getShopStripeAccount(db, shop.id)))(),
       ])
@@ -145,7 +154,11 @@ export default async function RentOutPage({
   const rentNotice = person && notice?.step === "rent" ? noticeText : undefined;
   // A refusal of the rent step brings the bill back as it was sent (fifth
   // loop, item 14); any other answer forgets it.
-  const rentRefused = rentNotice !== undefined && notice?.tone !== "success";
+  const rentRefused =
+    notice?.tone !== "success" &&
+    (rentNotice !== undefined ||
+      search.notice === "not-certified" ||
+      search.notice === "no-drysuit-card");
 
   const currency = toShopCurrency(shop.currency);
   const digits = currencyFractionDigits(currency);
@@ -201,15 +214,21 @@ export default async function RentOutPage({
   const pickerUnit = (unit: (typeof units)[number]): PickerUnit & { order: number } => {
     const flagged = gearServiceKeepsUnitBack(unit);
     const cardRefusal = cards ? counterRentalCardRefusal([unit.kind], cards) : null;
-    const blocked = cardRefusal
+    const blocked = unit.unavailable
       ? t(
-          cardRefusal === "no_drysuit_card"
-            ? "counterRentals.new.unitNeedsDrysuitCard"
-            : "counterRentals.new.unitNeedsCard",
+          unit.unavailable === "unit_out_of_service"
+            ? "counterRentals.new.unitOutOfService"
+            : "counterRentals.new.unitUnavailable",
         )
-      : flagged && isLifeSupportKind(unit.kind)
-        ? t("counterRentals.new.unitNeedsService")
-        : null;
+      : cardRefusal
+        ? t(
+            cardRefusal === "no_drysuit_card"
+              ? "counterRentals.new.unitNeedsDrysuitCard"
+              : "counterRentals.new.unitNeedsCard",
+          )
+        : flagged && isLifeSupportKind(unit.kind)
+          ? t("counterRentals.new.unitNeedsService")
+          : null;
     return {
       id: unit.id,
       kind: unit.kind,
@@ -301,23 +320,7 @@ export default async function RentOutPage({
               todayLocal={todayLocal}
               fromLabel={t("counterRentals.new.fromLabel")}
               untilLabel={t("counterRentals.new.untilLabel")}
-              status={
-                windowRefusal ? (
-                  <FormStatus tone="danger">
-                    {t(
-                      windowRefusal === "starts_in_past"
-                        ? "counterRentals.new.notice.startsInPast"
-                        : windowRefusal === "window_too_long"
-                          ? "counterRentals.new.notice.windowTooLong"
-                          : "counterRentals.new.notice.invalidWindow",
-                    )}
-                  </FormStatus>
-                ) : (
-                  <span className="text-muted">
-                    {t("counterRentals.new.days", { count: days })}
-                  </span>
-                )
-              }
+              status={rentalWindowStatus(t, windowRefusal, days)}
             />
           </SectionCard>
         ) : null}
@@ -370,25 +373,16 @@ export default async function RentOutPage({
                 }
                 notice={<FormStatus tone="danger">{rentNotice}</FormStatus>}
                 restoreKept={rentRefused ? keptScope : null}
-                words={{
-                  gearHeading: t("counterRentals.new.gearHeading"),
-                  kindsAria: t("counterRentals.new.kindsAria"),
-                  billHeading: t("counterRentals.new.pickedHeading"),
-                  billEmpty: t("counterRentals.new.billEmpty"),
-                  inSet: t("counterRentals.new.inSet"),
-                  setLabel: t("counterRentals.new.setPrice", { count: days }),
-                  total: t("counterRentals.new.total"),
-                  payHeading: t("counterRentals.new.pay.heading"),
-                  items: {
-                    one: t("counterRentals.new.itemsOne"),
-                    other: t("counterRentals.new.itemsOther"),
-                  },
-                  submit: t("counterRentals.new.submit"),
-                  submitting: t("counterRentals.new.submitting"),
-                  fillLabel: t("counterRentals.new.fillLabel"),
-                  fillOptions: tankFillOptions(t, t("counterRentals.new.fillChoose")),
-                  fillHint: t("counterRentals.new.fillHint"),
-                }}
+                refusal={
+                  rentRefused
+                    ? {
+                        code: search.notice ?? "",
+                        unitId: noticeUnitId ?? null,
+                        message: noticeText ?? "",
+                      }
+                    : null
+                }
+                words={counterRentalCartWords(t, days)}
               />
             )}
           </form>

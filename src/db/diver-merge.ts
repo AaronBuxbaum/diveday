@@ -350,6 +350,8 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "trip_change_events.actor_person_id": "who changed the departure",
   "trip_desk_events.actor_person_id": "who did it at the desk",
   "trip_desk_events.subject_person_id": "an event trail records who it happened to at the time",
+  "trip_help_requests.helper_person_id":
+    "which crew member the desk confirmed would help; staff assignment attribution stays with that person",
   "trip_help_requests.resolved_by_person_id": "who answered the ask",
   "interests.created_by_person_id": "who raised the interest or sent the offer",
   "trip_last_minute_promos.created_by_person_id": "who wrote the deal",

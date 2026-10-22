@@ -11,6 +11,9 @@
     "whenHeading": "Cuándo",
     "gearHeading": "Equipo",
     "kindsAria": "Tipo de equipo",
+    "filterLabel": "Buscar por etiqueta o talla",
+    "clearFilter": "Limpiar",
+    "noMatches": "No hay unidades que coincidan",
     "fromLabel": "Desde",
     "untilLabel": "Devolver antes del",
     "pickedHeading": "Se lleva",
@@ -76,6 +79,8 @@
     "unitNeedsCard": "Necesita una tarjeta verificada",
     "unitNeedsDrysuitCard": "Necesita la tarjeta de traje seco",
     "unitNeedsService": "Necesita mantenimiento antes",
+    "unitOutOfService": "Fuera de la pared por mantenimiento",
+    "unitUnavailable": "No disponible para estos días",
     "lendAnyway": "Prestar {label} de todos modos",
     "setPrice": "Precio del equipo completo, {count, plural, one {# día} other {# días}}",
     "cards": {

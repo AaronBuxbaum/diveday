@@ -18,7 +18,7 @@
 // does not; a layer above is one that contains HEAD. A layer sits on HEAD's first-parent chain;
 // a sub-branch is merged in through a second parent. So this reads the remote refs and asks
 // git, and is exactly as fresh as the last fetch — `session-context.mjs` fetches `main` and
-// `claude/*` once at session start for that reason. Owned paths are each layer's own diff.
+// all remote branch refs once at session start for that reason. Owned paths are each layer's own diff.
 //
 //   node scripts/stack-map.mjs           the stack, one line per layer
 //   node scripts/stack-map.mjs --json    the same record, machine-readable
@@ -29,8 +29,8 @@
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { resolveVerificationBase } from "./verification-base.mjs";
 
 /** Refs read per run. A thread with more open branches than this is its own finding. */
 const MAX_REFS = 40;
@@ -146,6 +146,7 @@ export function readStack(git, { paths = false } = {}) {
 
   return {
     base: BASE,
+    verificationBase: resolveVerificationBase(git),
     layers: unique,
     current: unique.findIndex((layer) => layer.here),
     top: (top ?? current).name,
@@ -188,9 +189,11 @@ export function renderStack(stack) {
   if (stack.forks.length > 0) lines.push(`Other tips above HEAD: ${stack.forks.join(", ")}`);
   if (stack.subBranches.length > 0)
     lines.push(`Sub-branches merged in: ${stack.subBranches.join(", ")}`);
-  lines.push(
-    "As fresh as the last fetch: git fetch origin main '+refs/heads/claude/*:refs/remotes/origin/claude/*'",
-  );
+  lines.push("As fresh as the last fetch: git fetch origin '+refs/heads/*:refs/remotes/origin/*'");
+  if (stack.verificationBase)
+    lines.push(
+      `Verification base: ${stack.verificationBase.ref ?? "unavailable"} (${stack.verificationBase.source})`,
+    );
   return lines.join("\n");
 }
 

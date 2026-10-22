@@ -59,6 +59,14 @@ export const NODE_MAJOR = 24;
 export const NODE_FLOOR = "24.15.0";
 
 /**
+ * Artifact producers and consumers need one exact runtime. A major-only
+ * setup-node selector can reuse different cached patches on different runners
+ * (24.22.0 build vs 24.21.0 capture in run 39791953247), invalidating evidence.
+ * This CI pin is separate from the supported local runtime range above.
+ */
+export const CI_NODE_VERSION = "24.22.0";
+
+/**
  * The major AWS Lambda runs the handlers in `infra/` on, stated separately
  * because it is a different question with a different clock: AWS publishes and
  * retires runtimes on its own schedule, so "the major we develop on" and "the
@@ -104,7 +112,7 @@ const DECLARATIONS = [
   {
     file: ".github/actions/setup/action.yml",
     find: (text) => text.match(/^\s*node-version:\s*(\S+)\s*$/m)?.[1],
-    want: String(NODE_MAJOR),
+    want: CI_NODE_VERSION,
     where: "node-version:",
   },
   {
@@ -226,7 +234,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error("The repository disagrees with itself about which Node it runs on:");
     console.error(drift.map((line) => `- ${line}`).join("\n"));
     console.error(
-      "\nThe numbers live in scripts/check-node-version.mjs (NODE_MAJOR, NODE_FLOOR, LAMBDA_NODE_MAJOR, ES_LIB). Change them there first, then bring every file above into line — never the other way round.",
+      "\nThe numbers live in scripts/check-node-version.mjs (NODE_MAJOR, NODE_FLOOR, CI_NODE_VERSION, LAMBDA_NODE_MAJOR, ES_LIB). Change them there first, then bring every file above into line — never the other way round.",
     );
     console.error(
       "This is a guard rather than a convention because `engines` is warn-only and pnpm writes that warning to stdout, which is how a mismatch took both MCP servers down (issue #1326, ADR 20260903-node-24-is-the-floor).",

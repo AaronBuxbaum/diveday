@@ -59,6 +59,23 @@ describe("StaffCardCredentials", () => {
     expect(screen.getByText("No captain’s license on file")).toBeVisible();
   });
 
+  it("keeps the full credential summary and every detail accessible for long names", () => {
+    const names = [
+      "PADI Open Water Scuba Instructor — Professional Teaching Status",
+      "Emergency First Response Primary and Secondary Care Instructor",
+    ];
+    const { container } = renderCard(
+      ["instructor"],
+      [card(names[0], "instructor_rating"), card(names[1], "first_aid_cpr")],
+    );
+    const summary = container.querySelector("summary");
+    expect(summary).toHaveTextContent("Credentials");
+    for (const name of names) {
+      expect(summary).toHaveTextContent(name);
+      expect(screen.getAllByText(name, { exact: true })).toHaveLength(1);
+    }
+  });
+
   it("draws no row for a role that sails on no card and has nothing recorded", () => {
     const { container } = renderCard(["owner"], []);
     expect(container).toBeEmptyDOMElement();

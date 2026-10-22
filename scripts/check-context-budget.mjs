@@ -158,6 +158,24 @@ export async function measure(root = ROOT) {
   return measured;
 }
 
+/** Repository-only estimates, not observed runtime or billed tokens. */
+export async function providerProfiles(root = ROOT) {
+  const measured = await measure(root);
+  let canonical = 0;
+  for (const dir of await listDirs(root, ".agents/skills")) {
+    const contents = await readFile(path.join(root, ".agents/skills", dir, "SKILL.md"), "utf8");
+    // Other hosts may list user-only skills; include all descriptions conservatively.
+    canonical += words(frontmatterDescription(contents));
+  }
+  return {
+    claude: Object.values(measured).reduce((sum, value) => sum + value, 0),
+    codex: measured["AGENTS.md"] + canonical,
+    other: measured["AGENTS.md"] + canonical,
+    excludes:
+      "Host/global prompts, tool schemas, plugins, memory, on-demand bodies and actual cache usage",
+  };
+}
+
 /** Lines over the cap, as `{ file, line, words, preview }`. */
 export async function overlongLines(root = ROOT, cap = LINE_WORD_CAP) {
   const found = [];
@@ -180,6 +198,10 @@ async function main() {
   const { absorb } = ratchetFlags(args);
 
   const measured = await measure();
+  const profiles = await providerProfiles();
+  console.log(
+    `provider estimates (words): Claude ${profiles.claude}; Codex ${profiles.codex}; other ${profiles.other}. Excludes: ${profiles.excludes}.`,
+  );
   const baseline = (await readRatchet(ROOT, "context-budget")) ?? {};
   const budgets = baseline.budgets ?? {};
 
@@ -192,7 +214,7 @@ async function main() {
       .map(([file, count]) => `| ${file} | ${count} | ${budgets[file] ?? "-"} |`);
     await writeFile(
       path.join(ROOT, reportPath),
-      `# Always-loaded agent context\n\n` +
+      `# Repository Claude startup estimate\n\n` +
         `Total ${total} words (~${Math.round((total * TOKENS_PER_WORD) / 100) * 100} tokens), ` +
         `budget ${budgetTotal}.\n\n` +
         `| File | Words | Budget |\n| --- | --- | --- |\n${rows.join("\n")}\n`,
@@ -277,7 +299,7 @@ async function main() {
 
   const slack = budgetTotal - total;
   console.log(
-    `context-budget: ${total} words always loaded (~${Math.round((total * TOKENS_PER_WORD) / 100) * 100} tokens)` +
+    `context-budget: ${total} words in repository Claude startup estimate (~${Math.round((total * TOKENS_PER_WORD) / 100) * 100} tokens)` +
       `${slack > 0 ? `, ${slack} under budget — bank it with --write` : ", at budget"}`,
   );
 }

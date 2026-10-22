@@ -6,11 +6,13 @@ import type { MapPin, ShopAnchor } from "@/components/map/SiteMap";
 
 export function CatalogMapLayout({
   shopAnchor,
+  viewportStorageKey,
   pins,
   clusterLabel,
   children,
 }: {
   shopAnchor: ShopAnchor | null;
+  viewportStorageKey?: string;
   pins: MapPin[];
   clusterLabel: string;
   children: ReactNode;
@@ -30,6 +32,7 @@ export function CatalogMapLayout({
         <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
           <div className="h-[440px] w-full sm:h-[540px] lg:h-[620px]">
             <LazySiteMap
+              viewportStorageKey={viewportStorageKey}
               center={defaultCenter}
               zoom={10}
               shopAnchor={shopAnchor}

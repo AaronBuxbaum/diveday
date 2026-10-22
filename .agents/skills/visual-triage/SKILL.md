@@ -19,23 +19,14 @@ browser it resolved — if it says "falling back", your local diff is not compar
 
 ## Before the first image
 
-Read the sticky `diveday:visual-summary` comment first ([pr-comment.md](pr-comment.md)). The
-baseline is your branch's parent commit, not current `main`, so **rebase onto current `main`
-before triaging** or attribute each inherited surface to the PR it came from. On a stacked PR read
-the comment on every layer, name the layer each inherited diff came from, and use
-`pnpm visual:layers` for one layer's own slice. A surface you expected to move that reads as passed
-was not selected: add the `visual-all` label and push again.
+Read the sticky `diveday:visual-summary` comment first ([pr-comment.md](pr-comment.md)). Use its explicit expected/actual commit keys: the default expected key is the fork point from the default branch, not necessarily the immediate parent. Preserve stack topology; do not rebase a layer onto main merely to simplify image triage. Attribute inherited changes to their layer and use `pnpm visual:layers` when needed. A changed surface marked passed may have been filled from baseline; inspect selection, then request `visual-all` if it missed the surface.
 
 ## Triage loop
 
 1. Read the code and route/state changes before opening images.
 2. On a PR, read the sticky visual summary comment first — if it says nothing was compared, stop and
    fix that; a zero there is not evidence.
-3. Get the report — `pnpm visual:report` against the commit under review ([fetching.md](fetching.md)), or run the
-   full local comparison on Linux:
-   ```bash
-   pnpm visual
-   ```
+3. Fetch `pnpm visual:report --commit <sha>` for the CI commit under review ([fetching.md](fetching.md)). Local scoped capture uses `scripts/visual-review.mjs`; full Linux comparison is optional for an explicit whole-suite investigation. Never compare macOS output to Linux as evidence of regression.
 4. Read `.reg-report/<commit>/REPORT.md` and view the expected/actual/diff PNGs it lists.
 5. Put each difference in one bucket:
    - **Expected:** the code change explains it. Merge the branch to update S3 references for subsequent builds.
@@ -44,7 +35,7 @@ was not selected: add the `visual-all` label and push again.
 
 ## Reference
 
-- [pr-comment.md](pr-comment.md) — the sticky `diveday:visual-summary` comment in full: `NOTHING WAS COMPARED`, the parent-commit baseline, rebasing before triage, what a PR captures (`visual-all`), and `pnpm visual:layers` for a stacked layer.
+- [pr-comment.md](pr-comment.md) — the sticky `diveday:visual-summary` comment in full: `NOTHING WAS COMPARED`, explicit baseline keys and inherited-layer attribution, what a PR captures (`visual-all`), and `pnpm visual:layers` for a stacked layer.
 - [fetching.md](fetching.md) — getting the report and its images from a session.
 - [mapping.md](mapping.md) — attributing a diff to code, unstable captures, and a capture with two causes.
 

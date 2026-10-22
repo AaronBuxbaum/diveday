@@ -26,6 +26,7 @@ import {
 } from "@/lib/setup-requests";
 // A plain module, deliberately not a second server action — see its comment.
 import { announceSetupRequest } from "./announce";
+import { sendSetupRequestReceipt } from "./receipt";
 
 /** Long enough for any honest answer; a value past it is refused by the parser anyway. */
 const ECHO_MAX = 400;
@@ -120,8 +121,10 @@ export async function submitSetupRequestAction(
     ...parsed.data,
     source: eventSource(form.data.source),
     locale: await requestLocale(),
+    receiptPending: true,
   });
   after(() => announceSetupRequest(row));
+  after(() => sendSetupRequestReceipt(row.id));
 
   // What they use today, and which system, and nothing else, ride to the next
   // page (item 55; the system since 2026-10-22).

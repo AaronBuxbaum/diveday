@@ -59,7 +59,6 @@ export function GearImportPanel({ t, notice }: { t: StaffTranslator; notice?: st
         </a>
         <form
           action={importGearServiceHistoryAction}
-          encType="multipart/form-data"
           className="mt-5 flex flex-wrap items-end gap-3"
         >
           {/* The same control the Divers tab uses, not the operating system's

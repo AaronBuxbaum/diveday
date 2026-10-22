@@ -2,6 +2,8 @@ import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { z } from "zod";
 import { thrownErrorToken } from "@/lib/error-token";
 import { log } from "@/lib/log";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { setupReceiptOutcome } from "@/lib/setup-request-receipts";
 import { deliveryAddressFor } from "@/lib/simulator-email";
 import type { Notification } from "./kinds";
 import type { NotificationProvider } from "./provider";
@@ -53,6 +55,8 @@ export interface SesEmailClient {
 
 export type SesProviderOptions = {
   client?: SesEmailClient;
+  /** Unverified setup receipts get one wire attempt and no automatic retry. */
+  maxAttempts?: 1;
 };
 
 export const sesConfigSchema = z.object({
@@ -211,13 +215,15 @@ export function sesNotificationProvider(
     new SESv2Client({
       region: config.region,
       credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+      ...(options.maxAttempts === undefined ? {} : { maxAttempts: options.maxAttempts }),
     });
   return {
     async send(notification) {
+      const receipt = notification.kind === "setup_request_receipt";
       // On a demo shop, a seeded person's address reads like a person's and is
       // delivered to the SES mailbox simulator (`deliveryAddressFor`); every
       // other address, and every address on a real shop, as written.
-      const demoShop = { demoShop: notification.sender?.demoShop === true };
+      const demoShop = { demoShop: !receipt && notification.sender?.demoShop === true };
       const to = deliveryAddressFor(notification.to, demoShop);
       const invalidRecipient = reservedTestRecipientDelivery(to);
       if (invalidRecipient) return invalidRecipient;
@@ -229,15 +235,17 @@ export function sesNotificationProvider(
           new SendEmailCommand({
             // "{Shop} via DiveDay" when the shop is the voice, on the same
             // verified address either way (`fromAddressFor`).
-            FromEmailAddress: fromAddressFor(config.from, notification),
+            FromEmailAddress: receipt ? DEFAULT_SENDER : fromAddressFor(config.from, notification),
             Destination: { ToAddresses: [to] },
             // A reply to a booking confirmation is a diver writing to the
             // shop, and `notifications@ses.dive.day` is a dead letter box. The
             // shop's own front-desk address, when it has one on file (ADR
             // 20260902-sender-standards-for-ses).
-            ...(notification.sender?.replyTo && {
-              ReplyToAddresses: [deliveryAddressFor(notification.sender.replyTo, demoShop)],
-            }),
+            ...(receipt
+              ? { ReplyToAddresses: [SUPPORT_EMAIL] }
+              : notification.sender?.replyTo && {
+                  ReplyToAddresses: [deliveryAddressFor(notification.sender.replyTo, demoShop)],
+                }),
             EmailTags: emailTagsOf(notification),
             Content: {
               Simple: {
@@ -278,6 +286,12 @@ export function sesNotificationProvider(
         return { status: "sent", providerMessageId: result.MessageId };
       } catch (error) {
         const info = sesErrorInfo(error);
+        if (receipt) {
+          const outcome = setupReceiptOutcome({ status: "failed", ...info });
+          const errorCode = outcome.status === "accepted" ? "invalid_response" : outcome.errorCode;
+          log("notification.ses_send_failed", "warn", { errorCode });
+          return { status: "failed", retryable: outcome.status === "unknown", errorCode };
+        }
         log("notification.ses_send_failed", "warn", info);
         return { status: "failed", ...info };
       }

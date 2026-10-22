@@ -35,16 +35,16 @@ There is nothing for you to run and nothing to wait for.
 git fetch origin main                                  # first, every time — it decides the shape
 
 # layer 1: nothing of yours is open, so cut from the refreshed main
-git checkout -b Codex/<slug>-1-schema origin/main
+git checkout -b claude/<slug>-1-schema origin/main
 # ... first commit ...
-git push -u origin Codex/<slug>-1-schema
+git push -u origin claude/<slug>-1-schema
 # open its pull request now, as a draft, base `main`
 
 # layer 2, cut from layer 1 — not from main, whether or not it depends on layer 1
-git checkout -b Codex/<slug>-2-reader Codex/<slug>-1-schema
+git checkout -b claude/<slug>-2-reader claude/<slug>-1-schema
 # ... first commit ...
-git push -u origin Codex/<slug>-2-reader
-# open its pull request now, as a draft, base `Codex/<slug>-1-schema`
+git push -u origin claude/<slug>-2-reader
+# open its pull request now, as a draft, base `claude/<slug>-1-schema`
 ```
 
 **Open a layer's pull request at its first commit, not when its work is finished.** That is the
@@ -56,8 +56,8 @@ retargeted the layer above onto the new base** — no timeline event, nothing to
 stayed open and its diff stayed honest. Run the same moment by hand and it fails outright:
 
 ```
-$ gh pr create --base Codex/<slug>-1-schema --head Codex/<slug>-2-reader
-No commits between Codex/<slug>-1-schema and Codex/<slug>-2-reader, Base ref must be a branch
+$ gh pr create --base claude/<slug>-1-schema --head claude/<slug>-2-reader
+No commits between claude/<slug>-1-schema and claude/<slug>-2-reader, Base ref must be a branch
 ```
 
 which is exactly what PR #893 recorded as a reason to stop stacking. The failure lives entirely in

@@ -1,3 +1,4 @@
+import type { SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { recordSetupRequest } from "@/db/funnel";
@@ -112,7 +113,9 @@ describe("submitSetupRequestAction", () => {
     expect(row?.notifiedAt).toBeInstanceOf(Date);
 
     expect(trackEvent).toHaveBeenCalledWith({ name: "setup_requested", source: "pricing-close" });
-    expect(vi.mocked(notify).mock.calls[0]?.[0]).toMatchObject({
+    expect(
+      vi.mocked(notify).mock.calls.find(([message]) => message.kind === "operator_alert")?.[0],
+    ).toMatchObject({
       kind: "operator_alert",
       event: "setup_request",
       setupRequestId: row?.id,
@@ -157,7 +160,9 @@ describe("submitSetupRequestAction", () => {
   it("mails onboarding a setup link that opens the form for this request, once", async () => {
     const { openSetupLink, spendSetupLink } = await import("@/db/setup-links");
     expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
-    const sent = vi.mocked(notify).mock.calls[0]?.[0];
+    const sent = vi
+      .mocked(notify)
+      .mock.calls.find(([message]) => message.kind === "operator_alert")?.[0];
     if (sent?.kind !== "operator_alert" || sent.event !== "setup_request")
       throw new Error("expected the onboarding mail");
     const url = new URL(sent.setupUrl ?? "");
@@ -172,6 +177,126 @@ describe("submitSetupRequestAction", () => {
     expect(await spendSetupLink(db, token)).toBe(true);
     expect(await openSetupLink(db, token)).toBeNull();
   });
+
+  it("sends a separate fixed requester receipt after saving the request", async () => {
+    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
+    const [row] = await db.select().from(setupRequests);
+    const receipt = vi
+      .mocked(notify)
+      .mock.calls.find(([message]) => message.kind === "setup_request_receipt")?.[0];
+    expect(receipt).toEqual({
+      kind: "setup_request_receipt",
+      setupRequestId: row?.id,
+      to: "ana@reefline.example",
+      locale: "en-US",
+    });
+    expect(row).toMatchObject({ receiptStatus: "accepted", receiptProviderMessageId: "m1" });
+  });
+
+  it("keeps separate duplicate submissions and the operator announcements but sends one requester receipt", async () => {
+    await submit(setUpForm());
+    await submit(
+      setUpForm({
+        shopName: "Changed shop",
+        contactName: "Changed name",
+        email: "ANA@REEFLINE.EXAMPLE",
+      }),
+    );
+    expect(await db.select().from(setupRequests)).toHaveLength(2);
+    const kinds = vi.mocked(notify).mock.calls.map(([message]) => message.kind);
+    expect(kinds.filter((kind) => kind === "operator_alert")).toHaveLength(2);
+    expect(kinds.filter((kind) => kind === "setup_request_receipt")).toHaveLength(1);
+  });
+
+  it("preserves operator notification and the saved row when the requester provider fails", async () => {
+    vi.mocked(notify).mockImplementation(async (message) =>
+      message.kind === "setup_request_receipt"
+        ? { status: "failed", retryable: true, errorCode: "network_error" }
+        : { status: "sent", providerMessageId: "operator-message" },
+    );
+    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent?uses=booking_system" });
+    expect(await db.select().from(setupRequests)).toMatchObject([
+      { notifiedAt: expect.any(Date), receiptStatus: "unknown", receiptErrorCode: "network_error" },
+    ]);
+  });
+
+  it("preserves the requester receipt when operator notification throws", async () => {
+    vi.mocked(notify).mockImplementation(async (message) => {
+      if (message.kind === "operator_alert") throw new Error("operator failed");
+      return { status: "sent", providerMessageId: "requester-message" };
+    });
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(await submit(setUpForm())).toEqual({
+        redirect: "/get-set-up/sent?uses=booking_system",
+      });
+      expect(await db.select().from(setupRequests)).toMatchObject([
+        {
+          notifiedAt: null,
+          receiptStatus: "accepted",
+          receiptProviderMessageId: "requester-message",
+        },
+      ]);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("captures the final requester SES command without submitted text or the founder capability", async () => {
+    const actual =
+      await vi.importActual<typeof import("@/lib/notifications")>("@/lib/notifications");
+    const send = vi.fn().mockResolvedValue({ MessageId: "receipt-safe" });
+    const provider = actual.sesNotificationProvider(
+      {
+        region: "us-east-1",
+        from: "DiveDay <notifications@ses.dive.day>",
+        accessKeyId: "TEST",
+        secretAccessKey: "TEST",
+      },
+      { client: { send }, maxAttempts: 1 },
+    );
+    vi.mocked(notify).mockImplementation(async (message) =>
+      message.kind === "setup_request_receipt"
+        ? actual.notify(message, provider)
+        : { status: "sent", providerMessageId: "operator-message" },
+    );
+    expect(
+      await submit(
+        setUpForm({
+          shopName: "Urgent: pay https://attacker.tld <img src=x>",
+          contactName: "PRIVATE_PERSON",
+          region: "PRIVATE_REGION",
+          email: "Victim@Reef.mail",
+        }),
+      ),
+    ).toHaveProperty("redirect");
+    const operator = vi
+      .mocked(notify)
+      .mock.calls.find(([message]) => message.kind === "operator_alert")?.[0];
+    expect(operator).toMatchObject({
+      kind: "operator_alert",
+      setupUrl: expect.stringContaining("/onboard?setup="),
+    });
+    expect(send).toHaveBeenCalledTimes(1);
+    const command = send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input).toMatchObject({
+      Destination: { ToAddresses: ["victim@reef.mail"] },
+      ReplyToAddresses: ["support@dive.day"],
+    });
+    expect(JSON.stringify(command.input)).not.toMatch(
+      /attacker|PRIVATE_|onboarding@|\/onboard|setup=|CcAddresses|BccAddresses/,
+    );
+  });
+
+  it.each(["Bad\r\nName", "Bad\u202eName"])(
+    "rejects unsafe submitted text without sending a receipt: %s",
+    async (shopName) => {
+      expect(await submit(setUpForm({ shopName }))).toMatchObject({
+        state: { fieldErrors: { shopName: "invalid" } },
+      });
+      expect(notify).not.toHaveBeenCalled();
+    },
+  );
 
   it("clamps a tag nobody registered rather than storing it", async () => {
     await submit(setUpForm({ source: "made-up-page" }));

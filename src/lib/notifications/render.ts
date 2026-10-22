@@ -58,6 +58,7 @@ import {
   shoreAlertStoppedEmail,
 } from "./roll-call-emails";
 import { seatAlreadyHeldEmail } from "./seat-already-held";
+import { setupRequestReceiptEmail } from "./setup-request-receipt";
 import { shopVoiceOf } from "./shop-voice";
 import { weeklyDigestEmail } from "./weekly-digest-email";
 import { gearServiceDueEmail, workOrderReadyEmail } from "./work-order-emails";
@@ -152,6 +153,7 @@ function addressConfirmationEmail(
 }
 
 function rawMessageFor(notification: Notification): NotificationEmail {
+  if (notification.kind === "setup_request_receipt") return setupRequestReceiptEmail(notification);
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
   // Service mail: a diver who joined the wait list hears "a seat opened"; the
   // reply to a date request is the invitation. Neither carries a way out.

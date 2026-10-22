@@ -74,3 +74,15 @@ it("rebuilds and atomically publishes every variant when the builder changes", a
     variants: ["lean", "history", "empty"],
   });
 });
+
+it("reports observed fingerprint and cache timing only when requested", async () => {
+  const { ensureTestDbTemplate } = await import("./db-template");
+  const observations: { phase: string; durationMs: number; cacheHit?: boolean }[] = [];
+  await ensureTestDbTemplate({ onTiming: (timing) => observations.push(timing) });
+  expect(observations.map((row) => row.phase)).toEqual(["fingerprint", "cache"]);
+  expect(observations[1]?.cacheHit).toBe(true);
+  expect(observations.every((row) => Number.isFinite(row.durationMs) && row.durationMs >= 0)).toBe(
+    true,
+  );
+  expect(filesystem.writeFile).not.toHaveBeenCalled();
+});

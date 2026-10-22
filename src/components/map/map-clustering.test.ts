@@ -106,13 +106,13 @@ describe("separateShopAnchor", () => {
     ]);
   });
 
-  it("hides only the shop when moving its cluster would overlap another group", () => {
+  it("keeps the shop visible when moving its cluster would overlap another group", () => {
     const crowded = [...points.slice(0, 2), { pin: { id: "neighbor" }, x: 120, y: 0 }];
     const groups = clusterMapPoints(crowded);
     const result = separateShopAnchor(groups, crowded, shop, () => true);
 
-    expect(result.showShopAnchor).toBe(false);
-    expect(result.groups).toBe(groups);
+    expect(result.showShopAnchor).toBe(true);
+    expect(result.groups).toEqual(groups);
     expect(result.groups.flat()).toHaveLength(3);
   });
 
@@ -120,8 +120,8 @@ describe("separateShopAnchor", () => {
     const groups = clusterMapPoints(points);
     const result = separateShopAnchor(groups, points, shop, () => false);
 
-    expect(result.showShopAnchor).toBe(false);
-    expect(result.groups).toBe(groups);
+    expect(result.showShopAnchor).toBe(true);
+    expect(result.groups).toEqual(groups);
   });
 
   it("keeps a large coincident cluster intact when no clear representative exists", () => {
@@ -133,8 +133,8 @@ describe("separateShopAnchor", () => {
     const groups = clusterMapPoints(coincident);
     const result = separateShopAnchor(groups, coincident, shop, () => true);
 
-    expect(result.showShopAnchor).toBe(false);
-    expect(result.groups).toBe(groups);
+    expect(result.showShopAnchor).toBe(true);
+    expect(result.groups).toEqual(groups);
     expect(result.groups[0]).toHaveLength(10_000);
   });
 
@@ -143,7 +143,7 @@ describe("separateShopAnchor", () => {
     const groups = clusterMapPoints(selected, "selected");
     expect(separateShopAnchor(groups, selected, shop, () => true)).toEqual({
       groups,
-      showShopAnchor: false,
+      showShopAnchor: true,
     });
     expect(separateShopAnchor(groups, selected, { x: 100, y: 0 }, () => true)).toEqual({
       groups,

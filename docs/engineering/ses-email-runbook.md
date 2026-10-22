@@ -65,6 +65,40 @@ The demo seed's divers, guardians and shop desks have human-looking addresses un
 
 To test the failure paths by hand, use `bounce@simulator.amazonses.com` or `complaint@simulator.amazonses.com` (a `+label` works on these too), or a real inbox when you need to read the message.
 
+### Setup requester receipts
+
+Setup receipts are the bounded exception to SDK/application retries (ADR
+[20261021-setup-request-receipts](../architecture/decisions/20261021-setup-request-receipts.md)).
+The receipt-only provider uses `maxAttempts: 1`. A saved request claims one attempt under an atomic
+24-hour exact-address cooldown and 30-claims-per-rolling-hour budget. Suppression keeps the request
+for manual onboarding. There is no automatic retry or resend endpoint; never reset a terminal claim
+to pending. Other notification kinds keep their existing retry behavior.
+
+A read-only support query lists receipt failures and work whose outcome is unresolved:
+
+```sql
+SELECT id, created_at, receipt_status, receipt_claimed_at,
+       receipt_provider_message_id, receipt_error_code
+FROM setup_requests
+WHERE receipt_status IN ('pending', 'claimed', 'failed', 'unknown')
+ORDER BY created_at
+LIMIT 100;
+```
+
+`accepted` means SES returned a MessageId, not that an inbox received it. Use the saved
+`receipt_provider_message_id` to find `ses_webhook.delivery_applied` log lines: the signed webhook
+records bounce/complaint status even when its delivery lookup returns `unknown_message`. SES's
+account suppression stays in force. No receipt webhook event triggers another send.
+
+Only allowlisted codes enter receipt state/logs: `address_cooldown`, `global_limit`,
+`not_configured`, `invalid_test_recipient`, `throttled`, `rejected`, `provider_rejected`,
+`provider_unavailable`, `network_error`, `invalid_response`, `send_exception`; an unrecorded storage
+failure logs `storage_error`. Provider names/messages/details, request text and capability tokens
+are never receipt failure detail. A crash before claim can leave pending work; a crash after claim
+or SES acceptance before the final write can leave a claimed row. Those are unresolved, with the
+request still saved. MessageId correlation is best-effort if that final write was lost. Deleting
+requests removes receipt metadata; an email already handed to SES cannot be recalled.
+
 ### Which region
 
 **`us-east-1`**, along with the rest of the estate

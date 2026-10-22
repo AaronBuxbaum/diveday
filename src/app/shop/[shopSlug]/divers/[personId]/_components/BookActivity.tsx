@@ -1,4 +1,6 @@
 import { seatExistingDiverAction } from "@/app/actions/seat-diver";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { Pager, staffPagerWords } from "@/components/Pager";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
@@ -7,6 +9,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, groupByLocalDay } from "@/lib/calendar-date";
 import { formatTime } from "@/lib/format";
+import { bookingPageHref } from "../_lib/record-query";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile, Shop, UpcomingTrip } from "./shared";
 
@@ -19,7 +22,7 @@ import type { DiverProfile, Shop, UpcomingTrip } from "./shared";
  *
  * It used to be a section of its own two thirds of the way down a ~6,400px
  * scroll, under a heading, above a second list of the same bookings. The form
- * itself is unchanged: it books by identity (`personId`), not by re-submitting
+ * books by identity (`personId`), not by re-submitting
  * a name and email — the person is already open on screen, and re-entering
  * them risked a second person row for the same human. Through the shared
  * `seatExistingDiverAction`, this door owes the same consequences as every
@@ -28,6 +31,10 @@ import type { DiverProfile, Shop, UpcomingTrip } from "./shared";
  * The disclosure's `<summary>` is the page's **only** primary-weight control;
  * the submit inside it is secondary, because once the picker is open the
  * choice — not the button — is the work.
+ *
+ * Matching departures are paged before rendering (issue #2859), with the
+ * standard Pager and the same diver kept in the URL and submitted identity.
+ * Full and already-booked departures never consume a page of choices.
  */
 export function BookActivity({
   diver,
@@ -38,6 +45,8 @@ export function BookActivity({
   upcoming,
   shopSlug,
   personId,
+  pagination,
+  query,
 }: {
   diver: DiverProfile;
   shop: Shop;
@@ -54,9 +63,16 @@ export function BookActivity({
   upcoming: UpcomingTrip[];
   shopSlug: string;
   personId: string;
+  pagination?: { page: number; pageCount: number };
+  query?: Record<string, string | string[] | undefined>;
 }) {
+  const page = pagination?.page ?? 1;
   return (
-    <details open={Boolean(status)} className="group open:w-full">
+    <AutoOpenDetails
+      openOnHash="book-departure"
+      open={Boolean(status) || page > 1}
+      className="group open:w-full"
+    >
       <summary
         id="book-departure"
         className={buttonClass({
@@ -70,57 +86,70 @@ export function BookActivity({
         action={seatExistingDiverAction.bind(null, "diver", shopSlug)}
         className={sectionCardClass({ className: "mt-3 w-full" })}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <input type="hidden" name="personId" value={personId} />
-          <FieldGrid columns={1} className="flex-1">
-            <Field label={t("divers.bookActivity.courseOrDiveLabel")}>
-              {/* `md`: from `sm` up the picker shares a line with the `md` "Book
+        <input type="hidden" name="personId" value={personId} />
+        {upcoming.length > 0 ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <FieldGrid columns={1} className="flex-1">
+              <Field label={t("divers.bookActivity.courseOrDiveLabel")}>
+                {/* `md`: from `sm` up the picker shares a line with the `md` "Book
                   activity", bottom-aligned, and at the 44px default the
                   button stood 4px above its top edge. */}
-              <select name="tripId" required defaultValue="" className={controlClass}>
-                <option value="" disabled>
-                  {t("divers.bookActivity.chooseActivity")}
-                </option>
-                {/*
-                 * Grouped by departure day, not one flat list. Staff seating a
-                 * diver are working from a date the person just said out loud
-                 * ("Saturday"), and a flat list repeated that date on every row
-                 * while giving them nothing to scan *by*.
-                 */}
-                {groupByLocalDay(upcoming, shop.timezone, (trip) => trip.startsAt).map((group) => (
-                  <optgroup key={group.day} label={formatCalendarDate(group.day, locale)}>
-                    {group.items.map((trip) => (
-                      <option key={trip.id} value={trip.id}>
-                        {formatTime(trip.startsAt, locale, shop.timezone)} ·{" "}
-                        {trip.course ? `${trip.course.title} — ` : ""}
-                        {trip.title}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </Field>
-          </FieldGrid>
-          <SubmitButton
-            pendingLabel={t("divers.bookActivity.booking")}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("divers.bookActivity.bookActivityButton")}
-          </SubmitButton>
-        </div>
+                <select key={page} name="tripId" required defaultValue="" className={controlClass}>
+                  <option value="" disabled>
+                    {t("divers.bookActivity.chooseActivity")}
+                  </option>
+                  {/*
+                   * Grouped by departure day, not one flat list. Staff seating a
+                   * diver are working from a date the person just said out loud
+                   * ("Saturday"), and a flat list repeated that date on every row
+                   * while giving them nothing to scan *by*.
+                   */}
+                  {groupByLocalDay(upcoming, shop.timezone, (trip) => trip.startsAt).map(
+                    (group) => (
+                      <optgroup key={group.day} label={formatCalendarDate(group.day, locale)}>
+                        {group.items.map((trip) => (
+                          <option key={trip.id} value={trip.id}>
+                            {formatTime(trip.startsAt, locale, shop.timezone)} ·{" "}
+                            {trip.course ? `${trip.course.title} — ` : ""}
+                            {trip.title}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ),
+                  )}
+                </select>
+              </Field>
+            </FieldGrid>
+            <SubmitButton
+              pendingLabel={t("divers.bookActivity.booking")}
+              className={buttonClass({ variant: "secondary" })}
+            >
+              {t("divers.bookActivity.bookActivityButton")}
+            </SubmitButton>
+          </div>
+        ) : (
+          <p className="text-base text-muted">{t("divers.bookActivity.noOpenActivities")}</p>
+        )}
+        <Pager
+          page={page}
+          pageCount={pagination?.pageCount ?? 1}
+          href={(target) => bookingPageHref(shopSlug, personId, query ?? {}, target)}
+          words={{
+            ...staffPagerWords(t),
+            previous: t("divers.bookActivity.earlierDepartures"),
+            next: t("divers.bookActivity.laterDepartures"),
+          }}
+        />
         {/* On its own line under the picker, never beside the button: in the
             row it took the width the picker needed and squeezed the chosen
             departure down to "Cho…" (Divers cleanup, 2026-10-03). */}
         <DiverFormStatus status={status} className="mt-3" />
         {/* Not a refusal — a heads-up. The seat is real either way; the waiver
             link just has nowhere to be emailed, so somebody has to hand it over. */}
-        {diver.person.email ? null : (
+        {upcoming.length > 0 && !diver.person.email ? (
           <p className="mt-3 text-sm text-muted">{t("divers.bookActivity.noEmailNote")}</p>
-        )}
-        {upcoming.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">{t("divers.bookActivity.noOpenActivities")}</p>
         ) : null}
       </form>
-    </details>
+    </AutoOpenDetails>
   );
 }
