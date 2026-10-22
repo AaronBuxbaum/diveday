@@ -436,6 +436,11 @@
         "label": "Check PADI certifications and eLearning with the extension",
         "description": "Beta: nobody has tried this on PADI’s real DiveChek page yet, and PADI hasn’t said yes or no to an extension filling it in. It runs in a browser where one of your PADI Pros is signed in to the Pros’ Site, under that Pro’s membership. Off, the link to the Pros’ Site stays. An owner or manager can turn it on."
       },
+      "claudeSuggestions": {
+        "heading": "Claude suggestions",
+        "label": "Show suggestions from Claude",
+        "description": "Drafts and sorting your staff can edit or ignore. Nothing is sent or saved until someone on your team does it. What Claude reads goes to Anthropic, DiveDay’s AI provider."
+      },
       "door": "Turn features on or off"
     },
     "crewSchedule": {

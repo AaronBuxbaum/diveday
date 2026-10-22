@@ -42,6 +42,7 @@ const OPTIONAL_FEATURE_GATES: Record<ShopFeature, FeatureRowGate> = {
   tips: "payments",
   publicYear: "settings",
   padiChecks: "settings",
+  claudeSuggestions: "settings",
 };
 
 const OPTIONAL_FEATURE_HEADINGS: Record<ShopFeature, StaffMessageKey> = {
@@ -51,6 +52,7 @@ const OPTIONAL_FEATURE_HEADINGS: Record<ShopFeature, StaffMessageKey> = {
   tips: "settings.main.features.tips.heading",
   publicYear: "settings.main.features.publicYear.heading",
   padiChecks: "settings.main.features.padiChecks.heading",
+  claudeSuggestions: "settings.main.features.claudeSuggestions.heading",
 };
 
 /** The optional features, in this page's order (not `SHOP_FEATURES`'). */
@@ -61,6 +63,7 @@ const OPTIONAL_ORDER = [
   "lastMinuteList",
   "publicYear",
   "padiChecks",
+  "claudeSuggestions",
 ] as const satisfies readonly ShopFeature[];
 
 export const FEATURE_ROWS: readonly FeatureRow[] = [

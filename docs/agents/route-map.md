@@ -37,6 +37,7 @@ A row moves between here and AGENTS.md in one commit, never duplicated.
 | Starting content a shop copies, and species it picks | `src/content/dive-site-templates.ts`, `src/content/course-templates.ts` (copied, then the shop's); `src/db/marine-life-catalog.ts` (DiveDay's words); photos by `pnpm content:photos` |
 | Feature modules | `src/features/<feature>/` — `index.ts` is the whole public surface; `calendar-sync`, `backup-export`, `integrations` |
 | Outbound integrations a shop connects for itself (Shopify, QuickBooks, Zapier) | `src/features/integrations/`; rows in `src/db/integrations.ts` + `src/db/integration-events.ts`; staff at `src/app/shop/[shopSlug]/settings/integrations`; callbacks under `src/app/api/integrations/` |
+| A Claude assist (a draft, a sort, a value read off a card or a website) | `runAssist` / `assistsAvailable` in `src/db/assists.ts`; the seam in `src/lib/claude/` (`callStructured`, `webFetchTool`, models and prices); on screen `src/components/assists/AssistDraftButton.tsx`; fake in `src/test/fakes.ts`; ADR 20261018-claude-assists |
 | Staff calendar subscriptions (iCalendar feeds) | `src/features/calendar-sync/` + `src/app/calendar/[token]/route.ts`; staff UI at `src/app/shop/[shopSlug]/settings/calendar/` |
 | Dev/e2e staff logins | `src/db/dev-credentials.ts` |
 | Why a route paints instantly (or doesn't) | its `loading.tsx` and `export const instant = true` (ADR 20260804-instant-navigation; the **instant-navigation** skill) |

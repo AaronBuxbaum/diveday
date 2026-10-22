@@ -832,6 +832,29 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "Claude assists (ADR 20261018-claude-assists). Unset, every assist is dark and",
+      "each feature works exactly as it does without Claude; DIVEDAY_DISABLE_EXTERNAL_HTTP=1",
+      "darkens them too. The per-shop monthly cap is in USD (default 15); at the cap a",
+      "shop's assists go dark until the first of the next UTC month.",
+    ],
+    keys: [
+      {
+        key: "ANTHROPIC_API_KEY",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent:
+          "every Claude assist is dark and the anthropic_spend ceiling reports not_configured",
+      },
+      {
+        key: "DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "each shop's Claude assists are capped at $15 a month",
+      },
+    ],
+  },
+  {
+    doc: [
       "Media object storage for course photos, recap memories, dive site maps, and",
       "shop logos (AWS-8, docs/architecture/aws-migration-dossier.md). Replaces Vercel",
       "Blob with an S3 bucket in the DiveDay AWS account. The diveday-media-uploader",

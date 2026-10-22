@@ -205,6 +205,13 @@ export const shops = pgTable(
      */
     padiChecksEnabled: boolean("padi_checks_enabled").notNull().default(false),
     /**
+     * **Claude suggestions**: the drafts, sorting and reading Claude offers
+     * staff across the app (ADR 20261018-claude-assists). On by default; off,
+     * every assist is dark and each feature works exactly as it does without
+     * Claude. Nothing an assist wrote is deleted by turning it off.
+     */
+    claudeSuggestionsEnabled: boolean("claude_suggestions_enabled").notNull().default(true),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not
