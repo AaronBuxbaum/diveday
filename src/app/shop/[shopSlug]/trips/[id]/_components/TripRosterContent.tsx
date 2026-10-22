@@ -354,7 +354,8 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
         slots={{
           arrival,
           record,
-          whoWantsInGroup: (
+          // A cancelled departure has no seat to offer anyone.
+          whoWantsInGroup: guests.cancelled ? null : (
             <WhoWantsInPanel
               groups={whoWantsInGroups}
               tripId={trip.id}

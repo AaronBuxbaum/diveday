@@ -6543,6 +6543,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
         await page.getByRole("button", { name: "Reinstate trip" }).waitFor();
         await page.getByRole("link", { name: "View the blow-out cascade" }).waitFor();
+        // Nobody can be offered a seat on a cancelled departure.
+        await expect(page.getByRole("heading", { name: /Who wants in/ })).toHaveCount(0);
         await capture(page, "trip-cancelled", scheme);
       });
 
