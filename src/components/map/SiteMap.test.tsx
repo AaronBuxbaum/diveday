@@ -295,6 +295,22 @@ describe("SiteMap labels through Leaflet", () => {
     }
   });
 
+  it("keeps no camera for an overview nobody moved, so the next visit fits its own size", async () => {
+    // The fit is the map's, not the reader's: kept, it came back at a phone
+    // width as a desktop's zoom and hid most of the shop's sites.
+    const key = "test-map-untouched";
+    sessionStorage.clear();
+    const first = render(
+      <SiteMap center={CENTER} pins={[PIN]} clusterLabel="dive sites" viewportStorageKey={key} />,
+    );
+    await markerButton(first.container);
+    // Nothing kept while it is open either: a reload unmounts nothing.
+    expect(sessionStorage.getItem(`diveday:map:${key}`)).toBeNull();
+    first.unmount();
+    expect(sessionStorage.getItem(`diveday:map:${key}`)).toBeNull();
+    sessionStorage.clear();
+  });
+
   it("restores the settled camera after unmount without fitting the overview again", async () => {
     const L = await import("leaflet");
     const getContainer = vi.spyOn(L.Map.prototype, "getContainer");
