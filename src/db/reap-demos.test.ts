@@ -54,6 +54,9 @@ async function requireShop(db: Db, slug: string) {
   return shop;
 }
 
+// Keep full-history mint, full cascade and stale-TTL deletion as end-to-end
+// oracles. Identity/configuration and individual FK regressions use a lean
+// minted shop; each FK case still inserts the exact dependent row it deletes.
 describe("createDemoShop", () => {
   it("mints a self-contained, seeded demo shop with a generated identity", async () => {
     const db = await seededTestDb();
@@ -98,8 +101,8 @@ describe("createDemoShop", () => {
 
   it("mints two demos side by side without a slug or email collision", async () => {
     const db = await seededTestDb();
-    const a = await createDemoShop(db);
-    const b = await createDemoShop(db);
+    const a = await createDemoShop(db, { history: false });
+    const b = await createDemoShop(db, { history: false });
 
     expect(a.slug).not.toBe(b.slug);
     expect(a.ownerEmail).not.toBe(b.ownerEmail);
@@ -111,7 +114,7 @@ describe("createDemoShop", () => {
 
   it("regenerates the whole identity when a generated name is already taken", async () => {
     const db = await seededTestDb();
-    const taken = await createDemoShop(db);
+    const taken = await createDemoShop(db, { history: false });
 
     // Force the exact collision the dropped random suffix made possible: the
     // next mint draws a name that already exists. It must recover with a fresh
@@ -128,7 +131,7 @@ describe("createDemoShop", () => {
       .mockImplementation(real);
 
     try {
-      const minted = await createDemoShop(db);
+      const minted = await createDemoShop(db, { history: false });
       expect(minted.slug).not.toBe(taken.slug);
       // The retry took a *whole* fresh identity: the emails agree with the
       // slug that actually landed, never the one that lost the race.
@@ -152,13 +155,16 @@ describe("createDemoShop", () => {
    */
   it("wears the canonical demo's brand, and a logo, only when asked", async () => {
     const db = await seededTestDb();
-    const plain = await requireShop(db, (await createDemoShop(db)).slug);
+    const plain = await requireShop(db, (await createDemoShop(db, { history: false })).slug);
     expect(plain.logoUrl).toBeNull();
     expect(plain.brandHeroImageUrl).toBeNull();
     expect(plain.brandBadges).toEqual([]);
 
     const canonical = await requireShop(db, DEMO_SHOP_SLUG);
-    const branded = await requireShop(db, (await createDemoShop(db, { brand: true })).slug);
+    const branded = await requireShop(
+      db,
+      (await createDemoShop(db, { brand: true, history: false })).slug,
+    );
     expect(branded.brandHeroImageUrl).toBe(canonical.brandHeroImageUrl);
     expect(branded.brandHeroImageAlt).toBe(canonical.brandHeroImageAlt);
     expect(branded.brandBadges).toEqual(canonical.brandBadges);
@@ -181,8 +187,8 @@ describe("createDemoShop", () => {
     const prev = process.env.DEMO_SHOP_MAX_LIVE;
     process.env.DEMO_SHOP_MAX_LIVE = "2";
     try {
-      const a = await createDemoShop(db);
-      const b = await createDemoShop(db);
+      const a = await createDemoShop(db, { history: false });
+      const b = await createDemoShop(db, { history: false });
       // Age `a` explicitly. The test clock is frozen (src/test/frozen-clock.ts),
       // so every mint here shares one `createdAt` and "the oldest" would other-
       // wise be decided by `enforceMintedDemoCap`'s `id` tiebreak — which is
@@ -193,7 +199,7 @@ describe("createDemoShop", () => {
         .update(shops)
         .set({ createdAt: new Date(nowMs() - HOUR_MS) })
         .where(eq(shops.slug, a.slug));
-      const c = await createDemoShop(db);
+      const c = await createDemoShop(db, { history: false });
 
       // Cap is 2, so minting c evicts the oldest minted demo (a); b and c stay,
       // and the canonical demo is never a candidate.
@@ -241,7 +247,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes sold package dives instead of FK-violating on the order they came from", async () => {
     const db = await seededTestDb();
-    const { slug } = await createDemoShop(db);
+    const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -281,7 +287,7 @@ describe("deleteDemoShopCascade", () => {
 
   it("deletes a booking's tip instead of FK-violating on the booking it references", async () => {
     const db = await seededTestDb();
-    const { slug } = await createDemoShop(db);
+    const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     const [booking] = await db.select().from(bookings).where(eq(bookings.shopId, shop.id)).limit(1);
     if (!booking) throw new Error("test setup: demo shop has no bookings");
@@ -311,7 +317,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes a last-minute unsubscribe token instead of FK-violating on its lead", async () => {
     const db = await seededTestDb();
-    const { slug } = await createDemoShop(db);
+    const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -350,7 +356,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes a blow-out cascade instead of FK-violating on its trip", async () => {
     const db = await seededTestDb();
-    const { slug } = await createDemoShop(db);
+    const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -399,7 +405,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes the buddy-team trail instead of FK-violating on its trip", async () => {
     const db = await seededTestDb();
-    const { slug } = await createDemoShop(db);
+    const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -435,7 +441,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes a courtesy-email unsubscribe token instead of FK-violating on its person", async () => {
     const db = await seededTestDb();
-    const { slug } = await createDemoShop(db);
+    const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -474,7 +480,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes the activity trail instead of FK-violating on its shop", async () => {
     const db = await seededTestDb();
-    const { slug } = await createDemoShop(db);
+    const { slug } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: demo shop has no people");
@@ -496,7 +502,7 @@ describe("deleteDemoShopCascade", () => {
 
   it("deletes an owner's outstanding account token instead of FK-violating (security review finding)", async () => {
     const db = await seededTestDb();
-    const { slug, ownerEmail } = await createDemoShop(db);
+    const { slug, ownerEmail } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     const [ownerAccount] = await db
       .select()
@@ -530,7 +536,7 @@ describe("deleteDemoShopCascade", () => {
    */
   it("deletes an owner's provider login instead of FK-violating (issue #1594)", async () => {
     const db = await seededTestDb();
-    const { slug, ownerEmail } = await createDemoShop(db);
+    const { slug, ownerEmail } = await createDemoShop(db, { history: false });
     const shop = await requireShop(db, slug);
     const [ownerAccount] = await db
       .select()
@@ -578,7 +584,7 @@ describe("deleteDemoShopCascade", () => {
 describe("reapExpiredDemoShops", () => {
   it("clears minted demos past the TTL but never a fresh one or the canonical demo", async () => {
     const db = await seededTestDb();
-    const fresh = await createDemoShop(db);
+    const fresh = await createDemoShop(db, { history: false });
     const stale = await createDemoShop(db);
 
     // Age the stale demo — and the canonical demo — well past the 7-day window.
