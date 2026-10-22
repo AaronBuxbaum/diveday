@@ -3635,9 +3635,9 @@ for (const scheme of ["light", "dark"] as const) {
        * photographed — which matters more here than on the two above, because
        * this is the card a diver reads on the morning a trip they had planned
        * around was called off. It carries the cancellation, the shop's name,
-       * the way to the schedule, and now a short list of the preparation that
-       * survived: those records are filed against the person and the shop, not
-       * the seat, so they are still there.
+       * the way to the schedule, a short list of the preparation that
+       * survived (those records are filed against the person and the shop, not
+       * the seat, so they are still there), and one boat to ask to move to.
        *
        * The sizes are saved through the real product path first, because the
        * block renders only what is actually true and a diver who has prepared
@@ -3680,6 +3680,9 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(threadUrl);
         await page.getByRole("heading", { level: 1, name: "This trip was canceled" }).waitFor();
         await page.getByText("Still on file for you").waitFor();
+        // The boat it offers (UX sheet 2026-10-22, item 5): the demo runs
+        // another reef boat at the charter's price or less with seats free.
+        await page.getByRole("button", { name: /^Ask to move to / }).waitFor();
         await capture(page, "stranded-diver-card", scheme);
       });
 

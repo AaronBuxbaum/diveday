@@ -897,6 +897,11 @@
       "sent": "Sent. The shop will be in touch about another date.",
       "unavailable": "That couldn’t be sent. Call the shop on the number below."
     },
+    "moveOffer": {
+      "lead": "{title} has a seat free, at the same price or less.",
+      "action": "Ask to move to {when}",
+      "note": "Please move me to {title}, {when}."
+    },
     "cancelSpot": "Cancel my seat",
     "lateLead": "On your way but behind?",
     "lateButton": "Running late",
@@ -933,6 +938,7 @@
     "cancelledSeeSchedule": "See what’s coming up",
     "cancelledNextInSeries": "Book the next {trip}: {date}",
     "tripCancelledBody": "Your seat is released, and there’s nothing you need to do.",
+    "tripCancelledMoveBody": "{shop} can move your seat to another boat.",
     "checklistDetail": {
       "setupGeneric": "Your shop is still finalizing this trip’s details.",
       "readinessUnavailable": "Your shop is confirming your readiness. Check back shortly.",

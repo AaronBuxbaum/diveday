@@ -897,6 +897,11 @@
       "sent": "Enviado. El centro te contactará para elegir otra fecha.",
       "unavailable": "No se pudo enviar. Llama al centro al número de abajo."
     },
+    "moveOffer": {
+      "lead": "{title} tiene una plaza libre, al mismo precio o menos.",
+      "action": "Pedir cambio al {when}",
+      "note": "Por favor, cámbienme a {title}, {when}."
+    },
     "cancelSpot": "Cancelar mi plaza",
     "lateLead": "¿Vas de camino pero con retraso?",
     "lateButton": "Llego tarde",
@@ -933,6 +938,7 @@
     "cancelledSeeSchedule": "Ver las próximas salidas",
     "cancelledNextInSeries": "Reservar la próxima fecha de {trip}: {date}",
     "tripCancelledBody": "Tu plaza queda liberada y no tienes que hacer nada.",
+    "tripCancelledMoveBody": "{shop} puede pasar tu plaza a otra salida.",
     "checklistDetail": {
       "setupGeneric": "Tu centro todavía está finalizando los detalles de esta salida.",
       "readinessUnavailable": "Tu centro está confirmando tu preparación. Vuelve a revisarlo en breve.",

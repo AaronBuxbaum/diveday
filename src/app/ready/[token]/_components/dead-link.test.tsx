@@ -12,12 +12,18 @@ const db = vi.hoisted(() => ({
   getBookingPayment: vi.fn(),
   getShopById: vi.fn(),
   partySeatsKeptAfterLeadCancel: vi.fn(),
+  verifyStrandedBookingCapability: vi.fn(),
+  strandedMoveAsk: vi.fn(),
 }));
+const card = vi.hoisted(() => ({ props: vi.fn() }));
 
 vi.mock("@/db/booking-capabilities", () => ({
   resolveRevokedBookingCapability: db.resolveRevokedBookingCapability,
   staleBookingCapabilityForToken: db.staleBookingCapabilityForToken,
+  verifyStrandedBookingCapability: db.verifyStrandedBookingCapability,
 }));
+vi.mock("@/db/move-offer", () => ({ strandedMoveAsk: db.strandedMoveAsk }));
+vi.mock("../booking-actions", () => ({ askToMoveFromCancelledAction: vi.fn() }));
 vi.mock("@/db/ready", () => ({ getReadyPageData: db.getReadyPageData }));
 vi.mock("@/db/payments", () => ({ getBookingPayment: db.getBookingPayment }));
 vi.mock("@/db/shops", () => ({ getShopById: db.getShopById }));
@@ -30,7 +36,12 @@ vi.mock("./ExpiredLink", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./ExpiredLink")>()),
   ExpiredLink: () => <p>expired-with-shop</p>,
 }));
-vi.mock("./TripCancelledCard", () => ({ TripCancelledCard: () => <p>departure-cancelled</p> }));
+vi.mock("./TripCancelledCard", () => ({
+  TripCancelledCard: (props: Record<string, unknown>) => {
+    card.props(props);
+    return <p>departure-cancelled</p>;
+  },
+}));
 
 const t = diverTranslator("en-US");
 const handle = {} as Awaited<ReturnType<typeof getDb>>;
@@ -40,8 +51,10 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
-async function show(cancelled?: string) {
-  render(await readyDeadLink({ db: handle, token: "tok", cancelled, sent: undefined, anonT: t }));
+async function show(cancelled?: string, error?: string) {
+  render(
+    await readyDeadLink({ db: handle, token: "tok", cancelled, sent: undefined, error, anonT: t }),
+  );
 }
 
 describe("readyDeadLink", () => {
@@ -99,6 +112,41 @@ describe("readyDeadLink", () => {
     await show();
     expect(screen.getByText("departure-cancelled")).toBeTruthy();
     expect(db.staleBookingCapabilityForToken).not.toHaveBeenCalled();
+  });
+
+  const STRANDED_PAGE = {
+    departureCancelled: true,
+    detail: { cancelled: false },
+    shop: { id: "s1", defaultLocale: "en-US" },
+  };
+  const OPEN = {
+    state: "open",
+    offer: { tripId: "t2", title: "Two-Tank Reef", startsAt: new Date("2026-10-29T16:00:00Z") },
+  };
+
+  it("offers the move on a live stranded link, read for the link's own booking", async () => {
+    db.resolveRevokedBookingCapability.mockResolvedValue({ bookingId: "b1" });
+    db.getReadyPageData.mockResolvedValue(STRANDED_PAGE);
+    db.verifyStrandedBookingCapability.mockResolvedValue({ bookingId: "b1", shopId: "s1" });
+    db.strandedMoveAsk.mockResolvedValue(OPEN);
+    await show(undefined, "move-ask");
+    expect(db.strandedMoveAsk).toHaveBeenCalledWith(
+      handle,
+      expect.objectContaining({ shopId: "s1", bookingId: "b1" }),
+    );
+    expect(card.props).toHaveBeenCalledWith(
+      expect.objectContaining({ moveAsk: OPEN, notice: "move-ask", locale: "en-US" }),
+    );
+  });
+
+  it("offers nothing on a revoked link, which still reads the card", async () => {
+    db.resolveRevokedBookingCapability.mockResolvedValue({ bookingId: "b1" });
+    db.getReadyPageData.mockResolvedValue(STRANDED_PAGE);
+    db.verifyStrandedBookingCapability.mockResolvedValue(null);
+    await show();
+    expect(screen.getByText("departure-cancelled")).toBeTruthy();
+    expect(db.strandedMoveAsk).not.toHaveBeenCalled();
+    expect(card.props).toHaveBeenCalledWith(expect.objectContaining({ moveAsk: null }));
   });
 
   it("names the shop an expired token still resolves", async () => {

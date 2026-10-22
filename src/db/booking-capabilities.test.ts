@@ -13,6 +13,7 @@ import {
   revokeBookingCapabilities,
   staleBookingCapabilityForToken,
   verifyBookingCapability,
+  verifyStrandedBookingCapability,
 } from "./booking-capabilities";
 import { cancelBooking, createBooking } from "./bookings";
 import { bookingCapabilities } from "./schema";
@@ -218,6 +219,66 @@ describe("booking capabilities (in-memory PGlite)", () => {
       purpose: "confirm",
     });
     expect(ctx).toBeNull();
+  });
+
+  describe("verifyStrandedBookingCapability (UX sheet 2026-10-22, item 5)", () => {
+    async function strandedLink(purpose: "readiness" | "confirm" = "readiness") {
+      const { db, shop, open, other } = await seededContext();
+      const bookingId = await bookVisitor(db, shop.id, open.id);
+      const issued = await issueBookingCapability(db, { shopId: shop.id, bookingId, purpose });
+      return { db, shop, open, other, bookingId, token: issued?.token ?? "" };
+    }
+
+    it("opens a live readiness link whose departure was called off, to its own booking", async () => {
+      const { db, shop, open, bookingId, token } = await strandedLink();
+      await setTripStatus(db, shop.id, open.id, "cancelled");
+      expect(await verifyStrandedBookingCapability(db, { token })).toEqual({
+        bookingId,
+        shopId: shop.id,
+      });
+    });
+
+    it("never opens a link the ordinary check would accept", async () => {
+      const { db, token } = await strandedLink();
+      expect(await verifyStrandedBookingCapability(db, { token })).toBeNull();
+    });
+
+    it("refuses a revoked link, a cancelled seat, another purpose and a guessed token", async () => {
+      const revoked = await strandedLink();
+      await setTripStatus(revoked.db, revoked.shop.id, revoked.open.id, "cancelled");
+      await revokeBookingCapabilities(revoked.db, {
+        shopId: revoked.shop.id,
+        bookingId: revoked.bookingId,
+      });
+      expect(
+        await verifyStrandedBookingCapability(revoked.db, { token: revoked.token }),
+      ).toBeNull();
+
+      // A cancelled seat on the other (also called-off) departure.
+      const { db, shop, other } = revoked;
+      const seat = await bookVisitor(db, shop.id, other.id);
+      const link = await issueBookingCapability(db, {
+        shopId: shop.id,
+        bookingId: seat,
+        purpose: "readiness",
+      });
+      const confirm = await issueBookingCapability(db, {
+        shopId: shop.id,
+        bookingId: seat,
+        purpose: "confirm",
+      });
+      await cancelBooking(db, shop.id, seat);
+      await setTripStatus(db, shop.id, other.id, "cancelled");
+      expect(await verifyStrandedBookingCapability(db, { token: link?.token ?? "" })).toBeNull();
+      expect(await verifyStrandedBookingCapability(db, { token: confirm?.token ?? "" })).toBeNull();
+      expect(await verifyStrandedBookingCapability(db, { token: "not-a-token" })).toBeNull();
+    });
+
+    it("refuses a confirm link on a called-off departure", async () => {
+      const { db, shop, open, token } = await strandedLink("confirm");
+      await setTripStatus(db, shop.id, open.id, "cancelled");
+      expect(await verifyStrandedBookingCapability(db, { token })).toBeNull();
+    });
   });
 
   it("cancellation: refuses to issue a fresh capability for an already-canceled booking", async () => {
