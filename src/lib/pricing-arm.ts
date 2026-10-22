@@ -19,8 +19,10 @@ import {
  * arm it was just given, and a header a client sends never survives.
  *
  * The arm is not a secret and not a capability. A visitor who edits the cookie
- * sees the other arm's copy and, at most, has their set-up request recorded on
- * it; the shop's plan is still stored and charged by DiveDay.
+ * sees the other arm's copy, and the shop their set-up request creates is
+ * assigned that arm: a choice between the two plans on offer, at the
+ * configured numbers, never other numbers. It costs the test its randomness for
+ * that visitor, which `pnpm billing:pricing-test` cannot tell apart.
  */
 
 export const PRICING_ARM_COOKIE = "dd_pricing";

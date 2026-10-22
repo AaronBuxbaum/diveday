@@ -347,7 +347,7 @@ function rememberPartnerReferral(req: NextRequest, res: Response): void {
  * Unlike the referral cookies this one carries nothing a database trusts as
  * proof of anything, so it needs no navigation check: an `<img>` that plants
  * an arm on someone changes which of two public price pages they read. It is
- * `HttpOnly` and `SameSite=Lax` all the same, and the response that sets it is
+ * `HttpOnly` and `SameSite=Lax` all the same, and every response that carries an arm is
  * `private, no-store`, so no shared cache hands one visitor's arm to another.
  */
 function rememberPricingArm(req: NextRequest, res: Response): string | null {
@@ -356,7 +356,8 @@ function rememberPricingArm(req: NextRequest, res: Response): string | null {
     cookie: req.cookies.get(PRICING_ARM_COOKIE)?.value,
     config: pricingConfig(),
   });
-  if (decision.setCookie && decision.arm && res instanceof NextResponse) {
+  if (!decision.arm) return null;
+  if (decision.setCookie && res instanceof NextResponse) {
     res.cookies.set(PRICING_ARM_COOKIE, decision.arm, {
       httpOnly: true,
       sameSite: "lax",
@@ -364,8 +365,10 @@ function rememberPricingArm(req: NextRequest, res: Response): string | null {
       path: "/",
       maxAge: PRICING_ARM_COOKIE_MAX_AGE,
     });
-    res.headers.set("Cache-Control", "private, no-store");
   }
+  // A page rendered for one arm is never a shared cache's to replay, for a
+  // returning visitor as much as a new one.
+  res.headers.set("Cache-Control", "private, no-store");
   return decision.arm;
 }
 

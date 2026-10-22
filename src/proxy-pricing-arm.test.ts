@@ -75,6 +75,7 @@ describe("the pricing arm (ADR 20261022-pricing-ab-test)", () => {
     const res = await run(request("/", { cookie: "dd_pricing=flat_monthly" }));
     expect(res.headers.get("set-cookie")).toBeNull();
     expect(res.headers.get(ARM_HEADER)).toBe("flat_monthly");
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
   });
 
   it("replaces a cookie that names no arm, and overwrites a forged header", async () => {

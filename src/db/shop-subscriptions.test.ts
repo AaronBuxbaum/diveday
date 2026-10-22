@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { BillingEventEffect } from "@/lib/billing/events";
 import { DEFAULT_PRICING_CONFIG } from "@/lib/billing/pricing-plans";
@@ -360,6 +360,30 @@ describe("applyBillingEffect", () => {
       .from(shopMilestones)
       .where(eq(shopMilestones.shopId, shop.id));
     expect(milestones).toContainEqual({ milestone: "first_paid_month", reachedAt: later(100) });
+  });
+
+  it("adds nothing when the paid invoice's writes fail, so Stripe's retry counts it once", async () => {
+    const { db, shop } = ctx;
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await applyBillingEffect(db, completed(shop.id));
+    const paid: BillingEventEffect = {
+      kind: "invoice_paid",
+      customerId: "cus_a",
+      subscriptionId: "sub_a",
+      amountPaid: 9_900,
+      paidAt: later(100),
+    };
+    // The milestone insert fails after the increment ran.
+    await db.execute(sql`alter table shop_milestones rename to shop_milestones_away`);
+    try {
+      await expect(applyBillingEffect(db, paid)).rejects.toThrow();
+    } finally {
+      await db.execute(sql`alter table shop_milestones_away rename to shop_milestones`);
+    }
+    expect((await getShopSubscription(db, shop.id))?.paidTotalCents).toBe(0);
+    expect(await applyBillingEffect(db, paid)).toBe("first_paid");
+    expect((await getShopSubscription(db, shop.id))?.paidTotalCents).toBe(9_900);
   });
 
   it("passes ignored and malformed events through without a read", async () => {

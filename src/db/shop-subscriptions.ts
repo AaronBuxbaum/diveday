@@ -306,28 +306,32 @@ export async function applyBillingEffect(
         );
         // What the shop has paid DiveDay, the pricing test's revenue (ADR
         // 20261022-pricing-ab-test). Every paid invoice adds once: the
-        // webhook's event ledger claims each delivery before this runs.
-        await db
-          .update(shopSubscriptions)
-          .set({
-            paidTotalCents: sql`${shopSubscriptions.paidTotalCents} + ${effect.amountPaid}`,
-            updatedAt: now,
-          })
-          .where(sameSubscription);
-        if (row.firstPaidAt) return "already_paid";
-        const [first] = await db
-          .update(shopSubscriptions)
-          .set({ firstPaidAt: effect.paidAt, updatedAt: now })
-          .where(and(sameSubscription, isNull(shopSubscriptions.firstPaidAt)))
-          .returning({ shopId: shopSubscriptions.shopId });
-        if (!first) return "already_paid";
-        // The funnel's activation step (ADR 20261007-founder-metrics).
-        await recordShopMilestone(db, {
-          shopId: first.shopId,
-          milestone: "first_paid_month",
-          at: effect.paidAt,
+        // webhook's event ledger claims each delivery before this runs, and
+        // the writes share one transaction, so a failure after the increment
+        // rolls it back before the claim is released for Stripe's retry.
+        return await db.transaction(async (tx) => {
+          await tx
+            .update(shopSubscriptions)
+            .set({
+              paidTotalCents: sql`${shopSubscriptions.paidTotalCents} + ${effect.amountPaid}`,
+              updatedAt: now,
+            })
+            .where(sameSubscription);
+          if (row.firstPaidAt) return "already_paid" as const;
+          const [first] = await tx
+            .update(shopSubscriptions)
+            .set({ firstPaidAt: effect.paidAt, updatedAt: now })
+            .where(and(sameSubscription, isNull(shopSubscriptions.firstPaidAt)))
+            .returning({ shopId: shopSubscriptions.shopId });
+          if (!first) return "already_paid" as const;
+          // The funnel's activation step (ADR 20261007-founder-metrics).
+          await recordShopMilestone(tx, {
+            shopId: first.shopId,
+            milestone: "first_paid_month",
+            at: effect.paidAt,
+          });
+          return "first_paid" as const;
         });
-        return "first_paid";
       }
     }
   } catch (error) {

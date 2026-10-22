@@ -47,7 +47,7 @@ through DiveDay converts better, with adjustable numbers.
 - With the env unset nothing changes; the flat arm's copy is byte-identical.
 - Before the test turns on, the percent arm needs its copy on `/about`, the product and payments
   feature pages, the Rezdy guide's per-booking lines and `/`'s JSON-LD offer.
-- The arm cookie is client-editable: it moves a visitor between arms, never a price.
+- The arm cookie is client-editable: a visitor can pick either arm on offer, never other numbers.
 - A month's statement is never recomputed; a refund recorded after the close is not credited.
 - A meter event timestamped in a Stripe period already invoiced may be billed late or not at all.
 - An override stands with the test off, and `PRICING_FLAT_MONTHLY_CENTS` applies with the test off.
