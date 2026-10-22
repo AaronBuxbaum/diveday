@@ -143,23 +143,24 @@ export function OfflineCounter({
                   size: "boat",
                   // Settled rows sink and dim: the dock copy has no
                   // roster groups to file them under.
-                  className: `w-full justify-between gap-3 text-start${settled ? " opacity-70" : ""}`,
+                  className: `w-full gap-3 text-start${settled ? " opacity-70" : ""}`,
                 })}
               >
                 <StatusMark variant={arrived ? "checked" : "unchecked"} size="md" />
-                <span className="min-w-0 flex-1 truncate">{diver.fullName}</span>
-                {/* **The act, in words, on the row.** A name beside a
+                <span className="min-w-0 flex-1 whitespace-normal break-words">
+                  <span className="block">{diver.fullName}</span>{" "}
+                  {/* **The act, in words, on the row.** A name beside a
                       circle is what every roll-call row on this page also
                       is, and the one thing a crew member must never do
                       here is board somebody by reaching for the wrong
                       list. So the control says which question it answers,
                       in the live counter's own two words. */}
-                {/* `text-base`, matching the live counter's own trailing
+                  {/* `text-base`, matching the live counter's own trailing
                       word rather than shrinking it: this is a wet-thumb
                       surface in sun, and 14px on it is the size the
                       critical-text rule exists about. */}
-                <span className="shrink-0 text-base font-semibold whitespace-nowrap">
-                  {/* **Whose statement is this?** A tap this device made
+                  <span className="mt-1 block text-base font-semibold">
+                    {/* **Whose statement is this?** A tap this device made
                         is this device's own and says so plainly, with roll
                         call's "waiting to send" suffix while it is
                         unsent. A reading that came off `snapshot.checkedIn`
@@ -167,15 +168,16 @@ export function OfflineCounter({
                         saved" hedge every readiness badge on this page
                         wears — somebody may have undone it at the desk
                         since. */}
-                  {!arrived
-                    ? t("shared.offlineManifest.single.counter.notCheckedInLabel")
-                    : arrival.local
-                      ? `${t("shared.offlineManifest.single.counter.checkedInLabel")}${
-                          arrival.pending
-                            ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
-                            : ""
-                        }`
-                      : t("shared.offlineManifest.single.counter.checkedInWhenSavedLabel")}
+                    {!arrived
+                      ? t("shared.offlineManifest.single.counter.notCheckedInLabel")
+                      : arrival.local
+                        ? `${t("shared.offlineManifest.single.counter.checkedInLabel")}${
+                            arrival.pending
+                              ? ` ${t("shared.offlineManifest.single.statePendingSuffix")}`
+                              : ""
+                          }`
+                        : t("shared.offlineManifest.single.counter.checkedInWhenSavedLabel")}
+                  </span>
                 </span>
               </button>
               {refusal}

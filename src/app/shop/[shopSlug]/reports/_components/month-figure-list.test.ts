@@ -61,3 +61,30 @@ describe("the net revenue tile's basis line", () => {
     );
   });
 });
+
+describe("the tip pool being reconciled with the crew shares", () => {
+  it.each([
+    [67_500, "usd", "en-US", "$675.00"],
+    [67_501, "usd", "en-US", "$675.01"],
+    [675, "jpy", "en-US", "¥675"],
+    [67_501, "usd", "es-ES", "675,01 US$"],
+  ])("keeps %i minor units exact for %s in %s", (tipsCents, currency, locale, expected) => {
+    const figures = monthFigureList({
+      report: month({ tipsCents, tipCount: 1 }),
+      baselineReport: null,
+      comparison: null,
+      baselineMonthLabel: null,
+      toDateDay: null,
+      currency,
+      locale,
+      t: staffTranslator(locale),
+      split: null,
+      bookingsDetail: "",
+      revenueOrdersHref: "/orders",
+    });
+    expect(figures.find((figure) => figure.key === "tips")?.value.replace(/\u00a0/g, " ")).toBe(
+      expected,
+    );
+    expect(figures.find((figure) => figure.key === "revenue")?.value).not.toMatch(/[.,]00(?:\D|$)/);
+  });
+});

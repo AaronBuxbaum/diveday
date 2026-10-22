@@ -1,3 +1,4 @@
+import { staffTranslator } from "../src/i18n/staff-messages";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
@@ -11,12 +12,15 @@ import {
   signOut,
 } from "./helpers";
 
+const staff = staffTranslator("en-US");
+
 test.describe("the dive arrival arc", () => {
   signedInAsOwner();
 
   test("carries arrival facts, party help, and the staff hand-off", async ({ page }) => {
     test.setTimeout(60_000);
     const title = `Arrival Arc ${e2eNow().getTime()}`;
+    const helperName = "Marcus Webb";
 
     await createTrip(page, {
       title,
@@ -38,6 +42,11 @@ test.describe("the dive arrival arc", () => {
 
     await page.goto(staffTripPath);
     await openTripAbout(page);
+    // Help can only promise someone assigned to this departure. A newly
+    // created trip has no crew, so roster the helper before the diver asks.
+    await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
+    await page.getByLabel("Assign crew").selectOption({ label: helperName });
+    await expect(page.getByRole("button", { name: `Unassign ${helperName}` })).toBeVisible();
     await page.getByText("Edit details", { exact: true }).click();
     await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
     await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
@@ -104,22 +113,42 @@ test.describe("the dive arrival arc", () => {
     // The demo seed keeps its own open help request (Diego's, from the desk
     // hand-off), so Today lists two; act on this diver's row only. The row
     // leads with the name, so the sentence does not repeat it.
-    const helpRow = page.getByRole("listitem").filter({ hasText: "Arrival Diver" });
-    const waiting = helpRow.filter({ hasText: "Waiting for help: carry gear." });
+    // A diver can also appear in cert, prep, email and contact rows. Keep
+    // identity tied to the help kind even when completion removes its controls.
+    const helpRow = page
+      .getByRole("listitem")
+      .filter({ hasText: "Arrival Diver" })
+      .filter({ has: page.getByText(staff("today.actionKind.helpRequest"), { exact: true }) });
+    await expect(helpRow).toHaveCount(1);
     await expect(helpRow.getByText("Asked for help: carry gear.")).toBeVisible();
-    await helpRow.getByRole("button", { name: "Acknowledge" }).click();
-    await expect(waiting).toBeVisible();
-    await helpRow.getByRole("button", { name: "Mark handled" }).click();
-    // Wait for the write to *land* before navigating away: the action ends in
-    // `revalidateAndRedirect(home, home)`, and Today lists only open requests,
-    // so the row leaving is the destination's own proof. Without it the `goto`
-    // below can preempt the in-flight action and the thread reads "acknowledged".
-    await expect(waiting).not.toBeVisible();
+    await helpRow.getByRole("button", { name: "Arrange help" }).click();
+    const crew = helpRow.getByLabel("Crew member");
+    await expect(crew.locator("option").filter({ hasText: helperName })).toHaveText(helperName);
+    await crew.selectOption({ label: helperName });
+    await helpRow.getByRole("button", { name: "Confirm helper" }).click();
+    await expect(
+      helpRow.getByText(`${helperName} will help with carry gear.`, { exact: true }),
+    ).toBeVisible();
+    await helpRow.getByRole("button", { name: "Help completed" }).click();
+    // The row leaves the active queue after completion; the page-level outcome
+    // keeps Undo available after its unmount.
+    await expect(page.getByText("Help marked complete.", { exact: true })).toBeVisible();
+    await expect(helpRow).not.toBeVisible();
+
+    const diverPage = await page.context().newPage();
+    await diverPage.goto(readyPath);
+    await openThreadStep(diverPage, "dayof");
+    await expect(diverPage.getByText(new RegExp(`${helperName} will help you at`))).toBeVisible();
+    await diverPage.close();
+
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(helpRow).toHaveCount(1);
+    await expect(helpRow.getByText(`${helperName} will help with carry gear.`)).toBeVisible();
 
     await page.goto(readyPath);
     // The response lives in the day-of step's body, and at most one step is
     // open at rest — the spec opens it exactly as the diver would.
     await openThreadStep(page, "dayof");
-    await expect(page.getByText("The crew handled this request.")).toBeVisible();
+    await expect(page.getByText(`${helperName} will help you at`, { exact: false })).toBeVisible();
   });
 });

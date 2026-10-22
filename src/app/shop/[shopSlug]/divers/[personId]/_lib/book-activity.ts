@@ -1,6 +1,22 @@
-/**
- * How many upcoming trips the "book on an upcoming trip" picker scans. Some
- * of the scanned trips get filtered out below (already booked, full), so
- * this is generously larger than what the picker actually shows.
- */
-export const BOOK_ACTIVITY_TRIP_SCAN_LIMIT = 50;
+import type { AppDb } from "@/db/client";
+import { PAGE_SIZE } from "@/db/paging";
+import { offsetUpcomingTripsWithCounts } from "@/db/trips";
+import { bookingPageNumber } from "./record-query";
+
+/** The picker pages eligible departures after excluding this diver's existing seats. */
+export function loadBookingDepartures(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  page: string | string[] | undefined,
+  now: Date,
+) {
+  return offsetUpcomingTripsWithCounts(db, shopId, {
+    hasSpace: true,
+    excludeBookedForPersonId: personId,
+    includeDepartureBuffer: true,
+    limit: PAGE_SIZE.section,
+    page: bookingPageNumber(page),
+    now,
+  });
+}

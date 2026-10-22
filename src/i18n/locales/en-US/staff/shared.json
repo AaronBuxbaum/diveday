@@ -22,7 +22,7 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
     "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
-    "tooBigSuffix": ": that’s over {maxMb}\u00a0MB, so try a smaller photo.",
+    "tooBigSuffix": ": that’s over {maxMb} MB, so try a smaller photo.",
     "choose": "Choose a photo",
     "chooseAnother": "Choose a different photo",
     "chooseOthers": "Choose different photos"
@@ -637,8 +637,8 @@
   "boatWork": {
     "missingSize": "{count} missing a size",
     "kitUnasked": "{count} not asked about kit",
-    "ungatedNitrox": "{count, plural, one {# diver wants nitrox and gets air} other {# divers want nitrox and get air}} unless a card is verified before the boat leaves",
-    "missingContact": "{count, plural, one {# person has} other {# people have}} no emergency contact",
+    "ungatedNitrox": "{count, plural, one {# diver wants nitrox and gets air} other {# divers want nitrox and get air}} unless a card is verified before the boat leaves.",
+    "missingContact": "{count, plural, one {# person has} other {# people have}} no emergency contact.",
     "openOrders": "{count, plural, one {# order} other {# orders}} awaiting payment"
   },
   "payouts": {

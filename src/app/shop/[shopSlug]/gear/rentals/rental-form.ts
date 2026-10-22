@@ -24,6 +24,17 @@ export const SET_PRICE_FIELD = "price-set";
  */
 export const FILL_FIELD_PREFIX = "fill-";
 
+/** Kept-form display state precedes rows; the action only reads the fields above/below. */
+export const CART_UNITS_FIELD = "cart-units";
+export const CART_PAYMENT_FIELD = "cart-payment";
+export const CART_SET_PRICE_FIELD = "cart-set-price";
+export const CART_PRICE_FIELD_PREFIX = "cart-price-";
+export const CART_FILLS_FIELD = "cart-fills";
+export const CART_CONFIRMED_FIELD = "cart-confirmed";
+
+/** Mirrors the action's 40-unit bound without changing its validation. */
+export const KEPT_CART_UNITS_MAX = 40;
+
 /** A flagged soft-goods unit the staffer chose to lend anyway posts `confirm-<unit id>`. */
 export const CONFIRM_FIELD_PREFIX = "confirm-";
 

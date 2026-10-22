@@ -11,6 +11,7 @@ import {
   listDirs,
   measure,
   overlongLines,
+  providerProfiles,
   rules,
 } from "./check-context-budget.mjs";
 
@@ -167,4 +168,13 @@ describe("the per-line cap", () => {
     });
     expect(await overlongLines(root)).toEqual([]);
   });
+});
+
+it("reports a separate canonical provider profile including user-only listings", async () => {
+  const root = await fixture({ agents: "one two", claude: "three", skill: SKILL });
+  await mkdir(path.join(root, ".agents/skills/demo"), { recursive: true });
+  await writeFile(path.join(root, ".agents/skills/demo/SKILL.md"), SKILL);
+  const profiles = await providerProfiles(root);
+  expect(profiles.codex).toBe(5);
+  expect(profiles.excludes).toContain("cache");
 });

@@ -7,6 +7,7 @@ import {
   asc,
   desc,
   eq,
+  exists,
   gte,
   inArray,
   isNotNull,
@@ -50,6 +51,8 @@ export type AvailableGearUnit = {
    * picker the way a lapsed clock is; never proposed.
    */
   serviceConcern: boolean;
+  /** Only the counter's opt-in read includes reasons for units it cannot lend. */
+  unavailable?: "unit_out_of_service" | "unit_unavailable" | null;
 };
 
 /**
@@ -142,6 +145,8 @@ export async function openServiceConcerns(
  * not on the wall either, and offering it packs a boat around an empty peg.
  * One kind, or the whole fleet for a picker that groups. Advisory only —
  * the exclusion constraint is the arbiter, this just keeps the picker honest.
+ * The counter may opt into unavailable rows too, carrying an explicit reason
+ * so a refused selection stays visible for removal; that never lends a unit.
  */
 export async function listAvailableGearUnits(
   db: AppDb,
@@ -151,6 +156,8 @@ export async function listAvailableGearUnits(
     until: CalendarDate;
     todayLocal: CalendarDate;
     kind?: GearItemKind;
+    /** Counter cart only: keep unavailable units visible, never eligible to lend. */
+    includeUnavailable?: boolean;
     /**
      * The day the service clocks are read on; today unless said. The counter
      * reads them on the window's last day (`counterRentalServiceVerdicts`).
@@ -158,6 +165,28 @@ export async function listAvailableGearUnits(
     serviceAsOf?: CalendarDate;
   },
 ): Promise<AvailableGearUnit[]> {
+  const reservedForWindow = db
+    .select({ one: sql`1` })
+    .from(gearReservations)
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        eq(gearReservations.gearItemId, gearItems.id),
+        openGearReservation(),
+        or(
+          and(
+            lte(gearReservations.reservedFrom, options.until),
+            gte(gearReservations.reservedUntil, options.from),
+          ),
+          // An out unit stays unavailable after its promised return day.
+          // A lapsed reservation never collected is still on the wall.
+          and(
+            isNotNull(gearReservations.checkedOutAt),
+            lt(gearReservations.reservedUntil, options.todayLocal),
+          ),
+        ),
+      ),
+    );
   const units = await db
     .select({
       id: gearItems.id,
@@ -166,6 +195,8 @@ export async function listAvailableGearUnits(
       size: gearItems.size,
       nitroxDesignated: gearItems.nitroxDesignated,
       thicknessMm: gearItems.thicknessMm,
+      status: gearItems.status,
+      reserved: options.includeUnavailable ? exists(reservedForWindow) : sql<boolean>`false`,
     })
     .from(gearItems)
     .where(
@@ -173,33 +204,8 @@ export async function listAvailableGearUnits(
         eq(gearItems.shopId, shopId),
         liveGearItem(),
         options.kind ? eq(gearItems.kind, options.kind) : undefined,
-        eq(gearItems.status, "in_service"),
-        notExists(
-          db
-            .select({ one: sql`1` })
-            .from(gearReservations)
-            .where(
-              and(
-                eq(gearReservations.gearItemId, gearItems.id),
-                openGearReservation(),
-                or(
-                  // The asked-for window is spoken for…
-                  and(
-                    lte(gearReservations.reservedFrom, options.until),
-                    gte(gearReservations.reservedUntil, options.from),
-                  ),
-                  // …or the unit is out with a lapsed window and not home yet.
-                  // A never-picked-up lapsed reservation deliberately does NOT
-                  // block: that unit hangs on the wall, and its stale claim is
-                  // the returns panel's to release.
-                  and(
-                    isNotNull(gearReservations.checkedOutAt),
-                    lt(gearReservations.reservedUntil, options.todayLocal),
-                  ),
-                ),
-              ),
-            ),
-        ),
+        options.includeUnavailable ? undefined : eq(gearItems.status, "in_service"),
+        options.includeUnavailable ? undefined : notExists(reservedForWindow),
       ),
     )
     .orderBy(asc(gearItems.label));
@@ -212,14 +218,19 @@ export async function listAvailableGearUnits(
     ),
     openServiceConcerns(db, shopId, units),
   ]);
-  return units.map((unit) => ({
-    ...unit,
-    serviceState: gearServiceState(
-      clocksByItem.get(unit.id) ?? [],
-      options.serviceAsOf ?? options.todayLocal,
-    ),
-    serviceConcern: concerns.has(unit.id),
-  }));
+  return units.map(({ status, reserved, ...unit }) => {
+    const unavailable: AvailableGearUnit["unavailable"] =
+      status !== "in_service" ? "unit_out_of_service" : reserved ? "unit_unavailable" : null;
+    return {
+      ...unit,
+      ...(options.includeUnavailable ? { unavailable } : {}),
+      serviceState: gearServiceState(
+        clocksByItem.get(unit.id) ?? [],
+        options.serviceAsOf ?? options.todayLocal,
+      ),
+      serviceConcern: concerns.has(unit.id),
+    };
+  });
 }
 
 /** The kind of each of these units this shop owns and has not deleted. */

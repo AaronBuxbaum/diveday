@@ -37,14 +37,15 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-
 import { gitReader } from "./stack-map.mjs";
 import { changedLinesByFile, moduleIndex, readModules, symbolReach } from "./symbol-reach.mjs";
+import { resolveVerificationBase } from "./verification-base.mjs";
+import { isVisualSpec, visualSpecs } from "./visual-specs.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Specs this selector never picks: the capture run is `visual-affected.mjs --grep`'s. */
-const NEVER = new Set(["e2e/visual.spec.ts"]);
+
 const MOBILE_SPEC = /(?:^|\/)mobile[^/]*\.spec\.ts$/;
 
 /**
@@ -102,24 +103,8 @@ const TEST_FILE = /\.test\.(?:ts|tsx|mjs)$/;
  * merges the one below holds it through a second parent, so "contains", not first-parent.
  * Falls back to `origin/main`; null only when git cannot answer at all.
  */
-export function stackBase(git) {
-  const head = git(["rev-parse", "HEAD"]);
-  if (!head) return null;
-  const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
-  const own = branch && branch !== "HEAD" ? `origin/${branch}` : null;
-  const listed =
-    git(["for-each-ref", "--format=%(refname:short)", "--merged", "HEAD", "refs/remotes/origin"]) ??
-    "";
-  let best = null;
-  for (const ref of listed.split("\n").filter(Boolean)) {
-    if (ref === own || ref === "origin/main" || ref === "origin/HEAD") continue;
-    if (git(["rev-parse", ref]) === head) continue;
-    const ahead = Number(git(["rev-list", "--count", `origin/main..${ref}`]));
-    if (!Number.isFinite(ahead) || ahead === 0) continue;
-    if (!best || ahead > best.ahead) best = { ref, ahead };
-  }
-  if (best) return best.ref;
-  return git(["rev-parse", "--verify", "--quiet", "origin/main"]) ? "origin/main" : null;
+export function stackBase(git, options) {
+  return resolveVerificationBase(git, options).ref;
 }
 
 /** `git diff -U0` text split per file into removed and added lines. */
@@ -292,7 +277,7 @@ export function readSpecs(root = ROOT) {
     for (const entry of readdirSync(path.join(root, dir), { withFileTypes: true })) {
       const rel = `${dir}/${entry.name}`;
       if (entry.isDirectory()) walk(rel);
-      else if (rel.endsWith(".spec.ts") && !NEVER.has(rel) && !MOBILE_SPEC.test(rel)) {
+      else if (rel.endsWith(".spec.ts") && !isVisualSpec(rel) && !MOBILE_SPEC.test(rel)) {
         specs.set(rel, readFileSync(path.join(root, rel), "utf8"));
       }
     }
@@ -387,7 +372,7 @@ export function selectSpecs({ changed, diff, specs, graph, modules, lines }) {
   const reach = new Map();
   const rank = new Map();
   const note = (map, spec, why) => {
-    if (NEVER.has(spec) || MOBILE_SPEC.test(spec) || !specs.has(spec)) return;
+    if (isVisualSpec(spec) || MOBILE_SPEC.test(spec) || !specs.has(spec)) return;
     if (!map.has(spec)) map.set(spec, new Set());
     map.get(spec).add(why);
   };
@@ -530,7 +515,7 @@ function titlePattern(title) {
  * spec itself. Each value says why. A capture is a screenshot; running it here is what finds the
  * heading it waits for gone (five visual shards, 2026-10-09 to 2026-10-12).
  */
-export function selectCaptures({ changed, diff, source }) {
+export function selectCaptures({ changed, diff, source, file = VISUAL_SPEC }) {
   const picked = new Map();
   if (!source) return picked;
   const blocks = visualBlocks(source);
@@ -554,7 +539,7 @@ export function selectCaptures({ changed, diff, source }) {
   }
   const added =
     diff
-      .get(VISUAL_SPEC)
+      .get(file)
       ?.added.map((line) => line.trim())
       .filter((line) => line.length >= 20) ?? [];
   for (const block of blocks) {
@@ -667,13 +652,19 @@ export function affectedSpecs({ root = ROOT, base, commit, git = gitReader(root)
       selection.rank.delete(spec);
     }
   }
-  let captureSource = "";
-  try {
-    captureSource = readFileSync(path.join(root, VISUAL_SPEC), "utf8");
-  } catch {}
-  const captures = names.some((file) => APP_CHANGE.test(file) || file === VISUAL_SPEC)
-    ? selectCaptures({ changed: names, diff: parseDiff(diffText), source: captureSource })
-    : new Map();
+  const captures = new Map();
+  if (names.some((file) => APP_CHANGE.test(file) || isVisualSpec(file))) {
+    for (const file of visualSpecs(root)) {
+      const selected = selectCaptures({
+        changed: names,
+        diff: parseDiff(diffText),
+        source: readFileSync(path.join(root, file), "utf8"),
+        file,
+      });
+      for (const [title, why] of selected)
+        captures.set(title, new Set([...(captures.get(title) ?? []), ...why]));
+    }
+  }
   return { base: label, changed: names, ...selection, captures };
 }
 

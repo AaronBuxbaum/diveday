@@ -6,18 +6,24 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { INSET_NOTE_BOX, SectionCard } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
 import { getAccountSecurity, getTotpSecret, listAccountSessions } from "@/db/account-security";
 import { getAccountIdForPerson } from "@/db/user-accounts";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import {
+  isCurrentAccountSession,
+  sessionDeviceLabel,
+  sessionUserAgentDetails,
+} from "@/lib/account-session-device";
 import { formatDateTimeTz } from "@/lib/format";
 import { openSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { isStepUpPurpose, type StepUpPurpose, safeStepUpReturnPath } from "@/lib/security-step-up";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
+import { AccountSessionsList } from "./_components/AccountSessionsList";
 import {
   beginTotpEnrollmentAction,
   disableTotpAction,
@@ -105,6 +111,28 @@ export default async function SecurityPage({
     },
   });
   const isEnabled = Boolean(security?.totpEnabledAt);
+  const sessionRows = sessions.map((item) => {
+    const device = sessionDeviceLabel(item.userAgent);
+    const deviceLabel =
+      device.browser || device.os
+        ? [
+            device.browser ? t(`settings.security.browser.${device.browser}`) : null,
+            device.os ? t(`settings.security.os.${device.os}`) : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : t("settings.security.unknownDevice");
+    return {
+      id: item.id,
+      deviceLabel,
+      isCurrent: isCurrentAccountSession(session.user.sessionId, item.id),
+      lastSeen: t("settings.security.lastSeen", {
+        date: formatDateTimeTz(item.updatedAt, locale, shop.timezone),
+      }),
+      userAgent: sessionUserAgentDetails(item.userAgent),
+      ipAddress: item.ipAddress,
+    };
+  });
   return (
     <main className={settingsPaneClass()}>
       <FlashParams params={["notice"]} />
@@ -247,48 +275,21 @@ export default async function SecurityPage({
           title={t("settings.security.sessionsHeading")}
           description={t("settings.security.sessionsDescription")}
         >
-          <ul className="space-y-2">
-            {sessions.map((item) => (
-              // One line, Revoke at its end: the device line takes the room
-              // Revoke leaves and wraps in it, breaking a long unspaced token
-              // (an IPv6 address) rather than running under the button. With
-              // `flex-wrap` and no basis to give up, a real user agent pushed
-              // Revoke onto a second line of its own, the box 12px above the
-              // words and 25px below them (K-448).
-              <li
-                key={item.id}
-                className={`flex items-center gap-3 ${INSET_NOTE_BOX} bg-surface-sunken`}
-              >
-                {/* Each dot glued to the part before it, so a wrapped line
-                    never opens on one (the Print register's K-590). */}
-                <span className="min-w-0 flex-1 break-words">
-                  {item.userAgent ?? t("settings.security.unknownDevice")}
-                  {"\u00a0· "}
-                  {item.ipAddress ?? t("settings.security.unknownIp")}
-                  {"\u00a0· "}
-                  {t("settings.security.lastSeen", {
-                    date: formatDateTimeTz(item.updatedAt, locale, shop.timezone),
-                  })}
-                </span>
-                <form action={revokeSessionAction.bind(null, shopSlug)} className="shrink-0">
-                  <input type="hidden" name="sessionId" value={item.id} />
-                  <SubmitButton
-                    pendingLabel={t("settings.security.revoking")}
-                    className={buttonClass({
-                      variant: "ghost",
-                      size: "sm",
-                      flush: true,
-                      // The row's 12px inset leaves the flush fill 4px from
-                      // the sunken row's edge; the outset ring would cross it.
-                      className: "focus-visible:focus-ring-inset",
-                    })}
-                  >
-                    {t("settings.security.revoke")}
-                  </SubmitButton>
-                </form>
-              </li>
-            ))}
-          </ul>
+          <AccountSessionsList
+            rows={sessionRows}
+            shopSlug={shopSlug}
+            revokeAction={revokeSessionAction}
+            labels={{
+              thisDevice: t("settings.security.thisDevice"),
+              details: t("settings.security.details"),
+              browserDetails: t("settings.security.browserDetails"),
+              networkDetails: t("settings.security.networkDetails"),
+              unknownDevice: t("settings.security.unknownDevice"),
+              unknownIp: t("settings.security.unknownIp"),
+              revoke: t("settings.security.revoke"),
+              revoking: t("settings.security.revoking"),
+            }}
+          />
           <form action={revokeAllSessionsAction.bind(null, shopSlug)} className="mt-4">
             <SubmitButton
               pendingLabel={t("settings.security.revokingAll")}

@@ -12,7 +12,13 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${to}`);
   }),
 }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({ db: "handle" })) }));
+vi.mock("@/db/help-requests", () => ({
+  assignHelpRequestHelper: vi.fn(),
+  completeHelpRequest: vi.fn(),
+  undoHelpRequestCompletion: vi.fn(),
+}));
 vi.mock("@/db/user-accounts", () => ({ dismissOrientation: vi.fn() }));
 vi.mock("@/db/recap", () => ({
   addCrewRecapPhoto: vi.fn(),
@@ -33,6 +39,10 @@ vi.mock("@/lib/navigation", () => ({
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
+const { assignHelpRequestHelper, completeHelpRequest, undoHelpRequestCompletion } = await import(
+  "@/db/help-requests"
+);
+const { revalidatePath } = await import("next/cache");
 const { dismissOrientation } = await import("@/db/user-accounts");
 const { revalidateAndRedirect } = await import("@/lib/navigation");
 const { requireStaffSession } = await import("@/lib/session");
@@ -40,6 +50,7 @@ const {
   deleteCrewRecapPhotoAction,
   deleteRecapPhotoAction,
   dismissOrientationAction,
+  helpRequestAction,
   saveRecapNoteAction,
   sendRecapAction,
   toggleRecapAutoSendPauseAction,
@@ -47,6 +58,124 @@ const {
 } = await import("./actions");
 
 afterEach(() => vi.clearAllMocks());
+
+describe("helpRequestAction", () => {
+  const form = (fields: Record<string, string>) => {
+    const data = new FormData();
+    data.set("expectedRevision", "7");
+    for (const [key, value] of Object.entries(fields)) data.set(key, value);
+    return data;
+  };
+  const signedIn = () =>
+    vi.mocked(requireStaffSession).mockResolvedValue({
+      user: { shopId: "shop-1", shopSlug: "blue-mantis", personId: "person-7" },
+    } as never);
+
+  it("rejects malformed request, helper, and expected status values before opening the db", async () => {
+    signedIn();
+    const previous = null;
+    expect(
+      await helpRequestAction(
+        previous,
+        form({
+          requestId: "bad",
+          helperPersonId: "bad",
+          intent: "assign",
+          expectedStatus: "requested",
+        }),
+      ),
+    ).toMatchObject({ ok: false, reason: "invalid" });
+    expect(
+      await helpRequestAction(
+        previous,
+        form({
+          requestId: "11111111-1111-4111-8111-111111111111",
+          helperPersonId: "22222222-2222-4222-8222-222222222222",
+          intent: "assign",
+          expectedStatus: "anything",
+        }),
+      ),
+    ).toMatchObject({ ok: false, reason: "invalid" });
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it.each(["", "-1", "1.5", "1e2", "2147483648"])(
+    "refuses malformed revision %s without opening the db",
+    async (expectedRevision) => {
+      signedIn();
+      expect(
+        await helpRequestAction(
+          null,
+          form({
+            requestId: "11111111-1111-4111-8111-111111111111",
+            helperPersonId: "22222222-2222-4222-8222-222222222222",
+            intent: "complete",
+            expectedRevision,
+          }),
+        ),
+      ).toMatchObject({ ok: false, reason: "invalid" });
+      expect(getDb).not.toHaveBeenCalled();
+    },
+  );
+
+  it("assigns the submitted crew helper using the session tenant and revalidates Today", async () => {
+    signedIn();
+    vi.mocked(assignHelpRequestHelper).mockResolvedValue({
+      ok: true,
+      request: { revision: 8, helperPersonId: "22222222-2222-4222-8222-222222222222" },
+    } as never);
+    const result = await helpRequestAction(
+      null,
+      form({
+        requestId: "11111111-1111-4111-8111-111111111111",
+        helperPersonId: "22222222-2222-4222-8222-222222222222",
+        intent: "assign",
+        expectedStatus: "acknowledged",
+        expectedRevision: "7",
+      }),
+    );
+    expect(assignHelpRequestHelper).toHaveBeenCalledWith(
+      { db: "handle" },
+      expect.objectContaining({
+        shopId: "shop-1",
+        actorPersonId: "person-7",
+        expectedStatus: "acknowledged",
+        expectedRevision: 7,
+      }),
+    );
+    expect(result).toMatchObject({ ok: true, effect: "assigned" });
+    expect(revalidatePath).toHaveBeenCalledWith("/shop/blue-mantis");
+  });
+
+  it.each([
+    ["complete", completeHelpRequest, "completed"],
+    ["undo", undoHelpRequestCompletion, "undone"],
+  ] as const)("routes %s through the named helper guard", async (intent, action, effect) => {
+    signedIn();
+    vi.mocked(action).mockResolvedValue({
+      ok: true,
+      request: { revision: 8, helperPersonId: "22222222-2222-4222-8222-222222222222" },
+    } as never);
+    const result = await helpRequestAction(
+      null,
+      form({
+        requestId: "11111111-1111-4111-8111-111111111111",
+        helperPersonId: "22222222-2222-4222-8222-222222222222",
+        intent,
+      }),
+    );
+    expect(action).toHaveBeenCalledWith(
+      { db: "handle" },
+      expect.objectContaining({
+        shopId: "shop-1",
+        actorPersonId: "person-7",
+        expectedHelperPersonId: "22222222-2222-4222-8222-222222222222",
+        expectedRevision: 7,
+      }),
+    );
+    expect(result).toMatchObject({ ok: true, effect });
+  });
+});
 
 describe("dismissOrientationAction", () => {
   it("dismisses it for the session's own person and lands back on the home", async () => {

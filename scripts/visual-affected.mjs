@@ -64,6 +64,7 @@ import { importersOf, importGraph, routeOf } from "./e2e-affected.mjs";
 import { listedTests, testListLine } from "./e2e-shard.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { changedLinesByFile, moduleIndex, readModules, symbolReach } from "./symbol-reach.mjs";
+import { visualSpecs } from "./visual-specs.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -88,7 +89,7 @@ export const SMOKE = [
  * `config/env-registry.mjs`: `next.config.ts` and `src/` import it.
  */
 const INERT =
-  /^(?:docs\/|\.claude\/|\.agents\/|infra\/|drizzle\/|extension\/|LICENSE$)|\.md$|\.snap$|(?:^|\/)[^/]+\.test\.(?:ts|tsx|mts|mjs|js)$|^e2e\/(?!visual\.spec\.ts$).+\.spec\.ts$|^(?:\.gitignore|\.gitattributes|\.env\.example|\.coderabbit\.yaml|\.mcp\.json|\.vercelignore|vercel\.json|biome\.json|cdk\.json|skills-lock\.json|pnpm-lock\.yaml|vitest\.config\.ts|drizzle\.config(?:\.prod)?\.ts|next-env\.d\.ts|tsconfig\.tsbuildinfo)$|\.d\.ts$/;
+  /^(?:docs\/|\.claude\/|\.agents\/|infra\/|drizzle\/|extension\/|LICENSE$)|\.md$|\.snap$|(?:^|\/)[^/]+\.test\.(?:ts|tsx|mts|mjs|js)$|^e2e\/(?!visual(?:-[\w-]+)?\.spec\.ts$).+\.spec\.ts$|^(?:\.gitignore|\.gitattributes|\.env\.example|\.coderabbit\.yaml|\.mcp\.json|\.vercelignore|vercel\.json|biome\.json|cdk\.json|skills-lock\.json|pnpm-lock\.yaml|vitest\.config\.ts|drizzle\.config(?:\.prod)?\.ts|next-env\.d\.ts|tsconfig\.tsbuildinfo)$|\.d\.ts$/;
 
 /** `scripts/` and `.github/` are inert except the files the capture or the build runs. */
 const VISUAL_PLUMBING =
@@ -834,6 +835,50 @@ export function lightGrep(lines) {
   return titles.length === 0 ? null : `(?:${titles.join("|")})$`;
 }
 
+/** Each spec owns its line numbers; never apply one file's spans to another. */
+export function selectCaptureFiles({
+  files,
+  report,
+  diff,
+  graph,
+  readSource,
+  linesFor,
+  visualSources = new Map(),
+}) {
+  const results = files.map((file) => {
+    const source = readSource(file);
+    const fileReport = {
+      ...report,
+      suites: report.suites.filter((suite) => path.basename(suite.file) === path.basename(file)),
+    };
+    const changed = diff.changed
+      .filter((name) => !files.includes(name) || name === file)
+      .map((name) => (name === file ? "e2e/visual.spec.ts" : name));
+    const visualLines = linesFor(file);
+    return selectCaptures({
+      ...diff,
+      changed,
+      visualLines,
+      graph,
+      report: fileReport,
+      source,
+      visualSources,
+      helpers: new Map([
+        ...helperBodies(readSource("e2e/helpers.ts")),
+        ...helperBodies(readSource("e2e/visual-harness.ts")),
+        ...helperBodies(source),
+      ]),
+    });
+  });
+  return (
+    results.find((item) => item.mode === "all") ?? {
+      mode: "affected",
+      lines: new Set(results.flatMap((item) => [...item.lines])),
+      why: new Map(results.flatMap((item) => [...item.why])),
+    }
+  );
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const listFile = option(args, "list");
@@ -857,18 +902,14 @@ async function main() {
     if (diff === null) {
       result = { mode: "all", why: `git could not diff against ${base}` };
     } else {
-      const source = readFileSync(path.join(ROOT, "e2e/visual.spec.ts"), "utf8");
-      const visualSources = await collectVisualSources(ROOT);
-      result = selectCaptures({
-        ...diff,
-        graph: importGraph(ROOT),
+      result = selectCaptureFiles({
+        files: visualSpecs(ROOT),
         report,
-        source,
-        visualSources,
-        helpers: new Map([
-          ...helperBodies(readFileSync(path.join(ROOT, "e2e/helpers.ts"), "utf8")),
-          ...helperBodies(source),
-        ]),
+        diff,
+        graph: importGraph(ROOT),
+        visualSources: await collectVisualSources(ROOT),
+        readSource: (file) => readFileSync(path.join(ROOT, file), "utf8"),
+        linesFor: (file) => changedLines(git(["diff", "--unified=0", forkPoint, "--", file]) ?? ""),
       });
     }
   }

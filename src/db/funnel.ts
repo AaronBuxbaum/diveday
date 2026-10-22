@@ -44,6 +44,7 @@ export async function recordSetupRequest(
   db: DbExecutor,
   input: Omit<SetupRequestInput, "currentSystemGuide"> & {
     currentSystemGuide?: string | null;
+    receiptPending?: boolean;
     source: FunnelSource | "unknown";
     locale: string;
     at?: Date;
@@ -62,6 +63,7 @@ export async function recordSetupRequest(
       phone: input.phone,
       source: input.source,
       locale: input.locale,
+      receiptStatus: input.receiptPending ? "pending" : null,
       createdAt: input.at ?? nowDate(),
     })
     .returning();

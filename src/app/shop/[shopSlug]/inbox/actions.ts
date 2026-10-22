@@ -27,6 +27,8 @@ import { uuidParam } from "@/lib/uuid";
 const messageForm = z.object({ messageId: z.string().default(""), done: z.string().optional() });
 
 /** "Mark running late for {trip}" posts the message and the seat the desk chose (issue #2551). */
+const doneMessageForm = messageForm.extend({ receivedAt: z.iso.datetime() });
+
 const lateForm = z.object({
   messageId: z.string().default(""),
   bookingId: z.string().default(""),
@@ -112,14 +114,15 @@ export async function setInboxMessageDoneAction(formData: FormData): Promise<voi
   const db = await getDb();
   if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
 
-  const parsed = parseForm(messageForm, formData);
+  const parsed = parseForm(doneMessageForm, formData);
   const messageId = parsed.ok ? uuidParam(parsed.data.messageId) : null;
   if (!parsed.ok || !messageId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
 
   const done = parsed.data.done !== "false";
+  const receivedAt = new Date(parsed.data.receivedAt);
   const changed = done
-    ? await markInboundAnswered(db, session.user.shopId, messageId)
-    : await reopenInboundMessage(db, session.user.shopId, messageId);
+    ? await markInboundAnswered(db, session.user.shopId, messageId, nowDate(), receivedAt)
+    : await reopenInboundMessage(db, session.user.shopId, messageId, receivedAt);
   revalidateAndRedirect(inbox, changed ? inbox : noticeUrl(inbox, "gone"));
 }
 

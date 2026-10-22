@@ -1,0 +1,79 @@
+{
+  "row-actions": {
+    "paths": ["src/components/RowMenu.tsx", "src/components/RowMenu.test.tsx"],
+    "intent": "Compact row actions retain row context, focus and dismissal.",
+    "visualStates": [
+      "phone menu open near bottom edge",
+      "desktop menu open",
+      "keyboard focus return",
+      "long localized action label"
+    ],
+    "limitations": ["DOM tests prove interaction, not rendered geometry."],
+    "testArgs": ["exec", "vitest", "run", "src/components/RowMenu.test.tsx"],
+    "testCommand": "pnpm exec vitest run src/components/RowMenu.test.tsx"
+  },
+  "feedback": {
+    "paths": ["src/components/UndoToast.tsx", "src/components/UndoToast.test.tsx"],
+    "intent": "A reversible saved action retains Undo until explicitly dismissed; temporary success uses Toast.",
+    "visualStates": ["saved outcome with Undo", "undo pending", "dismissed", "phone long label"],
+    "limitations": ["Do not use durable UndoToast for ordinary transient success."],
+    "testArgs": ["exec", "vitest", "run", "src/components/UndoToast.test.tsx"],
+    "testCommand": "pnpm exec vitest run src/components/UndoToast.test.tsx"
+  },
+  "forms": {
+    "paths": ["src/components/ui/form.tsx", "src/components/ui/form.test.tsx"],
+    "intent": "Validation belongs to the field and preserves its label, hint and error relationships.",
+    "visualStates": ["field error", "long localized label", "keyboard focus", "submit pending"],
+    "limitations": ["Geometry needs the production capture at narrow and desktop widths."],
+    "testArgs": ["exec", "vitest", "run", "src/components/ui/form.test.tsx", "-t", "Field"],
+    "testCommand": "pnpm exec vitest run src/components/ui/form.test.tsx -t Field"
+  },
+  "settings": {
+    "paths": [
+      "src/app/shop/[shopSlug]/settings/_components/SettingsRail.tsx",
+      "src/app/shop/[shopSlug]/settings/_components/SettingsRail.test.tsx"
+    ],
+    "intent": "An editor preserves settings navigation context and exposes its current row.",
+    "visualStates": [
+      "sub-route current row",
+      "phone collapsed navigation",
+      "current row below fold"
+    ],
+    "limitations": [
+      "JSDOM scrolling tests use measured rectangles; capture verifies actual layout."
+    ],
+    "testArgs": [
+      "exec",
+      "vitest",
+      "run",
+      "src/app/shop/[shopSlug]/settings/_components/SettingsRail.test.tsx"
+    ],
+    "testCommand": "pnpm exec vitest run 'src/app/shop/[shopSlug]/settings/_components/SettingsRail.test.tsx'"
+  },
+  "handoff": {
+    "paths": [
+      "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx",
+      "src/db/help-requests.test.ts",
+      "src/db/help-requests.ts"
+    ],
+    "intent": "Show the responsible person, next action and persisted outcome. Use a DB read-back to prove the saved state.",
+    "visualStates": [
+      "request awaiting an owner",
+      "assigned helper named",
+      "completed persisted outcome",
+      "refusal"
+    ],
+    "limitations": [
+      "Existing runnable example proves requested/acknowledged/handled persistence only. It does not implement or endorse that wording as the approved helper-assignment UX; issue #2851 governs the product redesign."
+    ],
+    "testArgs": [
+      "exec",
+      "vitest",
+      "run",
+      "src/db/help-requests.test.ts",
+      "-t",
+      "moves one request"
+    ],
+    "testCommand": "pnpm exec vitest run src/db/help-requests.test.ts -t 'moves one request'"
+  }
+}

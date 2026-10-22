@@ -1,0 +1,74 @@
+[
+  {
+    "file": "overview.jpg",
+    "source": "screenshots/ux-audit-20261021/contact-sheet.jpg",
+    "width": 1950,
+    "height": 2220
+  },
+  {
+    "file": "ready-phone.jpg",
+    "source": "screenshots/ux-audit-detail/booking-ready-fresh-390.png",
+    "width": 390,
+    "height": 2071
+  },
+  {
+    "file": "waiver-phone.jpg",
+    "source": "screenshots/ux-audit-detail/booking-waiver-390.png",
+    "width": 390,
+    "height": 4257
+  },
+  {
+    "file": "cancelled-phone.jpg",
+    "source": "screenshots/ux-audit-detail/booking-cancelled-390.png",
+    "width": 390,
+    "height": 844
+  },
+  {
+    "file": "reports-phone.jpg",
+    "source": "screenshots/ux-audit-detail/shop-blue-mantis-reports-owner-390.png",
+    "width": 390,
+    "height": 4730
+  },
+  {
+    "file": "security-phone.jpg",
+    "source": "screenshots/ux-audit-detail/shop-blue-mantis-settings-security-owner-390.png",
+    "width": 390,
+    "height": 3141
+  },
+  {
+    "file": "today-phone.jpg",
+    "source": "screenshots/ux-audit-detail/shop-blue-mantis-owner-390.png",
+    "width": 390,
+    "height": 2239
+  },
+  {
+    "file": "manifest-captain-phone.jpg",
+    "source": "screenshots/ux-audit-detail/shop-blue-mantis-trips-cdcb97af-b608-4a81-b4bd-d4748786a246-manifest-captain-390.png",
+    "width": 390,
+    "height": 3596
+  },
+  {
+    "file": "search-failed.jpg",
+    "source": "screenshots/ux-audit-search-failure.png",
+    "width": 390,
+    "height": 844
+  },
+  {
+    "file": "search-stale.jpg",
+    "source": "screenshots/ux-audit-search-stale.png",
+    "width": 390,
+    "height": 844
+  },
+  {
+    "file": "draft-return.jpg",
+    "source": "screenshots/ux-audit-draft-return.png",
+    "width": 1280,
+    "height": 900
+  },
+  {
+    "file": "reports-spanish-phone.jpg",
+    "source": "screenshots/ux-audit-detail/shop-blue-mantis-reports-owner-es-390.png",
+    "width": 390,
+    "height": 5254
+  }
+]

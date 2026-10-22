@@ -206,6 +206,9 @@ export function ThreadSections({ context }: { context: ReadyThreadSectionsContex
             {data.moveAsk ? (
               <MoveAsk
                 state={data.moveAsk}
+                tripId={data.trip.id}
+                locale={locale}
+                timeZone={detail.shop.timezone}
                 shopName={detail.shop.name}
                 shopPhone={fullShop?.contactPhone ?? null}
                 action={askToMoveAction.bind(null, token)}
