@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { diveIntentTally } from "@/lib/dive-intent";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { bookings, trips } from "./schema";
 import { demoTodayDepartureStart } from "./seed-clock";
+
+const ctx = fileScopedShopContext({ history: true });
 
 /**
  * The seeded answers exist so the aggregate line has a visual baseline. What
@@ -54,7 +56,7 @@ async function intentsOn(
 
 describe("the seeded dive intents", () => {
   it("puts answers on today's reef boat, and leaves some of its seats silent", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = ctx;
     const answers = await intentsOn(db, shop.id, REEF);
 
     const answered = answers.filter((intent): intent is NonNullable<typeof intent> =>
@@ -83,7 +85,7 @@ describe("the seeded dive intents", () => {
    * without this failing.
    */
   it("writes to exactly one departure in the whole shop", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = ctx;
     const rows = await db
       .select({ tripId: bookings.tripId, intent: bookings.diveIntent })
       .from(bookings)
@@ -96,7 +98,7 @@ describe("the seeded dive intents", () => {
 
   /** The line the baselines are for actually renders, in the reader's words. */
   it("renders as one quiet aggregate that names nobody", async () => {
-    const { db, shop } = await seededShopContext({ history: true });
+    const { db, shop } = ctx;
     const answered = (await intentsOn(db, shop.id, REEF)).filter(Boolean);
     const line = staffDiveIntentLine(staffTranslator("en-US"), diveIntentTally(answered), "en-US");
 
