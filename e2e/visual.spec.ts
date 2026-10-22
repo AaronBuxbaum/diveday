@@ -7156,6 +7156,18 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "dive-sites-library-pin-selected", scheme, {
           beforeShot: async () => {
             await expectPopupInMap(page, selectedPopup);
+            for (const selector of [
+              ".leaflet-site-card__title",
+              ".leaflet-site-card__fact",
+              ".leaflet-site-card__link",
+            ]) {
+              const decisionText = selectedPopup.locator(selector);
+              await expect(decisionText.first()).toBeVisible();
+              const sizes = await decisionText.evaluateAll((nodes) =>
+                nodes.map((node) => Number.parseFloat(getComputedStyle(node).fontSize)),
+              );
+              for (const size of sizes) expect(size).toBeGreaterThanOrEqual(16);
+            }
             const footer = selectedPopup.locator(".leaflet-site-card__link");
             await expect
               .poll(async () => (await footer.boundingBox())?.height ?? 0)
