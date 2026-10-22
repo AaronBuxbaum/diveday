@@ -1116,7 +1116,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
             rows={lead}
             row={stationRowFor(controls)}
             shopSlug={shopSlug}
-            deskLabel={t("shopHome.spine.deskGroupLabel")}
+            t={t}
             desk={
               drafts.length > 0 || (!deskFold && paymentsRow) ? (
                 <>
@@ -1141,7 +1141,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
                 rows={deskFold}
                 row={stationRowFor(controls)}
                 shopSlug={shopSlug}
-                deskLabel={t("shopHome.spine.deskGroupLabel")}
+                t={t}
                 desk={paymentsRow ?? undefined}
               />
             </LedgerGroup>

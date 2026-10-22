@@ -1,7 +1,10 @@
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   blockerActionLabelText,
+  blockerItemText,
   blockerRowText,
+  diverAlsoText,
+  diverItemsText,
   emailDeliveryDetailText,
   emailResendActionText,
   nameListText,
@@ -10,6 +13,8 @@ import {
   owedRefundGroupDetailText,
   owedRefundGroupSubjectText,
   pointingLabelText,
+  type WaiverBatchCode,
+  waiverBatchLabelText,
 } from "@/i18n/today-labels";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
@@ -42,7 +47,7 @@ import type { WelcomeCue } from "./welcome-cue";
  * Words live in the message bundles, not here — `src/i18n/today-labels.ts`
  * maps every code this file produces to its staff-bundle key, and the
  * `src/app`/`src/components` caller does the `t()` call. The one exception is
- * `diverBlockerAction`/`collapseDiverActions` below: they compose a single
+ * `diverBlockerAction`/`oneRowPerDiver` below: they compose a single
  * rendered `TodayAction.detail`/`actionLabel` string, a field several other
  * call sites (`src/db/today.ts`) also fill with a plain string, so it stays
  * `string` rather than forking into a second, code-carrying shape. Those two
@@ -926,7 +931,7 @@ export type TodayAction = {
    * queue renders the inline "copy link"/"resend invoice" control only once
    * `orderId` is present; otherwise the row keeps its `href` fallback to the
    * roster (never a dead button). A collapsed multi-diver row has no single
-   * booking to act on, so `collapseDiverActions` never sets this.
+   * booking to act on, so it never carries this.
    */
   payment?: { bookingId: string; orderId?: string; hostedInvoiceUrl?: string | null };
   /** A one-choice day-of request and its visible staff hand-off state. */
@@ -965,6 +970,23 @@ export type TodayAction = {
    * offers each a "working it anyway" (issue #2678).
    */
   crewAway?: { people: readonly { personId: string; fullName: string }[] };
+  /**
+   * **The diver a row is about, and the short name of each gap it says is
+   * open for them** ("waiver", "emergency contact"), worst first. Set on every
+   * row about one diver's own gap on one boat, so `oneRowPerDiver` can name
+   * each diver once under their boat with every item open for them.
+   */
+  diver?: {
+    personId: string;
+    items: readonly string[];
+    /** Raised from a readiness blocker: it leads a merged row and keeps its own fix and sentence. */
+    readiness?: true;
+  };
+  /**
+   * A row that acts on divers already named in rows of their own (the boat's
+   * one-tap waiver send): it is not counted again as a job.
+   */
+  batch?: true;
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };
@@ -985,7 +1007,7 @@ const WAIVER_CODES = new Set<ReadinessBlockerCode>([
   "guardian_signature_missing",
 ]);
 
-export function isWaiverCode(code: ReadinessBlockerCode): boolean {
+export function isWaiverCode(code: ReadinessBlockerCode): code is WaiverBatchCode {
   return WAIVER_CODES.has(code);
 }
 
@@ -994,7 +1016,7 @@ export function isWaiverCode(code: ReadinessBlockerCode): boolean {
  * the one surface that actually fixes it. Card evidence lives on the person
  * record; waiver, payment, and requirement work lives on the trip roster. The
  * words for `actionLabel`/`groupLabel` live in `src/i18n/today-labels.ts`
- * (`BLOCKER_ACTION_LABEL_KEYS`/`BLOCKER_GROUP_LABEL_KEYS`), keyed by the same
+ * (`BLOCKER_ACTION_LABEL_KEYS`), keyed by the same
  * `ReadinessBlockerCode` — this map only states kind and target.
  */
 export const BLOCKER_ACTIONS: Record<
@@ -1187,13 +1209,19 @@ export function blockerDestination(
     // Waiver rows send in place, so they keep the verb; a card row only opens
     // the person record, so it points instead of pretending to act.
     label: sendsWaiver
-      ? blockerActionLabelText(t, blocker.code, false)
+      ? blockerActionLabelText(t, blocker.code)
       : pointingLabelText(t, target, ctx.fullName),
     href:
       target === "diver"
         ? `/shop/${ctx.shopSlug}/divers/${ctx.personId}`
         : `/shop/${ctx.shopSlug}/trips/${ctx.tripId}#booking-${ctx.bookingId}`,
   };
+}
+
+/** A diver's other blockers, the one that takes longest to clear first (`KIND_SEVERITY`). */
+function worstFirst(blockers: readonly ReadinessBlocker[]): ReadinessBlocker[] {
+  const rank = (blocker: ReadinessBlocker) => KIND_SEVERITY[BLOCKER_ACTIONS[blocker.code].kind];
+  return [...blockers].sort((a, b) => rank(a) - rank(b));
 }
 
 export type DiverBlockerInput = {
@@ -1251,11 +1279,20 @@ export function diverBlockerAction(
     subject: input.fullName,
     context: input.tripTitle,
     departure: { tripId: input.tripId, label: input.tripTitle },
-    detail: blockerRowText(t, blocker, 1),
+    detail: blockerRowText(t, blocker),
     actionLabel: destination.label,
     href: destination.href,
     ...(sendsWaiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
     ...(kind === "payment" ? { payment: { bookingId: input.bookingId } } : {}),
+    // Every blocker the diver owes, the headline first, so the one row that
+    // names them under their boat can say all of it (`oneRowPerDiver`).
+    diver: {
+      personId: input.personId,
+      items: [blocker, ...worstFirst(input.blockers.filter((each) => each !== blocker))].map(
+        (each) => blockerItemText(t, each),
+      ),
+      readiness: true,
+    },
     // Never on a held seat (H-13): the human on this booking may not be the
     // one whose cards are on file, so nobody checks that person's card from
     // here until a staffer confirms who it is. Said outright, not left to
@@ -1269,69 +1306,147 @@ export function diverBlockerAction(
 }
 
 /**
- * Nine divers on one boat all missing a waiver is one job, not nine. Rows are
- * collapsed per departure and per blocker so the queue stays a list of *jobs*;
- * without this, one busy trip buries every other boat's real problem.
+ * **Every blocked diver is a row of their own** (UX delight sheet 2026-10-22,
+ * item 4, Aaron's call 4). The queue used to fold a boat's divers with the
+ * same headline blocker into one counted row ("3 waivers not signed"), so the
+ * desk tapped through to the roster to find out who. Now each blocked diver
+ * is named; `oneRowPerDiver` then folds a diver's other gaps on the same boat
+ * into that one row, and the boat's group caps a long list behind
+ * "and N more" (`NeedsYouGroups`), so a busy boat still cannot bury the rest.
  *
- * A lone diver keeps their own row — a named person is more useful than
- * "1 diver", and it can point straight at their record.
+ * Readiness is a safety surface: this drops nobody. Every diver with an open
+ * blocker yields exactly one row, and a diver with none yields nothing.
  */
-export function collapseDiverActions(
+export function blockedDiverActions(
   divers: readonly DiverBlockerInput[],
   shopSlug: string,
   now: Date,
   t: StaffTranslator = staffTranslator("en-US"),
 ): TodayAction[] {
-  const byTripAndCode = new Map<
-    string,
-    { blocker: ReadinessBlocker; aboard: boolean; rows: DiverBlockerInput[] }
-  >();
+  return divers.flatMap((diver) => diverBlockerAction(diver, shopSlug, now, t) ?? []);
+}
+
+/**
+ * **One tap still sends a boat's waivers** (coordinator, 2026-10-22): the
+ * divers stay named one row each, and when two or more ashore on one boat lead
+ * with the same waiver gap, one row about the boat sends them all — "3 waivers
+ * not signed, not sent yet · Send waivers" — the batch the counted rows used to
+ * carry. Grouped by headline, as that batch was, so a held seat
+ * (`identity_unconfirmed` leads) never gets a waiver from it. Aboard divers keep
+ * their own rows: a send cannot reach somebody already on the boat.
+ */
+export function waiverBatchActions(
+  divers: readonly DiverBlockerInput[],
+  shopSlug: string,
+  now: Date,
+  t: StaffTranslator = staffTranslator("en-US"),
+): TodayAction[] {
+  const byTripAndCode = new Map<string, { code: WaiverBatchCode; rows: DiverBlockerInput[] }>();
   for (const diver of divers) {
     const headline = headlineFor(diver);
-    if (!headline) continue;
-    const { blocker } = headline;
-    // Aboard and ashore never share a row: the one is a question about
-    // somebody on the boat, the other about somebody who can still be stopped.
-    const key = `${diver.tripId}:${headline.aboard ? "aboard:" : ""}${blocker.code}`;
+    if (!headline || headline.aboard || !isWaiverCode(headline.blocker.code)) continue;
+    const key = `${diver.tripId}:${headline.blocker.code}`;
     const bucket = byTripAndCode.get(key);
     if (bucket) bucket.rows.push(diver);
-    else byTripAndCode.set(key, { blocker, aboard: headline.aboard, rows: [diver] });
+    else byTripAndCode.set(key, { code: headline.blocker.code, rows: [diver] });
   }
+  return [...byTripAndCode].flatMap(([key, { code, rows }]) => {
+    const [first] = rows;
+    if (!first || rows.length < 2) return [];
+    return [
+      {
+        id: `waivers:${key}`,
+        kind: "waiver" as const,
+        urgency: urgencyFor(first.startsAt, now),
+        // Built like the open-orders row: a row about the departure renders
+        // its detail, never its subject (layer 3 auditor review, B1).
+        subject: first.tripTitle,
+        context: first.tripTitle,
+        departure: { tripId: first.tripId, label: first.tripTitle },
+        aboutDeparture: true,
+        batch: true as const,
+        detail: blockerRowText(t, { code }, rows.length),
+        actionLabel: waiverBatchLabelText(t, code),
+        href: `/shop/${shopSlug}/trips/${first.tripId}`,
+        waiver: { bookingIds: rows.map((row) => row.bookingId) },
+        dueAt: first.startsAt,
+      },
+    ];
+  });
+}
 
-  const actions: TodayAction[] = [];
-  for (const [key, { blocker, aboard, rows }] of byTripAndCode) {
-    const first = rows[0];
-    if (!first) continue;
-    if (rows.length === 1) {
-      const action = diverBlockerAction(first, shopSlug, now, t);
-      if (action) actions.push(action);
+/**
+ * **Needs you names each diver once per boat** (UX delight sheet 2026-10-22,
+ * item 4). Every row about one diver's own gap on one boat (`diver` set) is
+ * folded into one row: the most pressing of them, by the list's own order
+ * (`sortStationRows`), keeps its kind, its fix and its door, and its detail
+ * becomes every item open for that diver — "waiver, emergency contact". A
+ * diver with one gap keeps the row they had, sentence and all.
+ *
+ * Grouped **by diver inside each boat** (Aaron's call 4): a diver on two boats
+ * is a row under each, because the fix for one departure is not the other's.
+ * Rows that cannot name a person (orders, open seats, crew) pass through.
+ *
+ * Runs after `filterActionsForRoles`, so a row names only the items its reader
+ * may see. The merged row sits where the diver's first row stood.
+ */
+export function oneRowPerDiver(
+  actions: readonly TodayAction[],
+  t: StaffTranslator = staffTranslator("en-US"),
+): TodayAction[] {
+  const keyOf = (action: TodayAction) =>
+    action.diver && action.departure ? `${action.departure.tripId}:${action.diver.personId}` : null;
+  const byDiver = new Map<string, TodayAction[]>();
+  for (const action of actions) {
+    const key = keyOf(action);
+    if (key === null) continue;
+    const rows = byDiver.get(key);
+    if (rows) rows.push(action);
+    else byDiver.set(key, [action]);
+  }
+  const out: TodayAction[] = [];
+  for (const action of actions) {
+    const key = keyOf(action);
+    if (key === null) {
+      out.push(action);
       continue;
     }
-    const { kind } = BLOCKER_ACTIONS[blocker.code];
-    const waiver = isWaiverCode(blocker.code);
-    actions.push({
-      id: `blockers:${key}`,
-      kind: aboard ? "blocked_aboard" : kind,
-      urgency: urgencyFor(first.startsAt, now),
-      // The whole fact is the subject — "9 divers not certified for this
-      // trip." — so the row carries no detail; the names are on the roster
-      // the row opens.
-      subject: blockerRowText(t, blocker, rows.length),
-      context: first.tripTitle,
-      departure: { tripId: first.tripId, label: first.tripTitle },
-      detail: "",
-      // A batch waiver send keeps the verb ("Send waivers"); any other grouped
-      // fix only opens the roster, the one screen that shows all of them.
-      actionLabel: waiver
-        ? blockerActionLabelText(t, blocker.code, true)
-        : pointingLabelText(t, "trip", first.fullName),
-      // Always the roster: it is the one screen that shows all of them at once.
-      href: `/shop/${shopSlug}/trips/${first.tripId}`,
-      ...(waiver ? { waiver: { bookingIds: rows.map((row) => row.bookingId) } } : {}),
-      dueAt: first.startsAt,
-    });
+    const rows = byDiver.get(key);
+    // The group is written where its first row stood, then forgotten.
+    if (!rows) continue;
+    byDiver.delete(key);
+    out.push(diverRow(rows, t));
   }
-  return actions;
+  return out;
+}
+
+/**
+ * One diver's rows on one boat as the one row that names every item.
+ *
+ * **A readiness blocker leads** whatever the list's rank says (layer 3 desk
+ * review, B1): a payment blocker under a rental size lost its invoice control
+ * and its door. And **it keeps its own sentence**, the other gaps after it
+ * (auditor review, B2): "Not cleared to dive by a physician; also waiver" —
+ * never a list of topics that reads a physician's no as paperwork. A row of
+ * boat work alone says its items: "rental size, emergency contact".
+ */
+function diverRow(rows: readonly TodayAction[], t: StaffTranslator): TodayAction {
+  const sorted = sortStationRows(rows);
+  const lead = sorted.find((row) => row.diver?.readiness) ?? sorted[0];
+  if (!lead?.diver) throw new Error("diverRow takes rows about one diver");
+  const items = [
+    ...new Set(
+      [lead, ...sorted.filter((row) => row !== lead)].flatMap((row) => row.diver?.items ?? []),
+    ),
+  ];
+  if (items.length <= 1) return lead;
+  const diver = { ...lead.diver, items };
+  if (!lead.diver.readiness) return { ...lead, detail: diverItemsText(items), diver };
+  return {
+    ...lead,
+    detail: diverAlsoText(t, lead.detail, items.slice(1)),
+    diver,
+  };
 }
 
 /** One email that never reached a diver, with the departure it was about. */
@@ -1437,7 +1552,7 @@ export type OwedRefundInput = {
 /**
  * **Five refunds owed on one cancelled boat is one job, not five.**
  *
- * The same rule {@link collapseDiverActions} applies to blocked divers, applied
+ * The folding the queue once applied to blocked divers, applied
  * to the money a cancelled departure owes: a shop that pulls a charter off the
  * board owes every seat on it, so the queue drew one row per diver and each one
  * repeated "You cancelled the departure and the money couldn’t go back by
@@ -1828,9 +1943,12 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
     desk: sortStationRows(desk),
     tomorrow: {
       stations: tomorrowStations,
-      jobs: tomorrowStations.reduce((total, station) => total + station.rows.length, 0),
+      jobs: tomorrowStations.reduce(
+        (total, station) => total + station.rows.filter(countsAsJob).length,
+        0,
+      ),
     },
-    week: { jobs: weekRows.length, rows: sortStationRows(weekRows) },
+    week: { jobs: weekRows.filter(countsAsJob).length, rows: sortStationRows(weekRows) },
   };
 }
 
@@ -1856,10 +1974,15 @@ export function weekCrewAway(
   return { people: people.size, firstDay: calendarDateInTimezone(soonest, timeZone) };
 }
 
+/** Whether a row is a job of its own: a batch acts on divers already counted (`batch`). */
+export function countsAsJob(action: TodayAction): boolean {
+  return !action.batch;
+}
+
 /** Every row the spine holds, wherever it filed. */
 export function spineJobCount(spine: DaySpine): number {
   return (
-    spine.stations.reduce((total, station) => total + station.rows.length, 0) +
+    spine.stations.reduce((total, station) => total + station.rows.filter(countsAsJob).length, 0) +
     spine.desk.length +
     spine.tomorrow.jobs +
     spine.week.jobs
@@ -2018,7 +2141,7 @@ export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReadi
   const rest = all.filter((action) => !leads(action));
   const paymentsRows = lens.paymentsRow ? 1 : 0;
   const folded = crewsToday && (rest.length > 0 || paymentsRows > 0) ? rest : null;
-  const count = lead.length + (lens.drafts ?? 0) + (folded ? 0 : paymentsRows);
+  const count = lead.filter(countsAsJob).length + (lens.drafts ?? 0) + (folded ? 0 : paymentsRows);
   const next = spine.stations.find((station) => !hasSailed(station.startsAt, lens.now)) ?? null;
   // The sentence names a time, not a boat: every boat leaving at that minute
   // is "the 2:30 PM", so the count is theirs together and cannot change with
@@ -2031,8 +2154,12 @@ export function readNeedsYou(spine: DaySpine, lens: NeedsYouLens): NeedsYouReadi
       : [],
   );
   const dueBeforeNext = next
-    ? lead.filter((action) => action.departure != null && nextTripIds.has(action.departure.tripId))
-        .length
+    ? lead.filter(
+        (action) =>
+          countsAsJob(action) &&
+          action.departure != null &&
+          nextTripIds.has(action.departure.tripId),
+      ).length
     : count;
   return {
     lead,
@@ -2141,6 +2268,40 @@ export function groupByDeparture(rows: readonly TodayAction[]): NeedsYouGroup[] 
   }
   const groups = [...boats.values()];
   return desk.length > 0 ? [...groups, { departure: null, rows: desk }] : groups;
+}
+
+/**
+ * **A long boat stays readable at 390px** (UX delight sheet 2026-10-22, item
+ * 4). Naming each diver turned "9 waivers not signed" into nine rows, so a
+ * boat's group shows its first few and folds the rest behind "and N more",
+ * which opens the full list in place. Nobody is dropped: `shown` and `more`
+ * together are every row, in the ranked order.
+ *
+ * **A danger row or a readiness blocker never folds**: a diver not back
+ * aboard, a medical hold or an unsigned waiver is everyone's to see, however
+ * many there are. A list only one longer than the cap shows whole, because "and 1
+ * more" costs the room of the row it hides (`nameListText`'s rule).
+ */
+export const BOAT_ROWS_SHOWN = 5;
+
+/** Every kind a readiness blocker raises, aboard or ashore: none of them folds. */
+const READINESS_KINDS: ReadonlySet<TodayActionKind> = new Set([
+  "blocked_aboard",
+  ...Object.values(BLOCKER_ACTIONS).map((action) => action.kind),
+]);
+
+export function foldBoatRows(rows: readonly TodayAction[]): {
+  shown: TodayAction[];
+  more: TodayAction[];
+} {
+  // Danger and readiness rows are kept wherever they sit: a fold that hid one
+  // would be the grouping hiding a diver who cannot board (layer 3 auditor
+  // review, note 1). Only boat work and the boat's other chores fold.
+  const danger = (row: TodayAction) =>
+    ACTION_KIND_META[row.kind].tone === "danger" || READINESS_KINDS.has(row.kind);
+  const shown = rows.filter((row, index) => index < BOAT_ROWS_SHOWN || danger(row));
+  const more = rows.filter((row, index) => index >= BOAT_ROWS_SHOWN && !danger(row));
+  return more.length <= 1 ? { shown: [...rows], more: [] } : { shown, more };
 }
 
 /**

@@ -4615,7 +4615,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .getByRole("listitem")
           .filter({ hasText: staffCopy("today.actionKind.blockedAboard") })
-          .filter({ hasText: staffCopy("today.blockerRow.waiverLapsed", { count: 1 }) })
+          .filter({ hasText: staffCopy("today.blockerRow.waiverLapsed") })
           .first()
           .waitFor();
         await capture(page, "today-blocked-aboard", scheme);

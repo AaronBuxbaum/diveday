@@ -13,7 +13,7 @@ import {
 import type { WeeklyDigestEmailSection } from "@/lib/notifications/kinds";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { shopPath } from "@/lib/staff-notices";
-import type { TodayActionKind } from "@/lib/today";
+import { countsAsJob, type TodayActionKind } from "@/lib/today";
 import {
   type DigestWeeks,
   digestWeeks,
@@ -355,7 +355,7 @@ export async function readWeeklyDigestFacts(
   const dealCandidates = new Set([...neverSentDeal].filter((id) => suitedToADeal.has(id)));
   // Today's own rows, counted rather than detected twice (item 24).
   const countKinds = (kinds: ReadonlySet<TodayActionKind>) =>
-    reportsToday.actions.filter((action) => kinds.has(action.kind)).length;
+    reportsToday.actions.filter((action) => countsAsJob(action) && kinds.has(action.kind)).length;
 
   const shared = {
     thisWeek: {
