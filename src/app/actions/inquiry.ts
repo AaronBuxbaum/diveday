@@ -59,7 +59,7 @@ export type { InquiryFormState };
  *
  * `shopSlug`/`courseSlug` are bound server-side from the calling page's own URL
  * params, never taken from the submitted form — the same discipline
- * `joinLastMinuteListAction` uses for `shopSlug`.
+ * `askAnytimeAction` uses for `shopSlug`.
  */
 export async function submitInquiryAction(
   shopSlug: string,

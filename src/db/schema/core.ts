@@ -947,7 +947,7 @@ export const people = pgTable(
      * lives on `issuePersonCourtesyEmailUnsubscribeToken` in
      * `src/db/courtesy-email.ts` (docs features/story-backlog.md "Leo —
      * self-serve email unsubscribe"). Deliberately narrower than
-     * `lastMinuteListEntries.unsubscribedAt`: that column opts a person out of
+     * an anytime lead's `closed_as = 'unsubscribed'`: that opts a person out of
      * a *list they joined*, this one opts a person out of the courtesy
      * notification *kinds* everyone is eligible for, so it can't reuse the
      * same row. Never suppresses booking confirmations, waiver requests, trip

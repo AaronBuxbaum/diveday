@@ -41,9 +41,8 @@ import {
   courses,
   executedDives,
   internalNotes,
-  lastMinuteListEntries,
-  lastMinuteListUnsubscribeTokens,
   leads,
+  leadUnsubscribeTokens,
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
@@ -59,7 +58,6 @@ import {
   rollCallEvents,
   shops,
   specialtyCertifications,
-  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   tripReviews,
   trips,
@@ -1155,13 +1153,6 @@ describe("diver erasure", () => {
       })
       .returning({ id: tripLastMinutePromos.id });
     if (!promo) throw new Error("promo insert failed");
-    await db.insert(tripLastMinutePromoRecipients).values({
-      shopId: shop.id,
-      tripPromoId: promo.id,
-      personId: diver.id,
-      email: "elena@example.com",
-    });
-
     const issued = await issueWaiverRequest(db, {
       shopId: shop.id,
       bookingId,
@@ -1446,14 +1437,19 @@ describe("diver erasure", () => {
     await db
       .insert(leads)
       .values(departureLead({ shopId: shop.id, tripId: trip.id, personId: diver.id }));
-    const [listEntry] = await db
-      .insert(lastMinuteListEntries)
-      .values({ shopId: shop.id, personId: diver.id })
+    const [listLead] = await db
+      .insert(leads)
+      .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId: diver.id })
       .returning();
-    if (!listEntry) throw new Error("last-minute list insert failed");
-    await db.insert(lastMinuteListUnsubscribeTokens).values({
+    if (!listLead) throw new Error("last-minute list insert failed");
+    // The deal went out on her departure row, copied from her last-minute lead.
+    await db
+      .update(leads)
+      .set({ promoId: promo.id, parentLeadId: listLead.id, offeredAt: erasureNow })
+      .where(and(eq(leads.personId, diver.id), eq(leads.scope, "departure")));
+    await db.insert(leadUnsubscribeTokens).values({
       shopId: shop.id,
-      entryId: listEntry.id,
+      leadId: listLead.id,
       tokenHash: "elena-unsub-hash",
     });
     await db.insert(personCourtesyEmailUnsubscribeTokens).values({
@@ -1579,23 +1575,9 @@ describe("diver erasure", () => {
       await db.select().from(internalNotes).where(eq(internalNotes.personId, diver.id)),
     ).toHaveLength(0);
     expect(await db.select().from(leads).where(eq(leads.personId, diver.id))).toHaveLength(0);
-    expect(
-      await db
-        .select()
-        .from(lastMinuteListEntries)
-        .where(eq(lastMinuteListEntries.personId, diver.id)),
-    ).toHaveLength(0);
-    expect(await db.select().from(lastMinuteListUnsubscribeTokens)).toHaveLength(0);
-    // The recipient log keeps its row and loses the address it was sent to
-    // (issue #1607): the shop's record of a deal it sent is its own, and
-    // `person_id` stays pointing at a row that has itself been erased.
-    const promoRecipients = await db
-      .select({ email: tripLastMinutePromoRecipients.email })
-      .from(tripLastMinutePromoRecipients)
-      .where(eq(tripLastMinutePromoRecipients.personId, diver.id));
-    expect(promoRecipients).toHaveLength(1);
-    expect(promoRecipients[0]?.email).not.toContain("elena@example.com");
-    expect(promoRecipients[0]?.email).toContain("@invalid");
+    expect(await db.select().from(leadUnsubscribeTokens)).toHaveLength(0);
+    // Who a deal went to is the departure row it was copied onto, deleted whole
+    // with the diver (the leads assertion above): no address is kept anywhere on it.
     expect(
       await db
         .select()

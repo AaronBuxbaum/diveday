@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { stopBookkeeperByToken } from "@/db/bookkeeper";
 import { getDb } from "@/db/client";
 import { optOutPersonFromCourtesyEmailByToken } from "@/db/courtesy-email";
-import { unsubscribeLastMinuteListEntryByToken } from "@/db/last-minute-list";
+import { unsubscribeAnytimeLeadByToken } from "@/db/leads";
 import { stopShoreAlertsByToken } from "@/db/shore-alert-tokens";
 import { turnOffWeeklyDigestByToken } from "@/db/weekly-digest";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -30,7 +30,7 @@ import { clientIp } from "@/lib/request-ip";
  * server error (security review finding on this task).
  *
  * One route serves every token kind, in the page's order: a last-minute-list
- * entry, a person's courtesy email, a staffer's Monday email, a shore
+ * lead, a person's courtesy email, a staffer's Monday email, a shore
  * contact's roll-call alerts and a bookkeeper's month-end files.
  */
 export async function POST(
@@ -53,7 +53,7 @@ export async function POST(
   if (!limit.allowed) return new NextResponse(null, { status: 429 });
 
   const db = await getDb();
-  const lastMinute = await unsubscribeLastMinuteListEntryByToken(db, { token });
+  const lastMinute = await unsubscribeAnytimeLeadByToken(db, { token });
   if (!lastMinute) {
     const courtesy = await optOutPersonFromCourtesyEmailByToken(db, { token });
     // The third kind: a staffer's own Monday email. The fourth: a shop's

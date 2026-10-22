@@ -28,9 +28,7 @@ export function LastMinuteSendButton({
     const form = containerRef.current?.closest("form");
     if (!form) return;
     const update = () => {
-      setCount(
-        form.querySelectorAll<HTMLInputElement>('input[name="recipientPersonIds"]:checked').length,
-      );
+      setCount(form.querySelectorAll<HTMLInputElement>('input[name="leadId"]:checked').length);
     };
     form.addEventListener("change", update);
     return () => form.removeEventListener("change", update);

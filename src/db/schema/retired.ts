@@ -1,14 +1,17 @@
 import { getTableName, sql } from "drizzle-orm";
 import {
   check,
+  date,
   index,
   integer,
   pgEnum,
   pgTable,
+  text,
   timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { tripLastMinutePromos } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { courseInquiries } from "./courses";
@@ -133,8 +136,104 @@ export const tripInvitations = pgTable(
   ],
 );
 
+/**
+ * A diver opted in, shop-wide, to hear about last-minute deals — deliberately
+ * separate from `tripWaitlistEntries` (per-trip interest in a *full* charter).
+ * `availableFrom`/`availableUntil` are the date range the diver said they're
+ * around; either side null means no bound on that side. See docs ADR
+ * 20260727-last-minute-fill-promos.
+ */
+export const lastMinuteListEntries = pgTable(
+  "last_minute_list_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    availableFrom: date("available_from", { mode: "string" }),
+    availableUntil: date("available_until", { mode: "string" }),
+    /** Null while active; set once the diver unsubscribes, so a blast never emails them again. */
+    unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("last_minute_list_entries_shop_person_unique").on(table.shopId, table.personId),
+    index("last_minute_list_entries_shop_active_idx")
+      .on(table.shopId)
+      .where(sql`${table.unsubscribedAt} is null`),
+    check(
+      "last_minute_list_entries_range",
+      sql`${table.availableFrom} is null or ${table.availableUntil} is null or ${table.availableFrom} <= ${table.availableUntil}`,
+    ),
+  ],
+);
+
+/**
+ * A diver-facing, self-serve bearer link to unsubscribe one last-minute-list
+ * entry (docs features/story-backlog.md "Leo — self-serve email unsubscribe"). A fresh
+ * token is minted for every deal blast rather than one stable token per entry
+ * (mirrors `bookingCapabilities`, not `calendarFeeds`), so an old email's link
+ * keeps working even after a later blast mints another — deliberately never
+ * expires: an expired unsubscribe link would leave someone unable to opt out,
+ * silently, the same reasoning `createBearerToken`'s calendar-feed case
+ * documents. Consuming a token only ever sets `unsubscribedAt`, an idempotent
+ * write, so unlike `bookingCapabilities`/`accountTokens` there is nothing to
+ * mark used or revoke.
+ */
+export const lastMinuteListUnsubscribeTokens = pgTable(
+  "last_minute_list_unsubscribe_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => lastMinuteListEntries.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    issuedAt: appNowTimestamp("issued_at").notNull(),
+  },
+  (table) => [
+    index("last_minute_list_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
+    index("last_minute_list_unsubscribe_tokens_entry_idx").on(table.entryId),
+  ],
+);
+
+/**
+ * Per-diver recipient audit log for last-minute promo blasts.
+ * Records who was sent which deal, when, and with what discount (via tripPromoId).
+ */
+export const tripLastMinutePromoRecipients = pgTable(
+  "trip_last_minute_promo_recipients",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripPromoId: uuid("trip_promo_id")
+      .notNull()
+      .references(() => tripLastMinutePromos.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    email: text("email").notNull(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    index("trip_last_minute_promo_recipients_promo_idx").on(table.tripPromoId),
+    index("trip_last_minute_promo_recipients_person_idx").on(table.personId),
+    index("trip_last_minute_promo_recipients_shop_person_idx").on(table.shopId, table.personId),
+  ],
+);
+
 /** The tables above, by name: still in the database, no longer in the model. */
 export const RETIRED_TABLE_NAMES: readonly string[] = [
   getTableName(tripWaitlistEntries),
   getTableName(tripInvitations),
+  getTableName(lastMinuteListEntries),
+  getTableName(lastMinuteListUnsubscribeTokens),
+  getTableName(tripLastMinutePromoRecipients),
 ];

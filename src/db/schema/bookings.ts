@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
-  date,
   foreignKey,
   index,
   integer,
@@ -656,41 +655,6 @@ export const tripHelpRequests = pgTable(
   ],
 );
 
-/**
- * A diver opted in, shop-wide, to hear about last-minute deals — deliberately
- * separate from `tripWaitlistEntries` (per-trip interest in a *full* charter).
- * `availableFrom`/`availableUntil` are the date range the diver said they're
- * around; either side null means no bound on that side. See docs ADR
- * 20260727-last-minute-fill-promos.
- */
-export const lastMinuteListEntries = pgTable(
-  "last_minute_list_entries",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    personId: uuid("person_id")
-      .notNull()
-      .references(() => people.id),
-    availableFrom: date("available_from", { mode: "string" }),
-    availableUntil: date("available_until", { mode: "string" }),
-    /** Null while active; set once the diver unsubscribes, so a blast never emails them again. */
-    unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("last_minute_list_entries_shop_person_unique").on(table.shopId, table.personId),
-    index("last_minute_list_entries_shop_active_idx")
-      .on(table.shopId)
-      .where(sql`${table.unsubscribedAt} is null`),
-    check(
-      "last_minute_list_entries_range",
-      sql`${table.availableFrom} is null or ${table.availableUntil} is null or ${table.availableFrom} <= ${table.availableUntil}`,
-    ),
-  ],
-);
-
 export const tripLastMinutePromoStatus = pgEnum("trip_last_minute_promo_status", [
   "pending",
   "sent",
@@ -757,33 +721,6 @@ export const tripLastMinutePromos = pgTable(
       "trip_last_minute_promos_one_discount",
       sql`(${table.discountPercent} is null) <> (${table.discountAmountCents} is null)`,
     ),
-  ],
-);
-
-/**
- * Per-diver recipient audit log for last-minute promo blasts.
- * Records who was sent which deal, when, and with what discount (via tripPromoId).
- */
-export const tripLastMinutePromoRecipients = pgTable(
-  "trip_last_minute_promo_recipients",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    tripPromoId: uuid("trip_promo_id")
-      .notNull()
-      .references(() => tripLastMinutePromos.id, { onDelete: "cascade" }),
-    personId: uuid("person_id")
-      .notNull()
-      .references(() => people.id),
-    email: text("email").notNull(),
-    createdAt: appNowTimestamp("created_at").notNull(),
-  },
-  (table) => [
-    index("trip_last_minute_promo_recipients_promo_idx").on(table.tripPromoId),
-    index("trip_last_minute_promo_recipients_person_idx").on(table.personId),
-    index("trip_last_minute_promo_recipients_shop_person_idx").on(table.shopId, table.personId),
   ],
 );
 
@@ -872,11 +809,7 @@ export const bookingCapabilities = pgTable(
 
 export type Booking = typeof bookings.$inferSelect;
 
-export type LastMinuteListEntry = typeof lastMinuteListEntries.$inferSelect;
-
 export type TripLastMinutePromo = typeof tripLastMinutePromos.$inferSelect;
-
-export type TripLastMinutePromoRecipient = typeof tripLastMinutePromoRecipients.$inferSelect;
 
 /**
  * **Which diver's link brought this seat** (ADR 20260908-one-hand, decision 6,

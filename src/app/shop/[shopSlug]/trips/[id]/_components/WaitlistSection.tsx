@@ -7,7 +7,7 @@ import {
 } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
-import { type LastMinuteDepartureBar, ranksBelow } from "@/lib/last-minute-list";
+import { type LastMinuteDepartureBar, ranksBelow } from "@/lib/leads";
 import { publicTripPath } from "@/lib/public-routes";
 import { RosterGroupBand } from "./RosterGroupBand";
 import type { Waitlist } from "./types";

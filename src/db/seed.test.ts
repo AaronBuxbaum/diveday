@@ -17,8 +17,8 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
-  lastMinuteListEntries,
-  lastMinuteListUnsubscribeTokens,
+  leads,
+  leadUnsubscribeTokens,
   orders,
   paymentOperationIntents,
   people,
@@ -134,18 +134,18 @@ describe("resetDemoSchedule", () => {
    * data — which is why the failure appeared to wander between `manifest`,
    * `courses`, and `gear-fit-and-age` rather than pointing at its own cause.
    */
-  it("clears last-minute unsubscribe tokens instead of FK-violating on their entries", async () => {
+  it("clears last-minute unsubscribe tokens instead of FK-violating on their leads", async () => {
     const { db, shop } = ctx;
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: seeded shop has no people");
-    const [entry] = await db
-      .insert(lastMinuteListEntries)
-      .values({ shopId: shop.id, personId: person.id })
+    const [lead] = await db
+      .insert(leads)
+      .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId: person.id })
       .returning();
-    if (!entry) throw new Error("test setup: last-minute entry insert returned no row");
+    if (!lead) throw new Error("test setup: last-minute lead insert returned no row");
     await db
-      .insert(lastMinuteListUnsubscribeTokens)
-      .values({ shopId: shop.id, entryId: entry.id, tokenHash: `hash_${entry.id}` });
+      .insert(leadUnsubscribeTokens)
+      .values({ shopId: shop.id, leadId: lead.id, tokenHash: `hash_${lead.id}` });
 
     // Resolving rather than throwing is the whole assertion.
     await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
@@ -153,8 +153,8 @@ describe("resetDemoSchedule", () => {
     expect(
       await db
         .select()
-        .from(lastMinuteListUnsubscribeTokens)
-        .where(eq(lastMinuteListUnsubscribeTokens.shopId, shop.id)),
+        .from(leadUnsubscribeTokens)
+        .where(eq(leadUnsubscribeTokens.shopId, shop.id)),
     ).toHaveLength(0);
   });
 

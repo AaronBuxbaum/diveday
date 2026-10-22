@@ -9,7 +9,7 @@ import {
   filterEligibleLastMinuteRecipients,
   lastMinuteEntryMatchesTripDate,
   orderLastMinuteRecipients,
-} from "@/lib/last-minute-list";
+} from "@/lib/leads";
 import { unionRequirements } from "@/lib/requirement";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
@@ -25,8 +25,7 @@ import { spendableDivesForTrip } from "./dive-packages";
 import { findSimilarDivers, lastDiveDaysHere, listBookableDivers } from "./divers";
 import { otherSameNamePeople } from "./identity-repoint";
 import { listInviteSuggestions } from "./invite-suggestions";
-import { listLastMinuteList } from "./last-minute-list";
-import { listDepartureLeads } from "./leads";
+import { listDepartureLeads, listOpenAnytimeLeads } from "./leads";
 import { listBookingNotes, listDiverNotesForTrip, listTripActivity } from "./operations";
 import { getTripRosterWithPaymentMarks } from "./payment-marks";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
@@ -121,7 +120,7 @@ export async function getTripGuests(
     // Past divers of this departure's site worth asking (H-130), only while
     // it has a seat to offer.
     isFull(trip) ? null : listInviteSuggestions(db, { shopId: shop.id, tripId, now: nowDate() }),
-    listLastMinuteList(db, shop.id),
+    listOpenAnytimeLeads(db, shop.id),
     listTripLastMinutePromos(db, shop.id, tripId),
     listTripLastMinutePromoRecipients(db, shop.id, tripId),
     listBookingNotes(db, shop.id, tripId),
@@ -144,8 +143,8 @@ export async function getTripGuests(
   // The last-minute pipeline: who said they are around on this date, who among
   // them could actually be cleared for it, and in what order to offer the seat.
   const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, shop.timezone));
-  const lastMinuteMatched = lastMinuteList.filter(({ entry }) =>
-    lastMinuteEntryMatchesTripDate(entry, tripDateIso),
+  const lastMinuteMatched = lastMinuteList.filter(({ lead }) =>
+    lastMinuteEntryMatchesTripDate(lead, tripDateIso),
   );
   // The wait list is the leads the diver asked for; the rest were the shop's own
   // outreach (`asked_by`). One table, two readings.

@@ -550,57 +550,6 @@ export const LEADS_CSV = sharedFile<ShopRow<"leadRows">>({
   },
 });
 
-export const LAST_MINUTE_LIST_CSV = sharedFile<ShopRow<"lastMinuteListRows">>({
-  file: "last_minute_list.csv",
-  columns: [
-    { header: "id", in: "both", value: (row) => row.id },
-    { header: "person_id", in: "shop", value: (row) => row.personId },
-    {
-      header: "person_name",
-      in: "shop",
-      value: (row, { personName }) => personName.get(row.personId),
-    },
-    { header: "available_from", in: "both", value: (row) => row.availableFrom },
-    { header: "available_until", in: "both", value: (row) => row.availableUntil },
-    { header: "unsubscribed_at", in: "both", value: (row) => row.unsubscribedAt },
-    { header: "created_at", in: "both", value: (row) => row.createdAt },
-  ],
-  shop: {
-    rows: ({ lastMinuteListRows }) => lastMinuteListRows,
-    note: EXPORT_FILE_NOTES["last_minute_list.csv"],
-  },
-  diver: {
-    rows: ({ lastMinuteListRows }) => lastMinuteListRows,
-    note: "This diver's opt-in to hear about last-minute deals shop-wide, and the date range they gave.",
-  },
-});
-
-export const TRIP_LAST_MINUTE_PROMO_RECIPIENTS_CSV = sharedFile<
-  ShopRow<"lastMinutePromoRecipientRows">
->({
-  file: "trip_last_minute_promo_recipients.csv",
-  columns: [
-    { header: "id", in: "both", value: (row) => row.id },
-    { header: "trip_promo_id", in: "both", value: (row) => row.tripPromoId },
-    { header: "person_id", in: "shop", value: (row) => row.personId },
-    {
-      header: "person_name",
-      in: "shop",
-      value: (row, { personName }) => personName.get(row.personId),
-    },
-    { header: "email", in: "both", value: (row) => row.email },
-    { header: "created_at", in: "both", value: (row) => row.createdAt },
-  ],
-  shop: {
-    rows: ({ lastMinutePromoRecipientRows }) => lastMinutePromoRecipientRows,
-    note: EXPORT_FILE_NOTES["trip_last_minute_promo_recipients.csv"],
-  },
-  diver: {
-    rows: ({ lastMinutePromoRecipientRows }) => lastMinutePromoRecipientRows,
-    note: "Last-minute deal blasts this diver was sent.",
-  },
-});
-
 export const BOOKING_PAYMENT_EVENTS_CSV = sharedFile<ShopRow<"paymentEventRows">>({
   file: "booking_payment_events.csv",
   columns: [

@@ -23,6 +23,7 @@ import {
   importedPaymentHistory,
   integrationEvents,
   leads,
+  leadUnsubscribeTokens,
   mediaDeletionAttempts,
   orderLineItems,
   orders,
@@ -34,7 +35,6 @@ import {
   rollCallEvents,
   shops,
   tips,
-  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   trips,
   userAccounts,
@@ -669,12 +669,27 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       })
       .returning({ id: tripLastMinutePromos.id });
     if (!promo) throw new Error("fixture insert failed");
-    await db.insert(tripLastMinutePromoRecipients).values({
+    // The deal went out as a departure row copied from the diver's anytime lead,
+    // with a way out of the list.
+    const [anytime] = await db
+      .insert(leads)
+      .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId: diver.id })
+      .returning({ id: leads.id });
+    if (!anytime) throw new Error("fixture insert failed");
+    await db.insert(leads).values({
       shopId: shop.id,
-      tripPromoId: promo.id,
+      scope: "departure",
+      askedBy: "shop",
+      tripId: trip.id,
       personId: diver.id,
-      email: "kwame@example.com",
+      parentLeadId: anytime.id,
+      partySize: 1,
+      promoId: promo.id,
+      offeredAt: new Date("2026-03-01T12:00:00.000Z"),
     });
+    await db
+      .insert(leadUnsubscribeTokens)
+      .values({ shopId: shop.id, leadId: anytime.id, tokenHash: "kwame-token-hash" });
 
     // 6. A staff-typed invoice line, and the hosted pages Stripe mints.
     const [order] = await db
@@ -791,12 +806,15 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     expect(event?.note).toBeNull();
     expect(event?.amountCents).toBe(18000);
 
-    const [recipient] = await db
-      .select()
-      .from(tripLastMinutePromoRecipients)
-      .where(eq(tripLastMinutePromoRecipients.personId, diver.id));
-    expect(recipient).toBeDefined();
-    expect(recipient?.email).not.toBe("kwame@example.com");
+    // The deal's departure row and the list lead it came from go whole, and the
+    // token that named the lead goes first.
+    expect(await db.select().from(leads).where(eq(leads.personId, diver.id))).toEqual([]);
+    expect(
+      await db
+        .select()
+        .from(leadUnsubscribeTokens)
+        .where(eq(leadUnsubscribeTokens.tokenHash, "kwame-token-hash")),
+    ).toEqual([]);
 
     const [waiver] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, record.id));
     expect(waiver?.deliveryError).toBeNull();
@@ -978,85 +996,6 @@ describe("anonymizeDiver — an unfinished form about the erased diver (issue #1
     expect(JSON.stringify(left)).not.toContain("Tomás Herrera");
     expect(JSON.stringify(left)).not.toContain("tomas@example.com");
     expect(JSON.stringify(left)).not.toContain("Pilar Herrera");
-  });
-});
-
-/**
- * **A duplicate person keeps the address the key sweep cannot reach**
- * (issue #1622).
- *
- * `people_shop_email_unique` is partial on live rows, so a soft-deleted
- * duplicate legitimately shares an address with the survivor. Where that
- * duplicate was never merged, `person_id` points at it rather than at the
- * erased record — and a sweep keyed on `person_id` alone leaves the address
- * standing on a table `src/db/export.ts` carries out of the shop.
- *
- * Every other durable address column in the erasure already has this second
- * sweep. This is the one that did not.
- */
-describe("anonymizeDiver — a deal sent to an unmerged duplicate (issue #1622)", () => {
-  it("redacts the address on the duplicate's recipient row too", async () => {
-    const { db, shop, owner } = await erasureFixtures();
-    const shared = "marisol@example.com";
-    const [diver] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Marisol Vega", email: shared })
-      .returning({ id: people.id });
-    if (!diver) throw new Error("fixture insert failed");
-    await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
-    // The duplicate is soft-deleted, which is what makes the shared address
-    // legal under the partial unique index — and what leaves it unmerged.
-    const [duplicate] = await db
-      .insert(people)
-      .values({
-        shopId: shop.id,
-        fullName: "Marisol Vega",
-        email: shared,
-        deletedAt: new Date("2026-02-01T00:00:00.000Z"),
-      })
-      .returning({ id: people.id });
-    if (!duplicate) throw new Error("fixture insert failed");
-
-    const [trip] = await db
-      .select({ id: trips.id })
-      .from(trips)
-      .where(eq(trips.shopId, shop.id))
-      .orderBy(trips.id)
-      .limit(1);
-    if (!trip) throw new Error("expected a seeded departure");
-    const [promo] = await db
-      .insert(tripLastMinutePromos)
-      .values({
-        shopId: shop.id,
-        tripId: trip.id,
-        discountPercent: 15,
-        code: "DUPLICATE15",
-        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
-      })
-      .returning({ id: tripLastMinutePromos.id });
-    if (!promo) throw new Error("fixture insert failed");
-    await db.insert(tripLastMinutePromoRecipients).values([
-      { shopId: shop.id, tripPromoId: promo.id, personId: diver.id, email: shared },
-      { shopId: shop.id, tripPromoId: promo.id, personId: duplicate.id, email: shared },
-    ]);
-
-    const erased = await anonymizeDiver(db, {
-      shopId: shop.id,
-      personId: diver.id,
-      actorPersonId: owner.id,
-    });
-    expect(erased.ok).toBe(true);
-
-    const rows = await db
-      .select()
-      .from(tripLastMinutePromoRecipients)
-      .where(eq(tripLastMinutePromoRecipients.tripPromoId, promo.id));
-    // Both rows survive — how many people a deal reached is the shop's own
-    // record — and neither carries the address any more.
-    expect(rows).toHaveLength(2);
-    expect(rows.map((row) => row.email)).not.toContain(shared);
-    // Redacted per row, so two erased people never collapse into one value.
-    expect(new Set(rows.map((row) => row.email)).size).toBe(2);
   });
 });
 

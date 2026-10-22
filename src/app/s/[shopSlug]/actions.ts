@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db/client";
 import { sendFindMyBookingLinks } from "@/db/find-my-booking";
-import { joinLastMinuteList } from "@/db/last-minute-list";
+import { askAnytime } from "@/db/leads";
 import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -37,7 +37,7 @@ export type LastMinuteListFormState = { error?: string; success?: boolean };
  * checks capacity or a specific trip; it's a standing preference a diver can
  * update anytime by submitting again.
  */
-export async function joinLastMinuteListAction(
+export async function askAnytimeAction(
   shopSlug: string,
   _prev: LastMinuteListFormState,
   formData: FormData,
@@ -74,7 +74,7 @@ export async function joinLastMinuteListAction(
   // tab still shows (ADR 20261005-optional-shop-features).
   if (!shop?.lastMinuteListEnabled) return { error: t("lastMinute.errors.shopUnavailable") };
 
-  await joinLastMinuteList(dbi, {
+  await askAnytime(dbi, {
     shopId: shop.id,
     fullName: parsed.data.fullName,
     email: parsed.data.email,

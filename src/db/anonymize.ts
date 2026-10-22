@@ -106,9 +106,8 @@ import {
   incidentReportPeople,
   incidentReports,
   internalNotes,
-  lastMinuteListEntries,
-  lastMinuteListUnsubscribeTokens,
   leads,
+  leadUnsubscribeTokens,
   lostItems,
   nitroxCertifications,
   notificationDeliveries,
@@ -135,7 +134,6 @@ import {
   staffReplies,
   tips,
   tripChangeEvents,
-  tripLastMinutePromoRecipients,
   tripReviews,
   tripSeries,
   trips,
@@ -960,6 +958,21 @@ async function scrubPersonOnlyRows(
   // live on a name and an address, and is blanked, not deleted
   // (`scrubCourseInquiries`): the two modes sit under one `scope` branch (ADR
   // 20261017-one-lead-with-a-scope, R4).
+  // An anytime lead's unsubscribe tokens name it by foreign key, so they go
+  // first or the delete below would raise 23503 and roll back every other
+  // redaction with it.
+  await tx.delete(leadUnsubscribeTokens).where(
+    and(
+      eq(leadUnsubscribeTokens.shopId, shopId),
+      inArray(
+        leadUnsubscribeTokens.leadId,
+        tx
+          .select({ id: leads.id })
+          .from(leads)
+          .where(and(eq(leads.shopId, shopId), eq(leads.personId, personId))),
+      ),
+    ),
+  );
   await tx
     .delete(leads)
     .where(
@@ -975,51 +988,9 @@ async function scrubPersonOnlyRows(
     .delete(lostItems)
     .where(and(eq(lostItems.shopId, shopId), eq(lostItems.personId, personId)));
 
-  const listEntries = await tx
-    .select({ id: lastMinuteListEntries.id })
-    .from(lastMinuteListEntries)
-    .where(
-      and(eq(lastMinuteListEntries.shopId, shopId), eq(lastMinuteListEntries.personId, personId)),
-    );
-  if (listEntries.length > 0) {
-    const entryIds = listEntries.map((row) => row.id);
-    await tx
-      .delete(lastMinuteListUnsubscribeTokens)
-      .where(inArray(lastMinuteListUnsubscribeTokens.entryId, entryIds));
-    await tx.delete(lastMinuteListEntries).where(inArray(lastMinuteListEntries.id, entryIds));
-  }
   await tx
     .delete(personCourtesyEmailUnsubscribeTokens)
     .where(eq(personCourtesyEmailUnsubscribeTokens.personId, personId));
-
-  // **The last-minute deal's recipient log keeps its row and loses its
-  // address.** `trip_last_minute_promo_recipients` records who was sent which
-  // deal, and it stores the address it went *to* — the diver's own email, as a
-  // NOT NULL column, keyed by `person_id`. Nothing here touched it, so an
-  // erased diver's address survived every deal they were ever offered, and
-  // `src/db/export.ts` carries that table out of the shop in the portable
-  // bundle (found by the sweep issue #1607 asks for).
-  //
-  // Redacted rather than deleted, the shape `user_accounts.email` above takes.
-  // What is left afterwards is a `person_id` pointing at a row that has itself
-  // been erased and nothing else, which is exactly what `course_inquiries`
-  // keeps and for the same reason: it is what makes a replayed erasure reach
-  // the same rows.
-  //
-  // Not "the count of who was mailed would move": it would not. The number a
-  // shop reads is `trip_last_minute_promos.recipient_count`, denormalized at
-  // send time from the messages that actually went out, while these rows are
-  // written for every *attempted* recipient — the two already disagree, and
-  // deleting these would not change either (security review, 2026-09-10).
-  await tx
-    .update(tripLastMinutePromoRecipients)
-    .set({ email: `${redactedUniqueValue("erased")}@invalid` })
-    .where(
-      and(
-        eq(tripLastMinutePromoRecipients.shopId, shopId),
-        eq(tripLastMinutePromoRecipients.personId, personId),
-      ),
-    );
 
   // Staff prose about a person is personal data end to end, and the body column
   // carries a non-blank check, so there is nothing to redact it *to*.
@@ -1882,46 +1853,6 @@ async function scrubImportedHistory(
         dedupeKey: redactedUniqueValue("redacted"),
       })
       .where(eq(priorGearAssignments.id, assignment.id));
-  }
-  return [];
-}
-
-/** The erasure's "last-minute deals" sweep. */
-async function scrubLastMinuteDeals(
-  tx: AppTransaction,
-  ctx: ScrubSectionContext,
-): Promise<ProcessorErasureTargetInput[]> {
-  const { shopId } = ctx;
-  // The key sweep of `trip_last_minute_promo_recipients` is above, with the
-  // rest of this diver's addresses. This is its other half: the address sweep
-  // beside the key sweep, which every other durable address
-  // column here already has (issue #1622). `people_shop_email_unique` is
-  // partial on *live* rows, so a soft-deleted duplicate person legitimately
-  // shares this diver's address — and a duplicate that was never merged keeps
-  // their address on its own recipient rows, where `person_id` cannot reach it.
-  // The same case the send queue and `booking_checkouts` are swept for.
-  //
-  // Each row takes its own redacted value rather than one shared value: nothing
-  // here is unique-indexed today, but a shared sentinel across rows is what
-  // makes two erased people look like one, and `redactedUniqueValue` costs
-  // nothing to call per row.
-  if (ctx.email) {
-    const byAddress = await tx
-      .select({ id: tripLastMinutePromoRecipients.id })
-      .from(tripLastMinutePromoRecipients)
-      .where(
-        and(
-          eq(tripLastMinutePromoRecipients.shopId, shopId),
-          sql`lower(${tripLastMinutePromoRecipients.email}) = ${ctx.email.toLowerCase()}`,
-        ),
-      );
-    for (const row of byAddress) {
-      await tx
-        .update(tripLastMinutePromoRecipients)
-        .set({ email: `${redactedUniqueValue("erased")}@invalid` })
-        .where(eq(tripLastMinutePromoRecipients.id, row.id));
-    }
-    logFuzzyMatch(ctx, "last_minute_recipient_address", byAddress.length);
   }
   return [];
 }
@@ -2916,7 +2847,6 @@ const SCRUB_SECTIONS = [
   scrubReviews,
   scrubPrivateWord,
   scrubImportedHistory,
-  scrubLastMinuteDeals,
   scrubHostedProcessorPages,
   scrubGearRegister,
   scrubBench,

@@ -4,9 +4,10 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
 import type { TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
+import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
-import { joinLastMinuteList } from "./last-minute-list";
+import { askAnytime } from "./leads";
 import { setBookingNitrox } from "./nitrox";
 import { boats, leads, nitroxCertifications, orders, people } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -14,7 +15,6 @@ import { getTodayWork } from "./today";
 import { getDepartureNeeds } from "./today-departure-needs";
 import { pushDepartureRows } from "./today-departure-rows";
 import { rowsContext } from "./today-rows-test-fixtures";
-import { sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { listStaff } from "./trips-crew";
 import { getTripOverview } from "./trips-overview";
@@ -110,7 +110,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     // Somebody to send the deal to. A diver who states no dates is around for
     // every departure — without one on the list the row is correctly absent
     // (the test below), so this is the row's premise, not scenery.
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -134,7 +134,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       .set({ certifiedPassengers: reef.booked + 1 })
       .where(eq(boats.id, reef.boatId));
     expect(reef.capacity - reef.booked).toBeGreaterThan(1);
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -160,7 +160,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     // sharper case than an empty list, because the entry exists and still must
     // not count.
     const nextYear = new Date(nowMs() + 300 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -186,13 +186,13 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       payoutsEnabled: true,
       detailsSubmitted: true,
     });
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
       declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
-    const sent = await sendLastMinuteDealBlast(
+    const sent = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: shop.slug, tripId: reef.id, discountPercent: 25 },
       fakePromotions(),

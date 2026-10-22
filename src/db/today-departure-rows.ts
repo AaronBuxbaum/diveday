@@ -16,7 +16,7 @@ import {
 } from "@/i18n/today-labels";
 import { type BoatWorkItem, boatWorkItems } from "@/lib/boat-work";
 import { PREP_SECTION_ID } from "@/lib/element-id";
-import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
+import { lastMinuteEntryMatchesTripDate } from "@/lib/leads";
 import { publicTripPath } from "@/lib/public-routes";
 import { shopPath } from "@/lib/staff-notices";
 import {

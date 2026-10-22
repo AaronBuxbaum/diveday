@@ -17,7 +17,7 @@ import {
   type CourseTargetInfo,
   filterEligibleLastMinuteRecipients,
   reviewLastMinuteRecipients,
-} from "@/lib/last-minute-list";
+} from "@/lib/leads";
 import { currencySymbol } from "@/lib/money";
 import { promoDiscountOf } from "@/lib/promo-codes";
 import type { CertRequirementSource } from "@/lib/readiness";
@@ -54,6 +54,8 @@ const STATUS_KEYS: Record<TripLastMinutePromo["status"], StaffMessageKey> = {
  * nothing else about the diver belongs on a "who is this going to" list.
  */
 export type LastMinuteDealRecipient = {
+  /** The anytime lead the offer goes to: what the form posts. */
+  leadId: string;
   personId: string;
   fullName: string;
   certification: CertificationSummary | null;
@@ -178,14 +180,14 @@ export function LastMinuteDealSection({
                 // the name on a phone, indented past the box, and takes an
                 // end-aligned column from `sm`.
                 <li
-                  key={recipient.personId}
+                  key={recipient.leadId}
                   className="grid grid-cols-1 items-center gap-x-2 px-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
                 >
                   <label className="flex min-h-11 cursor-pointer select-none items-center gap-2">
                     <input
                       type="checkbox"
-                      name="recipientPersonIds"
-                      value={recipient.personId}
+                      name="leadId"
+                      value={recipient.leadId}
                       defaultChecked
                       className={choiceClass}
                     />

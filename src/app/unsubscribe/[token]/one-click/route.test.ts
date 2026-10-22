@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * try the last-minute-list resolver, fall back to the courtesy-email one, and
  * always answer with a bare status — a mail client acting on
  * `List-Unsubscribe-Post` never reads a body. The mutators themselves are
- * covered against a real database in `src/db/last-minute-list.test.ts` and
+ * covered against a real database in `src/db/lead-anytime.test.ts` and
  * `src/db/courtesy-email.test.ts`.
  */
 
@@ -14,7 +14,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn(async () => ({}) as never) };
 });
 vi.mock("@/db/courtesy-email", () => ({ optOutPersonFromCourtesyEmailByToken: vi.fn() }));
-vi.mock("@/db/last-minute-list", () => ({ unsubscribeLastMinuteListEntryByToken: vi.fn() }));
+vi.mock("@/db/leads", () => ({ unsubscribeAnytimeLeadByToken: vi.fn() }));
 vi.mock("@/db/weekly-digest", () => ({ turnOffWeeklyDigestByToken: vi.fn() }));
 vi.mock("@/db/shore-alert-tokens", () => ({ stopShoreAlertsByToken: vi.fn() }));
 vi.mock("@/db/bookkeeper", () => ({ stopBookkeeperByToken: vi.fn() }));
@@ -25,7 +25,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 });
 
 const { optOutPersonFromCourtesyEmailByToken } = await import("@/db/courtesy-email");
-const { unsubscribeLastMinuteListEntryByToken } = await import("@/db/last-minute-list");
+const { unsubscribeAnytimeLeadByToken } = await import("@/db/leads");
 const { turnOffWeeklyDigestByToken } = await import("@/db/weekly-digest");
 const { stopShoreAlertsByToken } = await import("@/db/shore-alert-tokens");
 const { stopBookkeeperByToken } = await import("@/db/bookkeeper");
@@ -43,7 +43,7 @@ function post(token = TOKEN) {
 
 beforeEach(() => {
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
-  vi.mocked(unsubscribeLastMinuteListEntryByToken).mockResolvedValue(null);
+  vi.mocked(unsubscribeAnytimeLeadByToken).mockResolvedValue(null);
   vi.mocked(optOutPersonFromCourtesyEmailByToken).mockResolvedValue(null);
   vi.mocked(turnOffWeeklyDigestByToken).mockResolvedValue(null);
   vi.mocked(stopShoreAlertsByToken).mockResolvedValue(null);
@@ -55,21 +55,21 @@ afterEach(() => {
 });
 
 describe("POST /unsubscribe/[token]/one-click", () => {
-  it("unsubscribes a last-minute-list entry and answers 200 with no body", async () => {
-    vi.mocked(unsubscribeLastMinuteListEntryByToken).mockResolvedValue({
+  it("unsubscribes a last-minute-list lead and answers 200 with no body", async () => {
+    vi.mocked(unsubscribeAnytimeLeadByToken).mockResolvedValue({
       shopId: "shop-1",
-      entryId: "entry-1",
+      leadId: "lead-1",
     } as never);
 
     const response = await post();
 
     expect(response.status).toBe(200);
     await expect(response.text()).resolves.toBe("");
-    expect(unsubscribeLastMinuteListEntryByToken).toHaveBeenCalledWith({}, { token: TOKEN });
+    expect(unsubscribeAnytimeLeadByToken).toHaveBeenCalledWith({}, { token: TOKEN });
     expect(optOutPersonFromCourtesyEmailByToken).not.toHaveBeenCalled();
   });
 
-  it("falls back to the courtesy-email opt-out when the token is not a last-minute-list entry", async () => {
+  it("falls back to the courtesy-email opt-out when the token is not a last-minute-list lead", async () => {
     const response = await post();
 
     expect(response.status).toBe(200);
@@ -139,7 +139,7 @@ describe("POST /unsubscribe/[token]/one-click", () => {
     const response = await post();
 
     expect(response.status).toBe(429);
-    expect(unsubscribeLastMinuteListEntryByToken).not.toHaveBeenCalled();
+    expect(unsubscribeAnytimeLeadByToken).not.toHaveBeenCalled();
     expect(optOutPersonFromCourtesyEmailByToken).not.toHaveBeenCalled();
   });
 
@@ -170,7 +170,7 @@ describe("POST /unsubscribe/[token]/one-click", () => {
       rateLimitKey("unsubscribe-one-click-ip", "203.0.113.7"),
       RATE_LIMITS.oneClickUnsubscribeByIp,
     );
-    expect(unsubscribeLastMinuteListEntryByToken).not.toHaveBeenCalled();
+    expect(unsubscribeAnytimeLeadByToken).not.toHaveBeenCalled();
     expect(stopBookkeeperByToken).not.toHaveBeenCalled();
   });
 

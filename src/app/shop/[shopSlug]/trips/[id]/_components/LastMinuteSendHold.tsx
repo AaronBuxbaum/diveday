@@ -38,7 +38,7 @@ export function LastMinuteSendHold({
       }}
       copy={copy}
     >
-      <input type="hidden" name="holdKind" value="last_minute_deal" />
+      <input type="hidden" name="holdKind" value="seat_offer" />
       <input type="hidden" name="tripId" value={tripId} />
       {children}
     </SendHold>

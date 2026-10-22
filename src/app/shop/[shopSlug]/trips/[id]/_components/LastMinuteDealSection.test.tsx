@@ -52,7 +52,12 @@ function recipient(
   level: CertificationSummary["level"],
   selfDeclared = false,
 ): LastMinuteDealRecipient {
-  return { personId: `p-${fullName}`, fullName, certification: profile(level, selfDeclared) };
+  return {
+    leadId: `l-${fullName}`,
+    personId: `p-${fullName}`,
+    fullName,
+    certification: profile(level, selfDeclared),
+  };
 }
 
 function requires(minimumCertificationLevel: CertRequirementSource["minimumCertificationLevel"]) {
@@ -176,7 +181,12 @@ describe("LastMinuteDealSection recipient review", () => {
     const { container } = renderSection(
       [
         ...Array.from({ length: 11 }, (_, index) => recipient(`Diver ${index}`, "instructor")),
-        { personId: "p-dee", fullName: "Dee Ferrer", certification: uncertified() },
+        {
+          leadId: "l-dee",
+          personId: "p-dee",
+          fullName: "Dee Ferrer",
+          certification: uncertified(),
+        },
       ],
       { minimumCertificationLevel: null, requiredSpecialties: ["deep"], requiresNitrox: true },
     );
@@ -219,7 +229,12 @@ describe("LastMinuteDealSection recipient review", () => {
     const { container } = renderSection(
       [
         recipient("Hana Kobayashi", "advanced_open_water"),
-        { personId: "p-dee", fullName: "Dee Ferrer", certification: uncertified() },
+        {
+          leadId: "l-dee",
+          personId: "p-dee",
+          fullName: "Dee Ferrer",
+          certification: uncertified(),
+        },
         recipient("Amara Osei", null),
       ],
       requires("advanced_open_water"),
@@ -233,7 +248,14 @@ describe("LastMinuteDealSection recipient review", () => {
 
   it("still says nothing about a bar the departure does not set, for an uncertified joiner", () => {
     const { container } = renderSection(
-      [{ personId: "p-dee", fullName: "Dee Ferrer", certification: uncertified() }],
+      [
+        {
+          leadId: "l-dee",
+          personId: "p-dee",
+          fullName: "Dee Ferrer",
+          certification: uncertified(),
+        },
+      ],
       requires(null),
     );
 

@@ -1,8 +1,21 @@
-import { and, eq, gt, isNotNull, isNull, ne, notExists, notInArray, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  notExists,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
+import { generateLastMinutePromoCode, lastMinuteDealDiscount } from "@/lib/last-minute-list";
 import { offerMailClass } from "@/lib/leads";
+import { minorToMajor } from "@/lib/money";
 import {
   type NotificationDelivery,
   type NotificationProvider,
@@ -10,17 +23,34 @@ import {
   recipientLocale,
 } from "@/lib/notifications";
 import { diverSeatLimit, seatRefusal } from "@/lib/participant-types";
+import type { PromotionProvider } from "@/lib/payments/promotions";
+import { type PromoDiscount, promoDiscountColumns } from "@/lib/promo-codes";
 import { publicTripPath } from "@/lib/public-routes";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
+import { spotsRemaining } from "@/lib/trips";
 import { courseStudentSeatCap, tripAdmissionFor, tripCourseCrewCounts } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
-import { ensureDepartureLead } from "./leads";
+import { ensureDepartureLead, issueLeadUnsubscribeToken, listAnytimeLeadsCovering } from "./leads";
 import { sendNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
-import { bookings, certifications, courses, leads, people, shops, trips } from "./schema";
+import {
+  bookings,
+  certifications,
+  courses,
+  type Lead,
+  leads,
+  people,
+  shops,
+  tripLastMinutePromos,
+  trips,
+} from "./schema";
+import { getShopById } from "./shops";
+import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
+import { promotionProviderFromEnvironment } from "./stripe-providers";
 import { livePerson, liveTrip } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
+import { getTripWithBooked } from "./trips-record";
 
 /**
  * **Offer a seat** (ADR 20261017-one-lead-with-a-scope): the one staff act on a
@@ -43,6 +73,19 @@ export type SeatOfferDelivery = "sent" | "fallback" | "opted_out" | "already_sen
 const OFFER_RESEND_WINDOW_MS = 24 * HOUR_MS;
 
 const parentLead = alias(leads, "parent_lead");
+
+/**
+ * The deal an offer carries into the email: the code, the figure, the shop's
+ * currency (a fixed amount is typed in it) and when the code stops working. It
+ * travels with the send rather than being read back off the lead, because the
+ * promo row is still `pending` while the blast is going out.
+ */
+export type OfferDeal = {
+  code: string;
+  discount: PromoDiscount;
+  currency: string;
+  expiresAt: Date;
+};
 
 /** The shop-scoped lead, diver, departure and shop facts one offer needs. */
 async function getOfferContext(db: AppDb, shopId: string, tripId: string, leadId: string) {
@@ -113,6 +156,8 @@ export async function deliverSeatOffer(
      * item 31).
      */
     sailedStartsAt?: Date;
+    /** The deal this offer carries, when it is the blast of one (`offerSeats`). */
+    deal?: OfferDeal;
     now?: Date;
   },
   provider?: NotificationProvider,
@@ -140,30 +185,315 @@ export async function deliverSeatOffer(
   return (await sendOffer(db, input, context, offeredAt, provider)).delivery;
 }
 
+/** What the deal a held offer carried did: sent under a code, or why nothing went. */
+export type SeatOfferDealOutcome =
+  | { ok: true; promoId: string; code: string; recipientCount: number }
+  | {
+      ok: false;
+      reason:
+        | "invalid_discount"
+        | "trip_unavailable"
+        | "trip_full"
+        | "not_connected"
+        | "no_recipients"
+        | "stripe_failed";
+    };
+
 export type SeatOffersOutcome = {
   results: { leadId: string; delivery: SeatOfferDelivery }[];
+  /** Present only when the offer carried a discount. */
+  deal?: SeatOfferDealOutcome;
 };
+
+/** The discount a held offer carries: a percent, or a fixed amount in minor units. */
+export type SeatOfferDiscount = { percent: number } | { amountCents: number };
 
 /**
  * **The held send's body**: offer a seat to each lead staff ticked, one email
  * apiece. One lead never fails the rest: each answers for itself, and anything
  * but `sent` is the composer fallback on that row. Every lead is read inside
- * this shop and this departure, so an id from another shop or another trip is
- * `fallback` and nothing is written.
+ * this shop, so an id from another shop is `fallback` and nothing is written.
+ *
+ * A **departure** lead is offered as it stands. An **anytime** lead (the
+ * last-minute list) is first copied to a departure row of this trip
+ * (`parent_lead_id` pointing back), because every offer is a departure row; only
+ * the leads that clear `listAnytimeLeadsCovering`'s below-the-bar filter and
+ * whose stated dates cover the day are offered at all, whatever was posted.
+ *
+ * **With a discount, this is the deal** (ADR 20260727-last-minute-fill-promos).
+ * It fails closed on anything ambiguous: a full, past or rehearsal departure, a
+ * shop that cannot take payments, or a Stripe error, and then nothing is sent.
+ * The promo row is written `pending` before either Stripe call, the departure
+ * rows (each with `promo_id`) only after Stripe has minted the code, and the
+ * mail only after those. A diver whose row already took the 24-hour cold-send
+ * window is skipped rather than failing the blast, and is not given the code.
  */
 export async function offerSeats(
   db: AppDb,
-  input: { shopId: string; shopSlug: string; tripId: string; leadIds: string[] },
+  input: {
+    shopId: string;
+    shopSlug: string;
+    tripId: string;
+    leadIds: string[];
+    discount?: SeatOfferDiscount;
+    createdByPersonId?: string;
+  },
   provider?: NotificationProvider,
+  promotions: PromotionProvider = promotionProviderFromEnvironment(),
 ): Promise<SeatOffersOutcome> {
+  const leadIds = [...new Set(input.leadIds)];
+  const tripRow = await getTripWithBooked(db, input.shopId, input.tripId);
+  const found =
+    tripRow && !tripRow.isRehearsal
+      ? await db
+          .select()
+          .from(leads)
+          .where(and(eq(leads.shopId, input.shopId), inArray(leads.id, leadIds)))
+      : [];
+  const byId = new Map(found.map((lead) => [lead.id, lead]));
+
+  // The anytime leads a bulk offer may reach: dates covering the day, an address,
+  // and the below-the-bar filter. Anything else posted is not offered.
+  const eligibleAnytime = new Set<string>();
+  if (tripRow && found.some((lead) => lead.scope === "anytime")) {
+    const covering = await listAnytimeLeadsCovering(db, input.shopId, {
+      id: tripRow.id,
+      startsAt: tripRow.startsAt,
+      course: tripRow.course ?? null,
+    });
+    for (const { lead } of covering.eligible) eligibleAnytime.add(lead.id);
+  }
+  const targets = leadIds.filter((id) => {
+    const lead = byId.get(id);
+    if (!lead) return false;
+    if (lead.scope === "anytime") return eligibleAnytime.has(id);
+    return lead.scope === "departure" && lead.tripId === input.tripId;
+  });
+
+  if (!input.discount) {
+    return {
+      results: await deliverTargets(db, input, leadIds, targets, byId, undefined, provider),
+    };
+  }
+
+  const refused = (reason: Extract<SeatOfferDealOutcome, { ok: false }>["reason"]) => ({
+    results: [],
+    deal: { ok: false, reason } as const,
+  });
+  const discount = lastMinuteDealDiscount({
+    discountPercent: "percent" in input.discount ? input.discount.percent : null,
+    discountAmountCents: "amountCents" in input.discount ? input.discount.amountCents : null,
+  });
+  if (!discount) return refused("invalid_discount");
+  const [shop, account] = await Promise.all([
+    getShopById(db, input.shopId),
+    getShopStripeAccount(db, input.shopId),
+  ]);
+  if (
+    !shop ||
+    !tripRow ||
+    // A rehearsal is never sold or announced (ADR 20261012-rehearsal-departures).
+    tripRow.isRehearsal ||
+    tripRow.status !== "scheduled" ||
+    tripRow.startsAt <= nowDate()
+  ) {
+    return refused("trip_unavailable");
+  }
+  const openSeats = spotsRemaining({ capacity: tripRow.capacity, booked: tripRow.booked });
+  if (openSeats <= 0) return refused("trip_full");
+  if (!canAcceptPayments(account)) return refused("not_connected");
+  const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
+  if (targets.length === 0) return refused("no_recipients");
+
+  const currency = await getShopCurrency(db, input.shopId);
+  const code = generateLastMinutePromoCode(
+    discount.kind === "percent"
+      ? discount.percent
+      : Math.round(minorToMajor(discount.amountCents, currency)),
+  );
+  // Durable evidence before either Stripe call.
+  const [pendingRow] = await db
+    .insert(tripLastMinutePromos)
+    .values({
+      shopId: input.shopId,
+      tripId: input.tripId,
+      ...promoDiscountColumns(discount),
+      code,
+      expiresAt: tripRow.startsAt,
+      // The cap Stripe is about to be given, kept so the checkout can hold the
+      // same cap on the path Stripe cannot see (src/db/promo-caps.ts).
+      maxRedemptions: openSeats,
+      createdByPersonId: input.createdByPersonId,
+    })
+    .returning();
+  if (!pendingRow) throw new Error("offerSeats: promo insert returned no row");
+
+  const stripeResult = await promotions.createTripPromotion({
+    stripeAccountId,
+    code,
+    discount,
+    currency,
+    expiresAt: tripRow.startsAt,
+    maxRedemptions: openSeats,
+    idempotencyKey: pendingRow.id,
+  });
+  if (stripeResult.status !== "created") {
+    await db
+      .update(tripLastMinutePromos)
+      .set({ status: "failed" })
+      .where(eq(tripLastMinutePromos.id, pendingRow.id));
+    return refused("stripe_failed");
+  }
+
+  const deal: OfferDeal = { code, discount, currency, expiresAt: tripRow.startsAt };
+  const results = await deliverTargets(
+    db,
+    input,
+    leadIds,
+    targets,
+    byId,
+    { promoId: pendingRow.id, deal },
+    provider,
+  );
+  const sentCount = results.filter(({ delivery }) => delivery === "sent").length;
+  await db
+    .update(tripLastMinutePromos)
+    .set({
+      status: "sent",
+      stripeCouponId: stripeResult.stripeCouponId,
+      stripePromotionCodeId: stripeResult.stripePromotionCodeId,
+      recipientCount: sentCount,
+    })
+    .where(eq(tripLastMinutePromos.id, pendingRow.id));
+  return {
+    results,
+    deal: { ok: true, promoId: pendingRow.id, code, recipientCount: sentCount },
+  };
+}
+
+/**
+ * Write each target's departure row, then send. A lead that is not a target
+ * (another shop's id, an anytime lead that does not clear the filter) answers
+ * `fallback` with nothing written.
+ */
+async function deliverTargets(
+  db: AppDb,
+  input: { shopId: string; shopSlug: string; tripId: string; createdByPersonId?: string },
+  leadIds: string[],
+  targets: string[],
+  byId: Map<string, Lead>,
+  carried: { promoId: string; deal: OfferDeal } | undefined,
+  provider: NotificationProvider | undefined,
+): Promise<SeatOffersOutcome["results"]> {
+  const targeted = new Set(targets);
   const results: SeatOffersOutcome["results"] = [];
-  for (const leadId of new Set(input.leadIds)) {
+  for (const leadId of leadIds) {
+    const source = byId.get(leadId);
+    if (!source || !targeted.has(leadId)) {
+      results.push({ leadId, delivery: "fallback" });
+      continue;
+    }
+    const row = await departureRowToOffer(db, source, {
+      tripId: input.tripId,
+      createdByPersonId: input.createdByPersonId,
+      promoId: carried?.promoId,
+    });
+    if (row === "window_taken") {
+      results.push({ leadId, delivery: "already_sent" });
+      continue;
+    }
+    if (!row) {
+      results.push({ leadId, delivery: "fallback" });
+      continue;
+    }
     results.push({
       leadId,
-      delivery: await deliverSeatOffer(db, { ...input, leadId }, provider),
+      delivery: await deliverSeatOffer(
+        db,
+        { ...input, leadId: row, ...(carried ? { deal: carried.deal } : {}) },
+        provider,
+      ),
     });
   }
-  return { results };
+  return results;
+}
+
+/**
+ * The departure row an offer goes out on. A departure lead is its own row. An
+ * anytime lead is copied to one for this trip (`parent_lead_id` = the anytime
+ * lead): one row per person per departure, so a diver who already has a row here
+ * (waiting, or invited before) keeps it and it gains the parent and the deal. A
+ * row whose last commercial email is inside the 24-hour window is
+ * `window_taken`, left exactly as it is: the blast skips that diver rather than
+ * failing (#2133). Null when the lead names nobody this shop can write to.
+ */
+async function departureRowToOffer(
+  db: AppDb,
+  source: Lead,
+  input: { tripId: string; createdByPersonId?: string; promoId?: string },
+): Promise<string | "window_taken" | null> {
+  if (source.scope === "departure") {
+    if (
+      source.emailedAt &&
+      nowDate().getTime() - source.emailedAt.getTime() < OFFER_RESEND_WINDOW_MS
+    ) {
+      return "window_taken";
+    }
+    if (input.promoId) {
+      await db
+        .update(leads)
+        .set({ promoId: input.promoId })
+        .where(and(eq(leads.id, source.id), eq(leads.shopId, source.shopId)));
+    }
+    return source.id;
+  }
+  if (source.scope !== "anytime" || !source.personId) return null;
+
+  const find = () =>
+    db
+      .select()
+      .from(leads)
+      .where(
+        and(
+          eq(leads.scope, "departure"),
+          eq(leads.shopId, source.shopId),
+          eq(leads.tripId, input.tripId),
+          eq(leads.personId, source.personId as string),
+        ),
+      )
+      .limit(1);
+  const [inserted] = await db
+    .insert(leads)
+    .values({
+      shopId: source.shopId,
+      scope: "departure",
+      askedBy: "shop",
+      tripId: input.tripId,
+      personId: source.personId,
+      parentLeadId: source.id,
+      createdByPersonId: input.createdByPersonId,
+      partySize: 1,
+      promoId: input.promoId,
+    })
+    .onConflictDoNothing()
+    .returning({ id: leads.id });
+  if (inserted) return inserted.id;
+  const [existing] = await find();
+  if (!existing) return null;
+  if (
+    existing.emailedAt &&
+    nowDate().getTime() - existing.emailedAt.getTime() < OFFER_RESEND_WINDOW_MS
+  ) {
+    return "window_taken";
+  }
+  await db
+    .update(leads)
+    .set({
+      parentLeadId: existing.parentLeadId ?? source.id,
+      ...(input.promoId ? { promoId: input.promoId } : {}),
+    })
+    .where(and(eq(leads.id, existing.id), eq(leads.shopId, source.shopId)));
+  return existing.id;
 }
 
 /**
@@ -173,7 +503,13 @@ export async function offerSeats(
  */
 async function sendClaimedOffer(
   db: AppDb,
-  input: { shopId: string; shopSlug: string; leadId: string; sailedStartsAt?: Date },
+  input: {
+    shopId: string;
+    shopSlug: string;
+    leadId: string;
+    sailedStartsAt?: Date;
+    deal?: OfferDeal;
+  },
   context: OfferContext,
   claim: OfferSendClaim,
   provider: NotificationProvider | undefined,
@@ -195,7 +531,7 @@ type OfferSend = { delivery: SeatOfferDelivery; queued: boolean };
 /** The send itself, once the stamp (and for a commercial offer, the claim) is written. */
 async function sendOffer(
   db: AppDb,
-  input: { shopId: string; shopSlug: string; sailedStartsAt?: Date },
+  input: { shopId: string; shopSlug: string; sailedStartsAt?: Date; deal?: OfferDeal },
   context: OfferContext,
   offeredAt: Date,
   provider: NotificationProvider | undefined,
@@ -233,10 +569,16 @@ async function sendOffer(
   // Before anything about the send itself: a diver who opted out is
   // `opted_out` whether or not this deployment could have emailed them.
   if (person.courtesyEmailOptOutAt) return { delivery: "opted_out", queued: false };
-  const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {
-    shopId: input.shopId,
-    personId: person.id,
-  });
+  // An offer copied from a last-minute-list lead carries that list's own way
+  // out (the lead's token, which closes the lead), the one the diver joined; any
+  // other commercial offer carries the person's courtesy opt-out.
+  const unsubscribeToken =
+    lead.parentLeadId && context.parentScope === "anytime"
+      ? await issueLeadUnsubscribeToken(db, { shopId: input.shopId, leadId: lead.parentLeadId })
+      : await issuePersonCourtesyEmailUnsubscribeToken(db, {
+          shopId: input.shopId,
+          personId: person.id,
+        });
   // A course session's offer carries the course's prerequisite note, so it never
   // implies the diver already qualifies (dive-domain review N3).
   const [course] = trip.courseId
@@ -257,6 +599,18 @@ async function sendOffer(
       partySize: lead.partySize ?? undefined,
       ...(input.sailedStartsAt ? { sailedStartsAt: input.sailedStartsAt } : {}),
       prerequisiteNote,
+      ...(input.deal
+        ? {
+            code: input.deal.code,
+            expiresAt: input.deal.expiresAt,
+            ...(input.deal.discount.kind === "percent"
+              ? { discountPercent: input.deal.discount.percent }
+              : {
+                  discountAmountCents: input.deal.discount.amountCents,
+                  currency: input.deal.currency,
+                }),
+          }
+        : {}),
     },
     provider,
   ).catch(() => ({ status: "failed" as const, retryable: false }));
