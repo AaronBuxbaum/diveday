@@ -6,7 +6,6 @@
       {
         "why": "Three new seams (lib to db values, app to drizzle-orm, the trips barrel): what was left after draining the 2026-10-10 review's list",
         "files": {
-          "src/app/shop/[shopSlug]/_components/ShopChrome.tsx": "0 -> 1",
           "src/lib/auth.ts": "0 -> 3",
           "src/lib/credentials.ts": "0 -> 1",
           "src/lib/dive-declaration.ts": "0 -> 1",
@@ -188,16 +187,7 @@
     ]
   },
   "copy": {
-    "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs.",
-    "//absorbed": [
-      {
-        "why": "The guard learned the || / ?? / ternary fallback shape (2026-10-11 review, item 31); these English fallbacks predate it. Both need a translator where none is held. Each has a follow-up.",
-        "files": {
-          "src/app/actions/waiver-send-types.ts": "0 -> 1",
-          "src/app/shop/[shopSlug]/settings/team/actions.ts": "0 -> 2"
-        }
-      }
-    ]
+    "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs."
   },
   "domain-strings": {
     "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs."
@@ -287,97 +277,54 @@
         "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
         "files": {
           "src/app/api/offline-manifests/sync/route.test.ts": "953 -> 955",
-          "src/app/api/test/seed-trouble-states/route.ts": "2030 -> 2040",
-          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1103 -> 1110",
-          "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": "1267 -> 1281",
           "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1046 -> 1057",
-          "src/app/shop/[shopSlug]/schedule/board/actions.ts": "925 -> 948",
-          "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.test.tsx": "1003 -> 1040",
-          "src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx": "1021 -> 1050",
           "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "961 -> 971",
-          "src/app/shop/[shopSlug]/trips/[id]/actions.ts": "0 -> 990",
-          "src/components/ui/ledger.test.tsx": "1231 -> 1232",
-          "src/db/anonymize.test.ts": "1686 -> 1693",
           "src/db/bookings.test.ts": "3384 -> 3418",
           "src/db/checkouts.test.ts": "2839 -> 2912",
           "src/db/closeout.test.ts": "0 -> 903",
           "src/db/courses.test.ts": "1659 -> 1719",
           "src/db/executed-dives.test.ts": "1082 -> 1085",
-          "src/db/manifests.test.ts": "3678 -> 3725",
           "src/db/no-show.test.ts": "1100 -> 1165",
           "src/db/orders.test.ts": "3097 -> 3163",
           "src/db/recap.test.ts": "2114 -> 2138",
-          "src/db/refunds.test.ts": "1102 -> 1154",
-          "src/db/reminders.test.ts": "0 -> 1078",
           "src/db/retention.test.ts": "1250 -> 1262",
           "src/db/self-declared-cards.test.ts": "1836 -> 1864",
-          "src/db/trips-series.test.ts": "1774 -> 1824",
-          "src/i18n/label-maps.test.ts": "1296 -> 1313",
-          "src/lib/notifications/email.test.ts": "1437 -> 1480",
-          "src/lib/readiness.test.ts": "1482 -> 1585",
           "src/lib/staffing-week.test.ts": "979 -> 1115",
-          "src/lib/waivers.test.ts": "1188 -> 1205",
-          "src/proxy.test.ts": "1204 -> 1241"
-        }
-      },
-      {
-        "why": "merge of origin/main (Fix deploy script, #2590, #2591) into the code review runtime layer: dive-sites.test.ts grew two lines on main",
-        "files": {
-          "src/db/dive-sites.test.ts": "1172 -> 1174"
+          "src/lib/waivers.test.ts": "1188 -> 1205"
         }
       },
       {
         "why": "merge of opportunities batch 6 (#2596, #2597) into the code review runtime layer: the Stripe webhook route and its test, the trip actions authz test and DetailsSection grew on that side",
         "files": {
-          "src/app/api/webhooks/stripe/route.test.ts": "1824 -> 1876",
-          "src/app/api/webhooks/stripe/route.ts": "0 -> 932",
-          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "971 -> 1180",
-          "src/app/shop/[shopSlug]/trips/[id]/actions.ts": "990 -> 1062",
           "src/db/bookings.test.ts": "3418 -> 3540",
-          "src/db/checkouts.test.ts": "2912 -> 2972",
-          "src/db/export.test.ts": "1666 -> 1670",
-          "src/db/seat-claims.test.ts": "1004 -> 1047",
-          "src/db/trips-series.test.ts": "1824 -> 1873",
-          "src/i18n/label-maps.test.ts": "1313 -> 1331"
+          "src/db/seat-claims.test.ts": "1004 -> 1047"
         }
       },
       {
         "why": "merge of #2610, whose stricter length ratchet postdates the cert-check extension's Today diver link and agency-check tests",
         "files": {
-          "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx": "1281 -> 1338",
-          "src/lib/agency-check.test.ts": "0 -> 930",
-          "src/lib/readiness.test.ts": "1585 -> 1614",
-          "src/lib/today.test.ts": "1614 -> 1651"
+          "src/lib/agency-check.test.ts": "0 -> 930"
         }
       },
       {
         "why": "merge of the stack top into fourth-review layer r4-1: both sides added to these files",
         "files": {
-          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1110 -> 1118",
-          "src/db/seat-claims.test.ts": "1047 -> 1478",
-          "src/lib/notifications/email.test.ts": "1480 -> 1494"
+          "src/db/seat-claims.test.ts": "1047 -> 1478"
         }
       },
       {
         "why": "merge of fourth-review layer r4-1 into r4-2: both sides added to these files",
         "files": {
-          "src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx": "1057 -> 1072",
           "src/db/staffing.test.ts": "946 -> 952"
         }
       },
       {
         "why": "merge of the pre-push-gate branch: the file-length half now counts test files, and the 2026-10-14 test review's safety cases (H-104, S2, admission/readiness adversarial tests) grew these before it landed",
         "files": {
-          "src/app/shop/[shopSlug]/orders/page.test.tsx": "927 -> 929",
-          "src/db/anonymize.test.ts": "1693 -> 1695",
-          "src/db/erasure-coverage.test.ts": "1176 -> 1178",
-          "src/db/participant-types.test.ts": "1143 -> 1216",
-          "src/db/readiness.test.ts": "1519 -> 1691",
           "src/db/seat-claims.test.ts": "1047 -> 1094",
           "src/db/self-declared-cards.test.ts": "1864 -> 1865",
           "src/db/waiver-issue.test.ts": "1051 -> 1178",
           "src/db/waivers-medical.test.ts": "0 -> 1004",
-          "src/lib/readiness.test.ts": "1614 -> 1752",
           "src/lib/trip-admission.test.ts": "918 -> 984",
           "src/lib/waivers.test.ts": "1205 -> 1402"
         }
@@ -391,12 +338,6 @@
       {
         "why": "fourth review layer 3 merged layer 2: both sides grew these files",
         "files": {
-          "src/app/api/webhooks/stripe/route.replay.test.ts": "1369 -> 1417",
-          "src/app/api/webhooks/stripe/route.test.ts": "1876 -> 1931",
-          "src/app/api/webhooks/stripe/route.ts": "932 -> 958",
-          "src/db/export.test.ts": "1670 -> 1673",
-          "src/db/orders.test.ts": "3163 -> 3175",
-          "src/db/reporting.test.ts": "1594 -> 1633",
           "src/db/reviews.test.ts": "1004 -> 1034",
           "src/db/work-order-follow-up.test.ts": "0 -> 1213"
         }
@@ -404,64 +345,25 @@
       {
         "why": "fourth review layer 4 merged layer 3: both sides grew these files",
         "files": {
-          "src/app/s/[shopSlug]/trips/[id]/actions.ts": "1118 -> 1131",
           "src/db/trips-queries.test.ts": "1143 -> 1209"
-        }
-      },
-      {
-        "why": "list entries that cannot live in a sibling: export.test.ts column decisions (#2445, #2446, #2425) and the label-maps row for the named buddy alert",
-        "files": {
-          "src/db/export.test.ts": "1670 -> 1673",
-          "src/i18n/label-maps.test.ts": "1327 -> 1334"
-        }
-      },
-      {
-        "why": "merge of PR 2652's stack into r4-3: both sides grew the order page (record payment, dispute sheet) and export.test.ts",
-        "files": {
-          "src/db/export.test.ts": "1673 -> 1675"
         }
       },
       {
         "why": "boat_snags (fifth-loop ideas, item 1) is a new table, and the export, erasure and retention coverage lists each name every table by design: one entry apiece, which no sibling file can hold",
         "files": {
-          "src/db/erasure-coverage.test.ts": "1176 -> 1178",
-          "src/db/export.test.ts": "1670 -> 1673",
           "src/db/retention.test.ts": "1262 -> 1265"
-        }
-      },
-      {
-        "why": "the label-maps table must hold every message-key map in src/i18n by design, and r5-4's PARTY_LEFT_KEYS (why Team up each party left a party) is one more row and its code list, which no sibling file can hold",
-        "files": {
-          "src/i18n/label-maps.test.ts": "1333 -> 1351"
-        }
-      },
-      {
-        "why": "safety layer 2 merged onto ready-for-agent: both sides grew incident-reports.test.ts (held-seat naming, discard and hold)",
-        "files": {
-          "src/db/incident-reports.test.ts": "0 -> 1013"
         }
       },
       {
         "why": "A new departure table (departure_boat_safety_snapshots, issue 2300) is registered in the export, erasure and retention coverage lists, and the manifest and log routes gain one component and its props each (issues 2285, 2300)",
         "files": {
-          "src/db/erasure-coverage.test.ts": "1178 -> 1180",
-          "src/db/export.test.ts": "1672 -> 1675",
           "src/db/retention.test.ts": "1262 -> 1264"
         }
       },
       {
         "why": "label-maps table rows for DEPTH_RANGE_KEYS (#2426): a list that cannot live in a sibling",
         "files": {
-          "src/db/readiness.test.ts": "1519 -> 1522",
-          "src/i18n/label-maps.test.ts": "1334 -> 1349"
-        }
-      },
-      {
-        "why": "w1 review fixes: schema-guard exclusion lists in export.test.ts (#2450, #2598), one expected field in checkouts.test.ts (#2566), notification kind cases in email.test.ts (#2566, #2381); none can live in a sibling",
-        "files": {
-          "src/db/checkouts.test.ts": "2972 -> 2973",
-          "src/db/export.test.ts": "1672 -> 1683",
-          "src/lib/notifications/email.test.ts": "1480 -> 1493"
+          "src/db/readiness.test.ts": "1519 -> 1522"
         }
       },
       {
@@ -473,81 +375,34 @@
       {
         "why": "merge of the safety layer (#2687/#2688) into the ready-for-human batch",
         "files": {
-          "src/app/api/webhooks/stripe/route.ts": "902 -> 923",
-          "src/lib/notifications/index.test.ts": "0 -> 915"
+          "src/app/api/webhooks/stripe/route.ts": "902 -> 923"
         }
       },
       {
         "why": "merge of batches 1-5 (#2058 #2129 #2145 #2225 #2226 #2265) into the safety stack top: the batch 2 seat, ratio and youth-form work grew these on that side; the three test files that grew most moved their new tests to siblings",
         "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/actions.authz.test.ts": "1180 -> 1181",
           "src/db/waiver-issue.test.ts": "1178 -> 1179",
           "src/lib/staffing-week.test.ts": "1115 -> 1125"
-        }
-      },
-      {
-        "why": "Stack integration: b4 (stale invoice void attempts) adds two orders export exclusions and a trouble-state seed; growth arrived in the merge",
-        "files": {
-          "src/app/api/test/seed-trouble-states/route.ts": "2040 -> 2049",
-          "src/db/export.test.ts": "1579 -> 1581"
-        }
-      },
-      {
-        "why": "merge of origin/main (168ee02bd) into the fifth-loop branch: both sides grew these functions and files, each under the limit on its own",
-        "files": {
-          "src/i18n/label-maps.test.ts": "1351 -> 1366"
         }
       },
       {
         "why": "list entries that cannot live in a sibling: the crew_away_acknowledgements table's classification in the erasure, export and retention schema guards (#2678)",
         "files": {
           "src/db/erasure-coverage.test.ts": "1165 -> 1167",
-          "src/db/export.test.ts": "1565 -> 1566",
           "src/db/retention.test.ts": "1248 -> 1251"
-        }
-      },
-      {
-        "why": "crew_away_acknowledgements.csv is one new line in each of the export test's two registries (#2678 records review S2)",
-        "files": {
-          "src/db/export.test.ts": "1566 -> 1567"
         }
       },
       {
         "why": "claude_usage table (ADR 20261018-claude-assists): its row in each schema guard's classification list (retention fixture, export exclusion, erasure closure); none can live in a sibling",
         "files": {
           "src/db/erasure-coverage.test.ts": "1165 -> 1167",
-          "src/db/export.test.ts": "1565 -> 1566",
           "src/db/retention.test.ts": "1250 -> 1263"
-        }
-      },
-      {
-        "why": "assist_results and shop_text_translations tables (ADR 20261018-claude-assists, L3): their rows in each schema guard's classification list (retention fixture, export exclusion, erasure closure); none can live in a sibling",
-        "files": {
-          "src/db/erasure-coverage.test.ts": "1167 -> 1171",
-          "src/db/export.test.ts": "1566 -> 1568",
-          "src/db/retention.test.ts": "1263 -> 1279"
-        }
-      },
-      {
-        "why": "shop_text_translations joins the shop export (security review L3, N2): its rows in the exported-table, expected-file and excluded-column registries, which are one table each and cannot live in a sibling",
-        "files": {
-          "src/db/export.test.ts": "1568 -> 1571"
         }
       },
       {
         "why": "website_setup_drafts table and inbound_messages.assist_intent (ADR 20261018-claude-assists, front-of-house assists): their rows in the schema guards' classification lists (retention fixture, export exclusion, erasure closure and outside-handle census); none can live in a sibling",
         "files": {
-          "src/db/erasure-coverage.test.ts": "1167 -> 1173",
-          "src/db/export.test.ts": "1566 -> 1567",
           "src/db/retention.test.ts": "1263 -> 1271"
-        }
-      },
-      {
-        "why": "merge of L2 (claude-assists front) into L3: both layers add their tables to the same coverage registries",
-        "files": {
-          "src/db/erasure-coverage.test.ts": "1173 -> 1177",
-          "src/db/export.test.ts": "1571 -> 1572",
-          "src/db/retention.test.ts": "1279 -> 1287"
         }
       }
     ],
@@ -629,43 +484,6 @@
     "//": "Code lines (blank and comment lines left out) of the top-level functions under src/app, src/components, src/features, src/db, src/lib still over 300, keyed <file>#<name>. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "//absorbed": [
       {
-        "why": "merge of layer 4 (speed layer grew getTodayWork and ManageTripPage; the erasure split shrank scrub)",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "1043 -> 1047",
-          "src/db/today.ts#getTodayWork": "1438 -> 1453"
-        }
-      },
-      {
-        "why": "Merge of layer A (with the -8-doors base) into layer B: both sides added prune arms to pruneExpiredRecords (layer B: send queue, waiver deliveries, set-up requests; base: lost items, departure notes)",
-        "files": {
-          "src/db/retention.ts#pruneExpiredRecords": "0 -> 445"
-        }
-      },
-      {
-        "why": "Merge of layer 1 into layer 2: seedMoreTrips keeps both the dawn-boat record call (layer 2) and the readiness-gated roll call (#2415)",
-        "files": {
-          "src/db/seed-more-trips.ts#seedMoreTrips": "735 -> 739"
-        }
-      },
-      {
-        "why": "Merge of main (#2547, #2575 to #2580) into the test-split layer: the widened guard (test files, code-line limit) meets files that grew on main after this layer forked",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/_components/trip-about-rows.tsx#tripAboutRows": "0 -> 301"
-        }
-      },
-      {
-        "why": "merge of opportunities batch 6 (#2596, #2597) into the code review runtime layer: the Stripe webhook route and its test, the trip actions authz test and DetailsSection grew on that side",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/_components/DetailsSection.tsx#DetailsSection": "328 -> 329"
-        }
-      },
-      {
-        "why": "merge of #2610, whose stricter length ratchet postdates the cert-check extension's Today diver link and agency-check tests",
-        "files": {
-          "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx#DaySpine": "0 -> 304"
-        }
-      },
-      {
         "why": "safety stack merge onto ready-for-agent: the trip page passes the removed seat (bid, roster) to tripPageNotices",
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "356 -> 358"
@@ -678,29 +496,14 @@
         }
       },
       {
-        "why": "Merge of the UX review stack (PR 2654) into safety layer 3: both sides added a prop to the trip page",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/page.tsx#ManageTripPage": "366 -> 368"
-        }
-      },
-      {
-        "why": "A new departure table (departure_boat_safety_snapshots, issue 2300) is registered in the export, erasure and retention coverage lists, and the manifest and log routes gain one component and its props each (issues 2285, 2300)",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx#IncidentExportPage": "424 -> 425"
-        }
-      },
-      {
         "why": "merge of batches 1-5 (#2058 #2129 #2145 #2225 #2226 #2265) into the safety stack top: the batch 2 seat, ratio and youth-form work grew these on that side; the three test files that grew most moved their new tests to siblings",
         "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "0 -> 308",
-          "src/db/reminders.ts#sendDueReminders": "332 -> 335"
+          "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "0 -> 308"
         }
       },
       {
         "why": "merge of origin/main (168ee02bd) into the fifth-loop branch: both sides grew these functions and files, each under the limit on its own",
         "files": {
-          "src/app/shop/[shopSlug]/gear/rentals/new/_components/CounterRentalCart.tsx#CounterRentalCart": "0 -> 309",
-          "src/app/shop/[shopSlug]/gear/rentals/new/page.tsx#RentOutPage": "0 -> 303",
           "src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx#buildArrivalDesk": "0 -> 310",
           "src/app/shop/[shopSlug]/trips/[id]/_components/roster-seat.ts#rosterSeat": "308 -> 315"
         }
@@ -779,38 +582,9 @@
     "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
     "//absorbed": [
       {
-        "why": "The register page carries the Gear section's tab strip (Register, Work orders) since the bench became its second tab (ADR 20261008-gear-work-orders)",
-        "files": {}
-      },
-      {
         "why": "safety stack merge onto ready-for-agent: the trip page passes the removed seat (bid, roster) to tripPageNotices",
         "files": {
           "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "511 -> 513"
-        }
-      },
-      {
-        "why": "merge of PR 2652's stack into r4-3: both sides grew the order page (record payment, dispute sheet) and export.test.ts",
-        "files": {
-          "src/app/shop/[shopSlug]/orders/[id]/page.tsx": "0 -> 401"
-        }
-      },
-      {
-        "why": "merge of PR 2652's stack into r4-5: the base thinned the trip route and this layer added its departure-needs read to the pulse",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "511 -> 521"
-        }
-      },
-      {
-        "why": "Merge of the UX review stack (PR 2654) into safety layer 3: both sides added a prop to the trip page",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/page.tsx": "521 -> 523"
-        }
-      },
-      {
-        "why": "A new departure table (departure_boat_safety_snapshots, issue 2300) is registered in the export, erasure and retention coverage lists, and the manifest and log routes gain one component and its props each (issues 2285, 2300)",
-        "files": {
-          "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": "756 -> 758",
-          "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": "501 -> 506"
         }
       }
     ],

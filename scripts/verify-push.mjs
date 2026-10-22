@@ -44,11 +44,12 @@
 // red run for this layer and every layer above, so the base's failing specs run here too (its
 // unit files are in the full suite), and the stamp means this layer carries their fix.
 //
-// The diff is measured against the layer below (`stackBase`), not `origin/main`: on a fifteen-
-// layer stack every route would count as reached. Each step's output goes to a log under the git dir; a red
+// The diff is measured against the layer below (`resolveVerificationBase` in
+// `scripts/verification-base.mjs`: the open PR's base, then `--base` or
+// `git config branch.<branch>.divedayBase <ref>`, then the contained layer below, then
+// `origin/main`), not `origin/main`: on a fifteen-layer stack every route would count as reached. Each step's output goes to a log under the git dir; a red
 // step prints only its tail.
 
-import { createHash } from "node:crypto";
 import {
   closeSync,
   existsSync,
@@ -148,9 +149,6 @@ const BROWSER_FALLBACK = /^e2e: the Chromium pinned by @playwright\/test is not 
 
 /** A unit, script or guard test: no page imports one, so no browser spec can move with it. */
 const UNIT_TEST = /\.test\.(?:ts|tsx|mts|mjs|js)$/;
-
-/** Paths the e2e build never reads: a change to only these reuses the build already made. */
-const NOT_BUILT = /(?:^|\/)[^/]+\.test\.(?:ts|tsx|mts|mjs|js)$|^e2e\/|^docs\/|\.md$|^\.claude\//;
 
 /** A diff of only these changes no code: CI skips the unit and browser jobs for it too. */
 const DOCS_ONLY = /^(?:docs\/|\.claude\/|[^/]+\.md$)|\.md$/;
@@ -356,19 +354,6 @@ export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = []
 }
 
 /**
- * The build's key: every path the e2e build reads, with its blob, from `git ls-tree -r HEAD`.
- * Keyed on the tree minus tests, specs and docs rather than on the whole tree, so a commit that
- * only fixes a spec or a unit test reuses the build it already has instead of spending two more
- * minutes making the same one.
- */
-export function appTreeKey(lsTree) {
-  const built = lsTree
-    .split("\n")
-    .filter((line) => line && !NOT_BUILT.test(line.slice(line.indexOf("\t") + 1)));
-  return createHash("sha256").update(built.join("\n")).digest("hex");
-}
-
-/**
  * Writes the stamp twice: the per-worktree file older guards read, and `<git common dir>/
  * diveday-verified/<sha>`, which every worktree of the clone shares, so a push from any worktree
  * (or from the shared checkout naming one) finds it (`scripts/guard-push.mjs`).
@@ -448,20 +433,11 @@ function allSpecFiles() {
     .sort();
 }
 
-/** The {@link appTreeKey} a build was made from, so a commit that changes none of it reuses it. */
-
-function buildTreeFile() {
-  return path.join(ROOT, ".next", "diveday-build-tree");
-}
-
 async function main() {
   const args = process.argv.slice(2);
   const quick = args.includes("--quick");
   const git = gitReader(ROOT);
   const head = git(["rev-parse", "HEAD"]);
-  // Falls back to the whole tree when git cannot list it, which only ever costs a rebuild.
-  const listed = git(["ls-tree", "-r", "HEAD"]);
-  const tree = listed ? appTreeKey(listed) : git(["rev-parse", "HEAD^{tree}"]);
   if (!head) {
     console.error("verify:push: git could not read HEAD.");
     process.exit(1);
@@ -828,7 +804,6 @@ async function main() {
       );
       process.exit(1);
     }
-    if (step.build) writeFileSync(buildTreeFile(), `${tree}\n`);
     console.log(`✓ ${step.name} (${seconds}s)`);
     ran.push(step.name);
   }
@@ -862,7 +837,7 @@ async function main() {
   };
   writeStamps(stamp, { git });
   try {
-    const state = readState(ROOT);
+    const state = readState(ROOT, git(["branch", "--show-current"]) || null);
     if (state?.task)
       appendMetric(
         {

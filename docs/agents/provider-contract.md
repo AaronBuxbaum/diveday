@@ -42,7 +42,7 @@ Run `pnpm task:state` for the current state or a template. Fill a JSON file and 
 `pnpm task:state <file>`. Validation requires immutable base/head SHAs, owner, owned paths,
 accepted decisions with exact text and provenance, check outcomes, visual evidence, owned
 processes, pending reviews/CI, blockers and the next executable command. Both commits must exist
-locally. Store no secrets or personal/medical data. Keep `.agent-out/task-state.json` with the
+locally. Store no secrets or personal/medical data. Keep `.agent-out/task-state/<branch>.json` with the
 checkout and attach it when responsibility moves to another machine; ignored local state is not
 shared automatically. Human product decisions remain in `docs/product/human-decisions/`.
 

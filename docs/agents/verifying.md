@@ -74,7 +74,9 @@ So the problem was never flakiness. A stacked change that breaks a spec breaks i
 above it, which is how one deleted sentence became twelve red Playwright shards.
 
 `pnpm verify:push` (`scripts/verify-push.mjs`) runs the local half of every row above against
-the layer below (`stackBase` in `scripts/e2e-affected.mjs`; `origin/main` off a stack), stops at
+the layer below (`resolveVerificationBase` in `scripts/verification-base.mjs`: the open PR's base;
+else `--base <ref>` or `git config branch.<branch>.divedayBase origin/<parent>`; else the nearest
+remote layer HEAD contains; else `origin/main`), stops at
 the first red step, and writes a stamp naming HEAD into the git directory (keyed by sha in the
 common git dir too, so a push from any worktree finds it):
 
@@ -86,8 +88,9 @@ common git dir too, so a push from any worktree finds it):
    over the changed code, and every other unit test was CI's first run; Aaron chose "run
    everything" over that saving. CI runs the four shards in about six minutes each.
 4. The Playwright specs `pnpm e2e:affected` selects, after an `e2e:build` it reuses while
-   nothing the build reads has changed (the tree minus tests, `e2e/` and docs, so a commit that
-   only fixes a spec reuses it). *Strong*: specs the diff edits or whose helper it edits, specs
+   nothing the build reads has changed (`.next/diveday-build-evidence.json`, a content
+   fingerprint without tests, written by `scripts/e2e-build-evidence.mjs`, so a commit that only
+   fixes a spec reuses it). *Strong*: specs the diff edits or whose helper it edits, specs
    quoting text the diff removed (a locale value, JSX text, a seed literal), and specs visiting a
    route whose own directory the diff edits. *Smoke*: five tests (`SMOKE`: booking, a waiver,
    check-in, roll call offline, sign-in), run as `file:line` whenever the app changed. *Reach*:
