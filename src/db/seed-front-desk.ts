@@ -5,7 +5,6 @@ import type { DbExecutor } from "./client";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
-  lastMinuteListEntries,
   leads,
   notificationDeliveries,
   notificationDeliveryAttempts,
@@ -48,15 +47,19 @@ export async function seedFrontDesk(
     .filter((person) => person !== undefined);
   if (includeHistoryData && listPeople.length > 0) {
     await db
-      .insert(lastMinuteListEntries)
+      .insert(leads)
       .values(
         listPeople.map((person, index) => ({
           shopId,
+          scope: "anytime" as const,
+          askedBy: "diver" as const,
           personId: person.id,
           availableFrom: dateAt(index === 0 ? 0 : 2),
           availableUntil: dateAt(30),
-          unsubscribedAt: index === listPeople.length - 1 ? nowDate() : null,
-          createdAt: nextCreatedAt(),
+          ...(index === listPeople.length - 1
+            ? { closedAt: nowDate(), closedAs: "unsubscribed" as const }
+            : {}),
+          askedAt: nextCreatedAt(),
         })),
       )
       .onConflictDoNothing();

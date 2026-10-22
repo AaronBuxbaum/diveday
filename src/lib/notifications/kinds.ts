@@ -429,31 +429,18 @@ const seatOfferCommercialSchema = seatOfferBase.extend({
    * qualifies (dive-domain review N3).
    */
   prerequisiteNote: z.string().trim().min(1).max(2_000).optional(),
-});
-
-// A staff-triggered last-minute-fill blast (docs ADR
-// 20260727-last-minute-fill-promos): no bookingId — it goes to a
-// last-minute-list entry, not a booking — so like seat_offer_commercial/
-// checkout_recovery this is structurally excluded from TrackedNotification.
-const lastMinuteDealSchema = z.object({
-  kind: z.literal("last_minute_deal"),
-  shopId: z.uuid(),
-  to: emailAddressSchema,
-  locale: localeSchema,
-  diverName: z.string().trim().min(1).max(120),
-  shopName: z.string().trim().min(1).max(120),
-  tripTitle: tripTitleSchema,
-  startsAt: z.date(),
-  endsAt: z.date(),
-  timezone: z.string().trim().min(1).max(100),
-  // One of the two: a percent, or a fixed amount in the shop's currency.
+  /**
+   * **The deal this offer carries** (ADR 20260727-last-minute-fill-promos; the
+   * deal is an offer with a discount, ADR 20261017-one-lead-with-a-scope). Set
+   * together: the code the diver types at booking, one of a percent or a fixed
+   * amount (in minor units, with `currency`), and when the code stops working
+   * (pinned to the departure). Absent, this is an ordinary offer.
+   */
+  code: z.string().trim().min(1).max(40).optional(),
   discountPercent: z.number().int().min(1).max(100).optional(),
   discountAmountCents: z.number().int().positive().optional(),
   currency: z.string().trim().length(3).optional(),
-  code: z.string().trim().min(1).max(40),
-  bookingUrl: z.url().max(2_000),
-  expiresAt: z.date(),
-  unsubscribeUrl: z.url().max(2_000),
+  expiresAt: z.date().optional(),
 });
 
 // A pay-at-booking checkout the diver never finished (docs ADR
@@ -1921,7 +1908,6 @@ export const notificationSchema = z
     passwordChangedSchema,
     staffInviteSchema,
     checkoutRecoverySchema,
-    lastMinuteDealSchema,
     operatorAlertSchema,
     leadReceivedSchema,
     staffReplySchema,
@@ -2200,11 +2186,6 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // single call from double-hitting the notification_send_queue.
     case "checkout_recovery":
       return `checkout-recovery/${notification.checkoutId}`;
-    // Keyed by the code (unique per blast) and recipient, so a retry of one
-    // send never doubles that diver's email while a fresh blast (new code) on
-    // the same trip is always its own send.
-    case "last_minute_deal":
-      return `last-minute-deal/${notification.code}/${notification.to}`;
     // The event is the kind a founder alert used to be, and its key is
     // unchanged: one alert per account, ever (as welcome); one per demo entry
     // (every entry mints its own shop under a freshly-generated identity, so the

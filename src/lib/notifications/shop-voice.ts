@@ -45,7 +45,6 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "party_payment_receipt":
     case "seat_already_held":
     case "checkout_recovery":
-    case "last_minute_deal":
     case "staff_reply":
     case "work_order_ready":
     case "gear_service_due":

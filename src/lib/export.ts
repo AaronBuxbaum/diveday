@@ -77,12 +77,8 @@ export const EXPORT_FILE_NOTES = {
     "One non-medical day-of help request per booking, with its visible hand-off status and timestamps. The request is retained with the trip history; resolved staff identity is included when available.",
   "leads.csv":
     "Everyone who wanted a seat, one row each, with a scope: departure (a wait-list entry or an offer for one trip, with party_size and offered_at), date (a day that was not on the board, with the contact the person left), anytime (the last-minute list, with the dates they are around). asked_by says whether the diver asked or the shop reached out; parent_lead_id names the row an offer was copied from. A lead never consumed a seat and never appears on a manifest. A date lead's person_id is filled in only where its address exactly matched a diver the shop already had at the time; otherwise it stays an unlinked name, email and phone, and was never back-filled.",
-  "last_minute_list.csv":
-    "Divers who opted in, shop-wide, to hear about last-minute deals, with the date range they said they're around. Distinct from waitlist_entries.csv: this is a general availability signal, not interest in one specific full trip.",
   "trip_last_minute_promos.csv":
-    "Discount blasts sent on under-capacity trips: the discount percent, the code, when it expires, and how many divers it went to. Stripe coupon/promotion-code ids are excluded — provider linkage, useless outside this Stripe account.",
-  "trip_last_minute_promo_recipients.csv":
-    "Per-diver recipient audit log for last-minute promo blasts: who was sent each deal, when, and their email on file.",
+    "Discount blasts sent on under-capacity trips: the discount percent, the code, when it expires, and how many divers it went to; who it went to is in leads.csv, the departure rows with that promo_id. Stripe coupon/promotion-code ids are excluded — provider linkage, useless outside this Stripe account.",
   "booking_payment_events.csv":
     "Every recorded change to a booking's payment state, oldest first — what it moved to, what it moved from, the amount and currency at that moment, and which operation caused it (a checkout settling, a staff mark, a refund). bookings.csv carries only where each booking's money stands *now*, and a refund overwrites that in place, so this is the file that says how it got there. It records transitions, not writes: a webhook redelivered twice appends nothing the second time, and a refused write appends nothing at all — so a row here always means the state genuinely changed.",
   "booking_checkouts.csv":

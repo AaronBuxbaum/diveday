@@ -222,3 +222,36 @@ export const leads = pgTable(
 );
 
 export type Lead = typeof leads.$inferSelect;
+
+/**
+ * A diver-facing, self-serve bearer link to unsubscribe one **anytime** lead
+ * (the last-minute list; docs features/story-backlog.md "Leo — self-serve email
+ * unsubscribe"). A fresh token is minted for every deal blast rather than one
+ * stable token per lead (mirrors `bookingCapabilities`, not `calendarFeeds`), so
+ * an old email's link keeps working even after a later blast mints another.
+ * Deliberately never expires: an expired unsubscribe link would leave someone
+ * unable to opt out, silently. Consuming a token only ever closes the lead as
+ * `unsubscribed`, an idempotent write, so there is nothing to mark used or
+ * revoke. Same semantics as the `last_minute_list_unsubscribe_tokens` it
+ * replaces (ADR 20261017-one-lead-with-a-scope).
+ */
+export const leadUnsubscribeTokens = pgTable(
+  "lead_unsubscribe_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id),
+    tokenHash: text("token_hash").notNull().unique(),
+    issuedAt: appNowTimestamp("issued_at").notNull(),
+  },
+  (table) => [
+    index("lead_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
+    index("lead_unsubscribe_tokens_lead_idx").on(table.leadId),
+  ],
+);
+
+export type LeadUnsubscribeToken = typeof leadUnsubscribeTokens.$inferSelect;

@@ -503,7 +503,8 @@ export function TripPromoteAndActivity({
             <LastMinuteDealSection
               shopSlug={shopSlug}
               locale={locale}
-              recipients={lastMinute.recipients.map(({ person }) => ({
+              recipients={lastMinute.recipients.map(({ lead, person }) => ({
+                leadId: lead.id,
                 personId: person.id,
                 fullName: person.fullName,
                 certification: certificationSummaries.get(person.id) ?? null,

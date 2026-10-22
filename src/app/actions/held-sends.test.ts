@@ -53,10 +53,10 @@ function signIn(shop: { id: string }, person: { personId: string; role: string }
 
 function dealForm(tripId: string, recipient: string): FormData {
   const form = new FormData();
-  form.set("holdKind", "last_minute_deal");
+  form.set("holdKind", "seat_offer");
   form.set("tripId", tripId);
   form.set("discountPercent", "25");
-  form.append("recipientPersonIds", recipient);
+  form.append("leadId", recipient);
   return form;
 }
 
@@ -87,10 +87,10 @@ describe("holdSendAction", () => {
     expect(ticket.runAt - nowMs()).toBe(SEND_HOLD_MS);
     const [row] = await heldRows(db, shop.id);
     expect(row?.payload).toEqual({
-      kind: "last_minute_deal",
+      kind: "seat_offer",
       tripId: seat.tripId,
-      discountPercent: 25,
-      recipientPersonIds: [owner.personId],
+      leadIds: [owner.personId],
+      discount: { percent: 25 },
     });
     expect(row?.actorPersonId).toBe(owner.personId);
   });
@@ -105,10 +105,10 @@ describe("holdSendAction", () => {
     await holdSendAction(form);
     const [row] = await heldRows(db, shop.id);
     expect(row?.payload).toEqual({
-      kind: "last_minute_deal",
+      kind: "seat_offer",
       tripId: seat.tripId,
-      discountAmountCents: 2_000,
-      recipientPersonIds: [owner.personId],
+      leadIds: [owner.personId],
+      discount: { amountCents: 2_000 },
     });
   });
 

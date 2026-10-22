@@ -136,9 +136,10 @@ export type DiverMergeResult =
  * The survivor is the record the shop chose to keep, so the survivor's row
  * wins and the source's is dropped. Both are current-state rows a staffer can
  * re-enter, not history: a fit profile is the diver's sizes today, and a
- * last-minute-list entry is a standing "tell me when a seat frees".
+ * last-minute-list lead is a standing "tell me when a seat frees" (it is
+ * handled with the other leads below, because it shares their table).
  */
-const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_entries"] as const;
+const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles"] as const;
 
 export const DIVER_HISTORY_TABLES = [
   // What the bench told this diver about their own gear (ADR
@@ -149,9 +150,7 @@ export const DIVER_HISTORY_TABLES = [
   "bookings",
   "internal_notes",
   "leads",
-  "last_minute_list_entries",
   "person_courtesy_email_unsubscribe_tokens",
-  "trip_last_minute_promo_recipients",
   "dive_package_entitlements",
   "orders",
   "waiver_records",
@@ -964,13 +963,7 @@ export const DIVER_MERGE_COUNT_GROUPS = {
     "lost_items",
   ],
   history: ["prior_visits"],
-  lists: [
-    "leads",
-    "last_minute_list_entries",
-    "person_courtesy_email_unsubscribe_tokens",
-    "trip_last_minute_promo_recipients",
-    "trip_blowout_divers",
-  ],
+  lists: ["leads", "person_courtesy_email_unsubscribe_tokens", "trip_blowout_divers"],
 } as const satisfies Record<string, readonly (typeof DIVER_HISTORY_TABLES)[number][]>;
 export type DiverMergeCountGroup = keyof typeof DIVER_MERGE_COUNT_GROUPS;
 
@@ -1342,6 +1335,11 @@ export async function mergeDiverRecords(input: {
       // departure both records share (issue #2177).
       await tx.execute(
         sql`delete from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'departure' and "trip_id" in (select "trip_id" from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'departure')`,
+      );
+      // The last-minute list is one lead per person: the source's goes, with the
+      // unsubscribe links that name it (a foreign key, so they go first).
+      await tx.execute(
+        sql`delete from "lead_unsubscribe_tokens" where "lead_id" in (select "id" from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'anytime') and exists (select 1 from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'anytime')`,
       );
       await tx.execute(
         sql`delete from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${source.id} and "scope" = 'anytime' and exists (select 1 from "leads" where "shop_id" = ${input.shopId} and "person_id" = ${survivor.id} and "scope" = 'anytime')`,

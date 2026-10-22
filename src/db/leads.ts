@@ -1,18 +1,42 @@
 import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { courseRatioRefusal } from "@/lib/booking-gates";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import type { DateRequestOutcome } from "@/lib/date-requests";
 import type { DiveDeclaration } from "@/lib/dive-declaration";
+import {
+  type CourseTargetInfo,
+  filterEligibleLastMinuteRecipients,
+  type LastMinuteDepartureBar,
+  type LastMinuteListWindow,
+  type LastMinuteRecipientReview,
+  lastMinuteEntryMatchesTripDate,
+  orderLastMinuteRecipients,
+  reviewLastMinuteRecipients,
+} from "@/lib/leads";
 import { rowCanBeReactivated } from "@/lib/no-show";
 import { seatRefusal } from "@/lib/participant-types";
+import { unionRequirements } from "@/lib/requirement";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
+import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { courseStudentSeatCap } from "./bookings";
 import type { AppDb, DbExecutor } from "./client";
 import { findOrCreatePerson } from "./people";
-import { bookings, type Lead, leads, people, personRoles, trips } from "./schema";
-import { recordSelfDeclaredCards } from "./self-declared-cards";
+import { getTripRequirements, getTripSiteRequirement } from "./readiness";
+import {
+  bookings,
+  type Lead,
+  leads,
+  leadUnsubscribeTokens,
+  type Person,
+  people,
+  personRoles,
+  shops,
+  trips,
+} from "./schema";
+import { listCertificationSummaries, recordSelfDeclaredCards } from "./self-declared-cards";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 import { heldSeatCounts, sellableCapacity } from "./trips-queries";
 
@@ -575,6 +599,367 @@ export async function attachDateLeadsToDeparture(
       .returning({ id: leads.id });
     return inserted.length;
   });
+}
+
+/**
+ * **The last-minute list** (ADR 20261017-one-lead-with-a-scope): an `anytime`
+ * lead is a diver's standing "tell me if something opens", optionally bounded
+ * by the dates they said they are around. Shop-wide, never a claim on a boat.
+ */
+
+export type AnytimeAsk = {
+  shopId: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  /** Date-only (YYYY-MM-DD); either bound omitted means "no preference" on that side. */
+  availableFrom?: string;
+  availableUntil?: string;
+  /**
+   * What the joiner optionally said they can dive. Written onto the **person**
+   * as a self-declared pending card, not onto the lead — see
+   * `recordSelfDeclaredCards`. Absent, or all-empty, records nothing.
+   */
+  declaration?: DiveDeclaration;
+};
+
+export type AnytimeAskOutcome = { leadId: string; personName: string };
+
+/**
+ * Adds (or reopens) a diver's shop-wide last-minute-list lead. Unlike
+ * `askForDeparture`, this is not scoped to one trip and never checks capacity:
+ * it is a standing preference, not a claim on a specific charter. A re-submit
+ * (same shop and person) overwrites the stated date range and **reopens an
+ * unsubscribed lead**, so a diver can update "when I'm around" by filling the
+ * form out again.
+ */
+export async function askAnytime(db: AppDb, input: AnytimeAsk): Promise<AnytimeAskOutcome> {
+  const email = input.email.trim().toLowerCase();
+  const fullName = input.fullName.trim();
+  const availableFrom = input.availableFrom || null;
+  const availableUntil = input.availableUntil || null;
+
+  return db.transaction(async (tx) => {
+    const { person, nameMatches } = await findOrCreatePerson(tx, {
+      shopId: input.shopId,
+      fullName,
+      email,
+      phone: input.phone,
+    });
+
+    // Inside the same transaction as the lead itself: a joiner who told the
+    // shop their level and a joiner who did not are two outcomes, not three, so
+    // the card must not be able to land without the lead or the reverse. It
+    // refuses to touch a card the shop actually captured — see the
+    // anti-displacement rule, which is what makes this safe on a path anyone
+    // can post to.
+    //
+    // `nameMatches` is H-13's borrowed-identity rule, applied to the one write
+    // here that is evidence about a body. This form is unauthenticated, and an
+    // email that already belongs to a diver under a *different* name is a
+    // possible second human — a family sharing an inbox, or somebody typing an
+    // address that is not theirs. Everywhere else that reaches this fork
+    // refuses to write on a mismatch (`seat-claims.ts` will not even record a
+    // phone number, `people.ts` will not record a locale), and certification
+    // data is stronger than either. The **lead** is still created: joining a
+    // marketing list under a borrowed address is the behaviour this feature
+    // found, not one it introduced, and refusing the opt-in would be a new
+    // regression. Only the safety record is withheld.
+    if (nameMatches) {
+      await recordSelfDeclaredCards(tx, {
+        shopId: input.shopId,
+        personId: person.id,
+        level: input.declaration?.level,
+        agency: input.declaration?.agency,
+        identifier: input.declaration?.identifier,
+        noCertification: input.declaration?.noCertification,
+        nitrox: input.declaration?.nitrox,
+      });
+    }
+
+    const [lead] = await tx
+      .insert(leads)
+      .values({
+        shopId: input.shopId,
+        scope: "anytime",
+        askedBy: "diver",
+        personId: person.id,
+        availableFrom,
+        availableUntil,
+      })
+      .onConflictDoUpdate({
+        target: [leads.shopId, leads.personId],
+        targetWhere: sql`${leads.scope} = 'anytime'`,
+        set: { availableFrom, availableUntil, closedAt: null, closedAs: null },
+      })
+      .returning({ id: leads.id });
+    if (!lead) throw new Error("askAnytime: upsert returned no row");
+    return { leadId: lead.id, personName: person.fullName };
+  });
+}
+
+/** An open last-minute-list lead and the person it belongs to. */
+export type AnytimeLeadRow = { lead: Lead; person: Person };
+
+/**
+ * Every open (not unsubscribed, not closed) anytime lead for a shop, oldest
+ * first — none at all while the shop has the list switched off
+ * (`shops.last_minute_list_enabled`, ADR 20261005-optional-shop-features), so
+ * the trip page's deal sender and the send itself both find nobody to reach.
+ */
+export async function listOpenAnytimeLeads(
+  db: DbExecutor,
+  shopId: string,
+): Promise<AnytimeLeadRow[]> {
+  return db
+    .select({ lead: leads, person: people })
+    .from(leads)
+    .innerJoin(people, and(eq(people.id, leads.personId), eq(people.shopId, shopId)))
+    .innerJoin(shops, eq(shops.id, leads.shopId))
+    .where(
+      and(
+        eq(leads.shopId, shopId),
+        eq(leads.scope, "anytime"),
+        eq(shops.lastMinuteListEnabled, true),
+        isNull(leads.closedAt),
+      ),
+    )
+    .orderBy(asc(leads.askedAt), asc(people.fullName), asc(leads.id));
+}
+
+/**
+ * Just the stated availability windows of a shop's open anytime leads — no
+ * people, no ordering. Today's queue reads it to decide whether a "fill these
+ * seats" row has anyone behind it at all; the matching is pure arithmetic over
+ * the rows (`lastMinuteEntryMatchesTripDate`), done once per departure.
+ * Empty while the shop has the list switched off, like the read above.
+ */
+export async function listOpenAnytimeWindows(
+  db: DbExecutor,
+  shopId: string,
+): Promise<LastMinuteListWindow[]> {
+  return db
+    .select({ availableFrom: leads.availableFrom, availableUntil: leads.availableUntil })
+    .from(leads)
+    .innerJoin(shops, eq(shops.id, leads.shopId))
+    .where(
+      and(
+        eq(leads.shopId, shopId),
+        eq(leads.scope, "anytime"),
+        eq(shops.lastMinuteListEnabled, true),
+        isNull(leads.closedAt),
+      ),
+    );
+}
+
+/** The departure an anytime read is made for. */
+export type AnytimeTrip = {
+  id: string;
+  startsAt: Date;
+  /** The course this session teaches, when it is one: its target narrows who is eligible. */
+  course?: CourseTargetInfo | null;
+};
+
+export type AnytimeCoveringOptions = {
+  /** The shop's zone; read when absent. */
+  timezone?: string;
+  /** The departure's effective gate (its own requirement folded with its sites); read when absent. */
+  requirement?: LastMinuteDepartureBar | null;
+  /** Only divers with an email an offer could go to (the deal needs one). On by default. */
+  requireEmail?: boolean;
+  /** The preview cap; `LAST_MINUTE_RECIPIENT_PREVIEW_LIMIT` when absent. */
+  limit?: number;
+};
+
+/** One recipient the panel draws: the lead, the person, and what is known about their card. */
+export type AnytimeRecipient = AnytimeLeadRow & {
+  certification: Awaited<ReturnType<typeof listCertificationSummaries>> extends Map<
+    string,
+    infer Summary
+  >
+    ? Summary | null
+    : never;
+};
+
+export type AnytimeLeadsCovering = {
+  /** Open leads whose stated window covers the departure's day, before the eligibility filter. */
+  matched: AnytimeLeadRow[];
+  /**
+   * Every lead a bulk offer may reach, in send order: this departure's own
+   * wait-listers first, then the rest in the order they asked. The below-bar
+   * filter has been applied; nothing here is capped.
+   */
+  eligible: AnytimeRecipient[];
+  /** The panel's third group: the first `limit` of `eligible`, risky names first, and the counts. */
+  review: LastMinuteRecipientReview<AnytimeRecipient>;
+};
+
+/**
+ * **Who a bulk offer on this departure would reach, and how to draw them.**
+ * Open anytime leads whose window covers the departure's day (in the shop's
+ * zone), with an address to write to, filtered by the deal's below-the-bar rule
+ * (`filterEligibleLastMinuteRecipients`: never someone under the departure's
+ * minimum; for a course, only those who would reach its level), this
+ * departure's own wait-listers put first, and the capped preview with
+ * below-the-bar names lifted to the top (`reviewLastMinuteRecipients`). The cap
+ * is safe *because* of that ordering. The review informs and nothing else: the
+ * filter above it is what bounds the send.
+ */
+export async function listAnytimeLeadsCovering(
+  db: DbExecutor,
+  shopId: string,
+  trip: AnytimeTrip,
+  options: AnytimeCoveringOptions = {},
+): Promise<AnytimeLeadsCovering> {
+  const timezone =
+    options.timezone ??
+    (
+      await db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1)
+    )[0]?.timezone ??
+    "UTC";
+  const tripDateIso = toDateInputValue(utcToWallTime(trip.startsAt, timezone));
+  const requirement =
+    options.requirement !== undefined
+      ? options.requirement
+      : unionRequirements(
+          await getTripRequirements(db, shopId, trip.id),
+          await getTripSiteRequirement(db, shopId, trip.id),
+        );
+
+  const matched = (await listOpenAnytimeLeads(db, shopId)).filter(({ lead }) =>
+    lastMinuteEntryMatchesTripDate(lead, tripDateIso),
+  );
+  const reachable =
+    options.requireEmail === false
+      ? matched
+      : matched.filter(({ person }) => Boolean(person.email));
+
+  const waitlisted = await db
+    .select({ personId: leads.personId })
+    .from(leads)
+    .where(
+      and(
+        eq(leads.shopId, shopId),
+        eq(leads.scope, "departure"),
+        eq(leads.tripId, trip.id),
+        eq(leads.askedBy, "diver"),
+      ),
+    )
+    // diveday:allow-time-id-order: the send order of wait-listers only; nobody is shown it
+    .orderBy(asc(leads.askedAt), asc(leads.id));
+
+  const summaries = await listCertificationSummaries(
+    db,
+    shopId,
+    reachable.map(({ person }) => person.id),
+  );
+  const eligible = orderLastMinuteRecipients(
+    filterEligibleLastMinuteRecipients(
+      reachable.map((row) => ({
+        ...row,
+        certification: summaries.get(row.person.id) ?? null,
+      })),
+      requirement,
+      trip.course ?? null,
+    ),
+    waitlisted.flatMap(({ personId }) => (personId ? [personId] : [])),
+  );
+  return {
+    matched,
+    eligible,
+    review: reviewLastMinuteRecipients(eligible, requirement, options.limit),
+  };
+}
+
+/**
+ * Mints a fresh, non-expiring bearer link for one anytime lead (Leo — self-serve
+ * email unsubscribe). Called once per deal blast, per recipient, so every
+ * last-minute-deal email carries its own working unsubscribe link even if an
+ * earlier email's link is later relied on too — see `leadUnsubscribeTokens` for
+ * why this never expires and is never single-use.
+ */
+export async function issueLeadUnsubscribeToken(
+  db: DbExecutor,
+  input: { shopId: string; leadId: string },
+): Promise<string> {
+  const token = createBearerToken();
+  await db.insert(leadUnsubscribeTokens).values({
+    shopId: input.shopId,
+    leadId: input.leadId,
+    tokenHash: hashBearerToken(token),
+  });
+  return token;
+}
+
+export type LeadUnsubscribeContext = {
+  shopId: string;
+  shopName: string;
+  leadId: string;
+  alreadyUnsubscribed: boolean;
+};
+
+/**
+ * Resolves a bearer token to its lead, or null for anything that must read as
+ * "this link isn't available" — an unknown token or a since-deleted shop.
+ * Deliberately does not treat an already-closed lead as invalid (the page still
+ * needs to render a real "you're already unsubscribed" state, not a dead link,
+ * if a diver clicks an old email's link twice).
+ */
+export async function resolveLeadUnsubscribeToken(
+  db: DbExecutor,
+  token: string,
+): Promise<LeadUnsubscribeContext | null> {
+  const [row] = await db
+    .select({
+      tokenShopId: leadUnsubscribeTokens.shopId,
+      leadShopId: leads.shopId,
+      shopName: shops.name,
+      leadId: leads.id,
+      closedAt: leads.closedAt,
+    })
+    .from(leadUnsubscribeTokens)
+    .innerJoin(leads, eq(leads.id, leadUnsubscribeTokens.leadId))
+    .innerJoin(shops, eq(shops.id, leads.shopId))
+    .where(eq(leadUnsubscribeTokens.tokenHash, hashBearerToken(token)))
+    .limit(1);
+  if (!row) return null;
+  // Defense in depth, mirroring verifyBookingCapability: nothing legitimate can
+  // cause the token's own shopId to drift from its lead's, but a resolved
+  // identity must never be trusted past that check.
+  if (row.tokenShopId !== row.leadShopId) return null;
+  return {
+    shopId: row.leadShopId,
+    shopName: row.shopName,
+    leadId: row.leadId,
+    alreadyUnsubscribed: row.closedAt !== null,
+  };
+}
+
+/**
+ * The one mutating step a diver's own unsubscribe click drives: resolves the
+ * token, then closes the lead it names as `unsubscribed`, kept as history and
+ * not deleted. Idempotent — a token clicked twice (or a lead closed another
+ * way) just confirms the same outcome rather than erroring, and never rewrites
+ * the first close.
+ */
+export async function unsubscribeAnytimeLeadByToken(
+  db: AppDb,
+  input: { token: string; now?: Date },
+): Promise<LeadUnsubscribeContext | null> {
+  const context = await resolveLeadUnsubscribeToken(db, input.token);
+  if (!context) return null;
+  await db
+    .update(leads)
+    .set({ closedAt: input.now ?? nowDate(), closedAs: "unsubscribed" })
+    .where(
+      and(
+        eq(leads.id, context.leadId),
+        eq(leads.shopId, context.shopId),
+        eq(leads.scope, "anytime"),
+        isNull(leads.closedAt),
+      ),
+    );
+  return context;
 }
 
 export type { Lead };

@@ -12,7 +12,6 @@ import type { AppDb } from "./client";
 import { type SendDepartureNoteOutcome, sendDepartureNote } from "./departure-notes";
 import type { SeatOffersOutcome } from "./lead-offers";
 import { heldSends } from "./schema";
-import { type SendLastMinuteDealOutcome, sendLastMinuteDealBlast } from "./trip-promos";
 import type { RescheduleNoticeOutcome } from "./trip-rescheduled";
 import { deliverWaiverBatch, type WaiverBatchOutcome } from "./waiver-issue";
 
@@ -37,7 +36,6 @@ export type HeldSendRow = {
 
 export type HeldSendOutcome =
   | ({ kind: "waiver_send" } & WaiverBatchOutcome)
-  | { kind: "last_minute_deal"; outcome: SendLastMinuteDealOutcome }
   | ({ kind: "seat_offer" } & SeatOffersOutcome)
   | ({ kind: "trip_rescheduled" } & RescheduleNoticeOutcome)
   | { kind: "departure_note"; outcome: SendDepartureNoteOutcome };
@@ -175,18 +173,6 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
       });
       return { kind: "waiver_send", ...outcome };
     }
-    case "last_minute_deal": {
-      const outcome = await sendLastMinuteDealBlast(db, {
-        shopId: row.shopId,
-        shopSlug: await shopSlugOf(db, row.shopId),
-        tripId: payload.tripId,
-        discountPercent: payload.discountPercent,
-        discountAmountCents: payload.discountAmountCents,
-        createdByPersonId: row.actorPersonId ?? undefined,
-        recipientPersonIds: payload.recipientPersonIds,
-      });
-      return { kind: "last_minute_deal", outcome };
-    }
     // Checked again inside: a departure cancelled or sailed during the hold
     // is refused here and nobody is messaged (`sendDepartureNote`).
     case "departure_note": {
@@ -205,6 +191,8 @@ export async function executeHeldSend(db: AppDb, row: HeldSendRow): Promise<Held
         shopSlug: await shopSlugOf(db, row.shopId),
         tripId: payload.tripId,
         leadIds: payload.leadIds,
+        discount: payload.discount,
+        createdByPersonId: row.actorPersonId ?? undefined,
       });
       return { kind: "seat_offer", ...outcome };
     }

@@ -15,7 +15,6 @@ import {
   DIVE_PACKAGE_ENTITLEMENTS_CSV,
   GEAR_RESERVATIONS_CSV,
   IMPORTED_PAYMENT_HISTORY_CSV,
-  LAST_MINUTE_LIST_CSV,
   LEADS_CSV,
   NITROX_CERTIFICATIONS_CSV,
   NOTIFICATION_DELIVERIES_CSV,
@@ -29,7 +28,6 @@ import {
   SPECIALTY_CERTIFICATIONS_CSV,
   shopFile,
   TIPS_CSV,
-  TRIP_LAST_MINUTE_PROMO_RECIPIENTS_CSV,
   TRIP_REVIEWS_CSV,
   WAIVER_RECORDS_CSV,
   WORK_ORDER_CARE_CSV,
@@ -1112,7 +1110,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
     note: EXPORT_FILE_NOTES["trip_help_requests.csv"],
   },
   shopFile(LEADS_CSV),
-  shopFile(LAST_MINUTE_LIST_CSV),
   {
     file: "trip_last_minute_promos.csv",
     header: [
@@ -1148,7 +1145,6 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       ]),
     note: EXPORT_FILE_NOTES["trip_last_minute_promos.csv"],
   },
-  shopFile(TRIP_LAST_MINUTE_PROMO_RECIPIENTS_CSV),
   shopFile(BOOKING_PAYMENT_EVENTS_CSV),
   {
     file: "booking_checkouts.csv",

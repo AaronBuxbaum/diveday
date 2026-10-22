@@ -54,9 +54,7 @@ const EXPECTED_FILES = [
   "bookings.csv",
   "trip_help_requests.csv",
   "leads.csv",
-  "last_minute_list.csv",
   "trip_last_minute_promos.csv",
-  "trip_last_minute_promo_recipients.csv",
   "booking_payment_events.csv",
   "booking_checkouts.csv",
   "booking_checkout_bookings.csv",
@@ -154,9 +152,7 @@ const EXPORTED_TABLES = [
   "notification_deliveries",
   "shop_promo_redemptions",
   "leads",
-  "last_minute_list_entries",
   "trip_last_minute_promos",
-  "trip_last_minute_promo_recipients",
   "booking_arrival_events",
   "roll_call_events",
   "roll_call_crew_events",
@@ -321,7 +317,7 @@ const EXCLUDED_TABLES = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
-  "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "lead_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
   "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported

@@ -65,8 +65,8 @@ import {
 import { listTodayHelpRequests } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listUnfiledIncidentDrafts } from "./incident-reports";
-import { listActiveLastMinuteWindows } from "./last-minute-list";
 import { countOpenDateLeads } from "./lead-dates";
+import { listOpenAnytimeWindows } from "./leads";
 import { countOpenLostItems } from "./lost-items";
 import {
   listBoardedAtAnyCheckpointByTrip,
@@ -1751,7 +1751,7 @@ async function readTodayWave(
     // standing "I'm around these dates" preference, and which departures it
     // covers is arithmetic (`lastMinuteEntryMatchesTripDate`), done per trip
     // below against the same predicate the trip's own roster uses.
-    listActiveLastMinuteWindows(db, shopId),
+    listOpenAnytimeWindows(db, shopId),
     // Deliberately not derived from `inWindow`/`todayTrips`: those look only
     // forward, and a boat that is out or already came back is exactly what this
     // chases.

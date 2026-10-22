@@ -600,6 +600,8 @@ function reviveQueuedNotification(payload: Notification): Notification {
     "endsAt",
     "expiresAt",
     "invitedAt",
+    "offeredAt",
+    "sailedStartsAt",
     "changedAt",
     "confirmedAt",
   ]) {

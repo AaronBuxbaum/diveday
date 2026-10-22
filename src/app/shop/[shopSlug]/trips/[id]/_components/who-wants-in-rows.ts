@@ -6,8 +6,7 @@ import {
 } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
-import { type LastMinuteDepartureBar, ranksBelow } from "@/lib/last-minute-list";
-import { leadContact } from "@/lib/leads";
+import { type LastMinuteDepartureBar, leadContact, ranksBelow } from "@/lib/leads";
 import type { Waitlist } from "./types";
 
 /**

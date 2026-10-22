@@ -11,7 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { bookings, lastMinuteListEntries } from "./bookings";
+import { bookings } from "./bookings";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
 import { trips } from "./trips";
@@ -23,48 +23,17 @@ import { trips } from "./trips";
  */
 
 /**
- * A diver-facing, self-serve bearer link to unsubscribe one last-minute-list
- * entry (docs features/story-backlog.md "Leo — self-serve email unsubscribe"). A fresh
- * token is minted for every deal blast rather than one stable token per entry
- * (mirrors `bookingCapabilities`, not `calendarFeeds`), so an old email's link
- * keeps working even after a later blast mints another — deliberately never
- * expires: an expired unsubscribe link would leave someone unable to opt out,
- * silently, the same reasoning `createBearerToken`'s calendar-feed case
- * documents. Consuming a token only ever sets `unsubscribedAt`, an idempotent
- * write, so unlike `bookingCapabilities`/`accountTokens` there is nothing to
- * mark used or revoke.
- */
-export const lastMinuteListUnsubscribeTokens = pgTable(
-  "last_minute_list_unsubscribe_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    entryId: uuid("entry_id")
-      .notNull()
-      .references(() => lastMinuteListEntries.id),
-    tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: appNowTimestamp("issued_at").notNull(),
-  },
-  (table) => [
-    index("last_minute_list_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
-    index("last_minute_list_unsubscribe_tokens_entry_idx").on(table.entryId),
-  ],
-);
-
-/**
  * A diver-facing, self-serve bearer link to opt one person out of courtesy
  * email, every courtesy kind `people.courtesyEmailOptOutAt` governs: wait-list
  * openings, post-trip recaps, checkout reminders and cold staff invitations, as
  * listed on `issuePersonCourtesyEmailUnsubscribeToken` in
  * `src/db/courtesy-email.ts` (docs features/story-backlog.md "Leo — self-serve
  * email unsubscribe"). Same
- * shape and reasoning as `lastMinuteListUnsubscribeTokens`: a fresh token per
+ * shape and reasoning as `leadUnsubscribeTokens`: a fresh token per
  * send rather than one stable token per person, never expires, and consuming
  * it is an idempotent write (only ever sets `courtesyEmailOptOutAt`) — kept as
- * a separate table rather than folded into `lastMinuteListUnsubscribeTokens`
- * because it resolves to a person, not a last-minute-list entry.
+ * a separate table rather than folded into `leadUnsubscribeTokens`
+ * because it resolves to a person, not an anytime lead.
  */
 export const personCourtesyEmailUnsubscribeTokens = pgTable(
   "person_courtesy_email_unsubscribe_tokens",

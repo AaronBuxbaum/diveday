@@ -367,11 +367,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const leadRows = await readScoped(tx, "leads", scope);
 
-  const lastMinuteListRows = await readScoped(tx, "lastMinuteListEntries", scope);
-
   const lastMinutePromoRows = await readScoped(tx, "tripLastMinutePromos", scope);
-
-  const lastMinutePromoRecipientRows = await readScoped(tx, "tripLastMinutePromoRecipients", scope);
 
   const orderRows = await readScoped(tx, "orders", scope);
 
@@ -665,9 +661,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     courseTitle,
     ...seriesRecordRows,
     leadRows,
-    lastMinuteListRows,
     lastMinutePromoRows,
-    lastMinutePromoRecipientRows,
     orderRows,
     orderLineRows,
     workOrderBillRows,
@@ -909,10 +903,6 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
 
   const leadRows = await readScoped(tx, "leads", scope);
 
-  const lastMinuteListRows = await readScoped(tx, "lastMinuteListEntries", scope);
-
-  const lastMinutePromoRecipientRows = await readScoped(tx, "tripLastMinutePromoRecipients", scope);
-
   const paymentEventRows = await readScoped(tx, "bookingPaymentEvents", scope);
 
   const checkoutBookingRows = await readScoped(tx, "bookingCheckoutBookings", scope);
@@ -1106,8 +1096,6 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     specialtyRows,
     nitroxRows,
     leadRows,
-    lastMinuteListRows,
-    lastMinutePromoRecipientRows,
     paymentEventRows,
     checkoutBookingRows,
     arrivalRows,
@@ -1253,13 +1241,7 @@ export async function loadShopExportCounts(
     "notification_deliveries.csv": await countShopScoped(db, "notificationDeliveries", shopId),
     "shop_promo_redemptions.csv": await countShopScoped(db, "shopPromoRedemptions", shopId),
     "leads.csv": await countShopScoped(db, "leads", shopId),
-    "last_minute_list.csv": await countShopScoped(db, "lastMinuteListEntries", shopId),
     "trip_last_minute_promos.csv": await countShopScoped(db, "tripLastMinutePromos", shopId),
-    "trip_last_minute_promo_recipients.csv": await countShopScoped(
-      db,
-      "tripLastMinutePromoRecipients",
-      shopId,
-    ),
     "booking_arrival_events.csv": await countShopScoped(db, "bookingArrivalEvents", shopId),
     "roll_call_events.csv": await countShopScoped(db, "rollCallEvents", shopId),
     "roll_call_crew_events.csv": await countShopScoped(db, "rollCallCrewEvents", shopId),

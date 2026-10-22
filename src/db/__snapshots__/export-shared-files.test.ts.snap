@@ -148,13 +148,6 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "currency",
     "imported_at",
   ],
-  "last_minute_list.csv": [
-    "id",
-    "available_from",
-    "available_until",
-    "unsubscribed_at",
-    "created_at",
-  ],
   "leads.csv": [
     "id",
     "scope",
@@ -321,12 +314,6 @@ exports[`the diver bundle's headers > are exactly the columns decided for the di
     "currency",
     "amount_cents",
     "completed_at",
-    "created_at",
-  ],
-  "trip_last_minute_promo_recipients.csv": [
-    "id",
-    "trip_promo_id",
-    "email",
     "created_at",
   ],
   "trip_reviews.csv": [

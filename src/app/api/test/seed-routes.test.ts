@@ -95,7 +95,7 @@ const routes: SeedRoute[] = [
     expectPastTheGuard: expectInvalidBody,
   },
   {
-    slug: "seed-last-minute-unsubscribe-token",
+    slug: "seed-lead-unsubscribe-token",
     expectPastTheGuard: expectInvalidBody,
   },
   {

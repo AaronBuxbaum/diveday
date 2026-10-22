@@ -35,7 +35,6 @@ import {
   incidentReportPeople,
   incidentReports,
   internalNotes,
-  lastMinuteListEntries,
   leads,
   nitroxCertifications,
   notificationDeliveries,
@@ -56,7 +55,6 @@ import {
   tips,
   tripChangeEvents,
   tripHelpRequests,
-  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   tripLenses,
   tripRequirements,
@@ -191,26 +189,10 @@ export const EXPORT_TABLES = {
     order: [asc(leads.askedAt), asc(leads.id)],
     scope: { shopColumn: leads.shopId, personColumn: leads.personId },
   },
-  lastMinuteListEntries: {
-    table: lastMinuteListEntries,
-    order: [asc(lastMinuteListEntries.createdAt), asc(lastMinuteListEntries.id)],
-    scope: {
-      shopColumn: lastMinuteListEntries.shopId,
-      personColumn: lastMinuteListEntries.personId,
-    },
-  },
   tripLastMinutePromos: {
     table: tripLastMinutePromos,
     order: [asc(tripLastMinutePromos.createdAt), asc(tripLastMinutePromos.id)],
     scope: { shopColumn: tripLastMinutePromos.shopId },
-  },
-  tripLastMinutePromoRecipients: {
-    table: tripLastMinutePromoRecipients,
-    order: [asc(tripLastMinutePromoRecipients.createdAt), asc(tripLastMinutePromoRecipients.id)],
-    scope: {
-      shopColumn: tripLastMinutePromoRecipients.shopId,
-      personColumn: tripLastMinutePromoRecipients.personId,
-    },
   },
   orders: {
     table: orders,

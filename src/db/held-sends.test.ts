@@ -107,10 +107,10 @@ describe("held sends", () => {
       actorPersonId: owner.personId,
       now,
       payload: {
-        kind: "last_minute_deal",
+        kind: "seat_offer",
         tripId: seat.tripId,
-        discountPercent: 20,
-        recipientPersonIds: [owner.personId],
+        leadIds: [owner.personId],
+        discount: { percent: 20 },
       },
     });
     const otherShop = "00000000-0000-4000-8000-000000000000";

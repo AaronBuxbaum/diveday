@@ -157,6 +157,15 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   // A waiting diver hears "a seat opened"; anyone the shop reached out to hears
   // that the shop is offering it. The words are the diver's, unchanged.
   if (notification.kind === "seat_offer_commercial") {
+    // An offer that carries a deal says the deal: the code, the figure and the
+    // day the code stops working.
+    if (notification.code !== undefined && notification.expiresAt !== undefined) {
+      return lastMinuteDealEmail({
+        ...notification,
+        code: notification.code,
+        expiresAt: notification.expiresAt,
+      });
+    }
     return notification.askedBy === "diver"
       ? waitlistInviteEmail(notification)
       : tripInvitationEmail(notification);
@@ -183,7 +192,6 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
-  if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
   if (notification.kind === "operator_alert") return operatorAlertEmail(notification);
   if (notification.kind === "lead_received") return leadReceivedEmail(notification);
   if (notification.kind === "staff_reply") return staffReplyEmail(notification);

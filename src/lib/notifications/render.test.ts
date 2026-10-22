@@ -140,6 +140,23 @@ describe("messageFor", () => {
       expect(email.html).toContain("Reef &amp; Wreck · 1 Harbor Rd");
     });
 
+    it("says the deal, with its code and the list's own way out, when the offer carries one", () => {
+      const email = messageFor({
+        ...invite,
+        askedBy: "shop",
+        code: "SAVE25-ABC123",
+        discountPercent: 25,
+        expiresAt: new Date("2026-08-01T12:00:00.000Z"),
+        sender,
+      });
+      expect(email.subject).toContain("25%");
+      expect(email.text).toContain("SAVE25-ABC123");
+      expect(email.text).toContain("https://dive.day/unsubscribe/tok");
+      expect(email.text.endsWith("\n\nBlue Mantis · 1 Harbor Rd, Key Largo, FL 33037, US\n")).toBe(
+        true,
+      );
+    });
+
     it("appends nothing when the shop has no address on file", () => {
       const withNone = messageFor(invite);
       const withReplyOnly = messageFor({ ...invite, sender: { replyTo: "desk@bluemantis.dive" } });

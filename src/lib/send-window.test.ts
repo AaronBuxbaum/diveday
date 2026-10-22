@@ -107,7 +107,7 @@ describe("the kinds that ignore the window", () => {
       "trip_reminder_7d",
       "trip_reminder_24h",
       "trip_recap",
-      "last_minute_deal",
+      "seat_offer_commercial",
     ] as const) {
       expect(maySendNow(kind, threeAm, "America/New_York"), kind).toBe(false);
     }
