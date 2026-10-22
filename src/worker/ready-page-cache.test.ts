@@ -88,6 +88,35 @@ describe("saveReadyPage and readyPageFallback", () => {
   });
 
   /**
+   * Two saves of the same page overlap (the navigation's and the page's own
+   * keep request). A reload with no signal that lands between them must still
+   * find a copy, so a save replaces the copy and never empties the cache first.
+   */
+  it("never leaves the cache without a copy while it replaces one", async () => {
+    expect(await saveReadyPage(store.storage, `/ready/${TOKEN}`, page("first"), NOW)).toBe(true);
+    const entries = store.caches.get(READY_CACHE_NAME);
+    const sizes: number[] = [];
+    const open = store.storage.open.bind(store.storage);
+    const watched = {
+      open: async (name: string) => {
+        const cache = await open(name);
+        return {
+          ...cache,
+          delete: async (key: RequestInfo | URL) => {
+            const deleted = await cache.delete(key);
+            sizes.push(entries?.size ?? 0);
+            return deleted;
+          },
+        };
+      },
+    } as unknown as CacheStorage;
+    expect(await saveReadyPage(watched, `/ready/${TOKEN}`, page("second"), NOW)).toBe(true);
+    expect(sizes).not.toContain(0);
+    const served = await readyPageFallback(store.storage, `/ready/${TOKEN}`, NOW);
+    expect(await served?.text()).toContain("second");
+  });
+
+  /**
    * Security review of layer 8, D1: Cache Storage is origin-wide, so any
    * same-origin script can list its keys. The copy is filed under one fixed
    * key that carries no token, and answers a path only by its hash.

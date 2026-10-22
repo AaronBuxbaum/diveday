@@ -24,6 +24,10 @@ import { timingSafeEqual } from "node:crypto";
  * docs/product/archive/specialist-optimization-audit-20260731.md §5).
  */
 export function e2eTestRouteAuthorized(request: Request): boolean {
+  // Read before any refusal: under Cache Components, reading the request is
+  // what keeps a `GET` route (`email-previews`) from being prerendered at
+  // build time, where no secret is set and a baked-in 404 is the result.
+  const provided = Buffer.from(request.headers.get("authorization") ?? "", "utf8");
   const hasRealDatabase = Boolean(process.env.DATABASE_URL);
   const productionRuntime = process.env.NODE_ENV === "production";
   const e2eHarness = process.env.DIVEDAY_E2E === "1";
@@ -32,6 +36,5 @@ export function e2eTestRouteAuthorized(request: Request): boolean {
   const secret = process.env.DIVEDAY_E2E_SECRET;
   if (!secret) return false;
   const expected = Buffer.from(`Bearer ${secret}`, "utf8");
-  const provided = Buffer.from(request.headers.get("authorization") ?? "", "utf8");
   return expected.length === provided.length && timingSafeEqual(expected, provided);
 }
