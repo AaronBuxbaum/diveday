@@ -219,6 +219,7 @@ describe("draftReplyFor", () => {
       provider: answering({
         reply: `Yes! ${quoted.replace(/^- /, "")}`,
         medical: false,
+        eligibility: false,
         confidence: 0.9,
       }),
       env: keyed,
@@ -232,7 +233,31 @@ describe("draftReplyFor", () => {
       await draftReplyFor(ctx.db, {
         shopId: ctx.shop.id,
         personId,
-        provider: answering({ reply: "It is 987654 dollars.", medical: false, confidence: 0.9 }),
+        provider: answering({
+          reply: "It is 987654 dollars.",
+          medical: false,
+          eligibility: false,
+          confidence: 0.9,
+        }),
+        env: keyed,
+      }),
+    ).toBeNull();
+  });
+
+  it("never drafts a reply that tells a diver they are qualified", async () => {
+    const { personId } = await diverWithMessage(
+      "I'm SSI Open Water. Can I do Saturday's wreck? It's 30 m right?",
+    );
+    expect(
+      await draftReplyFor(ctx.db, {
+        shopId: ctx.shop.id,
+        personId,
+        provider: answering({
+          reply: "Yes, your Open Water card is fine for the wreck at 30 m.",
+          medical: false,
+          eligibility: true,
+          confidence: 0.9,
+        }),
         env: keyed,
       }),
     ).toBeNull();
@@ -244,7 +269,7 @@ describe("draftReplyFor", () => {
       await draftReplyFor(ctx.db, {
         shopId: ctx.shop.id,
         personId,
-        provider: answering({ reply: "Sure.", medical: true, confidence: 0.9 }),
+        provider: answering({ reply: "Sure.", medical: true, eligibility: false, confidence: 0.9 }),
         env: keyed,
       }),
     ).toBeNull();
@@ -252,7 +277,12 @@ describe("draftReplyFor", () => {
 
   it("drafts nothing when the shop wrote last, and sends no address", async () => {
     const { personId, messageId } = await diverWithMessage("Thanks!");
-    const provider = answering({ reply: "You're welcome.", medical: false, confidence: 0.9 });
+    const provider = answering({
+      reply: "You're welcome.",
+      medical: false,
+      eligibility: false,
+      confidence: 0.9,
+    });
     await recordStaffReply(ctx.db, {
       shopId: ctx.shop.id,
       personId,

@@ -42,7 +42,7 @@
   },
   "waiver": {
     "label": "Empieza con tu exención actual",
-    "hint": "Elige su PDF y el texto aparece en el cuadro de arriba para que lo leas y lo edites. Esto no es asesoría legal. No se publica nada hasta que tú lo publiques.",
+    "hint": "Elige su PDF y el texto aparece en el cuadro de arriba. Compáralo línea por línea con el PDF antes de publicarlo: Claude puede leer mal una cláusula. Las líneas de firma y las preguntas médicas se omiten porque el formulario en línea las pide. Esto no es asesoría legal.",
     "draft": "Redactar desde el PDF",
     "drafting": "Leyendo el PDF…",
     "failed": "Ese archivo no se pudo leer como una exención. Elige un PDF de tu exención, de menos de 5 MB."

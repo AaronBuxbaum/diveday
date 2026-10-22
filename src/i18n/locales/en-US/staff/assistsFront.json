@@ -42,7 +42,7 @@
   },
   "waiver": {
     "label": "Start from your current waiver",
-    "hint": "Choose its PDF and the text lands in the box above for you to read and edit. This is not legal advice. Nothing is published until you publish it.",
+    "hint": "Choose its PDF and the text lands in the box above. Check it line by line against the PDF before you publish: Claude can misread a clause. The signature lines and medical questions are left out because the online form asks them itself. This is not legal advice.",
     "draft": "Draft from PDF",
     "drafting": "Reading the PDF…",
     "failed": "That file could not be read as a waiver. Choose a PDF of your release, under 5 MB."

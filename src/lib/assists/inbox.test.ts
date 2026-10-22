@@ -138,6 +138,35 @@ describe("replyDraftCall", () => {
   });
 });
 
+describe("what the prompts tell the model", () => {
+  it("forbids a reply draft from judging a card, a depth, a prerequisite or an agency's equivalent", () => {
+    const request = buildStructuredRequest(
+      replyDraftCall({
+        facts: [],
+        thread: [{ from: "diver", text: "I'm SSI Open Water, can I come?" }],
+      }),
+    );
+    const system = JSON.stringify(request.system);
+    expect(system).toContain(
+      "Never say whether a certification, experience, age or nitrox card qualifies anyone for a dive or course, and never state a depth, a limit, a prerequisite or that one agency's card equals another's. Say a staff member will check their card against that dive.",
+    );
+    expect(system).toContain("eligibility: true when");
+  });
+
+  it("sorts a diver's symptoms during or after a dive as urgent", () => {
+    const request = buildStructuredRequest(
+      inboundTriageCall({
+        subject: null,
+        body: "My shoulder has ached since yesterday's second dive and my fingers tingle.",
+        targetLocale: "en-US",
+      }),
+    );
+    expect(JSON.stringify(request.system)).toContain(
+      "or they describe feeling unwell, pain, numbness, tingling, dizziness or trouble breathing during or after a dive.",
+    );
+  });
+});
+
 describe("groundedReply", () => {
   const facts = ["Sat 26 Oct 8:00 AM, Two-tank reef: 4 seats open, $95"];
   const thread = [{ from: "diver" as const, text: "Is there room for 2 on Saturday?" }];
@@ -148,6 +177,7 @@ describe("groundedReply", () => {
         {
           reply: "Yes, 4 seats are open on Sat 26 Oct at 8:00 for $95. Room for 2!",
           medical: false,
+          eligibility: false,
           confidence: 1,
         },
         { facts, thread },
@@ -157,11 +187,14 @@ describe("groundedReply", () => {
 
   it("throws away a draft that names a price or a seat count nobody gave it", () => {
     expect(
-      groundedReply({ reply: "Sure, it's $85.", medical: false, confidence: 1 }, { facts, thread }),
+      groundedReply(
+        { reply: "Sure, it's $85.", medical: false, eligibility: false, confidence: 1 },
+        { facts, thread },
+      ),
     ).toBeNull();
     expect(
       groundedReply(
-        { reply: "We have 6 seats.", medical: false, confidence: 1 },
+        { reply: "We have 6 seats.", medical: false, eligibility: false, confidence: 1 },
         { facts, thread },
       ),
     ).toBeNull();
@@ -170,7 +203,21 @@ describe("groundedReply", () => {
   it("never drafts an answer to a medical question, whatever the reply says", () => {
     expect(
       groundedReply(
-        { reply: "You should be fine.", medical: true, confidence: 1 },
+        { reply: "You should be fine.", medical: true, eligibility: false, confidence: 1 },
+        { facts, thread },
+      ),
+    ).toBeNull();
+  });
+
+  it("never drafts a judgment of whether the diver may join, however well it quotes the facts", () => {
+    expect(
+      groundedReply(
+        {
+          reply: "Yes, your Open Water card is fine for Sat 26 Oct at 8:00. 4 seats open.",
+          medical: false,
+          eligibility: true,
+          confidence: 1,
+        },
         { facts, thread },
       ),
     ).toBeNull();
@@ -178,7 +225,10 @@ describe("groundedReply", () => {
 
   it("is null for an empty draft", () => {
     expect(
-      groundedReply({ reply: "  ", medical: false, confidence: 1 }, { facts, thread }),
+      groundedReply(
+        { reply: "  ", medical: false, eligibility: false, confidence: 1 },
+        { facts, thread },
+      ),
     ).toBeNull();
   });
 });
