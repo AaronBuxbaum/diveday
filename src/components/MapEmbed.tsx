@@ -47,7 +47,7 @@ export function MapEmbed({
         className="absolute -top-16 -left-16 h-[calc(100%+4rem)] w-[calc(100%+8rem)]"
       />
       {/* The credit shows with the map it credits, never over a blocked one. */}
-      <p className="pointer-events-none absolute right-0 bottom-0 hidden max-w-full truncate rounded-tl-inset bg-surface/90 px-1.5 py-0.5 text-xs text-muted group-has-[[data-map-state=reachable]]/embed:block">
+      <p className="pointer-events-none absolute end-0 bottom-0 hidden max-w-full truncate rounded-ss-inset bg-surface/90 px-1.5 py-0.5 text-xs text-muted group-has-[[data-map-state=reachable]]/embed:block">
         {BASEMAP_CREDIT}
       </p>
       <div className="absolute inset-x-0 top-0 h-[calc(100%-4rem)]">{children}</div>
