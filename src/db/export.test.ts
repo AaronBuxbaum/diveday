@@ -329,6 +329,8 @@ const EXCLUDED_TABLES = [
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "crew_notices", // crew news waiting to be told, and the stamp of when it was — delivery plumbing; the crew list itself is exported as trip_assignments
   "claude_usage", // token counts and cost codes for Claude calls — DiveDay's billing ledger, not the shop's records
+  "assist_results", // what an assist answered (review chips, themes, the Monday read): derived, and asked again on demand
+  "shop_text_translations", // Spanish copies of descriptions the export carries in the original; a restore drafts them again
   "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "shop_shore_alert_tokens", // the shore contact's confirm and stop links (H-118): bearer credentials, same reasoning

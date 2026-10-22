@@ -36,6 +36,7 @@ import closeout from "./closeout.json";
 import counterRentals from "./counterRentals.json";
 import courses from "./courses.json";
 import desk from "./desk.json";
+import deskAssists from "./deskAssists.json";
 import disputeSheet from "./disputeSheet.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
@@ -120,6 +121,7 @@ const staff = {
   participants,
   workOrders,
   desk,
+  deskAssists,
   disputeSheet,
 };
 

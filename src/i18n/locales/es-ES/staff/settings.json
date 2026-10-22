@@ -441,6 +441,11 @@
         "label": "Mostrar sugerencias de Claude",
         "description": "Borradores y orden que tu equipo puede editar o ignorar. No se envía ni se guarda nada hasta que alguien de tu equipo lo haga. Lo que Claude lee se envía a Anthropic, el proveedor de IA de DiveDay."
       },
+      "recapAutoApprove": {
+        "heading": "Resumen del día",
+        "label": "Escribir el resumen del día cuando la tripulación lo deja vacío",
+        "description": "Claude escribe dos frases con los avistamientos que anotó tu tripulación, y salen en el resumen. Desactivado, la tripulación escribe o aprueba cada uno."
+      },
       "door": "Activar o desactivar funciones"
     },
     "crewSchedule": {

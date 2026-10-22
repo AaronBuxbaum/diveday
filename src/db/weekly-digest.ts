@@ -32,6 +32,7 @@ import {
 } from "@/lib/weekly-digest";
 import { inHorizonReadiness } from "./blockers";
 import type { AppDb, DbExecutor } from "./client";
+import { mondayReadFor } from "./monday-read";
 import { sendNotification } from "./notifications";
 import { readOwed } from "./owed";
 import { getMonthlyReport } from "./reporting";
@@ -464,6 +465,7 @@ function digestNotification(input: {
   recipient: WeeklyDigestRecipient;
   weeks: DigestWeeks;
   sections: WeeklyDigestEmailSection[];
+  read?: { section: string; text: string }[];
   origin: string;
   turnOffUrl: string;
 }): Notification {
@@ -483,6 +485,7 @@ function digestNotification(input: {
     thisWeekFrom: weeks.thisWeek.from,
     thisWeekTo: weeks.thisWeek.to,
     sections: input.sections,
+    ...(input.read && input.read.length > 0 ? { read: input.read } : {}),
     settingsUrl: `${input.origin}${weeklyDigestSettingsPath(shop.slug)}`,
     turnOffUrl: input.turnOffUrl,
   };
@@ -508,15 +511,22 @@ export async function previewWeeklyDigest(
   );
   if (!recipient) return null;
   const { weeks, grades } = await readWeeklyDigestFacts(db, input.shop, input.now ?? nowDate());
-  const sections = linkedGrades(grades, input.origin, input.shop.slug)[
-    weeklyDigestGrade(recipient.roles)
-  ];
+  const grade = weeklyDigestGrade(recipient.roles);
+  const sections = linkedGrades(grades, input.origin, input.shop.slug)[grade];
   if (sections.length === 0) return null;
+  const read = await mondayReadFor(db, {
+    shopId: input.shop.id,
+    weekOf: weeks.weekOf,
+    grade,
+    locale: recipientLocale(recipient.locale, input.shop.defaultLocale),
+    sections,
+  });
   return digestNotification({
     shop: input.shop,
     recipient,
     weeks,
     sections,
+    read,
     origin: input.origin,
     turnOffUrl: `${input.origin}${weeklyDigestSettingsPath(input.shop.slug)}`,
   });
@@ -584,8 +594,28 @@ export async function sendWeeklyDigestForShop(
     return summary;
   }
 
+  // The opening sentences, one ask per grade and language this pass, however
+  // many recipients share them (`mondayReadFor` keeps them for the week).
+  const reads = new Map<string, Promise<{ section: string; text: string }[]>>();
+  const readFor = (grade: keyof typeof linked, locale: string) => {
+    const key = `${grade}:${locale}`;
+    let read = reads.get(key);
+    if (!read) {
+      read = mondayReadFor(db, {
+        shopId: shop.id,
+        weekOf: weeks.weekOf,
+        grade,
+        locale,
+        sections: linked[grade],
+      });
+      reads.set(key, read);
+    }
+    return read;
+  };
+
   for (const recipient of pending) {
-    const sections = linked[weeklyDigestGrade(recipient.roles)];
+    const grade = weeklyDigestGrade(recipient.roles);
+    const sections = linked[grade];
     // Nothing this person may read happened: no email, and no claim, so a
     // later pass the same morning asks again rather than remembering a send.
     if (sections.length === 0) continue;
@@ -611,6 +641,7 @@ export async function sendWeeklyDigestForShop(
         recipient,
         weeks,
         sections,
+        read: await readFor(grade, recipientLocale(recipient.locale, shop.defaultLocale)),
         origin: options.origin,
         turnOffUrl: `${options.origin}/unsubscribe/${token}`,
       }),

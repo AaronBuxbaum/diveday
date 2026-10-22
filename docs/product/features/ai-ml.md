@@ -14,6 +14,15 @@ The features built on it (inbox drafts and sorting, import mapping, card reading
 the rest of the build plan) land in the layers above that ADR; each keeps the guardrails below. The
 "app has no LLM dependency" baseline in the audit section is out of date for that reason.
 
+**Content and desk assists (2026-10-22):** card-photo reading at the desk and at sign-up, a roster
+ask box, the gear-note fill, a same-person read on merge, review flags and monthly themes, the
+Monday read in the weekly digest, trip and course description drafts, Spanish drafts of shop text
+(`shop_text_translations`, shown on the shop's diver pages), dive-site briefs, the recap line
+(drafted, or filled before send when the shop allows it), sightings matched from what the crew
+said, and bench notes on work orders. Pure prompt and guard code is in `src/lib/assists/`, cached
+reads in `assist_results`. No prompt carries medical or waiver answers; a fact the model must
+repeat is passed as a placeholder, and an answer that invents a number or a species is refused.
+
 ## Guardrails
 
 - AI suggests; the safety spine decides.
@@ -90,6 +99,10 @@ section — the task numbering below is unchanged from the original audit, only 
 - **Verification**: Table-driven unit tests for every rationale branch and the clamp; a `src/db` test seeding two past blasts asserts the outcome aggregate; open the trip page in dev and confirm the prefilled percent; `pnpm check` green.
 
 ### Ship an assistive review-moderation and themes assistant (Claude API)
+
+**Shipped 2026-10-22** on the shared seam rather than a module of its own: flags in
+`src/lib/assists/review-flags.ts`, themes in `src/lib/assists/review-themes.ts`, stored by
+`src/db/review-assists.ts`. The prompt below is kept for its guardrails.
 
 - **Priority**: high
 - **Effort**: L

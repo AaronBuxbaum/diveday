@@ -821,6 +821,8 @@
     "levelLabel": "Nivel",
     "levelPlaceholder": "Elige tu nivel",
     "identifierLabel": "Número de tarjeta",
+    "cardPhoto": "Llenar esto con una foto de mi tarjeta",
+    "cardPhotoPending": "Leyendo tu tarjeta…",
     "sizesHeading": "Tus tallas",
     "sizesHint": "Solo si alquilas con nosotros. Te ahorra la prueba en el mostrador.",
     "wetsuitLabel": "Neopreno",

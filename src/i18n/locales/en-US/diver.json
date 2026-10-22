@@ -821,6 +821,8 @@
     "levelLabel": "Level",
     "levelPlaceholder": "Choose your level",
     "identifierLabel": "Card number",
+    "cardPhoto": "Fill this from a photo of my card",
+    "cardPhotoPending": "Reading your card…",
     "sizesHeading": "Your sizes",
     "sizesHint": "Only if you rent from us. It saves a fitting at the counter.",
     "wetsuitLabel": "Wetsuit",

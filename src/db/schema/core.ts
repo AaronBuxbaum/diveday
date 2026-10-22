@@ -212,6 +212,13 @@ export const shops = pgTable(
      */
     claudeSuggestionsEnabled: boolean("claude_suggestions_enabled").notNull().default(true),
     /**
+     * **Recap highlights without a tap** (the `recap` assist): when a
+     * departure's recap goes out and the crew left its note empty, Claude's
+     * two-sentence highlight from the logged sightings fills it. Off by
+     * default, so a crew approves each one by saving it.
+     */
+    recapAssistAutoApprove: boolean("recap_assist_auto_approve").notNull().default(false),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not

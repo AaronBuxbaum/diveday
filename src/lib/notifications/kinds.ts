@@ -1257,6 +1257,15 @@ const weeklyDigestSchema = z.object({
   thisWeekFrom: calendarDateSchema,
   thisWeekTo: calendarDateSchema,
   sections: z.array(weeklyDigestSectionSchema).min(1).max(6),
+  /**
+   * Claude's opening sentences (the `monday` assist), each about one of the
+   * sections above and linked to that section's page. Absent while assists are
+   * dark, and the email reads exactly as it did.
+   */
+  read: z
+    .array(z.object({ section: z.string().max(40), text: z.string().trim().min(1).max(280) }))
+    .max(3)
+    .optional(),
   /** The recipient's own email settings, where the toggle lives. */
   settingsUrl: z.url().max(2_000),
   /** The one-click opt-out — see the docblock above for why it is not `unsubscribeUrl`. */

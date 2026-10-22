@@ -9,6 +9,7 @@ const allOn = {
   publicYearEnabled: true,
   padiChecksEnabled: true,
   claudeSuggestionsEnabled: true,
+  recapAssistAutoApprove: true,
 };
 
 describe("shopOffers", () => {
@@ -43,5 +44,11 @@ describe("Claude suggestions", () => {
     const { shops } = await import("@/db/schema");
     expect(shops.claudeSuggestionsEnabled.default).toBe(true);
     expect(parseShopFeature("claudeSuggestions")).toBe("claudeSuggestions");
+  });
+
+  it("recap highlights start off: the crew approves each one until the shop says otherwise", async () => {
+    const { shops } = await import("@/db/schema");
+    expect(shops.recapAssistAutoApprove.default).toBe(false);
+    expect(parseShopFeature("recapAutoApprove")).toBe("recapAutoApprove");
   });
 });

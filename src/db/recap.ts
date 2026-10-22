@@ -57,6 +57,7 @@ import {
   sendNotificationBatch,
 } from "./notifications";
 import { queryAll } from "./query-helpers";
+import { autoFillRecapLine } from "./recap-assist";
 import {
   bookings,
   certifications,
@@ -1664,6 +1665,19 @@ async function sendRecaps(
       ),
     );
   const alreadySent = new Set(delivered.map((d) => d.bookingId));
+
+  // **The highlight a crew left blank**, for a shop that switched on "Recap
+  // highlights": Claude's line from the logged sightings, written to the trip
+  // before the first recap of it goes, so every diver on the boat and the page
+  // read the same words. Never over a crew's own; dark or refused, the recap
+  // goes without one exactly as before (`src/db/recap-assist.ts`).
+  for (const { trip, shop } of new Map(
+    rows
+      .filter((row) => !alreadySent.has(row.booking.id))
+      .map((row) => [row.trip.id, row] as const),
+  ).values()) {
+    await autoFillRecapLine(db, trip, shop);
+  }
 
   // When each diver may fly (`src/lib/fly-safe.ts`), from the same
   // `executed_dives` the after-state reads.

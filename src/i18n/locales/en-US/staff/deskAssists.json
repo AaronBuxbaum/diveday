@@ -1,0 +1,58 @@
+{
+  "draft": "Draft it",
+  "drafting": "Drafting…",
+  "cardPhoto": "Read a card photo",
+  "cardPhotoPending": "Reading the card…",
+  "gearNote": "Fill sizes from their note",
+  "gearNotePending": "Reading the note…",
+  "search": {
+    "label": "Ask in plain words",
+    "placeholder": "Who hasn’t been back in a year",
+    "submit": "Find",
+    "pending": "Finding…",
+    "noAnswer": "That doesn’t match any of the list’s views. Try the search box."
+  },
+  "dupes": {
+    "ask": "Ask Claude whether this is one person",
+    "pending": "Reading both records…",
+    "verdict": {
+      "same": "Claude reads these as one person.",
+      "different": "Claude reads these as two people.",
+      "unsure": "Claude can’t tell from these records."
+    }
+  },
+  "reviewFlags": {
+    "names_someone": "Names someone",
+    "contact_info": "Phone or email",
+    "safety_complaint": "Safety complaint",
+    "profanity": "Swearing"
+  },
+  "themes": {
+    "heading": "What divers keep mentioning"
+  },
+  "translate": {
+    "label": "In Spanish",
+    "marineLifeLabel": "Marine life, in Spanish",
+    "draft": "Draft in Spanish",
+    "save": "Save Spanish",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "error": "That didn’t save. Try again.",
+    "stale": "The original changed after this was saved. Divers read the original until you save the Spanish again."
+  },
+  "bench": {
+    "draft": "Draft from the bench notes"
+  },
+  "siteBrief": {
+    "draft": "Draft from these fields"
+  },
+  "sightings": {
+    "label": "Or say what you saw",
+    "match": "Match",
+    "matching": "Matching…",
+    "add": "Add these",
+    "adding": "Adding…",
+    "none": "Nothing you said matches this reef’s chips.",
+    "proposed": "{name} × {count}"
+  }
+}

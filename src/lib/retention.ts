@@ -167,6 +167,7 @@ export type RetainedTable =
   | "staff_replies"
   | "weekly_digest_sends"
   | "claude_usage"
+  | "assist_results"
   | "crew_notices"
   | "notification_send_queue"
   | "waiver_deliveries"
@@ -396,6 +397,13 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * month's bill with last year's same month, and nothing reads further back.
    */
   claude_usage: 400,
+  /**
+   * 400 days, measured on `updated_at`. A row is one assist's answer about
+   * the shop (review chip codes, a month's review themes, a week's Monday
+   * read). The themes page reads this month's and the queue reads pending
+   * reviews; a year and a season keeps last year's same month to compare.
+   */
+  assist_results: 400,
   /**
    * 30 days, measured on `created_at`. A row is crew news waiting for the
    * hourly pass (ADR 20261009-crew-hear-about-their-boats), and it is spent

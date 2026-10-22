@@ -441,6 +441,11 @@
         "label": "Show suggestions from Claude",
         "description": "Drafts and sorting your staff can edit or ignore. Nothing is sent or saved until someone on your team does it. What Claude reads goes to Anthropic, DiveDay’s AI provider."
       },
+      "recapAutoApprove": {
+        "heading": "Recap highlights",
+        "label": "Write the recap highlight when the crew leaves it blank",
+        "description": "Claude writes two sentences from the sightings your crew logged, and they go out on the recap. Off, the crew writes or approves each one."
+      },
       "door": "Turn features on or off"
     },
     "crewSchedule": {

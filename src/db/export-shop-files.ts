@@ -154,6 +154,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // The shop's own Claude switch (ADR 20261018-claude-assists): a shop
       // that said no must not come back with assists on.
       "claude_suggestions_enabled",
+      // Off unless the shop said yes: a restore must not send unread recap
+      // highlights for a shop that approves each one.
+      "recap_assist_auto_approve",
       "contact_email",
       "contact_phone",
       "address_street",
@@ -257,6 +260,7 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.publicYearEnabled,
         shop.padiChecksEnabled,
         shop.claudeSuggestionsEnabled,
+        shop.recapAssistAutoApprove,
         shop.contactEmail,
         shop.contactPhone,
         shop.addressStreet,
