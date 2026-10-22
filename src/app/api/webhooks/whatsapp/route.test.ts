@@ -12,6 +12,7 @@ vi.mock("@/db/inbound-messages", () => ({ recordInboundMessage: vi.fn() }));
 // 20260909-reply-keywords).
 vi.mock("@/db/reply-keywords", () => ({ handleInboundReplyKeyword: vi.fn() }));
 vi.mock("@/db/desk-pings", () => ({ pingDeskAfterHoursSafely: vi.fn() }));
+vi.mock("@/db/inbox-assists", () => ({ triageInboundMessagesSafely: vi.fn() }));
 // The ping runs after the response (#2311); the test runs what was deferred.
 vi.mock("next/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/server")>();

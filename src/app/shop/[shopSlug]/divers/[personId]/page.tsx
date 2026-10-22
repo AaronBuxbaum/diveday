@@ -27,7 +27,7 @@ import { saveAnswerFromReplyAction } from "../../inbox/actions";
 import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationsGroup } from "./_components/CertificationsGroup";
-import { ConversationSection } from "./_components/ConversationSection";
+import { ConversationWithAssists } from "./_components/ConversationWithAssists";
 import { DiverDetailsGroup } from "./_components/DiverDetailsGroup";
 import { DiverHeader } from "./_components/DiverHeader";
 import { DiverNotesSection } from "./_components/DiverNotesSection";
@@ -381,7 +381,7 @@ export default async function DiverDetailPage({
           />
           {/* What the diver said, after the paperwork that decides whether
             they board. Renders nothing for a diver who has never written. */}
-          <ConversationSection
+          <ConversationWithAssists
             entries={thread}
             diverName={diver.person.fullName}
             shopSlug={shopSlug}

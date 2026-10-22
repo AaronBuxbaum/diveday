@@ -22,6 +22,7 @@
 // file is imported here, so a stray or orphaned namespace cannot ship.
 
 import activity from "./activity.json";
+import assistsFront from "./assistsFront.json";
 import backup from "./backup.json";
 import benchFollowUp from "./benchFollowUp.json";
 import billing from "./billing.json";
@@ -72,6 +73,7 @@ import whatsapp from "./whatsapp.json";
 import workOrders from "./workOrders.json";
 
 const staff = {
+  assistsFront,
   benchFollowUp,
   calendar,
   emailSettings,

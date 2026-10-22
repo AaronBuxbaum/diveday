@@ -53,6 +53,18 @@ export function maskSampleCell(value: string): string {
     .slice(0, SAMPLE_CELL_MAX);
 }
 
+/**
+ * **Words that keep a whole column out of the sample.** The importer's own
+ * medical pattern is English and header-only, which is enough to drop a column
+ * from an import but not enough to decide what leaves the server: an
+ * "Antécédents médicaux" column holding "asthma" would pass it. So a column is
+ * left out when its header *or any of its first rows* names health, in the
+ * languages a switching shop's export arrives in. Over-reach costs a column
+ * the owner maps by hand; under-reach would send a diver's medical answer.
+ */
+const NEVER_SAMPLE =
+  /medic|médic|m[eé]dec|salud|sant[eé]|gesund|krank|arzt|health|allerg|alerg|asthm|asma|diabet|epilep|heart|coraz|cardi|herz|pregnan|embaraz|enceinte|schwanger|condition|diagnos|surg|cirug|chirurg|operat|lung|pulm|blood|sangre|sang\b|blut|pressure|presi[oó]n|seizure|convuls|disease|enfermedad|maladie|illness|injur|lesi[oó]n|bless|verletz|rstc|physician|doctor|questionnaire|cuestionario|fragebogen|ant[eé]c[eé]dent|anteceden|vorerkrank|medikament|medicament|medication|pill|insulin|inhaler|inhal|panic|anxiety|ansiedad|depress|psych|mental|disab|discapac|behinder/i;
+
 /** The level column's header, if an alias or nothing claimed one: where the spellings are read. */
 const LEVEL_HEADERS =
   /^(?:certification_level|cert_level|level|certification|cert|certification_name|course)$/;
@@ -80,7 +92,9 @@ export function importAssistSample(text: string): ImportSample | null {
   const spellings = new Set<string>();
   headers.forEach((raw, index) => {
     const header = raw.trim();
-    if (unknown.has(header)) {
+    const health =
+      NEVER_SAMPLE.test(header) || body.some((row) => NEVER_SAMPLE.test(row[index] ?? ""));
+    if (unknown.has(header) && !health) {
       const samples = new Set<string>();
       for (const row of body) {
         const cell = maskSampleCell(row[index] ?? "");
@@ -128,7 +142,7 @@ export const ImportMapping = z.object({
 
 const MAPPING_SYSTEM = `You help a scuba diving shop move its customer list from another system into DiveDay.
 
-You are given column headers DiveDay did not recognise, with a few masked sample values each, and the certification-level spellings it could not read. Answer:
+You are given column headers DiveDay did not recognize, with a few masked sample values each, and the certification-level spellings it could not read. Answer:
 - columns: for each header, the DiveDay field it holds, or "none" when it holds none of them or you are unsure. Each field may be used once.
 - levels: for each spelling, the recreational rung it names: open_water, advanced_open_water, rescue, divemaster, instructor, or "none". A specialty, a technical, nitrox or cave rating, a junior or referral level, or anything you are unsure of is "none". "AOW" and "Adv Open Water" are advanced_open_water.
 

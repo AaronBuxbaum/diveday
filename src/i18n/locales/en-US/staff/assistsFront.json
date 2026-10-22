@@ -1,0 +1,92 @@
+{
+  "inbox": {
+    "intent": {
+      "cancel": "Wants to cancel",
+      "move": "Wants to move",
+      "question": "Asks a question",
+      "payment": "About a payment",
+      "waiver": "About a waiver",
+      "late": "Running late"
+    },
+    "urgent": "Urgent",
+    "translation": "In {language}: {text}",
+    "makeRequest": "Make a request",
+    "makeRequestFor": "Make a request from {name}’s message",
+    "makingRequest": "Reading…",
+    "requestNothing": "Nothing in that message reads as a booking."
+  },
+  "conversation": {
+    "translatedFrom": "Translated from {language}",
+    "draft": "Draft a reply",
+    "drafting": "Drafting…",
+    "translate": "Translate into {language}",
+    "translating": "Translating…",
+    "yourWords": "What you wrote: {text}"
+  },
+  "callNote": {
+    "label": "Notes from the call",
+    "hint": "Type it as it came. Fill reads it into the form, and the note keeps your words.",
+    "fill": "Fill the form",
+    "filling": "Reading…",
+    "callback": "Call back: {when}",
+    "onFile": "On file: {name}",
+    "nothing": "Nothing in the note fills a field."
+  },
+  "import": {
+    "map": "Map the other columns",
+    "mapping": "Reading the columns…",
+    "mapHint": "Sends the column names and a few masked values from the first 50 rows. A column that mentions health is never sent.",
+    "mapNothing": "No other column could be matched. Rename a header and choose the file again.",
+    "suggested": "{field}, suggested",
+    "pendingCards": "Cards read from a suggested column come in for review, not verified."
+  },
+  "waiver": {
+    "label": "Start from your current waiver",
+    "hint": "Choose its PDF and the text lands in the box above for you to read and edit. This is not legal advice. Nothing is published until you publish it.",
+    "draft": "Draft from PDF",
+    "drafting": "Reading the PDF…",
+    "failed": "That file could not be read as a waiver. Choose a PDF of your release, under 5 MB."
+  },
+  "setup": {
+    "tab": "Website",
+    "heading": "Set up from your website",
+    "intro": "Paste your site and Claude reads it for your tagline, phone, desk hours, prices and departures. Nothing changes until you accept a line.",
+    "siteLabel": "Your website",
+    "read": "Read the site",
+    "reading": "Reading the site…",
+    "readFrom": "Read from {host}, {date}",
+    "kind": {
+      "tagline": "Tagline",
+      "description": "About the shop",
+      "phone": "Phone",
+      "deskHours": "Desk hours",
+      "coursePrice": "Course price",
+      "departure": "Departure",
+      "policy": "Policy"
+    },
+    "deskHoursValue": "{opens} to {closes}",
+    "coursePriceValue": "{course}: {price}",
+    "departureValue": "{title}, {time}",
+    "departurePriceValue": "{title}, {time}, {price}",
+    "source": "On the site: “{source}”",
+    "accept": "Accept",
+    "acceptFor": "Accept {kind}",
+    "addDeparture": "Add to the board",
+    "dismiss": "Dismiss",
+    "dismissFor": "Dismiss {kind}",
+    "accepted": "Accepted",
+    "dismissed": "Dismissed",
+    "policyHint": "Copy it to wherever your divers read policies.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Try again",
+    "notices": {
+      "read": "Read. Accept the lines that are right.",
+      "nothing": "Nothing on that site could be used. Check the address and try again.",
+      "badSite": "That address cannot be read. Paste your shop’s own website, starting with https://.",
+      "dark": "Claude suggestions are off for this shop.",
+      "saved": "Saved.",
+      "gone": "That line was already handled."
+    }
+  }
+}

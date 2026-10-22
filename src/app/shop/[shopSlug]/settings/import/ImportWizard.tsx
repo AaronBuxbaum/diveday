@@ -2,22 +2,38 @@
 
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { fill } from "@/i18n/fill";
-import { type PreparedImport, prepareContactImport } from "@/lib/import";
+import { importAssistSample } from "@/lib/assists/import-mapping";
+import { type ImportAssist, type PreparedImport, prepareContactImport } from "@/lib/import";
 import { type ImportActionState, importContactsAction } from "./actions";
 import { ImportPreview, PREVIEW_LIMIT } from "./ImportPreview";
 import { ImportResult } from "./ImportResult";
 import type { ImportWizardCopy } from "./import-wizard-copy";
+
+/** The `import` assist's action and words (ADR 20261018-claude-assists); absent while dark. */
+export type ImportWizardAssist = {
+  map: (csv: string) => Promise<ImportAssist | null>;
+  words: {
+    map: string;
+    mapping: string;
+    mapHint: string;
+    mapNothing: string;
+    /** "{field}, suggested". */
+    suggested: string;
+    pendingCards: string;
+  };
+};
 
 export function ImportWizard({
   diversHref,
   intro,
   copy,
   locale,
+  assist,
 }: {
   diversHref: string;
   /** Rendered on the server via `t.rich` for the embedded `contacts.csv` mono span. */
@@ -29,6 +45,7 @@ export function ImportWizard({
    * browser is the *device's* language and not the one the page is written in.
    */
   locale: string;
+  assist?: ImportWizardAssist;
 }) {
   const [state, formAction] = useActionState<ImportActionState, FormData>(importContactsAction, {
     status: "idle",
@@ -36,6 +53,11 @@ export function ImportWizard({
   const [fileName, setFileName] = useState<string | null>(null);
   const [csvText, setCsvText] = useState("");
   const [prepared, setPrepared] = useState<PreparedImport | null>(null);
+  // Claude's mapping for this file, once asked for, and whether asking found
+  // nothing. Both reset with the file.
+  const [mapped, setMapped] = useState<ImportAssist | null>(null);
+  const [mapNothing, setMapNothing] = useState(false);
+  const [mapping, startMapping] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
   // The whole preview runs in the browser off this input's change event, so a
   // file chosen before hydration is silently dropped. Marked here so a test can
@@ -58,6 +80,8 @@ export function ImportWizard({
     setFileName(null);
     setCsvText("");
     setPrepared(null);
+    setMapped(null);
+    setMapNothing(false);
     if (inputRef.current) inputRef.current.value = "";
   }, [pathname]);
 
@@ -67,6 +91,39 @@ export function ImportWizard({
     setFileName(file.name);
     setCsvText(text);
     setPrepared(prepareContactImport(text));
+    setMapped(null);
+    setMapNothing(false);
+  }
+
+  // Offered only when the file has a column or a level spelling the importer
+  // could not read on its own, and the shop's assists are on.
+  const canMap =
+    assist !== undefined &&
+    prepared !== null &&
+    !prepared.fatal &&
+    mapped === null &&
+    importAssistSample(csvText) !== null;
+
+  function mapColumns() {
+    if (!assist) return;
+    const text = csvText;
+    startMapping(async () => {
+      let answer: ImportAssist | null = null;
+      try {
+        answer = await assist.map(text);
+      } catch {
+        answer = null;
+      }
+      const useful =
+        answer && (Object.keys(answer.headers).length > 0 || Object.keys(answer.levels).length > 0);
+      if (!answer || !useful) {
+        setMapNothing(true);
+        return;
+      }
+      setMapped(answer);
+      // The same preparation the confirm re-runs on the server with this mapping.
+      setPrepared(prepareContactImport(text, answer));
+    });
   }
 
   const showResult = state.status === "done";
@@ -99,6 +156,26 @@ export function ImportWizard({
           : undefined}
       </FormStatus>
 
+      {canMap && assist ? (
+        <div className="mt-4 grid gap-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={mapColumns}
+              disabled={mapping}
+              aria-busy={mapping || undefined}
+              className={buttonClass({ variant: "ghost", size: "sm", busy: mapping })}
+            >
+              {mapping ? assist.words.mapping : assist.words.map}
+            </button>
+            {mapNothing ? (
+              <span className="text-sm text-muted">{assist.words.mapNothing}</span>
+            ) : null}
+          </div>
+          <p className="text-xs text-muted">{assist.words.mapHint}</p>
+        </div>
+      ) : null}
+
       {prepared && !prepared.fatal ? (
         <ImportPreview
           prepared={prepared}
@@ -109,6 +186,15 @@ export function ImportWizard({
           formAction={formAction}
           csvText={csvText}
           state={state}
+          assist={
+            assist && mapped
+              ? {
+                  json: JSON.stringify(mapped),
+                  suggested: assist.words.suggested,
+                  pendingCards: assist.words.pendingCards,
+                }
+              : undefined
+          }
         />
       ) : null}
 

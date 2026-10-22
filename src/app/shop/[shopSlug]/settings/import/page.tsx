@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { proseLinkClass } from "@/components/ui/button";
@@ -19,7 +20,9 @@ import type { ImportActionErrorCode } from "./actions";
 import { DiveSiteImportPanel } from "./DiveSiteImportPanel";
 import { GearImportPanel } from "./GearImportPanel";
 import { ImportKindTabs } from "./ImportKindTabs";
-import { ImportWizard } from "./ImportWizard";
+import { ImportWizard, type ImportWizardAssist } from "./ImportWizard";
+import { importAssists } from "./import-assists";
+import { WebsiteSetupTab } from "./WebsiteSetupTab";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -240,7 +243,7 @@ export const metadata: Metadata = { title: "Import — DiveDay" };
  * hub and the rail, each a file picker and a submit. `?what=` picks the tab;
  * anything else is the Divers tab, the one a switching shop arrives for.
  */
-const IMPORT_TABS = ["divers", "gear", "dive-sites"] as const;
+const IMPORT_TABS = ["divers", "gear", "dive-sites", "website"] as const;
 type ImportTab = (typeof IMPORT_TABS)[number];
 
 function importTab(what: string | undefined): ImportTab {
@@ -354,10 +357,9 @@ export default async function ImportPage({
 }) {
   const { shopSlug } = await params;
   const { what, notice } = await searchParams;
-  const tab = importTab(what);
   // Settings, not Today — Import is a Settings sub-page, and its parent is
   // where the refusal is legible. Same pattern as promos/WhatsApp/team.
-  const { shop } = await requireShopSurface(shopSlug, {
+  const { shop, db, session } = await requireShopSurface(shopSlug, {
     allow: canPersonImportShopData,
     refusal: { notice: "import-not-authorized" },
   });
@@ -365,6 +367,8 @@ export default async function ImportPage({
   const t = staffTranslator(locale);
   const staysBehind = staysBehindChip(t);
   const base = `/shop/${shopSlug}/settings/import`;
+  const assists = await importAssists(db, shop.id, session.user.personId, t);
+  const tab = assists.tab(importTab(what));
 
   return (
     <main className={settingsPaneClass()}>
@@ -377,20 +381,31 @@ export default async function ImportPage({
 
       <DataTabs t={t} shopSlug={shopSlug} current="import" />
 
-      <ImportKindTabs t={t} base={base} current={tab} />
+      <ImportKindTabs t={t} base={base} current={tab} website={assists.website} />
 
       {tab === "gear" ? (
         <div className="space-y-6">
           <GearImportPanel t={t} notice={notice} />
         </div>
+      ) : tab === "website" ? (
+        <WebsiteSetupTab db={db} shop={shop} t={t} locale={locale} notice={notice} />
       ) : tab === "dive-sites" ? (
         <div className="space-y-6">
           <DiveSiteImportPanel t={t} notice={notice} />
         </div>
       ) : (
-        diversTab({ t, shopSlug, locale, staysBehind })
+        diversTab({ t, shopSlug, locale, staysBehind, assist: assists.wizard })
       )}
     </main>
+  );
+}
+
+/** A link to one of the /switching guides, opened beside the import. */
+function switchingGuide(guide: string) {
+  return (chunks: ReactNode) => (
+    <a href={`/switching/${guide}`} target="_blank" rel="noreferrer" className={proseLinkClass}>
+      {chunks}
+    </a>
   );
 }
 
@@ -404,11 +419,13 @@ function diversTab({
   shopSlug,
   locale,
   staysBehind,
+  assist,
 }: {
   t: StaffTranslator;
   shopSlug: string;
   locale: string;
   staysBehind: { label: string; className: string };
+  assist?: ImportWizardAssist;
 }) {
   return (
     <>
@@ -418,31 +435,9 @@ function diversTab({
           layout (settled in docs/design/settled-questions.md). */}
       <p className="mb-6 text-sm text-muted">
         {t.rich("settings.import.comingFrom", {
-          eve: (chunks) => (
-            <a href="/switching/eve" target="_blank" rel="noreferrer" className={proseLinkClass}>
-              {chunks}
-            </a>
-          ),
-          diveshop360: (chunks) => (
-            <a
-              href="/switching/diveshop360"
-              target="_blank"
-              rel="noreferrer"
-              className={proseLinkClass}
-            >
-              {chunks}
-            </a>
-          ),
-          spreadsheet: (chunks) => (
-            <a
-              href="/switching/spreadsheet"
-              target="_blank"
-              rel="noreferrer"
-              className={proseLinkClass}
-            >
-              {chunks}
-            </a>
-          ),
+          eve: switchingGuide("eve"),
+          diveshop360: switchingGuide("diveshop360"),
+          spreadsheet: switchingGuide("spreadsheet"),
         })}
       </p>
 
@@ -491,6 +486,7 @@ function diversTab({
           })}
           copy={importWizardCopy(t)}
           locale={locale}
+          assist={assist}
         />
       </div>
     </>

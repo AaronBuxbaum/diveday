@@ -42,6 +42,18 @@ describe("importAssistSample", () => {
     expect(JSON.stringify(sample)).not.toContain("123456");
   });
 
+  it("leaves out a column whose header or values name health, in any language", () => {
+    const sample = importAssistSample(
+      [
+        "Nom,Antécédents médicaux,Notas,Taille combi",
+        "Lena,asthma,diabetes tipo 1,M",
+        "Ari,none,,L",
+      ].join("\n"),
+    );
+    expect(sample?.columns.map((column) => column.header)).toEqual(["Nom", "Taille combi"]);
+    expect(JSON.stringify(sample)).not.toMatch(/asthma|diabetes|médicaux/);
+  });
+
   it("reads at most the first rows, and a few values from each", () => {
     const rows = Array.from({ length: SAMPLE_ROWS + 20 }, (_, index) => `Diver ${index},x`);
     const sample = importAssistSample(["Cust,Note", ...rows].join("\n"));

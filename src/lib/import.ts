@@ -1632,6 +1632,72 @@ export function unclaimedImportHeaders(headers: readonly string[]): string[] {
   return out;
 }
 
+/** The field an assist gave a header, when it may fill it and no column already has. */
+function assistedField(
+  assist: ImportAssist | undefined,
+  header: string,
+  claimed: ReadonlySet<ImportField>,
+): ImportField | null {
+  const field = assist && Object.hasOwn(assist.headers, header) ? assist.headers[header] : null;
+  return field && ASSIST_MAPPABLE_FIELDS.includes(field) && !claimed.has(field) ? field : null;
+}
+
+/** The rung an assist gave a level spelling `normalizeLevel` could not read; never a technical name. */
+function assistedLevel(
+  assist: ImportAssist | undefined,
+  raw: string | undefined,
+): ImportLevel | null {
+  if (!assist || !raw || isTechnicalCertName(raw)) return null;
+  const level = assist.levels[assistLevelKey(raw)];
+  return level && IMPORT_LEVELS.includes(level) ? level : null;
+}
+
+/**
+ * Which column is which field: an alias first, then (only for a gap) a Claude
+ * assist's suggestion. A payment-method header is left unmapped and a medical
+ * one ignored before any assist is consulted.
+ */
+function mapImportHeaders(headers: readonly string[], assist: ImportAssist | undefined) {
+  const mapping: ColumnMapping[] = [];
+  const unmappedColumns: string[] = [];
+  const ignoredMedicalColumns: string[] = [];
+  const claimedFields = new Set<ImportField>();
+
+  headers.forEach((rawHeader, columnIndex) => {
+    const header = rawHeader.trim();
+    const normalized = normalizeHeader(header);
+    if (!normalized) return;
+    if (SENSITIVE_PAYMENT_HEADER_PATTERN.test(normalized)) {
+      unmappedColumns.push(header);
+      return;
+    }
+    const field = IMPORT_FIELDS.find(
+      (candidate) =>
+        !claimedFields.has(candidate) && HEADER_ALIASES[candidate].includes(normalized),
+    );
+    if (field) {
+      claimedFields.add(field);
+      mapping.push({ field, header, columnIndex });
+      return;
+    }
+    if (MEDICAL_HEADER_PATTERN.test(header)) {
+      ignoredMedicalColumns.push(header);
+      return;
+    }
+    const suggested = assistedField(assist, header, claimedFields);
+    if (suggested) {
+      claimedFields.add(suggested);
+      mapping.push({ field: suggested, header, columnIndex, assisted: true });
+      return;
+    }
+    unmappedColumns.push(header);
+  });
+  // A card column Claude matched is not the old system's word: no card from
+  // this file lands verified (see `ImportAssist`).
+  const assistedCards = mapping.some((entry) => entry.assisted && CARD_FIELDS.has(entry.field));
+  return { mapping, unmappedColumns, ignoredMedicalColumns, assistedCards };
+}
+
 export function prepareContactImport(text: string, assist?: ImportAssist): PreparedImport {
   const grid = parseCsv(text).filter((row) => row.some((cell) => cell.trim() !== ""));
   const empty: PreparedImport = {
@@ -1694,44 +1760,10 @@ export function prepareContactImport(text: string, assist?: ImportAssist): Prepa
     }
   }
 
-  const mapping: ColumnMapping[] = [];
-  const unmappedColumns: string[] = [];
-  const ignoredMedicalColumns: string[] = [];
-  const claimedFields = new Set<ImportField>();
-
-  headers.forEach((rawHeader, columnIndex) => {
-    const header = rawHeader.trim();
-    const normalized = normalizeHeader(header);
-    if (!normalized) return;
-    if (SENSITIVE_PAYMENT_HEADER_PATTERN.test(normalized)) {
-      unmappedColumns.push(header);
-      return;
-    }
-    const field = IMPORT_FIELDS.find(
-      (candidate) =>
-        !claimedFields.has(candidate) && HEADER_ALIASES[candidate].includes(normalized),
-    );
-    if (field) {
-      claimedFields.add(field);
-      mapping.push({ field, header, columnIndex });
-      return;
-    }
-    if (MEDICAL_HEADER_PATTERN.test(header)) {
-      ignoredMedicalColumns.push(header);
-      return;
-    }
-    const suggested =
-      assist && Object.hasOwn(assist.headers, header) ? assist.headers[header] : undefined;
-    if (suggested && ASSIST_MAPPABLE_FIELDS.includes(suggested) && !claimedFields.has(suggested)) {
-      claimedFields.add(suggested);
-      mapping.push({ field: suggested, header, columnIndex, assisted: true });
-      return;
-    }
-    unmappedColumns.push(header);
-  });
-  // A card column Claude matched is not the old system's word: no card from
-  // this file lands verified (see `ImportAssist`).
-  const assistedCards = mapping.some((entry) => entry.assisted && CARD_FIELDS.has(entry.field));
+  const { mapping, unmappedColumns, ignoredMedicalColumns, assistedCards } = mapImportHeaders(
+    headers,
+    assist,
+  );
 
   const indexOf = (field: ImportField) =>
     mapping.find((entry) => entry.field === field)?.columnIndex ?? -1;
@@ -1882,12 +1914,7 @@ export function prepareContactImport(text: string, assist?: ImportAssist): Prepa
     }
     if (levelRaw && !levelNamesSpecialty) {
       const known = normalizeLevel(levelRaw);
-      const assistedLevel =
-        known || isTechnicalCertName(levelRaw) || !assist
-          ? null
-          : (assist.levels[assistLevelKey(levelRaw)] ?? null);
-      const level =
-        known ?? (assistedLevel && IMPORT_LEVELS.includes(assistedLevel) ? assistedLevel : null);
+      const level = known ?? assistedLevel(assist, levelRaw);
       const levelStatus: PreparedCardStatus = known ? cardStatus : "pending";
       if (!level && isTechnicalCertName(levelRaw)) {
         // Named separately from the generic "isn't a level" note, because this is
