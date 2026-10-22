@@ -653,11 +653,15 @@ test.describe("staff", () => {
       page.getByText("The mooring ball moved south. Brief the swim-through first."),
     ).toBeVisible();
 
-    // And nowhere a diver looks. The public briefing reads the same row.
-    await page.goto("/s/blue-mantis");
-    await expect(
-      page.getByText("The mooring ball moved south. Brief the swim-through first."),
-    ).toHaveCount(0);
+    // And nowhere a diver looks. The public briefing reads the same row, so its
+    // HTML (the RSC payload included) is read whole rather than opened in the
+    // browser: a stricter check than the visible text, without a page load
+    // spent on pages this test never clicks (PR #2923, shard 6/6 over budget).
+    for (const diverPath of ["/s/blue-mantis", "/s/blue-mantis/sites/molasses-reef"]) {
+      const diverPage = await page.request.get(diverPath);
+      expect(diverPage.status(), diverPath).toBe(200);
+      expect(await diverPage.text(), diverPath).not.toContain("The mooring ball moved south.");
+    }
 
     // Taking it back takes it off the row. Straight to the site: the library's
     // link to it was proven above, and a second walk through it was budget
@@ -672,11 +676,14 @@ test.describe("staff", () => {
     // this is the assertion that raced.
     await page.waitForURL(/[?&]notice=saved/);
     await expect(cleared).toHaveValue("");
-    await page.goto("/shop/blue-mantis/dive-sites");
-    await page.getByRole("heading", { level: 1, name: "Dive-site library" }).waitFor();
-    await expect(
-      page.getByText("The mooring ball moved south. Brief the swim-through first."),
-    ).toHaveCount(0);
+    // The row's absence is read off the library's whole HTML, as the diver
+    // pages were: nothing is clicked there, so its hydration was budget spent
+    // on nothing.
+    const library = await page.request.get("/shop/blue-mantis/dive-sites");
+    expect(library.status()).toBe(200);
+    const libraryHtml = await library.text();
+    expect(libraryHtml).toContain("Dive-site library");
+    expect(libraryHtml).not.toContain("The mooring ball moved south.");
   });
 
   test("a second tab's save is refused rather than reverting the first", async ({
