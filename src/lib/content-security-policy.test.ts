@@ -4,7 +4,7 @@ import {
   enforcedPolicy,
   reportingEndpointsHeader,
 } from "./content-security-policy";
-import { MAP_REACHABILITY_PROBES } from "./maps";
+import { ARRIVAL_MAP_PROBES, MAP_REACHABILITY_PROBES } from "./maps";
 
 const base = { denyFraming: true } as const;
 
@@ -226,14 +226,14 @@ describe("the policy", () => {
     expect(imgSrc).toContain("https://*.s3.amazonaws.com");
     expect(imgSrc).toContain("https://*.cloudfront.net");
     // The route maps' reachability read (UX review 2026-10-10, item 20).
-    expect(MAP_REACHABILITY_PROBES.map((probe) => new URL(probe).origin).sort()).toEqual([
-      "https://a.basemaps.cartocdn.com",
-      "https://tile.openstreetmap.org",
+    expect(MAP_REACHABILITY_PROBES.map((probe) => new URL(probe).origin)).toEqual([
+      "https://server.arcgisonline.com",
     ]);
-    expect(imgSrc).toContain("https://*.basemaps.cartocdn.com");
-    expect(imgSrc).toContain("https://tile.openstreetmap.org");
+    // The shared basemap's tiles (src/lib/basemap.ts).
+    expect(imgSrc).toContain("https://server.arcgisonline.com");
+    expect(imgSrc).not.toContain("https://*.basemaps.cartocdn.com");
     expect(imgSrc).not.toContain("https://*.tile.openstreetmap.org");
-    for (const probe of MAP_REACHABILITY_PROBES) {
+    for (const probe of [...MAP_REACHABILITY_PROBES, ...ARRIVAL_MAP_PROBES]) {
       expect(imgSrc).toContain(probe);
     }
   });

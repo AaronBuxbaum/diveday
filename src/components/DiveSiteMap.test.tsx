@@ -71,7 +71,7 @@ describe("DiveSiteMap's route ends", () => {
 describe("DiveSiteMap when the map does not load (issue 2013)", () => {
   it("lays the frame over a sunken ground", () => {
     const { container } = render(<DiveSiteMap site={SITE} t={t} />);
-    const frame = container.querySelector("iframe");
+    const frame = container.querySelector("[data-map-state]");
     expect(frame?.parentElement).toHaveClass("bg-surface-sunken");
   });
 
