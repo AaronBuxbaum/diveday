@@ -25,7 +25,7 @@ test.describe("the front-of-house assists, dark", () => {
     await expect(page.getByRole("button", { name: "Fill the form" })).toHaveCount(0);
 
     await page.goto("/shop/blue-mantis/settings/import");
-    await expect(page.getByRole("link", { name: "Website" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Website", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Map the other columns" })).toHaveCount(0);
     // Asked for by URL, the Website tab is the Divers tab while dark.
     await page.goto("/shop/blue-mantis/settings/import?what=website");
