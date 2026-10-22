@@ -23,7 +23,6 @@ import {
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
@@ -51,6 +50,8 @@ import {
 import { ClosingStation } from "./ClosingStation";
 import { crewAwayRowControl } from "./CrewAwayWorkingControl";
 import { DayStation } from "./DayStation";
+import { HelpRequestControl, HelpRequestProvider } from "./HelpRequestControl";
+import { helpRequestCopy } from "./help-request-copy";
 import { NeedsYouGroups } from "./NeedsYouGroups";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import { RentalFitKeepControl } from "./RentalFitKeepControl";
@@ -119,11 +120,6 @@ import { WeekHorizon } from "./WeekHorizon";
 /** One of the reader's fresh form drafts, with the door back to it. */
 export type SpineDraft = { form: FormDraftKind; href: string };
 
-export type SpineHelpRequestAction = (
-  requestId: string,
-  status: "acknowledged" | "handled",
-) => Promise<void>;
-
 type RowControls = {
   shopSlug: string;
   shopName: string;
@@ -131,7 +127,6 @@ type RowControls = {
   resendCopy: ResendConfirmationCopy;
   offerCopy: OfferSeatCopy;
   paymentCopy: PaymentActionCopy;
-  helpRequestAction?: SpineHelpRequestAction;
   /** The signed-in staffer: the "working it" tap is never offered about them (#2678). */
   readerPersonId?: string;
   t: StaffTranslator;
@@ -141,8 +136,9 @@ type RowControls = {
  * The copy and context every row's control needs, composed once per render on the server:
  * the controls are Client Components, so a translator never crosses the boundary.
  */
+
 function rowControls(
-  base: Pick<RowControls, "shopSlug" | "shopName" | "helpRequestAction" | "readerPersonId" | "t">,
+  base: Pick<RowControls, "shopSlug" | "shopName" | "readerPersonId" | "t">,
 ): RowControls {
   const { t } = base;
   return {
@@ -448,22 +444,11 @@ function StationRow({
       hostedInvoiceUrl={action.payment.hostedInvoiceUrl ?? null}
       copy={controls.paymentCopy}
     />
-  ) : action.helpRequest && controls.helpRequestAction ? (
-    <form
-      action={controls.helpRequestAction.bind(
-        null,
-        action.helpRequest.requestId,
-        action.helpRequest.status === "requested" ? "acknowledged" : "handled",
-      )}
-      className="flex sm:inline-flex"
-    >
-      <SubmitButton
-        pendingLabel={t("today.helpRequest.saving")}
-        className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
-      >
-        {action.actionLabel}
-      </SubmitButton>
-    </form>
+  ) : action.helpRequest ? (
+    <HelpRequestControl
+      {...action.helpRequest}
+      meetingInstructions={action.helpRequest.meetingInstructions}
+    />
   ) : action.agencyCheck && action.agencyCheck.cards.length > 0 ? (
     // **"Check with SSI" beside a card still waiting for its check** (H-105):
     // drawn only with the browser extension, and then the same check the
@@ -800,7 +785,6 @@ export type DaySpineContext = {
    * due) stays open under the crew lens instead of folding with the desk's.
    */
   readerPersonId?: string;
-  helpRequestAction?: SpineHelpRequestAction;
   /**
    * The reader's own unfinished forms (ADR 20260906-before-you-ask, decision
    * 3): one row per fresh draft under the desk group, and none otherwise.
@@ -885,7 +869,6 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
     currency,
     crewedTripIds,
     readerPersonId,
-    helpRequestAction,
     drafts = [],
     showPaymentsRow = false,
     firstRun,
@@ -903,7 +886,6 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
   const controls = rowControls({
     shopSlug,
     shopName: context.mailShopName,
-    helpRequestAction,
     readerPersonId,
     t,
   });
@@ -1253,7 +1235,7 @@ export function DaySpine({ context }: { context: DaySpineContext }) {
   );
   return (
     <TodayAgencyCheck shopSlug={shopSlug} t={t}>
-      {spineBody}
+      <HelpRequestProvider copy={helpRequestCopy(t)}>{spineBody}</HelpRequestProvider>
     </TodayAgencyCheck>
   );
 }

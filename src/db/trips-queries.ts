@@ -11,6 +11,8 @@ import {
   isNull,
   lt,
   lte,
+  ne,
+  notExists,
   or,
   sql,
 } from "drizzle-orm";
@@ -26,6 +28,7 @@ import {
   type TripDiveSiteRef,
   type TripDiveSiteSummary,
 } from "@/lib/trip-dives";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { shiftWeek, weekDates } from "@/lib/week-board";
 import { shopDayBounds, wallTimeToUtc } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
@@ -569,6 +572,10 @@ export async function offsetUpcomingTripsWithCounts(
     monthEnd?: Date;
     /** Only trips with at least one open seat (booked < capacity). */
     hasSpace?: boolean;
+    /** Exclude departures where this diver already has a booking that cannot be reactivated. */
+    excludeBookedForPersonId?: string;
+    /** Keep the schedule reader's one-hour late-departure grace. */
+    includeDepartureBuffer?: boolean;
     /** "fun_dive" for no linked course, "course" for a course session. */
     tripType?: "fun_dive" | "course";
     /**
@@ -580,14 +587,34 @@ export async function offsetUpcomingTripsWithCounts(
   } = {},
 ): Promise<UpcomingTripOffsetPage> {
   const now = options.now ?? nowDate();
+  const existingBooking = alias(bookings, "picker_existing_booking");
   const scope = and(
     upcomingTripScope(shopId, {
-      from: now,
+      from: options.includeDepartureBuffer ? new Date(now.getTime() - DEPARTURE_BUFFER_MS) : now,
       monthEnd: options.monthEnd,
       tripType: options.tripType,
       publicOnly: options.outward,
     }),
     options.outward ? notRehearsal() : undefined,
+    // Applied before LIMIT, to both rows and count. A cancelled booking and a
+    // future no-show can be reactivated (`rowCanBeReactivated`, issue #2484);
+    // the booking transaction still rechecks that lifecycle and every gate.
+    options.excludeBookedForPersonId
+      ? notExists(
+          db
+            .select({ id: existingBooking.id })
+            .from(existingBooking)
+            .where(
+              and(
+                eq(existingBooking.shopId, shopId),
+                eq(existingBooking.tripId, trips.id),
+                eq(existingBooking.personId, options.excludeBookedForPersonId),
+                ne(existingBooking.status, "cancelled"),
+                or(ne(existingBooking.status, "no_show"), lte(trips.startsAt, nowDate())),
+              ),
+            ),
+        )
+      : undefined,
   );
   const having = hasSpaceHaving(options.hasSpace);
 

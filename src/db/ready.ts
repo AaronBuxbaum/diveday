@@ -28,7 +28,7 @@ import type { AppDb } from "./client";
 import { courseMaterialsDoneByPerson } from "./course-materials";
 import { firstActiveIntroCourse, hasActiveRefresherCourse } from "./courses";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
-import { hasMoveAsk } from "./inbound-messages";
+import { getPendingMoveAsk, type PendingMoveAsk } from "./inbound-messages";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
@@ -197,6 +197,13 @@ export type ReadyPageData = {
   trip: {
     id: string;
     plannedDives: number;
+    meetingPointLabel: string | null;
+    meetingPointAddress: string | null;
+    arrivalLandmark: string | null;
+    arrivalParkingNote: string | null;
+    arrivalTransitNote: string | null;
+    arrivalLookFor: string | null;
+    arrivalFirstInteraction: string | null;
     /**
      * Only what the gear step needs, never the whole catalog row: whether a
      * session of this course may run on enriched air (`nitroxAvailableOn`,
@@ -407,11 +414,11 @@ export type ReadyPageData = {
    * trip with none, a paid cancel returns nothing right away, so the diver
    * may ask the shop for another date instead: `open` while that ask could be
    * made — a paid seat the diver may still release, not held, on their own
-   * booking — and `asked` while one about this departure stands
-   * (`hasMoveAsk`), so the page says so rather than offering it twice. Null
+   * booking — and a receipt while one about this departure stands
+   * (`getPendingMoveAsk`), so the page says so rather than offering it twice. Null
    * everywhere else. The move itself is staff's.
    */
-  moveAsk: "open" | "asked" | null;
+  moveAsk: "open" | PendingMoveAsk | null;
   /**
    * **The departure itself was called off** — `trips.status`, not the
    * booking's.
@@ -539,7 +546,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     nitroxOnFile,
     welcomeInputs,
     fitConfirmation,
-    moveAskStands,
+    pendingMoveAsk,
   ] = await Promise.all([
     getTripWithBookedOnce(db, row.shopId, row.tripId),
     reEntryOffersOpen ? hasActiveRefresherCourse(db, row.shopId) : false,
@@ -577,8 +584,8 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     row.status === "booked" &&
     !hasSailed(row.tripStartsAt, now) &&
     row.identityUnconfirmedAt === null
-      ? hasMoveAsk(db, row.shopId, bookingId, row.tripId)
-      : false,
+      ? getPendingMoveAsk(db, row.shopId, bookingId, row.tripId)
+      : null,
   ]);
   if (!trip) return null;
   return {
@@ -596,7 +603,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
-    moveAskStands,
+    pendingMoveAsk,
   };
 }
 
@@ -631,7 +638,7 @@ export async function getReadyPageData(
     welcomeInputs,
     fitConfirmation,
     materialsDoneElsewhere,
-    moveAskStands,
+    pendingMoveAsk,
   } = page;
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -693,7 +700,8 @@ export async function getReadyPageData(
     canCancelBooking &&
     !identityHeld &&
     (cancelPreview === "forfeit" || cancelPreview === "no_policy");
-  const moveAsk: ReadyPageData["moveAsk"] = moveAskable ? (moveAskStands ? "asked" : "open") : null;
+  const moveAsk: ReadyPageData["moveAsk"] =
+    moveAskable && trip.status !== "cancelled" ? (pendingMoveAsk ?? "open") : null;
 
   const canPayPartySeats =
     canCancelBooking &&
@@ -727,6 +735,13 @@ export async function getReadyPageData(
     trip: {
       id: row.tripId,
       plannedDives: trip.plannedDives,
+      meetingPointLabel: trip.meetingPointLabel,
+      meetingPointAddress: trip.meetingPointAddress,
+      arrivalLandmark: trip.arrivalLandmark,
+      arrivalParkingNote: trip.arrivalParkingNote,
+      arrivalTransitNote: trip.arrivalTransitNote,
+      arrivalLookFor: trip.arrivalLookFor,
+      arrivalFirstInteraction: trip.arrivalFirstInteraction,
       course: trip.course
         ? { nitroxCompatible: trip.course.nitroxCompatible, gearIncluded: trip.course.gearIncluded }
         : null,

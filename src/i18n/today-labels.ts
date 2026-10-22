@@ -902,6 +902,7 @@ export function helpRequestDetailText(
   input: {
     kind: "carry_gear" | "first_timer" | "find_group";
     status: "requested" | "acknowledged";
+    helperPersonName?: string | null;
   },
 ): string {
   const help = t(
@@ -912,20 +913,21 @@ export function helpRequestDetailText(
         : "today.helpRequest.kind.findGroup",
   );
   return t(
-    input.status === "acknowledged"
-      ? "today.helpRequest.detailAcknowledged"
+    input.helperPersonName
+      ? "today.helpRequest.detailAssigned"
       : "today.helpRequest.detailRequested",
-    { help },
+    input.helperPersonName ? { help, name: input.helperPersonName } : { help },
   );
 }
 
 export function helpRequestActionText(
   t: StaffTranslator,
   status: "requested" | "acknowledged",
+  helperPersonName?: string | null,
 ): string {
-  return t(
-    status === "acknowledged" ? "today.helpRequest.markHandled" : "today.helpRequest.acknowledge",
-  );
+  return status === "acknowledged" && helperPersonName
+    ? t("today.helpRequest.markHandled")
+    : t(helperPersonName ? "today.helpRequest.changeHelper" : "today.helpRequest.arrangeHelp");
 }
 
 export function openTripActionText(t: StaffTranslator): string {

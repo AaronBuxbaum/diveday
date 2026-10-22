@@ -243,7 +243,9 @@
     "chooseActivity": "Elige una salida",
     "booking": "Reservando…",
     "bookActivityButton": "Reservar",
-    "noOpenActivities": "Ninguna salida próxima tiene plazas libres.",
+    "noOpenActivities": "No hay otras salidas próximas con plazas libres.",
+    "earlierDepartures": "Salidas anteriores",
+    "laterDepartures": "Salidas posteriores",
     "noEmailNote": "Sin correo registrado. Entrégale el enlace de la exención en persona o agrega una dirección a su ficha.",
     "bookDeparture": "Agregar una reserva"
   },
@@ -274,7 +276,7 @@
     "noContact": "Sin datos de contacto",
     "compare": "Comparar",
     "compareWith": "Comparar con {name}",
-    "more": "Y {count} más"
+    "showMore": "Mostrar más"
   },
   "mergePreview": {
     "title": "Fusionar registros duplicados",

@@ -1,4 +1,6 @@
 // Bounded subprocess calls for scripts/.
+// Async stages use runBoundedAsync: detached groups are reaped on timeout,
+// completion, parent exit, SIGINT and SIGTERM; callers never own raw spawn.
 //
 // Every synchronous `spawnSync`/`execFileSync` in this directory goes through
 // one of the two wrappers below, because an unbounded one is how `pnpm check`
@@ -25,7 +27,7 @@
 // binary and the argv -- which the caller already chose to make visible in `ps`
 // -- the elapsed bound, and nothing else.
 
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 
 /**
  * The conventional shell exit code for "killed by a timeout" (`timeout(1)`).
@@ -265,4 +267,67 @@ export function readBounded(command, args, { timeoutMs, ...options } = {}) {
       stderr: error.stderr,
     });
   }
+}
+
+const ownedGroups = new Set();
+function reapGroups() {
+  for (const pid of ownedGroups) {
+    try {
+      process.kill(-pid, "SIGKILL");
+    } catch {}
+  }
+}
+function interrupted() {
+  reapGroups();
+  process.exit(130);
+}
+function terminated() {
+  reapGroups();
+  process.exit(143);
+}
+function registerGroup(pid) {
+  if (!pid) return;
+  if (ownedGroups.size === 0) {
+    process.on("exit", reapGroups);
+    process.on("SIGINT", interrupted);
+    process.on("SIGTERM", terminated);
+  }
+  ownedGroups.add(pid);
+}
+function releaseGroup(pid) {
+  ownedGroups.delete(pid);
+  if (ownedGroups.size === 0) {
+    process.off("exit", reapGroups);
+    process.off("SIGINT", interrupted);
+    process.off("SIGTERM", terminated);
+  }
+}
+
+/** Bounded asynchronous equivalent of runStep; owns and reaps the whole process group. */
+export function runBoundedAsync(command, args, { timeoutMs, ...options } = {}) {
+  requireBound(timeoutMs, "runBoundedAsync");
+  requireArgv(command, args, options, "runBoundedAsync");
+  return new Promise((resolve) => {
+    let settled = false;
+    const child = spawn(command, args, { ...options, detached: true });
+    registerGroup(child.pid);
+    const kill = () => {
+      if (child.pid) {
+        try {
+          process.kill(-child.pid, "SIGKILL");
+        } catch {}
+      }
+    };
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      kill();
+      releaseGroup(child.pid);
+      resolve(result);
+    };
+    const timer = setTimeout(() => finish({ status: 124, error: "ETIMEDOUT" }), timeoutMs);
+    child.once("error", (error) => finish({ status: 1, error: error.code }));
+    child.once("exit", (status, signal) => finish({ status: status ?? 1, signal }));
+  });
 }

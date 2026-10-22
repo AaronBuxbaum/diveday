@@ -3,6 +3,8 @@ import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import type { ReadyPageData } from "@/db/ready";
 import type { DiverTranslator } from "@/i18n/messages";
+import type { DiverLocale } from "@/i18n/settings";
+import { formatDateTimeTz } from "@/lib/format";
 import { MOVE_ASK_NOTE_MAX_LENGTH } from "@/lib/inbox";
 
 /**
@@ -17,22 +19,35 @@ import { MOVE_ASK_NOTE_MAX_LENGTH } from "@/lib/inbox";
  */
 export function MoveAsk({
   state,
+  tripId,
+  locale,
+  timeZone,
   shopName,
   shopPhone,
   action,
   t,
 }: {
   state: NonNullable<ReadyPageData["moveAsk"]>;
+  tripId: string;
+  locale: DiverLocale;
+  timeZone: string;
   shopName: string;
   shopPhone: string | null;
   action: (formData: FormData) => Promise<void>;
   t: DiverTranslator;
 }) {
-  if (state === "asked") {
+  if (state !== "open") {
     return (
-      <p id="move-ask" className="text-base">
-        {t("ready.moveAsk.asked", { shop: shopName })}
-      </p>
+      <div id="move-ask" className="flex flex-col gap-2 text-base">
+        <p className="font-medium">{t("ready.moveAsk.asked", { shop: shopName })}</p>
+        {state.note ? <p className="whitespace-pre-wrap wrap-anywhere">{state.note}</p> : null}
+        <p className="text-muted">
+          <time dateTime={state.sentAt.toISOString()}>
+            {t("ready.moveAsk.sentAt", { when: formatDateTimeTz(state.sentAt, locale, timeZone) })}
+          </time>
+        </p>
+        <p className="text-muted">{t("ready.moveAsk.bookingUnchanged")}</p>
+      </div>
     );
   }
   return (
@@ -43,6 +58,7 @@ export function MoveAsk({
           : t("ready.moveAsk.bodyNoPhone", { shop: shopName })}
       </p>
       <form action={action} className="flex flex-wrap items-end gap-3">
+        <input type="hidden" name="tripId" value={tripId} />
         <Field label={t("ready.moveAsk.noteLabel")} className="min-w-56 flex-1">
           <input
             name="note"

@@ -930,7 +930,15 @@ export type TodayAction = {
    */
   payment?: { bookingId: string; orderId?: string; hostedInvoiceUrl?: string | null };
   /** A one-choice day-of request and its visible staff hand-off state. */
-  helpRequest?: { requestId: string; status: "requested" | "acknowledged" };
+  helpRequest?: {
+    requestId: string;
+    revision: number;
+    status: "requested" | "acknowledged";
+    helperPersonId: string | null;
+    helperPersonName: string | null;
+    crew: readonly { personId: string; fullName: string }[];
+    meetingInstructions: string | null;
+  };
   /**
    * Present on the evening's rental-fit question (issue #1174, D14): the tap
    * writes the size onto the diver's fit in place rather than navigating.

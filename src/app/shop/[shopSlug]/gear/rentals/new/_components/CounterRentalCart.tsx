@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useEffectEvent, useId, useState } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import {
   ChoicePill,
   ChoiceRow,
   controlClass,
+  Field,
+  FormStatus,
   StickyFormActions,
 } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
@@ -17,14 +19,23 @@ import { formatMoneyCents } from "@/lib/format";
 import type { GearItemKind } from "@/lib/gear";
 import { currencySymbol, majorToMinor } from "@/lib/money";
 import {
+  CART_CONFIRMED_FIELD,
+  CART_FILLS_FIELD,
+  CART_PAYMENT_FIELD,
+  CART_PRICE_FIELD_PREFIX,
+  CART_SET_PRICE_FIELD,
+  CART_UNITS_FIELD,
   CONFIRM_FIELD_PREFIX,
   FILL_FIELD_PREFIX,
+  KEPT_CART_UNITS_MAX,
   PAYMENT_FIELD,
   PRICE_FIELD_PREFIX,
   type RentalPayment,
   SET_PRICE_FIELD,
   UNIT_FIELD,
 } from "../../rental-form";
+import { CounterRentalPicker } from "./CounterRentalPicker";
+import { counterRentalRowError } from "./counter-rental-row-error";
 import { readKeptCart } from "./kept-cart";
 
 export type PickerUnit = {
@@ -51,6 +62,9 @@ export type PaymentChoice = { value: RentalPayment; label: string; hint?: string
 export type CartWords = {
   gearHeading: string;
   kindsAria: string;
+  filterLabel: string;
+  clearFilter: string;
+  noMatches: string;
   billHeading: string;
   billEmpty: string;
   inSet: string;
@@ -91,7 +105,7 @@ function centsOf(raw: string, currency: string): number {
  * like nothing happened (Aaron, 2026-10-09). So a pick now answers where the
  * finger is. The kinds are a row of chips, the free units of the chosen kind
  * are tiles, and a tapped tile turns into a ticked one in place, tapped again
- * to put it back. The bill below lists every pick with its price, and the
+ * to put it back. The bill above the filtered grid keeps every pick with its price, and the
  * sticky bar at the foot says how many and how much the whole time.
  *
  * **What it costs and how it is paid sit on the screen, always** (same day:
@@ -118,6 +132,7 @@ export function CounterRentalCart({
   invoiceExtras,
   words,
   notice,
+  refusal = null,
   restoreKept = null,
 }: {
   groups: { kind: GearItemKind; kindLabel: string; units: PickerUnit[] }[];
@@ -133,6 +148,7 @@ export function CounterRentalCart({
   invoiceExtras: ReactNode;
   words: CartWords;
   notice: ReactNode;
+  refusal?: { code: string; unitId: string | null; message: string } | null;
   /**
    * The page came back with this form's refusal: put back the picks, prices
    * and payment this tab just submitted (fifth loop, item 14), so the staffer
@@ -142,11 +158,13 @@ export function CounterRentalCart({
   restoreKept?: string | null;
 }) {
   const billId = useId();
-  const [kind, setKind] = useState<GearItemKind | undefined>(groups[0]?.kind);
+  const keptAnchor = useRef<HTMLInputElement>(null);
   const [pickedIds, setPickedIds] = useState<readonly string[]>([]);
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [setFigure, setSetFigure] = useState(setPrice ?? "");
   const [payment, setPayment] = useState<RentalPayment | null>(null);
+  const [fills, setFills] = useState<Record<string, string>>({});
+  const [confirmed, setConfirmed] = useState<readonly string[]>([]);
 
   const byId = new Map(groups.flatMap((group) => group.units.map((unit) => [unit.id, unit])));
 
@@ -154,13 +172,34 @@ export function CounterRentalCart({
     if (!restoreKept) return;
     const kept = readKeptCart(restoreKept, (id) => byId.has(id));
     if (!kept) return;
-    if (kept.ids.length > 0) setPickedIds(kept.ids);
+    setPickedIds(kept.ids);
     setPrices(kept.prices);
+    setFills(
+      Object.fromEntries(
+        Object.entries(kept.fills).map(([id, value]) => [
+          id,
+          words.fillOptions.some((option) => option.value === value) ? value : "",
+        ]),
+      ),
+    );
+    setConfirmed(kept.confirmed);
     if (kept.setFigure !== undefined) setSetFigure(kept.setFigure);
     if (kept.payment) setPayment(kept.payment);
   });
   useEffect(() => {
-    if (restoreKept) restore();
+    if (!restoreKept) return;
+    restore();
+    const form = keptAnchor.current?.closest("form");
+    let frame = 0;
+    const onReset = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => restore());
+    };
+    form?.addEventListener("reset", onReset);
+    return () => {
+      cancelAnimationFrame(frame);
+      form?.removeEventListener("reset", onReset);
+    };
   }, [restoreKept]);
   const picked = pickedIds.flatMap((id) => byId.get(id) ?? []);
   const asSet =
@@ -185,100 +224,47 @@ export function CounterRentalCart({
     setPickedIds((previous) =>
       previous.includes(id) ? previous.filter((other) => other !== id) : [...previous, id],
     );
-  const shown = groups.find((group) => group.kind === kind) ?? groups[0];
+  const fillOf = (unit: PickerUnit) => fills[unit.id] ?? "";
+  // Save the supported cart before per-row fields use up the 80-name draft.
+  // Separate price fields let each raw price keep its own value-length budget.
+  const keptPicked = picked.slice(0, KEPT_CART_UNITS_MAX);
+  const rowError = (unit: PickerUnit) => counterRentalRowError(unit, refusal, fillOf(unit));
 
   return (
     <>
-      <SectionCard title={words.gearHeading}>
-        <fieldset aria-label={words.kindsAria} className="flex min-w-0 flex-wrap gap-2">
-          {groups.map((group) => {
-            const chosen = group.kind === shown?.kind;
-            const taken = group.units.filter((unit) => pickedIds.includes(unit.id)).length;
-            return (
-              <button
-                key={group.kind}
-                type="button"
-                aria-pressed={chosen}
-                onClick={() => setKind(group.kind)}
-                className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors ${
-                  chosen
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-surface hover:bg-surface-sunken"
-                }`}
-              >
-                {group.kindLabel}
-                {taken > 0 ? (
-                  <span
-                    className={`rounded-full px-1.5 text-xs tabular-nums ${
-                      chosen ? "bg-primary-foreground text-primary" : "bg-primary-tint text-primary"
-                    }`}
-                  >
-                    {taken}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </fieldset>
-        {shown ? (
-          <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {shown.units.map((unit) => {
-              const on = pickedIds.includes(unit.id);
-              return (
-                <li key={unit.id}>
-                  <button
-                    type="button"
-                    aria-pressed={on}
-                    disabled={unit.blocked !== null}
-                    onClick={() => toggle(unit.id)}
-                    className={`flex h-full min-h-14 w-full items-start gap-2 rounded-lg border p-3 text-start text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                      on
-                        ? "border-primary bg-primary-tint"
-                        : "border-border bg-surface enabled:hover:bg-surface-sunken"
-                    }`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-sm border ${
-                        on
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border-strong"
-                      }`}
-                    >
-                      {on ? (
-                        <svg
-                          aria-hidden="true"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={2.5}
-                          className="size-3"
-                        >
-                          <path d="M3.5 8.5l3 3 6-7" />
-                        </svg>
-                      ) : null}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-medium">
-                        {unit.label}
-                        {unit.size ? (
-                          <span className="font-normal text-muted"> · {unit.size}</span>
-                        ) : null}
-                      </span>
-                      {unit.blocked ? (
-                        <span className="block text-muted">{unit.blocked}</span>
-                      ) : unit.care.length > 0 ? (
-                        <span className="block text-warning-strong">{unit.care.join(" · ")}</span>
-                      ) : null}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
-      </SectionCard>
-
+      <input
+        ref={keptAnchor}
+        type="hidden"
+        name={CART_UNITS_FIELD}
+        value={keptPicked.map((unit) => unit.id).join(" ")}
+      />
+      <input type="hidden" name={CART_PAYMENT_FIELD} value={payment ?? ""} />
+      <input type="hidden" name={CART_SET_PRICE_FIELD} value={setFigure} />
+      <input
+        type="hidden"
+        name={CART_FILLS_FIELD}
+        value={JSON.stringify(
+          Object.fromEntries(
+            keptPicked.filter((unit) => unit.fillAria).map((unit) => [unit.id, fillOf(unit)]),
+          ),
+        )}
+      />
+      <input
+        type="hidden"
+        name={CART_CONFIRMED_FIELD}
+        value={keptPicked
+          .filter((unit) => confirmed.includes(unit.id))
+          .map((unit) => unit.id)
+          .join(" ")}
+      />
+      {keptPicked.map((unit) => (
+        <input
+          key={unit.id}
+          type="hidden"
+          name={`${CART_PRICE_FIELD_PREFIX}${unit.id}`}
+          value={priceOf(unit)}
+        />
+      ))}
       <SectionCard title={words.billHeading}>
         {picked.length === 0 ? (
           <p className="text-sm text-muted">{words.billEmpty}</p>
@@ -308,7 +294,7 @@ export function CounterRentalCart({
                   <li key={unit.id} className="flex flex-col gap-1 py-2">
                     <input type="hidden" name={UNIT_FIELD} value={unit.id} />
                     <div className="flex min-h-11 items-center gap-3">
-                      <p className="min-w-0 flex-1 text-sm">
+                      <p className="min-w-0 flex-1 text-base">
                         <span className="font-medium">{unit.label}</span>
                         {unit.size ? <span className="text-muted"> · {unit.size}</span> : null}
                       </p>
@@ -351,12 +337,27 @@ export function CounterRentalCart({
                         </svg>
                       </button>
                     </div>
+                    {unit.blocked ? (
+                      <FormStatus tone="danger">
+                        <span className="text-base">{unit.blocked}</span>
+                      </FormStatus>
+                    ) : null}
+                    {!unit.fillAria && rowError(unit) ? (
+                      <FormStatus tone="danger">
+                        <span className="text-base">{rowError(unit)}</span>
+                      </FormStatus>
+                    ) : null}
                     {unit.fillAria ? (
                       <TankFillField
                         unitId={unit.id}
                         aria={unit.fillAria}
                         hintId={`${billId}-fill-hint`}
                         words={words}
+                        value={fillOf(unit)}
+                        onChange={(value) =>
+                          setFills((previous) => ({ ...previous, [unit.id]: value }))
+                        }
+                        error={rowError(unit)}
                       />
                     ) : null}
                     {unit.confirmLabel ? (
@@ -364,15 +365,24 @@ export function CounterRentalCart({
                         type="checkbox"
                         name={`${CONFIRM_FIELD_PREFIX}${unit.id}`}
                         className="text-sm"
+                        checked={confirmed.includes(unit.id)}
+                        onChange={(event) => {
+                          const checked = event.currentTarget.checked;
+                          setConfirmed((previous) =>
+                            checked
+                              ? [...previous, unit.id]
+                              : previous.filter((id) => id !== unit.id),
+                          );
+                        }}
                       >
-                        {unit.confirmLabel}
+                        <span className="text-base">{unit.confirmLabel}</span>
                       </ChoiceRow>
                     ) : null}
                   </li>
                 );
               })}
               {picked.some((unit) => unit.fillAria !== null) && (
-                <li id={`${billId}-fill-hint`} className="py-2 text-sm text-muted">
+                <li id={`${billId}-fill-hint`} className="py-2 text-base text-muted">
                   {words.fillHint}
                 </li>
               )}
@@ -412,15 +422,17 @@ export function CounterRentalCart({
         )}
       </SectionCard>
 
+      <CounterRentalPicker groups={groups} pickedIds={pickedIds} toggle={toggle} words={words} />
+
       <StickyFormActions>
-        <p className="me-auto text-sm" aria-live="polite">
+        <p className="me-auto text-base" aria-live="polite">
           <span className="font-medium">{count}</span>
           {picked.length > 0 ? <span className="tabular-nums text-muted"> · {total}</span> : null}
         </p>
         {notice}
         <SubmitButton
           pendingLabel={words.submitting}
-          disabled={picked.length === 0}
+          disabled={picked.length === 0 || picked.some((unit) => unit.blocked !== null)}
           className={buttonClass()}
         >
           {words.submit}
@@ -441,22 +453,31 @@ function TankFillField({
   aria,
   hintId,
   words,
+  value,
+  onChange,
+  error,
 }: {
   unitId: string;
   aria: string;
   hintId: string;
   words: Pick<CartWords, "fillLabel" | "fillOptions">;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
 }) {
   return (
-    <label className="flex min-h-11 items-center gap-3 text-sm">
-      <span className="text-muted">{words.fillLabel}</span>
+    <Field
+      label={words.fillLabel}
+      error={error ? <span className="text-base">{error}</span> : undefined}
+    >
       <select
         name={`${FILL_FIELD_PREFIX}${unitId}`}
-        defaultValue=""
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
         required
         aria-label={aria}
         aria-describedby={hintId}
-        className={`${controlClass.replace("w-full", "")} w-40`}
+        className={controlClass}
       >
         {words.fillOptions.map((option) => (
           <option key={option.value} value={option.value} disabled={option.value === ""}>
@@ -464,6 +485,6 @@ function TankFillField({
           </option>
         ))}
       </select>
-    </label>
+    </Field>
   );
 }

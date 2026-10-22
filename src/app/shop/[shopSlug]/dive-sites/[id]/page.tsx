@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EditorRail, UnsavedSections } from "@/components/editor/EditorRail";
@@ -59,7 +58,7 @@ import { TEMPLATE_FIELD_KEYS } from "./template-field-keys";
 
 export const instant = true;
 
-export const metadata: Metadata = { title: "Edit dive site — DiveDay" };
+export { librarySiteRouteMetadata as generateMetadata } from "../dive-site-page-metadata";
 
 /**
  * How many of the upcoming departures carry a tide line (ADR

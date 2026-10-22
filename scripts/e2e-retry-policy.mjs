@@ -1,13 +1,26 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { stripVTControlCharacters } from "node:util";
+
+function directWedge(error) {
+  return (
+    typeof error?.message === "string" &&
+    /^(?:Error: )?visual: page\.screenshot did not return within \d+ms at [^\n]+ The renderer did not answer a trivial evaluate, so it is wedged, not slow/.test(
+      error.message,
+    )
+  );
+}
+
+function testDeadline(error) {
+  if (typeof error?.message !== "string") return false;
+  // Playwright colors its deadline message in JSON reports; no other text or
+  // assertion that merely quotes a deadline is an accepted companion error.
+  const plain = stripVTControlCharacters(error.message);
+  return /^Test timeout (?:of \d+ms )?exceeded\.?$/.test(plain);
+}
 
 function probeAttachment(result) {
-  if (
-    result.status !== "timedOut" ||
-    result.errors?.length !== 1 ||
-    !/Test timeout (?:of \d+ms )?exceeded/.test(result.errors[0]?.message ?? "")
-  )
-    return false;
+  if (result.status !== "timedOut") return false;
   return (result.attachments ?? []).some((attachment) => {
     if (attachment.name !== "browser-activity" || attachment.contentType !== "text/plain")
       return false;
@@ -26,7 +39,7 @@ function probeAttachment(result) {
 }
 
 /** Fail closed: --last-failed is safe only when every initial failed result
- * carries the probe verdict, with no global errors or unexecuted tests. */
+ * carries the probe verdict, with no global errors or unexpectedly unexecuted tests. */
 export function canRetryWedges(report) {
   if (!Array.isArray(report?.suites) || !Array.isArray(report.errors) || report.errors.length)
     return false;
@@ -36,7 +49,18 @@ export function canRetryWedges(report) {
     for (const suite of suites) {
       for (const spec of suite.specs ?? [])
         for (const test of spec.tests ?? []) {
-          if (test.status === "expected" && test.expectedStatus === "passed") continue;
+          const onlyResult = test.results?.length === 1 ? test.results[0] : null;
+          if (
+            onlyResult &&
+            !onlyResult.errors?.length &&
+            ((test.status === "expected" &&
+              test.expectedStatus === "passed" &&
+              onlyResult.status === "passed") ||
+              (test.status === "skipped" &&
+                test.expectedStatus === "skipped" &&
+                onlyResult.status === "skipped"))
+          )
+            continue;
           if (
             test.status !== "unexpected" ||
             test.expectedStatus !== "passed" ||
@@ -47,18 +71,17 @@ export function canRetryWedges(report) {
           }
           const result = test.results[0];
           const errors = result.errors ?? [];
-          const directProof =
+          const recognizedErrors =
             errors.length > 0 &&
             errors.every(
               (error) =>
-                typeof error.message === "string" &&
-                /^(?:Error: )?visual: page\.screenshot did not return within \d+ms at [^\n]+ The renderer did not answer a trivial evaluate, so it is wedged, not slow/.test(
-                  error.message,
-                ),
+                directWedge(error) || (result.status === "timedOut" && testDeadline(error)),
             );
+          const independentProof = errors.some(directWedge) || probeAttachment(result);
           if (
             !["failed", "timedOut"].includes(result.status) ||
-            !(directProof || probeAttachment(result))
+            !recognizedErrors ||
+            !independentProof
           )
             valid = false;
           failures++;

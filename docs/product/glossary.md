@@ -290,6 +290,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Seat move
 - Seat release
 - Self-guided departure
+- Set-up receipt
 - Set-up request
 - Settled total
 - Setup link

@@ -289,8 +289,17 @@ describe("getReadyPageData", () => {
     const past = await getReadyPageData(db, bookingId);
     expect(past?.cancelPreview).toBe("forfeit");
     expect(past?.moveAsk).toBe("open");
-    await recordMoveAsk(db, { shopId: shop.id, bookingId, now: nowDate() });
-    expect((await getReadyPageData(db, bookingId))?.moveAsk).toBe("asked");
+    const sentAt = nowDate();
+    await recordMoveAsk(db, { shopId: shop.id, bookingId, note: "Any Saturday", now: sentAt });
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toEqual({
+      note: "Any Saturday",
+      sentAt,
+    });
+    // Refresh reads the persisted note and its original send time.
+    expect((await getReadyPageData(db, bookingId))?.moveAsk).toEqual({
+      note: "Any Saturday",
+      sentAt,
+    });
     // A held seat is owed nothing (#2125).
     await db
       .update(bookings)
@@ -390,7 +399,10 @@ describe("getReadyPageData", () => {
   // state rather than a default.
   it("reads back the diver's own currency answer, and nothing before they give one", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
-    expect((await getReadyPageData(db, bookingId))?.lastDivedBand).toBeNull();
+    const before = await getReadyPageData(db, bookingId);
+    expect(before).not.toBeNull();
+    expect(before?.lastDivedBand).toBeNull();
+    const readinessBefore = before?.detail.readiness;
 
     expect(
       await setBookingLastDived(db, { shopId: shop.id, bookingId, band: "over_five_years" }),
@@ -398,9 +410,7 @@ describe("getReadyPageData", () => {
     const data = await getReadyPageData(db, bookingId);
     expect(data?.lastDivedBand).toBe("over_five_years");
     // And it moves nothing else: currency is not a gate.
-    expect(data?.detail.readiness.status).toBe(
-      (await getReadyPageData(db, bookingId))?.detail.readiness.status,
-    );
+    expect(data?.detail.readiness).toEqual(readinessBefore);
   });
 
   it("refuses to record currency against a canceled seat", async () => {

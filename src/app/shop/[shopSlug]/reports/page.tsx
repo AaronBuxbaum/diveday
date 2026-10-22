@@ -334,7 +334,7 @@ export default async function ReportsPage({
     split,
     bookingsDetail,
     revenueOrdersHref,
-    tipsSplit: tipsSplitLine(owner.crewRows, t, money),
+    tipsSplit: tipsSplitLine(owner.crewRows, t, currency, locale),
   });
 
   const departureRows = departureLedgerRows({

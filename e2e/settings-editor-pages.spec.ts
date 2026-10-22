@@ -345,7 +345,42 @@ test("bookkeeper settings and registers retain the settings rail", async ({
       page.getByRole("navigation", { name: staff("settings.main.rail.ariaLabel") }),
     ).toBeVisible();
   }
-  await expect(
-    page.getByRole("textbox", { name: staff("reports.bookkeeper.label") }),
-  ).toBeVisible();
+  const email = page.getByRole("textbox", { name: staff("reports.bookkeeper.label") });
+  const save = page.getByRole("button", { name: staff("reports.bookkeeper.save"), exact: true });
+  const helper = page.getByText(staff("reports.bookkeeper.description"), { exact: true });
+  const form = page.locator("form").filter({ has: email });
+  const panel = page.getByRole("main").locator(":scope > section").filter({ has: email });
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(email).toBeVisible();
+    await expect(save).toBeVisible();
+    await expect(helper).toBeVisible();
+    await expect(email).toHaveAttribute(
+      "aria-describedby",
+      (await helper.getAttribute("id")) ?? "",
+    );
+    const [emailBox, saveBox, helperBox, formBox, panelBox] = await Promise.all([
+      email.boundingBox(),
+      save.boundingBox(),
+      helper.boundingBox(),
+      form.boundingBox(),
+      panel.boundingBox(),
+    ]);
+    if (!emailBox || !saveBox || !helperBox || !formBox || !panelBox) {
+      throw new Error("Bookkeeper controls must have rendered bounds");
+    }
+    expect(Math.abs(saveBox.x - emailBox.x)).toBeLessThanOrEqual(1);
+    expect(saveBox.y).toBeGreaterThanOrEqual(helperBox.y + helperBox.height);
+    for (const box of [emailBox, saveBox, helperBox]) {
+      for (const container of [formBox, panelBox]) {
+        expect(box.x).toBeGreaterThanOrEqual(container.x - 1);
+        expect(box.x + box.width).toBeLessThanOrEqual(container.x + container.width + 1);
+        expect(box.y).toBeGreaterThanOrEqual(container.y - 1);
+        expect(box.y + box.height).toBeLessThanOrEqual(container.y + container.height + 1);
+      }
+    }
+  }
 });

@@ -349,6 +349,7 @@ export function InboxRow({
             ))}
             <form action={doneAction}>
               <input type="hidden" name="messageId" value={message.id} />
+              <input type="hidden" name="receivedAt" value={message.receivedAt.toISOString()} />
               <input type="hidden" name="done" value={done ? "false" : "true"} />
               <SubmitButton pendingLabel={t("inbox.done.pending")} className={MENU_ROW_CLASS}>
                 {done ? t("inbox.done.reopen") : t("inbox.done.action")}

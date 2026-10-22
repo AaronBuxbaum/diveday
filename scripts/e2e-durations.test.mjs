@@ -92,3 +92,17 @@ describe("mergeDurations", () => {
     expect(next["//"]).toMatch(/never edited by hand/);
   });
 });
+
+it("routes extracted visual domains to visual durations only", () => {
+  const split = {
+    suites: [
+      {
+        title: "visual-sites.spec.ts",
+        file: "visual-sites.spec.ts",
+        specs: [{ title: "site", tests: [{ results: [{ duration: 12 }] }] }],
+      },
+    ],
+  };
+  expect(durationsFromReport(split, "functional")).toEqual({});
+  expect(durationsFromReport(split, "visual")).toEqual({ "visual-sites.spec.ts › site": 12 });
+});

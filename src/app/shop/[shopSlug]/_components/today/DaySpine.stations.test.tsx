@@ -21,6 +21,7 @@ vi.mock("@/app/actions/held-sends", () => ({
 vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   keepRentalFitAction: vi.fn(),
   acknowledgeCrewAwayAction: vi.fn(),
+  helpRequestAction: vi.fn(),
 }));
 // The agency check's host (H-105) wraps the spine and repaints through the
 // router when a "Check all" ends; no app router is mounted here.

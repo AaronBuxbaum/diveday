@@ -183,7 +183,7 @@ describe("CompactDisclosureRow", () => {
       </CompactDisclosureRow>,
     );
     expect(container.querySelector("details")).toBeTruthy();
-    expect(getByText("English")).toHaveClass("whitespace-normal", "break-words", "sm:truncate");
+    expect(getByText("English")).toHaveClass("whitespace-normal", "break-words");
     expect(container.querySelector('input[aria-label="language"]')).toBeTruthy();
   });
 
@@ -207,8 +207,7 @@ describe("CompactDisclosureRow", () => {
       "grid",
       "grid-cols-[auto_minmax(0,1fr)]",
       "content-center",
-      "sm:flex",
-      "sm:justify-between",
+      "sm:grid-cols-[max-content_minmax(0,1fr)]",
     );
     const label = getByText("Shown on the public schedule");
     const value = getByText("Shown as Dana");

@@ -37,14 +37,14 @@ src/
   app/          # routes, layouts — App Router. Keep route files thin.
   features/     # feature modules: one index.ts is the public surface, README.md the contract
   lib/          # framework-free domain logic and helpers. Most unit tests live here.
-  db/           # schema.ts (source of truth), client.ts (getDb seam), queries, seed
-  components/   # (when it exists) shared UI components, token-styled
+  db/           # schema/ (source of truth), client.ts (getDb seam), queries, seed
+  components/   # shared UI components, token-styled
   i18n/         # locale negotiation and the diver/staff message bundles
   test/         # test setup
 drizzle/        # generated SQL migrations — committed, never hand-edited
 e2e/            # Playwright functional and visual specs
 docs/           # the knowledge base (see docs/README.md)
-.claude/skills/ # provider-neutral agent playbooks (new-feature, verify, design-review, …)
+.agents/skills/ # provider-neutral agent playbooks (new-feature, verify, design-review, …)
 .claude/        # Claude-specific agents and settings
 scripts/        # dev utilities (screenshots, etc.)
 ```
@@ -61,7 +61,7 @@ browser. `pnpm check:architecture` enforces every arrow.
 a directory under `src/features/` with a required `index.ts` — its *entire* importable surface,
 deep imports fail the check — and a required `README.md` saying what it owns, what it does not, and
 its invariants. Internals are free to move because nothing outside can name them. Tables still live
-in `src/db/schema.ts` (a feature owns its rows' lifecycle, not their definition), and routes still
+in `src/db/schema/` (a feature owns its rows' lifecycle, not their definition), and routes still
 live in `src/app/`. `calendar-sync` is the first one; this is a convention proven on one feature,
 not a migration order.
 
@@ -82,8 +82,9 @@ obvious cleanup targets and are not — do not re-litigate them without new evid
   `isPublicShopRoute` allowlist — a matcher with reserved-segment carve-outs so a course slug could
   not impersonate a staff page — is gone with it. Add a diver surface under `/s`, never by opening a
   hole in `/shop`.
-- **PGlite stays per-test.** Test isolation beats the speed of a shared or template database. A
-  migrate-once template db is a plausible perf follow-up, but it needs its own design and ADR.
+- **PGlite isolation is explicit.** `src/test/db.ts` hydrates migrate-once snapshots.
+  Use the existing per-file transaction-isolated helper where its contract fits; independent
+  instances remain available for tests that need them. See [testing](../engineering/testing.md).
 - **The `src/lib` dive-site helpers stay split** (`dive-site-media` / `-map` / `-landmarks`) —
   small, live, single-purpose; consolidating them is churn without payoff.
 - **Superseded ADRs are retained**, never deleted — see [decisions/README.md](decisions/README.md).

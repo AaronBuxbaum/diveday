@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   pgEnum,
   pgTable,
@@ -8,8 +10,10 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  varchar,
 } from "drizzle-orm/pg-core";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
+import type { SetupReceiptError, SetupReceiptStatus } from "@/lib/setup-request-receipts";
 import { appNowTimestamp } from "./columns";
 import { shops } from "./core";
 
@@ -31,8 +35,8 @@ import { shops } from "./core";
  *
  * **It holds a person's contact details** — a name, an email, maybe a phone —
  * so it follows the standing decision at the top of `src/lib/retention.ts`:
- * kept until somebody asks for it gone, never aged out on a clock. A prospect
- * asking to be forgotten is answered by deleting their row.
+ * pruned after 365 days or deleted sooner when the requester asks. Receipt
+ * metadata is co-located, so the same erasure and retention removes it.
  *
  * `source` is the funnel tag of the page whose door the reader came through,
  * already clamped to the registry by `eventSource` (`src/lib/funnel.ts`), or
@@ -62,9 +66,25 @@ export const setupRequests = pgTable(
     /** The language the reader filled the form in, so the first reply can match it. */
     locale: text("locale").notNull(),
     notifiedAt: timestamp("notified_at", { withTimezone: true }),
+    /** Null on historical/non-public inserts: only the public action opts in. */
+    receiptStatus: text("receipt_status").$type<SetupReceiptStatus>(),
+    receiptClaimedAt: timestamp("receipt_claimed_at", { withTimezone: true }),
+    receiptProviderMessageId: varchar("receipt_provider_message_id", { length: 256 }),
+    receiptErrorCode: text("receipt_error_code").$type<SetupReceiptError>(),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
-  (table) => [index("setup_requests_created_idx").on(table.createdAt)],
+  (table) => [
+    index("setup_requests_created_idx").on(table.createdAt),
+    index("setup_requests_receipt_claimed_idx").on(table.receiptClaimedAt),
+    check(
+      "setup_requests_receipt_status_check",
+      sql`${table.receiptStatus} in ('pending', 'claimed', 'accepted', 'failed', 'unknown', 'suppressed')`,
+    ),
+    check(
+      "setup_requests_receipt_error_check",
+      sql`${table.receiptErrorCode} in ('address_cooldown', 'global_limit', 'not_configured', 'invalid_test_recipient', 'throttled', 'rejected', 'provider_rejected', 'provider_unavailable', 'network_error', 'invalid_response', 'send_exception')`,
+    ),
+  ],
 );
 
 export type SetupRequest = typeof setupRequests.$inferSelect;

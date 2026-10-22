@@ -1,5 +1,11 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
+import { getCourseBySlug } from "@/db/courses";
+import { listOpenDateInterests } from "@/db/interest-dates";
+import { courses, shops } from "@/db/schema";
+import { diverTranslator } from "@/i18n/messages";
+import { nowDate } from "@/lib/clock";
 import type { InquiryFormState } from "@/lib/course-inquiry";
 import { fileScopedShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -52,8 +58,8 @@ function requestForm(email: string): FormData {
   return form;
 }
 
-async function submit(form: FormData): Promise<InquiryFormState> {
-  const state = await submitInquiryAction("blue-mantis", null, {}, form);
+async function submit(form: FormData, courseSlug: string | null = null): Promise<InquiryFormState> {
+  const state = await submitInquiryAction("blue-mantis", courseSlug, {}, form);
   await Promise.all(hoisted.afterTasks);
   return state;
 }
@@ -67,6 +73,135 @@ beforeEach(async () => {
   vi.mocked(getDb).mockReset().mockResolvedValue(db);
   vi.mocked(sendNotification).mockClear();
   vi.mocked(checkRateLimit).mockReset().mockResolvedValue({ allowed: true, retryAfterMs: 0 });
+});
+
+describe("course date requests without a shop notification address (issue 2860)", () => {
+  const email = "course-date-2860@example.com";
+  const t = diverTranslator("en-US");
+  const contactCases = [
+    { contactEmail: null, contactPhone: null, confirmed: false, nudge: false },
+    { contactEmail: null, contactPhone: "+1 305 555 0134", confirmed: false, nudge: false },
+    { contactEmail: "desk@example.com", contactPhone: null, confirmed: true, nudge: true },
+    { contactEmail: "unverified@example.com", contactPhone: null, confirmed: false, nudge: false },
+  ];
+
+  it.each(contactCases)(
+    "retains a staff-visible request with $contactEmail, $contactPhone, confirmed=$confirmed",
+    async ({ contactEmail, contactPhone, confirmed, nudge }) => {
+      await db
+        .update(shops)
+        .set({
+          contactEmail,
+          contactPhone,
+          contactEmailConfirmedAt: confirmed ? nowDate() : null,
+          dateRequestsEnabled: false,
+        })
+        .where(eq(shops.id, ctx.shop.id));
+
+      expect(await submit(requestForm(email), "open-water-diver")).toEqual({ success: true });
+      const page = await listOpenDateInterests(db, ctx.shop.id);
+      expect(page.rows).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            courseTitle: "Open Water Diver",
+            email,
+            name: "Ana Ruiz",
+            preferredDate: "2030-09-07",
+            interest: null,
+          }),
+        ]),
+      );
+      expect(sentKinds().filter((kind) => kind === "interest_received")).toHaveLength(
+        nudge ? 1 : 0,
+      );
+      expect(sentKinds()).toContain("interest_received_ack");
+      if (nudge) {
+        expect(sendNotification).toHaveBeenCalledWith(
+          db,
+          expect.objectContaining({
+            kind: "interest_received",
+            to: contactEmail,
+            shopId: ctx.shop.id,
+          }),
+        );
+      }
+    },
+  );
+
+  it("accepts a phone-only diver and sends no email when the shop has no address", async () => {
+    await db
+      .update(shops)
+      .set({ contactEmail: null, contactEmailConfirmedAt: null })
+      .where(eq(shops.id, ctx.shop.id));
+    const form = requestForm(email);
+    form.delete("email");
+    form.set("phone", "+1 305 555 0199");
+
+    expect(await submit(form, "open-water-diver")).toEqual({ success: true });
+    expect((await listOpenDateInterests(db, ctx.shop.id)).rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          courseTitle: "Open Water Diver",
+          email: null,
+          phone: "+1 305 555 0199",
+        }),
+      ]),
+    );
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("still refuses an IP that has exhausted its request allowance before reading the database", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, retryAfterMs: 60_000 });
+    expect(await submit(requestForm(email), "open-water-diver")).toEqual({
+      error: t("common.rateLimited"),
+    });
+    expect(getDb).not.toHaveBeenCalled();
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("still requires a reply path", async () => {
+    const form = requestForm(email);
+    form.delete("email");
+    expect(await submit(form, "open-water-diver")).toEqual({
+      error: t("inquiry.errors.contactRequired"),
+    });
+    expect(getDb).not.toHaveBeenCalled();
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("still refuses a course hidden before the request arrives", async () => {
+    const course = await getCourseBySlug(db, ctx.shop.id, "open-water-diver");
+    if (!course) throw new Error("seeded Open Water Diver missing");
+    await db.update(courses).set({ isActive: false }).where(eq(courses.id, course.id));
+
+    expect(await submit(requestForm(email), "open-water-diver")).toEqual({
+      error: t("inquiry.errors.unavailable"),
+    });
+    expect(
+      (await listOpenDateInterests(db, ctx.shop.id)).rows.map((row) => row.email),
+    ).not.toContain(email);
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("never accepts another shop's course or exposes a retained request in that shop's inbox", async () => {
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef-2860", timezone: "America/New_York" })
+      .returning();
+    await db
+      .insert(courses)
+      .values({ shopId: other.id, slug: "other-course-2860", title: "Other course" });
+
+    expect(await submit(requestForm(email), "other-course-2860")).toEqual({
+      error: t("inquiry.errors.unavailable"),
+    });
+    expect(sendNotification).not.toHaveBeenCalled();
+    expect(await submit(requestForm(email), "open-water-diver")).toEqual({ success: true });
+    expect((await listOpenDateInterests(db, other.id)).rows).toEqual([]);
+    expect((await listOpenDateInterests(db, ctx.shop.id)).rows.map((row) => row.email)).toContain(
+      email,
+    );
+  });
 });
 
 describe("submitInquiryAction, the diver's acknowledgment", () => {

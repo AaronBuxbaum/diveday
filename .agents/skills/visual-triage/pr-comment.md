@@ -1,6 +1,6 @@
 # Visual triage: reading the PR comment
 
-Part of the **visual-triage** skill ([SKILL.md](SKILL.md)). Read it on every pull request with a visual report, before opening a diff image: what the sticky comment says, which baseline you are compared against, why to rebase first, what a PR captures, and how to read a stacked layer's slice.
+Part of the **visual-triage** skill ([SKILL.md](SKILL.md)). Read it on every pull request with a visual report, before opening a diff image: what the sticky comment says, which baseline you are compared against, how to attribute inherited changes, what a PR captures, and how to read a stacked layer's slice.
 
 ## Start at the PR comment
 
@@ -23,19 +23,7 @@ their payload is counts only:
 If the comment says no report was published, `reg-suit run` never got far enough to publish one —
 read the `visual-report` job log rather than assuming the pixels held still.
 
-**On any branch, the baseline is your own parent commit — not current `main`.** A branch cut a few
-days ago is compared against the world as it was then, so every PR that merged in between shows up
-in *your* report as changed pixels. That is not a subtle effect: a branch cut four PRs back came
-back with 102 changed surfaces of which **66 belonged to other people**, and the four "new, no
-baseline" items were another PR's brand-new captures. Triaging that honestly means opening diffs
-for surfaces you never touched and attributing each one, which is slow and easy to get wrong in the
-generous direction.
-
-So **rebase onto current `main` before triaging**, and let CI re-run. The report then contains your
-pixels and nothing else, which is the only version of it you can actually account for. If you
-cannot rebase yet — `main` is red, or the fix is still in review — say so in the PR and attribute
-the inherited surfaces explicitly by naming the PR each one came from; a reviewer cannot tell them
-apart from yours by looking.
+**Use the explicit expected key in the report.** The default is the branch's fork point from the default branch, resolved by `scripts/reg-suit-keys.mjs` and the published-baseline lookup in CI. It is not necessarily the immediate parent or current main. Keep the approved stack topology intact. Attribute inherited pixels to the layer that changed them, and use `pnpm visual:layers` to isolate a layer; rebasing onto main is not a visual-review prerequisite.
 
 **A pull request captures what its diff can reach, not everything.** `visual-plan` in `ci.yml`
 (`scripts/visual-affected.mjs`) picks the captures whose test visits a route the diff reaches,

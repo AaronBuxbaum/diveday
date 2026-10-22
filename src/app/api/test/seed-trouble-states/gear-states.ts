@@ -5,6 +5,7 @@ import { gearItems, gearReservations, people, shops } from "@/db/schema";
 import { livePerson } from "@/db/trips-live";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS } from "@/lib/clock";
+import { seedRentalLookupFleet } from "./rental-lookup-state";
 
 /**
  * The gear states `seed-trouble-states` writes on request, kept beside the
@@ -31,9 +32,11 @@ export async function gearSliceStates(request: Request, db: AppDb, shopId: strin
   const rentalWaiverWarning = asked("rentalWaiverWarning")
     ? await lendAMaskToSomeoneWithNoWaiver(db, shopId, now, timezone)
     : null;
+  const rentalLookup = asked("rentalLookup") ? await seedRentalLookupFleet(db, shopId, now) : null;
   return {
     ...(gearConcern ? { gearConcern } : {}),
     ...(rentalWaiverWarning ? { rentalWaiverWarning } : {}),
+    ...(rentalLookup ? { rentalLookup } : {}),
   };
 }
 

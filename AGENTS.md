@@ -22,7 +22,7 @@ range and `foo.test.ts` before `foo.ts`; run one focused test; redirect long run
 ## Delegating
 
 One file: no plan, no subagent. Multi-file: plan first. Cross-area: at most three
-subagents, each with objective, output format and boundary; scouting and tests go to `Explore`;
+subagents, each with objective, output format and boundary; scouting goes to `Explore`; tests need an execution-capable worker;
 a worker returns a path plus at most ten lines
 ([working-rules.md](docs/agents/working-rules.md#delegating)).
 
@@ -56,14 +56,12 @@ Core rows; every other area (auth, DB client, domain logic, glossary, ADRs) is i
 
 ## Skills and providers
 
-Playbooks, indexed in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**,
-**verify**, **design-implementation**, **i18n-copy**, **copy-restraint**, **design-review**,
-**brand-voice**, **schema-change**, **debug**, **instant-navigation**, **e2e-and-visual**,
-**visual-triage**, **adr**, **stacked-prs**, **triage**, **backlog-routine**, **marketing-page**,
-**switching-pages**, **run**, **expand-content**, **commercial-outreach**; another provider reads the
-`SKILL.md`. A skill contradicting docs, tests or code is fixed in the same change. Reviewer
-agents are launched, never skipped: `dive-domain-expert` for safety-critical surfaces,
-`security-reviewer` for auth, tokens, personal or medical data, export/import.
+Playbooks have one source in `.agents/skills/`, mirrored into Claude by symlinks; use the
+[skill index](.claude/skills/README.md). Start or resume with `pnpm agent:bootstrap --provider codex`
+(or `claude` / `other`); it reports repository capabilities. Use `pnpm task:context --path
+<changed-path>` for bounded contracts and `pnpm task:state` for durable handoffs.
+Reviewer agents remain required: `dive-domain-expert` for safety and `security-reviewer` for
+security-sensitive changes. [Provider contract](docs/agents/provider-contract.md).
 
 ## Parallel work
 

@@ -40,3 +40,33 @@ No package rename or checklist rename operation was introduced. Purchased packag
 authorization, boat admission limits, checklist order and emergency/offline readers remain domain
 contracts. Closed emergency rows remain mounted and submit their current values, and shore-alert
 consent retains its separate recorded-address and confirmation rules.
+
+## Manual Settings follow-up
+
+A later interactive pass on 2026-10-21 opened and exercised all 25 Settings destinations on
+merged PR #2886. It is separate from the source audit above and that PR's original CI and visual
+verification. Supported safe edits and refusal paths were exercised; unavailable connection and
+credential controls were inspected in their existing states.
+
+| Destinations | Pages opened and exercised |
+| --- | --- |
+| 1–5 | Settings hub; Shop profile & branding; Dock-day rhythm; Rentals; Features |
+| 6–10 | Team; Activity; Emergency reference; Email; Security |
+| 11–15 | Calendar; WhatsApp; Billing; Bookkeeper's email; Export |
+| 16–20 | Backups; Import; Integrations; Website embed; Boats |
+| 21–25 | Trip tags; Pre-departure checklist; Dive packages; Dive sites; Waivers and signed records |
+
+The pass confirmed five pre-existing defects: boat draft loss after refusal
+([#2898](https://github.com/AaronBuxbaum/diveday/issues/2898)), Bookkeeper Save beside the helper
+([#2899](https://github.com/AaronBuxbaum/diveday/issues/2899)), stale dive-site input after Clear
+([#2900](https://github.com/AaronBuxbaum/diveday/issues/2900)), waiver All retaining the medical
+filter ([#2901](https://github.com/AaronBuxbaum/diveday/issues/2901)), and redundant encoding on
+function-action import forms ([#2902](https://github.com/AaronBuxbaum/diveday/issues/2902)). Their
+source fixes and regression tests are prepared; runtime validation of those fixes is **unrun**.
+The original PR's passing checks do not validate this later patch.
+
+The pass did not complete provider connections, payments, credential creation, legal publication
+or signing, external messages or backup delivery. Contact import stopped at preview; no import
+was committed. Export feedback appeared, but successful file receipt remains unverified. External
+iframe preview content was blocked in the local environment. Reversible preferences were
+restored, and disposable collection records were removed through their normal soft-delete flows.

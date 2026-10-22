@@ -127,10 +127,10 @@ export function DockRiderForm({
             className={controlClass}
           />
         </Field>
-        <Field label={copy.dateOfBirth} hint={copy.optional}>
+        <Field label={copy.dateOfBirth} hint={copy.optional} className="sm:col-span-2">
           <DateField name="dateOfBirth" />
         </Field>
-        <ChoiceFieldset legend={copy.aboardAs}>
+        <ChoiceFieldset legend={copy.aboardAs} className="sm:col-span-2">
           <div className="flex flex-wrap gap-2">
             <ChoicePill type="radio" name="participantType" value="rider" defaultChecked>
               {copy.ridesAlong}

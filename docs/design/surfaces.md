@@ -79,7 +79,8 @@ carries the green turtle; the two horizons are two tideline panels side by side.
   [settled-questions.md](settled-questions.md)).
 - **Composition:** **the day's spine.** Today's departures are stations in clock order, each owning
   its time, title, site, hull, crew, price and head count, with its own blockers and chores as
-  ledger rows beneath it; a diver's open day-of help request is one neutral row on that departure;
+  ledger rows beneath it; a diver's open day-of help request is one neutral row on that departure,
+  where the desk records a crew member after speaking with them and can mark the hand-off complete;
   work bound to no boat pools under "At the desk"; once every boat is settled the day's takings read
   beneath the stations, for a reader who may read money (there is no act of closing the day,
   removed 2026-10-05); tomorrow is a collapsed disclosure and
@@ -758,3 +759,30 @@ The redundant settings frame and empty header action wrappers disappear before u
 or consequences do.
 The existing public booking compositions, staff ledgers and configuration groups serve their
 content, with readable trip titles and complete explanatory sentences preserving those shapes.
+
+### Dive-site library and catalog maps — `/shop/[shopSlug]/dive-sites`
+
+- **One idea:** find a dive site in its geographic context, then open its briefing.
+- **The question it arrives with:** “where is this site relative to our dive center, and what kind
+  of dive is it?” The independent dive-center marker anchors the map, while site previews show
+  depth and difficulty rather than repeating a vague location.
+- **Controls that dissolved:** catalog rows open their preview; importing belongs in that preview,
+  and the dive-center marker reveals its name on hover or focus without a redundant popup.
+- **Remove first:** repeated location captions and list import buttons; retain the site’s useful
+  facts, its one Open site action, and an accurately centered popup close target.
+- **Composition:** the map above a paged ledger, with clusters fitting their sites into the view,
+  the dive center above site labels, and the map camera preserved when returning from a briefing
+  through either browser Back or the page’s own return link.
+
+### Visual consistency continuation — saved arrivals, dock riders and credentials
+
+Saved arrival actions keep the full identifying name above the action/status words, preserving the
+counter’s arrival queue and its distinction from boarding. Dock rider date of birth and participant
+choice each occupy a full form row. Compact disclosures keep the desktop label in its own content
+track and let the value wrap; phones retain the value below its label. Booking status leads use
+heading punctuation, inline validation uses sentence punctuation, and boat-work fragments stay bare
+while complete emergency-contact and nitrox statements retain their full stops.
+
+The authored phone/desktop captures cover the settled offline arrival, the open dock rider editor
+and the long credential summary. These recovered changes still require hosted screenshot review;
+source and component checks do not establish their rendered geometry.

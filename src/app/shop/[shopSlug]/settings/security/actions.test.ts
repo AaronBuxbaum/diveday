@@ -35,7 +35,7 @@ vi.mock("next/headers", () => nextHeadersStub());
 vi.mock("@/lib/session", () => ({ requireShopSurface: vi.fn() }));
 
 const { requireShopSurface } = await import("@/lib/session");
-const { disableTotpAction, verifyStepUpAction } = await import("./actions");
+const { disableTotpAction, revokeSessionAction, verifyStepUpAction } = await import("./actions");
 
 const ctx = fileScopedShopContext();
 
@@ -260,5 +260,37 @@ describe("verifyStepUpAction", () => {
     // Sign-in, which does spend it, still takes the same code once.
     expect(await verifyAccountSecondFactor(db, owner.accountId, code)).toBe(true);
     expect(await verifyAccountSecondFactor(db, owner.accountId, code)).toBe(false);
+  });
+});
+
+describe("revokeSessionAction", () => {
+  it("revokes only the selected session owned by the signed-in account", async () => {
+    const { db, shop } = ctx;
+    const owner = await enrolledOwner(db, shop);
+    const siblingSessionId = await sessionRow(db, shop, owner.personId, owner.accountId);
+    const other = await enrolledOwner(db, shop);
+    signIn(owner.personId, owner.sessionId);
+
+    const to = await redirectedTo(() =>
+      revokeSessionAction(shop.slug, form({ sessionId: siblingSessionId })),
+    );
+
+    expect(to).toBe(noticeUrl(securityPage(shop.slug), "session-revoked"));
+    const remaining = await db
+      .select({ id: accountSessions.id })
+      .from(accountSessions)
+      .where(eq(accountSessions.id, owner.sessionId));
+    const foreign = await db
+      .select({ id: accountSessions.id })
+      .from(accountSessions)
+      .where(eq(accountSessions.id, other.sessionId));
+    expect(remaining).toHaveLength(1);
+    expect(foreign).toHaveLength(1);
+    expect(
+      await db
+        .select({ id: accountSessions.id })
+        .from(accountSessions)
+        .where(eq(accountSessions.id, siblingSessionId)),
+    ).toHaveLength(0);
   });
 });

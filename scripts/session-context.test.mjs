@@ -17,6 +17,7 @@ import {
   openPullsText,
   promptLine,
   readOpenPulls,
+  SESSION_FETCH_ARGS,
   selectPinnedNode,
   sessionBlock,
   unwrittenPapercut,
@@ -617,4 +618,9 @@ describe("fast-forwarding a real repository", () => {
     expect(sh(clone, "rev-parse", "HEAD")).toBe(first);
     expect(readFileSync(path.join(clone, "secret.env"), "utf8")).toBe("mine");
   });
+});
+
+it("fetches branches from any agent provider", () => {
+  expect(SESSION_FETCH_ARGS).toContain("+refs/heads/*:refs/remotes/origin/*");
+  expect(SESSION_FETCH_ARGS.some((arg) => arg.includes("claude/*"))).toBe(false);
 });

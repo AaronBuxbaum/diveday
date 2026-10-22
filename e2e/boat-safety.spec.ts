@@ -23,15 +23,62 @@ test("a distress-channel refusal reopens the new boat editor", async ({ page, pr
   await add.locator("summary").click();
   await add.getByLabel(t("boats.nameLabel")).fill("Radio test");
   await add.getByLabel(t("boats.capacityLabel")).fill("10");
-  await add.getByLabel(t("boats.workingChannelLabel")).fill("16");
-  await add.getByRole("button", { name: t("boats.addBoat"), exact: true }).click();
-  await expect(add.getByRole("alert")).toHaveText(t("boats.boatChannelDistress"));
-  await expect(add).toHaveAttribute("open");
-  await expect(add.getByLabel(t("boats.workingChannelLabel"))).toHaveAttribute(
-    "aria-invalid",
-    "true",
-  );
-  await expect(boatRow(page, BOAT)).not.toHaveAttribute("open");
+  await add.getByLabel(t("boats.descriptionLabel")).fill("Dock test boat");
+  await add.getByLabel(t("boats.certifiedPassengersLabel")).fill("10");
+  await add.getByLabel(t("boats.certifiedTotalPersonsLabel")).fill("12");
+  const paperDates = [
+    [t("boats.coiExpiresLabel"), daysFromNow(-1)],
+    [t("boats.inspectionDueLabel"), daysFromNow(70)],
+    [t("boats.registrationExpiresLabel"), daysFromNow(-2)],
+    [t("boats.insuranceExpiresLabel"), daysFromNow(-3)],
+  ] as const;
+  for (const [label, day] of paperDates) await add.getByLabel(label).fill(day);
+  const submit = add.getByRole("button", { name: t("boats.addBoat"), exact: true });
+  for (const channel of ["16", "70"]) {
+    await add.getByLabel(t("boats.workingChannelLabel")).fill(channel);
+    // A repeat refusal has the same message, so wait for this submission's
+    // answer before checking the retained values on the returned editor.
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === `${shop}/boats` &&
+          response.headers()["x-action-redirect"]?.includes("notice=boat-channel-distress") ===
+            true,
+      ),
+      submit.click(),
+    ]);
+    await expect(submit).toBeEnabled();
+    await expect(add.getByRole("alert")).toHaveText(t("boats.boatChannelDistress"));
+    await expect(add).toHaveAttribute("open");
+    await expect(add.getByLabel(t("boats.workingChannelLabel"))).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await expect(add.getByLabel(t("boats.nameLabel"))).toHaveValue("Radio test");
+    await expect(add.getByLabel(t("boats.capacityLabel"))).toHaveValue("10");
+    await expect(add.getByLabel(t("boats.descriptionLabel"))).toHaveValue("Dock test boat");
+    await expect(add.getByLabel(t("boats.workingChannelLabel"))).toHaveValue(channel);
+    for (const [label, day] of paperDates) await expect(add.getByLabel(label)).toHaveValue(day);
+    await expect(boatRow(page, BOAT)).not.toHaveAttribute("open");
+  }
+
+  await add.getByLabel(t("boats.workingChannelLabel")).fill("68");
+  await submit.click();
+  await expect(page.getByRole("status").filter({ hasText: t("boats.boatCreated") })).toBeVisible();
+  const created = boatRow(page, "Radio test");
+  await expect(created).toHaveCount(1);
+  await expect(created.locator("summary")).toContainText(t("boats.seats", { count: 10 }));
+  await created.locator("summary").click();
+  await expect(created.getByLabel(t("boats.workingChannelLabel"))).toHaveValue("68");
+  for (const [label, day] of paperDates) await expect(created.getByLabel(label)).toHaveValue(day);
+
+  if ((await add.getAttribute("open")) === null) await add.locator("summary").click();
+  await expect(add.getByLabel(t("boats.nameLabel"))).toHaveValue("");
+  await expect(add.getByLabel(t("boats.capacityLabel"))).toHaveValue("");
+  await expect(add.getByLabel(t("boats.descriptionLabel"))).toHaveValue("");
+  await expect(add.getByLabel(t("boats.workingChannelLabel"))).toHaveValue("");
+  for (const [label] of paperDates) await expect(add.getByLabel(label)).toHaveValue("");
 });
 
 test("an MMSI refusal reopens the existing boat editor", async ({ page, privateShop }) => {

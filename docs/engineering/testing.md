@@ -710,3 +710,18 @@ A new e2e spec or visual capture that reaches its routes by URL is credited to t
 that reaches a route only by clicks names itself on that route's entry in
 `scripts/route-coverage.json` — the same change, not a follow-up. If it closes a gap, delete that
 route's `exempt` line while you are there (`--write` does).
+
+### Measuring fixture cost
+
+Run `node --import tsx src/test/db-template-profile.ts .agent-out/fixture-profile.json` to measure
+fingerprinting, cache lookup, any rebuilt variants, snapshot reads, and PGlite hydration on the
+current machine. This explicit diagnostic writes one JSON file and closes every database it
+opens. Normal tests remain quiet. It records durations, variant names and byte counts only;
+no rows, credentials, or environment values. Compare repeated observations with the same input
+and machine before narrowing the conservative fixture fingerprint.
+
+Form source-policy sweeps live in `src/components/ui/form-source.test.ts`, selected by the
+existing `guards` project. `form.test.tsx` holds the rendered behavior tests. The existing
+`check-form-controls.mjs` guard still owns placeholder labels and action-submit rules, once in
+`check:repo`. Booking diver-detail queries live in `src/db/bookings-diver-details.ts`; callers
+continue importing the stable public exports from `src/db/bookings.ts`.

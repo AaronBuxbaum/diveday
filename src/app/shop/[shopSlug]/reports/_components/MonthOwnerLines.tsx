@@ -6,7 +6,7 @@ import { bookingLeadTimes } from "@/db/reporting";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { MonthRef } from "@/lib/calendar";
 import { assembleCrewSheet } from "@/lib/crew-sheet";
-import { joinFacts, weekdayNames } from "@/lib/format";
+import { formatMoneyCents, joinFacts, weekdayNames } from "@/lib/format";
 import { leadTimeLines, wholePercent } from "@/lib/lead-time";
 
 /**
@@ -32,15 +32,17 @@ export async function readMonthOwner(
 }
 
 /**
- * **The Tips figure's split** (item 31): "Equal shares: Keiko $180 · Sal $160",
+ * **The Tips figure's split** (item 31): "Equal shares: Keiko $180.00 · Sal $160.00",
  * the crew sheet's own equal shares, so the payday conversation reads off the
  * tile instead of a download in Settings. Tips on a departure nobody crewed
- * stay on the shop's line, as the sheet keeps them.
+ * stay on the shop's line, as the sheet keeps them. Shares keep the currency's
+ * minor units so they reconcile with the pool and the crew export (#2858).
  */
 export function tipsSplitLine(
   rows: ReturnType<typeof assembleCrewSheet>,
   t: StaffTranslator,
-  money: (cents: number) => string,
+  currency: string,
+  locale: string,
 ): string | undefined {
   const shares = rows
     .filter((row) => row.tipsCents > 0)
@@ -48,7 +50,7 @@ export function tipsSplitLine(
     .map((row) =>
       t("reports.tipsShare", {
         name: row.personName ?? t("settings.crewSheet.unassigned"),
-        amount: money(row.tipsCents),
+        amount: formatMoneyCents(row.tipsCents, currency, locale),
       }),
     );
   // The sheet splits equally; many shops split by role, so the line says

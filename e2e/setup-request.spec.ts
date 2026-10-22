@@ -43,6 +43,10 @@ test("a shop asks to be set up from the pricing page and lands on the thank-you 
   // The sent page carries what the shop uses today, for its export step.
   await expect(page).toHaveURL(/\/get-set-up\/sent(?:\?|$)/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Request sent");
+  await expect(page.getByRole("link", { name: "Contact DiveDay" })).toHaveAttribute(
+    "href",
+    "mailto:support@dive.day",
+  );
   // The demo is the one thing left to do while the reply is on its way.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toBeVisible();
 });

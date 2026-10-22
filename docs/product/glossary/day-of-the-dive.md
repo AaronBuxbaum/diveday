@@ -43,7 +43,11 @@
 - **Day-of help request** — one controlled, non-medical request a diver can make from `/ready`
   (`carry gear`, `first-timer orientation`, or `find my group`). It is scoped to one booking,
   expires from active Today work when the trip ends, and moves through `requested`,
-  `acknowledged`, and `handled`; it is not a social feed, medical record, or free-text inbox.
+  `acknowledged`, and `handled`. `Acknowledged` records the crew member who agreed after the desk
+  spoke with them; `handled` preserves that helper and can be undone back to the assigned state.
+  Staff actions apply only to the displayed request revision; replacing the request or changing
+  its handoff invalidates older assignment, completion and undo forms.
+  It is not a social feed, medical record, or free-text inbox.
 - **Staff note** — shop-private operational context written for the next person on the team. A
   note has one general kind for now and attaches either to a **diver** (shared across that diver's
   record and the live boat manifest) or to one **booking** (departure-specific desk context). It is

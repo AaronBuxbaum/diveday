@@ -140,7 +140,8 @@ export default async function CoursePage({
     course.durationText ? { label: t("course.duration"), value: course.durationText } : null,
     course.groupSizeText ? { label: t("course.groupSize"), value: course.groupSizeText } : null,
   ].filter((fact) => fact !== null);
-  const inquiryHref = shop.contactEmail ? "#get-in-touch" : null;
+  // Requests are retained for staff even when the shop has no email for a nudge.
+  const inquiryHref = "#get-in-touch";
 
   // The one way down a long page (the same grammar Settings and the diver
   // record wear) — only the sections this course actually renders, in page
@@ -153,7 +154,7 @@ export default async function CoursePage({
       : null,
     { id: "dates", label: t("course.jumpDates") },
     course.faqs.length > 0 ? { id: "faqs", label: t("course.jumpQuestions") } : null,
-    inquiryHref ? { id: "get-in-touch", label: t("course.jumpContact") } : null,
+    { id: "get-in-touch", label: t("course.jumpContact") },
   ].filter((item) => item !== null);
 
   // The phone's one persistent door (UX audit #8).
@@ -227,21 +228,16 @@ export default async function CoursePage({
         t={t}
       />
       <CourseFaqs faqs={course.faqs} t={t} />
-      {shop.contactEmail ? (
-        // The composer's own refusals ("tell us where you are up to") are
-        // chosen on the client as a diver types, so it needs its own
-        // translator there — DiverIntlProvider is what makes
-        // useTranslations() inside DateRequestForm work rather than throw.
-        <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry"]}>
-          <DateRequestForm
-            submitRequest={submitInquiryAction.bind(null, shopSlug, slug)}
-            className="mt-14"
-            contactEmail={shop.contactEmail}
-            contactPhone={shop.contactPhone}
-            copy={dateRequestCopy(t, "course")}
-          />
-        </DiverIntlProvider>
-      ) : null}
+      {/* The composer's client-side refusals need the diver's translator. */}
+      <DiverIntlProvider locale={locale} timeZone={shop.timezone} namespaces={["inquiry"]}>
+        <DateRequestForm
+          submitRequest={submitInquiryAction.bind(null, shopSlug, slug)}
+          className="mt-14"
+          contactEmail={shop.contactEmail}
+          contactPhone={shop.contactPhone}
+          copy={dateRequestCopy(t, "course")}
+        />
+      </DiverIntlProvider>
       {footBar ? <PhoneFootBar href={footBar.href}>{footBar.label}</PhoneFootBar> : null}
     </main>
   );

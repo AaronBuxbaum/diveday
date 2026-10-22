@@ -327,7 +327,7 @@ export function findParentUpdateLocks(contents) {
  *
  * `describePostgres` (`src/test/postgres.ts`) skips unless
  * `DIVEDAY_TEST_POSTGRES_URL` names a server, and only CI's `real-postgres` job
- * sets it — for `src/db/*.postgres.test.ts` and nothing else (`ci.yml`). A
+ * sets it for database and feature-module `*.postgres.test.ts` files (`ci.yml`). A
  * `describePostgres` block in any other file therefore skips in the unit shards
  * and is never selected by the job: the race tests of `lockSeatDeparture` sat in
  * `seat-locks.test.ts` that way, green and inert, until 2026-10-13. The job's
@@ -336,7 +336,7 @@ export function findParentUpdateLocks(contents) {
  * Returns `{ line, text }` for each use of either name outside that glob.
  * `src/test/postgres.ts` defines them and is the one other file allowed to.
  */
-export const REAL_SERVER_SUITE = /^src\/db\/[^/]+\.postgres\.test\.ts$/;
+export const REAL_SERVER_SUITE = /^src\/(?:db|features\/[^/]+)\/[^/]+\.postgres\.test\.ts$/;
 const REAL_SERVER_NAMES = /\b(describePostgres|postgresTestDb)\b/;
 const REAL_SERVER_HOME = "src/test/postgres.ts";
 
@@ -396,10 +396,10 @@ async function main() {
   }
   if (misplaced.length > 0) {
     console.error(
-      `A real-Postgres suite outside src/db/*.postgres.test.ts:\n${misplaced.map((v) => `- ${v}`).join("\n")}`,
+      `A real-Postgres suite outside the database or feature-module PostgreSQL globs:\n${misplaced.map((v) => `- ${v}`).join("\n")}`,
     );
     console.error(
-      "describePostgres skips without DIVEDAY_TEST_POSTGRES_URL, and CI's real-postgres job sets it only for src/db/*.postgres.test.ts, so this suite runs nowhere. Move it into a <module>.postgres.test.ts file beside the module.",
+      "describePostgres skips without DIVEDAY_TEST_POSTGRES_URL, and CI's real-postgres job sets it only for src/db/*.postgres.test.ts and src/features/*/*.postgres.test.ts, so this suite runs nowhere. Move it into a <module>.postgres.test.ts file beside the module.",
     );
   }
 
