@@ -1,5 +1,6 @@
 import { and, eq, gt, gte, lt, sql } from "drizzle-orm";
 import type { z } from "zod";
+import { e2eClaudeFixtureProvider } from "@/lib/assists/e2e-fixtures";
 import {
   type AssistDarkReason,
   assistDarkReason,
@@ -68,6 +69,18 @@ function providerFor(options: AssistOptions): ClaudeProvider | null {
   return options.provider ?? claudeProviderFromEnv(options.env ?? process.env);
 }
 
+/**
+ * The browser fleet's canned provider for a shop a spec armed
+ * (`src/lib/assists/e2e-fixtures.ts`), so a lit assist can be photographed.
+ * Null outside the fleet's own server, so a deployment always takes the real
+ * provider or none; a test's own provider always wins.
+ */
+function withE2eFixture(shopId: string, options: AssistOptions): AssistOptions {
+  if (options.provider) return options;
+  const provider = e2eClaudeFixtureProvider(shopId, options.env ?? process.env);
+  return provider ? { ...options, provider } : options;
+}
+
 /** The shop's recorded Claude spend since the first of this UTC month, in micro-USD. */
 export async function shopClaudeSpendMicroUsd(
   db: AppDb,
@@ -105,8 +118,9 @@ export async function claudeSpendUsdBetween(db: AppDb, start: Date, end: Date): 
 export async function assistDarkReasonFor(
   db: AppDb,
   shopId: string,
-  options: AssistOptions = {},
+  given: AssistOptions = {},
 ): Promise<AssistDarkReason | null> {
+  const options = withE2eFixture(shopId, given);
   const env = options.env ?? process.env;
   const hasKey = providerFor(options) !== null;
   // A test that injects its own provider is exercising the seam on purpose;
@@ -316,8 +330,9 @@ export type AssistOutcome<T> = { status: "answered" | "skipped"; value: T | null
 
 export async function runAssistOutcome<S extends z.ZodType>(
   db: AppDb,
-  input: RunAssistInput<S>,
+  given: RunAssistInput<S>,
 ): Promise<AssistOutcome<z.infer<S>>> {
+  const input = { ...given, ...withE2eFixture(given.shopId, given) };
   const skipped = { status: "skipped", value: null } as const;
   const { shopId, feature } = input;
   if (!FEATURE_KEY.test(feature)) {

@@ -4770,6 +4770,8 @@
         "vercelBody": "alojamiento, el almacenamiento de archivos donde viven las fotos y la evidencia de certificación, y analítica a nivel de página. La analítica registra qué páginas se ven; no asociamos la identidad de un buceador ni de un miembro del personal a una visita.",
         "neonTerm": "Neon",
         "neonBody": "la base de datos en sí.",
+        "anthropicTerm": "Anthropic",
+        "anthropicBody": "Claude, el modelo de IA detrás de las sugerencias de DiveDay, y solo para un centro que las tenga activadas. Recibe lo que cada sugerencia necesita: un mensaje que el personal le pide redactar, clasificar o traducir; filas de muestra de un archivo que se está importando; la foto de una tarjeta de certificación, que se lee y se descarta; el sitio web del propio centro; textos que escribió el centro, como descripciones de salidas y fichas de sitios; comentarios de reseñas; y notas del taller sobre el equipo que se repara. Las respuestas médicas nunca se envían. Anthropic lo procesa solo para responder la petición, según sus términos comerciales, y no entrena sus modelos con ello.",
         "sentryTerm": "Sentry",
         "sentryBody": "informes de errores. Cuando algo se rompe, el fallo se envía aquí para que podamos arreglarlo. A la dirección de la página se le quita cualquier token antes de enviarla, y no mandamos registros de buceadores con ella.",
         "googleTerm": "Google",

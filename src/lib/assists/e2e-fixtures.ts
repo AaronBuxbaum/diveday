@@ -3,6 +3,7 @@ import { BENCH_NOTE_SYSTEM, benchNoteFixture } from "./bench-note";
 import { CERT_SCAN_SYSTEM, certScanFixture } from "./cert-scan";
 import { DESCRIPTION_DRAFT_SYSTEM, descriptionDraftFixture } from "./description-draft";
 import { DIVER_SEARCH_SYSTEM, diverSearchFixture } from "./diver-search";
+import { FRONT_FIXTURES } from "./front-fixtures";
 import { MONDAY_READ_SYSTEM, mondayReadFixture } from "./monday-read";
 import { RECAP_LINE_SYSTEM, recapLineFixture } from "./recap-line";
 import { RENTAL_NOTE_SYSTEM, rentalNoteFixture } from "./rental-note";
@@ -44,6 +45,7 @@ const FIXTURES: ReadonlyMap<string, (request: ClaudeRequest) => unknown> = new M
   [RECAP_LINE_SYSTEM, recapLineFixture],
   [SIGHTINGS_MATCH_SYSTEM, sightingsMatchFixture],
   [BENCH_NOTE_SYSTEM, benchNoteFixture],
+  ...FRONT_FIXTURES,
 ]);
 
 function systemText(request: ClaudeRequest): string {

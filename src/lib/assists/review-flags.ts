@@ -72,5 +72,6 @@ export function reviewFlagsFixture(request: { messages: unknown }): unknown {
   const text = JSON.stringify(request.messages).toLowerCase();
   const flags: ReviewFlag[] = [];
   if (/\b(current|unsafe|scared|left behind)\b/.test(text)) flags.push("safety_complaint");
+  if (/\d{3}[\s.-]?\d{4}|@[a-z]/.test(text)) flags.push("contact_info");
   return { flags };
 }

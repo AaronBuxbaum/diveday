@@ -1,10 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { getDb } from "@/db/client";
+import { type AppDb, getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/demo-shop";
-import { shops } from "@/db/schema";
+import { bookings, shops, tripReviews, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { armClaudeFixtures } from "@/lib/assists/e2e-fixtures";
+import { nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 
 /**
@@ -37,7 +38,41 @@ export async function POST(request: Request) {
   if (!found?.shop.isDemo) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   await found.db.update(shops).set({ isDemo: false }).where(eq(shops.id, found.shop.id));
   armClaudeFixtures(found.shop.id, true);
+  // `?review=1`: one commented review waiting for moderation, on a departure
+  // that has sailed, so the review flags have a row to mark. A minted shop
+  // carries no review history of its own.
+  if (new URL(request.url).searchParams.get("review") === "1") {
+    await seedWaitingReview(found.db, found.shop.id);
+  }
   return NextResponse.json({ ok: true });
+}
+
+async function seedWaitingReview(db: AppDb, shopId: string): Promise<void> {
+  const [seat] = await db
+    .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .leftJoin(tripReviews, eq(tripReviews.bookingId, bookings.id))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        lt(trips.startsAt, nowDate()),
+        ne(bookings.status, "cancelled"),
+        isNull(tripReviews.id),
+      ),
+    )
+    .orderBy(desc(trips.startsAt))
+    .limit(1);
+  if (!seat?.personId) return;
+  await db.insert(tripReviews).values({
+    shopId,
+    bookingId: seat.id,
+    tripId: seat.tripId,
+    personId: seat.personId,
+    rating: 4,
+    // i18n-exempt: a diver's own words, seeded for the browser fleet
+    comment: "Lovely reef and a patient crew. Text me on 305 555 0199 when the night dive runs.",
+  });
 }
 
 export async function DELETE(request: Request) {

@@ -162,6 +162,8 @@ async function PrivacyBody({ locale }: { locale: DiverLocale }) {
             { term: p("processors.metaTerm"), body: p("processors.metaBody") },
             { term: p("processors.vercelTerm"), body: p("processors.vercelBody") },
             { term: p("processors.neonTerm"), body: p("processors.neonBody") },
+            // Claude, for a shop with its suggestions on (ADR 20261018-claude-assists).
+            { term: p("processors.anthropicTerm"), body: p("processors.anthropicBody") },
             // The third parties a security review found live and none of them
             // visible from `observability-client.tsx`, which is where the
             // first draft's derivation stopped. Sentry mounts from

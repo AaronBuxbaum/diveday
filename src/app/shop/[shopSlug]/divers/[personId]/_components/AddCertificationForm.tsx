@@ -6,8 +6,8 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { readCardPhotoAction } from "../card-assist-actions";
 import { addCardAction } from "../card-actions";
+import { readCardPhotoAction } from "../card-assist-actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { AGENCY_KEYS } from "./shared";
 

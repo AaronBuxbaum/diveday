@@ -51,7 +51,7 @@ export type WebsiteReading = z.infer<typeof WebsiteReading>;
 /** One of the shop's own courses, offered to Claude to attach a website price to. */
 export type SetupCourse = { id: string; name: string };
 
-const SETUP_SYSTEM = `You help a scuba diving shop set up its booking system from its existing website. Read the website at the URL given with the web_fetch tool: the home page, and at most a few pages it links to on the same site about trips, courses, prices, hours, contact and policies.
+export const SETUP_SYSTEM = `You help a scuba diving shop set up its booking system from its existing website. Read the website at the URL given with the web_fetch tool: the home page, and at most a few pages it links to on the same site about trips, courses, prices, hours, contact and policies.
 
 Then answer, copying from the site and never inventing:
 - tagline: one line under 120 characters that the site itself uses to describe the shop.

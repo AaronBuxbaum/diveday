@@ -140,7 +140,7 @@ export const ImportMapping = z.object({
   ),
 });
 
-const MAPPING_SYSTEM = `You help a scuba diving shop move its customer list from another system into DiveDay.
+export const MAPPING_SYSTEM = `You help a scuba diving shop move its customer list from another system into DiveDay.
 
 You are given column headers DiveDay did not recognize, with a few masked sample values each, and the certification-level spellings it could not read. Answer:
 - columns: for each header, the DiveDay field it holds, or "none" when it holds none of them or you are unsure. Each field may be used once.
