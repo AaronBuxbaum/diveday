@@ -48,6 +48,15 @@ describe("the base's verdict", () => {
     expect(verdict.unnamed).toEqual([]);
   });
 
+  it("leaves out the aggregate CI result job, which names no file and is red whenever any job is", () => {
+    const verdict = baseVerdict(
+      [run(1, "CI result", "failure"), run(2, "Playwright shard 3/6", "failure")],
+      (r) => (r.id === 2 ? [fails("e2e/courses.spec.ts")] : [fails(".github")]),
+    );
+    expect(verdict.red).toEqual(["Playwright shard 3/6"]);
+    expect(verdict.unnamed).toEqual([]);
+  });
+
   it("calls a red job that names no file unnamed, so the gate cannot pretend it re-ran it", () => {
     const verdict = baseVerdict([run(6, "Build", "failure")], () => [fails(".github")]);
     expect(verdict.unnamed).toEqual(["Build"]);
@@ -70,7 +79,10 @@ describe("the base's verdict", () => {
     const runs = [
       run(10, "Unit tests shard 1/4", "failure"),
       run(11, "Unit tests shard 1/4", "success"),
-      { ...run(12, "Claude Approvals", "failure"), app: { slug: "claude-approvals" } },
+      {
+        ...run(12, "Claude Approvals", "failure"),
+        app: { slug: "claude-approvals" },
+      },
     ];
     expect(latestRuns(runs).map((r) => r.id)).toEqual([11]);
     expect(baseVerdict(runs, () => []).red).toEqual([]);
@@ -123,12 +135,18 @@ describe("what the gate does about the base", () => {
     "refuses unsupported --base-red input %j instead of clearing an unnamed failure",
     (file) => {
       const verdict = { ...green, red: ["CI result"], unnamed: ["CI result"] };
-      const decision = baseDecision(verdict, { base: "origin/main", extra: [file] });
+      const decision = baseDecision(verdict, {
+        base: "origin/main",
+        extra: [file],
+      });
       expect(decision.refuse).toMatch(/unsupported --base-red/);
       expect(decision.files).toEqual([]);
       expect(decision.specs).toEqual([]);
       expect(
-        baseDecision(verdict, { base: "origin/main", extra: ["src/lib/x.test.ts", file] }).refuse,
+        baseDecision(verdict, {
+          base: "origin/main",
+          extra: ["src/lib/x.test.ts", file],
+        }).refuse,
       ).toMatch(/unsupported --base-red/);
       expect(
         baseDecision({ unknown: "offline" }, { base: "origin/main", extra: [file] }).refuse,
@@ -203,7 +221,10 @@ describe("reading GitHub", () => {
       /gh: not found/,
     );
     expect(
-      readBaseVerdict("abc1234", { repo: "o/r", gh: () => ({ check_runs: [] }) }).unknown,
+      readBaseVerdict("abc1234", {
+        repo: "o/r",
+        gh: () => ({ check_runs: [] }),
+      }).unknown,
     ).toMatch(/no CI run/);
     expect(readBaseVerdict(null, { repo: "o/r" }).unknown).toBeTruthy();
   });

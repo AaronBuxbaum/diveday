@@ -140,7 +140,8 @@ contracts and documentation inputs. Database snapshot loaders are operational fi
 schema, migrations and test infrastructure changes instead run all unit tests. Source/test deletions,
 global configuration and unknown inputs also fall back to the whole unit suite. A test-only diff runs
 edited tests directly when they neither export fixtures nor appear in other tests; otherwise it
-keeps native dependency selection. Base CI's named failures are included in either mode.
+keeps native dependency selection. Base CI's named failures, and this branch's own last red
+run's, are included in either mode ([below](#a-red-run-on-this-branch)).
 
 `pnpm test:affected --plan` shows this local selection against the nearest contained remote
 branch below HEAD; `--base <ref>` selects an explicit base. Without `--plan`, it runs the whole
@@ -204,6 +205,31 @@ Measured again on 2026-10-18 for #2624, at load averages of 10 to 14 from other 
   now runs after the servers instead of beside them: its first navigation read 22.3 and 27.2 s
   queued behind worker 0's seed, and reads 1.3 s after it.
 - A cheaper reset stays the fix, and it is #2729's (`src/db/seed.ts`).
+
+### A red run on this branch
+
+Fixing forward had a hole of its own. A push meant to fix a red run went out behind
+`verify:push --quick`, which runs no browser, so the next CI run, about 22 minutes later, was the
+first to say whether the fix worked. In the week from 2026-10-16 to 10-22, 37 pushes followed a
+red run on the same PR; 18 came back red again, and 14 of those were still red on a test the run
+before had already named (the review is in the PR that added this section).
+
+So `verify:push`, in both modes, also reads this branch's own latest finished CI run
+(`scripts/own-ci.mjs`). When it is red, what it names runs here:
+
+- **Unit shards**: the files `src/test/failed-files-reporter.ts` annotated.
+- **Playwright shards**: each failed test's spec file, read from the "Playwright Run Summary"
+  notice (a failure annotation can point at `e2e/fixtures.ts` rather than the spec).
+- **Visual capture shards**: each failed capture by title, in light mode. A capture that fails is
+  a functional failure, a heading it waits for gone or a timeout, not a pixel difference; reg-suit
+  compares pixels, and its "Refuse a green check over nothing compared" step goes red whenever a
+  capture shard does, so fix the capture and reg-suit follows.
+- Lint, Typecheck and Repository safeguards run here anyway; a job naming nothing (Build, say)
+  gets a line with its run's link: read its log before pushing.
+
+It never refuses and fails open when GitHub cannot answer. The stamp records what it replayed
+(`ownCi`). The cost is the e2e build plus the named files, a few minutes, against a 22-minute CI
+round per miss.
 
 ### A red base
 

@@ -56,9 +56,11 @@ export default async function ScheduleOpenGraphImage({
   // sits at the foot.
   return new ImageResponse(
     <div style={CARD_STYLE}>
-      {shop.logoUrl ? (
+      {shop.logoUrl?.startsWith("https://") ? (
         // The uploaded mark is optional, and the card remains readable when a
-        // shop has not set one.
+        // shop has not set one. An uploaded mark is an absolute storage URL;
+        // the demo's bundled one is a root-relative path the renderer cannot
+        // fetch, so the card leaves it off rather than failing.
         // biome-ignore lint/performance/noImgElement: ImageResponse needs a direct remote image
         <img
           src={shop.logoUrl}

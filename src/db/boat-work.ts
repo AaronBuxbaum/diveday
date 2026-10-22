@@ -19,7 +19,8 @@ import { bookings, nitroxCertifications, people, rentalFitProfiles, shops } from
  * bookings, the same roster both surfaces count), so a seat cannot be on one
  * and not the other.
  */
-export type BoatWorkDiver = { fullName: string };
+/** One diver a boat's job names: who, and the person Today's row folds their gaps under. */
+export type BoatWorkDiver = { personId: string; fullName: string };
 
 export type BoatWork = {
   /** Asked, and take a piece from the shop with no size against it. */
@@ -53,7 +54,7 @@ export async function readBoatWork(
   const divers = (ids: readonly string[], gap: (seat: SeatWork) => boolean) =>
     ids.flatMap((id) => {
       const seat = seats.get(id);
-      return seat && gap(seat) ? [{ fullName: seat.fullName }] : [];
+      return seat && gap(seat) ? [{ personId: seat.personId, fullName: seat.fullName }] : [];
     });
   return new Map(
     tripIds.map((tripId) => {
@@ -78,6 +79,7 @@ export function boatWorkFor(work: ReadonlyMap<string, BoatWork>, tripId: string)
 }
 
 type SeatWork = {
+  personId: string;
   fullName: string;
   /** `rentalFitCompleteness`'s state: two different jobs when it is not complete. */
   fit: "complete" | "incomplete" | "not_recorded";
@@ -124,6 +126,7 @@ async function readSeatWork(
   const rows = await db
     .select({
       bookingId: bookings.id,
+      personId: bookings.personId,
       fullName: people.fullName,
       participantType: bookings.participantType,
       wantsNitrox: bookings.wantsNitrox,
@@ -157,6 +160,7 @@ async function readSeatWork(
     .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, [...bookingIds])));
   for (const row of rows) {
     seats.set(row.bookingId, {
+      personId: row.personId,
       fullName: row.fullName,
       fit: rentalFitCompleteness(row.fit, row.rentalItems, row.participantType).state,
       ungatedNitrox: seatUngatedNitrox({

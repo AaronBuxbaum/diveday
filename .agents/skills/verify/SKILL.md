@@ -40,7 +40,9 @@ Before every push:
    (`scripts/guard-push.mjs`), so a merge from the layer below means another run. It reads the
    layer below's CI first: on a red base it re-runs the files CI names and stamps only when they
    pass here, so carry the fix or wait for the layer that broke; a red job naming no file needs
-   `--base-red <file…>` from its log. The reasons
+   `--base-red <file…>` from its log. It also replays what this branch's own last red CI run
+   names (unit files, specs, captures), so a fix is checked here, not by CI's next round. A red
+   **Visual capture** shard is a functional failure, not a pixel diff. The reasons
    and the measurements: [verifying.md](../../../docs/agents/verifying.md#the-pre-push-gate).
 7. **One validated push per round.** Commit as often as you like; push once, when
    `verify:push --quick` is green for the round's work, because each push cancels the CI run of the one

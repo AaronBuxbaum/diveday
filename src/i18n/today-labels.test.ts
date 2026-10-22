@@ -229,14 +229,9 @@ describe("a Needs you row's sentence", () => {
 describe("the words for a diver still in training", () => {
   it("send staff to the course result, not to a card that does not exist yet (#2058)", () => {
     const t = staffTranslator("en-US");
-    expect(blockerActionLabelText(t, "certification_in_training", false)).toBe(
-      "Check the course result",
-    );
-    expect(blockerActionLabelText(t, "certification_in_training", true)).toBe(
-      "Check course results",
-    );
-    expect(blockerActionLabelText(t, "certification_in_training", false)).not.toBe(
-      blockerActionLabelText(t, "certification_insufficient", false),
+    expect(blockerActionLabelText(t, "certification_in_training")).toBe("Check the course result");
+    expect(blockerActionLabelText(t, "certification_in_training")).not.toBe(
+      blockerActionLabelText(t, "certification_insufficient"),
     );
   });
 });

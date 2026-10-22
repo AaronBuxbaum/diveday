@@ -419,6 +419,24 @@ describe("the /ready/ registration's fetch", () => {
     expect(kept.size).toBe(0);
   });
 
+  /** The landing's own keep request must not put back the copy its navigation just forgot. */
+  it("keeps nothing when a cancelled landing asks to keep its page", async () => {
+    const handler = listeners.get("message");
+    if (!handler) throw new Error("no message listener");
+    fetchMock.mockResolvedValueOnce(html("still live"));
+    const replies: unknown[] = [];
+    const waits: Promise<unknown>[] = [];
+    handler({
+      data: { type: "KEEP_READY_PAGE" },
+      ports: [{ postMessage: (reply: unknown) => replies.push(reply) }],
+      source: { url: `https://dive.day${PATH}?cancelled=1` },
+      waitUntil: (promise: Promise<unknown>) => waits.push(promise),
+    });
+    await Promise.allSettled(waits);
+    expect(kept.size).toBe(0);
+    expect(replies).toEqual([{ ok: false }]);
+  });
+
   it("does not keep a load that carries a one-time notice", async () => {
     fetchMock.mockResolvedValueOnce(html("with notice"));
     const load = navigate(`https://dive.day${PATH}?saved=seat`);

@@ -85,7 +85,7 @@ export default async function TripOpenGraphImage({
   return new ImageResponse(
     <div style={CARD_STYLE}>
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-        {shop.logoUrl ? (
+        {shop.logoUrl?.startsWith("https://") ? (
           // biome-ignore lint/performance/noImgElement: ImageResponse needs a direct remote image
           <img src={shop.logoUrl} alt="" width="64" height="64" style={{ objectFit: "cover" }} />
         ) : null}

@@ -75,6 +75,7 @@ import {
 } from "./e2e-affected.mjs";
 import { requireFreshBuild } from "./e2e-build-evidence.mjs";
 import { verifiedFile } from "./guard-push.mjs";
+import { ownDecision, readOwnVerdict } from "./own-ci.mjs";
 import { gitReader } from "./stack-map.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import { appendMetric } from "./task-metrics.mjs";
@@ -113,7 +114,10 @@ export const CORES_PER_E2E_WORKER = 3;
 export function e2eWorkers({ cores, load, override } = {}) {
   const set = Number(override);
   if (Number.isFinite(set) && set > 0) {
-    return { workers: Math.floor(set), formula: `E2E_WORKERS=${override} set by the operator` };
+    return {
+      workers: Math.floor(set),
+      formula: `E2E_WORKERS=${override} set by the operator`,
+    };
   }
   const free = Math.max(0, cores - load);
   const workers = Math.max(
@@ -188,12 +192,16 @@ function staticSteps(changed) {
  * `--quick`: static checks plus native dependency/source-reader selection, direct
  * changed leaf tests, or a full fallback for global/unknown/deleted inputs.
  */
-export function quickPlan({ changed, selection, specs = [] }) {
+export function quickPlan({ changed, selection, specs = [], captures = [] }) {
   const steps = staticSteps(changed);
   const selected = selection ?? testPlan({ changed, readers: [] });
   if (selected.mode === "all" || selected.files.length > 0)
-    steps.push({ name: "related unit tests", command: "pnpm", args: testArgs(selected) });
-  steps.push(...browserSteps({ specs }));
+    steps.push({
+      name: "related unit tests",
+      command: "pnpm",
+      args: testArgs(selected),
+    });
+  steps.push(...browserSteps({ specs, captures }));
   return steps;
 }
 
@@ -208,9 +216,10 @@ export function baseReplayFiles({ files, existing }) {
 }
 
 /** Coverage in a stamp follows the actual browser plan in either verification mode. */
-export function stampCoverage({ specs, verdict, decision }) {
+export function stampCoverage({ specs, verdict, decision, own }) {
   return {
     specs,
+    ...(own ? { ownCi: own } : {}),
     baseCi: verdict.unknown
       ? { unknown: verdict.unknown }
       : {
@@ -254,7 +263,12 @@ export function plan({ changed, specs, captures = [] }) {
 function browserSteps({ specs, captures = [] }) {
   const steps = [];
   if (specs.length > 0 || captures.length > 0) {
-    steps.push({ name: "e2e build", command: "pnpm", args: ["e2e:build"], build: true });
+    steps.push({
+      name: "e2e build",
+      command: "pnpm",
+      args: ["e2e:build"],
+      build: true,
+    });
     // Chunked so a hub-route change, which selects most of the suite, stays inside each step's
     // hour (SUBPROCESS_TIMEOUTS.verifyPushStep) and prints progress between chunks.
     const chunks = [];
@@ -314,7 +328,9 @@ export function notRunHere({ docsOnly, testsOnly, specs, allSpecs, captures = []
       ...(skipped.length > 0
         ? [`${ran.size === 0 ? "all " : ""}${skipped.length} Playwright specs (quick run)`]
         : []),
-      "visual captures (reg-suit): CI only, and a difference never fails the build",
+      captures.length > 0
+        ? `visual captures (reg-suit): the ${captures.length} own CI named red ran here in light mode; the rest, dark mode and the comparison are CI's`
+        : "visual captures (reg-suit): CI only, and a difference never fails the build",
     ];
   }
   const lines = [];
@@ -487,7 +503,10 @@ async function main() {
   const verdict = readBaseVerdict(git(["rev-parse", selection.base]), {
     repo: repoSlug(git(["remote", "get-url", "origin"])) ?? process.env.GITHUB_REPOSITORY ?? null,
   });
-  const decision = baseDecision(verdict, { base: selection.base, extra: baseRedArgs(args) });
+  const decision = baseDecision(verdict, {
+    base: selection.base,
+    extra: baseRedArgs(args),
+  });
   for (const line of decision.lines) console.log(line);
   if (decision.refuse && !docsOnly) {
     console.error(`verify:push: ${decision.refuse}`);
@@ -496,24 +515,51 @@ async function main() {
   const existing = (file) => existsSync(path.join(ROOT, file));
   let baseSpecs;
   try {
-    baseReplayFiles({ files: [...decision.files, ...decision.specs], existing });
+    baseReplayFiles({
+      files: [...decision.files, ...decision.specs],
+      existing,
+    });
     baseSpecs = docsOnly ? [] : [...new Set(decision.specs)];
   } catch (error) {
     console.error(`verify:push: ${error.message}`);
     process.exit(1);
   }
+  // The branch's own last CI run (scripts/own-ci.mjs): a fix-forward push runs what that run
+  // named as red, so it is not the next CI run that says whether the fix worked. A file the
+  // change deleted is left out; deleting a red test is the change's own claim, and CI checks it.
+  const branch = git(["branch", "--show-current"]);
+  const own = ownDecision(
+    readOwnVerdict(branch, {
+      repo: repoSlug(git(["remote", "get-url", "origin"])) ?? process.env.GITHUB_REPOSITORY ?? null,
+    }),
+    { branch, head },
+  );
+  for (const line of own.lines) console.log(line);
+  const ownSpecs = docsOnly ? [] : own.specs.filter(existing);
+  const ownCaptures = docsOnly ? [] : own.captures;
+  baseSpecs = [...new Set([...baseSpecs, ...ownSpecs])];
   if (quick) specs.splice(0, specs.length, ...baseSpecs);
   else specs.push(...baseSpecs.filter((spec) => !specs.includes(spec)));
-  const captures = quick || docsOnly || testsOnly ? [] : [...selection.captures.keys()].sort();
+  const captures = [
+    ...new Set([
+      ...(quick || docsOnly || testsOnly ? [] : [...selection.captures.keys()]),
+      ...ownCaptures,
+    ]),
+  ].sort();
   const unitSelection = quick
     ? testPlan({
         changed: selection.changed,
         readers: () => sourceReaders(ROOT),
-        extra: decision.files.filter(existing),
+        extra: [...decision.files, ...own.files].filter(existing),
       })
     : null;
   const steps = quick
-    ? quickPlan({ changed: selection.changed, selection: unitSelection, specs })
+    ? quickPlan({
+        changed: selection.changed,
+        selection: unitSelection,
+        specs,
+        captures,
+      })
     : plan({ changed: selection.changed, specs, captures });
 
   if (quick) {
@@ -523,7 +569,9 @@ async function main() {
         "static checks and the unit tests they reach. CI runs the rest; fix forward if it goes red.",
     );
     if (baseSpecs.length > 0)
-      console.log(`  replaying red browser specs on the base: ${baseSpecs.join(" ")}`);
+      console.log(`  replaying red browser specs (base and own CI): ${baseSpecs.join(" ")}`);
+    if (captures.length > 0)
+      console.log(`  replaying red captures from own CI: ${captures.length}, light mode only`);
   } else {
     console.log(
       `verify:push: ${selection.changed.length} file(s) against ${selection.base}; ` +
@@ -784,8 +832,16 @@ async function main() {
     base: selection.base,
     at: new Date().toISOString(),
     steps: ran,
-    ...stampCoverage({ specs, verdict, decision }),
-    captures: !quick && captures.length > 0 ? captures : undefined,
+    ...stampCoverage({
+      specs,
+      verdict,
+      decision,
+      own:
+        own.files.length + ownSpecs.length + ownCaptures.length > 0
+          ? { files: own.files, specs: ownSpecs, captures: ownCaptures }
+          : undefined,
+    }),
+    captures: captures.length > 0 ? captures : undefined,
     e2eWorkers: workerCounts.length > 0 ? workerCounts : undefined,
     browser: browserNote ?? undefined,
     notRunHere: skipped,

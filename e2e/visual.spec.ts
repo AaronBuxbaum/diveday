@@ -42,6 +42,7 @@ import {
   openRosterNotes,
   openSettingsRow,
   openThreadStep,
+  openTodayBoatFolds,
   openTripAbout,
   openTripFromBoard,
   openTripTab,
@@ -2461,6 +2462,8 @@ for (const scheme of ["light", "dark"] as const) {
       test(`failed emails batch into one row (${scheme})`, async ({ page, request }) => {
         await request.post("/api/test/seed-trouble-states?failedEmails=1");
         await page.goto("/shop/blue-mantis");
+        // A chore on a long boat: the row sits behind "and N more" (foldBoatRows).
+        await openTodayBoatFolds(page);
         await page.getByRole("button", { name: "Resend confirmations" }).waitFor();
         await capture(page, "today-failed-emails", scheme);
       });
