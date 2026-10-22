@@ -7,7 +7,6 @@ import {
   bookkeeperNoticeEmail,
 } from "./bookkeeper-email";
 import { courseCertifiedEmail } from "./course-certified";
-import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 import { crewScheduleChangeEmail } from "./crew-emails";
 import {
   deskAfterHoursEmail,
@@ -22,12 +21,12 @@ import {
   bookingHandoffEmail,
   checkoutRecoveryEmail,
   contactEmailConfirmationEmail,
-  courseInquiryEmail,
   demoStartedAlertEmail,
   type EmailShopBrand,
   founderDigestEmail,
   guardianReleaseCopyEmail,
   lastMinuteDealEmail,
+  leadReceivedEmail,
   type NotificationEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
@@ -50,6 +49,7 @@ import {
 } from "./email";
 import { incidentMissingDiverEmail, incidentMissingDiverFoundEmail } from "./incident-emails";
 import type { Notification } from "./kinds";
+import { leadReceivedAckEmail } from "./lead-received-ack";
 import { partyPaymentReceiptEmail } from "./party-payment-receipt";
 import {
   rollCallStaleEmail,
@@ -185,7 +185,7 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
   if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
   if (notification.kind === "operator_alert") return operatorAlertEmail(notification);
-  if (notification.kind === "course_inquiry") return courseInquiryEmail(notification);
+  if (notification.kind === "lead_received") return leadReceivedEmail(notification);
   if (notification.kind === "staff_reply") return staffReplyEmail(notification);
   if (notification.kind === "weekly_digest") return weeklyDigestEmail(notification);
   if (notification.kind === "work_order_ready") return workOrderReadyEmail(notification);
@@ -214,8 +214,8 @@ function rawMessageFor(notification: Notification): NotificationEmail {
     return bookkeeperConfirmationEmail(notification);
   }
   if (notification.kind === "bookkeeper_notice") return bookkeeperNoticeEmail(notification);
-  if (notification.kind === "course_inquiry_received") {
-    return courseInquiryReceivedEmail(notification);
+  if (notification.kind === "lead_received_ack") {
+    return leadReceivedAckEmail(notification);
   }
   return passwordChangedEmail(notification);
 }

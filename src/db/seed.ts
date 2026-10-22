@@ -39,7 +39,6 @@ import {
   courseFormRequirements,
   courseForms,
   courseFormVersions,
-  courseInquiries,
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
@@ -204,7 +203,7 @@ import { syncDemoStripeAccount } from "./stripe-accounts";
  * | `./seed-nitrox.ts` | EANx cards and the per-dive gas the wreck charter gates on |
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
  * | `./seed-gear.ts` | the rental fleet on the wall — tagged units, service clocks, a few reserved for the wreck trip |
- * | `./seed-course-inquiries.ts` | course leads off the public pages, in all three `person_id` states |
+ * | `./seed-course-inquiries.ts` | date leads for courses off the public pages, in all three `person_id` states |
  * | `./seed-course-materials.ts` | the links behind two courses' learning materials, and one student marked done |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-course-photos.ts` | a species photo of its own on every course, so the storefront reads as a shop and not a template |
@@ -1611,11 +1610,6 @@ export async function resetDemoSchedule(
   // time it exercises the picker's refusal.
   await db.delete(marineLifeRequests).where(eq(marineLifeRequests.shopId, shopId));
   await db.delete(diveSites).where(eq(diveSites.shopId, shopId));
-  // A course inquiry references its course without cascade (a lead is
-  // evidence, not something a schedule reset should silently vanish), so it
-  // must go before the courses delete or this FK-violates and aborts the whole
-  // reset mid-run — the same class of bug the comment above already walks.
-  await db.delete(courseInquiries).where(eq(courseInquiries.shopId, shopId));
   await db.delete(courses).where(eq(courses.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));

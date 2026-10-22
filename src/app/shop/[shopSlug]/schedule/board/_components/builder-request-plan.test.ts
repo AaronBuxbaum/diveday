@@ -15,7 +15,7 @@ function request(over: Record<string, unknown>) {
   return {
     id: "r1",
     name: "Tomás",
-    divers: 4,
+    partySize: 4,
     experienceLevel: null,
     courseId: null,
     courseTitle: null,
@@ -33,7 +33,7 @@ describe("builderRequestPlan", () => {
     const plan = builderRequestPlan({
       requestRows: [
         request({}),
-        request({ id: "r2", name: null, divers: null, courseTitle: "Rescue" }),
+        request({ id: "r2", name: null, partySize: null, courseTitle: "Rescue" }),
       ] as Input["requestRows"],
       shop,
       shopBoats: [{ id: "b1", name: "Reef Runner", capacity: 12 }] as Input["shopBoats"],
@@ -48,7 +48,7 @@ describe("builderRequestPlan", () => {
 
   it("tells a shop with no crew schedule nothing about crewing", () => {
     const plan = builderRequestPlan({
-      requestRows: [request({ divers: 20 })] as Input["requestRows"],
+      requestRows: [request({ partySize: 20 })] as Input["requestRows"],
       shop: { ...shop, crewScheduleEnabled: false } as Input["shop"],
       shopBoats: [],
       st,

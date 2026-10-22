@@ -284,7 +284,7 @@ const waiverRequestSchema = z.object({
  *   by name, at a named shop, on a named day. A first cut carried `diverEmail`
  *   so `notificationSubjectEmail` could lift it into a column and legal erasure
  *   could sweep a queued copy — the hole issue #1298 closed for
- *   `course_inquiry`. It only ever half-worked: a twelve-year-old signing on a
+ *   `lead_received`. It only ever half-worked: a twelve-year-old signing on a
  *   shop tablet has no address to lift, and the row stayed unreachable. So this
  *   kind is not queued at all (`notificationIsQueueable`), and with no row to
  *   sweep there is no handle to carry. What is left is a minor's *name*, in a
@@ -1016,11 +1016,11 @@ const founderDigestSchema = z.object({
 
 // The shop's own inbox learns about a lead the moment the diver submits the
 // public course-page composer (docs/product/archive/ux-personas-20260730-findings.md
-// task 7) — carries the course_inquiries row id so a retried send can't double
+// task 7) — carries the lead id so a retried send can't double
 // up, exactly like waiver_request keys off its own row.
-const courseInquirySchema = z.object({
-  kind: z.literal("course_inquiry"),
-  courseInquiryId: z.uuid(),
+const leadReceivedSchema = z.object({
+  kind: z.literal("lead_received"),
+  leadId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
@@ -1339,11 +1339,11 @@ const lostItemFoundSchema = z.object({
  * item 13). Addressed to the address the public form took, so it carries
  * nothing the diver typed: the course title is the shop's, the dates are
  * parsed calendar days, and the phone and hours are the shop's own
- * (`courseInquiryReceivedEmail`).
+ * (`leadReceivedAckEmail`).
  */
-const courseInquiryReceivedSchema = z.object({
-  kind: z.literal("course_inquiry_received"),
-  courseInquiryId: z.uuid(),
+const leadReceivedAckSchema = z.object({
+  kind: z.literal("lead_received_ack"),
+  leadId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
@@ -1923,7 +1923,7 @@ export const notificationSchema = z
     checkoutRecoverySchema,
     lastMinuteDealSchema,
     operatorAlertSchema,
-    courseInquirySchema,
+    leadReceivedSchema,
     staffReplySchema,
     weeklyDigestSchema,
     workOrderReadySchema,
@@ -1940,7 +1940,7 @@ export const notificationSchema = z
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
-    courseInquiryReceivedSchema,
+    leadReceivedAckSchema,
     bookkeeperMonthEndSchema,
     bookkeeperConfirmationSchema,
     bookkeeperNoticeSchema,
@@ -1960,7 +1960,7 @@ export type Notification = z.infer<typeof notificationSchema>;
  * is almost all of them. Two are addressed elsewhere and carry a person in the
  * body:
  *
- * - `course_inquiry` mails the shop's own front desk about a diver who used
+ * - `lead_received` mails the shop's own front desk about a diver who used
  *   the public composer, and carries their name, address, phone and free-text
  *   message;
  * - an `operator_alert` for `new_account` mails DiveDay about a shop owner who just signed up.
@@ -1977,7 +1977,7 @@ export type Notification = z.infer<typeof notificationSchema>;
  */
 export function notificationSubjectEmail(notification: Notification): string | null {
   switch (notification.kind) {
-    case "course_inquiry":
+    case "lead_received":
       return notification.inquirerEmail ?? null;
     case "operator_alert":
       if (notification.event === "new_account") return notification.ownerEmail;
@@ -1995,7 +1995,7 @@ export function notificationSubjectEmail(notification: Notification): string | n
 /**
  * **The subject's phone number, for the lead that gave one and no address.**
  *
- * An address is not a sufficient handle for a `course_inquiry`, and the
+ * An address is not a sufficient handle for a `lead_received`, and the
  * product says so: the public composer's reply-path rule is "an address *or* a
  * number" (`hasReplyPath`, `src/app/actions/inquiry.ts`), so a diver on a dock
  * who leaves only a phone number produces a queued notification carrying their
@@ -2004,7 +2004,7 @@ export function notificationSubjectEmail(notification: Notification): string | n
  * exactly the reason it was unreachable by `recipient_email`
  * (`security-reviewer`, on issue #1298).
  *
- * The same over-reach `scrub` already accepts for `course_inquiries.phone`
+ * The same over-reach `scrub` already accepts for the date-lead phone
  * applies here and is accepted for the same reason: a household number is
  * genuinely shared, so this can drop a partner's queued lead. That is a lost
  * retry of a notification whose underlying row the same transaction blanks
@@ -2012,13 +2012,13 @@ export function notificationSubjectEmail(notification: Notification): string | n
  * cannot reach.
  *
  * Matched exactly rather than normalised, because `people.phone` and
- * `course_inquiries.phone` are compared exactly by the sweep beside it and
+ * the date-lead phone are compared exactly by the sweep beside it and
  * three spellings of "the same number" would be a different decision than this
  * one.
  */
 export function notificationSubjectPhone(notification: Notification): string | null {
   switch (notification.kind) {
-    case "course_inquiry":
+    case "lead_received":
       return notification.inquirerPhone ?? null;
     case "operator_alert":
       return notification.event === "setup_request" ? (notification.contactPhone ?? null) : null;
@@ -2215,8 +2215,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "operator_alert":
       return operatorAlertKey(notification);
     // One notification per submitted inquiry row.
-    case "course_inquiry":
-      return `course-inquiry/${notification.courseInquiryId}`;
+    case "lead_received":
+      return `lead-received/${notification.leadId}`;
     // One send per reply row; the row exists before the send does.
     case "staff_reply":
       return `staff-reply/${notification.replyId}`;
@@ -2227,8 +2227,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "lost_item_found":
       return `lost-item-found/${notification.itemId}/${notification.toldAt.toISOString()}`;
     // One acknowledgment per submitted request row.
-    case "course_inquiry_received":
-      return `course-inquiry-received/${notification.courseInquiryId}`;
+    case "lead_received_ack":
+      return `lead-received-ack/${notification.leadId}`;
     // One receipt per checkout, ever; the webhook sends it only on the call
     // that completes the checkout.
     case "party_payment_receipt":

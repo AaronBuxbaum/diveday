@@ -1,17 +1,20 @@
 import { getTableName, sql } from "drizzle-orm";
 import {
+  boolean,
   check,
+  date,
   index,
   integer,
   pgEnum,
   pgTable,
+  text,
   timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { appNowTimestamp } from "./columns";
 import { people, shops } from "./core";
-import { courseInquiries } from "./courses";
+import { courses } from "./courses";
 import { trips } from "./trips";
 
 /*
@@ -133,8 +136,66 @@ export const tripInvitations = pgTable(
   ],
 );
 
+/** Retired with `course_inquiries`: now `lead_experience` (`leads.ts`). */
+export const courseInquiryExperience = pgEnum("course_inquiry_experience", [
+  "never",
+  "tried",
+  "certified",
+  "lapsed",
+]);
+
+/** Retired with `course_inquiries`: now `lead_closed_as` (`leads.ts`). */
+export const courseInquiryOutcome = pgEnum("course_inquiry_outcome", ["booked", "done"]);
+
+/**
+ * A diver asking a shop to run something on a date that is not on the board.
+ * Its rows are `leads` with `scope = 'date'` (ADR 20261017-one-lead-with-a-scope,
+ * which supersedes 20260814-a-date-request-is-a-course-inquiry). The columns
+ * map one to one: `divers` is `party_size`, `created_at` is `asked_at`,
+ * `handled_at`/`handled_as` are `closed_at`/`closed_as`.
+ */
+export const courseInquiries = pgTable(
+  "course_inquiries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    courseId: uuid("course_id").references(() => courses.id),
+    interest: text("interest"),
+    preferredDate: date("preferred_date", { mode: "string" }),
+    alternateDate: date("alternate_date", { mode: "string" }),
+    dateFlexible: boolean("date_flexible").notNull().default(false),
+    personId: uuid("person_id").references(() => people.id),
+    name: text("name"),
+    email: text("email"),
+    phone: text("phone"),
+    experienceLevel: courseInquiryExperience("experience_level"),
+    timing: text("timing"),
+    divers: integer("divers"),
+    message: text("message"),
+    handledAt: timestamp("handled_at", { withTimezone: true }),
+    handledAs: courseInquiryOutcome("handled_as"),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    index("course_inquiries_shop_created_idx").on(table.shopId, table.createdAt),
+    index("course_inquiries_course_idx").on(table.courseId),
+    index("course_inquiries_shop_preferred_date_idx").on(table.shopId, table.preferredDate),
+    check(
+      "course_inquiries_subject_present",
+      sql`${table.courseId} is not null or length(btrim(coalesce(${table.interest}, ''))) > 0`,
+    ),
+    check(
+      "course_inquiries_handled_together",
+      sql`(${table.handledAt} is null) = (${table.handledAs} is null)`,
+    ),
+  ],
+);
+
 /** The tables above, by name: still in the database, no longer in the model. */
 export const RETIRED_TABLE_NAMES: readonly string[] = [
   getTableName(tripWaitlistEntries),
   getTableName(tripInvitations),
+  getTableName(courseInquiries),
 ];

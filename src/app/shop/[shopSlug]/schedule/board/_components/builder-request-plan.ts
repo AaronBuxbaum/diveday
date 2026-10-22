@@ -1,5 +1,5 @@
 import type { listBoats } from "@/db/boats";
-import type { listDateRequestsByIds } from "@/db/course-inquiries";
+import type { listDateLeadsByIds } from "@/db/lead-dates";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import type { BuilderRequestPlan } from "./ScheduleBuilder";
@@ -16,7 +16,7 @@ export function builderRequestPlan({
   shopBoats,
   st,
 }: {
-  requestRows: Awaited<ReturnType<typeof listDateRequestsByIds>>;
+  requestRows: Awaited<ReturnType<typeof listDateLeadsByIds>>;
   shop: Parameters<typeof departureShapeFor>[0] & {
     crewScheduleEnabled: boolean;
     diversPerDivemaster: number;
@@ -27,7 +27,7 @@ export function builderRequestPlan({
   const requestAdvice = adviseRequests(
     requestRows.map((request) => ({
       id: request.id,
-      divers: request.divers,
+      divers: request.partySize,
       experienceLevel: request.experienceLevel,
       courseId: request.courseId,
     })),
@@ -51,7 +51,7 @@ export function builderRequestPlan({
           subject: request.courseTitle
             ? st("requests.aboutCourse", { course: request.courseTitle })
             : st("requests.aboutDive", { interest: request.interest ?? "" }),
-          divers: Math.max(1, request.divers ?? 1),
+          divers: Math.max(1, request.partySize ?? 1),
         })),
       }
     : null;

@@ -4,7 +4,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { LedgerRow } from "@/components/ui/ledger";
 import { menuRowClass } from "@/components/ui/menu";
-import type { DateRequestRow } from "@/db/course-inquiries";
+import type { DateLeadRow } from "@/db/lead-dates";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
@@ -49,7 +49,7 @@ const ADDRESS_TARGET =
  * the language is 20260827-clearwater-surface-language).
  *
  * A request is a diver asking for a departure to *exist* — a
- * `course_inquiries` row (ADR 20260814-a-date-request-is-a-course-inquiry),
+ * date lead (ADR 20261017-one-lead-with-a-scope),
  * never the wait list and never a last-minute deal. So the row's job is to say
  * who asked, what for, how many of them, and why it is filed under the day it
  * is filed under; the act that answers it belongs to the day group above.
@@ -76,7 +76,7 @@ const ADDRESS_TARGET =
  * The name is the door when this lead is linked to a diver on file
  * (`personId`: an exact email match, made at capture time and again on every
  * read, so a diver added after they asked still gets their door —
- * `withRosterLinks` in `src/db/course-inquiries.ts`). Most requests are strangers, so
+ * `withRosterLinks` in `src/db/lead-dates.ts`). Most requests are strangers, so
  * most rows have no door at all: a stretched row link over a list where one row
  * in four is tappable is a promise the surface cannot keep, and the row's own
  * acts — mailing them, seating them — have to stay reachable either way.
@@ -90,7 +90,7 @@ export function RequestLedgerRow({
   markDoneAction,
   t,
 }: {
-  request: DateRequestRow;
+  request: DateLeadRow;
   locale: string;
   timezone: string;
   shopSlug: string;
@@ -115,12 +115,14 @@ export function RequestLedgerRow({
     ? t(EXPERIENCE_KEYS[request.experienceLevel])
     : null;
   const facts = [
-    request.divers ? { text: t("requests.divers", { count: request.divers }), whole: true } : null,
+    request.partySize
+      ? { text: t("requests.divers", { count: request.partySize }), whole: true }
+      : null,
     experienceFact ? { text: experienceFact, whole: false } : null,
     request.dateFlexible ? { text: t("requests.flexible"), whole: true } : null,
     // When they asked is the desk's sorting fact; a phone reads who and what.
     {
-      text: t("requests.askedOn", { date: formatShortDate(request.createdAt, locale, timezone) }),
+      text: t("requests.askedOn", { date: formatShortDate(request.askedAt, locale, timezone) }),
       whole: true,
       desktop: true,
     },

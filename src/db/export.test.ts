@@ -13,10 +13,10 @@ import {
   activityEvents,
   bookings,
   certifications,
-  courseInquiries,
   courses,
   diveSites,
   internalNotes,
+  leads,
   people,
   personRoles,
   shops,
@@ -53,8 +53,7 @@ const EXPECTED_FILES = [
   "staff_credentials.csv",
   "bookings.csv",
   "trip_help_requests.csv",
-  "waitlist_entries.csv",
-  "trip_invitations.csv",
+  "leads.csv",
   "last_minute_list.csv",
   "trip_last_minute_promos.csv",
   "trip_last_minute_promo_recipients.csv",
@@ -113,7 +112,6 @@ const EXPECTED_FILES = [
   "shop_promo_codes.csv",
   "shop_promo_redemptions.csv",
   "courses.csv",
-  "course_inquiries.csv",
 ];
 /** Schema tables that get their own CSV in the bundle. */
 const EXPORTED_TABLES = [
@@ -154,10 +152,8 @@ const EXPORTED_TABLES = [
   "incident_report_addenda",
   "activity_events",
   "notification_deliveries",
-  "course_inquiries",
   "shop_promo_redemptions",
-  "trip_waitlist_entries",
-  "trip_invitations",
+  "leads",
   "last_minute_list_entries",
   "trip_last_minute_promos",
   "trip_last_minute_promo_recipients",
@@ -723,7 +719,7 @@ describe("full-shop export dataset", () => {
       "trip_requirements.csv",
       "trip_assignments.csv",
       "bookings.csv",
-      "waitlist_entries.csv",
+      "leads.csv",
       "waiver_templates.csv",
       "dive_sites.csv",
       "dive_site_creatures.csv",
@@ -738,7 +734,6 @@ describe("full-shop export dataset", () => {
       "notification_deliveries.csv",
       "shop_promo_redemptions.csv",
       "imported_payment_history.csv",
-      "course_inquiries.csv",
     ]) {
       expect(table(input, file).rows.length, `${file} has no rows`).toBeGreaterThan(0);
     }
@@ -1282,8 +1277,10 @@ describe("full-shop export dataset", () => {
       code: "counter_check_in",
       params: { diver: "Erasable Esme" },
     });
-    await db.insert(courseInquiries).values({
+    await db.insert(leads).values({
       shopId: shop.id,
+      scope: "date",
+      askedBy: "diver",
       courseId: course.id,
       personId: diver.id,
       name: "Erasable Esme",

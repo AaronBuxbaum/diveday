@@ -5,11 +5,12 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats } from "@/db/boats";
-import { listDateRequestsForStaff, listHandledDateRequests } from "@/db/course-inquiries";
+import { listClosedDateLeads, listDeparturesOnDates, listOpenDateLeads } from "@/db/lead-dates";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { addDepartureHref, groupDateRequests } from "@/lib/date-requests";
+import { formatShortDate } from "@/lib/format";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -92,11 +93,11 @@ export default async function RequestsPage({
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range, so a bookmarked page past the end lands on the last real one.
   const [requestPage, handled, shopBoats, canAddDeparture] = await Promise.all([
-    listDateRequestsForStaff(db, shop.id, {
+    listOpenDateLeads(db, shop.id, {
       page: Number.parseInt(page ?? "", 10),
     }),
     // The closed leads (third UX review, item 13): off the days, under "Done".
-    listHandledDateRequests(db, shop.id),
+    listClosedDateLeads(db, shop.id),
     listBoats(db, shop.id),
     // **Reading a day is every role's; putting a boat on it is not** (issue
     // #1831). The day's act lands on the schedule builder, whose add panel is
@@ -113,6 +114,18 @@ export default async function RequestsPage({
     shopBoats.map((b) => ({ id: b.id, name: b.name, capacity: b.capacity })),
   );
   const { groups, undated } = groupDateRequests(requestPage.rows, (row) => row);
+  // **Departures already on the board for these days** (ADR
+  // 20261017-one-lead-with-a-scope): a day whose leads were listed as if nothing
+  // existed for them now says what does.
+  const boardByDate = new Map<string, Awaited<ReturnType<typeof listDeparturesOnDates>>>();
+  for (const departure of await listDeparturesOnDates(
+    db,
+    shop.id,
+    groups.map((group) => group.date),
+    timezone,
+  )) {
+    boardByDate.set(departure.date, [...(boardByDate.get(departure.date) ?? []), departure]);
+  }
   const base = shopPath(shopSlug, "requests");
   // The one notice this page answers, and it is genuinely about the page rather
   // than about a form on it: the staffer wrote a caller down on "Took a call"
@@ -125,8 +138,8 @@ export default async function RequestsPage({
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
   const outcomeAction = setRequestOutcomeAction.bind(null, shopSlug);
   const done = handled.flatMap((request) =>
-    request.handledAt && request.handledAs
-      ? [{ ...request, handledAt: request.handledAt, handledAs: request.handledAs }]
+    request.closedAt && request.closedAs
+      ? [{ ...request, closedAt: request.closedAt, closedAs: request.closedAs }]
       : [],
   );
 
@@ -164,7 +177,7 @@ export default async function RequestsPage({
             const advice = adviseRequests(
               group.entries.map(({ request }) => ({
                 id: request.id,
-                divers: request.divers,
+                divers: request.partySize,
                 experienceLevel: request.experienceLevel,
                 courseId: request.courseId,
               })),
@@ -197,8 +210,17 @@ export default async function RequestsPage({
                   divers: advice.estimatedDivers,
                 })}
                 advice={repeats ? [] : lines}
+                onBoard={(boardByDate.get(group.date) ?? []).map((departure) => ({
+                  href: `${shopPath(shopSlug, "trips", departure.tripId)}#who-wants-in`,
+                  label: t("requests.onTheBoard", {
+                    when: formatShortDate(departure.startsAt, locale, timezone),
+                    title: departure.title,
+                    seats: departure.seatsLeft,
+                  }),
+                }))}
                 add={
-                  canAddDeparture
+                  // "Add a departure" is for the days with nothing on the board.
+                  canAddDeparture && !boardByDate.has(group.date)
                     ? {
                         href: addDepartureHref(
                           shopSlug,

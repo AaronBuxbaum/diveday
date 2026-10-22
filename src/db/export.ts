@@ -502,8 +502,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
 
   const notificationRows = await readScoped(tx, "notificationDeliveries", scope);
 
-  const inquiryRows = await readScoped(tx, "courseInquiries", scope);
-
   const arrivalRows = await readScoped(tx, "bookingArrivalEvents", scope);
 
   const rollCallRows = await readScoped(tx, "rollCallEvents", scope);
@@ -703,7 +701,6 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
     noteRows,
     activityRows,
     notificationRows,
-    inquiryRows,
     arrivalRows,
     rollCallRows,
     crewRollCallRows,
@@ -1072,11 +1069,8 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
 
   const courseFormRecordRows = await readScoped(tx, "courseFormRecords", scope);
 
-  const inquiryRows = await readScoped(tx, "courseInquiries", scope);
   const inquiryCourseIds = [
-    ...new Set(
-      [...inquiryRows, ...leadRows].flatMap((row) => (row.courseId ? [row.courseId] : [])),
-    ),
+    ...new Set(leadRows.flatMap((row) => (row.courseId ? [row.courseId] : []))),
   ];
   const inquiryCourseRows = inquiryCourseIds.length
     ? await tx
@@ -1139,7 +1133,6 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
     importedPaymentHistoryRows,
     waiverRows,
     courseFormRecordRows,
-    inquiryRows,
     courseTitle,
     shop,
     photoUrls,
@@ -1259,7 +1252,6 @@ export async function loadShopExportCounts(
     "activity_events.csv": await countShopScoped(db, "activityEvents", shopId),
     "notification_deliveries.csv": await countShopScoped(db, "notificationDeliveries", shopId),
     "shop_promo_redemptions.csv": await countShopScoped(db, "shopPromoRedemptions", shopId),
-    "course_inquiries.csv": await countShopScoped(db, "courseInquiries", shopId),
     "leads.csv": await countShopScoped(db, "leads", shopId),
     "last_minute_list.csv": await countShopScoped(db, "lastMinuteListEntries", shopId),
     "trip_last_minute_promos.csv": await countShopScoped(db, "tripLastMinutePromos", shopId),

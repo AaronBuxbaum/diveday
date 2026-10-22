@@ -129,7 +129,7 @@ describe("RequestPlanBrief", () => {
         }}
       />,
     );
-    const boxes = [...document.querySelectorAll<HTMLInputElement>('input[name="inquiryId"]')];
+    const boxes = [...document.querySelectorAll<HTMLInputElement>('input[name="leadId"]')];
     expect(boxes.map((box) => [box.value, box.checked])).toEqual([
       ["r1", true],
       ["r2", true],

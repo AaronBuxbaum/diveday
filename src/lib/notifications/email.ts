@@ -1825,7 +1825,7 @@ type CourseInquiryEmailInput = {
  * send (staffInviteEmail), not English-only like the founder-only
  * the new_account operator alert.
  */
-export function courseInquiryEmail(input: CourseInquiryEmailInput): NotificationEmail {
+export function leadReceivedEmail(input: CourseInquiryEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const notSaid = t("inquiry.notSaid");
   const name = input.inquirerName?.trim() || t("notifications.courseInquiry.anonymous");
