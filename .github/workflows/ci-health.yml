@@ -1,0 +1,60 @@
+name: CI health
+
+# Red CI runs per pull request rose from 0.4 to 1.4 in a week, and 14 of the
+# 18 fix pushes that came back red were red again on a test the run before had
+# named (2026-10-22 review). Both were found by reading two weeks of runs by
+# hand, after landing code had already got slow. `scripts/ci-health.mjs` reads
+# the last seven days' pull requests, their CI runs and the red runs'
+# annotations every Monday, writes the week's table to this job's summary, and
+# opens (or comments on) one `needs-triage` issue when a week crosses a
+# threshold. A red run of this workflow is its own `ci-red` alert
+# (scripts/workflow-alert.mjs).
+on:
+  schedule:
+    # Mondays 08:00 UTC, after durations-refresh.yml (05:00), follow-ups.yml
+    # (06:00) and ci.yml's nightly (07:00).
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-health
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: Read the week's CI runs
+    runs-on: ubuntu-24.04
+    # About five minutes of `gh api` reads on 2026-10-22 (59 pull requests).
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+      pull-requests: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - run: node scripts/ci-health.mjs --summary "$GITHUB_STEP_SUMMARY" --file-issue --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  alert:
+    name: Report a red run
+    needs: health
+    if: ${{ !cancelled() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: node scripts/workflow-alert.mjs --workflow ci-health --outcome "${{ needs.health.result == 'success' && 'success' || 'failure' }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

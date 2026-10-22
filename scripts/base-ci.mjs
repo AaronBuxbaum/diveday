@@ -27,9 +27,13 @@ import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 /** Red jobs the gate's own steps answer for: green here is the fix carried. */
 export const COVERED_LOCALLY = /^(?:Lint|Typecheck|Repository safeguards)$/;
 
-/** Jobs that are not a test verdict, or are approved by a push rather than passed. */
+/**
+ * Jobs that are not a test verdict, or are approved by a push rather than passed. "CI result" is
+ * the aggregate of every other job (ci.yml, since 2026-10-13): red whenever any of them is, and
+ * naming no file, it made every red base a refusal that only `--base-red` got past.
+ */
 export const NOT_A_VERDICT =
-  /^(?:Visual capture|reg-suit|Plan the visual|Deploy a preview|Resolve the head|Detect what changed|cdk )/;
+  /^(?:CI result|Visual capture|reg-suit|Plan the visual|Deploy a preview|Resolve the head|Detect what changed|cdk )/;
 
 /**
  * The events a pull request's own CI runs on. A run the base got any other way (a schedule, a

@@ -29,7 +29,7 @@ export const DEMO_SHOP_SLUG = demoShop.slug;
 /**
  * A trip id that is well-formed and belongs to nobody — the "this departure is
  * gone" surface Tomas lands on when a link outlives its trip. The same id
- * `e2e/visual.spec.ts` photographs, so the two never diverge on what "missing"
+ * `e2e/visual-*.spec.ts` photograph, so the two never diverge on what "missing"
  * looks like.
  */
 const MISSING_TRIP_ID = "00000000-0000-4000-8000-000000000000";

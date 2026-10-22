@@ -14,7 +14,7 @@ const MY_DEPARTURES = "My departures";
  * 20260815-per-test-private-shops) and signs in as that shop's owner.
  *
  * Before that, whatever state the last of them reached was what the rest of the
- * worker read — and two `e2e/visual.spec.ts` captures wait on "Create
+ * worker read — and two `e2e/visual-*.spec.ts` captures wait on "Create
  * subscription link", i.e. assume the owner has no live subscription at all.
  *
  * Locators are still scoped to one panel by its heading: an owner sees two

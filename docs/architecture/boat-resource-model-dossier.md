@@ -83,7 +83,7 @@ migration cost against this list.
 | Reports (`/shop/[shopSlug]/reports`) | Utilization against stated capacity; no per-boat cut. |
 | `calendar-sync` feature (`src/features/calendar-sync`) | Trips → VEVENT; a boat name would belong in the event title/location for crew phones. |
 | Offline manifest viewer (`src/app/offline-manifest/`) | Per-trip snapshot; on a multi-boat morning the crew needs "which boat" on the snapshot header. |
-| e2e + visual (`e2e/visual.spec.ts`, `scripts/route-coverage.json`) | Clock-frozen seed; board and public-schedule captures are pixel baselines. Any slice that adds visible boat chrome moves baselines and must say so in its PR (visual-triage rule). |
+| e2e + visual (`e2e/visual-*.spec.ts`, `scripts/route-coverage.json`) | Clock-frozen seed; board and public-schedule captures are pixel baselines. Any slice that adds visible boat chrome moves baselines and must say so in its PR (visual-triage rule). |
 
 ### What "capacity" means today — three numbers already in tension
 

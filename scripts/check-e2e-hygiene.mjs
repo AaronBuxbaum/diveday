@@ -236,7 +236,7 @@ const escapeForRegExp = (source) => source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"
  * It is syntactically a wait and semantically nothing, and that is the whole
  * defect: `action-race` asks only whether *some* statement stands between the
  * submit and the navigation, so this shape satisfied the rule while leaving the
- * race exactly as it was. One stood in `e2e/visual.spec.ts` from 2026-09-05
+ * race exactly as it was. One stood in the visual spec (then a single file) from 2026-09-05
  * until it cost a visual shard its whole 210-second budget on PR #1618, with
  * the trace showing the action's POST at status -1 and the destination
  * rendering pre-save state (issue #1644).

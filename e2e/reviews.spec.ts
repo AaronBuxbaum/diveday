@@ -5,6 +5,7 @@ import { staffTranslator } from "../src/i18n/staff-messages";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import { signInAsOwner } from "./helpers";
+import { E2E_FROZEN_CLOCK } from "./servers";
 
 // Sentences come from the bundles by key, so a rewording does not break the walk.
 const diver = diverTranslator("en-US");
@@ -21,6 +22,18 @@ const staff = staffTranslator("en-US");
  * asked here as "which group is it in?" — the pill it used to wear is gone, and
  * a row moving between groups is what a publish or a hide *is*.
  */
+
+/**
+ * Past a success toast's own auto-dismiss (`Toast`'s 4s `durationMs`). The
+ * tests that watch a confirmation leave install the page clock first and jump
+ * it forward, instead of spending four real seconds of a 15s budget on a timer
+ * (CI annotated both at 80-91% of their budget, 2026-10-22). The mouse is moved
+ * off first, because a toast holds its countdown while hovered.
+ */
+async function letToastExpire(page: Page) {
+  await page.mouse.move(0, 0);
+  await page.clock.fastForward(5_000);
+}
 
 /** One of the three groups, by the heading that names it. */
 function group(page: Page, name: RegExp) {
@@ -83,6 +96,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   page,
 }) => {
   const comment = "The crew found us a nurse shark under the ledge.";
+  await page.clock.install({ time: E2E_FROZEN_CLOCK });
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
   await page.getByRole("radio", { name: "4 out of 5 stars" }).check();
   await page.getByLabel("Anything you’d tell another diver?").fill(comment);
@@ -164,6 +178,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   await standout.click();
   await expect(page.getByText("Review marked as standout")).toBeVisible();
   expect(await page.evaluate(() => window.scrollY)).toBe(scrolledToStandout);
+  await letToastExpire(page);
   await expect(page.getByText("Review marked as standout")).toBeHidden();
 
   // Signed out again, the diver-facing schedule now carries it.
@@ -273,6 +288,7 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
 }) => {
   // Two reviews waiting: the seeded one, plus one this diver leaves now.
   const comment = "Second tank was the best dive of the trip.";
+  await page.clock.install({ time: E2E_FROZEN_CLOCK });
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
   await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
   await page.getByLabel("Anything you’d tell another diver?").fill(comment);
@@ -311,7 +327,8 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
 
   // The success confirmation is ephemeral. Its disappearance leaves the
   // published result in the list as the durable record of the action.
-  await expect(outcome).toBeHidden({ timeout: 6000 });
+  await letToastExpire(page);
+  await expect(outcome).toBeHidden();
   await expect(
     group(page, /^Published/)
       .locator("li")

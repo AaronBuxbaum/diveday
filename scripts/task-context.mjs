@@ -157,7 +157,7 @@ export function pathPacket(root, file) {
         ].slice(0, 6),
     invariants: [...new Set(matches.flatMap((name) => areas[name].invariants))],
     decisions:
-      "Read .agent-out/task-state.json decisions; search relevant entries in docs/product/human-decisions/ before reopening a settled decision.",
+      "Read .agent-out/task-state/<branch>.json decisions; search relevant entries in docs/product/human-decisions/ before reopening a settled decision.",
     visual: recipe ? recipePacket(root, recipe) : null,
     fallback: matches.length
       ? null

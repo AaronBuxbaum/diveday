@@ -408,7 +408,7 @@ test.describe("staff", () => {
     page,
   }) => {
     // Chains several sequential navigations and status-toast waits — same
-    // aggregate-cost reasoning as visual.spec.ts's test.setTimeout:
+    // aggregate-cost reasoning as the visual specs' test.setTimeout:
     // legitimate per-step cost under 2-worker CI load can sum past the
     // default 15s test budget even when no individual step is stuck.
     test.setTimeout(30_000);
@@ -595,7 +595,7 @@ test.describe("staff", () => {
   }) => {
     // Two full booking rounds (6 divers, then 2 more) plus the session setup
     // and a third ratio-refused attempt — same aggregate-cost reasoning as
-    // visual.spec.ts's test.setTimeout: many real, sequential steps under
+    // the visual specs' test.setTimeout: many real, sequential steps under
     // 2-worker load add up past the default 15s budget even though no
     // individual step is stuck.
     test.setTimeout(30_000);

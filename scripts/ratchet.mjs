@@ -76,6 +76,26 @@ const sortedEntries = (counts) =>
     .sort(([a], [b]) => a.localeCompare(b));
 
 /**
+ * The `//absorbed` entries still in effect: a file's recorded rise `"a -> b"` stays while the
+ * file is still at `b` or above, and goes once the count has fallen below `b` (the rise was paid
+ * back) or the file left the baseline. Parallel branches merged their own logs together, so
+ * without this the log kept rises no ceiling reflects, with different `a -> b` for one file.
+ */
+export function liveAbsorbed(absorbed, counts) {
+  const live = [];
+  for (const entry of absorbed) {
+    const files = Object.fromEntries(
+      Object.entries(entry.files ?? {}).filter(([file, rise]) => {
+        const to = Number(String(rise).split("->")[1]);
+        return file in counts && Number.isFinite(to) && counts[file] >= to;
+      }),
+    );
+    if (Object.keys(files).length > 0) live.push({ ...entry, files });
+  }
+  return live;
+}
+
+/**
  * `--write` / `--absorb` for a per-file counter guard. Returns the exit code.
  *
  * `--write` banks the current counts and refuses any that rose, printing `refusal` (the
@@ -106,7 +126,7 @@ export async function bankCounts({
       ? `- ${file}: ${allowed[file]} → ${count}`
       : `- ${file}: new file with ${count}`;
   const previous = (await readRatchet(root, guard)) ?? {};
-  let absorbed = previous["//absorbed"] ?? [];
+  let absorbed = liveAbsorbed(previous["//absorbed"] ?? [], Object.fromEntries(entries));
 
   if (grew.length > 0) {
     if (absorb === null) {

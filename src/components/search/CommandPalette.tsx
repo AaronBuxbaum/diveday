@@ -897,7 +897,7 @@ function PaletteTrigger({
       // border below arrives at `sm` — so crossing that breakpoint started
       // four longhand transitions (one per side) on the very resize
       // `capture()` performs, and a screenshot taken during the fade catches
-      // a half-drawn border. `e2e/visual.spec.ts`'s capture-harness canary is
+      // a half-drawn border. `e2e/visual-capture-harness.spec.ts`'s canary is
       // what found it. Hover changes the text and the background and nothing
       // else, so those are what may move.
       //

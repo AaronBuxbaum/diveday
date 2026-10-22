@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { readPullRequestBase, resolveVerificationBase } from "./verification-base.mjs";
+import {
+  containedLayer,
+  readPullRequestBase,
+  resolveVerificationBase,
+} from "./verification-base.mjs";
 
 const fake = (answers) => (args) => answers[args.join(" ")] ?? null;
 describe("verification parent policy", () => {
@@ -42,6 +46,29 @@ describe("verification parent policy", () => {
         { env: {} },
       ),
     ).toMatchObject({ ref: "origin/main", source: "conservative-fallback" });
+  });
+  it("finds the layer below a stacked branch with no PR and no config", () => {
+    const git = fake({
+      "rev-parse HEAD": "top",
+      "rev-parse --abbrev-ref HEAD": "claude/top",
+      "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin":
+        "origin/main\norigin/claude/top\norigin/claude/bottom\norigin/claude/mid\norigin/old",
+      "rev-parse origin/claude/top": "top",
+      "rev-parse origin/claude/bottom": "b",
+      "rev-parse origin/claude/mid": "m",
+      "rev-parse origin/old": "o",
+      "rev-list --count origin/main..origin/claude/bottom": "3",
+      "rev-list --count origin/main..origin/claude/mid": "7",
+      "rev-list --count origin/main..origin/old": "0",
+      "rev-parse --verify --quiet origin/claude/mid": "m",
+      "rev-parse --verify --quiet origin/main": "main",
+    });
+    expect(containedLayer(git)).toBe("origin/claude/mid");
+    expect(resolveVerificationBase(git, { env: {} })).toMatchObject({
+      ref: "origin/claude/mid",
+      source: "stack",
+      warning: null,
+    });
   });
   it("falls back broadly when configured parent was deleted", () => {
     expect(

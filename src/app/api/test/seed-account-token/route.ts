@@ -13,7 +13,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * its real page and server action, since the token is otherwise only ever
  * readable from inside a real email (no staff-facing display to read it
  * from, unlike a waiver link) and is hashed at rest (unlike the stateless
- * `recap-links.ts` token `e2e/visual.spec.ts` computes directly). An invite
+ * `recap-links.ts` token `e2e/visual-recap.spec.ts` computes directly). An invite
  * token still requires the account to already exist — the real invite
  * action (`inviteStaffMember`, 20260726-staff-invite-accounts) creates it;
  * this only re-mints a fresh token for it, exactly like a resend. Exists

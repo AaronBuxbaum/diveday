@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import sharp from "sharp";
 import { loadCoverage } from "./check-route-coverage.mjs";
 import { CHECKS, censusNearMisses, clusterKey, settledEntryFor } from "./pixel-probe/analyze.mjs";
+import { isVisualSpec } from "./visual-specs.mjs";
 
 /**
  * **Reads what the pixel probe wrote and turns it into something to audit.**
@@ -129,15 +130,14 @@ export function rerunCommand(record) {
   }
   // Imported declarations still need the registering spec to load. Older
   // records have no entryFile; recover only the known visual registration
-  // modules when their recorded title path confirms visual.spec.ts.
+  // modules when their recorded title path names a visual spec.
+  const registeredBy = path.basename(record.titlePath?.[0] || "");
   const importedVisual =
     !record.entryFile &&
     /(?:^|[/\\])e2e[/\\]visual-audit-[a-z0-9-]+\.ts$/.test(record.testFile || "") &&
-    path.basename(record.titlePath?.[0] || "") === "visual.spec.ts";
-  const entryFile = record.entryFile || (importedVisual ? "e2e/visual.spec.ts" : record.testFile);
-  const file = entryFile
-    ? path.relative(ROOT, path.resolve(ROOT, entryFile))
-    : "e2e/visual.spec.ts";
+    isVisualSpec(registeredBy);
+  const entryFile = record.entryFile || (importedVisual ? `e2e/${registeredBy}` : record.testFile);
+  const file = entryFile ? path.relative(ROOT, path.resolve(ROOT, entryFile)) : "e2e/visual";
   const environment = ["PIXEL_PROBE=1"];
   if (record.exhaustiveAudit === true) environment.push("VISUAL_EXHAUSTIVE_AUDIT=1");
   if (record.initialPaintAudit === true) environment.push("VISUAL_AUDIT_INITIAL_PAINT=1");
