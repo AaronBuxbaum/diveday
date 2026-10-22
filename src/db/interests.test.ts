@@ -266,10 +266,11 @@ describe("deliverSeatOffer on a wait-list interest", () => {
     expect(await listDepartureInterests(db, shop.id, fullTrip.id)).toHaveLength(1);
   });
 
-  it("reports opted_out and sends nothing to a diver who self-served out of courtesy email", async () => {
-    // Leo — self-serve email unsubscribe: a wait-listed diver's offer is
-    // commercial mail, so `people.courtesyEmailOptOutAt` governs it. The interest
-    // is still stamped offered; the composer stands in for the email.
+  it("still offers the seat a diver waited for after they opted out of courtesy email", async () => {
+    // Leo — self-serve email unsubscribe. H-145 D-2 option (b), H-96's own
+    // test: the diver asked for this boat, so the offer is service mail and
+    // `people.courtesyEmailOptOutAt` does not silence it. Here it degrades to
+    // the composer only because the test environment has no mail provider.
     const { db, shop, fullTrip, interestId, find } = await joined();
     await db
       .update(people)
@@ -284,7 +285,7 @@ describe("deliverSeatOffer on a wait-list interest", () => {
         interestId,
         now: T,
       }),
-    ).resolves.toBe("opted_out");
+    ).resolves.toBe("fallback");
     expect((await find())?.interest.offeredAt?.toISOString()).toBe(T.toISOString());
     expect((await find())?.interest.emailedAt).toBeNull();
   });
@@ -323,10 +324,14 @@ describe("listDepartureInterests / getDepartureInterestForTrip cross-tenant isol
 
     // otherShop's session can't see shop's entry at all.
     expect(await listDepartureInterests(db, otherShop.id, fullTrip.id)).toEqual([]);
-    expect(await getDepartureInterestForTrip(db, otherShop.id, fullTrip.id, joined.interestId)).toBeNull();
+    expect(
+      await getDepartureInterestForTrip(db, otherShop.id, fullTrip.id, joined.interestId),
+    ).toBeNull();
 
     // shop's own session still can, unaffected by the other shop existing.
-    expect(await getDepartureInterestForTrip(db, shop.id, fullTrip.id, joined.interestId)).not.toBeNull();
+    expect(
+      await getDepartureInterestForTrip(db, shop.id, fullTrip.id, joined.interestId),
+    ).not.toBeNull();
   });
 });
 
@@ -480,7 +485,10 @@ describe("a shop-asked interest and a diver's own ask are one row", () => {
   // It must not reclassify the shop's invitation or rewrite the party.
   it("leaves a shop-asked row alone when someone asks under another name with the diver's address", async () => {
     const { db, shop, fullTrip, interestId } = await diverAndOwner();
-    await db.update(interests).set({ askedBy: "shop", partySize: 1 }).where(eq(interests.id, interestId));
+    await db
+      .update(interests)
+      .set({ askedBy: "shop", partySize: 1 })
+      .where(eq(interests.id, interestId));
     const again = await askForDeparture(db, {
       shopId: shop.id,
       tripId: fullTrip.id,

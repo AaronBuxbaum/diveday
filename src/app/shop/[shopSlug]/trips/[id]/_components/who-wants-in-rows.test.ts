@@ -169,7 +169,10 @@ function dateInterest(id: string, over: Partial<DateInterestInReach> = {}): Date
   } as DateInterestInReach;
 }
 
-function dateRows(interests: DateInterestInReach[], summaries = new Map<string, CertificationSummary>()) {
+function dateRows(
+  interests: DateInterestInReach[],
+  summaries = new Map<string, CertificationSummary>(),
+) {
   return dateInterestRows({
     interests,
     certificationSummaries: summaries,

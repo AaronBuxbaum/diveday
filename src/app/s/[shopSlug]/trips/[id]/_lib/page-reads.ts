@@ -77,7 +77,16 @@ export type TripPageRequest = {
 export async function readTripPage(
   db: AppDb,
   shop: Shop,
-  { tripId, isEmbed, bookingToken, interestId, handoffToken, payDue, session, now }: TripPageRequest,
+  {
+    tripId,
+    isEmbed,
+    bookingToken,
+    interestId,
+    handoffToken,
+    payDue,
+    session,
+    now,
+  }: TripPageRequest,
 ) {
   // **Every read this page makes is one wave** (issue #2353). A read that
   // needs another's answer chains off that one promise inside the wave — the

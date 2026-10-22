@@ -5,7 +5,11 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats } from "@/db/boats";
-import { listClosedDateInterests, listDeparturesOnDates, listOpenDateInterests } from "@/db/interest-dates";
+import {
+  listClosedDateInterests,
+  listDeparturesOnDates,
+  listOpenDateInterests,
+} from "@/db/interest-dates";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";

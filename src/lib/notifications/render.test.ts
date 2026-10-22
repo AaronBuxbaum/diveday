@@ -200,7 +200,12 @@ describe("messageFor", () => {
       });
 
       it("leaves the answer to a diver's own request without either", () => {
-        const email = messageFor({ ...invitation, kind: "seat_offer", answers: "date_request", sender });
+        const email = messageFor({
+          ...invitation,
+          kind: "seat_offer",
+          answers: "date_request",
+          sender,
+        });
         expect(email.text).not.toContain("unsubscribe");
         expect(email.html).not.toContain("unsubscribe");
         expect(email.text).not.toContain("1 Harbor Rd");

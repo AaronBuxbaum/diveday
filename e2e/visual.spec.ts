@@ -6677,7 +6677,11 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the deal panel carries the demo's own declarations (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Christ of the Abyss");
+        const tripId = await seededTripId(
+          page,
+          "blue-mantis",
+          "Two-Tank Reef — Christ of the Abyss",
+        );
         await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
         // Both seeded joiners now read unverified (#2428: a staff-typed card
         // nobody checked is not vouched for), so wait on the first of them.

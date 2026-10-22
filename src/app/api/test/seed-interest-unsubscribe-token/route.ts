@@ -48,6 +48,9 @@ export async function POST(request: Request) {
     .limit(1);
   if (!interest) return NextResponse.json({ error: "interest_not_found" }, { status: 404 });
 
-  const token = await issueInterestUnsubscribeToken(db, { shopId: shop.id, interestId: interest.id });
+  const token = await issueInterestUnsubscribeToken(db, {
+    shopId: shop.id,
+    interestId: interest.id,
+  });
   return NextResponse.json({ token });
 }

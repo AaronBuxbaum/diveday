@@ -113,7 +113,13 @@ describe("rollSailedSeriesInterests", () => {
   it("rolls uninvited interests onto the next date and invites them while it has seats", async () => {
     const { db, shop, first, second, now } = await saturdays();
     const ana = await interest(db, shop.id, first.id, "Ana Reyes");
-    const worked = await interest(db, shop.id, first.id, "Ben Worked", new Date("2030-09-06T00:00Z"));
+    const worked = await interest(
+      db,
+      shop.id,
+      first.id,
+      "Ben Worked",
+      new Date("2030-09-06T00:00Z"),
+    );
 
     expect(await rollSailedSeriesInterests(db, now)).toEqual({ rolled: 1, invited: 1 });
     const next = await waiting(db, second.id);
@@ -362,7 +368,13 @@ describe("carryInterests", () => {
     });
     if (!second) throw new Error("second departure failed");
     const before = new Date(first.startsAt.getTime() - 24 * 60 * 60 * 1000);
-    const eve = await interest(db, shop.id, first.id, "Eve Interest", new Date("2030-09-01T00:00Z"));
+    const eve = await interest(
+      db,
+      shop.id,
+      first.id,
+      "Eve Interest",
+      new Date("2030-09-01T00:00Z"),
+    );
     const fay = await interest(db, shop.id, first.id, "Fay Seated");
     const seated = await createBooking(db, {
       actor: "staff",

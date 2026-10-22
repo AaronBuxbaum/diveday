@@ -128,6 +128,24 @@ export function dateRequestMatchFor(
 }
 
 /**
+ * The requests beside each departure date, and the first of those dates each
+ * request belongs to (so a request shows once among the booking flow's cards).
+ */
+export function dateRequestsByDay<T extends DateRequestDates & { id: string }>(
+  rows: readonly T[],
+  days: readonly CalendarDate[],
+): { byDay: Map<CalendarDate, T[]>; firstDayById: Map<string, CalendarDate> } {
+  const byDay = new Map(days.map((day) => [day, rows.filter((row) => matchFor(row, day))]));
+  const firstDayById = new Map<string, CalendarDate>();
+  for (const day of days) {
+    for (const row of byDay.get(day) ?? []) {
+      if (!firstDayById.has(row.id)) firstDayById.set(row.id, day);
+    }
+  }
+  return { byDay, firstDayById };
+}
+
+/**
  * Groups requests by the dates they name.
  *
  * `datesOf` reads the three fields off whatever row shape the caller holds, so

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type DateRequestDates, FLEXIBLE_WINDOW_DAYS, groupDateRequests } from "./date-requests";
+import {
+  type DateRequestDates,
+  dateRequestsByDay,
+  FLEXIBLE_WINDOW_DAYS,
+  groupDateRequests,
+} from "./date-requests";
 
 type Row = DateRequestDates & { id: string };
 
@@ -183,5 +188,30 @@ describe("groupDateRequests", () => {
 
   it("returns nothing at all for no requests", () => {
     expect(group([])).toEqual({ groups: [], undated: [] });
+  });
+});
+
+describe("dateRequestsByDay", () => {
+  it("lists each departure day's requests and names the first day a request fits", () => {
+    const rows = [
+      request("a", { preferredDate: september(10) }),
+      request("b", { preferredDate: september(10), dateFlexible: true }),
+      request("c", { alternateDate: september(20) }),
+    ];
+    const { byDay, firstDayById } = dateRequestsByDay(rows, [
+      september(11),
+      september(10),
+      september(20),
+    ]);
+
+    expect(byDay.get(september(10))?.map((row) => row.id)).toEqual(["a", "b"]);
+    expect(byDay.get(september(11))?.map((row) => row.id)).toEqual(["b"]);
+    expect(byDay.get(september(20))?.map((row) => row.id)).toEqual(["c"]);
+    // In the order the days were handed over, so a flexible request shows once.
+    expect(Object.fromEntries(firstDayById)).toEqual({
+      a: september(10),
+      b: september(11),
+      c: september(20),
+    });
   });
 });

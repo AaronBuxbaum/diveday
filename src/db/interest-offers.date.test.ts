@@ -105,7 +105,10 @@ describe("offerSeats to a date request", () => {
       });
     await offer();
     await offer();
-    const children = await db.select().from(interests).where(eq(interests.parentInterestId, requestId));
+    const children = await db
+      .select()
+      .from(interests)
+      .where(eq(interests.parentInterestId, requestId));
     expect(children).toHaveLength(1);
   });
 
@@ -124,7 +127,9 @@ describe("offerSeats to a date request", () => {
       interestIds: [requestId],
     });
     expect(outcome.results).toEqual([{ interestId: requestId, delivery: "fallback" }]);
-    expect(await db.select().from(interests).where(eq(interests.parentInterestId, requestId))).toEqual([]);
+    expect(
+      await db.select().from(interests).where(eq(interests.parentInterestId, requestId)),
+    ).toEqual([]);
     expect(mail()).toEqual([]);
   });
 });

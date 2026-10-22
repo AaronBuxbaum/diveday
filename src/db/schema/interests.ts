@@ -48,7 +48,12 @@ export const interestClosedAs = pgEnum("interest_closed_as", ["booked", "done", 
  * enrollment, referral to an earlier course, or a card the desk reviews first.
  * Mirrors `CourseInquiryExperience` in src/lib/course-inquiry.ts.
  */
-export const interestExperience = pgEnum("interest_experience", ["never", "tried", "certified", "lapsed"]);
+export const interestExperience = pgEnum("interest_experience", [
+  "never",
+  "tried",
+  "certified",
+  "lapsed",
+]);
 
 /**
  * A person who wants a seat. It is deliberately not a booking: an interest never
@@ -178,7 +183,10 @@ export const interests = pgTable(
       "interests_emailed_after_offer",
       sql`${table.emailedAt} is null or ${table.offeredAt} is not null`,
     ),
-    check("interests_closed_together", sql`(${table.closedAt} is null) = (${table.closedAs} is null)`),
+    check(
+      "interests_closed_together",
+      sql`(${table.closedAt} is null) = (${table.closedAs} is null)`,
+    ),
     check(
       "interests_party_size_range",
       sql`(${table.partySize} is not null or ${table.scope} <> 'departure') and (${table.partySize} is null or ${table.partySize} between 1 and 20)`,

@@ -718,7 +718,9 @@ async function courtesyRecipientOptedOut(db: AppDb, notification: Notification):
             eq(offerListInterest.scope, "anytime"),
           ),
         )
-        .where(and(eq(interests.id, notification.interestId), eq(interests.shopId, notification.shopId)))
+        .where(
+          and(eq(interests.id, notification.interestId), eq(interests.shopId, notification.shopId)),
+        )
         .limit(1);
       return Boolean(row?.at ?? row?.listLeftAt);
     }

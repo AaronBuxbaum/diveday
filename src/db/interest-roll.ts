@@ -38,7 +38,9 @@ function notADateRequest(db: AppDb) {
     db
       .select({ id: requestParent.id })
       .from(requestParent)
-      .where(and(eq(requestParent.id, interests.parentInterestId), eq(requestParent.scope, "date"))),
+      .where(
+        and(eq(requestParent.id, interests.parentInterestId), eq(requestParent.scope, "date")),
+      ),
   );
 }
 

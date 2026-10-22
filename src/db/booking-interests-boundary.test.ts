@@ -29,10 +29,16 @@ const BOOKING_PATH = [
 ];
 
 /** `src/db/interests.ts`, `src/db/interest-*.ts`, `src/lib/interests.ts`, `src/db/schema/interests.ts`. */
-const LEAD_MODULE = /(^|\/)(interests|interest-[a-z-]+)(\.ts)?$/;
+const INTEREST_MODULE = /(^|\/)(interests|interest-[a-z-]+)(\.ts)?$/;
 
 /** The schema bindings that are the interest tables. */
-const INTEREST_TABLES = new Set(["interests", "Interest", "interestUnsubscribeTokens", "interestScope", "interestAskedBy"]);
+const INTEREST_TABLES = new Set([
+  "interests",
+  "Interest",
+  "interestUnsubscribeTokens",
+  "interestScope",
+  "interestAskedBy",
+]);
 
 function importsOf(file: string): { spec: string; names: string[] }[] {
   const source = fs.readFileSync(path.join(ROOT, file), "utf8");
@@ -53,10 +59,10 @@ function importsOf(file: string): { spec: string; names: string[] }[] {
 
 describe("the booking transaction and interests (R1)", () => {
   it.each(BOOKING_PATH)("%s imports no interest module", (file) => {
-    const leadImports = importsOf(file)
+    const interestImports = importsOf(file)
       .map(({ spec }) => spec)
-      .filter((spec) => LEAD_MODULE.test(spec));
-    expect(leadImports).toEqual([]);
+      .filter((spec) => INTEREST_MODULE.test(spec));
+    expect(interestImports).toEqual([]);
   });
 
   it.each(BOOKING_PATH)("%s takes no interest table from the schema", (file) => {

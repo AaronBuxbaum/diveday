@@ -32,8 +32,8 @@ import {
   certifications,
   gearItems,
   gearReservations,
-  internalNotes,
   interests,
+  internalNotes,
   people,
   personRoles,
   priorVisits,
@@ -432,7 +432,7 @@ describe("diver record merge, a seat that is already over", () => {
       askedBy: "diver" as const,
       personId,
     });
-    const both = (personId: string) => [interest(personId, "departure"), interest(personId, "anytime")];
+    const both = (id: string) => [interest(id, "departure"), interest(id, "anytime")];
     await f.db.insert(interests).values([...both(f.source.id), ...both(f.survivor.id)]);
     expect((await merge(f)).ok).toBe(true);
     const rows = await f.db

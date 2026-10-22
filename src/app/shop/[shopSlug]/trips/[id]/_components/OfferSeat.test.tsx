@@ -12,7 +12,11 @@ afterEach(cleanup);
 
 const copy = offerSeatCopy(staffTranslator("en-US"));
 const interests = [
-  { interestId: "11111111-1111-4111-8111-111111111111", name: "Nora Quinn", email: "n@example.com" },
+  {
+    interestId: "11111111-1111-4111-8111-111111111111",
+    name: "Nora Quinn",
+    email: "n@example.com",
+  },
   { interestId: "22222222-2222-4222-8222-222222222222", name: "Rafa Ortiz", email: null },
 ];
 

@@ -433,7 +433,12 @@ describe("setDateInterestOutcome", () => {
   it("keeps the first answer: a later booking does not restamp a closed interest", async () => {
     const { db, shop, id } = await openInterest();
     const first = new Date("2031-04-01T12:00:00Z");
-    await setDateInterestOutcome(db, { shopId: shop.id, interestId: id, outcome: "done", now: first });
+    await setDateInterestOutcome(db, {
+      shopId: shop.id,
+      interestId: id,
+      outcome: "done",
+      now: first,
+    });
     expect(
       await setDateInterestOutcome(db, {
         shopId: shop.id,
@@ -506,7 +511,12 @@ describe("setDateInterestOutcome", () => {
       interestIds: [id],
       createdByPersonId: await ownerId(db, shop.id),
     });
-    await setDateInterestOutcome(db, { shopId: shop.id, interestId: id, outcome: "done", now: nowDate() });
+    await setDateInterestOutcome(db, {
+      shopId: shop.id,
+      interestId: id,
+      outcome: "done",
+      now: nowDate(),
+    });
     const [child] = await db.select().from(interests).where(eq(interests.parentInterestId, id));
     expect(child).toMatchObject({ scope: "departure", closedAt: null, closedAs: null });
   });
@@ -627,7 +637,10 @@ describe("attachDateInterestsToDeparture", () => {
         createdByPersonId: author,
       }),
     ).toBe(1);
-    const [child] = await db.select().from(interests).where(eq(interests.parentInterestId, borrowed));
+    const [child] = await db
+      .select()
+      .from(interests)
+      .where(eq(interests.parentInterestId, borrowed));
     expect(child).toMatchObject({
       personId: null,
       name: "Bob Borrower",
@@ -671,7 +684,9 @@ describe("attachDateInterestsToDeparture", () => {
         createdByPersonId: author,
       }),
     ).toBe(0);
-    expect(await db.select().from(interests).where(eq(interests.parentInterestId, id))).toHaveLength(0);
+    expect(
+      await db.select().from(interests).where(eq(interests.parentInterestId, id)),
+    ).toHaveLength(0);
   });
 });
 
@@ -711,9 +726,9 @@ describe("listDateInterestsInReach", () => {
       [preferred, "preferred"],
     ]);
     // The same answer by date, which is how the panel asks before a trip exists.
-    expect((await listDateInterestsInReach(db, shop.id, { date: day })).map((row) => row.id)).toEqual(
-      reach.map((row) => row.id),
-    );
+    expect(
+      (await listDateInterestsInReach(db, shop.id, { date: day })).map((row) => row.id),
+    ).toEqual(reach.map((row) => row.id));
   });
 
   it("leaves out a near day that is not flexible, a day past three, a closed interest and another shop's", async () => {
@@ -773,7 +788,9 @@ describe("listDateInterestsInReach", () => {
 
   it("is empty for a trip that is not this shop's", async () => {
     const { db, shop } = await reachContext();
-    expect(await listDateInterestsInReach(db, shop.id, { tripId: crypto.randomUUID() })).toEqual([]);
+    expect(await listDateInterestsInReach(db, shop.id, { tripId: crypto.randomUUID() })).toEqual(
+      [],
+    );
   });
 });
 

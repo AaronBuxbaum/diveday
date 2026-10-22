@@ -580,7 +580,9 @@ describe("unanswered messages", () => {
     const open = await db
       .select({ id: interests.id })
       .from(interests)
-      .where(and(eq(interests.shopId, shop.id), eq(interests.scope, "date"), isNull(interests.closedAt)));
+      .where(
+        and(eq(interests.shopId, shop.id), eq(interests.scope, "date"), isNull(interests.closedAt)),
+      );
     for (const row of open) {
       await setDateInterestOutcome(db, {
         shopId: shop.id,

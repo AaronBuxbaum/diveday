@@ -18,7 +18,11 @@ import { SummaryCaret } from "@/components/ui/disclosure";
 import { FieldActions, FormStatus } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { readFormDraft } from "@/db/form-drafts";
-import { type DateInterestRow, listDateInterestsByIds, listOpenDateInterestsForDates } from "@/db/interest-dates";
+import {
+  type DateInterestRow,
+  listDateInterestsByIds,
+  listOpenDateInterestsForDates,
+} from "@/db/interest-dates";
 import { PAGE_SIZE } from "@/db/paging";
 import { offsetUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -30,7 +34,7 @@ import {
   shiftCalendarDate,
 } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
+import { dateRequestsByDay, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
 import { departurePickerWindow } from "@/lib/departure-picker-window";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
@@ -198,19 +202,9 @@ export default async function NewBookingPage({
     listOpenDateInterestsForDates(db, shop.id, lookupDates),
   ]);
   const selectedRequest = requestContext[0] ?? null;
-  const relevantDateById = new Map<string, string>();
-  for (const date of tripDates) {
-    for (const row of relevantRows) {
-      if (dateRequestMatchFor(row, date) && !relevantDateById.has(row.id)) {
-        relevantDateById.set(row.id, date);
-      }
-    }
-  }
-  const relevantRequestsByDate = new Map(
-    tripDates.map((date) => [
-      date,
-      relevantRows.filter((row) => dateRequestMatchFor(row, date) !== null),
-    ]),
+  const { byDay: relevantRequestsByDate, firstDayById: relevantDateById } = dateRequestsByDay(
+    relevantRows,
+    tripDates,
   );
   const requestSubject = (row: DateInterestRow) =>
     row.courseTitle

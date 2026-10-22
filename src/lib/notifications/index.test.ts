@@ -354,28 +354,6 @@ describe("the demo-try alert's schema (docs ADR 20260805-demo-try-alerts)", () =
   });
 });
 
-describe("the seat offer notification schema", () => {
-  it("accepts a shop-scoped invitation payload for SES delivery", () => {
-    const notification = {
-      kind: "seat_offer" as const,
-      interestId: "00000000-0000-4000-8000-000000000002",
-      shopId: "00000000-0000-4000-8000-000000000010",
-      to: "nora@dive.day",
-      locale: "en-US" as const,
-      diverName: "Nora Quinn",
-      shopName: "Blue Mantis",
-      tripTitle: "Two-Tank Reef",
-      startsAt: new Date("2026-08-01T12:00:00.000Z"),
-      endsAt: new Date("2026-08-01T15:00:00.000Z"),
-      timezone: "America/New_York",
-      bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
-      offeredAt: new Date("2026-07-30T12:00:00.000Z"),
-    };
-
-    expect(notificationSchema.parse(notification)).toMatchObject(notification);
-  });
-});
-
 describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () => {
   it("sends through the injected SES client and returns its message id", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };

@@ -80,18 +80,18 @@ describe("offerMailClass", () => {
   });
 
   it("keeps a carried or rolled row commercial: the diver asked for a different boat", () => {
-    expect(
-      offerMailClass({ scope: "departure", askedBy: "diver", parentScope: "departure" }),
-    ).toBe("commercial");
+    expect(offerMailClass({ scope: "departure", askedBy: "diver", parentScope: "departure" })).toBe(
+      "commercial",
+    );
   });
 
   it("keeps everything from the last-minute list commercial", () => {
     expect(offerMailClass({ scope: "departure", askedBy: "shop", parentScope: "anytime" })).toBe(
       "commercial",
     );
-    expect(
-      offerMailClass({ scope: "departure", askedBy: "diver", parentScope: "anytime" }),
-    ).toBe("commercial");
+    expect(offerMailClass({ scope: "departure", askedBy: "diver", parentScope: "anytime" })).toBe(
+      "commercial",
+    );
     expect(offerMailClass({ scope: "anytime", askedBy: "diver" })).toBe("commercial");
   });
 

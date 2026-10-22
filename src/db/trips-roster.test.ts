@@ -324,8 +324,12 @@ describe("the departure interests", () => {
     const [trip] = await twoTrips(db, shop.id);
     const first = await makeDiver(db, shop.id);
     const second = await makeDiver(db, shop.id);
-    await db.insert(interests).values(ask(shop.id, trip, first.id, new Date("2020-01-01T00:00:00Z")));
-    await db.insert(interests).values(ask(shop.id, trip, second.id, new Date("2020-02-01T00:00:00Z")));
+    await db
+      .insert(interests)
+      .values(ask(shop.id, trip, first.id, new Date("2020-01-01T00:00:00Z")));
+    await db
+      .insert(interests)
+      .values(ask(shop.id, trip, second.id, new Date("2020-02-01T00:00:00Z")));
 
     const waiting = (await listDepartureInterests(db, shop.id, trip)).filter((row) =>
       [first.id, second.id].includes(row.person?.id ?? ""),

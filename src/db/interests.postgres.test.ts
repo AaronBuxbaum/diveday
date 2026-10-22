@@ -63,7 +63,10 @@ describePostgres("askForDeparture under real concurrency", () => {
     const outcomes = await Promise.all(joins);
     expect(outcomes.filter((outcome) => outcome.ok)).toHaveLength(1);
     expect(outcomes.find((outcome) => !outcome.ok)).toMatchObject({ reason: "already_waitlisted" });
-    const rows = await pg.db.select({ id: interests.id }).from(interests).where(eq(interests.tripId, trip.id));
+    const rows = await pg.db
+      .select({ id: interests.id })
+      .from(interests)
+      .where(eq(interests.tripId, trip.id));
     expect(rows).toHaveLength(1);
     const noras = await pg.db
       .select({ id: people.id })

@@ -55,7 +55,11 @@ describe("seeded self-declared joiners", () => {
         .select()
         .from(interests)
         .where(
-          and(eq(interests.shopId, shop.id), eq(interests.scope, "anytime"), eq(interests.personId, personId)),
+          and(
+            eq(interests.shopId, shop.id),
+            eq(interests.scope, "anytime"),
+            eq(interests.personId, personId),
+          ),
         );
       expect(entries).toHaveLength(1);
       expect(entries[0]?.closedAt).toBeNull();

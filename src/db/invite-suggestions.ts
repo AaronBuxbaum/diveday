@@ -83,7 +83,11 @@ function invitedSince(since: Date) {
     // The shop's own outreach: a diver who asked and was offered a seat was
     // not "invited" in the sense the cooldown spaces out.
     eq(interests.askedBy, "shop"),
-    or(gte(interests.askedAt, since), gte(interests.offeredAt, since), gte(interests.emailedAt, since)),
+    or(
+      gte(interests.askedAt, since),
+      gte(interests.offeredAt, since),
+      gte(interests.emailedAt, since),
+    ),
   );
 }
 
@@ -397,6 +401,8 @@ export async function createInvitationUnderCooldown(
       return { status: "unavailable" };
     }
     const interest = await ensureDepartureInterest(tx, input);
-    return interest ? { status: "created", interestId: interest.interestId } : { status: "refused" };
+    return interest
+      ? { status: "created", interestId: interest.interestId }
+      : { status: "refused" };
   });
 }

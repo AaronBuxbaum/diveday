@@ -34,7 +34,12 @@ import { paperRelease, signingNames } from "./seed-paper-release";
 export const DEMO_COMPLETED_TRIP_TITLE = "Dawn Two-Tank — Molasses Reef";
 
 /** The roster's "Party of 2" line (issue #2677): a pair waiting on a full charter. */
-async function seedWaitlistInterest(db: DbExecutor, shopId: string, tripId: string, personId: string) {
+async function seedWaitlistInterest(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  personId: string,
+) {
   await db.insert(interests).values({
     shopId,
     scope: "departure",

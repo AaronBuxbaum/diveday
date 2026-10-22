@@ -82,7 +82,13 @@ type TripHandles = {
 function tripHandlesOf(notification: Notification): TripHandles {
   const handles: TripHandles = {};
   const fields = notification as Record<string, unknown>;
-  for (const key of ["tripId", "bookingId", "interestId", "checkoutId", "waiverRecordId"] as const) {
+  for (const key of [
+    "tripId",
+    "bookingId",
+    "interestId",
+    "checkoutId",
+    "waiverRecordId",
+  ] as const) {
     const value = fields[key];
     if (typeof value === "string" && isUuid(value)) handles[key] = value;
   }

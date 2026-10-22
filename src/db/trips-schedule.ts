@@ -322,7 +322,11 @@ export async function deleteTrip(
       .select({ waiting: count() })
       .from(interests)
       .where(
-        and(eq(interests.scope, "departure"), eq(interests.askedBy, "diver"), eq(interests.tripId, tripId)),
+        and(
+          eq(interests.scope, "departure"),
+          eq(interests.askedBy, "diver"),
+          eq(interests.tripId, tripId),
+        ),
       );
     if (waiting > 0) return { ok: false, reason: "has_roster" };
 

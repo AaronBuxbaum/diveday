@@ -11,9 +11,9 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { formatCalendarDateRange, formatShortDate } from "@/lib/format";
 import {
+  interestContact,
   LAST_MINUTE_RECIPIENT_PREVIEW_LIMIT,
   type LastMinuteDepartureBar,
-  interestContact,
   ranksBelow,
   reviewLastMinuteRecipients,
 } from "@/lib/interests";
@@ -123,7 +123,9 @@ export function whoWantsInSources(input: {
     return true;
   });
   const byPerson = new Map(
-    input.departureInterests.flatMap((row) => (row.interest.personId ? [[row.interest.personId, row]] : [])),
+    input.departureInterests.flatMap((row) =>
+      row.interest.personId ? [[row.interest.personId, row]] : [],
+    ),
   );
   const offeredAtByPerson = new Map<string, Date | null>();
   const anytimeRecipients = input.anytimeRecipients.filter(({ interest, person }) => {
@@ -135,7 +137,9 @@ export function whoWantsInSources(input: {
     return true;
   });
   return {
-    departureInterests: input.departureInterests.filter((row) => !offeredChildren.has(row.interest.id)),
+    departureInterests: input.departureInterests.filter(
+      (row) => !offeredChildren.has(row.interest.id),
+    ),
     dateInterests,
     anytimeRecipients,
     offeredAtByPerson,

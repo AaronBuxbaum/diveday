@@ -54,7 +54,7 @@ export const tripWaitlistEntries = pgTable(
     // When staff last invited this diver to grab a freed seat. Null until the
     // first invite; shown as "Invited 2h ago" so two staff don't double-invite.
     invitedAt: timestamp("invited_at", { withTimezone: true }),
-    // How many seats this lead waits for: the joiner and the people they are
+    // How many seats this entry waits for: the joiner and the people they are
     // diving with, who wait and are invited together, never split across dates
     // (fourth review, item 34; ADR 20260719-trip-waitlist, amended). The
     // public form's own ceiling bounds it.

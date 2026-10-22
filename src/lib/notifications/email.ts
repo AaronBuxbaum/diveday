@@ -903,7 +903,9 @@ export function waitlistInviteEmail(input: WaitlistInviteEmailInput): Notificati
   const footer = t("notifications.waitlistInvite.footer");
   // The way out is drawn only when the schema gave one (`seat_offer_commercial`).
   const unsubscribe = t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName });
-  const unsubscribeText = input.unsubscribeUrl ? `\n\n${unsubscribe}:\n${input.unsubscribeUrl}` : "";
+  const unsubscribeText = input.unsubscribeUrl
+    ? `\n\n${unsubscribe}:\n${input.unsubscribeUrl}`
+    : "";
   const unsubscribeHtml = input.unsubscribeUrl
     ? `<p><a href="${escapeHtml(input.unsubscribeUrl)}">${escapeHtml(unsubscribe)}</a></p>`
     : "";

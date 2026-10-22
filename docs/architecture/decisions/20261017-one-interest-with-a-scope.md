@@ -7,7 +7,7 @@
 
 ## Context
 
-Four tables hold one fact, a person who wants a seat: the wait list, invitations, the last-minute list and course inquiries, with two side tables. Each has its own reader, row grammar, hold behaviour and mail class, and a date request that fits a departure never appears on it. Issue #2656 offered four shapes; Aaron chose option 4. There are no real divers, so the migration has no backfill (H-49).
+Four tables hold one fact, a person who wants a seat: the wait list, invitations, the last-minute list and course inquiries. Each has its own reader, grammar and mail class, and a date request that fits a departure never appears on it. Aaron chose option 4 of issue #2656. No backfill (H-49).
 
 ## Decision
 
@@ -18,19 +18,19 @@ Four tables hold one fact, a person who wants a seat: the wait list, invitations
 - An interest reserves nothing. `bookings.ts` never reads or writes it; "booked" stays derived for departure interests, and only staff seating from an interest stamps `closed_as = 'booked'`, after the seat commits.
 - `invitableSeats` ignores offers that carry a deal, so a blast never starves the wait-list roll.
 - Offers inform and never gate (ADR 20260813): a ticked row below the bar may be offered with a warning, "everyone who fits" sends only to fits, the counter keeps its refusal. `readiness.ts` and `trip-admission.ts` are untouched.
-- The Stripe deal (`trip_last_minute_promos`) and `trip_help_requests` stay; a deal is something an offer carries (`promo_id`).
+- The Stripe deal (`trip_last_minute_promos`) stays; an offer carries it (`promo_id`).
 - One held-send kind, `seat_offer`; two notification kinds split by mail class so the schema can require the unsubscribe link on one. Every commercial offer takes the 24 h cold-send window (#2133).
 - Erasure keeps two modes under one `scope` branch: departure and anytime rows are deleted; date rows are blanked by person, email and fuzzy phone, with their departure children.
 - The export's four CSVs become one `interests.csv` with a `scope` column.
-- The concept is **Interest** (Aaron, H-145 D-1, 2026-10-17): `interests`, its code and file names, so it never meets a booking's *party lead*.
+- The concept is **Interest** (H-145 D-1): table, code and file names.
 - **Mail class follows H-96's test** (H-145 D-2 option b): a seat on the departure the diver waited for, or the reply to their own date request, is service mail; everything the shop chose is commercial (`offerMailClass`, `src/lib/interests.ts`).
 
 ## Alternatives considered
 
-- **A spine plus three detail tables** gives back most of the "one table" win.
-- **`leads` as the name**, the build's first default: it collides with a booking's party lead.
+- **A spine plus three detail tables** loses the one-table win.
+- **`leads`**: collides with a booking's party lead.
 - **Today's mail classes, mapped** (H-145 D-2 a): kept a diver-asked wait-list invite commercial, failing H-96's own test.
 
 ## Consequences
 
-One row grammar, one held-send kind, one offer function. About 30 columns of which a row uses 10 to 12. Every staff offer now holds 8 s, and a deal blast skips a diver offered cold that day. The deal sender moves to the Divers tab (D-3). The old tables are undeclared one release and dropped the next.
+One row grammar, one held-send kind, one offer function. Every staff offer holds 8 s; a deal blast skips a diver offered cold that day. The deal sender moves to the Divers tab (D-3). The old tables are undeclared one release and dropped the next.

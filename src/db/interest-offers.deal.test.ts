@@ -28,6 +28,7 @@ const { offerSeats } = await import("./interest-offers");
 const { askAnytime, resolveInterestUnsubscribeToken } = await import("./interests");
 const { interests, people, tripLastMinutePromos } = await import("./schema");
 const { setShopStripeAccountStatus, upsertShopStripeAccount } = await import("./stripe-accounts");
+const { trips } = await import("./schema");
 const { upcomingTripsWithCounts } = await import("./trips");
 
 const nora = { fullName: "Nora Quinn", email: "nora@example.com" };
@@ -70,7 +71,10 @@ describe("offerSeats with a discount", () => {
           .select()
           .from(tripLastMinutePromos)
           .where(eq(tripLastMinutePromos.id, request.idempotencyKey));
-        const rows = await db.select().from(interests).where(eq(interests.promoId, request.idempotencyKey));
+        const rows = await db
+          .select()
+          .from(interests)
+          .where(eq(interests.promoId, request.idempotencyKey));
         seenAtStripe = { status: promo?.status, departureRows: rows.length };
         return { status: "created", stripeCouponId: "coupon_x", stripePromotionCodeId: "promo_x" };
       },
@@ -116,7 +120,9 @@ describe("offerSeats with a discount", () => {
     expect(mail).toMatchObject({ code: outcome.deal.code, discountPercent: 25 });
     expect(mail.expiresAt).toEqual(trip.startsAt);
     const token = mail.unsubscribeUrl.split("/unsubscribe/")[1] ?? "";
-    expect(await resolveInterestUnsubscribeToken(db, token)).toMatchObject({ interestId: joined.interestId });
+    expect(await resolveInterestUnsubscribeToken(db, token)).toMatchObject({
+      interestId: joined.interestId,
+    });
   });
 
   it("skips a diver whose row already took the 24-hour window, and still sends the rest", async () => {
@@ -208,5 +214,59 @@ describe("offerSeats with a discount", () => {
     if (mail?.kind !== "seat_offer_commercial") return;
     expect(mail.code).toBeUndefined();
     expect(await db.select().from(tripLastMinutePromos)).toHaveLength(promosBefore);
+  });
+});
+
+/**
+ * **A rehearsal's offers never leave** (ADR 20261012-rehearsal-departures,
+ * `src/db/rehearsal-coverage.test.ts`'s gate on this file). A departure made a
+ * rehearsal while the send was held offers nobody, with or without a deal:
+ * Stripe is never asked, no promo or departure row is written, no mail goes.
+ */
+describe("offerSeats on a rehearsal", () => {
+  beforeEach(() => {
+    vi.mocked(sendNotification).mockReset();
+    vi.mocked(sendNotification).mockResolvedValue({ status: "sent", providerMessageId: "m-1" });
+  });
+
+  it.each([
+    ["without a discount", undefined],
+    ["with a discount", { percent: 25 }],
+  ])("offers nobody %s", async (_label, discount) => {
+    const { db, shop, trip } = await context();
+    const joined = await askAnytime(db, { shopId: shop.id, ...nora, declaration: openWater });
+    await db.update(trips).set({ isRehearsal: true, isPrivate: true }).where(eq(trips.id, trip.id));
+    const promosBefore = (await db.select().from(tripLastMinutePromos)).length;
+    const stripeCalls: string[] = [];
+    const promotions = fakePromotions({
+      async createTripPromotion(request) {
+        stripeCalls.push(request.idempotencyKey);
+        return { status: "created", stripeCouponId: "coupon_x", stripePromotionCodeId: "promo_x" };
+      },
+    });
+
+    const outcome = await offerSeats(
+      db,
+      {
+        shopId: shop.id,
+        shopSlug: shop.slug,
+        tripId: trip.id,
+        interestIds: [joined.interestId],
+        discount,
+      },
+      undefined,
+      promotions,
+    );
+
+    expect(outcome.deal?.ok ?? false).toBe(false);
+    expect(outcome.results.every((result) => result.delivery !== "sent")).toBe(true);
+    expect(stripeCalls).toEqual([]);
+    expect(offered()).toHaveLength(0);
+    expect(await db.select().from(tripLastMinutePromos)).toHaveLength(promosBefore);
+    const rows = await db
+      .select()
+      .from(interests)
+      .where(and(eq(interests.scope, "departure"), eq(interests.tripId, trip.id)));
+    expect(rows).toEqual([]);
   });
 });

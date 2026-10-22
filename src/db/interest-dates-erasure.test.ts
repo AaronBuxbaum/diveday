@@ -70,13 +70,19 @@ describe("erasing a diver who asked for a date", () => {
       phone: null,
       interest: "wrecks",
     });
-    const [child] = await db.select().from(interests).where(eq(interests.parentInterestId, byEmail));
+    const [child] = await db
+      .select()
+      .from(interests)
+      .where(eq(interests.parentInterestId, byEmail));
     expect(child).toMatchObject({ name: null, email: null, phone: null });
     expect(await interestRow(db, bystander)).toMatchObject({
       name: "Bystander Bo",
       email: "bo@example.com",
     });
-    const [bystanderChild] = await db.select().from(interests).where(eq(interests.parentInterestId, bystander));
+    const [bystanderChild] = await db
+      .select()
+      .from(interests)
+      .where(eq(interests.parentInterestId, bystander));
     expect(bystanderChild).toMatchObject({ name: "Bystander Bo", email: "bo@example.com" });
   });
 
@@ -131,10 +137,16 @@ describe("erasing a diver who asked for a date", () => {
 
     // The child never carries the person (security review of #2656, MAJOR 2):
     // it holds the request's snapshot, and the erasure blanks it with its parent.
-    const children = await db.select().from(interests).where(eq(interests.parentInterestId, linkedInterest));
+    const children = await db
+      .select()
+      .from(interests)
+      .where(eq(interests.parentInterestId, linkedInterest));
     expect(children).toHaveLength(1);
     expect(children[0]).toMatchObject({ personId: null, name: null, email: null, phone: null });
     expect(await interestRow(db, linkedInterest)).toMatchObject({ name: null, email: null });
-    expect(await interestRow(db, theirs)).toMatchObject({ name: "Esme", email: "esme@example.com" });
+    expect(await interestRow(db, theirs)).toMatchObject({
+      name: "Esme",
+      email: "esme@example.com",
+    });
   });
 });

@@ -36,7 +36,7 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 - **Templates are copied, then the shop's**: `src/content/dive-site-templates.ts`,
   `src/content/course-templates.ts`. **The catalog is DiveDay's words**: `src/db/marine-life-catalog.ts`,
   a species without copy fails to compile (ADR 20260813-marine-life-is-diveday-copy).
-- **Date leads** (`interests`, `scope = 'date'`): writer `askForDate` in `src/db/interests.ts`, reads in
+- **Date interests** (`interests`, `scope = 'date'`): writer `askForDate` in `src/db/interests.ts`, reads in
   `src/db/interest-dates.ts`; a row names a course or an interest (`interests_scope_columns`) and never
   creates a person (H-13).
 - **Integrations**: `src/db/integrations.ts` (sealed by `src/lib/secret-box.ts`) and the outbox

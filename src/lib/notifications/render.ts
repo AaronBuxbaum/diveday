@@ -25,8 +25,8 @@ import {
   type EmailShopBrand,
   founderDigestEmail,
   guardianReleaseCopyEmail,
-  lastMinuteDealEmail,
   interestReceivedEmail,
+  lastMinuteDealEmail,
   type NotificationEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
@@ -48,8 +48,8 @@ import {
   wrapEmailHtml,
 } from "./email";
 import { incidentMissingDiverEmail, incidentMissingDiverFoundEmail } from "./incident-emails";
-import type { Notification } from "./kinds";
 import { interestReceivedAckEmail } from "./interest-received-ack";
+import type { Notification } from "./kinds";
 import { partyPaymentReceiptEmail } from "./party-payment-receipt";
 import {
   rollCallStaleEmail,

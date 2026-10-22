@@ -39,9 +39,9 @@ import {
   certifications,
   courses,
   executedDives,
-  internalNotes,
   interests,
   interestUnsubscribeTokens,
+  internalNotes,
   mediaDeletionAttempts,
   nitroxCertifications,
   notificationDeliveries,
@@ -74,7 +74,7 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
  * surface — thirty tests that seat, search, page and filter, each reading back
  * what it just wrote — so nothing here needs its rows committed.
  */
-const DATE_LEAD = { scope: "date", askedBy: "diver" } as const;
+const DATE_INTEREST = { scope: "date", askedBy: "diver" } as const;
 const ctx = fileScopedShopContext();
 /** The saved row, or a failure naming the refusal. */
 function saved(result: Awaited<ReturnType<typeof updateDiver>>) {
@@ -1466,7 +1466,7 @@ describe("diver erasure", () => {
       .insert(interests)
       .values({
         shopId: shop.id,
-        ...DATE_LEAD,
+        ...DATE_INTEREST,
         courseId: course.id,
         name: "Erasure Elena",
         email: "ELENA@example.com",
@@ -1575,7 +1575,7 @@ describe("diver erasure", () => {
     expect(
       await db.select().from(internalNotes).where(eq(internalNotes.personId, diver.id)),
     ).toHaveLength(0);
-    expect(await db.select().from(interests).where(eq(interests.personId, diver.id))).toHaveLength(0);
+    expect(await db.select().from(interests).where(eq(interests.personId, diver.id))).toEqual([]);
     expect(await db.select().from(interestUnsubscribeTokens)).toHaveLength(0);
     // Who a deal went to is the departure row it was copied onto, deleted whole
     // with the diver (the interests assertion above): no address is kept anywhere on it.
@@ -2597,7 +2597,7 @@ describe("diver erasure", () => {
         .insert(interests)
         .values({
           shopId: input.shopId,
-          ...DATE_LEAD,
+          ...DATE_INTEREST,
           courseId: course.id,
           personId: input.personId ?? null,
           name: input.name,
@@ -2699,7 +2699,7 @@ describe("diver erasure", () => {
         .insert(interests)
         .values({
           shopId: rival.id,
-          ...DATE_LEAD,
+          ...DATE_INTEREST,
           courseId: rivalCourse.id,
           personId: diver.id,
           name: "Erasure Elena",
