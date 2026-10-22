@@ -24,7 +24,12 @@ export function buildFingerprint(root = process.cwd()) {
   walk("public");
   walk("config");
   walk("drizzle");
-  for (const entry of readdirSync(root)) if (ROOT_INPUT.test(entry)) files.push(entry);
+  for (const entry of readdirSync(root)) {
+    // Next creates/rewrites this gitignored declaration during build/typegen.
+    // Its installed generator owns the contents; custom types belong under src.
+    if (entry === "next-env.d.ts") continue;
+    if (ROOT_INPUT.test(entry)) files.push(entry);
+  }
   for (const file of [
     "node_modules/next/package.json",
     "scripts/build-service-worker.mjs",
