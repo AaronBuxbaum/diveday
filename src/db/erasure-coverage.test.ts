@@ -400,7 +400,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   stripe_payouts:
     "the shop’s own money leaving its Connect account for its bank: one row per Stripe payout, its amount, fees and the days it covers. No diver is named on a payout; the payments it settles are censused on their orders",
   shop_subscriptions:
-    "what the shop pays DiveDay: Stripe ids on DiveDay’s own account, a status and a few dates. The business is the customer, never a diver",
+    "what the shop pays DiveDay: Stripe ids on DiveDay’s own account, a status, a few dates and the plan’s numbers (ADR 20261022-pricing-ab-test). The business is the customer, never a diver",
+  pricing_volume_statements: "a closed month’s volume, rate and fee, as shop_subscriptions",
   shop_integrations: "a provider connection the shop made, and the sealed credentials behind it",
   shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
   shop_backup_deliveries: "whether one of those bundles arrived: a period key, byte count, status",
@@ -578,14 +579,12 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     held: "shop",
     why: "the shop as DiveDay's own billing customer, on DiveDay's account; no diver is behind it",
   },
-  "shop_subscriptions.stripe_subscription_id": {
-    held: "shop",
-    why: "as shop_subscriptions.stripe_customer_id",
-  },
+  "shop_subscriptions.stripe_subscription_id": { held: "shop", why: "as its stripe_customer_id" },
   "shop_subscriptions.stripe_checkout_session_id": {
     held: "shop",
     why: "the owner's last open Checkout for DiveDay's plan, as shop_subscriptions.stripe_customer_id",
   },
+  "pricing_volume_statements.stripe_meter_identifier": { held: "shop", why: "DiveDay's meter key" },
   "shop_stripe_accounts.stripe_account_id": {
     held: "shop",
     why: "the shop's own Connect account. Disconnecting it is a shop decision, not an erasure",
