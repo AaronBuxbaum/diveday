@@ -4,6 +4,8 @@ Part of the **e2e-and-visual** skill ([SKILL.md](SKILL.md)). Read it before a sp
 
 ## Which shop a test writes to
 
+**Choose authentication before copying a setup:** `privateShop` starts with a signed-out page and performs its own live owner sign-in. Do not put it in a scope that calls `signedInAsOwner()` or supplies authenticated `storageState`. Otherwise `/sign-in` redirects to the existing shop, and the fixture times out waiting for the Email field. Use a separate describe scope with the default signed-out page; increasing the timeout cannot fix this mismatch.
+
 Every spec in a run shares one seeded `blue-mantis` shop, and which specs land in a shard together
 is decided by Playwright's sharding rather than by anyone's intent. `/api/test/reset` (the auto
 `demoReset` fixture) makes that safe for most writes: it restores the shop's whole **schedule**

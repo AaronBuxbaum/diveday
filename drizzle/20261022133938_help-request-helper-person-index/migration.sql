@@ -1,0 +1,1 @@
+CREATE INDEX "trip_help_requests_helper_person_idx" ON "trip_help_requests" ("helper_person_id");

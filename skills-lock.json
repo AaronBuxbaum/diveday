@@ -144,6 +144,116 @@
       "sourceType": "github",
       "skillPath": "skills/in-progress/writing-shape/SKILL.md",
       "computedHash": "0d0ac1150c4d65f8370ad194fc097ee17855247f6e5943d05f075806980e7401"
+    },
+    "brand-voice": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/brand-voice/SKILL.md"
+    },
+    "backlog-routine": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/backlog-routine/SKILL.md"
+    },
+    "i18n-copy": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/i18n-copy/SKILL.md"
+    },
+    "adr": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/adr/SKILL.md"
+    },
+    "visual-triage": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/visual-triage/SKILL.md"
+    },
+    "verify": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/verify/SKILL.md"
+    },
+    "schema-change": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/schema-change/SKILL.md"
+    },
+    "expand-content": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/expand-content/SKILL.md"
+    },
+    "stacked-prs": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/stacked-prs/SKILL.md"
+    },
+    "design-implementation": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/design-implementation/SKILL.md"
+    },
+    "e2e-and-visual": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/e2e-and-visual/SKILL.md"
+    },
+    "instant-navigation": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/instant-navigation/SKILL.md"
+    },
+    "copy-restraint": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/copy-restraint/SKILL.md"
+    },
+    "marketing-page": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/marketing-page/SKILL.md"
+    },
+    "new-feature": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/new-feature/SKILL.md"
+    },
+    "design-review": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/design-review/SKILL.md"
+    },
+    "run": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/run/SKILL.md"
+    },
+    "switching-pages": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/switching-pages/SKILL.md"
+    },
+    "commercial-outreach": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/commercial-outreach/SKILL.md"
+    },
+    "debug": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/debug/SKILL.md"
+    },
+    "ci-triage": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/ci-triage/SKILL.md"
+    },
+    "dependency-maintenance": {
+      "source": "AaronBuxbaum/diveday",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/dependency-maintenance/SKILL.md"
     }
   }
 }

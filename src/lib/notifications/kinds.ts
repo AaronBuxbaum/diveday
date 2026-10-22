@@ -1357,6 +1357,14 @@ const lostItemFoundSchema = z.object({
  * parsed calendar days, and the phone and hours are the shop's own
  * (`interestReceivedAckEmail`).
  */
+/** Fixed platform acknowledgment; no submitted names, answers or capability fields. */
+const setupRequestReceiptSchema = z.object({
+  kind: z.literal("setup_request_receipt"),
+  setupRequestId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+});
+
 const interestReceivedAckSchema = z.object({
   kind: z.literal("interest_received_ack"),
   interestId: z.uuid(),
@@ -1956,6 +1964,7 @@ export const notificationSchema = z
     lostItemFoundSchema,
     courseCertifiedSchema,
     interestReceivedAckSchema,
+    setupRequestReceiptSchema,
     bookkeeperMonthEndSchema,
     bookkeeperConfirmationSchema,
     bookkeeperNoticeSchema,
@@ -2092,6 +2101,7 @@ export function notificationIsQueueable(notification: Notification): boolean {
     case "bookkeeper_confirmation":
     case "bookkeeper_notice":
     case "seat_already_held":
+    case "setup_request_receipt":
       return false;
     default:
       return true;
@@ -2239,6 +2249,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One acknowledgment per submitted request row.
     case "interest_received_ack":
       return `interest-received-ack/${notification.interestId}`;
+    case "setup_request_receipt":
+      return `setup-request-receipt/${notification.setupRequestId}`;
     // One receipt per checkout, ever; the webhook sends it only on the call
     // that completes the checkout.
     case "party_payment_receipt":

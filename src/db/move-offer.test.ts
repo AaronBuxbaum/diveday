@@ -157,9 +157,14 @@ describe("the ask from the cancelled card", () => {
       offer: { tripId: target.id, title: target.title, startsAt: target.startsAt },
     });
 
+    // An ordinary ask refuses a seat on a cancelled departure; the card's ask is for exactly that.
+    expect(await recordMoveAsk(db, { shopId: shop.id, bookingId: nora.bookingId, now })).toEqual({
+      status: "not_found",
+    });
     const filed = await recordMoveAsk(db, {
       shopId: shop.id,
       bookingId: nora.bookingId,
+      calledOff: true,
       note: "Please move me to Reef, Thursday.",
       now,
     });

@@ -37,6 +37,7 @@ const { contextFor } = await import("./action-helpers");
 const { askToMoveAction } = await import("./booking-actions");
 
 const TOKEN = "ready-token";
+const TRIP_ID = "0f2a9c1e-2222-4222-8333-444444444444";
 const BOOKING_ID = "0f2a9c1e-1111-4222-8333-444444444444";
 
 function withPage(data: Record<string, unknown>) {
@@ -46,13 +47,14 @@ function withPage(data: Record<string, unknown>) {
     bookingId: BOOKING_ID,
     ownLocale: null,
     delivered: true,
-    data: { identityHeld: false, shop: { id: "shop-1" }, ...data } as never,
+    data: { identityHeld: false, shop: { id: "shop-1" }, trip: { id: TRIP_ID }, ...data } as never,
   });
 }
 
-async function redirectedTo(note = "Any Saturday"): Promise<string> {
+async function redirectedTo(note = "Any Saturday", tripId = TRIP_ID): Promise<string> {
   const form = new FormData();
   form.set("note", note);
+  form.set("tripId", tripId);
   // A posted booking id is ignored: the link names the booking.
   form.set("bookingId", "11111111-1111-4111-8111-111111111111");
   try {
@@ -80,7 +82,12 @@ describe("askToMoveAction", () => {
     await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}?saved=move-ask#move-ask`);
     expect(recordMoveAsk).toHaveBeenCalledWith(
       {},
-      expect.objectContaining({ shopId: "shop-1", bookingId: BOOKING_ID, note: "Any Saturday" }),
+      expect.objectContaining({
+        shopId: "shop-1",
+        bookingId: BOOKING_ID,
+        expectedTripId: TRIP_ID,
+        note: "Any Saturday",
+      }),
     );
     // #2667: the filed ask is what may email owners and managers.
     expect(alertStaffToMoveAsk).toHaveBeenCalledWith(
@@ -96,7 +103,7 @@ describe("askToMoveAction", () => {
   });
 
   it("files nothing twice: an asked seat lands on the asked state, not on Sent", async () => {
-    withPage({ moveAsk: "asked" });
+    withPage({ moveAsk: { note: "Any Saturday", sentAt: new Date("2026-07-21T13:30:00Z") } });
     await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}#move-ask`);
     expect(recordMoveAsk).not.toHaveBeenCalled();
   });
@@ -114,6 +121,35 @@ describe("askToMoveAction", () => {
     withPage({ moveAsk: "open", identityHeld: true });
     await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}`);
     expect(recordMoveAsk).not.toHaveBeenCalled();
+  });
+
+  it("refuses a form displayed for a different departure than the validated booking", async () => {
+    withPage({ moveAsk: "open" });
+    await expect(redirectedTo("Old date", "0f2a9c1e-3333-4222-8333-444444444444")).resolves.toBe(
+      `/ready/${TOKEN}?error=move-ask`,
+    );
+    expect(recordMoveAsk).not.toHaveBeenCalled();
+  });
+
+  it("does not acknowledge or alert when a concurrent move invalidates the write", async () => {
+    withPage({ moveAsk: "open" });
+    vi.mocked(recordMoveAsk).mockResolvedValue({ status: "not_found" });
+    await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}?error=move-ask`);
+    expect(alertStaffToMoveAsk).not.toHaveBeenCalled();
+  });
+
+  it("keeps a bounded lock refusal inline without claiming the request was sent", async () => {
+    withPage({ moveAsk: "open" });
+    vi.mocked(recordMoveAsk).mockRejectedValue(new Error("busy", { cause: { code: "55P03" } }));
+    await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}?error=move-ask`);
+    expect(alertStaffToMoveAsk).not.toHaveBeenCalled();
+  });
+
+  it("reveals nothing and files nothing for an expired or revoked capability", async () => {
+    vi.mocked(contextFor).mockResolvedValue({ ok: false, reason: "invalid" });
+    await expect(redirectedTo()).resolves.toBe(`/ready/${TOKEN}`);
+    expect(recordMoveAsk).not.toHaveBeenCalled();
+    expect(alertStaffToMoveAsk).not.toHaveBeenCalled();
   });
 
   it("is throttled per address", async () => {

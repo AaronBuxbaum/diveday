@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, ne, notLike, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   type InboundChannel,
@@ -9,6 +9,7 @@ import {
   phoneMatches,
   truncateInboundBody,
 } from "@/lib/inbox";
+import { hasSailed } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { queryAll } from "./query-helpers";
@@ -19,7 +20,10 @@ import {
   people,
   shops,
   staffReplies,
+  trips,
 } from "./schema";
+import { lockSeatDeparture } from "./seat-locks";
+import { liveTrip, notRehearsal } from "./trips-live";
 
 /**
  * The shop inbox's readers and writers (ADR 20260907-two-way-inbox).
@@ -233,6 +237,11 @@ async function recordMatchedInboundMessage(
   return inserted ? { status: "recorded", id: inserted.id, personId } : { status: "duplicate" };
 }
 
+type RecordMoveAskResult =
+  | { status: "recorded"; id: string }
+  | { status: "already" }
+  | { status: "not_found" };
+
 /**
  * **A diver asks to move a seat** (H-126). Past the free-cancellation window a
  * cancel forfeits the money, so the booking page offers "Ask to move" instead:
@@ -245,82 +254,134 @@ async function recordMatchedInboundMessage(
  * per booking and departure (`moveAskProviderId`): a repeat while it stands
  * is `already`, never a second row. Once staff answered or deleted it, or the
  * seat moved (`moveBooking` answers it), it no longer stands, and asking
- * again files it anew: the same row for the same departure, unanswered again
- * with the new words and time, so it is never swallowed.
+ * again files a new row. The old row and its replies remain history, while its
+ * internal provider key is retired so the new row owns the standing request.
+ * A row id is the request generation, even if both asks have the same time.
  */
 export async function recordMoveAsk(
   db: DbExecutor,
-  input: { shopId: string; bookingId: string; note?: string | null; now: Date },
-): Promise<{ status: "recorded"; id: string } | { status: "already" } | { status: "not_found" }> {
-  const [seat] = await db
-    .select({
-      personId: people.id,
-      email: people.email,
-      phone: people.phone,
-      tripId: bookings.tripId,
-    })
-    .from(bookings)
-    .innerJoin(
-      people,
-      and(
-        eq(people.id, bookings.personId),
-        eq(people.shopId, input.shopId),
-        isNull(people.deletedAt),
-        isNull(people.anonymizedAt),
-      ),
-    )
-    .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
-    .limit(1);
-  if (!seat) return { status: "not_found" };
-  const note = truncateInboundBody(input.note ?? "").slice(0, MOVE_ASK_NOTE_MAX_LENGTH);
-  const fromAddress = normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "";
-  const [filed] = await db
-    .insert(inboundMessages)
-    .values({
-      shopId: input.shopId,
-      personId: seat.personId,
-      channel: "page",
-      fromAddress,
-      body: note,
-      receivedAt: input.now,
-      providerMessageId: moveAskProviderId(input.bookingId, seat.tripId),
-      keywordIntent: "move",
-      bookingId: input.bookingId,
-      // The bearer link vouched for who this is, as WhatsApp vouches for a
-      // number: it is a diver waiting, and counts as one.
-      senderAuthenticated: true,
-    })
-    .onConflictDoUpdate({
-      target: [inboundMessages.channel, inboundMessages.providerMessageId],
-      set: {
+  input: {
+    shopId: string;
+    bookingId: string;
+    /** The departure on the validated page; refused if staff moved the seat meanwhile. */
+    expectedTripId?: string;
+    /**
+     * The ask comes from a called-off departure's card (`askToMoveFromCancelledAction`,
+     * H-151): the seat must be on a cancelled departure, the one state an
+     * ordinary ask refuses, and a boat that never sails is not refused as sailed.
+     */
+    calledOff?: true;
+    note?: string | null;
+    now: Date;
+  },
+): Promise<RecordMoveAskResult> {
+  return db.transaction(async (tx): Promise<RecordMoveAskResult> => {
+    // The same order as staff moves/cancels: departure, booking, Inbox row.
+    // Re-read after the lock, since staff may have moved or released the seat.
+    const lockedTripId = await lockSeatDeparture(tx, input.shopId, input.bookingId);
+    if (!lockedTripId) return { status: "not_found" };
+    const [seat] = await tx
+      .select({
+        personId: people.id,
+        email: people.email,
+        phone: people.phone,
+        tripId: bookings.tripId,
+        startsAt: trips.startsAt,
+      })
+      .from(bookings)
+      .innerJoin(
+        people,
+        and(
+          eq(people.id, bookings.personId),
+          eq(people.shopId, input.shopId),
+          isNull(people.deletedAt),
+          isNull(people.anonymizedAt),
+        ),
+      )
+      .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, input.shopId)))
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          eq(bookings.tripId, lockedTripId),
+          input.expectedTripId ? eq(bookings.tripId, input.expectedTripId) : undefined,
+          eq(bookings.status, "booked"),
+          isNull(bookings.identityUnconfirmedAt),
+          input.calledOff ? eq(trips.status, "cancelled") : ne(trips.status, "cancelled"),
+          liveTrip(),
+          notRehearsal(),
+        ),
+      )
+      .limit(1)
+      .for("update", { of: bookings });
+    if (!seat || (!input.calledOff && hasSailed(seat.startsAt, input.now))) {
+      return { status: "not_found" };
+    }
+    const note = truncateInboundBody(input.note ?? "").slice(0, MOVE_ASK_NOTE_MAX_LENGTH);
+    const fromAddress =
+      normalizeEmailAddress(seat.email) ?? normalizePhoneAddress(seat.phone) ?? "";
+    const providerMessageId = moveAskProviderId(input.bookingId, seat.tripId);
+    const [previous] = await tx
+      .select({
+        id: inboundMessages.id,
+        answeredAt: inboundMessages.answeredAt,
+        deletedAt: inboundMessages.deletedAt,
+      })
+      .from(inboundMessages)
+      .where(
+        and(
+          eq(inboundMessages.shopId, input.shopId),
+          eq(inboundMessages.channel, "page"),
+          eq(inboundMessages.providerMessageId, providerMessageId),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (previous) {
+      if (!previous.answeredAt && !previous.deletedAt) return { status: "already" };
+      // Keep the original identity/body and any reply foreign keys. Only the
+      // current request owns the canonical key used by the pending reader.
+      await tx
+        .update(inboundMessages)
+        .set({ providerMessageId: `${providerMessageId}:superseded:${previous.id}` })
+        .where(and(eq(inboundMessages.shopId, input.shopId), eq(inboundMessages.id, previous.id)));
+    }
+    const [filed] = await tx
+      .insert(inboundMessages)
+      .values({
+        shopId: input.shopId,
         personId: seat.personId,
+        channel: "page",
         fromAddress,
         body: note,
         receivedAt: input.now,
-        answeredAt: null,
-        deletedAt: null,
-      },
-      // Only an ask that no longer stands is filed anew; a standing one is
-      // left exactly as the diver first wrote it.
-      setWhere: or(isNotNull(inboundMessages.answeredAt), isNotNull(inboundMessages.deletedAt)),
-    })
-    .returning({ id: inboundMessages.id });
-  return filed ? { status: "recorded", id: filed.id } : { status: "already" };
+        providerMessageId,
+        keywordIntent: "move",
+        bookingId: input.bookingId,
+        // The booking capability vouched for the identity; this is never a reply target.
+        senderAuthenticated: true,
+      })
+      .returning({ id: inboundMessages.id });
+    return filed ? { status: "recorded", id: filed.id } : { status: "already" };
+  });
 }
 
+/** The diver's own words and send time, never a staff reply or contact details. */
+export type PendingMoveAsk = { note: string; sentAt: Date };
+
 /**
- * Whether this booking's diver has an ask to move it standing (H-126): one
- * about the departure the seat is on now, not answered and not deleted.
- *
- * A caller that already holds the seat's row passes its `tripId` (read under
- * `shopId`), and the departure is not looked up again.
+ * The standing request for this live booking and its current departure (H-126).
+ * A known departure is an expectation, never permission to read an old request:
+ * the booking is joined again so a concurrent move cannot expose a stale receipt.
  */
-export async function hasMoveAsk(
+export async function getPendingMoveAsk(
   db: DbExecutor,
   shopId: string,
   bookingId: string,
   knownTripId?: string,
-): Promise<boolean> {
+  /** The called-off card's ask (`recordMoveAsk`'s `calledOff`): it stands only on a cancelled departure. */
+  options: { calledOff?: true } = {},
+): Promise<PendingMoveAsk | null> {
   const tripId =
     knownTripId ??
     (
@@ -330,21 +391,58 @@ export async function hasMoveAsk(
         .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
         .limit(1)
     )[0]?.tripId;
-  if (!tripId) return false;
+  if (!tripId) return null;
   const [row] = await db
-    .select({ id: inboundMessages.id })
+    .select({ note: inboundMessages.body, sentAt: inboundMessages.receivedAt })
     .from(inboundMessages)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.id, inboundMessages.bookingId),
+        eq(bookings.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        eq(bookings.status, "booked"),
+        isNull(bookings.identityUnconfirmedAt),
+        eq(bookings.personId, inboundMessages.personId),
+      ),
+    )
+    .innerJoin(
+      people,
+      and(
+        eq(people.id, bookings.personId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+      ),
+    )
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
     .where(
       and(
         eq(inboundMessages.shopId, shopId),
+        eq(inboundMessages.bookingId, bookingId),
         eq(inboundMessages.channel, "page"),
+        eq(inboundMessages.keywordIntent, "move"),
         eq(inboundMessages.providerMessageId, moveAskProviderId(bookingId, tripId)),
         isNull(inboundMessages.answeredAt),
         isNull(inboundMessages.deletedAt),
+        options.calledOff ? eq(trips.status, "cancelled") : ne(trips.status, "cancelled"),
+        liveTrip(),
+        notRehearsal(),
       ),
     )
     .limit(1);
-  return Boolean(row);
+  return row ?? null;
+}
+
+/** Whether this booking's current departure has a standing request (H-126). */
+export async function hasMoveAsk(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+  knownTripId?: string,
+  options: { calledOff?: true } = {},
+): Promise<boolean> {
+  return (await getPendingMoveAsk(db, shopId, bookingId, knownTripId, options)) !== null;
 }
 
 /** The shop a reply-to token names, or null for a token nobody holds. */
@@ -507,17 +605,28 @@ export async function lastInboundAt(
   return row?.receivedAt ?? null;
 }
 
-/** Stamp a message answered. Idempotent; a no-op outside the shop. */
+/** Stamp a message answered. Superseded move requests cannot answer a later generation. */
 export async function markInboundAnswered(
   db: DbExecutor,
   shopId: string,
   messageId: string,
   now: Date = nowDate(),
+  expectedReceivedAt?: Date,
 ): Promise<boolean> {
   const updated = await db
     .update(inboundMessages)
     .set({ answeredAt: now })
-    .where(and(liveMessage(shopId), eq(inboundMessages.id, messageId)))
+    .where(
+      and(
+        liveMessage(shopId),
+        eq(inboundMessages.id, messageId),
+        expectedReceivedAt ? eq(inboundMessages.receivedAt, expectedReceivedAt) : undefined,
+        or(
+          ne(inboundMessages.channel, "page"),
+          notLike(inboundMessages.providerMessageId, "move-ask:%:superseded:%"),
+        ),
+      ),
+    )
     .returning({ id: inboundMessages.id });
   return updated.length > 0;
 }
@@ -530,11 +639,22 @@ export async function reopenInboundMessage(
   db: DbExecutor,
   shopId: string,
   messageId: string,
+  expectedReceivedAt?: Date,
 ): Promise<boolean> {
   const updated = await db
     .update(inboundMessages)
     .set({ answeredAt: null })
-    .where(and(liveMessage(shopId), eq(inboundMessages.id, messageId)))
+    .where(
+      and(
+        liveMessage(shopId),
+        eq(inboundMessages.id, messageId),
+        expectedReceivedAt ? eq(inboundMessages.receivedAt, expectedReceivedAt) : undefined,
+        or(
+          ne(inboundMessages.channel, "page"),
+          notLike(inboundMessages.providerMessageId, "move-ask:%:superseded:%"),
+        ),
+      ),
+    )
     .returning({ id: inboundMessages.id });
   return updated.length > 0;
 }

@@ -6,6 +6,7 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { proseLinkClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { setupSentAdvice } from "@/lib/setup-requests";
 import { SetUpDemoDoor } from "../_components/SetUpDemoDoor";
 
@@ -60,6 +61,11 @@ export default async function SetUpSentPage({
                 ) : null}
               </p>
             ) : null}
+            <p>
+              <Link href={`mailto:${SUPPORT_EMAIL}`} className={proseLinkClass}>
+                {t("marketing.setUp.sent.support")}
+              </Link>
+            </p>
             <SetUpDemoDoor t={t} source="setup-sent" />
           </div>
         }

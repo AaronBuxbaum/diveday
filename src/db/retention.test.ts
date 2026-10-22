@@ -3,6 +3,7 @@ import { eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { RETENTION_DAYS, type RetainedTable, UNBOUNDED_BY_DECISION } from "@/lib/retention";
 import { fileScopedShopContext } from "@/test/db";
+import { setupRequestForRetention } from "@/test/retention-setup-request";
 import { schemaTableNames } from "@/test/schema-tables";
 import { setBookingPayment } from "./payments";
 import { PRUNE_ARMS, pruneExpiredRecords } from "./retention";
@@ -492,23 +493,15 @@ describe("pruneExpiredRecords", () => {
     expect(left).toEqual([{ channel: "text" }]);
   });
 
-  it("prunes a set-up request past its window, with its setup link, and keeps a recent one", async () => {
+  it("prunes a set-up request and receipt metadata past its window, with its setup link, and keeps a recent one", async () => {
     const { db } = await retentionContext();
     const window = RETENTION_DAYS.setup_requests;
-    const request = (shopName: string, createdAt: Date) => ({
-      shopName,
-      region: "Key Largo",
-      runsBoat: true,
-      currentSystem: "paper",
-      contactName: "Retention Lead",
-      email: `${shopName.toLowerCase().replace(/\s+/g, "-")}@example.invalid`,
-      source: "retention-test",
-      locale: "en-US",
-      createdAt,
-    });
     const [stale, fresh] = await db
       .insert(schema.setupRequests)
-      .values([request("Stale Lead", daysAgo(window + 1)), request("Fresh Lead", daysAgo(1))])
+      .values([
+        setupRequestForRetention("Stale Lead", daysAgo(window + 1)),
+        setupRequestForRetention("Fresh Lead", daysAgo(1)),
+      ])
       .returning({ id: schema.setupRequests.id });
     if (!stale || !fresh) throw new Error("insert failed");
     await db.insert(schema.shopSetupLinks).values({

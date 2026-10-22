@@ -12,6 +12,7 @@ import {
   isTimeout,
   readBounded,
   runBounded,
+  runBoundedAsync,
   SUBPROCESS_TIMEOUTS,
   TIMEOUT_EXIT_CODE,
 } from "./subprocess.mjs";
@@ -24,6 +25,20 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  * from the parent's side.
  */
 const WEDGE = ["sleep", ["30"]];
+
+describe("runBoundedAsync", () => {
+  it("requires finite bounds and argv before spawning", () => {
+    for (const timeoutMs of [undefined, 0, -1, Infinity, NaN]) {
+      expect(() => runBoundedAsync(process.execPath, [], { timeoutMs })).toThrow("timeoutMs");
+    }
+    expect(() => runBoundedAsync(process.execPath, [], { timeoutMs: 1000, shell: true })).toThrow(
+      "shell",
+    );
+    expect(() => runBoundedAsync(process.execPath, ["bad\0arg"], { timeoutMs: 1000 })).toThrow(
+      "NUL",
+    );
+  });
+});
 
 describe("runBounded", () => {
   it("kills a wedged child and reports which command it was", () => {

@@ -7,6 +7,16 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## UX audit continuity and operational trust (merged 2026-10-21)
+
+Search distinguishes failed lookup from no matches and prevents activation of a previous query's
+results; staff form drafts survive immediate navigation (#2855/#2856/#2857, [PR
+#2873](https://github.com/AaronBuxbaum/diveday/pull/2873)). Offline certified-person warnings,
+boat-swap/history handling and buddy cautions (#2742/#2727/#2807) merged in [PR
+#2906](https://github.com/AaronBuxbaum/diveday/pull/2906). These dates use America/New_York. Merge
+is confirmed; production deployment was not established by this audit reconciliation. The [dated UX
+audit](assessments/ux-delight-20261021/report.md) retains the baseline evidence and limits.
+
 ## Boat papers and safety kit (delivered 2026-10-09)
 
 Roadmap N-08 and the paper half of N-10. A boat in Settings, Boats carries the passenger limit on its certificate and the dates its next safety inspection is due and its registration and insurance expire; the fleet row says when the seats on sale pass the certificate or a paper is inside its window (90 days for the inspection, 60 for registration and insurance). O2 kit, AED, first-aid kit and flares are gear register kinds with the AED's pads and battery and a consumable's printed expiry as service clocks, and a unit of safety kit can be assigned aboard one boat from its record. A departure's Boat tab opens with "<boat>: papers and safety kit", judged on the departure's own date and gone once it has sailed: an O2 kit or AED the shop keeps but this hull lacks ("No emergency oxygen aboard", danger), the people booked or counted aboard against the certificate (danger), each paper inside its window, and each clock on that boat's kit inside 30 days or expired ("AED: pads expire in 12 days", "Flares: expired 3 days ago"); kit flagged for service reads "flagged for service. Check before sailing." The section is printed and rides in the offline copy. On Today, a departure sailing today with missing oxygen or AED, or an oxygen, AED or flare clock due or expired, is one danger row for every role on that departure (`boat_safety_kit`); a paper inside its window is a quiet owner errand (`boat_papers_due`) that escalates once it lapses (`boat_safety_expired`), as does kit expired ashore. Everything informs and nothing gates; the departure's seats against the boat's capacity stays the one block. Engine hours and fuel (the rest of N-10) are not built. See the glossary's "Safety kit", "Boat papers" and "Certificate passenger limit".

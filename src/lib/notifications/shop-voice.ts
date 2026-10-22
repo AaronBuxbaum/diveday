@@ -65,6 +65,7 @@ export function shopVoiceOf(notification: Notification): string | null {
     case "password_changed":
     case "staff_invite":
     case "operator_alert":
+    case "setup_request_receipt":
     case "interest_received":
     case "weekly_digest":
     case "desk_after_hours":

@@ -20,6 +20,7 @@ import {
   deriveBrandTheme,
   deriveDarkBrandTheme,
 } from "@/lib/brand";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { saveProfileAction } from "../../website-actions";
 import { BrandColorField } from "../BrandColorField";
@@ -221,6 +222,14 @@ export function ProfileForm({
         >
           {t("settings.main.profile.submit")}
         </SubmitButton>
+        <a
+          href={publicSchedulePath(shop.slug)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={buttonClass({ variant: "secondary" })}
+        >
+          {t("settings.main.profile.viewSavedStorefront")}
+        </a>
       </FieldActions>
     </FieldGrid>
   );

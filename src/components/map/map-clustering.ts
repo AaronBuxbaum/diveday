@@ -93,9 +93,8 @@ export function separateShopAnchor<T extends { id: string }>(
         )
       );
     });
-    // Coincident or tightly packed sites may offer no clear real position.
-    // Their count takes priority; the shop returns when zoom separates them.
-    if (!representative) return { groups, showShopAnchor: false };
+    // The elevated shop landmark remains visible even for coincident sites.
+    if (!representative) continue;
     resolved[index] = [representative, ...groups[index].filter((pin) => pin !== representative)];
     anchors[index] = positions.get(representative.id);
   }

@@ -11,6 +11,9 @@
     "whenHeading": "When",
     "gearHeading": "Gear",
     "kindsAria": "Kind of gear",
+    "filterLabel": "Find by tag or size",
+    "clearFilter": "Clear",
+    "noMatches": "No matching units",
     "fromLabel": "From",
     "untilLabel": "Back by",
     "pickedHeading": "Going out",
@@ -76,6 +79,8 @@
     "unitNeedsCard": "Needs a verified card",
     "unitNeedsDrysuitCard": "Needs a drysuit card",
     "unitNeedsService": "Needs service first",
+    "unitOutOfService": "Off the wall for service",
+    "unitUnavailable": "Unavailable for these days",
     "lendAnyway": "Lend {label} anyway",
     "setPrice": "Set price, {count, plural, one {# day} other {# days}}",
     "cards": {

@@ -93,7 +93,7 @@ describe("tripPulseFacts", () => {
     );
     expect(facts.map((fact) => fact.text)).toEqual([
       "1 missing a size · 3 not asked about kit",
-      "3 people have no emergency contact",
+      "3 people have no emergency contact.",
       "2 orders awaiting payment",
     ]);
     expect(facts[1]?.href).toBe("/shop/blue-mantis/trips/trip-1#roster");
@@ -153,7 +153,7 @@ describe("tripPulseFacts", () => {
       row({
         id: "prep:trip-1",
         aboutDeparture: true,
-        detail: "1 missing a size · 3 not asked about kit.",
+        detail: "1 missing a size · 3 not asked about kit",
       }),
     ];
     const facts = tripPulseFacts(
@@ -162,7 +162,7 @@ describe("tripPulseFacts", () => {
     expect(facts.map((fact) => fact.text)).toEqual([
       "Diego Alvarez · Asked for help: carry gear.",
       "Say hello to Ana.",
-      "1 missing a size · 3 not asked about kit.",
+      "1 missing a size · 3 not asked about kit",
     ]);
     // A row that opens this very page lands on its roster, never a dead tap.
     expect(facts[1]?.href).toBe("/shop/blue-mantis/trips/trip-1#roster");

@@ -6,6 +6,8 @@ import { runGuard } from "./guard-fixture.mjs";
 const tree = (files) => ({
   "README.md": "# DiveDay\n",
   "AGENTS.md": "# Agents\n",
+  "CLAUDE.md": "# Claude\n",
+  ".agents/skills/": "",
   "docs/": "",
   ".claude/skills/": "",
   ".claude/rules/": "",
@@ -23,7 +25,7 @@ describe("check-doc-links", () => {
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(
-      "5 Markdown files have valid internal links (1 with a verified",
+      "6 Markdown files have valid internal links (1 with a verified",
     );
   });
 
@@ -73,4 +75,11 @@ describe("check-doc-links", () => {
     const { stderr } = run({ ".claude/rules/db.md": "[gone](../../docs/nope.md)\n" });
     expect(stderr).toContain(".claude/rules/db.md: ../../docs/nope.md -> docs/nope.md");
   });
+});
+
+it("checks canonical non-Claude skill links and ignores fenced examples", () => {
+  expect(run({ ".agents/skills/demo/SKILL.md": "[missing](absent.md)" }).status).toBe(1);
+  expect(
+    run({ ".agents/skills/demo/SKILL.md": "```markdown\n[example](absent.md)\n```\n" }).status,
+  ).toBe(0);
 });

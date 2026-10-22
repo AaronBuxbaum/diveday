@@ -54,10 +54,19 @@ export function pushDepartureRows(actions: TodayAction[], ctx: TodayRowsContext)
         detail: helpRequestDetailText(t, {
           kind: request.kind,
           status: request.status,
+          helperPersonName: request.helperPersonName,
         }),
-        actionLabel: helpRequestActionText(t, request.status),
+        actionLabel: helpRequestActionText(t, request.status, request.helperPersonName),
         href: `${tripHref}#booking-${request.bookingId}`,
-        helpRequest: { requestId: request.id, status: request.status },
+        helpRequest: {
+          requestId: request.id,
+          revision: request.revision,
+          status: request.status,
+          helperPersonId: request.helperPersonId,
+          helperPersonName: request.helperPersonName,
+          crew: request.crew,
+          meetingInstructions: request.meetingInstructions,
+        },
         dueAt: trip.startsAt,
       });
     }

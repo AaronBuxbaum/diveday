@@ -328,9 +328,11 @@ describe("what every push runs, and what only its tool's change runs", () => {
 describe("the base a layer is measured from", () => {
   const fake = (answers) => (args) => answers[args.join(" ")] ?? null;
 
-  it("is the nearest claude/* layer HEAD contains, not this branch's own remote", () => {
+  it("uses the explicitly configured layer, not this branch's own remote", () => {
     const git = fake({
       "rev-parse HEAD": "abc",
+      "config --get branch.claude/top.divedayBase": "origin/claude/mid",
+      "rev-parse --verify --quiet origin/claude/mid": "mid",
       "rev-parse --abbrev-ref HEAD": "claude/top",
       "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin":
         "origin/claude/low\norigin/claude/mid\norigin/claude/top",
@@ -338,7 +340,7 @@ describe("the base a layer is measured from", () => {
       "rev-list --count origin/main..origin/claude/mid": "9",
       "rev-list --count origin/main..origin/claude/top": "12",
     });
-    expect(stackBase(git)).toBe("origin/claude/mid");
+    expect(stackBase(git, { env: {} })).toBe("origin/claude/mid");
   });
 
   it("falls back to origin/main off a stack", () => {
@@ -348,7 +350,7 @@ describe("the base a layer is measured from", () => {
       "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin": "",
       "rev-parse --verify --quiet origin/main": "def",
     });
-    expect(stackBase(git)).toBe("origin/main");
+    expect(stackBase(git, { env: {} })).toBe("origin/main");
   });
 });
 
@@ -454,6 +456,8 @@ describe("cheap diff discovery", () => {
   it("excludes aliases at HEAD and includes provider-neutral contained layers", () => {
     const answers = {
       "rev-parse HEAD": "top",
+      "config --get branch.codex/top.divedayBase": "origin/codex/base",
+      "rev-parse --verify --quiet origin/codex/base": "middle",
       "rev-parse --abbrev-ref HEAD": "codex/top",
       "for-each-ref --format=%(refname:short) --merged HEAD refs/remotes/origin":
         "origin/main\norigin/HEAD\norigin/codex/top\norigin/snapshot\norigin/codex/base\norigin/feature/old",
@@ -463,7 +467,9 @@ describe("cheap diff discovery", () => {
       "rev-list --count origin/main..origin/codex/base": "8",
       "rev-list --count origin/main..origin/feature/old": "3",
     };
-    expect(stackBase((args) => answers[args.join(" ")] ?? null)).toBe("origin/codex/base");
+    expect(stackBase((args) => answers[args.join(" ")] ?? null, { env: {} })).toBe(
+      "origin/codex/base",
+    );
   });
 });
 
@@ -482,4 +488,15 @@ it("includes untracked working files and refuses an unreadable diff", () => {
   expect(
     changedDiff({ base: "origin/main", git: (args) => (args[0] === "merge-base" ? "base" : null) }),
   ).toBeNull();
+});
+
+it("selects edited captures in an extracted visual domain", () => {
+  const line = 'await page.goto("/shop/demo/sites");';
+  const captures = selectCaptures({
+    changed: ["e2e/visual-sites.spec.ts"],
+    diff: new Map([["e2e/visual-sites.spec.ts", { added: [line], removed: [] }]]),
+    source: `test("site renders true to the design", async () => {${line}});`,
+    file: "e2e/visual-sites.spec.ts",
+  });
+  expect([...captures.keys()]).toEqual(["site renders true to the design"]);
 });

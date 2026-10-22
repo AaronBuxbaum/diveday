@@ -315,30 +315,18 @@ the moment it is open.
 yourself before filing an issue by hand (`--body <path>`, no network) and before pushing a change
 that deletes or renames a path an open issue's `Touches:` line names.
 
-## Reading CI: through the MCP, or not at all
+## Reading CI: verify the available transport
 
-GitHub is reachable from a cloud container **only** through the MCP server tools. `gh` is not
-installed, and the agent proxy answers every repo-scoped `api.github.com` call with a 403 whose body
-is `GitHub access is not enabled for this session` — with a token or without, measured identically.
-The table is in ADR
+Use a connected GitHub plugin when available, otherwise authenticated `gh api` or the repository
+tracker. Probe once with a read-only request; availability differs by host. Git transport success
+does not establish API access. Report an unavailable transport instead of parsing its error body
+as an empty successful response. The historical restricted runner is documented in ADR
 [20260907-a-runner-registers-the-stack](../architecture/decisions/20260907-a-runner-registers-the-stack.md#context).
-`git ls-remote origin` *does* work, because the git proxy is authenticated separately, so "git
-reaches GitHub, therefore the API does" is the wrong inference and the easy one to make.
 
-What that costs is not an error. On 2026-09-07 four CI monitors polled `.../check-runs` with `curl`.
-A 403 body has no `check_runs` key, so each parse yielded nothing and none of them threw; every loop
-exited on the *absence* of failures, which an empty response satisfies perfectly. One reported **CI
-COMPLETE** while the run was still going; three timed out while CI finished normally. Four wrong
-answers, no error anywhere.
-
-So: **make a watch's exit condition a positive fact — a named check reporting a conclusion — never
-the absence of a negative.** A loop that stops when it sees no failures stops on a broken request,
-an empty page, and a typo in a field name, and cannot tell any of them from success.
-
-Better still, do not watch. `subscribe_pr_activity` delivers review comments, CI failures and
-check-suite rollups into the session on their own, and ending the turn is how you wait for them —
-so most CI polling here is unnecessary as well as unreliable. `node scripts/stray-processes.mjs
---list` labels a shell whose command this container refuses, whatever its age.
+A watch exits on positive evidence: a named check on the expected commit reports a terminal
+conclusion. Cancellation, missing jobs, API errors and stale commits never count as green. Prefer
+a host subscription when supported; otherwise use a bounded watch with failure and timeout exits.
+The creator owns stopping it and preserving its run ID in the durable task state.
 
 ## The rehearsal a machine runs every night
 

@@ -2,7 +2,7 @@
 // skill/agent frontmatter, and task:context doc references. Many short-lived parallel
 // sessions rely on these being accurate; drift here silently misroutes every one of them.
 import { existsSync } from "node:fs";
-import { access, lstat, readdir, readFile } from "node:fs/promises";
+import { access, lstat, readdir, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -12,6 +12,7 @@ import {
   guardCountProblems,
   linkedSkillProblems,
   missingDocPaths,
+  providerSkillProblems,
   spawnedGuardCount,
   vendoredSkillProblems,
 } from "./agent-layer.mjs";
@@ -40,6 +41,15 @@ function frontmatter(contents, file) {
 // A skill vendored under `.agents/skills/` is linked in, and `listDirs` follows the link, so a
 // linked skill's frontmatter is checked like a local one's.
 const skillDirs = await listDirs(ROOT, ".claude/skills");
+const canonicalSkills = await listDirs(ROOT, ".agents/skills");
+const mirrors = {};
+for (const name of canonicalSkills) {
+  const canonical = await realpath(path.join(ROOT, ".agents/skills", name));
+  mirrors[name] = await realpath(path.join(ROOT, ".claude/skills", name))
+    .then((p) => p === canonical)
+    .catch(() => false);
+}
+problems.push(...providerSkillProblems(canonicalSkills, mirrors));
 const linkedSkills = new Set();
 for (const dir of skillDirs) {
   if ((await lstat(path.join(ROOT, ".claude/skills", dir))).isSymbolicLink()) linkedSkills.add(dir);
@@ -67,11 +77,11 @@ for (const dir of skillDirs) {
 const skillIndex = await readFile(path.join(ROOT, ".claude/skills/README.md"), "utf8");
 const agentsMd = await readFile(path.join(ROOT, "AGENTS.md"), "utf8");
 const indexed = new Set([...skillIndex.matchAll(/^\| `([^`]+)` \|/gm)].map((m) => m[1]));
-for (const dir of skillDirs.filter((name) => !linkedSkills.has(name))) {
+const lockData =
+  JSON.parse(await readFile(path.join(ROOT, "skills-lock.json"), "utf8")).skills ?? {};
+for (const dir of skillDirs.filter((name) => lockData[name]?.sourceType === "local")) {
   if (!indexed.has(dir))
     problems.push(`.claude/skills/README.md: skill "${dir}" exists but is not in the index table`);
-  if (!agentsMd.includes(dir))
-    problems.push(`AGENTS.md: skill "${dir}" exists but is never mentioned`);
 }
 for (const name of indexed) {
   if (!skillDirs.includes(name))
@@ -251,8 +261,7 @@ const handoffDocs = [
     .filter((name) => name.endsWith(".md"))
     .map((name) => `docs/agents/${name}`),
   ...skillDirs
-    .filter((dir) => !linkedSkills.has(dir))
-    .map((dir) => `.claude/skills/${dir}/SKILL.md`)
+    .map((dir) => `.agents/skills/${dir}/SKILL.md`)
     .filter((file) => existsSync(path.join(ROOT, file))),
   ...agentFiles.map((file) => `.claude/agents/${file}`),
 ].sort();

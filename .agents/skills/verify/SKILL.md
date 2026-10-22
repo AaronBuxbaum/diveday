@@ -1,11 +1,11 @@
 ---
 name: verify
-description: Verify a change works before committing — checks, the running app, screenshots of changed UI. Use before every commit and whenever asked to confirm something works.
+description: Verify changes before commit: checks, running app and changed-state screenshots.
 ---
 
 # Verify a change
 
-This is the one pre-commit and pre-push checklist; AGENTS.md, `.Codex/rules/` and `docs/agents/`
+This is the one pre-commit and pre-push checklist; AGENTS.md, `.claude/rules/` and `docs/agents/`
 point here rather than repeat it, and [docs/agents/verifying.md](../../../docs/agents/verifying.md)
 holds the why. A change is verified when you have **observed** it working, not when checks pass.
 
@@ -29,19 +29,20 @@ Before every push:
 
 6. **`pnpm verify:push --quick`**, the default before a push (Aaron, 2026-10-16: batch work into
    large stacked PRs, don't wait on the full validation, fix forward when CI fails): `pnpm regen`
-   and a clean tree, lint, typecheck, `check:repo`, the `guards` project and change-based units (native imports plus source-reading contracts;
-   direct changed tests for a test-only diff; full fallback for global inputs or deletions). No browser unless base CI names failed specs or --base-red identifies them; those targeted replays run after selected units and must pass before stamping. Push when it is green, open or update the PR, and work CI's
+   and a clean tree, lint, typecheck, `check:repo`, the `guards` project and `vitest related` over
+   the diff. Minutes, no browser. Push when it is green, open or update the PR, and work CI's
    answer: a red job is the next commit on the same layer, not a reason to have waited.
    **`pnpm verify:push`** (no flag) is the full run, worth its hour only when you want the
    browser's answer before CI's: the whole unit suite in CI's four shards and every Playwright
    spec the diff reaches (`pnpm e2e:affected` prints them and why). Either run ends with what it
    did not run: say "verify:push --quick green" or "verify:push green", never "all tests pass
-   locally". It stops at the first red step and prints
-   that step's tail. Green, it stamps HEAD; `git push` is refused for a commit without a stamp
+   locally". Independent static checks finish together and report every failure. Dependent later stages stop after a failed prerequisite; their omission is explicit. Green, it stamps HEAD; `git push` is refused for a commit without a stamp
    (`scripts/guard-push.mjs`), so a merge from the layer below means another run. It reads the
    layer below's CI first: on a red base it re-runs the files CI names and stamps only when they
    pass here, so carry the fix or wait for the layer that broke; a red job naming no file needs
-   `--base-red <file…>` from its log. The reasons
+   `--base-red <file…>` from its log. It also replays what this branch's own last red CI run
+   names (unit files, specs, captures), so a fix is checked here, not by CI's next round. A red
+   **Visual capture** shard is a functional failure, not a pixel diff. The reasons
    and the measurements: [verifying.md](../../../docs/agents/verifying.md#the-pre-push-gate).
 7. **One validated push per round.** Commit as often as you like; push once, when
    `verify:push --quick` is green for the round's work, because each push cancels the CI run of the one

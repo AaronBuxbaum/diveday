@@ -48,7 +48,9 @@ const measured = await measure(ROOT);
 const { budgets } = await readRatchet(ROOT, "context-budget");
 const total = Object.values(measured).reduce((sum, count) => sum + count, 0);
 
-console.log("Always-loaded context (every session, main loop and subagents alike)");
+console.log(
+  "Repository Claude startup estimate (excludes host prompts, plugins and runtime input)",
+);
 for (const [file, count] of Object.entries(measured).sort((a, b) => b[1] - a[1])) {
   const budget = budgets[file];
   const headroom =

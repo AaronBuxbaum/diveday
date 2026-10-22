@@ -3,7 +3,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { DURATIONS_FILE, EXCLUDED_SPECS, testListLine } from "./e2e-shard.mjs";
+import { DURATIONS_FILE, testListLine } from "./e2e-shard.mjs";
+import { isVisualSpec } from "./visual-specs.mjs";
 
 /**
  * Records and folds the browser suites' durations — the input
@@ -67,7 +68,7 @@ export function durationsFromReport(report, kind) {
   const map = {};
   for (const { file, titles, duration } of reportedTests(report)) {
     const spec = `${SPEC_ROOT}/${file}`;
-    const visual = EXCLUDED_SPECS.includes(spec);
+    const visual = isVisualSpec(spec);
     if (kind === "functional" && !visual) map[spec] = (map[spec] ?? 0) + Math.round(duration);
     if (kind === "visual" && visual) map[testListLine(file, titles)] = Math.round(duration);
   }
