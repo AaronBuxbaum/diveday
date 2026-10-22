@@ -3,6 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
+import { sendLimitWords } from "@/i18n/shared-sentences";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { type FormNotice, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
@@ -33,6 +34,8 @@ const NOTICE_KEYS: Record<
     tone: "success" | "danger" | "warning";
     key: StaffMessageKey;
     countKey?: StaffMessageKey;
+    /** What the key's ICU select names, for a shared sentence (`shared-sentences.ts`). */
+    values?: Record<string, string>;
     /** The words name the seat's diver (`TripNoticeInput.roster`); said only when known. */
     named?: true;
   }
@@ -289,7 +292,7 @@ const NOTICE_KEYS: Record<
   "new-waiver-ready": { form: "roster", tone: "warning", key: "trips.notices.newWaiverReady" },
   "new-waiver-failed": { form: "roster", tone: "danger", key: "trips.notices.newWaiverFailed" },
   // Refused by the per-staff send bound (`RATE_LIMITS.staffSendByActor`).
-  "send-limit": { form: "roster", tone: "warning", key: "trips.notices.sendLimit" },
+  "send-limit": { form: "roster", tone: "warning", ...sendLimitWords("links") },
   // A course form recorded from paper on a student's row (ADR
   // 20261008-course-forms), and its refusals — each says what to do next.
   "course-form-recorded": {
@@ -822,7 +825,7 @@ export function resolveTripNotice({
     ? tripAdmissionRefusalText(t, refusal, locale)
     : parsedCount !== undefined && banner.countKey
       ? t(banner.countKey, { count: parsedCount })
-      : t(banner.key);
+      : t(banner.key, banner.values);
   return { form: tripNoticeForm(form, banner.form), tone: banner.tone, text };
 }
 
