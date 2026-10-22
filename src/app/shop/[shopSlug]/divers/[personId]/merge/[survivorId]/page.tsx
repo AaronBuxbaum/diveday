@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
+import { AssistReadButton } from "@/components/assists/AssistReadButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { shopAssistsAvailable } from "@/db/assist-shop";
 import { canPersonMergeDiver } from "@/db/authz";
+import { readUnsurePair } from "@/db/desk-assists";
 import { getDiverMergePreview } from "@/db/diver-merge";
 import { getTripWithBooked } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -10,6 +13,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { readSamePersonAction } from "./assist-action";
 import { MergePreview } from "./MergePreview";
 
 export const instant = true;
@@ -77,6 +81,13 @@ export default async function MergeDiverPage({
         "merge",
       );
 
+  // Only for a pair the duplicate check matched on the name alone, and never
+  // once a refusal already says the merge cannot happen.
+  const canAssist =
+    !preview.refusal &&
+    (await shopAssistsAvailable(db, shop.id)) &&
+    (await readUnsurePair(db, shop.id, personId, survivorId)) !== null;
+
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
@@ -84,6 +95,15 @@ export default async function MergeDiverPage({
         eyebrowHref={shopPath(shop.slug, "divers", personId)}
         title={t("divers.mergePreview.title")}
       />
+      {canAssist ? (
+        <div className="mt-6">
+          <AssistReadButton
+            read={readSamePersonAction.bind(null, shop.slug, personId, survivorId)}
+            label={t("deskAssists.dupes.ask")}
+            pendingLabel={t("deskAssists.dupes.pending")}
+          />
+        </div>
+      ) : null}
       <div className="mt-8">
         <MergePreview
           preview={preview}

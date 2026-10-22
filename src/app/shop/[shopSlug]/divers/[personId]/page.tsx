@@ -40,6 +40,7 @@ import { NoticeBanner } from "./_components/NoticeBanner";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { WaiverGroup } from "./_components/WaiverGroup";
 import { WorkOrdersGroup } from "./_components/WorkOrdersGroup";
+import { BOOK_ACTIVITY_TRIP_SCAN_LIMIT } from "./_lib/book-activity";
 import { loadDiverGear } from "./_lib/gear-load";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
 import { loadDiverRecordGates } from "./_lib/record-gates";
@@ -58,13 +59,6 @@ import { restoreDiverNoteAction } from "./note-actions";
 export const instant = true;
 
 export const metadata: Metadata = { title: "Diver — DiveDay" };
-
-/**
- * How many upcoming trips the "book on an upcoming trip" picker scans. Some
- * of the scanned trips get filtered out below (already booked, full), so
- * this is generously larger than what the picker actually shows.
- */
-const BOOK_ACTIVITY_TRIP_SCAN_LIMIT = 50;
 
 /**
  * **The diver record, which answers one question**: can this diver dive with
@@ -361,6 +355,7 @@ export default async function DiverDetailPage({
             t={t}
             status={cardsStatus}
             gap={gaps.file.certification}
+            canAssist={gear.canAssist}
           />
           <DiverDetailsGroup
             diver={diver}
@@ -410,6 +405,7 @@ export default async function DiverDetailPage({
             locale={locale}
             t={t}
             status={noticeForForm(diverNotice, "fit")}
+            canAssist={gear.canAssist}
           />
           <WorkOrdersGroup
             shopSlug={shop.slug}

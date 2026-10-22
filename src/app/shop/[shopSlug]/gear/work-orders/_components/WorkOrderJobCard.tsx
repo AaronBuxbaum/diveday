@@ -1,3 +1,4 @@
+import { AssistFillButton } from "@/components/assists/AssistFillButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -31,6 +32,7 @@ export function WorkOrderJobCard({
   readOnly,
   locale,
   t,
+  draftNote,
 }: {
   workOrder: WorkOrder;
   /** The shop's own unit: nobody "reports" a problem with it, staff found one. */
@@ -40,6 +42,8 @@ export function WorkOrderJobCard({
   readOnly: boolean;
   locale: string;
   t: StaffTranslator;
+  /** Claude's draft of the customer line from the bench notes (`bench`); absent while dark. */
+  draftNote?: (form: Record<string, string>) => Promise<Record<string, string> | null>;
 }) {
   if (readOnly) {
     return (
@@ -149,6 +153,15 @@ export function WorkOrderJobCard({
             maxLength={WORK_ORDER_TEXT_LIMITS.workPerformed}
             className={textareaClassFor(3)}
           />
+          {draftNote && !unit ? (
+            <div className="mt-2">
+              <AssistFillButton
+                draft={draftNote}
+                label={t("deskAssists.bench.draft")}
+                pendingLabel={t("deskAssists.drafting")}
+              />
+            </div>
+          ) : null}
         </Field>
         <FieldActions>
           <SubmitButton

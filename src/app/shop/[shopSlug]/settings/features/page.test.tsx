@@ -62,7 +62,7 @@ const rowsIn = (element: unknown) =>
     .map((input) => input.props.value);
 
 describe("the Features page", () => {
-  it("lists the ten switches, once each, in the issue's order", async () => {
+  it("lists the eleven switches, once each, in the issue's order", async () => {
     expect(rowsIn(await renderFeatures("owner"))).toEqual([
       "reviews",
       "tips",
@@ -71,6 +71,7 @@ describe("the Features page", () => {
       "publicYear",
       "padiChecks",
       "claudeSuggestions",
+      "recapAutoApprove",
       "crewSchedule",
       "tax",
       "divingOptions",
@@ -79,7 +80,7 @@ describe("the Features page", () => {
 
   it("offers each switch under the name its column had, and the three diving modes together", async () => {
     const names = inputNamesIn(await renderFeatures("owner"));
-    expect(names.filter((name) => name === "enabled")).toHaveLength(9);
+    expect(names.filter((name) => name === "enabled")).toHaveLength(10);
     for (const name of ["hasBoatDiving", "hasShoreDiving", "hasPoolDiving"]) {
       expect(names).toContain(name);
     }

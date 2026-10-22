@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AssistFillButton } from "@/components/assists/AssistFillButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
@@ -19,6 +20,7 @@ import {
   SUIT_KINDS,
 } from "@/lib/rentals";
 import { shopPath } from "@/lib/staff-notices";
+import { readGearNoteAction } from "../assist-actions";
 import { saveProfileAction, setNeedsStaffFitAction } from "../fit-actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -64,6 +66,7 @@ export function GearAndSizes({
   status,
   counterRentals = [],
   rentGearHref,
+  canAssist = false,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -79,6 +82,8 @@ export function GearAndSizes({
   counterRentals?: CounterRentalTicket[];
   /** The rent-out form for this person, when the shop has a fleet to lend. */
   rentGearHref?: string;
+  /** Claude can read the diver's gear note into the size boxes (`gear-text`). */
+  canAssist?: boolean;
 }) {
   const profile = diver.rentalFit;
   const mayEdit = canOverride || !profile;
@@ -292,6 +297,13 @@ export function GearAndSizes({
                 sizes={sizes}
               />
               <FieldActions>
+                {canAssist && profile?.note?.trim() ? (
+                  <AssistFillButton
+                    draft={readGearNoteAction.bind(null, shopSlug, personId)}
+                    label={t("deskAssists.gearNote")}
+                    pendingLabel={t("deskAssists.gearNotePending")}
+                  />
+                ) : null}
                 <SubmitButton
                   pendingLabel={t("divers.rentalFit.saving")}
                   className={buttonClass({ variant: "secondary" })}

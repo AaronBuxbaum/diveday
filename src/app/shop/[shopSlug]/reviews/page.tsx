@@ -40,9 +40,11 @@ import {
 import { type ReviewGroup, ReviewLedgerRow } from "./_components/ReviewLedgerRow";
 import { ReviewLinkEmptyForm } from "./_components/ReviewLinkEmptyForm";
 import { ReviewNarrowChips, reviewsPageHref } from "./_components/ReviewNarrowChips";
-import { type ReviewRowCopy, ReviewRowProvider } from "./_components/ReviewRowActions";
+import { ReviewRowProvider } from "./_components/ReviewRowActions";
 import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
+import { loadReviewAssists, ReviewThemes, reviewFlagWords } from "./_components/review-assists";
 import { reviewReplyContext } from "./_components/review-reply-context";
+import { reviewRowCopy } from "./_components/review-row-copy";
 import { markPulseAddressedAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints immediately — this segment's
@@ -184,34 +186,7 @@ export default async function ReviewsPage({
   // `noticeFromParam`, never a bare lookup: the param is attacker-supplied.
   const pulseNotice = noticeFromParam(notice, PULSE_NOTICES);
   const base = shopPath(shopSlug, "reviews");
-  /**
-   * The words every row's action bar reports with, translated once for the
-   * whole page rather than per row — a staff client component cannot
-   * translate, so it takes them as props (ADR 20260730-staff-copy-localization).
-   */
-  const rowCopy: ReviewRowCopy = {
-    publish: t("reviews.publish"),
-    republish: t("reviews.republish"),
-    saving: t("reviews.saving"),
-    hide: t("reviews.hide"),
-    hideConfirm: t("reviews.hideConfirm"),
-    hideReasonLabel: t("reviews.hideReasonLabel"),
-    hideReasonPlaceholder: t("reviews.hideReasonPlaceholder"),
-    hideNoteLabel: t("reviews.hideNoteLabel"),
-    markStandout: t("reviews.markStandout"),
-    removeStandout: t("reviews.removeStandout"),
-    hiddenToast: t("reviews.notice.hiddenToast"),
-    undo: t("shared.undoToast.undo"),
-    undoPending: t("shared.undoToast.pendingLabel"),
-    dismiss: t("shared.undoToast.dismiss"),
-    published: t("reviews.notice.published"),
-    standout: t("reviews.notice.standout"),
-    standoutRemoved: t("reviews.notice.standoutRemoved"),
-    reasonRequired: t("reviews.notice.reasonRequired"),
-    noteRequired: t("reviews.notice.noteRequired"),
-    noteTooLong: t("reviews.notice.noteTooLong"),
-    error: t("reviews.notice.error"),
-  };
+  const rowCopy = reviewRowCopy(t);
   const reply = await reviewReplyContext(db, shop, session.user.personId, t);
   /** The reason list, worded once for every row's picker. */
   const hideReasons = REVIEW_MODERATION_REASONS.map((reason) => ({
@@ -237,6 +212,7 @@ export default async function ReviewsPage({
   // instead of three headings over three absences. Narrowed, the chips stay.
   const nothingAtAll = waitingPage.total === 0 && moderatedPage.total === 0;
 
+  const assists = await loadReviewAssists(db, shop, waitingPage.reviews, canManageSettings);
   const rows = (reviews: StaffReview[], group: ReviewGroup) =>
     reviews.map((review) => (
       <ReviewLedgerRow
@@ -251,6 +227,7 @@ export default async function ReviewsPage({
         reasons={hideReasons}
         copy={rowCopy}
         reply={reply}
+        flags={group === "waiting" ? reviewFlagWords(assists, review.id, t) : []}
       />
     ));
 
@@ -399,6 +376,7 @@ export default async function ReviewsPage({
                 never a per-section `mt-*` that drifts. */}
             <ReviewRowProvider copy={rowCopy}>
               <div className="space-y-10">
+                <ReviewThemes themes={assists.themes} t={t} />
                 {waitingPage.reviews.length > 0 ? (
                   <section aria-labelledby="reviews-waiting">
                     <div className="flex items-baseline justify-between gap-3">
