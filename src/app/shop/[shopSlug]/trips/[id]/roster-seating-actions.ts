@@ -12,19 +12,14 @@ import {
   setBookingPickupDetails,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { deliverSeatOffer, type SeatOfferDelivery } from "@/db/interest-offers";
+import { carryInterests } from "@/db/interest-roll";
+import { askForDeparture, type DepartureAskOutcome, ensureDepartureInterest } from "@/db/interests";
 import { createInvitationUnderCooldown } from "@/db/invite-suggestions";
 import { getBookingPayment } from "@/db/payments";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { type MoveSeatRefusal, moveSeat } from "@/db/seat-diver";
 import { recordShopActivity } from "@/db/shop-activity";
-import {
-  createDirectTripInvitation,
-  deliverTripInvitation,
-  listTripInvitations,
-  type TripInvitationDelivery,
-} from "@/db/trip-invitations";
-import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
-import { carryWaitlist } from "@/db/waitlist-roll";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { blankAsAbsent, parseForm, readForm, single, text } from "@/lib/form-parse";
@@ -42,7 +37,7 @@ import { removeSeat, requireRosterBooking, tripPath } from "./roster-booking";
 
 /**
  * Wait-listing still parses its own submission here: it is a different
- * mutation (`joinTripWaitlist`) with its own outcomes, and it shares only the
+ * mutation (`askForDeparture`) with its own outcomes, and it shares only the
  * form. Seating a diver — hand-entered or picked — goes through the shared
  * `seatNewDiverAction`/`seatExistingDiverAction` (src/app/actions/seat-diver.ts)
  * so every door owes the same consequences.
@@ -54,7 +49,7 @@ const addDiverSchema = z.object({
   phone: blankAsAbsent(diverPhoneSchema),
 });
 
-const directInvitationSchema = z.object({ personId: single(z.uuid()) });
+const offerToDiverSchema = z.object({ personId: single(z.uuid()) });
 
 const rosterBookingForm = z.object({ bookingId: text() });
 
@@ -64,7 +59,7 @@ const rosterBookingForm = z.object({ bookingId: text() });
  * spelled out because the union contains it, and a table that quietly omitted an
  * arm would be the ladder this replaced.
  */
-const WAITLIST_NOTICE: Record<Extract<WaitlistOutcome, { ok: false }>["reason"], string> = {
+const WAITLIST_NOTICE: Record<Extract<DepartureAskOutcome, { ok: false }>["reason"], string> = {
   trip_available: "diver-waitlist-available",
   already_booked: "diver-already",
   already_waitlisted: "diver-waitlisted",
@@ -88,7 +83,7 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
   // raises `invalid input syntax for type uuid`, so the staffer gets a 500
   // where the notice below is the honest answer.
   if (!uuidParam(tripId) || !parsed.ok) redirect(noticeUrl(back, "diver-invalid"));
-  const outcome = await joinTripWaitlist(await getDb(), {
+  const outcome = await askForDeparture(await getDb(), {
     shopId: s.user.shopId,
     tripId,
     fullName: parsed.data.fullName,
@@ -100,31 +95,6 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
     revalidateAndRedirect(back, noticeUrl(back, "diver-waitlisted"));
   }
   redirect(noticeUrl(back, WAITLIST_NOTICE[outcome.reason]));
-}
-
-/**
- * Records a staff outreach attempt for an invitation and emails it when it
- * can (`deliverTripInvitation`). Anything but `sent` opens the same safe
- * composer fallback the wait-list invite uses — including a cold invitation
- * to a diver who turned off courtesy email, whom staff may still write to by
- * hand. This never turns a lead into a booking or consumes a seat.
- */
-export async function recordTripInvitationAction(
-  shopSlug: string,
-  tripId: string,
-  invitationId: string,
-): Promise<"sent" | "fallback"> {
-  const s = (await requireShopSurface(shopSlug)).session;
-  if (!uuidParam(tripId) || !uuidParam(invitationId)) return "fallback";
-  const db = await getDb();
-  const result = await deliverTripInvitation(db, {
-    shopId: s.user.shopId,
-    shopSlug,
-    tripId,
-    invitationId,
-  });
-  revalidatePath(tripPath(shopSlug, tripId));
-  return result === "sent" ? "sent" : "fallback";
 }
 
 /**
@@ -160,7 +130,7 @@ async function inviteOneDiver(
 ): Promise<never> {
   const guests = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
-  const parsed = parseForm(directInvitationSchema, formData);
+  const parsed = parseForm(offerToDiverSchema, formData);
   if (!uuidParam(tripId) || !parsed.ok) redirect(`${guests}#invite-person`);
   const db = await getDb();
   const input = {
@@ -169,39 +139,30 @@ async function inviteOneDiver(
     personId: parsed.data.personId,
     createdByPersonId: s.user.personId,
   };
-  let created: boolean;
+  let interestId: string | null;
   if (rule.cooldown) {
     // A suggestion: the cooldown and the departure's own gate, re-checked
     // under one lock for a page left open (H-130; review F1, N2).
     const outcome = await createInvitationUnderCooldown(db, { ...input, now: nowDate() });
-    if (outcome === "cooldown") redirect(noticeUrl(`${guests}#invitations`, "invite-cooldown"));
-    if (outcome === "unavailable") {
-      redirect(noticeUrl(`${guests}#invitations`, "invite-unavailable"));
+    if (outcome.status === "cooldown") {
+      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-cooldown"));
     }
-    created = outcome === "created";
+    if (outcome.status === "unavailable") {
+      redirect(noticeUrl(`${guests}#who-wants-in`, "invite-unavailable"));
+    }
+    interestId = outcome.status === "created" ? outcome.interestId : null;
   } else {
-    created = await createDirectTripInvitation(db, input);
+    interestId = (await ensureDepartureInterest(db, input))?.interestId ?? null;
   }
-  let delivery: TripInvitationDelivery | null = null;
-  if (created) {
-    const invitation = (await listTripInvitations(db, s.user.shopId, tripId)).find(
-      ({ invitation }) =>
-        invitation.source === "direct" && invitation.personId === parsed.data.personId,
-    );
-    if (invitation) {
-      delivery = await deliverTripInvitation(db, {
-        shopId: s.user.shopId,
-        shopSlug,
-        tripId,
-        invitationId: invitation.invitation.id,
-      });
-    }
+  let delivery: SeatOfferDelivery | null = null;
+  if (interestId) {
+    delivery = await deliverSeatOffer(db, { shopId: s.user.shopId, shopSlug, tripId, interestId });
   }
   revalidatePath(guests);
   redirect(
     delivery === "opted_out"
-      ? noticeUrl(`${guests}#invitations`, "invitation-opted-out")
-      : `${guests}#invitations`,
+      ? noticeUrl(`${guests}#who-wants-in`, "invitation-opted-out")
+      : `${guests}#who-wants-in`,
   );
 }
 
@@ -420,7 +381,7 @@ export async function moveSeatAction(shopSlug: string, tripId: string, formData:
 
 /**
  * **"Carry the wait list"** from the demand banner (third UX review, item 12):
- * every lead still waiting on this full departure is copied to the one staff
+ * every interest still waiting on this full departure is copied to the one staff
  * chose, and the staffer lands on it, where the wait list's one-tap invite
  * reaches them. Nobody is messaged here.
  */
@@ -434,7 +395,7 @@ export async function carryWaitlistAction(shopSlug: string, tripId: string, form
   const parsed = parseForm(carryWaitlistForm, formData);
   if (!uuidParam(tripId) || !parsed.ok) redirect(back);
   const { toTripId } = parsed.data;
-  const carried = await carryWaitlist(await getDb(), {
+  const carried = await carryInterests(await getDb(), {
     shopId: s.user.shopId,
     fromTripId: tripId,
     toTripId,

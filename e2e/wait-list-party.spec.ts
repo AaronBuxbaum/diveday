@@ -63,8 +63,8 @@ test("a full date in a weekly run points at the next one, and a party waits whol
   await expect(page.getByRole("heading", { name: /You’re on the wait list, Ines/ })).toBeVisible();
 
   await page.goto(staffUrl);
-  await expect(page.getByRole("heading", { name: /Waiting for a seat/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
   await expect(page.getByText("Party of 2")).toBeVisible();
   // The full boat's wait list can be carried to another date of the run.
-  await expect(page.getByRole("button", { name: "Carry the wait list" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Carry who’s waiting" })).toBeVisible();
 });

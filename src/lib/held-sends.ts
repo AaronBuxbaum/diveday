@@ -28,8 +28,7 @@ export const SEND_HOLD_TOLERANCE_MS = 750;
 
 export const HELD_SEND_KINDS = [
   "waiver_send",
-  "last_minute_deal",
-  "waitlist_invite",
+  "seat_offer",
   "trip_rescheduled",
   "departure_note",
 ] as const;
@@ -55,25 +54,23 @@ const waiverSendPayload = z
     message: "empty_batch",
   });
 
-const lastMinuteDealPayload = z
-  .object({
-    kind: z.literal("last_minute_deal"),
-    tripId: z.uuid(),
-    /** Percent off, or a fixed amount in minor units: exactly one of the two. */
-    discountPercent: z.number().int().min(1).max(100).optional(),
-    discountAmountCents: z.number().int().positive().optional(),
-    recipientPersonIds: z.array(z.uuid()).min(1).max(500),
-  })
-  .refine(
-    (payload) =>
-      (payload.discountPercent === undefined) !== (payload.discountAmountCents === undefined),
-    { message: "one_discount" },
-  );
-
-const waitlistInvitePayload = z.object({
-  kind: z.literal("waitlist_invite"),
+/**
+ * **Offer a seat** (ADR 20261017-one-interest-with-a-scope): the one held act on a
+ * departure's interests. Ids only, never a name or an address; the executor joins
+ * those at send time. `interestIds` may name departure interests or anytime interests (the
+ * last-minute list). A `discount` makes it the last-minute deal: a percent off,
+ * or a fixed amount in minor units, and exactly one of the two.
+ */
+const seatOfferPayload = z.object({
+  kind: z.literal("seat_offer"),
   tripId: z.uuid(),
-  entryId: z.uuid(),
+  interestIds: z.array(z.uuid()).min(1).max(500),
+  discount: z
+    .union([
+      z.strictObject({ percent: z.number().int().min(1).max(100) }),
+      z.strictObject({ amountCents: z.number().int().positive() }),
+    ])
+    .optional(),
 });
 
 /**
@@ -113,8 +110,7 @@ const departureNotePayload = z.object({
 
 export const heldSendPayloadSchema = z.discriminatedUnion("kind", [
   waiverSendPayload,
-  lastMinuteDealPayload,
-  waitlistInvitePayload,
+  seatOfferPayload,
   tripRescheduledPayload,
   departureNotePayload,
 ]);

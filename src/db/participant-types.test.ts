@@ -15,6 +15,7 @@ import {
 import { formBuddyTeam } from "./buddy-pairs";
 import type { AppDb } from "./client";
 import { openGearReservation } from "./gear";
+import { askForDeparture } from "./interests";
 import { getTripManifest, recordRollCall } from "./manifests";
 import { setBookingNitrox } from "./nitrox";
 import { setBookingPayment } from "./payments";
@@ -42,7 +43,6 @@ import {
   setTripParticipantTerms,
   upcomingTripsWithCounts,
 } from "./trips";
-import { joinTripWaitlist } from "./waitlist";
 import { issueWaiverRequest } from "./waivers";
 
 // (src/test/db.ts, `fileScopedShopContext`).
@@ -1041,7 +1041,7 @@ describe("the doors around a seat that is not a diver's", () => {
     const { db, shop, trip } = await benwood();
     // Three divers aboard, three diver seats, room for eight.
     await limits(db, trip.id, 8, 3);
-    const outcome = await joinTripWaitlist(db, {
+    const outcome = await askForDeparture(db, {
       shopId: shop.id,
       tripId: trip.id,
       fullName: "Wren Diver",

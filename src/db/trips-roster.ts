@@ -1,15 +1,14 @@
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import type { AppDb } from "./client";
-import { bookings, people, tripWaitlistEntries } from "./schema";
+import { bookings, people } from "./schema";
 
 /**
- * Who is *on* a departure: booked divers, the wait list behind them, and the
- * contact addresses for the seats currently held.
+ * Who is *on* a departure: booked divers and the contact addresses for the
+ * seats currently held. Who *wants* in is `src/db/interests.ts`.
  *
- * `bookings` and `trip_waitlist_entries` both carry their own `shop_id`
- * (CR-007), so every read here filters on it directly rather than joining
- * through `trips` — none of these can be called safely with only a trip UUID
- * for the wrong shop.
+ * `bookings` carries its own `shop_id` (CR-007), so every read here filters on
+ * it directly rather than joining through `trips` — none of these can be called
+ * safely with only a trip UUID for the wrong shop.
  */
 
 /** Email recipients holding active seats on one tenant-scoped trip. */
@@ -137,45 +136,3 @@ export function tripRosterWhere(shopId: string, tripId: string) {
 
 /** The roster's order, stated in full above `getTripRoster` (issue #1753). */
 export const tripRosterOrder = [asc(bookings.createdAt), asc(people.fullName), asc(bookings.id)];
-
-/**
- * Wait-list entries stay outside the roster because they have not booked a
- * seat. `trip_waitlist_entries` carries its own `shop_id` (CR-007).
- */
-export async function getTripWaitlist(db: AppDb, shopId: string, tripId: string) {
-  return db
-    .select({
-      entry: tripWaitlistEntries,
-      // What the wait-list renders: a name and the address an offer goes to.
-      person: { id: people.id, fullName: people.fullName, email: people.email },
-    })
-    .from(tripWaitlistEntries)
-    .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
-    .where(and(eq(tripWaitlistEntries.tripId, tripId), eq(tripWaitlistEntries.shopId, shopId)))
-    .orderBy(asc(tripWaitlistEntries.createdAt));
-}
-
-/**
- * Confirmation pages render only a real entry, never an identity in the URL.
- * `trip_waitlist_entries` carries its own `shop_id` (CR-007).
- */
-export async function getWaitlistEntryForTrip(
-  db: AppDb,
-  shopId: string,
-  tripId: string,
-  entryId: string,
-) {
-  const [row] = await db
-    .select({ entry: tripWaitlistEntries, person: people })
-    .from(tripWaitlistEntries)
-    .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
-    .where(
-      and(
-        eq(tripWaitlistEntries.id, entryId),
-        eq(tripWaitlistEntries.tripId, tripId),
-        eq(tripWaitlistEntries.shopId, shopId),
-      ),
-    )
-    .limit(1);
-  return row ?? null;
-}

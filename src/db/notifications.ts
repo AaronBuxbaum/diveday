@@ -14,6 +14,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate, nowMs } from "@/lib/clock";
 import { readLearningMaterials } from "@/lib/courses";
@@ -53,14 +54,13 @@ import {
   bookingPayments,
   bookings,
   courses,
+  interests,
   notificationDeliveries,
   notificationDeliveryAttempts,
   notificationSendQueue,
   people,
   shops,
-  tripInvitations,
   trips,
-  tripWaitlistEntries,
   waiverDeliveries,
   waiverRecords,
 } from "./schema";
@@ -601,6 +601,8 @@ function reviveQueuedNotification(payload: Notification): Notification {
     "endsAt",
     "expiresAt",
     "invitedAt",
+    "offeredAt",
+    "sailedStartsAt",
     "changedAt",
     "confirmedAt",
   ]) {
@@ -675,28 +677,18 @@ function drainableStatus() {
  * password resets) is never governed by the opt-out.
  *
  * The person is resolved the way each kind's own sender resolved them: through
- * the wait-list entry, the booking or the invitation the payload names, and for
+ * the interest or the booking the payload names, and for
  * a checkout reminder through the address, which is the only handle a party
  * checkout has (`findCourtesyEmailRecipientByAddress`). Each lookup is scoped to
  * the payload's shop.
  */
+/** The last-minute-list interest a commercial offer's departure row was copied from. */
+const offerListInterest = alias(interests, "offer_list_interest");
+
 async function courtesyRecipientOptedOut(db: AppDb, notification: Notification): Promise<boolean> {
   const optOutAt = { at: people.courtesyEmailOptOutAt };
   let rows: { at: Date | null }[];
   switch (notification.kind) {
-    case "waitlist_invite":
-      rows = await db
-        .select(optOutAt)
-        .from(tripWaitlistEntries)
-        .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
-        .where(
-          and(
-            eq(tripWaitlistEntries.id, notification.waitlistEntryId),
-            eq(tripWaitlistEntries.shopId, notification.shopId),
-          ),
-        )
-        .limit(1);
-      break;
     case "trip_recap":
       rows = await db
         .select(optOutAt)
@@ -707,19 +699,31 @@ async function courtesyRecipientOptedOut(db: AppDb, notification: Notification):
         )
         .limit(1);
       break;
-    case "direct_trip_invitation":
-      rows = await db
-        .select(optOutAt)
-        .from(tripInvitations)
-        .innerJoin(people, eq(people.id, tripInvitations.personId))
-        .where(
+    // The commercial offer only: a service offer is the reply to a diver's own
+    // request and is never governed by the opt-out.
+    //
+    // An offer the last-minute list made possible is also stopped by leaving
+    // that list (security review of #2656, MAJOR 1): its mail carried the
+    // list's link, and a click on it after this was queued must still hold.
+    case "seat_offer_commercial": {
+      const [row] = await db
+        .select({ at: people.courtesyEmailOptOutAt, listLeftAt: offerListInterest.closedAt })
+        .from(interests)
+        .innerJoin(people, eq(people.id, interests.personId))
+        .leftJoin(
+          offerListInterest,
           and(
-            eq(tripInvitations.id, notification.invitationId),
-            eq(tripInvitations.shopId, notification.shopId),
+            eq(offerListInterest.id, interests.parentInterestId),
+            eq(offerListInterest.shopId, interests.shopId),
+            eq(offerListInterest.scope, "anytime"),
           ),
         )
+        .where(
+          and(eq(interests.id, notification.interestId), eq(interests.shopId, notification.shopId)),
+        )
         .limit(1);
-      break;
+      return Boolean(row?.at ?? row?.listLeftAt);
+    }
     case "checkout_recovery": {
       const recipient = await findCourtesyEmailRecipientByAddress(db, {
         shopId: notification.shopId,

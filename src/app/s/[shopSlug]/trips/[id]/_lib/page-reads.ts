@@ -6,6 +6,7 @@ import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
 import { diverCrewWithAway } from "@/db/crew-away-diver";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
+import { getDepartureInterestForTrip } from "@/db/interests";
 import { bookingConfirmationMailState } from "@/db/notifications";
 import {
   getTripRequirements,
@@ -21,7 +22,6 @@ import { listTripChangeEvents } from "@/db/trip-change-events";
 import { siteSightings } from "@/db/trip-sightings";
 import {
   getTripWithBooked,
-  getWaitlistEntryForTrip,
   listTripDives,
   listTripScheduleDays,
   pagedUpcomingTripsWithCounts,
@@ -60,7 +60,7 @@ export type TripPageRequest = {
   tripId: string;
   isEmbed: boolean;
   bookingToken: string | undefined;
-  waitlistId: string | undefined;
+  interestId: string | undefined;
   handoffToken: string | null;
   /** `?pay=due`: the embed's confirmation links the booking's open checkout. */
   payDue: boolean;
@@ -81,7 +81,7 @@ export async function readTripPage(
     tripId,
     isEmbed,
     bookingToken,
-    waitlistId,
+    interestId,
     handoffToken,
     payDue,
     session,
@@ -115,8 +115,8 @@ export async function readTripPage(
             capability ? getBookingForTrip(db, shop.id, tripId, capability.bookingId) : null,
         )
       : Promise.resolve(null);
-  const waitlistRead = waitlistId
-    ? getWaitlistEntryForTrip(db, shop.id, tripId, waitlistId)
+  const waitlistRead = interestId
+    ? getDepartureInterestForTrip(db, shop.id, tripId, interestId)
     : Promise.resolve(null);
   const [
     staffPreview,

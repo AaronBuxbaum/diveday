@@ -13,7 +13,7 @@ import type { NotificationEmail } from "./email";
 // resolves its own text through `diverTranslator` in the recipient's locale
 // and escapes every dynamic value for the html body.
 
-export type CourseInquiryReceivedInput = {
+export type InterestReceivedAckInput = {
   locale: DiverLocale;
   shopName: string;
   /** The course the request named, in the shop's own words; absent for a dive request. */
@@ -38,7 +38,7 @@ export type CourseInquiryReceivedInput = {
  * own words (the course title, its phone, its hours) and the two dates, which
  * are parsed calendar days, reach the message.
  */
-export function courseInquiryReceivedEmail(input: CourseInquiryReceivedInput): NotificationEmail {
+export function interestReceivedAckEmail(input: InterestReceivedAckInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const lines: string[] = [];
   lines.push(

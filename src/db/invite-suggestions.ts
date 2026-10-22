@@ -22,19 +22,20 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { readCertificationEvidenceFor } from "./certification-evidence";
 import { listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb, DbExecutor } from "./client";
+import { departureOpenToDiver } from "./interest-offers";
+import { ensureDepartureInterest } from "./interests";
 import { queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookings,
   courses,
   diveSites,
+  interests,
   people,
   personRoles,
-  tripInvitations,
   trips,
   waiverRecords,
 } from "./schema";
-import { departureOpenToDiver, insertDirectTripInvitation } from "./trip-invitations";
 import { livePerson, liveTrip, notRehearsal } from "./trips-live";
 
 /**
@@ -77,10 +78,16 @@ export type InviteSuggestions = {
  * moment-earlier invite just wrote, before its mail has gone (security N2).
  */
 function invitedSince(since: Date) {
-  return or(
-    gte(tripInvitations.createdAt, since),
-    gte(tripInvitations.invitedAt, since),
-    gte(tripInvitations.emailedAt, since),
+  return and(
+    eq(interests.scope, "departure"),
+    // The shop's own outreach: a diver who asked and was offered a seat was
+    // not "invited" in the sense the cooldown spaces out.
+    eq(interests.askedBy, "shop"),
+    or(
+      gte(interests.askedAt, since),
+      gte(interests.offeredAt, since),
+      gte(interests.emailedAt, since),
+    ),
   );
 }
 
@@ -92,15 +99,9 @@ export async function recentlyInvitedPeople(
 ): Promise<Set<string>> {
   const since = inviteCooldownStart(now);
   const rows = await db
-    .selectDistinct({ personId: tripInvitations.personId })
-    .from(tripInvitations)
-    .where(
-      and(
-        eq(tripInvitations.shopId, shopId),
-        isNotNull(tripInvitations.personId),
-        invitedSince(since),
-      ),
-    );
+    .selectDistinct({ personId: interests.personId })
+    .from(interests)
+    .where(and(eq(interests.shopId, shopId), isNotNull(interests.personId), invitedSince(since)));
   return new Set(rows.flatMap((row) => (row.personId ? [row.personId] : [])));
 }
 
@@ -113,15 +114,9 @@ export async function invitedWithinCooldown(
 ): Promise<boolean> {
   const since = inviteCooldownStart(now);
   const [row] = await db
-    .select({ id: tripInvitations.id })
-    .from(tripInvitations)
-    .where(
-      and(
-        eq(tripInvitations.shopId, shopId),
-        eq(tripInvitations.personId, personId),
-        invitedSince(since),
-      ),
-    )
+    .select({ id: interests.id })
+    .from(interests)
+    .where(and(eq(interests.shopId, shopId), eq(interests.personId, personId), invitedSince(since)))
     .limit(1);
   return Boolean(row);
 }
@@ -213,10 +208,14 @@ export async function listInviteSuggestions(
         ),
     () =>
       db
-        .select({ personId: tripInvitations.personId })
-        .from(tripInvitations)
+        .select({ personId: interests.personId })
+        .from(interests)
         .where(
-          and(eq(tripInvitations.shopId, input.shopId), eq(tripInvitations.tripId, input.tripId)),
+          and(
+            eq(interests.scope, "departure"),
+            eq(interests.shopId, input.shopId),
+            eq(interests.tripId, input.tripId),
+          ),
         ),
     () => recentlyInvitedPeople(db, input.shopId, input.now),
     () => getTripRequirements(db, input.shopId, input.tripId),
@@ -365,7 +364,9 @@ const NO_CARDS: TripAdmissionEvidence = {
   nitroxCertifications: [],
 };
 
-export type CooledInvitation = "created" | "cooldown" | "unavailable" | "refused";
+export type CooledInvitation =
+  | { status: "created"; interestId: string }
+  | { status: "cooldown" | "unavailable" | "refused" };
 
 /**
  * **One invite under the 30-day cooldown** (H-130; the suggestions and the
@@ -392,13 +393,16 @@ export async function createInvitationUnderCooldown(
       sql`select pg_advisory_xact_lock(hashtext('invite_cooldown'), hashtext(${`${input.shopId}:${input.personId}`}))`,
     );
     if (await invitedWithinCooldown(tx, input.shopId, input.personId, input.now)) {
-      return "cooldown";
+      return { status: "cooldown" };
     }
-    if (!(await departureOpenToDiver(tx, { ...input }))) return "unavailable";
+    if (!(await departureOpenToDiver(tx, { ...input }))) return { status: "unavailable" };
     // A release parked on a physician's referral since the page was drawn (X3).
     if ((await physicianReferrals(tx, input.shopId, [input.personId])).size > 0) {
-      return "unavailable";
+      return { status: "unavailable" };
     }
-    return (await insertDirectTripInvitation(tx, input)) ? "created" : "refused";
+    const interest = await ensureDepartureInterest(tx, input);
+    return interest
+      ? { status: "created", interestId: interest.interestId }
+      : { status: "refused" };
   });
 }

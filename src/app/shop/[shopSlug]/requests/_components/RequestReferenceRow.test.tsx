@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { DateRequestRow } from "@/db/course-inquiries";
+import type { DateInterestRow } from "@/db/interest-dates";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { RequestReferenceRow } from "./RequestReferenceRow";
 
@@ -9,7 +9,7 @@ afterEach(cleanup);
 
 const t = staffTranslator("en-US");
 
-const BASE: DateRequestRow = {
+const BASE: DateInterestRow = {
   id: "8f000000-1111-4222-8333-444444444444",
   courseId: null,
   courseTitle: null,
@@ -23,16 +23,16 @@ const BASE: DateRequestRow = {
   preferredDate: "2027-03-06",
   alternateDate: "2027-03-13",
   dateFlexible: false,
-  divers: 2,
+  partySize: 2,
   message: null,
-  createdAt: new Date("2027-02-20T14:00:00.000Z"),
-  handledAt: null,
-  handledAs: null,
+  askedAt: new Date("2027-02-20T14:00:00.000Z"),
+  closedAt: null,
+  closedAs: null,
 };
 
 function row(
   match: "alternate" | "nearby" = "alternate",
-  request: Partial<DateRequestRow> = {},
+  request: Partial<DateInterestRow> = {},
   homeDate = "2027-03-06",
 ) {
   const { container } = render(
@@ -52,7 +52,7 @@ function row(
 }
 
 /**
- * **The same lead, said once.**
+ * **The same interest, said once.**
  *
  * A request lands in every group it could make, and each of those used to print
  * the whole four-line body: five divers appeared twice on one screen, identical

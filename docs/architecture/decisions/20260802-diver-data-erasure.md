@@ -227,16 +227,16 @@ the exact sweep it sits beside so the count is the over-reach in isolation.
 | Predicate | What it can reach that isn't the diver's |
 | --- | --- |
 | `activity_event_name` | an event about a different person with the same name |
-| `course_inquiry_phone` | a partner's or child's lead on a shared household number |
+| `date_interest_phone` | a partner's or child's interest on a shared household number |
 | `send_queue_recipient` | a live person's queued mail, when a soft-deleted duplicate shares their address — `people_shop_email_unique` is partial on *live* rows, so the duplicate is legitimate |
 | `booking_checkout_sole_occupant` | the address of someone who booked a seat purely on the erased diver's behalf |
 | `form_draft_address` | a staff member's unfinished form about a *different* person who shares the address — the same soft-deleted-duplicate case as the send queue, and the draft is lost rather than redacted |
-| `form_draft_phone` | the same, on a household number — the over-reach `course_inquiry_phone` already accepts. Reached for because `people.email` is nullable and a phone-only walk-in's draft would otherwise survive |
+| `form_draft_phone` | the same, on a household number — the over-reach `date_interest_phone` already accepts. Reached for because `people.email` is nullable and a phone-only walk-in's draft would otherwise survive |
 | `form_draft_name` | the same, on a namesake. Anchored on word boundaries and refused below three word characters, like every other name match here. It is what makes the draft sweep unconditional, since `people.full_name` is NOT NULL |
 | `last_minute_recipient_address` | an unmerged duplicate person's record of a deal sent to the shared address; the row survives, only the address is replaced |
 
-`course_inquiry_phone` is deliberately **not** tightened to "…and the inquiry carries no email":
-that would drop the real case it exists for, a diver who used a different address on the public lead
+`date_interest_phone` is deliberately **not** tightened to "…and the interest carries no email":
+that would drop the real case it exists for, a diver who used a different address on the public interest
 form than the one on their record.
 
 Blob objects (card photographs, recap photos, imported waiver documents) are retired through the

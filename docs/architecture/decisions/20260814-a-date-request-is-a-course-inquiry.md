@@ -1,6 +1,6 @@
 # 20260814-a-date-request-is-a-course-inquiry — One table for "please run this on this day", and dates only alongside the surface that groups them
 
-- **Status:** Accepted
+- **Status:** Superseded by [20261017-one-interest-with-a-scope](20261017-one-interest-with-a-scope.md)
 - **Date:** 2026-08-14
 
 ## Context

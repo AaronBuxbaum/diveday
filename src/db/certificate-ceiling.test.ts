@@ -8,6 +8,7 @@ import { publicAvailabilityTrips } from "./availability";
 import { cancelBooking, createBooking, createBookingParty, restoreBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { listUpcomingDeparturesForSite } from "./dive-sites";
+import { askForDeparture } from "./interests";
 import { nextDiveForBooking } from "./next-dive";
 import { markBookingNoShow, undoBookingNoShow } from "./no-show";
 import { boats, bookings, courses, diveSites, people, trips } from "./schema";
@@ -25,7 +26,6 @@ import {
   setTripStatus,
   updateTrip,
 } from "./trips";
-import { joinTripWaitlist } from "./waitlist";
 
 /**
  * **No path sells seat certificate + 1** (H-107).
@@ -141,7 +141,7 @@ describe("the booking transaction caps seats at the boat's certificate", () => {
     const trip = await overLimitTrip(db, shop.id, boat.id);
     await fillToCertificate(db, shop.id, trip.id);
 
-    const joined = await joinTripWaitlist(db, {
+    const joined = await askForDeparture(db, {
       shopId: shop.id,
       tripId: trip.id,
       fullName: "Wendy Waiting",

@@ -17,8 +17,8 @@ vi.mock("@/db/stale-package-invoices", () => ({
     stuck: 0,
   })),
 }));
-vi.mock("@/db/waitlist-roll", () => ({
-  rollSailedSeriesWaitlists: vi.fn(async () => ({ rolled: 0, invited: 0 })),
+vi.mock("@/db/interest-roll", () => ({
+  rollSailedSeriesInterests: vi.fn(async () => ({ rolled: 0, invited: 0 })),
 }));
 // The routes report only where a DSN is configured; the suite runs without one.
 vi.mock("@/lib/sentry-dsn", () => ({ SENTRY_DSN: "https://key@sentry.invalid/1" }));

@@ -20,7 +20,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * process-wide per worker — `api/test/clock`'s own docblock says the fleet
  * never calls it — while a seat cannot be *sold* onto a departure that has
  * sailed (`createBooking` refuses `trip_unavailable`) and nobody can join a
- * wait list for one that has left at all (`joinTripWaitlist`). So a spec that
+ * wait list for one that has left at all (`askForDeparture`). So a spec that
  * created a past boat could never fill it, and a spec that filled a future one
  * could never get the door.
  *

@@ -82,7 +82,7 @@ function branches(): { kind: string; email: string[]; phone: string[] }[] {
  * non-recipient contact field a *distinct* value, and the test asserts every
  * one of those values comes back out of one of the two functions. So it fails
  * not only when a new kind carries an unsurfaced handle — the bug it was
- * written for, `course_inquiry`'s `inquirerEmail` (issue #1298) — but also
+ * written for, `interest_received`'s `inquirerEmail` (issue #1298) — but also
  * when a kind already covered *grows a second one*, which a "returns something
  * truthy" assertion would have waved through.
  */
@@ -92,9 +92,9 @@ describe("every handle a notification carries is reachable by the erasure sweep"
    * distinct value so the assertion below can tell which one came back.
    */
   const SUBJECT_SAMPLES: Record<string, Notification> = {
-    course_inquiry: {
-      kind: "course_inquiry",
-      courseInquiryId: "00000000-0000-4000-8000-000000000001",
+    interest_received: {
+      kind: "interest_received",
+      interestId: "00000000-0000-4000-8000-000000000001",
       shopId: "00000000-0000-4000-8000-000000000002",
       to: "desk@shop.invalid",
       locale: "en-US",
@@ -174,7 +174,7 @@ describe("every handle a notification carries is reachable by the erasure sweep"
     // pass vacuously over an empty list, which is the failure mode a guard
     // must never have.
     expect(kinds.length).toBeGreaterThan(20);
-    expect(kinds).toContain("course_inquiry");
+    expect(kinds).toContain("interest_received");
     expect(kinds).toContain("booking_confirmation");
   });
 
@@ -182,7 +182,7 @@ describe("every handle a notification carries is reachable by the erasure sweep"
     // The half that stops a future `replyTo` or `mailbox` slipping past. If
     // this ever reads zero, `unwrap` has lost track of zod's shape and every
     // assertion below is vacuous.
-    const inquiry = branches().find((branch) => branch.kind === "course_inquiry");
+    const inquiry = branches().find((branch) => branch.kind === "interest_received");
     expect(inquiry?.email).toEqual(["to", "inquirerEmail"]);
     expect(inquiry?.phone).toEqual(["inquirerPhone"]);
   });
@@ -196,7 +196,7 @@ describe("every handle a notification carries is reachable by the erasure sweep"
    * kind is still caught.
    */
   const SHOP_OWNED_NUMBERS: Record<string, readonly string[]> = {
-    course_inquiry_received: ["shopPhone"],
+    interest_received_ack: ["shopPhone"],
     // The stale-roll-call alert's shore copy says whom to call first: the
     // shop's own `contact_phone` (H-118). Never queued, either.
     roll_call_stale_shore: ["shopPhone"],
@@ -248,9 +248,9 @@ describe("every handle a notification carries is reachable by the erasure sweep"
   it("hands back null rather than undefined when an optional handle is absent", () => {
     // Both columns are nullable and the writer inserts these values directly,
     // so `undefined` would silently become a Drizzle default rather than a
-    // null. A phone-only lead is the case that matters: it has no address at
+    // null. A phone-only interest is the case that matters: it has no address at
     // all, which is the hole the first version of this fix shipped.
-    const phoneOnly = { ...SUBJECT_SAMPLES.course_inquiry } as Record<string, unknown>;
+    const phoneOnly = { ...SUBJECT_SAMPLES.interest_received } as Record<string, unknown>;
     delete phoneOnly.inquirerEmail;
     expect(notificationSubjectEmail(phoneOnly as Notification)).toBeNull();
     expect(notificationSubjectPhone(phoneOnly as Notification)).toBe("+1 305 555 0134");
@@ -515,5 +515,28 @@ describe("address_confirmation: one kind, three readers, the keys the three kind
     expect(notificationSchema.safeParse(noOwner).success).toBe(false);
     expect(notificationSchema.safeParse(noShopName).success).toBe(false);
     expect(notificationSchema.safeParse({ ...shore, purpose: "stop" }).success).toBe(false);
+  });
+});
+
+describe("the seat offer notification schema", () => {
+  it("accepts a shop-scoped invitation payload for SES delivery", () => {
+    const notification = {
+      kind: "seat_offer" as const,
+      answers: "wait_list" as const,
+      interestId: "00000000-0000-4000-8000-000000000002",
+      shopId: "00000000-0000-4000-8000-000000000010",
+      to: "nora@dive.day",
+      locale: "en-US" as const,
+      diverName: "Nora Quinn",
+      shopName: "Blue Mantis",
+      tripTitle: "Two-Tank Reef",
+      startsAt: new Date("2026-08-01T12:00:00.000Z"),
+      endsAt: new Date("2026-08-01T15:00:00.000Z"),
+      timezone: "America/New_York",
+      bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
+      offeredAt: new Date("2026-07-30T12:00:00.000Z"),
+    };
+
+    expect(notificationSchema.parse(notification)).toMatchObject(notification);
   });
 });

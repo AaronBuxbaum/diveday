@@ -5,7 +5,7 @@ import type { DbExecutor } from "./client";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
-  lastMinuteListEntries,
+  interests,
   notificationDeliveries,
   notificationDeliveryAttempts,
   paymentOperationIntents,
@@ -13,7 +13,6 @@ import {
   personRoles,
   rollCallEvents,
   tripLastMinutePromos,
-  tripWaitlistEntries,
 } from "./schema";
 import { CAPTAIN_NAME } from "./seed-cast";
 import { at, dateAt, nextCreatedAt } from "./seed-clock";
@@ -48,15 +47,19 @@ export async function seedFrontDesk(
     .filter((person) => person !== undefined);
   if (includeHistoryData && listPeople.length > 0) {
     await db
-      .insert(lastMinuteListEntries)
+      .insert(interests)
       .values(
         listPeople.map((person, index) => ({
           shopId,
+          scope: "anytime" as const,
+          askedBy: "diver" as const,
           personId: person.id,
           availableFrom: dateAt(index === 0 ? 0 : 2),
           availableUntil: dateAt(30),
-          unsubscribedAt: index === listPeople.length - 1 ? nowDate() : null,
-          createdAt: nextCreatedAt(),
+          ...(index === listPeople.length - 1
+            ? { closedAt: nowDate(), closedAs: "unsubscribed" as const }
+            : {}),
+          askedAt: nextCreatedAt(),
         })),
       )
       .onConflictDoNothing();
@@ -66,12 +69,15 @@ export async function seedFrontDesk(
   if (includeHistoryData && wreckId) {
     const waiting = [10, 11, 12].map((index) => customers[index]).filter((c) => c !== undefined);
     if (waiting.length > 0) {
-      await db.insert(tripWaitlistEntries).values(
+      await db.insert(interests).values(
         waiting.map((person) => ({
           shopId,
+          scope: "departure" as const,
+          askedBy: "diver" as const,
+          partySize: 1,
           tripId: wreckId,
           personId: person.id,
-          createdAt: nextCreatedAt(),
+          askedAt: nextCreatedAt(),
         })),
       );
     }

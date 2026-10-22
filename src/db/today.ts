@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, lte, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lte, ne, notExists, or } from "drizzle-orm";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   highWindAlertDetailText,
@@ -54,7 +54,6 @@ import { openSnagsForShop } from "./boat-snags";
 import { readBoatWork } from "./boat-work";
 import type { AppDb } from "./client";
 import { courseCrewCountsByTrip } from "./course-crew-counts";
-import { countOpenDateRequests } from "./course-inquiries";
 import { crewAwayByTrip } from "./crew-away";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
@@ -66,7 +65,8 @@ import {
 import { listTodayHelpRequests } from "./help-requests";
 import { countUnansweredMessages } from "./inbound-messages";
 import { listUnfiledIncidentDrafts } from "./incident-reports";
-import { listActiveLastMinuteWindows } from "./last-minute-list";
+import { countOpenDateInterests } from "./interest-dates";
+import { listOpenAnytimeWindows } from "./interests";
 import { countOpenLostItems } from "./lost-items";
 import {
   listBoardedAtAnyCheckpointByTrip,
@@ -84,6 +84,7 @@ import { readReviewsAwaitingModeration } from "./reviews";
 import {
   boats,
   bookings,
+  interests,
   people,
   personRoles,
   rollCallCrewEvents,
@@ -91,7 +92,6 @@ import {
   shops,
   tripAssignments,
   trips,
-  tripWaitlistEntries,
 } from "./schema";
 import { listStaffCredentials } from "./staff-credentials";
 import {
@@ -109,7 +109,6 @@ import { at, shopDay } from "./today-shared";
 import { pushShopRows } from "./today-shop-rows";
 import { pushBoatSnagRows } from "./today-snag-rows";
 import { meetingWindowsByTrip } from "./trip-meeting-windows";
-import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { boatClashesByTrip, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
@@ -1007,54 +1006,80 @@ export async function openAfterDiveRollCalls(
 }
 
 /**
- * Wait-list depth *and* one suggested entry per trip, so a freed seat can be
- * offered to a real person without leaving Today. The suggestion is the
- * longest-waiting diver — a sensible default, not an entitlement: nothing tells
- * the diver they are in a line, and staff may invite anyone on the list
- * (ADR 20260813-wait-list-is-a-lead-list). Its name, email, and last-invited
- * stamp ride along so the Today row can one-tap invite and fall back to a
- * prewritten composer exactly like the trip page's wait-list section.
+ * How many divers asked for each departure *and* one suggested interest per trip,
+ * so a freed seat can be offered to a real person without leaving Today. The
+ * suggestion is the one who asked first: a sensible default, not an entitlement
+ * and never a ranking by fit (ADR 20260813-wait-list-is-a-lead-list). A diver
+ * who holds a seat is not wanting one (an interest is read against the seats, never
+ * written by the booking). Name, email and offered stamp ride along so the
+ * Today row can offer in one tap and fall back to the composer exactly like the
+ * trip page's panel (`OfferSeat`).
  */
-export type WaitlistFront = {
-  count: number;
-  entryId: string;
+export type SeatWantedInterest = {
+  interestId: string;
   personName: string;
   personEmail: string | null;
   invitedAt: Date | null;
+  /** The seats this interest waits for, themselves included. */
+  partySize: number;
 };
 
-async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[]) {
-  const fronts = new Map<string, WaitlistFront>();
+/**
+ * How many want in, and every one of them in the order they asked: the row
+ * offers the first whose whole party fits the open seats (dive-domain review
+ * of #2656, m2), as the roll does, never "a seat opened" to a party of four
+ * for one seat.
+ */
+export type SeatWantedFront = { count: number; interests: SeatWantedInterest[] };
+
+async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
+  const fronts = new Map<string, SeatWantedFront>();
   if (tripIds.length === 0) return fronts;
   const rows = await db
     .select({
-      tripId: tripWaitlistEntries.tripId,
-      entryId: tripWaitlistEntries.id,
-      invitedAt: tripWaitlistEntries.invitedAt,
+      tripId: interests.tripId,
+      interestId: interests.id,
+      invitedAt: interests.offeredAt,
+      partySize: interests.partySize,
       personName: people.fullName,
       personEmail: people.email,
     })
-    .from(tripWaitlistEntries)
-    .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
+    .from(interests)
+    .innerJoin(people, eq(people.id, interests.personId))
     .where(
-      and(eq(tripWaitlistEntries.shopId, shopId), inArray(tripWaitlistEntries.tripId, tripIds)),
+      and(
+        eq(interests.scope, "departure"),
+        eq(interests.askedBy, "diver"),
+        eq(interests.shopId, shopId),
+        inArray(interests.tripId, tripIds),
+        notExists(
+          db
+            .select({ id: bookings.id })
+            .from(bookings)
+            .where(
+              and(
+                eq(bookings.tripId, interests.tripId),
+                eq(bookings.personId, interests.personId),
+                ne(bookings.status, "cancelled"),
+              ),
+            ),
+        ),
+      ),
     )
-    .orderBy(asc(tripWaitlistEntries.createdAt));
+    .orderBy(asc(interests.askedAt), asc(people.fullName), asc(interests.id));
   for (const row of rows) {
-    const existing = fronts.get(row.tripId);
-    // Rows arrive oldest-first, so the first seen per trip is the true front of
-    // the line; later ones only bump the depth count.
-    if (existing) {
-      existing.count += 1;
-      continue;
-    }
-    fronts.set(row.tripId, {
-      count: 1,
-      entryId: row.entryId,
+    if (!row.tripId) continue;
+    // Rows arrive oldest-first, so each trip's list is in the order people asked.
+    const front = fronts.get(row.tripId) ?? { count: 0, interests: [] };
+    front.count += 1;
+    front.interests.push({
+      interestId: row.interestId,
       personName: row.personName,
       personEmail: row.personEmail,
       invitedAt: row.invitedAt,
+      partySize: row.partySize ?? 1,
     });
+    fronts.set(row.tripId, front);
   }
   return fronts;
 }
@@ -1656,10 +1681,9 @@ async function readTodayWave(
     departureRollCall,
     departureCrewRollCall,
     boatWork,
-    waitlisted,
+    seatWanted,
     courseCrewCounts,
     deliveryIssues,
-    neverSentLastMinuteDeal,
     lastMinuteWindows,
     rollCallGaps,
     stagesByTrip,
@@ -1708,7 +1732,7 @@ async function readTodayWave(
     // The boat's work, one reader shared with the trip's own band
     // (`./boat-work`): sizes, nitrox, contacts and open orders per departure.
     readBoatWork(db, shopId, bookingIdsByTrip),
-    waitlistFrontByTrip(
+    seatWantedByTrip(
       db,
       shopId,
       inWindow.map((trip) => trip.id),
@@ -1723,16 +1747,11 @@ async function readTodayWave(
       inWindow.map((trip) => trip.id),
     ),
     listNotificationDeliveryIssues(db, shopId, { from: now, until: horizon }),
-    tripIdsNeverSentLastMinuteDeal(
-      db,
-      shopId,
-      inWindow.map((trip) => trip.id),
-    ),
     // Who is even reachable by a blast. Not scoped to a trip: an entry is a
     // standing "I'm around these dates" preference, and which departures it
     // covers is arithmetic (`lastMinuteEntryMatchesTripDate`), done per trip
     // below against the same predicate the trip's own roster uses.
-    listActiveLastMinuteWindows(db, shopId),
+    listOpenAnytimeWindows(db, shopId),
     // Deliberately not derived from `inWindow`/`todayTrips`: those look only
     // forward, and a boat that is out or already came back is exactly what this
     // chases.
@@ -1785,7 +1804,7 @@ async function readTodayWave(
     readReviewsAwaitingModeration(db, shopId),
     countUnansweredMessages(db, shopId),
     // Open date requests count into the same unanswered row (issue #2658).
-    countOpenDateRequests(db, shopId),
+    countOpenDateInterests(db, shopId),
     db
       .select({
         unitsConfirmedAt: shops.unitsConfirmedAt,
@@ -1861,10 +1880,9 @@ async function readTodayWave(
     departureRollCall,
     departureCrewRollCall,
     boatWork,
-    waitlisted,
+    seatWanted,
     courseCrewCounts,
     deliveryIssues,
-    neverSentLastMinuteDeal,
     lastMinuteWindows,
     rollCallGaps,
     stagesByTrip,

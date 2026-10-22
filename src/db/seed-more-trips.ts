@@ -9,6 +9,7 @@ import {
   certifications,
   type DiveSpecialty,
   executedDives,
+  interests,
   notificationDeliveries,
   notificationDeliveryAttempts,
   people,
@@ -24,7 +25,6 @@ import {
   tripRequirements,
   tripScheduleDays,
   trips,
-  tripWaitlistEntries,
   waiverRecords,
 } from "./schema";
 import { at, DEMO_DAWN_BOAT, nextCreatedAt } from "./seed-clock";
@@ -32,6 +32,24 @@ import { paperRelease, signingNames } from "./seed-paper-release";
 
 /** The returned demo departure that gives Close-Out a finished local-day dive. */
 export const DEMO_COMPLETED_TRIP_TITLE = "Dawn Two-Tank — Molasses Reef";
+
+/** The roster's "Party of 2" line (issue #2677): a pair waiting on a full charter. */
+async function seedWaitlistInterest(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  personId: string,
+) {
+  await db.insert(interests).values({
+    shopId,
+    scope: "departure",
+    askedBy: "diver",
+    tripId,
+    personId,
+    partySize: 2,
+    askedAt: nextCreatedAt(),
+  });
+}
 
 /**
  * A fuller month: charters and course sessions beyond the four headline
@@ -745,20 +763,12 @@ export async function seedMoreTrips(
     if (duanePaymentSeed.length > 0) await db.insert(bookingPayments).values(duanePaymentSeed);
   }
 
-  // A little front-desk texture on the trips this back-fill added: a
-  // wait-list entry on the nearly-full Pickles Reef charter, and a
-  // last-minute promo on the quietest midweek boat.
+  // Front-desk texture: a wait-list interest on Pickles Reef, a promo midweek.
   const picklesTrip = insertedTrips.find((trip) => trip.title === "Two-Tank Reef — Pickles Reef");
   const quietTrip = insertedTrips.find((trip) => trip.title === "Midweek Two-Tank — Molasses Reef");
   const waitlistCandidate = customers[draw(1)[0] ?? -1];
   if (picklesTrip && waitlistCandidate) {
-    await db.insert(tripWaitlistEntries).values({
-      shopId,
-      tripId: picklesTrip.id,
-      personId: waitlistCandidate.id,
-      partySize: 2, // the roster's "Party of 2" line (issue #2677)
-      createdAt: nextCreatedAt(),
-    });
+    await seedWaitlistInterest(db, shopId, picklesTrip.id, waitlistCandidate.id);
   }
   if (quietTrip) {
     await db

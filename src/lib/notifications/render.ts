@@ -7,7 +7,6 @@ import {
   bookkeeperNoticeEmail,
 } from "./bookkeeper-email";
 import { courseCertifiedEmail } from "./course-certified";
-import { courseInquiryReceivedEmail } from "./course-inquiry-received";
 import { crewScheduleChangeEmail } from "./crew-emails";
 import {
   deskAfterHoursEmail,
@@ -22,11 +21,11 @@ import {
   bookingHandoffEmail,
   checkoutRecoveryEmail,
   contactEmailConfirmationEmail,
-  courseInquiryEmail,
   demoStartedAlertEmail,
   type EmailShopBrand,
   founderDigestEmail,
   guardianReleaseCopyEmail,
+  interestReceivedEmail,
   lastMinuteDealEmail,
   type NotificationEmail,
   newAccountAlertEmail,
@@ -49,6 +48,7 @@ import {
   wrapEmailHtml,
 } from "./email";
 import { incidentMissingDiverEmail, incidentMissingDiverFoundEmail } from "./incident-emails";
+import { interestReceivedAckEmail } from "./interest-received-ack";
 import type { Notification } from "./kinds";
 import { partyPaymentReceiptEmail } from "./party-payment-receipt";
 import {
@@ -153,9 +153,29 @@ function addressConfirmationEmail(
 
 function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "booking_confirmation") return bookingConfirmationEmail(notification);
-  if (notification.kind === "waitlist_invite") return waitlistInviteEmail(notification);
-  if (notification.kind === "trip_invitation") return tripInvitationEmail(notification);
-  if (notification.kind === "direct_trip_invitation") return tripInvitationEmail(notification);
+  // Service mail: a diver who joined the wait list hears "a seat opened"; the
+  // reply to a date request is the invitation. Neither carries a way out.
+  if (notification.kind === "seat_offer") {
+    return notification.answers === "wait_list"
+      ? waitlistInviteEmail(notification)
+      : tripInvitationEmail(notification);
+  }
+  // A waiting diver hears "a seat opened"; anyone the shop reached out to hears
+  // that the shop is offering it. The words are the diver's, unchanged.
+  if (notification.kind === "seat_offer_commercial") {
+    // An offer that carries a deal says the deal: the code, the figure and the
+    // day the code stops working.
+    if (notification.code !== undefined && notification.expiresAt !== undefined) {
+      return lastMinuteDealEmail({
+        ...notification,
+        code: notification.code,
+        expiresAt: notification.expiresAt,
+      });
+    }
+    return notification.askedBy === "diver"
+      ? waitlistInviteEmail(notification)
+      : tripInvitationEmail(notification);
+  }
   if (notification.kind === "trip_reminder_7d") {
     return diverStateEmail({ ...notification, state: "week_out" });
   }
@@ -178,9 +198,8 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
-  if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
   if (notification.kind === "operator_alert") return operatorAlertEmail(notification);
-  if (notification.kind === "course_inquiry") return courseInquiryEmail(notification);
+  if (notification.kind === "interest_received") return interestReceivedEmail(notification);
   if (notification.kind === "staff_reply") return staffReplyEmail(notification);
   if (notification.kind === "weekly_digest") return weeklyDigestEmail(notification);
   if (notification.kind === "work_order_ready") return workOrderReadyEmail(notification);
@@ -209,8 +228,8 @@ function rawMessageFor(notification: Notification): NotificationEmail {
     return bookkeeperConfirmationEmail(notification);
   }
   if (notification.kind === "bookkeeper_notice") return bookkeeperNoticeEmail(notification);
-  if (notification.kind === "course_inquiry_received") {
-    return courseInquiryReceivedEmail(notification);
+  if (notification.kind === "interest_received_ack") {
+    return interestReceivedAckEmail(notification);
   }
   return passwordChangedEmail(notification);
 }

@@ -4,31 +4,20 @@ import { nowDate } from "@/lib/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { fakeEmail } from "@/test/fakes";
 import { createBooking } from "./bookings";
-import { recordCourseInquiry } from "./course-inquiries";
-import { getCourseBySlug } from "./courses";
 import { listBookableDivers } from "./divers";
-import { loadShopExportBundleInput } from "./export";
+import { deliverSeatOffer, offerDepartureToDiver } from "./interest-offers";
+import { ensureDepartureInterest, listDepartureInterests } from "./interests";
 import {
   activityEvents,
   bookings,
   certifications,
+  interests,
   people,
   personRoles,
-  shops,
-  tripInvitations,
   tripRequirements,
   trips as tripsTable,
 } from "./schema";
-import {
-  createDirectTripInvitation,
-  createTripRequestInvitations,
-  deliverTripInvitation,
-  listTripInvitations,
-  offerDepartureToDiver,
-  recordTripInvitation,
-} from "./trip-invitations";
-import { getTripRoster, getTripWithBooked, upcomingTripsWithCounts } from "./trips";
-import { createTrip } from "./trips-create";
+import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 // One database for the file, a rolled-back transaction per test. The one race
 // below ("two taps that land together") takes its own: inside one transaction
@@ -38,8 +27,6 @@ const fileCtx = fileScopedShopContext();
 
 async function invitationContext({ fresh = false } = {}) {
   const { db, shop } = fresh ? await seededShopContext() : fileCtx;
-  const course = await getCourseBySlug(db, shop.id, "open-water-diver");
-  if (!course) throw new Error("expected seeded course missing");
   const [author] = await db
     .select({ id: people.id })
     .from(people)
@@ -50,143 +37,33 @@ async function invitationContext({ fresh = false } = {}) {
   const firstTrip = trips.find((trip) => trip.title === "Two-Tank Reef — Christ of the Abyss");
   const secondTrip = trips.find((trip) => trip.title === "Wreck Trip — Spiegel Grove");
   if (!firstTrip || !secondTrip) throw new Error("expected seeded trips missing");
-  return { db, shop, course, author, firstTrip, secondTrip };
+  return { db, shop, author, firstTrip, secondTrip };
 }
 
-async function makeRequest(
-  db: Awaited<ReturnType<typeof invitationContext>>["db"],
-  shopId: string,
-  courseId: string,
-  name: string,
-) {
-  return recordCourseInquiry(db, {
-    shopId,
-    courseId,
-    name,
-    email: `${name.toLowerCase().replaceAll(" ", ".")}@example.com`,
-    experienceLevel: "certified",
-    divers: 2,
-  });
-}
-
-describe("trip invitations", () => {
-  it("keeps request outreach outside capacity and allows one request on multiple trips", async () => {
-    const { db, shop, course, author, firstTrip, secondTrip } = await invitationContext();
-    const request = await makeRequest(db, shop.id, course.id, "Invitation Iris");
-    const bookedBefore = await getTripWithBooked(db, shop.id, firstTrip.id);
-    const rosterBefore = await getTripRoster(db, shop.id, firstTrip.id);
-
-    await expect(
-      createTripRequestInvitations(db, {
-        shopId: shop.id,
-        tripId: firstTrip.id,
-        requestIds: [request.id],
-        createdByPersonId: author.id,
-      }),
-    ).resolves.toBe(1);
-    await expect(
-      createTripRequestInvitations(db, {
-        shopId: shop.id,
-        tripId: firstTrip.id,
-        requestIds: [request.id],
-        createdByPersonId: author.id,
-      }),
-    ).resolves.toBe(0);
-    await expect(
-      createTripRequestInvitations(db, {
-        shopId: shop.id,
-        tripId: secondTrip.id,
-        requestIds: [request.id],
-        createdByPersonId: author.id,
-      }),
-    ).resolves.toBe(1);
-
-    expect(await getTripWithBooked(db, shop.id, firstTrip.id)).toMatchObject({
-      booked: bookedBefore?.booked,
-    });
-    expect(await getTripRoster(db, shop.id, firstTrip.id)).toHaveLength(rosterBefore.length);
-    expect(await listTripInvitations(db, shop.id, firstTrip.id)).toHaveLength(1);
-    expect(await listTripInvitations(db, shop.id, secondTrip.id)).toHaveLength(1);
-
-    const bundle = await loadShopExportBundleInput(db, shop.id);
-    const invitationTable = bundle?.tables.find((table) => table.file === "trip_invitations.csv");
-    expect(invitationTable?.rows).toHaveLength(2);
-    expect(invitationTable?.rows[0]?.[invitationTable.header.indexOf("source")]).toBe(
-      "date_request",
-    );
-    expect(invitationTable?.rows[0]?.[invitationTable.header.indexOf("person_name")]).toBe(
-      "Invitation Iris",
-    );
-  });
-
-  it("shows the request contact and records outreach without creating a booking", async () => {
-    const { db, shop, course, author, firstTrip, secondTrip } = await invitationContext();
-    const request = await makeRequest(db, shop.id, course.id, "Invitation Ines");
-    await createTripRequestInvitations(db, {
-      shopId: shop.id,
-      tripId: firstTrip.id,
-      requestIds: [request.id],
-      createdByPersonId: author.id,
-    });
-
-    const [listed] = await listTripInvitations(db, shop.id, firstTrip.id);
-    if (!listed) throw new Error("invitation was not listed");
-    expect(listed.request?.name).toBe("Invitation Ines");
-    expect(listed.invitation.invitedAt).toBeNull();
-
-    const now = new Date("2026-08-16T15:00:00.000Z");
-    await expect(
-      recordTripInvitation(db, {
-        shopId: shop.id,
-        tripId: firstTrip.id,
-        invitationId: listed.invitation.id,
-        now,
-      }),
-    ).resolves.toBe(true);
-    const [after] = await listTripInvitations(db, shop.id, firstTrip.id);
-    expect(after?.invitation.invitedAt?.toISOString()).toBe(now.toISOString());
-    expect(await getTripRoster(db, shop.id, firstTrip.id)).toHaveLength(0);
-
-    await expect(
-      recordTripInvitation(db, {
-        shopId: shop.id,
-        tripId: secondTrip.id,
-        invitationId: listed.invitation.id,
-      }),
-    ).resolves.toBe(false);
-  });
-
-  it("supports a direct existing-diver invitation without seating them", async () => {
+describe("seat offers", () => {
+  it("records a shop interest for an existing diver without seating them", async () => {
     const { db, shop, author, firstTrip } = await invitationContext();
     const [candidate] = await listBookableDivers(db, shop.id, firstTrip.id, {
       query: "mail.example",
     });
     if (!candidate) throw new Error("expected a bookable seeded diver");
 
-    await expect(
-      createDirectTripInvitation(db, {
-        shopId: shop.id,
-        tripId: firstTrip.id,
-        personId: candidate.person.id,
-        createdByPersonId: author.id,
-      }),
-    ).resolves.toBe(true);
-    await expect(
-      createDirectTripInvitation(db, {
-        shopId: shop.id,
-        tripId: firstTrip.id,
-        personId: candidate.person.id,
-        createdByPersonId: author.id,
-      }),
-    ).resolves.toBe(false);
+    const ask = {
+      shopId: shop.id,
+      tripId: firstTrip.id,
+      personId: candidate.person.id,
+      createdByPersonId: author.id,
+    };
+    expect(await ensureDepartureInterest(db, ask)).toMatchObject({ created: true });
+    expect(await ensureDepartureInterest(db, ask)).toMatchObject({ created: false });
 
-    const [listed] = await listTripInvitations(db, shop.id, firstTrip.id);
-    expect(listed?.invitation.source).toBe("direct");
+    const [listed] = await listDepartureInterests(db, shop.id, firstTrip.id);
+    expect(listed?.interest.askedBy).toBe("shop");
     expect(listed?.person?.id).toBe(candidate.person.id);
     expect(await getTripRoster(db, shop.id, firstTrip.id)).toHaveLength(0);
   });
 
-  it("refuses a direct invitation for an erased or merged person", async () => {
+  it("refuses a shop interest for an erased or merged person", async () => {
     const { db, shop, author, firstTrip } = await invitationContext({ fresh: true });
     const [candidate, other] = await listBookableDivers(db, shop.id, firstTrip.id, {
       query: "mail.example",
@@ -208,45 +85,16 @@ describe("trip invitations", () => {
       .where(eq(people.id, other.person.id));
 
     for (const personId of [candidate.person.id, other.person.id]) {
-      await expect(
-        createDirectTripInvitation(db, {
+      expect(
+        await ensureDepartureInterest(db, {
           shopId: shop.id,
           tripId: firstTrip.id,
           personId,
           createdByPersonId: author.id,
         }),
-      ).resolves.toBe(false);
+      ).toBeNull();
     }
-    expect(await listTripInvitations(db, shop.id, firstTrip.id)).toHaveLength(0);
-  });
-
-  it("does not attach a request across shop boundaries", async () => {
-    const { db, shop, course, author, firstTrip } = await invitationContext();
-    const request = await makeRequest(db, shop.id, course.id, "Tenant Tina");
-    const [otherShop] = await db
-      .insert(shops)
-      .values({ name: "Other Invitation Shop", slug: "other-invitation-shop", timezone: "UTC" })
-      .returning();
-    if (!otherShop) throw new Error("other shop setup failed");
-    const otherTrip = await createTrip(db, {
-      shopId: otherShop.id,
-      title: "Other Trip",
-      startsAt: new Date("2026-09-01T12:00:00.000Z"),
-      endsAt: new Date("2026-09-01T16:00:00.000Z"),
-      capacity: 12,
-    });
-    if (!otherTrip) throw new Error("other trip setup failed");
-
-    await expect(
-      createTripRequestInvitations(db, {
-        shopId: otherShop.id,
-        tripId: otherTrip.id,
-        requestIds: [request.id],
-        createdByPersonId: author.id,
-      }),
-    ).resolves.toBe(0);
-    expect(await listTripInvitations(db, otherShop.id, otherTrip.id)).toEqual([]);
-    expect(await listTripInvitations(db, shop.id, firstTrip.id)).toEqual([]);
+    expect(await listDepartureInterests(db, shop.id, firstTrip.id)).toHaveLength(0);
   });
 
   /** UX review 2026-10-11, item 14: the no-show's "another day", sent in one tap. */
@@ -266,15 +114,15 @@ describe("trip invitations", () => {
     // No mail provider in tests: the honest answer is the fallback, never "sent".
     await expect(offerDepartureToDiver(db, input)).resolves.toBe("fallback");
     await expect(offerDepartureToDiver(db, input)).resolves.toBe("fallback");
-    const listed = await listTripInvitations(db, shop.id, firstTrip.id);
+    const listed = await listDepartureInterests(db, shop.id, firstTrip.id);
     expect(listed).toHaveLength(1);
-    expect(listed[0]?.invitation.invitedAt).toBeInstanceOf(Date);
+    expect(listed[0]?.interest.offeredAt).toBeInstanceOf(Date);
     expect(await getTripRoster(db, shop.id, firstTrip.id)).toHaveLength(0);
   });
 
   /**
    * Issue #2480: a double tap at a busy counter sent two commercial emails,
-   * because every send stamps a fresh `invitedAt` and so a fresh idempotency
+   * because every send stamps a fresh `offeredAt` and so a fresh idempotency
    * key. Mail that went out under an hour ago answers "already sent".
    */
   describe("a second tap on Email them this date", () => {
@@ -336,9 +184,9 @@ describe("trip invitations", () => {
       const ago = async (hours: number) => {
         const at = new Date(nowDate().getTime() - hours * 3_600_000);
         await db
-          .update(tripInvitations)
-          .set({ invitedAt: at, emailedAt: at })
-          .where(eq(tripInvitations.tripId, input.tripId));
+          .update(interests)
+          .set({ offeredAt: at, emailedAt: at })
+          .where(eq(interests.tripId, input.tripId));
         await db
           .update(activityEvents)
           .set({ occurredAt: at })
@@ -354,21 +202,16 @@ describe("trip invitations", () => {
     it("answers already sent after the guests page emailed the diver minutes ago", async () => {
       const { db, input } = await offerInput();
       const mail = fakeEmail();
-      await createDirectTripInvitation(db, input);
-      const [invitation] = await listTripInvitations(db, input.shopId, input.tripId);
-      if (!invitation) throw new Error("direct invitation missing");
+      const interest = await ensureDepartureInterest(db, input);
+      if (!interest) throw new Error("shop interest missing");
       await expect(
-        deliverTripInvitation(
-          db,
-          { ...input, invitationId: invitation.invitation.id },
-          mail.provider,
-        ),
+        deliverSeatOffer(db, { ...input, interestId: interest.interestId }, mail.provider),
       ).resolves.toBe("sent");
       const fiveMinutesAgo = new Date(nowDate().getTime() - 5 * 60_000);
       await db
-        .update(tripInvitations)
-        .set({ invitedAt: fiveMinutesAgo, emailedAt: fiveMinutesAgo })
-        .where(eq(tripInvitations.id, invitation.invitation.id));
+        .update(interests)
+        .set({ offeredAt: fiveMinutesAgo, emailedAt: fiveMinutesAgo })
+        .where(eq(interests.id, interest.interestId));
 
       await expect(offerDepartureToDiver(db, input, mail.provider)).resolves.toBe("already_sent");
       expect(mail.sent).toHaveLength(1);
@@ -459,11 +302,9 @@ describe("trip invitations", () => {
         }),
       ).resolves.toBe("unavailable");
       const rows = await ctx.db
-        .select({ id: tripInvitations.id })
-        .from(tripInvitations)
-        .where(
-          and(eq(tripInvitations.tripId, ctx.firstTrip.id), eq(tripInvitations.personId, personId)),
-        );
+        .select({ id: interests.id })
+        .from(interests)
+        .where(and(eq(interests.tripId, ctx.firstTrip.id), eq(interests.personId, personId)));
       expect(rows).toEqual([]);
     }
 

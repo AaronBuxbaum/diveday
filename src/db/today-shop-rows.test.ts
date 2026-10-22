@@ -7,18 +7,18 @@ import type { TodayAction } from "@/lib/today";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import type { AppDb } from "./client";
-import { setDateRequestOutcome } from "./course-inquiries";
 import { markInboundAnswered, recordInboundMessage } from "./inbound-messages";
 import { startIncidentReport } from "./incident-reports";
+import { setDateInterestOutcome } from "./interests";
 import { queueMediaDeletion, resolveMediaDeletion } from "./media-deletions";
 import { recordStripeDispute } from "./payment-disputes";
 import { startPaymentOperation } from "./payment-operations";
 import { setBookingPayment } from "./payments";
 import { submitTripReview } from "./reviews";
 import {
-  courseInquiries,
   inboundMessages,
   incidentReports,
+  interests,
   orders,
   people,
   tripAssignments,
@@ -578,13 +578,15 @@ describe("unanswered messages", () => {
       href: `/shop/${shop.slug}/requests`,
     });
     const open = await db
-      .select({ id: courseInquiries.id })
-      .from(courseInquiries)
-      .where(and(eq(courseInquiries.shopId, shop.id), isNull(courseInquiries.handledAt)));
+      .select({ id: interests.id })
+      .from(interests)
+      .where(
+        and(eq(interests.shopId, shop.id), eq(interests.scope, "date"), isNull(interests.closedAt)),
+      );
     for (const row of open) {
-      await setDateRequestOutcome(db, {
+      await setDateInterestOutcome(db, {
         shopId: shop.id,
-        requestId: row.id,
+        interestId: row.id,
         outcome: "done",
         now: nowDate(),
       });

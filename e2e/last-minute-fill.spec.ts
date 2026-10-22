@@ -1,11 +1,12 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import {
-  HELD_SEND_TIMEOUT_MS,
-  openDiverFileGroup,
-  rosterRow,
-  seededTripId,
-  signInAsOwner,
-} from "./helpers";
+import { HELD_SEND_TIMEOUT_MS, openDiverFileGroup, rosterRow, signInAsOwner } from "./helpers";
+
+/** The panel keeps the names past its preview cap behind "Show N more"; open them. */
+async function openMoreWhoWantsIn(page: Page): Promise<void> {
+  const more = page.getByText(/^Show \d+ more$/);
+  if ((await more.count()) > 0) await more.first().click();
+}
 
 /**
  * Fill-the-boat: a diver opts into the shop-wide last-minute list, staff see
@@ -30,6 +31,9 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   // all in one flow — the suite's 15s default is sized for a single real flow,
   // not a chain of them.
   test.setTimeout(45_000);
+  // Unlocks the "not_connected" gate without ever calling real Stripe (same
+  // route the visual suite uses to render Stripe-gated surfaces).
+  await request.post("/api/test/seed-stripe-account");
   await page.goto("/s/blue-mantis");
   // Scoped to the wait-list card: the schedule page carries a second form
   // now ("Nothing on a date that works?"), which legitimately asks for a
@@ -38,6 +42,9 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await waitList.locator("summary").click();
   await waitList.getByLabel("Name").fill("Nora Quinn");
   await waitList.getByLabel("Email").fill("nora.e2e@example.com");
+  // The reef morning asks for Open Water, and the panel lists only who fits it
+  // (dive-domain review of #2656, m1), so Nora says what she holds.
+  await waitList.getByLabel("Certification level").selectOption("open_water");
   // No upper bound — "around from" 2020 covers today's frozen-clock departure.
   await page.locator('input[name="availableFrom"]').filter({ visible: true }).fill("2020-01-01");
   await page.getByRole("button", { name: "Notify me" }).click();
@@ -47,7 +54,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await page.goto("/shop/blue-mantis");
   const nudge = page
     .locator("li")
-    .filter({ hasText: "3 seats open, no last-minute deal sent." })
+    .filter({ hasText: /3 seats open, \d+ want in\./ })
     // The row itself, not the day station that contains it. Since the home
     // became the day's spine every row about a departure nests inside that
     // departure's own `<li>`, and `hasText` matches an ancestor as readily as
@@ -56,26 +63,23 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
     .filter({ visible: true });
   await expect(nudge).toBeVisible();
 
-  // The row's door names where it goes — a station short of crew *and* short
-  // of divers renders both rows under one heading, and two links announced
-  // "Open trip" would be indistinguishable. It carries this trip's own
-  // #last-minute-deal anchor, which is what auto-opens the "Promote this trip"
-  // disclosure the deal panel lives behind (task 156).
-  await nudge.getByRole("link", { name: "Open last-minute deal" }).click();
-  await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\?view=details#last-minute-deal$/);
-  await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
-  const sendButton = page.getByRole("button", { name: /Send to \d+ diver/ });
+  // One row for everyone who wants in ("N want in"): its door is the departure's
+  // "Who wants in" panel, where the list is offered a seat, with or without a
+  // discount.
+  await nudge.getByRole("link", { name: "Offer a seat" }).click();
+  await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+#who-wants-in$/);
+  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  await page.getByLabel("Offer Nora Quinn a seat").check();
+  const sendButton = page.getByRole("button", { name: "Offer a seat to 1" });
   await expect(sendButton).toBeVisible();
+  await page.getByLabel("With a discount").check();
 
-  // Unlocks the "not_connected" gate without ever calling real Stripe (same
-  // route the visual suite uses to render Stripe-gated surfaces).
-  await request.post("/api/test/seed-stripe-account");
-  await page.reload();
   // A tap before React owns the form submits it natively and holds nothing.
   await expect(sendButton.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
   await sendButton.click();
   // The send holds eight seconds with Undo first (ADR 20260906-before-you-ask,
-  // decision 2); the outcome is allowed the hold plus the Stripe attempt.
+  // decision 2); the outcome is allowed the hold plus the Stripe attempt, and
+  // lands on Details, where the deals sent are listed.
   const stripeFailed = page.getByText(
     "Stripe couldn’t create the discount code. Try again in a moment.",
   );
@@ -103,7 +107,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await expect(page.getByText(/failed/i)).toBeVisible();
 });
 
-test("a failed send attempt does not silence the Today nudge — nothing actually went out", async ({
+test("a failed send attempt does not silence the Today row — nothing actually went out", async ({
   page,
   request,
 }) => {
@@ -122,6 +126,7 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   await waitList.locator("summary").click();
   await waitList.getByLabel("Name").fill("Priya Shah");
   await waitList.getByLabel("Email").fill("priya.e2e@example.com");
+  await waitList.getByLabel("Certification level").selectOption("open_water");
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
@@ -129,7 +134,7 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   await page.goto("/shop/blue-mantis");
   const nudge = page
     .locator("li")
-    .filter({ hasText: "3 seats open, no last-minute deal sent." })
+    .filter({ hasText: /3 seats open, \d+ want in\./ })
     // The row itself, not the day station that contains it. Since the home
     // became the day's spine every row about a departure nests inside that
     // departure's own `<li>`, and `hasText` matches an ancestor as readily as
@@ -137,34 +142,29 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
     .filter({ hasNot: page.locator("li") })
     .filter({ visible: true });
   await expect(nudge).toBeVisible();
-  // The row's door names where it goes — a station short of crew *and* short
-  // of divers renders both rows under one heading, and two links announced
-  // "Open trip" would be indistinguishable. It carries this trip's own
-  // #last-minute-deal anchor, which is what auto-opens the "Promote this trip"
-  // disclosure the deal panel lives behind (task 156).
-  await nudge.getByRole("link", { name: "Open last-minute deal" }).click();
+  await nudge.getByRole("link", { name: "Offer a seat" }).click();
   // Stripe is seeded connected but has no real key, so this send fails at the
-  // Stripe step — durable proof an *attempt* happened, but no code actually
-  // went out, so the nudge (which dedupes on a genuinely `sent` row) must
-  // keep prompting staff to try again rather than reading the attempt as done.
-  const send = page.getByRole("button", { name: /Send to \d+ divers?/ });
+  // Stripe step: durable proof an *attempt* happened, but no code actually
+  // went out, so the Today row (people still want in) keeps prompting staff.
+  await page.getByLabel("Offer Priya Shah a seat").check();
+  const send = page.getByRole("button", { name: "Offer a seat to 1" });
   await expect(send.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
   // A fixed amount rather than a percent (amendment 2026-10-09 to ADR
   // 20260729-shop-promo-codes): the attempt's line names it once per booking.
-  const dealForm = send.locator("xpath=ancestor::form");
-  await dealForm.getByRole("combobox", { name: "Discount type" }).selectOption("amount");
-  await dealForm.getByRole("spinbutton", { name: "Discount" }).fill("20");
+  await page.getByLabel("With a discount").check();
+  await page.getByRole("combobox", { name: "Discount type" }).selectOption("amount");
+  await page.getByRole("spinbutton", { name: "Discount" }).fill("20");
   await send.click();
   await expect(page.getByText("$20 off each booking ·")).toBeVisible({
     timeout: HELD_SEND_TIMEOUT_MS,
   });
 
   await page.goto("/shop/blue-mantis");
-  await expect(page.getByText("3 seats open, no last-minute deal sent.")).toBeVisible();
+  await expect(page.getByText(/3 seats open, \d+ want in\./)).toBeVisible();
 });
 
-// /api/test/seed-last-minute-unsubscribe-token mints a real
-// last_minute_list_unsubscribe_tokens row (test-only, gated identically to
+// /api/test/seed-interest-unsubscribe-token mints a real
+// interest_unsubscribe_tokens row (test-only, gated identically to
 // /api/test/reset) so this drives the actual /unsubscribe/[token] page and
 // server action, since the real send flow can't reach a live email in e2e
 // (Stripe always fails first — see the tests above) and the token is
@@ -184,7 +184,7 @@ test("a diver can self-serve unsubscribe from last-minute deal emails", async ({
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
-  const seeded = await request.post("/api/test/seed-last-minute-unsubscribe-token", {
+  const seeded = await request.post("/api/test/seed-interest-unsubscribe-token", {
     data: { shopSlug: "blue-mantis", email: "uma.e2e@example.com" },
   });
   expect(seeded.ok()).toBe(true);
@@ -235,15 +235,16 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   await page.goto("/shop/blue-mantis");
   const nudge = page
     .locator("li")
-    .filter({ hasText: "3 seats open, no last-minute deal sent." })
+    .filter({ hasText: /3 seats open, \d+ want in\./ })
     // The row itself, not the day station that contains it. Since the home
     // became the day's spine every row about a departure nests inside that
     // departure's own `<li>`, and `hasText` matches an ancestor as readily as
     // the element that holds the words.
     .filter({ hasNot: page.locator("li") })
     .filter({ visible: true });
-  await nudge.getByRole("link", { name: "Open last-minute deal" }).click();
-  await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
+  await nudge.getByRole("link", { name: "Offer a seat" }).click();
+  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  await openMoreWhoWantsIn(page);
 
   // The row a staffer reads before deciding carries the level claim as
   // self-declared; the deal list does not collect a separate nitrox claim.
@@ -253,10 +254,11 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
     .filter({ visible: true });
   await expect(recipient).toContainText("Open Water — unverified");
 
-  // And the send is still offered: informing, never gating. A filter here would
-  // quietly stop the blast reaching everyone the shop has never carded, which
+  // And the offer is still there: informing, never gating. A filter here would
+  // quietly stop the offer reaching everyone the shop has never carded, which
   // is most of a deal list.
-  await expect(page.getByRole("button", { name: /Send to \d+ diver/ })).toBeEnabled();
+  await page.getByLabel("Offer Tess Alvarez a seat").check();
+  await expect(page.getByRole("button", { name: "Offer a seat to 1" })).toBeEnabled();
 });
 
 /**
@@ -287,19 +289,38 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   await page.getByRole("button", { name: "Notify me" }).click();
   await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
 
+  // A second joiner who holds the card, so "everyone who fits" has more than
+  // one row to tick beside the seeded list.
+  await page.goto("/s/blue-mantis");
+  await dealList.locator("summary").click();
+  await dealList.getByLabel("Name").fill("Owen Achebe");
+  await dealList.getByLabel("Email").fill("owen.e2e@example.com");
+  await dealList.getByLabel("Certification level").selectOption("open_water");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("heading", { name: "You’re on the list" })).toBeVisible();
+
   await signInAsOwner(page);
-  // The night charter, not today's reef morning: the shop-wide list is the same
-  // everywhere, but only a departure the whole seeded list matches puts eleven
-  // people in front of a ten-name panel.
-  const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
-  await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
-  await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
+  // Today's reef morning, which asks for Open Water and no specialty card: the
+  // night charter asks for a Night card nobody on the list holds, so its panel
+  // is rightly empty (dive-domain review of #2656, m1).
+  await page.goto("/shop/blue-mantis");
+  await page
+    .locator("li")
+    .filter({ hasText: /3 seats open, \d+ want in\./ })
+    .filter({ hasNot: page.locator("li") })
+    .filter({ visible: true })
+    .getByRole("link", { name: "Offer a seat" })
+    .click();
+  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
+  await openMoreWhoWantsIn(page);
 
   await expect(rosterRow(page, "Nell Byrne").filter({ visible: true })).toHaveCount(0);
   await expect(page.getByText(/below this departure’s requirement/)).toHaveCount(0);
 
-  // Other eligible recipients can still receive the deal.
-  await expect(page.getByRole("button", { name: /Send to \d+ diver/ })).toBeEnabled();
+  // Other eligible recipients can still be offered a seat, and the bulk tick
+  // reaches only the rows that fit.
+  await page.getByRole("button", { name: "Tick everyone who fits" }).click();
+  await expect(page.getByRole("button", { name: /Offer a seat to \d+/ })).toBeEnabled();
 });
 
 /**

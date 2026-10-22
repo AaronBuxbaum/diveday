@@ -5369,7 +5369,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **The days somebody asked for, under the week they belong to** (ADR
        * 20260919-one-idea, slice 23f).
        *
-       * A week off the current one, because that is where the seeded leads
+       * A week off the current one, because that is where the seeded interests
        * are: `seed-date-requests.ts` places them twelve and thirteen days out,
        * and the week board is seven days wide. Addressed by `?week=` rather
        * than by clicking the pager twice — the pager has its own coverage, and
@@ -5378,7 +5378,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the week draws the days somebody asked for (${scheme})`, async ({ page }) => {
         // Derived from the fleet's frozen clock rather than written down: the
-        // seed places these leads twelve days out, so a literal date here
+        // seed places these interests twelve days out, so a literal date here
         // would rot the moment either moves. Monday-first, like the board.
         const day = new Date(e2eNow());
         day.setUTCDate(day.getUTCDate() + 12);
@@ -6558,8 +6558,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **The list, before the send** (FU-20260813,
        * ADR 20260814-self-declared-cards).
        *
-       * `trip-guests` above can never show this: the deal panel lives behind a
-       * collapsed disclosure, and it renders nothing at all until somebody is
+       * `trip-guests` above can never show this: the "Who wants in" panel renders nothing at all until somebody is
        * on the shop's last-minute list. What it photographs is the one thing
        * standing between a shop and a discount emailed to a diver who cannot
        * board — the recipient's level, marked self-declared, in the row above
@@ -6592,8 +6591,8 @@ for (const scheme of ["light", "dark"] as const) {
         // block, which is also why the public form above renders with the staff
         // preview bar. Neither affects the surface being photographed.
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
-        // The `#last-minute-deal` anchor is what auto-opens the disclosure.
-        await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
+        // The Divers tab's "Who wants in" panel is where the list is offered a seat.
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
         await page.getByText("Open Water — unverified").waitFor();
         await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-recipients", scheme);
@@ -6644,9 +6643,10 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
-        await page.getByRole("heading", { name: "Nobody to send this to yet" }).waitFor();
-        await waitForHashLanding(page);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        // Nobody on the list clears the Rescue bar, so the panel is not drawn at all.
+        await page.locator("#roster").waitFor();
+        await expect(page.locator("#who-wants-in")).toHaveCount(0);
         await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
 
@@ -6668,15 +6668,21 @@ for (const scheme of ["light", "dark"] as const) {
        * who has no certification declaration, is correctly absent from the
        * send list.
        *
-       * The night charter still carries both seeded joiners, while Selah also
-       * starts today so the headline reef departure has one marked row when a
-       * demo visitor opens it. Rowan remains tomorrow-only, keeping that first
-       * list realistic rather than alarming.
+       * The deal is sent from the Divers tab's Who wants in panel now (H-145
+       * D-3), whose "Around these dates" group lists only who fits the
+       * departure (dive-domain review of #2656, m1). The night charter asks for
+       * a Night card nobody on the list holds, so this pins the shallow
+       * Christ of the Abyss reef a week out: an Open Water bar and no specialty,
+       * inside Rowan's window, so her claim arrives with its mark.
        */
       test(`the deal panel carries the demo's own declarations (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
-        const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
+        const tripId = await seededTripId(
+          page,
+          "blue-mantis",
+          "Two-Tank Reef — Christ of the Abyss",
+        );
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
         // Both seeded joiners now read unverified (#2428: a staff-typed card
         // nobody checked is not vouched for), so wait on the first of them.
         await page
@@ -6700,9 +6706,9 @@ for (const scheme of ["light", "dark"] as const) {
        * anybody seen this card?" and must stay that; if it ever warms here, this
        * is the baseline that catches it.
        *
-       * The Invite button beside the name is in the frame deliberately. Nothing
-       * about this mark filters the list, reorders it, or disables the invite —
-       * a wait list is leads in the order they asked (ADR
+       * The tick beside the name is in the frame deliberately. Nothing
+       * about this mark filters the list, reorders it, or disables the tick —
+       * a wait list is interests in the order they asked (ADR
        * 20260813-wait-list-is-a-lead-list) and informing the staffer is the whole
        * design.
        */
@@ -6721,12 +6727,11 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#waitlist`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#who-wants-in`);
         // Scoped to the ledger: the deal panel further down the same page
         // renders the identical phrase for its own recipients, and this test is
-        // about the list that was still silent until now. (`#waitlist` is the
-        // group's band heading, not an ancestor of its rows — the rows are the
-        // band's sibling list, so the section is the narrowest honest scope.)
+        // about the list that was still silent until now. (`#who-wants-in` is the
+        // panel that holds the rows, so the roster is still the narrowest honest scope.)
         await page
           .locator("#roster")
           .getByText("Open Water · below this departure’s minimum")

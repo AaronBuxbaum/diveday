@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/group-label";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RequestAdvice } from "@/lib/request-advisor";
@@ -67,7 +67,7 @@ export function requestAdviceLines(
  *
  * The same component renders the "no date named" tail, which has a count and no
  * day, so no advice and no act: prose a date field could not hold is still a
- * lead, but it is not a day anyone can put a boat on.
+ * interest, but it is not a day anyone can put a boat on.
  *
  * `advice` is empty on a day whose planner sentence is word for word the one
  * above it — the page decides that, because only the page can see the group
@@ -78,6 +78,7 @@ export function RequestDayGroup({
   label,
   advice = [],
   add,
+  onBoard = [],
   children,
 }: {
   id: string;
@@ -86,6 +87,12 @@ export function RequestDayGroup({
   advice?: readonly RequestAdviceLine[];
   /** The same departure action on every dated group. */
   add?: { href: string; label: string };
+  /**
+   * Departures already on the board for this day, each a link to its
+   * `#who-wants-in` (ADR 20261017-one-interest-with-a-scope). "Add a departure"
+   * stays for the days with none.
+   */
+  onBoard?: readonly { href: string; label: string }[];
   children: ReactNode;
 }) {
   return (
@@ -127,6 +134,20 @@ export function RequestDayGroup({
             </Fragment>
           ))}
         </p>
+      ) : null}
+      {onBoard.length > 0 ? (
+        <ul className="mt-2 text-sm tabular-nums">
+          {onBoard.map((departure) => (
+            <li key={departure.href}>
+              <Link
+                href={departure.href}
+                className={`${tapTargetLinkClass} underline underline-offset-2`}
+              >
+                {departure.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       ) : null}
       <ul className="mt-2">{children}</ul>
     </section>

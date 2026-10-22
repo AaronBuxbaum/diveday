@@ -13,12 +13,11 @@ import {
   bookings,
   executedDives,
   incidentReports,
+  interests,
   rollCallCrewEvents,
   rollCallEvents,
   shops,
-  tripInvitations,
   trips,
-  tripWaitlistEntries,
   waiverRecords,
 } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -75,8 +74,7 @@ export async function isRehearsalTrip(
 type TripHandles = {
   tripId?: string;
   bookingId?: string;
-  waitlistEntryId?: string;
-  invitationId?: string;
+  interestId?: string;
   checkoutId?: string;
   waiverRecordId?: string;
 };
@@ -87,8 +85,7 @@ function tripHandlesOf(notification: Notification): TripHandles {
   for (const key of [
     "tripId",
     "bookingId",
-    "waitlistEntryId",
-    "invitationId",
+    "interestId",
     "checkoutId",
     "waiverRecordId",
   ] as const) {
@@ -104,7 +101,7 @@ function tripHandlesOf(notification: Notification): TripHandles {
  * drain).
  *
  * Every kind that is about a departure carries one handle back to it — the
- * departure itself, a seat, a wait-list entry, an invitation, a checkout or a
+ * departure itself, a seat, an interest, a checkout or a
  * signed release —
  * and each is resolved inside the notification's own shop. A kind that carries
  * none of them is not held here: crew changes are dropped where they are
@@ -129,26 +126,13 @@ export async function notificationHeldForRehearsal(
       .limit(1);
     if (row) tripIds.add(row.tripId);
   }
-  if (handles.waitlistEntryId) {
+  if (handles.interestId) {
     const [row] = await db
-      .select({ tripId: tripWaitlistEntries.tripId })
-      .from(tripWaitlistEntries)
-      .where(
-        and(
-          eq(tripWaitlistEntries.id, handles.waitlistEntryId),
-          eq(tripWaitlistEntries.shopId, shopId),
-        ),
-      )
+      .select({ tripId: interests.tripId })
+      .from(interests)
+      .where(and(eq(interests.id, handles.interestId), eq(interests.shopId, shopId)))
       .limit(1);
-    if (row) tripIds.add(row.tripId);
-  }
-  if (handles.invitationId) {
-    const [row] = await db
-      .select({ tripId: tripInvitations.tripId })
-      .from(tripInvitations)
-      .where(and(eq(tripInvitations.id, handles.invitationId), eq(tripInvitations.shopId, shopId)))
-      .limit(1);
-    if (row) tripIds.add(row.tripId);
+    if (row?.tripId) tripIds.add(row.tripId);
   }
   if (handles.checkoutId) {
     const [row] = await db

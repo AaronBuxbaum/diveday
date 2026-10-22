@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { DateRequestRow } from "@/db/course-inquiries";
+import type { DateInterestRow } from "@/db/interest-dates";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import type { DateRequestMatch } from "@/lib/date-requests";
@@ -13,7 +13,7 @@ import type { DateRequestMatch } from "@/lib/date-requests";
  * point of the grouping, and it used to mean the same four-line body printed
  * under each of them: five divers each appeared twice on one screen, identical
  * down to the phone number, and a staffer reading the page top to bottom could
- * not tell thirteen leads from five.
+ * not tell thirteen interests from five.
  *
  * So the full record renders once, under `homeDate` (`src/lib/date-requests.ts`),
  * and every other group it reaches gets this: who, how many, and a link up to
@@ -31,7 +31,7 @@ export function RequestReferenceRow({
   locale,
   t,
 }: {
-  request: DateRequestRow;
+  request: DateInterestRow;
   /** Never `preferred`: a first choice is where the full record renders. */
   match: Exclude<DateRequestMatch, "preferred">;
   /** The group holding the full record, and this row's link target. */
@@ -45,7 +45,7 @@ export function RequestReferenceRow({
     <LedgerRow as="li">
       <p className="min-w-0 text-sm text-muted">
         <span className="font-medium">{name}</span>
-        {request.divers ? ` · ${t("requests.divers", { count: request.divers })}` : null}
+        {request.partySize ? ` · ${t("requests.divers", { count: request.partySize })}` : null}
         {" · "}
         {/* **Underlined always, not on hover.** The link sits inside a run of
             text — the name and the head count beside it — where colour alone

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
+import { rollSailedSeriesInterests } from "@/db/interest-roll";
 import { clearFinishedRehearsals } from "@/db/rehearsals";
 import { clearPassedReopensOn } from "@/db/shops";
 import { voidStalePublicPackageInvoices } from "@/db/stale-package-invoices";
 import { rollAllSeriesForward } from "@/db/trips";
-import { rollSailedSeriesWaitlists } from "@/db/waitlist-roll";
 import { nowDate } from "@/lib/clock";
 import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
@@ -82,9 +82,9 @@ export async function GET(request: Request) {
     // A "Back on the water" date that has passed comes off Settings
     // (`clearPassedReopensOn`); the storefront had already stopped reading it.
     const reopensCleared = await clearPassedReopensOn(db);
-    // Leads nobody invited on a series date that sailed roll onto the run's
+    // Interests nobody invited on a series date that sailed roll onto the run's
     // next date (third UX review, item 12).
-    const waitlist = await rollSailedSeriesWaitlists(db);
+    const waitlist = await rollSailedSeriesInterests(db);
     // A dive package bought on the public pages and left unpaid past its
     // window is voided at Stripe and on the order (issue #2304). Its own
     // failure never fails the roll: tomorrow's pass tries again.

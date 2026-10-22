@@ -76,7 +76,7 @@ const localeSchema = z.enum(DIVER_LOCALES);
  * before per-person capture existed.
  *
  * Pass the **recipient's** locale, not "a person in the story". A night-before
- * brief addressed to the crew, a staff invite, or a lead notification landing
+ * brief addressed to the crew, a staff invite, or an interest notification landing
  * in the shop's own inbox are all about a diver but not *to* one — those stay
  * on the shop's locale, so they pass `null` here or don't call this at all.
  */
@@ -284,7 +284,7 @@ const waiverRequestSchema = z.object({
  *   by name, at a named shop, on a named day. A first cut carried `diverEmail`
  *   so `notificationSubjectEmail` could lift it into a column and legal erasure
  *   could sweep a queued copy — the hole issue #1298 closed for
- *   `course_inquiry`. It only ever half-worked: a twelve-year-old signing on a
+ *   `interest_received`. It only ever half-worked: a twelve-year-old signing on a
  *   shop tablet has no address to lift, and the row stayed unreachable. So this
  *   kind is not queued at all (`notificationIsQueueable`), and with no row to
  *   sweep there is no handle to carry. What is left is a minor's *name*, in a
@@ -374,9 +374,25 @@ const readinessLinkSchema = z.object({
   purpose: z.enum(["course_forms", "other_day", "log_entry"]).optional(),
 });
 
-const waitlistInviteSchema = z.object({
-  kind: z.literal("waitlist_invite"),
-  waitlistEntryId: z.uuid(),
+/**
+ * **An offer of a seat on one departure** (ADR 20261017-one-interest-with-a-scope),
+ * to a diver who is on the shop's records. Two kinds because the mail class
+ * (`offerMailClass`, src/lib/interests.ts) decides whether the message may carry a
+ * way out, and the schema is what makes that structural: an optional
+ * `unsubscribeUrl` is one a future caller forgets.
+ *
+ * **`seat_offer` is service mail**: the diver asked for this (H-96's test;
+ * Aaron, H-145 D-2 option b, 2026-10-17): a seat on the departure they joined
+ * the wait list for, or the reply to their own date request. It reaches them
+ * whatever their courtesy-email setting and carries no unsubscribe (issue
+ * #1953).
+ *
+ * Both keys are `seat-offer/<departure interest>/<offeredAt>`, so a deliberate
+ * re-offer is a new send and a double tap is not.
+ */
+const seatOfferBase = z.object({
+  /** The departure interest the offer is for. */
+  interestId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
@@ -387,83 +403,52 @@ const waitlistInviteSchema = z.object({
   endsAt: z.date(),
   timezone: z.string().trim().min(1).max(100),
   bookingUrl: z.url().max(2_000),
-  /** The invite timestamp, so each explicit re-invite is a distinct send. */
-  invitedAt: z.date(),
+  /** The offer timestamp, so each deliberate re-offer is a distinct send. */
+  offeredAt: z.date(),
+});
+
+const seatOfferSchema = seatOfferBase.extend({
+  kind: z.literal("seat_offer"),
+  /** What the diver asked for: this departure's wait list, or a date. Picks the words. */
+  answers: z.enum(["wait_list", "date_request"]),
+  /** The waiting party's size (fourth review, item 34). */
+  partySize: z.number().int().min(1).max(MAX_PUBLIC_PARTY_SIZE).optional(),
+});
+
+/**
+ * **Commercial mail** (Aaron, 2026-10-06, issue #1953): the shop deciding to
+ * mail someone about a seat it is selling is what 16 CFR 316.2 describes, so it
+ * carries the one-click courtesy unsubscribe, and through it the postal footer
+ * (`withPostalFooter`, render.ts), and is not sent to a person whose
+ * `courtesyEmailOptOutAt` is set.
+ */
+const seatOfferCommercialSchema = seatOfferBase.extend({
+  kind: z.literal("seat_offer_commercial"),
+  /** Who asked: the words say "a seat opened" to a waiting diver and "the shop is offering" to the rest. */
+  askedBy: z.enum(["diver", "shop"]),
   unsubscribeUrl: z.url().max(2_000),
   /** The waiting party's size (fourth review, item 34). */
   partySize: z.number().int().min(1).max(MAX_PUBLIC_PARTY_SIZE).optional(),
-  /** The run's date that filled, for an invite the nightly roll sent (item 31). */
+  /** The run's date that filled, for an offer the nightly roll sent (item 31). */
   sailedStartsAt: z.date().optional(),
-});
-
-/**
- * A staffer's answer to a diver who asked the shop for a date (`source:
- * "date_request"`). **Service mail**: the diver asked, so it carries no
- * unsubscribe and reaches someone who opted out of courtesy email (Aaron,
- * 2026-10-06, issue #1953). The cold invitation to a diver who asked for
- * nothing is `direct_trip_invitation` below.
- */
-const tripInvitationSchema = z.object({
-  kind: z.literal("trip_invitation"),
-  invitationId: z.uuid(),
-  shopId: z.uuid(),
-  to: emailAddressSchema,
-  locale: localeSchema,
-  diverName: z.string().trim().min(1).max(120),
-  shopName: z.string().trim().min(1).max(120),
-  tripTitle: tripTitleSchema,
-  startsAt: z.date(),
-  endsAt: z.date(),
-  timezone: z.string().trim().min(1).max(100),
-  bookingUrl: z.url().max(2_000),
-  invitedAt: z.date(),
-});
-
-/**
- * A staffer inviting a diver already on the shop's records to a departure they
- * never asked about (`source: "direct"`). **Commercial mail** (Aaron,
- * 2026-10-06, issue #1953): the shop deciding to mail someone about a seat it
- * is selling is what 16 CFR 316.2 describes, so it carries the one-click
- * courtesy unsubscribe — and through it the postal footer (`withPostalFooter`,
- * render.ts) — and is not sent to a person whose `courtesyEmailOptOutAt` is
- * set. Same words as `trip_invitation`; a required `unsubscribeUrl`, for the
- * reason `checkoutRecoverySchema` gives: an optional field is one a future
- * caller forgets.
- */
-const directTripInvitationSchema = tripInvitationSchema.extend({
-  kind: z.literal("direct_trip_invitation"),
-  unsubscribeUrl: z.url().max(2_000),
   /**
    * On a course session, the course's own prerequisite note in the shop's
-   * words, so an invite to Rescue or Divemaster never implies the diver
-   * already qualifies (dive-domain review N3).
+   * words, so an offer to Rescue or Divemaster never implies the diver already
+   * qualifies (dive-domain review N3).
    */
   prerequisiteNote: z.string().trim().min(1).max(2_000).optional(),
-});
-
-// A staff-triggered last-minute-fill blast (docs ADR
-// 20260727-last-minute-fill-promos): no bookingId — it goes to a
-// last-minute-list entry, not a booking — so like waitlist_invite/
-// checkout_recovery this is structurally excluded from TrackedNotification.
-const lastMinuteDealSchema = z.object({
-  kind: z.literal("last_minute_deal"),
-  shopId: z.uuid(),
-  to: emailAddressSchema,
-  locale: localeSchema,
-  diverName: z.string().trim().min(1).max(120),
-  shopName: z.string().trim().min(1).max(120),
-  tripTitle: tripTitleSchema,
-  startsAt: z.date(),
-  endsAt: z.date(),
-  timezone: z.string().trim().min(1).max(100),
-  // One of the two: a percent, or a fixed amount in the shop's currency.
+  /**
+   * **The deal this offer carries** (ADR 20260727-last-minute-fill-promos; the
+   * deal is an offer with a discount, ADR 20261017-one-interest-with-a-scope). Set
+   * together: the code the diver types at booking, one of a percent or a fixed
+   * amount (in minor units, with `currency`), and when the code stops working
+   * (pinned to the departure). Absent, this is an ordinary offer.
+   */
+  code: z.string().trim().min(1).max(40).optional(),
   discountPercent: z.number().int().min(1).max(100).optional(),
   discountAmountCents: z.number().int().positive().optional(),
   currency: z.string().trim().length(3).optional(),
-  code: z.string().trim().min(1).max(40),
-  bookingUrl: z.url().max(2_000),
-  expiresAt: z.date(),
-  unsubscribeUrl: z.url().max(2_000),
+  expiresAt: z.date().optional(),
 });
 
 // A pay-at-booking checkout the diver never finished (docs ADR
@@ -783,7 +768,7 @@ const bookingCancelledSchema = z.object({
 
 // Account-lifecycle mail (20260725-account-lifecycle-emails): no bookingId,
 // so these are structurally excluded from TrackedNotification
-// (src/db/notifications.ts) exactly like waitlist_invite already is —
+// (src/db/notifications.ts) exactly like seat_offer_commercial already is —
 // there's no shop-facing delivery issue to surface for an account's own
 // welcome/verify/reset mail.
 const welcomeSchema = z.object({
@@ -1024,13 +1009,13 @@ const founderDigestSchema = z.object({
     .max(500),
 });
 
-// The shop's own inbox learns about a lead the moment the diver submits the
+// The shop's own inbox learns about an interest the moment the diver submits the
 // public course-page composer (docs/product/archive/ux-personas-20260730-findings.md
-// task 7) — carries the course_inquiries row id so a retried send can't double
+// task 7) — carries the interest id so a retried send can't double
 // up, exactly like waiver_request keys off its own row.
-const courseInquirySchema = z.object({
-  kind: z.literal("course_inquiry"),
-  courseInquiryId: z.uuid(),
+const interestReceivedSchema = z.object({
+  kind: z.literal("interest_received"),
+  interestId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
@@ -1349,11 +1334,11 @@ const lostItemFoundSchema = z.object({
  * item 13). Addressed to the address the public form took, so it carries
  * nothing the diver typed: the course title is the shop's, the dates are
  * parsed calendar days, and the phone and hours are the shop's own
- * (`courseInquiryReceivedEmail`).
+ * (`interestReceivedAckEmail`).
  */
-const courseInquiryReceivedSchema = z.object({
-  kind: z.literal("course_inquiry_received"),
-  courseInquiryId: z.uuid(),
+const interestReceivedAckSchema = z.object({
+  kind: z.literal("interest_received_ack"),
+  interestId: z.uuid(),
   shopId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
@@ -1913,9 +1898,8 @@ export const notificationSchema = z
     guardianReleaseCopySchema,
     readinessLinkSchema,
     bookingHandoffSchema,
-    waitlistInviteSchema,
-    tripInvitationSchema,
-    directTripInvitationSchema,
+    seatOfferSchema,
+    seatOfferCommercialSchema,
     tripReminder7dSchema,
     tripReminder24hSchema,
     tripRescheduledSchema,
@@ -1932,9 +1916,8 @@ export const notificationSchema = z
     passwordChangedSchema,
     staffInviteSchema,
     checkoutRecoverySchema,
-    lastMinuteDealSchema,
     operatorAlertSchema,
-    courseInquirySchema,
+    interestReceivedSchema,
     staffReplySchema,
     weeklyDigestSchema,
     workOrderReadySchema,
@@ -1951,7 +1934,7 @@ export const notificationSchema = z
     departureNoteSchema,
     lostItemFoundSchema,
     courseCertifiedSchema,
-    courseInquiryReceivedSchema,
+    interestReceivedAckSchema,
     bookkeeperMonthEndSchema,
     bookkeeperConfirmationSchema,
     bookkeeperNoticeSchema,
@@ -1971,7 +1954,7 @@ export type Notification = z.infer<typeof notificationSchema>;
  * is almost all of them. Two are addressed elsewhere and carry a person in the
  * body:
  *
- * - `course_inquiry` mails the shop's own front desk about a diver who used
+ * - `interest_received` mails the shop's own front desk about a diver who used
  *   the public composer, and carries their name, address, phone and free-text
  *   message;
  * - an `operator_alert` for `new_account` mails DiveDay about a shop owner who just signed up.
@@ -1988,7 +1971,7 @@ export type Notification = z.infer<typeof notificationSchema>;
  */
 export function notificationSubjectEmail(notification: Notification): string | null {
   switch (notification.kind) {
-    case "course_inquiry":
+    case "interest_received":
       return notification.inquirerEmail ?? null;
     case "operator_alert":
       if (notification.event === "new_account") return notification.ownerEmail;
@@ -2004,9 +1987,9 @@ export function notificationSubjectEmail(notification: Notification): string | n
 }
 
 /**
- * **The subject's phone number, for the lead that gave one and no address.**
+ * **The subject's phone number, for the interest that gave one and no address.**
  *
- * An address is not a sufficient handle for a `course_inquiry`, and the
+ * An address is not a sufficient handle for a `interest_received`, and the
  * product says so: the public composer's reply-path rule is "an address *or* a
  * number" (`hasReplyPath`, `src/app/actions/inquiry.ts`), so a diver on a dock
  * who leaves only a phone number produces a queued notification carrying their
@@ -2015,21 +1998,21 @@ export function notificationSubjectEmail(notification: Notification): string | n
  * exactly the reason it was unreachable by `recipient_email`
  * (`security-reviewer`, on issue #1298).
  *
- * The same over-reach `scrub` already accepts for `course_inquiries.phone`
+ * The same over-reach `scrub` already accepts for the date-interest phone
  * applies here and is accepted for the same reason: a household number is
- * genuinely shared, so this can drop a partner's queued lead. That is a lost
+ * genuinely shared, so this can drop a partner's queued interest notice. That is a lost
  * retry of a notification whose underlying row the same transaction blanks
  * anyway — availability, not disclosure — and it buys the case the address
  * cannot reach.
  *
  * Matched exactly rather than normalised, because `people.phone` and
- * `course_inquiries.phone` are compared exactly by the sweep beside it and
+ * the date-interest phone are compared exactly by the sweep beside it and
  * three spellings of "the same number" would be a different decision than this
  * one.
  */
 export function notificationSubjectPhone(notification: Notification): string | null {
   switch (notification.kind) {
-    case "course_inquiry":
+    case "interest_received":
       return notification.inquirerPhone ?? null;
     case "operator_alert":
       return notification.event === "setup_request" ? (notification.contactPhone ?? null) : null;
@@ -2150,15 +2133,12 @@ export function notificationIdempotencyKey(notification: Notification): string {
         : `readiness-link/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
     case "booking_handoff":
       return `booking-handoff/${notification.bookingId}/${notification.expiresAt.toISOString()}`;
-    // Keyed by invite timestamp so a genuine re-invite (a seat opens twice) is a
-    // fresh send, while a double-submit of the same tap still dedups at the
+    // Keyed by the offer timestamp so a genuine re-offer (a seat opens twice) is
+    // a fresh send, while a double-submit of the same tap still dedups at the
     // notification_send_queue level.
-    case "trip_invitation":
-      return `trip-invitation/${notification.invitationId}/${notification.invitedAt.toISOString()}`;
-    case "direct_trip_invitation":
-      return `direct-trip-invitation/${notification.invitationId}/${notification.invitedAt.toISOString()}`;
-    case "waitlist_invite":
-      return `waitlist-invite/${notification.waitlistEntryId}/${notification.invitedAt.toISOString()}`;
+    case "seat_offer":
+    case "seat_offer_commercial":
+      return `seat-offer/${notification.interestId}/${notification.offeredAt.toISOString()}`;
     // One reminder per booking per cadence — the kind alone keys it.
     case "trip_reminder_7d":
     case "trip_reminder_24h":
@@ -2214,11 +2194,6 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // single call from double-hitting the notification_send_queue.
     case "checkout_recovery":
       return `checkout-recovery/${notification.checkoutId}`;
-    // Keyed by the code (unique per blast) and recipient, so a retry of one
-    // send never doubles that diver's email while a fresh blast (new code) on
-    // the same trip is always its own send.
-    case "last_minute_deal":
-      return `last-minute-deal/${notification.code}/${notification.to}`;
     // The event is the kind a founder alert used to be, and its key is
     // unchanged: one alert per account, ever (as welcome); one per demo entry
     // (every entry mints its own shop under a freshly-generated identity, so the
@@ -2229,8 +2204,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "operator_alert":
       return operatorAlertKey(notification);
     // One notification per submitted inquiry row.
-    case "course_inquiry":
-      return `course-inquiry/${notification.courseInquiryId}`;
+    case "interest_received":
+      return `interest-received/${notification.interestId}`;
     // One send per reply row; the row exists before the send does.
     case "staff_reply":
       return `staff-reply/${notification.replyId}`;
@@ -2241,8 +2216,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     case "lost_item_found":
       return `lost-item-found/${notification.itemId}/${notification.toldAt.toISOString()}`;
     // One acknowledgment per submitted request row.
-    case "course_inquiry_received":
-      return `course-inquiry-received/${notification.courseInquiryId}`;
+    case "interest_received_ack":
+      return `interest-received-ack/${notification.interestId}`;
     // One receipt per checkout, ever; the webhook sends it only on the call
     // that completes the checkout.
     case "party_payment_receipt":

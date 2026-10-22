@@ -4,17 +4,17 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate, nowMs } from "@/lib/clock";
 import type { TodayAction } from "@/lib/today";
 import { fileScopedShopContext } from "@/test/db";
+import { sendDeal } from "@/test/deal";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
-import { joinLastMinuteList } from "./last-minute-list";
+import { askAnytime } from "./interests";
 import { setBookingNitrox } from "./nitrox";
-import { boats, nitroxCertifications, orders, people, tripWaitlistEntries } from "./schema";
+import { boats, bookings, interests, nitroxCertifications, orders, people } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { getDepartureNeeds } from "./today-departure-needs";
 import { pushDepartureRows } from "./today-departure-rows";
 import { rowsContext } from "./today-rows-test-fixtures";
-import { sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { listStaff } from "./trips-crew";
 import { getTripOverview } from "./trips-overview";
@@ -22,10 +22,9 @@ import { setWelcomeConsent } from "./welcome-cues";
 
 const emptyWave = {
   boatWork: new Map(),
-  waitlisted: new Map(),
+  seatWanted: new Map(),
   courseCrewCounts: new Map(),
   deliveryIssues: [],
-  neverSentLastMinuteDeal: new Set(),
   lastMinuteWindows: [],
   boardedAnywhere: new Map(),
   sharedWelcomeSeats: new Map(),
@@ -60,44 +59,141 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       .returning();
     if (!front || !later) throw new Error("could not seed waiters");
     // Explicit join times so the front of the line is deterministic.
-    await db.insert(tripWaitlistEntries).values([
+    const asked = {
+      shopId: shop.id,
+      tripId: reef.id,
+      scope: "departure",
+      askedBy: "diver",
+    } as const;
+    await db.insert(interests).values([
       {
-        shopId: shop.id,
-        tripId: reef.id,
+        ...asked,
         personId: front.id,
-        createdAt: new Date("2020-01-01T00:00:00.000Z"),
+        partySize: 1,
+        askedAt: new Date("2020-01-01T00:00:00.000Z"),
       },
       {
-        shopId: shop.id,
-        tripId: reef.id,
+        ...asked,
         personId: later.id,
-        createdAt: new Date("2020-02-01T00:00:00.000Z"),
+        partySize: 1,
+        askedAt: new Date("2020-02-01T00:00:00.000Z"),
       },
     ]);
     const frontEntry = (
       await db
         .select()
-        .from(tripWaitlistEntries)
-        .where(
-          and(eq(tripWaitlistEntries.tripId, reef.id), eq(tripWaitlistEntries.personId, front.id)),
-        )
+        .from(interests)
+        .where(and(eq(interests.tripId, reef.id), eq(interests.personId, front.id)))
     )[0];
     if (!frontEntry) throw new Error("front entry missing");
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const row = work.actions.find((action) => action.id === `waitlist:${reef.id}`);
-    expect(row?.kind).toBe("waitlist_seat");
-    // Depth is counted, but the invite targets the earliest joiner specifically.
-    expect(row?.detail).toContain("2 on the wait list");
-    expect(row?.invite).toBeDefined();
-    expect(row?.invite?.entryId).toBe(frontEntry.id);
-    expect(row?.invite?.personName).toBe("Marina Reyes");
-    expect(row?.invite?.personEmail).toBe("marina@example.com");
-    expect(row?.invite?.tripId).toBe(reef.id);
-    expect(row?.invite?.bookingPath).toBe(`/s/${shop.slug}/trips/${reef.id}`);
+    const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
+    expect(row?.kind).toBe("seat_wanted");
+    // Depth is counted, but the offer targets the earliest joiner specifically.
+    expect(row?.detail).toContain("2 want in");
+    expect(row?.offer).toBeDefined();
+    expect(row?.offer?.interestId).toBe(frontEntry.id);
+    expect(row?.offer?.personName).toBe("Marina Reyes");
+    expect(row?.offer?.personEmail).toBe("marina@example.com");
+    expect(row?.offer?.tripId).toBe(reef.id);
+    expect(row?.offer?.bookingPath).toBe(`/s/${shop.slug}/trips/${reef.id}`);
   });
 
-  it("nudges an under-capacity trip departing soon that has never had a last-minute deal sent", async () => {
+  // Dive-domain review of #2656, m2: one tap must not email "a seat opened" to
+  // a party the open seats cannot hold whole; the roll already skips them.
+  it("offers the one tap to the first party that fits whole, and to nobody when none does", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const open = reef.capacity - reef.booked;
+    expect(open).toBeGreaterThan(0);
+    const [big, small] = await db
+      .insert(people)
+      .values([
+        { shopId: shop.id, fullName: "Big Party", email: "big-party@example.com" },
+        { shopId: shop.id, fullName: "Solo Diver", email: "solo@example.com" },
+      ])
+      .returning();
+    if (!big || !small) throw new Error("could not seed waiters");
+    const asked = {
+      shopId: shop.id,
+      tripId: reef.id,
+      scope: "departure",
+      askedBy: "diver",
+    } as const;
+    await db.insert(interests).values({
+      ...asked,
+      personId: big.id,
+      partySize: open + 1,
+      askedAt: new Date("2020-01-01T00:00:00.000Z"),
+    });
+
+    const alone = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const tooBig = alone.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
+    expect(tooBig?.detail).toContain("1 want in");
+    expect(tooBig?.offer).toBeUndefined();
+
+    await db.insert(interests).values({
+      ...asked,
+      personId: small.id,
+      partySize: 1,
+      askedAt: new Date("2020-02-01T00:00:00.000Z"),
+    });
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
+    expect(row?.detail).toContain("2 want in");
+    expect(row?.offer?.personName).toBe("Solo Diver");
+  });
+
+  it("does not count a diver who already holds a seat (seated means hidden)", async () => {
+    const { db, shop } = ctx;
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
+    if (!reef) throw new Error("demo reef trip missing");
+    const [seated, waiting] = await db
+      .insert(people)
+      .values([
+        { shopId: shop.id, fullName: "Ines Seated", email: "ines@example.com" },
+        { shopId: shop.id, fullName: "Omar Waiting", email: "omar@example.com" },
+      ])
+      .returning();
+    if (!seated || !waiting) throw new Error("could not seed people");
+    const asked = {
+      shopId: shop.id,
+      tripId: reef.id,
+      scope: "departure",
+      askedBy: "diver",
+    } as const;
+    await db.insert(interests).values([
+      {
+        ...asked,
+        personId: seated.id,
+        partySize: 1,
+        askedAt: new Date("2020-01-01T00:00:00.000Z"),
+      },
+      {
+        ...asked,
+        personId: waiting.id,
+        partySize: 1,
+        askedAt: new Date("2020-02-01T00:00:00.000Z"),
+      },
+    ]);
+    await db.insert(bookings).values({
+      bookedAs: "diver",
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: seated.id,
+    });
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
+    expect(row?.detail).toContain("1 want in");
+    expect(row?.offer?.personName).toBe("Omar Waiting");
+  });
+
+  it("folds the last-minute list into the one seat_wanted row: N want in, with the panel as its door", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -106,7 +202,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     // Somebody to send the deal to. A diver who states no dates is around for
     // every departure — without one on the list the row is correctly absent
     // (the test below), so this is the row's premise, not scenery.
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -114,9 +210,15 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const row = work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`);
-    expect(row?.kind).toBe("last_minute_fill");
+    const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
+    expect(row?.kind).toBe("seat_wanted");
     expect(row?.detail).toContain(`${reef.capacity - reef.booked} seats open`);
+    expect(row?.detail).toMatch(/\d+ want in/);
+    // Nobody waits for this boat itself, so there is no one to offer in place:
+    // the tap opens the panel, where the list is offered a seat together.
+    expect(row?.offer).toBeUndefined();
+    expect(row?.href).toContain("#who-wants-in");
+    expect(work.actions.some((action) => action.id.startsWith("last-minute-fill"))).toBe(false);
   });
 
   /** The seats to fill are the seats on sale (H-107, #2388), not the stated number. */
@@ -130,7 +232,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       .set({ certifiedPassengers: reef.booked + 1 })
       .where(eq(boats.id, reef.boatId));
     expect(reef.capacity - reef.booked).toBeGreaterThan(1);
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -138,7 +240,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    const row = work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`);
+    const row = work.actions.find((action) => action.id === `seat-wanted:${reef.id}`);
     expect(row?.detail).toMatch(/^1 seat open/);
   });
 
@@ -156,7 +258,7 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     // sharper case than an empty list, because the entry exists and still must
     // not count.
     const nextYear = new Date(nowMs() + 300 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
@@ -165,12 +267,10 @@ describe("departure rows on the queue, read through getTodayWork", () => {
     });
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(
-      work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`),
-    ).toBeUndefined();
+    expect(work.actions.find((action) => action.id === `seat-wanted:${reef.id}`)).toBeUndefined();
   });
 
-  it("stops nudging once a last-minute deal has actually been sent for that trip", async () => {
+  it("keeps the row after a deal went out: the list still wants in, and the panel says who was offered", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -182,23 +282,23 @@ describe("departure rows on the queue, read through getTodayWork", () => {
       payoutsEnabled: true,
       detailsSubmitted: true,
     });
-    await joinLastMinuteList(db, {
+    await askAnytime(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
       email: "nora@example.com",
       declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
     });
-    const sent = await sendLastMinuteDealBlast(
+    const sent = await sendDeal(
       db,
       { shopId: shop.id, shopSlug: shop.slug, tripId: reef.id, discountPercent: 25 },
       fakePromotions(),
     );
     expect(sent.ok).toBe(true);
 
+    // One item for everyone who wants in, so a sent deal no longer retires it
+    // (the one-shot "no deal sent yet" rule went with `last_minute_fill`).
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(
-      work.actions.find((action) => action.id === `last-minute-fill:${reef.id}`),
-    ).toBeUndefined();
+    expect(work.actions.find((action) => action.id === `seat-wanted:${reef.id}`)).toBeDefined();
   });
 
   it("raises a nitrox request whose card stopped being verified", async () => {

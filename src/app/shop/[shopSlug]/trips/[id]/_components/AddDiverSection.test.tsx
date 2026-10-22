@@ -87,7 +87,7 @@ describe("AddDiverSection", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "Add to wait list" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Add to who’s waiting" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/divers/new?surface=departure&tripId=trip-1&waitlist=true",
     );

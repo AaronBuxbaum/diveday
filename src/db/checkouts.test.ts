@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import type { CheckoutSessionLookupResult, CheckoutSessionSnapshot } from "@/lib/payments/checkout";
 import { advanceClock } from "@/test/clock";
 import { fileScopedShopContext, seededShopContext } from "@/test/db";
+import { sendDeal } from "@/test/deal";
 import { fakeCheckout, fakeEmail, fakePromotions, recordingCheckout } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import {
@@ -17,7 +18,7 @@ import {
   settledPartyPayment,
   startBookingCheckout,
 } from "./checkouts";
-import { joinLastMinuteList } from "./last-minute-list";
+import { askAnytime } from "./interests";
 import { retryBookingConfirmation } from "./notifications";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import {
@@ -30,7 +31,7 @@ import {
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency, setShopPassThroughFee, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
+import { getActiveTripPromoByCode } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -40,9 +41,9 @@ import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
 const ctx = fileScopedShopContext();
 
 /**
- * A live trip-scoped last-minute deal on `tripId`, minted the way a shop
- * really mints one — someone on the last-minute list, a real blast, then the
- * diver's typed code resolved back through `getActiveTripPromoByCode`. That
+ * A live trip-scoped last-minute deal on `tripId`, minted the way a shop really
+ * mints one — someone on the last-minute list, a real offer with a discount, then
+ * the diver's typed code resolved back through `getActiveTripPromoByCode`. That
  * whole path leaves both shop-promo columns null on the checkout, which is
  * exactly the condition PAY-M3's last flavor lives in.
  */
@@ -52,24 +53,16 @@ async function sentTripDeal(
   tripId: string,
   discountPercent: number,
 ) {
-  await joinLastMinuteList(db, {
+  await askAnytime(db, {
     shopId,
     fullName: "Nora Quinn",
     email: "nora@example.com",
     declaration: { level: "open_water" as const, noCertification: false, nitrox: false },
   });
-  const blast = await sendLastMinuteDealBlast(
+  const blast = await sendDeal(
     db,
     { shopId, shopSlug: "blue-mantis", tripId, discountPercent },
-    fakePromotions({
-      async createTripPromotion() {
-        return {
-          status: "created",
-          stripeCouponId: "coupon_trip_deal",
-          stripePromotionCodeId: "promo_trip_deal",
-        };
-      },
-    }),
+    fakePromotions(),
   );
   if (!blast.ok) throw new Error(`last-minute blast failed: ${blast.reason}`);
   const promo = await getActiveTripPromoByCode(db, { shopId, tripId, code: blast.code });

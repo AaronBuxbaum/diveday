@@ -104,13 +104,15 @@ describe("NoShowSalvage", () => {
       <NoShowSalvage
         copy={salvage({
           line: "2 divers are waiting for this seat",
-          links: [{ href: "/shop/blue-mantis/trips/trip-1#waitlist", label: "Open the wait list" }],
+          links: [
+            { href: "/shop/blue-mantis/trips/trip-1#who-wants-in", label: "See who wants in" },
+          ],
         })}
       />,
     );
     expect(screen.getByText("2 divers are waiting for this seat")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Open the wait list" }).getAttribute("href")).toBe(
-      "/shop/blue-mantis/trips/trip-1#waitlist",
+    expect(screen.getByRole("link", { name: "See who wants in" }).getAttribute("href")).toBe(
+      "/shop/blue-mantis/trips/trip-1#who-wants-in",
     );
   });
 

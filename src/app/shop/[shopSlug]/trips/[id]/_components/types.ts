@@ -1,22 +1,17 @@
 import type { listDiveSites } from "@/db/dive-sites";
+import type { DepartureInterestRow } from "@/db/interests";
 import type {
   getTripRequirements,
   getTripSiteRequirement,
   listTripReadiness,
 } from "@/db/readiness";
-import type {
-  getTripRoster,
-  getTripWaitlist,
-  getTripWithBooked,
-  listStaff,
-  listTripDives,
-} from "@/db/trips";
+import type { getTripRoster, getTripWithBooked, listStaff, listTripDives } from "@/db/trips";
 import type { listTripWaiverStatuses } from "@/db/waivers";
 import type { RentalFit } from "@/lib/dive-prep";
 
 export type Trip = NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
 export type RosterEntry = Awaited<ReturnType<typeof getTripRoster>>[number];
-export type Waitlist = Awaited<ReturnType<typeof getTripWaitlist>>;
+export type Waitlist = DepartureInterestRow[];
 export type StaffList = Awaited<ReturnType<typeof listStaff>>;
 export type TripDiveList = Awaited<ReturnType<typeof listTripDives>>;
 export type DiveSiteList = Awaited<ReturnType<typeof listDiveSites>>;

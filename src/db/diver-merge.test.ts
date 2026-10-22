@@ -32,6 +32,7 @@ import {
   certifications,
   gearItems,
   gearReservations,
+  interests,
   internalNotes,
   people,
   personRoles,
@@ -41,12 +42,11 @@ import {
   rollCallEvents,
   shops,
   tripDeskEvents,
-  tripInvitations,
   trips,
-  tripWaitlistEntries,
   waiverRecords,
   waiverTemplates,
 } from "./schema";
+import { RETIRED_TABLE_NAMES } from "./schema/retired";
 
 async function mergeFixtures() {
   const { db, shop } = ctx;
@@ -422,41 +422,27 @@ describe("diver record merge, a seat that is already over", () => {
     expect(await holder(f, sourceSeat.id)).toBe(f.source.id);
   });
 
-  it("drops the merged-away record's duplicate wait-list and invitation rows on the shared departure", async () => {
+  it("drops the merged-away record's duplicate departure and anytime interests", async () => {
     const f = await mergeFixtures();
     await seatBoth(f, "cancelled", "booked");
-    await f.db.insert(tripWaitlistEntries).values([
-      { shopId: f.shop.id, tripId: f.trip.id, personId: f.source.id },
-      { shopId: f.shop.id, tripId: f.trip.id, personId: f.survivor.id },
-    ]);
-    await f.db.insert(tripInvitations).values([
-      {
-        shopId: f.shop.id,
-        tripId: f.trip.id,
-        source: "direct",
-        personId: f.source.id,
-        createdByPersonId: f.owner.id,
-      },
-      {
-        shopId: f.shop.id,
-        tripId: f.trip.id,
-        source: "direct",
-        personId: f.survivor.id,
-        createdByPersonId: f.owner.id,
-      },
-    ]);
+    const interest = (personId: string, scope: "departure" | "anytime") => ({
+      ...(scope === "departure" ? { tripId: f.trip.id, partySize: 1 } : {}),
+      shopId: f.shop.id,
+      scope,
+      askedBy: "diver" as const,
+      personId,
+    });
+    const both = (id: string) => [interest(id, "departure"), interest(id, "anytime")];
+    await f.db.insert(interests).values([...both(f.source.id), ...both(f.survivor.id)]);
     expect((await merge(f)).ok).toBe(true);
-    const waitlist = await f.db
-      .select({ personId: tripWaitlistEntries.personId })
-      .from(tripWaitlistEntries)
-      .where(eq(tripWaitlistEntries.tripId, f.trip.id));
-    expect(waitlist.filter((row) => row.personId === f.survivor.id)).toHaveLength(1);
-    expect(waitlist.filter((row) => row.personId === f.source.id)).toHaveLength(0);
-    const invitations = await f.db
-      .select({ personId: tripInvitations.personId })
-      .from(tripInvitations)
-      .where(eq(tripInvitations.tripId, f.trip.id));
-    expect(invitations.map((row) => row.personId)).toEqual([f.survivor.id]);
+    const rows = await f.db
+      .select({ personId: interests.personId, scope: interests.scope })
+      .from(interests)
+      .where(inArray(interests.personId, [f.source.id, f.survivor.id]));
+    expect(rows.sort((a, b) => a.scope.localeCompare(b.scope))).toEqual([
+      { personId: f.survivor.id, scope: "anytime" },
+      { personId: f.survivor.id, scope: "departure" },
+    ]);
   });
 
   it("leaves the kept record's live seat Ready", async () => {
@@ -710,7 +696,9 @@ describe("every person_id column in the schema has a merge answer", () => {
       where table_schema = 'public' and column_name = 'person_id'
       order by table_name
     `);
-    const inSchema = result.rows.map((row) => String((row as { table_name: string }).table_name));
+    const inSchema = result.rows
+      .map((row) => String((row as { table_name: string }).table_name))
+      .filter((table) => !RETIRED_TABLE_NAMES.includes(table));
     expect(inSchema.length).toBeGreaterThan(20);
 
     const classified = new Set<string>([
@@ -746,10 +734,12 @@ describe("every person_id column in the schema has a merge answer", () => {
         and column_name <> 'person_id'
       order by table_name, column_name
     `);
-    const inSchema = result.rows.map((row) => {
-      const { table_name, column_name } = row as { table_name: string; column_name: string };
-      return `${table_name}.${column_name}`;
-    });
+    const inSchema = result.rows
+      .filter((row) => !RETIRED_TABLE_NAMES.includes((row as { table_name: string }).table_name))
+      .map((row) => {
+        const { table_name, column_name } = row as { table_name: string; column_name: string };
+        return `${table_name}.${column_name}`;
+      });
     expect(inSchema.length).toBeGreaterThan(20);
 
     const classified = new Set<string>(Object.keys(PERSON_COLUMNS_DELIBERATELY_UNMOVED));
@@ -777,10 +767,12 @@ describe("every person_id column in the schema has a merge answer", () => {
       where con.contype = 'f' and ref.relname = 'people' and ns.nspname = 'public'
       order by 1, 2
     `);
-    const foreignKeys = result.rows.map((row) => {
-      const { table_name, column_name } = row as { table_name: string; column_name: string };
-      return { table: table_name, column: column_name };
-    });
+    const foreignKeys = result.rows
+      .map((row) => {
+        const { table_name, column_name } = row as { table_name: string; column_name: string };
+        return { table: table_name, column: column_name };
+      })
+      .filter(({ table }) => !RETIRED_TABLE_NAMES.includes(table));
     expect(foreignKeys.length).toBeGreaterThan(20);
 
     const bareTables = new Set<string>([

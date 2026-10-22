@@ -12,6 +12,7 @@ import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals"
 import { type CheckoutPromo, startBookingCheckout } from "@/db/checkouts";
 import { type AppDb, getDb } from "@/db/client";
 import { recordShopMilestone } from "@/db/founder-metrics";
+import { askForDeparture } from "@/db/interests";
 import { busyOnLockWait } from "@/db/lock-bounds";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
@@ -23,7 +24,6 @@ import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getActiveTripPromoByCode } from "@/db/trip-promos";
 import { getTripWithBooked } from "@/db/trips";
-import { joinTripWaitlist } from "@/db/waitlist";
 import {
   issueJoinWaiverLink,
   issueWaiverOnJoin,
@@ -965,7 +965,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
   if (!shopNow) {
     redirect(`${publicTripPath(shopSlug, tripId)}?error=unavailable${embedParam(embed, "&")}`);
   }
-  const outcome = await joinTripWaitlist(dbi, {
+  const outcome = await askForDeparture(dbi, {
     shopId: shopNow.id,
     tripId,
     fullName: parsed.data.fullName,
@@ -985,7 +985,7 @@ export async function joinWaitlist({ shopSlug, tripId, embed }: TripRef, formDat
     await trackEvent({ name: "waitlist_joined", source: "diver" });
     revalidateAndRedirect(
       publicTripPath(shopSlug, tripId),
-      `${publicTripPath(shopSlug, tripId)}?waitlist=${outcome.entryId}${embedParam(embed, "&")}`,
+      `${publicTripPath(shopSlug, tripId)}?interest=${outcome.interestId}${embedParam(embed, "&")}`,
     );
   }
   const code =

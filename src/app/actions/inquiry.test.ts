@@ -76,7 +76,7 @@ describe("submitInquiryAction, the diver's acknowledgment", () => {
       rateLimitKey("course-inquiry-ack", "ana@example.com"),
       RATE_LIMITS.courseInquiryAck,
     );
-    expect(sentKinds()).toContain("course_inquiry_received");
+    expect(sentKinds()).toContain("interest_received_ack");
   });
 
   it("drops the acknowledgment once that address has had its share, and keeps the request", async () => {
@@ -86,6 +86,6 @@ describe("submitInquiryAction, the diver's acknowledgment", () => {
         : { allowed: true, retryAfterMs: 0 },
     );
     expect(await submit(requestForm("ana@example.com"))).toEqual({ success: true });
-    expect(sentKinds()).not.toContain("course_inquiry_received");
+    expect(sentKinds()).not.toContain("interest_received_ack");
   });
 });

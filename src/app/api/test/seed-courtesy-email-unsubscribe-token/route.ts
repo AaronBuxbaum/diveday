@@ -12,7 +12,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * existing person and hands back the raw token — the only way an e2e spec
  * can drive `/unsubscribe/[token]`'s courtesy-email branch through its real
  * page and server action, mirroring
- * `/api/test/seed-last-minute-unsubscribe-token`'s reasoning: the token is
+ * `/api/test/seed-interest-unsubscribe-token`'s reasoning: the token is
  * otherwise only ever readable from inside a `waitlist_invite`/`trip_recap`
  * email and is hashed at rest. Exists only for e2e coverage; gated
  * identically to `/api/test/reset`, so it can never be reachable in a real

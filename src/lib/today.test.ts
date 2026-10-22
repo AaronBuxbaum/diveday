@@ -513,7 +513,7 @@ describe("filterActionsForRoles", () => {
     action({ id: "4", kind: "certification" }),
     action({ id: "5", kind: "waiver" }),
     action({ id: "6", kind: "payment" }),
-    action({ id: "7", kind: "last_minute_fill" }),
+    action({ id: "7", kind: "seat_wanted" }),
     action({ id: "8", kind: "gear_due_back" }),
   ];
 
@@ -1084,7 +1084,7 @@ describe("readNeedsYou, one reading for every role", () => {
     // The blocked diver's fix: the desk's, withheld from a captain's lens.
     action({ id: "waiver", kind: "waiver", subject: "Priya", departure: boat("t1") }),
     action({ id: "prep", kind: "dive_prep", subject: "4 sizes", departure: boat("t1") }),
-    action({ id: "fill", kind: "last_minute_fill", subject: "3 seats", departure: boat("t1") }),
+    action({ id: "fill", kind: "seat_wanted", subject: "3 seats", departure: boat("t1") }),
     action({ id: "messages", kind: "unanswered_messages", subject: "3", departure: undefined }),
   ];
   const ROLES = [

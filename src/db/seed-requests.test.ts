@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { groupDateRequests } from "@/lib/date-requests";
 import { seededShopContext } from "@/test/db";
-import { listDateRequestsForStaff } from "./course-inquiries";
+import { listOpenDateInterests } from "./interest-dates";
 import { dateAt } from "./seed-clock";
 
 /**
  * The demo's request pile is a product fixture, not filler. It needs to show
- * course and ordinary-dive leads, linked and unlinked people, dated and
+ * course and ordinary-dive interests, linked and unlinked people, dated and
  * undated asks, and the preferred/alternate/flexible grouping the staff page
  * is built around. This test keeps a future seed cleanup from quietly turning
  * that surface back into one repetitive card.
  */
 describe("seeded requests", () => {
-  it("keeps a believable mix of leads and date-grouping states", async () => {
+  it("keeps a believable mix of interests and date-grouping states", async () => {
     const { db, shop } = await seededShopContext();
-    const page = await listDateRequestsForStaff(db, shop.id);
+    const page = await listOpenDateInterests(db, shop.id);
 
     expect(page.total).toBe(7);
     expect(page.pageCount).toBe(1);
@@ -25,7 +25,7 @@ describe("seeded requests", () => {
     expect(courseRequests).toHaveLength(3);
     expect(diveRequests).toHaveLength(4);
     expect(page.rows.every((row) => row.courseTitle || row.interest)).toBe(true);
-    expect(page.rows.every((row) => row.divers === null || row.divers >= 1)).toBe(true);
+    expect(page.rows.every((row) => row.partySize === null || row.partySize >= 1)).toBe(true);
 
     expect(page.rows.find((row) => row.name === "Priya Sharma")).toMatchObject({
       courseTitle: "Advanced Open Water Diver",

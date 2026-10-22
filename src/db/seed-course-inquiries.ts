@@ -1,33 +1,33 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
-import { courseInquiries, people } from "./schema";
+import { interests, people } from "./schema";
 import { at, dateAt } from "./seed-clock";
 
 /**
- * Three course leads off the public course pages — the shape a shop's inquiry
+ * Three course interests off the public course pages — the shape a shop's inquiry
  * pile actually has, which is not "three rows that all look the same".
  *
  * The point of seeding them is the `person_id` column and its three states
  * (ADR 20260802-diver-data-erasure, and the DATA-H1 residue the 2026-08-02
  * review left open). It is resolved at capture time by **exact email match**
  * against a live diver of this shop, never fuzzily and never from a phone
- * number, and it is never back-filled. So a lead can be:
+ * number, and it is never back-filled. So an interest can be:
  *
  * - **linked** — an existing diver asking about their next card, matched on the
  *   address already on their record;
- * - **unlinked with an address** — a stranger, which is what most leads are;
+ * - **unlinked with an address** — a stranger, which is what most interests are;
  * - **unlinked with no address at all** — someone who left a phone number only.
  *   This is the case the residue is about: nothing can ever tie that row to a
  *   person, so an erasure request from the human behind it will not reach it,
- *   and closing that needs a human saying "this lead is that diver".
+ *   and closing that needs a human saying "this interest is that diver".
  *
  * Until this scenario existed all three states were unrepresented, which meant
- * `course_inquiries.csv` in the export bundle was a header row with nothing
+ * `interests.csv` in the export bundle was a header row with nothing
  * under it on every demo (DATA-A10).
  *
- * The rows are written directly rather than through `recordCourseInquiry`
- * (src/db/course-inquiries.ts) because that helper takes the app's `AppDb` and
+ * The rows are written directly rather than through `askForDate`
+ * (src/db/interests.ts) because that helper takes the app's `AppDb` and
  * the seed runs on a plain executor. The matching rule is reproduced here on
  * exactly one row, by looking the diver up by the address the seed itself gave
  * them — never by re-implementing the fuzzy version the helper deliberately
@@ -44,7 +44,7 @@ export async function seedCourseInquiries(
 
   // A diver the shop already knows, asking about their next card. Live rows
   // only — the same restriction `livePersonIdForEmail` applies, and for the
-  // same reason: linking a lead to a removed duplicate would point a later
+  // same reason: linking an interest to a removed duplicate would point a later
   // erasure at the wrong record.
   const [regular] = await db
     .select({ id: people.id, email: people.email })
@@ -59,6 +59,8 @@ export async function seedCourseInquiries(
       ? [
           {
             shopId,
+            scope: "date" as const,
+            askedBy: "diver" as const,
             courseId: advancedCourseId,
             personId: regular.id,
             name: "Priya Sharma",
@@ -71,10 +73,10 @@ export async function seedCourseInquiries(
             preferredDate: dateAt(12),
             alternateDate: null,
             dateFlexible: true,
-            divers: 1,
+            partySize: 1,
             // i18n-exempt: what a diver typed into the shop's own inquiry form, stored verbatim — a fixture value, not product copy
             message: "Loved the Benwood boat. Ready for the deep dives whenever you have space.",
-            createdAt: at(-6, 19, 12),
+            askedAt: at(-6, 19, 12),
           },
         ]
       : []),
@@ -82,10 +84,12 @@ export async function seedCourseInquiries(
       ? [
           {
             shopId,
+            scope: "date" as const,
+            askedBy: "diver" as const,
             courseId: openWaterCourseId,
             personId: null,
             name: "Marisol Vega",
-            // Nobody at this shop holds this address, so the lead stays
+            // Nobody at this shop holds this address, so the interest stays
             // unlinked — the ordinary case, and not a bug.
             email: demoEmail("marisol.vega"),
             phone: "+1-305-555-0410",
@@ -94,11 +98,11 @@ export async function seedCourseInquiries(
             preferredDate: dateAt(26),
             alternateDate: dateAt(33),
             dateFlexible: false,
-            divers: 2,
+            partySize: 2,
             // i18n-exempt: what a diver typed into the shop's own inquiry form, stored verbatim — a fixture value, not product copy
             message:
               "My partner and I have never dived. Is the three-day course beginner-friendly?",
-            createdAt: at(-3, 21, 41),
+            askedAt: at(-3, 21, 41),
           },
         ]
       : []),
@@ -106,6 +110,8 @@ export async function seedCourseInquiries(
       ? [
           {
             shopId,
+            scope: "date" as const,
+            askedBy: "diver" as const,
             courseId: nitroxCourseId,
             personId: null,
             // No name and no address: a phone number typed on a dock in a
@@ -115,14 +121,14 @@ export async function seedCourseInquiries(
             phone: "+1-786-555-0411",
             experienceLevel: "lapsed" as const,
             timing: null,
-            divers: null,
+            partySize: null,
             // i18n-exempt: what a diver typed into the shop's own inquiry form, stored verbatim — a fixture value, not product copy
             message: "Certified in 2014, haven't dived since. Call me?",
-            createdAt: at(-1, 8, 5),
+            askedAt: at(-1, 8, 5),
           },
         ]
       : []),
   ];
 
-  if (rows.length > 0) await db.insert(courseInquiries).values(rows);
+  if (rows.length > 0) await db.insert(interests).values(rows);
 }

@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import type { CsvValue, ExportTable } from "@/lib/export";
 import { fileScopedShopContext } from "@/test/db";
 import { loadDiverExportBundleInput, loadShopExportBundleInput } from "./export";
-import { bookings, people } from "./schema";
+import { bookings, interests, people, trips } from "./schema";
 
 const ctx = fileScopedShopContext({ history: true });
 
@@ -142,6 +142,97 @@ describe("the export bundle, pinned", () => {
     const dumped = dumpOnMismatch("divers", all);
     await expect(lines.join("\n"), `normalized bundles written to ${dumped}`).toMatchFileSnapshot(
       "./__snapshots__/export-bundle.divers.snap",
+    );
+  });
+
+  // Security review of #2656, minor 4: the seeded divers hold no interest, so the
+  // person scope of `interests.csv` was never pinned. One diver who waited, joined
+  // the last-minute list and asked for a date, beside a stranger's request
+  // attached to the same departure that must not reach her bundle.
+  it("pins a diver's own interests.csv: every scope she asked in, nobody else's row", async () => {
+    const { db, shop } = ctx;
+    const [diver] = await db
+      .select({ id: people.id, email: people.email })
+      .from(people)
+      .innerJoin(bookings, eq(bookings.personId, people.id))
+      .where(eq(people.shopId, shop.id))
+      .groupBy(people.id, people.email)
+      .orderBy(desc(count(bookings.id)), people.fullName)
+      .limit(1);
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .orderBy(desc(trips.startsAt))
+      .limit(1);
+    if (!diver || !trip) throw new Error("seeded diver or trip missing");
+    const askedAt = new Date("2026-05-01T12:00:00Z");
+    const [own, stranger] = await db
+      .insert(interests)
+      .values([
+        {
+          shopId: shop.id,
+          scope: "date",
+          askedBy: "diver",
+          personId: diver.id,
+          interest: "wrecks",
+          email: diver.email,
+          askedAt,
+        },
+        {
+          shopId: shop.id,
+          scope: "date",
+          askedBy: "diver",
+          interest: "reef",
+          name: "Stranger Sam",
+          email: "sam@example.com",
+          askedAt,
+        },
+      ])
+      .returning({ id: interests.id });
+    if (!own || !stranger) throw new Error("date interests missing");
+    await db.insert(interests).values([
+      {
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        personId: diver.id,
+        partySize: 2,
+        askedAt,
+      },
+      {
+        shopId: shop.id,
+        scope: "anytime",
+        askedBy: "diver",
+        personId: diver.id,
+        availableFrom: "2026-06-01",
+        askedAt,
+        closedAt: askedAt,
+        closedAs: "unsubscribed",
+      },
+      {
+        shopId: shop.id,
+        scope: "departure",
+        askedBy: "diver",
+        tripId: trip.id,
+        parentInterestId: stranger.id,
+        name: "Stranger Sam",
+        email: "sam@example.com",
+        partySize: 1,
+        askedAt,
+      },
+    ]);
+
+    const input = await loadDiverExportBundleInput(db, shop.id, diver.id);
+    const table = input?.tables.find((candidate) => candidate.file === "interests.csv");
+    if (!table) throw new Error("interests.csv missing");
+    const [file] = normalizeTables([table]);
+    expect(table.rows).toHaveLength(3);
+    expect(table.header).not.toContain("closed_as");
+    expect(file?.text).not.toContain("Stranger Sam");
+    await expect(`${file?.text}\n`).toMatchFileSnapshot(
+      "./__snapshots__/export-bundle.diver-interests.snap",
     );
   });
 });

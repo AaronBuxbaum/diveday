@@ -4,6 +4,7 @@ import { MINUTE_MS, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import { fileScopedShopContext } from "@/test/db";
+import { departureInterest } from "@/test/interests";
 import { createBooking } from "./bookings";
 import { checkInBooking, undoCheckInBooking } from "./check-in";
 import { recordRollCall } from "./manifests";
@@ -18,6 +19,7 @@ import {
   bookings,
   certifications,
   courses,
+  interests,
   orderLineItems,
   orders,
   paymentOperationIntents,
@@ -26,7 +28,6 @@ import {
   shops,
   tripRequirements,
   trips,
-  tripWaitlistEntries,
 } from "./schema";
 import {
   createTrip,
@@ -920,10 +921,9 @@ describe("noShowSalvage", () => {
       .limit(2);
     const [uninvited, invited] = waiting;
     if (!uninvited || !invited) throw new Error("seeded people missing");
-    await db.insert(tripWaitlistEntries).values([
-      { shopId: shop.id, tripId: trip.id, personId: uninvited.id },
-      { shopId: shop.id, tripId: trip.id, personId: invited.id, invitedAt: now },
-    ]);
+    const ask = (personId: string, offeredAt?: Date) =>
+      departureInterest({ shopId: shop.id, tripId: trip.id, personId, offeredAt });
+    await db.insert(interests).values([ask(uninvited.id), ask(invited.id, now)]);
 
     expect(await salvageFor(db, { shopId: shop.id, tripId: trip.id, personId, now })).toEqual({
       kind: "waitlist",
@@ -1155,8 +1155,8 @@ describe("noShowSalvage", () => {
       trip: theirTrip,
     } = await otherTenant(db, now, "other-reef-salvage");
     await db
-      .insert(tripWaitlistEntries)
-      .values({ shopId: other.id, tripId: theirTrip.id, personId: stranger.id });
+      .insert(interests)
+      .values(departureInterest({ shopId: other.id, tripId: theirTrip.id, personId: stranger.id }));
 
     expect(await salvageFor(db, { shopId: shop.id, tripId: theirTrip.id, personId, now })).toEqual({
       kind: "none",

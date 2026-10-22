@@ -1,293 +1,30 @@
-import { and, asc, count, countDistinct, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import {
-  filterEligibleLastMinuteRecipients,
-  generateLastMinutePromoCode,
-  isValidLastMinuteDiscountPercent,
-  lastMinuteEntryMatchesTripDate,
-  orderLastMinuteRecipients,
-} from "@/lib/last-minute-list";
-import { minorToMajor } from "@/lib/money";
-import { type NotificationProvider, publicAppUrl, recipientLocale } from "@/lib/notifications";
-import type { PromotionProvider } from "@/lib/payments/promotions";
-import {
-  isValidPromoDiscountAmountCents,
-  type PromoDiscount,
-  promoDiscountColumns,
-} from "@/lib/promo-codes";
-import { publicTripPath } from "@/lib/public-routes";
-import { unionRequirements } from "@/lib/requirement";
-import { spotsRemaining } from "@/lib/trips";
-import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import type { AppDb, DbExecutor } from "./client";
-import { issueLastMinuteListUnsubscribeToken, listLastMinuteList } from "./last-minute-list";
-import { notificationProviderForDb, sendNotificationBatch } from "./notifications";
+import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { queryAll } from "./query-helpers";
-import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookingCheckoutBookings,
   bookingCheckouts,
+  interests,
   people,
   type TripLastMinutePromo,
-  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   trips,
 } from "./schema";
-import { listCertificationSummaries } from "./self-declared-cards";
-import { getShopById } from "./shops";
-import { canAcceptPayments, getShopCurrency, getShopStripeAccount } from "./stripe-accounts";
-import { promotionProviderFromEnvironment } from "./stripe-providers";
 import { liveTrip } from "./trips-live";
-import { getTripWithBooked } from "./trips-record";
-import { getTripWaitlist } from "./trips-roster";
-
-export type SendLastMinuteDealInput = {
-  shopId: string;
-  shopSlug: string;
-  tripId: string;
-  /** Percent off. Exactly one of this and `discountAmountCents`. */
-  discountPercent?: number | null;
-  /**
-   * A fixed amount off the whole booking, in minor units — once per checkout,
-   * never per diver, and never below zero (`discountOffCents`).
-   */
-  discountAmountCents?: number | null;
-  createdByPersonId?: string;
-  recipientPersonIds?: string[];
-};
-
-/** The one discount a deal asks for, or null when it asks for none, both, or one out of range. */
-export function lastMinuteDealDiscount(input: {
-  discountPercent?: number | null;
-  discountAmountCents?: number | null;
-}): PromoDiscount | null {
-  const percent = input.discountPercent ?? null;
-  const amount = input.discountAmountCents ?? null;
-  if ((percent === null) === (amount === null)) return null;
-  if (percent !== null) {
-    return isValidLastMinuteDiscountPercent(percent) ? { kind: "percent", percent } : null;
-  }
-  return isValidPromoDiscountAmountCents(amount) ? { kind: "amount", amountCents: amount } : null;
-}
-
-export type SendLastMinuteDealOutcome =
-  | { ok: true; promoId: string; code: string; recipientCount: number }
-  | {
-      ok: false;
-      reason:
-        | "invalid_discount"
-        | "trip_unavailable"
-        | "trip_full"
-        | "not_connected"
-        | "no_recipients"
-        | "stripe_failed";
-    };
-
-/**
- * Creates a Stripe coupon + promotion code for one under-capacity trip and
- * emails it to every last-minute-list entry whose stated date range covers
- * the departure. Fails closed on anything ambiguous — an unpriced/full/past
- * trip, a shop that can't take payments, or a Stripe error — and never
- * partially sends: the local row is durable evidence before either Stripe
- * call, but the email step only runs after Stripe has actually minted the
- * code (docs ADR 20260727-last-minute-fill-promos).
- */
-export async function sendLastMinuteDealBlast(
-  db: AppDb,
-  input: SendLastMinuteDealInput,
-  promotions: PromotionProvider = promotionProviderFromEnvironment(),
-  notifications?: NotificationProvider,
-): Promise<SendLastMinuteDealOutcome> {
-  const discount = lastMinuteDealDiscount(input);
-  if (!discount) return { ok: false, reason: "invalid_discount" };
-
-  const [shop, tripRow, account, tripRequirement, siteRequirement] = await Promise.all([
-    getShopById(db, input.shopId),
-    getTripWithBooked(db, input.shopId, input.tripId),
-    getShopStripeAccount(db, input.shopId),
-    getTripRequirements(db, input.shopId, input.tripId),
-    getTripSiteRequirement(db, input.shopId, input.tripId),
-  ]);
-  if (
-    !shop ||
-    !tripRow ||
-    // A rehearsal is never sold or announced (ADR 20261012-rehearsal-departures).
-    tripRow.isRehearsal ||
-    tripRow.status !== "scheduled" ||
-    tripRow.startsAt <= nowDate()
-  ) {
-    return { ok: false, reason: "trip_unavailable" };
-  }
-  const openSeats = spotsRemaining({ capacity: tripRow.capacity, booked: tripRow.booked });
-  if (openSeats <= 0) return { ok: false, reason: "trip_full" };
-  if (!canAcceptPayments(account)) return { ok: false, reason: "not_connected" };
-  const stripeAccountId = (account as NonNullable<typeof account>).stripeAccountId;
-
-  const tripDateIso = toDateInputValue(utcToWallTime(tripRow.startsAt, shop.timezone));
-  const rawMatches = (await listLastMinuteList(db, input.shopId)).filter(
-    ({ entry, person }) =>
-      Boolean(person.email) && lastMinuteEntryMatchesTripDate(entry, tripDateIso),
-  );
-
-  if (rawMatches.length === 0) return { ok: false, reason: "no_recipients" };
-
-  const certSummaries = await listCertificationSummaries(
-    db,
-    input.shopId,
-    rawMatches.map((m) => m.person.id),
-  );
-  const matchesWithCert = rawMatches.map((m) => ({
-    ...m,
-    certification: certSummaries.get(m.person.id) ?? null,
-  }));
-
-  const dealRequirement = unionRequirements(tripRequirement, siteRequirement);
-
-  let eligibleMatches = filterEligibleLastMinuteRecipients(
-    matchesWithCert,
-    dealRequirement,
-    tripRow.course
-      ? {
-          slug: tripRow.course.slug,
-          title: tripRow.course.title,
-          sourceTemplateSlug: tripRow.course.sourceTemplateSlug,
-          minimumCertificationLevel: tripRow.course.minimumCertificationLevel,
-          isIntroCourse: tripRow.course.isIntroCourse,
-        }
-      : null,
-  );
-
-  if (input.recipientPersonIds && input.recipientPersonIds.length > 0) {
-    const allowed = new Set(input.recipientPersonIds);
-    eligibleMatches = eligibleMatches.filter((m) => allowed.has(m.person.id));
-  }
-
-  if (eligibleMatches.length === 0) return { ok: false, reason: "no_recipients" };
-
-  // A diver already waiting on this exact trip has told the shop they want
-  // this departure, and the deal can otherwise sell the seat out from under
-  // them — so they hear about it first, longest wait first, ahead of anyone
-  // just generically around that week. That is send order for one automated
-  // mail, not a standing in a queue: the wait list has none
-  // (ADR 20260813-wait-list-is-a-lead-list).
-  const waitlist = await getTripWaitlist(db, input.shopId, input.tripId);
-  const orderedMatches = orderLastMinuteRecipients(
-    eligibleMatches,
-    waitlist.map(({ person }) => person.id),
-  );
-
-  const currency = await getShopCurrency(db, input.shopId);
-  const code = generateLastMinutePromoCode(
-    discount.kind === "percent"
-      ? discount.percent
-      : Math.round(minorToMajor(discount.amountCents, currency)),
-  );
-  const [pendingRow] = await db
-    .insert(tripLastMinutePromos)
-    .values({
-      shopId: input.shopId,
-      tripId: input.tripId,
-      ...promoDiscountColumns(discount),
-      code,
-      expiresAt: tripRow.startsAt,
-      // The cap Stripe is about to be given, kept so the checkout can hold the
-      // same cap on the path Stripe cannot see (src/db/promo-caps.ts).
-      maxRedemptions: openSeats,
-      createdByPersonId: input.createdByPersonId,
-    })
-    .returning();
-  if (!pendingRow) throw new Error("sendLastMinuteDealBlast: insert returned no row");
-
-  const stripeResult = await promotions.createTripPromotion({
-    stripeAccountId,
-    code,
-    discount,
-    currency,
-    expiresAt: tripRow.startsAt,
-    maxRedemptions: openSeats,
-    idempotencyKey: pendingRow.id,
-  });
-  if (stripeResult.status !== "created") {
-    await db
-      .update(tripLastMinutePromos)
-      .set({ status: "failed" })
-      .where(eq(tripLastMinutePromos.id, pendingRow.id));
-    return { ok: false, reason: "stripe_failed" };
-  }
-
-  const origin = publicAppUrl();
-  const bookingUrl = origin
-    ? new URL(publicTripPath(input.shopSlug, input.tripId), `${origin}/`).toString()
-    : null;
-
-  let sentCount = 0;
-  if (origin && bookingUrl) {
-    const recipients = await Promise.all(
-      orderedMatches
-        .filter(({ person }) => Boolean(person.email))
-        .map(async ({ entry, person }) => {
-          const unsubscribeToken = await issueLastMinuteListUnsubscribeToken(db, {
-            shopId: input.shopId,
-            entryId: entry.id,
-          });
-          return {
-            personId: person.id,
-            kind: "last_minute_deal" as const,
-            shopId: input.shopId,
-            // Filtered above; non-null for every entry that reaches here.
-            to: person.email as string,
-            locale: recipientLocale(person.locale, shop.defaultLocale),
-            diverName: person.fullName,
-            shopName: shop.name,
-            tripTitle: tripRow.title,
-            startsAt: tripRow.startsAt,
-            endsAt: tripRow.endsAt,
-            timezone: shop.timezone,
-            ...(discount.kind === "percent"
-              ? { discountPercent: discount.percent }
-              : { discountAmountCents: discount.amountCents, currency }),
-            code,
-            bookingUrl,
-            expiresAt: tripRow.startsAt,
-            unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
-          };
-        }),
-    );
-    const deliveries = await sendNotificationBatch(
-      db,
-      recipients.map(({ personId: _pid, ...payload }) => payload),
-      notificationProviderForDb(notifications),
-    );
-    const successfulRecipients = recipients.filter(
-      (_, index) => deliveries[index]?.status === "sent",
-    );
-    sentCount = successfulRecipients.length;
-
-    if (recipients.length > 0) {
-      await db.insert(tripLastMinutePromoRecipients).values(
-        recipients.map((r) => ({
-          shopId: input.shopId,
-          tripPromoId: pendingRow.id,
-          personId: r.personId,
-          email: r.to,
-        })),
-      );
-    }
-  }
-
-  await db
-    .update(tripLastMinutePromos)
-    .set({
-      status: "sent",
-      stripeCouponId: stripeResult.stripeCouponId,
-      stripePromotionCodeId: stripeResult.stripePromotionCodeId,
-      recipientCount: sentCount,
-    })
-    .where(eq(tripLastMinutePromos.id, pendingRow.id));
-
-  return { ok: true, promoId: pendingRow.id, code, recipientCount: sentCount };
-}
 
 /** Every blast sent for one trip, newest first — the staff page's send history. */
 export async function listTripLastMinutePromos(
@@ -311,34 +48,50 @@ export type TripLastMinutePromoRecipientItem = {
 };
 
 /**
- * Returns who has been sent deals for this trip, with their name, email, promoId, and timestamp.
+ * Returns who has been sent deals for this trip, with their name, email, promoId,
+ * and timestamp: the departure rows that carry a deal (`interests.promo_id`), the
+ * rows the offer wrote when it went out (ADR 20261017-one-interest-with-a-scope).
  */
 export async function listTripLastMinutePromoRecipients(
   db: DbExecutor,
   shopId: string,
   tripId: string,
 ): Promise<TripLastMinutePromoRecipientItem[]> {
-  return db
+  const rows = await db
     .select({
-      promoId: tripLastMinutePromoRecipients.tripPromoId,
-      personId: tripLastMinutePromoRecipients.personId,
+      promoId: interests.promoId,
+      personId: interests.personId,
       fullName: people.fullName,
-      email: tripLastMinutePromoRecipients.email,
-      createdAt: tripLastMinutePromoRecipients.createdAt,
+      email: people.email,
+      offeredAt: interests.offeredAt,
     })
-    .from(tripLastMinutePromoRecipients)
-    .innerJoin(
-      tripLastMinutePromos,
-      eq(tripLastMinutePromoRecipients.tripPromoId, tripLastMinutePromos.id),
-    )
-    .innerJoin(people, eq(tripLastMinutePromoRecipients.personId, people.id))
+    .from(interests)
+    .innerJoin(tripLastMinutePromos, eq(tripLastMinutePromos.id, interests.promoId))
+    .innerJoin(people, and(eq(people.id, interests.personId), eq(people.shopId, shopId)))
     .where(
       and(
-        eq(tripLastMinutePromoRecipients.shopId, shopId),
+        eq(interests.shopId, shopId),
+        eq(interests.scope, "departure"),
         eq(tripLastMinutePromos.tripId, tripId),
+        // Who the deal went to, not who was merely stamped with it: an offer
+        // whose mail never left carries no `offered_at`.
+        isNotNull(interests.offeredAt),
       ),
     )
-    .orderBy(asc(tripLastMinutePromoRecipients.createdAt), asc(people.fullName));
+    .orderBy(asc(interests.offeredAt), asc(people.fullName));
+  return rows.flatMap((row) =>
+    row.promoId && row.personId && row.email && row.offeredAt
+      ? [
+          {
+            promoId: row.promoId,
+            personId: row.personId,
+            fullName: row.fullName,
+            email: row.email,
+            createdAt: row.offeredAt,
+          },
+        ]
+      : [],
+  );
 }
 
 export type OutstandingLastMinutePromo = TripLastMinutePromo & {

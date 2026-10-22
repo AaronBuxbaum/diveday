@@ -170,7 +170,7 @@
   (keep the other record instead); a cancelled seat on the record merged away does not refuse, it
   becomes a **seat left behind** (issue #2177). A seat on a departure that is out right now refuses
   too ("Merge after the boat is back"). On the departure both records shared, the merged-away
-  record's duplicate wait-list entry or invitation is dropped and the kept record's stands. Two different
+  record's duplicate departure interest is dropped (one row per person per departure) and the kept record's stands. Two different
   dates of birth, one date missing where only the name matches, cards or signed releases on both
   records, releases signed under names that do not match, or a medical answer still waiting on (or
   declined by) a physician mean the two may be **two people**, and the merge runs only after the

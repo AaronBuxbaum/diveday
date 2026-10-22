@@ -8,6 +8,7 @@ import { fakePromotions } from "@/test/fakes";
 import { waiverTemplateHistory } from "@/test/waiver-history";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
+import { askForDeparture } from "./interests";
 import { shopSenderFor } from "./notifications";
 import {
   accountSessions,
@@ -16,8 +17,8 @@ import {
   bookingCheckoutBookings,
   bookingCheckouts,
   bookings,
-  lastMinuteListEntries,
-  lastMinuteListUnsubscribeTokens,
+  interests,
+  interestUnsubscribeTokens,
   orders,
   paymentOperationIntents,
   people,
@@ -40,7 +41,6 @@ import {
 import { inviteStaffMember } from "./staff-accounts";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { listStaff, upcomingTripsWithCounts } from "./trips";
-import { joinTripWaitlist } from "./waitlist";
 import { getCurrentWaiverTemplate, saveWaiverTemplate } from "./waivers";
 
 // One seeded database for the file and a rolled-back transaction per test
@@ -103,7 +103,7 @@ describe("resetDemoSchedule", () => {
     // forever" cause: each poisoned reset then timed out downstream).
     const full = trips.find((t) => t.booked >= t.capacity);
     if (!full) throw new Error("expected a full trip in the seed to wait-list against");
-    const outcome = await joinTripWaitlist(db, {
+    const outcome = await askForDeparture(db, {
       shopId: shop.id,
       tripId: full.id,
       fullName: "Wait-List Wendy",
@@ -134,18 +134,18 @@ describe("resetDemoSchedule", () => {
    * data — which is why the failure appeared to wander between `manifest`,
    * `courses`, and `gear-fit-and-age` rather than pointing at its own cause.
    */
-  it("clears last-minute unsubscribe tokens instead of FK-violating on their entries", async () => {
+  it("clears last-minute unsubscribe tokens instead of FK-violating on their interests", async () => {
     const { db, shop } = ctx;
     const [person] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!person) throw new Error("test setup: seeded shop has no people");
-    const [entry] = await db
-      .insert(lastMinuteListEntries)
-      .values({ shopId: shop.id, personId: person.id })
+    const [interest] = await db
+      .insert(interests)
+      .values({ shopId: shop.id, scope: "anytime", askedBy: "diver", personId: person.id })
       .returning();
-    if (!entry) throw new Error("test setup: last-minute entry insert returned no row");
+    if (!interest) throw new Error("test setup: last-minute interest insert returned no row");
     await db
-      .insert(lastMinuteListUnsubscribeTokens)
-      .values({ shopId: shop.id, entryId: entry.id, tokenHash: `hash_${entry.id}` });
+      .insert(interestUnsubscribeTokens)
+      .values({ shopId: shop.id, interestId: interest.id, tokenHash: `hash_${interest.id}` });
 
     // Resolving rather than throwing is the whole assertion.
     await expect(resetDemoSchedule(db, shop.id)).resolves.toBeUndefined();
@@ -153,8 +153,8 @@ describe("resetDemoSchedule", () => {
     expect(
       await db
         .select()
-        .from(lastMinuteListUnsubscribeTokens)
-        .where(eq(lastMinuteListUnsubscribeTokens.shopId, shop.id)),
+        .from(interestUnsubscribeTokens)
+        .where(eq(interestUnsubscribeTokens.shopId, shop.id)),
     ).toHaveLength(0);
   });
 

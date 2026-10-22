@@ -22,13 +22,13 @@ import { rearmTripReminders } from "./reminder-rearm";
 import type { Trip } from "./schema";
 import {
   bookings,
+  interests,
   rollCallCrewEvents,
   rollCallEvents,
   shops,
   tripDives,
   tripScheduleDays,
   trips,
-  tripWaitlistEntries,
 } from "./schema";
 import { insertTripInstance, resolveCourse, validateBoat } from "./trips-create";
 import { liveTrip } from "./trips-live";
@@ -320,8 +320,14 @@ export async function deleteTrip(
 
     const [{ waiting }] = await tx
       .select({ waiting: count() })
-      .from(tripWaitlistEntries)
-      .where(eq(tripWaitlistEntries.tripId, tripId));
+      .from(interests)
+      .where(
+        and(
+          eq(interests.scope, "departure"),
+          eq(interests.askedBy, "diver"),
+          eq(interests.tripId, tripId),
+        ),
+      );
     if (waiting > 0) return { ok: false, reason: "has_roster" };
 
     if ((await countRollCallEvidence(tx, shopId, tripId)) > 0) {

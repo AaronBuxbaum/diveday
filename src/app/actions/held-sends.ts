@@ -62,13 +62,12 @@ const optionalText = () => trimmedText().transform((value) => value || undefined
 const heldSendForm = z.object({
   holdKind: formValue().transform((value) => String(value ?? "")),
   bookingId: idList(),
-  recipientPersonIds: idList(),
   personId: optionalText(),
   channel: optionalText(),
   surface: optionalText(),
   tripId: optionalText(),
   ticketId: optionalText(),
-  entryId: optionalText(),
+  interestId: idList(),
   discount: formValue(),
   discountPercent: formValue(),
   discountKind: formValue(),
@@ -76,21 +75,21 @@ const heldSendForm = z.object({
 type HeldSendForm = z.infer<typeof heldSendForm>;
 
 /**
- * A deal's discount off the form: a percent, or a fixed amount the staffer
+ * An offer's discount off the form: a percent, or a fixed amount the staffer
  * typed in whole currency units and DiveDay stores in minor units. `discount`
  * and `discountKind` are the deal form's two controls; a bare `discountPercent`
  * is the older single-box spelling and still reads as a percent.
  */
-function dealDiscountFromForm(
+function offerDiscountFromForm(
   form: HeldSendForm,
   currency: string,
-): { discountPercent?: number; discountAmountCents?: number } {
+): { percent: number } | { amountCents: number } {
   const raw = form.discount ?? form.discountPercent;
   const value = Number(String(raw ?? "").trim());
   if (form.discountKind === "amount") {
-    return { discountAmountCents: Number.isFinite(value) ? majorToMinor(value, currency) : value };
+    return { amountCents: Number.isFinite(value) ? majorToMinor(value, currency) : value };
   }
-  return { discountPercent: value };
+  return { percent: value };
 }
 
 function payloadFromForm(formData: FormData, currency: string): HeldSendPayload {
@@ -112,14 +111,15 @@ function payloadFromForm(formData: FormData, currency: string): HeldSendPayload 
           tripId: form.tripId,
           ticketId: form.ticketId,
         }
-      : kind === "last_minute_deal"
-        ? {
-            kind,
-            tripId: form.tripId,
-            ...dealDiscountFromForm(form, currency),
-            recipientPersonIds: form.recipientPersonIds,
-          }
-        : { kind, tripId: form.tripId, entryId: form.entryId };
+      : {
+          kind,
+          tripId: form.tripId,
+          interestIds: form.interestId,
+          // A blank box is no discount: an ordinary offer.
+          ...(String(form.discount ?? form.discountPercent ?? "").trim() === ""
+            ? {}
+            : { discount: offerDiscountFromForm(form, currency) }),
+        };
   return heldSendPayloadSchema.parse(raw);
 }
 
@@ -159,7 +159,7 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
   }
   const currency = toShopCurrency((await getShopById(db, session.user.shopId))?.currency);
   const payload = payloadFromForm(formData, currency);
-  if (payload.kind === "last_minute_deal") {
+  if (payload.kind === "seat_offer" && payload.discount) {
     // Discounting is money work wherever the button sits (issue #714): the
     // same gate the promo page and the old immediate action stood behind.
     const allowed = await canPersonManagePaymentSettings(
@@ -169,11 +169,11 @@ export async function holdSendAction(formData: FormData): Promise<HeldTicket> {
     );
     if (!allowed) throw new Error("not_authorized");
   }
-  // The wait-list invite is Today's `waitlist_seat` row: what Today hides from
+  // An offer of a seat is Today’s `seat_wanted` row: what Today hides from
   // a role, the action refuses it too (issue #2134).
   if (
-    payload.kind === "waitlist_invite" &&
-    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
+    payload.kind === "seat_offer" &&
+    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "seat_wanted"))
   ) {
     throw new Error("not_authorized");
   }
@@ -218,15 +218,15 @@ async function assertMayActOnHeld(
   const gate =
     row.kind === "trip_rescheduled"
       ? canPersonConfigureTrips
-      : row.kind === "last_minute_deal"
+      : row.kind === "seat_offer" && row.payload.kind === "seat_offer" && row.payload.discount
         ? canPersonManagePaymentSettings
         : null;
   if (gate && !(await gate(db, session.user.shopId, session.user.personId))) {
     throw new Error("not_authorized");
   }
   if (
-    row.kind === "waitlist_invite" &&
-    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "waitlist_seat"))
+    row.kind === "seat_offer" &&
+    !(await canPersonActOnKind(db, session.user.shopId, session.user.personId, "seat_wanted"))
   ) {
     throw new Error("not_authorized");
   }
@@ -303,11 +303,11 @@ export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   const tripPath = shopPath(shop.slug, "trips", payload.tripId);
   revalidatePath(tripPath);
   revalidatePath(shopPath(shop.slug));
-  if (outcome.kind === "last_minute_deal") {
+  if (outcome.kind === "seat_offer" && outcome.deal) {
     const anchor = `${tripPath}?view=details#last-minute-deal`;
-    const redirectTo = outcome.outcome.ok
-      ? noticeUrl(anchor, "last-minute-sent", { count: outcome.outcome.recipientCount })
-      : noticeUrl(anchor, LAST_MINUTE_NOTICE[outcome.outcome.reason]);
+    const redirectTo = outcome.deal.ok
+      ? noticeUrl(anchor, "last-minute-sent", { count: outcome.deal.recipientCount })
+      : noticeUrl(anchor, LAST_MINUTE_NOTICE[outcome.deal.reason]);
     return { status: "done", outcome: { ...outcome, redirectTo } };
   }
   return { status: "done", outcome };

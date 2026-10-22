@@ -53,10 +53,10 @@ function signIn(shop: { id: string }, person: { personId: string; role: string }
 
 function dealForm(tripId: string, recipient: string): FormData {
   const form = new FormData();
-  form.set("holdKind", "last_minute_deal");
+  form.set("holdKind", "seat_offer");
   form.set("tripId", tripId);
   form.set("discountPercent", "25");
-  form.append("recipientPersonIds", recipient);
+  form.append("interestId", recipient);
   return form;
 }
 
@@ -87,10 +87,10 @@ describe("holdSendAction", () => {
     expect(ticket.runAt - nowMs()).toBe(SEND_HOLD_MS);
     const [row] = await heldRows(db, shop.id);
     expect(row?.payload).toEqual({
-      kind: "last_minute_deal",
+      kind: "seat_offer",
       tripId: seat.tripId,
-      discountPercent: 25,
-      recipientPersonIds: [owner.personId],
+      interestIds: [owner.personId],
+      discount: { percent: 25 },
     });
     expect(row?.actorPersonId).toBe(owner.personId);
   });
@@ -105,10 +105,10 @@ describe("holdSendAction", () => {
     await holdSendAction(form);
     const [row] = await heldRows(db, shop.id);
     expect(row?.payload).toEqual({
-      kind: "last_minute_deal",
+      kind: "seat_offer",
       tripId: seat.tripId,
-      discountAmountCents: 2_000,
-      recipientPersonIds: [owner.personId],
+      interestIds: [owner.personId],
+      discount: { amountCents: 2_000 },
     });
   });
 
@@ -182,9 +182,9 @@ describe("holdSendAction", () => {
 describe("holdSendAction wait-list invite", () => {
   const waitlistForm = (tripId: string) => {
     const form = new FormData();
-    form.set("holdKind", "waitlist_invite");
+    form.set("holdKind", "seat_offer");
     form.set("tripId", tripId);
-    form.set("entryId", crypto.randomUUID());
+    form.set("interestId", crypto.randomUUID());
     return form;
   };
 
@@ -200,7 +200,7 @@ describe("holdSendAction wait-list invite", () => {
   });
 
   for (const role of ALL_ROLES) {
-    const allowed = KIND_AUDIENCE.waitlist_seat.includes(role);
+    const allowed = KIND_AUDIENCE.seat_wanted.includes(role);
     it(`${allowed ? "does not refuse" : "refuses"} a ${role}`, async () => {
       const { db, shop, owner, captain, seat } = await context();
       // The live roles are the database's: an owner for the roles the audience

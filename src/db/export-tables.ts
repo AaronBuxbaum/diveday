@@ -17,7 +17,6 @@ import {
   courseFormRequirements,
   courseForms,
   courseFormVersions,
-  courseInquiries,
   courses,
   crewAwayAcknowledgements,
   customerGearItems,
@@ -35,8 +34,8 @@ import {
   incidentReportAddenda,
   incidentReportPeople,
   incidentReports,
+  interests,
   internalNotes,
-  lastMinuteListEntries,
   nitroxCertifications,
   notificationDeliveries,
   orderLineItems,
@@ -56,8 +55,6 @@ import {
   tips,
   tripChangeEvents,
   tripHelpRequests,
-  tripInvitations,
-  tripLastMinutePromoRecipients,
   tripLastMinutePromos,
   tripLenses,
   tripRequirements,
@@ -66,7 +63,6 @@ import {
   tripSeriesSkips,
   tripSightings,
   tripStageEvents,
-  tripWaitlistEntries,
   waiverMaterialityDecisions,
   waiverRecords,
   waiverTemplates,
@@ -185,31 +181,18 @@ export const EXPORT_TABLES = {
     order: [asc(tripSeriesSkips.createdAt), asc(tripSeriesSkips.id)],
     scope: { shopColumn: tripSeriesSkips.shopId },
   },
-  tripWaitlistEntries: {
-    table: tripWaitlistEntries,
-    order: [asc(tripWaitlistEntries.createdAt), asc(tripWaitlistEntries.id)],
-    scope: { shopColumn: tripWaitlistEntries.shopId, personColumn: tripWaitlistEntries.personId },
-  },
-  lastMinuteListEntries: {
-    table: lastMinuteListEntries,
-    order: [asc(lastMinuteListEntries.createdAt), asc(lastMinuteListEntries.id)],
-    scope: {
-      shopColumn: lastMinuteListEntries.shopId,
-      personColumn: lastMinuteListEntries.personId,
-    },
+  // Everyone who wanted a seat, every scope in one file (ADR
+  // 20261017-one-interest-with-a-scope). A date interest may carry no person: it is in
+  // the shop's bundle and in no diver's, which is the person-scope rule.
+  interests: {
+    table: interests,
+    order: [asc(interests.askedAt), asc(interests.id)],
+    scope: { shopColumn: interests.shopId, personColumn: interests.personId },
   },
   tripLastMinutePromos: {
     table: tripLastMinutePromos,
     order: [asc(tripLastMinutePromos.createdAt), asc(tripLastMinutePromos.id)],
     scope: { shopColumn: tripLastMinutePromos.shopId },
-  },
-  tripLastMinutePromoRecipients: {
-    table: tripLastMinutePromoRecipients,
-    order: [asc(tripLastMinutePromoRecipients.createdAt), asc(tripLastMinutePromoRecipients.id)],
-    scope: {
-      shopColumn: tripLastMinutePromoRecipients.shopId,
-      personColumn: tripLastMinutePromoRecipients.personId,
-    },
   },
   orders: {
     table: orders,
@@ -363,16 +346,6 @@ export const EXPORT_TABLES = {
       shopColumn: notificationDeliveries.shopId,
       bookingColumn: notificationDeliveries.bookingId,
     },
-  },
-  courseInquiries: {
-    table: courseInquiries,
-    order: [asc(courseInquiries.createdAt), asc(courseInquiries.id)],
-    scope: { shopColumn: courseInquiries.shopId, personColumn: courseInquiries.personId },
-  },
-  tripInvitations: {
-    table: tripInvitations,
-    order: [asc(tripInvitations.createdAt), asc(tripInvitations.id)],
-    scope: { shopColumn: tripInvitations.shopId, personColumn: tripInvitations.personId },
   },
   // The counter's own trail, oldest first for the same reason roll call's
   // is: it is replayed, and `occurred_at` ties under a batched offline

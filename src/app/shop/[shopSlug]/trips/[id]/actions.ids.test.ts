@@ -139,7 +139,7 @@ describe("a malformed id on the trip roster", () => {
 
   it("refuses a wait-list join on a departure id that is not an id", async () => {
     // The one here that is not a form field: the departure id is bound into the
-    // action's arguments, and `joinTripWaitlist` compares it to `trips.id`
+    // action's arguments, and `askForDeparture` compares it to `trips.id`
     // inside the transaction that locks the row.
     signIn();
     const data = new FormData();

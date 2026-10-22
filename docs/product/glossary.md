@@ -223,6 +223,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Incident report
 - Instruction fee / e-learning fee
 - Integrity-sealed waiver
+- Interest
 - Invite suggestion
 - Invoice
 - Last-minute deal
@@ -245,6 +246,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Not counted at the dock
 - Not ready
 - Notification delivery status
+- Offer a seat
 - Offline manifest snapshot
 - Operational horizon
 - Optional feature
@@ -334,6 +336,7 @@ fails while it is stale. Grep the domain files for a term; this index says which
 - Weather day
 - Week totals
 - WhatsApp sender
+- Who wants in
 - Working channel
 - Working it anyway
 - Working shift

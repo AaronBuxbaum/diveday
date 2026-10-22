@@ -38,8 +38,8 @@ import { getMonthlyReport } from "./reporting";
 import { readReviewsAwaitingModeration } from "./reviews";
 import {
   bookings,
-  courseInquiries,
   incidentReports,
+  interests,
   people,
   personRoles,
   shops,
@@ -203,17 +203,18 @@ async function countDateRequestsWaiting(
 ): Promise<number> {
   const [row] = await db
     .select({ n: count() })
-    .from(courseInquiries)
+    .from(interests)
     .where(
       and(
-        eq(courseInquiries.shopId, shopId),
-        isNull(courseInquiries.handledAt),
+        eq(interests.shopId, shopId),
+        eq(interests.scope, "date"),
+        isNull(interests.closedAt),
         or(
-          sql`greatest(${courseInquiries.preferredDate}, ${courseInquiries.alternateDate}) >= ${today}`,
+          sql`greatest(${interests.preferredDate}, ${interests.alternateDate}) >= ${today}`,
           and(
-            isNull(courseInquiries.preferredDate),
-            isNull(courseInquiries.alternateDate),
-            gte(courseInquiries.createdAt, weeks.lastWeek.startUtc),
+            isNull(interests.preferredDate),
+            isNull(interests.alternateDate),
+            gte(interests.askedAt, weeks.lastWeek.startUtc),
           ),
         ),
       ),

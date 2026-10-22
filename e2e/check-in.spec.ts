@@ -566,7 +566,7 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
  * on a page.
  *
  * **The offer rides the shipped invite.** The released row points at the
- * departure's own wait list, where `WaitlistInvite` sends through the held-send
+ * departure's own wait list, where `OfferSeat` sends through the held-send
  * path with its eight-second undo and its composer fallback — no second sender
  * anywhere in this tree. Sending one is also what moves the desk's own offer
  * on, since `noShowSalvage` counts only the entries nobody has chased.
@@ -690,22 +690,22 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
 
   // The door goes to the shipped control rather than growing a second sender
   // beside it.
-  await released.getByRole("link", { name: "Open the wait list" }).click();
-  await page.waitForURL(new RegExp(`/shop/blue-mantis/trips/${tripId}#waitlist$`));
-  await expect(page.getByRole("heading", { name: /Waiting for a seat/ })).toBeVisible();
+  await released.getByRole("link", { name: "See who wants in" }).click();
+  await page.waitForURL(new RegExp(`/shop/blue-mantis/trips/${tripId}#who-wants-in$`));
+  await expect(page.getByRole("heading", { name: /Who wants in/ })).toBeVisible();
 
-  await page.getByRole("button", { name: "Email Nora an invite" }).click();
+  // Tick Nora and offer: the panel's one act, never a button per row.
+  await page.getByLabel("Offer Nora Quinn a seat").check();
+  await page.getByRole("button", { name: "Offer a seat to 1" }).click();
   // The send holds eight seconds with Undo where the button stood, then runs.
   // The fleet configures no email provider, so the server reports what it
   // could not do and the control falls back to its composer — but the outreach
   // is recorded either way, and *that* is the fact the desk reads next. The
-  // row says it in both halves: the button becomes a re-send, and the line
-  // under it dates the invite.
+  // row says it: it reads "offered" with the time beside the name.
   await expect(page.getByRole("status").filter({ hasText: /Sending/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Resend invite" })).toBeVisible({
+  await expect(page.getByText("offered just now")).toBeVisible({
     timeout: HELD_SEND_TIMEOUT_MS,
   });
-  await expect(page.getByText("Invited just now")).toBeVisible();
 
   // **The desk stops counting a diver somebody has already chased.** Nora is
   // still on the list; she is no longer an offer, because sending two staff

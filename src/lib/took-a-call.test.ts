@@ -43,8 +43,8 @@ describe("callRefusal", () => {
   });
 
   /**
-   * The rule that is about the lead rather than the table underneath it: a
-   * shop that cannot ring back has recorded a conversation, not a lead.
+   * The rule that is about the interest rather than the table underneath it: a
+   * shop that cannot ring back has recorded a conversation, not an interest.
    */
   it("refuses a caller with neither an address nor a number", () => {
     for (const outcome of CALL_OUTCOMES) {
@@ -67,7 +67,7 @@ describe("callRefusal", () => {
     expect(callRefusal("date-request", { ...complete(), tripId: null })).toBeNull();
   });
 
-  /** `course_inquiries`' own check constraint, said before the database says it. */
+  /** `interests_scope_columns`, the check constraint, said before the database says it. */
   it("insists a date request is about something", () => {
     expect(callRefusal("date-request", { ...complete(), interest: "  " })).toBe("interest");
     expect(callRefusal("waitlist", { ...complete(), interest: null })).toBeNull();

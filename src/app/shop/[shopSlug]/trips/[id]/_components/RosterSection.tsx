@@ -83,7 +83,7 @@ export function RosterSection({
   slots?: RosterSlots;
 }) {
   const { locale, shopTimezone } = trip;
-  const { waitingGroup, invitedGroup, addDiverGroup, arrival, record } = slots;
+  const { whoWantsInGroup, suggestionsGroup, addDiverGroup, arrival, record } = slots;
   const { roster } = rows;
   const t = staffTranslator(locale);
   const controls = waiverControls(t, { rehearsal: trip.rehearsal });
@@ -130,7 +130,7 @@ export function RosterSection({
     offersCreateOrder: trip.paymentsConnected && trip.canManageOrders,
   };
 
-  const hasTail = waitingGroup != null || invitedGroup != null || addDiverGroup != null;
+  const hasTail = whoWantsInGroup != null || suggestionsGroup != null || addDiverGroup != null;
   // This departure's cards the browser extension can check, in roster order:
   // the whole of what its "Check all" may touch (H-105). Held seats are never
   // in the map (`getTripGuests`).
@@ -284,8 +284,8 @@ export function RosterSection({
             settled={false}
             context={context}
           />
-          {waitingGroup}
-          {invitedGroup}
+          {whoWantsInGroup}
+          {suggestionsGroup}
           {/* One box, so `#add-diver` holds the form its links and specs
               scope to; the box draws the group's rule (K-354). */}
           {addDiverGroup ? (

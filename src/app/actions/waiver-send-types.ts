@@ -94,7 +94,7 @@ export const IDLE_WAIVER_SEND_STATE: WaiverSendState = {
 
 /** Copy for `WaiverSendControl` (a Client Component) — resolved server-side
  * from the staff bundle (`staff/<namespace>.json`) and passed down as plain data, the same pattern as
- * `ResendConfirmationCopy` and `WaitlistInviteCopy`. */
+ * `ResendConfirmationCopy` and `OfferSeatCopy`. */
 export type WaiverSendCopy = {
   /** The held send's undo row (ADR 20260906-before-you-ask, decision 2). */
   hold: SendHoldCopy;

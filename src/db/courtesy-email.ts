@@ -2,19 +2,14 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
-import {
-  lastMinuteListEntries,
-  people,
-  personCourtesyEmailUnsubscribeTokens,
-  shops,
-} from "./schema";
+import { interests, people, personCourtesyEmailUnsubscribeTokens, shops } from "./schema";
 
 /**
  * Mints a fresh, non-expiring bearer link opting one person out of courtesy
- * email — `waitlist_invite`, `trip_recap`, `checkout_recovery` and
- * `direct_trip_invitation` (Leo — self-serve email unsubscribe; issue #1953).
- * Called once per send, alongside `inviteWaitlistDiver` / `sendDueRecaps` /
- * `deliverTripInvitation`, mirroring `issueLastMinuteListUnsubscribeToken`: every
+ * email — `seat_offer_commercial`, `trip_recap`, `checkout_recovery` and
+ * a deal (Leo — self-serve email unsubscribe; issue #1953).
+ * Called once per send, alongside `sendOffer` / `sendDueRecaps` /
+ * `deliverSeatOffer`, mirroring `issueInterestUnsubscribeToken`: every
  * courtesy email carries its own working link even if an earlier one is later
  * relied on too, and the token never expires — an expired opt-out link would
  * leave someone unable to stop the emails, silently.
@@ -78,7 +73,7 @@ export type CourtesyEmailUnsubscribeContext = {
  * Resolves a bearer token to the person it names, or null for anything that
  * must read as "this link isn't available" — an unknown token or a
  * since-deleted shop. Deliberately does not treat an already-opted-out person
- * as invalid, the same reasoning as `resolveLastMinuteListUnsubscribeToken`:
+ * as invalid, the same reasoning as `resolveInterestUnsubscribeToken`:
  * a diver clicking an old email's link twice should see a real
  * "you're already unsubscribed" state, not a dead link.
  */
@@ -100,7 +95,7 @@ export async function resolveCourtesyEmailUnsubscribeToken(
     .where(eq(personCourtesyEmailUnsubscribeTokens.tokenHash, hashBearerToken(token)))
     .limit(1);
   if (!row) return null;
-  // Defense in depth, mirroring `resolveLastMinuteListUnsubscribeToken`: nothing
+  // Defense in depth, mirroring `resolveInterestUnsubscribeToken`: nothing
   // legitimate can cause the token's own shopId to drift from its person's, but
   // a resolved identity must never be trusted past that check.
   if (row.tokenShopId !== row.personShopId) return null;
@@ -138,7 +133,7 @@ export async function optOutPersonFromCourtesyEmailByToken(
  * reputation. This is the app's own half of the promise a sender makes
  * (ADR 20260902-sender-standards-for-ses): the record the shop reads stops
  * offering that person courtesy mail — `people.courtesyEmailOptOutAt`, and
- * every live last-minute-list entry of theirs — so a staffer never sees a
+ * every open last-minute-list interest of theirs — so a staffer never sees a
  * "send" that the provider is silently swallowing, and a later change of
  * address on the record does not quietly resume mail somebody reported.
  *
@@ -178,15 +173,16 @@ export async function optOutAddressAfterComplaint(
     )
     .returning({ id: people.id });
   const unsubscribed = await db
-    .update(lastMinuteListEntries)
-    .set({ unsubscribedAt: at })
+    .update(interests)
+    .set({ closedAt: at, closedAs: "unsubscribed" })
     .where(
       and(
-        eq(lastMinuteListEntries.shopId, input.shopId),
-        inArray(lastMinuteListEntries.personId, ids),
-        isNull(lastMinuteListEntries.unsubscribedAt),
+        eq(interests.shopId, input.shopId),
+        eq(interests.scope, "anytime"),
+        inArray(interests.personId, ids),
+        isNull(interests.closedAt),
       ),
     )
-    .returning({ id: lastMinuteListEntries.id });
+    .returning({ id: interests.id });
   return { people: optedOut.length, listEntries: unsubscribed.length };
 }

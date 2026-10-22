@@ -15,7 +15,7 @@
  * whose form had already accepted it.
  *
  * The writes themselves are the ones that already exist, unchanged:
- * `recordCourseInquiry` and `joinTripWaitlist`.
+ * `askForDate` and `askForDeparture`.
  */
 
 /**
@@ -39,11 +39,11 @@ export function isCallOutcome(value: unknown): value is CallOutcome {
  * Each row is a fact about the *mutation* underneath it rather than a
  * preference about the form:
  *
- * - `departure` — `joinTripWaitlist` names a `trips` row.
- * - `email` — `joinTripWaitlist` resolves its person by address
+ * - `departure` — `askForDeparture` names a `trips` row.
+ * - `email` — `askForDeparture` resolves its person by address
  *   (`findOrCreatePerson`), so an entry with no email has nobody to invite
  *   when a seat frees, which is the only thing a wait-list entry is for.
- * - `interest` — `course_inquiries` carries a check constraint refusing a row
+ * - `interest` — `interests_scope_columns` refuses a date interest
  *   that names neither a course nor an interest (ADR
  *   20260814-a-date-request-is-a-course-inquiry).
  */
@@ -70,8 +70,8 @@ export type CallCapture = {
 /**
  * Why this call cannot be written yet, or `null` when it can.
  *
- * `"reply"` is the one rule that is not about the mutation: a lead nobody can
- * ring back is a note about a conversation rather than a lead, and every other
+ * `"reply"` is the one rule that is not about the mutation: an interest nobody can
+ * ring back is a note about a conversation rather than an interest, and every other
  * door that records one already refuses it (`hasReplyPath`,
  * src/app/actions/inquiry.ts). A call is the surface where it bites hardest —
  * the staffer has the caller *on the line*, which is the only moment the

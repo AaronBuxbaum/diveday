@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/roster-seating-actions";
-import { recordCourseInquiry } from "@/db/course-inquiries";
 import { discardFormDraft } from "@/db/form-drafts";
+import { askForDate } from "@/db/interests";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { blankAsAbsent, formValue, parseForm, readForm, single } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -19,7 +19,7 @@ import { type CallOutcome, type CallRefusal, callRefusal, isCallOutcome } from "
  * the call turned out to be about.
  *
  * The routing is the whole feature. Nothing new is written here: a date request
- * is `recordCourseInquiry`, and a wait-list entry is the trip page's own
+ * is `askForDate`, and a wait-list entry is the trip page's own
  * `addToWaitlistAction`, so a wait-list join on a departure that turns out to
  * have a seat comes back on the trip page saying so. Only the refusals this
  * form can see before either runs — a caller with no name, no way to ring
@@ -93,20 +93,22 @@ export async function tookACallAction(shopSlug: string, formData: FormData): Pro
   const { fullName, email, phone, tripId, interest, preferredDate, divers, message } = parsed.data;
 
   if (outcome === "date-request") {
-    await recordCourseInquiry(db, {
+    await askForDate(db, {
       shopId: shop.id,
       // Always an interest, never a course: the desk is writing down what
       // somebody said on the phone, and picking a course row for them would be
       // the staffer's guess recorded as the caller's words. A request that
       // turns out to be about a course is matched on the Requests page, where
-      // the whole day's leads are read together.
+      // the whole day's interests are read together.
       interest,
       name: fullName,
       email,
       phone,
       preferredDate,
-      divers,
+      partySize: divers,
       message,
+      // The staffer who took the call; a diver's own form leaves this null.
+      createdByPersonId: session.user.personId,
     });
     const requests = shopPath(shopSlug, "requests");
     revalidateAndRedirect(requests, noticeUrl(requests, "call-logged"));

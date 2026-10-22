@@ -6,8 +6,8 @@ import { z } from "zod";
 import { CARD_KINDS, setCardProcessed } from "@/db/agency-processing";
 import { getDb } from "@/db/client";
 import { ladderInviteRefusal } from "@/db/course-ladder";
+import { deliverSeatOffer } from "@/db/interest-offers";
 import { createInvitationUnderCooldown } from "@/db/invite-suggestions";
-import { deliverTripInvitation, listTripInvitations } from "@/db/trip-invitations";
 import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -51,22 +51,12 @@ export async function inviteToCourseSessionAction(shopSlug: string, formData: Fo
     createdByPersonId: session.user.personId,
     now: nowDate(),
   });
-  if (outcome === "cooldown") redirect(noticeUrl(back, "invite-cooldown"));
-  if (outcome === "unavailable") redirect(noticeUrl(back, "invite-unavailable"));
-  const invitation =
-    outcome === "created"
-      ? (await listTripInvitations(db, shopId, tripId)).find(
-          ({ invitation }) => invitation.source === "direct" && invitation.personId === personId,
-        )
-      : undefined;
-  const delivery = invitation
-    ? await deliverTripInvitation(db, {
-        shopId,
-        shopSlug,
-        tripId,
-        invitationId: invitation.invitation.id,
-      })
-    : null;
+  if (outcome.status === "cooldown") redirect(noticeUrl(back, "invite-cooldown"));
+  if (outcome.status === "unavailable") redirect(noticeUrl(back, "invite-unavailable"));
+  const delivery =
+    outcome.status === "created"
+      ? await deliverSeatOffer(db, { shopId, shopSlug, tripId, interestId: outcome.interestId })
+      : null;
   revalidatePath(back);
   redirect(
     noticeUrl(

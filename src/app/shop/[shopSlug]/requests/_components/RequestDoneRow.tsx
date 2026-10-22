@@ -1,14 +1,14 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import type { DateRequestRow } from "@/db/course-inquiries";
+import type { DateInterestRow } from "@/db/interest-dates";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 
 /**
  * **A request the shop has closed** (third UX review, item 13): who asked, what
  * for, and how it was closed, one quiet line under "Done". Booked or marked
- * done, the lead no longer counts in its day's groups and divers; Reopen puts
+ * done, the interest no longer counts in its day's groups and divers; Reopen puts
  * it back if the tick was a mistake.
  */
 export function RequestDoneRow({
@@ -18,7 +18,7 @@ export function RequestDoneRow({
   reopenAction,
   t,
 }: {
-  request: DateRequestRow & { handledAt: Date; handledAs: "booked" | "done" };
+  request: DateInterestRow & { closedAt: Date; closedAs: "booked" | "done" };
   locale: string;
   timezone: string;
   reopenAction: (formData: FormData) => void;
@@ -28,9 +28,9 @@ export function RequestDoneRow({
   const ask = request.courseTitle
     ? t("requests.aboutCourse", { course: request.courseTitle })
     : t("requests.aboutDive", { interest: request.interest ?? "" });
-  const date = formatShortDate(request.handledAt, locale, timezone);
+  const date = formatShortDate(request.closedAt, locale, timezone);
   const how =
-    request.handledAs === "booked"
+    request.closedAs === "booked"
       ? t("requests.done.booked", { date })
       : t("requests.done.marked", { date });
   return (
