@@ -11193,7 +11193,9 @@ test.describe("light mode — Claude's assists, lit", () => {
       await page.getByRole("button", { name: "Save changes" }).click();
       await expect(page.getByRole("status")).toContainText("Changes saved");
       await page.getByRole("button", { name: "Draft in Spanish" }).click();
-      await expect(page.getByLabel("In Spanish", { exact: true })).toHaveValue(/español/);
+      await expect(page.getByLabel("Description, in Spanish", { exact: true })).toHaveValue(
+        /español/,
+      );
       await page.mouse.move(0, 0);
       await capture(page, "assist-trip-draft", "light");
 
