@@ -76,7 +76,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         /**
          * The same page once the diver has worked through it: the step rail at
-         * 2 of 3 with Release and Medical settled and Sign still open, the
+         * 3 of 4 with Release, Medical and the shop's Questions settled and Sign still open, the
          * questionnaire's own outcome line under the answers, and Sign as the
          * page's one filled button with saving demoted to the text link beside
          * the expiry sentence (ADR 20260827-the-divers-thread, decision 5).
@@ -93,7 +93,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Wait on the rail's own statement that every answer landed — never a
         // timeout, and never the last click's own resolution, which says
         // nothing about the count two components away from it.
-        await page.getByTestId("waiver-step-rail").getByText("2 of 3 done").waitFor();
+        await page.getByTestId("waiver-step-rail").getByText("3 of 4 done").waitFor();
         await capture(page, "waiver-rail", scheme);
 
         /**
@@ -101,7 +101,7 @@ for (const scheme of ["light", "dark"] as const) {
          * the most ordinary yes on a dive boat and it puts Box B's four
          * required questions on the page: the Box's own rule beside the
          * questions it opened, the outcome line saying they are still to
-         * answer, and the rail dropping back to 1 of 3 because the medical step
+         * answer, and the rail dropping back to 1 of 4 because the medical step
          * is open again. Every capture before this one answers "No" to
          * everything, so no Box had ever been photographed (2026-08-28 review).
          */
@@ -109,7 +109,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("group", { name: /I am over 45 years of age/ })
           .getByRole("radio", { name: "Yes" })
           .check();
-        await page.getByTestId("waiver-step-rail").getByText("1 of 3 done").waitFor();
+        await page.getByTestId("waiver-step-rail").getByText("1 of 4 done").waitFor();
         await capture(page, "waiver-rail-follow-ups", scheme);
       });
 
