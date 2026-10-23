@@ -284,8 +284,11 @@ describe("a slug the driver cannot send", () => {
     // Class 22, data exception: a server received the statement and refused it,
     // which is exactly what tells the classifier nothing is down.
     expect((raised as { cause?: { code?: string } })?.cause?.code).toBe("22021");
-    // And why no branch logs the caught message: drizzle's wrapper repeats the
-    // bound parameters verbatim, which here is the request's own string.
-    expect(String((raised as Error).message)).toContain(slug);
+    // drizzle 1.0.0-rc.5 leaves the bound parameters out of its wrapper unless a
+    // client opts into `paramsInErrors`; ours does not, so the request's own
+    // string stays out of the message. No branch logs it regardless: one opt-in
+    // would put it back, which is the shape `src/proxy.test.ts` fakes.
+    expect(String((raised as Error).message)).toContain('"shops"."slug" = $1');
+    expect(String((raised as Error).message)).not.toContain(slug);
   });
 });

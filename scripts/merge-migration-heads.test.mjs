@@ -14,26 +14,22 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 /**
- * **The snapshot `pnpm db:merge` writes must describe both heads, not one.**
+ * **The state `pnpm db:merge` leaves must be both heads, not one.**
  *
- * `drizzle-kit generate --custom` writes the merge folder's snapshot as *one
- * head's state whole* — losing the other's — when the two open heads **share a
- * parent**, each also having a parent the other lacks. That is the ordinary
- * shape once a repository has merged a few times, and this one shipped an
- * instance of it: the merge closing `shop-units-confirmed` and
+ * Before snapshot version 9, `drizzle-kit generate --custom` wrote the merge
+ * folder's snapshot as *one head's state whole* when the two open heads
+ * **shared a parent**, each also having a parent the other lacks. This
+ * repository shipped one: the merge closing `shop-units-confirmed` and
  * `dive-package-line-item` kept `dive_packages` and dropped
  * `shops.units_confirmed_at`, so the next `pnpm db:generate` re-emitted that
  * column as a fresh `ADD COLUMN` against a database that already had it
- * (issue #852).
+ * (issue #852). A version-9 merge node carries no state and drizzle rebuilds it
+ * from the parents, which is exactly the code a shared parent once broke.
  *
- * **A unit test over hand-written snapshots could not have caught this**, which
- * is why this file drives the real `drizzle-kit` over a real seven-folder
- * project instead. The bug is in what that binary writes; a fixture asserting
- * what we *think* it writes would have agreed with us and been wrong. Four
- * simpler shapes were tried first and every one of them unions correctly —
- * two heads off one base adding columns to the same table, the same with a
- * stale `schema.ts`, one head adding a table while the other adds a column, and
- * a head that is itself a merge node. Only the shared parent provokes it.
+ * **A unit test over hand-written snapshots could not catch this**, which is
+ * why this file drives the real `drizzle-kit` over a real seven-folder project:
+ * the bug is in what that binary does, and a fixture asserting what we *think*
+ * it does would agree with us and be wrong.
  *
  * The cost is a handful of `drizzle-kit` spawns, which is why there is one test
  * here rather than a suite.
@@ -71,13 +67,17 @@ export default defineConfig({
   return root;
 }
 
-/** Write the project's whole schema: one `widgets` table plus optional extras. */
-function schema(root, { widgets, packages = false }) {
+/**
+ * Write the project's whole schema: one `widgets` table plus optional extras.
+ * `name` is the column both heads alter, which is what makes them collide.
+ */
+function schema(root, { widgets, name = 'text("name")', packages = false }) {
   writeFileSync(
     path.join(root, "src", "db", "schema.ts"),
-    `import { pgTable, text, uuid } from "drizzle-orm/pg-core";
+    `import { pgTable, text, uuid, varchar } from "drizzle-orm/pg-core";
 export const widgets = pgTable("widgets", {
   id: uuid("id").primaryKey().defaultRandom(),
+  name: ${name},
 ${widgets.map((column) => `  ${column}: text("${column}"),`).join("\n")}
 });
 ${
@@ -120,17 +120,15 @@ function show(root, held, folder) {
   spawnSync("mv", [path.join(held, folder), path.join(root, "drizzle", folder)]);
 }
 
-const columnsOf = (root, folder, table) =>
-  JSON.parse(readFileSync(path.join(root, "drizzle", folder, "snapshot.json"), "utf8"))
-    .ddl.filter((entity) => entity.entityType === "columns" && entity.table === table)
-    .map((entity) => entity.name);
+const snapshotOf = (root, folder) =>
+  JSON.parse(readFileSync(path.join(root, "drizzle", folder, "snapshot.json"), "utf8"));
 
 describe("pnpm db:merge", () => {
-  // Eight `drizzle-kit` spawns, each loading a TypeScript config and a schema.
+  // Nine `drizzle-kit` spawns, each loading a TypeScript config and a schema.
   // Six seconds on a laptop and past vitest's 20s default on a CI runner, so
   // the ceiling is stated rather than discovered: this is a slow test on
   // purpose, not a flaky one being papered over.
-  it("repairs a merge snapshot that lost a head, when the two heads share a parent", {
+  it("closes two colliding heads that share a parent, keeping both heads' state", {
     timeout: 120_000,
   }, () => {
     const root = project();
@@ -139,72 +137,77 @@ describe("pnpm db:merge", () => {
 
     // `base`, then three siblings off it. `y` is the parent the two heads will
     // share; `x` and `z` are the ones each head has and the other does not.
-    schema(root, { widgets: ["name"] });
+    schema(root, { widgets: [] });
     generate(root, "base");
     const sibling = {};
     for (const column of ["x", "y", "z"]) {
-      schema(root, { widgets: ["name", column] });
+      schema(root, { widgets: [column] });
       sibling[column] = generate(root, column);
       hide(root, held, sibling[column]);
     }
 
-    // `head1` over {x, y} adds a column. This is the half that gets lost.
+    // `head1` over {x, y} adds a column and gives `name` a default. The column
+    // is the half #852 lost.
     show(root, held, sibling.x);
     show(root, held, sibling.y);
-    schema(root, { widgets: ["name", "x", "y", "units"] });
+    schema(root, { widgets: ["x", "y", "units"], name: `text("name").default("n")` });
     const head1 = generate(root, "head1");
     hide(root, held, head1);
     hide(root, held, sibling.x);
 
-    // `head2` over {y, z} adds a table. This is the half that survives.
+    // `head2` over {y, z} adds a table and retypes `name`, which rewrites its
+    // default too: both heads write `name`'s default, so drizzle refuses them.
     show(root, held, sibling.z);
-    schema(root, { widgets: ["name", "y", "z"], packages: true });
-    generate(root, "head2");
+    schema(root, { widgets: ["y", "z"], name: `varchar("name", { length: 64 })`, packages: true });
+    const head2 = generate(root, "head2");
     show(root, held, sibling.x);
     show(root, held, head1);
 
     // Both branches are in now, and `schema.ts` is the merged truth — which is
     // the state `pnpm db:merge` is documented to be run from.
-    schema(root, { widgets: ["name", "x", "y", "z", "units"], packages: true });
+    const name = `varchar("name", { length: 64 }).default("n")`;
+    schema(root, { widgets: ["x", "y", "z", "units"], name, packages: true });
 
     const merged = spawnSync(process.execPath, [SCRIPT], {
       cwd: root,
       encoding: "utf8",
       env: { ...process.env, DIVEDAY_DB_MERGE_ROOT: root },
     });
+    // The collision is real: without it the script has nothing to do, and the
+    // assertions below would pass on a folder nobody wrote.
+    expect(merged.stderr).toContain("Conflicting migrations detected");
     expect(merged.status, merged.stderr).toBe(0);
 
+    // One folder, empty of DDL, naming exactly the two heads.
     const mergeFolder = folderNamed(root, "merge-migration-heads");
-    // **The assertion the whole file exists for.** Without the repair this
-    // reads `["id", "name", "y", "z"]` — head2's state whole, with head1's `x`
-    // and `units` gone and nothing to say so.
-    expect(columnsOf(root, mergeFolder, "widgets").sort()).toEqual([
-      "id",
-      "name",
-      "units",
-      "x",
-      "y",
-      "z",
-    ]);
-    // The other head is still there too: a repair that swapped which head won
-    // would pass the line above.
-    expect(columnsOf(root, mergeFolder, "packages")).toContain("label");
+    const mergeNode = snapshotOf(root, mergeFolder);
+    expect(mergeNode.deltas).toEqual([]);
+    expect([...mergeNode.prevIds].sort()).toEqual(
+      [snapshotOf(root, head1).id, snapshotOf(root, head2).id].sort(),
+    );
+    expect(merged.stdout).toContain(`wrote drizzle/${mergeFolder}`);
 
-    // Said out loud, because a silent repair of a silent bug is still silent.
-    expect(merged.stdout).toContain("lost state from one head");
-    expect(merged.stdout).toContain("units");
-
-    // And nothing is left behind: the probe that found the loss is deleted, so
-    // the graph gains exactly one folder.
+    // And nothing is left behind: the probe that checked the state is deleted,
+    // so the graph gains exactly one folder.
     expect(folders(root).filter((folder) => folder.includes("db-merge-"))).toEqual([]);
 
-    // The repaired snapshot now describes `schema.ts`, so a plain generate has
-    // nothing to write — which is precisely what was false before.
+    // **The assertion the whole file exists for.** The merge state describes
+    // `schema.ts`, so a plain generate has nothing to write — #852's merge
+    // failed exactly here, re-emitting the lost head's column.
     const before = folders(root).length;
     spawnSync(process.execPath, [DRIZZLE_KIT, "generate", "--name", "should-be-empty"], {
       cwd: root,
       encoding: "utf8",
     });
     expect(folders(root).length).toBe(before);
+
+    // Both heads, not one: dropping each head's addition from the schema must
+    // read as a drop. A merge state that swapped which head won would pass the
+    // check above only if `schema.ts` agreed with it, and would fail one of these.
+    schema(root, { widgets: ["x", "y", "z"], name });
+    const dropped = generate(root, "drop-both-heads");
+    const sql = readFileSync(path.join(root, "drizzle", dropped, "migration.sql"), "utf8");
+    expect(sql).toContain('DROP COLUMN "units"');
+    expect(sql).toContain('DROP TABLE "packages"');
   });
 });

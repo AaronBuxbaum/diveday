@@ -400,8 +400,8 @@ describe("the public namespace's edge refusal", () => {
   });
 
   /**
-   * A slug Postgres refuses: SQLSTATE 22021, wrapped by drizzle exactly as the
-   * driver hands it over — the SQL followed by the bound parameters verbatim,
+   * A slug Postgres refuses: SQLSTATE 22021, wrapped by drizzle as a client with
+   * `paramsInErrors` hands it over — the SQL and the bound parameters verbatim,
    * which is the caller's own string and must never reach a log line.
    */
   function refuseWithSqlState(): void {
