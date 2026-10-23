@@ -73,6 +73,10 @@ async function main(): Promise<number> {
   }
   // One connection, short-lived: this is a check, not a server.
   const pool = new Pool({ connectionString: withExplicitSslMode(url), max: 1 });
+  // An idle client's error would otherwise be an uncaught exception printing its message.
+  pool.on("error", (error) => {
+    console.error(`restore-drill-verify: pool ${redacted(error)}.`);
+  });
   const db = drizzle({ client: pool }) as unknown as AppDb;
   try {
     if (!demoBypassEnabled()) {
@@ -128,14 +132,19 @@ async function main(): Promise<number> {
   }
 }
 
-main().then(
-  (code) => process.exit(code),
-  (error: unknown) => {
-    // The name and code only: a pg error message can quote a row.
-    const code = (error as { code?: unknown }).code;
-    console.error(
-      `restore-drill-verify: FAILED with ${(error as Error)?.name ?? "an error"}${typeof code === "string" ? ` (${code})` : ""}.`,
-    );
-    process.exit(1);
-  },
-);
+/** The name and code only: a pg error message can quote a row. */
+function redacted(error: unknown): string {
+  // drizzle wraps the driver's error, so its SQLSTATE is on the cause.
+  const failure = error as { code?: unknown; cause?: { code?: unknown } } | undefined;
+  const code = failure?.code ?? failure?.cause?.code;
+  return `${(error as Error | undefined)?.name ?? "an error"}${typeof code === "string" ? ` (${code})` : ""}`;
+}
+
+function fail(error: unknown): never {
+  console.error(`restore-drill-verify: FAILED with ${redacted(error)}.`);
+  process.exit(1);
+}
+
+process.on("uncaughtException", fail);
+process.on("unhandledRejection", fail);
+main().then((code) => process.exit(code), fail);

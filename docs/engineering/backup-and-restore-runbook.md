@@ -509,9 +509,12 @@ into the chat or the log.
    own): sign in to a local `pnpm dev` pointed at the restore with a real staff password
    (the drill's seeded owner signs in through the demo bypass, never a bcrypt compare), and open one
    signed waiver to check its `integrity_hash` still verifies. Then delete the branch.
-6. **Set the drill up to run alone.** In GitHub → Settings → Environments, create `restore-drill`
-   and give it what the next section lists. Run the workflow once from its **Run workflow** button
-   and watch it go green.
+6. **Set the drill up to run alone.** In GitHub → Settings → Environments, create `restore-drill`.
+   Under **Deployment branches and tags**, choose **Selected branches and tags** and add `main` only;
+   tick **Required reviewers** and add Aaron. Without the branch rule, any pushed branch can name
+   the environment and get its Neon key and its AWS role, and agents push branches all day. Then
+   give it what the next section lists. Run the workflow once from its **Run workflow** button on
+   `main`, approve it, and watch it go green.
 7. **Write the log row** below, replacing the `_never_` row, with anything that surprised you, and
    mark [H-154](../product/human-decisions/README.md) Implemented.
 
@@ -525,7 +528,9 @@ On the 2nd of each month at 07:00 UTC, and on demand from the workflow's **Run w
 2. creates a Neon branch named `restore-drill-<UTC minute>-<run id>` and a new, empty database
    `restore_drill` on it;
 3. restores the dump into that database with `pg_restore --no-owner --no-privileges
-   --exit-on-error`, in the dump job's own Postgres major (`postgres:17-alpine`);
+   --exit-on-error`, in the dump job's own Postgres major (`postgres:17-alpine`, pinned by digest
+   in `POSTGRES_IMAGE`), printing only each error's SQLSTATE and object name, because a Postgres
+   `DETAIL` or `CONTEXT` line quotes row values;
 4. runs `scripts/restore-drill-verify.ts` against it: the seeded owner signs in through
    `verifyCredentials`, the function sign-in calls, and every departure tomorrow in that shop's zone
    loads its manifest through `getTripManifest` (the next departure after now when tomorrow has
@@ -533,15 +538,27 @@ On the 2nd of each month at 07:00 UTC, and on demand from the workflow's **Run w
    because `getDb()` seeds the demo shop and would repair a restore before checking it;
 5. deletes the branch, and writes the timings and a log row to the run's step summary.
 
+The branch is created with a Neon expiry three hours out, and the workflow's `if: always()` step
+(`node scripts/restore-drill.mjs --sweep`) deletes this run's branch and any `restore-drill-*`
+branch over an hour old, through the same default-and-protected check. So a run killed by a
+timeout or a **Cancel workflow**, or a branch create that timed out after Neon made it, does not
+leave a copy of production behind. Every step has a timeout, the drill step's is above the
+script's own worst case, and they add up to less than the job's (`scripts/restore-drill.test.mjs`).
+
 **It never touches the production branch.** It restores into a database it created on a branch it
 created, never into the copy of production that branch starts with, and it deletes only the branch
 id it created after checking that branch is named `restore-drill-*` and is neither the default nor a
 protected branch (`scratchBranchProblem`, tested in `scripts/restore-drill.test.mjs`). Neon refuses
 to delete a default branch anyway; the check is the second lock. A red run on `main` opens a
-`ci-red` issue (`scripts/workflow-alert.mjs`); a run that could not delete its branch says so in red
-and leaves the name in the log.
+`ci-red` issue (`scripts/workflow-alert.mjs`); a run that could not or would not delete its branch
+is red and leaves the name in the log.
 
-What it needs, all on the `restore-drill` GitHub environment so no other workflow can read them:
+What it needs, all on the `restore-drill` GitHub environment. **The environment must admit
+deployment branch `main` only, with a required reviewer** (first-run step 6). `workflow_dispatch`
+runs the workflow file as the chosen ref has it, so on an environment without that rule a pushed
+branch can rewrite the drill's guards, or add a workflow naming `restore-drill`, and read
+everything below; a Neon branch also inherits production's role passwords. The job's `if` on the
+default branch is a second lock only, since a branch can edit it.
 
 | Name | Kind | Where it comes from |
 | --- | --- | --- |
@@ -553,8 +570,14 @@ What it needs, all on the `restore-drill` GitHub environment so no other workflo
 The dump holds every password hash and medical answer in the platform. On the runner it lives for
 the length of the job in a temporary directory the script removes, nothing uploads it as an
 artifact, the connection string is masked in the log, and the scripts print counts and ids only.
-The role can read every dump, so it trusts the `restore-drill` environment and no branch or pull
-request.
+The role can read every dump. Its trust policy names the `restore-drill` environment, and only the
+environment's branch rule keeps that to `main`: by default an environment admits every branch.
+The verify step gets a minimal environment (`subprocessEnv`): no Neon key, AWS session or GitHub
+token, which lives on the two alert steps only.
+
+The Postgres image is pinned by digest, read from ECR Public and Docker Hub on 2026-10-23.
+Dependabot does not read `POSTGRES_IMAGE`, so a Postgres minor or an Alpine fix is a by-hand bump
+of the digest there.
 
 ### Quarterly restore test
 

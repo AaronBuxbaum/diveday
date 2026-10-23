@@ -182,9 +182,10 @@ export const SUBPROCESS_TIMEOUTS = {
   dumpDownload: 600_000,
   /**
    * One `pg_restore` of that dump into a scratch Neon branch, including the
-   * container image pull. Twenty minutes, under the drill workflow's own
-   * thirty-minute job cap, so a wedged restore names itself and the branch is
-   * still deleted by the script rather than left behind by a killed job.
+   * container image pull. Twenty minutes: with every other ceiling in the drill
+   * (`worstCaseMs` in restore-drill.mjs) it stays under the drill step's
+   * timeout, so a wedged restore names itself and the script still deletes the
+   * branch rather than leaving it behind in a killed job.
    */
   pgRestore: 1_200_000,
 };

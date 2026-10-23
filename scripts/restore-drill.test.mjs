@@ -1,12 +1,22 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import {
   BRANCH_PREFIX,
+  BRANCH_TTL_MS,
   drillBranchName,
   logRow,
   newestDump,
+  ownLines,
+  POSTGRES_IMAGE,
+  pgRestoreErrorSummary,
   roleFromConnectionUris,
+  SWEEP_MIN_AGE_MS,
   scratchBranchProblem,
+  subprocessEnv,
+  sweepProblem,
+  worstCaseMs,
 } from "./restore-drill.mjs";
 
 describe("newestDump", () => {
@@ -91,5 +101,183 @@ describe("logRow", () => {
     expect(row.startsWith("| 2026-10-23 |")).toBe(true);
     expect(row.split("|")).toHaveLength(9);
     expect(row).toContain("dump 2026-10-19: restored, signed in, manifest read");
+  });
+});
+
+describe("sweepProblem", () => {
+  const now = new Date("2026-11-02T09:00:00Z");
+  const old = new Date(now.getTime() - SWEEP_MIN_AGE_MS - 1).toISOString();
+  const fresh = new Date(now.getTime() - 60_000).toISOString();
+  const branch = (fields) => ({ id: "br-x", name: `${BRANCH_PREFIX}20261102-0700-555`, ...fields });
+
+  it("deletes this run's own branch however young, and anyone's drill branch over an hour old", () => {
+    expect(sweepProblem(branch({ created_at: fresh }), { now, runId: "555" })).toBeNull();
+    expect(sweepProblem(branch({ created_at: old }), { now, runId: "999" })).toBeNull();
+    expect(sweepProblem(branch({ created_at: old }), { now, runId: undefined })).toBeNull();
+  });
+
+  it("leaves another run's young branch alone: a drill by hand may be using it", () => {
+    expect(sweepProblem(branch({ created_at: fresh }), { now, runId: "999" })).toBe("too young");
+    expect(sweepProblem(branch({ created_at: fresh }), { now, runId: undefined })).toBe(
+      "too young",
+    );
+    expect(sweepProblem(branch({ created_at: "not a date" }), { now, runId: "999" })).toBe(
+      "too young",
+    );
+    // A run id that is only a suffix of the name's is not this run's.
+    expect(sweepProblem(branch({ created_at: fresh }), { now, runId: "55" })).toBe("too young");
+  });
+
+  it("refuses the production branch even when it is old and named like this run's", () => {
+    for (const fields of [{ default: true }, { primary: true }, { protected: true }]) {
+      const problem = sweepProblem(branch({ created_at: old, ...fields }), { now, runId: "555" });
+      expect(problem).toMatch(/default|protected/);
+      expect(problem).not.toBe("too young");
+    }
+    expect(
+      sweepProblem({ id: "br-main", name: "main", created_at: old }, { now, runId: "555" }),
+    ).toMatch(/named/);
+    expect(
+      sweepProblem(
+        { id: "br-y", name: "main-restore-drill-20261102-0700-555", created_at: old },
+        { now, runId: "555" },
+      ),
+    ).toMatch(/named/);
+  });
+});
+
+describe("the drill's timeouts", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/restore-drill.yml", import.meta.url),
+    "utf8",
+  );
+  const steps = workflow.split(/\n {6}- /).slice(1);
+  const minutes = (text) => Number(text.match(/\n\s*timeout-minutes: (\d+)/)?.[1]);
+  const jobMinutes = Number(workflow.match(/\n {4}timeout-minutes: (\d+)/)?.[1]);
+  const drillStep = steps.find((step) =>
+    /run: node scripts\/restore-drill\.mjs\n/.test(`${step}\n`),
+  );
+  const sweepStep = steps.find((step) => step.includes("restore-drill.mjs --sweep"));
+
+  it("bound every step, and add up to less than the job's", () => {
+    expect(steps.length).toBeGreaterThan(5);
+    for (const step of steps) expect(minutes(`\n${step}`)).toBeGreaterThan(0);
+    const total = steps.reduce((sum, step) => sum + minutes(`\n${step}`), 0);
+    expect(total).toBeLessThanOrEqual(jobMinutes);
+  });
+
+  it("let the script's own delete run before the step is killed", () => {
+    expect(minutes(`\n${drillStep}`) * 60_000).toBeGreaterThan(worstCaseMs());
+  });
+
+  it("make a drill branch over an hour old belong to no running drill", () => {
+    expect(minutes(`\n${drillStep}`) * 60_000).toBeLessThan(SWEEP_MIN_AGE_MS);
+    expect(BRANCH_TTL_MS).toBeGreaterThan(jobMinutes * 60_000);
+  });
+
+  it("sweep after a failure, a timeout or a cancel", () => {
+    expect(sweepStep).toMatch(/\n\s*if: always\(\)/);
+  });
+});
+
+describe("pgRestoreErrorSummary", () => {
+  const stderr = [
+    "pg_restore: while PROCESSING TOC:",
+    "pg_restore: from TOC entry 3311; 0 16450 TABLE DATA medical_answers neondb_owner",
+    'pg_restore: error: COPY failed for table "medical_answers": ERROR:  invalid input syntax for type uuid: "secret-value-1"',
+    'CONTEXT:  COPY medical_answers, line 812, column answers: "{\\"epilepsy\\": true}"',
+    "pg_restore: from TOC entry 2990; 1259 16388 INDEX users_email_key neondb_owner",
+    'pg_restore: error: could not execute query: ERROR:  could not create unique index "users_email_key"',
+    "DETAIL:  Key (email)=(diver@example.com) is duplicated.",
+    "Command was: CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email);",
+    'pg_restore: error: COPY failed for table "waiver_records": ERROR:  null value in column "signed_at" of relation "waiver_records" violates not-null constraint',
+    "DETAIL:  Failing row contains (1, Ana Diver, ana@example.com, null).",
+  ].join("\n");
+
+  it("names each error's SQLSTATE and object, and nothing a row could be in", () => {
+    const lines = pgRestoreErrorSummary(stderr);
+    expect(lines).toEqual([
+      "pg_restore error: SQLSTATE 22P02 on TABLE DATA medical_answers",
+      "pg_restore error: SQLSTATE 23505 on INDEX users_email_key",
+      "pg_restore error: SQLSTATE 23502 on waiver_records",
+      "5 other stderr line(s) withheld: they can quote rows.",
+    ]);
+    const printed = lines.join("\n");
+    for (const secret of ["secret-value-1", "epilepsy", "diver@example.com", "Ana Diver", "ana@"]) {
+      expect(printed).not.toContain(secret);
+    }
+  });
+
+  it("keeps a verbose SQLSTATE, pg_restore's own words, and an unknown code", () => {
+    expect(
+      pgRestoreErrorSummary(
+        "pg_restore: error: could not execute query: ERROR:  40P01: deadlock detected\nDETAIL: Process 1 waits",
+      ),
+    ).toEqual([
+      "pg_restore error: SQLSTATE 40P01 on an unnamed object",
+      "1 other stderr line(s) withheld: they can quote rows.",
+    ]);
+    expect(
+      pgRestoreErrorSummary("pg_restore: error: could not read from input file: end of file"),
+    ).toEqual(["pg_restore error: could not read from input file: end of file"]);
+    expect(
+      pgRestoreErrorSummary(
+        'pg_restore: error: could not execute query: ERROR:  something new: "x@y.z"',
+      ),
+    ).toEqual(["pg_restore error: SQLSTATE unknown on an unnamed object"]);
+    expect(pgRestoreErrorSummary("")).toEqual([]);
+  });
+});
+
+describe("ownLines", () => {
+  it("keeps the verify script's own lines and withholds a stack or a pg message", () => {
+    expect(
+      ownLines(
+        [
+          "restore-drill-verify: FAILED with error (23505).",
+          "error: duplicate key value: Key (email)=(diver@example.com)",
+          "    at Pool.connect (node_modules/pg-pool/index.js:45)",
+        ].join("\n"),
+        "restore-drill-verify: ",
+      ),
+    ).toEqual([
+      "restore-drill-verify: FAILED with error (23505).",
+      "2 other stderr line(s) withheld: they can quote rows.",
+    ]);
+  });
+});
+
+describe("subprocessEnv", () => {
+  it("hands a subprocess no Neon key, AWS session or GitHub token", () => {
+    const env = subprocessEnv(
+      {
+        PATH: "/usr/bin",
+        HOME: "/home/runner",
+        PNPM_HOME: "/home/runner/pnpm",
+        NEON_API_KEY: "neon-secret",
+        NEON_PROJECT_ID: "proj",
+        AWS_ACCESS_KEY_ID: "AKIA",
+        AWS_SECRET_ACCESS_KEY: "aws-secret",
+        AWS_SESSION_TOKEN: "aws-session",
+        GH_TOKEN: "gh-secret",
+        GITHUB_TOKEN: "gh-secret-2",
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: "oidc",
+        DATABASE_URL: "postgres://prod",
+      },
+      { NODE_ENV: "production", RESTORE_DATABASE_URL: "postgres://scratch" },
+    );
+    expect(env).toEqual({
+      PATH: "/usr/bin",
+      HOME: "/home/runner",
+      PNPM_HOME: "/home/runner/pnpm",
+      NODE_ENV: "production",
+      RESTORE_DATABASE_URL: "postgres://scratch",
+    });
+  });
+});
+
+describe("POSTGRES_IMAGE", () => {
+  it("is pinned by digest, not only by a tag someone can move", () => {
+    expect(POSTGRES_IMAGE).toMatch(/:17-alpine@sha256:[0-9a-f]{64}$/);
   });
 });
