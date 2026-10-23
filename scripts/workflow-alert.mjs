@@ -128,7 +128,7 @@ export const ALERTS = {
       "scripts/vercel-build.mjs",
     ],
     noticed:
-      "The `Deploy gate` workflow failed. With the gate on, it is the only way a commit reaches production, so production is now behind main: the live site is the last commit it did deploy. Each failed run after this one adds a comment with its link; the first successful deploy closes this issue.",
+      "The `Deploy gate` workflow failed. With the gate on, a push to main no longer builds production and this workflow is what deploys a green commit, so production is now behind main: the live site is the last commit it did deploy. Each failed run after this one adds a comment with its link; the first successful deploy closes this issue.",
     why: "It was found by the deploy itself, not by a change anyone was making. The run can fail on its own credentials, on the Vercel half of the switch being unset, or in the Vercel build (a refused migration, a failed `pnpm build`), and only the run log and the Vercel deployment log say which.",
     proposed:
       "Read the failed step. A missing secret or Vercel variable is manual action `production-deploy-gate`. A failed Vercel build is read in the deploy and migrations runbook, which says what a database migrated ahead of the live code means. Fix forward, then redeploy with the workflow's Run workflow button and the green sha.",

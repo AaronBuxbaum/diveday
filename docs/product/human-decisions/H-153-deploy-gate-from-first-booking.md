@@ -20,7 +20,9 @@ shop's first real booking.
 
 `scripts/deploy-gate.mjs` and `.github/workflows/deploy-gate.yml`: with the switch on, Vercel's
 push-triggered production build cancels itself before it migrates, and the workflow deploys each
-commit once its CI on `main` is green. The switch is one name set as a GitHub repository variable
+commit once its CI on `main` is green. It stops push-triggered builds, and with them a red
+commit's migration; it is not an access control against anyone holding a Vercel token, so the gate
+has a token of its own. The switch is one name set as a GitHub repository variable
 and a Vercel Production variable; unset in both is today's behavior. How to turn it on:
 [deploy-and-migrations-runbook.md, "The deploy gate"](../../engineering/deploy-and-migrations-runbook.md#the-deploy-gate)
 and manual action `production-deploy-gate`. Set to Implemented when the gate is on.

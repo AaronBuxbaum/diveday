@@ -2318,17 +2318,19 @@ exports.handler = async (event) => {
         when: "once, at the pilot shop's first real booking (H-153), and again if the token is revoked. Skippable until then: with DEPLOY_REQUIRES_GREEN unset, every push to main deploys as before",
         why: "With the gate on, Vercel's push-triggered production build cancels itself and .github/workflows/deploy-gate.yml deploys each commit only after its CI on main is green, with the Vercel CLI. That needs a Vercel token and the project ids, and the switch itself has to be set on both GitHub and Vercel, because Vercel cannot read a GitHub variable. No CLI here can mint the token.",
         run: [
-          "Reuse the token minted for ci-vercel-deploy-token, or mint a second one: Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.",
+          "Mint a token for this environment alone: Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project. Never reuse the preview-deploy-token one: the preview job runs pull request code, and any token that can deploy the project can deploy production around the gate.",
+          "Create the environment restricted to main: gh api -X PUT repos/AaronBuxbaum/diveday/environments/production-deploy -F 'deployment_branch_policy[protected_branches]=false' -F 'deployment_branch_policy[custom_branch_policies]=true'; then gh api -X POST repos/AaronBuxbaum/diveday/environments/production-deploy/deployment-branch-policies -f name=main -f type=branch",
           "gh secret set VERCEL_TOKEN --env production-deploy",
           "gh secret set VERCEL_ORG_ID --env production-deploy --body <orgId>; gh secret set VERCEL_PROJECT_ID --env production-deploy --body <projectId> -- the same two ids as ci-vercel-deploy-token, read from .vercel/project.json.",
-          "vercel env add DEPLOY_REQUIRES_GREEN production (value: true) -- from here, pushes to main stop deploying.",
+          "vercel env add DEPLOY_REQUIRES_GREEN production (value: true, not sensitive: the workflow reads the value back) -- from here, pushes to main stop deploying.",
           "gh variable set DEPLOY_REQUIRES_GREEN --body true",
         ],
         produces:
-          "Production deploys only commits whose CI on main is green, newest first, so a red commit never runs its migration. Production lags main by one CI run.",
+          "A push to main no longer builds production; the workflow deploys each commit once its CI on main is green, newest first, so a red commit never runs its migration. Production lags main by one CI run. It stops push-triggered builds; it is not an access control against anyone holding a Vercel token.",
         store:
           "GitHub repo Settings -> Environments -> production-deploy -> Environment secrets -> VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID, with a deployment branch rule allowing main only and no required reviewer (a green main is the approval). The switch: GitHub repo Settings -> Secrets and variables -> Actions -> Variables -> DEPLOY_REQUIRES_GREEN, and Vercel project -> Settings -> Environment Variables -> DEPLOY_REQUIRES_GREEN (Production).",
         verify: [
+          "gh api repos/AaronBuxbaum/diveday/environments/production-deploy --jq .deployment_branch_policy shows custom_branch_policies true, and gh api repos/AaronBuxbaum/diveday/environments/production-deploy/deployment-branch-policies --jq '[.branch_policies[].name]' prints [\"main\"] and nothing else. Without that rule the token is open to a dispatch from any branch.",
           "Actions -> Deploy gate -> Run workflow with the newest green commit on main: Vercel shows a production deployment of that sha. The next push to main shows a CANCELED deployment whose log names the gate, then a deployment from the workflow once its CI is green.",
         ],
         note: "To turn it off, remove the Vercel variable first, then the GitHub one; the other order leaves a window in which nothing deploys. docs/engineering/deploy-and-migrations-runbook.md, 'The deploy gate', has the mechanism.",

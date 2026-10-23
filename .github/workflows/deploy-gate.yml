@@ -1,5 +1,8 @@
-# Production deploys only a commit whose CI on main is green, once the gate is
-# on (H-153; scripts/deploy-gate.mjs has the mechanism and why it is this one).
+# Once the gate is on, a push to main no longer builds production; this
+# workflow deploys a commit after its CI on main is green (H-153;
+# scripts/deploy-gate.mjs has the mechanism and why it is this one). It stops
+# push-triggered builds, and with them a red commit's migration. It is not an
+# access control: anyone holding a Vercel token can still deploy production.
 #
 # OFF until the pilot shop's first real booking. It is two switches by one
 # name, because Vercel cannot read a GitHub variable:
@@ -40,8 +43,13 @@ jobs:
   # record of CI on main, and refuses anything else.
   resolve:
     name: Choose the commit to deploy
+    # `github.ref` is main for every `workflow_run`. A dispatch runs the
+    # workflow file from the ref the user picks, so one from any other ref is
+    # refused here rather than trusted; the production-deploy environment's
+    # main-only branch rule is the second lock on the same door.
     if: >-
       vars.DEPLOY_REQUIRES_GREEN == 'true'
+      && github.ref == 'refs/heads/main'
       && (github.event_name == 'workflow_dispatch'
         || (github.event.workflow_run.conclusion == 'success'
           && github.event.workflow_run.head_branch == 'main'
@@ -56,10 +64,12 @@ jobs:
       deploy: ${{ steps.decide.outputs.deploy }}
       sha: ${{ steps.decide.outputs.sha }}
     steps:
-      # The default branch's own copy of the decision, never the commit's.
+      # main's own copy of the decision (the `if:` above holds this job to
+      # main), never the deployed commit's.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: scripts
+          persist-credentials: false
       - id: decide
         env:
           GH_TOKEN: ${{ github.token }}
@@ -95,7 +105,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.resolve.outputs.sha }}
-      - uses: ./.github/actions/setup
+          persist-credentials: false
+      # pnpm and Node only, no dependency install: `vercel deploy` uploads the
+      # source and builds on Vercel, so this job needs no node_modules, and no
+      # dependency's lifecycle script runs in the job that holds the token.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.0
       - name: Confirm the Vercel credentials and Vercel's half of the switch
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -111,10 +128,19 @@ jobs:
           done
           team=""
           case "$VERCEL_ORG_ID" in team_*) team="?teamId=${VERCEL_ORG_ID}" ;; esac
-          if ! curl -fsS --max-time 30 -H "Authorization: Bearer ${VERCEL_TOKEN}" \
-              "https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env${team}" \
-              | jq -e '[.envs[] | select(.key == "DEPLOY_REQUIRES_GREEN" and (.target | index("production")))] | length > 0' > /dev/null; then
-            echo "::error::The Vercel project has no Production variable DEPLOY_REQUIRES_GREEN, so every push to main still deploys before CI answers and the gate stops nothing. Set it to true on Vercel (manual action \"production-deploy-gate\"), or unset the GitHub variable to turn the gate off."
+          api="https://api.vercel.com"
+          auth="Authorization: Bearer ${VERCEL_TOKEN}"
+          # The list names the variable but returns no value; the by-id read
+          # returns it decrypted, unless it was created as "sensitive", which
+          # nobody can read back. A switch is not a secret: create it plain.
+          id=$(curl -fsS --max-time 30 -H "$auth" "${api}/v10/projects/${VERCEL_PROJECT_ID}/env${team}" \
+            | jq -r '[.envs[] | select(.key == "DEPLOY_REQUIRES_GREEN" and (.target | index("production")))][0].id // empty')
+          value=""
+          if [ -n "$id" ]; then
+            value=$(curl -fsS --max-time 30 -H "$auth" "${api}/v1/projects/${VERCEL_PROJECT_ID}/env/${id}${team}" | jq -r '.value // empty')
+          fi
+          if [ "$value" != "true" ]; then
+            echo "::error::The Vercel project's Production variable DEPLOY_REQUIRES_GREEN is not readable as true (missing, another value, or created as sensitive), so every push to main still deploys before CI answers and the gate stops nothing. Set it to true, not sensitive, on Vercel (manual action \"production-deploy-gate\"), or unset the GitHub variable to turn the gate off."
             exit 1
           fi
       # `vercel deploy` from this exact commit, built on Vercel with the
@@ -128,7 +154,8 @@ jobs:
           SHA: ${{ needs.resolve.outputs.sha }}
         run: |
           set -euo pipefail
-          url=$(pnpm dlx vercel@62.5.0 deploy --prod --archive=tgz --yes --token="$VERCEL_TOKEN" --build-env DEPLOY_GATE_SHA="$SHA")
+          # The CLI reads VERCEL_TOKEN from the environment; it is never on argv.
+          url=$(pnpm dlx vercel@62.5.0 deploy --prod --archive=tgz --yes --build-env DEPLOY_GATE_SHA="$SHA")
           echo "Production now serves \`${SHA}\`: ${url}" >> "$GITHUB_STEP_SUMMARY"
 
   # A failed production deploy is an issue, not a red run nobody opens
@@ -146,4 +173,6 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - run: node scripts/workflow-alert.mjs --workflow deploy-gate --outcome "${{ needs.resolve.result == 'success' && needs.deploy.result == 'success' && 'success' || 'failure' }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

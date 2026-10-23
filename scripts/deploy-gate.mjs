@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 /**
- * The production deploy gate: once it is on, production builds only a commit
- * whose CI on `main` finished green (H-153).
+ * The production deploy gate: once it is on, a push to `main` no longer builds
+ * production; a commit deploys after its CI on `main` finished green (H-153).
+ *
+ * **What it stops, and what it does not.** It stops push-triggered production
+ * builds, and with them a red commit's migration. It is not an access control:
+ * `DEPLOY_GATE_SHA` is a marker, not a credential, and the uploaded tree brings
+ * its own `vercel-build.mjs`, so anyone holding a Vercel token that can deploy
+ * the project can still deploy production. Keep that token to the
+ * production-deploy environment (manual action `production-deploy-gate`).
  *
  * **Why.** `scripts/vercel-build.mjs` runs `pnpm db:migrate` against the
  * production database inside the build, and Vercel builds every push to `main`
@@ -63,7 +70,7 @@ export function gitDeployRefusal(env) {
   if (env[GATE_SWITCH] !== "true") return null;
   const approved = env[GATE_SHA] ?? "";
   if (approved === "") {
-    return `The deploy gate is on (${GATE_SWITCH}=true): production builds only from .github/workflows/deploy-gate.yml, after this commit's CI on main is green. This push-triggered build stops here, before any migration; the workflow deploys the commit once CI passes.`;
+    return `The deploy gate is on (${GATE_SWITCH}=true): a push-triggered production build does not run; .github/workflows/deploy-gate.yml deploys a commit after its CI on main is green. This push-triggered build stops here, before any migration; the workflow deploys the commit once CI passes.`;
   }
   if (!SHA.test(approved)) {
     return `${GATE_SHA} is "${approved}", not a 40-character commit sha. Refusing rather than guessing which commit was proved green.`;

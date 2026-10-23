@@ -124,9 +124,13 @@ A docs-only commit therefore never reaches `pnpm db:migrate` either. That is saf
 
 **Off until the pilot shop's first real booking** (H-153). Today every push to `main` builds and
 migrates production at once, about twenty minutes before CI on that commit has an answer, so a
-commit CI would have stopped still runs its migration. With the gate on, production builds only a
-commit whose CI on `main` finished green, and the live site is the last green commit: production
-lags `main` by one CI run.
+commit CI would have stopped still runs its migration. With the gate on, a push to `main` no longer
+builds production; a commit deploys once its CI on `main` finished green, and the live site is the
+last green commit: production lags `main` by one CI run. **It stops push-triggered builds; it is
+not an access control against anyone holding a Vercel token.** `DEPLOY_GATE_SHA` is a marker, not a
+credential, and a deployed tree brings its own `scripts/vercel-build.mjs`, so a token that can
+deploy the project can deploy production around the gate. That is why the gate's token is its own,
+on an environment only `main` can use.
 
 Vercel's Git integration cannot wait for a GitHub check, and Vercel's deployment checks hold back
 the alias, not the build, which is where the migration runs. So the gate has two halves, both in
@@ -142,7 +146,10 @@ the alias, not the build, which is where the migration runs. So the gate has two
   `deploy` job, on the `production-deploy` environment, runs `vercel deploy --prod` from that exact
   commit with the build variable `DEPLOY_GATE_SHA`, which is the one thing the first half lets
   through. Run workflow with a green sha redeploys it, which is how a human rolls back to a green
-  commit. A failed deploy opens a `ci-red` issue (`scripts/workflow-alert.mjs`); the next
+  commit. Only from `main`: a dispatch from any other ref is refused by `resolve`, and the
+  environment's branch rule refuses it again. **A rollback is unreviewed and can go back past a
+  security fix**, or past a contracting migration to code older than the schema: any green commit
+  on `main` qualifies, so read what lies between it and the tip before you pick it. A failed deploy opens a `ci-red` issue (`scripts/workflow-alert.mjs`); the next
   successful one closes it.
 
 **The switch is one name in two places**, because Vercel cannot read a GitHub variable:
@@ -154,9 +161,15 @@ deployed twice.
 To turn it on, in this order:
 
 1. Complete manual action `production-deploy-gate` in [manual-actions.md](manual-actions.md): the
-   `production-deploy` environment with its three Vercel secrets.
-2. Set the Vercel variable: `vercel env add DEPLOY_REQUIRES_GREEN production`, value `true`. From
-   here, pushes to `main` stop deploying.
+   `production-deploy` environment, restricted to `main`, with its own Vercel token (never the
+   preview one) and the two project ids. Confirm the branch rule:
+   `gh api repos/AaronBuxbaum/diveday/environments/production-deploy --jq .deployment_branch_policy`
+   shows custom branch policies, and
+   `gh api repos/AaronBuxbaum/diveday/environments/production-deploy/deployment-branch-policies --jq '[.branch_policies[].name]'`
+   is `["main"]`.
+2. Set the Vercel variable: `vercel env add DEPLOY_REQUIRES_GREEN production`, value `true`, not
+   sensitive (the workflow reads the value back, and a sensitive one cannot be read). From here,
+   pushes to `main` stop deploying.
 3. Set the GitHub variable: `gh variable set DEPLOY_REQUIRES_GREEN --body true`.
 4. Run the `Deploy gate` workflow with the newest green commit on `main`, and confirm Vercel shows a
    production deployment of that sha. The next push to `main` should show a `CANCELED` deployment

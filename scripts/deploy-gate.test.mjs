@@ -166,4 +166,20 @@ describe("wiring", () => {
     expect(workflow).toContain(`--build-env ${GATE_SHA}=`);
     expect(workflow).toContain(`"${GATE_SWITCH}"`);
   });
+
+  it("a dispatch from any ref but main is refused before anything holds a token", () => {
+    const workflow = read(".github/workflows/deploy-gate.yml");
+    const resolve = workflow.slice(workflow.indexOf("  resolve:"), workflow.indexOf("  deploy:"));
+    expect(resolve).toContain("github.ref == 'refs/heads/main'");
+  });
+
+  it("the job holding the Vercel token installs nothing and keeps no git credential", () => {
+    const workflow = read(".github/workflows/deploy-gate.yml");
+    expect(workflow).not.toContain("./.github/actions/setup");
+    expect(workflow).not.toMatch(/pnpm install|--token/);
+    const checkouts = workflow.match(/uses: actions\/checkout@/g) ?? [];
+    const unpersisted = workflow.match(/persist-credentials: false/g) ?? [];
+    expect(checkouts.length).toBeGreaterThan(0);
+    expect(unpersisted).toHaveLength(checkouts.length);
+  });
 });
