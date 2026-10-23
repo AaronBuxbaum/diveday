@@ -136,8 +136,9 @@ discount that does not exist.
   - **Sightings** off: the manifest's Seen group and the dive log's species field go, the
     shopfront's month shelf and a trip page's site sightings are not read, the recap names no
     species, and no highlight is drafted from sightings. A chip tap and the sightings assist
-    refuse. **Saving a dive keeps the species already logged** (`keepObservedSpecies`, plus a
-    hidden field), because the save replaces the whole row. Roll call, head count and readiness
+    refuse. **Saving a dive keeps the species already logged** unless the form drew the
+    picker and its `speciesShown` marker (`keepObservedSpecies`), because the save replaces the
+    whole row. Roll call, head count and readiness
     never change.
   - **Recap photos** off: no upload from the recap link, the readiness link or the crew's
     departure album, and the diver's recap shows no photo door or album. Photos already added stay

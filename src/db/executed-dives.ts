@@ -42,9 +42,10 @@ export type ExecutedDiveInput = {
   observedSpeciesSlug?: string | null;
   /**
    * Leave the stored species exactly as it is, whatever `observedSpeciesSlug`
-   * says: the shop has sightings switched off, so the form drew no species
-   * field, and a save of the dive must not erase what was logged before
-   * (ADR 20261005-optional-shop-features). A new row starts with none.
+   * says: the form drew no species picker (sightings were off when it loaded,
+   * so it posted no `speciesShown` marker), and a save of the dive must not
+   * erase what was logged before (ADR 20261005-optional-shop-features). A new
+   * row starts with none.
    */
   keepObservedSpecies?: boolean;
   /**

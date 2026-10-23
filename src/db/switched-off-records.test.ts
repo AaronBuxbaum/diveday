@@ -68,6 +68,36 @@ describe("sightings switched off", () => {
       dive: { maxDepthMeters: 21, observedSpeciesSlug: species.slug },
     });
   });
+
+  it("saves the species a form that showed the picker posted, after the switch went off", async () => {
+    const { db, shop } = ctx;
+    const [owner] = await db
+      .select({ id: people.id })
+      .from(people)
+      .innerJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(and(eq(people.shopId, shop.id), eq(personRoles.role, "owner")))
+      .limit(1);
+    const [trip] = await db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(eq(trips.shopId, shop.id))
+      .limit(1);
+    const [species] = MARINE_LIFE_CATALOG;
+    if (!owner || !trip || !species) throw new Error("fixture needs an owner, a trip, a species");
+    await db.delete(executedDives).where(eq(executedDives.tripId, trip.id));
+    // The form loaded with sightings on; the switch went off before Save.
+    await db.update(shops).set({ sightingsEnabled: false }).where(eq(shops.id, shop.id));
+
+    const saved = await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      observedSpeciesSlug: species.slug,
+      keepObservedSpecies: false,
+      recordedByPersonId: owner.id,
+    });
+    expect(saved).toMatchObject({ ok: true, dive: { observedSpeciesSlug: species.slug } });
+  });
 });
 
 describe("recap photos switched off", () => {

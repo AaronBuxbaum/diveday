@@ -26,6 +26,7 @@ import {
 } from "@/lib/plan-change";
 import { utcToWallTime } from "@/lib/zoned";
 import type { ExecutedDiveResult } from "../actions";
+import { SPECIES_SHOWN_FIELD } from "./species-shown";
 
 function dateTimeValue(value: Date | null, timeZone: string) {
   if (!value) return "";
@@ -447,12 +448,11 @@ function ExecutedDiveForm({
                 </option>
               ))}
             </select>
+            {/* The save writes the species only from a form that drew this
+                picker; without the marker it keeps the one logged before. */}
+            <input type="hidden" name={SPECIES_SHOWN_FIELD} value="1" />
           </Field>
-        ) : (
-          // Sightings switched off: the species logged before is carried, not
-          // shown, so this save leaves it where it was.
-          <input type="hidden" name="observedSpeciesSlug" value={species} />
-        )}
+        ) : null}
       </FieldGrid>
       <ChoiceRow
         name="notRecorded"

@@ -172,6 +172,14 @@ describe("the species picker", () => {
     expect(speciesOptions()).toContain("spotted-eagle-ray");
   });
 
+  it("draws the speciesShown marker beside the picker, so the save writes what it posts", () => {
+    renderLog("Dive 1 — not recorded yet");
+
+    const marker = document.querySelector<HTMLInputElement>('input[name="speciesShown"]');
+    expect(marker?.type).toBe("hidden");
+    expect(marker?.value).toBe("1");
+  });
+
   it("keeps a chosen species when the crew changes the site", async () => {
     // A sighting is a claim about a moment, not about a row in the site
     // library, so re-picking the site reorders the list and drops nothing.
@@ -194,11 +202,11 @@ describe("the species picker", () => {
 
 /**
  * **Sightings switched off** (ADR 20261005-optional-shop-features): the dive
- * log draws no species field, and the species logged before rides along in
- * the form so saving the dive's times and depth never erases it.
+ * log draws no species field and no `speciesShown` marker, and the save keeps
+ * the species logged before because the marker is absent.
  */
 describe("the dive log with sightings switched off", () => {
-  it("hides the species picker and carries the logged species unchanged", () => {
+  it("hides the species picker and posts neither a species nor the marker", () => {
     const logged = {
       executed: {
         diveNumber: 1,
@@ -218,9 +226,7 @@ describe("the dive log with sightings switched off", () => {
 
     expect(document.querySelector('select[name="observedSpeciesSlug"]')).toBeNull();
     expect(screen.queryByText("Seen on this dive")).toBeNull();
-    const carried = document.querySelector<HTMLInputElement>(
-      'input[type="hidden"][name="observedSpeciesSlug"]',
-    );
-    expect(carried?.value).toBe("spotted-eagle-ray");
+    expect(document.querySelector('[name="observedSpeciesSlug"]')).toBeNull();
+    expect(document.querySelector('[name="speciesShown"]')).toBeNull();
   });
 });

@@ -4,6 +4,7 @@ import { recordLostItem } from "@/db/lost-items";
 import {
   divePackages,
   diveSites,
+  executedDives,
   lostItems,
   people,
   shopPromoCodes,
@@ -53,7 +54,7 @@ const { resendReadyNoticeAction } = await import("./gear/work-orders/follow-up-a
 const { createPromoAction } = await import("./promos/actions");
 const { createDivePackageAction } = await import("./settings/package-actions");
 const { lostItemRowAction } = await import("@/app/actions/lost-items");
-const { recordSightingAction, deleteSightingAction } = await import(
+const { recordSightingAction, deleteSightingAction, saveExecutedDiveAction } = await import(
   "./trips/[id]/manifest/actions"
 );
 
@@ -201,12 +202,62 @@ describe("actions behind a switched-off feature", () => {
         .from(tripSightings)
         .where(eq(tripSightings.tripId, trip.id));
 
-    expect(await recordSightingAction(sightingCtx, undefined, tap)).toEqual({ status: "error" });
-    expect(await deleteSightingAction(sightingCtx, undefined, tap)).toEqual({ status: "error" });
+    // Switched off is its own answer, not a lost connection: the group
+    // refreshes and goes rather than asking for another tap.
+    expect(await recordSightingAction(sightingCtx, undefined, tap)).toEqual({
+      status: "switched_off",
+    });
+    expect(await deleteSightingAction(sightingCtx, undefined, tap)).toEqual({
+      status: "switched_off",
+    });
     expect(await logged()).toEqual([]);
 
     await db.update(shops).set({ sightingsEnabled: true }).where(eq(shops.id, shop.id));
     expect(await recordSightingAction(sightingCtx, undefined, tap)).toEqual({ status: "ok" });
     expect(await logged()).toHaveLength(1);
+  });
+
+  it("saves the species a form that drew the picker posted, after sightings went off", async () => {
+    const { db, shop } = ctx;
+    const startsAt = new Date(nowDate().getTime() - 6 * 3_600_000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Sightings off mid-save",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+      capacity: 8,
+    });
+    if (!trip) throw new Error("trip not created");
+    const { owner } = await asOwnerWith("sightings");
+    vi.mocked(requireShopSurface).mockImplementation((async () => ({
+      db,
+      shop: await getShopById(db, shop.id),
+      session: staffSession({ shopId: shop.id, shopSlug: shop.slug, personId: owner }),
+    })) as never);
+    const diveCtx = { shopSlug: shop.slug, tripId: trip.id, checkpoint: "after_dive_1" as const };
+    const species = () =>
+      db
+        .select({ slug: executedDives.observedSpeciesSlug })
+        .from(executedDives)
+        .where(eq(executedDives.tripId, trip.id));
+    const save = (fields: Record<string, string>) =>
+      saveExecutedDiveAction(
+        diveCtx,
+        undefined,
+        form({ diveNumber: "1", actualSiteId: "", maxDepthMeters: "", ...fields }),
+      );
+
+    // The form loaded with sightings on, so it drew the picker and its marker;
+    // the switch went off before Save. What the crew picked is saved.
+    expect(
+      await save({ speciesShown: "1", observedSpeciesSlug: "green-sea-turtle" }),
+    ).toEqual({ status: "ok" });
+    expect(await species()).toEqual([{ slug: "green-sea-turtle" }]);
+
+    // A form drawn with sightings off posts no marker: the species stays.
+    expect(await save({ maxDepthMeters: "18", observedSpeciesSlug: "" })).toEqual({
+      status: "ok",
+    });
+    expect(await species()).toEqual([{ slug: "green-sea-turtle" }]);
   });
 });

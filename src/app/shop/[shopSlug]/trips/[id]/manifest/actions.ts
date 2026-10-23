@@ -42,6 +42,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { TRIP_STAGES } from "@/lib/trip-stages";
 import { UUID_SOURCE } from "@/lib/uuid";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { formShowedSpecies } from "./_components/species-shown";
 
 /* -------------------------------------------------------------------------- *
  * The boat manifest's mutations
@@ -239,9 +240,10 @@ export async function saveExecutedDiveAction(
     },
     notRecorded,
     observedSpeciesSlug: parsed.data.observedSpeciesSlug || null,
-    // Sightings switched off: the form drew no species, and the save keeps
-    // the one logged before rather than erasing it.
-    keepObservedSpecies: !shop.sightingsEnabled,
+    // A form that drew no species picker keeps the one logged before. Read off
+    // the form, not the switch: a form loaded with sightings on saves the
+    // species the crew picked even if the switch went off before Save.
+    keepObservedSpecies: !formShowedSpecies(formData),
     planChangeReason: parsed.data.planChangeReason || null,
     planChangeNote: parsed.data.planChangeNote || null,
     recordedByPersonId: staff.user.personId,
@@ -270,7 +272,12 @@ const sightingSchema = z.object({ speciesSlug: z.string().trim().min(1).max(80) 
  * none of them is a thing a crew member on a moving deck can act on
  * differently. What they need to know is that the tap did not count.
  */
-export type SightingResult = { status: "ok" } | { status: "error" };
+/**
+ * `switched_off` is its own answer, not an error: the shop turned sightings off
+ * while this manifest was open, which is no lost connection, so the group
+ * refreshes and goes rather than asking for another tap.
+ */
+export type SightingResult = { status: "ok" } | { status: "error" } | { status: "switched_off" };
 
 /**
  * The site the taps attach to rides in the bound context rather than in the
@@ -291,7 +298,7 @@ export async function recordSightingAction(
   if (!parsed.success) return { status: "error" };
   // Sightings switched off: the Seen group is gone, so a tap is a hand-built post.
   if (!(await shopHasFeatureOn(await getDb(), staff.user.shopId, "sightings"))) {
-    return { status: "error" };
+    return { status: "switched_off" };
   }
   const saved = await recordTripSighting(await getDb(), {
     shopId: staff.user.shopId,
@@ -315,7 +322,7 @@ export async function deleteSightingAction(
   const parsed = sightingSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error" };
   if (!(await shopHasFeatureOn(await getDb(), staff.user.shopId, "sightings"))) {
-    return { status: "error" };
+    return { status: "switched_off" };
   }
   const removed = await deleteTripSighting(await getDb(), {
     shopId: staff.user.shopId,
