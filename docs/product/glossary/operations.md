@@ -1910,7 +1910,9 @@
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a
   daily reaper clears minted demos after 7 days. The canonical `isDemo` shop (Blue Mantis) is
   bootstrapped in every environment as the fixture the e2e/visual-regression fleet tests against,
-  and is never reaped. Onboarding a **trial** at `/onboard` — which only the owner's setup link opens, since every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand) — creates a real shop that is *not* demo mode and is
+  and is never reaped. AI suggestions run in a minted demo under a $1 cap and the demo AI
+  allowance, $10 a month across every minted demo, kept in `claude_demo_spend` so a reaped
+  demo's spend still counts; Blue Mantis keeps a real shop's cap (Aaron, 2026-10-23). Onboarding a **trial** at `/onboard` — which only the owner's setup link opens, since every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand) — creates a real shop that is *not* demo mode and is
   **never seeded** — it starts empty, with no playground banner or destructive reset (ADR
   20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed). A trial runs
   **3 weeks** from `shops.created_at` (`TRIAL_DURATION_DAYS`, `src/lib/trial.ts`), shown to the
