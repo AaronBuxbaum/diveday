@@ -149,6 +149,9 @@ export async function sendDueCheckoutRecoveries(
     .where(
       and(
         eq(bookingCheckouts.status, "pending"),
+        // The shop's Features switch: off, no reminder goes and the checkout
+        // is left exactly as it was (ADR 20261005-optional-shop-features).
+        eq(shops.checkoutRecoveryEnabled, true),
         isNull(bookingCheckouts.abandonedRecoverySentAt),
         lte(bookingCheckouts.createdAt, staleBefore),
         or(isNull(bookingCheckouts.expiresAt), gt(bookingCheckouts.expiresAt, now)),

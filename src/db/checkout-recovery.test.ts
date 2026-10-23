@@ -9,7 +9,7 @@ import { sendDueCheckoutRecoveries } from "./checkout-recovery";
 import { startBookingCheckout } from "./checkouts";
 import { setBookingPayment } from "./payments";
 import { bookingCheckoutBookings, bookingCheckouts, bookings, people, trips } from "./schema";
-import { setShopTaxEnabled } from "./shops";
+import { setShopFeature, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts, updateTrip } from "./trips";
 
@@ -202,6 +202,26 @@ describe("sendDueCheckoutRecoveries", () => {
     });
     expect(again.sent).toBe(0);
     expect(email.sent).toHaveLength(1);
+  });
+
+  it("sends nothing for a shop with checkout reminders switched off, and leaves the checkout as it was", async () => {
+    const { db, shop, checkoutId } = await pendingCheckoutContext(3);
+    await setShopFeature(db, shop.id, "checkoutRecovery", false);
+    const email = fakeEmail();
+    const summary = await sendDueCheckoutRecoveries(db, {
+      now: NOW,
+      emailProvider: email.provider,
+      checkoutProvider: fakeCheckoutProvider(stillOpen),
+    });
+
+    expect(summary.scanned).toBe(0);
+    expect(email.sent).toHaveLength(0);
+    const [row] = await db
+      .select()
+      .from(bookingCheckouts)
+      .where(eq(bookingCheckouts.id, checkoutId));
+    expect(row?.status).toBe("pending");
+    expect(row?.abandonedRecoverySentAt).toBeNull();
   });
 
   /**
