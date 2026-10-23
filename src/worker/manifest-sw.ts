@@ -68,6 +68,62 @@ const LIVE_MANIFEST_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/manifest(?:\/.*)?
 const COUNTER_PATTERN = /^\/shop\/[^/]+\/trips\/([0-9a-f]{8}-[0-9a-f-]{27})\/?$/i;
 
 /**
+ * How long a navigation waits for the network before the worker shows the
+ * device's saved copy instead. Dock Wi-Fi can show full bars and carry
+ * nothing; on that network a request neither answers nor fails, it waits,
+ * and a fallback that waits for `fetch` to fail never comes. Four seconds is
+ * past a normal page load on a weak link and well short of a captain giving
+ * up on the phone.
+ */
+const NAVIGATION_TIMEOUT_MS = 4_000;
+
+/**
+ * Network-first with a deadline: the live page whenever the network answers,
+ * the device's saved copy when it fails, and the saved copy too once
+ * `NAVIGATION_TIMEOUT_MS` passes without an answer.
+ *
+ * With nothing saved to show, it keeps waiting for the network rather than
+ * trading a slow page for an error page. `live` receives the abort signal,
+ * so a request given up on is stopped, and any work chained inside `live`
+ * (keeping a copy of the page) never runs for a response nobody shows.
+ */
+async function networkFirst(
+  live: (signal: AbortSignal) => Promise<Response>,
+  saved: () => Promise<Response | null | undefined>,
+): Promise<Response> {
+  const controller = new AbortController();
+  const network = live(controller.signal);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), NAVIGATION_TIMEOUT_MS);
+  });
+  try {
+    // Raced as well as aborted: a fetch that ignores its signal still cannot
+    // hold the captain past the deadline.
+    const answered = await Promise.race([network, deadline]);
+    if (answered) return answered;
+  } catch {
+    return (await saved()) ?? Response.error();
+  } finally {
+    clearTimeout(timer);
+  }
+  const copy = await saved();
+  if (!copy) return network.catch(() => Response.error());
+  controller.abort();
+  network.catch(() => undefined);
+  return copy;
+}
+
+/** The saved offline shell, opened at `search`, or null when this device has none. */
+async function offlineShellRedirect(search?: URLSearchParams): Promise<Response | null> {
+  const cachedShell = await caches.match(OFFLINE_SHELL);
+  if (!cachedShell) return null;
+  const redirectTarget = new URL(OFFLINE_SHELL, self.location.origin);
+  if (search) redirectTarget.search = search.toString();
+  return Response.redirect(redirectTarget.href, 302);
+}
+
+/**
  * Chunks the bundler's runtime loads *lazily*, which the shell HTML therefore
  * never names in a `src`/`href`. They are listed inside the chunks the HTML
  * does name, so one extra pass over those bodies finds them.
@@ -551,32 +607,36 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       // Network-first: online, the diver always gets the live page. Only a
       // clean load is kept (a `?saved=` notice is a moment, not the page).
-      fetch(event.request)
-        .then((response) => {
-          if (url.search === "") {
-            event.waitUntil(
-              saveReadyPage(caches, path, response.clone(), nowMs()).catch(() => false),
-            );
-          } else if (url.searchParams.has("cancelled")) {
-            // The diver just cancelled this seat (`cancelMyBookingAction`):
-            // the copy goes with it (security review of layer 8, D2).
-            event.waitUntil(forgetReadyPage(caches, path).catch(() => undefined));
-          }
-          return response;
-        })
-        .catch(async () => (await readyPageFallback(caches, path, nowMs())) ?? Response.error()),
+      networkFirst(
+        (signal) =>
+          fetch(event.request, { signal }).then((response) => {
+            if (url.search === "") {
+              event.waitUntil(
+                saveReadyPage(caches, path, response.clone(), nowMs()).catch(() => false),
+              );
+            } else if (url.searchParams.has("cancelled")) {
+              // The diver just cancelled this seat (`cancelMyBookingAction`):
+              // the copy goes with it (security review of layer 8, D2).
+              event.waitUntil(forgetReadyPage(caches, path).catch(() => undefined));
+            }
+            return response;
+          }),
+        () => readyPageFallback(caches, path, nowMs()),
+      ),
     );
     return;
   }
 
   if (event.request.mode === "navigate" && url.pathname === OFFLINE_SHELL) {
     event.respondWith(
-      fetch(event.request)
-        .then(async (response) => {
-          if (response.ok) (await caches.open(CACHE_NAME)).put(OFFLINE_SHELL, response.clone());
-          return response;
-        })
-        .catch(async () => (await caches.match(OFFLINE_SHELL)) || Response.error()),
+      networkFirst(
+        (signal) =>
+          fetch(event.request, { signal }).then(async (response) => {
+            if (response.ok) (await caches.open(CACHE_NAME)).put(OFFLINE_SHELL, response.clone());
+            return response;
+          }),
+        () => caches.match(OFFLINE_SHELL),
+      ),
     );
     return;
   }
@@ -588,11 +648,10 @@ self.addEventListener("fetch", (event) => {
     // device already has saved instead of the browser's own offline error;
     // online, "/" is untouched and still the marketing home page.
     event.respondWith(
-      fetch(event.request).catch(async () => {
-        const cachedShell = await caches.match(OFFLINE_SHELL);
-        if (!cachedShell) return Response.error();
-        return Response.redirect(new URL(OFFLINE_SHELL, self.location.origin).href, 302);
-      }),
+      networkFirst(
+        (signal) => fetch(event.request, { signal }),
+        () => offlineShellRedirect(),
+      ),
     );
     return;
   }
@@ -603,14 +662,11 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       // Network-first, exactly like the live manifest below: the counter is
       // never served from cache, and this only ever substitutes the device's
-      // own offline copy once the network genuinely fails.
-      fetch(event.request).catch(async () => {
-        const cachedShell = await caches.match(OFFLINE_SHELL);
-        if (!cachedShell) return Response.error();
-        const redirectTarget = new URL(OFFLINE_SHELL, self.location.origin);
-        redirectTarget.searchParams.set("trip", tripId);
-        return Response.redirect(redirectTarget.href, 302);
-      }),
+      // own offline copy once the network fails or stops answering.
+      networkFirst(
+        (signal) => fetch(event.request, { signal }),
+        () => offlineShellRedirect(new URLSearchParams({ trip: tripId })),
+      ),
     );
     return;
   }
@@ -621,19 +677,19 @@ self.addEventListener("fetch", (event) => {
       const tripId = liveManifestMatch[1];
       event.respondWith(
         // Network-first: the live manifest is never served from cache — this
-        // only ever substitutes the device's own offline copy, and only once
-        // the network genuinely fails.
-        fetch(event.request).catch(async () => {
-          const cachedShell = await caches.match(OFFLINE_SHELL);
-          if (!cachedShell) return Response.error();
-          const redirectTarget = new URL(OFFLINE_SHELL, self.location.origin);
-          redirectTarget.searchParams.set("trip", tripId);
-          // Carries the checkpoint a captain was on (e.g. "after_dive_1") so a
-          // reload mid roll call doesn't drop them back to "Before departure".
-          const checkpoint = url.searchParams.get("checkpoint");
-          if (checkpoint) redirectTarget.searchParams.set("checkpoint", checkpoint);
-          return Response.redirect(redirectTarget.href, 302);
-        }),
+        // only ever substitutes the device's own offline copy, once the
+        // network fails or stops answering.
+        networkFirst(
+          (signal) => fetch(event.request, { signal }),
+          () => {
+            const search = new URLSearchParams({ trip: tripId });
+            // Carries the checkpoint a captain was on (e.g. "after_dive_1") so a
+            // reload mid roll call doesn't drop them back to "Before departure".
+            const checkpoint = url.searchParams.get("checkpoint");
+            if (checkpoint) search.set("checkpoint", checkpoint);
+            return offlineShellRedirect(search);
+          },
+        ),
       );
       return;
     }

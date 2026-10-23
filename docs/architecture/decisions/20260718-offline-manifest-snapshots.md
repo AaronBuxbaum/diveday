@@ -26,6 +26,15 @@ offline shell instead of surfacing the browser's own offline error. With no snap
 shell just says so plainly; it never fabricates a roster. This closes the gap where a captain who
 never tapped "Save now" had no page at all to land on once signal dropped.
 
+**Amended 2026-10-23: a network that stops answering counts as failed.** Dock Wi-Fi can show full
+bars and carry nothing, and there a request neither answers nor fails. Every navigation fallback in
+the worker (this live-manifest route, the counter, `/`, the offline shell and the diver's `/ready/`
+copy) now gives the network four seconds, then serves the saved copy and aborts the request. With
+nothing saved on the device it keeps waiting for the network instead. The page's sync of queued
+events gives up after ten seconds and leaves them pending for the next pass, which resends the same
+`clientEventId`s; the server dedupes on `(shop_id, client_event_id)`, so a POST given up on that
+still landed is answered as a duplicate rather than written twice.
+
 > Superseded by [20260726-manifest-offline-copy-automation](20260726-manifest-offline-copy-automation.md):
 > the snapshot now saves and refreshes itself automatically; "Save now" no longer exists, and a captain
 > gets the offline copy without tapping anything.

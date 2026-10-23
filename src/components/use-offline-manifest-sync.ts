@@ -86,8 +86,13 @@ export function useOfflineManifestSync(
     // is gone by then* (ADR 20260804-manifest-web-push). Without this, roll
     // call recorded at sea waits for somebody to reopen DiveDay — and those
     // events are the record of who came back aboard.
+    //
+    // Never awaited: `requestBackgroundFlush` waits on
+    // `navigator.serviceWorker.ready`, which never settles on a device with no
+    // worker registered, and awaiting it here would hold the reconcile queue
+    // below — every later pass on this page — behind a promise that never ends.
     if (!navigator.onLine) {
-      await requestBackgroundFlush();
+      void requestBackgroundFlush();
       return;
     }
     const pendingBefore = lastPendingCount.current;
@@ -129,11 +134,14 @@ export function useOfflineManifestSync(
       // syncOfflineManifest throws a typed OfflineManifestError, not an
       // English sentence (src/lib/offline-manifest-store.ts) — the only
       // failure mode here is "couldn't reach the server," which the one
-      // fallback string already says.
+      // fallback string already says. That includes a sync that gave up at
+      // its deadline (`SYNC_TIMEOUT_MS`): the events are still pending on the
+      // device, and the next pass sends them again under the same ids.
       setMessage(copy.reconcileErrorFallback);
       // Same reasoning as the offline branch above: a failed flush is exactly
       // what Background Sync is for, and this page may not be here to retry.
-      await requestBackgroundFlush();
+      // Not awaited, for the same reason as above.
+      void requestBackgroundFlush();
     }
   }, [router, tripId, copy]);
 
