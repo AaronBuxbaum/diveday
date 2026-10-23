@@ -16,3 +16,10 @@ export const SES_KIND_TAG = "diveday_kind";
  * by kind. Absent for every kind with one reader.
  */
 export const SES_PURPOSE_TAG = "diveday_purpose";
+
+/**
+ * The staff member whose action sent the message (`sender.sentByPersonId`), so
+ * a bounce names who to ask about it. Absent on mail nobody pressed a button
+ * for.
+ */
+export const SES_SENDER_TAG = "diveday_sender";

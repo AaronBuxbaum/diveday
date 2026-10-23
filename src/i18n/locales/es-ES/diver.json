@@ -4804,6 +4804,7 @@
         "intro": "Los registros propios del centro se guardan mientras el centro use DiveDay, y desaparecen cuando el centro los borra o cierra su cuenta. La mayoría de los historiales tienen ventanas fijas, y estos son los números reales con los que el sistema los poda:",
         "activity": "Historial de actividad del personal: 3 años.",
         "delivery": "Resultados e intentos de entrega de mensajes: 400 días. Contienen identificadores del proveedor y códigos de error más que el contenido de los mensajes, aunque el texto de error de un proveedor a veces cita la dirección a la que no pudo llegar.",
+        "bounces": "Correos rebotados o marcados como spam: 90 días. Cada registro guarda la dirección, el motivo que dio el servidor de destino, qué correo era y quién lo envió, para poder corregir problemas de entrega.",
         "payments": "Historial de eventos de pago: 7 años, acorde con el horizonte habitual de los registros financieros. Los pedidos y los pagos en sí son registros del centro y se conservan hasta que el centro los elimina.",
         "webhooks": "Registros de eventos del procesador de pagos: 400 días. No contienen ningún dato de buceadores.",
         "tokens": "Tokens caducados de inicio de sesión y de restablecimiento: 90 días después de su propia caducidad. Uno vigente no se poda nunca.",

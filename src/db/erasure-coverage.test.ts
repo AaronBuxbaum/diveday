@@ -692,6 +692,10 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
     why: "the provider's handle on the message carrying a waiver link. `detail` beside it is nulled, a `wamid.` is rewritten as on notification_deliveries, and the sent message is not chased",
   },
   "waiver_records.delivery_provider_message_id": { held: "elsewhere", why: "as above" },
+  "email_bounces.provider_message_id": {
+    held: "elsewhere",
+    why: "SES's id for a message that bounced or drew a complaint. The erasure deletes the row by its recipient address, id and all; the sent message is not chased",
+  },
   "integration_sync_records.external_id": {
     held: "elsewhere",
     why: "the QuickBooks object a diver was synced to: the map from a DiveDay row to the provider's own object. The row copies no details, but the Customer it names holds the diver's name and contact details at the provider, and erasure does not reach it. Kept so a second Customer is not created for someone already synced (`OUTSIDE_CLOSURE_REASONS` above, issue #1015). The books are the shop's to keep, and deleting a Customer may not be possible while its invoices reference it. Nothing is owed (ADR)",

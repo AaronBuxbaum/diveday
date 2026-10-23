@@ -273,6 +273,68 @@ export const notificationDeliveryAttempts = pgTable(
 );
 
 /**
+ * Every bounce and complaint SES reported, one row per recipient it named, for
+ * DiveDay's own debugging: which address, why, and which email it was. The
+ * delivery rows above only catch a verdict on a message they tracked; the
+ * courtesy kinds and account mail record no message id, so before this table
+ * their bounces were a log line with nothing in it to act on.
+ *
+ * `shop_id` is the `diveday_shop` tag the send carried, null for DiveDay's own
+ * mail (sign-in links, set-up receipts) and for anything sent before the tag.
+ * The recipient is an address in clear, so the table has a short retention
+ * window (`RETENTION_DAYS.email_bounces`) and the erasure sweeps it by address.
+ * Read by the founder's Monday digest; no shop screen reads it.
+ */
+export const emailBounces = pgTable(
+  "email_bounces",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id").references(() => shops.id, { onDelete: "cascade" }),
+    providerMessageId: text("provider_message_id").notNull(),
+    /** `bounce` or `complaint`. */
+    event: text("event").notNull(),
+    /** Lower-cased and trimmed, as SES named it. */
+    recipient: text("recipient").notNull(),
+    /** SES's `bounceType`: `Permanent`, `Transient` or `Undetermined`. */
+    bounceType: text("bounce_type"),
+    /** SES's `bounceSubType`, such as `General`, `NoEmail` or `MailboxFull`. */
+    bounceSubType: text("bounce_sub_type"),
+    /** The SMTP codes from the diagnostic (`550 5.1.1`), never its free text (issue #2531). */
+    smtpStatus: text("smtp_status"),
+    /** The complaint's feedback type (`abuse`), when the mailbox provider gave one. */
+    complaintType: text("complaint_type"),
+    /** The `diveday_kind` tag: which email it was. */
+    kind: text("kind"),
+    /** The `diveday_purpose` tag, for a kind that serves several readers. */
+    purpose: text("purpose"),
+    /**
+     * The staff member whose action sent it (the `diveday_sender` tag), null
+     * for mail nobody pressed a button for: reminders, recaps, digests.
+     */
+    sentByPersonId: uuid("sent_by_person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    createdAt: appNowTimestamp("created_at").notNull(),
+  },
+  (table) => [
+    // SNS delivers at least once; a redelivered event is the same row.
+    uniqueIndex("email_bounces_event_unique").on(
+      table.providerMessageId,
+      table.recipient,
+      table.event,
+    ),
+    index("email_bounces_occurred_idx").on(table.occurredAt),
+    index("email_bounces_recipient_idx").on(table.recipient),
+    // The erasure and a person merge look rows up by who sent them.
+    index("email_bounces_sent_by_idx").on(table.sentByPersonId),
+    check("email_bounces_event_check", sql`${table.event} in ('bounce', 'complaint')`),
+  ],
+);
+
+export type EmailBounce = typeof emailBounces.$inferSelect;
+
+/**
  * Retryable outbound notifications. The payload is the validated application
  * notification, not provider-specific JSON, so a later worker can render it
  * again and keep the idempotency boundary stable across process restarts.

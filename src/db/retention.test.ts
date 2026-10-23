@@ -901,6 +901,20 @@ const STALE_AND_FRESH = {
         })
         .returning({ id: schema.lostItems.id }),
     ),
+  email_bounces: async ({ db, shop }, at) =>
+    idOf(
+      await db
+        .insert(schema.emailBounces)
+        .values({
+          shopId: shop.id,
+          providerMessageId: token(),
+          event: "bounce",
+          recipient: `${token()}@example.com`,
+          bounceType: "Permanent",
+          occurredAt: at,
+        })
+        .returning({ id: schema.emailBounces.id }),
+    ),
   departure_notes: async ({ db, shop, reef }, at) =>
     idOf(
       await db
