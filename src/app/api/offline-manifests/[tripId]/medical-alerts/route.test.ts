@@ -176,11 +176,12 @@ describe("POST /api/offline-manifests/[tripId]/medical-alerts (H-153 amendment)"
   it("refuses a request from another origin before reading anything (security review 2, L5)", async () => {
     const { db, shop, tripId, diverId, owner } = await alerted();
     vi.mocked(auth).mockResolvedValue(session(shop.id, owner, ["owner"]));
-    for (const headers of [
+    const refused: Record<string, string>[] = [
       { Origin: "https://evil.example" },
       { Origin: "null" },
       { "Sec-Fetch-Site": "cross-site" },
-    ]) {
+    ];
+    for (const headers of refused) {
       const response = await call(tripId, headers);
       expect(response.status, JSON.stringify(headers)).toBe(403);
       expect(response.headers.get("Cache-Control")).toBe("private, no-store");
