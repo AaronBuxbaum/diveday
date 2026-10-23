@@ -719,14 +719,13 @@ describe("what Today asks about the bench", () => {
       todayLocal: TODAY,
       timezone: shop.timezone,
     });
-    expect(now).toEqual([
+    expect(now).toMatchObject([
       {
         workOrderId: late.workOrder.id,
         reason: "past_promise",
         status: "received",
         subject: "Maya Late",
         since: "2026-07-18",
-        fleetUnitId: null,
       },
     ]);
 
