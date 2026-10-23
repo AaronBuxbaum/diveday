@@ -21,10 +21,7 @@ Detail: [ai-ml.md](../../product/features/ai-ml.md#claude-assists-in-detail).
 - **Running**: every feature calls `runAssist` (`src/db/assists.ts`). It is **dark** with no
   `ANTHROPIC_API_KEY`, with `DIVEDAY_DISABLE_EXTERNAL_HTTP=1`, when the shop's "AI
   suggestions" switch is off, or past the shop's monthly cap ($15;
-  `DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD`). A demo tenant has a $1 cap of its own
-  (`DIVEDAY_CLAUDE_DEMO_SHOP_MONTHLY_CAP_USD`) and is dark once every demo together spent $10
-  that month (`DIVEDAY_CLAUDE_DEMO_MONTHLY_CAP_USD`), reserved under one shared lock; demos were
-  dark outright until Aaron lit them on 2026-10-23.
+  `DIVEDAY_CLAUDE_SHOP_MONTHLY_CAP_USD`); demos $1, all together $10.
 - **Ledger**: `claude_usage` records each call's tokens and cost, never a prompt, answer or
   person. The cron's `anthropic_spend` ceiling ($200 a month, alert-only) sums it.
 - **Websites**: read by `web_fetch` limited to the exact host the owner pasted, never a shared
