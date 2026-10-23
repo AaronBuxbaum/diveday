@@ -5,7 +5,7 @@ import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { Pool } from "pg";
-import { getDbPoolConfig, listenForPoolErrors } from "@/lib/db-pool-config";
+import { getDbPoolConfig, listenForPoolErrors, retryConnectOnce } from "@/lib/db-pool-config";
 import { queryTimingLogger, withStatementTiming } from "@/lib/observability/query-timing";
 import { closePglite } from "./close-pglite";
 import { withExplicitSslMode } from "./connection-string";
@@ -94,6 +94,9 @@ async function init(): Promise<AppDb> {
     // Before anything can check a client out: an idle client's error with no
     // listener is an uncaught exception that ends the process.
     listenForPoolErrors(pool);
+    // A connection that times out (a suspended Neon compute waking up) is tried once more before
+    // anyone sees an error; a statement never is (src/lib/db-pool-config.ts, H-155).
+    retryConnectOnce(pool);
     // Same schema, same query-builder surface as the PGlite driver below;
     // the driver classes differ only in how they execute over the wire.
     // Every statement timed at the driver for the render's `db_ms`

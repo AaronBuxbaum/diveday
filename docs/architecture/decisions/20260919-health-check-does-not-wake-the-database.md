@@ -110,8 +110,19 @@ surprise in place.
 - `checkDatabase()` keeps one caller and stays a shared function rather than being inlined into
   `/status`, because the next thing that wants this question must get the same answer.
 - **Escape hatch.** If detection latency on the no-traffic database failure ever proves to matter —
-  a pilot shop reporting an outage we did not see, or a first booking morning we want belt-and-braces
-  — the reversal is to restore the `select 1` and accept the always-on compute, priced above. Revisit
-  when a shop is live on real bookings, when the database moves to something without scale-to-zero
-  billing (see the H-04 provider question), or if Neon's idle timeout becomes configurable beyond
-  five minutes.
+  a pilot shop reporting an outage we did not see — the reversal is to restore the `select 1` and
+  accept the always-on compute, priced above. Revisit when the database moves to something without
+  scale-to-zero billing (see the H-04 provider question), or if Neon's idle timeout becomes
+  configurable beyond five minutes. **A shop going live on real bookings is not a trigger**: see the
+  amendment below.
+
+## Amendment 2026-10-23: no always-on compute at the pilot
+
+The 2026-10-23 pre-mortem priced always-on again (about $19 a month) as the cure for a cold first
+screen once the first shop takes real bookings, and named "a shop live on real bookings" above as
+the trigger. **Aaron declined it** ([H-155](../../product/human-decisions/README.md)): "Neon
+auto-scaling should work well here". Scale-to-zero stays on at the pilot. What shipped instead is
+the cheap half: a connection that times out while the compute wakes is tried once more before an
+error shows, and a statement is never retried (`retryConnectOnce` in `src/lib/db-pool-config.ts`).
+Do not propose always-on compute again on the strength of a shop going live; propose it only with
+evidence that a desk saw a cold-start error the retry did not absorb.

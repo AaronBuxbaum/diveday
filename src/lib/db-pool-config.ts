@@ -76,6 +76,79 @@ export function getDbPoolConfig(
   };
 }
 
+/**
+ * Whether a failure to *open* a connection is worth one more attempt.
+ *
+ * Only ever asked of an error from `pool.connect()`, so no statement was sent: a retry here cannot
+ * run a query twice. What it filters out is the refusal another attempt cannot change. A
+ * five-character SQLSTATE means the server (or Neon's proxy) answered, and only three of those
+ * answers are passing: class 08 (connection exception), 57P03 (`cannot_connect_now`, the database
+ * starting up) and 53300 (`too_many_connections`). Everything else with a SQLSTATE -- a wrong
+ * password (class 28), a missing database (3D000) -- fails the same way twice. An error without one
+ * is a timeout or a socket error (`ETIMEDOUT`, `ECONNRESET`, pg-pool's "timeout exceeded when trying
+ * to connect"), which is what a suspended Neon compute waking up looks like. A pool that has been
+ * ended is never retried.
+ */
+export function isRetryableConnectError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  if (error.message.startsWith("Cannot use a pool after calling end")) return false;
+  const code = (error as { code?: unknown }).code;
+  if (typeof code !== "string" || !/^[0-9A-Z]{5}$/.test(code)) return true;
+  return code.startsWith("08") || code === "57P03" || code === "53300";
+}
+
+type ConnectCallback = (error: Error | undefined, client?: unknown, done?: unknown) => void;
+
+/** The one method of a `pg` Pool this wraps; typed narrowly so `src/lib` needs no `pg` import. */
+interface ConnectingPool {
+  connect: (...args: never[]) => unknown;
+}
+
+/**
+ * Try a failed connection once more before anyone sees the error (pre-mortem 2026-10-23, item 6).
+ *
+ * Neon suspends the compute after five idle minutes (ADR 20260919-health-check-does-not-wake-the-database),
+ * and the hourly crons keep it awake only about eleven minutes in sixty, so the first desk request
+ * after a lull usually lands on a cold database. Waking usually takes well under a second and can
+ * outlast the five-second `connectionTimeoutMillis` above; a second attempt then finds the compute
+ * awake. Aaron chose this over paying to keep the compute always on (H-155).
+ *
+ * **Only the connection is retried, never a statement.** This replaces the pool's own `connect`,
+ * which both `pool.query` (it calls `this.connect` with a callback) and a transaction's checkout
+ * (the promise form) go through, and an error from `connect` means no statement was sent. A query
+ * that fails after its connection opened reaches the caller unchanged, because it may have run.
+ * One retry, no delay: pg-pool's own timeout already spent five seconds waiting.
+ */
+export function retryConnectOnce(pool: ConnectingPool): void {
+  const connect = pool.connect.bind(pool) as (callback?: ConnectCallback) => unknown;
+  const noteRetry = (error: Error) => {
+    const code = (error as { code?: unknown }).code;
+    log("db_pool.connect_retried", "warn", {
+      name: error.name,
+      code: typeof code === "string" ? code : null,
+    });
+  };
+  const retrying = (callback?: ConnectCallback): unknown => {
+    if (callback) {
+      connect((error, client, done) => {
+        if (error && isRetryableConnectError(error)) {
+          noteRetry(error);
+          connect(callback);
+          return;
+        }
+        callback(error, client, done);
+      });
+      return undefined;
+    }
+    return (connect() as Promise<unknown>).catch((error: unknown) => {
+      if (!isRetryableConnectError(error)) throw error;
+      noteRetry(error as Error);
+      return connect();
+    });
+  };
+  pool.connect = retrying as ConnectingPool["connect"];
+}
+
 /** The one event of a `pg` Pool this listens to; typed narrowly so `src/lib` needs no `pg` import. */
 interface PoolErrorEmitter {
   on(event: "error", listener: (error: Error) => void): unknown;
