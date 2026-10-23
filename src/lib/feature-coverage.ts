@@ -83,6 +83,13 @@ export const SHOP_BOOLEAN_COVERAGE: Record<string, FeatureCoverage> = {
   sightingsEnabled: "sightings",
   diverPhotosEnabled: "diverPhotos",
   selfRegistrationEnabled: "selfRegistration",
+  waitlistEnabled: "waitlist",
+  pastDiverInvitesEnabled: "pastDiverInvites",
+  helpRequestsEnabled: "helpRequests",
+  partnerLinksEnabled: "partnerLinks",
+  weekOutReminderEnabled: "weekOutReminder",
+  publicConditionsEnabled: "publicConditions",
+  fieldGuideEnabled: "fieldGuide",
   isDemo: { core: "platform marker for a demo shop, not a shop's choice" },
 };
 

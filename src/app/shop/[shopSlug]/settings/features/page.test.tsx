@@ -75,6 +75,8 @@ describe("the Features page", () => {
     expect(rowsIn(await renderFeatures("owner"))).toEqual([
       "divingOptions",
       "hotelPickup",
+      "publicConditions",
+      "fieldGuide",
       "dateRequests",
       "lastMinuteList",
       "promoCodes",
@@ -84,11 +86,16 @@ describe("the Features page", () => {
       "checkoutRecovery",
       "buddyLinks",
       "selfRegistration",
+      "waitlist",
+      "pastDiverInvites",
+      "partnerLinks",
       "reviews",
       "publicYear",
       "padiChecks",
       "sightings",
       "diverPhotos",
+      "weekOutReminder",
+      "helpRequests",
       "crewSchedule",
       "workOrders",
       "lostFound",
@@ -102,6 +109,8 @@ describe("the Features page", () => {
     const switches = names.filter((name) => name.startsWith("feature:"));
     expect(switches).toEqual([
       "feature:hotelPickup",
+      "feature:publicConditions",
+      "feature:fieldGuide",
       "feature:dateRequests",
       "feature:lastMinuteList",
       "feature:promoCodes",
@@ -111,11 +120,16 @@ describe("the Features page", () => {
       "feature:checkoutRecovery",
       "feature:buddyLinks",
       "feature:selfRegistration",
+      "feature:waitlist",
+      "feature:pastDiverInvites",
+      "feature:partnerLinks",
       "feature:reviews",
       "feature:publicYear",
       "feature:padiChecks",
       "feature:sightings",
       "feature:diverPhotos",
+      "feature:weekOutReminder",
+      "feature:helpRequests",
       "feature:crewSchedule",
       "feature:workOrders",
       "feature:lostFound",
@@ -133,7 +147,7 @@ describe("the Features page", () => {
     expect(findElements(page, SubmitButton)).toHaveLength(1);
     // Every row the page drew is named, so the save knows which rows it may write.
     const [form] = findElements<{ children: unknown }>(page, "form");
-    expect(rowsIn(form)).toHaveLength(21);
+    expect(rowsIn(form)).toHaveLength(28);
   });
 
   it("does not render at all for a divemaster", async () => {

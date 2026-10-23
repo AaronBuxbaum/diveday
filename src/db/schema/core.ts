@@ -282,6 +282,49 @@ export const shops = pgTable(
      */
     selfRegistrationEnabled: boolean("self_registration_enabled").notNull().default(true),
     /**
+     * **Waitlist**: a diver asking to hear when a seat opens on a full
+     * departure (the public join, the staff inbox's wait-list door), the "Who
+     * wants in" panel, Today's seat-wanted row and the seat-offer and
+     * received emails. Off, nobody new joins and no offer is sent; interests
+     * already on file stay, and the cron's cleanup of sailed ones keeps running.
+     */
+    waitlistEnabled: boolean("waitlist_enabled").notNull().default(true),
+    /**
+     * **Invite past divers**: suggestions to invite divers who sailed before
+     * onto a thin boat, the quiet-day invite door and the seat offers they
+     * send. Off, none is suggested or sent.
+     */
+    pastDiverInvitesEnabled: boolean("past_diver_invites_enabled").notNull().default(true),
+    /**
+     * **Day-of help requests**: a diver asking the crew for help from their
+     * ready page, and Today's row for it. Off, no new request is taken;
+     * requests already open stay on Today until the crew handles them.
+     */
+    helpRequestsEnabled: boolean("help_requests_enabled").notNull().default(true),
+    /**
+     * **Partner links**: referral links for a hotel or partner, the credit a
+     * booking through one earns and Reports' referred seats. Off, the embed
+     * page offers none and no new credit is recorded; earlier credits stay.
+     */
+    partnerLinksEnabled: boolean("partner_links_enabled").notNull().default(true),
+    /**
+     * **Week-out reminder**: the email a diver gets seven days before a
+     * departure. Off, it is not sent; the day-before reminder always is.
+     */
+    weekOutReminderEnabled: boolean("week_out_reminder_enabled").notNull().default(true),
+    /**
+     * **Public conditions**: the forecast line on public trip pages, their
+     * link previews and structured data, and the shopfront. Off, divers see
+     * none; the staff conditions panel and the high-wind alert never change.
+     */
+    publicConditionsEnabled: boolean("public_conditions_enabled").notNull().default(true),
+    /**
+     * **Field guide**: what lives at each dive site, written by the crew and
+     * shown on public site pages, briefings and print. Off, it is hidden and
+     * kept; the sites themselves stay.
+     */
+    fieldGuideEnabled: boolean("field_guide_enabled").notNull().default(true),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not

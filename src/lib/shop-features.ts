@@ -9,8 +9,10 @@
  * (beta), Claude suggestions (ADR 20261018-claude-assists; off, every
  * assist is dark), lost and found, gear servicing (work orders), promo codes,
  * dive packages, hotel pickups, abandoned-checkout emails, bring-a-buddy
- * links, marine-life sightings, recap photos and counter QR
- * self-registration. Off hides the feature on every surface that offers it and deletes
+ * links, marine-life sightings, recap photos, counter QR
+ * self-registration, the waitlist, past-diver invites, day-of help requests,
+ * partner links, the week-out reminder, public conditions and the dive-site
+ * field guide. Off hides the feature on every surface that offers it and deletes
  * nothing, so turning it back on finds everything where it was.
  *
  * **Every feature starts on for a new shop** (Aaron, 2026-10-23). "Our year"
@@ -41,6 +43,13 @@ export const SHOP_FEATURES = [
   "sightings",
   "diverPhotos",
   "selfRegistration",
+  "waitlist",
+  "pastDiverInvites",
+  "helpRequests",
+  "partnerLinks",
+  "weekOutReminder",
+  "publicConditions",
+  "fieldGuide",
 ] as const;
 
 export type ShopFeature = (typeof SHOP_FEATURES)[number];
@@ -65,6 +74,13 @@ export const SHOP_FEATURE_COLUMNS = {
   sightings: "sightingsEnabled",
   diverPhotos: "diverPhotosEnabled",
   selfRegistration: "selfRegistrationEnabled",
+  waitlist: "waitlistEnabled",
+  pastDiverInvites: "pastDiverInvitesEnabled",
+  helpRequests: "helpRequestsEnabled",
+  partnerLinks: "partnerLinksEnabled",
+  weekOutReminder: "weekOutReminderEnabled",
+  publicConditions: "publicConditionsEnabled",
+  fieldGuide: "fieldGuideEnabled",
 } as const satisfies Record<ShopFeature, string>;
 
 export type ShopFeatureColumn = (typeof SHOP_FEATURE_COLUMNS)[ShopFeature];

@@ -507,6 +507,41 @@
         "label": "Let divers and crew add photos to the recap",
         "description": "Photos from the day, shared with the boat. Off, nobody can add one; photos already added stay with you so you can remove any."
       },
+      "waitlist": {
+        "heading": "Wait list",
+        "label": "Keep a wait list for full departures",
+        "description": "Divers ask to hear when a seat opens on a full boat, and you offer it by email. Off, nobody new joins and no offer goes out; divers already waiting stay on file."
+      },
+      "pastDiverInvites": {
+        "heading": "Invite past divers",
+        "label": "Suggest past divers for a boat with empty seats",
+        "description": "Divers who sailed with you before, suggested on a thin departure with an email offer you send. Off, none is suggested or sent."
+      },
+      "partnerLinks": {
+        "heading": "Partner links",
+        "label": "Give hotels and partners a booking link",
+        "description": "Each seat booked through a partner’s link is credited to them on Reports. Off, Website embed offers no partner link and no new seat is credited; earlier credits stay."
+      },
+      "weekOutReminder": {
+        "heading": "Week-out reminder",
+        "label": "Email divers a week before they dive",
+        "description": "One email seven days before the departure. The day-before reminder goes out either way."
+      },
+      "helpRequests": {
+        "heading": "Help requests",
+        "label": "Let divers ask for help on the day",
+        "description": "A button on their ready page that puts the request on Today. Off, the button is gone; requests already open stay on Today until you handle them."
+      },
+      "publicConditions": {
+        "heading": "Public conditions",
+        "label": "Show divers the forecast",
+        "description": "The wind and sea line on your schedule, trip pages and their link previews. Your crew’s conditions and the high-wind alert stay either way."
+      },
+      "fieldGuide": {
+        "heading": "Field guide",
+        "label": "Keep a field guide for each site",
+        "description": "What lives at each dive site, on its public page, in briefings and on print. Off, it’s hidden and kept; your sites stay."
+      },
       "door": "Turn features on or off"
     },
     "crewSchedule": {

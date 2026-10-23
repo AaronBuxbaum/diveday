@@ -20,6 +20,13 @@ const allOn = {
   sightingsEnabled: true,
   diverPhotosEnabled: true,
   selfRegistrationEnabled: true,
+  waitlistEnabled: true,
+  pastDiverInvitesEnabled: true,
+  helpRequestsEnabled: true,
+  partnerLinksEnabled: true,
+  weekOutReminderEnabled: true,
+  publicConditionsEnabled: true,
+  fieldGuideEnabled: true,
 };
 
 describe("shopOffers", () => {

@@ -507,6 +507,41 @@
         "label": "Dejar que buceadores y tripulación agreguen fotos al resumen",
         "description": "Fotos del día, compartidas con el barco. Desactivado, nadie puede agregar una; las fotos ya agregadas se quedan contigo para que puedas quitar cualquiera."
       },
+      "waitlist": {
+        "heading": "Lista de espera",
+        "label": "Llevar una lista de espera para salidas llenas",
+        "description": "Los buceadores piden saber cuándo se libera una plaza en un barco lleno, y tú se la ofreces por correo. Desactivado, nadie nuevo se anota y no sale ninguna oferta; quienes ya esperan siguen registrados."
+      },
+      "pastDiverInvites": {
+        "heading": "Invitar a buceadores anteriores",
+        "label": "Sugerir buceadores anteriores para un barco con plazas libres",
+        "description": "Buceadores que ya salieron contigo, sugeridos en una salida con pocas reservas junto con una oferta por correo que tú envías. Desactivado, no se sugiere ni se envía ninguno."
+      },
+      "partnerLinks": {
+        "heading": "Enlaces de socios",
+        "label": "Dar a hoteles y socios un enlace de reserva",
+        "description": "Cada plaza reservada con el enlace de un socio se le acredita en Informes. Desactivado, Inserción en tu web no ofrece enlaces de socio y no se acredita ninguna plaza nueva; los créditos anteriores se quedan."
+      },
+      "weekOutReminder": {
+        "heading": "Recordatorio de una semana",
+        "label": "Enviar un correo a los buceadores una semana antes",
+        "description": "Un correo siete días antes de la salida. El recordatorio del día anterior se envía de todos modos."
+      },
+      "helpRequests": {
+        "heading": "Pedidos de ayuda",
+        "label": "Dejar que los buceadores pidan ayuda el día de la salida",
+        "description": "Un botón en su página de preparación que pone el pedido en Hoy. Desactivado, el botón desaparece; los pedidos ya abiertos siguen en Hoy hasta que los atiendas."
+      },
+      "publicConditions": {
+        "heading": "Condiciones públicas",
+        "label": "Mostrar el pronóstico a los buceadores",
+        "description": "La línea de viento y mar en tu calendario, las páginas de salidas y sus vistas previas de enlace. Las condiciones de tu tripulación y la alerta de viento fuerte se quedan de todos modos."
+      },
+      "fieldGuide": {
+        "heading": "Guía de campo",
+        "label": "Llevar una guía de campo para cada sitio",
+        "description": "Lo que vive en cada sitio de buceo, en su página pública, en los briefings y en lo impreso. Desactivado, se oculta y se guarda; tus sitios se quedan."
+      },
       "door": "Activar o desactivar funciones"
     },
     "crewSchedule": {
