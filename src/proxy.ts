@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { rememberedPublicRouteLookup } from "@/db/public-route-existence";
 import { isStaff, type Role } from "@/lib/authz";
+import { arcgisApiKey } from "@/lib/basemap";
 import {
   BUDDY_COOKIE,
   BUDDY_COOKIE_MAX_AGE,
@@ -904,6 +905,8 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
     // the product that loads a third-party script at all. Granting those hosts
     // here rather than app-wide keeps them off every page a diver ever sees.
     metaSignup: WHATSAPP_SETTINGS_PATH.test(req.nextUrl.pathname),
+    // The maps' sharp place labels, fetched from Esri only with a key.
+    vectorLabels: Boolean(arcgisApiKey()),
     development: process.env.NODE_ENV === "development" || process.env.DIVEDAY_E2E === "1",
   };
   res.headers.set("Content-Security-Policy", enforcedPolicy(cspOptions));

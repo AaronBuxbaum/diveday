@@ -118,21 +118,12 @@ for (const scheme of ["light", "dark"] as const) {
           },
         });
         await expect(selectedPopup.locator(".leaflet-site-card__link")).toBeFocused();
-        await capture(page, "dive-sites-library-shop-edge-tooltip", scheme, {
+        // The card pans the map toward the map's edge. Where that takes the
+        // shop's own spot off the map, the shop is not drawn at all rather than
+        // pinned to the edge (Aaron, 2026-10-23); where it does not, it stays.
+        await capture(page, "dive-sites-library-site-card-edge", scheme, {
           beforeShot: async () => {
             await expectPopupInMap(page, selectedPopup);
-          },
-          beforeScreenshot: async () => {
-            const shop = page.locator(".leaflet-shop-marker [role=img]");
-            await expect(shop).toBeVisible();
-            await page.mouse.move(0, 0);
-            await shop.focus();
-            await shop.hover();
-            const tooltip = page.locator(".leaflet-site-tooltip");
-            await expect(tooltip).toHaveCount(1);
-            await expect(tooltip).toContainText("Blue Mantis Divers");
-            await expectPopupInMap(page, tooltip);
-            await expectPopupInMap(page, shop);
           },
         });
       });

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { BASEMAP_IMAGERY_URL, BASEMAP_TILE_HOSTS, routeFrameBounds } from "./basemap";
+import {
+  BASEMAP_IMAGERY_URL,
+  BASEMAP_TILE_HOSTS,
+  routeFrameBounds,
+  VECTOR_LABEL_HOSTS,
+  vectorLabelsStyleUrl,
+} from "./basemap";
 import { osmCoordsEmbedUrl } from "./maps";
 
 describe("routeFrameBounds", () => {
@@ -24,5 +30,12 @@ describe("routeFrameBounds", () => {
 describe("basemap tiles", () => {
   it("come from the one tile host the CSP allows", () => {
     expect(new URL(BASEMAP_IMAGERY_URL.replace(/[{}]/g, "")).origin).toBe(BASEMAP_TILE_HOSTS[0]);
+  });
+
+  it("ask for the vector label style from a host the CSP allows, key encoded", () => {
+    const url = new URL(vectorLabelsStyleUrl("a&b"));
+    expect(VECTOR_LABEL_HOSTS).toContain(url.origin);
+    expect(url.searchParams.get("token")).toBe("a&b");
+    expect(url.pathname).toMatch(/\/arcgis\/imagery\/labels$/);
   });
 });
