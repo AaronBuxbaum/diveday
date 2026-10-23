@@ -31,6 +31,7 @@ function data(participantType: ReadyPageData["participantType"]): ReadyPageData 
     hotelPickupLocation: null,
     offersHotelPickup: true,
     helpRequest: null,
+    helpRequestsOn: true,
     rentalFit: null,
     welcomeOffer: null,
     welcomeShared: false,
@@ -217,5 +218,33 @@ describe("the day-of help request promise", () => {
     expect(screen.getByText("The crew handled this request.")).toBeVisible();
     expect(screen.queryByText(/will help you/)).toBeNull();
     expect(screen.queryByText(/Sam/)).toBeNull();
+  });
+});
+
+/** Help requests switched off on the Features page take no new ask. */
+describe("the help question follows the shop's Help requests switch", () => {
+  it("asks for help while on", () => {
+    render(<DayOfDetails token="tok" data={data("diver")} saved={false} t={t} />);
+    expect(screen.getAllByText(t("ready.helpHeading")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("radio", { name: t("ready.helpCarryGear") })).toBeInTheDocument();
+  });
+
+  it("asks nothing while off", () => {
+    const off = { ...data("diver"), helpRequestsOn: false } as ReadyPageData;
+    render(<DayOfDetails token="tok" data={off} saved={false} t={t} />);
+    expect(screen.queryByText(t("ready.helpHeading"))).toBeNull();
+    expect(screen.queryByRole("radio", { name: t("ready.helpCarryGear") })).toBeNull();
+  });
+
+  it("still says where an open request stands while off, with no way to change it", () => {
+    const off = {
+      ...data("diver"),
+      helpRequestsOn: false,
+      helpRequest: { kind: "carry_gear", status: "requested", helperPersonName: null },
+    } as unknown as ReadyPageData;
+    render(<DayOfDetails token="tok" data={off} saved={false} t={t} />);
+    expect(screen.getByText(t("ready.helpSent"))).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: t("ready.helpCarryGear") })).toBeNull();
+    expect(screen.queryByText(t("ready.helpBody"))).toBeNull();
   });
 });

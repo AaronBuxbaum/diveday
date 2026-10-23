@@ -6,7 +6,15 @@ import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, AppTransaction, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { lockHelpRequestDeparture } from "./help-request-lock";
-import { bookings, people, personRoles, tripAssignments, tripHelpRequests, trips } from "./schema";
+import {
+  bookings,
+  people,
+  personRoles,
+  shops,
+  tripAssignments,
+  tripHelpRequests,
+  trips,
+} from "./schema";
 import { livePerson, liveTrip } from "./trips-live";
 
 export type HelpRequestKind = (typeof tripHelpRequests.kind.enumValues)[number];
@@ -211,9 +219,14 @@ export async function saveHelpRequest(
   const now = input.now ?? nowDate();
   return db.transaction(async (tx) => {
     const [booking] = await tx
-      .select({ tripId: bookings.tripId, personId: bookings.personId })
+      .select({
+        tripId: bookings.tripId,
+        personId: bookings.personId,
+        helpRequestsOn: shops.helpRequestsEnabled,
+      })
       .from(bookings)
       .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .innerJoin(shops, eq(shops.id, bookings.shopId))
       .where(
         and(
           eq(bookings.id, input.bookingId),
@@ -229,6 +242,12 @@ export async function saveHelpRequest(
       .limit(1)
       .for("update", { of: trips });
     if (!booking) return { ok: false, reason: "unavailable" };
+    // **Help requests are a Features switch.** Off, nobody asks for a new one;
+    // a request already open stays on Today until the crew handles it, and
+    // the diver may still withdraw it.
+    if (input.kind !== "none" && !booking.helpRequestsOn) {
+      return { ok: false, reason: "unavailable" };
+    }
 
     const [existing] = await tx
       .select()

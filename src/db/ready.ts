@@ -321,6 +321,8 @@ export type ReadyPageData = {
   rentalFit: DiverRentalFit | null;
   /** The one active, non-medical day-of request this booking has made. */
   helpRequest: HelpRequest | null;
+  /** The shop takes day-of help requests (the Features page); off, only an open one is shown. */
+  helpRequestsOn: boolean;
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
   /** The shop runs hotel pickups, so Day-of details asks about one (fourth UX review, item 8). */
@@ -503,6 +505,7 @@ async function readyPageReads(db: AppDb, bookingId: string, now: Date) {
       rentalPricing: shops.rentalPricing,
       dockCallMinutes: shops.dockCallMinutes,
       offersHotelPickup: shops.offersHotelPickup,
+      helpRequestsOn: shops.helpRequestsEnabled,
       deskPayment: shops.deskPayment,
       personEmail: people.email,
       personLocale: people.locale,
@@ -790,6 +793,7 @@ export async function getReadyPageData(
     pickupTime: row.pickupTime,
     canPay,
     offersHotelPickup: row.offersHotelPickup,
+    helpRequestsOn: row.helpRequestsOn,
     lunchAboard: row.tripLunchAboard,
     dietaryNote: row.dietaryNote,
     owesAtShop: Boolean(perDiverPriceCents) && !settled && !canPay,
