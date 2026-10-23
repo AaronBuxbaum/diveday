@@ -4502,7 +4502,12 @@
           "note3": "Los registros de certificación y las tallas de alquiler no están en una exportación de FareHarbor, porque un motor de reservas no los guarda (mira la tabla de alcance abajo). Espera personas y sus datos de contacto. Las certificaciones y las tallas las construyes en DiveDay a medida que llegan los buceadores.",
           "note4": "Lo que FareHarbor sí guarda son reservas, y esas se trasladan. Ejecuta el informe de Reservas sobre el mismo rango amplio de fechas y tus habituales llegan con su historial de visitas en vez de como nombres nuevos."
         },
-        "importerNote": "Una exportación de FareHarbor es sobre todo datos de contacto y reservas. Se importan personas, correos, teléfonos y el contacto de emergencia que haya. Los registros de certificación y las tallas de alquiler no, porque una plataforma de reservas no los guarda. Importa primero el archivo de Contactos y después el de Reservas: DiveDay empareja a los buceadores por correo, así que el segundo agrega cada reserva al historial del mismo buceador en vez de duplicarlo."
+        "importerNote": "Una exportación de FareHarbor es sobre todo datos de contacto y reservas. Se importan personas, correos, teléfonos y el contacto de emergencia que haya. Los registros de certificación y las tallas de alquiler no, porque una plataforma de reservas no los guarda. Importa primero el archivo de Contactos y después el de Reservas: DiveDay empareja a los buceadores por correo, así que el segundo agrega cada reserva al historial del mismo buceador en vez de duplicarlo.",
+        "percentArm": {
+          "cardSummary": "Un motor de reservas para tours, no software de buceo. Consérvalo como escaparate y lleva el día de buceo que él no puede, o toma también la reserva aquí.",
+          "metaDescription": "¿Estás en FareHarbor? Conserva su red de reservas y distribución y lleva el día de buceo para el que nunca se construyó (controles de certificación, exenciones y el manifiesto con pase de lista), o toma también la reserva aquí. Trae a tus buceadores con una imagen clara de lo que viene con ellos.",
+          "heroLede": "FareHarbor toma la reserva online y te pone delante de su red de hoteles y revendedores. Y aun así el día de buceo sigue llevándose con una tablilla, porque un motor de reservas generalista nunca se construyó para verificar certificaciones, exenciones ni un pase de lista en el agua. Conserva FareHarbor como escaparate, o toma también la reserva aquí."
+        }
       },
       "rezdy": {
         "cardSummary": "Una plataforma de tours generalista con un gran mercado de revendedores, no software de buceo. Consérvala para la distribución, o deja atrás la cuota mensual y la comisión por reserva.",
@@ -4553,7 +4558,12 @@
           "note3": "Los registros de certificación y las tallas de alquiler no están en una exportación de Rezdy, porque un motor de reservas no los guarda (mira la tabla de alcance abajo). Espera personas y sus datos de contacto. Las certificaciones y las tallas las construyes en DiveDay a medida que llegan los buceadores.",
           "note4": "Lo que Rezdy sí guarda son reservas, y esas se trasladan. La forma de una fila por reserva del informe de Pedidos traslada el historial de visitas de tus habituales con ellos."
         },
-        "importerNote": "Una exportación de Rezdy es sobre todo datos de contacto y reservas. Se importan personas, correos, teléfonos y el contacto de emergencia que haya. Los registros de certificación y las tallas de alquiler no, porque una plataforma de reservas no los guarda. Trae el archivo de Pedidos: DiveDay empareja a los buceadores por correo, así que sus filas repetidas de un mismo cliente se convierten en el historial de visitas de ese buceador en vez de en personas duplicadas."
+        "importerNote": "Una exportación de Rezdy es sobre todo datos de contacto y reservas. Se importan personas, correos, teléfonos y el contacto de emergencia que haya. Los registros de certificación y las tallas de alquiler no, porque una plataforma de reservas no los guarda. Trae el archivo de Pedidos: DiveDay empareja a los buceadores por correo, así que sus filas repetidas de un mismo cliente se convierten en el historial de visitas de ese buceador en vez de en personas duplicadas.",
+        "percentArm": {
+          "cardSummary": "Una plataforma de tours generalista con un gran mercado de revendedores, no software de buceo. Consérvala para la distribución, o toma también la reserva aquí.",
+          "metaDescription": "¿Estás en Rezdy? Conserva su mercado de revendedores y lleva el día de buceo para el que nunca se construyó (controles de certificación, exenciones y el manifiesto con pase de lista), o toma también la reserva aquí. Trae a tus buceadores con una imagen clara de lo que viene con ellos.",
+          "heroLede": "Rezdy toma la reserva online y empuja tus salidas a su mercado de revendedores y a las grandes OTAs. Y aun así el día de buceo sigue llevándose con una tablilla, porque un motor de reservas generalista nunca se construyó para verificar certificaciones, exenciones ni un pase de lista en el agua. Conserva Rezdy como escaparate, o toma también la reserva aquí."
+        }
       }
     },
     "about": {
@@ -4599,7 +4609,12 @@
       "whoAnswersLabel": "Quién te responde",
       "whoAnswersValue": "Una de las personas que construyen DiveDay, en {email}.",
       "closingTitle": "La demo es un centro en marcha, con buceadores en el barco de hoy",
-      "closingDescription": "Ábrela como propietario, capitán o buceador y recorre el día completo: reserva un asiento, firma la exención, registra la llegada de alguien y pasa lista con el teléfono en modo avión. Cuando quieras un centro propio, escríbenos y lo armamos contigo."
+      "closingDescription": "Ábrela como propietario, capitán o buceador y recorre el día completo: reserva un asiento, firma la exención, registra la llegada de alguien y pasa lista con el teléfono en modo avión. Cuando quieras un centro propio, escríbenos y lo armamos contigo.",
+      "percentArm": {
+        "onePriceTitle": "Un plan cubre el centro",
+        "onePriceBody": "El plan es el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {, sin cuota mensual}}, y cubre cada parte de DiveDay y una cuenta para cada persona de tu personal. Las propinas nunca cuentan. La página de precios enumera cada cosa que cubre.",
+        "seeCost": "El {percent} del dinero cobrado con tarjeta{hasBase, select, yes { y {base} al mes} other { a través de DiveDay}}. Mira la lista completa"
+      }
     },
     "product": {
       "eyebrow": "Funciones",
@@ -4926,7 +4941,13 @@
         "season": "A lo largo de la temporada"
       },
       "closePrice": "{price} {cadence}, con todas las funciones incluidas.",
-      "demoNote": "La demo se abre en {place}. Es un centro de muestra en funcionamiento, sin registro y sin tarjeta."
+      "demoNote": "La demo se abre en {place}. Es un centro de muestra en funcionamiento, sin registro y sin tarjeta.",
+      "percentArm": {
+        "includedPrice": "Cada línea de esta lista entra en el único plan, por el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {}}.",
+        "closePrice": "Todas las funciones incluidas, por el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, yes { más {base} al mes} other {}}.",
+        "paymentsNote3": "Ninguna fila lleva una comisión de DiveDay. El {percent} de DiveDay se te cobra una vez al mes, en una factura aparte.",
+        "paymentsFaq1A": "Sí. La tarifa es el {percent} del dinero cobrado con tarjeta a través de DiveDay{hasBase, select, no {} other {, más {base} al mes}}, cobrada una vez al mes. Las propinas, los impuestos y el dinero cobrado en el mostrador nunca cuentan, y no se suma nada al precio de tu cliente. Stripe cobra sus propias comisiones de tarjeta en tu cuenta de Stripe."
+      }
     },
     "featurePages": {
       "onlineBooking": {
@@ -5629,6 +5650,11 @@
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes.",
       "testMessage": "Este es un mensaje de prueba de DiveDay. Tu conexión de WhatsApp funciona."
+    },
+    "whatsappReopen": {
+      "answerReady": "Tenemos respuesta a tu mensaje. Contesta aquí y te la enviamos.",
+      "question": "Tenemos una pregunta rápida sobre tu mensaje. Contesta aquí cuando tengas un momento.",
+      "followUp": "Nos gustaría retomar la conversación. Contesta aquí cuando te venga bien."
     },
     "gearPieces": {
       "bcd": "chaleco",

@@ -42,7 +42,7 @@
   },
   "waiver": {
     "label": "Empieza con tu exención actual",
-    "hint": "Elige su PDF y el texto aparece en el cuadro de arriba. Compáralo línea por línea con el PDF antes de publicarlo: Claude puede leer mal una cláusula. Las líneas de firma y las preguntas médicas se omiten porque el formulario en línea las pide. Esto no es asesoría legal.",
+    "hint": "Elige su PDF y el texto aparece en el cuadro de arriba. Compáralo línea por línea con el PDF antes de publicarlo: la IA puede leer mal una cláusula. Las líneas de firma y las preguntas médicas se omiten porque el formulario en línea las pide. Esto no es asesoría legal.",
     "draft": "Redactar desde el PDF",
     "drafting": "Leyendo el PDF…",
     "failed": "Ese archivo no se pudo leer como una exención. Elige un PDF de tu exención, de menos de 5 MB."
@@ -50,7 +50,7 @@
   "setup": {
     "tab": "Sitio web",
     "heading": "Configura con tu sitio web",
-    "intro": "Pega tu sitio y Claude lo lee para encontrar tu lema, teléfono, horario, precios y salidas. Nada cambia hasta que aceptes una línea.",
+    "intro": "Pega tu sitio y la IA lo lee para encontrar tu lema, teléfono, horario, precios y salidas. Nada cambia hasta que aceptes una línea.",
     "siteLabel": "Tu sitio web",
     "read": "Leer el sitio",
     "reading": "Leyendo el sitio…",
@@ -84,7 +84,7 @@
       "read": "Leído. Acepta las líneas correctas.",
       "nothing": "No se pudo usar nada de ese sitio. Revisa la dirección e inténtalo de nuevo.",
       "badSite": "Esa dirección no se puede leer. Pega el sitio web de tu centro, empezando por https://.",
-      "dark": "Las sugerencias de Claude están desactivadas en este centro.",
+      "dark": "Las sugerencias de IA no están disponibles en este centro ahora mismo.",
       "saved": "Guardado.",
       "gone": "Esa línea ya se resolvió."
     }

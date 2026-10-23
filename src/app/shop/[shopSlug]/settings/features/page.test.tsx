@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { SubmitButton } from "@/components/SubmitButton";
 import type { AppDb } from "@/db/client";
-import { getShopBySlug, setShopCrewScheduleEnabled, setShopDivingOptions } from "@/db/shops";
+import {
+  getShopBySlug,
+  setShopCrewScheduleEnabled,
+  setShopDivingOptions,
+  setShopFeature,
+} from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
@@ -26,6 +31,9 @@ const authModule = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const FeaturesPage = (await import("./page")).default;
+const { darkWhileOnKey } = await import("./feature-rows");
+const { ReplyNotesForm } = await import("./ReplyNotesForm");
+const { REPLY_NOTES_DRAWN_FIELD, REPLY_NOTES_FIELD } = await import("./save-plan");
 
 const SHOP_SLUG = "blue-mantis";
 
@@ -141,5 +149,70 @@ describe("the Features page", () => {
     );
     expect(off).not.toContain(`${base}/settings#crew-schedule`);
     expect(off).not.toContain(`${base}/boats`);
+  });
+
+  it("says why AI suggestions stay hidden while their switch is on", async () => {
+    // No ANTHROPIC_API_KEY in the unit run, so the assists are dark on this server.
+    const lines = (page: unknown) =>
+      findElements<{ children?: unknown }>(page, "p").map((p) => String(p.props.children));
+    const on = await renderFeatures("owner", (db, shopId) =>
+      setShopFeature(db, shopId, "claudeSuggestions", true).then(() => undefined),
+    );
+    expect(lines(on)).toContain(
+      "AI isn’t connected on this server yet, so suggestions stay hidden even with this on.",
+    );
+    // Dark, the notes for AI would be a box nothing reads.
+    expect(findElements(on, ReplyNotesForm)).toHaveLength(0);
+
+    const off = await renderFeatures("owner", (db, shopId) =>
+      setShopFeature(db, shopId, "claudeSuggestions", false).then(() => undefined),
+    );
+    expect(lines(off).join(" ")).not.toMatch(/stay hidden/);
+  });
+});
+
+describe("the notes for AI", () => {
+  it("sit under the AI switch while AI is lit, a demo shop included", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "test-anthropic-key");
+    vi.stubEnv("DIVEDAY_DISABLE_EXTERNAL_HTTP", "0");
+    try {
+      const page = await renderFeatures("owner", (db, shopId) =>
+        setShopFeature(db, shopId, "claudeSuggestions", true).then(() => undefined),
+      );
+      const [box] = findElements<Parameters<typeof ReplyNotesForm>[0]>(page, ReplyNotesForm);
+      expect(box?.props.notes).toContain("The gate opens at 7:15.");
+      expect(rowsIn(page).indexOf("claudeSuggestions")).toBeGreaterThan(-1);
+      // Inside the page's one form, saved by its one Save.
+      const [form] = findElements<{ children: unknown }>(page, "form");
+      expect(findElements(form, ReplyNotesForm)).toHaveLength(1);
+      expect(findElements(page, "form")).toHaveLength(1);
+      expect(findElements(page, SubmitButton)).toHaveLength(1);
+      // The box posts its text and the marker that tells the save it was drawn.
+      const fields = box ? ReplyNotesForm(box.props) : null;
+      expect(inputNamesIn(fields)).toContain(REPLY_NOTES_DRAWN_FIELD);
+      expect(
+        findElements<{ name: string }>(fields, "textarea").map((area) => area.props.name),
+      ).toEqual([REPLY_NOTES_FIELD]);
+      expect(findElements(fields, "form")).toHaveLength(0);
+      expect(findElements(fields, SubmitButton)).toHaveLength(0);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
+describe("the line under the AI switch", () => {
+  it("names the reason the switch can't, and nothing when it may run or is off", () => {
+    expect(darkWhileOnKey(null)).toBeNull();
+    expect(darkWhileOnKey("shop_off")).toBeNull();
+    expect(darkWhileOnKey("no_key")).toBe(
+      "settings.main.features.claudeSuggestions.dark.noProvider",
+    );
+    expect(darkWhileOnKey("demo_over_cap")).toBe(
+      "settings.main.features.claudeSuggestions.dark.demoOverCap",
+    );
+    expect(darkWhileOnKey("over_cap")).toBe(
+      "settings.main.features.claudeSuggestions.dark.overCap",
+    );
   });
 });

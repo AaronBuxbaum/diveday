@@ -438,14 +438,24 @@
         "description": "Beta: verifica la tarjeta PADI de un buceador en DiveChek desde su ficha, y su eLearning desde el listado de un curso, con un clic. La extensión de DiveDay hace la verificación en un navegador donde uno de tus profesionales PADI tiene la sesión iniciada en el PADI Pros’ Site, con la afiliación de ese profesional. Desactivado, el enlace al PADI Pros’ Site se mantiene."
       },
       "claudeSuggestions": {
-        "heading": "Sugerencias de Claude",
-        "label": "Mostrar sugerencias de Claude",
-        "description": "Borradores y orden que tu equipo puede editar o ignorar. No se envía ni se guarda nada hasta que alguien de tu equipo lo haga. Lo que Claude lee se envía a Anthropic, el proveedor de IA de DiveDay."
+        "heading": "Sugerencias de IA",
+        "label": "Mostrar sugerencias de IA",
+        "description": "Borradores y orden que tu equipo puede editar o ignorar. No se envía ni se guarda nada hasta que alguien de tu equipo lo haga. Lo que lee la IA se envía a Anthropic, el proveedor de IA de DiveDay.",
+        "dark": {
+          "noProvider": "La IA aún no está conectada en este servidor, así que las sugerencias siguen ocultas aunque esto esté activado.",
+          "demoOverCap": "Los centros de demostración comparten una pequeña cuota mensual de IA, y ya se agotó. Las sugerencias vuelven el día 1 (UTC).",
+          "overCap": "Este centro ya usó la cuota de IA de este mes. Las sugerencias vuelven el día 1 (UTC)."
+        }
+      },
+      "replyNotes": {
+        "heading": "Notas para la IA",
+        "label": "¿Qué debe saber la IA sobre tu centro?",
+        "placeholder": "Estaciona detrás del centro, junto a los tanques. El portón abre a las 7:15."
       },
       "recapAutoApprove": {
         "heading": "Resumen del día",
         "label": "Escribir el resumen del día cuando la tripulación lo deja vacío",
-        "description": "Claude escribe dos frases con los avistamientos que anotó tu tripulación, y salen en el resumen. Desactivado, la tripulación escribe o aprueba cada uno."
+        "description": "La IA escribe dos frases con los avistamientos que anotó tu tripulación, y salen en el resumen. Desactivado, la tripulación escribe o aprueba cada uno."
       },
       "lostFound": {
         "heading": "Objetos perdidos",
@@ -1205,7 +1215,7 @@
       "bookings": "Reservas y dinero",
       "divers": "Buceadores",
       "crew": "Tripulación y equipo",
-      "claude": "Claude"
+      "claude": "IA"
     }
   }
 }

@@ -147,6 +147,13 @@ export const pricingVolumeStatements = pgTable(
     /** `diveday-fee-<shopId>-<yyyy-mm>`: the meter event's own identifier. */
     stripeMeterIdentifier: text("stripe_meter_identifier").notNull(),
     reportedAt: timestamp("reported_at", { withTimezone: true }),
+    /**
+     * When the fee was first sent to Stripe, stamped before the call. Null is
+     * "never sent"; set with no `reported_at` is "sent, outcome unknown". Past
+     * Stripe's 24-hour identifier window the close asks the meter before it
+     * sends again, so a lost answer is never billed twice.
+     */
+    firstReportAttemptAt: timestamp("first_report_attempt_at", { withTimezone: true }),
     createdAt: appNowTimestamp("created_at").notNull(),
   },
   (table) => [

@@ -1,4 +1,5 @@
 import type { StaffMessageKey } from "@/i18n/staff-messages";
+import type { AssistDarkReason } from "@/lib/claude/dark";
 import { SHOP_FEATURES, type ShopFeature, type ShopSwitch } from "@/lib/shop-features";
 
 /**
@@ -88,3 +89,23 @@ export const FEATURE_ROWS: readonly FeatureRow[] = [
 export function isOptionalFeature(id: FeatureRowId): id is ShopFeature {
   return (SHOP_FEATURES as readonly string[]).includes(id);
 }
+
+/**
+ * Why the AI suggestions stay hidden with their switch on (Aaron, 2026-10-23:
+ * the switch read on while every page said they were off). `shop_off` needs no
+ * line, the switch itself says it.
+ */
+const DARK_WHILE_ON: Record<Exclude<AssistDarkReason, "shop_off">, StaffMessageKey> = {
+  no_key: "settings.main.features.claudeSuggestions.dark.noProvider",
+  external_http_disabled: "settings.main.features.claudeSuggestions.dark.noProvider",
+  over_cap: "settings.main.features.claudeSuggestions.dark.overCap",
+  demo_over_cap: "settings.main.features.claudeSuggestions.dark.demoOverCap",
+};
+
+/** The line under the AI switch, or null when there is nothing to explain. */
+export function darkWhileOnKey(reason: AssistDarkReason | null): StaffMessageKey | null {
+  return reason === null || reason === "shop_off" ? null : DARK_WHILE_ON[reason];
+}
+
+/** The notes-for-AI form's anchor under the AI switch, and its `saved` id. */
+export const REPLY_NOTES_ROW = "replyNotes";

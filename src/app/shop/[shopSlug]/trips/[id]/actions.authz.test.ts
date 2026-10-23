@@ -581,10 +581,10 @@ describe("who may run each action on the trip page", () => {
     "addInternalNoteAction",
     "deleteInternalNoteAction",
     "restoreInternalNoteAction",
+    // Adding to the wait list, typed or picked, and carrying it to another departure: each
+    // copies leads, seats nobody and invites nobody (ADR 20260813-wait-list-is-a-lead-list).
     "addToWaitlistAction",
-    // Carrying a wait list to another departure of the same course is the
-    // wait list's own work, open on the same terms as adding to it: it copies
-    // leads, seats nobody, and invites nobody (ADR 20260813-wait-list-is-a-lead-list).
+    "addKnownDiverToWaitlistAction",
     "carryWaitlistAction",
     // **A seat move** (ADR 20261013-staff-move-a-seat) is the counter's reseat,
     // open on the same terms as seating a walk-in: every gate the target admits

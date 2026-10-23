@@ -75,6 +75,9 @@ const EXCERPT_LENGTH = 140;
 /** Whether a seat already carries the mark, by any door. */
 const marked = (seat: InboxSeat) => seat.runningLateAt !== null;
 
+/** Whether a sender's address is an email one: a page message can carry either. */
+const isEmailAddress = (address: string) => address.includes("@");
+
 function excerpt(body: string): string {
   const flattened = body.replace(/\s+/g, " ").trim();
   return flattened.length <= EXCERPT_LENGTH
@@ -218,7 +221,24 @@ export function InboxRow({
     [
       // The address is on the stranger's row only: for a diver on file the name
       // above already says who this is, and their address is on their record.
-      message.personId ? null : { key: "from", node: message.fromAddress },
+      // An email address is a link that starts the reply in the staffer's own
+      // mail app, since a stranger has no record to write from. A phone number
+      // stays words: it came in on WhatsApp or text, and a link would dial it.
+      message.personId
+        ? null
+        : {
+            key: "from",
+            node: isEmailAddress(message.fromAddress) ? (
+              <a
+                href={`mailto:${message.fromAddress}`}
+                className="wrap-anywhere font-medium text-primary hover:underline"
+              >
+                {message.fromAddress}
+              </a>
+            ) : (
+              message.fromAddress
+            ),
+          },
       // A LATE reply already marked the seat; the seat's own fact says so.
       message.keywordIntent && !(message.keywordIntent === "late" && seats.some(marked))
         ? { key: "keyword", node: t(KEYWORD_KEYS[message.keywordIntent]) }

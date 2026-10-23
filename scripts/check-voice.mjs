@@ -893,6 +893,18 @@ export const HOUSE_PHRASE_ALLOWLIST = new Set([
   "lee una persona",
   "la lista completa",
   "comisión por reserva",
+  // The pricing test's percent arm names its fee base the same way on every
+  // page that states it (ADR 20261022-pricing-ab-test, "Volume"): a defined
+  // term, like "no setup fee", that must not drift from page to page.
+  "the card money",
+  "card money taken",
+  "money taken through",
+  "taken through diveday",
+  "del dinero cobrado",
+  "dinero cobrado con",
+  "cobrado con tarjeta",
+  "tarjeta a través",
+  "través de diveday",
   "teléfono sin señal",
 ]);
 

@@ -17,6 +17,8 @@ import {
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
+import { planCopyParams } from "@/lib/billing/plan-display";
+import type { PlanTerms } from "@/lib/billing/pricing-plans";
 import { setUpHref, switchingHref } from "@/lib/funnel";
 import {
   continuityPromise,
@@ -25,6 +27,7 @@ import {
   sharedLinkCard,
 } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { requestPricingOffer } from "@/lib/pricing-arm-request";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -76,13 +79,13 @@ export const metadata: Metadata = {
  * *session* as well as the locale; the body must not wait on that.
  */
 export default async function AboutPage() {
-  const locale = await requestLocale();
+  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
   return (
     <div className="flex flex-1 flex-col">
       <Suspense fallback={<MarketingNavFallback />}>
         <MarketingNav />
       </Suspense>
-      <AboutBody locale={locale} />
+      <AboutBody locale={locale} offer={offer} />
       <Suspense fallback={<MarketingFooterFallback />}>
         <MarketingFooter />
       </Suspense>
@@ -90,11 +93,19 @@ export default async function AboutPage() {
   );
 }
 
-/** Cached per negotiated locale (DIVER_LOCALES — two entries) — no session-scoped content. */
-async function AboutBody({ locale }: { locale: DiverLocale }) {
+/**
+ * Cached per negotiated locale (DIVER_LOCALES — two entries) and per pricing
+ * offer (ADR 20261022-pricing-ab-test) — no session-scoped content.
+ */
+async function AboutBody({ locale, offer }: { locale: DiverLocale; offer: PlanTerms }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
+  // "One price" and "no cut of your bookings" are the flat arm's alone; the
+  // percent arm's card and door say its own terms.
+  const percentArm = offer.plan === "percent_of_volume";
+  const params = planCopyParams(offer, locale);
+  const flatPrice = { price: params.price, cadence: t(earlyAccessPrice.cadenceKey) };
 
   /**
    * The four things every screen is held to. Each is a shipped behavior a
@@ -119,15 +130,16 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
       body: t("marketing.about.rules.noSilentPasses.body"),
     },
     {
-      title: t("marketing.about.rules.onePrice.title"),
+      title: percentArm
+        ? t("marketing.about.percentArm.onePriceTitle")
+        : t("marketing.about.rules.onePrice.title"),
       // The figure where the question is raised, never a door away from it.
       // Interpolated, never spelled: `earlyAccessPrice` is H-12's single
       // source, and `src/lib/marketing.test.ts` counts this key among the
       // sentences that must carry `{price}` and `{cadence}`.
-      body: t("marketing.about.rules.onePrice.body", {
-        price: earlyAccessPrice.price,
-        cadence: t(earlyAccessPrice.cadenceKey),
-      }),
+      body: percentArm
+        ? t("marketing.about.percentArm.onePriceBody", params)
+        : t("marketing.about.rules.onePrice.body", flatPrice),
     },
     {
       title: t("marketing.about.rules.yourRecords.title"),
@@ -297,10 +309,9 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                   {t("marketing.common.getSetUp")}
                 </Link>
                 <Link href="/pricing" className={buttonClass({ variant: "outline" })}>
-                  {t("marketing.about.seeCost", {
-                    price: earlyAccessPrice.price,
-                    cadence: t(earlyAccessPrice.cadenceKey),
-                  })}
+                  {percentArm
+                    ? t("marketing.about.percentArm.seeCost", params)
+                    : t("marketing.about.seeCost", flatPrice)}
                 </Link>
                 <Link
                   href={switchingHref("/switching", "about-switching")}

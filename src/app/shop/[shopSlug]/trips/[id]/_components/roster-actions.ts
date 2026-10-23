@@ -13,6 +13,7 @@ import {
 } from "../roster-identity-actions";
 import { markPaymentAction } from "../roster-payment-actions";
 import {
+  addKnownDiverToWaitlistAction,
   addToWaitlistAction,
   carryWaitlistAction,
   createDirectTripInvitationAction,
@@ -63,6 +64,7 @@ export async function tripRosterActions({
     walkInAddBookingAction: seatNewDiverAction.bind(null, "walk-in", shopSlug),
     walkInAddExistingDiverAction: seatExistingDiverAction.bind(null, "walk-in", shopSlug),
     addToWaitlistAction: addToWaitlistAction.bind(null, shopSlug, tripId),
+    addKnownToWaitlistAction: addKnownDiverToWaitlistAction.bind(null, shopSlug, tripId),
     createDirectTripInvitationAction: createDirectTripInvitationAction.bind(null, shopSlug, tripId),
     invitePastDiverAction: invitePastDiverAction.bind(null, shopSlug, tripId),
     markRosterWaiverInPersonAction: markRosterWaiverInPersonAction.bind(null, shopSlug, tripId),

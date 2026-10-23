@@ -7,7 +7,10 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS } from "@/lib/clock";
 import { ConversationSection } from "./ConversationSection";
 
-vi.mock("../details-actions", () => ({ replyToDiverAction: vi.fn() }));
+vi.mock("../details-actions", () => ({
+  replyToDiverAction: vi.fn(),
+  reopenWhatsAppAction: vi.fn(),
+}));
 
 afterEach(cleanup);
 
@@ -220,7 +223,8 @@ describe("a removed diver", () => {
     expect(
       screen.getByText("This diver’s record was removed, so replies are switched off."),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/WhatsApp takes a typed reply for 24 hours/)).toBeNull();
+    expect(screen.queryByText(/more than 24 hours ago/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Reply here/ })).toBeNull();
   });
 });
 
@@ -241,9 +245,32 @@ describe("Meta's 24-hour window", () => {
     expect(screen.getByLabelText("Reply on WhatsApp to +13055550110")).toBeInTheDocument();
   });
 
-  it("replaces the composer with the reason once it has closed", () => {
+  it("replaces the composer with the reason and the approved asks once it has closed", () => {
     renderSection([whatsApp(30 * HOUR_MS)]);
     expect(screen.queryByLabelText(/^Reply on WhatsApp/)).toBeNull();
-    expect(screen.getByText(/WhatsApp takes a typed reply for 24 hours/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Priya Sharma last wrote on WhatsApp more than 24 hours ago. After that, WhatsApp stops a business typing freely, so nobody gets messages they never asked for.",
+      ),
+    ).toBeInTheDocument();
+    const asks = screen.getAllByRole("button");
+    expect(asks.map((button) => [button.getAttribute("value"), button.textContent])).toEqual([
+      ["answer_ready", "We have an answer to your message. Reply here and we’ll send it."],
+      [
+        "question",
+        "We have a quick question about your message. Reply here when you have a minute.",
+      ],
+      ["follow_up", "We’d like to pick up where we left off. Reply here whenever suits you."],
+    ]);
+  });
+
+  it("says when the shop already asked, instead of offering the asks again", () => {
+    const ask = outbound();
+    if (ask.direction !== "outbound") throw new Error("unreachable");
+    ask.reply.channel = "whatsapp";
+    ask.reply.sentAt = new Date(NOW.getTime() - 2 * HOUR_MS);
+    renderSection([whatsApp(30 * HOUR_MS), ask]);
+    expect(screen.queryByRole("button", { name: /Reply here/ })).toBeNull();
+    expect(screen.getByText(/^You asked Priya Sharma to write back/)).toBeInTheDocument();
   });
 });

@@ -1,0 +1,11 @@
+-- Deliberately empty. This migration exists for its snapshot, not its SQL.
+--
+-- Two branches each added a migration, each merged cleanly, and neither ever
+-- saw the other -- so the migration graph was left with two open heads whose
+-- branches touch the same object. drizzle refuses that tree, and the walk that
+-- refuses it also runs inside the production build.
+--
+-- This snapshot names both heads as its parents, which closes the diamond: a
+-- fork whose branches reach a common leaf is skipped by the walk. Nothing is
+-- applied and nothing changes shape. Written by `pnpm db:merge`; see
+-- scripts/check-migration-graph.mjs and the schema-change skill.

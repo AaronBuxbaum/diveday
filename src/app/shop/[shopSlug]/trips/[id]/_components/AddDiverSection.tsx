@@ -23,6 +23,8 @@ export type AddDiverContext = {
   candidates: BookableDiver[];
   addBookingAction: (formData: FormData) => void;
   addToWaitlistAction: (formData: FormData) => void;
+  /** Puts a diver already on file on the full boat's wait list, by `personId`. */
+  addKnownToWaitlistAction: (formData: FormData) => void;
   addExistingDiverAction: (formData: FormData) => void;
   offerAction?: (formData: FormData) => void;
   /**
@@ -89,6 +91,7 @@ export function AddDiverSection({
     candidates,
     addBookingAction,
     addToWaitlistAction,
+    addKnownToWaitlistAction,
     addExistingDiverAction,
     offerAction,
     status,
@@ -113,6 +116,12 @@ export function AddDiverSection({
     walkIn: true,
     tripId,
   });
+  const waitNewDiver = newDiverHref(shopSlug, {
+    query,
+    surface: "departure",
+    tripId,
+    waitlist: true,
+  });
   const bookLabel = t("trips.addDiver.addNewDiverAction", { query });
   const walkInLabel = t("trips.addDiver.addAsWalkIn");
   return (
@@ -128,7 +137,12 @@ export function AddDiverSection({
             <ul className="list-disc pl-5 space-y-1 text-sm text-muted">
               {confirmMatches.map((match) => (
                 <li key={match.id}>
-                  <form action={addExistingDiverAction} className="inline">
+                  {/* On a full boat the match joins who's waiting: a seat
+                      would only be refused. */}
+                  <form
+                    action={full ? addKnownToWaitlistAction : addExistingDiverAction}
+                    className="inline"
+                  >
                     <input type="hidden" name="tripId" value={tripId} />
                     <input type="hidden" name="personId" value={match.id} />
                     {/* A tap here came off a name match, so the booking is
@@ -177,19 +191,40 @@ export function AddDiverSection({
       {full ? (
         <>
           <p className="text-sm text-muted">{t("trips.addDiver.fullDescription")}</p>
-          {/* A block of its own, so the column does not stretch the button. */}
-          <div>
-            <Link
-              href={newDiverHref(shopSlug, {
-                surface: "departure",
-                tripId,
-                waitlist: true,
-              })}
-              className={buttonClass({ variant: "primary" })}
-            >
-              {t("trips.addDiver.addToWaitlist")}
-            </Link>
-          </div>
+          {/* A full boat leads with the shop's people too (Aaron, 2026-10-23):
+              a returning diver is picked onto who's waiting, never typed
+              again, and "Add diver" stays the door for someone new. */}
+          <PersonSearchForm
+            query={query}
+            label={t("trips.addDiver.findLabel")}
+            placeholder={t("trips.addDiver.findPlaceholder")}
+            addDiverHref={waitNewDiver}
+            addDiverLabel={t("trips.addDiver.addDiver")}
+          />
+          {searched ? (
+            candidates.length > 0 ? (
+              <PersonCandidateList
+                context={{
+                  candidates,
+                  tripId,
+                  seatAction: addKnownToWaitlistAction,
+                  personHref: (personId) => `/shop/${shopSlug}/divers/${personId}`,
+                  addLabel: t("trips.addDiver.addToWaitlist"),
+                  pendingLabel: t("seatDiver.adding"),
+                  addPersonAriaLabel: (name) => t("trips.addDiver.addPersonToWaitlist", { name }),
+                  noEmailOnFile: t("trips.addDiver.noEmailOnFile"),
+                }}
+                rowClassName="bg-surface"
+              />
+            ) : (
+              <HandEntryPrompt
+                heading={t("trips.addDiver.noMatchesHeading")}
+                body={t("trips.addDiver.noMatches", { query })}
+                actionLabel={t("trips.addDiver.addToWaitlist")}
+                href={waitNewDiver}
+              />
+            )
+          ) : null}
         </>
       ) : (
         <>
