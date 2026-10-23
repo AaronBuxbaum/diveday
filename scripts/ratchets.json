@@ -612,7 +612,7 @@
     "src/app/shop/[shopSlug]/settings/team/page.tsx": 714,
     "src/app/shop/[shopSlug]/staffing/page.tsx": 592,
     "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 537,
-    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 477,
+    "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 476,
     "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 514
   },
   "tokens": {

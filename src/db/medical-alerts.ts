@@ -17,11 +17,14 @@
  * roll call or a count.
  */
 import { and, desc, eq, gte, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
-import { MINUTE_MS, nowMs } from "@/lib/clock";
+import { MINUTE_MS, nowDate, nowMs } from "@/lib/clock";
+import type { OfflineMedicalAlertsResponse } from "@/lib/offline-manifests";
+import { canPersonReadMedicalAlertOnTrip } from "./authz";
 import type { DbExecutor } from "./client";
 import { recordDiverActivity } from "./operations";
 import { listTripReadiness } from "./readiness";
-import { activityEvents, bookings, waiverRecords } from "./schema";
+import { activityEvents, bookings, people, trips, waiverRecords } from "./schema";
+import { livePerson, liveTrip } from "./trips-live";
 
 /** One readiness row as far as this module reads it. */
 type StandingReleaseRow = {
@@ -239,4 +242,55 @@ export async function medicalAlertPrefill(
     .orderBy(desc(waiverRecords.signedAt))
     .limit(1);
   return earlier?.text ? { text: earlier.text, earlier: true } : { text: null, earlier: false };
+}
+
+/**
+ * **Hands one departure's medical alert words to an explicit offline save**
+ * (H-153 amendment; `POST /api/offline-manifests/[tripId]/medical-alerts`).
+ * `not_found` for a departure that is not this shop's live one; `forbidden`
+ * unless `canPersonReadMedicalAlertOnTrip` admits the reader now. Otherwise
+ * one `medical_alert_saved_offline` line per diver on the trail first
+ * (`recordMedicalAlertTrailLine`), and the words of each diver whose line the
+ * trail took, with the reader as the copy records them.
+ */
+export async function medicalAlertsForOfflineSave(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; readerId: string },
+): Promise<
+  | { ok: true; body: OfflineMedicalAlertsResponse }
+  | { ok: false; reason: "not_found" | "forbidden" }
+> {
+  const [trip] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
+    .limit(1);
+  if (!trip) return { ok: false, reason: "not_found" };
+  if (!(await canPersonReadMedicalAlertOnTrip(db, input.shopId, input.readerId, trip.id))) {
+    return { ok: false, reason: "forbidden" };
+  }
+  const [reader] = await db
+    .select({ name: people.fullName })
+    .from(people)
+    .where(and(eq(people.id, input.readerId), eq(people.shopId, input.shopId), livePerson()))
+    .limit(1);
+  if (!reader) return { ok: false, reason: "forbidden" };
+  const texts: Record<string, string> = {};
+  for (const [bookingId, alert] of await medicalAlertsForTrip(db, input.shopId, trip.id)) {
+    const recorded = await recordMedicalAlertTrailLine(db, {
+      shopId: input.shopId,
+      personId: alert.personId,
+      actorPersonId: input.readerId,
+      code: "medical_alert_saved_offline",
+      departureId: trip.id,
+    });
+    if (recorded) texts[bookingId] = alert.text;
+  }
+  return {
+    ok: true,
+    body: {
+      texts,
+      savedBy: { personId: input.readerId, name: reader.name, savedAt: nowDate().toISOString() },
+    },
+  };
 }
