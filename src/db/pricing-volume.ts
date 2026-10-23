@@ -24,15 +24,20 @@ import { pricingVolumeStatements, shopSubscriptions, shops } from "./schema";
 
 export type PricingStatement = typeof pricingVolumeStatements.$inferSelect;
 
-/** The shop-local month as UTC bounds, its start moved past the shop's free time. */
+/**
+ * The shop-local month as UTC bounds, its start moved past the shop's free
+ * time and its end, for a subscription that ended inside it, back to the end.
+ */
 export function billableWindow(
   month: MonthRef,
   timeZone: string,
   freeUntil: Date | null,
+  endedAt: Date | null = null,
 ): { from: Date; to: Date } {
   const bounds = shopMonthBounds(month, timeZone);
+  const to = endedAt && endedAt.getTime() < bounds.to.getTime() ? endedAt : bounds.to;
   const from = freeUntil && freeUntil.getTime() > bounds.from.getTime() ? freeUntil : bounds.from;
-  return { from: from.getTime() < bounds.to.getTime() ? from : bounds.to, to: bounds.to };
+  return { from: from.getTime() < to.getTime() ? from : to, to };
 }
 
 /**
@@ -46,8 +51,9 @@ export async function processedVolumeCents(
   month: MonthRef,
   timeZone: string,
   freeUntil: Date | null = null,
+  endedAt: Date | null = null,
 ): Promise<number> {
-  const window = billableWindow(month, timeZone, freeUntil);
+  const window = billableWindow(month, timeZone, freeUntil, endedAt);
   if (window.from.getTime() >= window.to.getTime()) return 0;
   return cardMoneyThroughDiveDayCents(db, shopId, window.from, window.to);
 }
@@ -76,6 +82,8 @@ export async function closePricingMonth(
     timeZone: string;
     terms: PlanTerms;
     freeUntil: Date | null;
+    /** A subscription that ended inside the month: its volume is read up to here. */
+    endedAt?: Date | null;
   },
 ): Promise<PricingStatement> {
   const month = statementMonth(input.month);
@@ -87,6 +95,7 @@ export async function closePricingMonth(
     input.month,
     input.timeZone,
     input.freeUntil,
+    input.endedAt ?? null,
   );
   const now = nowDate();
   await db
@@ -151,6 +160,27 @@ export async function markPricingStatementReported(
     .set({ reportedAt: at })
     .where(
       and(eq(pricingVolumeStatements.id, statementId), isNull(pricingVolumeStatements.reportedAt)),
+    );
+}
+
+/**
+ * Stamp the first time a statement's fee is sent to Stripe, before the call.
+ * Only the first attempt is kept: it is what Stripe's 24-hour identifier
+ * window runs from.
+ */
+export async function markPricingReportAttempted(
+  db: AppDb,
+  statementId: string,
+  at: Date,
+): Promise<void> {
+  await db
+    .update(pricingVolumeStatements)
+    .set({ firstReportAttemptAt: at })
+    .where(
+      and(
+        eq(pricingVolumeStatements.id, statementId),
+        isNull(pricingVolumeStatements.firstReportAttemptAt),
+      ),
     );
 }
 

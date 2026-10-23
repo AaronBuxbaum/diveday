@@ -226,9 +226,11 @@ export function parsePricingPlanArgs(
 }
 
 /**
- * The monthly close (`/api/cron/pricing-volume`): 14:08 UTC on the 2nd and 3rd.
- * By then every zone's month has ended and a late refund recorded on the 1st
- * is in; the 3rd retries whatever the 2nd could not report. Restated in
+ * The monthly close (`/api/cron/pricing-volume`): 14:08, 18:08 and 22:08 UTC
+ * on the 2nd and 3rd. By then every zone's month has ended and a late refund
+ * recorded on the 1st is in. The 2nd's later runs retry a lost answer inside
+ * Stripe's 24-hour identifier window; the 3rd's are the last resort, and ask
+ * the meter before they send (`REPORT_RECHECK_AFTER_MS`). Restated in
  * vercel.json, and `src/lib/cron-schedule.test.ts` holds the two together.
  */
-export const PRICING_CLOSE_CRONTAB = "8 14 2,3 * *";
+export const PRICING_CLOSE_CRONTAB = "8 14,18,22 2,3 * *";

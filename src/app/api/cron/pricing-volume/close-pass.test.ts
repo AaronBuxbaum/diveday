@@ -95,7 +95,46 @@ function fakeProvider(status: "ok" | "failed" = "ok") {
         ? ({ status: "ok", value: "reported" } as const)
         : ({ status: "failed" } as const),
     ),
+    meterValueReported: vi.fn(async () => ({ status: "ok", value: 0 }) as const),
+    invoiceFinalMonth: vi.fn(async () => ({ status: "ok", value: "invoiced" }) as const),
   };
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Stripe's meter as the docs describe it: an identifier is unique for exactly
+ * 24 hours and no longer, and a summary sums what was recorded. `lose` drops
+ * the next answers after the event is recorded, as a timed-out call would.
+ */
+function fakeStripe() {
+  const state = { now: NOW, lose: 0, summary: "ok" as "ok" | "failed" };
+  const events: { identifier: string; at: Date; value: number }[] = [];
+  const provider = {
+    reportMeterEvent: vi.fn(
+      async (input: { identifier: string; valueCents: number; customerId: string }) => {
+        const held = events.some(
+          (event) =>
+            event.identifier === input.identifier &&
+            state.now.getTime() - event.at.getTime() < DAY_MS,
+        );
+        if (!held)
+          events.push({ identifier: input.identifier, at: state.now, value: input.valueCents });
+        if (state.lose > 0) {
+          state.lose -= 1;
+          return { status: "failed" } as const;
+        }
+        return { status: "ok", value: "reported" } as const;
+      },
+    ),
+    meterValueReported: vi.fn(async () =>
+      state.summary === "ok"
+        ? ({ status: "ok", value: events.reduce((sum, event) => sum + event.value, 0) } as const)
+        : ({ status: "failed" } as const),
+    ),
+    invoiceFinalMonth: vi.fn(async () => ({ status: "ok", value: "invoiced" }) as const),
+  };
+  return { state, events, provider };
 }
 
 describe("lastClosedMonth", () => {
@@ -199,5 +238,127 @@ describe("closePercentMonths", () => {
     ).toMatchObject({ nothingToReport: 1 });
     expect(provider.reportMeterEvent).not.toHaveBeenCalled();
     expect((await latestPricingStatement(db, shopId))?.reportedAt).toEqual(NOW);
+  });
+
+  it("never bills twice when a lost answer is retried about 24 hours later", async () => {
+    const db = await unseededTestDb();
+    const shopId = await percentShop(db);
+    const stripe = fakeStripe();
+    const run = (now: Date) =>
+      closePercentMonths(db, { now, config: ON, provider: stripe.provider, percent: PERCENT });
+
+    stripe.state.now = new Date("2031-07-02T14:08:00Z");
+    stripe.state.lose = 1;
+    expect(await run(stripe.state.now)).toMatchObject({ failed: 1 });
+    expect((await latestPricingStatement(db, shopId))?.reportedAt).toBeNull();
+
+    // A day and a minute on, past Stripe's 24-hour window: the meter is asked
+    // first, holds the fee, and the statement is stamped with nothing re-sent.
+    stripe.state.now = new Date("2031-07-03T14:09:00Z");
+    expect(await run(stripe.state.now)).toMatchObject({ reconciled: 1, failed: 0 });
+    expect(stripe.events).toHaveLength(1);
+    expect(stripe.provider.reportMeterEvent).toHaveBeenCalledTimes(1);
+    expect(stripe.provider.meterValueReported).toHaveBeenCalledWith({
+      priceId: PERCENT.priceId,
+      customerId: expect.stringMatching(/^cus_close_/),
+      from: new Date("2031-06-01T00:00:00Z"),
+      to: new Date("2031-07-01T00:00:00Z"),
+    });
+    expect((await latestPricingStatement(db, shopId))?.reportedAt).toEqual(stripe.state.now);
+  });
+
+  it("re-sends within the hours after a lost answer, where Stripe dedupes the identifier", async () => {
+    const db = await unseededTestDb();
+    await percentShop(db);
+    const stripe = fakeStripe();
+    const run = (now: Date) =>
+      closePercentMonths(db, { now, config: ON, provider: stripe.provider, percent: PERCENT });
+    stripe.state.now = new Date("2031-07-02T14:08:00Z");
+    stripe.state.lose = 1;
+    await run(stripe.state.now);
+    stripe.state.now = new Date("2031-07-02T18:08:00Z");
+    expect(await run(stripe.state.now)).toMatchObject({ reported: 1 });
+    expect(stripe.provider.meterValueReported).not.toHaveBeenCalled();
+    expect(stripe.events).toHaveLength(1);
+  });
+
+  it("sends a stale attempt the meter never got, and holds one it cannot check", async () => {
+    const db = await unseededTestDb();
+    const shopId = await percentShop(db);
+    const failing = fakeProvider("failed");
+    await closePercentMonths(db, {
+      now: new Date("2031-07-02T14:08:00Z"),
+      config: ON,
+      provider: failing,
+      percent: PERCENT,
+    });
+    const stripe = fakeStripe();
+    stripe.state.now = new Date("2031-07-03T14:09:00Z");
+    stripe.state.summary = "failed";
+    expect(
+      await closePercentMonths(db, {
+        now: stripe.state.now,
+        config: ON,
+        provider: stripe.provider,
+        percent: PERCENT,
+      }),
+    ).toMatchObject({ failed: 1, reported: 0 });
+    expect(stripe.provider.reportMeterEvent).not.toHaveBeenCalled();
+    stripe.state.summary = "ok";
+    expect(
+      await closePercentMonths(db, {
+        now: stripe.state.now,
+        config: ON,
+        provider: stripe.provider,
+        percent: PERCENT,
+      }),
+    ).toMatchObject({ reported: 1 });
+    expect(stripe.events).toEqual([
+      expect.objectContaining({ identifier: `diveday-fee-${shopId}-2031-06`, value: 3_000 }),
+    ]);
+  });
+
+  it("bills a percent shop's final month up to the cancel, on what it was sold", async () => {
+    const db = await unseededTestDb();
+    // Canceled on 20 June, with the test switched off since: the snapshot still holds.
+    const shopId = await percentShop(db, {
+      stripeStatus: "canceled",
+      lastSubscriptionEventAt: new Date("2031-06-20T00:00:00Z"),
+    });
+    const provider = fakeProvider();
+    const options = { now: NOW, config: DEFAULT_PRICING_CONFIG, provider, percent: PERCENT };
+    expect(await closePercentMonths(db, options)).toMatchObject({ finalMonths: 1, closed: 1 });
+    expect(provider.invoiceFinalMonth).toHaveBeenCalledWith({
+      customerId: expect.stringMatching(/^cus_close_/),
+      amountCents: 3_000,
+      identifier: `diveday-fee-${shopId}-2031-06`,
+      month: "2031-06",
+    });
+    expect(provider.reportMeterEvent).not.toHaveBeenCalled();
+    expect((await latestPricingStatement(db, shopId))?.reportedAt).toEqual(NOW);
+    // Run again, and the month after: nothing more is billed.
+    await closePercentMonths(db, options);
+    await closePercentMonths(db, { ...options, now: new Date("2031-08-02T14:08:00Z") });
+    expect(provider.invoiceFinalMonth).toHaveBeenCalledTimes(1);
+    expect(await db.select().from(pricingVolumeStatements)).toHaveLength(1);
+  });
+
+  it("counts only the money taken before the cancel, and skips a subscription that ended earlier", async () => {
+    const db = await unseededTestDb();
+    // The June order is paid on the 15th, after a cancel on the 10th.
+    const after = await percentShop(db, {
+      stripeStatus: "canceled",
+      lastSubscriptionEventAt: new Date("2031-06-10T00:00:00Z"),
+    });
+    await percentShop(db, {
+      stripeStatus: "canceled",
+      lastSubscriptionEventAt: new Date("2031-05-20T00:00:00Z"),
+    });
+    const provider = fakeProvider();
+    expect(
+      await closePercentMonths(db, { now: NOW, config: ON, provider, percent: PERCENT }),
+    ).toMatchObject({ closed: 1, nothingToReport: 1, finalMonths: 0 });
+    expect(provider.invoiceFinalMonth).not.toHaveBeenCalled();
+    expect(await latestPricingStatement(db, after)).toMatchObject({ volumeCents: 0, feeCents: 0 });
   });
 });

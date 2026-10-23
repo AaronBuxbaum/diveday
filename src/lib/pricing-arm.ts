@@ -53,16 +53,24 @@ export function isPricingMarketingPath(pathname: string): boolean {
  * The proxy's decision for one request: the arm to pass on (or none), and
  * whether to write the cookie. Pure, so the whole matrix is tested without a
  * request.
+ *
+ * A new arm is drawn only for a page view (GET or HEAD). The set-up form's
+ * POST passes on the arm its cookie names, and with no cookie it passes none,
+ * so a visitor whose browser dropped the cookie is recorded as having seen no
+ * arm rather than one drawn after they read the page.
  */
 export function visitorPricingArm(input: {
   pathname: string;
   cookie: string | undefined;
   config: PricingConfig;
+  method?: string;
   random?: () => number;
 }): { arm: PricingPlan | null; setCookie: boolean } {
   if (!input.config.test || !isPricingMarketingPath(input.pathname)) {
     return { arm: null, setCookie: false };
   }
   if (isPricingPlan(input.cookie)) return { arm: input.cookie, setCookie: false };
+  const method = (input.method ?? "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD") return { arm: null, setCookie: false };
   return { arm: randomPricingPlan(input.config.split, input.random), setCookie: true };
 }
