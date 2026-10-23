@@ -376,6 +376,7 @@ export default async function NewBookingPage({
               optionalHint: t("seatDiver.optionalHint"),
             }}
             departures={fullDepartures}
+            waitlistOn={shop.waitlistEnabled}
             defaultOutcome={isCallOutcome(outcome) ? outcome : null}
           />
           {/* The refusal sits in the action row beside the button that

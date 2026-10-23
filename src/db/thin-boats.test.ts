@@ -122,5 +122,12 @@ describe("listThinBoats", () => {
     await db.update(shops).set({ lastMinuteListEnabled: false }).where(eq(shops.id, shop.id));
     const off = await listThinBoats(db, shop.id, now, 1000);
     expect(off.shown.find((boat) => boat.tripId === session.id)?.dealOpen).toBe(false);
+
+    // The invite is past-diver invites' door: switched off, no boat offers it.
+    await db.update(shops).set({ pastDiverInvitesEnabled: false }).where(eq(shops.id, shop.id));
+    const noInvites = await listThinBoats(db, shop.id, now, 1000);
+    expect(noInvites.shown.find((boat) => boat.tripId === funDive.id)?.invitesPastDivers).toBe(
+      false,
+    );
   });
 });

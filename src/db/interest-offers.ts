@@ -179,6 +179,17 @@ export async function deliverSeatOffer(
 ): Promise<SeatOfferDelivery> {
   const context = await getOfferContext(db, input.shopId, input.tripId, input.interestId);
   if (!context) return "fallback";
+  // A diver's wait-list ask (their own, or carried or rolled from another date)
+  // gets no seat offer while the shop's wait list is off (the Features page):
+  // nothing is stamped or sent, whatever page posted it. A date request's reply
+  // and a last-minute list row are their own features'.
+  if (
+    context.interest.askedBy === "diver" &&
+    (context.parentScope === null || context.parentScope === "departure") &&
+    !context.shop.waitlistEnabled
+  ) {
+    return "fallback";
+  }
   const mailClass = offerMailClass({
     scope: context.interest.scope,
     askedBy: context.interest.askedBy,

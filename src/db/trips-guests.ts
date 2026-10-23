@@ -66,6 +66,7 @@ export type TripGuestsShop = {
   timezone: string;
   padiChecksEnabled: boolean;
   pastDiverInvitesEnabled: boolean;
+  waitlistEnabled: boolean;
 };
 
 export type TripGuestsFilters = {
@@ -209,8 +210,14 @@ export async function getTripGuests(
       .filter(({ booking }) => booking.status !== "cancelled")
       .map(({ booking }) => booking.personId),
   );
+  // A diver's own ask is the wait list's, so it is not drawn while the shop's
+  // wait list is off (the Features page): the panel, the demand banner and the
+  // deal list all read none. The interests stay, and the shop's own outreach
+  // (`asked_by = 'shop'`) still shows.
   const interests = departureInterests.filter(
-    ({ interest }) => interest.personId === null || !seatedPersonIds.has(interest.personId),
+    ({ interest }) =>
+      (shop.waitlistEnabled || interest.askedBy !== "diver") &&
+      (interest.personId === null || !seatedPersonIds.has(interest.personId)),
   );
   const dateInterests = dateInterestsInReach.filter(
     (r) => !r.personId || !seatedPersonIds.has(r.personId),
@@ -526,6 +533,8 @@ export async function getTripGuests(
       waitlisted: waitlist.reduce((seats, { interest }) => seats + (interest.partySize ?? 1), 0),
     }),
     dateInterests,
+    /** The shop keeps a wait list (the Features page); off, a full boat's roster offers none. */
+    waitlistOn: shop.waitlistEnabled,
     lastMinute: {
       matched: lastMinuteMatched,
       dateIso: tripDateIso,

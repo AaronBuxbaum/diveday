@@ -409,6 +409,7 @@ export function TripRosterContent({ context }: { context: TripRosterContentConte
               context={{
                 shopSlug,
                 full: isFull(seatsOnSale(trip)),
+                waitlistOn: guests.waitlistOn,
                 query: diverQuery,
                 candidates: diverCandidates,
                 tripId: trip.id,

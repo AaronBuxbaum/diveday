@@ -1060,6 +1060,9 @@ async function seatWantedByTrip(db: AppDb, shopId: string, tripIds: string[]) {
     })
     .from(interests)
     .innerJoin(people, eq(people.id, interests.personId))
+    // Nobody waits while the wait list is off (the Features page); the row
+    // still offers the last-minute list's divers, which is that list's.
+    .innerJoin(shops, and(eq(shops.id, interests.shopId), eq(shops.waitlistEnabled, true)))
     .where(
       and(
         eq(interests.scope, "departure"),

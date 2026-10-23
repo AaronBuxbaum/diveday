@@ -9,6 +9,8 @@ import {
   updateDiveSiteForForm,
 } from "./dive-sites";
 import { upsertExecutedDive } from "./executed-dives";
+import { deliverSeatOffer } from "./interest-offers";
+import { askForDeparture } from "./interests";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
 import {
   addCrewRecapPhoto,
@@ -20,8 +22,17 @@ import {
   listRecapPhotosForTrips,
 } from "./recap";
 import { getMonthlyReport } from "./reporting";
-import { bookings, diveSites, executedDives, people, personRoles, shops, trips } from "./schema";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import {
+  bookings,
+  diveSites,
+  executedDives,
+  interests,
+  people,
+  personRoles,
+  shops,
+  trips,
+} from "./schema";
+import { createTrip, getTripGuests, listStaff, upcomingTripsWithCounts } from "./trips";
 
 /**
  * **A switched-off feature keeps what it holds** (ADR
@@ -237,5 +248,95 @@ describe("field guide switched off", () => {
       creatures: [],
     });
     expect(await listDiveSiteCreatures(db, shop.id, site.id)).toHaveLength(0);
+  });
+});
+
+describe("wait list switched off", () => {
+  /** A boat with one seat, taken: the wait list's only door. */
+  async function fullBoat() {
+    const { db, shop } = ctx;
+    const startsAt = new Date(Date.UTC(2031, 0, 10, 13));
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Full Switch Boat",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 1,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("trip not created");
+    const seated = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Seated Sam",
+        email: "seated-switch@example.com",
+      },
+    ]);
+    if (!seated.ok) throw new Error("seat failed");
+    return { db, shop, trip };
+  }
+
+  const ask = (shopId: string, tripId: string, email: string) => ({
+    shopId,
+    tripId,
+    fullName: "Waiting Wren",
+    email,
+  });
+
+  it("takes no join, and keeps and hides an interest already on file", async () => {
+    const { db, shop, trip } = await fullBoat();
+    const before = await askForDeparture(db, ask(shop.id, trip.id, "wren-before@example.com"));
+    expect(before.ok).toBe(true);
+    await db.update(shops).set({ waitlistEnabled: false }).where(eq(shops.id, shop.id));
+
+    expect(await askForDeparture(db, ask(shop.id, trip.id, "wren-after@example.com"))).toEqual({
+      ok: false,
+      reason: "trip_unavailable",
+    });
+    const onFile = await db.select().from(interests).where(eq(interests.tripId, trip.id));
+    expect(onFile).toHaveLength(1);
+
+    const [row] = await db.select().from(shops).where(eq(shops.id, shop.id));
+    if (!row) throw new Error("shop missing");
+    const guests = await getTripGuests(db, row, trip.id);
+    expect(guests?.waitlistOn).toBe(false);
+    expect(guests?.interests).toEqual([]);
+    expect(guests?.waitlist).toEqual([]);
+  });
+
+  it("sends no seat offer to a wait-list ask, and stamps nothing", async () => {
+    const { db, shop, trip } = await fullBoat();
+    const joined = await askForDeparture(db, ask(shop.id, trip.id, "wren-offer@example.com"));
+    if (!joined.ok) throw new Error("join failed");
+    await db.update(shops).set({ waitlistEnabled: false }).where(eq(shops.id, shop.id));
+    expect(
+      await deliverSeatOffer(db, {
+        shopId: shop.id,
+        shopSlug: shop.slug,
+        tripId: trip.id,
+        interestId: joined.interestId,
+      }),
+    ).toBe("fallback");
+    const [row] = await db
+      .select({ offeredAt: interests.offeredAt })
+      .from(interests)
+      .where(eq(interests.id, joined.interestId));
+    expect(row?.offeredAt).toBeNull();
+  });
+});
+
+describe("past-diver invites switched off", () => {
+  it("suggests nobody on a boat with seats", async () => {
+    const { db, shop } = ctx;
+    const [row] = await db.select().from(shops).where(eq(shops.id, shop.id));
+    if (!row) throw new Error("shop missing");
+    const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
+    const open = upcoming.find((trip) => trip.booked < trip.capacity && trip.diveSiteId);
+    if (!open) throw new Error("seed has no open boat at a site");
+    await db.update(shops).set({ pastDiverInvitesEnabled: false }).where(eq(shops.id, shop.id));
+    const guests = await getTripGuests(db, { ...row, pastDiverInvitesEnabled: false }, open.id);
+    expect(guests?.inviteSuggestions).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import {
   divePackages,
   diveSites,
   executedDives,
+  interests,
   lostItems,
   people,
   shopPromoCodes,
@@ -56,6 +57,9 @@ const { createDivePackageAction } = await import("./settings/package-actions");
 const { lostItemRowAction } = await import("@/app/actions/lost-items");
 const { recordSightingAction, deleteSightingAction, saveExecutedDiveAction } = await import(
   "./trips/[id]/manifest/actions"
+);
+const { addKnownDiverToWaitlistAction, invitePastDiverAction } = await import(
+  "./trips/[id]/roster-seating-actions"
 );
 
 async function asOwnerWith(feature: ShopFeature) {
@@ -259,5 +263,44 @@ describe("actions behind a switched-off feature", () => {
       status: "ok",
     });
     expect(await species()).toEqual([{ slug: "green-sea-turtle" }]);
+  });
+
+  it("puts nobody on a full boat's wait list, and invites no past diver, while those are off", async () => {
+    const { db, shop } = ctx;
+    const startsAt = new Date(nowDate().getTime() + 5 * 24 * 3_600_000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Switched-off asks",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
+      // Open seats: the switch refuses before fullness is asked.
+      capacity: 4,
+    });
+    if (!trip) throw new Error("trip not created");
+    const { owner } = await asOwnerWith("waitlist");
+    await db.update(shops).set({ pastDiverInvitesEnabled: false }).where(eq(shops.id, shop.id));
+    vi.mocked(requireShopSurface).mockImplementation((async () => ({
+      db,
+      shop: await getShopById(db, shop.id),
+      session: staffSession({ shopId: shop.id, shopSlug: shop.slug, personId: owner }),
+    })) as never);
+    const [diver] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id));
+    if (!diver) throw new Error("seeded diver missing");
+    const asks = () => db.select().from(interests).where(eq(interests.tripId, trip.id));
+
+    expect(
+      await redirectedTo(() =>
+        addKnownDiverToWaitlistAction(shop.slug, trip.id, form({ personId: diver.id })),
+      ),
+    ).toContain("notice=diver-unavailable");
+    expect(
+      await redirectedTo(() =>
+        invitePastDiverAction(shop.slug, trip.id, form({ personId: diver.id })),
+      ),
+    ).toContain("notice=invite-unavailable");
+    expect(await asks()).toEqual([]);
   });
 });
