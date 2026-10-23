@@ -8,7 +8,6 @@ import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingN
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
-import { tapTargetLinkClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/group-label";
 import {
   BANNER_TITLE_CLASS,
@@ -22,10 +21,12 @@ import { guideSource, setUpHref } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
 import {
   getMigrationGuide,
+  guideForPlan,
   MIGRATION_GUIDE_SLUGS,
   type MigrationGuide,
   WEBSITE_LEDGER_ID,
 } from "@/lib/migration-guides";
+import { requestPricingArm } from "@/lib/pricing-arm-request";
 import {
   ClosingCta,
   DividedList,
@@ -44,6 +45,7 @@ import {
   StepList,
 } from "../_components/guide";
 import { GUIDE_SKELETON_LINES } from "../_components/guide-skeleton-lines";
+import { CALLOUT_LINK_CLASS, ReplaceCallout } from "../_components/ReplaceCallout";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -67,8 +69,10 @@ export async function generateMetadata({
   params: Promise<{ competitor: string }>;
 }): Promise<Metadata> {
   const { competitor } = await params;
-  const guide = getMigrationGuide(competitor);
-  if (!guide) return { title: "Switching to DiveDay" };
+  const found = getMigrationGuide(competitor);
+  if (!found) return { title: "Switching to DiveDay" };
+  // Per pricing arm; while the test is off this reads nothing from the request.
+  const guide = guideForPlan(found, await requestPricingArm());
   // Fixed to the default locale, like the hub page's static `metadata`:
   // negotiating here would read request headers inside `generateMetadata` and
   // cost the registered slugs their prerendered shells.
@@ -159,23 +163,15 @@ async function GuideRoute({ params }: { params: Promise<{ competitor: string }> 
   );
 }
 
-async function LocalizedGuideBody({ guide }: { guide: MigrationGuide }) {
-  const locale = await requestLocale();
+async function LocalizedGuideBody({ guide: registered }: { guide: MigrationGuide }) {
+  const [locale, arm] = await Promise.all([requestLocale(), requestPricingArm()]);
+  // The guide as this reader's pricing arm reads it, so the cache keys on it.
+  const guide = guideForPlan(registered, arm);
   const t = diverTranslator(locale);
   const label = t("switching.common.openImportCta");
   const importCta = <SwitchingImportCta label={label} from={guide.slug} />;
   return <GuideBody locale={locale} guide={guide} importCta={importCta} />;
 }
-
-/**
- * The one link inside the coexist and website callouts: a 44px target
- * (`tapTargetLinkClass`) whose underline thickens on hover. They were 24px
- * `inline-block` words, already underlined, so a hover changed no pixel
- * (K-258). Each sits in a `flex h-6 items-center` line, the 16px text's own
- * 24px, so the target bleeds 10px into the gap above and the callout's
- * padding below and the callout keeps its shape.
- */
-const CALLOUT_LINK_CLASS = `${tapTargetLinkClass} font-medium text-primary underline underline-offset-4 hover:decoration-2`;
 
 /**
  * The website ledger's two columns, one class for the head row and every
@@ -244,31 +240,13 @@ async function GuideBody({
 
             <p className="mt-8 max-w-2xl leading-7 text-muted">{t(guide.coexist.bridgeNote)}</p>
 
-            <div className="mt-8 rounded-panel border border-primary/30 bg-primary/5 p-6">
-              <h3 className={`${ITEM_TITLE_CLASS} tracking-tight`}>
-                {t(guide.coexist.replace.heading)}
-              </h3>
-              <p className="mt-2 leading-7 text-muted">{t(guide.coexist.replace.body)}</p>
-              {/* The one forward link to /pricing on a switching guide, and it
-                  belongs here rather than in the closing band. This page has
-                  just told a shop owner what the incumbent's per-booking fee
-                  costs them; "and yours costs what?" is the next thought, and
-                  until now the only answer was the nav tab several thousand
-                  pixels up (these guides run 6,000-8,000px). The closing band
-                  already carries three controls, so a fourth there would break
-                  principles.md #8's one-primary rule.
-
-                  A destination, never a claim: no figure, no "flat price", no
-                  savings arithmetic. The price renders only from
-                  src/lib/marketing.ts (marketing.md's claims policy), and
-                  /pricing already links back here for the fee citation -- this
-                  is what closes that loop in the other direction. */}
-              <p className="mt-4 flex h-6 items-center">
-                <Link href="/pricing" className={CALLOUT_LINK_CLASS}>
-                  {t("switching.common.seePricing")}
-                </Link>
-              </p>
-            </div>
+            {guide.coexist.replace && (
+              <ReplaceCallout
+                heading={t(guide.coexist.replace.heading)}
+                body={t(guide.coexist.replace.body)}
+                pricingLabel={t("switching.common.seePricing")}
+              />
+            )}
           </div>
         </section>
       )}

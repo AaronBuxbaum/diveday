@@ -43,6 +43,7 @@ const { cancelBooking, getShopBookingTripId } = await import("@/db/bookings");
 const { recordInPersonWaiver } = await import("@/db/waivers");
 const { requireShopSurface } = await import("@/lib/session");
 const {
+  addKnownDiverToWaitlistAction,
   addToWaitlistAction,
   carryWaitlistAction,
   moveSeatAction,
@@ -149,6 +150,18 @@ describe("a malformed id on the trip roster", () => {
     const to = await redirectedTo(() => addToWaitlistAction(SHOP_SLUG, NOT_A_UUID, data));
 
     expect(to).toBe(noticeUrl(tripLanding(NOT_A_UUID), "diver-invalid"));
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("refuses a picked diver whose id is not an id, before any read", async () => {
+    signIn();
+    const data = new FormData();
+    data.set("personId", NOT_A_UUID);
+    const tripId = "22222222-2222-4222-8222-222222222222";
+
+    const to = await redirectedTo(() => addKnownDiverToWaitlistAction(SHOP_SLUG, tripId, data));
+
+    expect(to).toBe(noticeUrl(tripLanding(tripId), "diver-invalid"));
     expect(getDb).not.toHaveBeenCalled();
   });
 });

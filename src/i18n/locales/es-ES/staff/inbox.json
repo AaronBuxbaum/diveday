@@ -72,7 +72,9 @@
     "placeholder": "Escribe tu respuesta",
     "send": "Enviar",
     "sending": "Enviando…",
-    "windowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
+    "windowClosed": "{name} escribió por WhatsApp por última vez hace más de 24 horas. Pasado ese plazo, WhatsApp no deja que un negocio escriba libremente, para que nadie reciba mensajes que no pidió.",
+    "reopenLead": "Envía uno de estos mensajes aprobados por WhatsApp. Cuando {name} conteste, podrás escribir tu respuesta.",
+    "reopenSent": "Pediste a {name} que escribiera {date}. Cuando lo haga, podrás escribir tu respuesta aquí.",
     "diverRemoved": "El registro de este buceador fue eliminado, así que las respuestas están desactivadas."
   },
   "notices": {
@@ -84,23 +86,15 @@
     "channelUnsupported": "DiveDay todavía no puede responder un SMS.",
     "noReplyAddress": "No hay ninguna dirección a la que responder.",
     "cannotBeSent": "Esta respuesta no se puede enviar tal como está. No salió nada, y volver a intentarlo no cambiará eso.",
-    "whatsappWindowClosed": "WhatsApp acepta una respuesta escrita durante 24 horas después del último mensaje del buceador. El suyo es más antiguo.",
+    "whatsappWindowClosed": "Su último mensaje de WhatsApp tiene más de 24 horas, así que WhatsApp no acepta una respuesta escrita. Envía uno de los mensajes aprobados para pedirle que escriba.",
     "whatsappNotConnected": "Para responder por WhatsApp hace falta el remitente que conectas en Ajustes.",
+    "reopenFailed": "No llegó a WhatsApp. Inténtalo de nuevo en un minuto o llámale.",
+    "reopenWindowOpen": "Volvió a escribir en las últimas 24 horas, así que escribe tu respuesta.",
+    "reopenAlreadyAsked": "Ya le pediste que escribiera. Espera su respuesta antes de volver a pedírselo.",
     "notAuthorized": "Tu cuenta ya no puede responder a los buceadores en este centro. Pide a un propietario o gerente que revise tu acceso.",
     "lateMarked": "Marcado: llega tarde. La lista y el manifiesto lo muestran.",
     "lateClosed": "Ese lugar ya no admite el aviso: hizo el check-in, se canceló o el barco ya salió.",
     "deleted": "Mensaje eliminado",
-    "gone": "Ese mensaje ya no está en la bandeja.",
-    "notesSaved": "Notas guardadas. Claude las lee en el próximo borrador."
-  },
-  "replyNotes": {
-    "heading": "Notas para Claude",
-    "label": "¿Qué debe saber un borrador de respuesta?",
-    "hint": "Estacionamiento, alquiler, qué traer. Claude las lee junto con tu calendario, precios y horario del mostrador cuando redacta una respuesta en la ficha de un buceador. No incluyas nombres ni números de buceadores. Nada sale hasta que alguien lo envía.",
-    "placeholder": "Estaciona detrás del centro, junto a los tanques. El portón abre a las 7:15.",
-    "off": "Las sugerencias de Claude están desactivadas en este centro.",
-    "turnOn": "Actívalas en Ajustes",
-    "save": "Guardar notas",
-    "saving": "Guardando…"
+    "gone": "Ese mensaje ya no está en la bandeja."
   }
 }

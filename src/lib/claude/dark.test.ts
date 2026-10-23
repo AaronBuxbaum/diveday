@@ -26,8 +26,17 @@ describe("assistDarkReason", () => {
     expect(assistDarkReason({ ...lit, shopEnabled: false })).toBe("shop_off");
   });
 
-  it("goes dark for a demo shop, which anyone can mint", () => {
-    expect(assistDarkReason({ ...lit, shopIsDemo: true })).toBe("demo_shop");
+  it("lights a demo shop while every demo together is under the demo allowance", () => {
+    const demo = { ...lit, shopIsDemo: true, demoCapMicroUsd: 10_000_000 };
+    expect(assistDarkReason({ ...demo, demoSpentMicroUsd: 9_999_999 })).toBeNull();
+    expect(assistDarkReason({ ...demo, demoSpentMicroUsd: 10_000_000 })).toBe("demo_over_cap");
+  });
+
+  it("reads a demo's unknown allowance as spent, since anyone can mint a demo", () => {
+    expect(assistDarkReason({ ...lit, shopIsDemo: true })).toBe("demo_over_cap");
+    expect(
+      assistDarkReason({ ...lit, shopIsDemo: true, demoCapMicroUsd: 1, demoSpentMicroUsd: -1 }),
+    ).toBe("demo_over_cap");
   });
 
   it("goes dark at the cap, not one micro-dollar past it", () => {

@@ -1,10 +1,12 @@
-import type { Map as LeafletMap, MapOptions, ZoomPanOptions } from "leaflet";
+import type { Layer, Map as LeafletMap, MapOptions, ZoomPanOptions } from "leaflet";
 import {
+  arcgisApiKey,
   BASEMAP_ATTRIBUTION,
   BASEMAP_IMAGERY_URL,
   BASEMAP_LABELS_URL,
   BASEMAP_MAX_NATIVE_ZOOM,
   BASEMAP_MAX_ZOOM,
+  vectorLabelsStyleUrl,
 } from "@/lib/basemap";
 
 /**
@@ -36,7 +38,12 @@ export function createBasemapMap(
   if (credit) L.control.attribution({ prefix: false }).addTo(map);
   const tiles = { maxZoom: BASEMAP_MAX_ZOOM, maxNativeZoom: BASEMAP_MAX_NATIVE_ZOOM };
   L.tileLayer(BASEMAP_IMAGERY_URL, { ...tiles, attribution: BASEMAP_ATTRIBUTION }).addTo(map);
-  L.tileLayer(BASEMAP_LABELS_URL, tiles).addTo(map);
+  const rasterLabels = () => {
+    L.tileLayer(BASEMAP_LABELS_URL, tiles).addTo(map);
+  };
+  const key = arcgisApiKey();
+  if (key) addVectorLabels(map, key, rasterLabels);
+  else rasterLabels();
 
   if (typeof ResizeObserver !== "undefined") {
     const observer = new ResizeObserver(() => {
@@ -59,4 +66,52 @@ export function createBasemapMap(
     map.on("unload", () => observer.disconnect());
   }
   return map;
+}
+
+/**
+ * **Place names drawn as text, not as a picture of text.** Esri's vector label
+ * style, rendered by MapLibre into its own pane over the imagery and under
+ * every marker, so a label is as sharp as the screen. Loaded only on a map
+ * that has a key, and only after the map is up: the photo does not wait for it.
+ *
+ * Any failure (no WebGL, the style refused, a blocked host) puts the raster
+ * labels back, once, rather than leave a map with no place names.
+ */
+function addVectorLabels(map: LeafletMap, key: string, fallBack: () => void): void {
+  const pane = map.createPane("basemapLabels");
+  pane.style.zIndex = "250";
+  pane.style.pointerEvents = "none";
+
+  let removed = false;
+  let fellBack = false;
+  let layer: Layer | null = null;
+  map.on("unload", () => {
+    removed = true;
+  });
+  const recover = () => {
+    if (removed || fellBack) return;
+    fellBack = true;
+    if (layer) {
+      try {
+        map.removeLayer(layer);
+      } catch {
+        // A layer that failed while being added has nothing to take down.
+      }
+    }
+    fallBack();
+  };
+
+  import("@maplibre/maplibre-gl-leaflet")
+    .then(({ maplibreGL }) => {
+      if (removed) return;
+      const labels = maplibreGL({
+        style: vectorLabelsStyleUrl(key),
+        pane: "basemapLabels",
+        interactive: false,
+      } as Parameters<typeof maplibreGL>[0]);
+      layer = labels;
+      labels.addTo(map);
+      labels.getMaplibreMap().on("error", recover);
+    })
+    .catch(recover);
 }

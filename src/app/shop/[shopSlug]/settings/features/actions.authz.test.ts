@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import type { AppDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
+import { REPLY_NOTES_MAX_LENGTH } from "@/lib/assists/inbox";
 import { fileScopedShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -9,7 +11,13 @@ import {
   staffSession,
 } from "@/test/staff-session";
 import { FEATURE_ROWS, type FeatureRowGate, type FeatureRowId } from "./feature-rows";
-import { planFeatureSave, ROWS_FIELD, switchField } from "./save-plan";
+import {
+  planFeatureSave,
+  REPLY_NOTES_DRAWN_FIELD,
+  REPLY_NOTES_FIELD,
+  ROWS_FIELD,
+  switchField,
+} from "./save-plan";
 
 /**
  * **The Features page's one Save** (issue #2814; one form, Aaron 2026-10-23).
@@ -241,5 +249,79 @@ describe("what a save writes for a manager without the payments gate", () => {
     expect(planFeatureSave(post(["tips", "tax"], ["tips"]), noPayments)).toEqual({
       kind: "nothing",
     });
+  });
+});
+
+describe("the notes for AI, saved with the switches", () => {
+  async function notesOf(db: AppDb, shopId: string): Promise<string | null> {
+    return (await getShopById(db, shopId))?.replyNotes ?? null;
+  }
+
+  /** The page with the notes box drawn: the marker and the box's text ride the one post. */
+  function withNotes(data: FormData, notes: string): FormData {
+    data.set(REPLY_NOTES_DRAWN_FIELD, "on");
+    data.set(REPLY_NOTES_FIELD, notes);
+    return data;
+  }
+
+  it("writes an owner's trimmed words with the switches, and an empty box clears them", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() =>
+      saveFeaturesAction(withNotes(allOn(), "  Gate opens at 7:15.  ")),
+    );
+    expect(to).toBe(`/shop/${shop.slug}/${FEATURES}?notice=feature-saved`);
+    expect(await getShopById(db, shop.id)).toMatchObject({
+      replyNotes: "Gate opens at 7:15.",
+      reviewsEnabled: true,
+    });
+
+    await redirectedTo(() => saveFeaturesAction(withNotes(allOn(), "   ")));
+    expect(await notesOf(db, shop.id)).toBeNull();
+  });
+
+  it("caps the notes at their length", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+
+    await redirectedTo(() =>
+      saveFeaturesAction(withNotes(allOn(), "a".repeat(REPLY_NOTES_MAX_LENGTH + 50))),
+    );
+    expect(await notesOf(db, shop.id)).toHaveLength(REPLY_NOTES_MAX_LENGTH);
+  });
+
+  it("leaves the notes untouched when the page did not draw the box", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    await redirectedTo(() => saveFeaturesAction(withNotes(allOn(), "Gate opens at 7:15.")));
+
+    // No marker: an absent box is not an empty one, even with a stray notes field.
+    const data = allOn();
+    data.set(REPLY_NOTES_FIELD, "");
+    await redirectedTo(() => saveFeaturesAction(data));
+    expect(await notesOf(db, shop.id)).toBe("Gate opens at 7:15.");
+  });
+
+  it("writes no notes when the diving refusal stops the save", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const before = await getShopById(db, shop.id);
+
+    const to = await redirectedTo(() => saveFeaturesAction(withNotes(post(ALL_ROWS), "Refused")));
+    expect(to).toBe(`/shop/${shop.slug}/${FEATURES}?notice=diving-options-none`);
+    expect(await getShopById(db, shop.id)).toEqual(before);
+  });
+
+  it("refuses a captain, as it refuses every switch, and writes nothing", async () => {
+    const { db, shop, captain } = await context();
+    const before = await notesOf(db, shop.id);
+    signIn(shop, captain);
+
+    const to = await redirectedTo(() =>
+      saveFeaturesAction(withNotes(post(ALL_ROWS), "A captain’s words")),
+    );
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
+    expect(await notesOf(db, shop.id)).toBe(before);
   });
 });

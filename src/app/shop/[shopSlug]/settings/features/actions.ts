@@ -19,9 +19,12 @@ import { planFeatureSave } from "./save-plan";
  * them is refused whole. Past that, each row keeps its own gate, re-checked
  * here against live roles: a row is written only when the page drew it and the
  * reader passes its gate now, and every other column is left as it was
- * (`planFeatureSave`). Only the switches move: the divemaster target and every
- * other value setting stay, and turning a feature off deletes nothing it wrote
- * (`shop-features.ts`). All three kinds of diving off refuses the whole save.
+ * (`planFeatureSave`). Only the switches move, plus the notes for AI when the
+ * page drew their box: the divemaster target and every other value setting
+ * stay, and turning a feature off deletes nothing it wrote
+ * (`shop-features.ts`). All three kinds of diving off refuses the whole save,
+ * the notes included. The write is scoped by the session's shop, never a
+ * posted one.
  */
 export async function saveFeaturesAction(formData: FormData) {
   const session = await requireStaffSession();

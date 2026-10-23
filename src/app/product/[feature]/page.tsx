@@ -13,6 +13,7 @@ import {
   getFeaturePage,
 } from "@/lib/feature-pages";
 import { sharedLinkCard } from "@/lib/marketing";
+import { requestPricingOffer } from "@/lib/pricing-arm-request";
 import { FeaturePageBody } from "../_components/FeaturePageBody";
 import { FeaturePageSkeleton } from "../_components/FeaturePageSkeleton";
 
@@ -78,6 +79,6 @@ export default async function FeaturePage({ params }: { params: Promise<{ featur
 }
 
 async function LocalizedFeatureBody({ slug }: { slug: FeaturePageSlug }) {
-  const locale = await requestLocale();
-  return <FeaturePageBody slug={slug} locale={locale} />;
+  const [locale, offer] = await Promise.all([requestLocale(), requestPricingOffer()]);
+  return <FeaturePageBody slug={slug} locale={locale} offer={offer} />;
 }

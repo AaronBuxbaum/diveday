@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { VECTOR_LABEL_HOSTS } from "./basemap";
 import {
   CSP_REPORT_PATH,
   enforcedPolicy,
@@ -15,6 +16,7 @@ const everyOption = {
   mediaRegion: "us-east-1",
   mediaPublicUrlBase: "https://media.dive.day",
   metaSignup: true,
+  vectorLabels: true,
   development: true,
 } as const;
 
@@ -112,6 +114,13 @@ describe("the policy", () => {
     expect(directives(enforcedPolicy(base)).get("connect-src")).not.toContain(
       "https://api.stripe.com",
     );
+  });
+
+  it("lets the maps fetch Esri's vector labels only when a key is configured", () => {
+    const withKey = directives(enforcedPolicy({ ...base, vectorLabels: true })).get("connect-src");
+    expect(withKey).toEqual(expect.arrayContaining([...VECTOR_LABEL_HOSTS]));
+    const withoutKey = directives(enforcedPolicy(base)).get("connect-src") ?? [];
+    for (const host of VECTOR_LABEL_HOSTS) expect(withoutKey).not.toContain(host);
   });
 
   describe("CloudWatch RUM's per-region hosts", () => {

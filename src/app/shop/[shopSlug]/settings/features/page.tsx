@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Fragment } from "react";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { ChoiceRow, FormStatus, StickyFormActions } from "@/components/ui/form";
+import { assistDarkReasonFor } from "@/db/assists";
 import {
   canPersonManagePaymentSettings,
   canPersonManageShopSettings,
@@ -19,11 +21,14 @@ import { type NoticeMessages, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
 import { saveFeaturesAction } from "./actions";
 import {
+  darkWhileOnKey,
   FEATURE_ROWS,
   type FeatureRow,
   type FeatureRowGate,
   isOptionalFeature,
+  REPLY_NOTES_ROW,
 } from "./feature-rows";
+import { ReplyNotesForm } from "./ReplyNotesForm";
 import { ROWS_FIELD, switchField } from "./save-plan";
 
 export const instant = true;
@@ -130,7 +135,8 @@ function switches(shop: Shop, row: FeatureRow, t: StaffTranslator) {
  * and saves once. Each drawn row posts its id in `rows`, so the save writes
  * those rows and leaves every row this reader was not shown as it was. The
  * list is taller than a screen, so Save rides the bottom edge
- * (`StickyFormActions`) with the outcome beside it.
+ * (`StickyFormActions`) with the outcome beside it. The notes for AI, drawn
+ * under the AI row while assists are lit, save with the same Save.
  */
 export default async function FeaturesPage({
   params,
@@ -154,6 +160,9 @@ export default async function FeaturesPage({
     gates.add("team");
   }
   const banner = noticeFromParam(notice, noticeMessages(t));
+  // Never the reason the page fails: a read that throws shows no line and no notes box.
+  const dark = await assistDarkReasonFor(db, shop.id).catch(() => "unread" as const);
+  const darkKey = dark === "unread" ? null : darkWhileOnKey(dark);
   const base = `/shop/${session.user.shopSlug}`;
 
   return (
@@ -168,19 +177,29 @@ export default async function FeaturesPage({
         <SectionCard padding="none">
           <ul className="divide-y divide-border">
             {FEATURE_ROWS.filter((row) => gates.has(row.gate)).map((row) => (
-              <li key={row.id} id={row.id} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
-                <input type="hidden" name={ROWS_FIELD} value={row.id} />
-                <h2 className="text-sm font-semibold">{t(row.headingKey)}</h2>
-                {switches(shop, row, t)}
-                {row.link && linkShown(shop, row) ? (
-                  <Link
-                    href={`${base}${row.link.path}`}
-                    className="inline-block text-sm font-medium text-primary hover:underline"
-                  >
-                    {t(row.link.labelKey)}
-                  </Link>
+              <Fragment key={row.id}>
+                <li id={row.id} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
+                  <input type="hidden" name={ROWS_FIELD} value={row.id} />
+                  <h2 className="text-sm font-semibold">{t(row.headingKey)}</h2>
+                  {switches(shop, row, t)}
+                  {row.id === "claudeSuggestions" && darkKey && isOn(shop, row) ? (
+                    <p className="text-xs text-warning">{t(darkKey)}</p>
+                  ) : null}
+                  {row.link && linkShown(shop, row) ? (
+                    <Link
+                      href={`${base}${row.link.path}`}
+                      className="inline-block text-sm font-medium text-primary hover:underline"
+                    >
+                      {t(row.link.labelKey)}
+                    </Link>
+                  ) : null}
+                </li>
+                {row.id === "claudeSuggestions" && dark === null ? (
+                  <li id={REPLY_NOTES_ROW} className="scroll-mt-8 space-y-3 p-5 sm:p-6">
+                    <ReplyNotesForm notes={shop.replyNotes} t={t} />
+                  </li>
                 ) : null}
-              </li>
+              </Fragment>
             ))}
           </ul>
         </SectionCard>

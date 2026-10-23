@@ -524,18 +524,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-diver-conversation", scheme);
       });
 
-      // **Notes for Claude**, at the foot of the Inbox: the box holding the
-      // seed's notes that a reply draft reads (Aaron, 2026-10-22).
-      test(`the inbox's notes for Claude render true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/shop/blue-mantis/inbox");
-        const notes = page.getByRole("region", { name: "Notes for Claude" });
-        await notes.getByRole("button", { name: "Save notes" }).waitFor();
-        await notes.scrollIntoViewIfNeeded();
-        await capture(page, "staff-inbox-reply-notes", scheme);
-      });
-
       // Shop-wide discount codes: the codes as one ledger shelved live /
       // scheduled / ended, with the trip deals as their own ledger beneath
       // (slice 9g of ADR 20260827-the-shops-shelves; codes themselves are ADR

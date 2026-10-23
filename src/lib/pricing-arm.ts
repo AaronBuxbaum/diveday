@@ -30,28 +30,47 @@ export const PRICING_ARM_COOKIE = "dd_pricing";
 export const PRICING_ARM_COOKIE_MAX_AGE = 90 * 24 * 60 * 60;
 export const PRICING_ARM_HEADER = "x-diveday-pricing-arm";
 
-/** The pages that state a price, and the set-up form that records which one was seen. */
-const PRICING_MARKETING_PATHS = new Set(["/", "/pricing", "/get-set-up"]);
+/**
+ * The pages that state a price or a claim about it (`/about`, the feature
+ * hub and pages, the switching hub and guides as well as `/` and `/pricing`),
+ * and the set-up form that records which one was seen.
+ */
+const PRICING_MARKETING_PATHS = new Set(["/", "/pricing", "/get-set-up", "/about"]);
+/** Sections whose hub and every page under it state the price. */
+const PRICING_MARKETING_SECTIONS = ["/product", "/switching"] as const;
 
 export function isPricingMarketingPath(pathname: string): boolean {
   const trimmed = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
-  return PRICING_MARKETING_PATHS.has(trimmed);
+  return (
+    PRICING_MARKETING_PATHS.has(trimmed) ||
+    PRICING_MARKETING_SECTIONS.some(
+      (section) => trimmed === section || trimmed.startsWith(`${section}/`),
+    )
+  );
 }
 
 /**
  * The proxy's decision for one request: the arm to pass on (or none), and
  * whether to write the cookie. Pure, so the whole matrix is tested without a
  * request.
+ *
+ * A new arm is drawn only for a page view (GET or HEAD). The set-up form's
+ * POST passes on the arm its cookie names, and with no cookie it passes none,
+ * so a visitor whose browser dropped the cookie is recorded as having seen no
+ * arm rather than one drawn after they read the page.
  */
 export function visitorPricingArm(input: {
   pathname: string;
   cookie: string | undefined;
   config: PricingConfig;
+  method?: string;
   random?: () => number;
 }): { arm: PricingPlan | null; setCookie: boolean } {
   if (!input.config.test || !isPricingMarketingPath(input.pathname)) {
     return { arm: null, setCookie: false };
   }
   if (isPricingPlan(input.cookie)) return { arm: input.cookie, setCookie: false };
+  const method = (input.method ?? "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD") return { arm: null, setCookie: false };
   return { arm: randomPricingPlan(input.config.split, input.random), setCookie: true };
 }

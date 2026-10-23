@@ -386,6 +386,117 @@ describe("the pricing test's Stripe side (ADR 20261022-pricing-ab-test)", () => 
     expect(headers["Idempotency-Key"]).toBe("diveday-fee-s-2026-09");
   });
 
+  it("reads v2's duplicate_meter_event as already reported, and nothing else", async () => {
+    // Stripe documents one duplicate-identifier code, `duplicate_meter_event`
+    // (400) on its v2 meter-events API; v1 validates asynchronously and names
+    // none, so `resource_already_exists` is not a meter-event answer at all.
+    const event = {
+      eventName: "e",
+      customerId: "cus_1",
+      valueCents: 1,
+      identifier: "id",
+      timestamp: NOW,
+    };
+    const dup = stripeBillingProvider(
+      CONFIG,
+      fakeFetch(400, { error: { code: "duplicate_meter_event" } }) as never,
+    );
+    expect(await dup.reportMeterEvent(event)).toEqual({ status: "ok", value: "already_reported" });
+    const other = stripeBillingProvider(
+      CONFIG,
+      fakeFetch(400, { error: { code: "resource_already_exists" } }) as never,
+    );
+    expect(await other.reportMeterEvent(event)).toEqual({ status: "failed" });
+  });
+
+  it("reads what the meter holds for a customer over a window, from the metered price's meter", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const path = String(url);
+      if (path.includes("/v1/prices/price_metered")) {
+        return new Response(JSON.stringify({ product: "prod_x", recurring: { meter: "mtr_1" } }));
+      }
+      return new Response(
+        JSON.stringify({ data: [{ aggregated_value: 1_000 }, { aggregated_value: 2_000 }] }),
+      );
+    });
+    const provider = stripeBillingProvider(CONFIG, fetchMock as never);
+    expect(
+      await provider.meterValueReported({
+        priceId: "price_metered",
+        customerId: "cus_1",
+        from: new Date("2031-06-01T00:00:00Z"),
+        to: new Date("2031-07-01T00:00:00Z"),
+      }),
+    ).toEqual({ status: "ok", value: 3_000 });
+    const summary = new URL(String(fetchMock.mock.calls[1]?.[0]));
+    expect(summary.pathname).toBe("/v1/billing/meters/mtr_1/event_summaries");
+    expect(Object.fromEntries(summary.searchParams)).toEqual({
+      customer: "cus_1",
+      start_time: String(Date.parse("2031-06-01T00:00:00Z") / 1000),
+      end_time: String(Date.parse("2031-07-01T00:00:00Z") / 1000),
+    });
+    const broken = stripeBillingProvider(CONFIG, fakeFetch(500, {}) as never);
+    expect(
+      await broken.meterValueReported({
+        priceId: "price_metered_2",
+        customerId: "cus_1",
+        from: NOW,
+        to: NOW,
+      }),
+    ).toEqual({ status: "failed" });
+  });
+
+  it("invoices a final month once: an item tagged with the identifier, then a sent invoice", async () => {
+    const calls: { method: string; url: string; body: URLSearchParams; key?: string }[] = [];
+    let items: unknown[] = [];
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      const headers = (init?.headers ?? {}) as Record<string, string>;
+      calls.push({
+        method,
+        url: String(url),
+        body: new URLSearchParams(String(init?.body ?? "")),
+        key: headers["Idempotency-Key"],
+      });
+      if (method === "GET") return new Response(JSON.stringify({ data: items }));
+      if (String(url).endsWith("/v1/invoiceitems")) {
+        items = [{ id: "ii_1", invoice: null, metadata: { diveday_statement: "fee-id" } }];
+        return new Response(JSON.stringify({ id: "ii_1" }));
+      }
+      return new Response(JSON.stringify({ id: "in_1" }));
+    });
+    const provider = stripeBillingProvider(CONFIG, fetchMock as never);
+    const input = {
+      customerId: "cus_1",
+      amountCents: 3_000,
+      identifier: "fee-id",
+      month: "2031-06",
+    };
+    expect(await provider.invoiceFinalMonth(input)).toEqual({ status: "ok", value: "invoiced" });
+    const item = calls.find((call) => call.url.endsWith("/v1/invoiceitems"));
+    expect(Object.fromEntries(item?.body ?? [])).toMatchObject({
+      customer: "cus_1",
+      amount: "3000",
+      currency: "usd",
+      "metadata[diveday_statement]": "fee-id",
+    });
+    expect(item?.key).toBe("fee-id-item");
+    const invoice = calls.find((call) => call.url.endsWith("/v1/invoices"));
+    expect(Object.fromEntries(invoice?.body ?? [])).toMatchObject({
+      customer: "cus_1",
+      collection_method: "send_invoice",
+      pending_invoice_items_behavior: "include",
+    });
+    // The item already on an invoice: nothing more is sent.
+    items = [{ id: "ii_1", invoice: "in_1", metadata: { diveday_statement: "fee-id" } }];
+    calls.length = 0;
+    expect(await provider.invoiceFinalMonth(input)).toEqual({
+      status: "ok",
+      value: "already_invoiced",
+    });
+    expect(calls.filter((call) => call.method === "POST")).toEqual([]);
+  });
+
   it("reads Stripe already holding the identifier as reported, and anything else as failed", async () => {
     const event = {
       eventName: "e",
@@ -396,7 +507,7 @@ describe("the pricing test's Stripe side (ADR 20261022-pricing-ab-test)", () => 
     };
     const dup = stripeBillingProvider(
       CONFIG,
-      fakeFetch(400, { error: { code: "resource_already_exists" } }) as never,
+      fakeFetch(400, { error: { code: "duplicate_meter_event" } }) as never,
     );
     expect(await dup.reportMeterEvent(event)).toEqual({ status: "ok", value: "already_reported" });
     const bad = stripeBillingProvider(CONFIG, fakeFetch(400, { error: { code: "x" } }) as never);

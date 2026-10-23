@@ -17,7 +17,7 @@ import { SITE_BRIEF_SYSTEM, siteBriefFixture } from "./site-brief";
 /**
  * **A canned Claude for the browser fleet**, so an assist's surface can be
  * photographed. The fleet runs with `DIVEDAY_DISABLE_EXTERNAL_HTTP=1` and no
- * key, and every shop it mints is a demo, so every assist is dark there by the
+ * key, so every assist is dark there by the
  * seam's own rules. A spec arms one private shop through
  * `/api/test/claude-fixtures`; for that shop alone the assists answer from the
  * fixtures below, chosen by the feature's fixed instructions.

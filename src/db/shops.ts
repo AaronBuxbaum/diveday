@@ -821,12 +821,17 @@ export type ShopSwitches = Partial<
   >
 >;
 
+/** Everything one Save of the Features page writes: its switches, and the notes for AI when drawn. */
+export type FeaturesPageWrite = ShopSwitches &
+  Partial<Pick<typeof shops.$inferSelect, "replyNotes">>;
+
 /**
- * Writes the Features page's switches in one statement, so a save lands whole
- * or not at all. A column absent from `switches` is left as it was: only the
- * rows the page drew, and the reader may flip, are ever named.
+ * Writes the Features page's switches (and, when the page drew the box, the
+ * notes for AI) in one statement, so a save lands whole or not at all. A
+ * column absent from `switches` is left as it was: only the rows the page
+ * drew, and the reader may flip, are ever named.
  */
-export async function setShopSwitches(db: AppDb, shopId: string, switches: ShopSwitches) {
+export async function setShopSwitches(db: AppDb, shopId: string, switches: FeaturesPageWrite) {
   if (Object.keys(switches).length === 0) return null;
   const [shop] = await db.update(shops).set(switches).where(eq(shops.id, shopId)).returning();
   return shop ?? null;

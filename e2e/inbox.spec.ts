@@ -157,32 +157,3 @@ test("a message about a seat opens it, and its menu opens the seat's move", asyn
   await expect(move.getByLabel("Departure")).toBeVisible();
   await expect(move.getByRole("button", { name: "Move" })).toBeVisible();
 });
-
-/**
- * **Notes for Claude** (Aaron, 2026-10-22): the shop writes what a reply draft
- * should know once, at the foot of the Inbox, and a reply draft reads it.
- */
-test("a staffer keeps the shop's notes for Claude's reply drafts", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/inbox#reply-notes");
-  const section = page.getByRole("region", { name: "Notes for Claude" });
-  const box = section.getByLabel("What should a reply draft know?");
-  const seeded = await box.inputValue();
-  expect(seeded).toContain("The gate opens at 7:15.");
-
-  await box.fill(`${seeded}\nBring your own mask if you have one.`);
-  await section.getByRole("button", { name: "Save notes" }).click();
-  await expect(page.getByText(/^Notes saved\./)).toBeVisible();
-  await expect(
-    page
-      .getByRole("region", { name: "Notes for Claude" })
-      .getByLabel("What should a reply draft know?"),
-  ).toHaveValue(/Bring your own mask/);
-
-  // The seed's words back, for the capture that reads them.
-  await page
-    .getByRole("region", { name: "Notes for Claude" })
-    .getByLabel("What should a reply draft know?")
-    .fill(seeded);
-  await page.getByRole("button", { name: "Save notes" }).click();
-  await expect(page.getByText(/^Notes saved\./)).toBeVisible();
-});

@@ -74,7 +74,10 @@ describe("bookingAskFromNote", () => {
   });
 
   it("is null while the shop's assists are dark, and never calls", async () => {
-    await ctx.db.update(shops).set({ isDemo: true }).where(eq(shops.id, ctx.shop.id));
+    await ctx.db
+      .update(shops)
+      .set({ claudeSuggestionsEnabled: false })
+      .where(eq(shops.id, ctx.shop.id));
     const provider = reading({});
     expect(
       await bookingAskFromNote(ctx.db, {

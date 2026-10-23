@@ -110,6 +110,28 @@ test.describe("light mode — Claude's assists, lit", () => {
     });
   });
 
+  // **Notes for AI** (Aaron, 2026-10-22 and 10-23): under the AI switch in
+  // Settings, drawn only while the shop's assists are lit. An owner writes a
+  // fact once and saves it with the page's one Save.
+  test("the notes for AI under the AI switch", async ({ page, request, privateShop }) => {
+    await lit(request, privateShop.slug, async () => {
+      await page.goto(`/shop/${privateShop.slug}/settings/features`);
+      const notes = page.locator("li#replyNotes");
+      // i18n-exempt: the shop's own words, typed as a staffer would
+      await notes
+        .getByLabel("What should AI know about your shop?")
+        .fill("Park behind the shop by the tank racks. The gate opens at 7:15.");
+      await page.getByRole("button", { name: "Save", exact: true }).click();
+      await page.waitForURL(/notice=feature-saved/);
+      await expect(notes.getByLabel("What should AI know about your shop?")).toHaveValue(
+        /The gate opens at 7:15\./,
+      );
+      await page.locator("li#replyNotes").scrollIntoViewIfNeeded();
+      await page.mouse.move(0, 0);
+      await capture(page, "assist-reply-notes", "light");
+    });
+  });
+
   test("the website setup tab and the import mapping", async ({ page, request, privateShop }) => {
     test.setTimeout(FLOW_TIMEOUT_MS);
     await lit(request, privateShop.slug, async () => {

@@ -10,6 +10,7 @@ import {
   replyDestination,
   sesMessageIdFromHeader,
   truncateInboundBody,
+  whatsAppReopenSentAt,
   whatsAppReplyWindowOpen,
 } from "./inbox";
 
@@ -161,6 +162,24 @@ describe("whatsAppReplyWindowOpen", () => {
   it("is closed when the diver never wrote, or wrote from the future", () => {
     expect(whatsAppReplyWindowOpen(null, now)).toBe(false);
     expect(whatsAppReplyWindowOpen(new Date("2026-07-22T00:00:00.000Z"), now)).toBe(false);
+  });
+});
+
+describe("whatsAppReopenSentAt", () => {
+  const lastWrote = new Date("2026-07-20T09:00:00.000Z");
+
+  it("counts only a reply sent once the window had closed, which can only be an approved one", () => {
+    const typedInsideWindow = new Date("2026-07-20T10:00:00.000Z");
+    expect(whatsAppReopenSentAt(lastWrote, [typedInsideWindow])).toBeNull();
+    const ask = new Date("2026-07-21T09:00:00.000Z");
+    expect(whatsAppReopenSentAt(lastWrote, [typedInsideWindow, ask])).toEqual(ask);
+  });
+
+  it("answers the latest ask, and nothing for a diver who never wrote", () => {
+    const first = new Date("2026-07-22T09:00:00.000Z");
+    const second = new Date("2026-07-23T09:00:00.000Z");
+    expect(whatsAppReopenSentAt(lastWrote, [second, first])).toEqual(second);
+    expect(whatsAppReopenSentAt(null, [first])).toBeNull();
   });
 });
 
