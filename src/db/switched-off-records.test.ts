@@ -307,6 +307,17 @@ describe("wait list switched off", () => {
     expect(guests?.waitlist).toEqual([]);
   });
 
+  it("still answers that a seat is open before saying the list is off", async () => {
+    // Review 2026-10-23, item 7: "go and book it" outranks the switch.
+    const { db, shop, trip } = await fullBoat();
+    await db.update(shops).set({ waitlistEnabled: false }).where(eq(shops.id, shop.id));
+    await db.update(trips).set({ capacity: 2 }).where(eq(trips.id, trip.id));
+    expect(await askForDeparture(db, ask(shop.id, trip.id, "wren-open@example.com"))).toEqual({
+      ok: false,
+      reason: "trip_available",
+    });
+  });
+
   it("sends no seat offer to a wait-list ask, and stamps nothing", async () => {
     const { db, shop, trip } = await fullBoat();
     const joined = await askForDeparture(db, ask(shop.id, trip.id, "wren-offer@example.com"));

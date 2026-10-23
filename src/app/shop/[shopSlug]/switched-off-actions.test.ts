@@ -275,7 +275,7 @@ describe("actions behind a switched-off feature", () => {
       title: "Switched-off asks",
       startsAt,
       endsAt: new Date(startsAt.getTime() + 4 * 3_600_000),
-      // Open seats: the switch refuses before fullness is asked.
+      // Open seats: the seat answer comes before the switch (review item 7).
       capacity: 4,
     });
     if (!trip) throw new Error("trip not created");
@@ -297,7 +297,7 @@ describe("actions behind a switched-off feature", () => {
       await redirectedTo(() =>
         addKnownDiverToWaitlistAction(shop.slug, trip.id, form({ personId: diver.id })),
       ),
-    ).toContain("notice=diver-unavailable");
+    ).toContain("notice=diver-waitlist-available");
     expect(
       await redirectedTo(() =>
         invitePastDiverAction(shop.slug, trip.id, form({ personId: diver.id })),

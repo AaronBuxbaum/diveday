@@ -316,15 +316,6 @@ async function lockFullDeparture(
   if (trip?.status !== "scheduled" || trip.startsAt <= nowDate()) {
     return { ok: false, reason: "trip_unavailable" };
   }
-  // **The wait list is a Features switch.** Off, no door anywhere offers it
-  // (the public trip page, the roster, a new diver's form), and a post that
-  // reaches here anyway finds no list to join. Interests already on file stay.
-  const [shop] = await tx
-    .select({ on: shops.waitlistEnabled })
-    .from(shops)
-    .where(eq(shops.id, shopId))
-    .limit(1);
-  if (!shop?.on) return { ok: false, reason: "trip_unavailable" };
   // The form offers "up to the boat's seats"; the server keeps that promise,
   // so a hand-posted party cannot claim more demand than the boat holds.
   const partySize = Math.max(1, Math.min(askedParty, trip.capacity));
@@ -356,6 +347,17 @@ async function lockFullDeparture(
   ) {
     return { ok: false, reason: "trip_available" };
   }
+  // **The wait list is a Features switch**, asked after the seat question
+  // (review 2026-10-23, item 7): a boat with a seat open answers "go and book
+  // it" whatever the switch says. Off, no door anywhere offers the list (the
+  // public trip page, the roster, a new diver's form), and a post that reaches
+  // here anyway finds no list to join. Interests already on file stay.
+  const [shop] = await tx
+    .select({ on: shops.waitlistEnabled })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  if (!shop?.on) return { ok: false, reason: "trip_unavailable" };
   return { ok: true, trip, partySize };
 }
 
