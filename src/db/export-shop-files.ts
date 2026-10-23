@@ -153,6 +153,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       // Off unless the shop said yes: a restore must not send unread recap
       // highlights for a shop that approves each one.
       "recap_assist_auto_approve",
+      "lost_found_enabled",
+      "work_orders_enabled",
+      "promo_codes_enabled",
+      "dive_packages_enabled",
       "contact_email",
       "contact_phone",
       "address_street",
@@ -263,6 +267,10 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         shop.padiChecksEnabled,
         shop.claudeSuggestionsEnabled,
         shop.recapAssistAutoApprove,
+        shop.lostFoundEnabled,
+        shop.workOrdersEnabled,
+        shop.promoCodesEnabled,
+        shop.divePackagesEnabled,
         shop.contactEmail,
         shop.contactPhone,
         shop.addressStreet,
